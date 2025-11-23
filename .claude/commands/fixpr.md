@@ -566,6 +566,158 @@ Examine the collected data to understand what needs fixing:
 - Categorize conflicts by risk level (low risk: comments/formatting, high risk: business logic)
 - Determine which conflicts can be safely auto-resolved vs requiring human review
 
+**🚨 MANDATORY: Conflict Resolution Documentation**:
+When merge conflicts are detected and resolved, ALWAYS document the resolution choices:
+
+1. **Create Documentation Directory**:
+   ```bash
+   # Extract branch name and PR number
+   BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+   PR_NUMBER="${PR_NUMBER}"  # Replace with actual PR number (e.g., PR_NUMBER="1234")
+
+   # Sanitize branch name (replace slashes with dashes to prevent nested directories)
+   SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | tr '/' '-')
+
+   # Create docs directory structure with delimiter between branch and PR
+   CONFLICT_DOCS_DIR="docs/conflicts/${SANITIZED_BRANCH}-pr${PR_NUMBER}"
+   mkdir -p "$CONFLICT_DOCS_DIR"
+   ```
+
+2. **Document Each Conflict Resolution**:
+   For EACH file with merge conflicts, create a markdown document explaining:
+   - **File**: Which file had conflicts
+   - **Conflict Type**: What type of conflict (code logic, imports, formatting, etc.)
+   - **Resolution Strategy**: How the conflict was resolved
+   - **Reasoning**: WHY this specific resolution was chosen
+   - **Risk Assessment**: Low/Medium/High risk level
+   - **Original Conflict**: Show the conflict markers (<<<<<<, =======, >>>>>>>)
+   - **Final Resolution**: Show the final merged code
+
+   Example documentation file `$CONFLICT_DOCS_DIR/conflict_summary.md`:
+   ```markdown
+   # Merge Conflict Resolution Report
+
+   **Branch**: {branch_name}
+   **PR Number**: {pr-number}
+   **Date**: {timestamp}
+
+   ## Conflicts Resolved
+
+   ### File: src/main.py
+
+   **Conflict Type**: Import statement ordering
+   **Risk Level**: Low
+
+   **Original Conflict**:
+   ```python
+   <<<<<<< HEAD
+   import os
+   import sys
+   from typing import Dict
+   =======
+   from typing import Dict
+   import os
+   import sys
+   >>>>>>> main
+   ```
+
+   **Resolution Strategy**: Combined both branches, sorted imports alphabetically
+
+   **Reasoning**:
+   - Both branches had the same imports, just different ordering
+   - Alphabetical sorting follows PEP 8 style guide
+   - No functional difference between orderings
+   - Low risk as no logic changes
+
+   **Final Resolution**:
+   ```python
+   import os
+   import sys
+   from typing import Dict
+   ```
+
+   ---
+
+   ### File: tests/test_auth.py
+
+   **Conflict Type**: Function implementation logic
+   **Risk Level**: High
+
+   **Original Conflict**:
+   ```python
+   <<<<<<< HEAD
+   def authenticate_user(username, password):
+       return check_password(username, password)
+   =======
+   def authenticate_user(username, password, mfa_code=None):
+       if mfa_code:
+           return check_password_with_mfa(username, password, mfa_code)
+       return check_password(username, password)
+   >>>>>>> main
+   ```
+
+   **Resolution Strategy**: Preserved both features - kept MFA support from main branch
+
+   **Reasoning**:
+   - Main branch added MFA (multi-factor authentication) support
+   - Feature branch had simpler authentication
+   - MFA is a security enhancement and should be preserved
+   - Backward compatible (mfa_code is optional parameter)
+   - Preserves existing functionality while adding new feature
+
+   **Final Resolution**:
+   ```python
+   def authenticate_user(username, password, mfa_code=None):
+       if mfa_code:
+           return check_password_with_mfa(username, password, mfa_code)
+       return check_password(username, password)
+   ```
+
+   ## Summary
+
+   - **Total Conflicts**: 2
+   - **Low Risk**: 1 (import ordering)
+   - **High Risk**: 1 (authentication logic)
+   - **Auto-Resolved**: 1
+   - **Manual Review Recommended**: 1 (authentication logic change)
+
+   ## Recommendations
+
+   - Review the authentication logic change for security implications
+   - Ensure MFA implementation has proper test coverage
+   - Verify backward compatibility with existing API clients
+   ```
+
+3. **Create Index File**:
+   Create `$CONFLICT_DOCS_DIR/index.md` with summary of all conflicts:
+   ```bash
+   cat > "$CONFLICT_DOCS_DIR/index.md" << EOF
+   # Conflict Resolution Index
+
+   **PR**: #${PR_NUMBER}
+   **Branch**: ${BRANCH_NAME}
+   **Resolved**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+   ## Files Modified
+
+   - [Detailed Conflict Report](./conflict_summary.md)
+
+   ## Quick Stats
+
+   - Files with conflicts: {count}
+   - Low risk resolutions: {count}
+   - Medium risk resolutions: {count}
+   - High risk resolutions: {count}
+   - Manual review required: {count}
+   EOF
+   ```
+
+4. **Commit Documentation**:
+   ```bash
+   git add "$CONFLICT_DOCS_DIR"
+   git commit -m "docs: Document conflict resolution for PR #${PR_NUMBER}"
+   ```
+
 **Bot Feedback Processing**:
 - **SAFE APPROACH**: Remember reviews and comments are lists - iterate through them
 - Extract actionable suggestions from automated code reviews
@@ -690,9 +842,29 @@ EOF
 - **MANDATORY VERIFICATION**: After each fix category, run `./run_ci_replica.sh` to confirm fix works in CI environment
 
 **For Merge Conflicts**:
+- **🚨 MANDATORY FIRST STEP**: Before resolving ANY conflicts, create documentation directory:
+  ```bash
+  BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+  PR_NUMBER="${PR_NUMBER}"  # Replace with actual PR number (e.g., PR_NUMBER="1234")
+
+  # Sanitize branch name (replace slashes with dashes to prevent nested directories)
+  SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | tr '/' '-')
+
+  # Create docs directory structure with delimiter between branch and PR
+  CONFLICT_DOCS_DIR="docs/conflicts/${SANITIZED_BRANCH}-pr${PR_NUMBER}"
+  mkdir -p "$CONFLICT_DOCS_DIR"
+  ```
 - **Safe resolutions**: Combine imports from both branches, merge non-conflicting configuration
 - **Function signatures**: Preserve parameters from both versions when possible
 - **Complex conflicts**: Flag for human review with clear explanation of the conflict
+- **🚨 MANDATORY DOCUMENTATION**: For EACH conflict resolved:
+  1. Capture the original conflict markers (<<<<<<, =======, >>>>>>>)
+  2. Document the resolution strategy chosen
+  3. Explain WHY this specific resolution was chosen
+  4. Assess risk level (Low/Medium/High)
+  5. Write to `$CONFLICT_DOCS_DIR/conflict_summary.md`
+  6. Update `$CONFLICT_DOCS_DIR/index.md` with summary stats
+  7. Commit documentation: `git add "$CONFLICT_DOCS_DIR" && git commit -m "docs: Document conflict resolution for PR #${PR_NUMBER}"`
 
 **For Bot Suggestions**:
 - Apply formatting and style fixes
@@ -753,6 +925,17 @@ For every fix applied:
 - Add comments for complex merge decisions
 - Create clear commit messages explaining changes
 - Flag any high-risk modifications for review
+
+**🚨 MANDATORY: Merge Conflict Documentation**:
+- **ALWAYS create** `docs/conflicts/{branch_name}{pr-number}/` directory
+- **ALWAYS document** each conflict resolution with:
+  - Original conflict markers
+  - Resolution strategy
+  - Reasoning for the chosen approach
+  - Risk assessment (Low/Medium/High)
+  - Final merged code
+- **ALWAYS commit** documentation alongside conflict resolution
+- See "Merge Conflict Analysis" section above for detailed documentation template
 
 ## Example Usage
 

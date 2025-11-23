@@ -4,7 +4,6 @@ Matrix-style tests for /exportcommands functionality.
 Tests the complete export workflow with comprehensive coverage.
 """
 
-import json
 import os
 import sys
 import tempfile
@@ -25,7 +24,7 @@ except ImportError as e:
 class TestExportCommandsMatrix(unittest.TestCase):
     """
     Matrix-style tests covering all export dimensions:
-    - Export Types: [Commands, Hooks, Scripts, Orchestration] 
+    - Export Types: [Commands, Hooks, Scripts, Orchestration]
     - Content States: [Empty, Normal, Large]
     - Filtering: [With/Without project-specific content]
     - GitHub Operations: [Success, Failure, No Token]
@@ -38,22 +37,22 @@ class TestExportCommandsMatrix(unittest.TestCase):
         self.project_root = os.path.join(self.temp_dir, 'test_project')
         self.export_dir = os.path.join(self.temp_dir, 'export')
         self.repo_dir = os.path.join(self.temp_dir, 'repo')
-        
+
         # Create test project structure
         os.makedirs(self.project_root)
         os.makedirs(os.path.join(self.project_root, '.claude', 'commands'))
         os.makedirs(os.path.join(self.project_root, '.claude', 'hooks'))
         os.makedirs(os.path.join(self.project_root, 'orchestration'))
-        
+
         # Create test files with project-specific content
         self._create_test_files()
-        
+
         # Mock git operations
         self.git_patcher = patch('subprocess.run')
         self.mock_subprocess = self.git_patcher.start()
         self.mock_subprocess.return_value.returncode = 0
         self.mock_subprocess.return_value.stdout = self.project_root
-        
+
         # Setup exporter if available
         if ClaudeCommandsExporter:
             with patch.object(ClaudeCommandsExporter, '_get_project_root', return_value=self.project_root):
@@ -71,11 +70,11 @@ class TestExportCommandsMatrix(unittest.TestCase):
         # Test command with project-specific content
         with open(os.path.join(self.project_root, '.claude', 'commands', 'test_command.md'), 'w') as f:
             f.write("""# Test Command
-            
+
 This command uses $PROJECT_ROOT/ paths and references $USER.
 Also mentions your-project.com and TESTING=true python.
 """)
-        
+
         # Create files that should be skipped according to COMMANDS_SKIP_LIST
         skip_files = ['conv.md', 'orchconverge.md', 'converge.md', 'orchc.md', 'testi.sh', 'run_tests.sh']
         for skip_file in skip_files:
@@ -84,7 +83,7 @@ Also mentions your-project.com and TESTING=true python.
 This file should be excluded from exports per COMMANDS_SKIP_LIST.
 Contains orchestration/testing content specific to original project.
 """)
-        
+
         # Test hook with project-specific content
         hook_content = """#!/bin/bash
 # Test hook
@@ -97,7 +96,7 @@ TESTING=true python test.py
         with open(os.path.join(self.project_root, '.claude', 'hooks', 'test_hook.sh'), 'w') as f:
             f.write(hook_content)
         os.chmod(os.path.join(self.project_root, '.claude', 'hooks', 'test_hook.sh'), 0o755)
-        
+
         # Test infrastructure script
         with open(os.path.join(self.project_root, 'claude_start.sh'), 'w') as f:
             f.write("""#!/bin/bash
@@ -105,13 +104,13 @@ TESTING=true python test.py
 export DOMAIN="your-project.com"
 export USER="$USER"
 """)
-        
+
         # Test orchestration files with excluded directories
         for excluded_dir in ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']:
             os.makedirs(os.path.join(self.project_root, 'orchestration', excluded_dir), exist_ok=True)
             with open(os.path.join(self.project_root, 'orchestration', excluded_dir, 'test.py'), 'w') as f:
                 f.write(f"# {excluded_dir} test file - should be excluded")
-        
+
         # Test orchestration core files (should be included)
         with open(os.path.join(self.project_root, 'orchestration', 'core.py'), 'w') as f:
             f.write("# Core orchestration - should be included")
@@ -121,10 +120,10 @@ export USER="$USER"
         """Test command export across different content states."""
         test_cases = [
             {'state': 'empty', 'file_count': 0, 'expect_warning': True},
-            {'state': 'normal', 'file_count': 1, 'expect_warning': False}, 
+            {'state': 'normal', 'file_count': 1, 'expect_warning': False},
             {'state': 'large', 'file_count': 50, 'expect_warning': False}
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case):
                 # Setup test state
@@ -132,23 +131,23 @@ export USER="$USER"
                 # Clear directory (including the pre-created test_command.md)
                 for f in os.listdir(commands_dir):
                     os.remove(os.path.join(commands_dir, f))
-                
+
                 # Reset counter
                 self.exporter.commands_count = 0
-                
+
                 # Create test files based on state
                 if case['state'] != 'empty':
                     for i in range(case['file_count']):
                         with open(os.path.join(commands_dir, f'cmd_{i}.md'), 'w') as f:
                             f.write(f"# Command {i}\nContent with $PROJECT_ROOT/ references")
-                
+
                 # Create staging directory
                 staging_dir = os.path.join(self.export_dir, 'staging')
                 os.makedirs(staging_dir, exist_ok=True)
-                
+
                 # Test export
                 self.exporter._export_commands(staging_dir)
-                
+
                 # Validate results
                 target_dir = os.path.join(staging_dir, 'commands')
                 if case['expect_warning']:
@@ -157,7 +156,7 @@ export USER="$USER"
                 else:
                     # Should export files and apply filtering
                     self.assertEqual(self.exporter.commands_count, case['file_count'])
-                    
+
                     # Check content filtering
                     if case['file_count'] > 0:
                         test_file = os.path.join(target_dir, 'cmd_0.md')
@@ -174,29 +173,29 @@ export USER="$USER"
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, 'staging')
         os.makedirs(staging_dir, exist_ok=True)
-        
+
         # Reset counter
         self.exporter.commands_count = 0
-        
+
         # Get initial count (should include test_command.md but exclude skip list files)
         commands_dir = os.path.join(self.project_root, '.claude', 'commands')
         total_files = len([f for f in os.listdir(commands_dir) if f.endswith(('.md', '.py', '.sh'))])
         skip_files = ['conv.md', 'orchconverge.md', 'converge.md', 'orchc.md', 'testi.sh', 'run_tests.sh']
         expected_count = total_files - len(skip_files)
-        
+
         # Test export
         self.exporter._export_commands(staging_dir)
-        
+
         # Validate skip list worked correctly
         self.assertEqual(self.exporter.commands_count, expected_count)
-        
+
         # Check that skip list files were not exported
         target_commands_dir = os.path.join(staging_dir, 'commands')
         exported_files = os.listdir(target_commands_dir) if os.path.exists(target_commands_dir) else []
-        
+
         for skip_file in skip_files:
             self.assertNotIn(skip_file, exported_files, f"Skip list file {skip_file} should not be exported")
-        
+
         # Check that regular files were exported
         self.assertIn('test_command.md', exported_files, "Regular command files should be exported")
 
@@ -210,15 +209,15 @@ export USER="$USER"
         Export statistics show **145 Commands** total.
         And **22 Hooks** with **5 Scripts** available.
         """
-        
+
         # Set test counts
         self.exporter.commands_count = 100
         self.exporter.hooks_count = 15
         self.exporter.scripts_count = 8
-        
+
         # Apply dynamic replacement
         result = self.exporter._replace_dynamic_placeholders(test_content)
-        
+
         # Verify replacements
         self.assertIn('**100 commands**', result)
         self.assertNotIn('**144 commands**', result)
@@ -233,30 +232,30 @@ export USER="$USER"
         # Create source directory with mixed files
         source_dir = os.path.join(self.temp_dir, 'source')
         os.makedirs(source_dir, exist_ok=True)
-        
+
         # Create files including some from skip list
         all_files = ['test_command.md', 'conv.md', 'orchconverge.md', 'normal_file.py', 'testi.sh']
         for file_name in all_files:
             with open(os.path.join(source_dir, file_name), 'w') as f:
                 f.write(f"Content of {file_name}")
-        
+
         # Create target directory
         target_dir = os.path.join(self.temp_dir, 'target')
         os.makedirs(target_dir, exist_ok=True)
-        
+
         # Test the copy with filtering
         self.exporter._copy_directory_with_filtering(source_dir, target_dir)
-        
+
         # Check results
         copied_files = os.listdir(target_dir)
-        
+
         # Should include normal files
         self.assertIn('test_command.md', copied_files)
         self.assertIn('normal_file.py', copied_files)
-        
+
         # Should exclude skip list files
         self.assertNotIn('conv.md', copied_files)
-        self.assertNotIn('orchconverge.md', copied_files) 
+        self.assertNotIn('orchconverge.md', copied_files)
         self.assertNotIn('testi.sh', copied_files)
 
     @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
@@ -267,13 +266,13 @@ export USER="$USER"
             {'type': 'python', 'ext': '.py', 'expect_executable': True},
             {'type': 'markdown', 'ext': '.md', 'expect_executable': False}
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case):
                 # Create test hook
                 hooks_dir = os.path.join(self.project_root, '.claude', 'hooks')
                 test_hook = os.path.join(hooks_dir, f'test_hook{case["ext"]}')
-                
+
                 with open(test_hook, 'w') as f:
                     if case['type'] == 'shell':
                         f.write("#!/bin/bash\necho 'test with $PROJECT_ROOT/ path'")
@@ -281,19 +280,19 @@ export USER="$USER"
                         f.write("#!/usr/bin/env python3\nprint('test with $USER')")
                     else:
                         f.write("# Test markdown\nContent with your-project.com")
-                
+
                 if case['expect_executable']:
                     os.chmod(test_hook, 0o755)
-                
+
                 # Create staging directory and test export
                 staging_dir = os.path.join(self.export_dir, 'staging')
                 os.makedirs(staging_dir, exist_ok=True)
-                
+
                 # Mock rsync for hooks export
                 with patch('subprocess.run') as mock_rsync:
                     mock_rsync.return_value.returncode = 0
                     self.exporter._export_hooks(staging_dir)
-                    
+
                     # Should call rsync with correct parameters
                     mock_rsync.assert_called()
                     args = mock_rsync.call_args[0][0]
@@ -310,17 +309,17 @@ export USER="$USER"
             {'input': 'TESTING=true python', 'expected': 'TESTING=true python'},
             {'input': 'Your Project', 'expected': 'Your Project'}
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case):
                 # Create test file with content to filter
                 test_file = os.path.join(self.temp_dir, 'test_content.txt')
                 with open(test_file, 'w') as f:
                     f.write(case['input'])
-                
+
                 # Apply filtering
                 self.exporter._apply_content_filtering(test_file)
-                
+
                 # Check result
                 with open(test_file, 'r') as f:
                     result = f.read()
@@ -330,18 +329,18 @@ export USER="$USER"
     def test_directory_exclusions_matrix(self):
         """Test directory exclusion patterns."""
         excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']
-        
+
         for excluded_dir in excluded_dirs:
             with self.subTest(directory=excluded_dir):
                 # Create staging directory
                 staging_dir = os.path.join(self.export_dir, 'staging')
                 os.makedirs(staging_dir, exist_ok=True)
-                
+
                 # Mock rsync to capture exclusion patterns
                 with patch('subprocess.run') as mock_rsync:
                     mock_rsync.return_value.returncode = 0
                     self.exporter._export_orchestration(staging_dir)
-                    
+
                     if mock_rsync.called:
                         args = mock_rsync.call_args[0][0]
                         exclusion_found = any(f'--exclude={excluded_dir}/' in arg for arg in args)
@@ -355,28 +354,28 @@ export USER="$USER"
             {'commands': 5, 'hooks': 3, 'scripts': 2},
             {'commands': 85, 'hooks': 8, 'scripts': 7}
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case):
                 # Set test counts
                 self.exporter.commands_count = case['commands']
                 self.exporter.hooks_count = case['hooks']
                 self.exporter.scripts_count = case['scripts']
-                
+
                 # Generate README
                 self.exporter._generate_readme()
-                
+
                 # Check generated content
                 readme_path = os.path.join(self.export_dir, 'README.md')
                 self.assertTrue(os.path.exists(readme_path))
-                
+
                 with open(readme_path, 'r') as f:
                     content = f.read()
-                    
+
                     # Should contain dynamic counts
                     self.assertIn(f"**{case['commands']} commands**", content)
                     self.assertIn(f"**{case['hooks']} hooks**", content)
-                    
+
                     # Should contain proper structure - check for installation content
                     self.assertTrue("Installation" in content or "install" in content.lower() or "MANUAL INSTALLATION" in content)
                     self.assertIn("REFERENCE EXPORT", content)
@@ -386,15 +385,15 @@ export USER="$USER"
         """Test export workflow without deprecated install script generation."""
         # Test that export works without install script
         self.exporter.phase1_local_export()
-        
+
         # Verify export structure created successfully
         staging_dir = os.path.join(self.export_dir, 'staging')
         self.assertTrue(os.path.exists(staging_dir))
-        
+
         # Check that README was generated (fallback mode)
         readme_path = os.path.join(self.export_dir, 'README.md')
         self.assertTrue(os.path.exists(readme_path))
-        
+
         with open(readme_path, 'r') as f:
             content = f.read()
             # Should contain export contents information
@@ -403,14 +402,14 @@ export USER="$USER"
             self.assertIn('MANUAL INSTALLATION', content)
             self.assertNotIn('install.sh', content)
 
-    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available") 
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
     def test_github_operations_matrix(self):
         """Test GitHub operations with different scenarios."""
         test_cases = [
             {'token_present': True, 'expect_success': True},
             {'token_present': False, 'expect_success': False}
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case):
                 # Setup GitHub token
@@ -418,12 +417,12 @@ export USER="$USER"
                     self.exporter.github_token = 'test_token'
                 else:
                     self.exporter.github_token = None
-                
+
                 # Mock GitHub API calls
                 with patch('requests.post') as mock_post:
                     mock_post.return_value.status_code = 201
                     mock_post.return_value.json.return_value = {'html_url': 'https://github.com/test/pr/1'}
-                    
+
                     if not case['expect_success']:
                         with self.assertRaises(Exception):
                             self.exporter.phase2_github_publish()
@@ -434,7 +433,7 @@ export USER="$USER"
                              patch.object(self.exporter, '_copy_to_repository'), \
                              patch.object(self.exporter, '_verify_exclusions'), \
                              patch.object(self.exporter, '_commit_and_push'):
-                            
+
                             result = self.exporter._create_pull_request()
                             self.assertIn('github.com', result)
 
@@ -442,13 +441,13 @@ export USER="$USER"
         """Test error handling across different failure scenarios."""
         if ClaudeCommandsExporter is None:
             self.skipTest("ClaudeCommandsExporter not available")
-            
+
         test_cases = [
             {'scenario': 'missing_commands_dir', 'expect_warning': True},
             {'scenario': 'missing_hooks_dir', 'expect_warning': True},
             {'scenario': 'missing_orchestration_dir', 'expect_skip': True}
         ]
-        
+
         for case in test_cases:
             with self.subTest(scenario=case['scenario']):
                 # Remove directory to trigger error handling
@@ -458,11 +457,11 @@ export USER="$USER"
                     shutil.rmtree(os.path.join(self.project_root, '.claude', 'hooks'))
                 elif case['scenario'] == 'missing_orchestration_dir':
                     shutil.rmtree(os.path.join(self.project_root, 'orchestration'))
-                
+
                 # Create staging directory
                 staging_dir = os.path.join(self.export_dir, 'staging')
                 os.makedirs(staging_dir, exist_ok=True)
-                
+
                 # Test graceful handling
                 try:
                     if case['scenario'] == 'missing_commands_dir':
@@ -474,28 +473,28 @@ export USER="$USER"
                     elif case['scenario'] == 'missing_orchestration_dir':
                         self.exporter._export_orchestration(staging_dir)
                         # Should not raise exception
-                        
+
                 except Exception as e:
                     self.fail(f"Should handle missing directory gracefully: {e}")
 
 class TestExportCommandsIntegration(unittest.TestCase):
     """Integration tests for end-to-end export workflow."""
-    
+
     def setUp(self):
         """Set up integration test environment."""
         if ClaudeCommandsExporter is None:
             self.skipTest("ClaudeCommandsExporter not available")
-            
+
         self.temp_dir = tempfile.mkdtemp(prefix='test_export_integration_')
         self.project_root = os.path.join(self.temp_dir, 'test_project')
-        
+
         # Create realistic project structure
         self._create_realistic_project()
-        
+
     def tearDown(self):
         """Clean up integration test environment."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
-    
+
     def _create_realistic_project(self):
         """Create a realistic project structure for testing."""
         # Create directory structure
@@ -506,10 +505,10 @@ class TestExportCommandsIntegration(unittest.TestCase):
             'orchestration/analysis',  # Should be excluded
             'orchestration/automation'  # Should be excluded
         ]
-        
+
         for dir_path in dirs:
             os.makedirs(os.path.join(self.project_root, dir_path), exist_ok=True)
-        
+
         # Create test commands
         commands = ['execute.md', 'pr.md', 'copilot.md', 'testproject.sh']  # testproject.sh should be excluded
         for cmd in commands:
@@ -520,7 +519,7 @@ User: $USER
 Domain: your-project.com
 TESTING=true python test.py
 """)
-        
+
         # Create test hooks
         hooks = ['post_commit_sync.sh', 'anti_demo_check.py']
         for hook in hooks:
@@ -530,7 +529,7 @@ TESTING=true python test.py
                     f.write(f"""#!/bin/bash
 # {hook} - Essential Claude Code hook
 export PROJECT_ROOT="$PROJECT_ROOT/"
-export USER="$USER" 
+export USER="$USER"
 """)
                 else:
                     f.write(f"""#!/usr/bin/env python3
@@ -539,7 +538,7 @@ PROJECT_ROOT = "$PROJECT_ROOT/"
 USER = "$USER"
 """)
             os.chmod(hook_path, 0o755)
-        
+
         # Create infrastructure scripts
         scripts = ['claude_start.sh', 'claude_mcp.sh']
         for script in scripts:
@@ -548,11 +547,11 @@ USER = "$USER"
 # {script} infrastructure
 export DOMAIN="your-project.com"
 """)
-        
+
         # Create orchestration files (some to exclude, some to keep)
         with open(os.path.join(self.project_root, 'orchestration/core/main.py'), 'w') as f:
             f.write("# Core orchestration - should be included")
-        
+
         with open(os.path.join(self.project_root, 'orchestration/analysis/report.py'), 'w') as f:
             f.write("# Analysis - should be excluded")
 
@@ -563,11 +562,11 @@ export DOMAIN="your-project.com"
         # Mock git operations
         mock_subprocess.return_value.returncode = 0
         mock_subprocess.return_value.stdout = self.project_root
-        
+
         # Create exporter
         with patch.object(ClaudeCommandsExporter, '_get_project_root', return_value=self.project_root):
             exporter = ClaudeCommandsExporter()
-        
+
         # Create a mock rsync that actually creates files
         def mock_rsync_side_effect(*args, **kwargs):
             if 'rsync' in args[0] and args[0][0] == 'rsync':
@@ -582,31 +581,31 @@ export DOMAIN="your-project.com"
                             f.write(f"# Test hook: {hook}")
                         if hook.endswith('.sh'):
                             os.chmod(hook_path, 0o755)
-            
+
             mock_result = Mock()
             mock_result.returncode = 0
             mock_result.stdout = ''
             mock_result.stderr = ''
             return mock_result
-        
+
         # Mock GitHub operations and subprocess for hooks
         with patch.object(exporter, 'phase2_github_publish', return_value='https://github.com/test/pr/1') as mock_github, \
              patch('subprocess.run', side_effect=mock_rsync_side_effect) as mock_subprocess:
-            
+
             # Run phase 1 (local export)
             exporter.phase1_local_export()
-            
+
             # Verify local export results
             self.assertTrue(os.path.exists(os.path.join(exporter.export_dir, 'staging')))
             self.assertTrue(os.path.exists(os.path.join(exporter.export_dir, 'README.md')))
-            
+
             # Verify install script is not generated (deprecated functionality)
             self.assertFalse(os.path.exists(os.path.join(exporter.export_dir, 'install.sh')))
-            
+
             # Check counts are reasonable
             self.assertGreater(exporter.commands_count, 0)
             self.assertGreater(exporter.hooks_count, 0)
-            
+
             # Verify content filtering
             commands_dir = os.path.join(exporter.export_dir, 'staging', 'commands')
             if os.path.exists(commands_dir):
@@ -621,7 +620,7 @@ export DOMAIN="your-project.com"
                             # Should contain generic replacements
                             self.assertIn('$PROJECT_ROOT/', content)
                             self.assertIn('$USER', content)
-            
+
             # Test GitHub phase would be called
             mock_github.return_value = 'https://github.com/test/pr/1'
 

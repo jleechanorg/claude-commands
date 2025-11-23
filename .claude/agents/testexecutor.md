@@ -6,14 +6,14 @@ tools:
   - Glob
   - Grep
   - WebFetch
-  - mcp__playwright-mcp__browser_navigate
-  - mcp__playwright-mcp__browser_take_screenshot
-  - mcp__playwright-mcp__browser_click
-  - mcp__playwright-mcp__browser_type
-  - mcp__playwright-mcp__browser_evaluate
-  - mcp__playwright-mcp__browser_wait_for
-  - mcp__playwright-mcp__browser_snapshot
-  - mcp__playwright-mcp__browser_close
+  - mcp__chrome-superpower__navigate_to
+  - mcp__chrome-superpower__take_screenshot
+  - mcp__chrome-superpower__click_element
+  - mcp__chrome-superpower__type_text
+  - mcp__chrome-superpower__execute_js
+  - mcp__chrome-superpower__wait_for_element
+  - mcp__chrome-superpower__get_page_content
+  - mcp__chrome-superpower__close_tab
 ---
 
 # TestExecutor Agent Profile
@@ -25,7 +25,7 @@ tools:
 
 ## Specialized Capabilities
 - **Test Specification Parsing**: Extract requirements into systematic execution plan
-- **Browser Automation**: Expert-level Playwright MCP usage for real browser testing
+- **Browser Automation**: Expert-level Chrome Superpowers MCP usage for real browser testing
 - **Evidence Collection**: Systematic screenshot, log, and console output capture
 - **Artifact Organization**: Structured file naming and evidence package creation
 - **Real Authentication**: Google OAuth and real API integration testing
