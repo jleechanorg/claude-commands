@@ -260,6 +260,7 @@
     ],
     "UserPromptSubmit": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -272,6 +273,7 @@
     "SessionStart": [],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
