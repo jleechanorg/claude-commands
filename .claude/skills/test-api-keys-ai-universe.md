@@ -1,17 +1,17 @@
 ---
-description: Test API keys against jleechanorg/ai_universe repository services
+description: Test API keys against $ORG/$REPO repository services
 type: testing
 scope: project
 ---
 
-# Test API Keys Against AI Universe Repository
+# Test API Keys Against Repository
 
-This skill provides a script to test API keys from your `.bashrc` against the actual services used by the `jleechanorg/ai_universe` repository.
+This skill provides a script to test API keys from your `.bashrc` against the actual services used by your repository.
 
 ## Overview
 
 The script:
-- Clones the `ai_universe` repository to `/tmp`
+- Clones the repository to `/tmp`
 - Tests API keys against the actual API endpoints used by the repo
 - Validates GitHub access to the repository
 - Tests LLM API keys (Gemini, OpenAI, Anthropic, Perplexity, OpenRouter)
@@ -30,12 +30,12 @@ The script:
 
 ```bash
 # Run the test script
-bash /tmp/test_ai_universe_api_keys.sh
+bash /tmp/test_repo_api_keys.sh
 ```
 
 The script will:
 1. Load API keys from `~/.bashrc`
-2. Clone the `ai_universe` repository to `/tmp/ai_universe_api_test_*/`
+2. Clone your repository to `/tmp/repo_api_test_*/`
 3. Test each API key against its respective service
 4. Display results and cleanup temporary files
 
@@ -43,10 +43,10 @@ The script will:
 
 The script tests the following API keys (loaded from `~/.bashrc`):
 
-| API Key | Service | Purpose in AI Universe |
-|---------|---------|----------------------|
+| API Key | Service | Purpose |
+|---------|---------|---------|
 | `GITHUB_TOKEN` | GitHub API | Repository access and authentication |
-| `GEMINI_API_KEY` | Google Gemini | Primary AI model for game master |
+| `GEMINI_API_KEY` | Google Gemini | Primary AI model |
 | `OPENAI_API_KEY` | OpenAI | Multi-model synthesis |
 | `ANTHROPIC_API_KEY` | Anthropic Claude | Multi-model synthesis |
 | `PERPLEXITY_API_KEY` | Perplexity | Multi-model synthesis |
@@ -56,11 +56,11 @@ The script tests the following API keys (loaded from `~/.bashrc`):
 
 ```
 ========================================
-AI Universe API Key Testing
+Repository API Key Testing
 ========================================
 
 Loading API keys from ~/.bashrc...
-Cloning ai_universe repository...
+Cloning repository...
 ✅ Repository cloned successfully
 
 Checking API key usage in repository...
@@ -71,7 +71,7 @@ Checking API key usage in repository...
 Testing API keys...
 
 Testing GitHub repo access...
-✅ GitHub token valid - Can access repo: jleechanorg/ai_universe
+✅ GitHub token valid - Can access repo: $ORG/$REPO
 
 Testing Gemini API...
 ✅ Gemini API key valid - Can list models
@@ -102,7 +102,7 @@ Total: 6
 
 ### Script Not Found
 
-If the script doesn't exist at `/tmp/test_ai_universe_api_keys.sh`, you can recreate it:
+If the script doesn't exist at `/tmp/test_repo_api_keys.sh`, you can recreate it:
 
 ```bash
 # The script is created automatically, but if needed, you can ask Claude to recreate it
@@ -174,7 +174,7 @@ If the repository clone fails:
 
 2. **Verify repository exists:**
    ```bash
-   curl -I https://github.com/jleechanorg/ai_universe
+   curl -I https://github.com/$ORG/$REPO
    ```
 
 3. **Check GitHub access:**
@@ -191,7 +191,7 @@ You can integrate this script into CI/CD pipelines:
 # Example GitHub Actions workflow
 - name: Test API Keys
   run: |
-    bash /tmp/test_ai_universe_api_keys.sh
+    bash /tmp/test_repo_api_keys.sh
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -205,7 +205,7 @@ Set up a cron job to test keys periodically:
 ```bash
 # Add to crontab (crontab -e)
 # Test API keys daily at 2 AM
-0 2 * * * bash /tmp/test_ai_universe_api_keys.sh >> /tmp/api_key_test.log 2>&1
+0 2 * * * bash /tmp/test_repo_api_keys.sh >> /tmp/api_key_test.log 2>&1
 ```
 
 ## Security Notes
@@ -217,29 +217,29 @@ Set up a cron job to test keys periodically:
 
 ## Related Skills
 
-- [ai-universe-auth.md](ai-universe-auth.md) - Authentication setup for AI Universe MCP server
-- [ai-universe-httpie.md](ai-universe-httpie.md) - Using HTTPie with AI Universe APIs
-- [gcp-deployment.md](gcp-deployment.md) - GCP deployment and service management
+- Project-specific authentication setup
+- HTTPie usage with APIs
+- Deployment and service management
 
 ## Script Location
 
 The script is located at:
-- **Path**: `/tmp/test_ai_universe_api_keys.sh`
-- **Working Directory**: `/tmp/ai_universe_api_test_*/` (temporary, auto-cleaned)
-- **Repository Clone**: `/tmp/ai_universe_api_test_*/ai_universe/` (temporary)
+- **Path**: `/tmp/test_repo_api_keys.sh`
+- **Working Directory**: `/tmp/repo_api_test_*/` (temporary, auto-cleaned)
+- **Repository Clone**: `/tmp/repo_api_test_*/$REPO/` (temporary)
 
 ## Maintenance
 
 The script is automatically maintained and can be recreated if needed. To update:
 
 1. Ask Claude to recreate the script
-2. Or modify the script directly at `/tmp/test_ai_universe_api_keys.sh`
+2. Or modify the script directly at `/tmp/test_repo_api_keys.sh`
 
 ## Example Workflow
 
 ```bash
 # 1. Test all API keys
-bash /tmp/test_ai_universe_api_keys.sh
+bash /tmp/test_repo_api_keys.sh
 
 # 2. If GitHub fails, check token
 curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
@@ -248,5 +248,5 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
 curl "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY"
 
 # 4. Fix any issues and re-run
-bash /tmp/test_ai_universe_api_keys.sh
+bash /tmp/test_repo_api_keys.sh
 ```

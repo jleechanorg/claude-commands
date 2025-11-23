@@ -14,8 +14,6 @@ import tempfile
 import os
 import subprocess
 import shutil
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 
 class TestConflictDocumentationDirectoryCreation(unittest.TestCase):

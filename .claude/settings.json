@@ -291,6 +291,7 @@
     "padding": 0
   },
   "mcpServers": {
+    "# playwright-mcp disabled by default - set PLAYWRIGHT_ENABLED=true to enable": {},
     "chrome-superpower": {
       "command": "node",
       "args": [
