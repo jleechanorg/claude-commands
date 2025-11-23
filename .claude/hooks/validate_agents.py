@@ -74,7 +74,7 @@ def validate_all_agents():
             print(f"   • {agent_file.name}: {message}")
         return False
 
-    print(f"\n✅ All agents valid")
+    print("\n✅ All agents valid")
     return True
 
 if __name__ == "__main__":

@@ -289,7 +289,6 @@ declare -a ALL_SERVER_NAMES=(
     "context7"
     "sequential-thinking"
     "chrome-superpower"
-    # "playwright-mcp"  # Disabled by default - uncomment to enable
     "gemini-cli-mcp"
     "grok"
     "perplexity-ask"
@@ -532,7 +531,10 @@ FAILED_INSTALLS=0
 CURRENT_STEP=0
 
 # Ensure GitHub token availability per scripting guidelines
-export GITHUB_TOKEN="${GITHUB_TOKEN:-$GITHUB_PERSONAL_ACCESS_TOKEN}"
+# Mirror personal access token into GITHUB_TOKEN when only the former is set.
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
+    export GITHUB_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
+fi
 
 # Parallel processing configuration
 MAX_PARALLEL_JOBS=3
@@ -1968,11 +1970,8 @@ if should_install_server "chrome-superpower"; then
     install_chrome_superpower_mcp
 fi
 
-# DISABLED: Playwright MCP Server (disabled by default - users can enable if needed)
-# if should_install_server "playwright-mcp"; then
-#     display_step "Installing Optional Playwright MCP Server..."
-#     install_playwright_mcp
-# fi
+# Playwright MCP intentionally disabled by default. To enable, set PLAYWRIGHT_ENABLED=true
+# and re-add "playwright-mcp" to ALL_SERVER_NAMES along with the install block below.
 
 # DISABLED: Memory MCP Server (not needed - using standard state management)
 # if should_install_server "memory-server"; then

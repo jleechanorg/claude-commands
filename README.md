@@ -880,7 +880,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ## 📚 Version History
 
-### v1.1.0 (2025-11-22)
+### v1.2.0 (2025-11-22)
 
 **Export Statistics**:
 - **191 Commands**: Complete workflow orchestration system
@@ -902,7 +902,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude Code specific vs universally useful tools
+- Better categorization of Claude-Code-specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:

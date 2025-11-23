@@ -1,17 +1,17 @@
 ---
-description: Test API keys against jleechanorg/ai_universe repository services
+description: Test API keys against $ORG/$REPO repository services
 type: testing
 scope: project
 ---
 
 # Test API Keys Against AI Universe Repository
 
-This skill provides a script to test API keys from your `.bashrc` against the actual services used by the `jleechanorg/ai_universe` repository.
+This skill provides a script to test API keys from your `.bashrc` against the actual services used by the `$ORG/$REPO` repository.
 
 ## Overview
 
 The script:
-- Clones the `ai_universe` repository to `/tmp`
+- Clones the `$REPO` repository to `/tmp`
 - Tests API keys against the actual API endpoints used by the repo
 - Validates GitHub access to the repository
 - Tests LLM API keys (Gemini, OpenAI, Anthropic, Perplexity, OpenRouter)
@@ -35,7 +35,7 @@ bash /tmp/test_ai_universe_api_keys.sh
 
 The script will:
 1. Load API keys from `~/.bashrc`
-2. Clone the `ai_universe` repository to `/tmp/ai_universe_api_test_*/`
+2. Clone the `$REPO` repository to `/tmp/${REPO}_api_test_*/`
 3. Test each API key against its respective service
 4. Display results and cleanup temporary files
 
@@ -54,13 +54,13 @@ The script tests the following API keys (loaded from `~/.bashrc`):
 
 ### Expected Output
 
-```
+```bash
 ========================================
 AI Universe API Key Testing
 ========================================
 
 Loading API keys from ~/.bashrc...
-Cloning ai_universe repository...
+Cloning $REPO repository...
 ✅ Repository cloned successfully
 
 Checking API key usage in repository...
@@ -71,7 +71,7 @@ Checking API key usage in repository...
 Testing API keys...
 
 Testing GitHub repo access...
-✅ GitHub token valid - Can access repo: jleechanorg/ai_universe
+✅ GitHub token valid - Can access repo: $ORG/$REPO
 
 Testing Gemini API...
 ✅ Gemini API key valid - Can list models

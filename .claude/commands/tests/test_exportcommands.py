@@ -163,8 +163,7 @@ export USER="$USER"
                         if os.path.exists(test_file):
                             with open(test_file, 'r') as f:
                                 content = f.read()
-                                # Project-specific content should be filtered
-                                self.assertNotIn('$PROJECT_ROOT/', content)
+                                # Project-specific placeholders should remain after filtering
                                 self.assertIn('$PROJECT_ROOT/', content)
 
     @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
@@ -180,7 +179,7 @@ export USER="$USER"
         # Get initial count (should include test_command.md but exclude skip list files)
         commands_dir = os.path.join(self.project_root, '.claude', 'commands')
         total_files = len([f for f in os.listdir(commands_dir) if f.endswith(('.md', '.py', '.sh'))])
-        skip_files = ['conv.md', 'orchconverge.md', 'converge.md', 'orchc.md', 'testi.sh', 'run_tests.sh']
+        skip_files = ['conv.md', 'orchconverge.md', 'converge.md', 'orchc.md', 'testi.sh', 'run_tests.sh', 'testproject.sh']
         expected_count = total_files - len(skip_files)
 
         # Test export
@@ -188,6 +187,8 @@ export USER="$USER"
 
         # Validate skip list worked correctly
         self.assertEqual(self.exporter.commands_count, expected_count)
+        exported_commands = os.listdir(os.path.join(staging_dir, 'commands'))
+        self.assertNotIn('testproject.sh', exported_commands)
 
         # Check that skip list files were not exported
         target_commands_dir = os.path.join(staging_dir, 'commands')
@@ -613,13 +614,10 @@ export DOMAIN="your-project.com"
                     if cmd_file.endswith('.md'):
                         with open(os.path.join(commands_dir, cmd_file), 'r') as f:
                             content = f.read()
-                            # Project-specific content should be filtered
-                            self.assertNotIn('$PROJECT_ROOT/', content)
-                            self.assertNotIn('$USER', content)
-                            self.assertNotIn('your-project.com', content)
-                            # Should contain generic replacements
+                            # Project-specific placeholders should remain in filtered output
                             self.assertIn('$PROJECT_ROOT/', content)
                             self.assertIn('$USER', content)
+                            self.assertIn('your-project.com', content)
 
             # Test GitHub phase would be called
             mock_github.return_value = 'https://github.com/test/pr/1'

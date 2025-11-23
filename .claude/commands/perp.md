@@ -21,7 +21,7 @@ execution_mode: immediate
 
 **Purpose**: Combine multiple search engines for comprehensive results
 
-**Usage**: `/perp <query>` - Search across Claude WebSearch, DuckDuckGo, Perplexity, Gemini, and Grok simultaneously (with Grok prioritized when available for its real-time signal)
+**Usage**: `/perp <query>` - Search across Claude WebSearch, Perplexity, Gemini, and Grok simultaneously (with Grok prioritized when available for its real-time signal)
 
 ## 🔍 MULTI-ENGINE SEARCH PROTOCOL
 
@@ -73,15 +73,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 - Provide `return_citations=true` unless the user explicitly requests otherwise
 - Include `stream=false` for deterministic batch responses
 
-#### 3. DuckDuckGo MCP
-
-**Capabilities**:
-- Free, privacy-first search results
-- No API key required
-- Complementary ranking to Claude WebSearch
-- Lightweight link discovery for rapid follow-up
-
-#### 4. Gemini MCP
+#### 3. Gemini MCP
 
 **Capabilities**:
 - AI development consultation and code assistance
@@ -89,7 +81,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 - Alternative AI analysis approach
 - Development-focused insights
 
-#### 5. Grok MCP
+#### 4. Grok MCP
 
 **Capabilities**:
 - Real-time intelligence sourced from X (Twitter) data streams
@@ -102,7 +94,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 
 **Intelligent Execution**:
 - Use `WebSearch` first to confirm date context and detect which MCP search tools are active
-- Try all available search engines automatically (Claude WebSearch, Perplexity, DuckDuckGo, Gemini, Grok)
+- Try all available search engines automatically (Claude WebSearch, Perplexity, Gemini, Grok)
 - Prioritize Grok's real-time signal when time-sensitive insight is needed
 - Handle any unavailable services gracefully
 - Results are compared and synthesized
@@ -128,9 +120,6 @@ This command provides comprehensive multi-engine search by intelligently using w
 
 🧠 Perplexity Deep Research:
 [Structured synthesis with citations and recency filters]
-
-🦆 DuckDuckGo Findings:
-[Alternate ranking and supplemental sources]
 
 💎 Gemini Consultation:
 [Development-focused technical analysis and code guidance]
@@ -172,11 +161,10 @@ This command provides comprehensive multi-engine search by intelligently using w
 
 ## Key Benefits
 
-- ✅ **Comprehensive Coverage** - Five different search approaches
+- ✅ **Comprehensive Coverage** - Four different search approaches
 - ✅ **Real-time Information** - Latest data from multiple sources
 - ✅ **AI Analysis & Synthesis** - Perplexity, Gemini, and Grok MCPs intelligently combine and interpret results for deeper insights
 - ✅ **Perplexity Deep Research** - Premium search with citations, recency controls, and reasoning traces for authoritative answers
-- ✅ **DuckDuckGo Integration** - Provides a free alternate search index with source citations for enhanced reliability
 - ✅ **Development Focus** - Gemini MCP specializes in technical consultation when available
 - ✅ **Real-time Intelligence** - Grok layers in fast-moving trends and X-based insights
 - ✅ **Source Diversity** - Different algorithms and data sources

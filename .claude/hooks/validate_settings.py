@@ -23,7 +23,7 @@ def remove_additional_properties_false(schema):
             del schema['additionalProperties']
 
         # Recurse into nested schemas
-        for key, value in schema.items():
+        for _, value in schema.items():
             if isinstance(value, (dict, list)):
                 remove_additional_properties_false(value)
     elif isinstance(schema, list):
@@ -64,7 +64,7 @@ def validate_settings():
 
             # Validate with lenient schema
             validate(instance=settings, schema=lenient_schema)
-            print(f"   ✅ Valid (lenient mode: allows description fields)")
+            print("   ✅ Valid (lenient mode: allows description fields)")
 
         except ValidationError as e:
             print(f"   ❌ Validation error: {e.message}")
@@ -81,7 +81,7 @@ def validate_settings():
         print(f"\n❌ Found {len(errors)} validation error(s)")
         return False
 
-    print(f"\n✅ All settings files valid")
+    print("\n✅ All settings files valid")
     return True
 
 if __name__ == "__main__":

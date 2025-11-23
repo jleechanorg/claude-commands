@@ -14,8 +14,6 @@ import tempfile
 import os
 import subprocess
 import shutil
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 
 class TestConflictDocumentationDirectoryCreation(unittest.TestCase):
@@ -51,7 +49,7 @@ class TestConflictDocumentationDirectoryCreation(unittest.TestCase):
         # Verify directory exists at correct flat path
         self.assertTrue(os.path.isdir(conflict_docs_dir))
         # Verify it's flat (no nested feature/ directory)
-        self.assertFalse(os.path.exists("docs/conflicts/feature/test-branch1234"))
+        self.assertFalse(os.path.exists("docs/conflicts/feature"))
         # Verify expected sanitized path
         self.assertTrue(os.path.exists("docs/conflicts/feature-test-branch-pr1234"))
 
