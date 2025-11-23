@@ -107,7 +107,7 @@ GITHUB_TOKEN_LOADED=${GITHUB_TOKEN_LOADED:-false}
 RENDER_API_KEY=${RENDER_API_KEY:-}
 PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
 GROK_API_KEY=${GROK_API_KEY:-}
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
+PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-false}
 REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
 IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
 GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
@@ -289,10 +289,9 @@ declare -a ALL_SERVER_NAMES=(
     "context7"
     "sequential-thinking"
     "chrome-superpower"
-    "playwright-mcp"
+    # "playwright-mcp"  # Disabled by default - uncomment to enable
     "gemini-cli-mcp"
     "grok"
-    "ddg-search"
     "perplexity-ask"
     # "filesystem"  # Disabled by default - uncomment to enable
     "react-mcp"
@@ -1064,21 +1063,28 @@ else
     echo -e "${YELLOW}⚠️ Centralized token helper not found, falling back to legacy method${NC}"
     log_with_timestamp "WARNING: Token helper not found at $TOKEN_HELPER, using fallback"
 
-    # Fallback to legacy token loading
-    HOME_TOKEN_FILE="$HOME/.token"
-    if [ -f "$HOME_TOKEN_FILE" ]; then
-        echo -e "${GREEN}✅ Loading tokens from $HOME_TOKEN_FILE${NC}"
-        source "$HOME_TOKEN_FILE"
+    # Fallback: try environment variable first, then ~/.token file
+    if [ -n "$GITHUB_TOKEN" ]; then
+        echo -e "${GREEN}✅ Loading tokens from GITHUB_TOKEN environment variable${NC}"
         export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+    elif [ -f "$HOME/.token" ]; then
+        echo -e "${GREEN}✅ Loading tokens from $HOME/.token${NC}"
+        source "$HOME/.token"
+        # Only export if GITHUB_TOKEN was defined in the file
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+        else
+            echo -e "${YELLOW}⚠️ ~/.token file exists but GITHUB_TOKEN not defined${NC}"
+        fi
     else
-        echo -e "${RED}❌ No token file found${NC}"
-        echo -e "${YELLOW}💡 Create ~/.token file with your tokens${NC}"
+        echo -e "${RED}❌ No GitHub token found${NC}"
+        echo -e "${YELLOW}💡 Set GITHUB_TOKEN environment variable or create ~/.token file${NC}"
         safe_exit 1
     fi
 fi
 
-# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility
-export GITHUB_PERSONAL_ACCESS_TOKEN
+# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility (already exported above)
+# export GITHUB_PERSONAL_ACCESS_TOKEN  # Removed: causes unbound variable error if not set
 
 # Function to check environment requirements
 check_github_requirements() {
@@ -1098,7 +1104,7 @@ check_github_requirements() {
     else
         echo -e "${YELLOW}⚠️ No GitHub token found${NC}"
         echo -e "${YELLOW}   Server will work for public repositories only${NC}"
-        echo -e "${YELLOW}   For private repos, add GITHUB_TOKEN to ~/.token file${NC}"
+        echo -e "${YELLOW}   For private repos, set GITHUB_TOKEN environment variable${NC}"
     fi
 }
 
@@ -1241,7 +1247,7 @@ setup_render_mcp_server() {
         else
             echo -e "${YELLOW}  ⚠️ Render API key not found - skipping cloud infrastructure server${NC}"
             echo -e "${YELLOW}  💡 Render server provides cloud infrastructure management with natural language${NC}"
-            echo -e "${YELLOW}  💡 Add RENDER_API_KEY to ~/.token file or environment to enable${NC}"
+            echo -e "${YELLOW}  💡 Set RENDER_API_KEY environment variable to enable${NC}"
             log_with_timestamp "Render API key not found, skipping server installation"
             INSTALL_RESULTS["render"]="API_KEY_MISSING"
             # Don't count as failure since this is expected without API key
@@ -1312,10 +1318,8 @@ fi
 # Group servers that can be installed concurrently without conflicts
 
 # Environment flags for optional MCP servers (disabled by default for context optimization)
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
-REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
-IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
-GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
+# Note: PLAYWRIGHT_ENABLED, REACT_MCP_ENABLED, IOS_SIMULATOR_ENABLED, GITHUB_MCP_ENABLED
+# are declared at the top of this file (around line 110)
 
 declare -A BATCH_1=(
     ["sequential-thinking"]="@modelcontextprotocol/server-sequential-thinking"
@@ -1324,7 +1328,6 @@ declare -A BATCH_1=(
 
 declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
-    ["ddg-search"]="@oevortex/ddg_search"
     ["grok"]="@chinchillaenterprises/mcp-grok"
 )
 
@@ -1824,6 +1827,78 @@ install_ios_simulator_mcp() {
     fi
 }
 
+# Function to install Beads MCP server
+install_beads_mcp() {
+    echo -e "${BLUE}  📋 Installing Beads MCP server for git-backed issue tracking...${NC}"
+
+    update_stats "TOTAL" "beads" ""
+
+    # Check if server already exists
+    if server_already_exists "beads"; then
+        echo -e "${GREEN}  ✅ Server beads already exists, skipping installation${NC}"
+        log_with_timestamp "Server beads already exists, skipping"
+        update_stats "SUCCESS" "beads" "ALREADY_EXISTS"
+        return 0
+    fi
+
+    # Check if beads-mcp command is available
+    if ! command -v beads-mcp >/dev/null 2>&1; then
+        echo -e "${YELLOW}  ⚠️ beads-mcp command not found in PATH${NC}"
+        echo -e "${YELLOW}     Install beads-mcp: pip3 install beads-mcp${NC}"
+        echo -e "${YELLOW}     Install bd CLI: https://github.com/steveyegge/beads${NC}"
+        log_with_timestamp "WARN: beads-mcp not found in PATH"
+        update_stats "FAILURE" "beads" "DEPENDENCY_MISSING"
+        return 0
+    fi
+
+    echo -e "${GREEN}  ✅ Found beads-mcp command in PATH${NC}"
+    log_with_timestamp "Found beads-mcp command"
+
+    # Check if bd (beads CLI) is available
+    local BD_PATH=""
+    if command -v bd >/dev/null 2>&1; then
+        BD_PATH=$(command -v bd)
+        echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
+    elif [ -x "$HOME/go/bin/bd" ]; then
+        BD_PATH="$HOME/go/bin/bd"
+        echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
+    else
+        echo -e "${YELLOW}  ⚠️ bd CLI not found - beads-mcp will work but bd command won't be available${NC}"
+        echo -e "${YELLOW}     Install bd from: https://github.com/steveyegge/beads${NC}"
+        BD_PATH="$HOME/go/bin/bd"  # Set expected path for future use
+    fi
+
+    # Remove existing beads server to reconfigure
+    ${MCP_CLI_BIN} mcp remove "beads" >/dev/null 2>&1 || true
+
+    # Add Beads MCP server
+    echo -e "${BLUE}  🔗 Adding Beads MCP server...${NC}"
+    log_with_timestamp "Attempting to add Beads MCP server"
+
+    local add_output=""
+    local add_exit_code=0
+    local beads_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+    beads_env_flags+=(--env "BEADS_USE_DAEMON=1")
+    beads_env_flags+=(--env "BEADS_PATH=$BD_PATH")
+
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "beads" "${beads_env_flags[@]}" -- "beads-mcp"
+
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully configured Beads MCP server${NC}"
+        echo -e "${BLUE}  📋 Server info:${NC}"
+        echo -e "     • Command: beads-mcp"
+        echo -e "     • BD CLI path: $BD_PATH"
+        echo -e "     • Features: Git-backed issue tracking, dependency management, ready work detection"
+        echo -e "     • Tools: create, update, close, dep, ready, list, show, stats"
+        log_with_timestamp "Successfully added Beads MCP server"
+        update_stats "SUCCESS" "beads" "SUCCESS"
+    else
+        echo -e "${RED}  ❌ Failed to add Beads MCP server${NC}"
+        log_error_details "${MCP_CLI_BIN} mcp add beads" "beads" "$add_output"
+        update_stats "FAILURE" "beads" "ADD_FAILED"
+    fi
+}
+
 # Function to install GitHub MCP server with environment guard
 install_github_mcp() {
     if [[ "$GITHUB_MCP_ENABLED" != "true" ]]; then
@@ -1898,10 +1973,11 @@ if should_install_server "chrome-superpower"; then
     install_chrome_superpower_mcp
 fi
 
-if should_install_server "playwright-mcp"; then
-    display_step "Installing Optional Playwright MCP Server..."
-    install_playwright_mcp
-fi
+# DISABLED: Playwright MCP Server (disabled by default - users can enable if needed)
+# if should_install_server "playwright-mcp"; then
+#     display_step "Installing Optional Playwright MCP Server..."
+#     install_playwright_mcp
+# fi
 
 # DISABLED: Memory MCP Server (not needed - using standard state management)
 # if should_install_server "memory-server"; then
@@ -1957,7 +2033,7 @@ fi
 #     fi
 # fi
 
-if should_install_server "gemini-cli-mcp" || should_install_server "ddg-search" || should_install_server "grok"; then
+if should_install_server "gemini-cli-mcp" || should_install_server "grok"; then
     display_step "Installing Batch 2 Servers (Parallel)..."
     install_batch_parallel BATCH_2 "Batch 2"
 fi
@@ -1968,15 +2044,9 @@ fi
 #     install_ios_simulator_mcp
 # fi
 
-if should_install_server "perplexity-ask" || should_install_server "ddg-search"; then
+if should_install_server "perplexity-ask"; then
     display_step "Setting up Web Search MCP Servers..."
-    echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
-
-    if should_install_server "ddg-search"; then
-        echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
-        echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
-        echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
-    fi
+    echo -e "${BLUE}📋 Installing Perplexity search server${NC}"
 
     if should_install_server "perplexity-ask"; then
         echo -e "\n${BLUE}  → Perplexity AI Search (Premium)...${NC}"
@@ -2004,7 +2074,7 @@ if should_install_server "perplexity-ask" || should_install_server "ddg-search";
         else
             echo -e "${YELLOW}⚠️ Perplexity API key not found - skipping premium server${NC}"
             echo -e "${YELLOW}💡 Perplexity server provides AI-powered search with real-time web research${NC}"
-            echo -e "${YELLOW}💡 Add PERPLEXITY_API_KEY to ~/.token file to enable${NC}"
+            echo -e "${YELLOW}💡 Set PERPLEXITY_API_KEY environment variable to enable${NC}"
             log_with_timestamp "Perplexity API key not found, skipping premium server installation"
         fi
     fi
@@ -2203,73 +2273,7 @@ fi
 # Setup Beads MCP Server
 if should_install_server "beads"; then
     display_step "Setting up Beads MCP Server..."
-    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-    echo -e "${BLUE}  📋 Configuring Beads MCP server for git-backed issue tracking...${NC}"
-    log_with_timestamp "Setting up MCP server: beads (beads-mcp Python package)"
-
-    # Check if server already exists
-    if server_already_exists "beads"; then
-        echo -e "${GREEN}  ✅ Server beads already exists, skipping installation${NC}"
-        log_with_timestamp "Server beads already exists, skipping"
-        INSTALL_RESULTS["beads"]="ALREADY_EXISTS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        # Check if beads-mcp command is available
-        if command -v beads-mcp >/dev/null 2>&1; then
-            echo -e "${GREEN}  ✅ Found beads-mcp command in PATH${NC}"
-            log_with_timestamp "Found beads-mcp command"
-
-            # Check if bd (beads CLI) is available
-            BD_PATH=""
-            if command -v bd >/dev/null 2>&1; then
-                BD_PATH=$(command -v bd)
-                echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
-            elif [ -x "$HOME/go/bin/bd" ]; then
-                BD_PATH="$HOME/go/bin/bd"
-                echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
-            else
-                echo -e "${YELLOW}  ⚠️ bd CLI not found - beads-mcp will work but bd command won't be available${NC}"
-                echo -e "${YELLOW}     Install bd from: https://github.com/steveyegge/beads${NC}"
-                BD_PATH=""  # Let beads-mcp use its default fallback
-            fi
-
-            # Remove existing beads server to reconfigure
-            ${MCP_CLI_BIN} mcp remove "beads" >/dev/null 2>&1 || true
-
-            # Add Beads MCP server
-            echo -e "${BLUE}  🔗 Adding Beads MCP server...${NC}"
-            log_with_timestamp "Attempting to add Beads MCP server"
-
-            beads_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
-            beads_env_flags+=(--env "BEADS_USE_DAEMON=1")
-            beads_env_flags+=(--env "BEADS_PATH=$BD_PATH")
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "beads" "${beads_env_flags[@]}" -- "beads-mcp"
-
-            if [ $add_exit_code -eq 0 ]; then
-                echo -e "${GREEN}  ✅ Successfully configured Beads MCP server${NC}"
-                echo -e "${BLUE}  📋 Server info:${NC}"
-                echo -e "     • Command: beads-mcp"
-                echo -e "     • BD CLI path: $BD_PATH"
-                echo -e "     • Features: Git-backed issue tracking, dependency management, ready work detection"
-                echo -e "     • Tools: create, update, close, dep, ready, list, show, stats"
-                log_with_timestamp "Successfully added Beads MCP server"
-                INSTALL_RESULTS["beads"]="SUCCESS"
-                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-            else
-                echo -e "${RED}  ❌ Failed to add Beads MCP server${NC}"
-                log_error_details "${MCP_CLI_BIN} mcp add beads" "beads" "$add_output"
-                INSTALL_RESULTS["beads"]="ADD_FAILED"
-                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-            fi
-        else
-            echo -e "${YELLOW}  ⚠️ beads-mcp command not found in PATH${NC}"
-            echo -e "${YELLOW}     Install beads-mcp: pip3 install beads-mcp${NC}"
-            echo -e "${YELLOW}     Install bd CLI: https://github.com/steveyegge/beads${NC}"
-            log_with_timestamp "WARN: beads-mcp not found in PATH"
-            INSTALL_RESULTS["beads"]="DEPENDENCY_MISSING"
-            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-        fi
-    fi
+    install_beads_mcp
 fi
 
 # Final verification and results

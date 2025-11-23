@@ -1,5 +1,6 @@
 ---
-name: "Claude Code Agent System Documentation"
+name: CLAUDE
+description: Reference documentation for understanding and using the custom agent system
 ---
 
 # Claude Code Agent System Documentation
@@ -112,6 +113,10 @@ Task({
 - **Integration-First**: Prefer existing file modification over new file creation
 - **Evidence-Based**: testvalidator requires proof files for all claims
 - **Independence**: testvalidator gets zero context from testexecutor
+
+### **File Tracking**
+- **NEVER gitignore .beads/**: Issue tracking database must be version controlled
+- **User Requirement**: `.beads/` directory and contents MUST be tracked in git
 
 ## 🎯 Usage Guidelines
 
