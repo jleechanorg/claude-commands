@@ -3,6 +3,27 @@ set -euo pipefail
 
 source "$(dirname "$0")/scripts/deploy_common.sh"
 
+# Hardcode the WorldArchitect project for all deploys from this repo
+DEFAULT_GCP_PROJECT="worldarchitecture-ai"
+GCP_PROJECT="${GCP_PROJECT_OVERRIDE:-$DEFAULT_GCP_PROJECT}"
+
+# Force gcloud to use the correct project/quota locally so images push to the right bucket
+if command -v gcloud >/dev/null 2>&1; then
+    # Activate the matching config if present (idempotent)
+    if gcloud config configurations describe worldarchitect-ai >/dev/null 2>&1; then
+        gcloud config configurations activate worldarchitect-ai >/dev/null
+    fi
+
+    gcloud config set project "$GCP_PROJECT" >/dev/null
+    gcloud config set billing/quota_project "$GCP_PROJECT" >/dev/null
+fi
+
+# Export environment overrides so any downstream tooling (including Cloud Build) sees the right project
+export CLOUDSDK_CORE_PROJECT="$GCP_PROJECT"
+export CLOUDSDK_BILLING_QUOTA_PROJECT="$GCP_PROJECT"
+export GOOGLE_CLOUD_PROJECT="$GCP_PROJECT"
+export GCLOUD_PROJECT="$GCP_PROJECT"
+
 # --- Argument Parsing & Directory Logic ---
 TARGET_DIR=""
 ENVIRONMENT="dev" # Default environment
@@ -34,6 +55,17 @@ else
         elif [[ "${2:-}" == "staging" ]]; then
             ENVIRONMENT="staging"
         fi
+    fi
+fi
+
+# Default to mvp_site when present (skip menu for common case)
+if [ -z "$TARGET_DIR" ] && [ -d "mvp_site" ] && [ -f "mvp_site/Dockerfile" ]; then
+    TARGET_DIR="mvp_site"
+    # Allow first arg to be an environment selector when no directory was provided
+    if [[ "${1:-}" == "stable" ]] || [[ "${1:-}" == "prod" ]] || [[ "${1:-}" == "production" ]]; then
+        ENVIRONMENT="stable"
+    elif [[ "${1:-}" == "staging" ]]; then
+        ENVIRONMENT="staging"
     fi
 fi
 

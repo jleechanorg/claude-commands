@@ -1,6 +1,6 @@
-"""
-Defensive numeric field converter that handles 'unknown' and invalid values
-"""
+"""Defensive numeric field converter that handles 'unknown' and invalid values."""
+# mypy: ignore-errors
+# ruff: noqa: PLR0911
 
 from typing import Any
 

@@ -5,12 +5,9 @@ import os
 import sys
 import unittest
 
-from pydantic import ValidationError
-
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import pytest
 
 from mvp_site.schemas.defensive_numeric_converter import DefensiveNumericConverter
 from mvp_site.schemas.entities_pydantic import (
@@ -164,9 +161,10 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
     def test_hp_validation_after_conversion(self):
         """Test that HP validation works after defensive conversion"""
 
-        # HP=10, HP_MAX=unknown (converts to 1) -> Should fail validation (hp > hp_max)
-        with pytest.raises(ValidationError):
-            HealthStatus(hp=10, hp_max="unknown")  # hp=10 > hp_max=1 after conversion
+        # HP=10, HP_MAX=unknown (converts to 1) -> should clamp hp to hp_max instead of raising
+        health = HealthStatus(hp=10, hp_max="unknown")
+        assert health.hp == 1
+        assert health.hp_max == 1
 
         # HP=unknown (converts to 1), HP_MAX=5 -> HP should be 1
         health = HealthStatus(hp="unknown", hp_max=5)

@@ -3,6 +3,7 @@ Pydantic schema models for entity tracking in Milestone 0.4
 Uses sequence ID format: {type}_{name}_{sequence}
 """
 
+import logging
 import re
 from datetime import datetime
 from enum import Enum
@@ -12,6 +13,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
+
+logger = logging.getLogger(__name__)
 
 
 def sanitize_entity_name_for_id(name: str) -> str:
@@ -154,10 +157,24 @@ class HealthStatus(BaseModel):
         return DefensiveNumericConverter.convert_value("temp_hp", v)
 
     @model_validator(mode="after")
-    def hp_not_exceed_max(self):
-        if self.hp > self.hp_max:
-            raise ValueError(f"HP {self.hp} cannot exceed max HP {self.hp_max}")
-        return self
+    @classmethod
+    def auto_clamp_hp_to_max(cls, model: "HealthStatus") -> "HealthStatus":
+        """Auto-clamp HP to hp_max if corrupted data has HP > max.
+
+        This prevents ValidationError crashes from corrupted game state data
+        and allows the game to continue with corrected values.
+        """
+        try:
+            if model.hp_max > 0 and model.hp > model.hp_max:
+                logger.warning(
+                    f"Auto-clamping corrupted HP: {model.hp} -> {model.hp_max} "
+                    f"(HP cannot exceed max HP)"
+                )
+                model.hp = model.hp_max
+        except Exception:
+            # If anything is off, fall back to original model values
+            return model
+        return model
 
 
 class Location(BaseModel):

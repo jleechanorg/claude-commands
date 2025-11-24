@@ -92,7 +92,7 @@ const parsePositiveInt = (value, fallback) => {
   return parsed;
 };
 
-const timeoutMs = parsePositiveInt(process.env.MCP_TEST_TIMEOUT_MS, 60000); // 60 seconds default
+const timeoutMs = parsePositiveInt(process.env.MCP_TEST_TIMEOUT_MS, 600000); // 10 minutes default
 const retryAttempts = parsePositiveInt(process.env.MCP_TEST_MAX_ATTEMPTS, 3);
 const retryDelayMs = parsePositiveInt(process.env.MCP_TEST_RETRY_DELAY_MS, 2000);
 

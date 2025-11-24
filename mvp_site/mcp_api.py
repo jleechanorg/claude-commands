@@ -626,7 +626,7 @@ def run_server():
 
         # HTTP handler for dual mode (simplified)
         class DualMCPHandler(BaseHTTPRequestHandler):
-            def do_GET(self):
+            def do_GET(self):  # noqa: N802
                 if self.path == "/health":
                     self.send_response(200)
                     self.send_header("Content-type", "application/json")

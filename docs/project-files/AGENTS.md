@@ -79,6 +79,7 @@ See `.claude/` for orchestrator command references and additional skill examples
 - Never commit secrets. Copy `.env.example` to `.env` and populate locally.
 - Firebase `serviceAccountKey.json` and `GEMINI_API_KEY` must be set as documented in `README.md`.
 - Prefer local mocks for tests; guard credentials with environment variables.
+- WorldArchitecture.AI Firebase Admin key lives at `~/serviceAccountKey.json` (duplicate: `~/serviceAccountKey-firebase.json`). Set `GOOGLE_APPLICATION_CREDENTIALS` to that path when running this repo locally.
 
 ### Beads Issue Tracking
 - **NEVER gitignore `.beads/`**: Issue tracking database MUST be version controlled and tracked in git.

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib
 import sys
-from typing import Dict
 
 # Preserve legacy import paths that referenced modules from the repository root
 # (e.g., ``import structured_fields_utils``). The canonical implementations now
@@ -24,7 +23,7 @@ _ALIAS_MODULES = {
         "robust_json_parser",
         "world_loader",
     ]
-}  # type: Dict[str, object]
+}
 
 for alias, module in _ALIAS_MODULES.items():
     sys.modules.setdefault(alias, module)

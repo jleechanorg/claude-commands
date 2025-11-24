@@ -24,7 +24,7 @@ mkfifo "$PIPE_FILE"
 exec 3<>"$PIPE_FILE"
 
 # Start MCP server with stdin from named pipe
-venv/bin/python mvp_site/mcp_api.py --dual "$@" <"$PIPE_FILE" &
+PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}" venv/bin/python -m mvp_site.mcp_api --dual "$@" <"$PIPE_FILE" &
 MCP_PID=$!
 
 # Function to cleanup on exit

@@ -144,6 +144,9 @@ Genesis Coder, Prime Mover,
 - ✅ `/copilot` commands operate autonomously without user approval prompts FOR ANALYSIS ONLY
 - ❌ **EXCEPTION**: MERGE operations ALWAYS require explicit user approval regardless of command
 
+## Service Account Location (WorldArchitecture.AI)
+- Firebase Admin SDK JSON lives at `~/serviceAccountKey.json` (duplicate copy: `~/serviceAccountKey-firebase.json`). Set `GOOGLE_APPLICATION_CREDENTIALS` to this path when running WorldArchitecture.AI services locally.
+
 🚨 **CRITICAL: TASK AGENT VERIFICATION PROTOCOL**: ⚠️ MANDATORY - Prevent False Success Reporting
 - ❌ **CRITICAL FAILURE PATTERN**: Agent claims successful work without producing actual changes
 - ✅ **MANDATORY VERIFICATION CHECKLIST** for ALL agent task completion:

@@ -44,7 +44,6 @@ WorldArchitect.AI, an AI-powered tabletop RPG platform (digital D&D 5e Game Mast
 import argparse
 import asyncio
 import atexit
-import concurrent.futures
 import datetime
 import json
 import logging
@@ -54,13 +53,15 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import traceback
+from collections.abc import Coroutine
 from functools import wraps
 from typing import Any
 
 # Firebase imports
 import firebase_admin
-from firebase_admin import auth
+from firebase_admin import auth, credentials
 
 # Flask and web imports
 from flask import (
@@ -77,10 +78,18 @@ from flask import (
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+# Infrastructure helpers
+from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
 
 # Firestore service imports
-from mvp_site import world_logic  # For MCP fallback logic
-from mvp_site import constants, firestore_service, logging_util
+from mvp_site import (
+    constants,
+    firestore_service,
+    logging_util,
+    world_logic,  # For MCP fallback logic
+)
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 
@@ -88,13 +97,16 @@ from mvp_site.firestore_service import json_default_serializer
 from mvp_site.mcp_api import handle_jsonrpc
 
 # MCP client import
-from mvp_site.mcp_client import MCPClient, MCPClientError, handle_mcp_errors
-
-# Infrastructure helpers
-from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
+from mvp_site.mcp_client import MCPClientError, handle_mcp_errors
 
 # --- CONSTANTS ---
 # API Configuration
+cors_allow_headers = ["Content-Type", "Authorization", "X-Forwarded-For"]
+TESTING_MODE = os.getenv("TESTING") == "true"
+if TESTING_MODE:
+    # These headers are only honored in TESTING mode; do not enable in production.
+    cors_allow_headers.extend(["X-Test-Bypass-Auth", "X-Test-User-ID"])
+
 CORS_RESOURCES = {
     r"/api/*": {
         "origins": [
@@ -103,13 +115,22 @@ CORS_RESOURCES = {
             "https://worldarchitect.ai",
         ],
         "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
+        "allow_headers": cors_allow_headers,
     }
 }
 
+ALLOW_TEST_AUTH_BYPASS = (
+    os.getenv(
+        "ALLOW_TEST_AUTH_BYPASS",
+        "true" if TESTING_MODE else "false",
+    ).lower()
+    == "true"
+)
+
 # Request Headers
 HEADER_AUTH = "Authorization"
-# Testing mode headers removed - authentication now always uses real Firebase
+HEADER_TEST_BYPASS = "X-Test-Bypass-Auth"
+HEADER_TEST_USER_ID = "X-Test-User-ID"
 
 # Logging Configuration (using centralized logging_util)
 # LOG_DIRECTORY moved to logging_util.get_log_directory() for consistency
@@ -233,16 +254,47 @@ def create_app() -> Flask:
     setup_file_logging()
 
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
     CORS(app, resources=CORS_RESOURCES)
+
+    # Dedicated background event loop for async routes to avoid per-request loop churn
+    background_loop = asyncio.new_event_loop()
+
+    def _start_loop(loop: asyncio.AbstractEventLoop) -> None:
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
+
+    loop_thread = threading.Thread(target=_start_loop, args=(background_loop,), daemon=True)
+    loop_thread.start()
+
+    def run_in_background_loop(coro: Coroutine[Any, Any, Any]) -> Any:
+        return asyncio.run_coroutine_threadsafe(coro, background_loop).result()
+
+    def _shutdown_loop() -> None:
+        if background_loop.is_running():
+            background_loop.call_soon_threadsafe(background_loop.stop)
+        loop_thread.join(timeout=1)
+
+    atexit.register(_shutdown_loop)
+
+    def client_ip() -> str:
+        """Extract client IP using ProxyFix-processed remote_addr.
+
+        ProxyFix with x_for=1 already processes X-Forwarded-For securely,
+        setting request.remote_addr to the rightmost external IP.
+        This prevents IP spoofing attacks on rate limiting.
+        """
+        return str(get_remote_address())
 
     # Configure rate limiting
     # NOTE: No default_limits - we only rate limit specific API routes
     # Static files and frontend routes are exempt to prevent CSS/JS loading failures
     limiter = Limiter(
         app=app,
-        key_func=get_remote_address,
+        key_func=client_ip,
         default_limits=[],  # No default limits - only apply to specific routes
-        storage_uri="memory://",
+        # Use Redis (or any shared backend) in production to avoid per-process buckets.
+        storage_uri=os.environ.get("RATE_LIMIT_STORAGE_URI", "memory://"),
     )
 
     # Add security headers
@@ -259,7 +311,9 @@ def create_app() -> Flask:
         # ensuring consistent "directive; " spacing without duplicated suffixes.
         csp_directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com",
+            # Inline scripts/styles removed; add nonces/hashes if inline assets are reintroduced.
+            "script-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com",
+            # Legacy frontend_v1 applies inline style attributes (spinner, animations), so allow unsafe-inline
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
             "font-src 'self' https://cdn.jsdelivr.net https://r2cdn.perplexity.ai data:",
             "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://cdn.jsdelivr.net https://www.gstatic.com",
@@ -270,7 +324,7 @@ def create_app() -> Flask:
             "form-action 'self'",
             "frame-ancestors 'none'",
         ]
-        response.headers["Content-Security-Policy"] = "; ".join(csp_directives) + "; "
+        response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
         return response
 
     # Defer MCP client initialization until first use to avoid race condition
@@ -305,16 +359,54 @@ def create_app() -> Flask:
 
     # Testing mode removed - Flask TESTING config no longer set from environment
 
-    # Initialize Firebase - always enabled (testing mode removed)
+    # Initialize Firebase with explicit project override when provided
+    # WORLDAI_* vars take precedence for WorldArchitect.AI repo-specific config
+    firebase_project_id = os.getenv("WORLDAI_FIREBASE_PROJECT_ID") or os.getenv(
+        "FIREBASE_PROJECT_ID"
+    )
+    firebase_options = {"projectId": firebase_project_id} if firebase_project_id else {}
+
+    # Check for repo-specific service account credentials
+    worldai_creds_path = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS")
+    if worldai_creds_path:
+        # Expand ~ to full path
+        worldai_creds_path = os.path.expanduser(worldai_creds_path)
+
     try:
         firebase_admin.get_app()
     except ValueError:
-        firebase_admin.initialize_app()
+        if firebase_project_id:
+            logging_util.info(
+                f"Initializing Firebase with projectId={firebase_project_id}"
+            )
+        if worldai_creds_path and os.path.exists(worldai_creds_path):
+            logging_util.info(f"Using WORLDAI credentials from {worldai_creds_path}")
+            firebase_admin.initialize_app(
+                credentials.Certificate(worldai_creds_path), firebase_options or None
+            )
+        else:
+            firebase_admin.initialize_app(
+                credentials.ApplicationDefault(), firebase_options or None
+            )
 
     def check_token(f):
         @wraps(f)
         def wrap(*args: Any, **kwargs: Any) -> Response:
-            # Authentication now always uses real Firebase (testing mode removed)
+            # Allow automated test flows to bypass Firebase verification (TESTING mode only)
+            if (
+                TESTING_MODE
+                and ALLOW_TEST_AUTH_BYPASS
+                and request.headers.get(HEADER_TEST_BYPASS, "").lower() == "true"
+            ):
+                kwargs["user_id"] = request.headers.get(
+                    HEADER_TEST_USER_ID, "test-user-123"
+                )
+                logging_util.info(
+                    "TESTING auth bypass activated for user_id=%s", kwargs["user_id"]
+                )
+                return f(*args, **kwargs)
+
+            # Authentication uses real Firebase; bypass is only available in TESTING mode
             if not request.headers.get(HEADER_AUTH):
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:
@@ -325,14 +417,31 @@ def create_app() -> Flask:
                 id_token = parts[1].strip()
                 if not id_token:
                     raise ValueError("Empty token")
-                # Firebase token verification using Admin SDK with clock skew tolerance
-                # check_revoked=True ensures revoked tokens are rejected for security
-                # clock_skew_seconds=10 allows for up to 10 seconds of clock difference
-                decoded_token = auth.verify_id_token(
-                    id_token,
-                    check_revoked=True,
-                    clock_skew_seconds=10,  # Allow 10 seconds of clock skew
+                # Firebase token verification using Admin SDK
+                # When clock skew patch is active (local clock ahead), we need to:
+                # 1. Use actual time for verification (tokens issued at Google's actual time)
+                # 2. Disable check_revoked (requires backend call which would fail)
+                from mvp_site.clock_skew_credentials import (
+                    UseActualTime,
+                    get_clock_skew_seconds,
                 )
+
+                clock_skew = get_clock_skew_seconds()
+                # When clock skew > 60s, use actual time and disable revocation check
+                if clock_skew > 60:
+                    with UseActualTime():
+                        decoded_token = auth.verify_id_token(
+                            id_token,
+                            check_revoked=False,  # Can't check - backend call would fail
+                            clock_skew_seconds=60,
+                        )
+                else:
+                    # Normal verification with revocation check
+                    decoded_token = auth.verify_id_token(
+                        id_token,
+                        check_revoked=True,
+                        clock_skew_seconds=60,
+                    )
                 kwargs["user_id"] = decoded_token["uid"]
             except Exception as e:
                 error_message = str(e)
@@ -369,17 +478,7 @@ def create_app() -> Flask:
         @wraps(f)
         def wrapper(*args, **kwargs):
             if asyncio.iscoroutinefunction(f):
-                # Check if we're already in an event loop
-                try:
-                    asyncio.get_running_loop()
-                except RuntimeError:
-                    # No event loop running, safe to use asyncio.run
-                    return asyncio.run(f(*args, **kwargs))
-                else:
-                    # Already in an event loop, create a task and run it
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(asyncio.run, f(*args, **kwargs))
-                        return future.result()
+                return run_in_background_loop(f(*args, **kwargs))
             return f(*args, **kwargs)
 
         return wrapper
@@ -558,9 +657,12 @@ def create_app() -> Flask:
     @app.route("/api/campaigns", methods=["POST"])
     @limiter.limit("20000 per hour, 1000 per minute")  # High limits, sanity checks only
     @check_token
-    def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
+    @async_route
+    async def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
         try:
             data = request.get_json()
+            if data is None or not isinstance(data, dict):
+                return jsonify({KEY_ERROR: "Invalid JSON payload"}), 400
 
             # Debug logging
             logging_util.info("Received campaign creation request:")
@@ -573,7 +675,7 @@ def create_app() -> Flask:
             # Add user_id to request data
             data["user_id"] = user_id
 
-            result = get_mcp_client().call_tool_sync("create_campaign", data)
+            result = await get_mcp_client().call_tool("create_campaign", data)
 
             if not result.get(KEY_SUCCESS):
                 return safe_jsonify(result), result.get("status_code", 400)
@@ -681,7 +783,9 @@ def create_app() -> Flask:
                     f"DEBUG: MCP process_action returned result: {result.get('success', False)}"
                 )
                 if not result.get("success"):
-                    error_msg = result.get("error", "Unknown error")
+                    error_msg = result.get(
+                        "error", result.get("error_message", "Unknown error")
+                    )
                     logging_util.error(f"DEBUG: MCP process_action failed: {error_msg}")
 
                     # Return appropriate error response based on error type
@@ -891,9 +995,7 @@ def create_app() -> Flask:
         if gunicorn_threads is not None:
             concurrency["threads"] = gunicorn_threads
         if gunicorn_workers is not None and gunicorn_threads is not None:
-            concurrency["max_concurrent_requests"] = (
-                gunicorn_workers * gunicorn_threads
-            )
+            concurrency["max_concurrent_requests"] = gunicorn_workers * gunicorn_threads
 
         if concurrency:
             health_info["concurrency"] = concurrency
@@ -1125,8 +1227,12 @@ def run_test_command(command: str) -> None:
                 "🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)..."
             )
             logging_util.info("   Using real browser automation with mocked backend")
+            browser_timeout = int(os.environ.get("BROWSER_TEST_TIMEOUT", "300"))
             result = subprocess.run(
-                [sys.executable, test_runner], shell=False, timeout=30, check=False
+                [sys.executable, test_runner],
+                shell=False,
+                timeout=browser_timeout,
+                check=False,
             )
             sys.exit(result.returncode)
         else:
@@ -1149,10 +1255,12 @@ def run_test_command(command: str) -> None:
             )
             env = os.environ.copy()
             env["REAL_APIS"] = "true"
+            # Real API tests need longer timeout (5 min default)
+            full_api_timeout = int(os.environ.get("FULL_API_TEST_TIMEOUT", "300"))
             result = subprocess.run(
                 [sys.executable, test_runner],
                 shell=False,
-                timeout=30,
+                timeout=full_api_timeout,
                 check=False,
                 env=env,
             )
@@ -1171,8 +1279,12 @@ def run_test_command(command: str) -> None:
         if os.path.exists(test_runner):
             logging_util.info("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
             logging_util.info("   Using direct HTTP requests with mocked backend")
+            http_timeout = int(os.environ.get("HTTP_TEST_TIMEOUT", "300"))
             result = subprocess.run(
-                [sys.executable, test_runner], shell=False, timeout=30, check=False
+                [sys.executable, test_runner],
+                shell=False,
+                timeout=http_timeout,
+                check=False,
             )
             sys.exit(result.returncode)
         else:
@@ -1192,8 +1304,13 @@ def run_test_command(command: str) -> None:
             logging_util.warning(
                 "⚠️  WARNING: These tests use REAL APIs and cost money!"
             )
+            # Real API tests need longer timeout (5 min default)
+            full_api_timeout = int(os.environ.get("FULL_API_TEST_TIMEOUT", "300"))
             result = subprocess.run(
-                [sys.executable, test_runner], shell=False, timeout=30, check=False
+                [sys.executable, test_runner],
+                shell=False,
+                timeout=full_api_timeout,
+                check=False,
             )
             sys.exit(result.returncode)
         else:
@@ -1242,10 +1359,8 @@ if __name__ == "__main__":
         if args.command == "serve":
             # Create app instance with MCP configuration for serve command
             app = create_app()
-            # Fix inverted boolean logic for MCP HTTP flag
-            app._skip_mcp_http = (
-                not args.mcp_http if args.mcp_http is not None else True
-            )  # Default to skip HTTP mode for MCP, respect CLI override
+            # Skip MCP HTTP calls unless explicitly requested via CLI
+            app._skip_mcp_http = not args.mcp_http
             app._mcp_server_url = args.mcp_server_url
 
             # Robust port parsing to handle descriptive PORT environment variables

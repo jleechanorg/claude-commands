@@ -21,7 +21,15 @@ import tempfile
 import uuid
 from typing import Any
 
+from pydantic import ValidationError
+
+# Apply clock skew patch BEFORE importing Firebase to handle time-ahead issues
+from mvp_site.clock_skew_credentials import apply_clock_skew_patch
+
+apply_clock_skew_patch()
+
 import firebase_admin
+from firebase_admin import credentials
 
 # WorldArchitect imports
 from mvp_site import (
@@ -43,11 +51,25 @@ from mvp_site.game_state import GameState
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 
 # Initialize Firebase if not already initialized (testing mode removed)
+# WORLDAI_* vars take precedence for WorldArchitect.AI repo-specific config
 try:
     firebase_admin.get_app()
 except ValueError:
     try:
-        firebase_admin.initialize_app()
+        worldai_creds_path = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS")
+        if worldai_creds_path:
+            worldai_creds_path = os.path.expanduser(worldai_creds_path)
+            if os.path.exists(worldai_creds_path):
+                logging_util.info(
+                    f"Using WORLDAI credentials from {worldai_creds_path}"
+                )
+                firebase_admin.initialize_app(
+                    credentials.Certificate(worldai_creds_path)
+                )
+            else:
+                firebase_admin.initialize_app()
+        else:
+            firebase_admin.initialize_app()
         logging_util.info("Firebase initialized successfully in world_logic.py")
     except Exception as e:
         logging_util.critical(f"Failed to initialize Firebase: {e}")
@@ -625,6 +647,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         return unified_response
 
+    except ValidationError:
+        # Re-raise ValidationError so mcp_api.py can apply god mode recovery
+        raise
     except Exception as e:
         logging_util.error(f"Process action failed: {e}")
         return {KEY_ERROR: f"Failed to process action: {str(e)}"}

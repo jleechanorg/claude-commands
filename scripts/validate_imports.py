@@ -92,7 +92,16 @@ class ImportValidator(ast.NodeVisitor):
             # Django optional dependencies
             'django.core.management',
             # Cerebras optional dependencies
-            'cerebras', 'cerebras.sdk', 'cerebras_tool'
+            'cerebras', 'cerebras.sdk', 'cerebras_tool',
+            # Clock skew patch dependencies (required for Firebase auth with clock drift)
+            'google.auth._helpers',
+            'mvp_site.clock_skew_credentials', 'clock_skew_credentials',
+            # mvp_site modules that may be imported after clock_skew_patch()
+            'mvp_site', 'mvp_site.constants', 'mvp_site.document_generator',
+            'mvp_site.firestore_service', 'mvp_site.gemini_service',
+            'mvp_site.structured_fields_utils', 'mvp_site.custom_types',
+            'mvp_site.debug_hybrid_system', 'mvp_site.game_state',
+            'mvp_site.prompt_utils'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:
@@ -148,7 +157,7 @@ class ImportValidator(ast.NodeVisitor):
             if self.sys_path_manipulation_seen:
                 self.generic_visit(node)
                 return
-            
+
             # Allow conditional imports in specific contexts
             if not self._is_allowed_conditional_import(node):
                 self.violations.append(
@@ -171,7 +180,7 @@ class ImportValidator(ast.NodeVisitor):
             if self.sys_path_manipulation_seen:
                 self.generic_visit(node)
                 return
-            
+
             # Allow conditional imports in specific contexts
             if not self._is_allowed_conditional_import(node):
                 self.violations.append(
@@ -213,7 +222,7 @@ class ImportValidator(ast.NodeVisitor):
                         self.sys_path_manipulation_seen = True
                         self.generic_visit(node)
                         return
-        
+
         # Allow os.environ assignments before imports (common in test files)
         if isinstance(node.targets[0], ast.Subscript):
             if isinstance(node.targets[0].value, ast.Attribute):
@@ -224,7 +233,7 @@ class ImportValidator(ast.NodeVisitor):
                     self.sys_path_manipulation_seen = True
                     self.generic_visit(node)
                     return
-        
+
         # Assignments always mark end of import section per PEP 8
         # This enforces strict import placement: all imports at top of file
         self.non_import_seen = True
@@ -259,8 +268,19 @@ class ImportValidator(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+# Files with architectural import requirements that need exemption from validation
+EXCLUDED_FILES = {
+    'clock_skew_credentials.py',  # Clock skew patch implementation - needs lazy google.auth imports
+    'world_logic.py',  # Must import clock_skew_patch before firebase_admin
+}
+
+
 def validate_file(file_path: Path) -> list[ImportViolation]:
     """Validate imports in a single Python file."""
+    # Skip files with architectural import requirements
+    if file_path.name in EXCLUDED_FILES:
+        return []
+
     try:
         with open(file_path, encoding="utf-8") as f:
             content = f.read()

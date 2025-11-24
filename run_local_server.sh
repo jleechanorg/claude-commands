@@ -1,6 +1,21 @@
 #!/bin/bash
 # run_local_server.sh - WorldArchitect.AI Dual Server Launcher
 # Starts both Flask backend and React v2 frontend servers simultaneously
+#
+# Usage: ./run_local_server.sh [--cleanup|-c]
+#   --cleanup, -c  Show interactive server cleanup menu
+#   (default)      Keep existing servers, find available ports
+
+# Parse command line arguments
+INTERACTIVE_CLEANUP=false
+for arg in "$@"; do
+    case $arg in
+        --cleanup|-c)
+            INTERACTIVE_CLEANUP=true
+            shift
+            ;;
+    esac
+done
 
 # Load shared utilities
 MAIN_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,16 +23,31 @@ PROJECT_ROOT="$MAIN_SCRIPT_DIR"
 source "$MAIN_SCRIPT_DIR/scripts/server-utils.sh"
 source "$MAIN_SCRIPT_DIR/scripts/venv_utils.sh"
 
+# Hardcode the WorldArchitect project for local tooling that touches GCP
+DEFAULT_GCP_PROJECT="worldarchitecture-ai"
+GCP_PROJECT="${GCP_PROJECT_OVERRIDE:-$DEFAULT_GCP_PROJECT}"
+if command -v gcloud >/dev/null 2>&1; then
+    if gcloud config configurations describe worldarchitect-ai >/dev/null 2>&1; then
+        gcloud config configurations activate worldarchitect-ai >/dev/null
+    fi
+    gcloud config set project "$GCP_PROJECT" >/dev/null
+    gcloud config set billing/quota_project "$GCP_PROJECT" >/dev/null
+fi
+export CLOUDSDK_CORE_PROJECT="$GCP_PROJECT"
+export CLOUDSDK_BILLING_QUOTA_PROJECT="$GCP_PROJECT"
+export GOOGLE_CLOUD_PROJECT="$GCP_PROJECT"
+export GCLOUD_PROJECT="$GCP_PROJECT"
+
 # Ensure all relative paths below are resolved from the repo root
 cd "$PROJECT_ROOT"
 
 print_banner "WorldArchitect.AI Development Server Launcher" "Dual server setup: Flask backend + React v2 frontend"
 
 # Function to offer cleanup of existing servers with aggressive port clearing
-cleanup_servers_aggressive() {
+cleanup_servers_interactive() {
     list_worldarchitect_servers
 
-    local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
+    local servers=$(ps aux | grep -E "python -m mvp_site\.main serve" | grep -v grep || true)
     local vite_servers=$(ps aux | grep -E "(vite|node.*vite)" | grep -v grep || true)
 
     if [ -n "$servers" ] || [ -n "$vite_servers" ]; then
@@ -26,9 +56,9 @@ cleanup_servers_aggressive() {
         echo "   [a] Kill all servers (aggressive cleanup)"
         echo "   [p] Kill processes on target ports only"
         echo "   [n] Keep all servers running"
-        echo -n "   Choice (default: a): "
+        echo -n "   Choice (default: n): "
         read -r choice
-        choice=${choice:-a}  # Default to aggressive cleanup
+        choice=${choice:-n}  # Default to keeping servers running
 
         case "$choice" in
             a|A)
@@ -54,8 +84,12 @@ cleanup_servers_aggressive() {
     fi
 }
 
-# Perform server cleanup
-cleanup_servers_aggressive
+# Perform server cleanup (interactive only with --cleanup flag)
+if [ "$INTERACTIVE_CLEANUP" = true ]; then
+    cleanup_servers_interactive
+else
+    echo "${EMOJI_INFO} Keeping existing servers (use --cleanup for interactive cleanup)"
+fi
 
 # Setup virtual environment using new venv_utils
 ensure_venv
@@ -89,6 +123,17 @@ echo "${EMOJI_GEAR} Ensuring target ports are available..."
 ensure_port_free $DEFAULT_FLASK_PORT 3 2>/dev/null || true
 ensure_port_free $DEFAULT_REACT_PORT 3 2>/dev/null || true
 
+# Hardcode WorldAI Firebase env for local runs
+CREDS_FILE="${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/serviceAccountKey.json}"
+if [ ! -f "$CREDS_FILE" ]; then
+    echo "${EMOJI_WARNING} Firebase credentials not found at $CREDS_FILE"
+    echo "${EMOJI_INFO} For local development, copy your serviceAccountKey.json to $HOME/"
+    echo "${EMOJI_INFO} Or set GOOGLE_APPLICATION_CREDENTIALS environment variable"
+    # Continue anyway; Firebase init will fail gracefully if needed
+fi
+export GOOGLE_APPLICATION_CREDENTIALS="$CREDS_FILE"
+export FIREBASE_PROJECT_ID="worldarchitecture-ai"
+
 # Find available ports
 echo "${EMOJI_SEARCH} Finding available ports..."
 FLASK_PORT=$(find_available_port $DEFAULT_FLASK_PORT 10)
@@ -112,9 +157,9 @@ echo ""
 echo "${EMOJI_ROCKET} Starting Flask backend on port $FLASK_PORT..."
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="Flask Backend" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve; exec bash"
+    gnome-terminal --tab --title="Flask Backend" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=true PORT=$FLASK_PORT python -m mvp_site.main serve || (echo 'Flask exited with status $?'; read -p 'Press enter to close'); exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "Flask Backend" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve" &
+    xterm -title "Flask Backend" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=true PORT=$FLASK_PORT python -m mvp_site.main serve; echo 'Flask exited with status $?'; read -p 'Press enter to close'" &
 else
     # Fallback: run in background
     echo "${EMOJI_INFO} Running Flask in background (no terminal emulator found)"
@@ -125,7 +170,7 @@ else
             # shellcheck disable=SC1091
             source "$PROJECT_ROOT/venv/bin/activate"
         fi
-        TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve
+        PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}" TESTING=true PORT=$FLASK_PORT python -m mvp_site.main serve
     ) &
     FLASK_PID=$!
     echo "${EMOJI_INFO} Flask backend started in background (PID: $FLASK_PID)"
@@ -308,15 +353,16 @@ echo "   http://localhost:$REACT_PORT?test_mode=true&test_user_id=test-user-123"
 echo ""
 echo "${EMOJI_GEAR} To stop servers:"
 echo "   - Close terminal tabs, or"
-echo "   - Run: pkill -f 'python.*main.py.*serve' && pkill -f 'node.*vite' && pkill -f 'python.*mcp_api.py'"
+echo "   - Run: pkill -f 'python.*main.py.*serve' && pkill -f 'node.*vite' && pkill -f \"python.*(mcp_api.py|mvp_site\\\\.mcp_api)\""
 echo ""
 echo "Press Ctrl+C to exit this script (servers will continue running in background)"
 
 # Wait for user to exit
+MCP_PROCESS_PATTERN="python.*(mcp_api.py|mvp_site\\.mcp_api)"
 while true; do
     sleep 10
     # Check if servers are still running
-    if ! ps aux | grep -E "python.*main.py.*serve" | grep -v grep > /dev/null; then
+    if ! ps aux | grep -E "python -m mvp_site\.main serve" | grep -v grep > /dev/null; then
         echo "${EMOJI_WARNING} Flask backend appears to have stopped"
         break
     fi
@@ -324,7 +370,7 @@ while true; do
         echo "${EMOJI_WARNING} React frontend appears to have stopped"
         break
     fi
-    if ! ps aux | grep -E "python.*mcp_api.py" | grep -v grep > /dev/null; then
+    if ! ps aux | grep -E "$MCP_PROCESS_PATTERN" | grep -v grep > /dev/null; then
         echo "${EMOJI_WARNING} MCP server appears to have stopped"
         # Don't break for MCP server - it's not critical for the web interface
     fi
