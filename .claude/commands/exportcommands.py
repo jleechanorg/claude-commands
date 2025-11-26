@@ -599,6 +599,7 @@ class ClaudeCommandsExporter:
         # Use rsync with explicit exclusions
         exclude_patterns = [
             '--exclude=analysis/',
+            '--exclude=automation/',
             '--exclude=claude-bot-commands/',
             '--exclude=coding_prompts/',
             '--exclude=prototype/',
@@ -622,7 +623,7 @@ class ClaudeCommandsExporter:
 
     def _copy_orchestration_manual(self, source_dir, target_dir):
         """Manual orchestration copy with exclusions for Windows compatibility"""
-        excluded_dirs = {'analysis', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'}
+        excluded_dirs = {'analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'}
         for root, dirs, files in os.walk(source_dir):
             # Filter out excluded directories
             dirs[:] = [d for d in dirs if d not in excluded_dirs]
@@ -995,6 +996,7 @@ This comprehensive export includes:
 
 🚨 **DIRECTORY EXCLUSIONS APPLIED**: This export excludes the following project-specific directories:
 - ❌ `analysis/` - Project-specific analytics
+- ❌ `automation/` - Project-specific automation
 - ❌ `claude-bot-commands/` - Project-specific bot implementation
 - ❌ `coding_prompts/` - Project-specific AI prompting templates
 - ❌ `prototype/` - Project-specific experimental code
@@ -1281,7 +1283,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Verify that excluded directories are not present"""
         print("🔍 Verifying directory exclusions...")
 
-        excluded_dirs = ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype']
+        excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']
         found_excluded = []
 
         for dir_name in excluded_dirs:
@@ -1318,7 +1320,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         commit_message = f"""Fresh Claude Commands Export {time.strftime('%Y-%m-%d')}
 
 🚨 DIRECTORY EXCLUSIONS APPLIED:
-- Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/
+- Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/
 - These project-specific directories are filtered from exports per requirements
 
 ✅ EXPORT CONTENTS:
@@ -1357,6 +1359,7 @@ Starting MANUAL INSTALLATION: Copy commands to .claude/commands/ and hooks to .c
 ## 🎯 Directory Exclusions Applied
 This export **excludes** the following project-specific directories:
 - ❌ `analysis/` - Project-specific analytics and reporting
+- ❌ `automation/` - Project-specific automation scripts
 - ❌ `claude-bot-commands/` - Project-specific bot implementation
 - ❌ `coding_prompts/` - Project-specific AI prompting templates
 - ❌ `prototype/` - Project-specific experimental code
@@ -1437,7 +1440,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(f"   Agents: {self.agents_count}")
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Skills: {self.skills_count}")
-        print("   Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/")
+        print("   Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/")
         print("\n🎯 The export has been published and is ready for review!")
 
     def handle_error(self, error):
