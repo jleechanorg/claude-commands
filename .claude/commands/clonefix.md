@@ -79,10 +79,8 @@ execution_mode: immediate
    - **For each conflicted file**:
      - **learnings.md pattern**: Keep both sides, remove markers
        ```bash
-       # Remove conflict markers (use permissive pattern to handle most branch names)
+       # Remove conflict markers (use generic pattern to match any branch name)
        # CRITICAL: Use double quotes for variable expansion, escape properly
-       # Pattern matches: <<<<<<< HEAD, =======, >>>>>>> followed by any non-whitespace chars
-       # Note: [^[:space:]]* handles unicode chars, #, @, etc. in branch names
        sed -i '/^<<<<<<< HEAD$/d' "$file"
        sed -i '/^=======$/d' "$file"
        sed -i '/^>>>>>>> [^[:space:]]*$/d' "$file"
@@ -235,7 +233,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 3. **Commit with descriptive message**:
    ```
    test: add comprehensive TDD tests for {feature}
-   
+
    - Add {N} tests covering {feature} functionality from PR #{pr_number}
    - Test files: {list}
    - All {N} tests passing locally
@@ -416,4 +414,3 @@ This command integrates with `/tdd` command:
 - Runs before test addition (Phase 2)
 - Ensures clean merge state before TDD workflow
 - Maintains full audit trail in proof directory
-

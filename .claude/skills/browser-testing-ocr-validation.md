@@ -9,7 +9,55 @@
 - **Proof of fix**: OCR provides concrete text evidence of what's actually rendered
 - **No guessing**: OCR output is definitive - either the text is there or it's not
 
-## Tesseract Setup (Already Available)
+## Primary Method: Chrome Superpowers Auto-Capture (`page.md`)
+
+Chrome Superpowers **automatically captures** `page.md` on every DOM-changing action (navigate, click, type, select, eval). This extracts text directly from the DOM - more accurate than image OCR.
+
+### Auto-Captured Files Location
+```
+/tmp/chrome-session-{id}/{action-number}-{action}-{timestamp}/
+├── page.md          # DOM text extraction (primary OCR)
+├── page.html        # Full rendered DOM
+├── screenshot.png   # Visual page state
+└── console-log.txt  # Browser console output
+```
+
+### Using Auto-Captured page.md
+```python
+# 1. Navigate (triggers auto-capture)
+mcp__chrome-superpower__use_browser(action="navigate", payload="https://example.com")
+
+# 2. Read the auto-captured page.md for text validation
+Read(file_path="/tmp/chrome-session-xxx/001-navigate-yyy/page.md")
+# Contains all text content extracted from the DOM
+```
+
+**Advantages:**
+- 100% accurate text from actual DOM (not image recognition)
+- Automatic - no extra steps needed
+- Includes all visible text content
+- Works with dynamically loaded content
+
+## Secondary Method: Claude Code Native Vision
+
+Claude Code is a **multimodal LLM** that can directly see and analyze images. When you use the Read tool on a PNG file, Claude sees the image content directly.
+
+### Using Claude Vision for OCR
+```python
+# Simply read the image file - Claude sees it directly
+Read(file_path="/tmp/screenshots/test-screenshot.png")
+# Claude will describe: user emails, button text, form content, UI state, etc.
+```
+
+**Advantages over external OCR:**
+- Higher accuracy for complex layouts
+- Understands context and UI elements
+- Can describe visual state (colors, positioning, icons)
+- No external dependencies needed
+
+## Tertiary Method: Tesseract OCR (Cross-Validation)
+
+Use Tesseract as an additional method for cross-validation when needed.
 
 This system has Tesseract installed at `/opt/homebrew/bin/tesseract` with Python bindings.
 
