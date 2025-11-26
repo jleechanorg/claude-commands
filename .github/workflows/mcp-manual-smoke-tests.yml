@@ -16,7 +16,7 @@ on:
         type: string
         default: 'real'
   workflow_run:
-    workflows: ["Deploy PR Preview to GCP"]
+    workflows: ["Deploy PR Preview (Rotating Pool)"]
     types: [completed]
 
 permissions:
@@ -86,12 +86,12 @@ jobs:
           ref: ${{ steps.pr_ref.outputs.result || github.ref }}
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up gcloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
         with:
           project_id: ${{ env.GCP_PROJECT }}
 
@@ -143,23 +143,42 @@ jobs:
           set -euo pipefail
 
           PR_NUMBER="${{ steps.pr_number.outputs.number }}"
-          SERVICE_NAME="mvp-site-app-pr-$PR_NUMBER"
 
+          # Query all services with the PR label (supports rotating server pool)
+          echo "🔍 Searching for service with label pr-number=$PR_NUMBER"
+          SERVICE_NAME=$(gcloud run services list \
+            --region="${{ env.GCP_REGION }}" \
+            --filter="metadata.labels.pr-number=$PR_NUMBER" \
+            --format="value(metadata.name)" \
+            --limit=1 \
+            --quiet 2>/dev/null || echo "")
+
+          if [ -z "$SERVICE_NAME" ]; then
+            echo "::error::No deployed preview found for PR #$PR_NUMBER"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "✅ Found service: $SERVICE_NAME"
+
+          # Get service URL
           SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
             --region="${{ env.GCP_REGION }}" \
             --format="value(status.url)" \
             --quiet 2>/dev/null || echo "")
 
           if [ -z "$SERVICE_URL" ]; then
-            echo "::error::No deployed preview found for PR #$PR_NUMBER (service: $SERVICE_NAME)"
+            echo "::error::Service $SERVICE_NAME found but no URL available"
             echo "service_url=" >> "$GITHUB_OUTPUT"
             echo "deployed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          # URL resolved; log before exporting outputs for downstream steps
+          echo "✅ Service URL: $SERVICE_URL"
           echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
           echo "deployed=true" >> "$GITHUB_OUTPUT"
-          echo "✅ Found deployed preview at $SERVICE_URL"
 
       - name: Post "no preview" comment
         if: github.event_name == 'issue_comment' && steps.service_url.outputs.deployed == 'false'
@@ -175,7 +194,7 @@ jobs:
 
       - name: Set up Node.js 20.x
         if: steps.service_url.outputs.deployed == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
         with:
           node-version: 20
 
