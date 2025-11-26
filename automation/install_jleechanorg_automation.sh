@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PLIST_SOURCE="$SCRIPT_DIR/com.jleechanorg.pr-automation.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.jleechanorg.pr-automation.plist"
-LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+LOG_DIR="$HOME/Library/Logs/jleechanorg-automation"
 
 echo "🚀 Installing jleechanorg PR Automation for macOS"
 echo "   🏢 Organization: jleechanorg (all repositories)"
@@ -61,9 +61,10 @@ echo "   Logs: $LOG_DIR"
 # NOTE: The .plist source file should use the placeholder '__PROJECT_ROOT__' for the project root path.
 echo "🔧 Configuring launchd service..."
 CURRENT_USER=$(whoami)
+ESCAPED_TOKEN=$(printf '%s\n' "${GITHUB_TOKEN:-}" | sed 's/[&/\\]/\\&/g')
 sed "s|__PROJECT_ROOT__|$PROJECT_ROOT|g" "$PLIST_SOURCE" | \
-sed "s|__USER__|$CURRENT_USER|g" | \
-sed "s|\\$GITHUB_TOKEN|$GITHUB_TOKEN|g" > "$PLIST_DEST"
+sed "s|$USER|$CURRENT_USER|g" | \
+sed "s|\\\$GITHUB_TOKEN|$ESCAPED_TOKEN|g" > "$PLIST_DEST"
 
 echo "📄 Created plist: $PLIST_DEST"
 
