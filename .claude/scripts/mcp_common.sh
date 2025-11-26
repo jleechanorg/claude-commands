@@ -40,7 +40,7 @@ if [[ -z "${MCP_BASH_REEXEC_DONE:-}" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Allow callers to preconfigure behaviour while providing sensible defaults.
 TEST_MODE=${TEST_MODE:-false}
@@ -1089,13 +1089,19 @@ fi
 # Function to check environment requirements
 check_github_requirements() {
     if [ "$GITHUB_TOKEN_LOADED" = true ]; then
-        echo -e "${GREEN}✅ GitHub token loaded - GitHub remote server will have full access${NC}"
+        if declare -F test_github_token >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ GitHub token loaded - GitHub remote server will have full access${NC}"
 
-        # Test token validity using the centralized helper
-        echo -e "${BLUE}  🔍 Testing GitHub token validity...${NC}"
-        if test_github_token; then
-            echo -e "${BLUE}  📡 Using GitHub's NEW official remote MCP server${NC}"
-            echo -e "${BLUE}  🔗 Server URL: https://api.githubcopilot.com/mcp/${NC}"
+            # Test token validity using the centralized helper
+            echo -e "${BLUE}  🔍 Testing GitHub token validity...${NC}"
+            if test_github_token; then
+                echo -e "${BLUE}  📡 Using GitHub's NEW official remote MCP server${NC}"
+                echo -e "${BLUE}  🔗 Server URL: https://api.githubcopilot.com/mcp/${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠️ GitHub token marked as loaded, but token helper is unavailable; skipping validation${NC}"
+            echo -e "${YELLOW}   Server will work for public repositories${NC}"
+            echo -e "${YELLOW}   For private repos, ensure token has required scopes${NC}"
         fi
     elif [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
         echo -e "${YELLOW}⚠️ GitHub token found but not validated by centralized helper${NC}"

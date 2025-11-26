@@ -33,6 +33,10 @@ if [[ "${1:-}" == "--test-dir" ]]; then
         exit 1
     fi
     TEST_INSTALL_DIR="$2"
+    if [[ ! -d "$TEST_INSTALL_DIR" ]]; then
+        echo -e "${RED}❌ Error: --test-dir path does not exist or is not a directory: $TEST_INSTALL_DIR${NC}" >&2
+        exit 1
+    fi
     shift 2
 fi
 
