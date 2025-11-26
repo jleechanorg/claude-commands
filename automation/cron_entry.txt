@@ -1,0 +1,2 @@
+# Run jleechanorg PR automation every hour via private registry monitor
+0 * * * * . $HOME/.token && $HOME/.pyenv/versions/3.11.10/bin/python3 -m jleechanorg_pr_automation.jleechanorg_pr_monitor >> $HOME/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1

@@ -71,6 +71,7 @@ class ClaudeCommandsExporter:
         self.agents_count = 0
         self.scripts_count = 0
         self.skills_count = 0
+        self.automation_count = 0
 
         # Versioning is now handled by LLM in exportcommands.md
         # These are kept for backward compatibility but not actively used
@@ -142,6 +143,9 @@ class ClaudeCommandsExporter:
 
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
+
+        # Export automation directory
+        self._export_automation(staging_dir)
 
         # Generate README
         self._generate_readme()
@@ -637,6 +641,47 @@ class ClaudeCommandsExporter:
                 shutil.copy2(src_file, dst_file)
 
         print("✅ Orchestration exported using manual copy (excluded specified directories)")
+
+    def _export_automation(self, staging_dir):
+        """Export automation directory (PR automation system)"""
+        print("🤖 Exporting automation directory...")
+
+        source_dir = os.path.join(self.project_root, 'automation')
+        if not os.path.exists(source_dir):
+            print("⏭ Skipping automation export (directory not found)")
+            return
+
+        target_dir = os.path.join(staging_dir, 'automation')
+        os.makedirs(target_dir, exist_ok=True)
+
+        file_count = 0
+        # Copy automation directory with content filtering
+        for root, dirs, files in os.walk(source_dir):
+            # Exclude common build artifacts and caches
+            dirs[:] = [d for d in dirs if d not in {'__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info'}]
+            # Also exclude egg-info directories with any name
+            dirs[:] = [d for d in dirs if not d.endswith('.egg-info')]
+
+            rel_path = os.path.relpath(root, source_dir)
+            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
+            os.makedirs(target_root, exist_ok=True)
+
+            for file in files:
+                # Skip compiled Python files and build artifacts
+                if file.endswith(('.pyc', '.pyo')) or file.startswith('.'):
+                    continue
+
+                src_file = os.path.join(root, file)
+                dst_file = os.path.join(target_root, file)
+                shutil.copy2(src_file, dst_file)
+                file_count += 1
+
+                # Apply content filtering for text files
+                if file.endswith(('.py', '.md', '.sh', '.txt', '.json', '.toml')):
+                    self._apply_content_filtering(dst_file)
+
+        self.automation_count = file_count
+        print(f"✅ Automation directory exported ({file_count} files)")
 
     def _apply_content_filtering(self, file_path):
         """Apply content transformations to files"""
@@ -1195,6 +1240,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             'skills': os.path.join(claude_dir, 'skills'),           # .claude/skills directory
             'settings_json': os.path.join(claude_dir, 'settings.json'),  # .claude/settings.json file
             'orchestration': 'orchestration',  # Goes to repo root
+            'automation': 'automation',        # Goes to repo root
             'scripts': None                    # Goes to repo root within scripts/
         }
 
@@ -1437,6 +1483,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(f"   Agents: {self.agents_count}")
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Skills: {self.skills_count}")
+        print(f"   Automation: {self.automation_count}")
         print("   Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/")
         print("\n🎯 The export has been published and is ready for review!")
 

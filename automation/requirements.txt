@@ -1,0 +1,4 @@
+# Install the jleechanorg-pr-automation package in editable mode
+# This allows tests to import from jleechanorg_pr_automation.*
+# Use relative path from project root since CI runs pip from root directory
+-e ./automation
