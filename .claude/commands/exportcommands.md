@@ -504,6 +504,7 @@ testing_ui/
 testing_mcp/
 ci_replica/
 analysis/
+automation/
 claude-bot-commands/
 coding_prompts/
 prototype/
