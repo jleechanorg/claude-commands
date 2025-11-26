@@ -106,7 +106,7 @@ export USER="jleechan"
 """)
 
         # Test orchestration files with excluded directories
-        for excluded_dir in ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']:
+        for excluded_dir in ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype']:
             os.makedirs(os.path.join(self.project_root, 'orchestration', excluded_dir), exist_ok=True)
             with open(os.path.join(self.project_root, 'orchestration', excluded_dir, 'test.py'), 'w') as f:
                 f.write(f"# {excluded_dir} test file - should be excluded")
@@ -328,7 +328,7 @@ export USER="jleechan"
     @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
     def test_directory_exclusions_matrix(self):
         """Test directory exclusion patterns."""
-        excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']
+        excluded_dirs = ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype']
 
         for excluded_dir in excluded_dirs:
             with self.subTest(directory=excluded_dir):
@@ -502,8 +502,8 @@ class TestExportCommandsIntegration(unittest.TestCase):
             '.claude/commands',
             '.claude/hooks',
             'orchestration/core',
+            'orchestration/automation',  # Now included (no longer excluded)
             'orchestration/analysis',  # Should be excluded
-            'orchestration/automation'  # Should be excluded
         ]
 
         for dir_path in dirs:
