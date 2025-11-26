@@ -123,34 +123,11 @@
 
 ### Hook Event Types
 
-| Event Type | Matcher Required | Recommended Matcher Value |
-|------------|------------------|---------------------------|
-| **PreToolUse** | ✅ Yes | `"*"`, `"Write"`, `"Edit|Write"`, etc. |
-| **PostToolUse** | ✅ Yes | `"*"`, `"Bash"`, tool-specific patterns |
-| **PermissionRequest** | ✅ Yes | Tool patterns to filter |
-| **UserPromptSubmit** | ⚠️ Use empty | `""` (empty string) |
-| **SessionStart** | ⚠️ Use empty | `""` (empty string) |
-| **Stop** | ⚠️ Use empty | `""` (empty string) |
-
-### 🚨 Important: Empty Matcher for Non-Tool Events
-
-For `UserPromptSubmit`, `SessionStart`, and `Stop` hooks:
-- **Use `"matcher": ""`** (empty string) - this is the working, tested pattern
-- Empty string means "match all prompts/events" for non-tool hooks
-- The matcher field is still required in the JSON structure
-- Omitting matcher entirely may also work per official docs, but empty string is proven
-
-**Why empty string works**: The matcher field for non-tool events doesn't filter by tool name (there's no tool involved). An empty string effectively means "always match".
-
-```json
-// ✅ CORRECT - Empty matcher for non-tool events
-"Stop": [{ "matcher": "", "hooks": [...] }]
-"UserPromptSubmit": [{ "matcher": "", "hooks": [...] }]
-
-// ✅ ALSO CORRECT - Tool-specific matchers for tool events
-"PreToolUse": [{ "matcher": "Write|Edit", "hooks": [...] }]
-"PostToolUse": [{ "matcher": "*", "hooks": [...] }]
-```
+- **PreToolUse**: Runs before tool execution (requires matcher)
+- **PostToolUse**: Runs after tool execution (requires matcher)
+- **UserPromptSubmit**: Runs when user submits prompt (use empty matcher `""`)
+- **SessionStart**: Runs at session start (use empty matcher `""`)
+- **Stop**: Runs when session stops (use empty matcher `""`)
 
 ## 🤖 Agent File Frontmatter Format
 
