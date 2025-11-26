@@ -595,7 +595,7 @@ class JleechanorgPRMonitor:
                 "--body", comment_body
             ]
 
-            result = AutomationUtils.execute_subprocess_with_timeout(comment_cmd, timeout=30)
+            AutomationUtils.execute_subprocess_with_timeout(comment_cmd, timeout=30)
 
             self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number} ({repo_full})")
 
@@ -767,7 +767,6 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         owner, name = repo_full_name.split("/", 1)
 
         # Validate GitHub naming constraints (alphanumeric, hyphens, periods, underscores, max 100 chars)
-        import re
         github_name_pattern = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9\-\._]{0,98}[a-zA-Z0-9])?$")
         if not github_name_pattern.match(owner) or not github_name_pattern.match(name):
             self.logger.warning(

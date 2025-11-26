@@ -259,7 +259,8 @@ This is an automated notification from the Your Project automation system."""
 
             # Atomic rename - this operation is atomic on POSIX systems
             os.rename(temp_path, file_path)
-            temp_path = None  # Successful, don't clean up
+            # Clear temp_path after successful rename to skip cleanup in finally block
+            temp_path = None
 
         except (OSError, json.JSONEncodeError) as e:
             # Clean up temp file on error

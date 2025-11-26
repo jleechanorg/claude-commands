@@ -322,7 +322,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         # Day 1: Record 50 runs
         day1 = datetime(2025, 10, 1, 10, 0, 0)
         mock_datetime.now.return_value = day1
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.side_effect = datetime
 
         for _ in range(50):
             self.automation_manager.record_global_run()
@@ -343,7 +343,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     @patch("jleechanorg_pr_automation.automation_safety_manager.datetime")
     def test_daily_reset_multiple_days(self, mock_datetime):
         """RED: Counter should reset each day for multiple days"""
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.side_effect = datetime
 
         # Day 1: 50 runs
         day1 = datetime(2025, 10, 1, 10, 0, 0)
@@ -368,7 +368,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     @patch("jleechanorg_pr_automation.automation_safety_manager.datetime")
     def test_daily_reset_midnight_transition(self, mock_datetime):
         """RED: Counter should reset at midnight transition"""
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.side_effect = datetime
 
         # 23:59:59 on Day 1 - at limit
         before_midnight = datetime(2025, 10, 1, 23, 59, 59)
