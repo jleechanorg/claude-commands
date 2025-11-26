@@ -1,36 +1,36 @@
 ---
-description: Browser-based login to WorldAI via Firebase Google OAuth using Chrome Superpowers MCP
+description: Browser-based login via Firebase Google OAuth using Chrome Superpowers MCP
 type: reference
-scope: project
+scope: generic
 ---
 
-# WorldAI Browser Login via MCP
+# Browser Login via MCP
 
-This skill documents how to authenticate with WorldAI in a real browser using Chrome Superpowers MCP or Playwright MCP for browser-based testing.
+This skill documents how to authenticate in a real browser using Chrome Superpowers MCP or Playwright MCP for browser-based testing with Firebase/Google OAuth.
 
 ## Test Accounts
 
-| Account | Purpose | Campaigns |
-|---------|---------|-----------|
-| `<your-email@gmail.com>` | Secondary test account | 44 campaigns |
-| `$USER@gmail.com` | Primary account (owner) | 146 campaigns |
+| Account | Purpose | Notes |
+|---------|---------|-------|
+| `<test-email@gmail.com>` | Test account | Configure for your project |
+| `$USER@gmail.com` | Primary account | Configure for your project |
 
 ## Server URLs
 
 | Environment | URL |
 |-------------|-----|
-| Deployed Dev | `https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app` |
+| Deployed Dev | `https://your-project.a.run.app` |
 | Local | `http://localhost:8081` |
 
 ## Chrome Superpowers MCP Login Flow
 
-### Step 1: Navigate to WorldAI
+### Step 1: Navigate to Application
 
 ```python
 # Navigate to deployed server
 mcp__chrome-superpower__use_browser(
     action="navigate",
-    payload="https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app"
+    payload="https://your-project.a.run.app"  # Replace with your URL
 )
 ```
 
@@ -64,8 +64,8 @@ mcp__chrome-superpower__use_browser(
 
 **Success indicators:**
 - Email address visible in header (e.g., `$USER@gmail.com`)
-- "My Campaigns" section visible
-- Campaign count shown (e.g., "Showing 146 of 146 campaigns")
+- User dashboard or authenticated content visible
+- Project-specific success indicators (e.g., campaign count, user data)
 
 ### Step 5: Navigate to Campaign
 
@@ -141,7 +141,7 @@ PY
 
 ```python
 # 1. Navigate
-mcp__chrome-superpower__use_browser(action="navigate", payload="https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app")
+mcp__chrome-superpower__use_browser(action="navigate", payload="https://your-project.a.run.app")  # Replace with your URL
 
 # 2. Click Sign In
 mcp__chrome-superpower__use_browser(action="click", selector="//button[contains(text(), 'Sign in with Google')]")
@@ -161,7 +161,7 @@ If Chrome Superpowers is unavailable, use Playwright MCP:
 
 ```python
 # Navigate
-mcp__playwright-mcp__browser_navigate(url="https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app")
+mcp__playwright-mcp__browser_navigate(url="https://your-project.a.run.app")  # Replace with your URL
 
 # Get snapshot
 mcp__playwright-mcp__browser_snapshot()
