@@ -11,6 +11,7 @@ RED Phase: All tests should FAIL initially
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -441,10 +442,8 @@ class TestAutomationIntegration(unittest.TestCase):
 
     def run_automation_script(self):
         """Helper to run automation script"""
-        import subprocess
-        return subprocess.run([
-            "/Users/$USER/projects/worktree_worker2/automation/simple_pr_batch.sh"
-        ], check=False, capture_output=True, text=True)
+        script_path = Path.home() / "projects" / "worktree_worker2" / "automation" / "simple_pr_batch.sh"
+        return subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
 
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""

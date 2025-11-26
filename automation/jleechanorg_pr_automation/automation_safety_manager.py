@@ -22,6 +22,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Dict, Optional, Union
 
+# Import shared utilities
+from .utils import (
+    get_automation_limits,
+    json_manager,
+    setup_logging,
+)
+
 REAL_DATETIME = datetime
 
 # Number of characters in the ISO 8601 date prefix ("YYYY-MM-DD").
@@ -35,13 +42,6 @@ if _keyring_spec:
 else:
     keyring = None  # type: ignore
     HAS_KEYRING = False
-
-# Import shared utilities
-from .utils import (
-    get_automation_limits,
-    json_manager,
-    setup_logging,
-)
 
 
 class AutomationSafetyManager:
@@ -711,8 +711,10 @@ def main():
     """CLI interface for safety manager"""
 
     parser = argparse.ArgumentParser(description="Automation Safety Manager")
-    parser.add_argument("--data-dir", default="/tmp/automation_safety",
-                        help="Directory for safety data files")
+    parser.add_argument(
+        "--data-dir",
+        default=os.path.join(os.path.expanduser("~"), ".automation_safety"),
+        help="Directory for safety data files")
     parser.add_argument("--check-pr", type=int, metavar="PR_NUMBER",
                         help="Check if PR can be processed")
     parser.add_argument("--record-pr", nargs=2, metavar=("PR_NUMBER", "RESULT"),

@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PLIST_SOURCE="$SCRIPT_DIR/com.worldarchitect.pr-automation.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.worldarchitect.pr-automation.plist"
-LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+LOG_DIR="$HOME/Library/Logs/jleechanorg-automation"
 
 echo "🚀 Installing WorldArchitect PR Automation for macOS"
 echo "   Project: $PROJECT_ROOT"
@@ -20,7 +20,7 @@ echo "📁 Created log directory: $LOG_DIR"
 
 # Update plist with correct paths
 echo "🔧 Updating plist paths..."
-sed "s|/Users/$USER/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
+sed "s|__PROJECT_ROOT__|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
 
 # Update username in plist
 CURRENT_USER=$(whoami)
