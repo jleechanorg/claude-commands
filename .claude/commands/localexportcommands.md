@@ -35,6 +35,7 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Hooks** (.claude/hooks/) → ~/.claude/hooks/ - Lifecycle hooks
 - **Agents** (.claude/agents/) → ~/.claude/agents/ - Subagents
 - **Scripts** (.claude/scripts/) → ~/.claude/scripts/ - Utility scripts (MCP scripts, secondo auth-cli.mjs, etc.)
+- **Root Scripts** (scripts/) → ~/.claude/scripts/ - MCP infrastructure tools; overlaid after component export
 - **Skills** (.claude/skills/) → ~/.claude/skills/ - Skill documentation and guides
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
 - **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
@@ -45,6 +46,8 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Unified MCP installer** (install_mcp_servers.sh) - Installs all MCP servers for Claude/Codex/both
 - **Secondo authentication CLI** (auth-cli.mjs in .claude/scripts/)
 - Node.js dependencies (package.json, package-lock.json)
+
+Root-level MCP utilities from `scripts/` are copied after the component export so they take precedence over the `.claude/scripts/` versions when both exist.
 
 **🚀 UNIFIED MCP INSTALLER**:
 - `install_mcp_servers.sh` replaces old claude_mcp.sh and codex_mcp.sh launchers
@@ -162,16 +165,34 @@ export_component() {
     fi
 }
 
-# Copy MCP scripts from root scripts/ directly to ~/.claude/scripts/ (NOT to working dir)
+# Track export statistics
+
+exported_count=0
+total_components=0
+
+# Use the predefined components list for export
+
+components=("${EXPORTABLE_COMPONENTS[@]}")
 
 echo ""
-echo "📦 Copying MCP scripts from root scripts/ to ~/.claude/scripts/..."
+echo "📦 Exporting components..."
+echo "================================="
+
+for component in "${components[@]}"; do
+    total_components=$((total_components + 1))
+    if export_component "$component"; then
+        exported_count=$((exported_count + 1))
+    fi
+done
+
+echo ""
+echo "📦 Overlaying root-level MCP scripts to ~/.claude/scripts/..."
 echo "================================="
 
 mkdir -p "$HOME/.claude/scripts"
 
-# Copy MCP-related scripts from root directly to ~/.claude/scripts/
-# Note: This does NOT modify the working directory - only the target ~/.claude/
+# Copy MCP-related scripts from root directly to ~/.claude/scripts/ after component export
+# This ensures any utilities stored outside .claude/scripts/ are included and take precedence
 mcp_scripts=(
     "mcp_common.sh"
     "mcp_dual_background.sh"
@@ -194,26 +215,6 @@ for script in "${mcp_scripts[@]}"; do
 done
 
 echo "   📊 Copied $mcp_copied MCP scripts to ~/.claude/scripts/"
-
-# Track export statistics
-
-exported_count=0
-total_components=0
-
-# Use the predefined components list for export
-
-components=("${EXPORTABLE_COMPONENTS[@]}")
-
-echo ""
-echo "📦 Exporting components..."
-echo "================================="
-
-for component in "${components[@]}"; do
-    total_components=$((total_components + 1))
-    if export_component "$component"; then
-        exported_count=$((exported_count + 1))
-    fi
-done
 
 # Export Node.js dependencies for secondo command
 

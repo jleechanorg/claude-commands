@@ -399,12 +399,12 @@ Alice sends `CHANGE_ORDER_REJECTED` with strategy.
 Bob follows the hint:
 
 ```python
-from mvp_site.storage.s3_client import get_s3_client, upload_file
+from $PROJECT_ROOT.storage.s3_client import get_s3_client, upload_file
 
 def upload_profile_image(user_id, image_file):
     """Upload user profile image to S3"""
     s3_client = get_s3_client()
-    bucket = 'worldarchitect-user-uploads'
+    bucket = 'your-project-uploads'  # Replace with your actual S3 bucket name
     key = f'profiles/{user_id}/avatar.jpg'
 
     # Upload to S3

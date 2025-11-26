@@ -20,6 +20,11 @@ MAX_FILE_SAMPLE_SIZE = 3
 MAX_DIRECTORY_PREVIEW_SIZE = 10
 MAX_FILE_CONTENT_PREVIEW_SIZE = 50
 
+# Directory exclusions
+EXCLUDED_ROOT_DIRS = ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype']
+ORCHESTRATION_ONLY_EXCLUDED_DIRS = ['tasks', 'task-agent-create-autono-slash']
+ALL_ORCHESTRATION_EXCLUDED_DIRS = EXCLUDED_ROOT_DIRS + ORCHESTRATION_ONLY_EXCLUDED_DIRS
+
 # Custom exceptions for better error handling
 class ExportError(Exception):
     """Base exception for export operations"""
@@ -597,14 +602,7 @@ class ClaudeCommandsExporter:
         target_dir = os.path.join(staging_dir, 'orchestration')
 
         # Use rsync with explicit exclusions
-        exclude_patterns = [
-            '--exclude=analysis/',
-            '--exclude=claude-bot-commands/',
-            '--exclude=coding_prompts/',
-            '--exclude=prototype/',
-            '--exclude=tasks/',
-            '--exclude=task-agent-create-autono-slash/',
-        ]
+        exclude_patterns = [f"--exclude={dir_name}/" for dir_name in ALL_ORCHESTRATION_EXCLUDED_DIRS]
 
         cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
 
@@ -622,7 +620,7 @@ class ClaudeCommandsExporter:
 
     def _copy_orchestration_manual(self, source_dir, target_dir):
         """Manual orchestration copy with exclusions for Windows compatibility"""
-        excluded_dirs = {'analysis', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'}
+        excluded_dirs = set(ALL_ORCHESTRATION_EXCLUDED_DIRS)
         for root, dirs, files in os.walk(source_dir):
             # Filter out excluded directories
             dirs[:] = [d for d in dirs if d not in excluded_dirs]
@@ -1281,18 +1279,25 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Verify that excluded directories are not present"""
         print("🔍 Verifying directory exclusions...")
 
-        excluded_dirs = ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype']
         found_excluded = []
 
-        for dir_name in excluded_dirs:
-            if os.path.exists(os.path.join(self.repo_dir, dir_name)):
-                found_excluded.append(dir_name)
+        for dir_name in EXCLUDED_ROOT_DIRS:
+            excluded_path = os.path.join(self.repo_dir, dir_name)
+            if os.path.exists(excluded_path):
+                found_excluded.append((dir_name, excluded_path))
+
+        orchestration_root = os.path.join(self.repo_dir, 'orchestration')
+        for dir_name in ORCHESTRATION_ONLY_EXCLUDED_DIRS:
+            excluded_path = os.path.join(orchestration_root, dir_name)
+            if os.path.exists(excluded_path):
+                found_excluded.append((f"orchestration/{dir_name}", excluded_path))
 
         if found_excluded:
-            print(f"❌ ERROR: Excluded directories found: {', '.join(found_excluded)}")
+            labels = [label for label, _ in found_excluded]
+            print(f"❌ ERROR: Excluded directories found: {', '.join(labels)}")
             # Clean them up
-            for dir_name in found_excluded:
-                shutil.rmtree(os.path.join(self.repo_dir, dir_name))
+            for _, path in found_excluded:
+                shutil.rmtree(path)
             print("✅ Cleaned up excluded directories")
         else:
             print("✅ Confirmed: No excluded directories in export")
@@ -1318,7 +1323,8 @@ This is a filtered reference export from a working Claude Code project. Commands
         commit_message = f"""Fresh Claude Commands Export {time.strftime('%Y-%m-%d')}
 
 🚨 DIRECTORY EXCLUSIONS APPLIED:
-- Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/
+- Excluded (root): analysis/, claude-bot-commands/, coding_prompts/, prototype/
+- Excluded (orchestration): tasks/, task-agent-create-autono-slash/
 - These project-specific directories are filtered from exports per requirements
 
 ✅ EXPORT CONTENTS:

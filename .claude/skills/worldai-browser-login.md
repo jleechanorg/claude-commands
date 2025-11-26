@@ -1,36 +1,36 @@
 ---
-description: Browser-based login to WorldAI via Firebase Google OAuth using Chrome Superpowers MCP
+description: Browser-based login to a sample web app via Firebase Google OAuth using Chrome Superpowers MCP
 type: reference
-scope: project
+scope: reference
 ---
 
-# WorldAI Browser Login via MCP
+# Browser Login via MCP (Firebase Google OAuth)
 
-This skill documents how to authenticate with WorldAI in a real browser using Chrome Superpowers MCP or Playwright MCP for browser-based testing.
+This skill documents how to authenticate with a Firebase-backed web app in a real browser using Chrome Superpowers MCP or Playwright MCP for browser-based testing.
 
 ## Test Accounts
 
-| Account | Purpose | Campaigns |
-|---------|---------|-----------|
-| `<your-email@gmail.com>` | Secondary test account | 44 campaigns |
-| `$USER@gmail.com` | Primary account (owner) | 146 campaigns |
+| Account | Purpose | Notes |
+|---------|---------|-------|
+| `<test-user@example.com>` | Secondary test account | Sample data available |
+| `$USER@example.com` | Primary account (owner) | Full data set |
 
 ## Server URLs
 
 | Environment | URL |
 |-------------|-----|
-| Deployed Dev | `https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app` |
+| Deployed Dev | `https://your-project.example.com` |
 | Local | `http://localhost:8081` |
 
 ## Chrome Superpowers MCP Login Flow
 
-### Step 1: Navigate to WorldAI
+### Step 1: Navigate to the App
 
 ```python
 # Navigate to deployed server
 mcp__chrome-superpower__use_browser(
     action="navigate",
-    payload="https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app"
+    payload="https://your-project.example.com"
 )
 ```
 
@@ -63,17 +63,17 @@ mcp__chrome-superpower__use_browser(
 ```
 
 **Success indicators:**
-- Email address visible in header (e.g., `$USER@gmail.com`)
-- "My Campaigns" section visible
-- Campaign count shown (e.g., "Showing 146 of 146 campaigns")
+- Email address visible in header (e.g., `$USER@example.com`)
+- Dashboard navigation and primary content visible
+- Expected data for the signed-in user rendered without errors
 
-### Step 5: Navigate to Campaign
+### Step 5: Navigate to App Page
 
 ```python
-# Navigate directly to a campaign
+# Navigate directly to a specific page
 mcp__chrome-superpower__use_browser(
     action="navigate",
-    payload="http://localhost:8081/game/CAMPAIGN_ID"
+    payload="http://localhost:8081/your/path"
 )
 ```
 
@@ -96,10 +96,10 @@ Screenshots are saved to Chrome Superpowers temp directory:
 
 ```bash
 # Create evidence directory
-mkdir -p /tmp/worldai-browser-evidence/
+mkdir -p /tmp/browser-login-evidence/
 
 # Copy screenshot
-cp /path/to/chrome-session/*/screenshot.png /tmp/worldai-browser-evidence/
+cp /path/to/chrome-session/*/screenshot.png /tmp/browser-login-evidence/
 ```
 
 ### OCR Validation
@@ -110,8 +110,8 @@ Claude Code can directly read and analyze image files as a multimodal LLM:
 
 ```python
 # Use the Read tool on PNG files - Claude sees the image directly
-Read(file_path="/tmp/worldai-browser-evidence/screenshot.png")
-# Claude will describe what it sees: user email, campaign list, UI state
+Read(file_path="/tmp/browser-login-evidence/screenshot.png")
+# Claude will describe what it sees: user email, page content, UI state
 ```
 
 **Secondary Method: Tesseract OCR (Cross-validation)**
@@ -121,16 +121,16 @@ python3 - <<'PY'
 from PIL import Image
 import pytesseract
 
-image_path = "/tmp/worldai-browser-evidence/screenshot.png"
+image_path = "/tmp/browser-login-evidence/screenshot.png"
 img = Image.open(image_path)
 text = pytesseract.image_to_string(img)
 
 # Verify login success
-if "$USER@gmail.com" in text or "<your-email@gmail.com>" in text:
+if "$USER@example.com" in text or "<test-user@example.com>" in text:
     print("SUCCESS: User is logged in")
 
-if "My Campaigns" in text:
-    print("SUCCESS: Campaigns page visible")
+if "Dashboard" in text:
+    print("SUCCESS: Dashboard page visible")
 
 print("\n=== Full OCR Output ===")
 print(text)
@@ -141,7 +141,7 @@ PY
 
 ```python
 # 1. Navigate
-mcp__chrome-superpower__use_browser(action="navigate", payload="https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app")
+mcp__chrome-superpower__use_browser(action="navigate", payload="https://your-project.example.com")
 
 # 2. Click Sign In
 mcp__chrome-superpower__use_browser(action="click", selector="//button[contains(text(), 'Sign in with Google')]")
@@ -161,7 +161,7 @@ If Chrome Superpowers is unavailable, use Playwright MCP:
 
 ```python
 # Navigate
-mcp__playwright-mcp__browser_navigate(url="https://mvp-site-app-s2-i6xf2p72ka-uc.a.run.app")
+mcp__playwright-mcp__browser_navigate(url="https://your-project.example.com")
 
 # Get snapshot
 mcp__playwright-mcp__browser_snapshot()
