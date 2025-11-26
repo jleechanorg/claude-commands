@@ -40,6 +40,9 @@ if [[ -z "${MCP_BASH_REEXEC_DONE:-}" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# NOTE: REPO_ROOT goes up two levels (../..) to account for the scripts/ subdirectory structure.
+# This is required for scripts located in nested directories like .claude/scripts/ or scripts/.
+# If you relocate this script, update the path calculation accordingly.
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Allow callers to preconfigure behaviour while providing sensible defaults.

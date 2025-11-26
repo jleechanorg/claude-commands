@@ -73,7 +73,7 @@ Alice generates:
 **File: `tmp/pair_1700000000_tests.py`**
 ```python
 import unittest
-from mvp_site.utils.validators import validate_email  # Implementation doesn't exist yet!
+from $PROJECT_ROOT.utils.validators import validate_email  # Implementation doesn't exist yet!
 
 class TestEmailValidation(unittest.TestCase):
 
@@ -399,12 +399,12 @@ Alice sends `CHANGE_ORDER_REJECTED` with strategy.
 Bob follows the hint:
 
 ```python
-from mvp_site.storage.s3_client import get_s3_client, upload_file
+from $PROJECT_ROOT.storage.s3_client import get_s3_client, upload_file
 
 def upload_profile_image(user_id, image_file):
     """Upload user profile image to S3"""
     s3_client = get_s3_client()
-    bucket = 'worldarchitect-user-uploads'
+    bucket = 'your-project-uploads'
     key = f'profiles/{user_id}/avatar.jpg'
 
     # Upload to S3
