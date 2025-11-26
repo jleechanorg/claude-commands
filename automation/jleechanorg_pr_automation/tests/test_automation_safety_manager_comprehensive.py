@@ -33,7 +33,7 @@ class TestAutomationSafetyManagerInit:
         """Test that initialization creates data directory if it doesn't exist"""
         with tempfile.TemporaryDirectory() as parent_dir:
             data_dir = os.path.join(parent_dir, "new_safety_dir")
-            manager = AutomationSafetyManager(data_dir)
+            _ = AutomationSafetyManager(data_dir)
             assert os.path.exists(data_dir)
 
     def test_init_reads_config_file(self):
@@ -56,7 +56,7 @@ class TestAutomationSafetyManagerInit:
     def test_init_creates_default_config(self):
         """Test that initialization creates default config if none exists"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            manager = AutomationSafetyManager(temp_dir)
+            _ = AutomationSafetyManager(temp_dir)
 
             config_file = os.path.join(temp_dir, "automation_safety_config.json")
             assert os.path.exists(config_file)
@@ -547,7 +547,7 @@ class TestConfigurationManagement:
     def test_save_config_creates_file(self):
         """Test that save_config creates configuration file"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            manager = AutomationSafetyManager(temp_dir)
+            _ = AutomationSafetyManager(temp_dir)
 
             config_file = os.path.join(temp_dir, "automation_safety_config.json")
             assert os.path.exists(config_file)
@@ -560,7 +560,7 @@ class TestConfigurationManagement:
     def test_config_file_permissions(self):
         """Test that config file has appropriate permissions"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            manager = AutomationSafetyManager(temp_dir)
+            _ = AutomationSafetyManager(temp_dir)
 
             config_file = os.path.join(temp_dir, "automation_safety_config.json")
             stat_info = os.stat(config_file)

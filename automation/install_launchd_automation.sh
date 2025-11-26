@@ -19,8 +19,9 @@ mkdir -p "$LOG_DIR"
 echo "📁 Created log directory: $LOG_DIR"
 
 # Update plist with correct paths
+# NOTE: The .plist source file should use the placeholder '__PROJECT_ROOT__' for the project root path.
 echo "🔧 Updating plist paths..."
-sed "s|/Users/$USER/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
+sed "s|__PROJECT_ROOT__|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
 
 # Update username in plist
 CURRENT_USER=$(whoami)
