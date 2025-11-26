@@ -102,7 +102,7 @@ fi
 # Test discovery functionality
 echo ""
 echo "🧪 Testing PR discovery..."
-if python3 "$SCRIPT_DIR/jleechanorg_pr_monitor.py" --dry-run --max-prs 5; then
+if python3 "$SCRIPT_DIR/jleechanorg_pr_automation/jleechanorg_pr_monitor.py" --dry-run --max-prs 5; then
     echo "✅ PR discovery test successful"
 else
     echo "⚠️ PR discovery test failed - check configuration"
@@ -130,12 +130,12 @@ echo "   • Start: launchctl load '$PLIST_DEST'"
 echo "   • Logs: tail -f '$LOG_DIR/jleechanorg_pr_monitor.log'"
 echo ""
 echo "🧪 Manual Testing:"
-echo "   • Dry run: python3 '$SCRIPT_DIR/jleechanorg_pr_monitor.py' --dry-run"
-echo "   • Single repo: python3 '$SCRIPT_DIR/jleechanorg_pr_monitor.py' --dry-run --single-repo repo-name"
-echo "   • Safety status: python3 '$SCRIPT_DIR/automation_safety_manager.py' --status"
+echo "   • Dry run: python3 '$SCRIPT_DIR/jleechanorg_pr_automation/jleechanorg_pr_monitor.py' --dry-run"
+echo "   • Single repo: python3 '$SCRIPT_DIR/jleechanorg_pr_automation/jleechanorg_pr_monitor.py' --dry-run --single-repo repo-name"
+echo "   • Safety status: python3 '$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py' --status"
 echo ""
 echo "💡 Grant manual approval when needed:"
-echo "   python3 '$SCRIPT_DIR/automation_safety_manager.py' --approve user@example.com"
+echo "   python3 '$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py' --approve user@example.com"
 echo ""
 echo "🔍 Monitor real-time activity:"
 echo "   tail -f '$LOG_DIR/jleechanorg_pr_monitor.log'"

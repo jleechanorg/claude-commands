@@ -7,7 +7,7 @@ name = "jleechanorg-pr-automation"
 version = "0.1.2"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
-    {name = "$USER", email = "jlee@$USER.org"}
+    {name = "automation-user", email = "automation@example.com"}
 ]
 readme = "README.md"
 license = "MIT"
@@ -38,9 +38,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jleechanorg/your-project.com"
-Repository = "https://github.com/jleechanorg/your-project.com"
-Issues = "https://github.com/jleechanorg/your-project.com/issues"
+Homepage = "https://github.com/OWNER/REPO"
+Repository = "https://github.com/OWNER/REPO"
+Issues = "https://github.com/OWNER/REPO/issues"
 
 [project.scripts]
 jleechanorg-pr-monitor = "jleechanorg_pr_automation.jleechanorg_pr_monitor:main"

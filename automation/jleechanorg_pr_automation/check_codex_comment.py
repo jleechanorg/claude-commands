@@ -15,7 +15,7 @@ def decide(marker_prefix: str, marker_suffix: str) -> Tuple[str, str]:
     try:
         # Read stdin with size limit to prevent memory exhaustion
         stdin_data = sys.stdin.read(MAX_JSON_SIZE)
-        if len(stdin_data) >= MAX_JSON_SIZE:
+        if len(stdin_data) > MAX_JSON_SIZE:
             sys.stderr.write("ERROR: PR data exceeds maximum size limit\n")
             return "post", ""
 
