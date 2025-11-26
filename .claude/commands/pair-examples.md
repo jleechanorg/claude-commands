@@ -73,7 +73,7 @@ Alice generates:
 **File: `tmp/pair_1700000000_tests.py`**
 ```python
 import unittest
-from your_project.utils.validators import validate_email  # Implementation doesn't exist yet!
+from mvp_site.utils.validators import validate_email  # Implementation doesn't exist yet!
 
 class TestEmailValidation(unittest.TestCase):
 
@@ -123,7 +123,7 @@ ACTIONS:
 
 Bob implements:
 
-**File: `your_project/utils/validators.py`** (new file or addition)
+**File: `$PROJECT_ROOT/utils/validators.py`** (new file or addition)
 ```python
 import re
 
@@ -190,7 +190,7 @@ Alice runs automated audit:
 📊 AUTOMATED AUDIT RESULTS: PASS
 
 IMPLEMENTATION FILES:
-- your_project/utils/validators.py
+- $PROJECT_ROOT/utils/validators.py
 
 GIT DIFF:
 + def validate_email(email):
@@ -208,7 +208,7 @@ ACTIONS:
 **Phase 4: Merge (Alice)**
 
 ```bash
-$ git add your_project/utils/validators.py
+$ git add $PROJECT_ROOT/utils/validators.py
 $ git commit -m "Pair Protocol: Add email validation function
 
 Planner: alice
@@ -383,14 +383,14 @@ CHANGE ORDER DETAILS:
 
 🤖 AUTOMATED ANALYSIS:
 - Skill issue detected: boto3 library is already in dependencies
-- Existing code shows S3 usage in your_project/storage/s3_client.py
+- Existing code shows S3 usage in $PROJECT_ROOT/storage/s3_client.py
 - Builder should use existing S3 client utilities
 
 ACTIONS:
 - Type "REJECT CHANGE: Use existing S3 client" to send builder a strategy
 ```
 
-**User Response:** `REJECT CHANGE: Check your_project/storage/s3_client.py - we already have S3 utilities. Import get_s3_client() and use upload_file() method.`
+**User Response:** `REJECT CHANGE: Check $PROJECT_ROOT/storage/s3_client.py - we already have S3 utilities. Import get_s3_client() and use upload_file() method.`
 
 Alice sends `CHANGE_ORDER_REJECTED` with strategy.
 
@@ -399,12 +399,12 @@ Alice sends `CHANGE_ORDER_REJECTED` with strategy.
 Bob follows the hint:
 
 ```python
-from your_project.storage.s3_client import get_s3_client, upload_file
+from mvp_site.storage.s3_client import get_s3_client, upload_file
 
 def upload_profile_image(user_id, image_file):
     """Upload user profile image to S3"""
     s3_client = get_s3_client()
-    bucket = 'your-project-uploads'
+    bucket = 'worldarchitect-user-uploads'
     key = f'profiles/{user_id}/avatar.jpg'
 
     # Upload to S3
@@ -514,7 +514,7 @@ Alice runs automated audit:
       "type": "integrity",
       "severity": "CRITICAL",
       "description": "Environment variable gaming detected: function returns True when TESTING env var is set, bypassing all business logic",
-      "location": "your_project/auth/admin.py:15"
+      "location": "$PROJECT_ROOT/auth/admin.py:15"
     }
   ],
   "notes": [
