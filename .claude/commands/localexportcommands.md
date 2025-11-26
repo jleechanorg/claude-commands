@@ -162,16 +162,16 @@ export_component() {
     fi
 }
 
-# Consolidate MCP scripts from root scripts/ to .claude/scripts/ before export
+# Copy MCP scripts from root scripts/ directly to ~/.claude/scripts/ (NOT to working dir)
 
 echo ""
-echo "📦 Consolidating MCP scripts from root scripts/ to .claude/scripts/..."
+echo "📦 Copying MCP scripts from root scripts/ to ~/.claude/scripts/..."
 echo "================================="
 
-mkdir -p ".claude/scripts"
+mkdir -p "$HOME/.claude/scripts"
 
-# Copy MCP-related scripts from root to .claude/scripts/
-# Note: auth-cli.mjs is already in .claude/scripts/ (not in root scripts/)
+# Copy MCP-related scripts from root directly to ~/.claude/scripts/
+# Note: This does NOT modify the working directory - only the target ~/.claude/
 mcp_scripts=(
     "mcp_common.sh"
     "mcp_dual_background.sh"
@@ -184,8 +184,8 @@ mcp_scripts=(
 mcp_copied=0
 for script in "${mcp_scripts[@]}"; do
     if [ -f "scripts/$script" ]; then
-        cp "scripts/$script" ".claude/scripts/$script"
-        chmod +x ".claude/scripts/$script"
+        cp "scripts/$script" "$HOME/.claude/scripts/$script"
+        chmod +x "$HOME/.claude/scripts/$script"
         echo "   ✅ Copied $script"
         mcp_copied=$((mcp_copied + 1))
     else
@@ -193,7 +193,7 @@ for script in "${mcp_scripts[@]}"; do
     fi
 done
 
-echo "   📊 Copied $mcp_copied MCP scripts to .claude/scripts/"
+echo "   📊 Copied $mcp_copied MCP scripts to ~/.claude/scripts/"
 
 # Track export statistics
 
