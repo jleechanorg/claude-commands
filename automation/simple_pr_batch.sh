@@ -374,7 +374,7 @@ post_threaded_comment() {
 log "🚀 Starting simplified PR batch processing with Codex instruction comments"
 
 # Get PRs updated in last 24 hours
-RECENT_PRS=$(gh pr list --repo "$GH_REPO" --state open --limit 20 --json number,updatedAt | \
+RECENT_PRS=$(gh pr list --repo "$GH_REPO" --state open --limit 20 --search "draft:false" --json number,updatedAt | \
     jq -r '.[] | select((.updatedAt | fromdateiso8601) > (now - 86400)) | .number')
 
 if [ -z "$RECENT_PRS" ]; then

@@ -18,6 +18,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from automation.orchestrated_pr_runner import run_fixpr_batch
+
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
 from .codex_config import (
@@ -223,6 +229,10 @@ class JleechanorgPRMonitor:
         """Determine if a PR is actionable (should be processed)"""
         # Closed PRs are not actionable
         if pr_data.get("state", "").lower() != "open":
+            return False
+
+        # Draft PRs are not actionable for automation
+        if pr_data.get("isDraft"):
             return False
 
         # PRs with no commits are not actionable
@@ -1166,6 +1176,10 @@ def main():
     parser = argparse.ArgumentParser(description="jleechanorg PR Monitor")
     parser.add_argument("--dry-run", action="store_true",
                         help="Discover PRs but do not process them")
+    parser.add_argument("--fixpr", action="store_true",
+                        help="Run /fixpr-only orchestrated flow for conflicts/failing checks (skips drafts)")
+    parser.add_argument("--cutoff-hours", type=int, default=24,
+                        help="Look-back window in hours for PR updates (default: 24)")
     parser.add_argument("--single-repo",
                         help="Process only specific repository")
     parser.add_argument("--max-prs", type=int, default=5,
@@ -1184,6 +1198,10 @@ def main():
         parser.error("--target-pr is required when using --target-repo")
 
     monitor = JleechanorgPRMonitor()
+
+    if args.fixpr:
+        run_fixpr_batch(args.cutoff_hours, args.max_prs)
+        return
 
     # Handle target PR processing
     if args.target_pr and args.target_repo:
