@@ -8,11 +8,12 @@ Saves all test results to /tmp/worldarchitect_test_results/[timestamp]/
 
 import json
 import os
+import subprocess
 import sys
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import requests
 
@@ -24,10 +25,28 @@ DEFAULT_TEST_USER = os.environ.get("MCP_TEST_USER_ID")
 AUTO_MODE = bool(MCP_SERVER_URL)
 
 
+def _get_git_branch() -> str:
+    """Get current git branch name for path isolation"""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5,
+            shell=False,
+        )
+        branch = result.stdout.strip()
+        # Sanitize branch name for file system safety
+        return branch.replace("/", "_").replace("\\", "_").replace(" ", "_")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        return "unknown_branch"
+
+
 def _generate_user_id() -> str:
     if DEFAULT_TEST_USER:
         return DEFAULT_TEST_USER
-    unique_suffix = datetime.now().strftime("%Y%m%d%H%M%S") + uuid.uuid4().hex[:6]
+    unique_suffix = datetime.now(UTC).strftime("%Y%m%d%H%M%S") + uuid.uuid4().hex[:6]
     return f"codex_mcp_autotest_{unique_suffix}"
 
 
@@ -85,9 +104,10 @@ def truncate_text(value: str | None, limit: int = 4000) -> str:
 
 
 def create_test_output_dir() -> Path:
-    """Create unique test output directory in /tmp/"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path(f"/tmp/worldarchitect_test_results/{timestamp}")
+    """Create unique test output directory in /tmp/ with branch isolation"""
+    branch = _get_git_branch()
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    output_dir = Path(f"/tmp/worldarchitect_test_results/{branch}/{timestamp}")
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"📁 Test results will be saved to: {output_dir}")
     return output_dir
@@ -161,7 +181,7 @@ def run_test_case_1(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]
         "test_name": "test_case_1_dragon_knight_default",
         "description": "Dragon Knight campaign with default character and setting",
         "passed": False,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     if AUTO_MODE:
@@ -239,7 +259,7 @@ def run_test_case_2(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]
         "test_name": "test_case_2_custom_random",
         "description": "Custom campaign with empty character/setting for AI random generation",
         "passed": False,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     if AUTO_MODE:
@@ -310,7 +330,7 @@ def run_test_case_3(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]
         "test_name": "test_case_3_custom_full",
         "description": "Custom campaign with full character, setting, and description",
         "passed": False,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     if AUTO_MODE:
@@ -386,7 +406,7 @@ def run_test_case_4(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]
         "test_name": "test_case_4_real_api_integration",
         "description": "Verify real Gemini API and Firebase integration",
         "passed": False,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "campaign_checks": [],
     }
 
@@ -457,7 +477,9 @@ def run_test_case_4(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]
                                 f"❌ AUTO: State retrieval failed for {entry['id']}: {detail['error']}"
                             )
 
-                        test_result["campaign_checks"].append(detail)
+                        # Type cast for mypy to recognize list type
+                        campaign_checks = cast(list[dict[str, Any]], test_result["campaign_checks"])
+                        campaign_checks.append(detail)
 
                     if attribute_checks_passed:
                         test_result["passed"] = True
@@ -525,7 +547,7 @@ def main():
     total_count = len(test_results)
 
     summary = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "user_id": user_id,
         "mcp_server": context.get("server_url", "worldarchitect"),
         "test_suite": "campaign_creation",
