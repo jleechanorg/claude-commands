@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
 
 import pytest
 
-import automation.orchestrated_pr_runner as runner
+import automation.jleechanorg_pr_automation.orchestrated_pr_runner as runner
 
 
 def test_sanitize_workspace_name_includes_pr_number():

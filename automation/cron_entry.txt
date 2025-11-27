@@ -1,7 +1,0 @@
-# Run jleechanorg PR automation every hour via private registry monitor
-# Hourly Codex comment monitor (existing)
-0 * * * * $HOME/.pyenv/versions/3.11.10/bin/python3 -m jleechanorg_pr_automation.jleechanorg_pr_monitor >> $HOME/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1
-
-# 30-min orchestrated /fixpr-only runner (no /copilot) using TaskDispatcher; worktrees under /tmp/{repo}/{branch}
-# Requires: GH_TOKEN in environment, Claude CLI configured, tmux installed
-*/30 * * * * flock -n /tmp/orchestrated_pr_runner.lock -c "cd $HOME/projects/worktree_auto3 && PYTHONPATH=. python3 automation/orchestrated_pr_runner.py --max-prs 5" >> $HOME/Library/Logs/worldarchitect-automation/orchestrated_pr_runner.log 2>&1

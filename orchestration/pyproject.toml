@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ai_orch"
-version = "0.1.0"
+name = "jleechanorg-orchestration"
+version = "0.1.2"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
 authors = [
     {name = "jleechan", email = "jlee@jleechan.org"}
 ]
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,7 +22,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Shells",
     "Topic :: Terminals",
-    "License :: OSI Approved :: MIT License",
 ]
 keywords = ["ai", "orchestration", "tmux", "claude", "codex", "cli", "automation", "agents", "terminal", "interactive"]
 requires-python = ">=3.9"
@@ -47,9 +46,12 @@ ai_orch = "orchestration.live_mode:main"
 orch = "orchestration.live_mode:main"
 
 [tool.setuptools]
-# PyPI package name is 'ai_orch' but Python package name is 'orchestration'
-# This allows 'pip install ai_orch' while using 'from orchestration import ...'
-packages = ["orchestration"]
+# PyPI package name is 'jleechanorg-orchestration' but Python package name is 'orchestration'
+# This allows 'pip install jleechanorg-orchestration' while using 'from orchestration import ...'
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["orchestration*"]
 
 [tool.setuptools.package-data]
 orchestration = ["*.md", "*.txt", "*.yaml", "*.conf", "config/*.yaml"]

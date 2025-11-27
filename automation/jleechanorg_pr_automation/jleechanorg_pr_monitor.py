@@ -22,7 +22,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from automation.orchestrated_pr_runner import run_fixpr_batch
+from .orchestrated_pr_runner import run_fixpr_batch
 
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils

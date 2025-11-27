@@ -1,2 +1,0 @@
-[console_scripts]
-worldarchitect-mcp = mvp_site.mcp_api:run_server

@@ -2,6 +2,26 @@
 
 A comprehensive GitHub PR automation system with safety limits, actionable counting, and intelligent filtering.
 
+## ⚠️ CRITICAL: Orchestration Dependency Required
+
+**This package requires the `orchestration` module to function correctly.**
+
+The automation system uses `orchestration.task_dispatcher.TaskDispatcher` for orchestrated PR processing. This means:
+
+- ✅ **For Development/Internal Use**: Clone the full WorldArchitect.AI repository where both `automation/` and `orchestration/` are available
+- ❌ **Standalone PyPI Installation**: Will fail with `ModuleNotFoundError: No module named 'orchestration'` when using CLI commands
+- 🔧 **Solution**: Use within the project repository where `orchestration/` is in the Python path, or wait for the package flattening refactor (tracked in issue worktree_auto3-g7h)
+
+**Installation Context:**
+```bash
+# For standalone use (CLI WILL FAIL - orchestration not available):
+pip install jleechanorg-pr-automation  # ❌ CLI commands fail
+
+# For development within WorldArchitect.AI project (WORKS):
+cd ~/worldarchitect.ai
+pip install -e ./automation  # ✅ Full functionality
+```
+
 ## Features
 
 - **Actionable PR Counting**: Only processes PRs that need attention, excluding already-processed ones
@@ -9,6 +29,7 @@ A comprehensive GitHub PR automation system with safety limits, actionable count
 - **Cross-Process Safety**: Thread-safe operations with file-based persistence
 - **Email Notifications**: Optional SMTP integration for automation alerts
 - **Commit-Based Tracking**: Avoids duplicate processing using commit SHAs
+- **Orchestrated PR Runner**: Autonomous agent-based PR fixing using TaskDispatcher
 - **Comprehensive Testing**: 200+ test cases with matrix-driven coverage
 
 ## Installation
