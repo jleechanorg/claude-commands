@@ -63,7 +63,30 @@ CLI_PROFILES = {
             "use the codex cli",
         ],
     },
+    "gemini": {
+        "binary": "gemini",
+        "display_name": "Gemini",
+        "generated_with": "🤖 Generated with [Gemini CLI](https://github.com/google-gemini/gemini-cli)",
+        "co_author": "Gemini <noreply@google.com>",
+        "supports_continue": False,
+        "conversation_dir": None,
+        "continue_flag": "",
+        "restart_env": "GEMINI_RESTART",
+        # CRITICAL: Only use gemini-2.5-pro model - no other models allowed
+        "command_template": "{binary} -m gemini-2.5-pro -p {prompt_file}",
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        "detection_keywords": [
+            "gemini",
+            "gemini cli",
+            "google ai",
+            "use gemini",
+            "use the gemini cli",
+            "google gemini",
+        ],
+    },
 }
+
 
 # Shared sanitization helper
 def _sanitize_agent_token(name: str) -> str:
@@ -71,10 +94,11 @@ def _sanitize_agent_token(name: str) -> str:
     sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
     return sanitized or "agent"
 
+
 # Constraint system removed - using simple safety rules only
 
 # Production safety limits - only counts actively working agents (not idle)
-MAX_CONCURRENT_AGENTS = int(os.environ.get('MAX_CONCURRENT_AGENTS', DEFAULT_MAX_CONCURRENT_AGENTS))
+MAX_CONCURRENT_AGENTS = int(os.environ.get("MAX_CONCURRENT_AGENTS", DEFAULT_MAX_CONCURRENT_AGENTS))
 
 
 # Shared configuration paths
@@ -153,9 +177,9 @@ class TaskDispatcher:
             if result.returncode != 0:
                 return set()
 
-            sessions = result.stdout.strip().split('\n')
+            sessions = result.stdout.strip().split("\n")
             # Get all task-agent-* sessions
-            all_agent_sessions = {s for s in sessions if s.startswith('task-agent-')}
+            all_agent_sessions = {s for s in sessions if s.startswith("task-agent-")}
 
             # Filter to only actively working agents (not idle)
             active_agents = set()
@@ -203,7 +227,7 @@ class TaskDispatcher:
                 "Agent completed successfully",
                 "Agent execution completed. Session remains active for monitoring",
                 "Session will auto-close in 1 hour",
-                "Monitor with: tmux attach"
+                "Monitor with: tmux attach",
             ]
 
             # If any completion indicator is found, agent is idle
@@ -286,33 +310,55 @@ class TaskDispatcher:
         task_suffix = ""
         if task_description:
             # Check for PR references first
-            pr_match = re.search(r'(?:PR|pull request)\s*#?(\d+)', task_description, re.IGNORECASE)
+            pr_match = re.search(r"(?:PR|pull request)\s*#?(\d+)", task_description, re.IGNORECASE)
             if pr_match:
                 task_suffix = f"pr{pr_match.group(1)}"
             else:
                 # Extract key action words for general tasks
-                action_words = re.findall(r'\b(?:implement|create|build|fix|test|deploy|analyze|review|update|add|remove|refactor|optimize)\b',
-                                        task_description.lower())
+                action_words = re.findall(
+                    r"\b(?:implement|create|build|fix|test|deploy|analyze|review|update|add|remove|refactor|optimize)\b",
+                    task_description.lower(),
+                )
                 if action_words:
                     # Use first action word + key object words
                     action = action_words[0]
                     # Extract key nouns/objects after cleaning
-                    clean_desc = re.sub(r'[^a-zA-Z0-9\s]', '', task_description.lower())
-                    words = [word for word in clean_desc.split() if word not in ['the', 'and', 'or', 'for', 'with', 'in', 'on', 'at', 'to', 'from', 'by', 'of', 'a', 'an']]
+                    clean_desc = re.sub(r"[^a-zA-Z0-9\s]", "", task_description.lower())
+                    words = [
+                        word
+                        for word in clean_desc.split()
+                        if word
+                        not in [
+                            "the",
+                            "and",
+                            "or",
+                            "for",
+                            "with",
+                            "in",
+                            "on",
+                            "at",
+                            "to",
+                            "from",
+                            "by",
+                            "of",
+                            "a",
+                            "an",
+                        ]
+                    ]
 
                     # Skip action word and take next meaningful words
                     content_words = [w for w in words if w != action][:2]
                     if content_words:
-                        desc_part = '-'.join(word[:6] for word in content_words)
+                        desc_part = "-".join(word[:6] for word in content_words)
                         task_suffix = f"{action}-{desc_part}"
                     else:
                         task_suffix = action
                 else:
                     # Fallback to first few meaningful words
-                    clean_desc = re.sub(r'[^a-zA-Z0-9\s]', '', task_description.lower())
+                    clean_desc = re.sub(r"[^a-zA-Z0-9\s]", "", task_description.lower())
                     words = [word for word in clean_desc.split() if len(word) > 2][:2]
                     if words:
-                        task_suffix = '-'.join(word[:6] for word in words)
+                        task_suffix = "-".join(word[:6] for word in words)
                     else:
                         task_suffix = "task"
 
@@ -367,18 +413,18 @@ class TaskDispatcher:
         workspace_config = {}
 
         # Extract workspace name
-        workspace_name_match = re.search(r'--workspace-name\s+([^\s]+)', task_description)
+        workspace_name_match = re.search(r"--workspace-name\s+([^\s]+)", task_description)
         if workspace_name_match:
             workspace_config["workspace_name"] = workspace_name_match.group(1)
 
         # Extract workspace root
-        workspace_root_match = re.search(r'--workspace-root\s+([^\s]+)', task_description)
+        workspace_root_match = re.search(r"--workspace-root\s+([^\s]+)", task_description)
         if workspace_root_match:
             workspace_config["workspace_root"] = workspace_root_match.group(1)
 
         # Extract PR number from workspace name if it follows tmux-pr pattern
         if "workspace_name" in workspace_config:
-            pr_match = re.search(r'tmux-pr(\d+)', workspace_config["workspace_name"])
+            pr_match = re.search(r"tmux-pr(\d+)", workspace_config["workspace_name"])
             if pr_match:
                 workspace_config["pr_number"] = pr_match.group(1)
 
@@ -388,9 +434,7 @@ class TaskDispatcher:
         """Determine which CLI should be used for the agent."""
 
         # Explicit override via flag (--agent-cli codex) or (--agent-cli=codex)
-        cli_flag = re.search(
-            r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE
-        )
+        cli_flag = re.search(r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE)
         if cli_flag:
             requested_cli = cli_flag.group(1).lower()
             if requested_cli in CLI_PROFILES:
@@ -421,7 +465,7 @@ class TaskDispatcher:
         if len(available_clis) == 0:
             raise RuntimeError(
                 "No agent CLI is available. Please install at least one supported CLI "
-                "(e.g., 'claude' or 'codex') and ensure it is in your PATH."
+                "(e.g., 'claude', 'codex', or 'gemini') and ensure it is in your PATH."
             )
 
         if len(available_clis) == 1:
@@ -471,9 +515,7 @@ class TaskDispatcher:
                 recent_pr = self._find_recent_pr()
                 if recent_pr:
                     return recent_pr, "update"
-                print(
-                    "🤔 Ambiguous PR reference detected. Agent will ask for clarification."
-                )
+                print("🤔 Ambiguous PR reference detected. Agent will ask for clarification.")
                 return None, "update"  # Signal update mode but need clarification
 
         return None, "create"
@@ -504,9 +546,7 @@ class TaskDispatcher:
                 text=True,
                 timeout=30,
             )
-            current_branch = (
-                branch_result.stdout.strip() if branch_result.returncode == 0 else None
-            )
+            current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
 
             if current_branch:
                 result = subprocess.run(
@@ -559,9 +599,7 @@ class TaskDispatcher:
 
         return None
 
-    def broadcast_task_to_a2a(
-        self, task_description: str, requirements: list[str] | None = None
-    ) -> str | None:
+    def broadcast_task_to_a2a(self, task_description: str, requirements: list[str] | None = None) -> str | None:
         """Broadcast task to A2A system for agent claiming"""
         if not self.a2a_enabled or self.task_pool is None:
             return None
@@ -624,9 +662,7 @@ class TaskDispatcher:
         # Show user what was detected
         if mode == "update":
             if pr_number:
-                print(
-                    f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR"
-                )
+                print(f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR")
                 # Get PR details for better context
                 try:
                     result = subprocess.run(
@@ -651,9 +687,7 @@ class TaskDispatcher:
                     pass
             else:
                 print("\n🔍 Detected PR update request but no specific PR number")
-                print(
-                    "   Agent will check for recent PRs and ask for clarification if needed"
-                )
+                print("   Agent will check for recent PRs and ask for clarification if needed")
         else:
             print("\n🆕 No PR context detected - Agent will create NEW PR")
             print("   New branch will be created from main")
@@ -783,7 +817,7 @@ Complete the task, then use /pr to create a new pull request."""
                 text=True,
                 check=True,
                 timeout=30,
-                shell=False
+                shell=False,
             )
             remote_url = result.stdout.strip()
 
@@ -854,30 +888,30 @@ Complete the task, then use /pr to create a new pull request."""
         """Calculate final agent directory path based on configuration."""
         try:
             # Get workspace configuration if it exists
-            workspace_config = agent_spec.get('workspace_config', {})
+            workspace_config = agent_spec.get("workspace_config", {})
 
             # Check if custom workspace_root is specified
-            if 'workspace_root' in workspace_config:
-                workspace_root = workspace_config['workspace_root']
+            if "workspace_root" in workspace_config:
+                workspace_root = workspace_config["workspace_root"]
                 # If workspace_name is also specified, use it
-                if 'workspace_name' in workspace_config:
-                    agent_dir = os.path.join(workspace_root, workspace_config['workspace_name'])
+                if "workspace_name" in workspace_config:
+                    agent_dir = os.path.join(workspace_root, workspace_config["workspace_name"])
                 else:
-                    agent_name = agent_spec.get('name', 'agent')
+                    agent_name = agent_spec.get("name", "agent")
                     agent_dir = os.path.join(workspace_root, agent_name)
                 return self._expand_path(agent_dir)
 
             # Check if custom workspace_name is specified
-            if 'workspace_name' in workspace_config:
+            if "workspace_name" in workspace_config:
                 base_path = self._get_worktree_base_path()
                 self._ensure_directory_exists(base_path)
-                agent_dir = os.path.join(base_path, workspace_config['workspace_name'])
+                agent_dir = os.path.join(base_path, workspace_config["workspace_name"])
                 return self._expand_path(agent_dir)
 
             # Default case: ~/projects/orch_{repo_name}/{agent_name}
             base_path = self._get_worktree_base_path()
             self._ensure_directory_exists(base_path)
-            agent_name = agent_spec.get('name', 'agent')
+            agent_name = agent_spec.get("name", "agent")
             agent_dir = os.path.join(base_path, agent_name)
             return self._expand_path(agent_dir)
 
@@ -901,7 +935,7 @@ Complete the task, then use /pr to create a new pull request."""
                 text=True,
                 check=False,
                 timeout=30,
-                shell=False
+                shell=False,
             )
 
             return agent_dir, result
@@ -937,9 +971,7 @@ Complete the task, then use /pr to create a new pull request."""
 
         # Check concurrent active agent limit
         if len(self.active_agents) >= MAX_CONCURRENT_AGENTS:
-            print(
-                f"❌ Active agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}"
-            )
+            print(f"❌ Active agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}")
             print(f"   Currently working agents: {sorted(self.active_agents)}")
             return False
 
@@ -957,9 +989,7 @@ Complete the task, then use /pr to create a new pull request."""
             cli_path = self._resolve_cli_binary(agent_cli)
 
             if not cli_path:
-                print(
-                    f"⚠️ Requested CLI '{cli_profile['binary']}' not available for {agent_name}"
-                )
+                print(f"⚠️ Requested CLI '{cli_profile['binary']}' not available for {agent_name}")
 
                 fallback_cli = None
                 fallback_path = None
@@ -973,25 +1003,19 @@ Complete the task, then use /pr to create a new pull request."""
                         break
 
                 if fallback_cli and fallback_path:
-                    print(
-                        f"   ➡️ Falling back to {CLI_PROFILES[fallback_cli]['display_name']} CLI"
-                    )
+                    print(f"   ➡️ Falling back to {CLI_PROFILES[fallback_cli]['display_name']} CLI")
                     agent_cli = fallback_cli
                     cli_profile = CLI_PROFILES[agent_cli]
                     cli_path = fallback_path
                     agent_spec["cli"] = agent_cli
                 else:
-                    print(
-                        f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}"
-                    )
+                    print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
                     if agent_cli == "claude":
-                        print(
-                            "   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code"
-                        )
+                        print("   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code")
                     elif agent_cli == "codex":
-                        print(
-                            "   Install Codex CLI and ensure the 'codex' command is available on your PATH"
-                        )
+                        print("   Install Codex CLI and ensure the 'codex' command is available on your PATH")
+                    elif agent_cli == "gemini":
+                        print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
                     return False
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
@@ -1032,9 +1056,7 @@ Complete the task, then use /pr to create a new pull request."""
 
             attribution_line = cli_profile["generated_with"]
             co_author_line = cli_profile["co_author"]
-            attribution_block = (
-                f"   {attribution_line}\n\n   Co-Authored-By: {co_author_line}"
-            )
+            attribution_block = f"   {attribution_line}\n\n   Co-Authored-By: {co_author_line}"
 
             if is_update_mode:
                 completion_instructions = f"""
@@ -1165,53 +1187,39 @@ Agent Configuration:
                 conversation_file = None
                 conversation_dir = cli_profile.get("conversation_dir")
                 if conversation_dir:
-                    conversation_path = os.path.join(
-                        os.path.expanduser(conversation_dir), f"{agent_name}.json"
-                    )
+                    conversation_path = os.path.join(os.path.expanduser(conversation_dir), f"{agent_name}.json")
                     conversation_file = conversation_path
                 restart_env = cli_profile.get("restart_env")
-                restart_requested = bool(
-                    restart_env
-                    and os.environ.get(restart_env, "false").strip().lower() == "true"
-                )
-                if (
-                    conversation_file
-                    and os.path.exists(conversation_file)
-                ) or restart_requested:
+                restart_requested = bool(restart_env and os.environ.get(restart_env, "false").strip().lower() == "true")
+                if (conversation_file and os.path.exists(conversation_file)) or restart_requested:
                     continue_flag = cli_profile.get("continue_flag", "")
-                    print(
-                        f"🔄 {agent_name}: Continuing existing {cli_profile['display_name']} session"
-                    )
+                    print(f"🔄 {agent_name}: Continuing existing {cli_profile['display_name']} session")
                 else:
-                    print(
-                        f"🆕 {agent_name}: Starting new {cli_profile['display_name']} session"
-                    )
+                    print(f"🆕 {agent_name}: Starting new {cli_profile['display_name']} session")
             else:
-                print(
-                    f"🆕 {agent_name}: Starting {cli_profile['display_name']} session"
-                )
+                print(f"🆕 {agent_name}: Starting {cli_profile['display_name']} session")
 
             continue_segment = f" {continue_flag}" if continue_flag else ""
             prompt_value_raw = prompt_file
             prompt_value_quoted = shlex.quote(prompt_file)
-            prompt_value = (
-                prompt_value_quoted if cli_profile.get("quote_prompt") else prompt_value_raw
-            )
+            prompt_value = prompt_value_quoted if cli_profile.get("quote_prompt") else prompt_value_raw
             binary_value = shlex.quote(cli_path)
             try:
-                cli_command = cli_profile["command_template"].format(
-                    binary=binary_value,
-                    binary_path=cli_path,
-                    prompt_file=prompt_value,
-                    prompt_file_path=prompt_value_raw,
-                    prompt_file_quoted=prompt_value_quoted,
-                    continue_flag=continue_segment,
-                ).strip()
+                cli_command = (
+                    cli_profile["command_template"]
+                    .format(
+                        binary=binary_value,
+                        binary_path=cli_path,
+                        prompt_file=prompt_value,
+                        prompt_file_path=prompt_value_raw,
+                        prompt_file_quoted=prompt_value_quoted,
+                        continue_flag=continue_segment,
+                    )
+                    .strip()
+                )
             except KeyError as exc:
                 missing = exc.args[0]
-                raise ValueError(
-                    f"CLI command template for {agent_cli} missing placeholder '{missing}'"
-                ) from exc
+                raise ValueError(f"CLI command template for {agent_cli} missing placeholder '{missing}'") from exc
 
             stdin_template = cli_profile.get("stdin_template", "/dev/null")
             if stdin_template == "{prompt_file}":
@@ -1226,9 +1234,7 @@ Agent Configuration:
             stdin_log_target = stdin_target or "/dev/null"
             stdin_log_target_quoted = shlex.quote(stdin_log_target)
             command_execution_line = cli_command + stdin_redirect
-            prompt_env_export = (
-                f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
-            )
+            prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
 
             agent_name_quoted = shlex.quote(agent_name)
             cli_display_name_quoted = shlex.quote(cli_profile["display_name"])
@@ -1239,7 +1245,7 @@ Agent Configuration:
             agent_name_json_shell = agent_name_json.replace('"', '\\"')
 
             # Enhanced bash command with error handling and logging
-            bash_cmd = f'''
+            bash_cmd = f"""
 # Signal handler to log interruptions
 trap 'echo "[$(date)] Agent interrupted with signal SIGINT" | tee -a {log_file_quoted}; exit 130' SIGINT
 trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_quoted}; exit 143' SIGTERM
@@ -1273,7 +1279,7 @@ echo "[$(date)] Agent execution completed. Session remains active for monitoring
 echo "[$(date)] Session will auto-close in 1 hour. Check log at: {log_file_display}" | tee -a {log_file_quoted}
 echo "[$(date)] Monitor with: tmux attach -t {monitor_hint}" | tee -a {log_file_quoted}
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
-'''
+"""
 
             script_path = Path("/tmp") / f"{agent_token}_run.sh"
             script_path.write_text(bash_cmd, encoding="utf-8")
@@ -1287,9 +1293,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             if os.path.exists(tmux_config):
                 tmux_cmd.extend(["-f", tmux_config])
             else:
-                print(
-                    f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config"
-                )
+                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
 
             tmux_cmd.extend(
                 [
@@ -1304,9 +1308,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                 ]
             )
 
-            result = subprocess.run(
-                tmux_cmd, check=False, capture_output=True, text=True, timeout=30
-            )
+            result = subprocess.run(tmux_cmd, check=False, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False
@@ -1328,8 +1330,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             return (value or "").strip().lower() in {"1", "true", "yes"}
 
         testing_mode = any(
-            _is_truthy(os.environ.get(env_var))
-            for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS")
+            _is_truthy(os.environ.get(env_var)) for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS")
         )
 
         if not testing_mode:
