@@ -64,7 +64,7 @@ class ImportValidator(ast.NodeVisitor):
             'orchestrate', 'pr_comment_formatter', 'command_output_trimmer',
             'helpers', 'mcp_api', 'mcp_test_client', 'commentreply',
             'mvp_site.logging_util', 'psutil', 'importlib.util',
-            'unified_router', 'mvp_site.testing_framework',
+            'mvp_site.testing_framework',
             # Automation modules that need sys.path manipulation
             'automation_safety_manager', 'jleechanorg_pr_monitor',
             'automation.automation_safety_manager', 'automation.utils',
@@ -86,13 +86,13 @@ class ImportValidator(ast.NodeVisitor):
             'agent_system', 'message_broker', 'a2a_integration', 'task_dispatcher',
             'constants', 'a2a_agent_wrapper', 'a2a_monitor', 'debug_worker', 'live_mode',
             # MCP optional dependencies
-            'fastmcp', 'mcp.types', 'mcp_servers.slash_commands.unified_router',
+            'fastmcp', 'mcp.types',
             # Claude commands optional dependencies
             'exportcommands',
             # Django optional dependencies
             'django.core.management',
             # Cerebras optional dependencies
-            'cerebras', 'cerebras.sdk', 'cerebras_tool',
+            'cerebras', 'cerebras.sdk',
             # Clock skew patch dependencies (required for Firebase auth with clock drift)
             'google.auth._helpers',
             'mvp_site.clock_skew_credentials', 'clock_skew_credentials',
