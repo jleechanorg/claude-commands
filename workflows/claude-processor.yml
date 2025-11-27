@@ -1,0 +1,55 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Claude Bot Processor
+on:
+  repository_dispatch:
+    types: [claude-command]
+
+jobs:
+  claude:
+    runs-on: [self-hosted, claude]
+    timeout-minutes: 10  # Prevent hung processes
+    steps:
+      - name: Extract
+        id: x
+        run: |
+          echo "Debug: GitHub event file content:"
+          cat "$GITHUB_EVENT_PATH"
+          echo ""
+          P=$(jq -r '.client_payload.slash_command.args.all // empty' "$GITHUB_EVENT_PATH")
+          CID=$(jq -r '.client_payload.github.payload.comment.id // empty' "$GITHUB_EVENT_PATH")
+          echo "Debug: Extracted prompt='$P'"
+          echo "Debug: Comment ID='$CID'"
+          echo "prompt=$P"  >> $GITHUB_OUTPUT
+          echo "cid=$CID"  >> $GITHUB_OUTPUT
+
+      - name: Call Claude
+        id: y
+        run: |
+          echo "Debug: Calling Claude with prompt='${{ steps.x.outputs.prompt }}'"
+          A=$(curl -s --data-urlencode "prompt=${{ steps.x.outputs.prompt }}" "${{ secrets.CLAUDE_ENDPOINT }}")
+          echo "Debug: Claude response='$A'"
+          echo "answer<<EOF" >> $GITHUB_OUTPUT
+          echo "$A" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment back
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.x.outputs.cid }}
+          body: |
+            **🤖 Claude Bot Reply**
+            ```
+            ${{ steps.y.outputs.answer }}
+            ```
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
