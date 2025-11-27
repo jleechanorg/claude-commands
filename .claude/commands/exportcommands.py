@@ -71,6 +71,7 @@ class ClaudeCommandsExporter:
         self.agents_count = 0
         self.scripts_count = 0
         self.skills_count = 0
+        self.workflows_count = 0
 
         # Versioning is now handled by LLM in exportcommands.md
         # These are kept for backward compatibility but not actively used
@@ -142,6 +143,9 @@ class ClaudeCommandsExporter:
 
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
+
+        # Export GitHub Actions workflows (as examples)
+        self._export_github_workflows(staging_dir)
 
         # Generate README
         self._generate_readme()
@@ -458,6 +462,11 @@ class ClaudeCommandsExporter:
             shutil.copy2(path, destination)
             self._apply_content_filtering(str(destination))
 
+            # Fix REPO_ROOT path for scripts exported to .claude/scripts/
+            # Source scripts/ needs ".." to reach repo root
+            # Export .claude/scripts/ needs "../.." to reach repo root
+            self._fix_repo_root_path(str(destination))
+
             if destination.suffix == '.sh':
                 try:
                     os.chmod(destination, 0o755)
@@ -637,6 +646,235 @@ class ClaudeCommandsExporter:
                 shutil.copy2(src_file, dst_file)
 
         print("✅ Orchestration exported using manual copy (excluded specified directories)")
+
+    def _export_github_workflows(self, staging_dir):
+        """Export GitHub Actions workflows with project-specific filtering.
+
+        🚨 IMPORTANT: These are EXAMPLES ONLY that need to be integrated into your codebase.
+        They cannot be used as-is because they contain project-specific:
+        - Repository references
+        - GCP project IDs
+        - Service account configurations
+        - Environment-specific variables
+        """
+        print("⚙️  Exporting GitHub Actions workflows (examples only)...")
+
+        source_dir = os.path.join(self.project_root, '.github', 'workflows')
+        if not os.path.exists(source_dir):
+            print("⚠️  Warning: .github/workflows directory not found")
+            return
+
+        target_dir = os.path.join(staging_dir, 'workflows')
+        os.makedirs(target_dir, exist_ok=True)
+
+        # Counter for workflows
+        workflows_count = 0
+
+        # Copy workflow files with filtering
+        for workflow_file in sorted(os.listdir(source_dir)):
+            if workflow_file.endswith(('.yml', '.yaml')):
+                src_file = os.path.join(source_dir, workflow_file)
+                dst_file = os.path.join(target_dir, workflow_file)
+
+                # Copy the file
+                shutil.copy2(src_file, dst_file)
+
+                # Apply content filtering to make it more generic
+                self._apply_workflow_filtering(dst_file)
+
+                workflows_count += 1
+                print(f"   ⚙️  {workflow_file}")
+
+        # Create README.md for the workflows directory
+        self._create_workflows_readme(target_dir, workflows_count)
+
+        # Store count for summary
+        self.workflows_count = workflows_count
+        print(f"✅ Exported {workflows_count} workflow examples")
+
+    def _apply_workflow_filtering(self, file_path):
+        """Apply project-specific filtering to workflow files."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Replace project-specific values with placeholders
+            # Order matters: match more specific patterns first to avoid partial matches
+            content = re.sub(r'jleechanorg/worldarchitect\.ai', '$GITHUB_REPOSITORY', content)
+            content = re.sub(r'worldarchitecture-ai', '$GCP_PROJECT_ID', content)
+            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
+            content = re.sub(r'jleechanorg', '$GITHUB_OWNER', content)
+            content = re.sub(r'\bjleechan\b', '$USER', content)
+
+            # Add header comment to the file indicating it's an example
+            header = """# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+"""
+            # Only add header if not already present
+            if '⚠️ EXAMPLE WORKFLOW' not in content:
+                content = header + content
+
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+        except Exception as e:
+            print(f"⚠️  Warning: Workflow filtering failed for {file_path}: {e}")
+            # Remove partially written file to avoid exporting broken workflows
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"   Removed broken workflow file: {os.path.basename(file_path)}")
+            except Exception as cleanup_error:
+                print(f"⚠️  Warning: Failed to remove broken workflow file {file_path}: {cleanup_error}")
+
+    def _fix_repo_root_path(self, file_path):
+        """Fix REPO_ROOT path calculation for scripts exported to .claude/scripts/.
+
+        Scripts from scripts/ directory use ".." to reach repo root.
+        When exported to .claude/scripts/, they need "../.." instead.
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Fix REPO_ROOT path: scripts/ uses ".." but .claude/scripts/ needs "../.."
+            # Match pattern: REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+            # Replace with: REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+            content = re.sub(
+                r'REPO_ROOT="\$\(cd "\$\{SCRIPT_DIR\}/\.\." && pwd\)"',
+                'REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"',
+                content
+            )
+
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+        except Exception as e:
+            print(f"⚠️  Warning: REPO_ROOT path fix failed for {file_path}: {e}")
+
+    def _create_workflows_readme(self, workflows_dir, count):
+        """Create a README.md explaining workflows are examples only."""
+        readme_content = f'''# GitHub Actions Workflows - EXAMPLES ONLY
+
+⚠️ **IMPORTANT: These workflows are EXAMPLES and require integration into your codebase.**
+
+## What This Directory Contains
+
+This directory contains **{count} GitHub Actions workflow examples** exported from a working Claude Code project. These serve as reference implementations and templates for common CI/CD patterns.
+
+## ⚠️ Why These Cannot Be Used As-Is
+
+These workflows contain project-specific configurations that **must be adapted** before use:
+
+1. **GCP Project IDs**: References to `$GCP_PROJECT_ID` need your actual Google Cloud project
+2. **Repository References**: `$GITHUB_REPOSITORY` placeholders need your `owner/repo`
+3. **Service Accounts**: Workload Identity Federation and service account configurations are project-specific
+4. **Secrets**: Workflow secrets (API keys, tokens) must be configured in your repository
+5. **Environment Variables**: Project-specific env vars need customization
+6. **Path References**: Some paths may be specific to the original project structure
+
+## How to Integrate These Workflows
+
+### Step 1: Create Your Workflows Directory
+```bash
+mkdir -p .github/workflows
+```
+
+### Step 2: Copy and Adapt Workflows
+For each workflow you want to use:
+
+1. Copy the workflow file to `.github/workflows/`
+2. Replace ALL placeholder values:
+   - `$GCP_PROJECT_ID` → Your GCP project ID (e.g., `my-project-123`)
+   - `$GITHUB_REPOSITORY` → Your repo (e.g., `myorg/myrepo`)
+   - `$GITHUB_OWNER` → Your GitHub username or organization
+   - `$USER` → Your username if applicable
+
+3. Configure required secrets in your repository settings:
+   - `GITHUB_TOKEN` (usually automatic)
+   - `GCP_SERVICE_ACCOUNT` if using GCP deployments
+   - Any API keys referenced in the workflow
+
+### Step 3: Validate Before Committing
+```bash
+# Check YAML syntax
+yamllint .github/workflows/*.yml
+
+# Or use actionlint for GitHub Actions specific validation
+actionlint
+```
+
+## Workflow Categories
+
+### CI/CD Workflows
+- **test.yml** - Run tests on push/PR
+- **deploy-*.yml** - Deployment workflows
+- **presubmit.yml** - Pre-merge validation
+
+### Automation Workflows
+- **pr-cleanup.yml** - Automatic PR maintenance
+- **auto-deploy-*.yml** - Automatic deployment triggers
+- **slash-dispatch.yml** - Slash command dispatching
+
+### Code Quality
+- **hook-tests.yml** - Claude Code hook validation
+- **doc-size-check.yml** - Documentation size limits
+
+## Common Adaptations
+
+### For Google Cloud Deployments
+```yaml
+# Replace this:
+env:
+  GCP_PROJECT: $GCP_PROJECT_ID
+
+# With your actual project:
+env:
+  GCP_PROJECT: my-actual-project-id
+```
+
+### For Repository References
+```yaml
+# Replace this:
+repository: $GITHUB_REPOSITORY
+
+# With your repo:
+repository: myorg/myrepo
+```
+
+### For Service Account Authentication
+Set up Workload Identity Federation or use a service account key:
+```yaml
+- uses: google-github-actions/auth@v2
+  with:
+    workload_identity_provider: projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/YOUR_POOL/providers/YOUR_PROVIDER
+    service_account: YOUR_SA@YOUR_PROJECT.iam.gserviceaccount.com
+```
+
+## Need Help?
+
+Claude Code can assist with adapting these workflows to your specific project. Just describe your CI/CD requirements and ask for help customizing the relevant workflow files.
+
+---
+
+**Source**: Exported from [WorldArchitect.AI](https://github.com/jleechanorg/worldarchitect.ai) Claude Code configuration
+'''
+
+        readme_path = os.path.join(workflows_dir, 'README.md')
+        with open(readme_path, 'w', encoding='utf-8') as f:
+            f.write(readme_content)
+
+        print("   📝 Created workflows/README.md with integration instructions")
 
     def _apply_content_filtering(self, file_path):
         """Apply content transformations to files"""
@@ -1136,14 +1374,16 @@ This is a filtered reference export from a working Claude Code project. Commands
 
     def _clone_repository(self):
         """Clone the target repository"""
-        print("Directory Cloning target repository...")
+        print("Cloning target repository...")
 
-        # Use system PATH to find gh command with fallback for Windows
+        # Use system PATH to find gh command with fallback for common locations
         gh_cmd = shutil.which('gh')
         if not gh_cmd:
-            # Try common Windows locations for gh
+            # Try common locations for gh (Linux and Windows)
             common_paths = [
-                "C:\\Users\\jnlc3\\bin\\gh",
+                os.path.expanduser("~/.local/bin/gh"),  # Linux user install
+                "/usr/local/bin/gh",                    # Linux system install
+                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Windows/Linux user bin
                 "C:\\Program Files\\GitHub CLI\\gh.exe",
                 "C:\\Program Files (x86)\\GitHub CLI\\gh.exe"
             ]
@@ -1195,7 +1435,8 @@ This is a filtered reference export from a working Claude Code project. Commands
             'skills': os.path.join(claude_dir, 'skills'),           # .claude/skills directory
             'settings_json': os.path.join(claude_dir, 'settings.json'),  # .claude/settings.json file
             'orchestration': 'orchestration',  # Goes to repo root
-            'scripts': None                    # Goes to repo root within scripts/
+            'scripts': None,                   # Goes to repo root within scripts/
+            'workflows': 'workflows'           # GitHub workflows - goes to repo root as examples
         }
 
         # Create the .claude/ subdirectories (but not for files like settings.json)
@@ -1301,6 +1542,12 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Commit changes and push branch"""
         print("💾 Committing and pushing changes...")
 
+        # Configure git user for commit (needed in clean clone)
+        subprocess.run(['git', 'config', 'user.email', 'claude-export@anthropic.com'], check=True)
+        subprocess.run(['git', 'config', 'user.name', 'Claude Export'], check=True)
+        # Disable commit signing (may not be configured in cloned repo)
+        subprocess.run(['git', 'config', 'commit.gpgsign', 'false'], check=True)
+
         # Add all changes with error handling
         try:
             subprocess.run(['git', 'add', '.'], check=True)
@@ -1326,6 +1573,7 @@ This is a filtered reference export from a working Claude Code project. Commands
 - 📎 Hooks: {self.hooks_count} Claude Code hooks with nested structure
 - 🚀 Scripts: {self.scripts_count} reusable automation scripts (scripts/ directory)
 - 🧠 Skills: {self.skills_count} shared knowledge references (.claude/skills/)
+- ⚙️  Workflows: {self.workflows_count} GitHub Actions workflow examples (require integration)
 - 🤖 Orchestration: Multi-agent task delegation system (core components only)
 - 📚 Documentation: Complete README with installation guide and adaptation examples
 
@@ -1366,6 +1614,7 @@ This export **excludes** the following project-specific directories:
 - **📎 {self.hooks_count} Hooks**: Essential Claude Code workflow automation
 - **🚀 {self.scripts_count} Scripts**: Development environment management (scripts/ directory)
 - **🧠 {self.skills_count} Skills**: Reference knowledge exports (.claude/skills/)
+- **⚙️  {self.workflows_count} Workflows**: GitHub Actions examples (REQUIRE INTEGRATION)
 - **🤖 Orchestration System**: Core multi-agent task delegation (WIP prototype)
 - **📚 Complete Documentation**: Setup guide with adaptation examples
 
@@ -1437,6 +1686,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(f"   Agents: {self.agents_count}")
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Skills: {self.skills_count}")
+        print(f"   Workflows: {self.workflows_count} (examples only)")
         print("   Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/")
         print("\n🎯 The export has been published and is ready for review!")
 
