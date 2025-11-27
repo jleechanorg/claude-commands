@@ -1,0 +1,42 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+# Auto-Deploy to Development Environment
+# Lightweight trigger that delegates to reusable deploy-dev workflow
+# Triggers on push to main OR manual workflow_dispatch
+
+name: Auto-Deploy Dev
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual auto-deploy trigger reason (optional)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-dev.yml
+    with:
+      reason: ${{ github.event_name == 'workflow_dispatch' && (inputs.reason != '' && inputs.reason || format('Manual auto-deploy trigger on {0}', github.ref_name)) || format('Auto-deploy from push to {0}', github.ref_name) }}
+      ref_name: ${{ github.ref_name }}
+    secrets: inherit
+    permissions:
+      contents: read
+      issues: write

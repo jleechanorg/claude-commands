@@ -1,0 +1,241 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: WorldArchitect Tests (Directory-Based)
+
+# Security permissions for directory-based testing
+permissions:
+  contents: read
+  pull-requests: read
+
+# When to run the tests (optimized - no duplication on PR branches)
+on:
+  pull_request:              # Run on all PRs regardless of target branch
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'roadmap/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  push:
+    branches: [ main, dev ]  # Run on pushes to main/dev for post-merge validation
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'roadmap/**'
+      - '.github/ISSUE_TEMPLATE/**'
+
+jobs:
+  # Job to detect which directories have changes
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      test-dirs: ${{ steps.changes.outputs.test-dirs }}
+      selected-groups: ${{ steps.changes.outputs.selected-groups }}
+      matrix: ${{ steps.changes.outputs.matrix }}
+      has-changes: ${{ steps.changes.outputs.has-changes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          fetch-depth: 0  # Full history for accurate change detection
+
+      - name: Detect directory changes
+        id: changes
+        run: |
+          # Use shared change detection script
+          chmod +x scripts/ci-detect-changes.sh
+
+          # Run change detection and capture output
+          OUTPUT=$(./scripts/ci-detect-changes.sh \
+            "${{ github.event_name }}" \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}" \
+            "include")
+
+          # Parse and export outputs
+          echo "$OUTPUT" | while IFS= read -r line; do
+            if [[ "$line" =~ ^test-dirs= ]]; then
+              echo "$line" >> $GITHUB_OUTPUT
+            elif [[ "$line" =~ ^selected-groups= ]]; then
+              echo "$line" >> $GITHUB_OUTPUT
+            elif [[ "$line" =~ ^matrix= ]]; then
+              echo "$line" >> $GITHUB_OUTPUT
+            elif [[ "$line" =~ ^has-changes= ]]; then
+              echo "$line" >> $GITHUB_OUTPUT
+            fi
+          done
+
+          echo "$OUTPUT"
+
+  # Import validation (always runs)
+  import-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      - name: Run import validation
+        run: |
+          if [ -f "scripts/validate_imports_delta.sh" ]; then
+            ./scripts/validate_imports_delta.sh
+          else
+            echo "Import validation script not found, skipping"
+          fi
+
+  # Directory-based test execution
+  test:
+    name: Directory tests (${{ matrix.test-group }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      with:
+        submodules: recursive
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip dependencies and virtual environment
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
+      with:
+        path: |
+          ~/.cache/pip
+          venv
+        key: ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-group }}
+        restore-keys: |
+          ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-
+          ${{ runner.os }}-python-3.11-
+
+    - name: Install dependencies
+      run: |
+        # Reuse cached venv when available; otherwise create it
+        if [ -d venv ]; then
+          echo "Reusing cached venv"
+        else
+          echo "Creating new venv"
+          python -m venv venv
+        fi
+        source venv/bin/activate
+
+        # Upgrade pip and install resolver tools with timeout
+        timeout 300 python -m pip install --upgrade pip setuptools wheel
+
+        # Install core application requirements
+        timeout 600 pip install -r mvp_site/requirements.txt
+
+        # Install additional requirements for specific directories if needed
+        # NOTE: Keep the group names in sync with GROUP_CONFIG in scripts/ci-detect-changes.sh (source of truth).
+        case "${{ matrix.test-group }}" in
+          "claude"|"orchestration"|"automation"|"scripts"|"mcp")
+            # These directories may have additional requirements
+            find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
+              echo "Installing $req_file (with 300s timeout)"
+              timeout 300 pip install -r "$req_file" || echo "Warning: Failed to install $req_file"
+            done
+            # Install automation package if testing automation
+            if [ "${{ matrix.test-group }}" = "automation" ] && [ -f "automation/pyproject.toml" ]; then
+              echo "Installing automation package in editable mode"
+              timeout 300 pip install -e automation/
+            fi
+            ;;
+        esac
+
+        # Verify key dependencies
+        timeout 60 python -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
+        chmod +x vpython
+        timeout 60 ./vpython --version
+
+    - name: Run directory-based tests - ${{ matrix.test-group }}
+      timeout-minutes: 8
+      run: |
+        source venv/bin/activate
+
+        # Set CI environment variables
+        export TESTING=true
+        export MOCK_SERVICES_MODE=true
+        export FAST_TESTS=1
+        export ENABLE_BROWSER_TESTS=0
+        export ENABLE_BUILD_TESTS=0
+        export ENABLE_NETWORK_TESTS=0
+        export GITHUB_ACTIONS=true
+        export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site:${PWD}/automation"
+
+        echo "🎯 Running tests for directory group: ${{ matrix.test-group }}"
+        echo "📂 Test directories: ${{ matrix.test-dirs }}"
+
+        # Run tests only for the specified directory/directories
+        chmod +x run_tests.sh
+        export CI_TEST_LIMIT=50  # Limit for performance
+
+        # Use directory-based test discovery with validation
+        IFS=',' read -ra SELECTED_DIRS <<< "${{ matrix.test-dirs }}"
+        TOTAL_TESTS=0
+        for DIR in "${SELECTED_DIRS[@]}"; do
+          DIR=$(echo "$DIR" | xargs)
+          [ -z "$DIR" ] && continue
+          COUNT=$(find "$DIR" -name "test_*.py" -type f 2>/dev/null | wc -l)
+          echo "📊 Found $COUNT test files in $DIR"
+          TOTAL_TESTS=$((TOTAL_TESTS + COUNT))
+        done
+
+        if [ "$TOTAL_TESTS" -eq 0 ]; then
+          echo "⚠️ No tests found in specified directories, falling back to core tests"
+          ./run_tests.sh --parallel --exclude-integration --exclude-mcp
+        else
+          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp
+        fi
+
+    - name: Upload test results
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+      if: always()
+      with:
+        name: test-results-${{ matrix.test-group }}
+        path: |
+          mvp_site/test-results/
+          /tmp/worldarchitectai/coverage/
+          mvp_site/*.log
+        retention-days: 30
+        if-no-files-found: warn
+
+  # Summary job to report overall results
+  test-summary:
+    needs: [detect-changes, test, import-validation]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report test summary
+        run: |
+          echo "🎯 Directory-based CI Results"
+          echo "Tested directories: ${{ needs.detect-changes.outputs.test-dirs }}"
+          echo "Test groups: ${{ needs.detect-changes.outputs.selected-groups }}"
+
+          # Check test results
+          test_success="${{ needs.test.result }}"
+          import_success="${{ needs.import-validation.result }}"
+
+          if [ "$test_success" = "success" ] && [ "$import_success" = "success" ]; then
+            echo "✅ All directory-based tests and validation passed!"
+          else
+            echo "❌ Some tests failed:"
+            echo "  Directory tests: $test_success"
+            echo "  Import validation: $import_success"
+            exit 1
+          fi
