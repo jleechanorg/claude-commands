@@ -1,0 +1,60 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Claude PR Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude-code-action:
+    # Temporarily disable the Claude PR Assistant workflow.
+    if: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude PR Action
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          timeout_minutes: "30"
+
+          # Custom instructions for WorldArchitect.AI context
+          custom_instructions: |
+            You are helping with WorldArchitect.AI, an AI-powered tabletop RPG platform.
+
+            Key project details:
+            - Stack: Python 3.11, Flask, Gunicorn, Gemini API, Firebase Firestore
+            - Frontend: Vanilla JS with Bootstrap
+            - Deployment: Docker on Google Cloud Run
+            - Testing: Use 'TESTING=true vpython' for tests
+            - Main directories: mvp_site/, testing_http/, testing_ui/
+
+            Follow the project's CLAUDE.md rules when making changes.
+            Always run tests before completing tasks.
+            Use the project's logging_util instead of standard logging.

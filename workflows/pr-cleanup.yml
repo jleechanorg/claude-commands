@@ -1,0 +1,139 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Clean up PR Preview (Rotating Pool)
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cleanup-preview:
+    runs-on: ubuntu-latest
+    env:
+      GCP_REGION: us-central1
+      GCP_PROJECT: $GCP_PROJECT_ID
+      CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Release server from pool
+        id: release
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          # Make script executable
+          chmod +x .github/scripts/pr-server-pool.sh
+
+          # Release server assigned to this PR
+          RELEASE_INFO=$(.github/scripts/pr-server-pool.sh release "$PR_NUMBER")
+
+          # Parse JSON output
+          SERVER=$(echo "$RELEASE_INFO" | jq -r '.server')
+          SERVICE_NAME=$(echo "$RELEASE_INFO" | jq -r '.serviceName')
+
+          # Set outputs
+          echo "server=$SERVER" >> "$GITHUB_OUTPUT"
+          echo "service_name=$SERVICE_NAME" >> "$GITHUB_OUTPUT"
+
+          if [[ "$SERVICE_NAME" == "null" ]]; then
+            echo "⚠️ No server was assigned to PR #$PR_NUMBER (nothing to clean up)"
+            exit 0
+          fi
+
+          echo "✅ Found server assignment: $SERVER (service: $SERVICE_NAME)"
+
+      - name: Remove PR label from service
+        if: steps.release.outputs.service_name != 'null'
+        env:
+          SERVICE_NAME: ${{ steps.release.outputs.service_name }}
+          SERVER: ${{ steps.release.outputs.server }}
+        run: |
+          set -euo pipefail
+
+          echo "🧹 Releasing server $SERVER back to pool..."
+
+          # Remove pr-number label to mark server as available
+          gcloud run services update "$SERVICE_NAME" \
+            --project="${{ env.GCP_PROJECT }}" \
+            --region="${{ env.GCP_REGION }}" \
+            --remove-labels=pr-number \
+            --quiet && {
+            echo "✅ Server $SERVER released back to pool"
+          } || {
+            echo "⚠️ Could not remove label (service may not exist yet)"
+            exit 0
+          }
+
+      - name: Show pool status
+        if: always()
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/pr-server-pool.sh
+          echo ""
+          echo "📊 Current pool status after cleanup:"
+          .github/scripts/pr-server-pool.sh status
+
+      - name: Post cleanup comment
+        if: steps.release.outputs.service_name != 'null'
+        env:
+          SERVER: ${{ steps.release.outputs.server }}
+          SERVICE_NAME: ${{ steps.release.outputs.service_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "## 🧹 PR Preview Resources Released
+
+          **Server \`$SERVER\` (\`$SERVICE_NAME\`) has been released back to the pool.**
+
+          ### ✅ What happened:
+          - Server label removed
+          - Server is now available for new PRs
+          - Service remains running for fast redeployment
+
+          ### 🔄 To get a preview again:
+          1. Reopen this PR
+          2. The workflow will automatically assign an available server
+
+          🤖 *Rotating server pool auto-management*"
+
+      - name: Post no-cleanup comment
+        if: steps.release.outputs.service_name == 'null'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "## ℹ️ No Preview Resources to Clean Up
+
+          This PR did not have an active preview deployment.
+
+          🤖 *Rotating server pool auto-management*"

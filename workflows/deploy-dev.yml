@@ -1,0 +1,178 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you running a dev deployment?'
+        required: false
+        default: ''
+        type: string
+  workflow_call:
+    inputs:
+      reason:
+        description: 'Reason exposed in deployment summary'
+        required: false
+        type: string
+      ref_name:
+        description: 'Branch name reported in deployment summary'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: dev
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GCP_PROJECT: $GCP_PROJECT_ID
+      GCP_REGION: us-central1
+      SERVICE_NAME: mvp-site-app-dev
+      DEPLOY_REASON: ${{ inputs.reason || github.event.inputs.reason || 'auto-deploy (dev)' }}
+      REF_NAME: ${{ inputs.ref_name || github.ref_name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Configure gcloud CLI defaults
+        run: |
+          gcloud config set project ${{ env.GCP_PROJECT }}
+          gcloud config set run/region ${{ env.GCP_REGION }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          chmod +x deploy.sh
+          ./deploy.sh mvp_site
+        timeout-minutes: 30
+
+      - name: Get deployment URL
+        id: get-url
+        run: |
+          URL=$(gcloud run services describe "${{ env.SERVICE_NAME }}" \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT }} \
+            --format='value(status.url)')
+          if [ -z "$URL" ]; then
+            echo "❌ Failed to retrieve deployment URL"
+            exit 1
+          fi
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployment URL: $URL"
+
+      - name: Health check
+        run: |
+          HEALTH_URL="${{ steps.get-url.outputs.url }}/health"
+          echo "Performing health check at ${HEALTH_URL}"
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          SLEEP_DURATION=5
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Health check attempt $(($RETRY_COUNT + 1))/$MAX_RETRIES..."
+
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+
+            echo "Health check returned status $STATUS"
+            RETRY_COUNT=$(($RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "Health check failed, retrying in ${SLEEP_DURATION}s..."
+              sleep $SLEEP_DURATION
+            fi
+          done
+
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Deployment summary
+        if: always() && steps.get-url.outcome == 'success'
+        run: |
+          echo "## 🚀 Dev Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** dev" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ env.GCP_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** ${{ env.GCP_PROJECT }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason:** ${DEPLOY_REASON}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment URL:** ${{ steps.get-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Service Health](${{ steps.get-url.outputs.url }}/health)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Cloud Run Console](https://console.cloud.google.com/run/detail/${{ env.GCP_REGION }}/${{ env.SERVICE_NAME }}?project=${{ env.GCP_PROJECT }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Logs](https://console.cloud.google.com/logs/query?project=${{ env.GCP_PROJECT }}&query=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22${{ env.SERVICE_NAME }}%22)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "## ❌ Dev Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${REF_NAME}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service**: ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
+
+      - name: Send failure email notification
+        if: failure()
+        uses: ./.github/actions/send-deploy-notification
+        with:
+          status: failure
+          environment: dev
+          service_name: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          project: ${{ env.GCP_PROJECT }}
+          branch: ${{ env.REF_NAME }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: ${{ steps.get-url.outputs.url }}
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}
+
+      - name: Send success email notification
+        if: success()
+        uses: ./.github/actions/send-deploy-notification
+        with:
+          status: success
+          environment: dev
+          service_name: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          project: ${{ env.GCP_PROJECT }}
+          branch: ${{ env.REF_NAME }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: ${{ steps.get-url.outputs.url }}
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}

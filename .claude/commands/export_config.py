@@ -21,7 +21,8 @@ EXPORTABLE_COMPONENTS = [
     "agents",        # Subagents/specialized AI assistants (.md files) - STANDARD
     "scripts",       # Claude Code utility scripts (.sh, .py files) - STANDARD
     "skills",        # Skill documentation and guides (.md files) - STANDARD
-    "settings.json"  # Configuration file - STANDARD
+    "settings.json", # Configuration file - STANDARD
+    "workflows"      # GitHub Actions workflows (.yml files) - EXAMPLES ONLY
 ]
 
 # 📝 NOTE: MCP Server Script Locations (export-time consolidation)
@@ -59,7 +60,8 @@ COMPONENT_DESCRIPTIONS = {
     "agents": "Specialized AI agent configurations for different tasks",
     "scripts": "Utility scripts including MCP server scripts and automation helpers",
     "skills": "Skill documentation and guides for Claude Code capabilities",
-    "settings.json": "Claude Code configuration and preferences"
+    "settings.json": "Claude Code configuration and preferences",
+    "workflows": "GitHub Actions workflow examples (require integration into your codebase)"
 }
 
 
