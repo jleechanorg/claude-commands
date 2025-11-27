@@ -8,6 +8,86 @@ execution_mode: immediate
 **This is NOT documentation - these are COMMANDS to execute right now.**
 **Use TodoWrite to track progress through multi-phase workflows.**
 
+## 🚨🚨🚨 CRITICAL: LOCAL-FIRST WORKFLOW - MANDATORY SEQUENCE 🚨🚨🚨
+
+**THE GOLDEN RULE**: Never push fixes to GitHub until you have:
+1. ✅ **REPRODUCED the failure LOCALLY**
+2. ✅ **FIXED it LOCALLY**
+3. ✅ **VERIFIED ALL tests pass LOCALLY**
+
+### 📋 MANDATORY WORKFLOW SEQUENCE (NO EXCEPTIONS)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  PHASE 1: LOCAL REPRODUCTION (MANDATORY FIRST STEP)                 │
+│  ───────────────────────────────────────────────────────────────────│
+│  1. Fetch GitHub PR status to identify failures                     │
+│  2. REPRODUCE those exact failures LOCALLY before any fixes         │
+│  3. If local tests pass but GitHub fails → use /redgreen            │
+│  4. DO NOT proceed to fixes until failure is reproduced locally     │
+└─────────────────────────────────────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  PHASE 2: LOCAL FIX & LOCAL VERIFICATION                            │
+│  ───────────────────────────────────────────────────────────────────│
+│  1. Fix the code to address the reproduced failure                  │
+│  2. Run the project's test suite - ALL tests MUST pass              │
+│  3. DO NOT push until tests pass completely                         │
+└─────────────────────────────────────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  PHASE 3: MERGE CONFLICTS (If Present)                              │
+│  ───────────────────────────────────────────────────────────────────│
+│  1. ALWAYS: git pull origin main                                    │
+│  2. Resolve conflicts locally                                       │
+│  3. Document decisions in docs/conflicts/{branch}-pr{number}/       │
+│  4. Run ALL tests again after conflict resolution                   │
+│  5. DO NOT push until tests pass post-resolution                    │
+└─────────────────────────────────────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  PHASE 4: PUSH & VERIFY GITHUB                                      │
+│  ───────────────────────────────────────────────────────────────────│
+│  1. Push to remote only after ALL local verification passes         │
+│  2. Wait for GitHub CI to complete                                  │
+│  3. Re-verify GitHub status shows all checks passing                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 🚨 MERGE CONFLICT MANDATORY PROTOCOL
+
+**ALWAYS follow this exact sequence for merge conflicts:**
+
+```bash
+# Step 1: ALWAYS pull latest main first
+git pull origin main
+
+# Step 2: If conflicts exist, resolve them
+# (Git will show conflict markers in files)
+
+# Step 3: Create documentation directory
+PR_NUMBER="<actual_pr_number>"
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | tr '/' '-')
+DOCS_DIR="docs/conflicts/${SANITIZED_BRANCH}-pr${PR_NUMBER}"
+mkdir -p "$DOCS_DIR"
+
+# Step 4: Document EACH conflict resolution in $DOCS_DIR/conflict_summary.md
+# - Original conflict (with markers)
+# - Resolution chosen
+# - WHY this resolution was chosen
+# - Risk level (Low/Medium/High)
+
+# Step 5: After resolving ALL conflicts, run the project's test suite
+# Detect and run: npm test, pytest, ./run_tests.sh, make test, etc.
+# ALL tests MUST pass before proceeding
+
+# Step 6: Only then commit and push
+git add -A
+git commit -m "fix: Resolve merge conflicts for PR #${PR_NUMBER}"
+git push origin HEAD
+```
+
 ## 🚨 EXECUTION WORKFLOW
 
 ### Phase 1: 🚀 Enhanced Execution
@@ -86,7 +166,7 @@ merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
 🚨 **CRITICAL DETECTION**: Before applying fixes, detect if GitHub CI failures are environment-specific.
 
 **GitHub CI vs Local Test Discrepancy Detection**:
-1. **MANDATORY CHECK**: Run local tests first: `./run_tests.sh`
+1. **MANDATORY CHECK**: Run local tests first (detect test runner: `npm test`, `pytest`, `make test`, etc.)
 2. **DISCREPANCY INDICATOR**: Local tests pass (✅) but GitHub CI shows failures (❌)
 3. **COMMON CAUSES**:
   4. Different Python versions between local and CI
@@ -116,7 +196,7 @@ Based on the analysis, apply appropriate fixes:
   6. **RED PHASE**: Create failing tests that reproduce the GitHub CI failure locally
   7. **GREEN PHASE**: Fix the code to make both local and GitHub tests pass
   8. **REFACTOR PHASE**: Clean up the solution while maintaining test coverage
-  9. **Trigger**: GitHub shows failing tests but `./run_tests.sh` passes locally
+  9. **Trigger**: GitHub shows failing tests but local test suite passes
   10. **Process**: Extract GitHub CI error → Write failing test → Implement fix → Verify both environments
 
 ### Phase 9: 🚨 Integrated `/redgreen` Workflow for CI Discrepancies
@@ -212,9 +292,9 @@ Based on the analysis, apply appropriate fixes:
      - All required checks passing
 
 2. **Local CI Replica Verification**:
-   - **MANDATORY**: Run `./run_ci_replica.sh` to verify fixes in CI-equivalent environment
-   - **PURPOSE**: Ensures fixes work in the same environment as GitHub Actions CI
-   - **ENVIRONMENT**: Sets CI=true, GITHUB_ACTIONS=true, TESTING=true, TEST_MODE=mock
+   - **MANDATORY**: Verify fixes work in CI-equivalent environment
+   - **PURPOSE**: Ensures fixes work the same way GitHub Actions CI runs them
+   - **APPROACH**: Run tests with CI environment variables if applicable (CI=true, etc.)
    - **VALIDATION**: Must pass completely before considering fixes successful
    - Check git status for uncommitted changes
    - Verify no conflicts remain with the base branch
@@ -246,7 +326,28 @@ If blockers remain, iterate through the analysis and fix process again until the
 
 **Usage**: `/fixpr <PR_NUMBER> [--auto-apply]`
 
-**Purpose**: Make GitHub PRs mergeable by analyzing and fixing CI failures, merge conflicts, and bot feedback - without merging. **NEW**: Automatically uses `/redgreen` methodology when GitHub CI fails but local tests pass.
+**Purpose**: Make GitHub PRs mergeable by analyzing and fixing CI failures, merge conflicts, and bot feedback - without merging.
+
+## 🚨🚨🚨 CORE PRINCIPLE: LOCAL-FIRST, ALWAYS 🚨🚨🚨
+
+**This command REQUIRES local verification before ANY push to GitHub.**
+
+### The Three Commandments of /fixpr:
+
+1. **🔴 REPRODUCE LOCALLY FIRST** - If GitHub shows a failure, you MUST reproduce that exact failure on your local machine BEFORE attempting any fix. No exceptions.
+
+2. **🟢 FIX AND VERIFY LOCALLY** - After fixing, run the project's test suite. ALL tests MUST pass. If any fail, you are NOT done.
+
+3. **📝 DOCUMENT CONFLICT DECISIONS** - For merge conflicts: ALWAYS `git pull origin main`, resolve, then document decisions in `docs/conflicts/{branch}-pr{number}/`
+
+### Why Local-First?
+
+- **Prevents blind fixes**: You can't fix what you haven't seen fail
+- **Catches environment differences**: Ensures fix works in CI-equivalent environment
+- **Creates evidence**: Local reproduction proves you understand the problem
+- **Avoids push/fail cycles**: One confident push instead of many trial-and-error pushes
+
+**Enhanced with `/redgreen` Integration**: When GitHub CI shows test failures that don't reproduce locally with normal test run, `/fixpr` automatically triggers the Red-Green-Refactor methodology to create failing tests locally that match GitHub's failure, fix the environment-specific issues, and verify the solution works in both environments.
 
 ## 🚨 FUNDAMENTAL PRINCIPLE: GITHUB IS THE AUTHORITATIVE SOURCE
 
@@ -724,9 +825,8 @@ When merge conflicts are detected and resolved, ALWAYS document the resolution c
 - Prioritize fixes by impact and safety
 - Identify quick wins vs changes requiring careful consideration
 
-# 1. Verify local tests pass
-
-./run_tests.sh
+# 1. Verify local tests pass (detect project's test runner)
+# Examples: npm test, pytest, make test, ./run_tests.sh, etc.
 
 # ✅ All tests pass locally
 
@@ -747,7 +847,7 @@ ci_failure_log=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '
   | map("\((.context // .name) // \"unknown\"): \((.description // \"no description\"))")
   | join("\n")
 ')
-/redgreen --pr "$PR_NUMBER" --check "$failing_check" --gh-log "$ci_failure_log" --local "./run_tests.sh"
+/redgreen --pr "$PR_NUMBER" --check "$failing_check" --gh-log "$ci_failure_log"
 
 # ✅ fixpr MUST wait for /redgreen to finish and confirm a matching local failure before attempting any fixes
 
@@ -803,14 +903,12 @@ EOF
 # Edit the source code to handle both environments consistently
 
 # 5. Verify local test now passes (GREEN confirmed)
-
-<RUN_TEST_COMMAND> "$TESTS_DIR/test_ci_discrepancy_redgreen.py"
+# Run the project's test command against the new test file
 
 # ✅ PASS: Test now passes locally
 
 # 6. Verify all existing tests still pass
-
-./run_tests.sh
+# Run full test suite (npm test, pytest, make test, etc.)
 
 # ✅ All tests pass
 
@@ -827,10 +925,9 @@ EOF
 # - Update documentation if needed
 
 # 8. Final verification
+# Run full test suite to ensure everything passes
 
-./run_tests.sh && ./run_ci_replica.sh
-
-# ✅ All tests pass in both local and CI-equivalent environments
+# ✅ All tests pass locally
 
 ```
 
@@ -839,7 +936,7 @@ EOF
 - Results in more robust fixes that work across environments
 - Prevents push/fail/fix cycles by reproducing CI conditions locally
 - Creates test cases that prevent regression of environment-specific issues
-- **MANDATORY VERIFICATION**: After each fix category, run `./run_ci_replica.sh` to confirm fix works in CI environment
+- **MANDATORY VERIFICATION**: After each fix category, verify tests pass locally
 
 **For Merge Conflicts**:
 - **🚨 MANDATORY FIRST STEP**: Before resolving ANY conflicts, create documentation directory:
@@ -967,7 +1064,7 @@ For every fix applied:
 
 # Example with GitHub CI vs Local discrepancy (auto-triggers /redgreen workflow):
 
-# Local: ./run_tests.sh → ✅ All tests pass
+# Local: test suite passes → ✅ All tests pass
 
 # GitHub: CI shows ❌ test-unit FAILING - Environment-specific test failure
 
@@ -979,7 +1076,7 @@ For every fix applied:
 
 # → Immediately issues the real /redgreen slash command to reproduce the CI failure locally
 
-/redgreen --pr 1234 --check "test-unit" --gh-log "AssertionError: Expected 'foo' but got 'FOO'" --local "./run_tests.sh"
+/redgreen --pr 1234 --check "test-unit" --gh-log "AssertionError: Expected 'foo' but got 'FOO'"
 
 # → Waits for /redgreen to finish establishing a failing local test that matches GitHub
 
@@ -1013,9 +1110,9 @@ For every fix applied:
 
 # 2. MANDATORY: Verify fixes work in CI-equivalent environment
 
-./run_ci_replica.sh
+# Run test suite to verify fixes work
 
-# 3. If CI replica passes, commit and sync fixes to GitHub
+# 3. If tests pass, commit and sync fixes to GitHub
 
 git add -A && git commit -m "fix: Address CI failures and merge conflicts"
 
@@ -1032,8 +1129,8 @@ sleep 60
 gh pr view <PR> --json statusCheckRollup,mergeable,mergeStateStatus
 ```
 
-**Key Benefits of run_ci_replica.sh Integration**:
-- **Environment Parity**: Exact match with GitHub Actions CI environment variables
+**Key Benefits of Local-First Testing**:
+- **Environment Parity**: Test in conditions matching GitHub Actions CI
 - **Early Detection**: Catch CI failures locally before pushing to GitHub
 - **Time Efficiency**: Avoid multiple push/wait/fail cycles
 - **Confidence**: Know fixes will work in CI before pushing
@@ -1046,7 +1143,7 @@ This command works naturally with:
 - `/pushl` - To push fixes to remote
 - `/redgreen` (alias `/tdd`) - **NEW**: Automatically triggered for GitHub CI vs local test discrepancies
 - Testing commands - To verify fixes work correctly
-- `./run_ci_replica.sh` - To verify fixes work in CI-equivalent environment
+- Project test suite - To verify fixes work locally before push
 
 ## Error Recovery
 
@@ -1072,6 +1169,68 @@ The focus is on describing intent and letting Claude determine the best implemen
 
 **📊 Success Metric**: A successful run means GitHub would show a green merge button with no blockers - all CI passing, no conflicts, no blocking reviews.
 
-## Regression Testing Notes
+## 🚨 PRE-PUSH CHECKLIST (MANDATORY)
 
-- `./run_tests.sh` *(2025-09-27)* – Completed with 177/178 tests passing. The remaining failure (`mvp_site/tests/test_main_state_helper.py`) surfaces an existing `ResourceWarning` about an unclosed log file handle in `mvp_site/main.py`. Investigate the logging lifecycle before treating `/fixpr` updates as production-ready.
+**Before ANY `git push`, verify ALL items are checked:**
+
+```
+□ 1. REPRODUCED failure locally (saw the exact error locally)
+□ 2. Project test suite passes (ALL tests, not just some)
+□ 3. If merge conflicts existed:
+   □ 3a. Ran: git pull origin main
+   □ 3b. Resolved all conflicts
+   □ 3c. Created docs/conflicts/{branch}-pr{number}/conflict_summary.md
+   □ 3d. Documented WHY each resolution was chosen
+   □ 3e. Re-ran test suite after resolution
+□ 4. NO uncommitted changes remain (git status is clean)
+```
+
+**❌ If ANY checkbox is unchecked → DO NOT PUSH**
+**✅ If ALL checkboxes are checked → Safe to push**
+
+## 🚨 MERGE CONFLICT DOCUMENTATION REQUIREMENT
+
+When merge conflicts are present, documentation is MANDATORY:
+
+**Directory**: `docs/conflicts/{sanitized-branch}-pr{number}/`
+
+**Required Files**:
+1. `conflict_summary.md` - Detailed resolution for each file
+2. `index.md` - Quick summary and stats
+
+**Each Conflict Must Document**:
+- **File**: Which file had the conflict
+- **Conflict Type**: (imports, logic, configuration, etc.)
+- **Original**: The full conflict with `<<<<<<<`, `=======`, `>>>>>>>` markers
+- **Resolution**: The final merged code
+- **Reasoning**: WHY this specific resolution was chosen
+- **Risk Level**: Low / Medium / High
+
+**Example entry in conflict_summary.md**:
+```markdown
+### File: src/auth.py
+
+**Conflict Type**: Authentication logic
+**Risk Level**: High
+
+**Original Conflict**:
+\```python
+<<<<<<< HEAD
+def login(user, password):
+    return basic_auth(user, password)
+=======
+def login(user, password, mfa=None):
+    if mfa:
+        return mfa_auth(user, password, mfa)
+    return basic_auth(user, password)
+>>>>>>> main
+\```
+
+**Resolution**: Kept main branch version with MFA support
+
+**Reasoning**:
+- Main branch added MFA which is a security improvement
+- Backward compatible (mfa parameter is optional)
+- Our branch had no conflicting business logic
+```
+
