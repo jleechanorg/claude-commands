@@ -447,14 +447,35 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 
 🚨 **GITHUB CLI INSTALLATION & USAGE:** ⚠️ MANDATORY - Step-by-step protocol
 
-**INSTALLATION (ONE-TIME SETUP):**
+**🚨 CRITICAL: ALWAYS CHECK IF GH IS ALREADY INSTALLED BEFORE DOWNLOADING**
+
+**PRE-INSTALLATION CHECK (MANDATORY - RUN FIRST):**
 ```bash
-# Step 0: Check if gh is already installed
-if [ -f ~/.local/bin/gh ]; then
+# Step 0: Check if gh is already installed ANYWHERE on the system
+# This MUST be run before attempting any download
+
+# Check 1: Is gh available in PATH?
+which gh && gh --version
+
+# Check 2: Is gh installed at our preferred location?
+[ -f ~/.local/bin/gh ] && ~/.local/bin/gh --version
+
+# If EITHER check succeeds, DO NOT proceed with download - gh is already installed
+```
+
+**INSTALLATION (ONLY IF PRE-CHECKS FAIL):**
+```bash
+# ⚠️ ONLY run this section if BOTH checks above failed (gh not found anywhere)
+
+# Verify gh is NOT already installed before proceeding
+if which gh > /dev/null 2>&1; then
+    echo "✅ gh CLI already installed in PATH at: $(which gh)"
+    gh --version
+elif [ -f ~/.local/bin/gh ]; then
     echo "✅ gh CLI already installed at ~/.local/bin/gh"
     ~/.local/bin/gh --version
 else
-    echo "Installing gh CLI to ~/.local/bin..."
+    echo "gh CLI not found - proceeding with installation to ~/.local/bin..."
 
     # Step 1: Download and extract gh CLI (complies with TEMPORARY FILE ISOLATION policy)
     TMP_GH_DIR="$(mktemp -d)"
@@ -473,7 +494,12 @@ else
 fi
 
 # Step 3: Test authentication (GITHUB_TOKEN environment variable is already set)
-~/.local/bin/gh auth status
+# Use whichever gh is available
+if which gh > /dev/null 2>&1; then
+    gh auth status
+else
+    ~/.local/bin/gh auth status
+fi
 # Expected: ✓ Logged in to github.com account <username> (GITHUB_TOKEN)
 ```
 
