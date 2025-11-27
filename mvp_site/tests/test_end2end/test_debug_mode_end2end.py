@@ -56,7 +56,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         user_data = {
             "settings": {
                 "debug_mode": False,  # Default user setting
-                "gemini_model": "gemini-2.5-flash",
+                "gemini_model": "gemini-3-pro-preview",
             },
             "lastUpdated": "2025-01-01T00:00:00Z",
         }
@@ -383,7 +383,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         debug_response = {
             "narrative": "You cast a fireball spell!",
             "debug_info": {
-                "llm_model": "gemini-2.5-flash",
+                "llm_model": "gemini-3-pro-preview",
                 "processing_time": 1.23,
                 "token_count": 150,
             },

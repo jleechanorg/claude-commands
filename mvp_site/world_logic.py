@@ -994,7 +994,7 @@ async def get_user_settings_unified(request_data: dict[str, Any]) -> dict[str, A
         if settings is None:
             settings = {
                 "debug_mode": constants.DEFAULT_DEBUG_MODE,
-                "gemini_model": "gemini-2.5-flash",  # Default model
+                "gemini_model": "gemini-3-pro-preview",  # Default model (supports code_execution + JSON)
             }
 
         return create_success_response(settings)

@@ -6,7 +6,8 @@ import { ArrowLeft, Settings, Check, AlertTriangle, Loader2 } from 'lucide-react
 import { useAuth } from '../hooks/useAuth'
 import { apiService } from '../services/api.service'
 
-type GeminiModel = 'gemini-2.5-pro' | 'gemini-2.5-flash'
+// Only models that support code_execution + JSON mode together
+type GeminiModel = 'gemini-3-pro-preview' | 'gemini-2.0-flash'
 
 interface UserSettings {
   geminiModel: GeminiModel
@@ -18,7 +19,7 @@ export function SettingsPage() {
   const { user, signOut } = useAuth()
 
   const [settings, setSettings] = useState<UserSettings>({
-    geminiModel: 'gemini-2.5-pro',
+    geminiModel: 'gemini-3-pro-preview',
     debugMode: false
   })
   const [loading, setLoading] = useState(true)
@@ -39,8 +40,13 @@ export function SettingsPage() {
 
     try {
       const data = await apiService.getUserSettings()
+      // Map any legacy 2.5 models to compatible default
+      let model = data.gemini_model || 'gemini-3-pro-preview'
+      if (model === 'gemini-2.5-pro' || model === 'gemini-2.5-flash') {
+        model = 'gemini-3-pro-preview'
+      }
       setSettings({
-        geminiModel: data.gemini_model || 'gemini-2.5-pro',
+        geminiModel: model as GeminiModel,
         debugMode: data.debug_mode || false
       })
     } catch (error) {
@@ -159,14 +165,14 @@ export function SettingsPage() {
                     <input
                       type="radio"
                       name="geminiModel"
-                      value="gemini-2.5-pro"
-                      checked={settings.geminiModel === 'gemini-2.5-pro'}
-                      onChange={() => handleModelChange('gemini-2.5-pro')}
+                      value="gemini-3-pro-preview"
+                      checked={settings.geminiModel === 'gemini-3-pro-preview'}
+                      onChange={() => handleModelChange('gemini-3-pro-preview')}
                       className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
                     />
                     <div>
-                      <div className="text-white font-semibold">Gemini Pro 2.5 (Default)</div>
-                      <div className="text-purple-200 text-sm">High-quality responses, best for complex scenarios</div>
+                      <div className="text-white font-semibold">Gemini 3 Pro Preview (Default)</div>
+                      <div className="text-purple-200 text-sm">High-quality responses with advanced reasoning and dice roll support</div>
                     </div>
                   </label>
 
@@ -174,13 +180,13 @@ export function SettingsPage() {
                     <input
                       type="radio"
                       name="geminiModel"
-                      value="gemini-2.5-flash"
-                      checked={settings.geminiModel === 'gemini-2.5-flash'}
-                      onChange={() => handleModelChange('gemini-2.5-flash')}
+                      value="gemini-2.0-flash"
+                      checked={settings.geminiModel === 'gemini-2.0-flash'}
+                      onChange={() => handleModelChange('gemini-2.0-flash')}
                       className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
                     />
                     <div>
-                      <div className="text-white font-semibold">Gemini Flash 2.5</div>
+                      <div className="text-white font-semibold">Gemini 2.0 Flash</div>
                       <div className="text-purple-200 text-sm">Faster responses, good for quick interactions</div>
                     </div>
                   </label>

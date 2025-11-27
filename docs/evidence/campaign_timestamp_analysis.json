@@ -1,0 +1,131 @@
+{
+  "analysis_timestamp": "2025-11-26T17:46:05.828639",
+  "total_parallel_campaigns": 23,
+  "first_created": "2025-11-26T22:50:32.306954+00:00",
+  "last_created": "2025-11-26T23:11:22.776469+00:00",
+  "time_spread_seconds": 1250.469515,
+  "parallelism_analysis": {
+    "avg_request_time_s": 65,
+    "expected_serial_time_s": 1495,
+    "actual_spread_s": 1250.469515,
+    "effective_parallelism": 1.1955509367215562,
+    "overlap_percentage": 16.35655418060201
+  },
+  "campaigns": [
+    {
+      "id": "vDV5lNB7Wsdr4X2CKS9G",
+      "title": "ParallelWrite_20251126T225905_11",
+      "created_at": "2025-11-26T22:50:32.306954+00:00"
+    },
+    {
+      "id": "GE4eTfNxIegK0GFVcdln",
+      "title": "ParallelWrite_20251126T225905_22",
+      "created_at": "2025-11-26T22:51:18.337914+00:00"
+    },
+    {
+      "id": "fJaI5k25moCTnf8M9Qp9",
+      "title": "ParallelWrite_20251126T225905_27",
+      "created_at": "2025-11-26T22:52:00.360337+00:00"
+    },
+    {
+      "id": "VaNjvxYs1hymxxnKNRLY",
+      "title": "ParallelWrite_20251126T225905_14",
+      "created_at": "2025-11-26T22:53:07.097144+00:00"
+    },
+    {
+      "id": "V9z65SW6yKR9PGUioL0e",
+      "title": "ParallelWrite_20251126T225905_1",
+      "created_at": "2025-11-26T22:54:06.234470+00:00"
+    },
+    {
+      "id": "NiQ19P9zXYMY2VvvnPMY",
+      "title": "ParallelWrite_20251126T225905_15",
+      "created_at": "2025-11-26T22:55:09.851911+00:00"
+    },
+    {
+      "id": "FLTDZ06qGugUVT0gzlJj",
+      "title": "ParallelWrite_20251126T225905_12",
+      "created_at": "2025-11-26T22:55:47.449764+00:00"
+    },
+    {
+      "id": "b62qp4nhvbPSWNWGzRlZ",
+      "title": "ParallelWrite_20251126T225905_24",
+      "created_at": "2025-11-26T22:56:21.854877+00:00"
+    },
+    {
+      "id": "Cc9QGZ7yIsYXpcEB18HH",
+      "title": "ParallelWrite_20251126T225905_13",
+      "created_at": "2025-11-26T22:57:03.480793+00:00"
+    },
+    {
+      "id": "BqfEShngahbg0jKgXs9p",
+      "title": "ParallelWrite_20251126T225905_19",
+      "created_at": "2025-11-26T22:57:55.476860+00:00"
+    },
+    {
+      "id": "LZILjrwX3Bn6ng1rFdCh",
+      "title": "ParallelWrite_20251126T225905_16",
+      "created_at": "2025-11-26T22:58:54.777845+00:00"
+    },
+    {
+      "id": "GLgABH8xci2sv9x1sjbl",
+      "title": "ParallelWrite_20251126T225905_17",
+      "created_at": "2025-11-26T22:59:56.478029+00:00"
+    },
+    {
+      "id": "TazZEbvzxdFb3Nh0Jd4D",
+      "title": "ParallelWrite_20251126T225905_18",
+      "created_at": "2025-11-26T23:01:03.277984+00:00"
+    },
+    {
+      "id": "F8KsrJKafFThYvr94MUY",
+      "title": "ParallelWrite_20251126T225905_4",
+      "created_at": "2025-11-26T23:01:54.077523+00:00"
+    },
+    {
+      "id": "zqispXhq7uzPsiDPPJmr",
+      "title": "ParallelWrite_20251126T225905_26",
+      "created_at": "2025-11-26T23:02:47.878475+00:00"
+    },
+    {
+      "id": "qUTpowS1xoAMlSciXbhK",
+      "title": "ParallelWrite_20251126T225905_23",
+      "created_at": "2025-11-26T23:03:42.577205+00:00"
+    },
+    {
+      "id": "ZG81vHRbF4rVExahhG3D",
+      "title": "ParallelWrite_20251126T225905_9",
+      "created_at": "2025-11-26T23:04:47.277110+00:00"
+    },
+    {
+      "id": "np86KyOoSCuGakkvRGqK",
+      "title": "ParallelWrite_20251126T225905_20",
+      "created_at": "2025-11-26T23:05:45.376813+00:00"
+    },
+    {
+      "id": "i95pga9pjguoP9iXKAqh",
+      "title": "ParallelWrite_20251126T225905_8",
+      "created_at": "2025-11-26T23:07:05.177299+00:00"
+    },
+    {
+      "id": "r9SMYlWL1e5BSMjSraVf",
+      "title": "ParallelWrite_20251126T225905_25",
+      "created_at": "2025-11-26T23:08:01.177311+00:00"
+    },
+    {
+      "id": "ApHN2VMi139VcVsQeILO",
+      "title": "ParallelWrite_20251126T225905_5",
+      "created_at": "2025-11-26T23:09:10.977749+00:00"
+    },
+    {
+      "id": "mxPUkt0iTag0leXMMQOn",
+      "title": "ParallelWrite_20251126T225905_6",
+      "created_at": "2025-11-26T23:10:27.377543+00:00"
+    },
+    {
+      "id": "Qz6e97Ns40JnqFPeQ3iM",
+      "title": "ParallelWrite_20251126T225905_21",
+      "created_at": "2025-11-26T23:11:22.776469+00:00"
+    }
+  ]
+}

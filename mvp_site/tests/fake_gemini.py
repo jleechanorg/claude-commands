@@ -36,7 +36,7 @@ class FakeGenerationConfig:
 class FakeModelAdapter:
     """Fake model adapter that generates realistic responses."""
 
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, model_name: str = "gemini-3-pro-preview"):
         self.model_name = model_name
         self._response_templates = {
             "campaign_creation": {
@@ -233,11 +233,11 @@ class FakeModelsManager:
 
     def __init__(self):
         self._models = {
-            "gemini-2.5-flash": FakeModelAdapter("gemini-2.5-flash"),
+            "gemini-3-pro-preview": FakeModelAdapter("gemini-3-pro-preview"),
             "gemini-1.5-flash": FakeModelAdapter("gemini-1.5-flash"),
             "gemini-1.5-pro": FakeModelAdapter("gemini-1.5-pro"),
         }
-        self._default_model = FakeModelAdapter("gemini-2.5-flash")
+        self._default_model = FakeModelAdapter("gemini-3-pro-preview")
 
     def get(self, model_name: str) -> FakeModelAdapter:
         """Get a fake model adapter."""
@@ -267,7 +267,7 @@ class FakeTokenCount:
 class FakeGenerativeModel:
     """Fake GenerativeModel for backward compatibility."""
 
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, model_name: str = "gemini-3-pro-preview"):
         self.model_name = model_name
         self._adapter = FakeModelAdapter(model_name)
 
@@ -290,6 +290,6 @@ def create_fake_gemini_client(api_key: str = "fake-api-key") -> FakeGeminiClient
     return FakeGeminiClient(api_key)
 
 
-def create_fake_model(model_name: str = "gemini-2.5-flash") -> FakeGenerativeModel:
+def create_fake_model(model_name: str = "gemini-3-pro-preview") -> FakeGenerativeModel:
     """Create a fake GenerativeModel for testing."""
     return FakeGenerativeModel(model_name)

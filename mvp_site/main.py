@@ -44,7 +44,9 @@ WorldArchitect.AI, an AI-powered tabletop RPG platform (digital D&D 5e Game Mast
 import argparse
 import asyncio
 import atexit
+import concurrent.futures
 import datetime
+import functools
 import json
 import logging
 import os
@@ -55,7 +57,7 @@ import subprocess
 import sys
 import threading
 import traceback
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from functools import wraps
 from typing import Any
 
@@ -84,12 +86,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
 
 # Firestore service imports
-from mvp_site import (
-    constants,
-    firestore_service,
-    logging_util,
-    world_logic,  # For MCP fallback logic
-)
+from mvp_site import world_logic  # For MCP fallback logic
+from mvp_site import constants, firestore_service, logging_util
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 
@@ -141,6 +139,15 @@ KEY_SELECTED_PROMPTS = "selected_prompts"
 KEY_USER_INPUT = "input"
 KEY_CAMPAIGN_ID = "campaign_id"
 KEY_SUCCESS = "success"
+
+# Shared async/thread infrastructure reused across app instances
+_background_loop: asyncio.AbstractEventLoop | None = None
+_loop_thread: threading.Thread | None = None
+_blocking_io_executor: concurrent.futures.ThreadPoolExecutor | None = None
+_concurrent_request_count = 0
+_concurrent_request_lock = threading.Lock()
+_async_init_lock = threading.Lock()
+_async_shutdown_registered = False
 KEY_ERROR = "error"
 KEY_MESSAGE = "message"
 KEY_CAMPAIGN = "campaign"
@@ -223,6 +230,53 @@ def generic_error_response(
     ), status_code
 
 
+def _shutdown_async_resources() -> None:
+    """Stop shared background loop and executor gracefully."""
+
+    global _background_loop, _loop_thread, _blocking_io_executor
+    loop = _background_loop
+    thread = _loop_thread
+    executor = _blocking_io_executor
+
+    if loop and loop.is_running():
+        loop.call_soon_threadsafe(loop.stop)
+    if thread:
+        thread.join(timeout=1)
+    if executor:
+        executor.shutdown(wait=True)
+
+
+def _ensure_async_infrastructure() -> None:
+    """Lazily initialize shared event loop and executor once per process."""
+
+    global _background_loop, _loop_thread, _blocking_io_executor, _async_shutdown_registered
+
+    with _async_init_lock:
+        if _background_loop is None:
+            background_loop = asyncio.new_event_loop()
+
+            def _start_loop(loop: asyncio.AbstractEventLoop) -> None:
+                asyncio.set_event_loop(loop)
+                loop.run_forever()
+
+            loop_thread = threading.Thread(
+                target=_start_loop, args=(background_loop,), daemon=True
+            )
+            loop_thread.start()
+
+            _background_loop = background_loop
+            _loop_thread = loop_thread
+
+        if _blocking_io_executor is None:
+            _blocking_io_executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=80, thread_name_prefix="blocking_io"
+            )
+
+        if not _async_shutdown_registered:
+            atexit.register(_shutdown_async_resources)
+            _async_shutdown_registered = True
+
+
 def create_app() -> Flask:
     """
     Create and configure the Flask application.
@@ -250,6 +304,11 @@ def create_app() -> Flask:
     Returns:
         Configured Flask application instance
     """
+    global _background_loop, _loop_thread, _blocking_io_executor
+
+    # Ensure shared async infrastructure is initialized before use
+    _ensure_async_infrastructure()
+
     # Set up file logging before creating app
     setup_file_logging()
 
@@ -257,25 +316,79 @@ def create_app() -> Flask:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
     CORS(app, resources=CORS_RESOURCES)
 
-    # Dedicated background event loop for async routes to avoid per-request loop churn
-    background_loop = asyncio.new_event_loop()
-
-    def _start_loop(loop: asyncio.AbstractEventLoop) -> None:
-        asyncio.set_event_loop(loop)
-        loop.run_forever()
-
-    loop_thread = threading.Thread(target=_start_loop, args=(background_loop,), daemon=True)
-    loop_thread.start()
-
     def run_in_background_loop(coro: Coroutine[Any, Any, Any]) -> Any:
-        return asyncio.run_coroutine_threadsafe(coro, background_loop).result()
+        if _background_loop is None:
+            raise RuntimeError("Background event loop not initialized")
+        return asyncio.run_coroutine_threadsafe(coro, _background_loop).result()
 
-    def _shutdown_loop() -> None:
-        if background_loop.is_running():
-            background_loop.call_soon_threadsafe(background_loop.stop)
-        loop_thread.join(timeout=1)
+    async def run_blocking_io(
+        func: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Any:
+        """
+        Run a blocking I/O function in a thread pool executor.
 
-    atexit.register(_shutdown_loop)
+        This prevents blocking database calls (Firestore, etc.) from serializing
+        the shared asyncio event loop. Without this, multiple concurrent requests
+        would be processed serially instead of in parallel.
+
+        Usage:
+            # Instead of: result = firestore_service.get_campaign_by_id(user_id, campaign_id)
+            # Use: result = await run_blocking_io(firestore_service.get_campaign_by_id, user_id, campaign_id)
+
+        Performance improvement:
+        - Before: N concurrent requests × 100ms each = N×100ms total (serial)
+        - After: N concurrent requests × 100ms each = ~100ms total (parallel)
+
+        Args:
+            func: The blocking function to call
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+
+        Returns:
+            The result of the blocking function call
+        """
+        global _concurrent_request_count
+
+        # Track concurrent operations for debugging
+        func_name = getattr(func, "__name__", str(func))
+        with _concurrent_request_lock:
+            _concurrent_request_count += 1
+            current_count = _concurrent_request_count
+
+        start_time = datetime.datetime.now()
+        logging_util.info(
+            f"🔄 PARALLEL I/O START: {func_name} "
+            f"[concurrent={current_count}, thread={threading.current_thread().name}]"
+        )
+
+        try:
+            loop = asyncio.get_running_loop()
+            executor = _blocking_io_executor
+            if executor is None:
+                raise RuntimeError("Blocking I/O executor not initialized")
+            if kwargs:
+                # functools.partial to handle kwargs
+                func_with_kwargs = functools.partial(func, *args, **kwargs)
+                result = await loop.run_in_executor(executor, func_with_kwargs)
+            else:
+                result = await loop.run_in_executor(executor, func, *args)
+
+            duration_ms = (datetime.datetime.now() - start_time).total_seconds() * 1000
+            with _concurrent_request_lock:
+                _concurrent_request_count -= 1
+                remaining = _concurrent_request_count
+
+            logging_util.info(
+                f"✅ PARALLEL I/O END: {func_name} "
+                f"[duration={duration_ms:.1f}ms, remaining={remaining}]"
+            )
+            return result
+
+        except Exception as e:
+            with _concurrent_request_lock:
+                _concurrent_request_count -= 1
+            logging_util.error(f"❌ PARALLEL I/O ERROR: {func_name} - {e}")
+            raise
 
     def client_ip() -> str:
         """Extract client IP using ProxyFix-processed remote_addr.
@@ -295,6 +408,16 @@ def create_app() -> Flask:
         default_limits=[],  # No default limits - only apply to specific routes
         # Use Redis (or any shared backend) in production to avoid per-process buckets.
         storage_uri=os.environ.get("RATE_LIMIT_STORAGE_URI", "memory://"),
+    )
+
+    campaign_rate_limit = os.environ.get(
+        "CAMPAIGN_RATE_LIMIT", "100 per hour, 20 per minute"
+    )
+    campaign_create_rate_limit = os.environ.get(
+        "CAMPAIGN_CREATE_RATE_LIMIT", campaign_rate_limit
+    )
+    settings_rate_limit = os.environ.get(
+        "SETTINGS_RATE_LIMIT", "100 per hour, 20 per minute"
     )
 
     # Add security headers
@@ -485,7 +608,7 @@ def create_app() -> Flask:
 
     # --- API Routes ---
     @app.route("/api/campaigns", methods=["GET"])
-    @limiter.limit("100 per hour, 20 per minute")  # Reading campaigns can be frequent
+    @limiter.limit(campaign_rate_limit)
     @check_token
     @async_route
     async def get_campaigns(user_id: UserId) -> Response | tuple[Response, int]:
@@ -548,7 +671,7 @@ def create_app() -> Flask:
             ), 500
 
     @app.route("/api/campaigns/<campaign_id>", methods=["GET"])
-    @limiter.limit("100 per hour, 20 per minute")  # Reading campaigns can be frequent
+    @limiter.limit(campaign_rate_limit)
     @check_token
     @async_route
     async def get_campaign(
@@ -565,19 +688,25 @@ def create_app() -> Flask:
                 "include_story": True,  # Include story processing for frontend compatibility
             }
 
-            # Direct service calls (testing mode removed - always use direct approach)
-            campaign_data, story = firestore_service.get_campaign_by_id(
-                user_id, campaign_id
+            # Direct service calls with run_in_executor for parallel request handling
+            # Using run_blocking_io prevents blocking calls from serializing the event loop
+            campaign_data, story = await run_blocking_io(
+                firestore_service.get_campaign_by_id, user_id, campaign_id
             )
             if not campaign_data:
                 return jsonify({"error": "Campaign not found"}), 404
 
-            # Get user settings for debug mode
-            user_settings = firestore_service.get_user_settings(user_id) or {}
+            # Get user settings for debug mode (parallel-safe)
+            user_settings = (
+                await run_blocking_io(firestore_service.get_user_settings, user_id)
+                or {}
+            )
             debug_mode = bool(user_settings.get("debug_mode", False))
 
-            # Get game state
-            game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            # Get game state (parallel-safe)
+            game_state = await run_blocking_io(
+                firestore_service.get_campaign_game_state, user_id, campaign_id
+            )
             if game_state:
                 game_state.debug_mode = debug_mode
 
@@ -655,7 +784,7 @@ def create_app() -> Flask:
             ), 500
 
     @app.route("/api/campaigns", methods=["POST"])
-    @limiter.limit("20000 per hour, 1000 per minute")  # High limits, sanity checks only
+    @limiter.limit(campaign_create_rate_limit)
     @check_token
     @async_route
     async def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
@@ -1079,7 +1208,7 @@ def create_app() -> Flask:
 
     @app.route("/api/settings", methods=["GET", "POST"])
     @limiter.limit(
-        "50 per hour, 10 per minute"
+        settings_rate_limit
     )  # Settings access is moderate frequency
     @check_token
     @async_route
@@ -1090,8 +1219,10 @@ def create_app() -> Flask:
                 # Use MCP client for getting settings
                 request_data = {"user_id": user_id}
 
-                # Direct service calls (testing mode removed - always use direct approach)
-                settings = firestore_service.get_user_settings(user_id)
+                # Direct service calls with run_in_executor for parallel request handling
+                settings = await run_blocking_io(
+                    firestore_service.get_user_settings, user_id
+                )
                 # Handle case where settings is None (user doesn't exist yet)
                 if settings is None:
                     settings = {}
@@ -1136,8 +1267,10 @@ def create_app() -> Flask:
                 }
                 request_data = {"user_id": user_id, "settings": filtered_data}
 
-                # Direct service calls (testing mode removed - always use direct approach)
-                ok = firestore_service.update_user_settings(user_id, filtered_data)
+                # Direct service calls with run_in_executor for parallel request handling
+                ok = await run_blocking_io(
+                    firestore_service.update_user_settings, user_id, filtered_data
+                )
                 result = (
                     {"success": True}
                     if ok

@@ -1,0 +1,278 @@
+{
+  "verdict": "FAIL",
+  "successful": 26,
+  "failed": 4,
+  "success_rate": 86.66666666666667,
+  "wall_time_s": 120.45649194717407,
+  "timestamp": "2025-11-26T14:36:07",
+  "campaign_ids": [
+    "KqUiTmHhuprhwFDlaD0L",
+    "hx4iuaFg7Po3hP9uUUMd",
+    "2SrnU61iRMZNvoKosFYv",
+    "GxfdYnMDqN6lNHPDncJ0",
+    "xHUYkvHNWrMNgRXWtA96",
+    "ZpxO06OzXYXWU6HqZI1b",
+    "ifULGOA2ooUDxPtqffK9",
+    "6K9zMJba4fLMJ69eYX7p",
+    "s9Aoo261U2Z18QkNeoyi",
+    "epphAe4LSoSEkzZhRAmz",
+    "aGmDSyD7M9vqLRFpp54Z",
+    "YVNSmLXYoBecXAmD9u4V",
+    "aEPh0amcQpmJVh6dT4ea",
+    "BTm9fZeH0u3dVcTmOpXw",
+    "kaBQnz3M4mFZBj5iigAc",
+    "TakmJ07IkfMJ9SpLHaSm",
+    "uEXWprwv4jbk2cUipvvn",
+    "r8vekIf7hRZOiyASzxDm",
+    "Oq6ev8zCiv7qRFQfyZJ8",
+    "N67PYydVtWhK6nqOj1i4",
+    "dOdMFJR5WWoItJ8R39GM",
+    "8aw6IbuEWQld9F3zLv0C",
+    "QICuY3jNG0pIkZOylg8l",
+    "2aZbWrH1QYzi7lqzg470",
+    "0AyXbL4FOCKwrofeUBg5",
+    "hcVNed5JRGIhCWVtIGmK"
+  ],
+  "results": [
+    {
+      "request_id": 21,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "KqUiTmHhuprhwFDlaD0L",
+      "duration_ms": 37055.816888809204,
+      "error": null
+    },
+    {
+      "request_id": 15,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "hx4iuaFg7Po3hP9uUUMd",
+      "duration_ms": 38921.88477516174,
+      "error": null
+    },
+    {
+      "request_id": 13,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "2SrnU61iRMZNvoKosFYv",
+      "duration_ms": 39883.03804397583,
+      "error": null
+    },
+    {
+      "request_id": 0,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "GxfdYnMDqN6lNHPDncJ0",
+      "duration_ms": 41516.27230644226,
+      "error": null
+    },
+    {
+      "request_id": 7,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "xHUYkvHNWrMNgRXWtA96",
+      "duration_ms": 42493.96085739136,
+      "error": null
+    },
+    {
+      "request_id": 28,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "ZpxO06OzXYXWU6HqZI1b",
+      "duration_ms": 42844.5360660553,
+      "error": null
+    },
+    {
+      "request_id": 10,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "ifULGOA2ooUDxPtqffK9",
+      "duration_ms": 43061.328172683716,
+      "error": null
+    },
+    {
+      "request_id": 6,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "6K9zMJba4fLMJ69eYX7p",
+      "duration_ms": 43259.61518287659,
+      "error": null
+    },
+    {
+      "request_id": 23,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "s9Aoo261U2Z18QkNeoyi",
+      "duration_ms": 43486.13238334656,
+      "error": null
+    },
+    {
+      "request_id": 8,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "epphAe4LSoSEkzZhRAmz",
+      "duration_ms": 43706.946849823,
+      "error": null
+    },
+    {
+      "request_id": 14,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "aGmDSyD7M9vqLRFpp54Z",
+      "duration_ms": 46301.00989341736,
+      "error": null
+    },
+    {
+      "request_id": 12,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "YVNSmLXYoBecXAmD9u4V",
+      "duration_ms": 46630.059003829956,
+      "error": null
+    },
+    {
+      "request_id": 22,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "aEPh0amcQpmJVh6dT4ea",
+      "duration_ms": 46942.007064819336,
+      "error": null
+    },
+    {
+      "request_id": 16,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "BTm9fZeH0u3dVcTmOpXw",
+      "duration_ms": 47755.8069229126,
+      "error": null
+    },
+    {
+      "request_id": 1,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "kaBQnz3M4mFZBj5iigAc",
+      "duration_ms": 51015.77115058899,
+      "error": null
+    },
+    {
+      "request_id": 25,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "TakmJ07IkfMJ9SpLHaSm",
+      "duration_ms": 53011.60407066345,
+      "error": null
+    },
+    {
+      "request_id": 17,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "uEXWprwv4jbk2cUipvvn",
+      "duration_ms": 76494.13180351257,
+      "error": null
+    },
+    {
+      "request_id": 27,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "r8vekIf7hRZOiyASzxDm",
+      "duration_ms": 79602.87284851074,
+      "error": null
+    },
+    {
+      "request_id": 19,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "Oq6ev8zCiv7qRFQfyZJ8",
+      "duration_ms": 83430.0389289856,
+      "error": null
+    },
+    {
+      "request_id": 2,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "N67PYydVtWhK6nqOj1i4",
+      "duration_ms": 85252.6547908783,
+      "error": null
+    },
+    {
+      "request_id": 20,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "dOdMFJR5WWoItJ8R39GM",
+      "duration_ms": 90514.7979259491,
+      "error": null
+    },
+    {
+      "request_id": 4,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "8aw6IbuEWQld9F3zLv0C",
+      "duration_ms": 94075.87790489197,
+      "error": null
+    },
+    {
+      "request_id": 5,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "QICuY3jNG0pIkZOylg8l",
+      "duration_ms": 96388.40293884277,
+      "error": null
+    },
+    {
+      "request_id": 18,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "2aZbWrH1QYzi7lqzg470",
+      "duration_ms": 97339.38097953796,
+      "error": null
+    },
+    {
+      "request_id": 26,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "0AyXbL4FOCKwrofeUBg5",
+      "duration_ms": 99939.71610069275,
+      "error": null
+    },
+    {
+      "request_id": 11,
+      "success": true,
+      "status_code": 201,
+      "campaign_id": "hcVNed5JRGIhCWVtIGmK",
+      "duration_ms": 99942.89422035217,
+      "error": null
+    },
+    {
+      "request_id": 3,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 120455.1751613617,
+      "error": ""
+    },
+    {
+      "request_id": 29,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 120454.55312728882,
+      "error": ""
+    },
+    {
+      "request_id": 24,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 120454.7049999237,
+      "error": ""
+    },
+    {
+      "request_id": 9,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 120455.06381988525,
+      "error": ""
+    }
+  ]
+}

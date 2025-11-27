@@ -1,0 +1,23 @@
+{
+  "analysis_timestamp": "2025-11-26T17:46:31.526306",
+  "test_results_file": "parallel_write_30_10min.json",
+  "total_requests": 30,
+  "successful": 30,
+  "failed": 0,
+  "wall_time_s": 141.00013709068298,
+  "duration_analysis": {
+    "min_s": 39.81291699409485,
+    "max_s": 140.99954509735107,
+    "avg_s": 65.5080017566681,
+    "total_cumulative_s": 1965.2400527000427
+  },
+  "parallelism_metrics": {
+    "serial_time_s": 1965.2400527000427,
+    "actual_wall_time_s": 141.00013709068298,
+    "parallelism_factor": 13.937859162761779,
+    "parallelism_efficiency_pct": 92.82529699631539,
+    "wall_to_max_ratio": 1.0000041985478145,
+    "interpretation": "TRUE PARALLELISM"
+  },
+  "verdict": "PASS - TRUE PARALLELISM CONFIRMED"
+}

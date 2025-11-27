@@ -1,5 +1,97 @@
 # WorldArchitect.AI
 
+WorldArchitect.AI is a lightweight HTTP → MCP (Model Context Protocol) gateway for the
+WorldArchitect tabletop RPG experience. The Flask app exposes a small set of REST
+endpoints that delegate all game logic to MCP tools while handling authentication,
+routing, and deployment concerns.
+
+## Core capabilities
+- **Pure API gateway** – No game logic in the web tier; all work is delegated to MCP
+  tools.
+- **Parallel-safe Firestore access** – Blocking database calls are offloaded to a
+  shared `ThreadPoolExecutor`, enabling true parallel request handling.
+- **Configurable rate limits** – Per-endpoint limits are driven by environment
+  variables so production and load-testing profiles stay separate.
+- **Firebase authentication helpers** – `auth-cli.mjs` and wrapper scripts simplify
+  getting a Firebase ID token for manual testing and automation.
+- **Health and settings APIs** – Basic readiness, campaign retrieval, and settings
+  management with JSON responses compatible with the existing frontend.
+
+## Quick start (development)
+1. **Install dependencies**
+   ```bash
+   npm install   # for auth tooling (optional for backend work)
+   pip install -r requirements/dev.txt
+   ```
+
+2. **Run the Flask app locally**
+   ```bash
+   export FLASK_APP=mvp_site.main
+   export FLASK_ENV=development
+   export FIREBASE_PROJECT_ID=your-project-id
+   export FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   export FIREBASE_API_KEY=your-firebase-web-api-key
+   flask run --host=0.0.0.0 --port=8080
+   ```
+
+3. **Hit the health check**
+   ```bash
+   curl http://localhost:8080/health
+   ```
+
+## Authentication helpers
+The repo includes Firebase auth helpers in `.claude/scripts/`:
+- `auth-cli.mjs` – Core auth flow; uses environment variables for Firebase config and
+  stores the token at `~/.worldarchitect-ai/auth-token.json`.
+- `auth-worldai.mjs` – Wrapper for the WorldArchitect project; reads
+  `WORLDAI_FIREBASE_API_KEY`.
+- `auth-aiuniverse.mjs` – Wrapper for the AI Universe project; reads
+  `AI_UNIVERSE_FIREBASE_API_KEY`.
+
+Example login:
+```bash
+node .claude/scripts/auth-worldai.mjs login
+cat ~/.worldarchitect-ai/auth-token.json | jq .idToken
+```
+
+## Configuration
+Key environment variables used by the Flask app:
+- `CAMPAIGN_RATE_LIMIT` – Rate limit for GET campaign endpoints (default `100 per hour, 20 per minute`).
+- `CAMPAIGN_CREATE_RATE_LIMIT` – Rate limit for POST `/api/campaigns` (defaults to `CAMPAIGN_RATE_LIMIT`).
+- `SETTINGS_RATE_LIMIT` – Rate limit for settings endpoints (default `100 per hour, 20 per minute`).
+- `RATE_LIMIT_STORAGE_URI` – Storage backend for `flask-limiter` (default `memory://`).
+- `ALLOW_TEST_AUTH_BYPASS` and `TESTING` – Enable test-only auth bypass headers in
+  integration tests.
+- `WORLDAI_*` Firebase variables – Override Firebase project/credentials when running
+  outside production.
+
+## Running tests
+- **Unit / integration**
+  ```bash
+  python -m unittest mvp_site.tests.test_concurrency_integration
+  ```
+- **Parallel load validation**
+  ```bash
+  python scripts/test_parallel.py --concurrent 20 --token-file ~/.worldarchitect-ai/auth-token.json
+  ```
+
+## Repository layout (high level)
+- `mvp_site/` – Flask application and route handlers.
+- `mvp_site/tests/` – Integration tests for concurrency and request handling.
+- `scripts/` – Developer tooling and automation (including parallel test runner).
+- `.claude/scripts/` – Authentication utilities used by engineers and CI flows.
+
+## Contributing
+1. Create a feature branch from the working branch for your task.
+2. Keep imports at module scope and avoid inline imports per project standards.
+3. Run the concurrency integration tests before opening a PR.
+4. Document any new environment variables or rate-limit changes in this README.
+
+## Support
+If you encounter issues authenticating or running the parallel tests, check that
+Firebase environment variables are set and that your token file exists. For
+deployment-specific problems, verify Cloud Run `containerConcurrency` and
+`CAMPAIGN_*` rate-limit settings.
 **AI-Powered Tabletop RPG Platform - Your Digital D&D 5e Game Master**
 
 ## 📋 Table of Contents

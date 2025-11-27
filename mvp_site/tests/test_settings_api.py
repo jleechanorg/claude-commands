@@ -70,7 +70,7 @@ class TestSettingsAPI(unittest.TestCase):
 
     def test_update_settings_api_works(self):
         """Test that settings update API works in MCP architecture."""
-        test_settings = {"gemini_model": "gemini-2.5-flash", "debug_mode": True}
+        test_settings = {"gemini_model": "gemini-3-pro-preview", "debug_mode": True}
 
         response = self.client.post(
             "/api/settings", json=test_settings, headers=self.headers

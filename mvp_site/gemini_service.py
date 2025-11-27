@@ -1457,24 +1457,34 @@ def _select_model_for_user(user_id: UserId | None) -> str:
 
         user_preferred_model = user_settings.get("gemini_model")
 
-        # Validate user preference against allowed models
+        # First check if we need to redirect legacy models via mapping
+        # This allows "gemini-2.5-flash" -> "gemini-3-pro-preview" auto-redirect
+        if user_preferred_model and user_preferred_model in constants.GEMINI_MODEL_MAPPING:
+            mapped_model = constants.GEMINI_MODEL_MAPPING[user_preferred_model]
+
+            # Log when auto-redirecting legacy models
+            if user_preferred_model != mapped_model:
+                logging_util.info(
+                    f"Auto-redirecting legacy model '{user_preferred_model}' "
+                    f"to compatible model '{mapped_model}'"
+                )
+
+            # Validate the MAPPED model against allowed models
+            if mapped_model in constants.ALLOWED_GEMINI_MODELS:
+                return mapped_model
+            else:
+                # Mapping exists but target is not allowed (shouldn't happen with proper config)
+                logging_util.warning(
+                    f"Mapped model '{mapped_model}' not in allowed models, using default"
+                )
+                return DEFAULT_MODEL
+
+        # Direct validation for models not in mapping
         if (
             user_preferred_model
             and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
         ):
-            # Use centralized model mapping from constants
-            model_to_use = constants.GEMINI_MODEL_MAPPING.get(
-                user_preferred_model, DEFAULT_MODEL
-            )
-            # Only warn if the mapping fell back to default (key not found in mapping)
-            if (
-                user_preferred_model not in constants.GEMINI_MODEL_MAPPING
-                and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
-            ):
-                logging_util.warning(
-                    f"No mapping found for allowed model: {user_preferred_model}"
-                )
-            return model_to_use
+            return user_preferred_model
         else:
             if user_preferred_model:
                 logging_util.warning(

@@ -54,7 +54,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
 
             # Call the API function
             gemini_service._call_gemini_api_with_model_cycling(
-                ["test prompt"], "gemini-2.5-flash", "test logging"
+                ["test prompt"], "gemini-3-pro-preview", "test logging"
             )
 
             # Verify the API was called
@@ -179,7 +179,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
             )
 
             gemini_service._call_gemini_api_with_model_cycling(
-                ["test prompt"], "gemini-2.5-flash", "test logging"
+                ["test prompt"], "gemini-3-pro-preview", "test logging"
             )
 
             call_args = mock_client.models.generate_content.call_args

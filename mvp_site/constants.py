@@ -13,23 +13,24 @@ ACTOR_UNKNOWN = "NO_ACTOR"  # Default when actor is missing from data
 
 
 # --- SETTINGS ---
-# Allowed Gemini model selections for user preferences (aligned with SDK format)
+# Allowed Gemini model selections for user preferences
+# NOTE: Only models that support BOTH code_execution AND JSON response mode are allowed
+# Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
+# See PR #2052 for compatibility testing details
 ALLOWED_GEMINI_MODELS = [
-    "gemini-2.5-pro",
-    "gemini-2.5-flash",
-    "gemini-3-pro-preview",
-    "pro-2.5",
-    "flash-2.5",
+    "gemini-3-pro-preview",  # ✅ WORKS with code_execution + JSON
+    "gemini-2.0-flash",       # ✅ WORKS (unofficial but tested)
 ]
 
-# Gemini model mapping from user preference to full model name (includes legacy compatibility)
+# Gemini model mapping from user preference to full model name
 GEMINI_MODEL_MAPPING = {
-    "gemini-2.5-flash": "gemini-2.5-flash",
-    "gemini-2.5-pro": "gemini-2.5-pro",
     "gemini-3-pro-preview": "gemini-3-pro-preview",
-    # Legacy compatibility mappings
-    "pro-2.5": "gemini-2.5-pro",
-    "flash-2.5": "gemini-2.5-flash",
+    "gemini-2.0-flash": "gemini-2.0-flash",
+    # Legacy compatibility - redirect 2.5 users to compatible model
+    "gemini-2.5-flash": "gemini-3-pro-preview",  # Auto-redirect to compatible
+    "gemini-2.5-pro": "gemini-3-pro-preview",     # Auto-redirect to compatible
+    "pro-2.5": "gemini-3-pro-preview",            # Auto-redirect to compatible
+    "flash-2.5": "gemini-3-pro-preview",          # Auto-redirect to compatible
 }
 
 # Debug mode settings

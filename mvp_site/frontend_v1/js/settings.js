@@ -42,9 +42,10 @@ async function loadSettings() {
     console.log('Loaded settings:', settings);
 
     // Validate the model value before using it
+    // NOTE: Only models that support code_execution + JSON mode are allowed
     if (
       settings.gemini_model &&
-      ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-preview'].includes(settings.gemini_model)
+      ['gemini-3-pro-preview', 'gemini-2.0-flash'].includes(settings.gemini_model)
     ) {
       const radio = document.querySelector(
         `input[value="${settings.gemini_model}"]`,
@@ -55,7 +56,7 @@ async function loadSettings() {
       }
     } else {
       console.log(
-        'No saved model preference or invalid value, using default (gemini-2.5-pro)',
+        'No saved model preference or invalid value, using default (gemini-3-pro-preview)',
       );
     }
 

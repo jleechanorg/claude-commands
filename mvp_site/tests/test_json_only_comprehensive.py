@@ -63,7 +63,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
 
             # Call _call_gemini_api_with_model_cycling directly
             gemini_service._call_gemini_api_with_model_cycling(
-                ["test prompt"], "gemini-2.5-flash", "test logging"
+                ["test prompt"], "gemini-3-pro-preview", "test logging"
             )
 
             # Verify JSON mode configuration

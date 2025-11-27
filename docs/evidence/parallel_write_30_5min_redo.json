@@ -1,0 +1,316 @@
+{
+  "verdict": "FAIL",
+  "successful": 0,
+  "failed": 30,
+  "success_rate": 0.0,
+  "wall_time_ms": 300153.39533402584,
+  "max_duration_ms": 300148.4261249425,
+  "parallelism_ratio": 1.0000165558392142,
+  "overlap_pct": 99.9999286694315,
+  "max_concurrent": 30,
+  "timeout_s": 300,
+  "timestamp": "2025-11-26T23:06:27.587764",
+  "campaign_ids": [],
+  "results": [
+    {
+      "request_id": 8,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300070.2643749537,
+      "abs_start": 1764198087.435597,
+      "abs_end": 1764198387.50587,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 4,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300086.6928329924,
+      "abs_start": 1764198087.43503,
+      "abs_end": 1764198387.521727,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 1,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300092.8162499331,
+      "abs_start": 1764198087.434654,
+      "abs_end": 1764198387.527491,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 11,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300096.29962500185,
+      "abs_start": 1764198087.43705,
+      "abs_end": 1764198387.533352,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 9,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300097.62129199225,
+      "abs_start": 1764198087.435801,
+      "abs_end": 1764198387.5334232,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 13,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300097.3422919633,
+      "abs_start": 1764198087.4382641,
+      "abs_end": 1764198387.535607,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 23,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300089.28279101383,
+      "abs_start": 1764198087.446419,
+      "abs_end": 1764198387.535702,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 2,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300101.027540979,
+      "abs_start": 1764198087.43478,
+      "abs_end": 1764198387.535808,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 18,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300092.8778749658,
+      "abs_start": 1764198087.444149,
+      "abs_end": 1764198387.537028,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 10,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300102.7443339117,
+      "abs_start": 1764198087.436364,
+      "abs_end": 1764198387.53911,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 25,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300100.72625009343,
+      "abs_start": 1764198087.447124,
+      "abs_end": 1764198387.547851,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 28,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300100.88204196654,
+      "abs_start": 1764198087.4483578,
+      "abs_end": 1764198387.549241,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 27,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300116.20183393825,
+      "abs_start": 1764198087.44799,
+      "abs_end": 1764198387.564193,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 26,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300116.86650000047,
+      "abs_start": 1764198087.447696,
+      "abs_end": 1764198387.564563,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 3,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300129.6530830441,
+      "abs_start": 1764198087.4349382,
+      "abs_end": 1764198387.5645912,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 7,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300129.15420893114,
+      "abs_start": 1764198087.435457,
+      "abs_end": 1764198387.5646122,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 21,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300119.16754196864,
+      "abs_start": 1764198087.445463,
+      "abs_end": 1764198387.564631,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 0,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300134.68179199845,
+      "abs_start": 1764198087.434509,
+      "abs_end": 1764198387.569191,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 24,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300122.61816696264,
+      "abs_start": 1764198087.446618,
+      "abs_end": 1764198387.569236,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 6,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300133.9376249816,
+      "abs_start": 1764198087.435322,
+      "abs_end": 1764198387.5692601,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 14,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300132.31129106134,
+      "abs_start": 1764198087.438713,
+      "abs_end": 1764198387.571024,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 19,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300134.59691707976,
+      "abs_start": 1764198087.444858,
+      "abs_end": 1764198387.579456,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 20,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300134.3659160193,
+      "abs_start": 1764198087.4451451,
+      "abs_end": 1764198387.579511,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 15,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300140.08795807604,
+      "abs_start": 1764198087.4394722,
+      "abs_end": 1764198387.57956,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 5,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300148.4261249425,
+      "abs_start": 1764198087.435198,
+      "abs_end": 1764198387.583624,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 22,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300137.8210840048,
+      "abs_start": 1764198087.445859,
+      "abs_end": 1764198387.583681,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 17,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300140.6124579953,
+      "abs_start": 1764198087.443121,
+      "abs_end": 1764198387.583734,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 16,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300142.890124931,
+      "abs_start": 1764198087.44088,
+      "abs_end": 1764198387.58377,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 29,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300137.3301249696,
+      "abs_start": 1764198087.448768,
+      "abs_end": 1764198387.586098,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    },
+    {
+      "request_id": 12,
+      "success": false,
+      "status_code": 0,
+      "campaign_id": null,
+      "duration_ms": 300148.3537920285,
+      "abs_start": 1764198087.4378119,
+      "abs_end": 1764198387.586167,
+      "error": "HTTPSConnectionPool(host='mvp-site-app-s9-i6xf2p72ka-uc.a.run.app', port=443): Read timed out. (read timeout=300)"
+    }
+  ]
+}

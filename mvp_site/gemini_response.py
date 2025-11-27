@@ -27,7 +27,7 @@ class GeminiResponse:
         debug_tags_present: dict[str, bool] | None = None,
         processing_metadata: dict[str, Any] | None = None,
         provider: str = "gemini",
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3-pro-preview",
     ):
         """
         Initialize GeminiResponse.
@@ -372,7 +372,7 @@ class GeminiResponse:
 
     @classmethod
     def create(
-        cls, raw_response_text: str, model: str = "gemini-2.5-flash"
+        cls, raw_response_text: str, model: str = "gemini-3-pro-preview"
     ) -> "GeminiResponse":
         """
         Create a GeminiResponse from raw Gemini API response.
@@ -404,7 +404,7 @@ class GeminiResponse:
     def create_from_structured_response(
         cls,
         structured_response: NarrativeResponse,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3-pro-preview",
         combined_narrative_text: str = None,
     ) -> "GeminiResponse":
         """
@@ -454,7 +454,7 @@ class GeminiResponse:
     def create_legacy(
         cls,
         narrative_text: str,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3-pro-preview",
         structured_response: NarrativeResponse | None = None,
     ) -> "GeminiResponse":
         """

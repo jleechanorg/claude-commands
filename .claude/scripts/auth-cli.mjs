@@ -1,16 +1,29 @@
 #!/usr/bin/env node
 
 /**
- * CLI Authentication Tool for AI Universe
+ * CLI Authentication Tool (Configurable)
  *
  * Implements browser-based OAuth flow with localhost callback server
  * Pattern used by: gcloud CLI, Firebase CLI, GitHub CLI
+ *
+ * Configuration via environment variables:
+ *   FIREBASE_API_KEY      - Firebase web API key
+ *   FIREBASE_AUTH_DOMAIN  - Firebase auth domain
+ *   FIREBASE_PROJECT_ID   - Firebase project ID
+ *   AUTH_TOKEN_DIR        - Directory for token storage (default: ~/.worldarchitect-ai)
  *
  * Usage:
  *   node ~/.claude/scripts/auth-cli.mjs login
  *   node ~/.claude/scripts/auth-cli.mjs logout
  *   node ~/.claude/scripts/auth-cli.mjs status
  *   node ~/.claude/scripts/auth-cli.mjs token
+ *
+ * Wrapper scripts for specific projects:
+ *   node ~/.claude/scripts/auth-worldai.mjs login    # WorldArchitect.AI
+ *   node ~/.claude/scripts/auth-aiuniverse.mjs login # AI Universe
+ *
+ * Note: Wrapper scripts should set FIREBASE_* environment variables
+ * to override the default configuration.
  */
 
 import express from 'express';
@@ -28,24 +41,22 @@ const REFRESH_TOKEN_URL = 'https://securetoken.googleapis.com/v1/token';
 
 // Configuration
 const CONFIG = {
-  // Firebase config for AI Universe
+  // Firebase config for WorldArchitect.AI
   // Note: Firebase web API keys are safe to include in client code (public by design)
   // See: https://firebase.google.com/docs/projects/api-keys
   firebaseConfig: {
-    apiKey: process.env.FIREBASE_API_KEY || 'AIzaSyARs7IekRptvhZIwtV7lwJh3axWFsn_4c8',
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'ai-universe-b3551.firebaseapp.com',
-    projectId: process.env.FIREBASE_PROJECT_ID || 'ai-universe-b3551'
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'worldarchitecture-ai.firebaseapp.com',
+    projectId: process.env.FIREBASE_PROJECT_ID || 'worldarchitecture-ai'
   },
   callbackPort: 9005,
   callbackPath: '/auth/callback',
-  tokenPath: join(homedir(), '.ai-universe', 'auth-token.json'),
-  mcpUrl: 'https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp'
+  tokenPath: join(homedir(), '.worldarchitect-ai', 'auth-token.json'),
+  mcpUrl: process.env.MCP_URL || 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app'
 };
 
 // Validate required configuration
 function validateConfig() {
-  // Firebase API key is now hardcoded with sensible defaults
-  // Environment variables can still override if needed
   if (!CONFIG.firebaseConfig.apiKey || CONFIG.firebaseConfig.apiKey.length < 10) {
     console.error('❌ Firebase configuration invalid.');
     console.error('   API key is missing or invalid.');
@@ -57,7 +68,7 @@ function validateConfig() {
 }
 
 // Ensure token directory exists when needed
-const tokenDir = join(homedir(), '.ai-universe');
+const tokenDir = join(homedir(), '.worldarchitect-ai');
 
 async function ensureTokenDir() {
   if (!existsSync(tokenDir)) {
@@ -209,7 +220,7 @@ function getAuthHtml(callbackUrl) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>AI Universe - Sign In</title>
+  <title>WorldArchitect.AI - Sign In</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
            max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
@@ -222,8 +233,8 @@ function getAuthHtml(callbackUrl) {
   </style>
 </head>
 <body>
-  <h1>🚀 AI Universe Authentication</h1>
-  <p>Sign in with your Google account to access the AI Universe MCP server</p>
+  <h1>🎮 WorldArchitect.AI Authentication</h1>
+  <p>Sign in with your Google account to access WorldArchitect.AI</p>
   <button onclick="signIn()">Sign in with Google</button>
   <div id="status"></div>
 
@@ -597,7 +608,7 @@ switch (command) {
     break;
   default:
     console.log(`
-AI Universe CLI Authentication Tool
+WorldArchitect.AI CLI Authentication Tool
 
 Usage:
   node ~/.claude/scripts/auth-cli.mjs <command>
