@@ -84,6 +84,11 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Infrastructure helpers
 from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
+from infrastructure.executor_config import (
+    get_blocking_io_executor,
+    configure_asyncio_executor,
+    shutdown_executor,
+)
 
 # Firestore service imports
 from mvp_site import world_logic  # For MCP fallback logic
@@ -236,18 +241,22 @@ def _shutdown_async_resources() -> None:
     global _background_loop, _loop_thread, _blocking_io_executor
     loop = _background_loop
     thread = _loop_thread
-    executor = _blocking_io_executor
 
     if loop and loop.is_running():
         loop.call_soon_threadsafe(loop.stop)
     if thread:
         thread.join(timeout=1)
-    if executor:
-        executor.shutdown(wait=True)
+    # Use centralized shutdown for the shared executor
+    shutdown_executor(wait=True)
+    _blocking_io_executor = None
 
 
 def _ensure_async_infrastructure() -> None:
-    """Lazily initialize shared event loop and executor once per process."""
+    """Lazily initialize shared event loop and executor once per process.
+
+    Uses centralized executor from infrastructure.executor_config with 100 workers.
+    Configures asyncio.to_thread() to use this executor by default.
+    """
 
     global _background_loop, _loop_thread, _blocking_io_executor, _async_shutdown_registered
 
@@ -257,6 +266,9 @@ def _ensure_async_infrastructure() -> None:
 
             def _start_loop(loop: asyncio.AbstractEventLoop) -> None:
                 asyncio.set_event_loop(loop)
+                # Configure the loop to use our centralized 100-thread executor
+                # This makes asyncio.to_thread() use our executor automatically
+                configure_asyncio_executor(loop)
                 loop.run_forever()
 
             loop_thread = threading.Thread(
@@ -268,9 +280,8 @@ def _ensure_async_infrastructure() -> None:
             _loop_thread = loop_thread
 
         if _blocking_io_executor is None:
-            _blocking_io_executor = concurrent.futures.ThreadPoolExecutor(
-                max_workers=80, thread_name_prefix="blocking_io"
-            )
+            # Use centralized executor from infrastructure (100 workers)
+            _blocking_io_executor = get_blocking_io_executor()
 
         if not _async_shutdown_registered:
             atexit.register(_shutdown_async_resources)

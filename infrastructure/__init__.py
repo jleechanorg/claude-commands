@@ -15,6 +15,13 @@ from infrastructure.worker_config import (
 from infrastructure.mcp_helpers import (
     create_thread_safe_mcp_getter,
 )
+from infrastructure.executor_config import (
+    EXECUTOR_MAX_WORKERS,
+    get_blocking_io_executor,
+    configure_asyncio_executor,
+    shutdown_executor,
+    get_executor_stats,
+)
 
 __all__ = [
     "calculate_default_workers",
@@ -23,4 +30,10 @@ __all__ = [
     "get_workers",
     "get_threads",
     "create_thread_safe_mcp_getter",
+    # Executor configuration (100-thread pool for blocking I/O)
+    "EXECUTOR_MAX_WORKERS",
+    "get_blocking_io_executor",
+    "configure_asyncio_executor",
+    "shutdown_executor",
+    "get_executor_stats",
 ]
