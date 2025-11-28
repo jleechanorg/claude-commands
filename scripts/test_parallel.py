@@ -120,6 +120,257 @@ def get_valid_campaign_info(base_url: str, token: str) -> tuple[str, str] | None
         return None
 
 
+def make_interaction_request(
+    base_url: str,
+    campaign_id: str,
+    token: str,
+    request_id: int,
+    user_input: str = "look around",
+) -> dict:
+    """
+    Make a POST /interaction request to test world_logic.py concurrency.
+
+    This exercises the code path:
+    main.py:handle_interaction() -> MCP client -> world_logic.process_action_unified()
+    -> gemini_service.continue_story() (10-30+ seconds blocking I/O)
+
+    CRITICAL: This was NOT tested by the original parallel test, which only tested
+    GET /api/campaigns/{id}. The interaction endpoint goes through a completely
+    different code path that was still blocking the event loop.
+    """
+    url = f"{base_url}/api/campaigns/{campaign_id}/interaction"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "input": user_input,
+        "mode": "character",
+    }
+
+    abs_start = time.time()
+    start = time.perf_counter()
+
+    try:
+        response = requests.post(
+            url, headers=headers, json=payload, timeout=120  # Longer timeout for Gemini
+        )
+        end = time.perf_counter()
+        abs_end = time.time()
+
+        success = response.status_code == 200
+        body_valid = False
+        narrative = ""
+
+        if success:
+            try:
+                body = response.json()
+                # Interaction returns {success: true, story: [...], narrative: "..."}
+                body_valid = body.get("success", False) and "narrative" in body
+                narrative = body.get("narrative", "")[:100]  # First 100 chars
+            except (json.JSONDecodeError, ValueError, KeyError):
+                body_valid = False
+
+        return {
+            "request_id": request_id,
+            "status_code": response.status_code,
+            "duration_ms": (end - start) * 1000,
+            "abs_start": abs_start,
+            "abs_end": abs_end,
+            "success": success and body_valid,
+            "body_valid": body_valid,
+            "narrative_preview": narrative,
+            "error": None,
+        }
+    except Exception as e:
+        end = time.perf_counter()
+        abs_end = time.time()
+        return {
+            "request_id": request_id,
+            "status_code": 0,
+            "duration_ms": (end - start) * 1000,
+            "abs_start": abs_start,
+            "abs_end": abs_end,
+            "success": False,
+            "body_valid": False,
+            "narrative_preview": "",
+            "error": str(e),
+        }
+
+
+def run_interaction_concurrency_test(
+    base_url: str,
+    campaign_id: str,
+    token: str,
+    num_concurrent: int = 2,
+) -> dict:
+    """
+    Test concurrent interaction requests to verify world_logic.py doesn't block.
+
+    This is the CRITICAL test that was missing. Without asyncio.to_thread() in
+    world_logic.py, concurrent interactions would serialize because:
+    1. gemini_service.continue_story() blocks for 10-30+ seconds
+    2. All async functions share one event loop
+    3. Blocking I/O in one coroutine blocks ALL coroutines
+
+    PASS criteria:
+    - Concurrent requests should overlap significantly (>50% overlap time)
+    - Wall clock time should be much less than sum of individual durations
+    """
+    print(f"\n{'=' * 60}")
+    print("🎮 INTERACTION CONCURRENCY TEST (world_logic.py)")
+    print(f"{'=' * 60}")
+    print(f"Target: POST {base_url}/api/campaigns/{campaign_id}/interaction")
+    print(f"Concurrent requests: {num_concurrent}")
+    print("⚠️  This test exercises Gemini API calls (10-30s each)")
+    print(f"Started at: {datetime.now(tz=UTC).isoformat()}")
+
+    # Different inputs to avoid caching
+    inputs = [
+        "look around the room",
+        "check my inventory",
+        "examine the door",
+        "listen carefully",
+    ]
+
+    print(f"\n📊 Making {num_concurrent} concurrent interaction requests...")
+
+    perf_start = time.perf_counter()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_concurrent) as executor:
+        futures = [
+            executor.submit(
+                make_interaction_request,
+                base_url,
+                campaign_id,
+                token,
+                i,
+                inputs[i % len(inputs)],
+            )
+            for i in range(num_concurrent)
+        ]
+        results = [f.result() for f in futures]
+
+    perf_end = time.perf_counter()
+    wall_time_ms = (perf_end - perf_start) * 1000
+
+    # Analyze results
+    successful = [r for r in results if r["success"]]
+    failed = [r for r in results if not r["success"]]
+
+    if successful:
+        durations = [r["duration_ms"] for r in successful]
+    else:
+        durations = [r["duration_ms"] for r in results]
+
+    if durations:
+        sum_durations = sum(durations)
+        avg_duration = sum_durations / len(durations)
+        max_duration = max(durations)
+    else:
+        sum_durations = 0
+        avg_duration = 0
+        max_duration = 0
+
+    overlap_pct = calculate_overlap_percentage(results)
+    max_concurrent = calculate_max_concurrent(results)
+
+    # Parallelism analysis
+    # If serial: wall_time ≈ sum_durations
+    # If parallel: wall_time ≈ max_duration
+    parallelism_ratio = sum_durations / wall_time_ms if wall_time_ms > 0 else 0
+
+    print(f"\n{'=' * 60}")
+    print("📈 INTERACTION TEST RESULTS")
+    print(f"{'=' * 60}")
+
+    success_rate = len(successful) / num_concurrent if num_concurrent else 0
+
+    print("\n🎯 Success Metrics:")
+    print(f"   Successful: {len(successful)}/{num_concurrent}")
+    print(f"   Failed: {len(failed)}")
+    print(f"   Success rate: {success_rate:.0%}")
+
+    print("\n⏱️  Timing:")
+    print(f"   Sum of durations: {sum_durations:.1f}ms")
+    print(f"   Wall clock time: {wall_time_ms:.1f}ms")
+    print(f"   Average duration: {avg_duration:.1f}ms")
+    print(f"   Max duration: {max_duration:.1f}ms")
+
+    print("\n🔀 Parallelism Evidence:")
+    print(f"   Max concurrent in-flight: {max_concurrent}")
+    print(f"   Overlap percentage: {overlap_pct:.1f}%")
+    print(
+        f"   Parallelism ratio: {parallelism_ratio:.2f}x (>1.5 = good parallel, ~1.0 = serial)"
+    )
+
+    # Show individual results
+    print("\n📝 Individual Requests:")
+    for r in results:
+        status = "✅" if r["success"] else "❌"
+        print(
+            f"   {status} Request {r['request_id']}: {r['duration_ms']:.0f}ms - {r['narrative_preview'][:50]}..."
+        )
+
+    # Verdict
+    print(f"\n{'=' * 60}")
+    print("🏆 VERDICT")
+    print(f"{'=' * 60}")
+
+    passed = True
+    reasons = []
+
+    if len(successful) == 0:
+        passed = False
+        reasons.append("No successful requests")
+    elif success_rate < 0.8:
+        passed = False
+        reasons.append(
+            f"Success rate {success_rate:.0%} below 80% threshold ({len(successful)}/{num_concurrent})"
+        )
+    elif parallelism_ratio < 1.3:
+        passed = False
+        reasons.append(
+            f"Parallelism ratio {parallelism_ratio:.2f}x < 1.3x (requests appear serial)"
+        )
+    elif overlap_pct < 30 and num_concurrent > 1:
+        passed = False
+        reasons.append(f"Overlap {overlap_pct:.1f}% < 30% (requests not concurrent)")
+
+    if passed:
+        print("✅ PASS: Interaction requests executed in parallel")
+        print(f"   - {parallelism_ratio:.2f}x parallelism (sum/wall)")
+        print(f"   - {overlap_pct:.1f}% overlap time")
+        verdict = "PASS"
+    else:
+        print("❌ FAIL: Interaction requests appear to be serialized")
+        for reason in reasons:
+            print(f"   - {reason}")
+        print("\n   ROOT CAUSE: world_logic.py async functions calling blocking I/O")
+        print("   FIX: Use asyncio.to_thread() for gemini_service/firestore_service calls")
+        verdict = "FAIL"
+
+    if failed:
+        print("\n⚠️  Failed Requests:")
+        for r in failed:
+            print(f"   Request {r['request_id']}: status={r['status_code']}, error={r.get('error', 'N/A')}")
+
+    print()
+
+    return {
+        "verdict": verdict,
+        "successful": len(successful),
+        "failed": len(failed),
+        "success_rate": success_rate,
+        "wall_time_ms": wall_time_ms,
+        "sum_durations_ms": sum_durations,
+        "parallelism_ratio": parallelism_ratio,
+        "overlap_pct": overlap_pct,
+        "max_concurrent": max_concurrent,
+        "results": results,
+    }
+
+
 def make_request_with_validation(
     base_url: str,
     endpoint: str,
@@ -504,6 +755,17 @@ def main():
     )
     parser.add_argument("--skip-warmup", action="store_true", help="Skip warmup phase")
     parser.add_argument("--output", "-o", help="Output JSON file for results")
+    parser.add_argument(
+        "--test-interactions",
+        action="store_true",
+        help="Test POST /interaction endpoint (exercises world_logic.py concurrency)",
+    )
+    parser.add_argument(
+        "--interaction-count",
+        type=int,
+        default=2,
+        help="Number of concurrent interaction requests (default: 2, keep low to avoid rate limits)",
+    )
 
     args = parser.parse_args()
 
@@ -515,7 +777,7 @@ def main():
         # In CI environment (GitHub Actions), skip gracefully instead of failing
         is_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
         if is_ci:
-            print(f"⏭️  Skipping test - no auth token available in CI environment")
+            print("⏭️  Skipping test - no auth token available in CI environment")
             print(f"   Token file: {args.token_file}")
             print("   This test requires local authentication")
             sys.exit(0)  # Exit with success to not block CI
@@ -555,7 +817,7 @@ def main():
         if campaign_info:
             expected_title = campaign_info[1] if campaign_info[0] == campaign_id else ""
 
-    # Run test
+    # Run campaign GET test (tests main.py direct routes)
     results = run_rigorous_test(
         base_url=base_url,
         campaign_id=campaign_id,
@@ -564,6 +826,16 @@ def main():
         num_concurrent=args.concurrent,
         skip_warmup=args.skip_warmup,
     )
+
+    # Run interaction POST test (tests world_logic.py via MCP)
+    interaction_results = None
+    if args.test_interactions:
+        interaction_results = run_interaction_concurrency_test(
+            base_url=base_url,
+            campaign_id=campaign_id,
+            token=token,
+            num_concurrent=args.interaction_count,
+        )
 
     # Save output
     if args.output:
@@ -576,11 +848,28 @@ def main():
             "campaign_id": campaign_id,
             "skip_warmup": args.skip_warmup,
         }
+        if interaction_results:
+            output_data["interaction_test"] = {
+                k: v for k, v in interaction_results.items() if k != "results"
+            }
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=2)
         print(f"📄 Results saved to {args.output}")
 
-    sys.exit(0 if results["verdict"] == "PASS" else 1)
+    # Exit based on both test results
+    campaign_pass = results["verdict"] == "PASS"
+    interaction_pass = (
+        interaction_results is None or interaction_results["verdict"] == "PASS"
+    )
+
+    if campaign_pass and interaction_pass:
+        sys.exit(0)
+    else:
+        if not campaign_pass:
+            print("❌ Campaign GET concurrency test FAILED")
+        if interaction_results and not interaction_pass:
+            print("❌ Interaction POST concurrency test FAILED")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

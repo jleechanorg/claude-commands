@@ -9,10 +9,16 @@ Architecture:
 - Consistent JSON input/output structures
 - Centralized error handling and response formatting
 - Support for both user_id extraction (Flask auth) and explicit parameters (MCP)
+
+Concurrency:
+- Async functions use asyncio.to_thread() for blocking I/O operations
+- This prevents blocking the shared event loop during Gemini/Firestore calls
+- Critical for allowing concurrent requests (e.g., loading campaigns while actions process)
 """
 
 # ruff: noqa: PLR0911, PLR0912, PLR0915, UP038
 
+import asyncio
 import collections
 import datetime
 import json
@@ -328,6 +334,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
     """
     Unified campaign creation logic for both Flask and MCP.
 
+    Uses asyncio.to_thread() for blocking I/O operations to prevent blocking
+    the shared event loop.
+
     Args:
         request_data: Dictionary containing:
             - user_id: User ID
@@ -368,8 +377,8 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         # Always use D&D system
         attribute_system = constants.ATTRIBUTE_SYSTEM_DND
 
-        # Get user settings to apply debug mode during campaign creation
-        user_settings = get_user_settings(user_id)
+        # Get user settings to apply debug mode during campaign creation (blocking I/O)
+        user_settings = await asyncio.to_thread(get_user_settings, user_id)
         debug_mode = (
             user_settings.get("debug_mode", constants.DEFAULT_DEBUG_MODE)
             if user_settings
@@ -386,13 +395,14 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         generate_companions = "companions" in custom_options
         use_default_world = "defaultWorld" in custom_options
 
-        # Generate opening story using Gemini
-        opening_story_response = gemini_service.get_initial_story(
+        # Generate opening story using Gemini (CRITICAL: blocking I/O - 10-30+ seconds!)
+        opening_story_response = await asyncio.to_thread(
+            gemini_service.get_initial_story,
             prompt,
-            user_id=user_id,
-            selected_prompts=selected_prompts,
-            generate_companions=generate_companions,
-            use_default_world=use_default_world,
+            user_id,
+            selected_prompts,
+            generate_companions,
+            use_default_world,
         )
 
         # Extract structured fields
@@ -400,8 +410,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             structured_fields_utils.extract_structured_fields(opening_story_response)
         )
 
-        # Create campaign in Firestore
-        campaign_id = firestore_service.create_campaign(
+        # Create campaign in Firestore (blocking I/O - run in thread)
+        campaign_id = await asyncio.to_thread(
+            firestore_service.create_campaign,
             user_id,
             title,
             prompt,
@@ -430,6 +441,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     """
     Unified story processing logic for both Flask and MCP.
 
+    Uses asyncio.to_thread() for blocking I/O operations to prevent blocking
+    the shared event loop. This allows concurrent requests (e.g., loading a
+    campaign while an action is being processed).
+
     Args:
         request_data: Dictionary containing:
             - user_id: User ID
@@ -455,26 +470,27 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         if user_input is None:
             return {KEY_ERROR: "User input is required"}
 
-        # Load and prepare game state
-        current_game_state, was_cleaned, num_cleaned = _prepare_game_state(
-            user_id, campaign_id
+        # Load and prepare game state (blocking I/O - run in thread)
+        current_game_state, was_cleaned, num_cleaned = await asyncio.to_thread(
+            _prepare_game_state, user_id, campaign_id
         )
 
-        # Apply user settings to game state
-        user_settings = get_user_settings(user_id)
+        # Apply user settings to game state (blocking I/O - run in thread)
+        user_settings = await asyncio.to_thread(get_user_settings, user_id)
         if user_settings and "debug_mode" in user_settings:
             current_game_state.debug_mode = user_settings["debug_mode"]
 
-        # Handle debug mode commands
-        debug_response = _handle_debug_mode_command(
+        # Handle debug mode commands (may contain blocking I/O)
+        debug_response = await asyncio.to_thread(
+            _handle_debug_mode_command,
             user_input, current_game_state, user_id, campaign_id
         )
         if debug_response:
             return debug_response
 
-        # Get story context for Gemini
-        campaign_data, story_context = firestore_service.get_campaign_by_id(
-            user_id, campaign_id
+        # Get story context for Gemini (blocking I/O - run in thread)
+        campaign_data, story_context = await asyncio.to_thread(
+            firestore_service.get_campaign_by_id, user_id, campaign_id
         )
         if not campaign_data:
             return {KEY_ERROR: "Campaign not found", "status_code": 404}
@@ -483,8 +499,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         selected_prompts = campaign_data.get("selected_prompts", [])
         use_default_world = campaign_data.get("use_default_world", False)
 
-        # Process regular game action with Gemini
-        gemini_response_obj = gemini_service.continue_story(
+        # Process regular game action with Gemini (CRITICAL: blocking I/O - 10-30+ seconds!)
+        # This is the most important call to run in a thread to prevent blocking
+        gemini_response_obj = await asyncio.to_thread(
+            gemini_service.continue_story,
             user_input,
             mode,
             story_context,
@@ -505,15 +523,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             current_game_state.to_dict(), response.get("state_changes", {})
         )
 
-        # Update in Firestore
-        firestore_service.update_campaign_game_state(
+        # Update in Firestore (blocking I/O - run in thread)
+        await asyncio.to_thread(
+            firestore_service.update_campaign_game_state,
             user_id, campaign_id, updated_game_state_dict
         )
 
-        # Save story entries to Firestore
+        # Save story entries to Firestore (blocking I/O - run in thread)
         # First save the user input
-        firestore_service.add_story_entry(
-            user_id, campaign_id, constants.ACTOR_USER, user_input, mode=mode
+        await asyncio.to_thread(
+            firestore_service.add_story_entry,
+            user_id, campaign_id, constants.ACTOR_USER, user_input, mode
         )
 
         # Then save the AI response with structured fields if available
@@ -524,12 +544,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             gemini_response_obj
         )
 
-        firestore_service.add_story_entry(
+        await asyncio.to_thread(
+            firestore_service.add_story_entry,
             user_id,
             campaign_id,
             constants.ACTOR_GEMINI,
             ai_response_text,
-            structured_fields=structured_fields,
+            None,  # mode
+            structured_fields,  # structured_fields
         )
 
         # Get debug mode for narrative text processing
@@ -640,7 +662,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             final_game_state_dict = update_state_with_changes(
                 updated_game_state_dict, story_id_update
             )
-            firestore_service.update_campaign_game_state(
+            # Blocking I/O - run in thread
+            await asyncio.to_thread(
+                firestore_service.update_campaign_game_state,
                 user_id, campaign_id, final_game_state_dict
             )
             unified_response["game_state"] = final_game_state_dict
@@ -658,6 +682,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, Any]:
     """
     Unified campaign state retrieval logic for both Flask and MCP.
+
+    Uses asyncio.to_thread() for blocking I/O operations to prevent blocking
+    the shared event loop.
 
     Args:
         request_data: Dictionary containing:
@@ -680,9 +707,9 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
         if not campaign_id:
             return {KEY_ERROR: "Campaign ID is required"}
 
-        # Get campaign metadata and story
-        campaign_data, story = firestore_service.get_campaign_by_id(
-            user_id, campaign_id
+        # Get campaign metadata and story (blocking I/O - run in thread)
+        campaign_data, story = await asyncio.to_thread(
+            firestore_service.get_campaign_by_id, user_id, campaign_id
         )
         if not campaign_data:
             return {KEY_ERROR: "Campaign not found", "status_code": 404}
@@ -703,12 +730,14 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
             ):
                 campaign_data[field] = clean_json_artifacts(campaign_data[field])
 
-        # Get game state and apply user settings
-        game_state, was_cleaned, num_cleaned = _prepare_game_state(user_id, campaign_id)
+        # Get game state and apply user settings (blocking I/O - run in thread)
+        game_state, was_cleaned, num_cleaned = await asyncio.to_thread(
+            _prepare_game_state, user_id, campaign_id
+        )
         game_state_dict = game_state.to_dict()
 
-        # Get debug mode from user settings and apply to game state
-        user_settings = get_user_settings(user_id)
+        # Get debug mode from user settings and apply to game state (blocking I/O)
+        user_settings = await asyncio.to_thread(get_user_settings, user_id)
         debug_mode = user_settings.get("debug_mode", False) if user_settings else False
         game_state_dict["debug_mode"] = debug_mode
 
@@ -741,6 +770,9 @@ async def update_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
     """
     Unified campaign update logic for both Flask and MCP.
 
+    Uses asyncio.to_thread() for blocking I/O operations to prevent blocking
+    the shared event loop.
+
     Args:
         request_data: Dictionary containing:
             - user_id: User ID
@@ -764,13 +796,17 @@ async def update_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         if not updates:
             return {KEY_ERROR: "Updates are required"}
 
-        # Check if campaign exists
-        campaign_data, _ = firestore_service.get_campaign_by_id(user_id, campaign_id)
+        # Check if campaign exists (blocking I/O - run in thread)
+        campaign_data, _ = await asyncio.to_thread(
+            firestore_service.get_campaign_by_id, user_id, campaign_id
+        )
         if not campaign_data:
             return {KEY_ERROR: "Campaign not found", "status_code": 404}
 
-        # Apply updates
-        firestore_service.update_campaign(user_id, campaign_id, updates)
+        # Apply updates (blocking I/O - run in thread)
+        await asyncio.to_thread(
+            firestore_service.update_campaign, user_id, campaign_id, updates
+        )
 
         return {
             KEY_SUCCESS: True,
@@ -785,6 +821,9 @@ async def update_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any]:
     """
     Unified campaign export logic for both Flask and MCP.
+
+    Uses asyncio.to_thread() for blocking I/O operations to prevent blocking
+    the shared event loop.
 
     Args:
         request_data: Dictionary containing:
@@ -811,9 +850,9 @@ async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         if export_format not in ["pdf", "docx", "txt"]:
             return {KEY_ERROR: "Format must be one of: pdf, docx, txt"}
 
-        # Get campaign data and story
-        campaign_data, story_context = firestore_service.get_campaign_by_id(
-            user_id, campaign_id
+        # Get campaign data and story (blocking I/O - run in thread)
+        campaign_data, story_context = await asyncio.to_thread(
+            firestore_service.get_campaign_by_id, user_id, campaign_id
         )
         if not campaign_data:
             return {KEY_ERROR: "Campaign not found", "status_code": 404}
@@ -847,16 +886,25 @@ async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         # Generate export file
         try:
             if export_format == "pdf":
-                document_generator.generate_pdf(
-                    story_text, safe_file_path, campaign_title
+                await asyncio.to_thread(
+                    document_generator.generate_pdf,
+                    story_text,
+                    safe_file_path,
+                    campaign_title,
                 )
             elif export_format == "docx":
-                document_generator.generate_docx(
-                    story_text, safe_file_path, campaign_title
+                await asyncio.to_thread(
+                    document_generator.generate_docx,
+                    story_text,
+                    safe_file_path,
+                    campaign_title,
                 )
             elif export_format == "txt":
-                document_generator.generate_txt(
-                    story_text, safe_file_path, campaign_title
+                await asyncio.to_thread(
+                    document_generator.generate_txt,
+                    story_text,
+                    safe_file_path,
+                    campaign_title,
                 )
 
             return {
@@ -916,9 +964,10 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
                 KEY_ERROR: f"Invalid sort_by parameter - must be one of: {', '.join(valid_sort_fields)}"
             }
 
-        # Get campaigns with pagination and sorting
-        campaigns = firestore_service.get_campaigns_for_user(
-            user_id, limit=limit, sort_by=sort_by
+        # Get campaigns with pagination and sorting (blocking I/O - run in thread)
+        campaigns = await asyncio.to_thread(
+            firestore_service.get_campaigns_for_user,
+            user_id, limit, sort_by
         )
 
         # Clean JSON artifacts from campaign text fields
@@ -976,6 +1025,9 @@ async def get_user_settings_unified(request_data: dict[str, Any]) -> dict[str, A
     """
     Unified user settings retrieval for both Flask and MCP.
 
+    Uses asyncio.to_thread() for blocking I/O operations to prevent blocking
+    the shared event loop.
+
     Args:
         request_data: Dictionary containing:
             - user_id: User ID
@@ -988,7 +1040,8 @@ async def get_user_settings_unified(request_data: dict[str, Any]) -> dict[str, A
         if not user_id:
             return create_error_response("User ID is required")
 
-        settings = get_user_settings(user_id)
+        # Blocking I/O - run in thread
+        settings = await asyncio.to_thread(get_user_settings, user_id)
 
         # Return default settings for new users or database errors
         if settings is None:
@@ -1007,6 +1060,9 @@ async def get_user_settings_unified(request_data: dict[str, Any]) -> dict[str, A
 async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str, Any]:
     """
     Unified user settings update for both Flask and MCP.
+
+    Uses asyncio.to_thread() for blocking I/O operations to prevent blocking
+    the shared event loop.
 
     Args:
         request_data: Dictionary containing:
@@ -1051,15 +1107,17 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
                 return create_error_response("Invalid debug mode value")
             settings_to_update["debug_mode"] = debug_mode
 
-        # Update settings if there are any valid changes
+        # Update settings if there are any valid changes (blocking I/O - run in thread)
         if settings_to_update:
-            firestore_service.update_user_settings(user_id, settings_to_update)
+            await asyncio.to_thread(
+                firestore_service.update_user_settings, user_id, settings_to_update
+            )
             logging_util.info(
                 f"Updated user settings for {user_id}: {settings_to_update}"
             )
 
-        # Get updated settings to return
-        updated_settings = get_user_settings(user_id) or {}
+        # Get updated settings to return (blocking I/O - run in thread)
+        updated_settings = await asyncio.to_thread(get_user_settings, user_id) or {}
 
         return create_success_response({"settings": updated_settings})
 
