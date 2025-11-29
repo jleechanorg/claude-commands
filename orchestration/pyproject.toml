@@ -1,16 +1,18 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-orchestration"
-version = "0.1.2"
+version = "0.1.8"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
 authors = [
-    {name = "jleechan", email = "jlee@jleechan.org"}
+    { name = "jleechan", email = "jlee@jleechan.org" },
 ]
 readme = "README.md"
-license = {text = "MIT"}
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -23,9 +25,23 @@ classifiers = [
     "Topic :: System :: Shells",
     "Topic :: Terminals",
 ]
-keywords = ["ai", "orchestration", "tmux", "claude", "codex", "cli", "automation", "agents", "terminal", "interactive"]
+keywords = [
+    "ai",
+    "orchestration",
+    "tmux",
+    "claude",
+    "codex",
+    "cli",
+    "automation",
+    "agents",
+    "terminal",
+    "interactive",
+]
 requires-python = ">=3.9"
 dependencies = []
+
+[project.license]
+text = "MIT"
 
 [project.optional-dependencies]
 dev = [
@@ -46,26 +62,43 @@ ai_orch = "orchestration.live_mode:main"
 orch = "orchestration.live_mode:main"
 
 [tool.setuptools]
-# PyPI package name is 'jleechanorg-orchestration' but Python package name is 'orchestration'
-# This allows 'pip install jleechanorg-orchestration' while using 'from orchestration import ...'
+packages = [
+    "orchestration",
+]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["orchestration*"]
+[tool.setuptools.package-dir]
+orchestration = "."
 
 [tool.setuptools.package-data]
-orchestration = ["*.md", "*.txt", "*.yaml", "*.conf", "config/*.yaml"]
+orchestration = [
+    "*.md",
+    "*.txt",
+    "*.yaml",
+    "*.conf",
+    "config/*.yaml",
+]
 
 [tool.black]
 line-length = 120
-target-version = ['py39']
+target-version = [
+    "py39",
+]
 
 [tool.ruff]
 line-length = 120
 target-version = "py39"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]

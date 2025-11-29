@@ -59,9 +59,10 @@ jleechanorg-pr-monitor --fixpr --max-prs 5
 - For Codex: Ensure `codex` binary is in PATH
 - For Gemini: `pip install google-gemini-cli` + `GOOGLE_API_KEY` environment variable
 
-**Model Restrictions:**
-- Gemini CLI is configured to use **ONLY gemini-3-pro-preview** model
-- No other Gemini models are supported in the orchestration system
+**Model Configuration:**
+- Gemini CLI defaults to **gemini-3-pro-preview** model
+- Can be overridden via `GEMINI_MODEL` environment variable if needed
+- Example: `export GEMINI_MODEL=gemini-2.0-flash` before running orchestration
 
 For complete CLI configuration and usage details, see the [orchestration README](../orchestration/README.md#cli-selection-methods).
 
