@@ -54,7 +54,7 @@ def _fill_god_mode_response(
 def _ensure_world_time(state_changes: dict[str, Any], game_state: GameState) -> None:
     world_data = state_changes.setdefault("world_data", {})
     world_time = world_data.get("world_time")
-    if isinstance(world_time, dict):
+    if isinstance(world_time, dict) and world_time and "hour" in world_time:
         return
 
     existing = game_state.world_data.get("world_time")
@@ -72,7 +72,8 @@ def _ensure_core_memory(state_changes: dict[str, Any], narrative: str) -> None:
     snippet = narrative.strip()
     if snippet:
         entry = f"{AUTO_MEMORY_PREFIX} {snippet}"[:180]
-        core_memories.append(entry)
+        if entry not in core_memories:
+            core_memories.append(entry)
     custom_state["core_memories"] = core_memories
 
 
@@ -86,18 +87,18 @@ def _ensure_location_progress(
     custom_state = state_changes.setdefault("custom_campaign_state", {})
 
     if location and location != "Unknown":
-        world_data.setdefault("current_location_name", location)
-        custom_state.setdefault("last_location", location)
+        world_data["current_location_name"] = location
+        custom_state["last_location"] = location
         return
 
     prior_location = game_state.world_data.get("current_location_name")
     if prior_location and "current_location_name" not in world_data:
         world_data["current_location_name"] = prior_location
-        custom_state.setdefault("last_location", prior_location)
+        custom_state["last_location"] = prior_location
 
 
 def _ensure_resource_checkpoint(state_changes: dict[str, Any], resources: str) -> None:
     resource_state = state_changes.setdefault("world_resources", {})
     if isinstance(resource_state, dict):
-        resource_state.setdefault("last_note", resources)
+        resource_state["last_note"] = resources
 

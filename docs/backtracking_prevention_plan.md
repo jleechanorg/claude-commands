@@ -1,7 +1,13 @@
 # Preventing Scene Backtracking and Missed God-Mode Corrections
 
+*Last updated: 2025-11-29*
+
 This plan reorients the safeguards away from emitting blocking errors and toward
-proactive prevention, automatic state repair, and low-friction guidance.
+proactive prevention, automatic state repair, and low-friction guidance. Current
+implementation covers preventive guards in `mvp_site/preventive_guards.py`
+(wired via `mvp_site/world_logic.py` with tests in
+`mvp_site/tests/test_preventive_guards.py`). Auto-reshot and resubmit mechanics
+described below remain planned follow-ups.
 
 ## 1) God-mode directives are applied automatically
 - Detect god-mode directives in `gemini_service.continue_story` prompt prep and

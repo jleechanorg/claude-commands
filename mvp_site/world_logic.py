@@ -650,6 +650,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 )
 
         if prevention_extras.get("god_mode_response"):
+            # Prefer synthesized god mode responses from preventive guards when present
+            # because they fill gaps left by the model.
             unified_response["god_mode_response"] = prevention_extras[
                 "god_mode_response"
             ]

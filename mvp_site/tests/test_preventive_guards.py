@@ -1,6 +1,6 @@
 import pytest
 
-from mvp_site import constants
+from mvp_site import constants, preventive_guards
 from mvp_site.game_state import GameState
 from mvp_site.gemini_response import GeminiResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
@@ -10,8 +10,13 @@ from mvp_site.narrative_response_schema import NarrativeResponse
 def base_game_state():
     state = GameState(user_id="user-123")
     # Seed time data so we can verify preservation
-    state.world_data["world_time"] = {"hour": 10, "minute": 15, "time_of_day": "morning"}
+    state.world_data["world_time"] = {
+        "hour": 10,
+        "minute": 15,
+        "time_of_day": "morning",
+    }
     state.world_data["current_location_name"] = "Harbor"
+    state.custom_campaign_state = {}
     return state
 
 
@@ -32,7 +37,6 @@ def _make_response(**kwargs):
 
 def test_enforces_god_mode_response_when_missing(base_game_state):
     response = _make_response(narrative="Repair the timeline.")
-    from mvp_site import preventive_guards
 
     state_changes, extras = preventive_guards.enforce_preventive_guards(
         base_game_state, response, constants.MODE_GOD
@@ -44,9 +48,10 @@ def test_enforces_god_mode_response_when_missing(base_game_state):
 
 def test_infers_time_and_memory_from_dice_rolls(base_game_state):
     response = _make_response(
-        narrative="You sprint across the deck as arrows fly.", dice_rolls=["1d20"], state_updates={}
+        narrative="You sprint across the deck as arrows fly.",
+        dice_rolls=["1d20"],
+        state_updates={},
     )
-    from mvp_site import preventive_guards
 
     state_changes, extras = preventive_guards.enforce_preventive_guards(
         base_game_state, response, constants.MODE_CHARACTER
@@ -66,7 +71,6 @@ def test_tracks_location_when_missing_state_update(base_game_state):
         location_confirmed="Bridge",
         state_updates={},
     )
-    from mvp_site import preventive_guards
 
     state_changes, _ = preventive_guards.enforce_preventive_guards(
         base_game_state, response, constants.MODE_CHARACTER
@@ -74,3 +78,50 @@ def test_tracks_location_when_missing_state_update(base_game_state):
 
     assert state_changes["world_data"]["current_location_name"] == "Bridge"
     assert state_changes["custom_campaign_state"]["last_location"] == "Bridge"
+
+
+def test_falls_back_to_prior_time_when_missing(base_game_state):
+    base_game_state.world_data.pop("world_time")
+    response = _make_response(
+        narrative="The sun hangs high as you rest.",
+        dice_rolls=["1d6"],
+        state_updates={},
+    )
+
+    state_changes, _ = preventive_guards.enforce_preventive_guards(
+        base_game_state, response, constants.MODE_CHARACTER
+    )
+
+    world_time = state_changes["world_data"]["world_time"]
+    assert world_time["hour"] == 12
+    assert world_time["minute"] == 0
+    assert world_time["time_of_day"] == "day"
+
+
+def test_tracks_resource_checkpoint_when_resources_present(base_game_state):
+    response = _make_response(
+        narrative="You gather herbs and stash them in your pack.",
+        resources="inventory: herbs",
+        state_updates={},
+    )
+
+    state_changes, _ = preventive_guards.enforce_preventive_guards(
+        base_game_state, response, constants.MODE_CHARACTER
+    )
+
+    assert state_changes["world_resources"]["last_note"] == "inventory: herbs"
+
+
+def test_preserves_prior_location_when_unknown_confirmed(base_game_state):
+    response = _make_response(
+        narrative="You circle back, no landmarks in sight.",
+        location_confirmed="Unknown",
+        state_updates={},
+    )
+
+    state_changes, _ = preventive_guards.enforce_preventive_guards(
+        base_game_state, response, constants.MODE_CHARACTER
+    )
+
+    assert state_changes["world_data"]["current_location_name"] == "Harbor"
+    assert state_changes["custom_campaign_state"]["last_location"] == "Harbor"
