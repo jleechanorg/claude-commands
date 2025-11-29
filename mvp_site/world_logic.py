@@ -16,7 +16,7 @@ Concurrency:
 - Critical for allowing concurrent requests (e.g., loading campaigns while actions process)
 """
 
-# ruff: noqa: PLR0911, PLR0912, PLR0915, UP038
+# ruff: noqa: PLR0911, PLR0912, PLR0915, UP038, E402
 
 import asyncio
 import collections
@@ -44,6 +44,7 @@ from mvp_site import (
     firestore_service,
     gemini_service,
     logging_util,
+    preventive_guards,
     structured_fields_utils,
 )
 from mvp_site.custom_types import CampaignId, UserId
@@ -513,9 +514,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Convert GeminiResponse to dict format for compatibility
+        state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
+            current_game_state, gemini_response_obj, mode
+        )
+
         response = {
             "story": gemini_response_obj.narrative_text,
-            "state_changes": gemini_response_obj.get_state_updates(),
+            "state_changes": state_changes,
         }
 
         # Update game state with changes
@@ -543,6 +548,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         structured_fields = structured_fields_utils.extract_structured_fields(
             gemini_response_obj
         )
+        structured_fields.update(prevention_extras)
 
         await asyncio.to_thread(
             firestore_service.add_story_entry,
@@ -642,6 +648,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["god_mode_response"] = (
                     structured_response.god_mode_response
                 )
+
+        if prevention_extras.get("god_mode_response"):
+            unified_response["god_mode_response"] = prevention_extras[
+                "god_mode_response"
+            ]
 
         # Track story mode sequence ID for character mode
         if mode == constants.MODE_CHARACTER:
