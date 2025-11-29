@@ -9,7 +9,7 @@ sys.path.insert(
 import unittest
 
 # We import the service to test its internal functions
-from mvp_site import gemini_service
+from mvp_site import llm_service
 from mvp_site.game_state import GameState
 
 
@@ -45,7 +45,7 @@ class TestContextTruncation(unittest.TestCase):
         )
 
         # Call the function with the new signature, setting turns_to_keep parameters
-        truncated_context = gemini_service._truncate_context(
+        truncated_context = llm_service._truncate_context(
             self.story_context,
             max_chars=1000,  # High char limit - context should be under this
             model_name="test-model",
@@ -86,7 +86,7 @@ class TestContextTruncation(unittest.TestCase):
 
         # With 4 total turns and wanting 3 at end, it uses the "few turns" logic
         # and returns the last 3 entries regardless of char limit
-        truncated_context = gemini_service._truncate_context(
+        truncated_context = llm_service._truncate_context(
             long_story_context,
             max_chars=120,  # Low char limit (will be ignored due to few turns)
             model_name="test-model",
@@ -122,7 +122,7 @@ class TestContextTruncation(unittest.TestCase):
             custom_campaign_state={"core_memories": []},
         )
 
-        truncated_context = gemini_service._truncate_context(
+        truncated_context = llm_service._truncate_context(
             short_context,
             max_chars=1000,  # High char limit
             model_name="test-model",

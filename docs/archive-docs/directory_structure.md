@@ -40,7 +40,7 @@ This document provides a comprehensive overview of the project's directory struc
 
 ### Core Python Modules
 - **`main.py`** - Flask application entry point and API routes
-- **`gemini_service.py`** - Google Gemini AI integration
+- **`llm_service.py`** - Google Gemini AI integration
 - **`game_state.py`** - Game state management and data structures
 - **`firestore_service.py`** - Firebase database operations
 - **`constants.py`** - Application-wide constants

@@ -50,7 +50,7 @@ class TestCharacterCreation(unittest.TestCase):
         self.client = self.app.test_client()
 
     def test_create_character(self):
-        with patch('main.gemini_service') as mock_gemini:
+        with patch('main.llm_service') as mock_gemini:
             mock_gemini.generate_character.return_value = {"name": "Test"}
             # test logic...
 ```
@@ -67,7 +67,7 @@ class TestCharacterCreation(DualModeTestMixin, unittest.TestCase):
 
     def test_create_character(self):
         # Automatically works with mock or real services
-        with smart_patch(gemini_service=None):
+        with smart_patch(llm_service=None):
             # In mock mode: uses framework mocks
             # In real mode: no patching, uses real services
             # test logic unchanged...
@@ -121,7 +121,7 @@ class ExistingTest(unittest.TestCase):
             self._run_test_logic()
         else:
             # Mock mode - use existing patches
-            with patch('main.gemini_service', self.services['gemini']):
+            with patch('main.llm_service', self.services['gemini']):
                 self._run_test_logic()
 ```
 
@@ -284,11 +284,11 @@ Replace manual patches with `smart_patch`:
 
 ```python
 # Instead of:
-with patch('main.gemini_service') as mock_gemini:
+with patch('main.llm_service') as mock_gemini:
     # setup mock...
 
 # Use:
-with smart_patch(gemini_service=None):
+with smart_patch(llm_service=None):
     # Works in both modes
 ```
 

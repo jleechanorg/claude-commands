@@ -10,7 +10,7 @@ This directory contains mock implementations of external services used for testi
 mocks/
 ├── __init__.py              # Package initialization
 ├── mock_firestore_service.py # Mock Firebase/Firestore implementation
-├── mock_gemini_service.py    # Mock Gemini AI service implementation
+├── mock_llm_service.py    # Mock Gemini AI service implementation
 └── data_fixtures.py         # Test data fixtures and sample data
 ```
 
@@ -32,7 +32,7 @@ mocks/
 - `update_campaign_game_state(user_id, campaign_id, state)` - Update mock state
 - `add_story_entry(user_id, campaign_id, actor, text, mode)` - Add mock story entry
 
-### mock_gemini_service.py
+### mock_llm_service.py
 - **Purpose**: Mock implementation of Gemini AI service
 - **Key Features**:
   - Predefined responses for common scenarios
@@ -69,7 +69,7 @@ mocks/
 ```python
 import unittest
 from mocks.mock_firestore_service import MockFirestoreService
-from mocks.mock_gemini_service import MockGeminiService
+from mocks.mock_llm_service import MockGeminiService
 
 class TestCampaignCreation(unittest.TestCase):
     def setUp(self):

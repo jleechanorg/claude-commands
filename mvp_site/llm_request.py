@@ -1,5 +1,5 @@
 """
-GeminiRequest Class for Structured JSON Input to Gemini API
+LLMRequest Class for Structured JSON Input to Gemini API
 
 This class replaces the flawed json_input_schema approach that converted JSON
 back to concatenated strings. Instead, it provides structured JSON that is sent
@@ -29,20 +29,20 @@ MAX_PAYLOAD_SIZE = (
 MAX_STRING_LENGTH = 1000000
 
 
-class GeminiRequestError(Exception):
-    """Custom exception for GeminiRequest validation and serialization errors."""
+class LLMRequestError(Exception):
+    """Custom exception for LLMRequest validation and serialization errors."""
 
 
-class PayloadTooLargeError(GeminiRequestError):
+class PayloadTooLargeError(LLMRequestError):
     """Raised when JSON payload exceeds size limits."""
 
 
-class ValidationError(GeminiRequestError):
-    """Raised when GeminiRequest fields fail validation."""
+class ValidationError(LLMRequestError):
+    """Raised when LLMRequest fields fail validation."""
 
 
 @dataclass
-class GeminiRequest:
+class LLMRequest:
     """
     Structured request object for Gemini API calls.
 
@@ -73,7 +73,7 @@ class GeminiRequest:
     world_data: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        """Validate GeminiRequest fields after initialization."""
+        """Validate LLMRequest fields after initialization."""
         self._validate_required_fields()
         self._validate_field_types()
         self._validate_string_lengths()
@@ -175,7 +175,7 @@ class GeminiRequest:
 
         Raises:
             PayloadTooLargeError: If JSON payload exceeds size limits
-            GeminiRequestError: If JSON serialization fails
+            LLMRequestError: If JSON serialization fails
         """
         try:
             json_data = {
@@ -204,9 +204,9 @@ class GeminiRequest:
             return json_data
 
         except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization failed for GeminiRequest: {e}")
-            raise GeminiRequestError(
-                f"Failed to serialize GeminiRequest to JSON: {e}"
+            logger.error(f"JSON serialization failed for LLMRequest: {e}")
+            raise LLMRequestError(
+                f"Failed to serialize LLMRequest to JSON: {e}"
             ) from e
 
     def _validate_payload_size(self, json_data: dict[str, Any]):
@@ -221,11 +221,11 @@ class GeminiRequest:
                     f"JSON payload too large: {payload_size} bytes exceeds limit of {MAX_PAYLOAD_SIZE} bytes"
                 )
 
-            logger.debug(f"GeminiRequest payload size: {payload_size} bytes")
+            logger.debug(f"LLMRequest payload size: {payload_size} bytes")
 
         except (TypeError, ValueError) as e:
             logger.error(f"Failed to validate payload size: {e}")
-            raise GeminiRequestError(f"Payload size validation failed: {e}") from e
+            raise LLMRequestError(f"Payload size validation failed: {e}") from e
 
     @classmethod
     def build_story_continuation(
@@ -241,9 +241,9 @@ class GeminiRequest:
         entity_tracking: dict[str, Any] | None = None,
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
-    ) -> "GeminiRequest":
+    ) -> "LLMRequest":
         """
-        Build a GeminiRequest for story continuation.
+        Build a LLMRequest for story continuation.
 
         Args:
             user_action: The user's input/action
@@ -259,7 +259,7 @@ class GeminiRequest:
             use_default_world: Whether to use default world content
 
         Returns:
-            GeminiRequest configured for story continuation
+            LLMRequest configured for story continuation
         """
         # Validate input parameters before creating instance
         if not user_action and not entity_tracking:
@@ -296,9 +296,9 @@ class GeminiRequest:
         generate_companions: bool = False,
         use_default_world: bool = False,
         world_data: dict[str, Any] | None = None,
-    ) -> "GeminiRequest":
+    ) -> "LLMRequest":
         """
-        Build a GeminiRequest for initial story generation.
+        Build a LLMRequest for initial story generation.
 
         Args:
             character_prompt: The character/story prompt from user
@@ -309,7 +309,7 @@ class GeminiRequest:
             world_data: Custom world data if applicable
 
         Returns:
-            GeminiRequest configured for initial story generation
+            LLMRequest configured for initial story generation
         """
         # Validate input parameters before creating instance
         if not character_prompt or not character_prompt.strip():
@@ -346,7 +346,7 @@ def json_default_serializer(obj: Any) -> Any:
         JSON-serializable representation of the object
 
     Raises:
-        GeminiRequestError: If object cannot be serialized
+        LLMRequestError: If object cannot be serialized
     """
     try:
         if hasattr(obj, "isoformat"):

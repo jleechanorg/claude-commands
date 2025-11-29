@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
 Import Validation Script (Delta Mode Support)
 
 Enforces clean import standards:
@@ -18,7 +20,7 @@ import ast
 import subprocess
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 
 class ImportViolation(NamedTuple):
@@ -98,13 +100,13 @@ class ImportValidator(ast.NodeVisitor):
             'mvp_site.clock_skew_credentials', 'clock_skew_credentials',
             # mvp_site modules that may be imported after clock_skew_patch()
             'mvp_site', 'mvp_site.constants', 'mvp_site.document_generator',
-            'mvp_site.firestore_service', 'mvp_site.gemini_service',
+            'mvp_site.firestore_service', 'mvp_site.llm_service',
             'mvp_site.structured_fields_utils', 'mvp_site.custom_types',
             'mvp_site.debug_hybrid_system', 'mvp_site.game_state',
             'mvp_site.prompt_utils'
         }
 
-    def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:
+    def _is_allowed_conditional_import(self, node: Union[ast.Import, ast.ImportFrom]) -> bool:
         """Check if import is allowed in conditional contexts."""
         if isinstance(node, ast.Import):
             for alias in node.names:

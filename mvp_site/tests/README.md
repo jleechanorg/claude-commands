@@ -7,7 +7,7 @@ This directory contains comprehensive test files for debugging, validation, and 
 **Current Coverage (January 2025)**: 67% overall (21,031 statements, 6,975 missing)
 - **main.py**: 74% (550 statements, 144 missing)
 - **firestore_service.py**: 64% (254 statements, 91 missing)
-- **gemini_service.py**: 70% (594 statements, 178 missing)
+- **llm_service.py**: 70% (594 statements, 178 missing)
 - **game_state.py**: 90% (169 statements, 17 missing) - Excellent!
 
 ## Directory Structure
@@ -15,7 +15,7 @@ This directory contains comprehensive test files for debugging, validation, and 
 ### Core Component Tests
 - **`test_main.py`** - Flask application routes and core functionality (126 test methods)
 - **`test_firestore_service.py`** - Database operations and state management
-- **`test_gemini_service.py`** - AI service integration and response processing
+- **`test_llm_service.py`** - AI service integration and response processing
 - **`test_game_state.py`** - Game state management and validation
 - **`test_constants.py`** - Constants and configuration validation
 

@@ -17,7 +17,7 @@ Per `roadmap/mcp_architecture_refactor_plan.md`, main.py should become a **Trans
 ### What Main.py Should NOT Know About (REMOVE THESE)
 - ❌ `from game_state import GameState` - Game logic belongs in world_logic.py
 - ❌ `import firestore_service` - Database operations belong in world_logic.py
-- ❌ `import gemini_service` - AI operations belong in world_logic.py
+- ❌ `import llm_service` - AI operations belong in world_logic.py
 - ❌ Campaign creation logic - Business logic belongs in world_logic.py
 - ❌ Story processing logic - Game mechanics belong in world_logic.py
 - ❌ Character management - D&D logic belongs in world_logic.py
@@ -54,7 +54,7 @@ world_logic.py (MCP Server - ALL BUSINESS LOGIC)
 From analysis of unified API testing reports, main.py currently has these problematic imports:
 - `from game_state import GameState` - Direct game logic dependency
 - `import firestore_service` - Direct database dependency
-- `import gemini_service` - Direct AI service dependency
+- `import llm_service` - Direct AI service dependency
 
 ### Business Logic in Main.py (To Move)
 Based on duplication analysis, main.py contains these business logic patterns that should move to world_logic.py:
@@ -72,7 +72,7 @@ Based on duplication analysis, main.py contains these business logic patterns th
 1. **Remove Game Logic Dependencies**
    - Remove `from game_state import GameState`
    - Remove `import firestore_service`
-   - Remove `import gemini_service`
+   - Remove `import llm_service`
    - Remove all business logic helper functions
 
 2. **Implement MCP Client Integration**
@@ -118,8 +118,8 @@ This refactor will resolve the integration gap by:
 **Problematic Game Logic Dependencies Found:**
 - `from game_state import GameState` (line 86) - Direct game logic dependency
 - `from firestore_service import ...` (line 79) - Direct database dependency
-- `import gemini_service as real_gemini_service` (line 78) - Direct AI service dependency
-- `from mocks import mock_firestore_service_wrapper, mock_gemini_service_wrapper` - Test dependencies
+- `import llm_service as real_llm_service` (line 78) - Direct AI service dependency
+- `from mocks import mock_firestore_service_wrapper, mock_llm_service_wrapper` - Test dependencies
 
 **Business Logic in Main.py:** 12 duplicated patterns that should move to world_logic.py MCP server
 
@@ -146,7 +146,7 @@ This refactor will resolve the integration gap by:
 4. **Remove Game Logic Dependencies**
    - Remove `from game_state import GameState`
    - Remove `from firestore_service import ...`
-   - Remove `import gemini_service`
+   - Remove `import llm_service`
    - Remove all business logic helper functions
 
 #### Phase 3: Pure API Gateway (1-2 hours)
@@ -163,7 +163,7 @@ This refactor will resolve the integration gap by:
 from flask import Flask, request, jsonify, g
 from mcp.client import Client as MCPClient
 import auth_utils  # JWT validation only
-# NO game_state, NO firestore_service, NO gemini_service
+# NO game_state, NO firestore_service, NO llm_service
 
 class MCPTranslationLayer:
     def __init__(self):

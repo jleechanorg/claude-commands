@@ -7,7 +7,7 @@ import os
 import re
 import unittest
 
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.main import (
     CORS_RESOURCES,
     DEFAULT_TEST_USER,
@@ -34,12 +34,12 @@ class StateHelper:
     @staticmethod
     def strip_debug_content(text):
         """Strip debug content from text."""
-        return GeminiResponse._strip_debug_content(text)
+        return LLMResponse._strip_debug_content(text)
 
     @staticmethod
     def strip_state_updates_only(text):
         """Strip only state updates from text."""
-        return GeminiResponse._strip_state_updates_only(text)
+        return LLMResponse._strip_state_updates_only(text)
 
     @staticmethod
     def strip_other_debug_content(text):

@@ -176,9 +176,10 @@ def setup_file_logging() -> None:
     # Use centralized logging utility for consistent directory structure
     log_file = logging_util.LoggingUtil.get_log_file("flask-server")
 
-    # Clear any existing handlers
+    # Clear any existing handlers (close them first to prevent ResourceWarning)
     root_logger = logging.getLogger()
     for handler in root_logger.handlers[:]:
+        handler.close()
         root_logger.removeHandler(handler)
 
     # Set up formatting
@@ -1336,6 +1337,17 @@ def create_app() -> Flask:
     # Register cleanup handler for app shutdown
     def cleanup_resources():
         """Cleanup resources on app shutdown"""
+        # Close file handlers to prevent ResourceWarning
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            if isinstance(handler, logging.FileHandler):
+                try:
+                    handler.close()
+                    root_logger.removeHandler(handler)
+                except Exception as e:
+                    logging_util.error(f"Error closing file handler: {e}")
+
+        # Close MCP client session
         if (
             app._mcp_client
             and hasattr(app._mcp_client, "session")

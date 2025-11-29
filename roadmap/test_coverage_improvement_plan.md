@@ -3,7 +3,7 @@
 ## Current State (2025-07-02)
 - Overall coverage: 32%
 - firestore_service.py: 50%
-- gemini_service.py: 27%
+- llm_service.py: 27%
 - game_state.py: 15%
 
 ## Goal
@@ -24,7 +24,7 @@ Achieve 80%+ test coverage across core modules while maintaining pragmatic testi
 - [ ] Test error handling for Firebase failures
 
 ### 1.3 Test Gemini API Calls
-- [ ] Test `_call_gemini_api()` with mocked responses
+- [ ] Test `_call_llm_api()` with mocked responses
 - [ ] Test token counting and budget management
 - [ ] Test model fallback behavior
 - [ ] Test error handling for API failures

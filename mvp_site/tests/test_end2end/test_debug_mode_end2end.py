@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 
 from main import create_app
-from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
+from tests.fake_firestore import FakeFirestoreClient, FakeLLMResponse
 
 
 class TestDebugModeEnd2End(unittest.TestCase):
@@ -288,7 +288,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             },
         }
         self.fake_genai_client.models.generate_content.return_value = (
-            FakeGeminiResponse(json.dumps(gemini_response_data))
+            FakeLLMResponse(json.dumps(gemini_response_data))
         )
 
         # Test with debug mode OFF
@@ -434,16 +434,16 @@ class TestDebugModeEnd2End(unittest.TestCase):
             parsed_enabled["message_type"], parsed_disabled["message_type"]
         )
 
-        # Legacy JsonInputBuilder and JsonInputValidator removed - using GeminiRequest validation
-        # Test that both debug modes would be valid for GeminiRequest
-        debug_on_valid = True  # GeminiRequest handles debug mode internally
-        debug_off_valid = True  # GeminiRequest handles normal mode internally
+        # Legacy JsonInputBuilder and JsonInputValidator removed - using LLMRequest validation
+        # Test that both debug modes would be valid for LLMRequest
+        debug_on_valid = True  # LLMRequest handles debug mode internally
+        debug_off_valid = True  # LLMRequest handles normal mode internally
 
         self.assertTrue(
-            debug_on_valid, "Debug mode ON should be valid with GeminiRequest"
+            debug_on_valid, "Debug mode ON should be valid with LLMRequest"
         )
         self.assertTrue(
-            debug_off_valid, "Debug mode OFF should be valid with GeminiRequest"
+            debug_off_valid, "Debug mode OFF should be valid with LLMRequest"
         )
 
     @patch("firestore_service.get_db")

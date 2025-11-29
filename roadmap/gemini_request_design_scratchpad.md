@@ -25,8 +25,8 @@ Replaced the flawed json_input_schema approach that converted JSON back to conca
    - Flat JSON architecture (no nested context)
    - Similar to existing GeminiResponse pattern
 
-2. **API Integration** (`mvp_site/gemini_service.py`)
-   - `_call_gemini_api_with_gemini_request()` - New structured JSON API
+2. **API Integration** (`mvp_site/llm_service.py`)
+   - `_call_llm_api_with_gemini_request()` - New structured JSON API
    - Updated `continue_story()` and `get_initial_story()` functions
    - Fallback to legacy API for compatibility
 
@@ -123,11 +123,11 @@ class GeminiRequest:
 
 ### API Integration Points
 
-1. **Main Path**: `_call_gemini_api_with_gemini_request()`
+1. **Main Path**: `_call_llm_api_with_gemini_request()`
    - Sends structured JSON directly
    - Used by both continue_story() and get_initial_story()
 
-2. **Fallback Path**: Legacy `_call_gemini_api()`
+2. **Fallback Path**: Legacy `_call_llm_api()`
    - For planning block regeneration
    - System-initiated calls
    - Maintains backward compatibility
@@ -140,7 +140,7 @@ class GeminiRequest:
 
 ### GREEN Phase ✅
 - Implemented GeminiRequest class
-- Updated gemini_service.py to use new architecture
+- Updated llm_service.py to use new architecture
 - All tests now pass
 
 ### REFACTOR Phase 🔄 (In Progress)

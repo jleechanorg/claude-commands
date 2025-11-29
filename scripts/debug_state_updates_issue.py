@@ -149,14 +149,14 @@ What next?"""
     print("4. Fixed Code Logic:")
     print("""
     # Old code (line 874 in main.py):
-    proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response_obj.narrative_text)
+    proposed_changes = llm_service.parse_llm_response_for_state_changes(gemini_response_obj.narrative_text)
 
     # Fixed code:
     if gemini_response_obj.structured_response:
         proposed_changes = gemini_response_obj.state_updates
     else:
         # Fallback to old markdown parsing if no structured response
-        proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response_obj.narrative_text)
+        proposed_changes = llm_service.parse_llm_response_for_state_changes(gemini_response_obj.narrative_text)
     """)
 
 

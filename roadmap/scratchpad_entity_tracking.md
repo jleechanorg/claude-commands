@@ -28,13 +28,13 @@
 ### ROOT CAUSE IDENTIFIED
 - PR #496 fixed `dual_pass_generator.py` and `entity_validator.py`
 - But `NarrativeSyncValidator` in `narrative_sync_validator.py` was missed
-- This validator is used in `gemini_service.py` lines 604 and 1382
+- This validator is used in `llm_service.py` lines 604 and 1382
 - It does NOT filter out "Unknown" entities like the other validators do
 
 ### INVESTIGATION COMPLETE ✅
 
 **Root Cause Confirmed**: `NarrativeSyncValidator` was missed in PR #496
-- Lines 596-604 and 1374-1385 in `gemini_service.py` use `NarrativeSyncValidator`
+- Lines 596-604 and 1374-1385 in `llm_service.py` use `NarrativeSyncValidator`
 - This validator does NOT filter "Unknown" entities (no `filter_unknown_entities` call)
 - It processes all `expected_entities` including "Unknown" and reports them as missing
 

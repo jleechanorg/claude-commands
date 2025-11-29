@@ -1,6 +1,6 @@
 """
 Narrative Synchronization Validator for Production Entity Tracking
-Adapted from Milestone 0.4 prototype for production use in gemini_service.py
+Adapted from Milestone 0.4 prototype for production use in llm_service.py
 
 REFACTORED: Now delegates to EntityValidator for all entity presence logic.
 """

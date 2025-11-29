@@ -10,7 +10,7 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 
 ### Core Backend Files (6,655 lines total)
 - **main.py**: 985 lines - Flask application entry point and API routes
-- **gemini_service.py**: 1,449 lines - AI service integration and response processing
+- **llm_service.py**: 1,449 lines - AI service integration and response processing
 - **firestore_service.py**: 467 lines - Database operations and state management
 - **game_state.py**: 373 lines - Core game state management and validation
 - **constants.py**: 174 lines - Shared constants and configuration
@@ -209,13 +209,13 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - Data validation and integrity
 - Legacy data cleanup and migration
 
-#### 3. AI Service (gemini_service.py - 1,449 lines)
+#### 3. AI Service (llm_service.py - 1,449 lines)
 **Purpose**: AI integration and sophisticated response processing
 **Public Methods**:
 - `get_initial_story()` - Campaign opening generation
 - `continue_story()` - User interaction processing
 - `PromptBuilder` class - System instruction construction
-- `_call_gemini_api_with_model_cycling()` - Robust API calls with fallback
+- `_call_llm_api_with_model_cycling()` - Robust API calls with fallback
 - `_validate_and_enforce_planning_block()` - Planning block requirement
 
 **Key Features**:
@@ -438,7 +438,7 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - Mock transaction handling
 - Test isolation maintenance
 
-#### 34. Mock Gemini Service (mocks/mock_gemini_service.py - 178 lines)
+#### 34. Mock Gemini Service (mocks/mock_llm_service.py - 178 lines)
 **Purpose**: Gemini AI service mock implementation for testing
 **Responsibilities**:
 - AI service response mocking
@@ -463,7 +463,7 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - Create separate document export service
 - Reduce function complexity (some >100 lines)
 
-### 2. gemini_service.py - Complex Prompt Building
+### 2. llm_service.py - Complex Prompt Building
 **Problems**:
 - PromptBuilder class handles too many concerns
 - Entity tracking logic scattered across multiple functions
@@ -556,7 +556,7 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 
 ### Short-term Improvements (Month 1)
 1. **Improve Test Coverage**:
-   - Target 80% coverage for main.py, firestore_service.py, gemini_service.py
+   - Target 80% coverage for main.py, firestore_service.py, llm_service.py
    - Add integration tests for critical workflows
    - Consolidate similar test files
 
@@ -591,7 +591,7 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 ### Current State
 - **Total Lines**: ~15,000+ across all files
 - **Test Coverage**: 67% (target: 80%+)
-- **Largest Files**: gemini_service.py (1,449 lines), main.py (985 lines)
+- **Largest Files**: llm_service.py (1,449 lines), main.py (985 lines)
 - **Test Files**: 132 files with good categorization
 - **Documentation**: 40% of files have comprehensive documentation
 

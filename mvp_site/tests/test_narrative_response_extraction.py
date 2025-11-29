@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for NarrativeResponse extraction from GeminiResponse.
+Unit tests for NarrativeResponse extraction from LLMResponse.
 Tests the mapping and validation of structured fields.
 """
 
@@ -14,7 +14,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
@@ -185,7 +185,7 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
             assert result.get("dice_rolls") == ["Roll 1"]
 
     def test_gemini_response_to_narrative_response_mapping(self):
-        """Test that GeminiResponse correctly maps to NarrativeResponse fields"""
+        """Test that LLMResponse correctly maps to NarrativeResponse fields"""
         raw_response = json.dumps(
             {
                 "narrative": "Mapped narrative",
@@ -202,7 +202,7 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
             }
         )
 
-        gemini_response = GeminiResponse.create(raw_response)
+        gemini_response = LLMResponse.create(raw_response)
         narrative_response = gemini_response.structured_response
 
         # Verify mapping

@@ -15,7 +15,7 @@
 ### Parameter Naming and Documentation
 - **mvp_site/main.py:326**: Parameter naming is actually correct - `gemini_response` is documented as "processed narrative text"
 - **mvp_site/main.py:327**: Parameter ordering could be cleaner but is functional and documented
-- **mvp_site/gemini_service.py:517**: Docstring correctly mentions JSON mode is always used
+- **mvp_site/llm_service.py:517**: Docstring correctly mentions JSON mode is always used
 
 ### Code Organization
 - **scripts/fix_debug_mocks.py**: Script is appropriately located in scripts/ directory for debug utilities

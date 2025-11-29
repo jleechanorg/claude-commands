@@ -34,7 +34,7 @@ After analyzing PR #398 and the entire codebase, **the PR is NOT sufficient to c
    - Exception handling may expose raw API responses
    - Status: **UNADDRESSED**
 
-3. **LLM Response Truncation** (`gemini_service.py:612-616`)
+3. **LLM Response Truncation** (`llm_service.py:612-616`)
    - JSON mode uses reduced token limit (`JSON_MODE_MAX_TOKENS`)
    - Large responses get cut off mid-JSON structure
    - Incomplete JSON parsing falls back to raw text
@@ -58,18 +58,18 @@ After analyzing PR #398 and the entire codebase, **the PR is NOT sufficient to c
 ## Current Architecture Flow
 
 ```
-LLM API → gemini_service.py → main.py → Frontend
+LLM API → llm_service.py → main.py → Frontend
     ↓         ↓                  ↓         ↓
- Raw JSON → GeminiResponse → JSON API → JSON.parse()
-           (structured)      (clean)    (frontend)
+ Raw JSON → LLMResponse → JSON API → JSON.parse()
+           (structured)     (clean)    (frontend)
 ```
 
 ### Key Processing Points
 
-1. **`gemini_service.py`** (Lines 612, 930, 1254)
+1. **`llm_service.py`** (Lines 612, 930, 1254)
    - **Always uses JSON mode**: `"response_mime_type": "application/json"`
    - **Processes structured response**: `_process_structured_response()`
-   - **Creates GeminiResponse**: `GeminiResponse.create(response_text, structured_response, raw_response_text)`
+   - **Creates LLMResponse**: `LLMResponse.create(raw_response_text, model)`
 
 2. **`main.py`** (Lines 329-413)
    - **Extracts clean data**: `final_narrative`, `state_updates`, `entities_mentioned`

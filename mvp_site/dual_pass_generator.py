@@ -60,7 +60,7 @@ class DualPassGenerator:
             initial_prompt: The original prompt for narrative generation
             expected_entities: Entities that should be present
             location: Current scene location
-            generation_callback: Function to call AI generation (gemini_service.continue_story)
+            generation_callback: Function to call AI generation (llm_service.continue_story)
 
         Returns:
             DualPassResult with both passes and final narrative

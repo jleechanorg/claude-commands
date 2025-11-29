@@ -32,11 +32,11 @@ class TestMockProvider(unittest.TestCase):
         assert firestore.__class__.__name__ == 'MockFirestoreClient'
 
     def test_get_gemini_returns_mock(self):
-        """Test that get_gemini returns MockGeminiClient."""
+        """Test that get_gemini returns MockLLMClient."""
         gemini = self.provider.get_gemini()
         # Check that it's a mock by testing it has mock functionality
         assert hasattr(gemini, 'generate_content')
-        assert gemini.__class__.__name__ == 'MockGeminiClient'
+        assert gemini.__class__.__name__ == 'MockLLMClient'
 
     def test_get_auth_returns_mock(self):
         """Test that get_auth returns mock auth (currently None)."""

@@ -32,7 +32,7 @@ cd .. && TESTING=true vpython mvp_site/tests/test_integration.py
 ### Key Files in mvp_site
 - **main.py**: Flask application entry point
 - **game_state.py**: Campaign state management
-- **gemini_service.py**: AI integration
+- **llm_service.py**: AI integration
 - **firestore_service.py**: Database operations
 - **prompts/**: AI system instructions
 

@@ -11,27 +11,15 @@ import sys
 import unittest
 from unittest.mock import MagicMock
 
-# Import modules needed for dependency detection
-try:
-    import cachetools
+# Import required dependencies (fail fast if missing)
+import cachetools
+import google.genai
+import pydantic
 
-    CACHETOOLS_AVAILABLE = True
-except ImportError:
-    CACHETOOLS_AVAILABLE = False
-
-try:
-    import google.genai
-
-    GOOGLE_GENAI_AVAILABLE = True
-except ImportError:
-    GOOGLE_GENAI_AVAILABLE = False
-
-try:
-    import pydantic
-
-    PYDANTIC_AVAILABLE = True
-except ImportError:
-    PYDANTIC_AVAILABLE = False
+# All dependencies available in test environment
+CACHETOOLS_AVAILABLE = True
+GOOGLE_GENAI_AVAILABLE = True
+PYDANTIC_AVAILABLE = True
 
 # Set test environment variables before importing modules
 os.environ["TESTING"] = "true"
@@ -130,24 +118,14 @@ if mvp_site_path not in sys.path:
 # Import proper fakes library from tests directory
 
 # Check for required dependencies early - BEFORE any mocking
-# This test requires real dependencies to work with the complex entity schema system
-DEPENDENCIES_AVAILABLE = False
-try:
-    # Check if running in CI/testing environment without real dependencies
-    if os.environ.get("TESTING") == "true" and os.environ.get("USE_MOCKS") == "true":
-        # In mock testing mode - dependencies are not available
-        DEPENDENCIES_AVAILABLE = False
-    else:
-        # Check for real dependencies using module-level imports
-        DEPENDENCIES_AVAILABLE = (
-            CACHETOOLS_AVAILABLE and GOOGLE_GENAI_AVAILABLE and PYDANTIC_AVAILABLE
-        )
-except Exception:
-    DEPENDENCIES_AVAILABLE = False
+# When running with injected mocks, treat dependencies as available so tests execute
+DEPENDENCIES_AVAILABLE = (
+    CACHETOOLS_AVAILABLE and GOOGLE_GENAI_AVAILABLE and PYDANTIC_AVAILABLE
+)
 from unittest.mock import MagicMock, patch
 
 from mvp_site.game_state import GameState
-from mvp_site.gemini_service import continue_story
+from mvp_site.llm_service import continue_story
 from mvp_site.narrative_response_schema import (
     create_generic_json_instruction,
     create_structured_prompt_injection,
@@ -167,19 +145,19 @@ class TestAlwaysJSONMode(unittest.TestCase):
         self.game_state = GameState(user_id="test-user-123")  # Add required user_id
         self.story_context = []
 
-    @patch("gemini_service.get_client")
+    @patch("mvp_site.llm_service.get_client")
     def test_json_mode_without_entities(self, mock_get_client):
         """Test that JSON mode is used even when there are no entities"""
         # Empty game state - no player character, no NPCs
         self.game_state.player_character_data = {}
         self.game_state.npc_data = {}
 
-        # Mock the Gemini client
+        # Mock the LLM client
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
         mock_client.models.count_tokens.return_value = MagicMock(total_tokens=1000)
 
-        with patch("gemini_service._call_gemini_api_with_gemini_request") as mock_api:
+        with patch("mvp_site.llm_service._call_llm_api_with_llm_request") as mock_api:
             # Mock the API response - JSON-first with separate planning block field
             mock_response = MagicMock()
             mock_response.text = json.dumps(
@@ -230,7 +208,7 @@ class TestAlwaysJSONMode(unittest.TestCase):
                 mock_api.called
             ), "API should have been called (JSON mode is always enabled)"
 
-            # Verify we got a clean GeminiResponse with JSON-first structure
+            # Verify we got a clean LLMResponse with JSON-first structure
             assert result is not None
             # The narrative should be clean (no planning block in narrative_text)
             assert "Welcome to character creation!" in result.narrative_text
@@ -269,7 +247,7 @@ class TestAlwaysJSONMode(unittest.TestCase):
             )
             assert create_choice["risk_level"] == "safe"
 
-    @patch("gemini_service.get_client")
+    @patch("mvp_site.llm_service.get_client")
     def test_json_mode_with_entities(self, mock_get_client):
         """Test that JSON mode is used when entities are present"""
         # Add a player character
@@ -296,7 +274,7 @@ class TestAlwaysJSONMode(unittest.TestCase):
         mock_get_client.return_value = mock_client
         mock_client.models.count_tokens.return_value = MagicMock(total_tokens=1000)
 
-        with patch("gemini_service._call_gemini_api_with_gemini_request") as mock_api:
+        with patch("mvp_site.llm_service._call_llm_api_with_llm_request") as mock_api:
             # Mock the API response
             mock_response = MagicMock()
             mock_response.text = json.dumps(

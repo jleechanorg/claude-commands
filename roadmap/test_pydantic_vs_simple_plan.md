@@ -239,7 +239,7 @@ For Pydantic to justify the dependency, it must achieve:
 2. **Day 2**: Performance benchmarking and basic integration
    - Object creation speed tests
    - Memory usage comparison
-   - Initial integration with gemini_service.py
+   - Initial integration with llm_service.py
 
 3. **Day 3**: Real-world integration testing with test_sariel_integration.py
    - Setup production-like test scenarios

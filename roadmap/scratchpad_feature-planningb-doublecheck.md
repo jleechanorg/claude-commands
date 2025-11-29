@@ -33,7 +33,7 @@ From `_detect_debug_tags_static()`:
    - Has comment: "Planning block extraction from narrative is deprecated - blocks should only come from JSON"
    - References to planning_block are all for JSON field handling, not narrative parsing
 
-2. **gemini_service.py**
+2. **llm_service.py**
    - References to "planning_block" are only for context logging, not narrative parsing
    - Uses centralized JSON parsing, no narrative extraction
 
@@ -98,7 +98,7 @@ Transform planning block architecture from:
 - **Test**: Mock LLM responses validate against new schema
 
 #### 1.2 Backend Response Processing
-- **File**: `mvp_site/gemini_service.py`
+- **File**: `mvp_site/llm_service.py`
 - **Action**: Update planning block parsing/validation
 - **Test**: Unit tests for JSON structure validation
 
@@ -175,7 +175,7 @@ Transform planning block architecture from:
 
 ### Core Implementation
 1. `mvp_site/game_state_instruction.md` - LLM format specification
-2. `mvp_site/gemini_service.py` - Backend JSON processing
+2. `mvp_site/llm_service.py` - Backend JSON processing
 3. `mvp_site/static/js/game.js` - Frontend JSON consumption
 4. `mvp_site/game_state.py` - Game state integration
 
@@ -292,7 +292,7 @@ If issues arise:
   - **REMOVED**: All string parsing and conversion logic (`_convert_string_planning_block_to_json()`)
   - **ENFORCED**: JSON-only validation with error logging for string inputs
   - **ADDED**: Comprehensive JSON structure validation and sanitization
-- ✅ **Service Integration**: `mvp_site/gemini_service.py`
+- ✅ **Service Integration**: `mvp_site/llm_service.py`
   - Updated validation to only accept JSON planning blocks
   - **REMOVED**: Legacy string format support
   - **ADDED**: Error logging for deprecated string format attempts
@@ -325,7 +325,7 @@ If issues arise:
 1. `mvp_site/prompts/game_state_instruction.md` - LLM format specification ✅
 2. `mvp_site/narrative_response_schema.py` - Backend JSON validation ✅
 3. `mvp_site/static/app.js` - Frontend JSON consumption ✅
-4. `mvp_site/gemini_service.py` - Service layer validation ✅
+4. `mvp_site/llm_service.py` - Service layer validation ✅
 
 #### **Test Infrastructure**
 5. `testing_ui/mock_data/edge_case_responses.json` - JSON mock data ✅

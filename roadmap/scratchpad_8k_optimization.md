@@ -44,7 +44,7 @@ Current word counts:
 **Goal**: Implement conditional loading to reduce effective prompt size
 
 **1. Context-Aware Prompt Assembly**
-Update `gemini_service.py` to load prompts based on current context:
+Update `llm_service.py` to load prompts based on current context:
 ```python
 def build_context_aware_instructions(self, context):
     # Always load core (3.5K words)
@@ -170,7 +170,7 @@ Modify `PromptBuilder` class:
 
 ### Phase 2A: Smart Loading (Week 1)
 - [ ] **FIX CRITICAL**: Remove character_template.md auto-loading from narrative mode
-- [ ] Implement context detection in gemini_service.py
+- [ ] Implement context detection in llm_service.py
 - [ ] Create combat_mode.md (1,500 words max)
 - [ ] Create creation_mode.md (2,000 words max) - includes character_template when needed
 - [ ] Test context-aware loading

@@ -28,7 +28,7 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
             "state_rationale": "Test rationale",
         }
 
-        # Mock GeminiResponse with structured_response
+        # Mock LLMResponse with structured_response
         self.mock_gemini_response = MagicMock()
         self.mock_gemini_response.narrative_text = "Test narrative"
         self.mock_gemini_response.structured_response = self.mock_structured_response

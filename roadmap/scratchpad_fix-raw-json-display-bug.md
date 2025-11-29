@@ -45,7 +45,7 @@ Completely eliminate raw JSON appearing in user responses and campaign logs thro
 
 #### 2.1 LLM Response Processing Logs
 ```python
-# Add to gemini_service.py
+# Add to llm_service.py
 logging_util.debug(f"RAW_LLM_RESPONSE: {raw_response_text[:200]}...")
 logging_util.debug(f"PARSED_NARRATIVE: {response_text[:200]}...")
 logging_util.debug(f"STRUCTURED_RESPONSE: {structured_response is not None}")
@@ -250,7 +250,7 @@ if match:
 #### 🔍 Root Cause Discovery
 **The AI is responding in pure JSON format due to configuration:**
 ```python
-# Line 612 in gemini_service.py
+# Line 612 in llm_service.py
 generation_config_params["response_mime_type"] = "application/json"
 ```
 

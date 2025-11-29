@@ -164,7 +164,7 @@
 - `class MockCompatibilityMixin` – Mixin for tests that expect specific mock attributes. Provides backward compatibility for tests that reference mock objects directly. (Status: Keep).
   - `setUp` – Setup mock compatibility layer. (Status: Keep).
 - `class SmartPatcher` – Context manager that patches services only when needed (mock mode). (Status: Keep).
-- `smart_patch` – Smart patching that only applies in mock mode. Usage: with smart_patch(gemini_service=None, firestore_service=None): # Code works in both mock and real mode # In mock mode: services are patched with framework mocks # In real mode: no patching, uses real services (Status: Keep).
+- `smart_patch` – Smart patching that only applies in mock mode. Usage: with smart_patch(llm_service=None, firestore_service=None): # Code works in both mock and real mode # In mock mode: services are patched with framework mocks # In real mode: no patching, uses real services (Status: Keep).
 - `convert_test_class` – Convert existing test class to dual-mode. Args: test_class: The test class to convert add_mixins: Whether to add dual-mode mixins Returns: Modified test class (Status: Keep).
 - `update_test_imports` – Update test module to import testing framework. Call this at the top of existing test files: update_test_imports(__name__) Args: _test_module: The module name (typically __name__) (Status: Keep).
 - `class TestResourceManager` – Manages test resources and prevents resource leaks in real mode. (Status: Keep).

@@ -89,13 +89,13 @@ Added to narrative_system_instruction.md Part 1:
 ## Phase 7: Direct Prompt Injection Fix ✓
 - [x] Investigate why character creation wasn't triggering reliably
 - [x] Found that system instructions alone weren't sufficient
-- [x] Modified `gemini_service.py` to inject character creation reminder
+- [x] Modified `llm_service.py` to inject character creation reminder
 - [x] Added reminder directly to user's initial prompt when mechanics enabled
 - [x] Created unit tests to verify injection works
 - [x] Manual test confirms 100% reliable character creation trigger
 
 ### Implementation Details
-Added to `get_initial_story()` in `gemini_service.py`:
+Added to `get_initial_story()` in `llm_service.py`:
 - Checks if 'mechanics' is in selected_prompts
 - Prepends CRITICAL REMINDER to user's prompt
 - Ensures AI sees character creation instruction in immediate context
@@ -104,7 +104,7 @@ Added to `get_initial_story()` in `gemini_service.py`:
 ## Status: COMPLETE ✅
 Character creation now reliably triggers when mechanics is enabled. The combination of:
 1. Strong instructions in mechanics_system_instruction.md
-2. Direct prompt injection in gemini_service.py
+2. Direct prompt injection in llm_service.py
 3. Master directive reinforcement
 
 Ensures the AI always presents character creation options before starting the story.

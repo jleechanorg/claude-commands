@@ -14,7 +14,7 @@
 - mvp_site/entity_instructions.py
 - mvp_site/frontend_v1/js/component-enhancer.js
 - mvp_site/gemini_request.py
-- mvp_site/gemini_service.py
+- mvp_site/llm_service.py
 - mvp_site/memory_integration.py
 - mvp_site/prompts/game_state_instruction.md
 - mvp_site/prompts/master_directive.md

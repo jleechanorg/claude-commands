@@ -10,7 +10,7 @@ import random
 import time
 
 
-class MockGeminiService:
+class MockLLMService:
     """Mock service that replaces real Gemini API calls with pre-captured responses"""
 
     def __init__(self):
@@ -52,7 +52,7 @@ class MockGeminiService:
 
     def get_initial_story(self, campaign_data):
         """
-        Mock the gemini_service.get_initial_story() function
+        Mock the llm_service.get_initial_story() function
         Returns a realistic response based on campaign type
         """
         campaign_type = campaign_data.get("campaign_type", "custom")
@@ -162,7 +162,7 @@ def mock_gemini_get_initial_story(
     use_default_world=False,
     **kwargs,
 ):
-    """Mock function to replace gemini_service.get_initial_story"""
+    """Mock function to replace llm_service.get_initial_story"""
 
     # Extract campaign data from parameters
     campaign_data = {
@@ -188,9 +188,9 @@ def mock_gemini_get_initial_story(
                     campaign_data["setting"] = line.replace("Setting:", "").strip()
 
     # Use mock service
-    mock_service = MockGeminiService()
+    mock_service = MockLLMService()
     return mock_service.get_initial_story(campaign_data)
 
 
 # Export for easy import
-__all__ = ["MockGeminiService", "mock_gemini_get_initial_story"]
+__all__ = ["MockLLMService", "mock_gemini_get_initial_story"]

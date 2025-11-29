@@ -4,13 +4,13 @@
 - Start Time: 2025-08-03T09:27:00Z
 - End Time: 2025-08-03T09:45:00Z
 - Branch: pr-1149-companion-fix
-- Files Modified in Branch: 2 (mvp_site/gemini_service.py, mvp_site/world_logic.py)
+- Files Modified in Branch: 2 (mvp_site/llm_service.py, mvp_site/world_logic.py)
 - Total Issues Found: 0
 - Total Issues Fixed: 0
 - Test Status: ✅ ALL PASSING
 
 ## Target Files for Analysis
-1. mvp_site/gemini_service.py - Companion generation service with mock response constants
+1. mvp_site/llm_service.py - Companion generation service with mock response constants
 2. mvp_site/world_logic.py - Enhanced companion logging and type safety improvements
 
 ## Iteration 1
@@ -23,7 +23,7 @@
 - Patterns Detected: Mock constants, mock mode logic (ALL LEGITIMATE)
 
 **Analysis Details:**
-- mvp_site/gemini_service.py:1062-1107: ✅ Legitimate test mocks with structured JSON
+- mvp_site/llm_service.py:1062-1107: ✅ Legitimate test mocks with structured JSON
 - Mock mode environment logic: ✅ Standard testing pattern for API isolation
 - Hardcoded game data: ✅ Intentional test data for D&D companion testing
 - Implementation comments: ✅ Design decisions, not placeholders

@@ -78,13 +78,13 @@ Purpose: Detect if narrative contains planning block markers (deprecated)
 Code snippet: `'planning_block': '--- PLANNING BLOCK ---' in text,`
 
 ### Planning Block Validation & Generation
-**File: gemini_service.py:1031-1045**
+**File: llm_service.py:1031-1045**
 Function: _validate_and_enforce_planning_block
 Type: JSON field & generation
 Purpose: Main function to validate planning blocks and generate if missing
 Code snippet: Full function signature and docstring
 
-**File: gemini_service.py:1063-1065**
+**File: llm_service.py:1063-1065**
 Function: _validate_and_enforce_planning_block
 Type: JSON field
 Purpose: Check if planning_block exists in structured response
@@ -95,7 +95,7 @@ if structured_response and hasattr(structured_response, 'planning_block') and st
     return response_text
 ```
 
-**File: gemini_service.py:1140-1149**
+**File: llm_service.py:1140-1149**
 Function: _validate_and_enforce_planning_block
 Type: JSON field
 Purpose: Parse planning block generation response
@@ -112,7 +112,7 @@ else:
     planning_block = planning_text
 ```
 
-**File: gemini_service.py:1164-1168**
+**File: llm_service.py:1164-1168**
 Function: _validate_and_enforce_planning_block
 Type: JSON field
 Purpose: Update structured_response.planning_block with generated content
@@ -389,7 +389,7 @@ The system now implements pure JSON-first architecture:
    - Accessed via `GeminiResponse.planning_block` property
 
 2. **Backend Validation & Generation**:
-   - `gemini_service.py:_validate_and_enforce_planning_block()` checks JSON field
+   - `llm_service.py:_validate_and_enforce_planning_block()` checks JSON field
    - If missing, generates planning block and updates JSON field
    - Updates `structured_response.planning_block` directly
 

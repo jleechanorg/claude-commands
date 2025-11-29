@@ -178,16 +178,16 @@
 2025-08-10T01:10:38.1038590Z 2025-08-10 01:10:38,101 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception type: <class 'ValueError'>
 2025-08-10T01:10:38.1040021Z 2025-08-10 01:10:38,101 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception details: ValueError('CRITICAL: GEMINI_API_KEY environment variable not found!')
 2025-08-10T01:10:38.1041590Z 2025-08-10 01:10:38,102 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Traceback: Traceback (most recent call last):
-2025-08-10T01:10:38.1055072Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 1908, in _validate_and_enforce_planning_block
-2025-08-10T01:10:38.1056224Z     planning_response = _call_gemini_api(
+2025-08-10T01:10:38.1055072Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 1908, in _validate_and_enforce_planning_block
+2025-08-10T01:10:38.1056224Z     planning_response = _call_llm_api(
 2025-08-10T01:10:38.1056680Z                         ^^^^^^^^^^^^^^^^^
-2025-08-10T01:10:38.1057644Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 1251, in _call_gemini_api
-2025-08-10T01:10:38.1062226Z     return _call_gemini_api_with_model_cycling(
+2025-08-10T01:10:38.1057644Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 1251, in _call_llm_api
+2025-08-10T01:10:38.1062226Z     return _call_llm_api_with_model_cycling(
 2025-08-10T01:10:38.1062759Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2025-08-10T01:10:38.1063951Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 919, in _call_gemini_api_with_model_cycling
+2025-08-10T01:10:38.1063951Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 919, in _call_llm_api_with_model_cycling
 2025-08-10T01:10:38.1068063Z     client = get_client()
 2025-08-10T01:10:38.1068470Z              ^^^^^^^^^^^^
-2025-08-10T01:10:38.1069408Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 240, in get_client
+2025-08-10T01:10:38.1069408Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 240, in get_client
 2025-08-10T01:10:38.1070662Z     raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
 2025-08-10T01:10:38.1071521Z ValueError: CRITICAL: GEMINI_API_KEY environment variable not found!
 2025-08-10T01:10:38.1077379Z
@@ -4896,7 +4896,7 @@
 2025-08-10T01:11:24.0705638Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:24.0706596Z     return func(*args, **kwargs)
 2025-08-10T01:11:24.0707013Z            ^^^^^^^^^^^^^^^^^^^^^
-2025-08-10T01:11:24.0708136Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 2109, in continue_story
+2025-08-10T01:11:24.0708136Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 2109, in continue_story
 2025-08-10T01:11:24.0709168Z     think_matches: list[str] = re.findall(think_pattern, user_input, re.IGNORECASE)
 2025-08-10T01:11:24.0709791Z                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 2025-08-10T01:11:24.0710567Z   File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/re/__init__.py", line 216, in findall
@@ -10849,8 +10849,8 @@
 2025-08-10T01:11:45.6768633Z 2025-08-10 01:11:45,675 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception type: <class 'Exception'>
 2025-08-10T01:11:45.6769735Z 2025-08-10 01:11:45,675 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception details: Exception('API Error')
 2025-08-10T01:11:45.6780714Z 2025-08-10 01:11:45,677 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Traceback: Traceback (most recent call last):
-2025-08-10T01:11:45.6789186Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 1908, in _validate_and_enforce_planning_block
-2025-08-10T01:11:45.6790330Z     planning_response = _call_gemini_api(
+2025-08-10T01:11:45.6789186Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 1908, in _validate_and_enforce_planning_block
+2025-08-10T01:11:45.6790330Z     planning_response = _call_llm_api(
 2025-08-10T01:11:45.6790830Z                         ^^^^^^^^^^^^^^^^^
 2025-08-10T01:11:45.6791700Z   File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/unittest/mock.py", line 1124, in __call__
 2025-08-10T01:11:45.6792582Z     return self._mock_call(*args, **kwargs)
@@ -10970,16 +10970,16 @@
 2025-08-10T01:11:46.9680614Z 2025-08-10 01:11:46,967 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception type: <class 'ValueError'>
 2025-08-10T01:11:46.9682879Z 2025-08-10 01:11:46,967 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception details: ValueError('CRITICAL: GEMINI_API_KEY environment variable not found!')
 2025-08-10T01:11:46.9685356Z 2025-08-10 01:11:46,967 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Traceback: Traceback (most recent call last):
-2025-08-10T01:11:46.9686895Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 1908, in _validate_and_enforce_planning_block
-2025-08-10T01:11:46.9688200Z     planning_response = _call_gemini_api(
+2025-08-10T01:11:46.9686895Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 1908, in _validate_and_enforce_planning_block
+2025-08-10T01:11:46.9688200Z     planning_response = _call_llm_api(
 2025-08-10T01:11:46.9688682Z                         ^^^^^^^^^^^^^^^^^
-2025-08-10T01:11:46.9689700Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 1251, in _call_gemini_api
-2025-08-10T01:11:46.9690703Z     return _call_gemini_api_with_model_cycling(
+2025-08-10T01:11:46.9689700Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 1251, in _call_llm_api
+2025-08-10T01:11:46.9690703Z     return _call_llm_api_with_model_cycling(
 2025-08-10T01:11:46.9691371Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2025-08-10T01:11:46.9692550Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 919, in _call_gemini_api_with_model_cycling
+2025-08-10T01:11:46.9692550Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 919, in _call_llm_api_with_model_cycling
 2025-08-10T01:11:46.9693623Z     client = get_client()
 2025-08-10T01:11:46.9693997Z              ^^^^^^^^^^^^
-2025-08-10T01:11:46.9694890Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 240, in get_client
+2025-08-10T01:11:46.9694890Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 240, in get_client
 2025-08-10T01:11:46.9696114Z     raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
 2025-08-10T01:11:46.9696965Z ValueError: CRITICAL: GEMINI_API_KEY environment variable not found!
 2025-08-10T01:11:46.9697453Z
@@ -10996,16 +10996,16 @@
 2025-08-10T01:11:46.9846786Z 2025-08-10 01:11:46,983 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception type: <class 'ValueError'>
 2025-08-10T01:11:46.9848489Z 2025-08-10 01:11:46,983 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception details: ValueError('CRITICAL: GEMINI_API_KEY environment variable not found!')
 2025-08-10T01:11:46.9850006Z 2025-08-10 01:11:46,984 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Traceback: Traceback (most recent call last):
-2025-08-10T01:11:46.9851385Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 1908, in _validate_and_enforce_planning_block
-2025-08-10T01:11:46.9852705Z     planning_response = _call_gemini_api(
+2025-08-10T01:11:46.9851385Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 1908, in _validate_and_enforce_planning_block
+2025-08-10T01:11:46.9852705Z     planning_response = _call_llm_api(
 2025-08-10T01:11:46.9853136Z                         ^^^^^^^^^^^^^^^^^
-2025-08-10T01:11:46.9854097Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 1251, in _call_gemini_api
-2025-08-10T01:11:46.9855027Z     return _call_gemini_api_with_model_cycling(
+2025-08-10T01:11:46.9854097Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 1251, in _call_llm_api
+2025-08-10T01:11:46.9855027Z     return _call_llm_api_with_model_cycling(
 2025-08-10T01:11:46.9855446Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2025-08-10T01:11:46.9856440Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 919, in _call_gemini_api_with_model_cycling
+2025-08-10T01:11:46.9856440Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 919, in _call_llm_api_with_model_cycling
 2025-08-10T01:11:46.9857623Z     client = get_client()
 2025-08-10T01:11:46.9858128Z              ^^^^^^^^^^^^
-2025-08-10T01:11:46.9858872Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 240, in get_client
+2025-08-10T01:11:46.9858872Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/llm_service.py", line 240, in get_client
 2025-08-10T01:11:46.9859924Z     raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
 2025-08-10T01:11:46.9860650Z ValueError: CRITICAL: GEMINI_API_KEY environment variable not found!
 2025-08-10T01:11:46.9861081Z
@@ -11333,10 +11333,10 @@
 2025-08-10T01:11:50.8186096Z
 2025-08-10T01:11:50.8186318Z 🟢 GREEN PHASE: Demonstrating the fix
 2025-08-10T01:11:50.8186716Z ==================================================
-2025-08-10T01:11:50.8187246Z ✅ get_initial_story() returns: GeminiResponse
+2025-08-10T01:11:50.8187246Z ✅ get_initial_story() returns: LLMResponse
 2025-08-10T01:11:50.8187567Z
 2025-08-10T01:11:50.8188079Z ✅ AFTER FIX: main.py extracts narrative_text:
-2025-08-10T01:11:50.8188666Z    opening_story_response = gemini_service.get_initial_story(...)
+2025-08-10T01:11:50.8188666Z    opening_story_response = llm_service.get_initial_story(...)
 2025-08-10T01:11:50.8189359Z    create_campaign(..., opening_story_response.narrative_text, ...)
 2025-08-10T01:11:50.8189753Z
 2025-08-10T01:11:50.8189959Z ✅ Extracted narrative_text: str
@@ -12081,8 +12081,8 @@
 2025-08-10T01:11:55.9193486Z Test that consecutive actions properly update state ... skipped 'Integration tests require refactoring for current API - see state_updates validation in narrative_response_schema.py'
 2025-08-10T01:11:55.9195219Z test_empty_state_updates_handling (__main__.TestStateUpdateIntegration.test_empty_state_updates_handling)
 2025-08-10T01:11:55.9196696Z Test handling of empty state updates ... skipped 'Integration tests require refactoring for current API - see state_updates validation in narrative_response_schema.py'
-2025-08-10T01:11:55.9198656Z test_gemini_service_state_update_processing (__main__.TestStateUpdateIntegration.test_gemini_service_state_update_processing)
-2025-08-10T01:11:55.9200455Z Test that Gemini service properly processes state updates ... skipped 'Integration tests require refactoring for current API - see state_updates validation in narrative_response_schema.py'
+2025-08-10T01:11:55.9198656Z test_llm_service_state_update_processing (__main__.TestStateUpdateIntegration.test_llm_service_state_update_processing)
+2025-08-10T01:11:55.9200455Z Test that LLM service properly processes state updates ... skipped 'Integration tests require refactoring for current API - see state_updates validation in narrative_response_schema.py'
 2025-08-10T01:11:55.9202175Z test_malformed_state_updates_handling (__main__.TestStateUpdateIntegration.test_malformed_state_updates_handling)
 2025-08-10T01:11:55.9203847Z Test graceful handling of malformed state updates ... skipped 'Integration tests require refactoring for current API - see state_updates validation in narrative_response_schema.py'
 2025-08-10T01:11:55.9205490Z test_response_without_state_updates (__main__.TestStateUpdateIntegration.test_response_without_state_updates)
@@ -12197,9 +12197,9 @@
 2025-08-10T01:11:56.3911996Z Running: tests/test_syntax.py
 2025-08-10T01:11:56.4347031Z ..
 2025-08-10T01:11:56.4347317Z
-2025-08-10T01:11:56.4347541Z --- Attempting to import gemini_service.py ---
+2025-08-10T01:11:56.4347541Z --- Attempting to import llm_service.py ---
 2025-08-10T01:11:56.4354388Z Setting dummy GEMINI_API_KEY for import test...
-2025-08-10T01:11:56.4354970Z SUCCESS: gemini_service.py was imported without a syntax error.
+2025-08-10T01:11:56.4354970Z SUCCESS: llm_service.py was imported without a syntax error.
 2025-08-10T01:11:56.4355580Z ----------------------------------------------------------------------
 2025-08-10T01:11:56.4356125Z Ran 2 tests in 0.007s
 2025-08-10T01:11:56.4356355Z
@@ -12254,7 +12254,7 @@
 2025-08-10T01:11:56.9313174Z ✓ mcp_client.py: Syntax OK
 2025-08-10T01:11:56.9313566Z ✓ document_generator.py: Syntax OK
 2025-08-10T01:11:56.9313996Z ✓ robust_json_parser.py: Syntax OK
-2025-08-10T01:11:56.9314437Z ✓ gemini_service.py: Syntax OK
+2025-08-10T01:11:56.9314437Z ✓ llm_service.py: Syntax OK
 2025-08-10T01:11:56.9314830Z ✓ start_flask.py: Syntax OK
 2025-08-10T01:11:56.9315211Z ✓ inspect_sdk.py: Syntax OK
 2025-08-10T01:11:56.9315592Z ✓ logging_util.py: Syntax OK

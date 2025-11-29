@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import Mock
 
 from mvp_site import constants, structured_fields_utils
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
@@ -53,8 +53,8 @@ class TestStructuredFieldsUtils(unittest.TestCase):
 
     def test_extract_structured_fields_with_full_data(self):
         """Test extraction with complete structured response data."""
-        # Create a mock GeminiResponse with structured_response
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        # Create a mock LLMResponse with structured_response
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = self.mock_structured_response
 
         # Extract structured fields
@@ -92,7 +92,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.resources = ""
         mock_structured_response.debug_info = {}
 
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
 
         # Extract structured fields
@@ -113,7 +113,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.planning_block = "Available planning"
         # dice_rolls, resources, debug_info are missing (will use getattr default)
 
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
 
         # Extract structured fields
@@ -127,9 +127,9 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         assert result[constants.FIELD_DEBUG_INFO] == {}  # Default empty dict
 
     def test_extract_structured_fields_with_no_structured_response(self):
-        """Test extraction when GeminiResponse has no structured_response."""
-        # Create a mock GeminiResponse without structured_response
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        """Test extraction when LLMResponse has no structured_response."""
+        # Create a mock LLMResponse without structured_response
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = None
 
         # Extract structured fields
@@ -148,7 +148,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.resources = None
         mock_structured_response.debug_info = None
 
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
 
         # Extract structured fields
@@ -171,7 +171,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.resources = "Test resources"
         mock_structured_response.debug_info = {"test": "data"}
 
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
 
         # Extract structured fields
@@ -212,7 +212,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.resources = "HP: 30/30, SP: 15/20"
         mock_structured_response.debug_info = complex_debug_info
 
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
 
         # Extract structured fields
@@ -261,7 +261,7 @@ Next Objective: Investigate the glowing altar"""
             "trap_disarmed": True,
         }
 
-        mock_gemini_response = Mock(spec=GeminiResponse)
+        mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
 
         # Extract structured fields

@@ -26,7 +26,7 @@ Remove identified dead code from the codebase to improve maintainability and red
 ### Functions to Remove
 1. ✅ `get_initial_game_state()` in game_state.py - Only used in tests
 2. ✅ `is_valid_attribute_system()` in constants.py - Only used in tests
-3. ✅ `json_datetime_serializer()` in gemini_service.py - Never called
+3. ✅ `json_datetime_serializer()` in llm_service.py - Never called
 
 ### Classes to Remove
 1. ❌ `EntityType` in schemas/entities_simple.py - Actually used in class constructors
@@ -38,7 +38,7 @@ Remove identified dead code from the codebase to improve maintainability and red
 
 ### FALSE POSITIVES (Keep These)
 - ❌ `_prepare_game_state()` - Actively used in main.py
-- ❌ `load_world_content_for_system_instruction()` - Used in gemini_service.py
+- ❌ `load_world_content_for_system_instruction()` - Used in llm_service.py
 - ❌ `create_from_game_state()` factory methods - Used for entity tracking
 - ❌ `_truncate_log_json()` - Used for logging
 - ❌ Most other classes and files - Used in production or tests
@@ -54,7 +54,7 @@ Remove identified dead code from the codebase to improve maintainability and red
 ### Functions Removed (3 total)
 - ✅ `get_initial_game_state()` in game_state.py
 - ✅ `is_valid_attribute_system()` in constants.py
-- ✅ `json_datetime_serializer()` in gemini_service.py
+- ✅ `json_datetime_serializer()` in llm_service.py
 
 ### Imports Cleaned (2 total)
 - ✅ `typing.Optional` in game_state.py
@@ -82,7 +82,7 @@ Remove identified dead code from the codebase to improve maintainability and red
 - See VULTURE_ANALYSIS.md for full details
 
 ### Additional Dead Code to Remove (Found by Vulture)
-1. ✅ `EntityManifest` import alias in gemini_service.py - REMOVED
+1. ✅ `EntityManifest` import alias in llm_service.py - REMOVED
 2. ✅ `io` import in main.py - REMOVED
 3. ✅ `Set` import in narrative_sync_validator.py - REMOVED
 4. ✅ `Union` import in schemas/entities_pydantic.py - REMOVED

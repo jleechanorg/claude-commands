@@ -32,7 +32,7 @@ deployment, documentation, and developer workflows.
 
 | File/Dir | Purpose | Keep? |
 | --- | --- | --- |
-| `prompts/*.md` | Prompt templates used by `gemini_service`. Recreate verbatim in the new prompt system. 【F:mvp_site/prompts/master_directive.md†L1-L200】 |
+| `prompts/*.md` | Prompt templates used by `llm_service`. Recreate verbatim in the new prompt system. 【F:mvp_site/prompts/master_directive.md†L1-L200】 |
 | `world/` | JSON assets representing world content consumed by `world_loader`. | Keep; convert to JSON/TS modules. |
 | `assets/DejaVuSans.ttf` | Font used for PDF exports. | Keep or replace with equivalent font in Node export pipeline. |
 | `static/` | Contains V2 compiled assets (mirrors frontend_v2 build). | Keep until front-end pipeline is replaced. |

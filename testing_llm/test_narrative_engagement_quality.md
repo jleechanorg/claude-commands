@@ -171,7 +171,7 @@ How would you rewrite the weakest part?
 
 **Fix Locations**:
 - `mvp_site/prompts/narrative_system_instruction.md`: Enhance engagement guidelines
-- `mvp_site/gemini_service.py`: Adjust temperature and top-p parameters
+- `mvp_site/llm_service.py`: Adjust temperature and top-p parameters
 - `mvp_site/game_state.py`: Better context management for story elements
 
 ## Implementation Notes

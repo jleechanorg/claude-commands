@@ -624,7 +624,7 @@
 
 ## `tests/test_character_extraction_regex_bug.py`
 
-**Role:** Red-Green test for character/NPC extraction regex functionality. Tests the NPC pattern matching that uses re.findall in gemini_service.py to ensure the import re statement exists and works properly.
+**Role:** Red-Green test for character/NPC extraction regex functionality. Tests the NPC pattern matching that uses re.findall in llm_service.py to ensure the import re statement exists and works properly.
 
 **Status:** Keep (critical to existing implementation unless noted otherwise).
 
@@ -632,9 +632,9 @@
 - `class TestCharacterExtractionRegex` – Test character/NPC extraction regex functionality (Status: Keep).
   - `test_re_import_exists` – RED: Test that re module is properly imported (Status: Keep).
   - `test_npc_pattern_extraction_from_prompt` – RED: Test NPC pattern extraction using re.findall (Status: Keep).
-  - `test_actual_gemini_service_npc_extraction` – GREEN: Test that actual gemini_service code works with re patterns (Status: Keep).
+  - `test_actual_llm_service_npc_extraction` – GREEN: Test that actual llm_service code works with re patterns (Status: Keep).
   - `test_planning_block_character_creation_check` – GREEN: Test the actual re.search usage in planning block logic (Status: Keep).
-  - `test_all_re_usage_in_gemini_service` – GREEN: Comprehensive test of all regex usage in gemini_service (Status: Keep).
+  - `test_all_re_usage_in_llm_service` – GREEN: Comprehensive test of all regex usage in llm_service (Status: Keep).
 
 ---
 
@@ -1706,14 +1706,14 @@
 
 ---
 
-## `tests/test_gemini_entity_sanitization.py`
+## `tests/test_llm_entity_sanitization.py`
 
-**Role:** Test entity name sanitization in gemini_service.py
+**Role:** Test entity name sanitization in llm_service.py
 
 **Status:** Keep (critical to existing implementation unless noted otherwise).
 
 **Public API:**
-- `class TestGeminiEntitySanitization` – Test entity name sanitization function in gemini_service (Status: Keep).
+- `class TestLLMEntitySanitization` – Test entity name sanitization function in llm_service (Status: Keep).
   - `test_sanitize_entity_name_for_id_basic` – Test basic sanitization cases (Status: Keep).
   - `test_multiple_apostrophes_and_quotes` – Test handling of multiple apostrophes and quotes (Status: Keep).
   - `test_special_characters` – Test various special characters (Status: Keep).
@@ -1768,7 +1768,7 @@
 
 ## `tests/test_gemini_response.py`
 
-**Role:** Test-Driven Development: Tests for GeminiResponse object These tests define the expected behavior for the GeminiResponse object that will clean up the architecture between gemini_service and main.py. Updated for new API where GeminiResponse.create() takes raw response text.
+**Role:** Test-Driven Development: Tests for GeminiResponse object These tests define the expected behavior for the GeminiResponse object that will clean up the architecture between llm_service and main.py. Updated for new API where GeminiResponse.create() takes raw response text.
 
 **Status:** Keep (critical to existing implementation unless noted otherwise).
 
@@ -1812,12 +1812,12 @@
 
 ## `tests/test_gemini_response_validation.py`
 
-**Role:** Tests for Gemini response validation and parsing in gemini_service.py. Focus on JSON parsing, schema validation, and field validation.
+**Role:** Tests for LLM response validation and parsing in llm_service.py. Focus on JSON parsing, schema validation, and field validation.
 
 **Status:** Keep (critical to existing implementation unless noted otherwise).
 
 **Public API:**
-- `class TestGeminiResponseValidation` – Test suite for Gemini API response validation and parsing. (Status: Keep).
+- `class TestGeminiResponseValidation` – Test suite for LLM API response validation and parsing. (Status: Keep).
   - `setUp` – Set up test fixtures. (Status: Keep).
   - `test_valid_json_parsing` – Test that valid JSON responses are parsed correctly. (Status: Keep).
   - `test_invalid_json_recovery` – Test that malformed JSON triggers proper error handling. (Status: Keep).
@@ -1974,7 +1974,7 @@
 **Public API:**
 - `class TestImports` – Test that all main modules can be imported without errors (Status: Keep).
   - `test_import_firestore_service` – Test that firestore_service can be imported (Status: Keep).
-  - `test_import_gemini_service` – Test that gemini_service can be imported (Status: Keep).
+  - `test_import_llm_service` – Test that llm_service can be imported (Status: Keep).
   - `test_import_main` – Test that main can be imported (Status: Keep).
   - `test_import_game_state` – Test that game_state can be imported (Status: Keep).
   - `test_import_constants` – Test that constants can be imported and has expected fields (Status: Keep).
@@ -2843,7 +2843,7 @@
   - `setUp` – Clear the instruction cache before each test to ensure isolation. (Status: Keep).
   - `test_all_prompts_are_loadable_via_service` – Ensures that all referenced prompt files can be loaded successfully by calling the actual _load_instruction_file function. (Status: Keep).
   - `test_loading_unknown_prompt_raises_error` – Ensures that calling _load_instruction_file with an unknown type correctly raises a ValueError, following the strict loading policy. (Status: Keep).
-  - `test_all_prompt_files_are_registered_in_service` – Ensures that every .md file in the prompts directory is registered in the gemini_service.path_map, and vice-versa. This prevents un-loaded or orphaned prompt files. (Status: Keep).
+  - `test_all_prompt_files_are_registered_in_service` – Ensures that every .md file in the prompts directory is registered in the llm_service.PATH_MAP, and vice-versa. This prevents un-loaded or orphaned prompt files. (Status: Keep).
   - `test_all_registered_prompts_are_actually_used` – Ensures that every prompt registered in PATH_MAP is actually used somewhere in the codebase. This prevents dead/unused prompts. (Status: Keep).
 
 ---
@@ -3027,7 +3027,7 @@
   - `test_state_updates_separated_from_narrative` – Test that state updates don't leak into narrative text (Status: Keep).
   - `test_response_without_state_updates` – Test handling of responses without state updates (Status: Keep).
   - `test_malformed_state_updates_handling` – Test graceful handling of malformed state updates (Status: Keep).
-  - `test_gemini_service_state_update_processing` – Test that Gemini service properly processes state updates (Status: Keep).
+  - `test_llm_service_state_update_processing` – Test that Gemini service properly processes state updates (Status: Keep).
   - `test_state_update_application_simulation` – Test simulation of state update application to game state (Status: Keep).
   - `test_consecutive_state_updates` – Test that consecutive actions properly update state (Status: Keep).
   - `test_state_update_field_completeness` – Test that all expected state update fields are present (Status: Keep).
@@ -3152,7 +3152,7 @@
 **Public API:**
 - `class TestModuleSyntax` – No class docstring present; review implementation to confirm behavior. (Status: Keep).
   - `test_all_python_files_syntax` – Test that all Python files have valid syntax - would catch f-string errors. (Status: Keep).
-  - `test_gemini_service_import` – Tests if the gemini_service.py module can be imported. A failure here indicates a syntax error in the file. (Status: Keep).
+  - `test_llm_service_import` – Tests if the llm_service.py module can be imported. A failure here indicates a syntax error in the file. (Status: Keep).
 
 ---
 
@@ -3569,4 +3569,3 @@
   - `test_campaign_wizard_reset_issue_reproduction` – Reproduce the complete user workflow that leads to persistent spinner (Status: Keep).
 
 ---
-

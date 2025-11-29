@@ -177,7 +177,7 @@ generate_coverage_reports() {
         # Show key file coverage
         echo
         echo "Key Files Coverage:"
-        grep -E "(main\.py|gemini_service\.py|game_state\.py|firestore_service\.py)" \
+        grep -E "(main\.py|llm_service\.py|game_state\.py|firestore_service\.py)" \
             "$coverage_dir/coverage_report.txt" | head -10 || echo "No key files found in report"
 
         echo "----------------------------------------"

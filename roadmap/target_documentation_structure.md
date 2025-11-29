@@ -72,7 +72,7 @@ roadmap/
 ### Core Components
 - main.py: Flask application
 - game_state.py: State management
-- gemini_service.py: AI integration
+- llm_service.py: AI integration
 - firestore_service.py: Database layer
 
 ### AI System

@@ -370,7 +370,7 @@ Additionally, the system lacks:
 *   **Prevention:** Monitor fallback frequency; if > 5% of requests, disable feature
 
 ### 4.7. Concrete Integration Points
-*   **Primary Integration:** Modifications to `gemini_service.py` to enforce state synchronization
+*   **Primary Integration:** Modifications to `llm_service.py` to enforce state synchronization
 *   **Integration Sequence:**
      1. **Before AI Call:** After loading GameState, call `game_state.get_active_entity_manifest()`
      2. **Prompt Injection with Security:**
@@ -547,7 +547,7 @@ class GameState:
 ### 6.3. Additional Test Coverage
 - Edge cases: empty state, malformed data, null values
 - Performance benchmarks for manifest generation
-- Integration tests with actual gemini_service.py flow
+- Integration tests with actual llm_service.py flow
 - Stress testing with 50+ entities
 - **Security Testing:**
   - Prompt injection tests with malicious entity names

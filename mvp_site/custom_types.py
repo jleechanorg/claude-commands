@@ -72,7 +72,7 @@ class ApiResponse(TypedDict):
     error: str | None
 
 
-class GeminiRequest(TypedDict):
+class LLMRequest(TypedDict):
     """Type definition for Gemini API requests."""
 
     prompt: str
@@ -82,7 +82,7 @@ class GeminiRequest(TypedDict):
     model: str | None
 
 
-class GeminiResponse(TypedDict):
+class LLMResponse(TypedDict):
     """Type definition for Gemini API responses."""
 
     text: str
@@ -127,7 +127,7 @@ class DatabaseService(Protocol):
 class AIService(Protocol):
     """Protocol for AI service implementations."""
 
-    def generate_response(self, request: GeminiRequest) -> GeminiResponse:
+    def generate_response(self, request: LLMRequest) -> LLMResponse:
         """Generate an AI response."""
         ...
 

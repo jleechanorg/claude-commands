@@ -159,7 +159,7 @@ Based on your instructions:
 
 ### Phase 2: Backend Updates
 1. Update response builders in main.py
-2. Update gemini_service.py response handling
+2. Update llm_service.py response handling
 3. Fix all response parsers
 
 ### Phase 3: Test Updates (Layer 1-2)

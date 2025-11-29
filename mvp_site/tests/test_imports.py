@@ -22,8 +22,8 @@ from mvp_site import (
     constants,
     firestore_service,
     game_state,
-    gemini_response,
-    gemini_service,
+    llm_response,
+    llm_service,
     narrative_response_schema,
     structured_fields_utils,
 )
@@ -40,12 +40,12 @@ class TestImports(unittest.TestCase):
         except ImportError as e:
             self.fail(f"Failed to import firestore_service: {e}")
 
-    def test_import_gemini_service(self):
-        """Test that gemini_service can be imported"""
+    def test_import_llm_service(self):
+        """Test that llm_service can be imported"""
         try:
-            assert hasattr(gemini_service, "continue_story")
+            assert hasattr(llm_service, "continue_story")
         except ImportError as e:
-            self.fail(f"Failed to import gemini_service: {e}")
+            self.fail(f"Failed to import llm_service: {e}")
 
     def test_import_main(self):
         """Test that main can be imported"""
@@ -87,12 +87,12 @@ class TestImports(unittest.TestCase):
         except ImportError as e:
             self.fail(f"Failed to import narrative_response_schema: {e}")
 
-    def test_import_gemini_response(self):
-        """Test that gemini_response can be imported"""
+    def test_import_llm_response(self):
+        """Test that llm_response can be imported"""
         try:
-            assert hasattr(gemini_response, "GeminiResponse")
+            assert hasattr(llm_response, "LLMResponse")
         except ImportError as e:
-            self.fail(f"Failed to import gemini_response: {e}")
+            self.fail(f"Failed to import llm_response: {e}")
 
 
 if __name__ == "__main__":

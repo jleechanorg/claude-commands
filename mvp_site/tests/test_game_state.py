@@ -536,7 +536,7 @@ class TestGameState(unittest.TestCase):
         gs.player_character_data = {"name": "TestHero", "level": 5}
         gs.world_data = {"current_location": "Test Town"}
 
-        # Add an internal cache attribute (simulating what happens in gemini_service.py)
+        # Add an internal cache attribute (simulating what happens in llm_service.py)
         # This should NOT be included in the serialized output
         class DummyManifest:
             """Dummy class to simulate SceneManifest objects"""

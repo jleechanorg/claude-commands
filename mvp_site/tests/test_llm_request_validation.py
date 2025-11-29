@@ -1,5 +1,5 @@
 """
-Test validation behavior of GeminiRequest class
+Test validation behavior of LLMRequest class
 
 Tests for the new validation features added to ensure proper type safety,
 field validation, and error handling.
@@ -16,23 +16,23 @@ os.environ["GEMINI_API_KEY"] = "test-api-key"
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from mvp_site.gemini_request import (
+from mvp_site.llm_request import (
     MAX_PAYLOAD_SIZE,
     MAX_STRING_LENGTH,
-    GeminiRequest,
-    GeminiRequestError,
+    LLMRequest,
+    LLMRequestError,
     PayloadTooLargeError,
     ValidationError,
 )
 
 
-class TestGeminiRequestValidation(unittest.TestCase):
-    """Test validation behavior of GeminiRequest class."""
+class TestLLMRequestValidation(unittest.TestCase):
+    """Test validation behavior of LLMRequest class."""
 
     def test_empty_user_id_raises_validation_error(self):
         """Test that empty user_id raises ValidationError."""
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="character",
                 user_id="",  # Empty user_id
@@ -42,7 +42,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_whitespace_user_id_raises_validation_error(self):
         """Test that whitespace-only user_id raises ValidationError."""
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="character",
                 user_id="   ",  # Whitespace-only user_id
@@ -52,7 +52,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_empty_game_mode_raises_validation_error(self):
         """Test that empty game_mode raises ValidationError."""
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="",  # Empty game_mode
                 user_id="test-user",
@@ -62,7 +62,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_wrong_game_state_type_raises_validation_error(self):
         """Test that non-dict game_state raises ValidationError."""
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="character",
                 user_id="test-user",
@@ -73,7 +73,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_wrong_story_history_type_raises_validation_error(self):
         """Test that non-list story_history raises ValidationError."""
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="character",
                 user_id="test-user",
@@ -84,7 +84,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_wrong_core_memories_type_raises_validation_error(self):
         """Test that non-list core_memories raises ValidationError."""
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="character",
                 user_id="test-user",
@@ -95,7 +95,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_wrong_core_memories_item_type_raises_validation_error(self):
         """Test that non-string items in core_memories raise ValidationError."""
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="character",
                 user_id="test-user",
@@ -107,7 +107,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
         """Test that overly long user_action raises ValidationError."""
         long_action = "x" * (MAX_STRING_LENGTH + 1)
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action=long_action, game_mode="character", user_id="test-user"
             )
         self.assertIn("user_action too long", str(cm.exception))
@@ -116,7 +116,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
         """Test that overly long checkpoint_block raises ValidationError."""
         long_checkpoint = "x" * (MAX_STRING_LENGTH + 1)
         with self.assertRaises(ValidationError) as cm:
-            GeminiRequest(
+            LLMRequest(
                 user_action="test",
                 game_mode="character",
                 user_id="test-user",
@@ -128,7 +128,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
         """Test that oversized JSON payload raises PayloadTooLargeError."""
         # Create a large game_state that will exceed payload limits
         large_data = "x" * (MAX_PAYLOAD_SIZE // 2)
-        request = GeminiRequest(
+        request = LLMRequest(
             user_action="test",
             game_mode="character",
             user_id="test-user",
@@ -140,8 +140,8 @@ class TestGeminiRequestValidation(unittest.TestCase):
         self.assertIn("JSON payload too large", str(cm.exception))
 
     def test_valid_request_passes_validation(self):
-        """Test that valid GeminiRequest passes all validation."""
-        request = GeminiRequest(
+        """Test that valid LLMRequest passes all validation."""
+        request = LLMRequest(
             user_action="I look around",
             game_mode="character",
             user_id="test-user-123",
@@ -160,7 +160,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_build_story_continuation_validates_parameters(self):
         """Test that build_story_continuation validates input parameters."""
         with self.assertRaises(ValidationError):
-            GeminiRequest.build_story_continuation(
+            LLMRequest.build_story_continuation(
                 user_action="",  # Empty action
                 user_id="test-user",
                 game_mode="character",
@@ -171,7 +171,7 @@ class TestGeminiRequestValidation(unittest.TestCase):
     def test_build_initial_story_validates_parameters(self):
         """Test that build_initial_story validates input parameters."""
         with self.assertRaises(ValidationError):
-            GeminiRequest.build_initial_story(
+            LLMRequest.build_initial_story(
                 character_prompt="",  # Empty prompt
                 user_id="test-user",
                 selected_prompts=[],
@@ -183,14 +183,14 @@ class TestGeminiRequestValidation(unittest.TestCase):
         circular_ref = {}
         circular_ref["self"] = circular_ref
 
-        request = GeminiRequest(
+        request = LLMRequest(
             user_action="test",
             game_mode="character",
             user_id="test-user",
             game_state=circular_ref,
         )
 
-        with self.assertRaises(GeminiRequestError):
+        with self.assertRaises(LLMRequestError):
             request.to_json()
 
 

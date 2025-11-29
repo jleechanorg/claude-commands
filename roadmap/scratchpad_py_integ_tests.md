@@ -14,7 +14,7 @@
 ### What NOT to Mock (MUST GO THROUGH REAL CODE):
 - ❌ DO NOT mock `main.py` functions
 - ❌ DO NOT mock `firestore_service.py` functions
-- ❌ DO NOT mock `gemini_service.py` functions
+- ❌ DO NOT mock `llm_service.py` functions
 - ❌ DO NOT mock `game_state.py` functions
 - ❌ DO NOT mock any internal application logic
 
@@ -48,8 +48,8 @@ The tests are failing because:
 #### Step 5: Test Flow Verification
 The tests should verify this complete flow:
 1. HTTP Request → Flask route in main.py
-2. main.py → calls gemini_service functions (NOT MOCKED)
-3. gemini_service → calls google.genai API (MOCKED HERE)
+2. main.py → calls llm_service functions (NOT MOCKED)
+3. llm_service → calls google.genai API (MOCKED HERE)
 4. main.py → calls firestore_service functions (NOT MOCKED)
 5. firestore_service → calls firebase_admin (MOCKED HERE)
 6. Response flows back through all layers

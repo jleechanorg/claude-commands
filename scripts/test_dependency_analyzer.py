@@ -108,7 +108,7 @@ class DependencyAnalyzer:
                     # Core mvp_site application files - intelligent mapping
                     "mvp_site/main.py": ["test_main*.py", "test_integration*.py"],
                     "mvp_site/game_state.py": ["test_game_state*.py", "test_integration*.py"],
-                    "mvp_site/gemini_service.py": ["test_gemini*.py", "test_ai*.py"],
+                    "mvp_site/llm_service.py": ["test_gemini*.py", "test_ai*.py"],
                     "mvp_site/firestore_service.py": ["test_firestore*.py", "test_database*.py"],
                     "mvp_site/mcp_client.py": ["test_mcp*.py", "test_integration*.py"],
                     "mvp_site/world_logic.py": ["test_world*.py", "test_game_state*.py"],
@@ -117,7 +117,7 @@ class DependencyAnalyzer:
 
                     # Legacy root-level files (backward compatibility)
                     "main.py": ["test_main_*.py", "test_api_*.py"],
-                    "gemini_service.py": ["test_gemini_*.py", "test_json_*.py"],
+                    "llm_service.py": ["test_gemini_*.py", "test_json_*.py"],
                     "firestore_service.py": ["test_firestore_*.py", "test_auth_*.py"],
                     "world_logic.py": ["test_world_*.py", "test_integration_*.py"]
                 },

@@ -56,12 +56,12 @@
 ```python
 # Remove duplicate fake classes (lines 53-177)
 # Add proper imports
-from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
+from tests.fake_firestore import FakeFirestoreClient, FakeLLMResponse
 
 # Use @patch decorators for external service injection  
 @patch("firebase_admin.firestore.client")
-@patch("gemini_service._call_gemini_api_with_gemini_request")
-def test_method(self, mock_gemini_request, mock_firestore_client):
+@patch("mvp_site.llm_service._call_llm_api_with_llm_request")
+def test_method(self, mock_llm_request, mock_firestore_client):
     fake_firestore = FakeFirestoreClient()
     mock_firestore_client.return_value = fake_firestore
 ```

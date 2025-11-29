@@ -1,10 +1,10 @@
 """
-Test-Driven Development: Tests for GeminiResponse object
+Test-Driven Development: Tests for LLMResponse object
 
-These tests define the expected behavior for the GeminiResponse object
-that will clean up the architecture between gemini_service and main.py.
+These tests define the expected behavior for the LLMResponse object
+that will clean up the architecture between llm_service and main.py.
 
-Updated for new API where GeminiResponse.create() takes raw response text.
+Updated for new API where LLMResponse.create() takes raw response text.
 """
 
 import json
@@ -19,13 +19,13 @@ sys.path.insert(
 )
 
 from mvp_site.game_state import GameState
-from mvp_site.gemini_response import GeminiResponse
-from mvp_site.gemini_service import continue_story, get_initial_story
+from mvp_site.llm_response import LLMResponse
+from mvp_site.llm_service import continue_story, get_initial_story
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
-class TestGeminiResponse(unittest.TestCase):
-    """Test cases for GeminiResponse object."""
+class TestLLMResponse(unittest.TestCase):
+    """Test cases for LLMResponse object."""
 
     def setUp(self):
         """Set up test fixtures."""
@@ -48,9 +48,9 @@ class TestGeminiResponse(unittest.TestCase):
         )
 
     def test_gemini_response_creation(self):
-        """Test creating a GeminiResponse object."""
+        """Test creating a LLMResponse object."""
 
-        response = GeminiResponse.create(self.sample_raw_response)
+        response = LLMResponse.create(self.sample_raw_response)
 
         # Core fields should be set
         assert response.narrative_text == self.sample_narrative
@@ -65,7 +65,7 @@ class TestGeminiResponse(unittest.TestCase):
     def test_debug_tags_detection_with_content(self):
         """Test debug tags are properly detected when content exists."""
 
-        response = GeminiResponse.create(self.sample_raw_response)
+        response = LLMResponse.create(self.sample_raw_response)
 
         # Should detect dm_notes and dice_rolls from structured response
         assert response.debug_tags_present["dm_notes"]
@@ -92,7 +92,7 @@ class TestGeminiResponse(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(clean_raw_response)
+        response = LLMResponse.create(clean_raw_response)
 
         # Should detect no debug content
         assert not response.debug_tags_present["dm_notes"]
@@ -104,7 +104,7 @@ class TestGeminiResponse(unittest.TestCase):
     def test_state_updates_property(self):
         """Test state_updates property returns correct data."""
 
-        response = GeminiResponse.create(self.sample_raw_response)
+        response = LLMResponse.create(self.sample_raw_response)
 
         # Should return state updates from structured response
         assert response.state_updates == {"player_character_data": {"hp_current": 18}}
@@ -112,7 +112,7 @@ class TestGeminiResponse(unittest.TestCase):
     def test_entities_mentioned_property(self):
         """Test entities_mentioned property returns correct data."""
 
-        response = GeminiResponse.create(self.sample_raw_response)
+        response = LLMResponse.create(self.sample_raw_response)
 
         # Should return entities from structured response
         assert response.entities_mentioned == ["knight", "tavern"]
@@ -120,7 +120,7 @@ class TestGeminiResponse(unittest.TestCase):
     def test_location_confirmed_property(self):
         """Test location_confirmed property returns correct data."""
 
-        response = GeminiResponse.create(self.sample_raw_response)
+        response = LLMResponse.create(self.sample_raw_response)
 
         # Should return location from structured response
         assert response.location_confirmed == "Silver Stag Tavern"
@@ -128,7 +128,7 @@ class TestGeminiResponse(unittest.TestCase):
     def test_debug_info_property(self):
         """Test debug_info property returns correct data."""
 
-        response = GeminiResponse.create(self.sample_raw_response)
+        response = LLMResponse.create(self.sample_raw_response)
 
         # Should return debug_info from structured response
         assert response.debug_info is not None
@@ -136,11 +136,11 @@ class TestGeminiResponse(unittest.TestCase):
         assert response.debug_info["dm_notes"] == ["Player seems cautious"]
 
     def test_none_structured_response_handling(self):
-        """Test GeminiResponse handles plain text gracefully."""
+        """Test LLMResponse handles plain text gracefully."""
 
         # Test with plain text (no JSON)
         plain_response = self.sample_narrative
-        response = GeminiResponse.create(plain_response)
+        response = LLMResponse.create(plain_response)
 
         # Should extract the narrative
         assert response.narrative_text == self.sample_narrative
@@ -154,10 +154,10 @@ class TestGeminiResponse(unittest.TestCase):
         assert response.location_confirmed == "Unknown"  # Default value
         assert response.debug_info == {}
 
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
     def test_get_initial_story_returns_gemini_response(self, mock_get_text, mock_api):
-        """Test that get_initial_story returns a GeminiResponse object."""
+        """Test that get_initial_story returns a LLMResponse object."""
 
         # Setup mocks - return raw response text
         mock_api.return_value = Mock()
@@ -170,8 +170,8 @@ class TestGeminiResponse(unittest.TestCase):
             user_id="test-user-123",
         )
 
-        # Should return a GeminiResponse object
-        assert type(result).__name__ == "GeminiResponse"
+        # Should return a LLMResponse object
+        assert type(result).__name__ == "LLMResponse"
         # Check that we got valid narrative content (environment-agnostic)
         assert result.narrative_text is not None
         assert len(result.narrative_text) > 0
@@ -185,14 +185,14 @@ class TestGeminiResponse(unittest.TestCase):
         )
 
     @patch(
-        "gemini_service.get_client"
+        "mvp_site.llm_service.get_client"
     )  # Patch get_client to prevent GEMINI_API_KEY error
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
     def test_continue_story_returns_gemini_response(
         self, mock_get_text, mock_api, mock_get_client
     ):
-        """Test that continue_story returns a GeminiResponse object."""
+        """Test that continue_story returns a LLMResponse object."""
 
         # Setup mocks
         mock_get_client.return_value = (
@@ -212,15 +212,15 @@ class TestGeminiResponse(unittest.TestCase):
             current_game_state=game_state,
         )
 
-        # Should return a GeminiResponse object
-        assert type(result).__name__ == "GeminiResponse"
+        # Should return a LLMResponse object
+        assert type(result).__name__ == "LLMResponse"
         assert result.narrative_text == self.sample_narrative
 
     def test_main_py_handles_gemini_response_object(self):
-        """Test that main.py properly handles GeminiResponse objects."""
+        """Test that main.py properly handles LLMResponse objects."""
         # This is more of an integration test - checking the interface contract
 
-        response = GeminiResponse.create(self.sample_raw_response)
+        response = LLMResponse.create(self.sample_raw_response)
 
         # Main.py expects these attributes/methods
         assert hasattr(response, "narrative_text")
@@ -246,7 +246,7 @@ class TestGeminiResponse(unittest.TestCase):
         mock_structured.debug_info = {"dm_notes": ["Boss fight"]}
 
         # Use legacy create method
-        response = GeminiResponse.create_legacy(
+        response = LLMResponse.create_legacy(
             narrative_text="The dragon roars!", structured_response=mock_structured
         )
 

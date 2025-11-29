@@ -13,7 +13,7 @@ Implement comprehensive entity tracking and state synchronization improvements f
 ### Completed ✅
 1. **Entity Schema Integration**
    - Added PROMPT_TYPE_ENTITY_SCHEMA constant to constants.py
-   - Integrated entity schema loading in gemini_service.py (both get_initial_story and continue_story)
+   - Integrated entity schema loading in llm_service.py (both get_initial_story and continue_story)
    - Created entity_tracking.py as wrapper for backward compatibility
    - Implemented proper entity ID format (pc_name_001, npc_name_001)
 
@@ -194,7 +194,7 @@ From campaign snapshot analysis (`campaign_snapshot_sariel_v2.json`):
 
 ### Files Modified
 - constants.py - Added PROMPT_TYPE_ENTITY_SCHEMA
-- gemini_service.py - Integrated entity schema loading, added resource tracking
+- llm_service.py - Integrated entity schema loading, added resource tracking
 - game_state.py - Changed debug_mode default
 - entity_tracking.py - Created as compatibility wrapper
 - **NEW: entity_preloader.py** - Entity Pre-Loading system (Option 3)
@@ -283,7 +283,7 @@ The mitigation strategies are fully implemented and tested. **Ready for producti
   1. Template Enforcement System - Rigid format markers
   2. Debug-First Restructuring - Moved DEBUG to beginning
   3. Strategic Instruction Redundancy - 4 reminder locations
-- **Fixed critical bug**: `gemini_service.py` null reference in model fallback
+- **Fixed critical bug**: `llm_service.py` null reference in model fallback
 - **Expected Impact**: 80-90% compliance rate for planning blocks
 
 #### 4. Test Suite Consolidation (Entity Tracking) ✅
@@ -409,7 +409,7 @@ The mitigation strategies are fully implemented and tested. **Ready for producti
 
 ## CRITICAL DISCOVERY: Entity Tracking Integration Status
 
-### What's Actually Integrated in gemini_service.py:
+### What's Actually Integrated in llm_service.py:
 - ✅ Basic entity manifest creation from game state
 - ✅ Structured prompt injection for entity tracking
 - ✅ JSON mode generation when entities expected
@@ -443,7 +443,7 @@ The 4-strategy mitigation approach is only partially implemented. The code exist
 4. **API integration issues** - Test framework needs adjustment for correct API parameters
 
 ### Next Steps Required:
-1. **Integration**: Wire entity_preloader, entity_instructions, and dual_pass_generator into gemini_service.py
+1. **Integration**: Wire entity_preloader, entity_instructions, and dual_pass_generator into llm_service.py
 2. **API Fix**: Update test to use correct parameter name (`user_input` not `prompt`) ✅ FIXED
 3. **Retry Logic**: Implement automatic retry when entity validation fails
 4. **Full Testing**: Run complete comparison once integration is done
@@ -505,7 +505,7 @@ Based on logs before timeout:
 4. **entity_validator.py** - ✅ Enhanced with generic suggestions
 
 **What was done**:
-- Imported all modules into gemini_service.py
+- Imported all modules into llm_service.py
 - Added entity pre-loading text to prompt construction
 - Added entity-specific instructions to prompts
 - Integrated dual-pass retry when validation fails
@@ -649,7 +649,7 @@ cd /home/jleechan/projects/worldarchitect.ai/mvp_site && TESTING=true /home/jlee
 ## Session Summary (2025-07-02)
 
 ### Major Accomplishments
-1. **Integrated all 4 entity tracking modules** into gemini_service.py
+1. **Integrated all 4 entity tracking modules** into llm_service.py
 2. **Removed ALL hardcoded campaign data** - system now works for any campaign
 3. **Fixed critical bug**: Entity tracking was missing from get_initial_story()
 4. **Fixed entity_preloader.py**: Corrected attribute access (.name → .display_name)
@@ -1019,7 +1019,7 @@ SARIEL_REPLAYS=5 TESTING=true vpython tests/test_sariel_consolidated.py
 - ServerError exceptions were not being properly caught for status code extraction
 
 ### Fix Applied:
-Modified `_call_gemini_api_with_model_cycling` in gemini_service.py to:
+Modified `_call_llm_api_with_model_cycling` in llm_service.py to:
 1. Extract status codes from error messages when exception doesn't have status_code attribute
 2. Check for '503 UNAVAILABLE' string in error message
 3. Properly continue to fallback models on 503 errors

@@ -28,7 +28,7 @@ Primary runtime flow:
    campaign creation, state updates, structured response formatting, and
    setting management. It orchestrates Gemini prompts, Firestore storage, and
    debugging utilities.
-4. **AI integrations** – `gemini_service.py` builds prompts, selects models,
+4. **AI integrations** – `llm_service.py` builds prompts, selects models,
    validates structured responses, and emits timeline entries. Memory and
    instruction helpers coordinate the narrative context across passes.
 5. **Persistence** – `firestore_service.py` encapsulates Firestore access with

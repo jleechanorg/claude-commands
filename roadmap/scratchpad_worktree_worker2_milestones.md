@@ -14,7 +14,7 @@ Deep code review and documentation of mvp_site/ directory with line counts, func
 - [x] Examined mvp_site/ directory structure (132 files total)
 - [x] Analyzed main.py (985 lines) - Primary Flask application entry point
 - [x] Analyzed firestore_service.py (467 lines) - Database operations
-- [x] Analyzed gemini_service.py (1,449 lines) - AI service integration
+- [x] Analyzed llm_service.py (1,449 lines) - AI service integration
 - [x] Analyzed game_state.py (373 lines) - Core game state management
 - [x] Analyzed constants.py (174 lines) - Shared constants
 - [x] Analyzed logging_util.py (208 lines) - Centralized logging
@@ -95,7 +95,7 @@ Deep code review and documentation of mvp_site/ directory with line counts, func
 - None
 
 #### Next 5 Minutes:
-- Add documentation to gemini_service.py key functions
+- Add documentation to llm_service.py key functions
 - Create prompts/ directory README.md
 - Document entity tracking and AI integration patterns
 
@@ -105,7 +105,7 @@ Deep code review and documentation of mvp_site/ directory with line counts, func
 **Status**: ✅ Complete
 
 #### Work Completed:
-- [x] Added comprehensive module docstring to gemini_service.py (1,449 lines)
+- [x] Added comprehensive module docstring to llm_service.py (1,449 lines)
   - Architecture overview and key responsibilities
   - Dependencies and class documentation
 - [x] Enhanced PromptBuilder class documentation

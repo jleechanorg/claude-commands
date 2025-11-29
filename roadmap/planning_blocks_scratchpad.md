@@ -49,7 +49,7 @@ The issue is NOT with the code or loading - it's with AI compliance. The AI is r
 Implemented a comprehensive fix with the following components:
 
 ### 1. Planning Block Validation Function
-- Added `_validate_and_enforce_planning_block()` in gemini_service.py
+- Added `_validate_and_enforce_planning_block()` in llm_service.py
 - Automatically detects missing planning blocks and adds them
 - Context-aware: adds deep think blocks for think/plan keywords
 

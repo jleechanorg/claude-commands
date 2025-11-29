@@ -132,7 +132,7 @@ def make_interaction_request(
 
     This exercises the code path:
     main.py:handle_interaction() -> MCP client -> world_logic.process_action_unified()
-    -> gemini_service.continue_story() (10-30+ seconds blocking I/O)
+    -> llm_service.continue_story() (10-30+ seconds blocking I/O)
 
     CRITICAL: This was NOT tested by the original parallel test, which only tested
     GET /api/campaigns/{id}. The interaction endpoint goes through a completely
@@ -209,7 +209,7 @@ def run_interaction_concurrency_test(
 
     This is the CRITICAL test that was missing. Without asyncio.to_thread() in
     world_logic.py, concurrent interactions would serialize because:
-    1. gemini_service.continue_story() blocks for 10-30+ seconds
+    1. llm_service.continue_story() blocks for 10-30+ seconds
     2. All async functions share one event loop
     3. Blocking I/O in one coroutine blocks ALL coroutines
 
@@ -347,7 +347,7 @@ def run_interaction_concurrency_test(
         for reason in reasons:
             print(f"   - {reason}")
         print("\n   ROOT CAUSE: world_logic.py async functions calling blocking I/O")
-        print("   FIX: Use asyncio.to_thread() for gemini_service/firestore_service calls")
+        print("   FIX: Use asyncio.to_thread() for llm_service/firestore_service calls")
         verdict = "FAIL"
 
     if failed:

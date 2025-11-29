@@ -13,7 +13,7 @@ Implement hard stop mechanism for unrecoverable integrity failures when LLM does
 
 ### Phase 1: Integrity Failure Detection (45 min)
 1. **State Update Validation Points:**
-   - After every LLM call in `gemini_service.py`
+   - After every LLM call in `llm_service.py`
    - Before processing LLM responses in game state logic
    - During JSON parsing and state updates
 
@@ -86,7 +86,7 @@ Implement hard stop mechanism for unrecoverable integrity failures when LLM does
 ## Implementation Strategy
 
 ### Files to Modify:
-1. **`mvp_site/gemini_service.py`** - Add integrity validation after LLM calls
+1. **`mvp_site/llm_service.py`** - Add integrity validation after LLM calls
 2. **`mvp_site/game_state.py`** - Add state update validation
 3. **Frontend templates** - Add error display modal/section
 4. **Error handling modules** - Create IntegrityFailureError class

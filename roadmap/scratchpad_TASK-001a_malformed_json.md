@@ -17,7 +17,7 @@ Investigate the malformed JSON issue where Gemini sometimes returns invalid JSON
 
 ## Areas to Investigate
 - `robust_json_parser.py` - existing parsing logic ✓
-- `gemini_service.py` - where responses are received
+- `llm_service.py` - where responses are received
 - Test files that might have examples of malformed JSON ✓
 - Error logs that show parsing failures
 - `narrative_response_schema.py` - how structured responses are handled ✓

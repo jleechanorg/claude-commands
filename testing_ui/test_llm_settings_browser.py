@@ -134,8 +134,8 @@ def test_gemini_settings_browser():
             print("✅ Settings page elements checked")
 
             # Check initial model selection (should be Pro 2.5 by default)
-            pro_radio = page.locator("input[value='pro-2.5']")
-            flash_radio = page.locator("input[value='flash-2.5']")
+            pro_radio = page.locator("input[value='gemini-3-pro-preview']")
+            flash_radio = page.locator("input[value='gemini-2.0-flash']")
 
             assert pro_radio.is_checked()
             print("✅ Pro 2.5 is initially selected (default)")

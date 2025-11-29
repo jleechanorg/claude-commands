@@ -19,7 +19,7 @@ Optimize world content sending (currently sent with every request) and verify to
    - Map world content inclusion patterns
 
 2. **Token Measurement Verification:**
-   - Compare estimated token counts vs actual prompt sizes in `gemini_service.py`
+   - Compare estimated token counts vs actual prompt sizes in `llm_service.py`
    - Log actual bytes/characters sent to Gemini API
    - Verify token counting algorithms match reality
    - Identify discrepancies in measurement
@@ -106,7 +106,7 @@ Optimize world content sending (currently sent with every request) and verify to
 4. **Trending**: Track token usage patterns over time
 
 ### Files to Modify:
-1. **`mvp_site/gemini_service.py`** - Add caching and verification
+1. **`mvp_site/llm_service.py`** - Add caching and verification
 2. **World content inclusion logic** - Optimize sending patterns
 3. **Logging systems** - Add token verification
 4. **Session management** - Track world content sent per session

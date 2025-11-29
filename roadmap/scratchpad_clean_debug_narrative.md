@@ -33,7 +33,7 @@
 
 3. **Analyze Current Implementation**
    - [ ] Review game_state_instruction.md for clarity
-   - [ ] Check gemini_service.py prompt construction
+   - [ ] Check llm_service.py prompt construction
    - [ ] Verify frontend parsing logic
 
 ## Findings
@@ -91,7 +91,7 @@
 This is a lower priority since these are test files, but should eventually be updated for consistency.
 
 Key files to update:
-- Mock services: `/mvp_site/mocks/mock_gemini_service.py`, `/mvp_site/mocks/data_fixtures.py`
+- Mock services: `/mvp_site/mocks/mock_llm_service.py`, `/mvp_site/mocks/data_fixtures.py`
 - Test files: Various files in `/mvp_site/tests/` and `/mvp_site/test_integration/`
 
 ### Phase 4: Implementation Updates
@@ -140,12 +140,12 @@ The main issue was that `game_state_instruction.md` had contradictory informatio
 - `/mvp_site/prompts/user_prompt_template.md` - User prompt construction
 
 ### Code
-- `/mvp_site/gemini_service.py` - Prompt construction and response handling
+- `/mvp_site/llm_service.py` - Prompt construction and response handling
 - `/mvp_site/static/app.js` - Frontend field parsing and display
 - `/mvp_site/structured_response_parser.py` - Response validation
 
 ### Tests
-- `/mvp_site/test_gemini_service_*.py` - Backend response tests
+- `/mvp_site/test_llm_service_*.py` - Backend response tests
 - `/testing_ui/test_structured_fields_*.py` - UI field display tests
 
 ## Success Criteria

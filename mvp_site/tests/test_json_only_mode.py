@@ -9,9 +9,9 @@ sys.path.insert(
 )
 import pytest
 
-from mvp_site import gemini_service
+from mvp_site import llm_service
 from mvp_site.game_state import GameState
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import parse_structured_response
 
 
@@ -22,11 +22,11 @@ class TestJSONOnlyMode(unittest.TestCase):
         """Test that the regex parsing function should not exist"""
         # This function should be removed
         with pytest.raises(AttributeError):
-            gemini_service.parse_llm_response_for_state_changes("any text")
+            llm_service.parse_llm_response_for_state_changes("any text")
 
     def test_all_gemini_calls_must_use_json_mode(self):
         """Test that all Gemini API calls enforce JSON mode"""
-        with patch("gemini_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_service.get_client") as mock_get_client:
             mock_client = Mock()
             Mock()
             mock_get_client.return_value = mock_client
@@ -40,7 +40,7 @@ class TestJSONOnlyMode(unittest.TestCase):
             # Test continue_story (need proper parameters)
 
             test_game_state = GameState(user_id="test-user-123")  # Add required user_id
-            gemini_service.continue_story("test prompt", "story", [], test_game_state)
+            llm_service.continue_story("test prompt", "story", [], test_game_state)
 
             # Verify JSON mode was used
             call_args = mock_client.models.generate_content.call_args
@@ -55,7 +55,7 @@ class TestJSONOnlyMode(unittest.TestCase):
         # Import main module
 
         # Create a mock response without structured_response
-        mock_response = Mock(spec=GeminiResponse)
+        mock_response = Mock(spec=LLMResponse)
         mock_response.structured_response = None
         mock_response.state_updates = {}
         mock_response.narrative_text = (
@@ -73,15 +73,15 @@ class TestJSONOnlyMode(unittest.TestCase):
     def test_no_regex_state_update_extraction(self):
         """Test that STATE_UPDATES_PROPOSED regex extraction is removed"""
         # The parse_llm_response_for_state_changes function should not exist
-        assert not hasattr(gemini_service, "parse_llm_response_for_state_changes")
+        assert not hasattr(llm_service, "parse_llm_response_for_state_changes")
 
         # The helper function should also not exist
-        assert not hasattr(gemini_service, "_clean_markdown_from_json")
+        assert not hasattr(llm_service, "_clean_markdown_from_json")
 
     def test_always_structured_response_required(self):
         """Test that a structured response is always required"""
-        # Any GeminiResponse without structured_response should have empty state_updates
-        response = GeminiResponse(
+        # Any LLMResponse without structured_response should have empty state_updates
+        response = LLMResponse(
             narrative_text='Some text with [STATE_UPDATES_PROPOSED]{"gold": 100}[END_STATE_UPDATES_PROPOSED]',
             structured_response=None,
             debug_tags_present={},
@@ -92,7 +92,7 @@ class TestJSONOnlyMode(unittest.TestCase):
 
     def test_generation_config_always_includes_json(self):
         """Test that generation config always includes JSON response format"""
-        with patch("gemini_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_service.get_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
             mock_client.models.generate_content = Mock(
@@ -103,17 +103,17 @@ class TestJSONOnlyMode(unittest.TestCase):
             test_cases = [
                 (
                     "continue_story",
-                    lambda: gemini_service.continue_story(
+                    lambda: llm_service.continue_story(
                         [], "prompt", "story", GameState(user_id="test-user")
                     ),
                 ),
                 (
                     "generate_opening_story",
-                    lambda: gemini_service.generate_opening_story("prompt"),
+                    lambda: llm_service.generate_opening_story("prompt"),
                 ),
                 (
                     "get_god_response",
-                    lambda: gemini_service.get_god_response({}, "command"),
+                    lambda: llm_service.get_god_response({}, "command"),
                 ),
             ]
 
@@ -151,7 +151,7 @@ class TestJSONOnlyMode(unittest.TestCase):
     def test_strip_functions_dont_affect_state_parsing(self):
         """Test that strip functions are only for display, not state extraction"""
 
-        strip_state_updates_only = GeminiResponse._strip_state_updates_only
+        strip_state_updates_only = LLMResponse._strip_state_updates_only
 
         text_with_state_block = """Story text.
 [STATE_UPDATES_PROPOSED]
@@ -168,7 +168,7 @@ class TestJSONOnlyMode(unittest.TestCase):
     def test_error_on_missing_structured_response(self):
         """Test that system logs error when structured response is missing"""
         with patch("logging.error"):
-            GeminiResponse(
+            LLMResponse(
                 narrative_text="Story without JSON",
                 structured_response=None,
                 debug_tags_present={},

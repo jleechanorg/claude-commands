@@ -11,7 +11,7 @@ from typing import Any
 from mvp_site import logging_util
 from mvp_site.json_utils import unescape_json_string
 
-# Debug tag patterns - same as in gemini_response.py
+# Debug tag patterns - same as in llm_response.py
 DEBUG_START_PATTERN = re.compile(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]")
 DEBUG_STATE_PATTERN = re.compile(r"\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]")
 DEBUG_ROLL_PATTERN = re.compile(r"\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]")

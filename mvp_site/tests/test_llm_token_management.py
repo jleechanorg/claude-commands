@@ -1,5 +1,5 @@
 """
-Test Suite for Gemini Service Token Management
+Test Suite for LLM Service Token Management
 
 Tests token constants and basic functionality without complex dependencies.
 This test is designed to work in both local and CI environments.
@@ -23,34 +23,34 @@ except ImportError:
 
 
 try:
-    from mvp_site import gemini_service
+    from mvp_site import llm_service
 
-    GEMINI_SERVICE_AVAILABLE = True
+    LLM_SERVICE_AVAILABLE = True
 except ImportError:
-    # Mock gemini_service for CI environment
-    class MockGeminiService:
+    # Mock llm_service for CI environment
+    class MockLLMService:
         MAX_OUTPUT_TOKENS = 50000
         JSON_MODE_MAX_OUTPUT_TOKENS = 50000
 
-    gemini_service = MockGeminiService()
-    GEMINI_SERVICE_AVAILABLE = False
+    llm_service = MockLLMService()
+    LLM_SERVICE_AVAILABLE = False
 
 
-class TestGeminiTokenManagement(unittest.TestCase):
+class TestLLMTokenManagement(unittest.TestCase):
     """Test cases for token management constants and functions."""
 
     def test_token_constants_updated(self):
-        """Test that token constants reflect correct Gemini 2.5 Flash limits."""
+        """Test that token constants are set to expected values."""
         # Test that we can access the updated token constants
         self.assertEqual(
-            gemini_service.MAX_OUTPUT_TOKENS,
+            llm_service.MAX_OUTPUT_TOKENS,
             50000,
-            "MAX_OUTPUT_TOKENS should be 50000 for Gemini 2.5 Flash",
+            "MAX_OUTPUT_TOKENS should be 50000",
         )
         self.assertEqual(
-            gemini_service.JSON_MODE_MAX_OUTPUT_TOKENS,
+            llm_service.JSON_MODE_MAX_OUTPUT_TOKENS,
             50000,
-            "JSON_MODE_MAX_OUTPUT_TOKENS should be 50000 for consistency",
+            "JSON_MODE_MAX_OUTPUT_TOKENS should match MAX_OUTPUT_TOKENS",
         )
 
     def test_token_estimation_basic(self):
@@ -73,17 +73,14 @@ class TestGeminiTokenManagement(unittest.TestCase):
         self.assertIsInstance(tokens, (int, float))
         self.assertGreater(tokens, 0)
 
+    @unittest.skipUnless(LLM_SERVICE_AVAILABLE, "llm_service not available")
     def test_token_constants_in_real_service(self):
         """Test that token constants are properly set in real service."""
-        # This test only runs when real gemini_service is available
-        self.assertTrue(hasattr(gemini_service, "MAX_OUTPUT_TOKENS"))
-        self.assertTrue(hasattr(gemini_service, "JSON_MODE_MAX_OUTPUT_TOKENS"))
-
         # Test that constants are reasonable values
-        self.assertGreater(gemini_service.MAX_OUTPUT_TOKENS, 1000)
-        self.assertLessEqual(gemini_service.MAX_OUTPUT_TOKENS, 100000)
-        self.assertGreater(gemini_service.JSON_MODE_MAX_OUTPUT_TOKENS, 1000)
-        self.assertLessEqual(gemini_service.JSON_MODE_MAX_OUTPUT_TOKENS, 100000)
+        self.assertGreater(llm_service.MAX_OUTPUT_TOKENS, 1000)
+        self.assertLessEqual(llm_service.MAX_OUTPUT_TOKENS, 100000)
+        self.assertGreater(llm_service.JSON_MODE_MAX_OUTPUT_TOKENS, 1000)
+        self.assertLessEqual(llm_service.JSON_MODE_MAX_OUTPUT_TOKENS, 100000)
 
 
 if __name__ == "__main__":

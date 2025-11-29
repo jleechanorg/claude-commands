@@ -30,14 +30,14 @@ sys.path.insert(
 )
 
 # Import using importlib to avoid import order issues
-entities_pydantic = importlib.import_module("schemas.entities_pydantic")
+entities_pydantic = importlib.import_module("mvp_site.schemas.entities_pydantic")
 NPC = entities_pydantic.NPC
 HealthStatus = entities_pydantic.HealthStatus
 DefensiveNumericConverter = importlib.import_module(
-    "schemas.defensive_numeric_converter"
+    "mvp_site.schemas.defensive_numeric_converter"
 ).DefensiveNumericConverter
-entity_tracking = importlib.import_module("entity_tracking")
-arch = importlib.import_module("arch")
+entity_tracking = importlib.import_module("mvp_site.entity_tracking")
+arch = importlib.import_module("mvp_site.arch")
 
 
 class TestArchitecturalDecisions(unittest.TestCase):

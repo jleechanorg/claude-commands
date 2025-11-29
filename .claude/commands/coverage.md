@@ -53,14 +53,14 @@ Overall Coverage: 67%
 
 ⚠️ Needs Improvement (<50%):
 - firestore_service.py: 45% (missing: lines 234-267, 301-315)
-- gemini_service.py: 38% (missing: error handling paths)
+- llm_service.py: 38% (missing: error handling paths)
 
 📍 Coverage Gaps for Planning Blocks:
 - narrative_response_schema.py: Line 89-95 (JSON validation edge cases)
 - app.js frontend parsing: Not measured (JavaScript)
 
 💡 Recommendations:
-1. Add tests for error handling in gemini_service.py
+1. Add tests for error handling in llm_service.py
 2. Test edge cases in planning block JSON validation
 3. Add integration tests for full planning block flow
 

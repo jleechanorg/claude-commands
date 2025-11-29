@@ -5,6 +5,7 @@ This is a simplified test that verifies both main.py and world_logic.py
 properly check for MOCK_SERVICES_MODE environment variable.
 """
 
+import importlib
 import os
 import sys
 import unittest
@@ -78,8 +79,6 @@ class TestFirebaseMockMode(unittest.TestCase):
 
             with patch.dict("sys.modules", mock_modules):
                 # Clear any cached imports
-                import importlib
-
                 for mod in ("mvp_site.main", "main"):
                     if mod in sys.modules:
                         del sys.modules[mod]
@@ -162,8 +161,8 @@ class TestFirebaseMockMode(unittest.TestCase):
                 "mvp_site.debug_hybrid_system": MagicMock(),
                 "firestore_service": MagicMock(),
                 "mvp_site.firestore_service": MagicMock(),
-                "gemini_service": MagicMock(),
-                "mvp_site.gemini_service": MagicMock(),
+                "llm_service": MagicMock(),
+                "mvp_site.llm_service": MagicMock(),
                 "game_state": MagicMock(),
                 "mvp_site.game_state": MagicMock(),
             }
@@ -172,8 +171,6 @@ class TestFirebaseMockMode(unittest.TestCase):
 
             with patch.dict("sys.modules", mocks):
                 # Clear any cached imports
-                import importlib
-
                 for mod in ("mvp_site.world_logic", "world_logic"):
                     if mod in sys.modules:
                         del sys.modules[mod]

@@ -193,7 +193,7 @@ def create_structured_input(game_state, story_context, user_input, mode):
 - `system_context` ← new meta information aggregation
 
 ### File Organization
-1. **No separate schema files**: Put functions in existing modules (gemini_service.py)
+1. **No separate schema files**: Put functions in existing modules (llm_service.py)
 2. **No documentation pollution**: Keep planning docs in roadmap/ until code is ready
 3. **Proportional testing**: 30-50% test coverage, not 117%
 4. **Integration over unit**: Test behavior, not structure

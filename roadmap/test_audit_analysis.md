@@ -35,7 +35,7 @@
 These may need refactoring into smaller, focused tests:
 1. `test_game_state.py` (1252 lines)
 2. `test_integration.py` (968 lines)
-3. `test_gemini_service.py` (873 lines)
+3. `test_llm_service.py` (873 lines)
 4. `test_main_security_validation.py` (822 lines)
 
 ## Recommendations

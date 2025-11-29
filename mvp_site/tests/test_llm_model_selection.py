@@ -11,7 +11,7 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from mvp_site import constants, gemini_service
+from mvp_site import constants, llm_service
 from mvp_site.game_state import GameState
 
 
@@ -29,8 +29,8 @@ class TestGeminiModelSelection(unittest.TestCase):
         if "MOCK_SERVICES_MODE" in os.environ:
             del os.environ["MOCK_SERVICES_MODE"]
 
-    @patch("mvp_site.gemini_service.get_user_settings")
-    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.llm_service.get_user_settings")
+    @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
     def test_continue_story_respects_user_model_preference(
         self, mock_api_call, mock_get_settings
     ):
@@ -69,7 +69,7 @@ class TestGeminiModelSelection(unittest.TestCase):
         ]
 
         # Act: Call continue_story with user_id to trigger model preference selection
-        gemini_service.continue_story(
+        llm_service.continue_story(
             user_input="I walk forward.",
             mode=constants.MODE_CHARACTER,
             story_context=story_context,
@@ -91,8 +91,8 @@ class TestGeminiModelSelection(unittest.TestCase):
             f"continue_story() is ignoring user preferences!"
         )
 
-    @patch("mvp_site.gemini_service.get_user_settings")
-    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.llm_service.get_user_settings")
+    @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
     def test_get_initial_story_respects_user_model_preference(
         self, mock_api_call, mock_get_settings
     ):
@@ -116,7 +116,7 @@ class TestGeminiModelSelection(unittest.TestCase):
         mock_api_call.return_value = mock_response
 
         # Act: Call get_initial_story
-        gemini_service.get_initial_story(
+        llm_service.get_initial_story(
             prompt="I want to be a brave knight",
             user_id=test_user_id,
             selected_prompts=[constants.PROMPT_TYPE_NARRATIVE],

@@ -7,7 +7,7 @@ Review the existing parallel dual-pass optimization scratchpad and assess implem
 
 ### What Exists:
 1. **dual_pass_generator.py** - The dual-pass system is already implemented
-2. **Current Usage** - Sequential execution in gemini_service.py:
+2. **Current Usage** - Sequential execution in llm_service.py:
    - Pass 1: Generate response with expected entities
    - If entities missing: Run Pass 2 to inject them
    - Total wait time: 4-10 seconds

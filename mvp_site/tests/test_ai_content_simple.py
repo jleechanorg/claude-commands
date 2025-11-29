@@ -15,11 +15,11 @@ sys.path.insert(
 )
 
 try:
-    from mvp_site.gemini_request import GeminiRequest
+    from mvp_site.llm_request import LLMRequest
 
     GEMINI_REQUEST_AVAILABLE = True
 except ImportError:
-    GeminiRequest = None
+    LLMRequest = None
     GEMINI_REQUEST_AVAILABLE = False
 
 
@@ -45,7 +45,7 @@ class AIContentPersonalizationTest(unittest.TestCase):
         }
 
         # Create story continuation request
-        request = GeminiRequest.build_story_continuation(
+        request = LLMRequest.build_story_continuation(
             user_action="I examine the glowing crystals",
             user_id="test-user-123",
             game_mode="story",
@@ -78,7 +78,7 @@ class AIContentPersonalizationTest(unittest.TestCase):
             "campaign_type": "Custom Adventure",
         }
 
-        request = GeminiRequest.build_initial_story(
+        request = LLMRequest.build_initial_story(
             character_prompt="Begin the adventure",
             user_id="test-user-123",
             selected_prompts=["adventure", "fantasy"],
@@ -96,7 +96,7 @@ class AIContentPersonalizationTest(unittest.TestCase):
         """Test that requests don't contain hardcoded character names like 'Shadowheart'"""
         campaign_data = {"character_name": "Zara the Mystic Warrior"}
 
-        request = GeminiRequest.build_initial_story(
+        request = LLMRequest.build_initial_story(
             character_prompt="Start adventure",
             user_id="test-user-123",
             selected_prompts=["fantasy"],

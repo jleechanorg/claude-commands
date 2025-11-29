@@ -6,8 +6,8 @@ import unittest
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-from mvp_site import gemini_service
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site import llm_service
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import (
     NarrativeResponse,
     parse_structured_response,
@@ -47,7 +47,7 @@ class TestJSONModePreference(unittest.TestCase):
             },
         )
 
-        gemini_response = GeminiResponse(
+        gemini_response = LLMResponse(
             narrative_text=narrative_with_block,
             structured_response=narrative_response,
             debug_tags_present={},
@@ -60,7 +60,7 @@ class TestJSONModePreference(unittest.TestCase):
     def test_no_fallback_parsing_exists(self):
         """Test that parse_llm_response_for_state_changes no longer exists"""
         # Function should not exist
-        assert not hasattr(gemini_service, "parse_llm_response_for_state_changes")
+        assert not hasattr(llm_service, "parse_llm_response_for_state_changes")
 
         # Create response with JSON state updates
         narrative_response = NarrativeResponse(
@@ -69,7 +69,7 @@ class TestJSONModePreference(unittest.TestCase):
             state_updates=self.sample_state_updates,
         )
 
-        gemini_response = GeminiResponse(
+        gemini_response = LLMResponse(
             narrative_text="Test narrative",
             structured_response=narrative_response,
             debug_tags_present={},
@@ -84,7 +84,7 @@ class TestJSONModePreference(unittest.TestCase):
     def test_no_state_updates_when_no_json(self):
         """Test that no state updates are available when no JSON response"""
         # Create response without structured response
-        gemini_response = GeminiResponse(
+        gemini_response = LLMResponse(
             narrative_text='Story with [STATE_UPDATES_PROPOSED]{"pc_data": {"gold": 200}}[END_STATE_UPDATES_PROPOSED]',
             structured_response=None,  # No JSON response
             debug_tags_present={},
@@ -100,7 +100,7 @@ class TestJSONModePreference(unittest.TestCase):
         """Test that strip_debug_content doesn't interfere with JSON state updates"""
         # Import strip_debug_content
 
-        strip_debug_content = GeminiResponse._strip_debug_content
+        strip_debug_content = LLMResponse._strip_debug_content
 
         # Text with debug content
         text_with_debug = """Story text here.
@@ -166,7 +166,7 @@ More story."""
             state_updates={"pc_data": {"exp": 200}},  # Different value
         )
 
-        response = GeminiResponse(
+        response = LLMResponse(
             narrative_text=narrative_with_embedded,
             structured_response=narrative_response,
             debug_tags_present={},

@@ -154,10 +154,10 @@ class TestStateUpdateIntegration(unittest.TestCase):
         )
         assert isinstance(state_updates, (dict, type(None)))
 
-    def test_gemini_service_state_update_processing(self):
-        """Test that Gemini service properly processes state updates"""
+    def test_llm_service_state_update_processing(self):
+        """Test that LLM service properly processes state updates"""
         # Following zero-tolerance skip pattern ban - provide basic implementation
-        # GeminiService would process state updates through structured response parsing
+        # The LLM service would process state updates through structured response parsing
         json_response = json.dumps(self.ai_response_with_state_updates)
         narrative_text, parsed_response = parse_structured_response(json_response)
 

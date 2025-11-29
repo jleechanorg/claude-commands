@@ -101,7 +101,7 @@ if not gemini_response_obj.has_valid_state_updates():
     handle_state_extraction_failure(raw_response)
 ```
 
-#### gemini_service.py:1142-1145 - Response Processing
+#### llm_service.py:1142-1145 - Response Processing
 ```python
 # Current implementation has no validation
 raw_response_text = _get_text_from_response(response)
@@ -240,6 +240,6 @@ PR #278 implements a solid architectural foundation but has critical gaps in err
 - `mvp_site/gemini_response.py:71-79` - Add fail-fast behavior
 - `mvp_site/narrative_response_schema.py:191-214` - Enhance JSON cleanup
 - `mvp_site/main.py:877` - Add state update validation
-- `mvp_site/gemini_service.py:1142-1145` - Add response validation
+- `mvp_site/llm_service.py:1142-1145` - Add response validation
 
 **Estimated Fix Time**: 4-6 hours for immediate fixes, 2-3 days for comprehensive solution.

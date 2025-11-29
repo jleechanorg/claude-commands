@@ -99,7 +99,7 @@ class TestUnifiedAPIStructure(unittest.TestCase):
         modules_to_clear = [
             "world_logic",
             "firestore_service",
-            "gemini_service",
+            "llm_service",
             "logging_util",
             "constants",
             "document_generator",
@@ -122,7 +122,7 @@ class TestUnifiedAPIStructure(unittest.TestCase):
             "constants",
             "document_generator",
             "firestore_service",
-            "gemini_service",
+            "llm_service",
             "logging_util",
             "structured_fields_utils",
             "custom_types",
@@ -316,7 +316,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     @patch("world_logic.firestore_service.get_campaign_by_id")
     @patch("world_logic.firestore_service.update_campaign_game_state")
     @patch("world_logic.firestore_service.add_story_entry")
-    @patch("world_logic.gemini_service.continue_story")
+    @patch("world_logic.llm_service.continue_story")
     @patch("world_logic._prepare_game_state")
     @patch("world_logic.get_user_settings")
     def test_sequence_id_calculation_bug_red_phase(
@@ -378,7 +378,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     @patch("world_logic.firestore_service.get_campaign_by_id")
     @patch("world_logic.firestore_service.update_campaign_game_state")
     @patch("world_logic.firestore_service.add_story_entry")
-    @patch("world_logic.gemini_service.continue_story")
+    @patch("world_logic.llm_service.continue_story")
     @patch("world_logic._prepare_game_state")
     @patch("world_logic.get_user_settings")
     def test_user_scene_number_field_red_phase(

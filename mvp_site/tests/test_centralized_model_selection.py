@@ -26,7 +26,7 @@ project_root = os.path.join(
 )
 sys.path.insert(0, project_root)
 
-from mvp_site.gemini_service import DEFAULT_MODEL, TEST_MODEL, _select_model_for_user
+from mvp_site.llm_service import DEFAULT_MODEL, TEST_MODEL, _select_model_for_user
 
 
 class TestCentralizedModelSelection(unittest.TestCase):

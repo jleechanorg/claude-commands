@@ -7,11 +7,11 @@
 - **Merge Target**: main
 
 ## Project Goal
-Refactor long methods in mvp_site (gemini_service.py, main.py, firestore_service.py) to improve code maintainability and testability.
+Refactor long methods in mvp_site (llm_service.py, main.py, firestore_service.py) to improve code maintainability and testability.
 
 ## Key Issues Found (Initial Analysis)
 
-### 1. gemini_service.py
+### 1. llm_service.py
 - **continue_story**: 268 lines (lines 427-695)
 - **get_initial_story**: 120 lines (lines 304-424)
 - **Duplicated debug instructions**: 30+ lines duplicated between get_initial_story and continue_story
@@ -28,16 +28,16 @@ Refactor long methods in mvp_site (gemini_service.py, main.py, firestore_service
 
 ## Refactoring Plan
 
-### Phase 1: Extract Debug Instructions Helper (gemini_service.py)
+### Phase 1: Extract Debug Instructions Helper (llm_service.py)
 1. Create `_build_debug_instructions()` method
    - Extract the 30+ line debug instruction block
    - Use in both get_initial_story and continue_story
    - Eliminate duplication
 
-### Phase 2: Create PromptBuilder Class (gemini_service.py)
+### Phase 2: Create PromptBuilder Class (llm_service.py)
 1. New class to encapsulate prompt building logic
 
-### Phase 3: Break Down continue_story (gemini_service.py)
+### Phase 3: Break Down continue_story (llm_service.py)
 1. Extract methods:
    - `_validate_checkpoint_consistency()`
    - `_prepare_entity_tracking()`
@@ -63,7 +63,7 @@ Refactor long methods in mvp_site (gemini_service.py, main.py, firestore_service
 ## Implementation Summary
 
 ### Methods Refactored
-1. **gemini_service.py**:
+1. **llm_service.py**:
    - `continue_story`: 268 → 136 lines (49% reduction)
    - `get_initial_story`: Extracted debug instructions helper
 
@@ -74,12 +74,12 @@ Refactor long methods in mvp_site (gemini_service.py, main.py, firestore_service
    - `update_state_with_changes`: 59 → 39 lines (34% reduction)
 
 ### Helper Classes Created
-1. **PromptBuilder** (gemini_service.py) - 8 methods
+1. **PromptBuilder** (llm_service.py) - 8 methods
 2. **StateHelper** (main.py) - 5 methods
 3. **MissionHandler** (firestore_service.py) - 5 methods
 
 ### Helper Functions Extracted
-- **gemini_service.py**: 7 helper functions
+- **llm_service.py**: 7 helper functions
 - **main.py**: 8 helper functions
 - **firestore_service.py**: 4 helper functions
 
@@ -96,7 +96,7 @@ Total: 28+ helper methods extracted
 
 ### Detailed Coverage by Module
 
-#### gemini_service.py - 100% Coverage ✅
+#### llm_service.py - 100% Coverage ✅
 All refactored components have test coverage:
 
 | Component | Status | Test File |
@@ -165,7 +165,7 @@ Core classes fully covered, Flask-dependent helpers partially covered:
 
 #### ✅ Fully Covered Components:
 1. **All three helper classes** (PromptBuilder, StateHelper, MissionHandler)
-2. **All extracted helper functions** in gemini_service.py
+2. **All extracted helper functions** in llm_service.py
 3. **All extracted helper functions** in firestore_service.py
 4. **Core state manipulation methods** in main.py
 
@@ -279,10 +279,10 @@ The uncovered items in main.py are Flask route helpers that:
 ## Merge from Main (2025-07-02)
 
 ### Merge Summary
-- **Commit**: 5d447dc - Merge main and resolve conflicts in firestore_service.py and gemini_service.py
+- **Commit**: 5d447dc - Merge main and resolve conflicts in firestore_service.py and llm_service.py
 - **Conflicts Resolved**:
   - firestore_service.py - Mission handling logic conflicts
-  - gemini_service.py - Prompt loading and DELETE token changes
+  - llm_service.py - Prompt loading and DELETE token changes
 - **Changes Incorporated**:
   - Fix DELETE token processing (#210)
   - Documentation updates (business plan, banned names)
@@ -317,7 +317,7 @@ The uncovered items in main.py are Flask route helpers that:
 
 3. **Test Coverage**:
    - Added 49 new unit tests
-   - 100% coverage on gemini_service.py refactored code
+   - 100% coverage on llm_service.py refactored code
    - 100% coverage on firestore_service.py refactored code
    - 50% coverage on main.py (Flask-dependent methods tested via integration)
 
@@ -348,12 +348,12 @@ The uncovered items in main.py are Flask route helpers that:
 - **Overall Coverage**: 34% (not 20% as previously reported)
 - **Individual File Coverage**:
   - firestore_service.py: 65%
-  - gemini_service.py: 43%
+  - llm_service.py: 43%
   - game_state.py: 56%
   - main.py: 2%
 - **Note**: Previous coverage report was incomplete - only ran a subset of tests
 - **Refactored Code Coverage**: Near 100%
-  - gemini_service.py: 100% of refactored components
+  - llm_service.py: 100% of refactored components
   - firestore_service.py: 100% of refactored components
   - main.py: 100% of core logic, Flask route helpers excluded
 

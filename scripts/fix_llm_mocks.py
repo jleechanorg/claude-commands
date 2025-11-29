@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to fix all gemini service mocks to return GeminiResponse objects instead of tuples.
+Script to fix all gemini service mocks to return LLMResponse objects instead of tuples.
 """
 
 import os
@@ -19,23 +19,23 @@ def fix_file_mocks(file_path):
 
     def replace_tuple_mock(match):
         ai_response_var = match.group(1)
-        return f"""return_value=mock_gemini_response)
+        return f"""return_value=mock_llm_response)
 
-        # Create mock GeminiResponse object before the patch
-        mock_gemini_response = MagicMock()
-        mock_gemini_response.narrative_text = {ai_response_var}
-        mock_gemini_response.debug_tags_present = {{'dm_notes': True, 'dice_rolls': True, 'state_changes': True}}
-        mock_gemini_response.state_updates = {{}}
+        # Create mock LLMResponse object before the patch
+        mock_llm_response = MagicMock()
+        mock_llm_response.narrative_text = {ai_response_var}
+        mock_llm_response.debug_tags_present = {{'dm_notes': True, 'dice_rolls': True, 'state_changes': True}}
+        mock_llm_response.state_updates = {{}}
 
-        with patch('gemini_service.continue_story', """
+        with patch('llm_service.continue_story', """
 
     # Replace the patterns
     new_content = re.sub(tuple_pattern, replace_tuple_mock, content)
 
     # Fix any issues with the replacement
     new_content = new_content.replace(
-        "with patch('gemini_service.continue_story', return_value=mock_gemini_response)\n        \n        # Create mock GeminiResponse",
-        "# Create mock GeminiResponse object\n        mock_gemini_response = MagicMock()\n        mock_gemini_response.narrative_text = ai_response\n        mock_gemini_response.debug_tags_present = {'dm_notes': True, 'dice_rolls': True, 'state_changes': True}\n        mock_gemini_response.state_updates = {}\n        \n        with patch('gemini_service.continue_story', return_value=mock_gemini_response",
+        "with patch('llm_service.continue_story', return_value=mock_gemini_response)\n        \n        # Create mock LLMResponse",
+        "# Create mock LLMResponse object\n        mock_llm_response = MagicMock()\n        mock_llm_response.narrative_text = ai_response\n        mock_llm_response.debug_tags_present = {'dm_notes': True, 'dice_rolls': True, 'state_changes': True}\n        mock_llm_response.state_updates = {}\n        \n        with patch('llm_service.continue_story', return_value=mock_llm_response",
     )
 
     # Write back

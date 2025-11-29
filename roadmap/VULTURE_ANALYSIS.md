@@ -18,7 +18,7 @@ json.dumps(data, default=json_datetime_serializer)
 
 ## Additional Dead Code Found (All Unused Imports)
 
-1. **mvp_site/gemini_service.py:25** - `unused import 'EntityManifest'` (90% confidence)
+1. **mvp_site/llm_service.py:25** - `unused import 'EntityManifest'` (90% confidence)
    - Imported as alias: `from entity_tracking import SceneManifest as EntityManifest`
    - Never used in the file
 

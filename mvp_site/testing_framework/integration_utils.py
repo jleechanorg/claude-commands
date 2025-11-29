@@ -166,7 +166,7 @@ class SmartPatcher:
 
         Args:
             **service_patches: Dict mapping service names to mock objects
-                              e.g., gemini_service=mock_gemini
+                              e.g., llm_service=mock_gemini
         """
         self.service_patches = service_patches
         self.provider = get_service_provider()
@@ -205,7 +205,7 @@ def smart_patch(**service_patches):
     """Smart patching that only applies in mock mode.
 
     Usage:
-        with smart_patch(gemini_service=None, firestore_service=None):
+        with smart_patch(llm_service=None, firestore_service=None):
             # Code works in both mock and real mode
             # In mock mode: services are patched with framework mocks
             # In real mode: no patching, uses real services

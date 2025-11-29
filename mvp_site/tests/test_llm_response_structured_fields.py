@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for GeminiResponse handling of structured fields.
+Unit tests for LLMResponse handling of structured fields.
 Tests parsing of raw JSON responses containing structured fields.
 """
 
@@ -14,12 +14,12 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
-class TestGeminiResponseStructuredFields(unittest.TestCase):
-    """Test GeminiResponse parsing of structured fields from raw JSON"""
+class TestLLMResponseStructuredFields(unittest.TestCase):
+    """Test LLMResponse parsing of structured fields from raw JSON"""
 
     def setUp(self):
         """Set up test fixtures"""
@@ -60,9 +60,9 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
 
-        # Verify GeminiResponse has the structured_response
+        # Verify LLMResponse has the structured_response
         assert response.structured_response is not None
         assert isinstance(response.structured_response, NarrativeResponse)
 
@@ -99,7 +99,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
         structured = response.structured_response
 
         # Present fields should have values
@@ -124,7 +124,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
         structured = response.structured_response
 
         # All fields should exist with empty values
@@ -152,7 +152,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
         structured = response.structured_response
 
         # Null fields should be converted to appropriate defaults
@@ -171,7 +171,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
         structured = response.structured_response
 
         # The implementation now converts invalid types to empty list
@@ -200,7 +200,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
         structured = response.structured_response
 
         # Complex debug info should be preserved
@@ -241,7 +241,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
         structured = response.structured_response
 
         # Special characters should be preserved
@@ -279,7 +279,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
             }
         )
 
-        response = GeminiResponse.create(raw_response)
+        response = LLMResponse.create(raw_response)
         structured = response.structured_response
 
         # Long content should be preserved

@@ -19,7 +19,7 @@ _ALIAS_MODULES = {
         "logging_util",
         "entity_preloader",
         "entity_validator",
-        "gemini_service",
+        "llm_service",
         "memory_mcp_real",
         "robust_json_parser",
         "world_loader",

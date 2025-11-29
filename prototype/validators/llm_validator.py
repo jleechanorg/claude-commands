@@ -68,7 +68,7 @@ class LLMValidator(BaseValidator):
 
     def __init__(
         self,
-        gemini_service=None,
+        llm_service=None,
         use_simple_prompt=False,
         api_key_path=None,
         timeout=30.0,
@@ -77,20 +77,20 @@ class LLMValidator(BaseValidator):
     ):
         super().__init__("LLMValidator")
         self.logger = setup_logging(self.name)
-        self.gemini_service = gemini_service
+        self.llm_service = llm_service
         self.use_simple_prompt = use_simple_prompt
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 
         # Initialize Gemini if not provided
-        if not self.gemini_service and api_key_path:
+        if not self.llm_service and api_key_path:
             try:
-                self._init_gemini_service(api_key_path)
+                self._init_llm_service(api_key_path)
             except Exception as e:
                 self.logger.warning(f"Failed to initialize Gemini service: {e}")
 
-    def _init_gemini_service(self, api_key_path):
+    def _init_llm_service(self, api_key_path):
         """Initialize Gemini service from API key file."""
         try:
             # Import here to avoid dependency if not using real API
@@ -102,7 +102,7 @@ class LLMValidator(BaseValidator):
             # Configure Gemini
             genai.configure(api_key=api_key)
             self.model = genai.GenerativeModel("gemini-pro")
-            self.gemini_service = self.model
+            self.llm_service = self.model
             self.logger.info("Gemini service initialized successfully")
 
         except ImportError:
@@ -317,12 +317,12 @@ class LLMValidator(BaseValidator):
 
         for attempt in range(self.max_retries):
             try:
-                if self.gemini_service:
+                if self.llm_service:
                     # Real API call with timeout
 
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
-                            self.gemini_service.generate_content, prompt
+                            self.llm_service.generate_content, prompt
                         )
 
                         try:

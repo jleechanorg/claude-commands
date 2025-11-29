@@ -18,7 +18,7 @@ from pathlib import Path
 # Internal mvp_site modules that should be package-qualified
 INTERNAL_MODULES = {
     "constants", "logging_util", "custom_types", "game_state",
-    "firestore_service", "world_logic", "decorators", "gemini_service",
+    "firestore_service", "world_logic", "decorators", "llm_service",
     "document_generator", "entity_tracking", "entity_validator",
     "entity_preloader", "entity_instructions", "entity_utils",
     "json_utils", "prompt_utils", "token_utils", "world_loader",

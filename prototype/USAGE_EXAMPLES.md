@@ -70,11 +70,11 @@ result = validator.validate(narrative, ["Gideon", "Rowan"])
 
 ```python
 from prototype.validators.llm_validator import LLMValidator
-from prototype.gemini_service_wrapper import get_gemini_service
+from prototype.llm_service_wrapper import get_llm_service
 
 # With real API
-service = get_gemini_service("path/to/api_key.txt")
-validator = LLMValidator(gemini_service=service)
+service = get_llm_service("path/to/api_key.txt")
+validator = LLMValidator(llm_service=service)
 
 # Or with mock for testing
 validator = LLMValidator()  # Uses mock service

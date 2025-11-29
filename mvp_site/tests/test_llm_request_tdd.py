@@ -1,13 +1,13 @@
 """
-Test-Driven Development for GeminiRequest Class
+Test-Driven Development for LLMRequest Class
 
 This test defines the proper structured JSON that should be sent directly to Gemini API
 instead of being converted back to concatenated string blobs. The tests will initially
-FAIL until we implement the GeminiRequest class properly.
+FAIL until we implement the LLMRequest class properly.
 
 RED -> GREEN -> REFACTOR approach:
 1. RED: Tests fail because current implementation converts JSON back to strings
-2. GREEN: Implement GeminiRequest class that sends actual JSON to Gemini
+2. GREEN: Implement LLMRequest class that sends actual JSON to Gemini
 3. REFACTOR: Remove old json_input_schema approach
 """
 
@@ -24,13 +24,13 @@ os.environ["TESTING"] = "true"
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from mvp_site import gemini_service
+from mvp_site import llm_service
 from mvp_site.game_state import GameState
 
 
-class TestGeminiRequestTDD(unittest.TestCase):
+class TestLLMRequestTDD(unittest.TestCase):
     """
-    TDD tests for GeminiRequest class that sends actual JSON to Gemini API.
+    TDD tests for LLMRequest class that sends actual JSON to Gemini API.
 
     These tests define the EXPECTED behavior: structured JSON fields should be
     sent directly to Gemini API, not converted to concatenated strings.
@@ -73,12 +73,12 @@ class TestGeminiRequestTDD(unittest.TestCase):
             },
         ]
 
-    @patch("gemini_service.get_client")  # Mock client to prevent API key requirement
-    @patch("gemini_service._get_text_from_response")
+    @patch("mvp_site.llm_service.get_client")  # Mock client to prevent API key requirement
+    @patch("mvp_site.llm_service._get_text_from_response")
     @patch(
-        "gemini_service._call_gemini_api_with_model_cycling"
+        "mvp_site.llm_service._call_llm_api_with_model_cycling"
     )  # Mock the underlying API
-    @patch("gemini_service._call_gemini_api")  # Mock planning block API calls
+    @patch("mvp_site.llm_service._call_llm_api")  # Mock planning block API calls
     def test_continue_story_sends_structured_json_to_gemini(
         self, mock_planning_api, mock_api_call, mock_get_text, mock_get_client
     ):
@@ -103,7 +103,7 @@ class TestGeminiRequestTDD(unittest.TestCase):
         mock_get_text.return_value = '{"narrative": "You continue your adventure..."}'
 
         # Act: Call continue_story (this will currently FAIL the assertions)
-        result = gemini_service.continue_story(
+        result = llm_service.continue_story(
             user_input="I look for hidden passages",
             mode="character",
             story_context=self.mock_story_context,
@@ -116,7 +116,7 @@ class TestGeminiRequestTDD(unittest.TestCase):
         self.assertTrue(mock_api_call.called, "Gemini API should have been called")
 
         # Get the actual call arguments - we want the MAIN story API call, not planning block
-        # The main call should be to _call_gemini_api_with_model_cycling with structured JSON
+        # The main call should be to _call_llm_api_with_model_cycling with structured JSON
         call_args = mock_api_call.call_args
 
         # The EXPECTED behavior: First argument should be structured JSON dict, not string list
@@ -212,7 +212,7 @@ class TestGeminiRequestTDD(unittest.TestCase):
         os.environ["MOCK_SERVICES_MODE"] = "true"
 
         # Act: Call get_initial_story in mock mode
-        result = gemini_service.get_initial_story(
+        result = llm_service.get_initial_story(
             prompt="I am a brave warrior seeking adventure",
             user_id="test-user-123",
             selected_prompts=["character", "narrative"],
@@ -220,7 +220,7 @@ class TestGeminiRequestTDD(unittest.TestCase):
             use_default_world=False,
         )
 
-        # Assert: Verify the function returns a valid GeminiResponse
+        # Assert: Verify the function returns a valid LLMResponse
         self.assertIsNotNone(result, "Function should return a result")
 
         # Verify the result has the expected structure
@@ -251,21 +251,21 @@ class TestGeminiRequestTDD(unittest.TestCase):
 
     def test_gemini_request_class_exists(self):
         """
-        FAILING TEST: Verify GeminiRequest class exists and has expected methods.
+        FAILING TEST: Verify LLMRequest class exists and has expected methods.
 
-        This test will FAIL until we create the GeminiRequest class.
+        This test will FAIL until we create the LLMRequest class.
         """
         # This import will FAIL until we create the class
         try:
-            from mvp_site.gemini_request import GeminiRequest
+            from mvp_site.llm_request import LLMRequest
 
             # Test that the class has the expected methods
-            self.assertTrue(hasattr(GeminiRequest, "build_story_continuation"))
-            self.assertTrue(hasattr(GeminiRequest, "build_initial_story"))
-            self.assertTrue(hasattr(GeminiRequest, "to_json"))
+            self.assertTrue(hasattr(LLMRequest, "build_story_continuation"))
+            self.assertTrue(hasattr(LLMRequest, "build_initial_story"))
+            self.assertTrue(hasattr(LLMRequest, "to_json"))
 
         except ImportError:
-            self.fail("GeminiRequest class should exist in gemini_request.py")
+            self.fail("LLMRequest class should exist in llm_request.py")
 
 
 if __name__ == "__main__":

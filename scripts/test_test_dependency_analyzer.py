@@ -35,8 +35,8 @@ class TestDependencyAnalyzerTests(unittest.TestCase):
         self.assertIn("test_main_*.py", tests)
         self.assertIn("test_api_*.py", tests)
 
-        # Test gemini_service.py mapping
-        tests = self.analyzer.find_matching_tests("gemini_service.py")
+        # Test llm_service.py mapping
+        tests = self.analyzer.find_matching_tests("llm_service.py")
         self.assertIn("test_gemini_*.py", tests)
         self.assertIn("test_json_*.py", tests)
 
@@ -79,7 +79,7 @@ class TestDependencyAnalyzerTests(unittest.TestCase):
 
     def test_analyze_changes(self):
         """Test full change analysis workflow."""
-        changed_files = ["main.py", "gemini_service.py"]
+        changed_files = ["main.py", "llm_service.py"]
         selected_tests = self.analyzer.analyze_changes(changed_files)
 
         # Should have selected some tests
@@ -159,7 +159,7 @@ def main():
     analyzer = DependencyAnalyzer()
 
     # Test with sample changes
-    test_changes = ["main.py", "gemini_service.py", "frontend_v2/test.tsx"]
+    test_changes = ["main.py", "llm_service.py", "frontend_v2/test.tsx"]
     selected_tests = analyzer.analyze_changes(test_changes)
 
     print(f"Sample analysis: {len(test_changes)} changed files -> {len(selected_tests)} selected tests")

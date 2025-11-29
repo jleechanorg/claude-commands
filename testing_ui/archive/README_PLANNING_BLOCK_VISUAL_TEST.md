@@ -81,5 +81,5 @@ If the test fails:
 ## Related Files
 
 - `mvp_site/static/js/game.js` - Frontend rendering logic
-- `mvp_site/gemini_service.py` - Backend structured response generation
+- `mvp_site/llm_service.py` - Backend structured response generation
 - `testing_ui/mock_services.py` - Mock service planning block generation

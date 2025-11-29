@@ -30,7 +30,7 @@ The user's selections are captured but not shown back after character creation c
 **Need**: Ensure user choices are stored in campaign data
 
 ### 2. Character Creation Response Enhancement
-**File**: `mvp_site/gemini_service.py` or `mvp_site/world_logic.py`
+**File**: `mvp_site/llm_service.py` or `mvp_site/world_logic.py`
 **Need**: Include user's original choices in character creation response
 
 ### 3. Display Template Updates

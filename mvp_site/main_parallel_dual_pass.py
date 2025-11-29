@@ -9,7 +9,7 @@ from flask import jsonify, request
 
 from mvp_site import logging_util
 from mvp_site.dual_pass_generator import EntityInjector, dual_pass_generator
-from mvp_site.gemini_service import generate_content
+from mvp_site.llm_service import generate_content
 
 
 def add_parallel_dual_pass_routes(app, get_campaign_info):

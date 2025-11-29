@@ -10,15 +10,8 @@ from typing import Any
 from .data_fixtures import SAMPLE_AI_RESPONSES
 from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE, GOD_MODE_RESPONSE
 
-try:
-    pass  # Import already handled above
-except ImportError:
-    # Fallback if fixtures not available
-    FULL_STRUCTURED_RESPONSE = None
-    GOD_MODE_RESPONSE = None
 
-
-class MockGeminiResponse:
+class MockLLMResponse:
     """Mock response object that mimics the real Gemini API response."""
 
     def __init__(self, text: str):
@@ -28,7 +21,7 @@ class MockGeminiResponse:
         return self.text
 
 
-class MockGeminiClient:
+class MockLLMClient:
     """
     Mock Gemini client that simulates AI responses based on prompt patterns.
     Designed to behave like the real Gemini API for testing purposes.
@@ -49,7 +42,7 @@ class MockGeminiClient:
             "validation_prompt": self._generate_validation_response,
         }
 
-    def generate_content(self, prompt_parts, model: str = None) -> MockGeminiResponse:
+    def generate_content(self, prompt_parts, model: str = None) -> MockLLMResponse:
         """
         Generate content based on prompt patterns.
 
@@ -58,7 +51,7 @@ class MockGeminiClient:
             model: Model name (ignored in mock)
 
         Returns:
-            MockGeminiResponse with appropriate text
+            MockLLMResponse with appropriate text
         """
         self.call_count += 1
 
@@ -74,7 +67,7 @@ class MockGeminiClient:
         response_type = self._determine_response_type(full_prompt)
         response_text = self.response_patterns[response_type](full_prompt)
 
-        return MockGeminiResponse(response_text)
+        return MockLLMResponse(response_text)
 
     def _determine_response_type(self, prompt: str) -> str:
         """Determine what type of response to generate based on prompt content."""
@@ -218,7 +211,7 @@ Which option would you prefer? (1, 2, or 3)""",
 
 
 # Global mock instance for easy testing
-mock_gemini_client = MockGeminiClient()
+mock_gemini_client = MockLLMClient()
 
 
 def get_mock_client():
