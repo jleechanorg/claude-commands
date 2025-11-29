@@ -27,8 +27,8 @@ def enforce_preventive_guards(
 
     _fill_god_mode_response(mode, llm_response, extras)
 
-    dice_rolls = getattr(llm_response, "dice_rolls", []) or []
-    resources = getattr(llm_response, "resources", "") or ""
+    dice_rolls = getattr(llm_response, "dice_rolls", [])
+    resources = getattr(llm_response, "resources", "")
 
     if dice_rolls or resources:
         _ensure_world_time(state_changes, game_state)
@@ -101,4 +101,3 @@ def _ensure_resource_checkpoint(state_changes: dict[str, Any], resources: str) -
     resource_state = state_changes.setdefault("world_resources", {})
     if isinstance(resource_state, dict):
         resource_state["last_note"] = resources
-
