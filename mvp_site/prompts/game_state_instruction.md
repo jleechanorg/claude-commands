@@ -123,7 +123,8 @@ Every response you generate MUST be valid JSON with this exact structure:
   - **CRITICAL: Use code execution for ALL dice rolls to ensure true randomness**
   - When you need to roll dice, use the code execution tool provided by Gemini to run Python code like: `import random; random.randint(1, 20)`. Do not generate dice results manually.
   - Include the code execution result in the `dice_rolls` array of your JSON response.
-  - Example results: ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"]
+  - Always state the DC or target number you were rolling against (e.g., "vs DC 15" or "vs AC 17"), including for social checks, saves, and contested rolls.
+  - Example results: ["Perception check: 1d20+3 = 15+3 = 18 vs DC 15 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 vs AC 14 (Hit)"]
   - Empty array [] if no dice rolls this turn
   - **NEVER generate dice results without code execution** - use actual random.randint() for fairness
 - `resources`: (string) Resource tracking in "remaining/total" format - ALWAYS VISIBLE TO PLAYERS

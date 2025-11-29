@@ -498,8 +498,8 @@ def _build_debug_instructions() -> str:
         "2. **DICE ROLLS**: Show ALL dice rolls throughout your response:\n"
         "   - **During Narrative**: Show important rolls (skill checks, saving throws, random events) using [DEBUG_ROLL_START] and [DEBUG_ROLL_END] tags\n"
         "   - **During Combat**: Show ALL combat rolls including attack rolls, damage rolls, initiative, saving throws, and any other dice mechanics\n"
-        "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END]\n"
-        "   - Include both the dice result and the final total with modifiers\n"
+        "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 vs DC 15 (Success)[DEBUG_ROLL_END]\n"
+        "   - Include both the dice result and the final total with modifiers, **and always state the DC/target you rolled against** (e.g., 'vs DC 15' or 'vs AC 17')\n"
         "\n"
         "3. **RESOURCES USED**: Track resources expended during the scene:\n"
         "   - Format: [DEBUG_RESOURCES_START]Resources: 1 HD used (2/3 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
@@ -1457,6 +1457,8 @@ def _select_model_for_user(user_id: UserId | None) -> str:
 
         user_preferred_model = user_settings.get("gemini_model")
 
+        fallback_reason = None
+
         # First check if we need to redirect legacy models via mapping
         # This allows "gemini-2.5-flash" -> "gemini-3-pro-preview" auto-redirect
         if user_preferred_model and user_preferred_model in constants.GEMINI_MODEL_MAPPING:
@@ -1472,25 +1474,20 @@ def _select_model_for_user(user_id: UserId | None) -> str:
             # Validate the MAPPED model against allowed models
             if mapped_model in constants.ALLOWED_GEMINI_MODELS:
                 return mapped_model
-            else:
-                # Mapping exists but target is not allowed (shouldn't happen with proper config)
-                logging_util.warning(
-                    f"Mapped model '{mapped_model}' not in allowed models, using default"
-                )
-                return DEFAULT_MODEL
 
-        # Direct validation for models not in mapping
-        if (
-            user_preferred_model
-            and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
-        ):
+            fallback_reason = (
+                f"Mapped model '{mapped_model}' not in allowed models, using default"
+            )
+        elif user_preferred_model and user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
+            # Direct validation for models not in mapping
             return user_preferred_model
-        else:
-            if user_preferred_model:
-                logging_util.warning(
-                    f"Invalid user model preference: {user_preferred_model}"
-                )
-            return DEFAULT_MODEL
+        elif user_preferred_model is not None:
+            fallback_reason = f"Invalid user model preference: {user_preferred_model}"
+
+        if fallback_reason:
+            logging_util.warning(fallback_reason)
+
+        return DEFAULT_MODEL
     except (KeyError, AttributeError, ValueError) as e:
         logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
         return DEFAULT_MODEL
