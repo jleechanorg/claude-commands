@@ -124,10 +124,10 @@ class MockGameState:
             }
 
 
-# Integration example for gemini_service.py
+# Integration example for llm_service.py
 class NarrativeValidationMixin:
     """
-    Mixin for gemini_service.py to add validation.
+    Mixin for llm_service.py to add validation.
     Would be integrated into the actual service.
     """
 

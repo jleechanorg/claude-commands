@@ -80,7 +80,7 @@
 #### Task 4: Remove Legacy Regex (30 min)
 **Objective**: Replace text pattern matching with JSON-based detection
 
-**Target**: `mvp_site/gemini_service.py:1044`
+**Target**: `mvp_site/llm_service.py:1044`
 ```python
 # Current (legacy):
 if re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE):
@@ -117,7 +117,7 @@ TESTING=true python mvp_site/tests/test_character_extraction_regex_bug.py
 ### **High Impact** (Major changes)
 - `mvp_site/main.py` - Extract helper method
 - `mvp_site/static/js/campaign-wizard.js` - Remove old wizard
-- `mvp_site/gemini_service.py` - Remove regex pattern
+- `mvp_site/llm_service.py` - Remove regex pattern
 
 ### **Medium Impact** (Content updates)
 - `mvp_site/prompts/mechanics_system_instruction.md` - Terminology

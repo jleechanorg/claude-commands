@@ -18,7 +18,7 @@ WorldArchitect.AI is an AI-powered tabletop RPG platform that serves as a digita
 
 - **`main.py`**: Flask application entry point with API routes
 - **`game_state.py`**: Campaign state management, combat system, data migrations
-- **`gemini_service.py`**: AI integration with context management and personality-driven responses
+- **`llm_service.py`**: AI integration with context management and personality-driven responses
 - **`firestore_service.py`**: Database operations and real-time synchronization
 - **`document_generator.py`**: Export campaigns to PDF/DOCX/TXT formats
 
@@ -45,7 +45,7 @@ worldarchitect.ai/
 ├── mvp_site/                    # Main application
 │   ├── main.py                  # Flask routes and application factory
 │   ├── game_state.py           # Core state management
-│   ├── gemini_service.py       # AI service integration
+│   ├── llm_service.py       # AI service integration
 │   ├── firestore_service.py    # Database layer
 │   ├── document_generator.py   # Export functionality
 │   ├── constants.py            # Shared constants

@@ -684,7 +684,7 @@ def create_generic_json_instruction() -> str:
 
 
 def create_structured_prompt_injection(
-    manifest_text: str, expected_entities: list[str]
+    manifest_text: str, expected_entities: list[str] | None
 ) -> str:
     """
     Create structured prompt injection for JSON response format
@@ -696,6 +696,8 @@ def create_structured_prompt_injection(
     Returns:
         Formatted prompt injection string
     """
+    expected_entities = expected_entities or []
+
     if expected_entities:
         # Use full entity tracking instruction when entities are present
         instruction = EntityTrackingInstruction.create_from_manifest(

@@ -26,7 +26,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site import gemini_service
+from mvp_site import llm_service
 from google.genai import types
 
 
@@ -41,7 +41,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
         includes the code_execution tool which allows Gemini to run actual
         Python code (random.randint) instead of inferring dice results.
         """
-        with patch("mvp_site.gemini_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_service.get_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
 
@@ -53,7 +53,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
             )
 
             # Call the API function
-            gemini_service._call_gemini_api_with_model_cycling(
+            llm_service._call_llm_api_with_model_cycling(
                 ["test prompt"], "gemini-3-pro-preview", "test logging"
             )
 
@@ -168,7 +168,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
         - Temperature settings
         - Safety settings
         """
-        with patch("mvp_site.gemini_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_service.get_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
 
@@ -178,7 +178,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
                 )
             )
 
-            gemini_service._call_gemini_api_with_model_cycling(
+            llm_service._call_llm_api_with_model_cycling(
                 ["test prompt"], "gemini-3-pro-preview", "test logging"
             )
 
@@ -194,13 +194,13 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
 
             self.assertEqual(
                 config_obj.max_output_tokens,
-                gemini_service.JSON_MODE_MAX_OUTPUT_TOKENS,
+                llm_service.JSON_MODE_MAX_OUTPUT_TOKENS,
                 "FAIL: Token limit not preserved after adding code_execution"
             )
 
             self.assertEqual(
                 config_obj.temperature,
-                gemini_service.TEMPERATURE,
+                llm_service.TEMPERATURE,
                 "FAIL: Temperature not preserved after adding code_execution"
             )
 

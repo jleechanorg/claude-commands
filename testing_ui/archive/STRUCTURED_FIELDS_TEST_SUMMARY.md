@@ -23,7 +23,7 @@ I've created a comprehensive browser test for validating all 10 structured respo
   - `GOD_MODE_RESPONSE` - God mode specific response
   - `MINIMAL_STRUCTURED_RESPONSE` - Response with minimal fields
 
-- **File**: `mvp_site/mocks/mock_gemini_service_wrapper.py` (UPDATED)
+- **File**: `mvp_site/mocks/mock_llm_service_wrapper.py` (UPDATED)
 - **Changes**: Fixed planning_block to use JSON format instead of deprecated string format
 
 ### 3. The 10 Required Fields
@@ -97,7 +97,7 @@ USE_MOCK_GEMINI=true USE_MOCK_FIREBASE=true python test_structured_fields_browse
 ## File Locations
 - Core test: `/testing_ui/core_tests/test_structured_fields_browser.py`
 - Mock fixtures: `/mvp_site/mocks/structured_fields_fixtures.py`
-- Mock service: `/mvp_site/mocks/mock_gemini_service_wrapper.py`
+- Mock service: `/mvp_site/mocks/mock_llm_service_wrapper.py`
 - Screenshots: `/tmp/worldarchitectai/browser/`
 
 The test infrastructure is ready and will fully pass once the UI properly displays all 10 structured fields.

@@ -15,7 +15,7 @@ sys.path.insert(
 
 try:
     from mvp_site.game_state import GameState
-    from mvp_site.gemini_service import (
+    from mvp_site.llm_service import (
         NarrativeResponse,
         _validate_and_enforce_planning_block,
     )
@@ -41,10 +41,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         self.structured_response = MagicMock(spec=NarrativeResponse)
         self.structured_response.planning_block = None
 
-    @patch("gemini_service.logging_util", autospec=True)
-    @patch("gemini_service._call_gemini_api", autospec=True)
-    @patch("gemini_service._get_text_from_response", autospec=True)
-    @patch("gemini_service._parse_gemini_response", autospec=True)
+    @patch("mvp_site.llm_service.logging_util", autospec=True)
+    @patch("mvp_site.llm_service._call_llm_api", autospec=True)
+    @patch("mvp_site.llm_service._get_text_from_response", autospec=True)
+    @patch("mvp_site.llm_service._parse_gemini_response", autospec=True)
     def test_character_creation_detection_case_insensitive(
         self, mock_parse, mock_get_text, mock_call_api, mock_logging
     ):
@@ -89,10 +89,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
                         f"Character creation detection crashed with case variation: {e}"
                     )
 
-    @patch("gemini_service.logging_util")
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
-    @patch("gemini_service._parse_gemini_response")
+    @patch("mvp_site.llm_service.logging_util")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
+    @patch("mvp_site.llm_service._parse_gemini_response")
     def test_planning_block_regeneration_logging(
         self, mock_parse, mock_get_text, mock_call_api, mock_logging
     ):
@@ -130,8 +130,8 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             for call in mock_logging.info.call_args_list
         )
 
-    @patch("gemini_service.logging_util", autospec=True)
-    @patch("gemini_service._call_gemini_api", autospec=True)
+    @patch("mvp_site.llm_service.logging_util", autospec=True)
+    @patch("mvp_site.llm_service._call_llm_api", autospec=True)
     def test_planning_block_early_return_when_already_set(
         self, mock_call_api, mock_logging
     ):
@@ -162,10 +162,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         # Verify response_text is returned unchanged
         assert result == response_text
 
-    @patch("gemini_service.logging_util", autospec=True)
-    @patch("gemini_service._call_gemini_api", autospec=True)
-    @patch("gemini_service._get_text_from_response", autospec=True)
-    @patch("gemini_service._parse_gemini_response", autospec=True)
+    @patch("mvp_site.llm_service.logging_util", autospec=True)
+    @patch("mvp_site.llm_service._call_llm_api", autospec=True)
+    @patch("mvp_site.llm_service._get_text_from_response", autospec=True)
+    @patch("mvp_site.llm_service._parse_gemini_response", autospec=True)
     def test_planning_block_validation_success_logging(
         self, mock_parse, mock_get_text, mock_call_api, mock_logging
     ):
@@ -198,10 +198,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
         assert success_log_found, "Should log validation success"
 
-    @patch("gemini_service.logging_util")
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
-    @patch("gemini_service._parse_gemini_response")
+    @patch("mvp_site.llm_service.logging_util")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
+    @patch("mvp_site.llm_service._parse_gemini_response")
     def test_planning_block_validation_failure_logging(
         self, mock_parse, mock_get_text, mock_call_api, mock_logging
     ):
@@ -238,8 +238,8 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             )
             assert failure_log_found, f"Should log validation failure: {expected_log}"
 
-    @patch("gemini_service.logging_util")
-    @patch("gemini_service._call_gemini_api")
+    @patch("mvp_site.llm_service.logging_util")
+    @patch("mvp_site.llm_service._call_llm_api")
     def test_planning_block_exception_logging(self, mock_call_api, mock_logging):
         """Test planning block exception logging with traceback."""
         # Setup mock to raise exception
@@ -271,10 +271,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             )
             assert exception_log_found, f"Should log exception: {expected_log}"
 
-    @patch("gemini_service.logging_util")
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
-    @patch("gemini_service._parse_gemini_response")
+    @patch("mvp_site.llm_service.logging_util")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
+    @patch("mvp_site.llm_service._parse_gemini_response")
     def test_planning_block_source_logging(
         self, mock_parse, mock_get_text, mock_call_api, mock_logging
     ):
@@ -311,10 +311,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
         assert source_log_found, "Should log structured response usage"
 
-    @patch("gemini_service.logging_util")
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
-    @patch("gemini_service._parse_gemini_response")
+    @patch("mvp_site.llm_service.logging_util")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
+    @patch("mvp_site.llm_service._parse_gemini_response")
     def test_planning_block_parsing_logging(
         self, mock_parse, mock_get_text, mock_call_api, mock_logging
     ):
@@ -352,7 +352,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             )
             assert parsing_log_found, f"Should log parsing step: {expected_log}"
 
-    @patch("gemini_service.logging_util")
+    @patch("mvp_site.llm_service.logging_util")
     def test_fallback_logging(self, mock_logging):
         """Test fallback logging when exceptions occur."""
         # Create a response that will skip regeneration (already has planning block)
@@ -377,9 +377,9 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         # Should return original response without modification
         assert result == response_text
 
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
-    @patch("gemini_service._parse_gemini_response")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
+    @patch("mvp_site.llm_service._parse_gemini_response")
     def test_crash_safety_with_malformed_inputs(
         self, mock_parse, mock_get_text, mock_call_api
     ):
@@ -426,9 +426,9 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         except Exception as e:
             self.fail(f"Function crashed with malformed game state: {e}")
 
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
-    @patch("gemini_service._parse_gemini_response")
+    @patch("mvp_site.llm_service._call_llm_api")
+    @patch("mvp_site.llm_service._get_text_from_response")
+    @patch("mvp_site.llm_service._parse_gemini_response")
     def test_unicode_handling_in_logging(
         self, mock_parse, mock_get_text, mock_call_api
     ):

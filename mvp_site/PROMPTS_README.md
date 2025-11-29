@@ -147,7 +147,7 @@ Not all prompts are loaded for every request:
 2. **Define Scope**: Clearly scope the prompt's responsibility
 3. **Write Content**: Follow existing format and style
 4. **Test Integration**: Ensure compatibility with existing prompts
-5. **Update Loading**: Modify gemini_service.py to load new prompt
+5. **Update Loading**: Modify llm_service.py to load new prompt
 
 ### Modifying Existing Prompts
 1. **Backup Current**: Save current version before changes
@@ -228,7 +228,7 @@ The following prompts have been archived to `prompt_archive/` directory:
 ## Integration
 
 ### Code Integration
-- **Loading**: Handled by `gemini_service.py`
+- **Loading**: Handled by `llm_service.py`
 - **Caching**: Prompts are cached after first load
 - **Updates**: Require application restart to take effect
 - **Constants**: Prompt paths defined in `constants.py`

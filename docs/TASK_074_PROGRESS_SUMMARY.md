@@ -36,7 +36,7 @@
 ### Test Coverage Targets
 - **main.py**: 33% → 65% (404 missing statements)
 - **firestore_service.py**: 61% → 80% (100 missing statements)
-- **gemini_service.py**: 65% → 75% (221 missing statements)
+- **llm_service.py**: 65% → 75% (221 missing statements)
 - **game_state.py**: 91% → 95% (17 missing statements)
 
 ## Next Steps (When User Returns)

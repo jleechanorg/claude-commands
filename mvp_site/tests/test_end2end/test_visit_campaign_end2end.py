@@ -35,7 +35,7 @@ from tests.fake_firestore import FakeFirestoreClient
 from mvp_site.game_state import GameState
 
 # Import JSON input schema components
-# Legacy json_input_schema imports removed - using GeminiRequest now
+# Legacy json_input_schema imports removed - using LLMRequest now
 from tests.fake_services import FakeServiceManager
 
 
@@ -281,9 +281,9 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
 
     def test_json_input_validation_in_campaign_context(self):
         """Test JSON input validation in campaign visit context."""
-        # Legacy JSON input schema components removed - using GeminiRequest now
+        # Legacy JSON input schema components removed - using LLMRequest now
         self.assertTrue(
-            True, "JSON input schema components replaced with GeminiRequest"
+            True, "JSON input schema components replaced with LLMRequest"
         )
 
         # Legacy FakeServiceManager removed - using direct mocking
@@ -294,14 +294,14 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
 
     def test_json_input_validation_error_handling(self):
         """Test JSON input validation error handling in end2end context."""
-        # Legacy JSON input schema components removed - using GeminiRequest now
+        # Legacy JSON input schema components removed - using LLMRequest now
         self.assertTrue(
-            True, "JSON input schema components replaced with GeminiRequest"
+            True, "JSON input schema components replaced with LLMRequest"
         )
 
-        # Legacy JsonInputValidator removed - using GeminiRequest validation
-        result_valid = True  # GeminiRequest handles validation internally
-        self.assertTrue(result_valid, "GeminiRequest provides built-in validation")
+        # Legacy JsonInputValidator removed - using LLMRequest validation
+        result_valid = True  # LLMRequest handles validation internally
+        self.assertTrue(result_valid, "LLMRequest provides built-in validation")
 
 
 if __name__ == "__main__":

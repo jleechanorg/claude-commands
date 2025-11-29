@@ -24,7 +24,7 @@ Raw JSON is being displayed to the user in the game interface. Based on the file
 **Hypothesis**: The backend is returning the wrong format or structure
 **Evidence**: Logs show "STRUCTURED_GENERATION" and JSON response mode
 **Investigation Steps**:
-1. Check gemini_service.py response formatting
+1. Check llm_service.py response formatting
 2. Verify API response structure
 3. Look for response transformation logic
 
@@ -57,7 +57,7 @@ Raw JSON is being displayed to the user in the game interface. Based on the file
 ### Root Cause Identified
 The issue is in the entity tracking feature when JSON mode is enabled. When entity tracking is active:
 
-1. `gemini_service.py` line 1117: Sets `use_json_mode=True`
+1. `llm_service.py` line 1117: Sets `use_json_mode=True`
 2. Line 1118: `raw_response_text = _get_text_from_response(response)` gets the raw JSON
 3. Line 1121: `response_text = _process_structured_response(raw_response_text, expected_entities)` should extract the narrative
 4. However, the log shows "Coverage rate 0.00" which suggests the JSON parsing might be failing
@@ -107,7 +107,7 @@ The AI was returning JSON wrapped in markdown code blocks (` ```json ... ``` `) 
 
 ## Key Files to Fix
 - `mvp_site/narrative_response_schema.py` - Update `parse_structured_response` to handle failures better
-- `mvp_site/gemini_service.py` - Ensure `_process_structured_response` always returns narrative text
+- `mvp_site/llm_service.py` - Ensure `_process_structured_response` always returns narrative text
 
 ## Success Criteria
 - JSON should never be displayed to users

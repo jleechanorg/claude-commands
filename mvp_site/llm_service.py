@@ -1,5 +1,5 @@
 """
-Gemini Service - AI Integration and Response Processing
+LLM Service - AI Integration and Response Processing
 
 This module provides comprehensive AI service integration for WorldArchitect.AI,
 handling all aspects of story generation, prompt construction, and response processing.
@@ -24,7 +24,7 @@ Architecture:
 
 Key Classes:
 - PromptBuilder: Constructs system instructions and prompts
-- GeminiResponse: Custom response object with parsed data
+- LLMResponse: Custom response object with parsed data
 - EntityPreloader: Pre-loads entity context for tracking
 - EntityInstructionGenerator: Creates entity-specific instructions
 - DualPassGenerator: Retry mechanism for entity tracking
@@ -37,6 +37,7 @@ Dependencies:
 """
 
 import json
+import logging
 import os
 import re
 import sys
@@ -61,10 +62,10 @@ from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings, json_default_serializer
 from mvp_site.game_state import GameState
-from mvp_site.gemini_request import GeminiRequest
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_request import LLMRequest
+from mvp_site.llm_response import LLMResponse
 
-# Removed old json_input_schema import - now using GeminiRequest for structured JSON
+# Removed old json_input_schema import - now using LLMRequest for structured JSON
 from mvp_site.narrative_response_schema import (
     NarrativeResponse,
     create_structured_prompt_injection,
@@ -79,6 +80,9 @@ from mvp_site.world_loader import load_world_content_for_system_instruction
 logging_util.basicConfig(
     level=logging_util.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+# Create module logger
+logger = logging.getLogger(__name__)
 
 # Initialize entity tracking mitigation modules
 entity_preloader = EntityPreloader()
@@ -553,8 +557,25 @@ def _prepare_entity_tracking(
         game_state._manifest_cache[manifest_cache_key] = entity_manifest
         logging_util.debug("Created new entity manifest")
 
-    entity_manifest_text = entity_manifest.to_prompt_format()
-    expected_entities = entity_manifest.get_expected_entities()
+    if entity_manifest is None:
+        # CI safety: some test fixtures can yield a None manifest; skip entity tracking in that case
+        logging_util.warning(
+            "Entity manifest generation returned None; skipping entity tracking for this turn"
+        )
+        entity_manifest_text = ""
+        expected_entities: list[str] = []
+    else:
+        try:
+            entity_manifest_text = entity_manifest.to_prompt_format()
+        except Exception as e:
+            logging_util.error(f"Entity manifest to_prompt_format() failed: {e}")
+            entity_manifest_text = ""
+
+        try:
+            expected_entities = entity_manifest.get_expected_entities() or []
+        except Exception as e:
+            logging_util.error(f"Entity manifest get_expected_entities() failed: {e}")
+            expected_entities = []
 
     # Always add structured response format instruction (for both entity tracking and general JSON response)
     entity_tracking_instruction = create_structured_prompt_injection(
@@ -788,20 +809,20 @@ def _log_token_count(
         logging_util.warning(f"Could not count tokens before API call: {e}")
 
 
-def _call_gemini_api_with_gemini_request(
-    gemini_request: GeminiRequest,
+def _call_llm_api_with_llm_request(
+    gemini_request: LLMRequest,
     model_name: str,
     system_instruction_text: str | None = None,
 ) -> Any:
     """
-    Calls Gemini API with structured JSON from GeminiRequest.
+    Calls LLM API with structured JSON from LLMRequest.
 
     This function sends the JSON structure to Gemini API as a formatted string.
     The Gemini API expects string content, so we convert the structured data
     to a JSON string for proper communication.
 
     Args:
-        gemini_request: GeminiRequest object with structured data
+        gemini_request: LLMRequest object with structured data
         model_name: Model to use for API call
         system_instruction_text: System instructions (optional)
 
@@ -811,15 +832,15 @@ def _call_gemini_api_with_gemini_request(
     Raises:
         TypeError: If parameters are of incorrect type
         ValueError: If parameters are invalid
-        GeminiRequestError: If GeminiRequest validation fails
+        LLMRequestError: If LLMRequest validation fails
     """
     # Input validation - critical for API stability
     if gemini_request is None:
         raise TypeError("gemini_request cannot be None")
 
-    if not isinstance(gemini_request, GeminiRequest):
+    if not isinstance(gemini_request, LLMRequest):
         raise TypeError(
-            f"gemini_request must be GeminiRequest instance, got {type(gemini_request)}"
+            f"gemini_request must be LLMRequest instance, got {type(gemini_request)}"
         )
 
     if not model_name or not isinstance(model_name, str):
@@ -836,21 +857,21 @@ def _call_gemini_api_with_gemini_request(
 
     # Log validation success for debugging
     logging_util.debug(
-        f"Input validation passed for GeminiRequest with user_id: {gemini_request.user_id}, "
+        f"Input validation passed for LLMRequest with user_id: {gemini_request.user_id}, "
         f"model: {model_name}"
     )
 
-    # Convert GeminiRequest to JSON for API call
+    # Convert LLMRequest to JSON for API call
     try:
         json_data = gemini_request.to_json()
     except Exception as e:
-        logging_util.error(f"Failed to convert GeminiRequest to JSON: {e}")
-        raise ValueError(f"GeminiRequest serialization failed: {e}") from e
+        logging_util.error(f"Failed to convert LLMRequest to JSON: {e}")
+        raise ValueError(f"LLMRequest serialization failed: {e}") from e
 
     # Validate JSON data structure before API call
     if not isinstance(json_data, dict):
         raise ValueError(
-            f"Expected dict from GeminiRequest.to_json(), got {type(json_data)}"
+            f"Expected dict from LLMRequest.to_json(), got {type(json_data)}"
         )
 
     # Ensure critical fields are present
@@ -889,15 +910,15 @@ def _call_gemini_api_with_gemini_request(
     json_string = json.dumps(json_data, indent=2, default=json_serializer)
 
     # Send the structured JSON as string to the API
-    return _call_gemini_api_with_model_cycling(
+    return _call_llm_api_with_model_cycling(
         [json_string],  # Send JSON as formatted string
         model_name,
-        f"GeminiRequest: {gemini_request.user_action[:100]}...",  # Logging
+        f"LLMRequest: {gemini_request.user_action[:100]}...",  # Logging
         system_instruction_text,
     )
 
 
-def _call_gemini_api_with_model_cycling(
+def _call_llm_api_with_model_cycling(
     prompt_contents: list[Any],
     model_name: str,
     current_prompt_text_for_logging: str | None = None,
@@ -1049,7 +1070,7 @@ def _call_gemini_api_with_model_cycling(
     raise last_error
 
 
-def _call_gemini_api_with_json_structure(
+def _call_llm_api_with_json_structure(
     json_input: dict[str, Any],
     model_name: str,
     system_instruction_text: str | None = None,
@@ -1117,7 +1138,7 @@ def _call_gemini_api_with_json_structure(
         prompt_content = json.dumps(json_input, indent=2)
 
     # Call the existing API with structured content
-    return _call_gemini_api_with_model_cycling(
+    return _call_llm_api_with_model_cycling(
         [prompt_content],
         model_name,
         f"Structured JSON: {message_type}",  # for logging
@@ -1125,7 +1146,7 @@ def _call_gemini_api_with_json_structure(
     )
 
 
-def _call_gemini_api_with_structured_json(
+def _call_llm_api_with_structured_json(
     json_input: dict[str, Any],
     model_name: str,
     system_instruction_text: str | None = None,
@@ -1133,8 +1154,8 @@ def _call_gemini_api_with_structured_json(
     """
     LEGACY: Call Gemini API using structured JSON input (DEPRECATED).
 
-    NOTE: This function is deprecated. New code should use GeminiRequest class
-    with _call_gemini_api_with_gemini_request() instead.
+    NOTE: This function is deprecated. New code should use LLMRequest class
+    with _call_llm_api_with_llm_request() instead.
 
     This function remains for backward compatibility with existing tests.
 
@@ -1147,20 +1168,20 @@ def _call_gemini_api_with_structured_json(
         Gemini API response object
     """
     # LEGACY: JsonInputBuilder removed - using direct JSON
-    # Legacy json_input_schema removed - using GeminiRequest now
+    # Legacy json_input_schema removed - using LLMRequest now
 
     # Direct JSON usage (no additional validation needed)
     validated_json = json_input
 
     # Pass structured JSON to the new handler
-    return _call_gemini_api_with_json_structure(
+    return _call_llm_api_with_json_structure(
         validated_json,
         model_name,
         system_instruction_text=system_instruction_text,
     )
 
 
-def _call_gemini_api_with_json_schema(
+def _call_llm_api_with_json_schema(
     content: str,
     message_type: str,
     model_name: str,
@@ -1172,8 +1193,8 @@ def _call_gemini_api_with_json_schema(
     """
     LEGACY: Call Gemini API using structured JSON input schema (DEPRECATED).
 
-    NOTE: This function is deprecated. New code should use GeminiRequest class
-    with _call_gemini_api_with_gemini_request() instead.
+    NOTE: This function is deprecated. New code should use LLMRequest class
+    with _call_llm_api_with_llm_request() instead.
 
     This function remains for backward compatibility with existing tests.
 
@@ -1190,7 +1211,7 @@ def _call_gemini_api_with_json_schema(
         Gemini API response object with JSON response
     """
     # LEGACY: JsonInputBuilder removed - using direct JSON
-    # Legacy json_input_schema removed - using GeminiRequest now
+    # Legacy json_input_schema removed - using LLMRequest now
 
     # Build structured JSON input based on message type
     if message_type == "user_input":
@@ -1219,7 +1240,7 @@ def _call_gemini_api_with_json_schema(
     else:
         # For unknown message types, use basic structure that bypasses validation
         # by directly formatting for Gemini API without JSON schema validation
-        return _call_gemini_api_with_model_cycling(
+        return _call_llm_api_with_model_cycling(
             [content],  # Direct string content bypass
             model_name,
             content,  # for logging
@@ -1227,14 +1248,14 @@ def _call_gemini_api_with_json_schema(
         )
 
     # NEW APPROACH: Use structured JSON directly instead of string conversion
-    return _call_gemini_api_with_structured_json(
+    return _call_llm_api_with_structured_json(
         json_input,
         model_name,
         system_instruction_text,
     )
 
 
-def _call_gemini_api(
+def _call_llm_api(
     prompt_contents: list[Any],
     model_name: str,
     current_prompt_text_for_logging: str | None = None,
@@ -1254,7 +1275,7 @@ def _call_gemini_api(
     Returns:
         Gemini API response object with JSON response
     """
-    return _call_gemini_api_with_model_cycling(
+    return _call_llm_api_with_model_cycling(
         prompt_contents,
         model_name,
         current_prompt_text_for_logging,
@@ -1500,12 +1521,12 @@ def get_initial_story(
     selected_prompts: list[str] | None = None,
     generate_companions: bool = False,
     use_default_world: bool = False,
-) -> GeminiResponse:
+) -> LLMResponse:
     """
     Generates the initial story part, including character, narrative, and mechanics instructions.
 
     Returns:
-        GeminiResponse: Custom response object containing:
+        LLMResponse: Custom response object containing:
             - narrative_text: Clean text for display (guaranteed to be clean narrative)
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
@@ -1526,10 +1547,10 @@ def get_initial_story(
         )
 
         if structured_response:
-            return GeminiResponse.create_from_structured_response(
+            return LLMResponse.create_from_structured_response(
                 structured_response, "mock-model"
             )
-        return GeminiResponse.create_legacy(
+        return LLMResponse.create_legacy(
             "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.",
             "mock-model",
         )
@@ -1652,15 +1673,15 @@ def get_initial_story(
     model_to_use: str = _select_model_for_user(user_id)
     logging_util.info(f"Using model: {model_to_use} for initial story generation.")
 
-    # ONLY use GeminiRequest structured JSON architecture (NO legacy fallbacks)
+    # ONLY use LLMRequest structured JSON architecture (NO legacy fallbacks)
     if not user_id:
         raise ValueError("user_id is required for initial story generation")
 
-    # NEW ARCHITECTURE: Use GeminiRequest for structured JSON (NO string concatenation)
+    # NEW ARCHITECTURE: Use LLMRequest for structured JSON (NO string concatenation)
     world_data = {}  # Could be extracted from builder if needed
 
-    # Build GeminiRequest with structured data
-    gemini_request = GeminiRequest.build_initial_story(
+    # Build LLMRequest with structured data
+    gemini_request = LLMRequest.build_initial_story(
         character_prompt=prompt,
         user_id=str(user_id),
         selected_prompts=selected_prompts or [],
@@ -1670,28 +1691,28 @@ def get_initial_story(
     )
 
     # Send structured JSON directly to Gemini API (NO string conversion)
-    api_response = _call_gemini_api_with_gemini_request(
+    api_response = _call_llm_api_with_llm_request(
         gemini_request=gemini_request,
         model_name=model_to_use,
         system_instruction_text=system_instruction_final,
     )
-    logging_util.info("Successfully used GeminiRequest for initial story generation")
+    logging_util.info("Successfully used LLMRequest for initial story generation")
     # Extract text from raw API response object
     raw_response_text: str = _get_text_from_response(api_response)
 
-    # Create GeminiResponse from raw response, which handles all parsing internally
+    # Create LLMResponse from raw response, which handles all parsing internally
     # Parse the structured response to extract clean narrative and debug data
     narrative_text, structured_response = parse_structured_response(raw_response_text)
 
-    # Create GeminiResponse with proper debug content separation
+    # Create LLMResponse with proper debug content separation
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
-        gemini_response = GeminiResponse.create_from_structured_response(
+        gemini_response = LLMResponse.create_from_structured_response(
             structured_response, model_to_use
         )
     else:
         # Fallback to legacy mode for non-JSON responses
-        gemini_response = GeminiResponse.create_legacy(narrative_text, model_to_use)
+        gemini_response = LLMResponse.create_legacy(narrative_text, model_to_use)
 
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
     if expected_entities:
@@ -1709,16 +1730,16 @@ def get_initial_story(
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
 
-    # Log GeminiResponse creation for debugging
+    # Log LLMResponse creation for debugging
     logging_util.debug(
-        f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}"
+        f"Created LLMResponse with narrative_text length: {len(gemini_response.narrative_text)}"
     )
 
     # Companion validation (moved from world_logic.py for proper SRP)
     if generate_companions:
         _validate_companion_generation(gemini_response)
 
-    # Return our custom GeminiResponse object (not raw API response)
+    # Return our custom LLMResponse object (not raw API response)
     # This object contains:
     # - narrative_text: Clean text for display (guaranteed to be clean narrative)
     # - structured_response: Parsed JSON structure with state updates, entities, etc.
@@ -1940,7 +1961,7 @@ Full narrative context:
         logging_util.info("🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API")
         logging_util.info(f"🔍 PLANNING_BLOCK_PROMPT: {planning_prompt[:200]}...")
 
-        planning_response = _call_gemini_api(
+        planning_response = _call_llm_api(
             [planning_prompt],
             chosen_model,
             current_prompt_text_for_logging="Planning block generation",
@@ -2122,7 +2143,7 @@ def continue_story(
     selected_prompts: list[str] | None = None,
     use_default_world: bool = False,
     user_id: UserId | None = None,
-) -> GeminiResponse:
+) -> LLMResponse:
     """
     Continues the story by calling the Gemini API with the current context and game state.
 
@@ -2136,7 +2157,7 @@ def continue_story(
         user_id: Optional user ID to retrieve user-specific settings (e.g., preferred model)
 
     Returns:
-        GeminiResponse: Custom response object containing:
+        LLMResponse: Custom response object containing:
             - narrative_text: Clean text for display (guaranteed to be clean narrative)
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
@@ -2316,7 +2337,7 @@ def continue_story(
     # Select appropriate model (use user preference if available, otherwise default selection)
     chosen_model: str = model_to_use
 
-    # ONLY use GeminiRequest structured JSON architecture (NO legacy fallbacks)
+    # ONLY use LLMRequest structured JSON architecture (NO legacy fallbacks)
     user_id_from_state = getattr(current_game_state, "user_id", None)
     if not user_id_from_state:
         raise ValueError("user_id is required in game state for story continuation")
@@ -2328,8 +2349,8 @@ def continue_story(
         "entity_preload_text": entity_preload_text,
     }
 
-    # Build GeminiRequest with structured data (NO string concatenation)
-    gemini_request = GeminiRequest.build_story_continuation(
+    # Build LLMRequest with structured data (NO string concatenation)
+    gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
         game_mode=mode,
@@ -2348,32 +2369,32 @@ def continue_story(
     )
 
     # Send structured JSON directly to Gemini API (NO string conversion)
-    api_response = _call_gemini_api_with_gemini_request(
+    api_response = _call_llm_api_with_llm_request(
         gemini_request=gemini_request,
         model_name=chosen_model,
         system_instruction_text=system_instruction_final,
     )
     logging_util.info(
-        "Successfully used GeminiRequest for structured JSON communication"
+        "Successfully used LLMRequest for structured JSON communication"
     )
     # Extract text from raw API response object
     raw_response_text: str = _get_text_from_response(api_response)
 
-    # Create initial GeminiResponse from raw response
+    # Create initial LLMResponse from raw response
     # Parse the structured response to extract clean narrative and debug data
     narrative_text: str
     structured_response: NarrativeResponse | None
     narrative_text, structured_response = parse_structured_response(raw_response_text)
 
-    # Create GeminiResponse with proper debug content separation
+    # Create LLMResponse with proper debug content separation
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
-        gemini_response = GeminiResponse.create_from_structured_response(
+        gemini_response = LLMResponse.create_from_structured_response(
             structured_response, chosen_model
         )
     else:
         # Fallback to legacy mode for non-JSON responses
-        gemini_response = GeminiResponse.create_legacy(narrative_text, chosen_model)
+        gemini_response = LLMResponse.create_legacy(narrative_text, chosen_model)
 
     response_text: str = gemini_response.narrative_text
 
@@ -2407,7 +2428,7 @@ def continue_story(
 
             # Create generation callback for API calls
             def generation_callback(prompt: str) -> str:
-                response: Any = _call_gemini_api(
+                response: Any = _call_llm_api(
                     [prompt],
                     chosen_model,
                     current_prompt_text_for_logging=current_prompt_text,
@@ -2487,16 +2508,16 @@ def continue_story(
             structured_response=gemini_response.structured_response,
         )
 
-    # MODERNIZED: No longer recreate GeminiResponse based on response_text modifications
+    # MODERNIZED: No longer recreate LLMResponse based on response_text modifications
     # The structured_response is now the authoritative source, response_text is for backward compatibility only
     # The frontend uses gemini_response.structured_response directly, not narrative_text
 
-    # Log GeminiResponse creation for debugging
+    # Log LLMResponse creation for debugging
     logging_util.debug(
-        f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}"
+        f"Created LLMResponse with narrative_text length: {len(gemini_response.narrative_text)}"
     )
 
-    # Return our custom GeminiResponse object (not raw API response)
+    # Return our custom LLMResponse object (not raw API response)
     # This object contains:
     # - narrative_text: Clean text for display (guaranteed to be clean narrative)
     # - structured_response: Parsed JSON structure with state updates, entities, etc.
@@ -2616,7 +2637,7 @@ def _get_current_turn_prompt(user_input: str, mode: str) -> str:
     return prompt_template.format(user_input=user_input)
 
 
-def _validate_companion_generation(gemini_response: GeminiResponse) -> None:
+def _validate_companion_generation(gemini_response: LLMResponse) -> None:
     """Validate companion generation results.
 
     Moved from world_logic.py to maintain Single Responsibility Principle.
@@ -2677,7 +2698,7 @@ def _validate_companion_generation(gemini_response: GeminiResponse) -> None:
 
 # --- Main block for rapid, direct testing ---
 if __name__ == "__main__":
-    print("--- Running gemini_service.py in chained conversation test mode ---")
+    print("--- Running llm_service.py in chained conversation test mode ---")
 
     try:
         # Look for Google API key in home directory first, then project root

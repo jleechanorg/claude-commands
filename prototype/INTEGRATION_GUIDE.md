@@ -8,7 +8,7 @@ This guide documents how to integrate the validation prototype into the WorldArc
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  gemini_service │────▶│ Validation Layer │────▶│   game_state    │
+│  llm_service │────▶│ Validation Layer │────▶│   game_state    │
 │                 │◀────│                  │◀────│                 │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
          │                       │                         │
@@ -62,7 +62,7 @@ class GameState:
 
 ### 2. Gemini Service Integration
 
-**File**: `mvp_site/gemini_service.py`
+**File**: `mvp_site/llm_service.py`
 
 ```python
 # Add to existing generate_narrative method
@@ -75,7 +75,7 @@ def generate_narrative(self, game_state, prompt, **kwargs):
     enhanced_prompt = self._inject_manifest(prompt, manifest)
 
     # Step 3: Generate narrative
-    narrative = self._call_gemini_api(enhanced_prompt)
+    narrative = self._call_llm_api(enhanced_prompt)
 
     # Step 4: Validate result
     validation = game_state.validate_narrative_consistency(narrative)
@@ -221,7 +221,7 @@ interface Entity {
 - [ ] Unit tests for manifest generation
 
 ### Phase 2: Service Integration (Week 2)
-- [ ] Modify gemini_service.py
+- [ ] Modify llm_service.py
 - [ ] Add prompt injection logic
 - [ ] Implement retry mechanism
 - [ ] Add monitoring/metrics

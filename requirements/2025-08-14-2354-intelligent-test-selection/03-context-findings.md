@@ -18,7 +18,7 @@
 ### File-to-Test Dependency Mappings Identified
 - **Direct Mappings**:
   - `main.py` → `test_main_*.py`, `test_api_*.py`, `test_end2end/*`
-  - `gemini_service.py` → `test_gemini_*.py`, `test_json_*.py`
+  - `llm_service.py` → `test_gemini_*.py`, `test_json_*.py`
   - `firestore_service.py` → `test_firestore_*.py`, auth-related tests
   - `world_logic.py` → `test_world_*.py`, integration tests
 

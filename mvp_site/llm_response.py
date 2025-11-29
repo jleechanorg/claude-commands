@@ -13,7 +13,7 @@ from mvp_site.narrative_response_schema import (
 )
 
 
-class GeminiResponse:
+class LLMResponse:
     """
     Gemini Response wrapper for clean architecture between AI service and main application.
 
@@ -30,7 +30,7 @@ class GeminiResponse:
         model: str = "gemini-3-pro-preview",
     ):
         """
-        Initialize GeminiResponse.
+        Initialize LLMResponse.
 
         Args:
             narrative_text: The clean narrative text from the response
@@ -373,9 +373,9 @@ class GeminiResponse:
     @classmethod
     def create(
         cls, raw_response_text: str, model: str = "gemini-3-pro-preview"
-    ) -> "GeminiResponse":
+    ) -> "LLMResponse":
         """
-        Create a GeminiResponse from raw Gemini API response.
+        Create a LLMResponse from raw Gemini API response.
 
         Handles all JSON parsing internally.
 
@@ -384,7 +384,7 @@ class GeminiResponse:
             model: Model name used for generation
 
         Returns:
-            GeminiResponse with parsed narrative and structured data
+            LLMResponse with parsed narrative and structured data
         """
         # Parse the raw response to extract narrative and structured data
         narrative_text, structured_response = parse_structured_response(
@@ -406,9 +406,9 @@ class GeminiResponse:
         structured_response: NarrativeResponse,
         model: str = "gemini-3-pro-preview",
         combined_narrative_text: str = None,
-    ) -> "GeminiResponse":
+    ) -> "LLMResponse":
         """
-        Create GeminiResponse from structured JSON response.
+        Create LLMResponse from structured JSON response.
 
         This is the new preferred way to create responses that properly separates
         narrative from debug content.
@@ -419,7 +419,7 @@ class GeminiResponse:
             combined_narrative_text: The combined narrative text (including god_mode_response if present)
 
         Returns:
-            GeminiResponse with clean narrative and structured data
+            LLMResponse with clean narrative and structured data
         """
         # Use the combined narrative text if provided (includes god_mode_response)
         # Otherwise extract clean narrative from structured response
@@ -456,9 +456,9 @@ class GeminiResponse:
         narrative_text: str,
         model: str = "gemini-3-pro-preview",
         structured_response: NarrativeResponse | None = None,
-    ) -> "GeminiResponse":
+    ) -> "LLMResponse":
         """
-        Create GeminiResponse from plain text (legacy support).
+        Create LLMResponse from plain text (legacy support).
 
         This handles old-style responses that embed debug content in the narrative.
 
@@ -468,7 +468,7 @@ class GeminiResponse:
             structured_response: Optional structured response object
 
         Returns:
-            GeminiResponse with debug content stripped from narrative
+            LLMResponse with debug content stripped from narrative
         """
         clean_narrative = cls._strip_all_debug_tags(narrative_text)
 

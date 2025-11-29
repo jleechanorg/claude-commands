@@ -139,8 +139,8 @@ tail -f /tmp/worldarchitectai_logs/browser-test-helper-library.log
 - `mvp_site/mocks/structured_fields_fixtures.py` - Response format
 
 ### Mock Services
-- `mvp_site/mocks/mock_gemini_service.py` - Mock API behavior
-- `mvp_site/mocks/mock_gemini_service_wrapper.py` - Response wrapper
+- `mvp_site/mocks/mock_llm_service.py` - Mock API behavior
+- `mvp_site/mocks/mock_llm_service_wrapper.py` - Response wrapper
 
 ### Test Infrastructure
 - `testing_ui/browser_test_helpers.py` - Validation helpers

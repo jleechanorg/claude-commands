@@ -153,7 +153,7 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
 - **mcp_client.py** - Enhanced MCP client with direct-call optimization (`skip_http=False`)
 
 #### AI & Game Services
-- **gemini_service.py** (2,209 lines) - AI service integration and response processing
+- **llm_service.py** (2,209 lines) - AI service integration and response processing
 - **firestore_service.py** (1,101 lines) - Database operations and state management
 - **narrative_response_schema.py** (752 lines) - AI response validation and parsing
 - **entity_validator.py** (636 lines) - Entity state validation and consistency
@@ -223,12 +223,12 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
 
 ### 3. AI Integration
 - **Purpose**: Generate dynamic story content and manage game logic
-- **Main Files**: `gemini_service.py`, `entity_tracking.py`, `narrative_response_schema.py`
+- **Main Files**: `llm_service.py`, `entity_tracking.py`, `narrative_response_schema.py`
 - **Public Methods**:
   - `get_initial_story()` - Generate campaign opening story
   - `continue_story()` - Process user input and generate responses
   - `PromptBuilder.build_core_system_instructions()` - Construct AI prompts
-  - `_call_gemini_api_with_model_cycling()` - Robust API calls with fallback
+  - `_call_llm_api_with_model_cycling()` - Robust API calls with fallback
 
 ### 4. Authentication & Authorization
 - **Purpose**: Secure user access using Firebase Authentication
@@ -280,7 +280,7 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
 ```
 mvp_site/
 ├── main.py                    # Flask application entry point (1,875 lines)
-├── gemini_service.py          # AI service integration (2,209 lines)
+├── llm_service.py          # AI service integration (2,209 lines)
 ├── firestore_service.py       # Database operations (1,101 lines)
 ├── narrative_response_schema.py # AI response validation (752 lines)
 ├── entity_validator.py        # Entity state validation (636 lines)
@@ -429,7 +429,7 @@ mvp_site/
    - **Clean separation**: Zero business logic in API layer
    - **Maintainable routes**: Each route is a simple HTTP-to-MCP translation
 
-2. **gemini_service.py** (2,209 lines) - Largest file with complex AI logic:
+2. **llm_service.py** (2,209 lines) - Largest file with complex AI logic:
    - PromptBuilder class has evolved but still handles many concerns
    - Advanced features like dual-pass generation add complexity
    - Model cycling and error handling are sophisticated but dense
@@ -473,13 +473,13 @@ The recent **Model Context Protocol (MCP)** refactor has dramatically improved t
 1. **Complex file interdependencies** - Large files create tight coupling
 2. **Entity validation layers** - Multiple overlapping validation systems
 3. **Testing coverage gaps** - 33% of statements still lack coverage
-4. **AI service complexity** - gemini_service.py has grown very large
+4. **AI service complexity** - llm_service.py has grown very large
 5. **Memory management** - Multiple memory/context systems need unification
 6. **Debug system integration** - Debug tools spread across multiple files
 
 ## Next Steps for Improvement
 
-1. **Modularize large files** - Split gemini_service.py and main.py into focused modules
+1. **Modularize large files** - Split llm_service.py and main.py into focused modules
 2. **Achieve 80%+ test coverage** - Focus on critical AI and state management paths
 3. **Unify entity management** - Create single interface for entity operations
 4. **Optimize AI performance** - Improve dual-pass generation efficiency

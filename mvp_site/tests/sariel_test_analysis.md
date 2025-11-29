@@ -23,7 +23,7 @@
   - 10 interactions (POST)
   - **Total: 11 API calls** (no state checks)
 - **Unique Features**:
-  - Monkey patches gemini_service to capture prompts
+  - Monkey patches llm_service to capture prompts
   - Logs first 50 lines of each prompt sent to LLM
   - Saves all captured prompts to JSON file
   - Focuses on prompt debugging

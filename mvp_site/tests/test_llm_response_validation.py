@@ -1,5 +1,5 @@
 """
-Tests for Gemini response validation and parsing in gemini_service.py.
+Tests for Gemini response validation and parsing in llm_service.py.
 Focus on JSON parsing, schema validation, and field validation.
 """
 
@@ -22,7 +22,7 @@ from mvp_site.narrative_response_schema import (
 )
 
 
-class TestGeminiResponseValidation(unittest.TestCase):
+class TestLLMResponseValidation(unittest.TestCase):
     """Test suite for Gemini API response validation and parsing."""
 
     def setUp(self):

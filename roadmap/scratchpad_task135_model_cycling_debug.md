@@ -80,7 +80,7 @@ Investigate and fix suspected model cycling issues causing transient errors wher
 ### Current Model Configuration:
 - **Primary model**: `gemini-2.5-flash`
 - **Test model**: `gemini-1.5-flash`
-- **Configuration location**: Check gemini_service.py and related files
+- **Configuration location**: Check llm_service.py and related files
 - **Environment variables**: API keys and model settings
 
 ### Error Types to Track:
@@ -131,7 +131,7 @@ logging.info(f"Request {request_id}: Retry {attempt_num} successful with model {
 - [ ] Model cycling working reliably under error conditions
 
 ## Files Likely to Modify
-1. **`mvp_site/gemini_service.py`** - Primary model interaction logic
+1. **`mvp_site/llm_service.py`** - Primary model interaction logic
 2. **Error handling modules** - Retry and cycling logic
 3. **Configuration files** - Model settings and fallbacks
 4. **Logging configuration** - Enhanced debugging output

@@ -129,8 +129,8 @@ class FakeFirestoreClient:
         return FakeFirestoreDocument(doc_id)
 
 
-class FakeGeminiResponse:
-    """Fake Gemini response that behaves like the real thing."""
+class FakeLLMResponse:
+    """Fake LLM response that behaves like the real thing."""
 
     def __init__(self, text):
         self.text = text

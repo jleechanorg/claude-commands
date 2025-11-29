@@ -47,7 +47,7 @@ Section: Application Factory Pattern
 For project code files:
 
 ```markdown
-[ref#3] Code File - mvp_site/gemini_service.py
+[ref#3] Code File - mvp_site/llm_service.py
 Lines: 234-256
 Function: generate_scene()
 Purpose: Scene generation implementation
@@ -198,7 +198,7 @@ URL: https://ai.google.dev/gemini-api/docs
 Accessed: 2025-01-12
 Section: Getting Started
 
-[ref#2] Code File - mvp_site/gemini_service.py
+[ref#2] Code File - mvp_site/llm_service.py
 Lines: 45-47
 Function: __init__()
 Purpose: API key configuration
@@ -208,12 +208,12 @@ URL: https://ai.google.dev/gemini-api/docs/structured-output
 Accessed: 2025-01-12
 Section: JSON Schema Support
 
-[ref#4] Code File - mvp_site/gemini_service.py
+[ref#4] Code File - mvp_site/llm_service.py
 Lines: 234-289
 Function: generate_scene()
 Purpose: Main scene generation logic
 
-[ref#5] Code File - mvp_site/gemini_service.py
+[ref#5] Code File - mvp_site/llm_service.py
 Lines: 156-178
 Function: _handle_rate_limit()
 Purpose: Rate limit retry logic

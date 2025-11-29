@@ -3,7 +3,7 @@ Mock libraries for function testing.
 Provides realistic mocks for external dependencies like Gemini API and Firestore.
 """
 
-from . import mock_firestore_service_wrapper, mock_gemini_service_wrapper
+from . import mock_firestore_service_wrapper, mock_llm_service_wrapper
 from .data_fixtures import (
     SAMPLE_AI_RESPONSES,
     SAMPLE_CAMPAIGN,
@@ -12,11 +12,11 @@ from .data_fixtures import (
     SAMPLE_STORY_CONTEXT,
 )
 from .mock_firestore_service import MockFirestoreClient, MockFirestoreDocument
-from .mock_gemini_service import MockGeminiClient, MockGeminiResponse
+from .mock_llm_service import MockLLMClient, MockLLMResponse
 
 __all__ = [
-    "MockGeminiClient",
-    "MockGeminiResponse",
+    "MockLLMClient",
+    "MockLLMResponse",
     "MockFirestoreClient",
     "MockFirestoreDocument",
     "SAMPLE_CAMPAIGN",

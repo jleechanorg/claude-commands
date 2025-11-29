@@ -92,13 +92,13 @@ The issue is NOT in the parsing logic itself. The problem is that somewhere in t
 ## Next Steps (Fresh Context Recommended)
 
 ### Investigation Needed
-1. **Search for response display logic** in gemini_service.py, main.py, API routes
+1. **Search for response display logic** in llm_service.py, main.py, API routes
 2. **Find god mode response handling** - where JSON gets returned to frontend
 3. **Trace the response path** from LLM → parsing → user display
 4. **Check if god_mode_response field** is being handled correctly
 
 ### Files to Investigate
-- `mvp_site/gemini_service.py` - Main LLM interaction logic
+- `mvp_site/llm_service.py` - Main LLM interaction logic
 - `mvp_site/main.py` - Flask routes and response handling
 - `mvp_site/api_routes.py` - API endpoints
 - Frontend JavaScript - Response display logic

@@ -5,7 +5,7 @@
 ### Problems with Current Architecture:
 1. **Scattered Parsing Logic**:
    - `narrative_response_schema.py`: parse_structured_response()
-   - `gemini_service.py`: _parse_gemini_response(), _process_structured_response()
+   - `llm_service.py`: _parse_gemini_response(), _process_structured_response()
    - `robust_json_parser.py`: parse_llm_json_response()
    - Planning block parsing in _validate_and_enforce_planning_block()
 
@@ -141,11 +141,11 @@ class GeminiResponse:
    ```
 
 ### Phase 4: GeminiResponse Refactor
-1. Remove `_parse_gemini_response()` from gemini_service
+1. Remove `_parse_gemini_response()` from llm_service
 2. Update GeminiResponse.create() to handle all parsing
 3. Ensure backward compatibility with existing code
 
-### Phase 5: Simplify gemini_service.py
+### Phase 5: Simplify llm_service.py
 1. Remove parsing logic
 2. Keep only:
    - API calling
@@ -228,7 +228,7 @@ Recommendation: Explicit types for clarity
 3. Implement ResponseParser with comprehensive tests
 4. Update prompts to include planning blocks
 5. Refactor GeminiResponse
-6. Update gemini_service.py
+6. Update llm_service.py
 7. Run comprehensive tests
 8. Update documentation
 

@@ -30,14 +30,6 @@ if not os.environ.get("GEMINI_API_KEY"):
             with open(project_key_path) as key_file:
                 os.environ["GEMINI_API_KEY"] = key_file.read().strip()
 
-try:
-
-
-except ImportError:
-    # Fallback for environments without the package
-    genai = None
-    print("WARNING: google-genai not installed. Using mock mode.")
-
 from config import (
     COST_PER_1K_INPUT_TOKENS,
     COST_PER_1K_OUTPUT_TOKENS,

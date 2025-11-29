@@ -27,7 +27,7 @@
 - orchestration/minimal_a2a_poc.py:182 - `pass` in asyncio exception handler (CORRECT)
 - orchestration/recovery_coordinator.py:93,101 - `return None` for no-failure state (CORRECT)
 - orchestration/task_dispatcher.py:91 - `pass` in exception handler (CORRECT)
-- prototype/gemini_service_wrapper.py:100 - Simulation in prototype directory (CORRECT)
+- prototype/llm_service_wrapper.py:100 - Simulation in prototype directory (CORRECT)
 **Test Results**: ✅ No tests needed - no code changes made
 **Remaining Issues**: None - codebase is clean
 
@@ -231,7 +231,7 @@ The A2A constraint system is **completely production-ready** with no fake implem
 
 **🟡 SUSPICIOUS PATTERNS**:
 
-1. **`prototype/gemini_service_wrapper.py:110-118`** - Keyword-based mock responses
+1. **`prototype/llm_service_wrapper.py:110-118`** - Keyword-based mock responses
    - Pattern: Simple keyword matching in mock service
    - Evidence: `if "knight" in prompt.lower() and "healer" in prompt.lower()`
    - Assessment: May be legitimate testing infrastructure (in prototype directory)
@@ -264,7 +264,7 @@ The A2A constraint system is **completely production-ready** with no fake implem
    - Updated guide to show correct `mcp__memory_server__*` pattern
 
 4. **Verified Prototype Code**:
-   - `prototype/gemini_service_wrapper.py` - Confirmed legitimate testing mock
+   - `prototype/llm_service_wrapper.py` - Confirmed legitimate testing mock
    - Located in prototype directory with clear testing purpose
    - No changes needed - verified as functional testing infrastructure
 

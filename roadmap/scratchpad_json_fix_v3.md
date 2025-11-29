@@ -80,7 +80,7 @@ From tmp/json_bug_v3.txt logs:
      logger.error(f"🔍 RESPONSE_DICT text field: {response_dict['text'][:200]}...")
      ```
 
-### Phase 3: Gemini Service Layer (gemini_service.py)
+### Phase 3: Gemini Service Layer (llm_service.py)
 **Goal**: Understand why JSON detection isn't preventing the issue
 
 1. **In `continue_story()` after detection**:
@@ -146,11 +146,11 @@ From tmp/json_bug_v3.txt logs:
 }
 ```
 
-**Expected by gemini_service.py**: Either:
+**Expected by llm_service.py**: Either:
 - Plain text string (when not using structured generation)
 - JSON object (when using structured generation)
 
-### Layer 2: gemini_service.py Response
+### Layer 2: llm_service.py Response
 **What it SHOULD return**: GeminiResponse object with:
 ```python
 GeminiResponse(
@@ -302,7 +302,7 @@ Scene #2: {
 
 ### Gemini Service Logging
 ```python
-# In gemini_service.py continue_story()
+# In llm_service.py continue_story()
 logger.error("🔍 GEMINI_RAW_RESPONSE type: %s", type(raw_response))
 logger.error("🔍 GEMINI_RAW_RESPONSE first 100 chars: %s", raw_response[:100])
 logger.error("🔍 GEMINI_RAW_RESPONSE is JSON: %s", raw_response.strip().startswith('{'))
@@ -417,14 +417,14 @@ Based on the logs, the most likely scenario:
 
 ## Critical Code Location
 
-The bug is in `gemini_service.py` where it creates the GeminiResponse object. The flow is:
+The bug is in `llm_service.py` where it creates the GeminiResponse object. The flow is:
 
-1. **gemini_service.py** creates GeminiResponse with `narrative_text` = full JSON string
+1. **llm_service.py** creates GeminiResponse with `narrative_text` = full JSON string
 2. **main.py** writes to Firebase using `firestore_service.add_story_entry(..., gemini_response_obj.narrative_text)`
 3. **Firebase** stores the full JSON string
 4. **Frontend** displays it with "Scene #" prefix
 
-The fix needs to be in `gemini_service.py` where it should extract the narrative:
+The fix needs to be in `llm_service.py` where it should extract the narrative:
 ```python
 # Current (buggy) behavior
 if use_structured_generation:
@@ -441,7 +441,7 @@ if use_structured_generation:
 
 ## Key Finding: Writer to Firebase
 
-**main.py writes to Firebase**, not gemini_service. The exact call is:
+**main.py writes to Firebase**, not llm_service. The exact call is:
 ```python
 # Line 918 in main.py
 firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
@@ -451,7 +451,7 @@ This means `gemini_response_obj.narrative_text` must contain ONLY the narrative 
 
 ## Fix Strategy (after debugging confirms location)
 
-**If issue is in gemini_service.py**:
+**If issue is in llm_service.py**:
 - When JSON is detected, extract the `narrative` field before returning
 - Ensure only the narrative text is returned, not the full JSON
 
@@ -474,13 +474,13 @@ This means `gemini_response_obj.narrative_text` must contain ONLY the narrative 
 The JSON corruption flows through the system as follows:
 
 1. **Gemini API** → Returns proper JSON with narrative field
-2. **gemini_service.py** → Creates GeminiResponse with `narrative_text = full JSON string` ❌
+2. **llm_service.py** → Creates GeminiResponse with `narrative_text = full JSON string` ❌
 3. **main.py** → Calls `add_story_entry(..., gemini_response_obj.narrative_text)` passing JSON
 4. **Firebase Write** → Saves `{'text': '{"narrative": "..."}'}` to Firestore
 5. **Firebase Read** → Returns story entry with JSON in text field
 6. **Frontend** → Displays "Scene #2: {" with raw JSON
 
-**The corruption happens at step 2** - gemini_service should extract just the narrative.
+**The corruption happens at step 2** - llm_service should extract just the narrative.
 
 ## Firebase-Specific Verification
 
@@ -493,7 +493,7 @@ logger.error("🔍   - gemini_response_obj.narrative_text type: %s", type(gemini
 logger.error("🔍   - gemini_response_obj.narrative_text[:200]: %s", gemini_response_obj.narrative_text[:200])
 logger.error("🔍   - is JSON: %s", gemini_response_obj.narrative_text.strip().startswith('{'))
 
-# This will prove that main.py is already receiving JSON from gemini_service
+# This will prove that main.py is already receiving JSON from llm_service
 ```
 
 ## Browser Test Plan with Real APIs
@@ -588,7 +588,7 @@ logger.error("🔍   narrative_text[:200]: %s", gemini_response_obj.narrative_te
 logger.error("🔍   is JSON: %s", gemini_response_obj.narrative_text.strip().startswith('{'))
 ```
 
-**In gemini_service.py** (in continue_story):
+**In llm_service.py** (in continue_story):
 ```python
 # Right before returning GeminiResponse
 logger.error("🔍 GEMINI_SERVICE creating response:")
@@ -610,7 +610,7 @@ The test should:
 2. On first interaction (typing "2"), trigger the JSON bug
 3. Capture screenshots showing "Scene #2: {" with raw JSON
 4. Log the exact JSON being passed through each layer
-5. Confirm the bug happens between gemini_service and main.py
+5. Confirm the bug happens between llm_service and main.py
 
 #### 7. **Data Collection**
 After running, we'll have:
@@ -644,7 +644,7 @@ After running, we'll have:
 
 2. **Backup current code**:
    ```bash
-   cp mvp_site/gemini_service.py mvp_site/gemini_service.py.backup
+   cp mvp_site/llm_service.py mvp_site/llm_service.py.backup
    cp mvp_site/main.py mvp_site/main.py.backup
    cp mvp_site/firestore_service.py mvp_site/firestore_service.py.backup
    ```
@@ -657,7 +657,7 @@ After running, we'll have:
    - Add multiple verification points
 
 2. **Add logging at ALL critical points**:
-   - gemini_service.py: Log raw response AND processed response
+   - llm_service.py: Log raw response AND processed response
    - main.py: Log before AND after getting narrative_text
    - firestore_service.py: Log input AND what gets saved
    - Add try-catch around logging to prevent crashes
@@ -685,11 +685,11 @@ After running, we'll have:
 
 ### Phase 3: Implement Fix (20 min)
 
-1. **Fix location confirmed**: gemini_service.py
+1. **Fix location confirmed**: llm_service.py
 
 2. **Safe fix implementation**:
    ```python
-   # In gemini_service.py, find where response_text is set
+   # In llm_service.py, find where response_text is set
    # Add extraction logic:
    if use_structured_generation and raw_response.strip().startswith('{'):
        try:
@@ -736,7 +736,7 @@ After running, we'll have:
 ### Phase 6: Final Verification (10 min)
 
 1. **Check all logs confirm fix**:
-   - gemini_service extracts narrative
+   - llm_service extracts narrative
    - main.py receives plain text
    - firestore saves plain text
    - frontend displays correctly
@@ -745,7 +745,7 @@ After running, we'll have:
    ```markdown
    # JSON Bug Fix Summary
    - Bug: Raw JSON displayed to users
-   - Root cause: gemini_service returning full JSON as narrative_text
+   - Root cause: llm_service returning full JSON as narrative_text
    - Fix: Extract narrative field when structured generation returns JSON
    - Verification: Red test failed, green test passed
    - Screenshots: Before/after in /tmp/worldarchitectai/browser/
@@ -756,7 +756,7 @@ After running, we'll have:
 If anything goes wrong:
 ```bash
 # Restore backups
-cp mvp_site/gemini_service.py.backup mvp_site/gemini_service.py
+cp mvp_site/llm_service.py.backup mvp_site/llm_service.py
 cp mvp_site/main.py.backup mvp_site/main.py
 cp mvp_site/firestore_service.py.backup mvp_site/firestore_service.py
 
@@ -815,7 +815,7 @@ This plan is designed to run without intervention and handle edge cases graceful
 The bug occurred in `parse_structured_response()` in `narrative_response_schema.py`. When JSON parsing failed (due to malformed JSON), the function would fall through to a final fallback case that returned the raw input text unchanged. This raw JSON would then flow through the entire system and be displayed to users.
 
 ### Fix Implementation
-Added defensive JSON detection and extraction in `_process_structured_response()` in `gemini_service.py`:
+Added defensive JSON detection and extraction in `_process_structured_response()` in `llm_service.py`:
 1. Detects when response_text starts with `{` (JSON indicator)
 2. Attempts multiple extraction methods:
    - JSON parsing to extract 'narrative' field
@@ -830,7 +830,7 @@ Added defensive JSON detection and extraction in `_process_structured_response()
 - ✅ Multiple edge cases handled
 
 ### Code Changes
-- `mvp_site/gemini_service.py`: Added JSON detection and extraction logic (lines 482-510)
+- `mvp_site/llm_service.py`: Added JSON detection and extraction logic (lines 482-510)
 - `mvp_site/main.py`: Added debug logging to trace data flow
 - Added 6 new test files to verify fix comprehensively
 

@@ -21,7 +21,7 @@ The services layer handles business logic, external integrations, and data manag
 - `analytics_service.py` - Usage tracking and performance metrics
 
 ### AI Integration Services
-- `gemini_service.py` - Gemini AI integration for content generation
+- `llm_service.py` - Language model integration for content generation
 - `prompt_service.py` - AI prompt management and optimization
 - Handles AI response validation and fallback strategies
 

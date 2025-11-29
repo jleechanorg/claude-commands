@@ -11,8 +11,8 @@ sys.path.insert(
 try:
     import pytest
 
-    from mvp_site import constants, gemini_service, logging_util
-    from mvp_site.gemini_service import (
+    from mvp_site import constants, llm_service, logging_util
+    from mvp_site.llm_service import (
         _load_instruction_file,
         _loaded_instructions_cache,
     )
@@ -20,7 +20,7 @@ try:
     MODULES_AVAILABLE = True
 except ImportError:
     constants = None
-    gemini_service = None
+    llm_service = None
     logging_util = None
     pytest = None
     _load_instruction_file = None
@@ -53,10 +53,10 @@ class TestPromptLoading(unittest.TestCase):
                 "--- Running Test: test_all_prompts_are_loadable_via_service ---"
             )
 
-        if not gemini_service or not _load_instruction_file:
-            self.skipTest("gemini_service or _load_instruction_file not available")
+        if not llm_service or not _load_instruction_file:
+            self.skipTest("llm_service or _load_instruction_file not available")
 
-        for p_type in gemini_service.PATH_MAP:
+        for p_type in llm_service.PATH_MAP:
             content = _load_instruction_file(p_type)
             assert isinstance(content, str)
             assert len(content) > 0, f"Prompt file for {p_type} should not be empty."
@@ -79,11 +79,11 @@ class TestPromptLoading(unittest.TestCase):
     def test_all_prompt_files_are_registered_in_service(self):
         """
         Ensures that every .md file in the prompts directory is registered
-        in the gemini_service.path_map, and vice-versa. This prevents
+        in the llm_service.path_map, and vice-versa. This prevents
         un-loaded or orphaned prompt files.
         """
-        if not gemini_service:
-            self.skipTest("gemini_service not available")
+        if not llm_service:
+            self.skipTest("llm_service not available")
 
         if logging_util:
             logging_util.info(
@@ -105,26 +105,26 @@ class TestPromptLoading(unittest.TestCase):
             self.fail(f"Prompts directory not found at {prompts_dir}")
 
         # 2. Get all file basenames from the service's path_map
-        service_files = {os.path.basename(p) for p in gemini_service.PATH_MAP.values()}
+        service_files = {os.path.basename(p) for p in llm_service.PATH_MAP.values()}
 
         # 3. Compare the sets
         unregistered_files = disk_files - service_files
         assert (
             len(unregistered_files) == 0
-        ), f"Found .md files in prompts/ dir not registered in gemini_service.path_map: {unregistered_files}"
+        ), f"Found .md files in prompts/ dir not registered in llm_service.path_map: {unregistered_files}"
 
         missing_files = service_files - disk_files
         assert (
             len(missing_files) == 0
-        ), f"Found files in gemini_service.path_map that do not exist in prompts/: {missing_files}"
+        ), f"Found files in llm_service.path_map that do not exist in prompts/: {missing_files}"
 
     def test_all_registered_prompts_are_actually_used(self):
         """
         Ensures that every prompt registered in PATH_MAP is actually used
         somewhere in the codebase. This prevents dead/unused prompts.
         """
-        if not gemini_service or not constants:
-            self.skipTest("gemini_service or constants not available")
+        if not llm_service or not constants:
+            self.skipTest("llm_service or constants not available")
 
         if logging_util:
             logging_util.info(
@@ -132,7 +132,7 @@ class TestPromptLoading(unittest.TestCase):
             )
 
         # Get all prompt types from PATH_MAP
-        prompt_types = set(gemini_service.PATH_MAP.keys())
+        prompt_types = set(llm_service.PATH_MAP.keys())
 
         # Create reverse mapping from constant values to constant names
         # by inspecting the constants module
@@ -194,12 +194,12 @@ class TestPromptLoading(unittest.TestCase):
         # This is a more specific check for actual loading via constants
         used_in_loading = set()
 
-        # Check if gemini_service.py path calculation is correct
-        gemini_service_path = os.path.join(codebase_dir, "gemini_service.py")
-        if not os.path.exists(gemini_service_path):
+        # Check if llm_service.py path calculation is correct
+        llm_service_path = os.path.join(codebase_dir, "llm_service.py")
+        if not os.path.exists(llm_service_path):
             if logging_util:
                 logging_util.warning(
-                    f"gemini_service.py not found at {gemini_service_path}"
+                    f"llm_service.py not found at {llm_service_path}"
                 )
 
         # Search for _load_instruction_file calls with constants

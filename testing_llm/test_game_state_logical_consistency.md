@@ -145,7 +145,7 @@ What would you improve about this response?
 **Fix Locations**:
 - `mvp_site/prompts/`: Update system prompts with consistency rules
 - `mvp_site/game_state.py`: Enhance state validation before AI calls
-- `mvp_site/gemini_service.py`: Add rule compliance checks
+- `mvp_site/llm_service.py`: Add rule compliance checks
 
 ## Implementation Notes
 

@@ -5,7 +5,7 @@ Found multiple instances of hardcoded string matching that should be replaced wi
 
 ## High Priority Replacements
 
-### 1. Planning Block Validation (`gemini_service.py:1390-1450`)
+### 1. Planning Block Validation (`llm_service.py:1390-1450`)
 **Current**: Hardcoded keyword matching for character creation detection
 ```python
 is_character_approval: bool = (
@@ -20,7 +20,7 @@ is_character_approval: bool = (
 ```
 **Should be**: LLM-based detection of campaign creation state
 
-### 2. Mode Switch Detection (`gemini_service.py:1346`)
+### 2. Mode Switch Detection (`llm_service.py:1346`)
 **Current**: Hardcoded phrase matching
 ```python
 phrase in user_input.lower() for phrase in constants.MODE_SWITCH_PHRASES

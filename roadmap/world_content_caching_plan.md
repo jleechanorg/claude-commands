@@ -47,7 +47,7 @@ _banned_names_cache = {}   # Stores banned names list
 - Implement `_clear_world_content_cache()` for tests
 - Add `get_world_cache_stats()` for monitoring
 
-#### gemini_service.py
+#### llm_service.py
 - Call `_clear_world_content_cache()` in test setup
 - Use cache stats for performance monitoring
 

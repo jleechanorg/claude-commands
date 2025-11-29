@@ -76,7 +76,7 @@ The `/api/campaigns` POST endpoint accepts:
 ```
 
 ## Code Location
-- Backend logic likely in `main.py` or `gemini_service.py`
+- Backend logic likely in `main.py` or `llm_service.py`
 - Need to find where `selected_prompts` is processed
 - Look for prompt file loading logic
 

@@ -117,7 +117,7 @@ class EntityPresenceType(Enum):
 - ✅ Created prototype/validators/narrative_sync_validator.py
 - ✅ Created prototype/tests/test_narrative_sync.py
 - ✅ Updated validators/__init__.py
-- ⏳ Integration with main gemini_service.py pending
+- ⏳ Integration with main llm_service.py pending
 - ⏳ Performance benchmarking pending
 
 ## Success Metrics Progress

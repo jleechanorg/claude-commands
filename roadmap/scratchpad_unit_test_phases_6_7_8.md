@@ -10,13 +10,13 @@ Continue systematic unit test coverage improvement focusing on the three most cr
 - **Phase 5**: ✅ firestore_service.py state helpers (30 tests) - PR #413
 
 ### Target Files for Next Phases
-1. **gemini_service.py**: 65% → 85% (221 statements missing)
+1. **llm_service.py**: 65% → 85% (221 statements missing)
 2. **firestore_service.py**: 61% → 80% (99 statements missing)
 3. **main.py**: 73% → 85% (159 statements missing)
 
 ---
 
-## Phase 6: gemini_service.py (65% → 85%)
+## Phase 6: llm_service.py (65% → 85%)
 
 **Current**: 632 statements, 221 missing
 **Target**: Add ~150 statements coverage
@@ -294,7 +294,7 @@ test_main_security_validation.py:
 
 ## Success Metrics
 
-### Phase 6 (gemini_service.py)
+### Phase 6 (llm_service.py)
 - **Target**: 65% → 85% coverage
 - **Tests**: ~80 new tests
 - **Focus**: Error handling, response validation, token management
@@ -323,7 +323,7 @@ test_main_security_validation.py:
 ## Implementation Strategy
 
 ### General Approach
-1. **Start with Phase 6** (gemini_service.py) - Largest impact
+1. **Start with Phase 6** (llm_service.py) - Largest impact
 2. **Mock extensively** - Avoid real API calls
 3. **Focus on error paths** - These are usually missing
 4. **Test edge cases** - Boundary conditions, null values
@@ -368,14 +368,14 @@ test_main_security_validation.py:
 
 #### Subagent 1: Gemini Error Handling Tests
 ```
-TASK: Create error handling tests for gemini_service.py
+TASK: Create error handling tests for llm_service.py
 BRANCH: feature/gemini-service-tests-phase6
 FILE: mvp_site/test_gemini_error_handling.py
 
 CONTEXT:
-- Testing mvp_site/gemini_service.py error handling
+- Testing mvp_site/llm_service.py error handling
 - Current coverage: 65%, targeting 85%
-- Focus on lines ~150-250 in gemini_service.py
+- Focus on lines ~150-250 in llm_service.py
 
 TESTS TO IMPLEMENT (commit after each group):
 
@@ -402,7 +402,7 @@ Group 5 - Response Errors (commit after completion):
 12. test_malformed_response_recovery - Mock bad JSON, verify parsing error
 
 REQUIREMENTS:
-- Import and examine existing test_gemini_service.py for patterns
+- Import and examine existing test_llm_service.py for patterns
 - Mock google.genai.Client to avoid real API calls
 - Each test must be isolated and runnable independently
 - Use unittest.TestCase as base class
@@ -419,13 +419,13 @@ IF BLOCKED: Report specific issue and stop. Do not simulate.
 
 #### Subagent 2: Gemini Response Validation Tests
 ```
-TASK: Create response validation tests for gemini_service.py
+TASK: Create response validation tests for llm_service.py
 BRANCH: feature/gemini-service-tests-phase6 (checkout existing)
 FILE: mvp_site/test_gemini_response_validation.py
 
 CONTEXT:
-- Testing mvp_site/gemini_service.py response parsing
-- Focus on lines ~350-450 in gemini_service.py
+- Testing mvp_site/llm_service.py response parsing
+- Focus on lines ~350-450 in llm_service.py
 - Tests JSON parsing, schema validation, field validation
 
 TESTS TO IMPLEMENT (commit after each group):
@@ -451,7 +451,7 @@ Group 4 - Size Limits (commit after completion):
 12. test_whitespace_only_content - Mock whitespace content
 
 REQUIREMENTS:
-- Study gemini_service.py response parsing logic first
+- Study llm_service.py response parsing logic first
 - Mock at the HTTP response level
 - Test both successful parsing and error cases
 - Include edge cases like Unicode, emojis
@@ -467,13 +467,13 @@ IF BLOCKED: Report specific issue and stop.
 
 #### Subagent 3: Gemini Token Management Tests
 ```
-TASK: Create token management tests for gemini_service.py
+TASK: Create token management tests for llm_service.py
 BRANCH: feature/gemini-service-tests-phase6 (checkout existing)
 FILE: mvp_site/test_gemini_token_management.py
 
 CONTEXT:
 - Testing token counting and context management
-- Focus on lines ~500-600 in gemini_service.py
+- Focus on lines ~500-600 in llm_service.py
 - Critical for cost control and context limits
 
 TESTS TO IMPLEMENT (commit after each group):
@@ -499,7 +499,7 @@ Group 4 - Token Estimation (commit after completion):
 12. test_token_usage_reporting - Verify usage tracking
 
 REQUIREMENTS:
-- Understand token counting logic in gemini_service.py
+- Understand token counting logic in llm_service.py
 - Mock the token counting API responses
 - Test edge cases with different character sets
 - Verify context management strategies
@@ -596,10 +596,10 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Set dummy API key before importing gemini_service
+# Set dummy API key before importing llm_service
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_TESTING"
 
-import gemini_service
+import llm_service
 # Import other modules without mvp_site prefix
 ```
 
@@ -607,7 +607,7 @@ import gemini_service
 
 #### Hour 1-2: Complete Phase 6
 1. Fix test_gemini_generation.py imports
-2. Adjust tests to match actual gemini_service.py functions:
+2. Adjust tests to match actual llm_service.py functions:
    - `get_initial_story()` instead of generate_character_details
    - `continue_story()` for narrative generation
 3. Run all Phase 6 tests

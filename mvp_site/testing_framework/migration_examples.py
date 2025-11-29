@@ -40,7 +40,7 @@ class TraditionalCharacterTestBefore:
 
         # BEFORE: Hardcoded mocks, only works in mock mode
         with (
-            patch("main.gemini_service") as mock_gemini,
+            patch("main.llm_service") as mock_gemini,
             patch("main.firestore_service") as mock_firestore,
             patch("main.firebase_admin.auth") as mock_auth,
         ):
@@ -95,7 +95,7 @@ class ModernCharacterTestAfter(BaseTestCase):
         if not self.is_real:
             # Only patch when using mock mode
             with (
-                patch("main.gemini_service", self.gemini),
+                patch("main.llm_service", self.gemini),
                 patch("main.firestore_service", self.firestore),
                 patch("main.firebase_admin.auth", self.auth),
             ):
@@ -137,7 +137,7 @@ class ModernCharacterTestAfter(BaseTestCase):
 def test_character_creation_pytest_old():
     """BEFORE: Pytest test with manual mocking."""
 
-    with patch("main.gemini_service") as mock_gemini:
+    with patch("main.llm_service") as mock_gemini:
         mock_gemini.generate_character.return_value = {"name": "Test Character"}
         # Test logic...
         assert True  # Placeholder

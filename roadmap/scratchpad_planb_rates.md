@@ -215,7 +215,7 @@ Each command will have associated scripts in `./claude_command_scripts/`:
 
 ### **Key Files Modified**
 - `mvp_site/firestore_service.py` - Added empty narrative fix
-- `mvp_site/gemini_service.py` - Enhanced think command prompts + logging
+- `mvp_site/llm_service.py` - Enhanced think command prompts + logging
 - `mvp_site/main.py` - Added comprehensive interaction logging
 - `CLAUDE.md` - Updated with server log locations
 

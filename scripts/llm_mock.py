@@ -13,8 +13,8 @@ from typing import Any
 
 
 @dataclass
-class GeminiResponse:
-    """Mock response from Gemini API"""
+class LLMResponse:
+    """Mock response from LLM API"""
 
     text: str
     tokens_used: int
@@ -38,7 +38,7 @@ class MockGeminiAPI:
 
     async def generate_narrative_async(
         self, prompt: str, approach: str = "baseline"
-    ) -> GeminiResponse:
+    ) -> LLMResponse:
         """Async generation with realistic delays"""
         # Simulate API delay
         delay = random.uniform(0.5, 2.0)
@@ -54,13 +54,13 @@ class MockGeminiAPI:
         # Calculate metrics
         tokens = len(prompt.split()) + len(response_text.split())
 
-        return GeminiResponse(
+        return LLMResponse(
             text=response_text, tokens_used=tokens, generation_time_ms=delay * 1000
         )
 
     def generate_narrative(
         self, prompt: str, approach: str = "baseline"
-    ) -> GeminiResponse:
+    ) -> LLMResponse:
         """Sync wrapper for generation"""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -170,7 +170,7 @@ Narrative: {included[0]} surveyed the scene{f" while {included[1]} stood nearby"
 
         return entities[:4]  # Limit to 4 for testing
 
-    def batch_generate(self, prompts: list[tuple[str, str]]) -> list[GeminiResponse]:
+    def batch_generate(self, prompts: list[tuple[str, str]]) -> list[LLMResponse]:
         """Batch generation for multiple prompts"""
         results = []
         for prompt, approach in prompts:
@@ -182,7 +182,7 @@ Narrative: {included[0]} surveyed the scene{f" while {included[1]} stood nearby"
             except Exception as e:
                 # Return error response
                 results.append(
-                    GeminiResponse(
+                    LLMResponse(
                         text=f"Error: {str(e)}", tokens_used=0, generation_time_ms=0
                     )
                 )

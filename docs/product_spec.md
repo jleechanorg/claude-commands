@@ -415,7 +415,7 @@ This principle ensures that frontend architectural improvements do not introduce
 mvp_site/
 ├── main.py                 # Flask application entry point
 ├── services/
-│   ├── gemini_service.py   # AI integration layer
+│   ├── llm_service.py   # AI integration layer
 │   ├── firestore_service.py # Database operations
 │   └── auth_service.py     # Authentication handling
 ├── models/
@@ -3902,10 +3902,10 @@ class TestCampaignAPI(TestCase):
 ```python
 class TestServiceIntegration(TestCase):
     @patch('services.firestore_service.db')
-    @patch('services.gemini_service.client')
-    def test_full_story_flow(self, mock_gemini, mock_firestore):
+    @patch('services.llm_service.client')
+    def test_full_story_flow(self, mock_llm, mock_firestore):
         # Setup mocks
-        mock_gemini.generate_content.return_value.text = self.get_mock_ai_response()
+        mock_llm.generate_content.return_value.text = self.get_mock_ai_response()
         mock_firestore.collection.return_value.document.return_value.get.return_value.exists = True
 
         # Execute flow
@@ -3914,7 +3914,7 @@ class TestServiceIntegration(TestCase):
 
         # Verify interactions
         mock_firestore.collection.assert_called_with('campaigns')
-        mock_gemini.generate_content.assert_called_once()
+        mock_llm.generate_content.assert_called_once()
         self.assertIsNotNone(result['narrative'])
 ```
 

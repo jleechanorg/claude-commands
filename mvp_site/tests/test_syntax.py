@@ -22,12 +22,12 @@ class TestModuleSyntax(unittest.TestCase):
         if syntax_errors:
             self.fail(f"Syntax errors: {'; '.join(syntax_errors)}")
 
-    def test_gemini_service_import(self):
+    def test_llm_service_import(self):
         """
-        Tests if the gemini_service.py module can be imported.
+        Tests if the llm_service.py module can be imported.
         A failure here indicates a syntax error in the file.
         """
-        print("\n--- Attempting to import gemini_service.py ---")
+        print("\n--- Attempting to import llm_service.py ---")
 
         # We must set the API key environment variable BEFORE importing,
         # because the module uses it immediately upon import.
@@ -44,12 +44,12 @@ class TestModuleSyntax(unittest.TestCase):
             )
 
             # If we get here, the import was successful.
-            print("SUCCESS: gemini_service.py was imported without a syntax error.")
+            print("SUCCESS: llm_service.py was imported without a syntax error.")
             assert True
         except (SyntaxError, IndentationError) as e:
             # If we get here, the import failed due to a syntax error.
-            print(f"FAILURE: A syntax error was found in gemini_service.py: {e}")
-            self.fail(f"SyntaxError or IndentationError in gemini_service.py: {e}")
+            print(f"FAILURE: A syntax error was found in llm_service.py: {e}")
+            self.fail(f"SyntaxError or IndentationError in llm_service.py: {e}")
         except Exception as e:
             # Catch any other potential import-time errors.
             print(f"FAILURE: An unexpected error occurred during import: {e}")

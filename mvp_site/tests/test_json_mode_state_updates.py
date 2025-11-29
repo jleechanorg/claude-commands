@@ -14,7 +14,7 @@ sys.path.insert(
 import unittest
 
 from mvp_site import logging_util
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 
 
 class TestJsonModeStateUpdates(unittest.TestCase):
@@ -41,7 +41,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         raw_response = json.dumps(json_response)
 
         # Process the response using new API
-        gemini_response = GeminiResponse.create(raw_response)
+        gemini_response = LLMResponse.create(raw_response)
         result = gemini_response.narrative_text
         structured_response = gemini_response.structured_response
 
@@ -80,7 +80,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         raw_response = json.dumps(json_response)
 
         # Process the response using new API
-        gemini_response = GeminiResponse.create(raw_response)
+        gemini_response = LLMResponse.create(raw_response)
         result = gemini_response.narrative_text
 
         # Check that narrative is included
@@ -104,7 +104,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         raw_response = json.dumps(json_response)
 
         # Process the response using new API
-        gemini_response = GeminiResponse.create(raw_response)
+        gemini_response = LLMResponse.create(raw_response)
         result = gemini_response.narrative_text
 
         # Check that narrative is included

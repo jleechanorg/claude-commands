@@ -32,7 +32,7 @@ Based on coverage analysis:
 - **Other low coverage modules:**
   - game_state.py: 9% coverage (153/169 lines missing)
   - main.py: 12% coverage (521/590 lines missing)
-  - gemini_service.py: 13% coverage (513/590 lines missing)
+  - llm_service.py: 13% coverage (513/590 lines missing)
 
 ## Progress Update (2025-01-07)
 - ✅ Milestone 1.1: json_utils.py tests (44 tests) - COMPLETE
@@ -136,7 +136,7 @@ Achieve comprehensive test coverage for utility modules and push overall coverag
 
 - [ ] Add missing tests for high-impact areas:
   - [ ] Critical paths in game_state.py
-  - [ ] Error handling in gemini_service.py
+  - [ ] Error handling in llm_service.py
   - [ ] Security validations in main.py
   - [ ] Data integrity checks
 

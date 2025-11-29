@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-from mvp_site import gemini_service
+from mvp_site import llm_service
 
 
 def _load_api_key() -> None:
@@ -36,7 +36,7 @@ def _load_api_key() -> None:
 _load_api_key()
 
 # Get the client object
-client = gemini_service.get_client()
+client = llm_service.get_client()
 
 # --- This is how you can check for yourself ---
 # Print the official help documentation for the method we are using.

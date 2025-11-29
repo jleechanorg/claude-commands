@@ -19,7 +19,7 @@
 ### 2. Data Flow
 ```
 Gemini API (returns JSON)
-    → gemini_service.py (parses JSON, extracts narrative)
+    → llm_service.py (parses JSON, extracts narrative)
     → main.py (receives GeminiResponse object)
     → firestore_service.py (saves narrative text)
     → Frontend (displays narrative with "Scene #X" prefix)
@@ -39,7 +39,7 @@ Gemini API (returns JSON)
 
 ### 5. Key Files and Their Roles
 - `narrative_response_schema.py`: Defines JSON structure and parsing logic
-- `gemini_service.py`: Calls Gemini API and processes responses
+- `llm_service.py`: Calls Gemini API and processes responses
 - `main.py`: Orchestrates the flow and saves to database
 - `app.js`: Frontend that adds "Scene #" prefix to displayed text
 
@@ -78,5 +78,5 @@ Gemini API (returns JSON)
 **Likely cause**: Valid JSON not being processed correctly somewhere in the pipeline
 **Investigation needed**:
 - Where exactly is the narrative extraction failing?
-- Is it in gemini_service, main.py, or somewhere else?
+- Is it in llm_service, main.py, or somewhere else?
 - Why does parse_structured_response work in tests but not in production?

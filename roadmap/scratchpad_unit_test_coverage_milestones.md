@@ -16,7 +16,7 @@ Updated comprehensive plan to improve unit test coverage from current 59% to 80%
 - **Key Files**:
   - `main.py`: **33%** (599 statements, 404 missing) - **TOP PRIORITY**
   - `firestore_service.py`: **61%** (254 statements, 100 missing) - **MEDIUM PRIORITY**
-  - `gemini_service.py`: **65%** (632 statements, 221 missing) - **LOWER PRIORITY**
+  - `llm_service.py`: **65%** (632 statements, 221 missing) - **LOWER PRIORITY**
   - `game_state.py`: **91%** (182 statements, 17 missing) - **MINIMAL WORK**
 
 ### Test Infrastructure Status
@@ -103,7 +103,7 @@ Updated comprehensive plan to improve unit test coverage from current 59% to 80%
 - **Lines covered**: ~50 additional statements
 - **Focus**: Critical data integrity paths
 
-### Milestone 3: gemini_service.py Polish (Week 4)
+### Milestone 3: llm_service.py Polish (Week 4)
 **Target Coverage: 65% → 75% (+10%)**
 
 #### Current Gap Analysis
@@ -122,7 +122,7 @@ Updated comprehensive plan to improve unit test coverage from current 59% to 80%
    - [ ] Test service degradation scenarios
 
 #### Success Metrics
-- **gemini_service.py coverage**: 65% → 75% (+10%)
+- **llm_service.py coverage**: 65% → 75% (+10%)
 - **Lines covered**: ~60 additional statements
 - **Focus**: Resilience and error recovery
 
@@ -162,7 +162,7 @@ Updated comprehensive plan to improve unit test coverage from current 59% to 80%
 ### Phase 2: Core Development (Weeks 2-4)
 1. **Complete main.py testing** (33% → 65%)
 2. **Enhance firestore_service.py** (61% → 80%)
-3. **Polish gemini_service.py** (65% → 75%)
+3. **Polish llm_service.py** (65% → 75%)
 
 ### Phase 3: Completion (Week 5)
 1. **Complete game_state.py** (91% → 95%)
@@ -201,7 +201,7 @@ TESTING=true python tests/test_main_routes.py
 ### Coverage Tracking Progress
 ```bash
 # Track progress on key files
-./coverage.sh --no-html | grep -E "(main\.py|firestore_service\.py|gemini_service\.py|game_state\.py)"
+./coverage.sh --no-html | grep -E "(main\.py|firestore_service\.py|llm_service\.py|game_state\.py)"
 
 # Full coverage summary
 ./coverage.sh --no-html | tail -10
@@ -213,7 +213,7 @@ TESTING=true python tests/test_main_routes.py
 - **Overall Coverage**: 59% → 80% (+21%)
 - **main.py**: 33% → 65% (+32%) ⭐ **PRIMARY TARGET**
 - **firestore_service.py**: 61% → 80% (+19%)
-- **gemini_service.py**: 65% → 75% (+10%)
+- **llm_service.py**: 65% → 75% (+10%)
 - **game_state.py**: 91% → 95% (+4%)
 
 ### Qualitative Goals
@@ -283,4 +283,4 @@ TESTING=true python tests/test_main_routes.py
 **Status**: Ready for Implementation
 **Next Milestone**: Milestone 1 (main.py coverage 33% → 65%)
 **Coverage Tool**: `./coverage.sh` (verified working)
-**Priority**: main.py > firestore_service.py > gemini_service.py > game_state.py
+**Priority**: main.py > firestore_service.py > llm_service.py > game_state.py

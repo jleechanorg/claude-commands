@@ -9,7 +9,7 @@
 Current codebase has architectural inconsistency between modern JSON mode responses and legacy text pattern matching:
 
 ### Issue Identified
-- **File**: `mvp_site/gemini_service.py:1044`
+- **File**: `mvp_site/llm_service.py:1044`
 - **Problem**: `re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE)` checks for old-style text markers
 - **Modern Approach**: Should use JSON response fields and structured data instead
 
@@ -20,7 +20,7 @@ Current codebase has architectural inconsistency between modern JSON mode respon
 ## Files to Clean Up
 
 ### Primary Target
-- `mvp_site/gemini_service.py`
+- `mvp_site/llm_service.py`
   - Line 1044: Remove regex pattern check in `_validate_and_enforce_planning_block()`
   - Replace with proper JSON-based character creation state detection
 
@@ -33,7 +33,7 @@ Current codebase has architectural inconsistency between modern JSON mode respon
 ## Implementation Plan
 
 ### 1. Analysis Phase
-- [ ] Map all text pattern matching usage in gemini_service.py
+- [ ] Map all text pattern matching usage in llm_service.py
 - [ ] Identify proper JSON fields for character creation state
 - [ ] Review existing character creation tests
 - [ ] Document current character creation flow

@@ -22,7 +22,7 @@ The `unified_api.py` module provides a consistent JSON interface layer that both
          ┌───────────▼───────────┐
          │  Shared Services      │
          │ firestore_service.py  │
-         │ gemini_service.py     │
+         │ llm_service.py     │
          │ game_state.py         │
          └───────────────────────┘
 ```

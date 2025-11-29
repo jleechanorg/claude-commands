@@ -18,7 +18,7 @@ These functions appear to have no calls in the codebase:
 2. **main.py**
    - `_prepare_game_state()` (line 131) - Private function that appears unused
 
-3. **gemini_service.py**
+3. **llm_service.py**
    - `json_datetime_serializer()` (line 35) - Utility function that may be obsolete
 
 4. **firestore_service.py**
@@ -51,7 +51,7 @@ These functions appear to have no calls in the codebase:
 
 ### Mock and Test Support Files
 
-12. **mocks/mock_gemini_service.py**
+12. **mocks/mock_llm_service.py**
     - `get_mock_client()` (line 165) - Mock factory appears unused
 
 13. **mocks/mock_firestore_service.py**
@@ -80,14 +80,14 @@ These classes appear to have no instantiation or usage:
 11. **entity_instructions.py** - `class EntityInstruction` (line 14)
 12. **entity_instructions_original.py** - `class EntityInstruction` (line 14)
 13. **narrative_sync_validator.py** - `class EntityPresenceType` (line 13)
-14. **gemini_service.py** - `class PromptBuilder` (line 186)
+14. **llm_service.py** - `class PromptBuilder` (line 186)
 15. **entity_validator.py** - `class ValidationResult` (line 15)
 16. **dual_pass_generator.py** - `class GenerationPass` (line 15)
 17. **game_state.py** - `class MigrationStatus` (line 10)
 
 ## 3. Potentially Unused Imports
 
-### gemini_service.py
+### llm_service.py
 - `entity_tracking.SceneManifest` - Imported but not used
 
 ### game_state.py
@@ -119,7 +119,7 @@ During analysis, these were initially flagged but are actually used:
 
 1. **Immediate Actions:**
    - Remove or archive the `*_original.py` files if they're no longer needed
-   - Remove unused utility functions in core files (game_state, main, gemini_service)
+   - Remove unused utility functions in core files (game_state, main, llm_service)
    - Clean up unused imports
 
 2. **Investigation Needed:**

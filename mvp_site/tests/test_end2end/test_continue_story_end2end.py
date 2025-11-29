@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
-from mvp_site.tests.fake_gemini import FakeGeminiResponse
+from mvp_site.tests.fake_llm import FakeLLMResponse
 
 
 class TestContinueStoryEnd2End(unittest.TestCase):
@@ -44,7 +44,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         }
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
     def test_continue_story_success(self, mock_gemini_request, mock_get_db):
         """Test successful story continuation using fake services."""
 
@@ -80,7 +80,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "location_confirmed": "Mountain Kingdom",
             "state_updates": {"story_progression": "continued"},
         }
-        mock_gemini_request.return_value = FakeGeminiResponse(
+        mock_gemini_request.return_value = FakeLLMResponse(
             json.dumps(gemini_response_data)
         )
 

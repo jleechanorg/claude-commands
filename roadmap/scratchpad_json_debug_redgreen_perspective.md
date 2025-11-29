@@ -89,7 +89,7 @@ Per CLAUDE.md debugging protocol:
 ## Key Files to Check
 - `mvp_site/static/app.js` - Frontend display logic
 - `mvp_site/main.py` - API endpoints
-- `mvp_site/gemini_service.py` - AI response processing
+- `mvp_site/llm_service.py` - AI response processing
 - `mvp_site/narrative_response_schema.py` - JSON parsing
 - `mvp_site/firestore_service.py` - Database storage
 

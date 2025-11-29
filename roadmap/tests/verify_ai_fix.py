@@ -38,11 +38,11 @@ def verify_fix_implementation():
     print()
 
     # Check 2: get_initial_story should accept campaign_data
-    print("📋 Checking gemini_service.py get_initial_story...")
+    print("📋 Checking llm_service.py get_initial_story...")
 
-    gemini_service_file = "mvp_site/gemini_service.py"
-    if os.path.exists(gemini_service_file):
-        with open(gemini_service_file) as f:
+    llm_service_file = "mvp_site/llm_service.py"
+    if os.path.exists(llm_service_file):
+        with open(llm_service_file) as f:
             content = f.read()
 
         # Check if campaign_data parameter was added to function signature
@@ -57,7 +57,7 @@ def verify_fix_implementation():
         else:
             print("   ❌ campaign_data not passed to GeminiRequest")
     else:
-        print("   ❌ gemini_service.py file not found")
+        print("   ❌ llm_service.py file not found")
 
     print()
 

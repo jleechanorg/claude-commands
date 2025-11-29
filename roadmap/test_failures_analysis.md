@@ -28,7 +28,7 @@ Out of 81 tests, 19 failed. Of these, only 2-3 failures are directly related to 
 - May be checking for calibration in refactoring tests
 - Needs investigation
 
-### test_gemini_service.py ❌
+### test_llm_service.py ❌
 - Could be testing prompt loading with calibration
 - Needs investigation
 
@@ -66,7 +66,7 @@ These tests were likely failing before our changes:
    - Remove FILENAME_CALIBRATION from string tests
    - Fix CHARACTER_SHEET references
 4. Fix or remove `test_prompt_loading_simple.py` - outdated test expecting calibration
-5. Investigate `test_refactoring_coverage.py` and `test_gemini_service.py` for calibration references
+5. Investigate `test_refactoring_coverage.py` and `test_llm_service.py` for calibration references
 
 ## Fixed So Far
 

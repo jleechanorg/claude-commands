@@ -161,7 +161,7 @@ message = DebugModeParser.get_state_update_message(command_type, new_state)
 - `class GenerationPass` – Represents a single generation pass (Status: Keep).
 - `class DualPassResult` – Result of dual-pass generation (Status: Keep).
 - `class DualPassGenerator` – Implements dual-pass generation to improve entity tracking. Pass 1: Generate initial narrative Pass 2: Verify entities and inject missing ones (Status: Keep).
-  - `generate_with_dual_pass` – Execute dual-pass generation with entity verification. Args: initial_prompt: The original prompt for narrative generation expected_entities: Entities that should be present location: Current scene location generation_callback: Function to call AI generation (gemini_service.continue_story) Returns: DualPassResult with both passes and final narrative (Status: Keep).
+  - `generate_with_dual_pass` – Execute dual-pass generation with entity verification. Args: initial_prompt: The original prompt for narrative generation expected_entities: Entities that should be present location: Current scene location generation_callback: Function to call AI generation (llm_service.continue_story) Returns: DualPassResult with both passes and final narrative (Status: Keep).
   - `create_entity_injection_snippet` – Create a snippet to inject a missing entity (REFACTORED: uses EntityValidator templates) (Status: Keep).
 - `class AdaptiveEntityInjector` – Advanced entity injection that adapts based on narrative context. (Status: Keep).
   - `inject_entities_adaptively` – Adaptively inject missing entities based on narrative context (Status: Keep).
@@ -360,7 +360,7 @@ message = DebugModeParser.get_state_update_message(command_type, new_state)
 
 ---
 
-## `gemini_service.py`
+## `llm_service.py`
 
 **Role:** Gemini Service - AI Integration and Response Processing This module provides comprehensive AI service integration for WorldArchitect.AI, handling all aspects of story generation, prompt construction, and response processing. Key Responsibilities: - Gemini AI client management and model selection - System instruction building and prompt construction - Entity tracking and narrative validation - JSON response parsing and structured data handling - Model fallback and error handling - Planning block enforcement and debug content management - Token counting and context management - **FIXED: Token limit management to prevent backstory cutoffs** Architecture: - Uses Google Generative AI (Gemini) for story generation - Implements robust prompt building with PromptBuilder class - Provides entity tracking with multiple mitigation strategies - Includes comprehensive error handling and model cycling - Supports both initial story generation and continuation - Manages complex state interactions and validation Key Classes: - PromptBuilder: Constructs system instructions and prompts - GeminiResponse: Custom response object with parsed data - EntityPreloader: Pre-loads entity context for tracking - EntityInstructionGenerator: Creates entity-specific instructions - DualPassGenerator: Retry mechanism for entity tracking Dependencies: - Google Generative AI SDK for Gemini API calls - Custom entity tracking and validation modules - Game state management for context - Token utilities for cost management
 
@@ -584,7 +584,7 @@ message = DebugModeParser.get_state_update_message(command_type, new_state)
 
 ## `narrative_sync_validator.py`
 
-**Role:** Narrative Synchronization Validator for Production Entity Tracking Adapted from Milestone 0.4 prototype for production use in gemini_service.py REFACTORED: Now delegates to EntityValidator for all entity presence logic.
+**Role:** Narrative Synchronization Validator for Production Entity Tracking Adapted from Milestone 0.4 prototype for production use in llm_service.py REFACTORED: Now delegates to EntityValidator for all entity presence logic.
 
 **Status:** Keep (critical to existing implementation unless noted otherwise).
 

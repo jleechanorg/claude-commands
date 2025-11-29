@@ -7,7 +7,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
@@ -38,7 +38,7 @@ class TestStateUpdatesJSONParsing(unittest.TestCase):
         }
 
     def test_state_updates_extracted_from_json_response(self):
-        """Test that state updates are properly extracted from GeminiResponse object"""
+        """Test that state updates are properly extracted from LLMResponse object"""
         # Create a NarrativeResponse with state updates
         narrative_response = NarrativeResponse(
             narrative="The brave knight finds a magical sword.",
@@ -47,8 +47,8 @@ class TestStateUpdatesJSONParsing(unittest.TestCase):
             state_updates=self.sample_json_response["state_updates"],
         )
 
-        # Create a GeminiResponse with the structured response
-        response = GeminiResponse(
+        # Create a LLMResponse with the structured response
+        response = LLMResponse(
             narrative_text="The brave knight finds a magical sword.",
             structured_response=narrative_response,
             debug_tags_present={
@@ -69,14 +69,14 @@ class TestStateUpdatesJSONParsing(unittest.TestCase):
 
     def test_main_py_uses_json_state_updates_not_markdown_blocks(self):
         """Test that main.py correctly uses state_updates from structured response"""
-        # Create a properly structured GeminiResponse
+        # Create a properly structured LLMResponse
         narrative_response = NarrativeResponse(
             narrative="The brave knight finds a magical sword.",
             entities_mentioned=["knight", "magical sword"],
             state_updates=self.sample_json_response["state_updates"],
         )
 
-        gemini_response = GeminiResponse(
+        gemini_response = LLMResponse(
             narrative_text="The brave knight finds a magical sword.",
             structured_response=narrative_response,
             debug_tags_present={},
@@ -116,7 +116,7 @@ The temple guardian greets him."""
             state_updates={"pc_data": {"attributes": {"wisdom": 14}}},
         )
 
-        response = GeminiResponse(
+        response = LLMResponse(
             narrative_text=narrative_with_block,
             structured_response=narrative_response,
             debug_tags_present={},
@@ -134,7 +134,7 @@ The temple guardian greets him."""
             entities_mentioned=[],
             state_updates=None,
         )
-        response1 = GeminiResponse(
+        response1 = LLMResponse(
             narrative_text="A quiet moment passes.",
             structured_response=narrative_response1,
             debug_tags_present={},
@@ -145,7 +145,7 @@ The temple guardian greets him."""
         narrative_response2 = NarrativeResponse(
             narrative="Nothing changes.", entities_mentioned=[], state_updates={}
         )
-        response2 = GeminiResponse(
+        response2 = LLMResponse(
             narrative_text="Nothing changes.",
             structured_response=narrative_response2,
             debug_tags_present={},
@@ -186,7 +186,7 @@ The temple guardian greets him."""
             state_updates=complex_updates,
         )
 
-        response = GeminiResponse(
+        response = LLMResponse(
             narrative_text="Dawn breaks as the adventurer prepares.",
             structured_response=narrative_response,
             debug_tags_present={},

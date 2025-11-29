@@ -1,11 +1,14 @@
 """
-Mock Gemini Service wrapper that provides the same interface as the real gemini_service module.
+Mock Gemini Service wrapper that provides the same interface as the real llm_service module.
 """
 
 import os
 import sys
 
-from .structured_fields_fixtures import INITIAL_CAMPAIGN_RESPONSE
+from .structured_fields_fixtures import (
+    INITIAL_CAMPAIGN_RESPONSE,
+    FULL_STRUCTURED_RESPONSE,
+)
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,10 +39,10 @@ except ImportError:
                     return logging.getLogger(name)
 
             logging_util = MinimalLoggingUtil()
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
 
-from .mock_gemini_service import MockGeminiClient
+from .mock_llm_service import MockLLMClient
 
 # Module-level client instance (like the real service)
 _client = None
@@ -50,7 +53,7 @@ def get_client():
     global _client
     if _client is None:
         logging_util.info("Mock Gemini Service: Creating mock client")
-        _client = MockGeminiClient()
+        _client = MockLLMClient()
     return _client
 
 
@@ -172,8 +175,8 @@ What do you do?"""
             resources="None",
         )
 
-    # Create GeminiResponse object
-    return GeminiResponse(
+    # Create LLMResponse object
+    return LLMResponse(
         narrative_text=narrative_text, structured_response=narrative_response
     )
 
@@ -213,12 +216,6 @@ Your strike lands true, dealing damage to your enemy."""
 The world responds to your actions, and new possibilities unfold before you."""
         state_updates = {}
 
-    # Import structured fields if available
-    try:
-        from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE
-    except ImportError:
-        FULL_STRUCTURED_RESPONSE = None
-
     # Add structured fields to the response
     if FULL_STRUCTURED_RESPONSE:
         # Use full structured fields from fixtures
@@ -249,7 +246,7 @@ The world responds to your actions, and new possibilities unfold before you."""
             state_updates=state_updates,
         )
 
-    return GeminiResponse(
+    return LLMResponse(
         narrative_text=narrative_text, structured_response=narrative_response
     )
 

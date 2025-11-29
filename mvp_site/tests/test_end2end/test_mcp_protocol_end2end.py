@@ -18,12 +18,15 @@ from importlib.util import find_spec  # noqa: E402
 from unittest.mock import MagicMock, patch  # noqa: E402
 
 # Check availability without importing (avoids conditional imports)
-HAS_GENAI = find_spec("google") is not None and find_spec("google.genai") is not None  # noqa: E402
+try:
+    HAS_GENAI = find_spec("google.genai") is not None  # noqa: E402
+except ValueError:
+    HAS_GENAI = False
 
 from mvp_site.main import create_app  # noqa: E402
 from mvp_site.tests.fake_firestore import (  # noqa: E402
     FakeFirestoreClient,
-    FakeGeminiResponse,
+    FakeLLMResponse,
     FakeTokenCount,
 )
 
@@ -146,7 +149,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
     @unittest.skipUnless(HAS_GENAI, "google-genai package not available")
     @patch("firestore_service.get_db")
-    @patch("gemini_service.genai.Client")
+    @patch("llm_service.genai.Client")
     def test_mcp_process_action_protocol(self, mock_genai_client_class, mock_get_db):
         """Test MCP protocol for process_action_unified tool."""
         # Set up fake Firestore
@@ -173,7 +176,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
             "resources": "None",
             "state_updates": {"hp": 100},
         }
-        fake_genai_client.models.generate_content.return_value = FakeGeminiResponse(
+        fake_genai_client.models.generate_content.return_value = FakeLLMResponse(
             json.dumps(gemini_response_data)
         )
 

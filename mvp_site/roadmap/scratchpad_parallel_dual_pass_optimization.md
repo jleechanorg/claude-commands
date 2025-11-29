@@ -71,7 +71,7 @@ def handle_interaction(user_id, campaign_id):
     # ... existing logic ...
 
     # Pass 1: Generate initial response
-    gemini_response = gemini_service.continue_story(...)
+    gemini_response = llm_service.continue_story(...)
 
     # Validate entities immediately
     validation_result = entity_validator.validate(gemini_response, expected_entities)

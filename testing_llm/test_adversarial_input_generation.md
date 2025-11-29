@@ -183,7 +183,7 @@ Classify the failure type:
 - **Poor Error UX**: Technical errors exposed to users
 
 **Fix Locations**:
-- `mvp_site/gemini_service.py`: Add input validation and sanitization
+- `mvp_site/llm_service.py`: Add input validation and sanitization
 - `mvp_site/prompts/master_directive.md`: Strengthen context boundaries
 - `mvp_site/game_state.py`: Add state validation and bounds checking
 - `mvp_site/main.py`: Implement request timeout and size limits

@@ -15,7 +15,7 @@ Review current unit test coverage state, assess progress toward 85% coverage goa
 Based on comprehensive test suite analysis:
 
 - **main.py**: **33%** coverage (599 statements, 404 missing)
-- **gemini_service.py**: **65%** coverage (632 statements, 221 missing)
+- **llm_service.py**: **65%** coverage (632 statements, 221 missing)
 - **game_state.py**: **91%** coverage (182 statements, 17 missing)
 - **firestore_service.py**: **61%** coverage (254 statements, 100 missing)
 - **Overall Coverage**: **59%** (16,023 statements, 6,542 missing)
@@ -49,7 +49,7 @@ Based on comprehensive test suite analysis:
 
 **Impact**: Data integrity and persistence
 
-### LOWER PRIORITY: gemini_service.py (65% coverage)
+### LOWER PRIORITY: llm_service.py (65% coverage)
 **Gap Analysis**: 221 missing statements out of 632 total
 **Status**: Much better than initially thought
 **Critical Areas**:
@@ -104,7 +104,7 @@ Based on comprehensive test suite analysis:
 **Estimated Impact**: ~50 new lines covered
 **Leverage**: Existing mock patterns
 
-### Milestone 3: gemini_service.py Polish (Week 3)
+### Milestone 3: llm_service.py Polish (Week 3)
 **Target**: 65% → 75% (+10%)
 **Focus Areas**:
 1. **Advanced Error Handling**
@@ -153,7 +153,7 @@ Based on comprehensive test suite analysis:
 - **Overall Coverage**: 59% → 75% (+16%)
 - **main.py**: 33% → 65% (+32%)
 - **firestore_service.py**: 61% → 80% (+19%)
-- **gemini_service.py**: 65% → 75% (+10%)
+- **llm_service.py**: 65% → 75% (+10%)
 - **game_state.py**: 91% → 95% (+4%)
 
 ### Qualitative Goals
@@ -207,7 +207,7 @@ TESTING=true python tests/test_main_routes.py
 3. **Use coverage infrastructure**: `./coverage.sh` for progress tracking
 
 ### Medium Term (Weeks 2-4)
-1. **Service layer enhancement**: firestore_service.py and gemini_service.py
+1. **Service layer enhancement**: firestore_service.py and llm_service.py
 2. **Integration validation**: Ensure tests work with existing infrastructure
 3. **Documentation updates**: Test patterns and coverage goals
 

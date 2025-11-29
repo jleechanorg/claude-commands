@@ -10,7 +10,7 @@ Function tests validate the interaction between multiple Python modules/files wh
 
 ## Mock Libraries to Create
 
-### 1. `mock_gemini_service.py` - Gemini API Mock
+### 1. `mock_llm_service.py` - Gemini API Mock
 ```python
 class MockGeminiClient:
     def __init__(self):
@@ -74,7 +74,7 @@ SAMPLE_STORY_CONTEXT = [
 ## Function Test Cases
 
 ### Test 1: Complete Interaction Flow with Validation
-**Modules Tested**: `main.py` → `gemini_service.py` → `game_state.py` → `firestore_service.py`
+**Modules Tested**: `main.py` → `llm_service.py` → `game_state.py` → `firestore_service.py`
 
 ```python
 def test_complete_interaction_with_checkpoint_validation():
@@ -84,7 +84,7 @@ def test_complete_interaction_with_checkpoint_validation():
 
     # Test flow:
     # 1. User sends input via main.py handle_interaction()
-    # 2. Pre-response validation in gemini_service.continue_story()
+    # 2. Pre-response validation in llm_service.continue_story()
     # 3. AI generates response with state changes
     # 4. Post-response validation in main.py
     # 5. State updates applied via firestore_service
@@ -98,7 +98,7 @@ def test_complete_interaction_with_checkpoint_validation():
 ```
 
 ### Test 2: HP Discrepancy Detection Across Modules
-**Modules Tested**: `game_state.py` validation → `gemini_service.py` prompt injection → `main.py` logging
+**Modules Tested**: `game_state.py` validation → `llm_service.py` prompt injection → `main.py` logging
 
 ```python
 def test_hp_discrepancy_detection_end_to_end():
@@ -108,7 +108,7 @@ def test_hp_discrepancy_detection_end_to_end():
 ```
 
 ### Test 3: Mission Completion State Management
-**Modules Tested**: `firestore_service.py` state updates → `game_state.py` validation → `gemini_service.py` context
+**Modules Tested**: `firestore_service.py` state updates → `game_state.py` validation → `llm_service.py` context
 
 ```python
 def test_mission_completion_state_management():
@@ -132,7 +132,7 @@ def test_location_consistency_validation():
 ## Mock Implementation Strategy
 
 ### Phase 1: Create Mock Base Classes
-1. **`mock_gemini_service.py`** - Realistic AI response patterns
+1. **`mock_llm_service.py`** - Realistic AI response patterns
 2. **`mock_firestore_service.py`** - In-memory database simulation
 3. **`test_data_fixtures.py`** - Comprehensive test data sets
 
@@ -154,7 +154,7 @@ mvp_site/
 ├── test_function_error_scenarios.py      # Error/edge case tests
 ├── mocks/
 │   ├── __init__.py
-│   ├── mock_gemini_service.py            # Gemini API mock
+│   ├── mock_llm_service.py            # Gemini API mock
 │   ├── mock_firestore_service.py         # Firestore mock
 │   └── test_data_fixtures.py             # Sample data
 └── existing unit test files...

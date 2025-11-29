@@ -51,7 +51,7 @@ The goal: True end2end tests that test real integration without mocking internal
 
 **Result**: Partial Success - Generated pytest-style tests in 775ms but used incorrect mocking approach
 **Issue Found**: Qwen generated `@patch('main.gemini_client')` instead of using existing fake services architecture
-**Correction Applied**: Manually fixed to use proper `@patch("firebase_admin.firestore.client")` with `FakeFirestoreClient` and `@patch("gemini_service._call_gemini_api_with_gemini_request")` with `FakeGeminiResponse` as per main branch pattern
+**Correction Applied**: Manually fixed to use proper `@patch("firebase_admin.firestore.client")` with `FakeFirestoreClient` and `@patch("llm_service._call_llm_api_with_gemini_request")` with `FakeGeminiResponse` as per main branch pattern
 
 **Learning**: Qwen needs more context about existing architecture patterns. For future use, provide examples of current mocking patterns when asking for test modifications.
 

@@ -14,7 +14,7 @@ Milestone 0.4 proved that the Combined approach achieves 100% entity tracking su
 - **Cost**: ~$0.0007 per narrative (negligible)
 
 ## Goals
-1. Integrate Combined approach into production `gemini_service.py`
+1. Integrate Combined approach into production `llm_service.py`
 2. Implement Entity ID system for better tracking
 3. Add monitoring and metrics
 4. Ensure backward compatibility
@@ -151,7 +151,7 @@ class NarrativeSyncValidator:
         """
 ```
 
-## Step 1: Production Implementation (gemini_service.py)
+## Step 1: Production Implementation (llm_service.py)
 
 ### 1.1 Update Narrative Generation
 - [ ] Add the schema code from above to your codebase or import from a new module
@@ -212,7 +212,7 @@ class NarrativeSyncValidator:
 
 ### 1.4 Example Complete Implementation
 ```python
-# In gemini_service.py
+# In llm_service.py
 def generate_narrative_with_tracking(self, prompt, game_state, session, turn):
     """Enhanced narrative generation with entity tracking"""
 
@@ -341,7 +341,7 @@ Format your response as JSON with 'narrative', 'entities_mentioned', and 'locati
 
 ## Dependencies
 - Completed Milestone 0.4 test results
-- Access to production gemini_service.py
+- Access to production llm_service.py
 - Ability to modify game state schema
 - Monitoring infrastructure
 
@@ -352,7 +352,7 @@ Format your response as JSON with 'narrative', 'entities_mentioned', and 'locati
 - Player perception of changes
 
 ## Notes
-- Start with gemini_service.py changes as they provide immediate value
+- Start with llm_service.py changes as they provide immediate value
 - Entity ID system can be implemented incrementally
 - Monitor closely during rollout for any issues
 - Keep validation-only as emergency fallback

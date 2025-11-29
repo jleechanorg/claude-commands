@@ -17,7 +17,7 @@ except ImportError:
     print("Warning: google-generativeai not installed. Using mock service.")
 
 
-class GeminiServiceWrapper:
+class LLMServiceWrapper:
     """Wrapper for Gemini API with validation-specific features."""
 
     def __init__(self, api_key: str = None, model_name: str = "gemini-pro"):
@@ -147,7 +147,7 @@ class MockGeminiService:
         }
 
 
-def get_gemini_service(api_key_path: str | None = None) -> Any:
+def get_llm_service(api_key_path: str | None = None) -> Any:
     """Get Gemini service (real or mock based on availability)."""
     if api_key_path and os.path.exists(api_key_path) and GEMINI_AVAILABLE:
         return GeminiServiceWrapper.from_file(api_key_path)

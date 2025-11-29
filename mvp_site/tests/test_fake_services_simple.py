@@ -15,7 +15,7 @@ if tests_dir not in sys.path:
 
 from fake_auth import FakeFirebaseAuth
 from fake_firestore import FakeFirestoreClient
-from fake_gemini import create_fake_gemini_client
+from fake_llm import create_fake_llm_client
 
 
 class TestFakeServicesSimple(unittest.TestCase):
@@ -51,9 +51,9 @@ class TestFakeServicesSimple(unittest.TestCase):
         json_str = json.dumps(retrieved)
         assert "Test Campaign" in json_str
 
-    def test_fake_gemini_response_generation(self):
+    def test_fake_llm_response_generation(self):
         """Test that fake Gemini generates realistic responses."""
-        client = create_fake_gemini_client()
+        client = create_fake_llm_client()
         model = client.models.get("gemini-2.5-flash")
 
         # Test campaign creation prompt
@@ -120,7 +120,7 @@ class TestFakeServicesSimple(unittest.TestCase):
         """Test that all fake services work together."""
         # Set up services
         firestore = FakeFirestoreClient()
-        gemini = create_fake_gemini_client()
+        gemini = create_fake_llm_client()
         auth = FakeFirebaseAuth()
 
         # Create user

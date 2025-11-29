@@ -42,7 +42,7 @@ from mvp_site import (
     constants,
     document_generator,
     firestore_service,
-    gemini_service,
+    llm_service,
     logging_util,
     structured_fields_utils,
 )
@@ -395,9 +395,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         generate_companions = "companions" in custom_options
         use_default_world = "defaultWorld" in custom_options
 
-        # Generate opening story using Gemini (CRITICAL: blocking I/O - 10-30+ seconds!)
+        # Generate opening story using LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         opening_story_response = await asyncio.to_thread(
-            gemini_service.get_initial_story,
+            llm_service.get_initial_story,
             prompt,
             user_id,
             selected_prompts,
@@ -499,10 +499,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         selected_prompts = campaign_data.get("selected_prompts", [])
         use_default_world = campaign_data.get("use_default_world", False)
 
-        # Process regular game action with Gemini (CRITICAL: blocking I/O - 10-30+ seconds!)
+        # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking
-        gemini_response_obj = await asyncio.to_thread(
-            gemini_service.continue_story,
+        llm_response_obj = await asyncio.to_thread(
+            llm_service.continue_story,
             user_input,
             mode,
             story_context,
@@ -512,10 +512,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             user_id,  # Pass user_id to enable user model preference selection
         )
 
-        # Convert GeminiResponse to dict format for compatibility
+        # Convert LLMResponse to dict format for compatibility
         response = {
-            "story": gemini_response_obj.narrative_text,
-            "state_changes": gemini_response_obj.get_state_updates(),
+            "story": llm_response_obj.narrative_text,
+            "state_changes": llm_response_obj.get_state_updates(),
         }
 
         # Update game state with changes
@@ -537,11 +537,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Then save the AI response with structured fields if available
-        ai_response_text = gemini_response_obj.narrative_text
+        ai_response_text = llm_response_obj.narrative_text
 
         # Extract structured fields from AI response for storage
         structured_fields = structured_fields_utils.extract_structured_fields(
-            gemini_response_obj
+            llm_response_obj
         )
 
         await asyncio.to_thread(
@@ -562,12 +562,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Extract narrative text with proper debug mode handling
-        if hasattr(gemini_response_obj, "get_narrative_text"):
-            final_narrative = gemini_response_obj.get_narrative_text(
+        if hasattr(llm_response_obj, "get_narrative_text"):
+            final_narrative = llm_response_obj.get_narrative_text(
                 debug_mode=debug_mode
             )
         else:
-            final_narrative = gemini_response_obj.narrative_text
+            final_narrative = llm_response_obj.narrative_text
 
         # Note: With "text" field fix, empty narratives should now be properly handled
         # by the translation layer without needing fallback messages
@@ -588,8 +588,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             sum(1 for entry in story_context if entry.get("actor") == "gemini") + 1
         )
 
-        # Extract structured fields from Gemini response (critical missing fields)
-        structured_response = getattr(gemini_response_obj, "structured_response", None)
+        # Extract structured fields from LLM response (critical missing fields)
+        structured_response = getattr(llm_response_obj, "structured_response", None)
 
         # Build comprehensive response with all frontend-required fields
         unified_response = {

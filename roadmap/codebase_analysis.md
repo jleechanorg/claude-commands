@@ -32,7 +32,7 @@
 
 1. **mvp_site/**: 233,440 lines changed (41%)
    - Most changed files:
-     - gemini_service.py: 163 changes
+     - llm_service.py: 163 changes
      - main.py: 122 changes
      - static/app.js: 81 changes
    - Heavy refactoring of core services
@@ -81,7 +81,7 @@
    - Browser tests added late
 
 4. **Refactoring Patterns**:
-   - gemini_service.py: Changed 163 times
+   - llm_service.py: Changed 163 times
    - main.py: Changed 122 times
    - Core services rewritten multiple times
 

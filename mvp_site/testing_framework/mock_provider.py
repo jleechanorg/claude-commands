@@ -21,7 +21,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from mvp_site.mocks.mock_firestore_service import MockFirestoreClient
-from mvp_site.mocks.mock_gemini_service import MockGeminiClient
+from mvp_site.mocks.mock_llm_service import MockLLMClient
 
 from .service_provider import TestServiceProvider
 
@@ -31,14 +31,14 @@ class MockServiceProvider(TestServiceProvider):
 
     def __init__(self):
         self._firestore = MockFirestoreClient()
-        self._gemini = MockGeminiClient()
+        self._gemini = MockLLMClient()
         self._auth = None  # Use existing mock auth
 
     def get_firestore(self) -> MockFirestoreClient:
         """Return mock Firestore client."""
         return self._firestore
 
-    def get_gemini(self) -> MockGeminiClient:
+    def get_gemini(self) -> MockLLMClient:
         """Return mock Gemini client."""
         return self._gemini
 

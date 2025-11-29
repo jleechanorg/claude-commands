@@ -1,13 +1,13 @@
 # TASK-146: Focused Unit Test Coverage Improvements
 
 ## Goal
-Improve unit test coverage for three critical files: main.py (22%), gemini_service.py (12%), and game_state.py (54%) by focusing on high-impact untested code paths.
+Improve unit test coverage for three critical files: main.py (22%), llm_service.py (12%), and game_state.py (54%) by focusing on high-impact untested code paths.
 
 ## Current Coverage Analysis
 
 ### Coverage Baseline (January 2025)
 - **main.py**: 22% coverage (599 statements, 469 missing)
-- **gemini_service.py**: 12% coverage (632 statements, 554 missing)
+- **llm_service.py**: 12% coverage (632 statements, 554 missing)
 - **game_state.py**: 54% coverage (182 statements, 83 missing)
 
 ### Missing Coverage Hotspots
@@ -27,7 +27,7 @@ Improve unit test coverage for three critical files: main.py (22%), gemini_servi
 - `process_user_input()` - Core game logic entry point
 - `authenticate_request()` - Security layer
 
-#### gemini_service.py (Lines 99-1475)
+#### llm_service.py (Lines 99-1475)
 **High-Impact Areas:**
 - API client initialization (lines 109-168)
 - Response processing (lines 378-533)
@@ -83,9 +83,9 @@ Improve unit test coverage for three critical files: main.py (22%), gemini_servi
 
 3. **Target Coverage Improvement**: 22% → 45% (+23%)
 
-### Phase 3: gemini_service.py Coverage (60 minutes)
-1. **Create test_gemini_service_core.py**
-   - Mock Gemini API client responses
+### Phase 3: llm_service.py Coverage (60 minutes)
+1. **Create test_llm_service_core.py**
+   - Mock LLM API client responses
    - Test model cycling behavior
    - Cover response validation logic
    - Test error handling pathways
@@ -149,7 +149,7 @@ Improve unit test coverage for three critical files: main.py (22%), gemini_servi
 ### Quantitative Goals
 - **Overall Coverage**: 22% → 40%+ across all three files
 - **main.py**: 22% → 45% (target 135+ new lines covered)
-- **gemini_service.py**: 12% → 35% (target 145+ new lines covered)
+- **llm_service.py**: 12% → 35% (target 145+ new lines covered)
 - **game_state.py**: 54% → 75% (target 38+ new lines covered)
 
 ### Qualitative Goals
@@ -175,7 +175,7 @@ Improve unit test coverage for three critical files: main.py (22%), gemini_servi
 
 ### Test Files
 1. **test_main_extended.py**: Route handlers, authentication, state updates
-2. **test_gemini_service_core.py**: API interaction, response processing
+2. **test_llm_service_core.py**: API interaction, response processing
 3. **test_game_state_extended.py**: State management, entity handling
 
 ### Documentation

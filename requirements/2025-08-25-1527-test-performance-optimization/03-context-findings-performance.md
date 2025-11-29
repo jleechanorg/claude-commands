@@ -104,13 +104,13 @@ jobs:
 
 **Current Performance**:
 ```python
-# Example: test_gemini_service.py - Heavy setup overhead
+# Example: test_llm_service.py - Heavy setup overhead
 class TestInitialStoryPromptAssembly(unittest.TestCase):
     @classmethod  
     def setUpClass(cls):
         cls.temp_dir_obj = tempfile.TemporaryDirectory()
         # Creates 40+ temporary files for each test class
-        for key, path in gemini_service.PATH_MAP.items():
+        for key, path in llm_service.PATH_MAP.items():
             full_path = os.path.join(cls.temp_dir, os.path.dirname(path))
             os.makedirs(full_path, exist_ok=True)
             with open(os.path.join(cls.temp_dir, path), "w") as f:
@@ -124,15 +124,15 @@ Integration tests create extensive temporary file structures and mock complex ex
 ```python
 # Cached fixture approach
 @pytest.fixture(scope="session")  # Share across all tests
-def gemini_service_fixtures():
+def llm_service_fixtures():
     """Create shared fixtures once per test session"""
     return create_temp_files_once()
 
 # Fast mock approach  
 def test_gemini_response_fast():
     """Replace file system mocks with in-memory mocks"""
-    with patch('gemini_service.PATH_MAP', MEMORY_FIXTURES):
-        result = gemini_service.process_request(test_data)
+    with patch('llm_service.PATH_MAP', MEMORY_FIXTURES):
+        result = llm_service.process_request(test_data)
         assert result.is_valid()
 ```
 

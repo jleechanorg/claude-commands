@@ -12,7 +12,8 @@ This directory contains captured Gemini API responses from real `/testuif` runs,
 - `continue_campaign_responses.json` - Campaign continuation responses
 
 ### Mock Service
-- `mock_gemini_service.py` - Mock Gemini service implementation
+├── mock_llm_service.py    # Mock Gemini AI service implementation
+### mock_llm_service.py
 - `response_patterns.json` - Common response patterns and templates
 
 ## Usage

@@ -31,7 +31,7 @@ def _get_structured_attr(
 
 
 def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
-    """Extract structured fields from a GeminiResponse-like object."""
+    """Extract structured fields from a LLMResponse-like object."""
 
     structured_fields: dict[str, Any] = {}
 

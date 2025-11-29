@@ -95,7 +95,8 @@ execution_mode: immediate
 ## Smart Test Selection Examples:
 
 - Changes to `mvp_site/main.py` → Run `test_main*.py` files
-- Changes to `mvp_site/gemini_service.py` → Run `test_gemini*.py` files  
+- Changes to `mvp_site/llm_service.py` → Run `test_gemini*.py` files  
+- Changes to `mvp_site/llm_service.py` → Run `test_llm*.py` files  
 - Changes to frontend files → Run frontend test suite
 - Changes to > 20 files → Full test suite
 - No changes detected → Run minimal smoke test suite

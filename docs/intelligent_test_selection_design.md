@@ -51,7 +51,7 @@ git diff --name-only "refs/remotes/origin/$BASE_REF...HEAD"
 | Source File | Related Tests |
 |-------------|---------------|
 | `main.py` | All `test_main_*.py`, `test_api_*.py`, `test_end2end/*` |
-| `gemini_service.py` | `test_gemini_*.py`, `test_json_*.py`, integration tests |
+| `llm_service.py` | `test_llm_*.py`, `test_json_*.py`, integration tests |
 | `firestore_service.py` | `test_firestore_*.py`, `test_main_*.py` (auth tests) |
 | `world_logic.py` | `test_world_*.py`, most integration tests |
 | `frontend_v1/*` | Browser/UI tests in `testing_ui/` |
@@ -67,7 +67,7 @@ git diff --name-only "refs/remotes/origin/$BASE_REF...HEAD"
 **Conditional Execution:**
 ```bash
 # If main.py changed → Run all API and main tests
-# If gemini_service.py changed → Run Gemini + JSON tests  
+# If llm_service.py changed → Run LLM + JSON tests  
 # If only docs changed → Run minimal smoke tests only
 # If frontend_v2/* changed → Run V2 tests + browser tests
 # If tests/* changed → Run the specific test + any integration tests
@@ -130,7 +130,7 @@ fi
 ```bash
 # Direct mappings
 main.py → test_main_*.py
-gemini_service.py → test_gemini_*.py  
+llm_service.py → test_llm_*.py  
 firestore_service.py → test_firestore_*.py
 
 # Wildcard mappings  

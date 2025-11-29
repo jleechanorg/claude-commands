@@ -13,7 +13,7 @@ import unittest.mock
 from unittest.mock import patch
 
 from mvp_site import main
-from mvp_site.tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
+from mvp_site.tests.fake_firestore import FakeFirestoreClient, FakeLLMResponse
 
 
 class TestCreateCampaignEnd2End(unittest.TestCase):
@@ -44,7 +44,7 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
         }
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
     def test_create_campaign_success(self, mock_gemini_request, mock_get_db):
         """Test successful campaign creation using fake services."""
 
@@ -66,7 +66,7 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
                 }
             },
         }
-        fake_response = FakeGeminiResponse(json.dumps(gemini_response_data))
+        fake_response = FakeLLMResponse(json.dumps(gemini_response_data))
         mock_gemini_request.return_value = fake_response
 
         # Campaign creation data
@@ -96,7 +96,7 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
         assert "campaign_id" in data
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
     @patch("mvp_site.mcp_client.MCPClient.call_tool")
     def test_create_campaign_gemini_error(
         self, mock_mcp_call, mock_gemini_request, mock_get_db

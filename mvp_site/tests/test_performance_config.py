@@ -22,8 +22,8 @@ def setup_fast_mode_mocks():
     world_loader_patch = patch('mvp_site.world_loader.load_world_content')
 
     # Mock Gemini service operations with absolute paths
-    gemini_continue_patch = patch('mvp_site.gemini_service.continue_story')
-    gemini_client_patch = patch('mvp_site.gemini_service.get_client')
+    gemini_continue_patch = patch('mvp_site.llm_service.continue_story')
+    gemini_client_patch = patch('mvp_site.llm_service.get_client')
 
     # Start patches
     patches = [

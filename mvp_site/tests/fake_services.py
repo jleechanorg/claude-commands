@@ -17,32 +17,23 @@ from contextlib import suppress
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-# Handle both relative and absolute imports for flexibility
-try:
-    from .fake_auth import FakeFirebaseAuth, FakeUserRecord
-    from .fake_firestore import FakeFirestoreClient
-    from .fake_gemini import create_fake_gemini_client
-except ImportError:
-    # Fallback to direct imports when not run as package
-    from fake_auth import FakeFirebaseAuth, FakeUserRecord
-    from fake_firestore import FakeFirestoreClient
-    from fake_gemini import create_fake_gemini_client
+# Import fake modules (fail fast if missing)
+from .fake_auth import FakeFirebaseAuth, FakeUserRecord
+from .fake_firestore import FakeFirestoreClient
+from .fake_llm import create_fake_llm_client
 
 # Import functions from main at module level to avoid inline imports
 # Note: HEADER_TEST_BYPASS and HEADER_TEST_USER_ID removed with testing mode deletion
 from main import create_app
 
-# Handle firebase_admin imports at module level
-try:
-    import firebase_admin.auth
+# Import firebase_admin (fail fast if missing)
+import firebase_admin.auth
 
-    FIREBASE_ADMIN_AVAILABLE = True
-except ImportError:
-    FIREBASE_ADMIN_AVAILABLE = False
+FIREBASE_ADMIN_AVAILABLE = True
 
 with suppress(ImportError):
-    # Legacy json_input_schema imports removed - using GeminiRequest now
-    pass  # No imports needed - using GeminiRequest directly
+    # Legacy json_input_schema imports removed - using LLMRequest now
+    pass  # No imports needed - using LLMRequest directly
 
 # Set fallback values for legacy compatibility
 JsonInputBuilder = None
@@ -55,7 +46,7 @@ class FakeServiceManager:
     def __init__(self):
         self.firestore = FakeFirestoreClient()
         self.auth = FakeFirebaseAuth()
-        self.gemini_client = create_fake_gemini_client()
+        self.gemini_client = create_fake_llm_client()
         self._patches = []
         self._original_env = {}
 
@@ -198,7 +189,7 @@ class FakeServiceManager:
         """Reset all services to clean state."""
         self.firestore = FakeFirestoreClient()
         self.auth = FakeFirebaseAuth()
-        self.gemini_client = create_fake_gemini_client()
+        self.gemini_client = create_fake_llm_client()
 
     def create_json_input(self, message_type: str, **kwargs) -> dict:
         """Create structured JSON input for testing.

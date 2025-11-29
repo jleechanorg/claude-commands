@@ -28,9 +28,9 @@ All issues from these documents have been **validated with concrete evidence** f
 
 ### 1. **Multiple API Calls** 🚨 CRITICAL
 **Evidence**:
-- `gemini_service.py:1405-1407` - Entity tracking retry calls `_call_gemini_api()`
-- `gemini_service.py:1454-1457` - Planning block enforcement calls `_validate_and_enforce_planning_block()`
-- `gemini_service.py:1144` - Additional API call for missing planning blocks
+- `llm_service.py:1405-1407` - Entity tracking retry calls `_call_llm_api()`
+- `llm_service.py:1454-1457` - Planning block enforcement calls `_validate_and_enforce_planning_block()`
+- `llm_service.py:1144` - Additional API call for missing planning blocks
 
 **Business Impact**: Direct cost increase, user-facing latency, operational complexity
 
@@ -38,13 +38,13 @@ All issues from these documents have been **validated with concrete evidence** f
 **Evidence**: 41 files contain parsing functions across:
 - `robust_json_parser.py:190` - `parse_llm_json_response()`
 - `narrative_response_schema.py:375` - `parse_structured_response()`
-- `gemini_service.py:528` - `_parse_gemini_response()`
-- `gemini_service.py:552` - `_process_structured_response()`
+- `llm_service.py:528` - `_parse_gemini_response()`
+- `llm_service.py:552` - `_process_structured_response()`
 
-**Operational Impact**: Production warning at `gemini_service.py:578` - "Failed to parse JSON response, falling back to plain text"
+**Operational Impact**: Production warning at `llm_service.py:578` - "Failed to parse JSON response, falling back to plain text"
 
 ### 3. **Legacy Regex Patterns** ⚠️ MEDIUM
-**Evidence**: `gemini_service.py:1112` still uses `"[CHARACTER CREATION" in response_text`
+**Evidence**: `llm_service.py:1112` still uses `"[CHARACTER CREATION" in response_text`
 
 **Architecture Impact**: Inconsistent with JSON-first approach, harder to maintain
 
@@ -88,7 +88,7 @@ All issues from these documents have been **validated with concrete evidence** f
 **Effort**: 1-2 days each | **Risk**: Very Low
 
 #### 1.1 JSON Mode Cleanup
-- **Target**: `gemini_service.py:1112`
+- **Target**: `llm_service.py:1112`
 - **Change**: Replace `"[CHARACTER CREATION" in response_text` with JSON field check
 - **Value**: Architectural consistency, remove legacy pattern
 
@@ -110,11 +110,11 @@ All issues from these documents have been **validated with concrete evidence** f
 - **Target Files**:
   - `robust_json_parser.py`
   - `narrative_response_schema.py`
-  - `gemini_service.py` (parsing functions)
+  - `llm_service.py` (parsing functions)
 - **Migration**: Gradual migration with fallback support
 
 #### 2.2 Single API Call Architecture
-- **Target**: Eliminate additional calls at `gemini_service.py:1405-1407, 1454-1457`
+- **Target**: Eliminate additional calls at `llm_service.py:1405-1407, 1454-1457`
 - **Strategy**: Include planning blocks and entity instructions in initial prompt
 - **Fallback**: Maintain current behavior as safety net during transition
 
@@ -186,7 +186,7 @@ All issues from these documents have been **validated with concrete evidence** f
 
 ### Immediate (This Week)
 1. **Create implementation branch** for Phase 1 work
-2. **Begin JSON Mode Cleanup** - Replace regex pattern at `gemini_service.py:1112`
+2. **Begin JSON Mode Cleanup** - Replace regex pattern at `llm_service.py:1112`
 3. **Document baseline metrics** - Current API call patterns, parsing warnings
 
 ### Short-term (Next 2 Weeks)

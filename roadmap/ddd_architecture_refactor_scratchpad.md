@@ -19,7 +19,7 @@ This refactoring aims to transform WorldArchitect.AI from its current monolithic
 ### Key Components
 1. **main.py**: Core application (routes, campaign management, AI orchestration)
 2. **game_state.py**: Campaign state management
-3. **gemini_service.py**: AI integration
+3. **llm_service.py**: AI integration
 4. **firestore_service.py**: Database operations
 5. **Frontend**: Vanilla JS with Bootstrap (tightly coupled to backend structure)
 

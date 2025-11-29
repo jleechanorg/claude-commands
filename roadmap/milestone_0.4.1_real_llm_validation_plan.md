@@ -4,7 +4,7 @@
 Add real Gemini API integration to the Milestone 0.4 test framework to validate results with actual LLM responses.
 
 ## Key Learnings from Existing Code
-From `mvp_site/gemini_service.py`:
+From `mvp_site/llm_service.py`:
 - Uses `google.genai` SDK (not `google.generativeai`)
 - Models: `gemini-2.5-flash` (default), `gemini-2.5-pro` (large), `gemini-1.5-flash` (test)
 - Safety settings configured to BLOCK_NONE
@@ -205,7 +205,7 @@ def _run_combined_real(self, campaign_id, scenario):
 ## Next Steps After Completion
 
 1. **Production Integration**:
-   - Port validated approach to gemini_service.py
+   - Port validated approach to llm_service.py
    - Add to game_state.py narrative generation
    - Enable for all campaigns
 

@@ -9,7 +9,7 @@ These tests validate the complete flow through all application layers while only
 **Key Principle**: Mock only external APIs, not internal service calls.
 
 - ✅ Mock: `firebase_admin.firestore.client()`, `google.genai.Client()`
-- ❌ Don't Mock: `firestore_service.py`, `gemini_service.py`, `main.py` functions
+- ❌ Don't Mock: `firestore_service.py`, `llm_service.py`, `main.py` functions
 
 ## Implementation Approach
 
@@ -37,7 +37,7 @@ fake_doc.set({"name": "test"})
    - `FakeFirestoreClient` - Mimics Firestore client behavior
    - `FakeFirestoreDocument` - Returns real dictionaries
    - `FakeFirestoreCollection` - Handles nested collections
-   - `FakeGeminiResponse` - Simple response with text attribute
+   - `FakeLLMResponse` - Simple response with text attribute
 
 2. **test_create_campaign_end2end_fixed.py** - Campaign creation tests
 3. **test_continue_story_end2end_fixed.py** - Story continuation tests

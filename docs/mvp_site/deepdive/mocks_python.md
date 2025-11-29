@@ -83,7 +83,7 @@
 
 ---
 
-## `mocks/mock_gemini_service.py`
+## `mocks/mock_llm_service.py`
 
 **Role:** Mock Gemini API service for function testing. Provides realistic AI responses without making actual API calls.
 
@@ -100,9 +100,9 @@
 
 ---
 
-## `mocks/mock_gemini_service_wrapper.py`
+## `mocks/mock_llm_service_wrapper.py`
 
-**Role:** Mock Gemini Service wrapper that provides the same interface as the real gemini_service module.
+**Role:** Mock Gemini Service wrapper that provides the same interface as the real llm_service module.
 
 **Status:** Keep (critical to existing implementation unless noted otherwise).
 

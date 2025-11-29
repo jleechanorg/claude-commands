@@ -198,7 +198,7 @@ This indicates healthy iteration and development, not excessive churn.
 
 ### Most Modified Files
 1. CLAUDE.md - 112 changes
-2. mvp_site/gemini_service.py - 56 changes
+2. mvp_site/llm_service.py - 56 changes
 3. mvp_site/main.py - 54 changes
 4. mvp_site/static/app.js - 53 changes
 

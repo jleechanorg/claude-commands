@@ -30,7 +30,7 @@ Implement an intelligent test selection system that analyzes git changes, maps d
 ### FR3: File-to-Test Dependency Mapping
 - **Core Mappings**:
   - `main.py` → `test_main_*.py`, `test_api_*.py`, `test_end2end/*`
-  - `gemini_service.py` → `test_gemini_*.py`, `test_json_*.py`
+  - `llm_service.py` → `test_gemini_*.py`, `test_json_*.py`
   - `firestore_service.py` → `test_firestore_*.py`, auth-related tests
   - `world_logic.py` → `test_world_*.py`, integration tests
   - `frontend_v2/*` → `test_v2_*.py`, browser tests in `testing_ui/`
@@ -116,7 +116,7 @@ git diff analysis → dependency mapping → test selection → existing executi
   "mappings": {
     "direct": {
       "main.py": ["test_main_*.py", "test_api_*.py"],
-      "gemini_service.py": ["test_gemini_*.py", "test_json_*.py"]
+      "llm_service.py": ["test_gemini_*.py", "test_json_*.py"]
     },
     "patterns": {
       "frontend_v2/**/*.tsx": ["test_v2_*.py", "testing_ui/test_v2_*.py"],

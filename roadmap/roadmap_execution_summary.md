@@ -39,7 +39,7 @@
 **Root cause**: String matching patterns in `_validate_and_enforce_planning_block()` for campaign state detection
 - **Current**: Hardcoded keyword detection for character creation
 - **Should be**: LLM-based campaign state tracking
-- **Evidence**: Lines 1428-1448 in gemini_service.py show extensive string matching
+- **Evidence**: Lines 1428-1448 in llm_service.py show extensive string matching
 
 ### 6. Fake Code Cleanup Analysis ✅
 **Review**: roadmap/scratchpad_fix-individual-comment-reply-requirements.md and scratchpad_fake_pattern_followup.md

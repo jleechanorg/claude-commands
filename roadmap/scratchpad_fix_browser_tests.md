@@ -88,10 +88,10 @@ class MockManager:
             return MockFirestoreService()
         return FirestoreService()
 
-    def get_gemini_service(self):
+    def get_llm_service(self):
         if self.use_mocks:
-            return MockGeminiService()
-        return GeminiService()
+            return MockLLMService()
+        return LLMService()
 ```
 
 #### 2.2 Service Injection Pattern

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test entity name sanitization in gemini_service.py
+Test entity name sanitization in llm_service.py
 """
 
 import os
@@ -11,12 +11,12 @@ import unittest
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-from mvp_site.gemini_service import sanitize_entity_name_for_id
+from mvp_site.llm_service import sanitize_entity_name_for_id
 from mvp_site.schemas.entities_pydantic import NPC, HealthStatus
 
 
 class TestGeminiEntitySanitization(unittest.TestCase):
-    """Test entity name sanitization function in gemini_service"""
+    """Test entity name sanitization function in llm_service"""
 
     def test_sanitize_entity_name_for_id_basic(self):
         """Test basic sanitization cases"""

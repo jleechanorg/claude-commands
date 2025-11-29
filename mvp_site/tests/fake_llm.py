@@ -1,5 +1,5 @@
 """
-Fake Gemini AI service for testing.
+Fake LLM service for testing.
 Returns realistic responses instead of Mock objects to avoid JSON serialization issues.
 """
 
@@ -7,8 +7,8 @@ import json
 import re
 
 
-class FakeGeminiResponse:
-    """Fake Gemini response that behaves like the real thing."""
+class FakeLLMResponse:
+    """Fake LLM response that behaves like the real thing."""
 
     def __init__(self, text: str, usage_metadata: dict | None = None):
         self.text = text
@@ -89,7 +89,7 @@ class FakeModelAdapter:
 
     def generate_content(
         self, prompt: str | dict, generation_config=None
-    ) -> FakeGeminiResponse:
+    ) -> "FakeLLMResponse":
         """Generate a fake response based on prompt content.
 
         Args:
@@ -104,7 +104,7 @@ class FakeModelAdapter:
         # Handle string prompt (legacy)
         return self._handle_string_prompt(prompt)
 
-    def _handle_json_input(self, json_input: dict) -> FakeGeminiResponse:
+    def _handle_json_input(self, json_input: dict) -> "FakeLLMResponse":
         """Handle structured JSON input and return appropriate response."""
         message_type = json_input.get("message_type", "unknown")
 
@@ -124,12 +124,12 @@ class FakeModelAdapter:
         # Fill template with context
         response_data = self._fill_template(template, context)
 
-        # Convert to JSON string as Gemini would return
+        # Convert to JSON string as an LLM would return
         response_text = json.dumps(response_data, indent=2)
 
-        return FakeGeminiResponse(response_text)
+        return FakeLLMResponse(response_text)
 
-    def _handle_string_prompt(self, prompt: str) -> FakeGeminiResponse:
+    def _handle_string_prompt(self, prompt: str) -> "FakeLLMResponse":
         """Handle legacy string prompt."""
         # Extract context from prompt for more realistic responses
         context = self._extract_context(prompt)
@@ -143,10 +143,10 @@ class FakeModelAdapter:
         # Fill template with context
         response_data = self._fill_template(template, context)
 
-        # Convert to JSON string as Gemini would return
+        # Convert to JSON string as an LLM would return
         response_text = json.dumps(response_data, indent=2)
 
-        return FakeGeminiResponse(response_text)
+        return FakeLLMResponse(response_text)
 
     def _extract_character_from_text(self, text: str) -> str:
         """Extract character name from character prompt text."""
@@ -214,8 +214,8 @@ class FakeModelAdapter:
         return replace_placeholders(template)
 
 
-class FakeGeminiClient:
-    """Fake Gemini client that behaves like google.genai.Client."""
+class FakeLLMClient:
+    """Fake LLM client that behaves like google.genai.Client."""
 
     def __init__(self, api_key: str = "fake-api-key"):
         self.api_key = api_key
@@ -243,7 +243,7 @@ class FakeModelsManager:
         """Get a fake model adapter."""
         return self._models.get(model_name, FakeModelAdapter(model_name))
 
-    def generate_content(self, prompts, generation_config=None) -> FakeGeminiResponse:
+    def generate_content(self, prompts, generation_config=None) -> FakeLLMResponse:
         """Generate content using the default model (for backward compatibility)."""
         return self._default_model.generate_content(prompts, generation_config)
 
@@ -285,9 +285,9 @@ class FakeGenerativeModel:
 
 
 # Convenience functions for test setup
-def create_fake_gemini_client(api_key: str = "fake-api-key") -> FakeGeminiClient:
-    """Create a fake Gemini client for testing."""
-    return FakeGeminiClient(api_key)
+def create_fake_llm_client(api_key: str = "fake-api-key") -> FakeLLMClient:
+    """Create a fake LLM client for testing."""
+    return FakeLLMClient(api_key)
 
 
 def create_fake_model(model_name: str = "gemini-3-pro-preview") -> FakeGenerativeModel:

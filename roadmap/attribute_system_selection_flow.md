@@ -43,7 +43,7 @@ Include in your initial response:
 [RECOMMENDED_SYSTEM: destiny] or [RECOMMENDED_SYSTEM: dnd]
 ```
 
-#### 2. Update gemini_service.py
+#### 2. Update llm_service.py
 ```python
 def get_initial_story(prompt, ...):
     # ... existing code ...
@@ -71,7 +71,7 @@ def create_campaign_route(user_id):
     # ... existing code ...
 
     # Get initial story with system recommendation
-    story_result = gemini_service.get_initial_story(prompt, ...)
+    story_result = llm_service.get_initial_story(prompt, ...)
 
     # Use LLM recommendation unless explicitly overridden
     attribute_system = data.get('attribute_system') or story_result['recommended_attribute_system']

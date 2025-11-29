@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Script to add GeminiResponse mock objects to debug mode tests.
+Script to add LLMResponse mock objects to debug mode tests.
 """
 
 
 def add_mock_to_line(lines, line_num, mock_response_var):
-    """Add mock GeminiResponse creation before the specified line."""
+    """Add mock LLMResponse creation before the specified line."""
     mock_creation = [
-        "        # Create mock GeminiResponse",
+        "        # Create mock LLMResponse",
         "        mock_gemini_response = MagicMock()",
         f"        mock_gemini_response.narrative_text = {mock_response_var}",
         "        mock_gemini_response.debug_tags_present = {'dm_notes': True, 'dice_rolls': True, 'state_changes': False}",
@@ -29,13 +29,13 @@ file_path = (
 with open(file_path) as f:
     lines = f.readlines()
 
-# Find lines that have "with patch('gemini_service.continue_story', return_value=mock_gemini_response):"
+# Find lines that have "with patch('llm_service.continue_story', return_value=mock_gemini_response):"
 # and add mock creation before them
 offset = 0
 for i, line in enumerate(lines):
     actual_line_num = i + offset
     if (
-        "with patch('gemini_service.continue_story', return_value=mock_gemini_response):"
+        "with patch('llm_service.continue_story', return_value=mock_gemini_response):"
         in line
     ):
         # Find the mock_response variable in the preceding lines

@@ -98,7 +98,7 @@ This level of engineering sophistication strongly supports the claimed FAANG bac
 
 **Gemini API Integration Analysis**:
 The repository contains extensive AI service integration through:
-- **Primary Service**: `gemini_service.py` handling API calls and response processing
+- **Primary Service**: `llm_service.py` handling API calls and response processing
 - **Prompt Management**: Dedicated `prompts/` directory with structured prompt templates
 - **Response Processing**: Sophisticated JSON parsing and validation systems
 - **Error Recovery**: Comprehensive handling of API failures and rate limits
