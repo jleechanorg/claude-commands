@@ -86,14 +86,14 @@ class LLMRequest:
         if not self.game_mode or not self.game_mode.strip():
             raise ValidationError("game_mode cannot be empty or whitespace")
 
-        if not self.user_action and self.user_action is not None:
+        if not self.user_action and self.user_action is not None:  # noqa: SIM102
             # Allow empty string for initial story, but not for continuation
             if not self.character_prompt:
                 raise ValidationError(
                     "user_action cannot be empty for story continuation"
                 )
 
-    def _validate_field_types(self):
+    def _validate_field_types(self):  # noqa: PLR0912
         """Validate that fields have correct data types."""
         if not isinstance(self.game_state, dict):
             raise ValidationError(
@@ -153,17 +153,23 @@ class LLMRequest:
         """Validate that string fields are within reasonable limits."""
         if len(self.user_action) > MAX_STRING_LENGTH:
             raise ValidationError(
-                f"user_action too long: {len(self.user_action)} > {MAX_STRING_LENGTH}"
+                f"User action is too long ({len(self.user_action)} characters). "
+                f"Maximum allowed is {MAX_STRING_LENGTH} characters. "
+                f"Please reduce the length of your action."
             )
 
         if len(self.checkpoint_block) > MAX_STRING_LENGTH:
             raise ValidationError(
-                f"checkpoint_block too long: {len(self.checkpoint_block)} > {MAX_STRING_LENGTH}"
+                f"Checkpoint block is too long ({len(self.checkpoint_block)} characters). "
+                f"Maximum allowed is {MAX_STRING_LENGTH} characters. "
+                f"Please reduce the checkpoint data size."
             )
 
         if self.character_prompt and len(self.character_prompt) > MAX_STRING_LENGTH:
             raise ValidationError(
-                f"character_prompt too long: {len(self.character_prompt)} > {MAX_STRING_LENGTH}"
+                f"Campaign prompt is too long ({len(self.character_prompt)} characters). "
+                f"Maximum allowed is {MAX_STRING_LENGTH} characters. "
+                f"Please reduce the length of your character, setting, or description fields."
             )
 
     def to_json(self) -> dict[str, Any]:
@@ -332,7 +338,7 @@ class LLMRequest:
         )
 
 
-def json_default_serializer(obj: Any) -> Any:
+def json_default_serializer(obj: Any) -> Any:  # noqa: PLR0911
     """
     JSON serializer for objects that aren't serializable by default.
 

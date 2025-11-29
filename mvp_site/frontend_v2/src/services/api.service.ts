@@ -11,6 +11,7 @@
 
 import { devLog, devWarn, devError } from '../utils/dev';
 import { MAX_DESCRIPTION_LENGTH } from '../constants/campaignDescriptions';
+import { validateCampaignCombinedLength } from '../utils/campaignValidation';
 import {
   User,
   Campaign,
@@ -662,6 +663,17 @@ class ApiService {
 
     if (data.custom_options && !Array.isArray(data.custom_options)) {
       throw new Error('Custom options must be an array if provided');
+    }
+
+    // Validate combined length using centralized validation utility
+    const lengthValidation = validateCampaignCombinedLength(
+      data.character,
+      data.setting,
+      data.description
+    );
+
+    if (!lengthValidation.isValid) {
+      throw new Error(lengthValidation.errorMessage);
     }
 
     try {
