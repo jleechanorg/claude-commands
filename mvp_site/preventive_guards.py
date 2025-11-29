@@ -5,13 +5,13 @@ from typing import Any
 
 from mvp_site import constants
 from mvp_site.game_state import GameState
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 
 AUTO_MEMORY_PREFIX = "[auto]"
 
 
 def enforce_preventive_guards(
-    game_state: GameState, gemini_response: GeminiResponse, mode: str
+    game_state: GameState, llm_response: LLMResponse, mode: str
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Harden structured responses to prevent backtracking without surfacing errors.
 
@@ -22,19 +22,19 @@ def enforce_preventive_guards(
     stored structured fields.
     """
 
-    state_changes: dict[str, Any] = deepcopy(gemini_response.get_state_updates())
+    state_changes: dict[str, Any] = deepcopy(llm_response.get_state_updates())
     extras: dict[str, Any] = {}
 
-    _fill_god_mode_response(mode, gemini_response, extras)
+    _fill_god_mode_response(mode, llm_response, extras)
 
-    dice_rolls = getattr(gemini_response, "dice_rolls", []) or []
-    resources = getattr(gemini_response, "resources", "") or ""
+    dice_rolls = getattr(llm_response, "dice_rolls", []) or []
+    resources = getattr(llm_response, "resources", "") or ""
 
     if dice_rolls or resources:
         _ensure_world_time(state_changes, game_state)
-        _ensure_core_memory(state_changes, gemini_response.narrative_text)
+        _ensure_core_memory(state_changes, llm_response.narrative_text)
 
-    _ensure_location_progress(state_changes, gemini_response, game_state)
+    _ensure_location_progress(state_changes, llm_response, game_state)
 
     if resources:
         _ensure_resource_checkpoint(state_changes, resources)
@@ -43,12 +43,12 @@ def enforce_preventive_guards(
 
 
 def _fill_god_mode_response(
-    mode: str, gemini_response: GeminiResponse, extras: dict[str, Any]
+    mode: str, llm_response: LLMResponse, extras: dict[str, Any]
 ) -> None:
-    structured = getattr(gemini_response, "structured_response", None)
+    structured = getattr(llm_response, "structured_response", None)
     existing = getattr(structured, constants.FIELD_GOD_MODE_RESPONSE, None)
     if mode == constants.MODE_GOD and not existing:
-        extras[constants.FIELD_GOD_MODE_RESPONSE] = gemini_response.narrative_text
+        extras[constants.FIELD_GOD_MODE_RESPONSE] = llm_response.narrative_text
 
 
 def _ensure_world_time(state_changes: dict[str, Any], game_state: GameState) -> None:
@@ -79,10 +79,10 @@ def _ensure_core_memory(state_changes: dict[str, Any], narrative: str) -> None:
 
 def _ensure_location_progress(
     state_changes: dict[str, Any],
-    gemini_response: GeminiResponse,
+    llm_response: LLMResponse,
     game_state: GameState,
 ) -> None:
-    location = gemini_response.get_location_confirmed()
+    location = llm_response.get_location_confirmed()
     world_data = state_changes.setdefault("world_data", {})
     custom_state = state_changes.setdefault("custom_campaign_state", {})
 

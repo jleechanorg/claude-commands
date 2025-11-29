@@ -2,7 +2,7 @@ import pytest
 
 from mvp_site import constants, preventive_guards
 from mvp_site.game_state import GameState
-from mvp_site.gemini_response import GeminiResponse
+from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
@@ -29,7 +29,7 @@ def _make_response(**kwargs):
         dice_rolls=kwargs.pop("dice_rolls", []),
         resources=kwargs.pop("resources", ""),
     )
-    return GeminiResponse(
+    return LLMResponse(
         narrative_text=structured.narrative,
         structured_response=structured,
     )
