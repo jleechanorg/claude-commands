@@ -112,8 +112,8 @@ def test_dispatch_agent_for_pr_injects_workspace(monkeypatch, tmp_path):
     workspace_config = created_specs[0].get("workspace_config")
     assert workspace_config
     assert "pr-5" in workspace_config["workspace_name"]
-    # commit prefix guidance should be present in task description
-    assert captured_desc and "[claude-automation-commit]" in captured_desc[0]
+    # commit prefix guidance should be present in task description with agent CLI
+    assert captured_desc and "-automation-commit]" in captured_desc[0]
 
 
 def test_has_failing_checks_uses_state_only(monkeypatch):
@@ -488,3 +488,75 @@ def test_dispatch_agent_for_pr_missing_number(tmp_path, monkeypatch):
 
     pr = {"repo_full": "org/repo", "repo": "repo", "number": None, "branch": "feature"}
     assert runner.dispatch_agent_for_pr(FakeDispatcher(), pr) is False
+
+
+# ============================================================================
+# RED PHASE: Test for workspace path collision bug (PR #318 root cause)
+# ============================================================================
+
+
+def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
+    """
+    Test that PRs with the same number from different repos don't collide on workspace paths.
+
+    BUG REPRODUCTION: dispatch_agent_for_pr() must create distinct workspace_config
+    for PRs with same number from different repos.
+
+    Real incident: PR #318 logs showed agent running in wrong repo directory.
+    ROOT CAUSE: Need to verify full agent dispatch flow, not just workspace prep.
+
+    This tests the COMPLETE dispatch flow to verify workspace_config uniqueness.
+    """
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+
+    # Track workspace configs that get passed to agents
+    captured_configs = []
+
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, _description):
+            return [{"id": "agent-spec"}]
+
+        def create_dynamic_agent(self, spec):
+            captured_configs.append(spec.get("workspace_config"))
+            return True
+
+    # Mock kill_tmux_session_if_exists to avoid tmux calls in test
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+
+    # Simulate two PRs with same number from different repos
+    pr_worldarchitect = {
+        "repo_full": "jleechanorg/worldarchitect.ai",
+        "repo": "worldarchitect.ai",
+        "number": 318,
+        "branch": "fix-doc-size",
+        "title": "Fix doc size check"
+    }
+
+    pr_ai_universe = {
+        "repo_full": "jleechanorg/ai_universe_frontend",
+        "repo": "ai_universe_frontend",
+        "number": 318,
+        "branch": "fix-playwright-tests",
+        "title": "Fix playwright tests"
+    }
+
+    # Dispatch agents for both PRs
+    success1 = runner.dispatch_agent_for_pr(FakeDispatcher(), pr_worldarchitect)
+    success2 = runner.dispatch_agent_for_pr(FakeDispatcher(), pr_ai_universe)
+
+    assert success1, "Failed to dispatch agent for worldarchitect.ai PR #318"
+    assert success2, "Failed to dispatch agent for ai_universe_frontend PR #318"
+    assert len(captured_configs) == 2, f"Expected 2 workspace configs, got {len(captured_configs)}"
+
+    config1 = captured_configs[0]
+    config2 = captured_configs[1]
+
+    # CRITICAL: workspace_root must be different for different repos
+    assert config1["workspace_root"] != config2["workspace_root"], \
+        f"BUG: workspace_root collision! Both: {config1['workspace_root']}"
+
+    # Verify correct repo association
+    assert "worldarchitect.ai" in config1["workspace_root"], \
+        f"Config1 should contain 'worldarchitect.ai': {config1}"
+    assert "ai_universe_frontend" in config2["workspace_root"], \
+        f"Config2 should contain 'ai_universe_frontend': {config2}"

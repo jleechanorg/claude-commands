@@ -1188,6 +1188,8 @@ def main():
                         help="Process specific PR number")
     parser.add_argument("--target-repo",
                         help="Repository for target PR (required with --target-pr)")
+    parser.add_argument("--fixpr-agent", choices=["claude", "codex", "gemini"], default="claude",
+                        help="AI CLI to use for --fixpr mode (default: claude)")
 
     args = parser.parse_args()
 
@@ -1200,7 +1202,7 @@ def main():
     monitor = JleechanorgPRMonitor()
 
     if args.fixpr:
-        run_fixpr_batch(args.cutoff_hours, args.max_prs)
+        run_fixpr_batch(args.cutoff_hours, args.max_prs, agent_cli=args.fixpr_agent)
         return
 
     # Handle target PR processing

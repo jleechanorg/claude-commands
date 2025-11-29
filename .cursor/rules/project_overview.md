@@ -145,9 +145,9 @@ if isinstance(item, dict):
 ## Key Constraints
 
 - **AI Models**:
-  - DEFAULT_MODEL = 'gemini-2.5-flash'
-  - LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
-  - TEST_MODEL = 'gemini-1.5-flash'
+  - DEFAULT_MODEL = 'gemini-3-pro-preview'
+  - LARGE_CONTEXT_MODEL = 'gemini-3-pro-preview'
+  - TEST_MODEL = 'gemini-3-pro-preview'
 - **SDK**: Must use modern `google-genai` SDK (not legacy `google-generativeai`)
 - **Virtual Environment**: Always activate `venv` before running Python commands
 - **Test Isolation**: Use temporary directories to avoid overwriting application files

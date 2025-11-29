@@ -22,6 +22,49 @@ cd ~/worldarchitect.ai
 pip install -e ./automation  # ✅ Full functionality
 ```
 
+### Multi-CLI Agent Support
+
+The orchestration system supports multiple AI CLI backends for autonomous PR fixing. When using the `--fixpr` mode, you can select which AI CLI handles the PR processing:
+
+**Supported AI CLIs:**
+- **Claude** (default): Anthropic's Claude Code CLI
+- **Codex**: OpenAI's Codex CLI
+- **Gemini**: Google's Gemini CLI (gemini-3-pro-preview model only)
+
+**CLI Selection Methods:**
+
+1. **Explicit Flag** (recommended for consistency):
+```bash
+# Force Gemini CLI for all PR fixes
+jleechanorg-pr-monitor --fixpr --max-prs 5 --agent-cli gemini
+
+# Use Codex instead
+jleechanorg-pr-monitor --fixpr --max-prs 5 --agent-cli codex
+```
+
+2. **Keyword Detection** (automatic based on task description):
+```bash
+# Orchestration auto-detects "use gemini" keyword
+# This is handled internally by the TaskDispatcher
+```
+
+3. **Default Behavior** (Claude if available):
+```bash
+# Uses Claude CLI by default when multiple CLIs installed
+jleechanorg-pr-monitor --fixpr --max-prs 5
+```
+
+**Prerequisites for Multi-CLI:**
+- For Claude: Install Claude Code CLI (see main README)
+- For Codex: Ensure `codex` binary is in PATH
+- For Gemini: `pip install google-gemini-cli` + `GOOGLE_API_KEY` environment variable
+
+**Model Restrictions:**
+- Gemini CLI is configured to use **ONLY gemini-3-pro-preview** model
+- No other Gemini models are supported in the orchestration system
+
+For complete CLI configuration and usage details, see the [orchestration README](../orchestration/README.md#cli-selection-methods).
+
 ## Features
 
 - **Actionable PR Counting**: Only processes PRs that need attention, excluding already-processed ones
@@ -30,6 +73,7 @@ pip install -e ./automation  # ✅ Full functionality
 - **Email Notifications**: Optional SMTP integration for automation alerts
 - **Commit-Based Tracking**: Avoids duplicate processing using commit SHAs
 - **Orchestrated PR Runner**: Autonomous agent-based PR fixing using TaskDispatcher
+- **Multi-CLI Support**: Works with Claude, Codex, or Gemini AI agents (via orchestration)
 - **Comprehensive Testing**: 200+ test cases with matrix-driven coverage
 
 ## Installation

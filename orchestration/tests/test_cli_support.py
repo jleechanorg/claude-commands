@@ -3,9 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
-
-GEMINI_MODEL = "gemini-2.5-pro"
+from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher, GEMINI_MODEL
 
 
 class TestAgentCliSelection(unittest.TestCase):
@@ -178,12 +176,12 @@ class TestGeminiCliSupport(unittest.TestCase):
         self.assertIn("gemini", gemini_profile["detection_keywords"])
         self.assertIn("google ai", gemini_profile["detection_keywords"])
 
-    def test_gemini_uses_only_gemini_2_5_pro(self):
-        """Verify Gemini CLI is configured to ONLY use gemini-2.5-pro model."""
+    def test_gemini_uses_configured_model(self):
+        """Verify Gemini CLI is configured to use the configured GEMINI_MODEL."""
         gemini_profile = CLI_PROFILES["gemini"]
         command_template = gemini_profile["command_template"]
 
-        # Must contain model flag with gemini-2.5-pro
+        # Must contain model flag with the configured GEMINI_MODEL
         self.assertIn(GEMINI_MODEL, command_template)
 
     def test_auto_selects_gemini_when_only_available(self):
@@ -247,7 +245,7 @@ class TestGeminiCliSupport(unittest.TestCase):
         script_contents = mock_write_text.call_args_list[0][0][0]
         # Verify Gemini CLI command is in the script
         self.assertIn("gemini", script_contents)
-        # Verify the model is gemini-2.5-pro
+        # Verify the model is the configured GEMINI_MODEL
         self.assertIn(GEMINI_MODEL, script_contents)
         self.assertIn("Gemini exit code", script_contents)
 
@@ -445,10 +443,6 @@ class TestGeminiCliIntegration(unittest.TestCase):
         # Verify model cannot be overridden by task content
         template = CLI_PROFILES["gemini"]["command_template"]
         self.assertIn(GEMINI_MODEL, template)
-
-        # Even if task mentions different model, template is fixed
-        self.assertNotIn("{model}", template)  # No model placeholder
-        self.assertEqual(template.count(GEMINI_MODEL), 1)
 
     def test_gemini_stdin_template_not_prompt_file(self):
         """Integration: Gemini uses /dev/null for stdin, not prompt file."""

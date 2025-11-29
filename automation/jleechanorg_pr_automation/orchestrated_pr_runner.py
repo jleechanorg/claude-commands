@@ -278,7 +278,7 @@ def kill_tmux_session_if_exists(name: str) -> None:
         log(f"Warning: unable to check/kill tmux session {name}: {exc}")
 
 
-def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
+def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str = "claude") -> bool:
     repo_full = pr.get("repo_full")
     repo = pr.get("repo")
     pr_number = pr.get("number")
@@ -296,7 +296,7 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
         f"Update PR #{pr_number} in {repo_full} (branch {branch}). "
         "Goal: resolve merge conflicts and CI failures with /fixpr. "
         "Skip /copilot for now—only run /fixpr. "
-        "Use commit messages prefixed with [claude-automation-commit]. "
+        f"Use commit messages prefixed with [{agent_cli}-automation-commit]. "
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
         f"Work directly on the PR branch (gh pr checkout {pr_number}) and push changes when done."
     )
@@ -306,7 +306,7 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
     for spec in agent_specs:
         agent_spec = {
             **spec,
-            "cli": "claude",
+            "cli": agent_cli,
         }
         # Ensure tmux session name is available for reuse
         session_name = agent_spec.get("name") or workspace_name
@@ -327,7 +327,7 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
     return success
 
 
-def run_fixpr_batch(cutoff_hours: int = DEFAULT_CUTOFF_HOURS, max_prs: int = DEFAULT_MAX_PRS) -> None:
+def run_fixpr_batch(cutoff_hours: int = DEFAULT_CUTOFF_HOURS, max_prs: int = DEFAULT_MAX_PRS, agent_cli: str = "claude") -> None:
     log(f"Discovering open PRs updated in last {cutoff_hours}h for org {ORG}")
     try:
         prs = query_recent_prs(cutoff_hours)
@@ -367,7 +367,7 @@ def run_fixpr_batch(cutoff_hours: int = DEFAULT_CUTOFF_HOURS, max_prs: int = DEF
             base_dir = ensure_base_clone(repo_full)
             with chdir(base_dir):
                 dispatcher = TaskDispatcher()
-                success = dispatch_agent_for_pr(dispatcher, pr)
+                success = dispatch_agent_for_pr(dispatcher, pr, agent_cli=agent_cli)
             if success:
                 processed += 1
         except Exception as exc:

@@ -25,6 +25,9 @@ from .constants import (
 
 A2A_AVAILABLE = True
 
+# Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-3-pro-preview by default
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+
 CLI_PROFILES = {
     "claude": {
         "binary": "claude",
@@ -72,8 +75,9 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "GEMINI_RESTART",
-        # CRITICAL: Only use gemini-2.5-pro model - no other models allowed
-        "command_template": "{binary} -m gemini-2.5-pro -p {prompt_file}",
+        # Stick to configured GEMINI_MODEL (default gemini-3-pro-preview) unless overridden
+        # YOLO mode enabled to allow file access outside workspace (user directive)
+        "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo -p {{prompt_file}}",
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         "detection_keywords": [
@@ -741,6 +745,11 @@ class TaskDispatcher:
 
 🔄 PR UPDATE MODE - You must UPDATE existing PR #{pr_number}
 
+🚧 Checkout rule:
+- If `gh pr checkout {pr_number}` fails because the branch is already checked out elsewhere, create a fresh worktree and use it:
+  git worktree add /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun {pr_number}
+  cd /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun
+
 IMPORTANT INSTRUCTIONS:
 1. First, checkout the PR branch: gh pr checkout {pr_number}
 2. Make the requested changes on that branch
@@ -771,6 +780,11 @@ Key points:
                 prompt = f"""Task: {task_description}
 
 🔄 PR UPDATE MODE - You need to update an existing PR
+
+🚧 Checkout rule:
+- If `gh pr checkout` fails because the branch is already checked out elsewhere, create a fresh worktree and use it:
+  git worktree add /private/tmp/{self._extract_repository_name()}/pr-update-rerun <branch-or-pr-number>
+  cd /private/tmp/{self._extract_repository_name()}/pr-update-rerun
 
 The user referenced "the PR" but didn't specify which one. You must:
 1. List recent PRs: gh pr list --author @me --limit 5
@@ -991,19 +1005,48 @@ Complete the task, then use /pr to create a new pull request."""
         capabilities = agent_spec.get("capabilities", [])
         workspace_config = agent_spec.get("workspace_config", {})
 
-        # Handle workspace name alignment - if workspace config specifies a name, use it
+        # Refresh actively working agents count from tmux sessions (excludes idle agents)
+        # This ensures we check against the actual running system state,
+        # clearing any temporary reservations from analysis phase.
+        self.active_agents = self._get_active_tmux_agents()
+
+        # 1. Determine the authoritative base name
+        # If workspace_name is specified, it takes precedence as the intended name
         if workspace_config and workspace_config.get("workspace_name"):
-            agent_name = workspace_config["workspace_name"]
-            print(f"🔄 Aligning agent name: {original_agent_name} → {agent_name} (workspace alignment)")
+            base_name = workspace_config["workspace_name"]
+            if base_name != original_agent_name:
+                print(f"🔄 Aligning agent name: {original_agent_name} → {base_name} (workspace alignment)")
         else:
-            agent_name = original_agent_name
+            base_name = original_agent_name
+
+        # 2. Ensure uniqueness
+        existing = self._check_existing_agents()
+        existing.update(self.active_agents)
+
+        agent_name = base_name
+        # If collision detected, generate a unique variation
+        if agent_name in existing:
+            timestamp = int(time.time() * 1000000) % 10000
+            counter = 1
+            original_candidate = f"{base_name}-{timestamp}"
+            agent_name = original_candidate
+            
+            while agent_name in existing:
+                agent_name = f"{original_candidate}-{counter}"
+                counter += 1
+            
+            print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
+
+        # 3. Update agent_spec to reflect the final unique name
+        # This ensures _create_worktree_at_location uses the correct, unique name
+        agent_spec["name"] = agent_name
+        if workspace_config:
+            # Keep workspace name in sync with agent name
+            workspace_config["workspace_name"] = agent_name
 
         # Clean up any existing stale prompt files for this agent to prevent task reuse
         # Use final agent name for cleanup (after workspace alignment)
         self._cleanup_stale_prompt_files(agent_name)
-
-        # Refresh actively working agents count from tmux sessions (excludes idle agents)
-        self.active_agents = self._get_active_tmux_agents()
 
         # Check concurrent active agent limit
         if len(self.active_agents) >= MAX_CONCURRENT_AGENTS:
@@ -1060,11 +1103,6 @@ Complete the task, then use /pr to create a new pull request."""
             try:
                 branch_name = f"{agent_name}-work"
                 agent_dir, git_result = self._create_worktree_at_location(agent_spec, branch_name)
-
-                # Update agent_name if workspace_name was specified for consistency
-                workspace_config = agent_spec.get("workspace_config", {})
-                if workspace_config.get("workspace_name"):
-                    agent_name = workspace_config["workspace_name"]
 
                 print(f"🏗️ Created worktree at: {agent_dir}")
 

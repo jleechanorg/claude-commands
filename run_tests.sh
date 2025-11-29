@@ -970,7 +970,7 @@ run_single_test() {
 
         if [ "$enable_coverage" = true ]; then
             # Run with coverage and proper Python path
-            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
+            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site:$PROJECT_ROOT/automation" python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
                 local exit_code=$?
@@ -982,7 +982,7 @@ run_single_test() {
             fi
         else
             # Run normally with proper Python path
-            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 "$test_file" 2>&1; then
+            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site:$PROJECT_ROOT/automation" python3 "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
                 local exit_code=$?
