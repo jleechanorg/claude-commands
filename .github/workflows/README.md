@@ -316,6 +316,8 @@ Create `.github/actions/send-deploy-notification/action.yml`:
 #       project: worldarchitecture-ai
 #       branch: main
 #       commit_sha: ${{ github.sha }}
+#       commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+#       pr_url: ${{ github.event.pull_request.html_url }}
 #       deployment_url: https://example.com
 #       workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 #       email_user: ${{ secrets.EMAIL_USER }}
@@ -348,6 +350,14 @@ inputs:
   commit_sha:
     description: 'Git commit SHA'
     required: true
+  commit_url:
+    description: 'URL to the deployed commit'
+    required: false
+    default: ''
+  pr_url:
+    description: 'URL to the related pull request (if available)'
+    required: false
+    default: ''
   deployment_url:
     description: 'URL of the deployed service'
     required: false
@@ -387,6 +397,8 @@ runs:
           ${{ inputs.project && format('Project: {0}', inputs.project) || '' }}
           Branch: ${{ inputs.branch }}
           Commit: ${{ inputs.commit_sha }}
+          ${{ inputs.commit_url && format('Commit URL: {0}', inputs.commit_url) || '' }}
+          ${{ inputs.pr_url && format('Pull Request: {0}', inputs.pr_url) || '' }}
 
           Status: ${{ inputs.status == 'success' && 'SUCCESS ✅' || 'FAILED ❌' }}
 
@@ -478,6 +490,8 @@ jobs:
           project: your-gcp-project
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: ${{ steps.get-url.outputs.url }}
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
@@ -495,6 +509,8 @@ jobs:
           project: your-gcp-project
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: ${{ steps.get-url.outputs.url }}
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
@@ -561,6 +577,8 @@ jobs:
           project: your-project
           branch: main
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: https://test.example.com
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
@@ -577,6 +595,8 @@ jobs:
           project: your-project
           branch: main
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: https://test.example.com
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
@@ -606,6 +626,8 @@ Region: us-central1
 Project: worldarchitecture-ai
 Branch: main
 Commit: abc123def456
+Commit URL: https://github.com/yourorg/yourrepo/commit/abc123def456
+Pull Request: https://github.com/yourorg/yourrepo/pull/123
 
 Status: SUCCESS ✅
 
@@ -631,6 +653,8 @@ Region: us-central1
 Project: worldarchitecture-ai
 Branch: main
 Commit: abc123def456
+Commit URL: https://github.com/yourorg/yourrepo/commit/abc123def456
+Pull Request: https://github.com/yourorg/yourrepo/pull/123
 
 Status: FAILED ❌
 
