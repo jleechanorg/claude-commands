@@ -81,6 +81,8 @@ See `.claude/` for orchestrator command references and additional skill examples
 - Prefer local mocks for tests; guard credentials with environment variables.
 - WorldArchitecture.AI Firebase Admin key lives at `~/serviceAccountKey.json` (duplicate: `~/serviceAccountKey-firebase.json`). Set `GOOGLE_APPLICATION_CREDENTIALS` to that path when running this repo locally.
 
+**Timeout guardrail (updated 2025-11-10):** Keep all request-handling layers (Cloud Run service + load balancer, Gunicorn, MCP client, and both frontends) pinned to **600 seconds (10 minutes)**. Drive changes through `scripts/timeout_config.sh` (`WORLDARCH_TIMEOUT_SECONDS`) so deployments, runtime configs, and frontends stay aligned. Do not lower any single layer without coordinating the rest of the stack, tests, and documentation.
+
 ### Beads Issue Tracking
 - **NEVER gitignore `.beads/`**: Issue tracking database MUST be version controlled and tracked in git.
 - The `.beads/` directory contains project issue tracking shared across the team.

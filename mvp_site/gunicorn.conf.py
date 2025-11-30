@@ -20,6 +20,13 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 from infrastructure import worker_config
 
+# Centralized timeout (mirrors scripts/timeout_config.sh)
+_request_timeout_env = os.environ.get("WORLDARCH_TIMEOUT_SECONDS", "600")
+try:
+    REQUEST_TIMEOUT_SECONDS = int(_request_timeout_env)
+except ValueError:
+    REQUEST_TIMEOUT_SECONDS = 600
+
 # Server socket
 # Cloud Run provides the PORT environment variable - must use it
 bind = f"0.0.0.0:{os.getenv('PORT', '8080')}"
@@ -52,7 +59,11 @@ max_requests_jitter = 50
 
 # Timeouts
 # Worker timeout - must be long enough for AI operations
-timeout = 300  # 5 minutes for Gemini API calls
+# ⚠️ Keep this aligned with Cloud Run + load balancer + client timeouts (10 minutes/600s)
+# to prevent premature termination of long-running Gemini/API calls. Do not lower without
+# updating every layer and the associated tests/docs. Pulls from WORLDARCH_TIMEOUT_SECONDS
+# so deployments using scripts/timeout_config.sh stay in sync with runtime behavior.
+timeout = REQUEST_TIMEOUT_SECONDS  # 10 minutes for long-running Gemini/API calls
 # Graceful shutdown timeout
 graceful_timeout = 30
 # Keep-alive connections

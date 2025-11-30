@@ -7,12 +7,12 @@ Tests the full configuration stack including:
 - Worker and thread configuration in different scenarios
 - Configuration hooks and lifecycle management
 """
-import sys
-import os
-import unittest
-from unittest.mock import patch, MagicMock
-import multiprocessing
 import importlib.util
+import multiprocessing
+import os
+import sys
+import unittest
+from unittest.mock import MagicMock, patch
 
 # Add project root to path for infrastructure package import
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -106,11 +106,19 @@ class TestGunicornIntegration(unittest.TestCase):
 
     def test_worker_lifecycle_configuration(self):
         """Integration: Worker lifecycle settings should be configured"""
-        config = self.load_gunicorn_config()
+        with patch.dict('os.environ', {}, clear=True):
+            config = self.load_gunicorn_config()
         self.assertEqual(config.max_requests, 1000)
         self.assertEqual(config.max_requests_jitter, 50)
-        self.assertEqual(config.timeout, 300)
+        self.assertEqual(config.timeout, 600)
         self.assertEqual(config.graceful_timeout, 30)
+
+    def test_timeout_respects_central_environment_variable(self):
+        """Integration: Timeout should follow WORLDARCH_TIMEOUT_SECONDS"""
+        with patch.dict('os.environ', {'WORLDARCH_TIMEOUT_SECONDS': '720'}, clear=True):
+            config = self.load_gunicorn_config()
+
+        self.assertEqual(config.timeout, 720)
 
     def test_logging_configuration(self):
         """Integration: Logging should be configured for Cloud Run"""

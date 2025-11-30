@@ -198,6 +198,10 @@ Genesis Coder, Prime Mover,
 
 🚨 **NO FAKE IMPLEMENTATIONS:** ⚠️ MANDATORY - Always audit existing functionality first
 - ❌ NEVER create placeholder/demo code or duplicate existing protocols
+
+🚨 **TIMEOUT INTEGRITY RULE:** All request layers (Cloud Run service + load balancer, Gunicorn, MCP client, and frontends) must
+remain at the 10-minute/600-second ceiling unless the entire stack, tests, and docs are updated together. Source the value from
+`scripts/timeout_config.sh` (`WORLDARCH_TIMEOUT_SECONDS`) and never lower a single layer in isolation.
 - ✅ ALWAYS build real, functional code
 
 🚨 **PRE-IMPLEMENTATION DECISION FRAMEWORK:** ⚠️ MANDATORY - Prevent fake code at source

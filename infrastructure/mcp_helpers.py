@@ -1,3 +1,4 @@
+# ruff: noqa: UP007
 """
 MCP Client Initialization Helpers
 
@@ -5,14 +6,20 @@ Thread-safe MCP client initialization for Flask applications using Gunicorn
 gthread workers. Provides lazy initialization with proper synchronization to
 prevent race conditions when multiple threads access the client simultaneously.
 """
+
 import os
 import threading
-from typing import Any, Optional
 
 from mvp_site.mcp_client import MCPClient
 
+_request_timeout_env = os.environ.get("WORLDARCH_TIMEOUT_SECONDS", "600")
+try:
+    REQUEST_TIMEOUT_SECONDS = int(_request_timeout_env)
+except ValueError:
+    REQUEST_TIMEOUT_SECONDS = 600
 
-def create_thread_safe_mcp_getter(app, world_logic_module: Optional[Any] = None):
+
+def create_thread_safe_mcp_getter(app, world_logic_module=None):
     """
     Create a thread-safe MCP client getter function for a Flask app.
 
@@ -65,9 +72,12 @@ def create_thread_safe_mcp_getter(app, world_logic_module: Optional[Any] = None)
                     if skip_http_mode:
                         world_logic_to_use = world_logic_module
 
+                    # ⚠️ Maintain parity with Gunicorn/Cloud Run/clients using the
+                    # centralized timeout value so long-running MCP flows do not
+                    # disconnect. Update docs/tests before changing this timeout.
                     app._mcp_client = MCPClient(
                         mcp_server_url,
-                        timeout=300,
+                        timeout=REQUEST_TIMEOUT_SECONDS,
                         skip_http=skip_http_mode,
                         world_logic_module=world_logic_to_use,
                     )

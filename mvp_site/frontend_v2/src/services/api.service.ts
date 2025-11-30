@@ -31,9 +31,18 @@ import {
 import { auth, googleProvider } from '../lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
+// Centralized request timeout (mirrors scripts/timeout_config.sh exports)
+const envTimeoutRaw = (
+  import.meta.env.VITE_REQUEST_TIMEOUT_MS ?? import.meta.env.REACT_APP_REQUEST_TIMEOUT_MS ?? ''
+)
+  .toString()
+  .trim();
+const REQUEST_TIMEOUT_MS = Number(envTimeoutRaw) || 600000;
+
 class ApiService {
   private baseUrl = '/api';
-  private defaultTimeout = 30000; // 30 seconds
+  // ⚠️ Must stay in sync with Gunicorn + Cloud Run 600s ceilings so browser calls do not time out first.
+  private defaultTimeout = REQUEST_TIMEOUT_MS; // 10 minutes to support long-running requests
   private maxRetries = 3;
   private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
   private cacheDefaultTTL = 5 * 60 * 1000; // 5 minutes
@@ -697,7 +706,7 @@ class ApiService {
           ...data,
           title: trimmedTitle // Use trimmed title
         })
-      }, 0, 60000); // 60 second timeout for campaign creation
+      }, 0, this.defaultTimeout); // Allow up to 10 minutes for campaign creation
 
       // Enhanced response validation
       if (!response || typeof response !== 'object') {
@@ -774,7 +783,7 @@ class ApiService {
         body: JSON.stringify(data)
       },
       0,
-      45000 // 45 second timeout for AI interactions
+      this.defaultTimeout // Allow up to 10 minutes for AI interactions
     );
 
     return response;

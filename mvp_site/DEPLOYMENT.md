@@ -140,7 +140,7 @@ docker stats  # For containers
 | Low CPU usage (<50%) | Increase workers |
 | High memory usage | Reduce workers or add RAM |
 | Request queue building up | Increase workers/threads |
-| Timeout errors | Check timeout setting (300s default) |
+| Timeout errors | Check timeout setting (600s default) |
 
 ### Thread Count Tuning
 
@@ -168,16 +168,20 @@ Recommendation: Allocate 1GB+ for safety margin
 
 ### Timeout Configuration
 
-Current setting: **300 seconds (5 minutes)**
+Current setting: **600 seconds (10 minutes)** sourced from `scripts/timeout_config.sh`.
+
+> ⚠️ Keep Gunicorn, Cloud Run (service + load balancer), and frontend clients aligned at **600s**.
+> Lowering any layer breaks long-running Gemini/API calls; changes must be coordinated with
+> documentation/tests across the stack and the shared `WORLDARCH_TIMEOUT_SECONDS` export.
 
 **Adjust if:**
-- Gemini API calls consistently timeout → Increase timeout
+- Gemini API calls consistently timeout → Increase timeout (and propagate change everywhere)
 - Workers killed during long operations → Increase timeout
-- Slow clients abuse resources → Decrease timeout
+- Slow clients abuse resources → Decrease timeout **only if** you also update Cloud Run and frontend timeouts
 
 ```python
-# In gunicorn.conf.py
-timeout = 300  # Adjust as needed
+# In gunicorn.conf.py (REQUEST_TIMEOUT_SECONDS reads WORLDARCH_TIMEOUT_SECONDS env var)
+timeout = REQUEST_TIMEOUT_SECONDS
 graceful_timeout = 30  # Time for graceful shutdown
 ```
 
@@ -367,7 +371,7 @@ Before deploying:
 
 - [ ] Set `GUNICORN_WORKERS` based on CPU count
 - [ ] Set `GUNICORN_THREADS` to 4 (or tuned value)
-- [ ] Verify timeout is sufficient (300s default)
+- [ ] Verify timeout is sufficient (600s default)
 - [ ] Test with production-like load
 - [ ] Monitor `/health` endpoint
 - [ ] Set up logging aggregation
