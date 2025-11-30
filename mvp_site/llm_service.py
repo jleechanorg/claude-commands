@@ -146,11 +146,11 @@ FALLBACK_PLANNING_BLOCK_EXCEPTION: dict[str, Any] = {
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
 JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
-MAX_INPUT_TOKENS: int = 750000
+MAX_INPUT_TOKENS: int = 300000
 SAFE_CHAR_LIMIT: int = MAX_INPUT_TOKENS * 4
 
-TURNS_TO_KEEP_AT_START: int = 25
-TURNS_TO_KEEP_AT_END: int = 75
+TURNS_TO_KEEP_AT_START: int = 20
+TURNS_TO_KEEP_AT_END: int = 20
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
