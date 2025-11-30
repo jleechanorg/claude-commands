@@ -16,7 +16,7 @@ Concurrency:
 - Critical for allowing concurrent requests (e.g., loading campaigns while actions process)
 """
 
-# ruff: noqa: PLR0911, PLR0912, PLR0915, UP038, E402
+# ruff: noqa: E402, PLR0911, PLR0912, PLR0915, UP038
 
 import asyncio
 import collections
@@ -44,7 +44,6 @@ from mvp_site import (
     firestore_service,
     llm_service,
     logging_util,
-    preventive_guards,
     structured_fields_utils,
 )
 from mvp_site.custom_types import CampaignId, UserId
@@ -484,7 +483,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Handle debug mode commands (may contain blocking I/O)
         debug_response = await asyncio.to_thread(
             _handle_debug_mode_command,
-            user_input, current_game_state, user_id, campaign_id
+            user_input,
+            current_game_state,
+            user_id,
+            campaign_id,
         )
         if debug_response:
             return debug_response
@@ -514,14 +516,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Convert LLMResponse to dict format for compatibility
-        # Apply preventive guards to enforce continuity safeguards
-        state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
-            current_game_state, llm_response_obj, mode
-        )
-
         response = {
             "story": llm_response_obj.narrative_text,
-            "state_changes": state_changes,
+            "state_changes": llm_response_obj.get_state_updates(),
         }
 
         # Update game state with changes
@@ -532,14 +529,20 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Update in Firestore (blocking I/O - run in thread)
         await asyncio.to_thread(
             firestore_service.update_campaign_game_state,
-            user_id, campaign_id, updated_game_state_dict
+            user_id,
+            campaign_id,
+            updated_game_state_dict,
         )
 
         # Save story entries to Firestore (blocking I/O - run in thread)
         # First save the user input
         await asyncio.to_thread(
             firestore_service.add_story_entry,
-            user_id, campaign_id, constants.ACTOR_USER, user_input, mode
+            user_id,
+            campaign_id,
+            constants.ACTOR_USER,
+            user_input,
+            mode,
         )
 
         # Then save the AI response with structured fields if available
@@ -549,7 +552,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         structured_fields = structured_fields_utils.extract_structured_fields(
             llm_response_obj
         )
-        structured_fields.update(prevention_extras)
 
         await asyncio.to_thread(
             firestore_service.add_story_entry,
@@ -570,9 +572,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Extract narrative text with proper debug mode handling
         if hasattr(llm_response_obj, "get_narrative_text"):
-            final_narrative = llm_response_obj.get_narrative_text(
-                debug_mode=debug_mode
-            )
+            final_narrative = llm_response_obj.get_narrative_text(debug_mode=debug_mode)
         else:
             final_narrative = llm_response_obj.narrative_text
 
@@ -650,13 +650,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     structured_response.god_mode_response
                 )
 
-        if prevention_extras.get("god_mode_response"):
-            # Prefer synthesized god mode responses from preventive guards when present
-            # because they fill gaps left by the model.
-            unified_response["god_mode_response"] = prevention_extras[
-                "god_mode_response"
-            ]
-
         # Track story mode sequence ID for character mode
         if mode == constants.MODE_CHARACTER:
             story_id_update = {
@@ -679,7 +672,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             # Blocking I/O - run in thread
             await asyncio.to_thread(
                 firestore_service.update_campaign_game_state,
-                user_id, campaign_id, final_game_state_dict
+                user_id,
+                campaign_id,
+                final_game_state_dict,
             )
             unified_response["game_state"] = final_game_state_dict
 
@@ -980,8 +975,7 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
 
         # Get campaigns with pagination and sorting (blocking I/O - run in thread)
         campaigns = await asyncio.to_thread(
-            firestore_service.get_campaigns_for_user,
-            user_id, limit, sort_by
+            firestore_service.get_campaigns_for_user, user_id, limit, sort_by
         )
 
         # Clean JSON artifacts from campaign text fields

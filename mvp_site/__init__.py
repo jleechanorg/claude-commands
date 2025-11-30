@@ -14,7 +14,6 @@ _ALIAS_MODULES = {
     name: importlib.import_module(f"mvp_site.{name}")
     for name in [
         "structured_fields_utils",
-        "preventive_guards",
         "firestore_service",
         "logging_util",
         "entity_preloader",
@@ -31,6 +30,5 @@ for alias, module in _ALIAS_MODULES.items():
 
 # Re-export commonly used aliases for convenience
 structured_fields_utils = _ALIAS_MODULES["structured_fields_utils"]
-preventive_guards = _ALIAS_MODULES["preventive_guards"]
 
 __all__ = list(_ALIAS_MODULES.keys())
