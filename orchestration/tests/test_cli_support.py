@@ -12,16 +12,30 @@ class TestAgentCliSelection(unittest.TestCase):
     def setUp(self):
         self.dispatcher = TaskDispatcher()
 
-    def test_detects_codex_cli_keyword(self):
-        """Ensure codex keyword detection selects the Codex CLI."""
+    def test_respects_forced_cli_codex(self):
+        """Forced CLI selection should override detection/keywords."""
         task = "Please run codex exec --yolo against the new hooks"
-        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="codex")
         self.assertEqual(agent_specs[0]["cli"], "codex")
 
-    def test_detects_codex_cli_name_reference(self):
-        """Mentioning the CLI name directly should select the Codex profile."""
+    def test_respects_forced_cli_codex_name_reference(self):
+        """Forced CLI selection works regardless of task wording."""
         task = "Codex should handle the red team hardening checklist"
-        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="codex")
+        self.assertEqual(agent_specs[0]["cli"], "codex")
+
+    def test_keywords_select_cli_when_not_forced(self):
+        """Keywords should select CLI when no explicit override is provided."""
+        with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
+            mock_which.side_effect = (
+                lambda command: "/usr/bin/codex" if command == "codex" else "/usr/bin/claude"
+                if command == "claude"
+                else None
+            )
+
+            task = "Please run codex exec against the hooks"
+            agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+
         self.assertEqual(agent_specs[0]["cli"], "codex")
 
     def test_auto_selects_only_available_cli(self):
@@ -42,6 +56,11 @@ class TestAgentCliSelection(unittest.TestCase):
             agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
 
         self.assertEqual(agent_specs[0]["cli"], "codex")
+
+    def test_invalid_forced_cli_raises_value_error(self):
+        """Invalid forced_cli values should raise a clear error."""
+        with self.assertRaises(ValueError):
+            self.dispatcher.analyze_task_and_create_agents("Please help", forced_cli="invalid")
 
     def test_create_dynamic_agent_uses_codex_command(self):
         """Ensure codex agents execute via `codex exec --yolo`."""
@@ -148,22 +167,36 @@ class TestGeminiCliSupport(unittest.TestCase):
     def setUp(self):
         self.dispatcher = TaskDispatcher()
 
-    def test_detects_gemini_cli_keyword(self):
-        """Ensure gemini keyword detection selects the Gemini CLI."""
+    def test_respects_forced_cli_gemini_keyword(self):
+        """Forced CLI selection should override detection/keywords."""
         task = "Please run gemini to analyze this code"
-        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="gemini")
         self.assertEqual(agent_specs[0]["cli"], "gemini")
 
-    def test_detects_gemini_cli_name_reference(self):
-        """Mentioning Gemini CLI name directly should select the Gemini profile."""
+    def test_respects_forced_cli_gemini_name_reference(self):
+        """Forced selection works regardless of wording."""
         task = "Use Gemini CLI to review the authentication module"
-        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="gemini")
         self.assertEqual(agent_specs[0]["cli"], "gemini")
 
-    def test_detects_gemini_google_reference(self):
-        """Google AI reference should select the Gemini profile."""
+    def test_respects_forced_cli_gemini_google_reference(self):
+        """Forced selection works even with generic Google reference."""
         task = "Use google ai to help with this task"
-        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="gemini")
+        self.assertEqual(agent_specs[0]["cli"], "gemini")
+
+    def test_gemini_keywords_select_cli_when_not_forced(self):
+        """Gemini keywords should select CLI when not overridden."""
+        with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
+            mock_which.side_effect = (
+                lambda command: "/usr/bin/gemini" if command == "gemini" else "/usr/bin/claude"
+                if command == "claude"
+                else None
+            )
+
+            task = "Please run gemini to analyze this code"
+            agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+
         self.assertEqual(agent_specs[0]["cli"], "gemini")
 
     def test_gemini_cli_profile_exists(self):
@@ -346,21 +379,14 @@ class TestGeminiCliIntegration(unittest.TestCase):
         self.assertFalse(gemini["supports_continue"])
         self.assertIsNone(gemini["conversation_dir"])
 
-    def test_gemini_detection_keywords_comprehensive(self):
-        """Integration: Test all detection keywords actually trigger Gemini selection."""
+    def test_gemini_forced_cli_overrides_keywords(self):
+        """Forced CLI should return gemini regardless of keywords."""
 
         keywords = CLI_PROFILES["gemini"]["detection_keywords"]
-
-        # Mock only shutil.which to make gemini appear available
-        with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
-            mock_which.side_effect = lambda command: "/usr/bin/gemini" if command == "gemini" else None
-
-            for keyword in keywords:
-                task = f"Please {keyword} this code for me"
-                agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
-                self.assertEqual(
-                    agent_specs[0]["cli"], "gemini", f"Keyword '{keyword}' did not trigger Gemini selection"
-                )
+        for keyword in keywords:
+            task = f"Please {keyword} this code for me"
+            agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="gemini")
+            self.assertEqual(agent_specs[0]["cli"], "gemini")
 
     def test_gemini_command_template_format_string_valid(self):
         """Integration: Verify command template has valid format placeholders."""

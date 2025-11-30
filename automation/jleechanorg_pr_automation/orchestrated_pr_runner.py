@@ -293,15 +293,24 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str =
     prepare_workspace_dir(repo, workspace_name)
 
     task_description = (
-        f"Update PR #{pr_number} in {repo_full} (branch {branch}). "
-        "Goal: resolve merge conflicts and CI failures with /fixpr. "
-        "Skip /copilot for now—only run /fixpr. "
-        f"Use commit messages prefixed with [{agent_cli}-automation-commit]. "
+        f"FIXPR TASK (SELF-CONTAINED): Update PR #{pr_number} in {repo_full} (branch {branch}). "
+        "Goal: resolve merge conflicts and failing checks. "
+        f"CLI: {agent_cli}. DO NOT wait for additional input—start immediately.\n\n"
+        "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
+        f"1) gh pr checkout {pr_number}\n"
+        "2) git status && git branch --show-current\n"
+        "3) If checkout fails because the branch exists elsewhere, create worktree:\n"
+        f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"
+        "4) Identify failing checks (gh pr view --json statusCheckRollup) and reproduce locally (tests/linters as needed)\n"
+        "5) Apply fixes\n"
+        f"6) git add -A && git commit -m \"[{agent_cli}-automation-commit] fix PR #{pr_number}\" && git push\n"
+        f"7) gh pr view {pr_number} --json mergeable,mergeStateStatus,statusCheckRollup\n"
+        "8) Write completion report to /tmp/orchestration_results/pr-{pr_number}._results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
-        f"Work directly on the PR branch (gh pr checkout {pr_number}) and push changes when done."
+        "Do not create new PRs or branches. Skip /copilot. Use only the requested CLI."
     )
 
-    agent_specs = dispatcher.analyze_task_and_create_agents(task_description)
+    agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=agent_cli)
     success = False
     for spec in agent_specs:
         agent_spec = {
