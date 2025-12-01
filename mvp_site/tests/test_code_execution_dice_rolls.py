@@ -41,7 +41,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
         includes the code_execution tool which allows Gemini to run actual
         Python code (random.randint) instead of inferring dice results.
         """
-        with patch("mvp_site.llm_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
 
@@ -168,7 +168,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
         - Temperature settings
         - Safety settings
         """
-        with patch("mvp_site.llm_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
 

@@ -4,6 +4,7 @@
 
 set -euo pipefail
 
+source "$(dirname "$0")/scripts/timeout_config.sh"  # Central timeout source (10m)
 source "$(dirname "$0")/scripts/deploy_common.sh"
 
 # Colors for output
@@ -171,15 +172,18 @@ deploy_common::deploy_service \
     "$IMAGE_TAG" \
     "$SECRET_SPEC" \
     "1Gi" \
-    "300" \
+    "$WORLDARCH_TIMEOUT_SECONDS" \
     "0" \
     "5" \
     "10" \
     "us-central1" \
-    "8080"
+    "8080" \
+    "--set-env-vars=WORLDARCH_TIMEOUT_SECONDS=$WORLDARCH_TIMEOUT_SECONDS,WORLDARCH_TIMEOUT_MILLISECONDS=$WORLDARCH_TIMEOUT_MILLISECONDS"
 
 echo -e "${BLUE}Configuring service...${NC}"
-deploy_common::update_service_timeout "$SERVICE_NAME" "300" "us-central1"
+# ⚠️ Keep MCP service timeout in lockstep with the centralized 10-minute ceiling
+# to avoid disconnects during long-running tool calls.
+deploy_common::update_service_timeout "$SERVICE_NAME" "$WORLDARCH_TIMEOUT_SECONDS" "us-central1"
 
 # Get service URL
 SERVICE_URL=$(deploy_common::service_url "$SERVICE_NAME" "us-central1")

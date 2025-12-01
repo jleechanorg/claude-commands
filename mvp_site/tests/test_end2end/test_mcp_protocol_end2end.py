@@ -47,7 +47,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
         # Use stable test UID and stub Firebase verification
         self._auth_patcher = patch(
-            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+            "mvp_site.main.auth.verify_id_token", return_value={"uid": self.test_user_id}
         )
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)
@@ -149,7 +149,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
     @unittest.skipUnless(HAS_GENAI, "google-genai package not available")
     @patch("firestore_service.get_db")
-    @patch("llm_service.genai.Client")
+    @patch("mvp_site.llm_providers.gemini_provider.get_client")
     def test_mcp_process_action_protocol(self, mock_genai_client_class, mock_get_db):
         """Test MCP protocol for process_action_unified tool."""
         # Set up fake Firestore
@@ -161,9 +161,9 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         campaign_doc = user_doc.collection("campaigns").document(self.test_campaign_id)
         campaign_doc.set(self.mock_campaign_data)
 
-        # Set up fake Gemini client
+        # Set up fake Gemini client (mocking get_client which returns the client instance)
         fake_genai_client = MagicMock()
-        mock_genai_client_class.return_value = fake_genai_client
+        mock_genai_client_class.return_value = fake_genai_client  # get_client() returns this
         fake_genai_client.models.count_tokens.return_value = FakeTokenCount(1000)
 
         # Mock Gemini response with structured fields

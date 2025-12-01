@@ -38,6 +38,33 @@ export CLOUDSDK_BILLING_QUOTA_PROJECT="$GCP_PROJECT"
 export GOOGLE_CLOUD_PROJECT="$GCP_PROJECT"
 export GCLOUD_PROJECT="$GCP_PROJECT"
 
+# Helper to pull secrets from Google Secret Manager without exposing values
+load_secret_env() {
+    local secret_name="$1"
+    local env_var="$2"
+
+    if ! command -v gcloud >/dev/null 2>&1; then
+        echo "${EMOJI_WARNING} gcloud not available; cannot load ${env_var} from Secret Manager"
+        return 1
+    fi
+
+    local value
+    if value=$(gcloud secrets versions access latest --secret "$secret_name" --project="$GCP_PROJECT" 2>/dev/null); then
+        if [ -n "$value" ]; then
+            # Always prefer Secret Manager for local runs; override existing value if present
+            if [ -n "${!env_var:-}" ]; then
+                echo "${EMOJI_INFO} ${env_var} present; overriding with Secret Manager (${secret_name})"
+            fi
+            export "$env_var"="$value"
+            echo "${EMOJI_CHECK} Loaded ${env_var} from Secret Manager (${secret_name}, len=${#value})"
+            return 0
+        fi
+    fi
+
+    echo "${EMOJI_WARNING} Unable to load ${env_var} from Secret Manager (${secret_name})"
+    return 1
+}
+
 # Ensure all relative paths below are resolved from the repo root
 cd "$PROJECT_ROOT"
 
@@ -134,6 +161,25 @@ fi
 export GOOGLE_APPLICATION_CREDENTIALS="$CREDS_FILE"
 export FIREBASE_PROJECT_ID="worldarchitecture-ai"
 
+# Load LLM API keys from Secret Manager when not already provided
+load_secret_env "gemini-api-key" "GEMINI_API_KEY"
+load_secret_env "cerebras-api-key" "CEREBRAS_API_KEY"
+load_secret_env "openrouter-api-key" "OPENROUTER_API_KEY"
+
+# Fail fast if required keys are still missing
+for required_var in GEMINI_API_KEY CEREBRAS_API_KEY; do
+    if [ -z "${!required_var:-}" ]; then
+        echo "${EMOJI_ERROR} ${required_var} is not set and could not be loaded from Secret Manager. Aborting."
+        exit 1
+    fi
+done
+
+# If using WORLDAI_GOOGLE_APPLICATION_CREDENTIALS, auto-ack dev mode for local runs
+if [ -n "${WORLDAI_GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -z "${WORLDAI_DEV_MODE:-}" ]; then
+    export WORLDAI_DEV_MODE=true
+    echo "${EMOJI_INFO} WORLDAI_GOOGLE_APPLICATION_CREDENTIALS detected; setting WORLDAI_DEV_MODE=true for local run"
+fi
+
 # Find available ports
 echo "${EMOJI_SEARCH} Finding available ports..."
 FLASK_PORT=$(find_available_port $DEFAULT_FLASK_PORT 10)
@@ -157,9 +203,9 @@ echo ""
 echo "${EMOJI_ROCKET} Starting Flask backend on port $FLASK_PORT..."
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="Flask Backend" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=true PORT=$FLASK_PORT python -m mvp_site.main serve || (echo 'Flask exited with status $?'; read -p 'Press enter to close'); exec bash"
+    gnome-terminal --tab --title="Flask Backend" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=false PORT=$FLASK_PORT python -m mvp_site.main serve || (echo 'Flask exited with status $?'; read -p 'Press enter to close'); exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "Flask Backend" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=true PORT=$FLASK_PORT python -m mvp_site.main serve; echo 'Flask exited with status $?'; read -p 'Press enter to close'" &
+    xterm -title "Flask Backend" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=false PORT=$FLASK_PORT python -m mvp_site.main serve; echo 'Flask exited with status $?'; read -p 'Press enter to close'" &
 else
     # Fallback: run in background
     echo "${EMOJI_INFO} Running Flask in background (no terminal emulator found)"
@@ -170,7 +216,12 @@ else
             # shellcheck disable=SC1091
             source "$PROJECT_ROOT/venv/bin/activate"
         fi
-        PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}" TESTING=true PORT=$FLASK_PORT python -m mvp_site.main serve
+        GEMINI_API_KEY="$GEMINI_API_KEY" \
+        CEREBRAS_API_KEY="$CEREBRAS_API_KEY" \
+        PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}" \
+        TESTING=false \
+        PORT=$FLASK_PORT \
+        python -m mvp_site.main serve
     ) &
     FLASK_PID=$!
     echo "${EMOJI_INFO} Flask backend started in background (PID: $FLASK_PID)"
@@ -198,12 +249,14 @@ if [ $? -ne 0 ]; then
 fi
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT; exec bash"
+    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && GEMINI_API_KEY='$GEMINI_API_KEY' CEREBRAS_API_KEY='$CEREBRAS_API_KEY' bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT; exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT" &
+    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && GEMINI_API_KEY='$GEMINI_API_KEY' CEREBRAS_API_KEY='$CEREBRAS_API_KEY' bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT" &
 else
     # Fallback: run in background with dual transport (stdio + HTTP) using named pipe
     echo "${EMOJI_INFO} Running MCP server in background (no terminal emulator found)"
+    GEMINI_API_KEY="$GEMINI_API_KEY" \
+    CEREBRAS_API_KEY="$CEREBRAS_API_KEY" \
     "$PROJECT_ROOT/scripts/mcp_dual_background.sh" --host 127.0.0.1 --port $MCP_PORT &
     MCP_PID=$!
     echo "${EMOJI_INFO} MCP server started in background (PID: $MCP_PID, Port: $MCP_PORT)"

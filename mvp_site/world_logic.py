@@ -16,13 +16,13 @@ Concurrency:
 - Critical for allowing concurrent requests (e.g., loading campaigns while actions process)
 """
 
-# ruff: noqa: PLR0911, PLR0912, PLR0915, UP038, E402
+# ruff: noqa: E402, PLR0911, PLR0912, PLR0915, UP038
 
 import asyncio
 import collections
-import datetime
 import json
 import os
+import re
 import tempfile
 import uuid
 from typing import Any
@@ -56,6 +56,7 @@ from mvp_site.firestore_service import (
 )
 from mvp_site.game_state import GameState
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
+from mvp_site.serialization import json_default_serializer
 
 # Initialize Firebase if not already initialized (testing mode removed)
 # WORLDAI_* vars take precedence for WorldArchitect.AI repo-specific config
@@ -93,55 +94,6 @@ KEY_SELECTED_PROMPTS = "selected_prompts"
 KEY_USER_INPUT = "user_input"
 KEY_RESPONSE = "response"
 KEY_TRACEBACK = "traceback"
-
-
-# --- Helper Functions ---
-
-
-def json_default_serializer(obj):
-    """
-    Default JSON serializer for objects that are not naturally JSON serializable.
-    Handles specific known types with targeted exception handling.
-    """
-    # Handle datetime objects
-    if isinstance(obj, (datetime.datetime, datetime.date)):
-        return obj.isoformat()
-
-    # Handle objects with to_dict method (like GameState, entities)
-    if hasattr(obj, "to_dict") and callable(obj.to_dict):
-        try:
-            return obj.to_dict()
-        except (AttributeError, TypeError) as e:
-            logging_util.warning(
-                f"Failed to serialize {type(obj).__name__} via to_dict(): {e}"
-            )
-            return f"<{type(obj).__name__}: to_dict_failed>"
-
-    # Handle objects with __dict__ attribute
-    if hasattr(obj, "__dict__"):
-        try:
-            return obj.__dict__
-        except (AttributeError, TypeError) as e:
-            logging_util.warning(
-                f"Failed to serialize {type(obj).__name__} via __dict__: {e}"
-            )
-            return f"<{type(obj).__name__}: dict_failed>"
-
-    # Final fallback with specific error types
-    try:
-        return str(obj)
-    except (UnicodeDecodeError, UnicodeEncodeError) as e:
-        logging_util.error(f"Unicode error serializing {type(obj).__name__}: {e}")
-        return f"<{type(obj).__name__}: unicode_error>"
-    except (AttributeError, TypeError) as e:
-        logging_util.error(f"Type error serializing {type(obj).__name__}: {e}")
-        return f"<{type(obj).__name__}: type_error>"
-    except Exception as e:
-        # Only catch truly unexpected exceptions with detailed logging
-        logging_util.error(
-            f"Unexpected error serializing {type(obj).__name__}: {type(e).__name__}: {e}"
-        )
-        return f"<{type(obj).__name__}: unexpected_error>"
 
 
 def truncate_game_state_for_logging(
@@ -227,6 +179,107 @@ def _cleanup_legacy_state(
             num_cleaned += 1
 
     return cleaned_dict, was_cleaned, num_cleaned
+
+
+def _get_player_character_data(game_state: Any) -> dict[str, Any]:
+    """Safely extract player character data from game state objects or dicts."""
+
+    if isinstance(game_state, dict):
+        return game_state.get("player_character_data", {}) or {}
+
+    if hasattr(game_state, "player_character_data"):
+        return game_state.player_character_data or {}
+
+    return {}
+
+
+def _enrich_session_header_with_progress(
+    session_header: str | None, game_state: Any
+) -> str:
+    """Ensure XP and gold are present in the session header for the UI."""
+
+    session_header = session_header or ""
+
+    player_data = _get_player_character_data(game_state)
+    xp_current = player_data.get("xp_current")
+    xp_next_level = player_data.get("xp_next_level")
+    gold_amount = player_data.get("gold")
+
+    contains_xp = re.search(
+        r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE
+    )
+    contains_gold = re.search(
+        r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE
+    )
+
+    remove_prefixes: tuple[str, ...] = ()
+    additions: list[str] = []
+    if xp_current is not None and not contains_xp:
+        xp_text = (
+            f"XP: {xp_current}/{xp_next_level}"
+            if xp_next_level is not None and xp_next_level != ""
+            else f"XP: {xp_current}"
+        )
+        additions.append(xp_text)
+        remove_prefixes += ("xp:", "experience:")
+
+    if gold_amount is not None and not contains_gold:
+        additions.append(f"Gold: {gold_amount}gp")
+        remove_prefixes += ("gold:", "gp:")
+
+    if not additions:
+        return session_header
+
+    def _remove_resource_tokens(tokens: list[str]) -> list[str]:
+        if not remove_prefixes:
+            return tokens
+
+        return [
+            token
+            for token in tokens
+            if token and not token.lower().strip().startswith(remove_prefixes)
+        ]
+
+    lines = session_header.splitlines()
+    for idx, line in enumerate(lines):
+        if line.strip().startswith("Status:"):
+            prefix, _, remainder = line.partition("Status:")
+            status_tokens = [part.strip() for part in remainder.split("|")]
+            status_tokens = _remove_resource_tokens(status_tokens)
+            merged_tokens = [token for token in status_tokens if token]
+            merged_tokens.extend(additions)
+            lines[idx] = f"{prefix}Status: {' | '.join(merged_tokens)}"
+            return "\n".join(lines)
+
+    if lines:
+        separator = " | " if lines[-1].strip() else ""
+        lines[-1] = f"{lines[-1]}{separator}{' | '.join(additions)}"
+    else:
+        lines.append(" | ".join(additions))
+
+    return "\n".join(lines)
+
+
+def _ensure_session_header_resources(
+    structured_fields: dict[str, Any], game_state: Any
+) -> dict[str, Any]:
+    """
+    Enriches session header with XP and gold from game state if these values exist in
+    player_character_data but are not already present in the session header text.
+    """
+
+    if not structured_fields:
+        return structured_fields
+
+    session_header = structured_fields.get(constants.FIELD_SESSION_HEADER, "")
+    enriched_header = _enrich_session_header_with_progress(session_header, game_state)
+
+    if enriched_header == session_header:
+        return structured_fields
+
+    updated_fields = structured_fields.copy()
+    updated_fields[constants.FIELD_SESSION_HEADER] = enriched_header
+    return updated_fields
 
 
 def _strip_game_state_fields(
@@ -407,8 +460,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         )
 
         # Extract structured fields
-        opening_story_structured_fields = (
-            structured_fields_utils.extract_structured_fields(opening_story_response)
+        opening_story_structured_fields = _ensure_session_header_resources(
+            structured_fields_utils.extract_structured_fields(opening_story_response),
+            initial_game_state,
         )
 
         # Create campaign in Firestore (blocking I/O - run in thread)
@@ -484,7 +538,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Handle debug mode commands (may contain blocking I/O)
         debug_response = await asyncio.to_thread(
             _handle_debug_mode_command,
-            user_input, current_game_state, user_id, campaign_id
+            user_input,
+            current_game_state,
+            user_id,
+            campaign_id,
         )
         if debug_response:
             return debug_response
@@ -532,22 +589,29 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Update in Firestore (blocking I/O - run in thread)
         await asyncio.to_thread(
             firestore_service.update_campaign_game_state,
-            user_id, campaign_id, updated_game_state_dict
+            user_id,
+            campaign_id,
+            updated_game_state_dict,
         )
 
         # Save story entries to Firestore (blocking I/O - run in thread)
         # First save the user input
         await asyncio.to_thread(
             firestore_service.add_story_entry,
-            user_id, campaign_id, constants.ACTOR_USER, user_input, mode
+            user_id,
+            campaign_id,
+            constants.ACTOR_USER,
+            user_input,
+            mode,
         )
 
         # Then save the AI response with structured fields if available
         ai_response_text = llm_response_obj.narrative_text
 
         # Extract structured fields from AI response for storage
-        structured_fields = structured_fields_utils.extract_structured_fields(
-            llm_response_obj
+        structured_fields = _ensure_session_header_resources(
+            structured_fields_utils.extract_structured_fields(llm_response_obj),
+            updated_game_state_dict,
         )
         structured_fields.update(prevention_extras)
 
@@ -570,9 +634,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Extract narrative text with proper debug mode handling
         if hasattr(llm_response_obj, "get_narrative_text"):
-            final_narrative = llm_response_obj.get_narrative_text(
-                debug_mode=debug_mode
-            )
+            final_narrative = llm_response_obj.get_narrative_text(debug_mode=debug_mode)
         else:
             final_narrative = llm_response_obj.narrative_text
 
@@ -679,7 +741,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             # Blocking I/O - run in thread
             await asyncio.to_thread(
                 firestore_service.update_campaign_game_state,
-                user_id, campaign_id, final_game_state_dict
+                user_id,
+                campaign_id,
+                final_game_state_dict,
             )
             unified_response["game_state"] = final_game_state_dict
 
@@ -980,8 +1044,7 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
 
         # Get campaigns with pagination and sorting (blocking I/O - run in thread)
         campaigns = await asyncio.to_thread(
-            firestore_service.get_campaigns_for_user,
-            user_id, limit, sort_by
+            firestore_service.get_campaigns_for_user, user_id, limit, sort_by
         )
 
         # Clean JSON artifacts from campaign text fields
@@ -1061,8 +1124,16 @@ async def get_user_settings_unified(request_data: dict[str, Any]) -> dict[str, A
         if settings is None:
             settings = {
                 "debug_mode": constants.DEFAULT_DEBUG_MODE,
-                "gemini_model": "gemini-3-pro-preview",  # Default model (supports code_execution + JSON)
+                "gemini_model": constants.DEFAULT_GEMINI_MODEL,  # Default model (supports code_execution + JSON)
+                "llm_provider": constants.DEFAULT_LLM_PROVIDER,
+                "openrouter_model": constants.DEFAULT_OPENROUTER_MODEL,
+                "cerebras_model": constants.DEFAULT_CEREBRAS_MODEL,
             }
+
+        settings.setdefault("llm_provider", constants.DEFAULT_LLM_PROVIDER)
+        settings.setdefault("gemini_model", constants.DEFAULT_GEMINI_MODEL)
+        settings.setdefault("openrouter_model", constants.DEFAULT_OPENROUTER_MODEL)
+        settings.setdefault("cerebras_model", constants.DEFAULT_CEREBRAS_MODEL)
 
         return create_success_response(settings)
 
@@ -1101,6 +1172,13 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
 
         settings_to_update = {}
 
+        # Validate provider selection
+        if "llm_provider" in settings_data:
+            provider = settings_data["llm_provider"]
+            if provider not in constants.ALLOWED_LLM_PROVIDERS:
+                return create_error_response("Invalid provider selection")
+            settings_to_update["llm_provider"] = provider
+
         # Validate gemini_model if provided
         if "gemini_model" in settings_data:
             model = settings_data["gemini_model"]
@@ -1113,6 +1191,26 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model
+
+        if "openrouter_model" in settings_data:
+            model = settings_data["openrouter_model"]
+            if not isinstance(model, str):
+                return create_error_response("Invalid model selection")
+
+            allowed_openrouter = {m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS}
+            if model.lower() not in allowed_openrouter:
+                return create_error_response("Invalid model selection")
+            settings_to_update["openrouter_model"] = model
+
+        if "cerebras_model" in settings_data:
+            model = settings_data["cerebras_model"]
+            if not isinstance(model, str):
+                return create_error_response("Invalid model selection")
+
+            allowed_cerebras = {m.lower() for m in constants.ALLOWED_CEREBRAS_MODELS}
+            if model.lower() not in allowed_cerebras:
+                return create_error_response("Invalid model selection")
+            settings_to_update["cerebras_model"] = model
 
         # Validate debug_mode if provided
         if "debug_mode" in settings_data:
@@ -1431,9 +1529,11 @@ def _handle_update_state_command(
         final_game_state = GameState.from_dict(updated_state_dict)
         if final_game_state is None:
             logging_util.error(
-                "PROCESS_ACTION: GameState.from_dict returned None after update, using fallback"
+                "PROCESS_ACTION: GameState.from_dict returned None after update; rejecting GOD_MODE_UPDATE_STATE"
             )
-            final_game_state = GameState(user_id=user_id)
+            return create_error_response(
+                "Unable to reconstruct game state after applying changes.", 500
+            )
 
         firestore_service.update_campaign_game_state(
             user_id, campaign_id, final_game_state.to_dict()

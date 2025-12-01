@@ -60,6 +60,9 @@ jobs:
           project: worldarchitecture-ai
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          # pr_url will always be empty in this workflow because it is triggered manually (workflow_dispatch), not by pull request events.
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: https://test-deployment.example.com
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
@@ -76,6 +79,9 @@ jobs:
           project: worldarchitecture-ai
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          # pr_url will always be empty in this workflow because it is triggered manually (workflow_dispatch), not by pull request events.
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: https://test-deployment.example.com
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}

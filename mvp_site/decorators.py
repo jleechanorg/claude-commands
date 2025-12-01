@@ -61,13 +61,12 @@ def log_exceptions(func: F) -> F:
             # Attempt to execute the decorated function
             return func(*args, **kwargs)
         except Exception as e:
-            # Construct a detailed error message
-            # The function name is retrieved using func.__name__
-            # Args and kwargs are included for context
+            # Construct error message - trim args to avoid dumping full narrative
+            args_summary = f"({len(args)} args)" if args else "()"
             error_message = (
                 f"--- EXCEPTION IN: {func.__name__} ---\n"
-                f"Args: {args}\n"
-                f"Kwargs: {kwargs}\n"
+                f"Args: {args_summary}\n"
+                f"Kwargs: {list(kwargs.keys()) if kwargs else {}}\n"
                 f"Error: {e}\n"
                 f"Traceback:\n{traceback.format_exc()}"
                 f"--- END EXCEPTION ---"

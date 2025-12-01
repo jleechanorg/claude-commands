@@ -13,7 +13,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.robust_json_parser import RobustJSONParser, parse_llm_json_response
+from mvp_site.json_utils import RobustJSONParser, parse_llm_json_response
 
 
 class TestRobustJSONParser(unittest.TestCase):
@@ -92,7 +92,7 @@ class TestRobustJSONParser(unittest.TestCase):
         if result:
             assert "narrative" in result
 
-    @patch("robust_json_parser.logging_util")
+    @patch("mvp_site.json_utils.logging_util")
     def test_logging_on_successful_fix(self, mock_logging):
         """Test that successful fixes are logged"""
         incomplete = '{"narrative": "Test"'
@@ -223,7 +223,7 @@ class TestParseLLMJsonResponse(unittest.TestCase):
         assert result["entities_mentioned"] == []  # Default added
         assert result["location_confirmed"] == "Unknown"  # Default added
 
-    @patch("robust_json_parser.logging_util")
+    @patch("mvp_site.json_utils.logging_util")
     def test_logging_when_no_json_found(self, mock_logging):
         """Test that appropriate logging occurs when no JSON is found"""
         response = "Just plain text"
@@ -232,6 +232,65 @@ class TestParseLLMJsonResponse(unittest.TestCase):
         # Should log that no JSON was found
         mock_logging.info.assert_called()
         assert was_incomplete
+
+
+class TestRegressionListResult(unittest.TestCase):
+    """Regression tests for list result handling bug"""
+
+    def test_regression_list_result_does_not_crash(self):
+        """
+        Regression test for TypeError when parser returns a list.
+
+        Bug: parse_llm_json_response crashes with:
+        TypeError: list indices must be integers or slices, not str
+
+        When RobustJSONParser.parse() returns a list (valid JSON like [1,2,3]),
+        the code tries to access result["narrative"] which fails on lists.
+
+        Error signature: TypeError | ["list indices must be integers"] | robust_json_parser:parse_llm_json_response
+        """
+        # This is valid JSON that parses to a list, not a dict
+        list_json = '[1, 2, 3]'
+
+        # This should NOT crash - should handle gracefully
+        result, was_incomplete = parse_llm_json_response(list_json)
+
+        # Should return a dict with defaults, not crash
+        assert isinstance(result, dict), f"Expected dict, got {type(result)}"
+        assert "narrative" in result
+        assert "entities_mentioned" in result
+        assert "location_confirmed" in result
+
+    def test_regression_empty_list_does_not_crash(self):
+        """
+        Regression test for empty list JSON response.
+
+        Bug: parse_llm_json_response crashes when parser returns []
+
+        Error signature: TypeError | ["list indices must be integers"] | robust_json_parser:parse_llm_json_response
+        """
+        empty_list_json = '[]'
+
+        # This should NOT crash
+        result, was_incomplete = parse_llm_json_response(empty_list_json)
+
+        assert isinstance(result, dict)
+        assert "narrative" in result
+
+    def test_regression_nested_list_response(self):
+        """
+        Regression test for nested list JSON response.
+
+        Some LLMs might return array responses like [{"key": "value"}]
+        The outer list should be handled gracefully.
+        """
+        nested_list_json = '[{"narrative": "Story text"}]'
+
+        # This should NOT crash
+        result, was_incomplete = parse_llm_json_response(nested_list_json)
+
+        assert isinstance(result, dict)
+        assert "narrative" in result
 
 
 class TestRealWorldScenarios(unittest.TestCase):

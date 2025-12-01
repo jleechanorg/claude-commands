@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+source "$(dirname "$0")/scripts/timeout_config.sh"  # Central timeout source (10m)
 source "$(dirname "$0")/scripts/deploy_common.sh"
 
 # Hardcode the WorldArchitect project for all deploys from this repo
@@ -299,20 +300,23 @@ fi
 deploy_common::deploy_service \
     "$SERVICE_NAME" \
     "$IMAGE_TAG" \
-    "GEMINI_API_KEY=gemini-api-key:latest" \
+    "GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
     "2Gi" \
-    "300" \
+    "$WORLDARCH_TIMEOUT_SECONDS" \
     "1" \
     "$MAX_INSTANCES" \
     "10" \
     "" \
     "" \
+    "--set-env-vars=WORLDARCH_TIMEOUT_SECONDS=$WORLDARCH_TIMEOUT_SECONDS,WORLDARCH_TIMEOUT_MILLISECONDS=$WORLDARCH_TIMEOUT_MILLISECONDS" \
     "--labels" "$LABELS_ARG"
 
 echo "--- Deployment of '$SERVICE_NAME' complete. ---"
 
 # Configure load balancer timeout to match service timeout
+# ⚠️ Keep this aligned with the centralized 10-minute ceiling so clients and
+# Gunicorn do not outlive the Cloud Run/HTTP load balancer limits.
 echo "Configuring load balancer timeout..."
-deploy_common::update_service_timeout "$SERVICE_NAME" "300"
+deploy_common::update_service_timeout "$SERVICE_NAME" "$WORLDARCH_TIMEOUT_SECONDS"
 
 deploy_common::service_url "$SERVICE_NAME"

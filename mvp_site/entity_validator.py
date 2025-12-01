@@ -10,9 +10,47 @@ from enum import Enum
 from typing import Any
 
 from mvp_site import logging_util
-from mvp_site.entity_utils import filter_unknown_entities
 
 logger = logging_util.getLogger(__name__)
+
+
+# =============================================================================
+# Utility Functions (consolidated from entity_utils.py)
+# =============================================================================
+
+
+def filter_unknown_entities(entities: list[str]) -> list[str]:
+    """
+    Filter out 'Unknown' entities from a list.
+
+    'Unknown' is used as a default location name when location is not found
+    in world_data and should not be treated as a real entity for validation.
+
+    Args:
+        entities: List of entity names to filter
+
+    Returns:
+        List of entities with 'Unknown' entries removed
+    """
+    return [e for e in entities if e.lower() != "unknown"]
+
+
+def is_unknown_entity(entity: str) -> bool:
+    """
+    Check if an entity is the 'Unknown' placeholder.
+
+    Args:
+        entity: Entity name to check
+
+    Returns:
+        True if entity is 'Unknown' (case-insensitive), False otherwise
+    """
+    return entity.lower() == "unknown"
+
+
+# =============================================================================
+# Enums and Data Classes
+# =============================================================================
 
 
 class EntityPresenceType(Enum):

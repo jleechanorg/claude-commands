@@ -2,6 +2,9 @@
 
 This module provides the actual MCP integration for production use.
 Replace mcp_memory_stub.py imports with this module when ready.
+
+FAIL-FAST DESIGN: If MCP functions are not available or fail, errors propagate
+to the caller rather than silently returning empty data.
 """
 
 from collections.abc import Callable
@@ -12,8 +15,16 @@ from mvp_site import logging_util
 logger = logging_util.getLogger(__name__)
 
 
+class MCPMemoryError(Exception):
+    """Raised when MCP memory operations fail."""
+
+
 class MCPMemoryClient:
-    """MCP Memory client with dependency injection support"""
+    """MCP Memory client with dependency injection support.
+
+    FAIL-FAST: All operations raise MCPMemoryError on failure instead of
+    returning empty data. Callers must handle errors explicitly.
+    """
 
     def __init__(self):
         self._search_fn: Callable[[str], list[dict[str, Any]]] | None = None
@@ -21,68 +32,106 @@ class MCPMemoryClient:
         self._read_fn: Callable[[], dict[str, Any]] | None = None
         self._initialized = False
 
-    def _get_mcp_function(self, func_name: str, fallback_func: Callable):
-        """Safely get MCP function with fallback for testing/development"""
-        try:
-            return globals().get(func_name, fallback_func)
-        except Exception as e:
-            logger.warning(f"MCP function {func_name} not available: {e}")
-            return fallback_func
+    def _get_mcp_function(self, func_name: str) -> Callable | None:
+        """Get MCP function from globals - returns None if not found."""
+        return globals().get(func_name)
 
     def initialize(self):
-        """Initialize MCP function references (called once at startup)"""
-        if not self._initialized:
-            self._search_fn = self._get_mcp_function(
-                "mcp__memory_server__search_nodes", lambda _: []
-            )
-            self._open_fn = self._get_mcp_function(
-                "mcp__memory_server__open_nodes", lambda _: []
-            )
-            self._read_fn = self._get_mcp_function(
-                "mcp__memory_server__read_graph",
-                lambda: {"entities": [], "relations": []},
-            )
-            self._initialized = True
+        """Initialize MCP function references (called once at startup).
 
-    def set_functions(self, search_fn=None, open_fn=None, read_fn=None):
-        """Dependency injection for testing (allows mock functions)"""
-        if search_fn:
-            self._search_fn = search_fn
-        if open_fn:
-            self._open_fn = open_fn
-        if read_fn:
-            self._read_fn = read_fn
+        Raises:
+            MCPMemoryError: If NO MCP functions are available.
+        """
+        if self._initialized:
+            return
+
+        self._search_fn = self._get_mcp_function("mcp__memory_server__search_nodes")
+        self._open_fn = self._get_mcp_function("mcp__memory_server__open_nodes")
+        self._read_fn = self._get_mcp_function("mcp__memory_server__read_graph")
+
+        if self._search_fn is None or self._open_fn is None or self._read_fn is None:
+            raise MCPMemoryError(
+                "Missing required MCP memory functions. Ensure MCP server is running "
+                "and functions are registered in globals."
+            )
+
+        self._initialized = True
+
+    def set_functions(
+        self,
+        search_fn: Callable[[str], list[dict[str, Any]]],
+        open_fn: Callable[[list[str]], list[dict[str, Any]]],
+        read_fn: Callable[[], dict[str, Any]],
+    ):
+        """Dependency injection for testing (requires all functions).
+
+        All three MCP functions must be provided together; partial injection is
+        rejected to avoid inconsistent initialization states. After injection,
+        `_initialized` is marked True to bypass globals-based initialization.
+        """
+        if search_fn is None or open_fn is None or read_fn is None:
+            raise MCPMemoryError(
+                "All MCP functions must be provided when injecting dependencies."
+            )
+
+        self._search_fn = search_fn
+        self._open_fn = open_fn
+        self._read_fn = read_fn
         self._initialized = True
 
     def search_nodes(self, query: str) -> list[dict[str, Any]]:
-        """Call real Memory MCP search_nodes function"""
-        try:
-            if not self._initialized:
-                self.initialize()
-            return self._search_fn(query)
-        except Exception as e:
-            logger.error(f"Memory MCP search_nodes failed: {e}")
-            return []
+        """Call real Memory MCP search_nodes function.
+
+        Raises:
+            MCPMemoryError: If MCP not initialized or search function unavailable.
+        """
+        if not self._initialized:
+            self.initialize()
+
+        if self._search_fn is None:
+            raise MCPMemoryError(
+                "MCP search_nodes function not available. "
+                "Initialize MCP or use set_functions() for testing."
+            )
+
+        # Let exceptions propagate - caller should handle failures
+        return self._search_fn(query)
 
     def open_nodes(self, names: list[str]) -> list[dict[str, Any]]:
-        """Call real Memory MCP open_nodes function"""
-        try:
-            if not self._initialized:
-                self.initialize()
-            return self._open_fn(names)
-        except Exception as e:
-            logger.error(f"Memory MCP open_nodes failed: {e}")
-            return []
+        """Call real Memory MCP open_nodes function.
+
+        Raises:
+            MCPMemoryError: If MCP not initialized or open function unavailable.
+        """
+        if not self._initialized:
+            self.initialize()
+
+        if self._open_fn is None:
+            raise MCPMemoryError(
+                "MCP open_nodes function not available. "
+                "Initialize MCP or use set_functions() for testing."
+            )
+
+        # Let exceptions propagate - caller should handle failures
+        return self._open_fn(names)
 
     def read_graph(self) -> dict[str, Any]:
-        """Call real Memory MCP read_graph function"""
-        try:
-            if not self._initialized:
-                self.initialize()
-            return self._read_fn()
-        except Exception as e:
-            logger.error(f"Memory MCP read_graph failed: {e}")
-            return {"entities": [], "relations": []}
+        """Call real Memory MCP read_graph function.
+
+        Raises:
+            MCPMemoryError: If MCP not initialized or read function unavailable.
+        """
+        if not self._initialized:
+            self.initialize()
+
+        if self._read_fn is None:
+            raise MCPMemoryError(
+                "MCP read_graph function not available. "
+                "Initialize MCP or use set_functions() for testing."
+            )
+
+        # Let exceptions propagate - caller should handle failures
+        return self._read_fn()
 
 
 # Global instance for backward compatibility
@@ -111,6 +160,10 @@ def initialize_mcp_functions():
     _mcp_client.initialize()
 
 
-def set_mcp_functions(search_fn=None, open_fn=None, read_fn=None):
-    """Dependency injection for testing (allows mock functions)"""
+def set_mcp_functions(
+    search_fn: Callable[[str], list[dict[str, Any]]],
+    open_fn: Callable[[list[str]], list[dict[str, Any]]],
+    read_fn: Callable[[], dict[str, Any]],
+):
+    """Dependency injection for testing (requires all functions)"""
     _mcp_client.set_functions(search_fn, open_fn, read_fn)

@@ -158,22 +158,15 @@ class HealthStatus(BaseModel):
 
     @model_validator(mode="after")
     @classmethod
-    def auto_clamp_hp_to_max(cls, model: "HealthStatus") -> "HealthStatus":
-        """Auto-clamp HP to hp_max if corrupted data has HP > max.
+    def validate_hp_not_exceed_max(cls, model: "HealthStatus") -> "HealthStatus":
+        """Clamp HP to hp_max if it exceeds after defensive conversion.
 
-        This prevents ValidationError crashes from corrupted game state data
-        and allows the game to continue with corrected values.
+        When defensive conversion reduces hp_max (e.g., "unknown" → 1), we clamp
+        hp to the new hp_max rather than raising an error, since the user didn't
+        explicitly provide conflicting valid integers.
         """
-        try:
-            if model.hp_max > 0 and model.hp > model.hp_max:
-                logger.warning(
-                    f"Auto-clamping corrupted HP: {model.hp} -> {model.hp_max} "
-                    f"(HP cannot exceed max HP)"
-                )
-                model.hp = model.hp_max
-        except Exception:
-            # If anything is off, fall back to original model values
-            return model
+        if model.hp_max > 0 and model.hp > model.hp_max:
+            model.hp = model.hp_max
         return model
 
 

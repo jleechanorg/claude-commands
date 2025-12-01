@@ -9,7 +9,6 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.dual_pass_generator import dual_pass_generator
 from mvp_site.entity_validator import entity_validator
 
 
@@ -18,7 +17,7 @@ class TestUnknownEntityFixSummary(unittest.TestCase):
     Summary test showing:
     1. The problem: Unknown was treated as a missing entity
     2. The fix: Filter Unknown from validation
-    3. The result: No unnecessary dual-pass generation
+    3. The result: No unnecessary retries
     """
 
     def test_complete_fix_demonstration(self):
@@ -53,25 +52,9 @@ class TestUnknownEntityFixSummary(unittest.TestCase):
         assert "Unknown" not in result.missing_entities
         assert not result.retry_needed
 
-        # Also test dual-pass generator
-        def mock_callback(prompt):
-            return narrative
-
-        dual_result = dual_pass_generator.generate_with_dual_pass(
-            initial_prompt="Continue the story",
-            expected_entities=expected_entities_with_bug,
-            location="Unknown",
-            generation_callback=mock_callback,
-        )
-
         print("3. THE RESULT:")
-        print("   Dual-pass generator also filters 'Unknown'")
-        print(f"   Second pass needed: {dual_result.second_pass is not None}")
-        print(f"   Success on first pass: {dual_result.success}")
-        print("\n✅ Fix verified: No unnecessary dual-pass for 'Unknown' entity!")
-
-        assert dual_result.second_pass is None
-        assert dual_result.success
+        print("   Entity validation no longer triggers unnecessary retries for 'Unknown'")
+        print("\n✅ Fix verified: No unnecessary retry for 'Unknown' entity!")
 
     def test_real_entities_still_validated(self):
         """Ensure real entities are still properly validated"""

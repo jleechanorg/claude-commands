@@ -15,7 +15,7 @@ import traceback
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mvp_site"))
 
 from narrative_response_schema import parse_structured_response
-from robust_json_parser import parse_llm_json_response
+from json_utils import parse_llm_json_response
 
 
 def test_state_updates_extraction():

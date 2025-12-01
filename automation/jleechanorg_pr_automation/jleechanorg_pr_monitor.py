@@ -22,7 +22,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from .orchestrated_pr_runner import run_fixpr_batch
+from .orchestrated_pr_runner import has_failing_checks, run_fixpr_batch
 
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
@@ -280,6 +280,38 @@ class JleechanorgPRMonitor:
         all_prs = self.discover_open_prs()
         eligible_prs = self.filter_eligible_prs(all_prs)
         return eligible_prs[:limit]
+
+    def list_actionable_prs(self, cutoff_hours: int = 24, max_prs: int = 20, mode: str = "fixpr", single_repo: Optional[str] = None) -> List[Dict]:
+        """
+        Return PRs that would be processed for fixpr (merge conflicts or failing checks).
+        """
+        prs = self.discover_open_prs()
+        if single_repo:
+            prs = [pr for pr in prs if pr.get("repository") == single_repo]
+
+        actionable = []
+        for pr in prs:
+            repo = pr.get("repository")
+            owner = pr.get("owner", "jleechanorg")
+            pr_number = pr.get("number")
+            if not repo or pr_number is None:
+                continue
+            repo_full = f"{owner}/{repo}"
+            if pr.get("mergeable") == "CONFLICTING":
+                actionable.append({**pr, "repo_full": repo_full})
+                continue
+            try:
+                if has_failing_checks(repo_full, pr_number):
+                    actionable.append({**pr, "repo_full": repo_full})
+            except Exception:
+                # Skip on error to avoid blocking listing
+                continue
+
+        actionable = actionable[:max_prs]
+        print(f"🔎 Eligible for fixpr: {len(actionable)}")
+        for pr in actionable:
+            print(f"  • {pr.get('repository')} PR #{pr.get('number')}: {pr.get('title')} (mergeable={pr.get('mergeable')})")
+        return actionable
 
     def run_monitoring_cycle_with_actionable_count(self, target_actionable_count: int = 20) -> Dict:
         """Enhanced monitoring cycle that processes exactly target actionable PRs"""
@@ -1140,7 +1172,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
                 # Post codex instruction comment directly (comment-only approach)
                 comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
-                success = comment_result == "posted"
+
+                # Treat "skipped" (already handled/guarded) the same as a success so we don't
+                # artificially accumulate failure counts or noisy error logs.
+                success = comment_result in {"posted", "skipped"}
 
                 result = "success" if success else "failure"
                 self.safety_manager.record_pr_attempt(
@@ -1152,10 +1187,22 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 attempt_recorded = True
 
                 if success:
-                    self.logger.info(f"✅ Successfully processed PR {repo_full_name} #{pr_number}")
-                    actionable_processed += 1
+                    # Only count as processed when we actually posted; skips should not inflate stats.
+                    if comment_result == "posted":
+                        actionable_processed += 1
+                    self.logger.info(
+                        "✅ Successfully processed PR %s #%s (result=%s)",
+                        repo_full_name,
+                        pr_number,
+                        comment_result,
+                    )
                 else:
-                    self.logger.error(f"❌ Failed to process PR {repo_full_name} #{pr_number}")
+                    self.logger.error(
+                        "❌ Failed to process PR %s #%s (result=%s)",
+                        repo_full_name,
+                        pr_number,
+                        comment_result,
+                    )
             except Exception as e:
                 self.logger.error(f"❌ Exception processing PR {repo_full_name} #{pr_number}: {e}")
                 self.logger.debug("Traceback: %s", traceback.format_exc())
@@ -1190,6 +1237,8 @@ def main():
                         help="Repository for target PR (required with --target-pr)")
     parser.add_argument("--fixpr-agent", choices=["claude", "codex", "gemini"], default="claude",
                         help="AI CLI to use for --fixpr mode (default: claude)")
+    parser.add_argument("--list-eligible", action="store_true",
+                        help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
 
     args = parser.parse_args()
 
@@ -1221,8 +1270,15 @@ def main():
         print(f"📋 Found {len(prs)} open PRs:")
         for pr in prs[:args.max_prs]:
             print(f"  • {pr['repository']} PR #{pr['number']}: {pr['title']}")
+
+        if args.list_eligible:
+            print("\n🔎 Eligible for fixpr (conflicts/failing checks):")
+            monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
     else:
-        monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs)
+        if args.list_eligible:
+            monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
+        else:
+            monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs)
 
 
 if __name__ == "__main__":

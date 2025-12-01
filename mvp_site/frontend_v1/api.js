@@ -1,6 +1,19 @@
+/* global firebase */
 // Clock skew detection and compensation system
 let clockSkewOffset = 0; // Detected clock skew in milliseconds
 let clockSkewDetected = false;
+
+// Centralized request timeout (mirrors scripts/timeout_config.sh exports so
+// browser calls stay aligned with backend and Cloud Run limits)
+const REQUEST_TIMEOUT_MS =
+  Number(
+    typeof window !== 'undefined' && typeof window.REQUEST_TIMEOUT_MS !== 'undefined'
+      ? window.REQUEST_TIMEOUT_MS
+      : undefined
+  ) || 600000;
+
+// Health checks should stay fast to avoid masking backend outages
+const HEALTH_CHECK_TIMEOUT_MS = 5000;
 
 /**
  * Detect and compensate for clock skew between client and server
@@ -81,38 +94,68 @@ if (typeof window !== 'undefined') {
 async function fetchApi(path, options = {}, retryCount = 0) {
   const startTime = performance.now();
 
+  // Extract and normalize timeout handling while preserving any caller-provided signal
+  const { signal: externalSignal, timeout: requestedTimeoutMs, ...restOptions } = options;
+  const timeoutMs = typeof requestedTimeoutMs === 'number' ? requestedTimeoutMs : REQUEST_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort(externalSignal.reason);
+    } else {
+      externalSignal.addEventListener('abort', () => controller.abort(externalSignal.reason), {
+        once: true,
+      });
+    }
+  }
+
   // Check for test mode bypass
-  let defaultHeaders;
+  let defaultHeaders = { 'Content-Type': 'application/json' };
+  const tokenManager = window.authTokenManager;
+  const forceRefresh = retryCount > 0;
+
   if (window.testAuthBypass && window.testAuthBypass.enabled) {
-    // Use test bypass headers
     defaultHeaders = {
-      'X-Test-Bypass-Auth': 'true',
-      'X-Test-User-ID': window.testAuthBypass.userId,
-      'Content-Type': 'application/json',
+      ...defaultHeaders,
+      ...(tokenManager?.getAuthHeaders
+        ? await tokenManager.getAuthHeaders(forceRefresh)
+        : {
+            'X-Test-Bypass-Auth': 'true',
+            'X-Test-User-ID': window.testAuthBypass.userId,
+          }),
     };
   } else {
     // Normal authentication flow
-    const user = firebase.auth().currentUser;
+    const user = tokenManager?.getCurrentUser
+      ? tokenManager.getCurrentUser()
+      : firebase.auth().currentUser;
     if (!user) throw new Error('User not authenticated');
 
     // Apply clock skew compensation before token generation
     await applyClockSkewCompensation();
 
     // Get fresh token, forcing refresh on retries to handle clock skew
-    const forceRefresh = retryCount > 0;
-    const token = await user.getIdToken(forceRefresh);
-    defaultHeaders = {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
+    const authHeaders = tokenManager?.getAuthHeaders
+      ? await tokenManager.getAuthHeaders(forceRefresh)
+      : { Authorization: `Bearer ${await user.getIdToken(forceRefresh)}` };
+
+    defaultHeaders = { ...defaultHeaders, ...authHeaders };
   }
 
   const config = {
-    ...options,
+    ...restOptions,
+    signal: controller.signal,
     headers: { ...defaultHeaders, ...options.headers },
   };
 
-  const response = await fetch(path, config);
+  let response;
+  try {
+    response = await fetch(path, config);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
   const duration = ((performance.now() - startTime) / 1000).toFixed(2);
 
   if (!response.ok) {
@@ -154,9 +197,23 @@ async function fetchApi(path, options = {}, retryCount = 0) {
         if (skewDelay > 0) {
           console.log(`⏱️ Adding ${skewDelay}ms delay for clock skew compensation`);
         }
-        
+
         await new Promise((resolve) => setTimeout(resolve, totalDelay));
         return fetchApi(path, options, retryCount + 1);
+      }
+
+      // Fallback: refresh the ID token on generic 401 responses and retry once
+      if (!(window.testAuthBypass && window.testAuthBypass.enabled)) {
+        try {
+          console.log('🔁 401 received. Refreshing Firebase ID token and retrying request.');
+          const user = firebase.auth().currentUser;
+          if (user) {
+            await user.getIdToken(true);
+            return fetchApi(path, options, retryCount + 1);
+          }
+        } catch (refreshError) {
+          console.error('Token refresh after 401 failed:', refreshError);
+        }
       }
     }
 
@@ -172,15 +229,20 @@ async function fetchApi(path, options = {}, retryCount = 0) {
 
 // RESILIENCE: Health check function to detect backend issues
 async function checkBackendHealth() {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
+
   try {
     const response = await fetch('/api/health', {
       method: 'GET',
-      timeout: 5000, // 5 second timeout
+      signal: controller.signal,
     });
     return response.ok;
   } catch (error) {
     console.warn('Backend health check failed:', error);
     return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

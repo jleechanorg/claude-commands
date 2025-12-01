@@ -198,6 +198,10 @@ Genesis Coder, Prime Mover,
 
 🚨 **NO FAKE IMPLEMENTATIONS:** ⚠️ MANDATORY - Always audit existing functionality first
 - ❌ NEVER create placeholder/demo code or duplicate existing protocols
+
+🚨 **TIMEOUT INTEGRITY RULE:** All request layers (Cloud Run service + load balancer, Gunicorn, MCP client, and frontends) must
+remain at the 10-minute/600-second ceiling unless the entire stack, tests, and docs are updated together. Source the value from
+`scripts/timeout_config.sh` (`WORLDARCH_TIMEOUT_SECONDS`) and never lower a single layer in isolation.
 - ✅ ALWAYS build real, functional code
 
 🚨 **PRE-IMPLEMENTATION DECISION FRAMEWORK:** ⚠️ MANDATORY - Prevent fake code at source
@@ -642,6 +646,11 @@ git add .
 git commit -m "message"
 git push
 ```
+
+## Oracle Usage (context bundling helper)
+- Source helpers: `source scripts/oracle_helpers.sh` (loads bundles and commands like `oracle_arch`, `oracle_arch_preview`, `oracle_ai_debug`, `oracle_diff_review`, `oracle_ui_debug`).
+- Playbook: `docs/oracle_playbook.md` (setup, prompts, flags).
+- Core flags: `--dry-run summary` to preview, `--files-report` for token spend, `--wait` to stay attached; include `README.md` plus focused globs for each question.
 
 ## Context Optimization
 

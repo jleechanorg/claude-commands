@@ -470,11 +470,50 @@ class TaskDispatcher:
 
         return workspace_config if workspace_config else None
 
-    def _detect_agent_cli(self, task_description: str) -> str:
-        """Determine which CLI should be used for the agent."""
+    def _detect_agent_cli(self, task_description: str, forced_cli: str | None = None) -> str:
+        """
+        Determine which CLI should be used for the agent.
+
+        Args:
+            task_description: The task description which may contain CLI preferences.
+            forced_cli: If provided, forces the use of this CLI (e.g., from --fixpr-agent).
+                Takes highest precedence over all other selection methods.
+
+        Returns:
+            The CLI name to use (e.g., 'claude', 'codex', 'gemini').
+
+        Raises:
+            ValueError: If an invalid forced_cli value is supplied.
+            RuntimeError: If no CLI is available in PATH.
+
+        Selection precedence (highest to lowest):
+            1. forced_cli parameter
+            2. --agent-cli flag in task_description
+            3. Keyword detection (CLI profile detection_keywords / binary names)
+            4. Auto-select if only one CLI is installed
+            5. Default to 'claude' if multiple CLIs available
+        """
+
+        cli_flag = re.search(r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE)
+
+        # Hard override when explicitly provided by caller (e.g., --fixpr-agent)
+        if forced_cli is not None:
+            forced_cli = forced_cli.lower()
+            if forced_cli not in CLI_PROFILES:
+                raise ValueError(
+                    f"Invalid forced_cli: {forced_cli}. Must be one of {list(CLI_PROFILES.keys())}"
+                )
+
+            if cli_flag:
+                requested_cli = cli_flag.group(1).lower()
+                if requested_cli != forced_cli:
+                    print(
+                        f"⚠️ Forced CLI '{forced_cli}' overrides --agent-cli request for '{requested_cli}'."
+                    )
+
+            return forced_cli
 
         # Explicit override via flag (--agent-cli codex) or (--agent-cli=codex)
-        cli_flag = re.search(r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE)
         if cli_flag:
             requested_cli = cli_flag.group(1).lower()
             if requested_cli in CLI_PROFILES:
@@ -683,8 +722,18 @@ class TaskDispatcher:
         except Exception as e:
             return {"a2a_enabled": True, "error": str(e), "timestamp": time.time()}
 
-    def analyze_task_and_create_agents(self, task_description: str) -> list[dict]:
-        """Create appropriate agent for the given task with PR context awareness."""
+    def analyze_task_and_create_agents(self, task_description: str, forced_cli: str | None = None) -> list[dict]:
+        """
+        Create appropriate agent for the given task with PR context awareness.
+
+        Args:
+            task_description: The task description to analyze and create agents for.
+            forced_cli: Optional; the CLI to force agent selection (e.g., from --fixpr-agent flag).
+                When provided, this overrides any CLI detection logic and forces the use of the specified CLI.
+
+        Returns:
+            List of agent specification dictionaries.
+        """
         print("\n🧠 Processing task request...")
 
         # Extract workspace configuration if present
@@ -692,7 +741,7 @@ class TaskDispatcher:
         if workspace_config:
             print(f"🏗️ Extracted workspace config: {workspace_config}")
 
-        agent_cli = self._detect_agent_cli(task_description)
+        agent_cli = self._detect_agent_cli(task_description, forced_cli=forced_cli)
         if agent_cli != "claude":
             print(f"🤖 Selected {agent_cli.capitalize()} CLI based on task request")
 

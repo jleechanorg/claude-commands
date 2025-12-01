@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mvp_site import logging_util
+from mvp_site.serialization import json_default_serializer
 
 logger = logging_util.getLogger(__name__)
 
@@ -86,14 +87,14 @@ class LLMRequest:
         if not self.game_mode or not self.game_mode.strip():
             raise ValidationError("game_mode cannot be empty or whitespace")
 
-        if not self.user_action and self.user_action is not None:
+        if not self.user_action and self.user_action is not None:  # noqa: SIM102
             # Allow empty string for initial story, but not for continuation
             if not self.character_prompt:
                 raise ValidationError(
                     "user_action cannot be empty for story continuation"
                 )
 
-    def _validate_field_types(self):
+    def _validate_field_types(self):  # noqa: PLR0912
         """Validate that fields have correct data types."""
         if not isinstance(self.game_state, dict):
             raise ValidationError(
@@ -153,17 +154,23 @@ class LLMRequest:
         """Validate that string fields are within reasonable limits."""
         if len(self.user_action) > MAX_STRING_LENGTH:
             raise ValidationError(
-                f"user_action too long: {len(self.user_action)} > {MAX_STRING_LENGTH}"
+                f"User action is too long ({len(self.user_action)} characters). "
+                f"Maximum allowed is {MAX_STRING_LENGTH} characters. "
+                f"Please reduce the length of your action."
             )
 
         if len(self.checkpoint_block) > MAX_STRING_LENGTH:
             raise ValidationError(
-                f"checkpoint_block too long: {len(self.checkpoint_block)} > {MAX_STRING_LENGTH}"
+                f"Checkpoint block is too long ({len(self.checkpoint_block)} characters). "
+                f"Maximum allowed is {MAX_STRING_LENGTH} characters. "
+                f"Please reduce the checkpoint data size."
             )
 
         if self.character_prompt and len(self.character_prompt) > MAX_STRING_LENGTH:
             raise ValidationError(
-                f"character_prompt too long: {len(self.character_prompt)} > {MAX_STRING_LENGTH}"
+                f"Campaign prompt is too long ({len(self.character_prompt)} characters). "
+                f"Maximum allowed is {MAX_STRING_LENGTH} characters. "
+                f"Please reduce the length of your character, setting, or description fields."
             )
 
     def to_json(self) -> dict[str, Any]:
@@ -330,46 +337,3 @@ class LLMRequest:
             use_default_world=use_default_world,
             world_data=world_data or {},
         )
-
-
-def json_default_serializer(obj: Any) -> Any:
-    """
-    JSON serializer for objects that aren't serializable by default.
-
-    Handles datetime objects and other non-JSON-serializable types with
-    improved error handling and type safety.
-
-    Args:
-        obj: Object to serialize
-
-    Returns:
-        JSON-serializable representation of the object
-
-    Raises:
-        LLMRequestError: If object cannot be serialized
-    """
-    try:
-        if hasattr(obj, "isoformat"):
-            # Handle datetime objects
-            return obj.isoformat()
-        if isinstance(obj, (set, frozenset)):
-            # Handle sets by converting to lists
-            return list(obj)
-        if isinstance(obj, bytes):
-            # Handle bytes by decoding to string
-            return obj.decode("utf-8", errors="replace")
-        if hasattr(obj, "__dict__"):
-            # Handle objects with __dict__ (convert to dict)
-            return obj.__dict__
-        if hasattr(obj, "__str__"):
-            # Fall back to string representation
-            str_repr = str(obj)
-            # Limit string length to prevent huge serializations
-            if len(str_repr) > MAX_STRING_LENGTH:
-                return str_repr[:MAX_STRING_LENGTH] + "...[truncated]"
-            return str_repr
-        # Last resort - return type name
-        return f"<{type(obj).__name__} object>"
-    except Exception as e:
-        logger.warning(f"Failed to serialize object of type {type(obj)}: {e}")
-        return f"<{type(obj).__name__} serialization failed>"
