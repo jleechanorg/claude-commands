@@ -94,6 +94,128 @@ KEY_USER_INPUT = "user_input"
 KEY_RESPONSE = "response"
 KEY_TRACEBACK = "traceback"
 
+# Temporal validation constants
+MAX_TEMPORAL_CORRECTION_ATTEMPTS = 2  # Max retries before accepting response
+
+
+def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, ...]:
+    """Convert world_time dict to comparable tuple (year, month_num, day, hour, min, sec, microsec).
+
+    Returns tuple that can be compared with < > operators.
+    Missing fields default to 0.
+    """
+    if not world_time or not isinstance(world_time, dict):
+        return (0, 0, 0, 0, 0, 0, 0)
+
+    # Month name to number mapping for Forgotten Realms calendar
+    month_map = {
+        "hammer": 1, "alturiak": 2, "ches": 3, "tarsakh": 4,
+        "mirtul": 5, "kythorn": 6, "flamerule": 7, "eleasis": 8,
+        "eleint": 9, "marpenoth": 10, "uktar": 11, "nightal": 12,
+        # Common abbreviations
+        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    }
+
+    year = world_time.get("year", 0)
+    month = world_time.get("month", 0)
+    if isinstance(month, str):
+        month = month_map.get(month.lower(), 0)
+    day = world_time.get("day", 0)
+    hour = world_time.get("hour", 0)
+    minute = world_time.get("minute", 0)
+    second = world_time.get("second", 0)
+    microsecond = world_time.get("microsecond", 0)
+
+    return (year, month, day, hour, minute, second, microsecond)
+
+
+def _extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None:
+    """Extract world_time from LLM response state_updates."""
+    try:
+        state_updates = llm_response.get_state_updates() if hasattr(llm_response, "get_state_updates") else {}
+        world_data = state_updates.get("world_data", {})
+        return world_data.get("world_time")
+    except Exception:
+        return None
+
+
+def _check_temporal_violation(
+    old_time: dict[str, Any] | None,
+    new_time: dict[str, Any] | None,
+) -> bool:
+    """Check if new_time is backward from old_time (violation).
+
+    Returns True if violation detected, False if OK.
+    """
+    if not old_time or not new_time:
+        return False  # Can't validate without both times
+
+    old_tuple = _world_time_to_comparable(old_time)
+    new_tuple = _world_time_to_comparable(new_time)
+
+    # Violation if new time is less than or equal to old time
+    # (equal is also a violation - time should always advance)
+    return new_tuple <= old_tuple
+
+
+def _format_world_time_for_prompt(world_time: dict[str, Any] | None) -> str:
+    """Format world_time dict for human-readable prompt display."""
+    if not world_time:
+        return "Unknown"
+
+    year = world_time.get("year", "????")
+    month = world_time.get("month", "??")
+    day = world_time.get("day", "??")
+    hour = world_time.get("hour", 0)
+    minute = world_time.get("minute", 0)
+    time_of_day = world_time.get("time_of_day", "")
+
+    time_str = f"{hour:02d}:{minute:02d}"
+    if time_of_day:
+        time_str = f"{time_of_day} ({time_str})"
+
+    return f"{year} DR, {month} {day}, {time_str}"
+
+
+def _build_temporal_correction_prompt(
+    original_user_input: str,
+    old_time: dict[str, Any],
+    new_time: dict[str, Any],
+    old_location: str | None,
+    new_location: str | None,
+) -> str:
+    """Build correction prompt when temporal violation detected.
+
+    This prompts the LLM to regenerate the ENTIRE response with correct context.
+    """
+    old_time_str = _format_world_time_for_prompt(old_time)
+    new_time_str = _format_world_time_for_prompt(new_time)
+    old_loc = old_location or "Unknown location"
+    new_loc = new_location or "Unknown location"
+
+    correction = f"""⚠️ TEMPORAL VIOLATION - FULL REGENERATION REQUIRED
+
+Your previous response was REJECTED because time went BACKWARD:
+- CORRECT current state: {old_time_str} at {old_loc}
+- YOUR invalid output: {new_time_str} at {new_loc}
+
+The TEMPORAL CONSISTENCY PROTOCOL requires time to ALWAYS move FORWARD.
+Your response appears to have lost track of the story context.
+
+MANDATORY REGENERATION INSTRUCTIONS:
+1. Continue from the CORRECT context: {old_time_str} at {old_loc}
+2. Time in your response MUST be AFTER {old_time_str}
+3. Location should continue logically from {old_loc}
+4. Do NOT reference {new_loc} if that was incorrect
+
+Original player action to respond to:
+{original_user_input}
+
+Generate a NEW response that properly continues the story with correct temporal progression."""
+
+    return correction
+
 
 def truncate_game_state_for_logging(
     game_state_dict: dict[str, Any], max_lines: int = 20
@@ -556,18 +678,71 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         selected_prompts = campaign_data.get("selected_prompts", [])
         use_default_world = campaign_data.get("use_default_world", False)
 
+        # Extract current world_time and location for temporal validation
+        old_world_time = current_game_state.world_data.get("world_time") if hasattr(current_game_state, "world_data") else None
+        old_location = current_game_state.world_data.get("current_location") if hasattr(current_game_state, "world_data") else None
+
         # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking
-        llm_response_obj = await asyncio.to_thread(
-            llm_service.continue_story,
-            user_input,
-            mode,
-            story_context,
-            current_game_state,
-            selected_prompts,
-            use_default_world,
-            user_id,  # Pass user_id to enable user model preference selection
-        )
+        # TEMPORAL VALIDATION LOOP: Retry if LLM generates backward time
+        original_user_input = user_input
+        temporal_correction_attempts = 0
+        llm_response_obj = None
+
+        while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
+            llm_response_obj = await asyncio.to_thread(
+                llm_service.continue_story,
+                user_input,
+                mode,
+                story_context,
+                current_game_state,
+                selected_prompts,
+                use_default_world,
+                user_id,  # Pass user_id to enable user model preference selection
+            )
+
+            # Check for temporal violation (time going backward)
+            new_world_time = _extract_world_time_from_response(llm_response_obj)
+
+            if not _check_temporal_violation(old_world_time, new_world_time):
+                # No violation - time is moving forward, accept response
+                if temporal_correction_attempts > 0:
+                    logging_util.info(
+                        f"✅ TEMPORAL_CORRECTION: Response accepted after {temporal_correction_attempts} correction(s)"
+                    )
+                break
+
+            # Temporal violation detected!
+            temporal_correction_attempts += 1
+
+            if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
+                # Max retries exceeded - log warning and accept the response anyway
+                logging_util.warning(
+                    f"⚠️ TEMPORAL_VIOLATION: Max correction attempts ({MAX_TEMPORAL_CORRECTION_ATTEMPTS}) exceeded. "
+                    f"Accepting response with backward time: {_format_world_time_for_prompt(new_world_time)} "
+                    f"< {_format_world_time_for_prompt(old_world_time)}"
+                )
+                break
+
+            # Extract new location for error message
+            new_state_updates = llm_response_obj.get_state_updates() if hasattr(llm_response_obj, "get_state_updates") else {}
+            new_location = new_state_updates.get("world_data", {}).get("current_location", old_location)
+
+            # Log the violation and retry
+            logging_util.warning(
+                f"🚨 TEMPORAL_VIOLATION (attempt {temporal_correction_attempts}/{MAX_TEMPORAL_CORRECTION_ATTEMPTS}): "
+                f"Time went backward from {_format_world_time_for_prompt(old_world_time)} to "
+                f"{_format_world_time_for_prompt(new_world_time)}. Requesting regeneration."
+            )
+
+            # Build correction prompt and retry
+            user_input = _build_temporal_correction_prompt(
+                original_user_input,
+                old_world_time,
+                new_world_time,
+                old_location,
+                new_location,
+            )
 
         # Convert LLMResponse to dict format for compatibility
         response = {
