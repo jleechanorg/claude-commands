@@ -700,15 +700,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking
         # TEMPORAL VALIDATION LOOP: Retry if LLM generates backward time
-        original_user_input = user_input  # Preserve for Firestore
-        llm_input = user_input  # Separate variable for LLM calls
+        original_user_input = user_input
         temporal_correction_attempts = 0
         llm_response_obj = None
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             llm_response_obj = await asyncio.to_thread(
                 llm_service.continue_story,
-                llm_input,  # Use llm_input, NOT user_input
+                user_input,
                 mode,
                 story_context,
                 current_game_state,
@@ -751,8 +750,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"{_format_world_time_for_prompt(new_world_time)}. Requesting regeneration."
             )
 
-            # Build correction prompt for next LLM call (does NOT overwrite user_input)
-            llm_input = _build_temporal_correction_prompt(
+            # Build correction prompt and retry
+            user_input = _build_temporal_correction_prompt(
                 original_user_input,
                 old_world_time,
                 new_world_time,
