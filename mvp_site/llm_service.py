@@ -27,7 +27,6 @@ Key Classes:
 - LLMResponse: Custom response object with parsed data
 - EntityPreloader: Pre-loads entity context for tracking
 - EntityInstructionGenerator: Creates entity-specific instructions
-- DualPassGenerator: Retry mechanism for entity tracking
 
 Dependencies:
 - Google Generative AI SDK for Gemini API calls
@@ -52,7 +51,6 @@ from google.genai import types
 from mvp_site import constants, logging_util
 from mvp_site.custom_types import UserId
 from mvp_site.decorators import log_exceptions
-from mvp_site.dual_pass_generator import DualPassGenerator
 from mvp_site.entity_instructions import EntityInstructionGenerator
 
 # Import entity tracking mitigation modules
@@ -88,7 +86,6 @@ logger = logging.getLogger(__name__)
 entity_preloader = EntityPreloader()
 instruction_generator = EntityInstructionGenerator()
 entity_validator = EntityValidator()
-dual_pass_generator = DualPassGenerator()
 
 # Expected companion count for validation
 EXPECTED_COMPANION_COUNT = 3
@@ -2401,82 +2398,6 @@ def continue_story(
 
     # Validate entity tracking if enabled
     if expected_entities:
-        # First do basic validation
-        validator = NarrativeSyncValidator()
-        validation_result = validator.validate(
-            narrative_text=response_text,
-            expected_entities=expected_entities,
-            location=current_game_state.world_data.get(
-                "current_location_name", "Unknown"
-            ),
-        )
-
-        if not validation_result.all_entities_present:
-            logging_util.warning(
-                "ENTITY_TRACKING_VALIDATION: Narrative failed entity validation"
-            )
-            logging_util.warning(
-                f"Missing entities: {validation_result.entities_missing}"
-            )
-            if validation_result.warnings:
-                for warning in validation_result.warnings:
-                    logging_util.warning(f"Validation warning: {warning}")
-
-            # Attempt dual-pass retry (Option 7)
-            logging_util.info(
-                "ENTITY_TRACKING_RETRY: Attempting dual-pass generation to fix missing entities"
-            )
-
-            # Create generation callback for API calls
-            def generation_callback(prompt: str) -> str:
-                response: Any = _call_llm_api(
-                    [prompt],
-                    chosen_model,
-                    current_prompt_text_for_logging=current_prompt_text,
-                    system_instruction_text=system_instruction_final,
-                )
-                raw_json: str = _get_text_from_response(response)
-                # Parse JSON and return only narrative text for dual-pass generator
-                narrative_text: str
-                narrative_text, _ = _process_structured_response(
-                    raw_json, expected_entities or []
-                )
-                return narrative_text
-
-            # Use dual-pass generator to fix missing entities
-            dual_pass_result = dual_pass_generator.generate_with_dual_pass(
-                initial_prompt=full_prompt,
-                expected_entities=expected_entities,
-                location=current_game_state.world_data.get(
-                    "current_location_name", "Unknown"
-                ),
-                generation_callback=generation_callback,
-            )
-
-            if dual_pass_result.final_narrative:
-                # PRIMARY: Update structured_response.narrative (this is what frontend uses)
-                if structured_response and isinstance(
-                    structured_response, NarrativeResponse
-                ):
-                    structured_response.narrative = dual_pass_result.final_narrative
-                    logging_util.info(
-                        "Updated structured_response.narrative with dual-pass result"
-                    )
-
-                # SECONDARY: Update response_text for backward compatibility only
-                response_text = dual_pass_result.final_narrative
-
-                # Calculate injected entities from the difference between passes
-                injected_count = len(dual_pass_result.total_entities_found) - len(
-                    dual_pass_result.first_pass.entities_found
-                )
-                logging_util.info(
-                    f"ENTITY_TRACKING_RETRY: Dual-pass succeeded. "
-                    f"Entities recovered: {injected_count}"
-                )
-            else:
-                logging_util.error("ENTITY_TRACKING_RETRY: Dual-pass generation failed")
-
         # Use the common validation function for entity tracking validation
         # (No longer modifies response_text - validation goes to logs only)
         _validate_entity_tracking(response_text, expected_entities, current_game_state)

@@ -9,13 +9,11 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.dual_pass_generator import DualPassGenerator
 from mvp_site.entity_validator import EntityValidator
 
 
 class TestUnknownEntityFiltering(unittest.TestCase):
     def setUp(self):
-        self.generator = DualPassGenerator()
         self.validator = EntityValidator()
 
     def test_unknown_filtered_from_validation(self):
@@ -35,23 +33,6 @@ class TestUnknownEntityFiltering(unittest.TestCase):
         # Should only report real missing entities
         assert "Sir Galahad" in result.missing_entities
         assert "Dragon" in result.missing_entities
-
-    def test_dual_pass_filters_unknown(self):
-        """Test that dual pass generation filters Unknown from expected entities"""
-
-        def mock_generation_callback(prompt):
-            return "The hero stands ready."
-
-        result = self.generator.generate_with_dual_pass(
-            initial_prompt="Test prompt",
-            expected_entities=["Hero", "Unknown"],
-            location="Unknown",
-            generation_callback=mock_generation_callback,
-        )
-
-        # First pass should not fail due to Unknown
-        assert "Unknown" not in result.first_pass.validation_result.missing_entities
-        assert "unknown" not in result.first_pass.validation_result.missing_entities
 
     def test_empty_expected_entities_after_filtering(self):
         """Test behavior when only Unknown is in expected entities"""
