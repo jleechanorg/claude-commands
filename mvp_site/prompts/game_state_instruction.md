@@ -1139,6 +1139,8 @@ Time can ONLY move backward when:
   "state_updates": {
     "world_data": {
       "world_time": {
+        "year": 1492,
+        "month": "Mirtul",
         "day": 10,
         "hour": 19,
         "minute": 0,

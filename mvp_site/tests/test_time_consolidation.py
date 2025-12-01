@@ -89,9 +89,9 @@ class TestTimeConsolidation(unittest.TestCase):
                 state = GameState(
                     world_data={"world_time": {"hour": hour, "minute": 0, "second": 0}}
                 )
-                assert (
-                    state.world_data["world_time"]["time_of_day"] == expected
-                ), f"Hour {hour} should map to '{expected}'"
+                assert state.world_data["world_time"]["time_of_day"] == expected, (
+                    f"Hour {hour} should map to '{expected}'"
+                )
 
     def test_missing_world_data(self):
         """Test handling of missing world_data."""
@@ -164,6 +164,38 @@ class TestTimeConsolidation(unittest.TestCase):
         assert state.world_data["world_time"]["hour"] == 9  # Estimated hour for morning
         assert state.world_data["world_time"]["minute"] == 0
         assert state.world_data["world_time"]["second"] == 0
+
+    def test_microsecond_migration(self):
+        """Test that microsecond is added to existing world_time when missing."""
+        state = GameState(
+            world_data={
+                "world_time": {
+                    "hour": 14,
+                    "minute": 30,
+                    "second": 0,
+                    "time_of_day": "Afternoon",
+                }
+            }
+        )
+
+        assert "microsecond" in state.world_data["world_time"]
+        assert state.world_data["world_time"]["microsecond"] == 0
+
+    def test_microsecond_preserved_when_present(self):
+        """Test that existing microsecond value remains unchanged."""
+        state = GameState(
+            world_data={
+                "world_time": {
+                    "hour": 9,
+                    "minute": 15,
+                    "second": 45,
+                    "microsecond": 123,
+                    "time_of_day": "Morning",
+                }
+            }
+        )
+
+        assert state.world_data["world_time"]["microsecond"] == 123
 
 
 if __name__ == "__main__":
