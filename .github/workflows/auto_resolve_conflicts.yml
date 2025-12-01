@@ -5,7 +5,40 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  # Fast check job - runs first, no checkout needed
+  # gh CLI is pre-installed on ubuntu-latest, no installation required
+  check-conflicts:
+    runs-on: ubuntu-latest
+    outputs:
+      has-conflicts: ${{ steps.check.outputs.has-conflicts }}
+      pr-number: ${{ steps.check.outputs.pr-number }}
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check if PR has merge conflicts
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          # Use GitHub API to check mergeable state (faster than checkout)
+          MERGE_STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json mergeStateStatus --jq '.mergeStateStatus')
+          echo "Merge state: $MERGE_STATE"
+
+          if [ "$MERGE_STATE" = "DIRTY" ]; then
+            echo "has-conflicts=true" >> $GITHUB_OUTPUT
+            echo "🔄 PR #$PR_NUMBER has conflicts - will attempt auto-resolution"
+          else
+            echo "has-conflicts=false" >> $GITHUB_OUTPUT
+            echo "✅ PR #$PR_NUMBER has no conflicts - skipping"
+          fi
+
+  # Heavy resolution job - only runs if conflicts detected
   auto-resolve-conflicts:
+    needs: check-conflicts
+    if: needs.check-conflicts.outputs.has-conflicts == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -14,7 +47,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
@@ -24,43 +57,20 @@ jobs:
         git config user.name "Claude Auto-Resolver"
         git config user.email "claude@anthropic.com"
 
-    - name: Install GitHub CLI
-      run: |
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-        sudo apt update
-        sudo apt install gh
-
-    - name: Check PR merge status
-      id: check_conflicts
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        PR_NUMBER="${{ github.event.pull_request.number }}"
-
-        echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-        MERGE_STATE=$(gh pr view $PR_NUMBER --json mergeStateStatus --jq '.mergeStateStatus')
-        echo "merge_state=$MERGE_STATE" >> $GITHUB_OUTPUT
-
-        if [ "$MERGE_STATE" = "DIRTY" ]; then
-          echo "conflicts=true" >> $GITHUB_OUTPUT
-        else
-          echo "conflicts=false" >> $GITHUB_OUTPUT
-        fi
+    # Note: gh CLI is pre-installed on ubuntu-latest runners - no installation needed
 
     - name: Auto-resolve conflicts
-      if: steps.check_conflicts.outputs.conflicts == 'true'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NUMBER: ${{ needs.check-conflicts.outputs.pr-number }}
       run: |
-        echo "🔄 Auto-resolving conflicts for PR #${{ steps.check_conflicts.outputs.pr_number }}"
+        echo "🔄 Auto-resolving conflicts for PR #$PR_NUMBER"
 
         # Make script executable
         chmod +x scripts/auto_resolve_conflicts.sh
 
         # Run auto-resolution
-        if ./scripts/auto_resolve_conflicts.sh ${{ steps.check_conflicts.outputs.pr_number }}; then
+        if ./scripts/auto_resolve_conflicts.sh "$PR_NUMBER"; then
           echo "✅ Conflicts resolved successfully"
         else
           echo "⚠️  Auto-resolution failed, manual intervention required"
@@ -68,11 +78,11 @@ jobs:
         fi
 
     - name: Update PR with resolution status
-      if: steps.check_conflicts.outputs.conflicts == 'true'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NUMBER: ${{ needs.check-conflicts.outputs.pr-number }}
       run: |
-        gh pr comment ${{ steps.check_conflicts.outputs.pr_number }} --body "🤖 **Auto-Conflict Resolution**
+        gh pr comment "$PR_NUMBER" --body "🤖 **Auto-Conflict Resolution**
 
         ✅ Merge conflicts have been automatically resolved and pushed to this PR.
 
