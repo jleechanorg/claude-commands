@@ -1021,12 +1021,14 @@ def _write_story_entry_to_firestore(
     except Exception:
         raise
 
-    # Return document ID for verification (fallback if not set)
-    # NOTE: Need fallback ID for verification logic - None would cause immediate failure
-    return (
-        document_id
-        or f"fallback-doc-{user_id}-{campaign_id}-{hash(str(timestamp)) % 10000}"
-    )
+    # Return document ID for verification - must be set by this point
+    # FirestoreWriteError is raised above if doc_ref doesn't have an id
+    if document_id is None:
+        raise FirestoreWriteError(
+            "Document ID was not captured during write. "
+            "This indicates an unexpected error in the Firestore write operation."
+        )
+    return document_id
 
 
 def verify_document_by_id(

@@ -5,32 +5,7 @@ Mock Firestore Service wrapper that provides the same interface as the real fire
 import copy
 import json
 
-# Handle logging_util import with triple fallback
-logging_util = None
-try:
-    from mvp_site import logging_util
-except ImportError:
-    try:
-        # Handle import from different contexts (e.g., tests run from project root)
-        from mvp_site import logging_util
-    except ImportError:
-        try:
-            # Handle import from testing framework context
-            import os
-            import sys
-
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-            from mvp_site import logging_util
-        except ImportError:
-            # Final fallback - create minimal logging interface
-            import logging
-
-            class MinimalLoggingUtil:
-                @staticmethod
-                def get_logger(name):
-                    return logging.getLogger(name)
-
-            logging_util = MinimalLoggingUtil()
+from mvp_site import logging_util
 
 from .mock_firestore_service import MockFirestoreClient
 

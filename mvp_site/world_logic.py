@@ -1564,9 +1564,11 @@ def _handle_update_state_command(
         final_game_state = GameState.from_dict(updated_state_dict)
         if final_game_state is None:
             logging_util.error(
-                "PROCESS_ACTION: GameState.from_dict returned None after update, using fallback"
+                "PROCESS_ACTION: GameState.from_dict returned None after update; rejecting GOD_MODE_UPDATE_STATE"
             )
-            final_game_state = GameState(user_id=user_id)
+            return create_error_response(
+                "Unable to reconstruct game state after applying changes.", 500
+            )
 
         firestore_service.update_campaign_game_state(
             user_id, campaign_id, final_game_state.to_dict()
