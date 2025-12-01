@@ -562,9 +562,35 @@ class PromptBuilder:
     def build_continuation_reminder(self) -> str:
         """
         Build reminders for story continuation, especially planning blocks.
+        Includes temporal enforcement to prevent backward time jumps.
         """
+        # Extract current world_time for temporal enforcement
+        world_time = self.game_state.world_data.get("world_time", {}) if hasattr(self.game_state, "world_data") else {}
+        current_location = self.game_state.world_data.get("current_location", "current location") if hasattr(self.game_state, "world_data") else "current location"
+
+        # Format current time for the prompt
+        time_parts = []
+        if world_time.get("year"):
+            time_parts.append(f"{world_time.get('year')} DR")
+        if world_time.get("month"):
+            time_parts.append(f"{world_time.get('month')} {world_time.get('day', '')}")
+        if world_time.get("hour") is not None:
+            time_parts.append(f"{world_time.get('hour', 0):02d}:{world_time.get('minute', 0):02d}")
+        current_time_str = ", ".join(time_parts) if time_parts else "current timestamp"
+
+        temporal_enforcement = (
+            f"\n**🚨 TEMPORAL CONSISTENCY ENFORCEMENT**\n"
+            f"CURRENT STORY STATE: {current_time_str} at {current_location}\n"
+            f"⚠️ TIME BOUNDARY: Your response MUST have a timestamp AFTER {current_time_str}\n"
+            f"- DO NOT generate events from before this time\n"
+            f"- DO NOT jump backward to earlier scenes or locations\n"
+            f"- Focus on the LATEST entries in the TIMELINE LOG (not older ones)\n"
+            f"- EXCEPTION: Only GOD MODE commands can move time backward\n\n"
+        )
+
         return (
-            "\n**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
+            temporal_enforcement +
+            "**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
             "1. **MANDATORY PLANNING BLOCK**: Every STORY MODE response MUST end with '--- PLANNING BLOCK ---'\n"
             "2. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options', "
             "generate ONLY internal thoughts with a deep think block. Each choice MUST have an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string. DO NOT take narrative actions.\n"
