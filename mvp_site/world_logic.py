@@ -23,6 +23,7 @@ import collections
 import datetime
 import json
 import os
+import re
 import tempfile
 import uuid
 from typing import Any
@@ -228,6 +229,107 @@ def _cleanup_legacy_state(
     return cleaned_dict, was_cleaned, num_cleaned
 
 
+def _get_player_character_data(game_state: Any) -> dict[str, Any]:
+    """Safely extract player character data from game state objects or dicts."""
+
+    if isinstance(game_state, dict):
+        return game_state.get("player_character_data", {}) or {}
+
+    if hasattr(game_state, "player_character_data"):
+        return game_state.player_character_data or {}
+
+    return {}
+
+
+def _enrich_session_header_with_progress(
+    session_header: str | None, game_state: Any
+) -> str:
+    """Ensure XP and gold are present in the session header for the UI."""
+
+    session_header = session_header or ""
+
+    player_data = _get_player_character_data(game_state)
+    xp_current = player_data.get("xp_current")
+    xp_next_level = player_data.get("xp_next_level")
+    gold_amount = player_data.get("gold")
+
+    contains_xp = re.search(
+        r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE
+    )
+    contains_gold = re.search(
+        r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE
+    )
+
+    remove_prefixes: tuple[str, ...] = ()
+    additions: list[str] = []
+    if xp_current is not None and not contains_xp:
+        xp_text = (
+            f"XP: {xp_current}/{xp_next_level}"
+            if xp_next_level is not None and xp_next_level != ""
+            else f"XP: {xp_current}"
+        )
+        additions.append(xp_text)
+        remove_prefixes += ("xp:", "experience:")
+
+    if gold_amount is not None and not contains_gold:
+        additions.append(f"Gold: {gold_amount}gp")
+        remove_prefixes += ("gold:", "gp:")
+
+    if not additions:
+        return session_header
+
+    def _remove_resource_tokens(tokens: list[str]) -> list[str]:
+        if not remove_prefixes:
+            return tokens
+
+        return [
+            token
+            for token in tokens
+            if token and not token.lower().strip().startswith(remove_prefixes)
+        ]
+
+    lines = session_header.splitlines()
+    for idx, line in enumerate(lines):
+        if line.strip().startswith("Status:"):
+            prefix, _, remainder = line.partition("Status:")
+            status_tokens = [part.strip() for part in remainder.split("|")]
+            status_tokens = _remove_resource_tokens(status_tokens)
+            merged_tokens = [token for token in status_tokens if token]
+            merged_tokens.extend(additions)
+            lines[idx] = f"{prefix}Status: {' | '.join(merged_tokens)}"
+            return "\n".join(lines)
+
+    if lines:
+        separator = " | " if lines[-1].strip() else ""
+        lines[-1] = f"{lines[-1]}{separator}{' | '.join(additions)}"
+    else:
+        lines.append(" | ".join(additions))
+
+    return "\n".join(lines)
+
+
+def _ensure_session_header_resources(
+    structured_fields: dict[str, Any], game_state: Any
+) -> dict[str, Any]:
+    """
+    Enriches session header with XP and gold from game state if these values exist in
+    player_character_data but are not already present in the session header text.
+    """
+
+    if not structured_fields:
+        return structured_fields
+
+    session_header = structured_fields.get(constants.FIELD_SESSION_HEADER, "")
+    enriched_header = _enrich_session_header_with_progress(session_header, game_state)
+
+    if enriched_header == session_header:
+        return structured_fields
+
+    updated_fields = structured_fields.copy()
+    updated_fields[constants.FIELD_SESSION_HEADER] = enriched_header
+    return updated_fields
+
+
 def _strip_game_state_fields(
     story_entries: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -406,8 +508,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         )
 
         # Extract structured fields
-        opening_story_structured_fields = (
-            structured_fields_utils.extract_structured_fields(opening_story_response)
+        opening_story_structured_fields = _ensure_session_header_resources(
+            structured_fields_utils.extract_structured_fields(opening_story_response),
+            initial_game_state,
         )
 
         # Create campaign in Firestore (blocking I/O - run in thread)
@@ -549,8 +652,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         ai_response_text = llm_response_obj.narrative_text
 
         # Extract structured fields from AI response for storage
-        structured_fields = structured_fields_utils.extract_structured_fields(
-            llm_response_obj
+        structured_fields = _ensure_session_header_resources(
+            structured_fields_utils.extract_structured_fields(llm_response_obj),
+            updated_game_state_dict,
         )
 
         await asyncio.to_thread(
