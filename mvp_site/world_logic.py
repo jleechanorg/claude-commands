@@ -200,19 +200,34 @@ Your previous response was REJECTED because time went BACKWARD:
 - CORRECT current state: {old_time_str} at {old_loc}
 - YOUR invalid output: {new_time_str} at {new_loc}
 
-The TEMPORAL CONSISTENCY PROTOCOL requires time to ALWAYS move FORWARD.
-Your response appears to have lost track of the story context.
+🚨 CRITICAL ERROR: You appear to have lost track of the story timeline.
 
-MANDATORY REGENERATION INSTRUCTIONS:
-1. Continue from the CORRECT context: {old_time_str} at {old_loc}
-2. Time in your response MUST be AFTER {old_time_str}
-3. Location should continue logically from {old_loc}
-4. Do NOT reference {new_loc} if that was incorrect
+## ROOT CAUSE ANALYSIS
+You likely focused on OLDER entries in the TIMELINE LOG instead of the MOST RECENT ones.
+This caused you to generate a response for a scene that already happened in the past.
 
-Original player action to respond to:
+## MANDATORY CORRECTION INSTRUCTIONS
+
+1. **FOCUS ON THE LATEST ENTRIES**: Look at the LAST 2-3 entries in the TIMELINE LOG.
+   These represent where the story CURRENTLY is, not where it was earlier.
+
+2. **IDENTIFY THE CURRENT SCENE**: The player is currently at:
+   - Time: {old_time_str}
+   - Location: {old_loc}
+   - This is where you must CONTINUE from.
+
+3. **GENERATE THE NEXT ENTRY**: Your response must continue the story forward.
+   - Time MUST be AFTER {old_time_str} (move forward, even if just by minutes)
+   - Location should logically follow from {old_loc}
+   - Do NOT jump back to earlier scenes or locations
+
+4. **IGNORE YOUR PREVIOUS ATTEMPT**: Your output of "{new_time_str} at {new_loc}" was WRONG.
+   Do not use that as a reference.
+
+## PLAYER ACTION TO RESPOND TO:
 {original_user_input}
 
-Generate a NEW response that properly continues the story with correct temporal progression."""
+Generate a NEW response that is the NEXT logical entry in the timeline, continuing from the CURRENT state."""
 
     return correction
 
