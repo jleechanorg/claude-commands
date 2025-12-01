@@ -111,29 +111,36 @@ async function fetchApi(path, options = {}, retryCount = 0) {
   }
 
   // Check for test mode bypass
-  let defaultHeaders;
+  let defaultHeaders = { 'Content-Type': 'application/json' };
+  const tokenManager = window.authTokenManager;
+  const forceRefresh = retryCount > 0;
+
   if (window.testAuthBypass && window.testAuthBypass.enabled) {
-    // Use test bypass headers
     defaultHeaders = {
-      'X-Test-Bypass-Auth': 'true',
-      'X-Test-User-ID': window.testAuthBypass.userId,
-      'Content-Type': 'application/json',
+      ...defaultHeaders,
+      ...(tokenManager?.getAuthHeaders
+        ? await tokenManager.getAuthHeaders(forceRefresh)
+        : {
+            'X-Test-Bypass-Auth': 'true',
+            'X-Test-User-ID': window.testAuthBypass.userId,
+          }),
     };
   } else {
     // Normal authentication flow
-    const user = firebase.auth().currentUser;
+    const user = tokenManager?.getCurrentUser
+      ? tokenManager.getCurrentUser()
+      : firebase.auth().currentUser;
     if (!user) throw new Error('User not authenticated');
 
     // Apply clock skew compensation before token generation
     await applyClockSkewCompensation();
 
     // Get fresh token, forcing refresh on retries to handle clock skew
-    const forceRefresh = retryCount > 0;
-    const token = await user.getIdToken(forceRefresh);
-    defaultHeaders = {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
+    const authHeaders = tokenManager?.getAuthHeaders
+      ? await tokenManager.getAuthHeaders(forceRefresh)
+      : { Authorization: `Bearer ${await user.getIdToken(forceRefresh)}` };
+
+    defaultHeaders = { ...defaultHeaders, ...authHeaders };
   }
 
   const config = {
@@ -190,9 +197,23 @@ async function fetchApi(path, options = {}, retryCount = 0) {
         if (skewDelay > 0) {
           console.log(`⏱️ Adding ${skewDelay}ms delay for clock skew compensation`);
         }
-        
+
         await new Promise((resolve) => setTimeout(resolve, totalDelay));
         return fetchApi(path, options, retryCount + 1);
+      }
+
+      // Fallback: refresh the ID token on generic 401 responses and retry once
+      if (!(window.testAuthBypass && window.testAuthBypass.enabled)) {
+        try {
+          console.log('🔁 401 received. Refreshing Firebase ID token and retrying request.');
+          const user = firebase.auth().currentUser;
+          if (user) {
+            await user.getIdToken(true);
+            return fetchApi(path, options, retryCount + 1);
+          }
+        } catch (refreshError) {
+          console.error('Token refresh after 401 failed:', refreshError);
+        }
       }
     }
 

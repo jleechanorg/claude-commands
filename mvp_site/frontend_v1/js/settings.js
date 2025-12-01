@@ -147,6 +147,10 @@ async function saveSettings() {
  * Get authentication headers for API requests
  */
 async function getAuthHeaders() {
+  if (window.authTokenManager) {
+    return window.authTokenManager.getAuthHeaders();
+  }
+
   const headers = {};
 
   // Check for test mode parameters in URL

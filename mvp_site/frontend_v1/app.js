@@ -172,10 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
       showSpinner('Loading settings...');
 
       // Fetch settings content from server
+      const authHeaders = window.authTokenManager
+        ? await window.authTokenManager.getAuthHeaders()
+        : { Authorization: `Bearer ${await firebase.auth().currentUser.getIdToken()}` };
+
       const response = await fetch('/settings', {
-        headers: {
-          Authorization: `Bearer ${await firebase.auth().currentUser.getIdToken()}`,
-        },
+        headers: authHeaders,
       });
 
       if (!response.ok) {
@@ -1285,7 +1287,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       let headers = {};
 
-      if (isTestMode && window.testAuthBypass) {
+      if (window.authTokenManager) {
+        headers = await window.authTokenManager.getAuthHeaders();
+      } else if (isTestMode && window.testAuthBypass) {
         // Use test bypass headers
         headers = {
           'X-Test-Bypass-Auth': 'true',
