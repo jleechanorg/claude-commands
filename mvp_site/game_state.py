@@ -408,10 +408,16 @@ class GameState:
                     "hour": hour,
                     "minute": 0,
                     "second": 0,
+                    "microsecond": 0,
                     "time_of_day": old_time_of_day,
                 }
             elif not isinstance(world_data["world_time"], dict):
-                world_data["world_time"] = {"hour": 12, "minute": 0, "second": 0}
+                world_data["world_time"] = {
+                    "hour": 12,
+                    "minute": 0,
+                    "second": 0,
+                    "microsecond": 0,
+                }
                 world_data["world_time"]["time_of_day"] = old_time_of_day
             else:
                 # world_time exists and is dict, just add time_of_day
@@ -425,6 +431,13 @@ class GameState:
 
         # Only process world_time if it already exists
         if "world_time" in world_data and isinstance(world_data["world_time"], dict):
+            # Ensure microsecond field exists (default to 0 for existing campaigns)
+            if "microsecond" not in world_data["world_time"]:
+                world_data["world_time"]["microsecond"] = 0
+                logging_util.info(
+                    "Added microsecond field to world_time (default: 0)"
+                )
+
             # Calculate time_of_day from hour if not present
             if "time_of_day" not in world_data["world_time"]:
                 hour = world_data["world_time"].get("hour", 12)
