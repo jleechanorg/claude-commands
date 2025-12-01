@@ -568,23 +568,29 @@ class PromptBuilder:
         world_time = self.game_state.world_data.get("world_time", {}) if hasattr(self.game_state, "world_data") else {}
         current_location = self.game_state.world_data.get("current_location", "current location") if hasattr(self.game_state, "world_data") else "current location"
 
-        # Format current time for the prompt
+        # Format current time for the prompt (including hidden microsecond for uniqueness)
         time_parts = []
         if world_time.get("year"):
             time_parts.append(f"{world_time.get('year')} DR")
         if world_time.get("month"):
             time_parts.append(f"{world_time.get('month')} {world_time.get('day', '')}")
         if world_time.get("hour") is not None:
-            time_parts.append(f"{world_time.get('hour', 0):02d}:{world_time.get('minute', 0):02d}")
+            time_parts.append(f"{world_time.get('hour', 0):02d}:{world_time.get('minute', 0):02d}:{world_time.get('second', 0):02d}")
         current_time_str = ", ".join(time_parts) if time_parts else "current timestamp"
+
+        # Include microsecond for precise temporal tracking
+        current_microsecond = world_time.get("microsecond", 0)
 
         temporal_enforcement = (
             f"\n**🚨 TEMPORAL CONSISTENCY ENFORCEMENT**\n"
             f"CURRENT STORY STATE: {current_time_str} at {current_location}\n"
+            f"HIDDEN TIMESTAMP: microsecond={current_microsecond} (for think-block uniqueness)\n"
             f"⚠️ TIME BOUNDARY: Your response MUST have a timestamp AFTER {current_time_str}\n"
             f"- DO NOT generate events from before this time\n"
             f"- DO NOT jump backward to earlier scenes or locations\n"
             f"- Focus on the LATEST entries in the TIMELINE LOG (not older ones)\n"
+            f"- For THINK/PLAN actions: increment microsecond by +1 (no narrative time advancement)\n"
+            f"- For STORY actions: increment by meaningful time units (minutes/hours)\n"
             f"- EXCEPTION: Only GOD MODE commands can move time backward\n\n"
         )
 
