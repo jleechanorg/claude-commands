@@ -527,7 +527,8 @@ The recent **Model Context Protocol (MCP)** refactor has dramatically improved t
 ## Configuration
 
 ### Environment Variables
-- `TESTING` - Enable test mode
+- `TESTING` - Enable test mode (does **not** switch the LLM to a test model)
+- `FORCE_TEST_MODEL` - Force the LLM to use the test model regardless of user preference
 - `GEMINI_API_KEY` - AI service API key
 - `PORT` - Server port (default: 8080)
 - `FIREBASE_CONFIG` - Firebase configuration

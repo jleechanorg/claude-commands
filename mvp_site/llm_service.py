@@ -1453,13 +1453,14 @@ def _select_model_for_user(user_id: UserId | None) -> str:
     Returns:
         str: Model name to use (TEST_MODEL in test/mock mode, user preference if valid, else DEFAULT_MODEL)
     """
-    # Check test/mock mode first (takes precedence over user preferences for testing)
-    # Support both TESTING and MOCK_SERVICES_MODE for backward compatibility
-    testing_mode: bool = (
-        os.environ.get("TESTING") == "true"
-        or os.environ.get("MOCK_SERVICES_MODE") == "true"
+    # Check mock/forced test mode first (takes precedence over user preferences)
+    force_test_model: bool = (
+        os.environ.get("MOCK_SERVICES_MODE") == "true"
+        or os.environ.get("FORCE_TEST_MODEL") == "true"
     )
-    if testing_mode:
+    # NOTE: The TESTING env var no longer forces the test model to avoid
+    # accidentally changing behavior when the server runs in testing mode.
+    if force_test_model:
         return TEST_MODEL
 
     # No user_id means use default model

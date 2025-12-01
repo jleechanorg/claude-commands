@@ -9,7 +9,7 @@ Problem: Model selection is inconsistent - TESTING env var not recognized,
 causing gemini-2.5-flash to be used instead of gemini-3-pro-preview in test mode.
 
 Solution: Centralize all model selection through _select_model_for_user() and
-ensure it checks both TESTING and MOCK_SERVICES_MODE environment variables.
+ensure it checks both MOCK_SERVICES_MODE and explicit FORCE_TEST_MODEL overrides.
 """
 
 import os
@@ -36,6 +36,7 @@ class TestCentralizedModelSelection(unittest.TestCase):
         """Save original env vars"""
         self.original_testing = os.environ.get("TESTING")
         self.original_mock = os.environ.get("MOCK_SERVICES_MODE")
+        self.original_force_test_model = os.environ.get("FORCE_TEST_MODEL")
 
     def tearDown(self):
         """Restore original env vars"""
@@ -49,17 +50,23 @@ class TestCentralizedModelSelection(unittest.TestCase):
         elif "MOCK_SERVICES_MODE" in os.environ:
             del os.environ["MOCK_SERVICES_MODE"]
 
-    def test_testing_env_returns_test_model(self):
-        """
-        RED PHASE TEST: TESTING=true should return TEST_MODEL
+        if self.original_force_test_model:
+            os.environ["FORCE_TEST_MODEL"] = self.original_force_test_model
+        elif "FORCE_TEST_MODEL" in os.environ:
+            del os.environ["FORCE_TEST_MODEL"]
 
-        This ensures that when running tests with TESTING=true, we use
+    def test_force_test_model_env_returns_test_model(self):
+        """
+        RED PHASE TEST: FORCE_TEST_MODEL=true should return TEST_MODEL
+
+        This ensures that when running tests with an explicit override, we use
         the TEST_MODEL (gemini-3-pro-preview) instead of fetching user preferences
         or using DEFAULT_MODEL.
         """
-        os.environ["TESTING"] = "true"
-        if "MOCK_SERVICES_MODE" in os.environ:
-            del os.environ["MOCK_SERVICES_MODE"]
+        os.environ["FORCE_TEST_MODEL"] = "true"
+        for key in ("MOCK_SERVICES_MODE", "TESTING"):
+            if key in os.environ:
+                del os.environ[key]
 
         result = _select_model_for_user("test-user-123")
 
@@ -81,6 +88,9 @@ class TestCentralizedModelSelection(unittest.TestCase):
             del os.environ["TESTING"]
         os.environ["MOCK_SERVICES_MODE"] = "true"
 
+        if "FORCE_TEST_MODEL" in os.environ:
+            del os.environ["FORCE_TEST_MODEL"]
+
         result = _select_model_for_user("test-user-123")
 
         self.assertEqual(
@@ -90,16 +100,39 @@ class TestCentralizedModelSelection(unittest.TestCase):
             f"but got {result}",
         )
 
-    def test_testing_takes_precedence_over_user_preference(self):
+    def test_testing_env_does_not_force_test_model(self):
         """
-        CRITICAL TEST: TESTING=true should override user preferences
+        SANITY TEST: TESTING=true should not force the test model on its own.
 
-        Even if a user has gemini-2.5-flash saved, TESTING=true should
-        force TEST_MODEL (gemini-3-pro-preview) to be used.
+        This prevents production-like servers running with TESTING=true from
+        unintentionally switching to TEST_MODEL.
         """
         os.environ["TESTING"] = "true"
-        if "MOCK_SERVICES_MODE" in os.environ:
-            del os.environ["MOCK_SERVICES_MODE"]
+        for key in ("MOCK_SERVICES_MODE", "FORCE_TEST_MODEL"):
+            if key in os.environ:
+                del os.environ[key]
+
+        with patch("mvp_site.firestore_service.get_user_settings") as mock_get_settings:
+            mock_get_settings.return_value = {"gemini_model": DEFAULT_MODEL}
+            result = _select_model_for_user("test-user-123")
+
+        self.assertEqual(
+            result,
+            DEFAULT_MODEL,
+            "TESTING=true should not override model selection without explicit test override",
+        )
+
+    def test_force_test_model_takes_precedence_over_user_preference(self):
+        """
+        CRITICAL TEST: FORCE_TEST_MODEL=true should override user preferences
+
+        Even if a user has gemini-2.5-flash saved, FORCE_TEST_MODEL=true should
+        force TEST_MODEL (gemini-3-pro-preview) to be used.
+        """
+        os.environ["FORCE_TEST_MODEL"] = "true"
+        for key in ("MOCK_SERVICES_MODE", "TESTING"):
+            if key in os.environ:
+                del os.environ[key]
 
         # Mock user settings returning gemini-2.5-flash preference
         with patch("mvp_site.firestore_service.get_user_settings") as mock_get_settings:
