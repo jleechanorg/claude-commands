@@ -1277,28 +1277,14 @@ def create_app() -> Flask:
                 # Use MCP client for getting settings
                 request_data = {"user_id": user_id}
 
-                # Direct service calls with run_in_executor for parallel request handling
-                settings = await run_blocking_io(
-                    firestore_service.get_user_settings, user_id
-                )
-                # Handle case where settings is None (user doesn't exist yet)
-                if settings is None:
-                    settings = {}
-                result = {"success": True, **settings}
+                # Delegate to world_logic for centralized defaults handling
+                result = await world_logic.get_user_settings_unified({"user_id": user_id})
 
                 if not result.get(KEY_SUCCESS):
                     return jsonify(result), result.get("status_code", 400)
 
                 # Return the settings directly (remove success wrapper for GET compatibility)
                 settings = {k: v for k, v in result.items() if k != KEY_SUCCESS}
-                settings.setdefault("llm_provider", constants.DEFAULT_LLM_PROVIDER)
-                settings.setdefault(
-                    "openrouter_model", constants.DEFAULT_OPENROUTER_MODEL
-                )
-                settings.setdefault(
-                    "cerebras_model", constants.DEFAULT_CEREBRAS_MODEL
-                )
-                settings.setdefault("gemini_model", constants.DEFAULT_GEMINI_MODEL)
                 return jsonify(settings)
 
             if request.method == "POST":

@@ -554,6 +554,125 @@ def handle_jsonrpc(request_data: dict) -> dict:
     }
 
 
+def create_mcp_handler(
+    transport_mode: str = "http",
+    http_port: int = 8000,
+    rpc_enabled: bool = False,
+) -> type:
+    """
+    Factory function to create a configured MCP HTTP handler class.
+
+    This consolidates the previously separate DualMCPHandler and MCPHandler
+    into a single configurable handler class.
+
+    Args:
+        transport_mode: "dual" for dual transport, "http" for HTTP-only mode
+        http_port: Port number for health status reporting
+        rpc_enabled: If True, /rpc works as alias for /mcp.
+                     If False, /rpc returns 410 deprecation error.
+
+    Returns:
+        A configured MCPHandler class ready for use with HTTPServer.
+    """
+
+    class MCPHandler(BaseHTTPRequestHandler):
+        """
+        Unified MCP HTTP handler supporting both dual and HTTP-only transport modes.
+
+        Endpoints:
+        - GET /health: Health check with status information
+        - POST /mcp: JSON-RPC 2.0 endpoint for MCP operations
+        - POST /rpc: Either alias for /mcp (dual mode) or 410 deprecation (HTTP-only)
+        """
+
+        # Class-level configuration from factory closure
+        _transport_mode = transport_mode
+        _http_port = http_port
+        _rpc_enabled = rpc_enabled
+
+        def do_GET(self):  # noqa: N802
+            """Handle GET requests - health endpoint."""
+            if self.path == "/health":
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+
+                if self._transport_mode == "dual":
+                    # Detailed health status for dual transport mode
+                    health_status = {
+                        "status": "healthy",
+                        "server": "world-logic",
+                        "transport": "dual",
+                        "http_port": self._http_port,
+                        "stdio_available": True,
+                    }
+                    self.wfile.write(json.dumps(health_status).encode())
+                else:
+                    # Simple health status for HTTP-only mode
+                    self.wfile.write(b'{"status": "healthy", "server": "world-logic"}')
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self):  # noqa: N802
+            """Handle POST requests - MCP JSON-RPC endpoints."""
+            if self.path == "/mcp" or (self.path == "/rpc" and self._rpc_enabled):
+                self._handle_mcp_request()
+            elif self.path == "/rpc" and not self._rpc_enabled:
+                # Deprecation response for /rpc in HTTP-only mode
+                self.send_response(410)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    b'{"error": "Endpoint moved. Use /mcp for MCP JSON-RPC requests."}'
+                )
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def _handle_mcp_request(self):
+            """Process MCP JSON-RPC request with error handling."""
+            request_data = None
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                post_data = self.rfile.read(content_length)
+                request_data = json.loads(post_data.decode("utf-8"))
+                response_data = handle_jsonrpc(request_data)
+                response_json = json.dumps(
+                    response_data, default=json_default_serializer
+                )
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(response_json.encode("utf-8"))
+            except Exception as e:
+                logging_util.error(f"JSON-RPC error: {e}")
+                is_production = (
+                    os.environ.get("PRODUCTION_MODE", "").lower() == "true"
+                )
+                error_data = None if is_production else traceback.format_exc()
+                error_response = {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32603,
+                        "message": str(e),
+                        "data": error_data,
+                    },
+                    "id": request_data.get("id") if request_data else None,
+                }
+                response_json = json.dumps(error_response)
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(response_json.encode("utf-8"))
+
+        def log_message(self, format, *args):
+            """Suppress default HTTP server logging for cleaner output."""
+            pass
+
+    return MCPHandler
+
+
 def run_server():
     """Run the World Logic MCP server."""
 
@@ -621,73 +740,16 @@ def run_server():
             f"Starting MCP server with dual transport: HTTP on {args.host}:{args.port} + stdio"
         )
 
-        # Run dual transport using threading
-        # threading and HTTPServer already imported at module level
-
-        # HTTP handler for dual mode with full /mcp JSON-RPC support
-        class DualMCPHandler(BaseHTTPRequestHandler):
-            def do_GET(self):  # noqa: N802
-                if self.path == "/health":
-                    self.send_response(200)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    health_status = {
-                        "status": "healthy",
-                        "server": "world-logic",
-                        "transport": "dual",
-                        "http_port": args.port,
-                        "stdio_available": True,
-                    }
-                    self.wfile.write(json.dumps(health_status).encode())
-                else:
-                    self.send_response(404)
-                    self.end_headers()
-
-            def do_POST(self):  # noqa: N802
-                if self.path in ("/mcp", "/rpc"):
-                    try:
-                        content_length = int(self.headers.get("Content-Length", 0))
-                        post_data = self.rfile.read(content_length)
-                        request_data = json.loads(post_data.decode("utf-8"))
-                        response_data = handle_jsonrpc(request_data)
-                        response_json = json.dumps(
-                            response_data, default=json_default_serializer
-                        )
-                        self.send_response(200)
-                        self.send_header("Content-type", "application/json")
-                        self.end_headers()
-                        self.wfile.write(response_json.encode("utf-8"))
-                    except Exception as e:
-                        logging_util.error(f"JSON-RPC error: {e}")
-                        is_production = (
-                            os.environ.get("PRODUCTION_MODE", "").lower() == "true"
-                        )
-                        error_data = None if is_production else traceback.format_exc()
-                        error_response = {
-                            "jsonrpc": "2.0",
-                            "error": {
-                                "code": -32603,
-                                "message": str(e),
-                                "data": error_data,
-                            },
-                            "id": request_data.get("id")
-                            if "request_data" in locals()
-                            else None,
-                        }
-                        response_json = json.dumps(error_response)
-                        self.send_response(500)
-                        self.send_header("Content-type", "application/json")
-                        self.end_headers()
-                        self.wfile.write(response_json.encode("utf-8"))
-                else:
-                    self.send_response(404)
-                    self.end_headers()
-
-            def log_message(self, format, *args):
-                pass  # Suppress HTTP server logs
+        # Create handler configured for dual transport mode
+        # /rpc enabled as alias for /mcp in dual mode
+        MCPHandler = create_mcp_handler(
+            transport_mode="dual",
+            http_port=args.port,
+            rpc_enabled=True,
+        )
 
         # Start HTTP server in background
-        httpd = HTTPServer((args.host, args.port), DualMCPHandler)
+        httpd = HTTPServer((args.host, args.port), MCPHandler)
         http_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         http_thread.start()
         logging_util.info(
@@ -718,84 +780,13 @@ def run_server():
     # Configure centralized logging
     setup_mcp_logging()
 
-    # Run HTTP server with JSON-RPC support
-    # BaseHTTPRequestHandler and HTTPServer already imported at module level
-
-    class MCPHandler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802
-            if self.path == "/health":
-                self.send_response(200)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(b'{"status": "healthy", "server": "world-logic"}')
-            else:
-                self.send_response(404)
-                self.end_headers()
-
-        def do_POST(self):  # noqa: N802
-            if self.path == "/mcp":
-                try:
-                    # Parse JSON-RPC request
-                    content_length = int(self.headers.get("Content-Length", 0))
-                    post_data = self.rfile.read(content_length)
-                    request_data = json.loads(post_data.decode("utf-8"))
-
-                    # Handle JSON-RPC request
-                    response_data = self._handle_jsonrpc(request_data)
-
-                    # Send response
-                    response_json = json.dumps(
-                        response_data, default=json_default_serializer
-                    )
-                    self.send_response(200)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(response_json.encode("utf-8"))
-
-                except Exception as e:
-                    logging_util.error(f"JSON-RPC error: {e}")
-
-                    # Security fix: Only include traceback in development/testing, not production
-                    is_production = (
-                        os.environ.get("PRODUCTION_MODE", "").lower() == "true"
-                    )
-                    error_data = None if is_production else traceback.format_exc()
-
-                    error_response = {
-                        "jsonrpc": "2.0",
-                        "error": {
-                            "code": -32603,
-                            "message": str(e),
-                            "data": error_data,
-                        },
-                        "id": request_data.get("id")
-                        if "request_data" in locals()
-                        else None,
-                    }
-                    response_json = json.dumps(error_response)
-                    self.send_response(500)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(response_json.encode("utf-8"))
-            elif self.path == "/rpc":
-                # Previous endpoint - return explicit error to prompt clients to update
-                self.send_response(410)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(
-                    b'{"error": "Endpoint moved. Use /mcp for MCP JSON-RPC requests."}'
-                )
-            else:
-                self.send_response(404)
-                self.end_headers()
-
-        def _handle_jsonrpc(self, request_data):
-            """Handle JSON-RPC 2.0 request - delegates to standalone function."""
-            return handle_jsonrpc(request_data)
-
-        def log_message(self, format, *args):
-            # Suppress default logging for cleaner output
-            pass
+    # Create handler configured for HTTP-only mode
+    # /rpc returns 410 deprecation in HTTP-only mode
+    MCPHandler = create_mcp_handler(
+        transport_mode="http",
+        http_port=args.port,
+        rpc_enabled=False,
+    )
 
     httpd = HTTPServer((args.host, args.port), MCPHandler)
     logging_util.info(f"MCP JSON-RPC server running on http://{args.host}:{args.port}")

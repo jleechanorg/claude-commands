@@ -33,15 +33,21 @@ class TestSettingsAPI(unittest.TestCase):
         self.addCleanup(self._auth_patcher.stop)
 
         # Bypass Firestore during tests
+        # Patch both locations: firestore_service (for direct calls) and world_logic (for imported reference)
         self._settings_get_patcher = patch(
             "mvp_site.firestore_service.get_user_settings", return_value={}
+        )
+        self._settings_get_wl_patcher = patch(
+            "mvp_site.world_logic.get_user_settings", return_value={}
         )
         self._settings_update_patcher = patch(
             "mvp_site.firestore_service.update_user_settings", return_value=True
         )
         self._settings_get_patcher.start()
+        self._settings_get_wl_patcher.start()
         self._settings_update_patcher.start()
         self.addCleanup(self._settings_get_patcher.stop)
+        self.addCleanup(self._settings_get_wl_patcher.stop)
         self.addCleanup(self._settings_update_patcher.stop)
 
         # Test headers with Authorization token
