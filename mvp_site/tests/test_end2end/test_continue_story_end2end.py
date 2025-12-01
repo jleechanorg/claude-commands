@@ -1,7 +1,7 @@
 """
 End-to-end integration test for continuing a story.
-Only mocks external services (Gemini API and Firestore DB) at the lowest level.
-Tests the full flow from API endpoint through all service layers.
+Only mocks external services (LLM provider APIs and Firestore DB) at the lowest level.
+Tests the full flow from API endpoint through all service layers including context compaction.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
@@ -43,45 +43,53 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "Authorization": "Bearer test-id-token",
         }
 
-    @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
-    def test_continue_story_success(self, mock_gemini_request, mock_get_db):
-        """Test successful story continuation using fake services."""
-
-        # Set up fake Firestore
-        fake_firestore = FakeFirestoreClient()
-        mock_get_db.return_value = fake_firestore
-
-        # Create test campaign data
-        campaign_id = "test_campaign_123"
-        fake_firestore.collection("users").document("test-user-123").collection(
-            "campaigns"
-        ).document(campaign_id).set(
-            {"title": "Test Campaign", "setting": "Fantasy realm"}
-        )
-
-        # Create game state
-        fake_firestore.collection("users").document("test-user-123").collection(
-            "campaigns"
-        ).document(campaign_id).collection("game_states").document("current_state").set(
-            {
-                "user_id": "test-user-123",
-                "story_text": "Previous story content",
-                "characters": ["Thorin"],
-                "locations": ["Mountain Kingdom"],
-                "items": ["Magic Sword"],
-            }
-        )
-
-        # Mock Gemini response
-        gemini_response_data = {
+        # Standard mock Gemini response
+        self.gemini_response_data = {
             "narrative": "The story continues with new adventures...",
             "entities_mentioned": ["Thorin"],
             "location_confirmed": "Mountain Kingdom",
             "state_updates": {"story_progression": "continued"},
         }
-        mock_gemini_request.return_value = FakeLLMResponse(
-            json.dumps(gemini_response_data)
+
+    def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
+        """Helper to set up fake Firestore with campaign and game state."""
+        # Create test campaign data
+        fake_firestore.collection("users").document(self.test_user_id).collection(
+            "campaigns"
+        ).document(campaign_id).set(
+            {"title": "Test Campaign", "setting": "Fantasy realm"}
+        )
+
+        # Create game state with proper structure including combat_state
+        fake_firestore.collection("users").document(self.test_user_id).collection(
+            "campaigns"
+        ).document(campaign_id).collection("game_states").document("current_state").set(
+            {
+                "user_id": self.test_user_id,
+                "story_text": "Previous story content",
+                "characters": ["Thorin"],
+                "locations": ["Mountain Kingdom"],
+                "items": ["Magic Sword"],
+                "combat_state": {"in_combat": False},
+                "custom_campaign_state": {},
+            }
+        )
+
+    @patch("mvp_site.firestore_service.get_db")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    def test_continue_story_success(self, mock_gemini_generate, mock_get_db):
+        """Test successful story continuation through full stack including context compaction."""
+
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_get_db.return_value = fake_firestore
+
+        campaign_id = "test_campaign_123"
+        self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
+
+        # Mock at the actual external API level (gemini_provider.generate_json_mode_content)
+        mock_gemini_generate.return_value = FakeLLMResponse(
+            json.dumps(self.gemini_response_data)
         )
 
         # Make the API request to the correct interaction endpoint
@@ -93,7 +101,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # Verify response - with auth stubbed, should get 200
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         # Verify story data structure

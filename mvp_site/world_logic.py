@@ -1159,8 +1159,16 @@ async def get_user_settings_unified(request_data: dict[str, Any]) -> dict[str, A
         if settings is None:
             settings = {
                 "debug_mode": constants.DEFAULT_DEBUG_MODE,
-                "gemini_model": "gemini-3-pro-preview",  # Default model (supports code_execution + JSON)
+                "gemini_model": constants.DEFAULT_GEMINI_MODEL,  # Default model (supports code_execution + JSON)
+                "llm_provider": constants.DEFAULT_LLM_PROVIDER,
+                "openrouter_model": constants.DEFAULT_OPENROUTER_MODEL,
+                "cerebras_model": constants.DEFAULT_CEREBRAS_MODEL,
             }
+
+        settings.setdefault("llm_provider", constants.DEFAULT_LLM_PROVIDER)
+        settings.setdefault("gemini_model", constants.DEFAULT_GEMINI_MODEL)
+        settings.setdefault("openrouter_model", constants.DEFAULT_OPENROUTER_MODEL)
+        settings.setdefault("cerebras_model", constants.DEFAULT_CEREBRAS_MODEL)
 
         return create_success_response(settings)
 
@@ -1199,6 +1207,13 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
 
         settings_to_update = {}
 
+        # Validate provider selection
+        if "llm_provider" in settings_data:
+            provider = settings_data["llm_provider"]
+            if provider not in constants.ALLOWED_LLM_PROVIDERS:
+                return create_error_response("Invalid provider selection")
+            settings_to_update["llm_provider"] = provider
+
         # Validate gemini_model if provided
         if "gemini_model" in settings_data:
             model = settings_data["gemini_model"]
@@ -1211,6 +1226,26 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model
+
+        if "openrouter_model" in settings_data:
+            model = settings_data["openrouter_model"]
+            if not isinstance(model, str):
+                return create_error_response("Invalid model selection")
+
+            allowed_openrouter = {m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS}
+            if model.lower() not in allowed_openrouter:
+                return create_error_response("Invalid model selection")
+            settings_to_update["openrouter_model"] = model
+
+        if "cerebras_model" in settings_data:
+            model = settings_data["cerebras_model"]
+            if not isinstance(model, str):
+                return create_error_response("Invalid model selection")
+
+            allowed_cerebras = {m.lower() for m in constants.ALLOWED_CEREBRAS_MODELS}
+            if model.lower() not in allowed_cerebras:
+                return create_error_response("Invalid model selection")
+            settings_to_update["cerebras_model"] = model
 
         # Validate debug_mode if provided
         if "debug_mode" in settings_data:

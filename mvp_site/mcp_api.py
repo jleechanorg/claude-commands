@@ -624,7 +624,7 @@ def run_server():
         # Run dual transport using threading
         # threading and HTTPServer already imported at module level
 
-        # HTTP handler for dual mode (simplified)
+        # HTTP handler for dual mode with full /mcp JSON-RPC support
         class DualMCPHandler(BaseHTTPRequestHandler):
             def do_GET(self):  # noqa: N802
                 if self.path == "/health":
@@ -639,6 +639,46 @@ def run_server():
                         "stdio_available": True,
                     }
                     self.wfile.write(json.dumps(health_status).encode())
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+            def do_POST(self):  # noqa: N802
+                if self.path in ("/mcp", "/rpc"):
+                    try:
+                        content_length = int(self.headers.get("Content-Length", 0))
+                        post_data = self.rfile.read(content_length)
+                        request_data = json.loads(post_data.decode("utf-8"))
+                        response_data = handle_jsonrpc(request_data)
+                        response_json = json.dumps(
+                            response_data, default=json_default_serializer
+                        )
+                        self.send_response(200)
+                        self.send_header("Content-type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(response_json.encode("utf-8"))
+                    except Exception as e:
+                        logging_util.error(f"JSON-RPC error: {e}")
+                        is_production = (
+                            os.environ.get("PRODUCTION_MODE", "").lower() == "true"
+                        )
+                        error_data = None if is_production else traceback.format_exc()
+                        error_response = {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": -32603,
+                                "message": str(e),
+                                "data": error_data,
+                            },
+                            "id": request_data.get("id")
+                            if "request_data" in locals()
+                            else None,
+                        }
+                        response_json = json.dumps(error_response)
+                        self.send_response(500)
+                        self.send_header("Content-type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(response_json.encode("utf-8"))
                 else:
                     self.send_response(404)
                     self.end_headers()

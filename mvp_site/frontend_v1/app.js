@@ -257,12 +257,31 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSettings();
     }
 
-    // Add change listeners to radio buttons
-    const radioButtons = document.querySelectorAll('input[name="geminiModel"]');
-    radioButtons.forEach((radio) => {
-      radio.addEventListener('change', saveSettings);
+    // Gemini dropdown listener
+    const geminiModelSelect = document.getElementById('geminiModel');
+    if (geminiModelSelect) {
+      geminiModelSelect.addEventListener('change', saveSettings);
+    }
+
+    const providerRadios = document.querySelectorAll('input[name="llmProvider"]');
+    providerRadios.forEach((radio) => {
+      radio.addEventListener('change', () => {
+        if (typeof toggleProviderSections === 'function') {
+          toggleProviderSections(radio.value);
+        }
+        saveSettings();
+      });
     });
 
+    const openrouterModelSelect = document.getElementById('openrouterModel');
+    if (openrouterModelSelect) {
+      openrouterModelSelect.addEventListener('change', saveSettings);
+    }
+
+    const cerebrasModelSelect = document.getElementById('cerebrasModel');
+    if (cerebrasModelSelect) {
+      cerebrasModelSelect.addEventListener('change', saveSettings);
+    }
     // Add change listener to debug mode switch
     const debugSwitch = document.getElementById('debugModeSwitch');
     if (debugSwitch) {

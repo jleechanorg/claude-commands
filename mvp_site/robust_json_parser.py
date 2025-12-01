@@ -34,6 +34,40 @@ class RobustJSONParser:
     """
 
     @staticmethod
+    def _normalize_to_dict(result: Any, original_text: str) -> dict[str, Any] | None:
+        """
+        Normalize parser result to always return a dict or None.
+
+        json.loads() can return any JSON type (dict, list, str, int, etc.),
+        but this parser's contract is to always return dict | None.
+
+        Args:
+            result: The raw result from json.loads()
+            original_text: The original text for fallback extraction
+
+        Returns:
+            A dict or None, never a list or primitive type
+        """
+        if result is None:
+            return None
+
+        if isinstance(result, dict):
+            return result
+
+        if isinstance(result, list):
+            # If list contains a dict, extract first element
+            if result and isinstance(result[0], dict):
+                logging_util.debug("Normalized list to dict by extracting first element")
+                return result[0]
+            # Otherwise, return None to trigger fallback strategies
+            logging_util.debug("List result cannot be normalized to dict, returning None")
+            return None
+
+        # For primitives (str, int, bool, etc.), return None
+        logging_util.debug(f"Primitive result type {type(result).__name__} cannot be normalized, returning None")
+        return None
+
+    @staticmethod
     def parse(text: str) -> tuple[dict[str, Any] | None, bool]:
         """
         Attempts to parse JSON text with multiple fallback strategies.
@@ -52,23 +86,27 @@ class RobustJSONParser:
         # Strategy 1: Try standard JSON parsing first
         result, success = try_parse_json(text)
         if success:
-            return result, False
+            normalized = RobustJSONParser._normalize_to_dict(result, text)
+            if normalized is not None:
+                return normalized, False
+            # If normalization failed (e.g., list result), continue to other strategies
 
         # Strategy 2: Find JSON boundaries and fix common issues
         try:
             fixed_json = RobustJSONParser._fix_json_boundaries(text)
             if fixed_json != text:
                 result = json.loads(fixed_json)
-                # If we got a list but the text seems to contain object fields, continue
-                if isinstance(result, list) and (
+                normalized = RobustJSONParser._normalize_to_dict(result, text)
+                # If we got a non-dict but the text seems to contain object fields, continue
+                if normalized is None and (
                     '"narrative"' in text or '"entities_mentioned"' in text
                 ):
                     logging_util.debug(
-                        "Got array but text contains object fields, continuing..."
+                        "Got non-dict but text contains object fields, continuing..."
                     )
-                else:
+                elif normalized is not None:
                     logging_util.info("Successfully fixed JSON boundaries")
-                    return result, True
+                    return normalized, True
         except json.JSONDecodeError:
             pass
         except (ValueError, KeyError, TypeError) as e:
@@ -78,8 +116,10 @@ class RobustJSONParser:
         try:
             completed_json = RobustJSONParser._complete_json(text)
             result = json.loads(completed_json)
-            logging_util.info("Successfully completed incomplete JSON")
-            return result, True
+            normalized = RobustJSONParser._normalize_to_dict(result, text)
+            if normalized is not None:
+                logging_util.info("Successfully completed incomplete JSON")
+                return normalized, True
         except json.JSONDecodeError:
             pass
         except (ValueError, KeyError, TypeError) as e:
@@ -117,8 +157,10 @@ class RobustJSONParser:
             aggressively_fixed = RobustJSONParser._aggressive_fix(text)
             if aggressively_fixed and aggressively_fixed != "{}":
                 result = json.loads(aggressively_fixed)
-                logging_util.info("Successfully parsed with aggressive fixes")
-                return result, True
+                normalized = RobustJSONParser._normalize_to_dict(result, text)
+                if normalized is not None:
+                    logging_util.info("Successfully parsed with aggressive fixes")
+                    return normalized, True
         except json.JSONDecodeError:
             pass
         except (ValueError, KeyError, TypeError) as e:

@@ -300,7 +300,7 @@ fi
 deploy_common::deploy_service \
     "$SERVICE_NAME" \
     "$IMAGE_TAG" \
-    "GEMINI_API_KEY=gemini-api-key:latest" \
+    "GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
     "2Gi" \
     "$WORLDARCH_TIMEOUT_SECONDS" \
     "1" \

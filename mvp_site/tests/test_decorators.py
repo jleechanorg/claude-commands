@@ -75,17 +75,17 @@ class TestLogExceptionsDecorator(unittest.TestCase):
 
         assert str(context.value) == "Negative values not allowed"
 
-        # Check that error was logged
+        # Check that error was logged (args trimmed for security)
         log_output = self.log_stream.getvalue()
         assert "EXCEPTION IN: failing_function" in log_output
-        assert "Args: (-1,)" in log_output
+        assert "Args: (1 args)" in log_output  # Trimmed: count only, not content
         assert "Kwargs: {}" in log_output
         assert "Error: Negative values not allowed" in log_output
         assert "Traceback:" in log_output
         assert "END EXCEPTION" in log_output
 
     def test_decorator_logs_function_arguments(self):
-        """Test that decorator logs function arguments in error messages."""
+        """Test that decorator logs function argument counts (trimmed for security)."""
 
         @log_exceptions
         def function_with_args(a, b, c=None, d="default"):
@@ -94,9 +94,10 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         with pytest.raises(RuntimeError, match="Test error"):
             function_with_args("arg1", "arg2", c="kwarg1", d="kwarg2")
 
+        # Args trimmed for security - shows count only, kwargs shows keys only
         log_output = self.log_stream.getvalue()
-        assert "Args: ('arg1', 'arg2')" in log_output
-        assert "Kwargs: {'c': 'kwarg1', 'd': 'kwarg2'}" in log_output
+        assert "Args: (2 args)" in log_output  # Count only, not content
+        assert "Kwargs: ['c', 'd']" in log_output  # Keys only, not values
 
     def test_decorator_with_different_exception_types(self):
         """Test decorator behavior with different exception types."""

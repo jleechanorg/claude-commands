@@ -17,6 +17,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 
 // Setup automatic log file output to /tmp
@@ -37,7 +39,8 @@ const getBranchName = () => {
 };
 
 const LOG_DIR = `/tmp/${getRepoName()}/${getBranchName()}/smoke_tests`;
-const LOG_FILE = path.join(LOG_DIR, 'mcp_output.log');
+const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+const LOG_FILE = path.join(LOG_DIR, `mcp_output_${timestamp}.log`);
 let logStream = null;
 
 // Create log directory and file
@@ -96,10 +99,253 @@ const timeoutMs = parsePositiveInt(process.env.MCP_TEST_TIMEOUT_MS, 600000); // 
 const retryAttempts = parsePositiveInt(process.env.MCP_TEST_MAX_ATTEMPTS, 3);
 const retryDelayMs = parsePositiveInt(process.env.MCP_TEST_RETRY_DELAY_MS, 2000);
 
+const providerDefaults = {
+  gemini: {
+    gemini_model: process.env.MCP_GEMINI_MODEL || 'gemini-3-pro-preview',
+  },
+  openrouter: {
+    // Must match backend allowlist (constants.ALLOWED_OPENROUTER_MODELS)
+    openrouter_model:
+      process.env.MCP_OPENROUTER_MODEL || 'meta-llama/llama-3.1-70b-instruct',
+  },
+  cerebras: {
+    cerebras_model: process.env.MCP_CEREBRAS_MODEL || 'llama-3.3-70b',
+  },
+};
+
+const bearerToken = process.env.MCP_BEARER_TOKEN;
+let effectiveBearerToken = bearerToken;
+let bearerTokenLoadedPromise = null;
+const TOKEN_EXPIRY_SKEW_MS = 5 * 60 * 1000; // refresh if expiring within 5 minutes
+const FALLBACK_FIREBASE_API_KEY =
+  process.env.FIREBASE_API_KEY ||
+  process.env.WORLDAI_FIREBASE_API_KEY ||
+  process.env.AI_UNIVERSE_FIREBASE_API_KEY ||
+  'AIzaSyARs7IekRptvhZIwtV7lwJh3axWFsn_4c8'; // worldarchitecture-ai public web key
+
+function isTokenExpiring(expiresAt) {
+  if (!expiresAt) return true;
+  const expMs = Date.parse(expiresAt);
+  if (Number.isNaN(expMs)) return true;
+  return expMs - Date.now() <= TOKEN_EXPIRY_SKEW_MS;
+}
+
+async function refreshIdToken(refreshToken) {
+  const apiKey = FALLBACK_FIREBASE_API_KEY;
+  if (!apiKey || !refreshToken) return null;
+  try {
+    const res = await fetch(
+      `https://securetoken.googleapis.com/v1/token?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+        }).toString(),
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    const data = await res.json();
+    if (data.id_token) {
+      return {
+        idToken: data.id_token,
+        refreshToken: data.refresh_token || refreshToken,
+        expiresAt: new Date(Date.now() + Number(data.expires_in) * 1000).toISOString(),
+      };
+    }
+  } catch (error) {
+    console.warn(`⚠️  Token refresh failed: ${error.message}`);
+  }
+  return null;
+}
+
+function loadBearerTokenFromFile() {
+  try {
+    const candidatePaths = [
+      path.join(os.homedir(), '.worldarchitect-ai', 'auth-token.json'),
+      path.join(os.homedir(), '.ai-universe', 'auth-token.json'),
+    ];
+
+    for (const tokenPath of candidatePaths) {
+      if (fs.existsSync(tokenPath)) {
+        const raw = fs.readFileSync(tokenPath, 'utf-8');
+        const data = JSON.parse(raw);
+        if (data?.idToken) {
+          console.log(`🔑 Loaded bearer token from ${tokenPath}`);
+          return data;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`⚠️  Could not load bearer token: ${error.message}`);
+  }
+  return null;
+}
+
+async function loginWithPassword() {
+  const email = process.env.TEST_EMAIL || process.env.GOOGLE_TEST_EMAIL;
+  const password = process.env.TEST_PASSWORD || process.env.GOOGLE_TEST_PASSWORD;
+  const apiKey = process.env.FIREBASE_API_KEY || FALLBACK_FIREBASE_API_KEY;
+
+  if (!email || !password || !apiKey) {
+    console.warn('⚠️  Missing TEST_EMAIL/TEST_PASSWORD/FIREBASE_API_KEY; cannot perform password login');
+    return null;
+  }
+
+  try {
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    const data = await res.json();
+    if (data?.idToken) {
+      console.log('🔑 Acquired bearer token via password login');
+      return data.idToken;
+    }
+  } catch (error) {
+    console.warn(`⚠️  Password login failed: ${error.message}`);
+  }
+  return null;
+}
+
+function readServiceAccountKey() {
+  const keyPath = process.env.MCP_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!keyPath) return null;
+  try {
+    const raw = fs.readFileSync(keyPath, 'utf-8');
+    const json = JSON.parse(raw);
+    if (json.client_email && json.private_key) {
+      return { clientEmail: json.client_email, privateKey: json.private_key };
+    }
+  } catch (error) {
+    console.warn(`⚠️  Could not load service account key: ${error.message}`);
+  }
+  return null;
+}
+function base64UrlEncode(input) {
+  return Buffer.from(input)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function createCustomToken(uid) {
+  const sa = readServiceAccountKey();
+  if (!sa) return null;
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const payload = {
+    iss: sa.clientEmail,
+    sub: sa.clientEmail,
+    aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+    uid,
+    iat: now,
+    exp: now + 3600,
+  };
+  const signingInput = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(JSON.stringify(payload))}`;
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(signingInput);
+  const signature = signer.sign(sa.privateKey);
+  return `${signingInput}.${base64UrlEncode(signature)}`;
+}
+
+async function exchangeCustomToken(customToken) {
+  if (!customToken) return null;
+  const apiKey = FALLBACK_FIREBASE_API_KEY;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    const data = await res.json();
+    if (data?.idToken) {
+      console.log('🔑 Acquired bearer token via service account custom token');
+      return {
+        idToken: data.idToken,
+        refreshToken: data.refreshToken,
+        expiresAt: new Date(Date.now() + Number(data.expiresIn || 3600) * 1000).toISOString(),
+      };
+    }
+  } catch (error) {
+    console.warn(`⚠️  Custom token exchange failed: ${error.message}`);
+  }
+  return null;
+}
+
+async function getBearerToken() {
+  if (effectiveBearerToken) return effectiveBearerToken;
+  if (!bearerTokenLoadedPromise) {
+    bearerTokenLoadedPromise = (async () => {
+      // Try password login first
+      const fromLogin = await loginWithPassword();
+      if (fromLogin) return fromLogin;
+
+      // Then try stored token
+      const stored = loadBearerTokenFromFile();
+      if (stored) {
+        const { idToken, refreshToken, expiresAt } = stored;
+        if (!isTokenExpiring(expiresAt)) return idToken;
+        const refreshed = await refreshIdToken(refreshToken);
+        if (refreshed?.idToken) {
+          console.log('🔄 Refreshed bearer token from stored refreshToken');
+          return refreshed.idToken;
+        }
+        return idToken; // fall back to stored token even if refresh failed
+      }
+
+      // Finally, try service account → custom token → ID token (works in CI with GCP_SA_KEY)
+      const custom = createCustomToken('smoke-test-user');
+      if (custom) {
+        const exchanged = await exchangeCustomToken(custom);
+        if (exchanged?.idToken) return exchanged.idToken;
+      }
+
+      return null;
+    })();
+  }
+  effectiveBearerToken = await bearerTokenLoadedPromise;
+  return effectiveBearerToken;
+}
+
+const providersToTest = (process.env.MCP_TEST_PROVIDERS || 'gemini,openrouter,cerebras')
+  .split(',')
+  .map((p) => p.trim())
+  .filter(Boolean)
+  .filter((p) => {
+    if (!providerDefaults[p]) {
+      console.warn(`⚠️  Unknown provider '${p}' - skipping. Valid options: ${Object.keys(providerDefaults).join(', ')}`);
+      return false;
+    }
+    return true;
+  });
+
 const normalizedBaseUrl = effectiveBaseUrl.replace(/\/$/, '');
 const serverBaseUrl = normalizedBaseUrl.endsWith('/mcp')
   ? normalizedBaseUrl.slice(0, -4)
   : normalizedBaseUrl;
+const settingsBaseUrl = process.env.MCP_SETTINGS_BASE_URL
+  ? String(process.env.MCP_SETTINGS_BASE_URL).replace(/\/$/, '')
+  : serverBaseUrl;
 const healthUrl = serverBaseUrl.endsWith('/health') ? serverBaseUrl : `${serverBaseUrl}/health`;
 const mcpEndpoint = normalizedBaseUrl.endsWith('/mcp') ? normalizedBaseUrl : `${normalizedBaseUrl}/mcp`;
 
@@ -235,6 +481,49 @@ async function callRpc(method, params = {}, id = generateRpcId()) {
   return response;
 }
 
+async function updateUserSettings(userId, provider) {
+  if (!providerDefaults[provider]) {
+    throw new Error(`Unknown provider: ${provider}. Valid options: ${Object.keys(providerDefaults).join(', ')}`);
+  }
+
+  const settingsPayload = { llm_provider: provider };
+  if (provider === 'openrouter') {
+    settingsPayload.openrouter_model = providerDefaults.openrouter.openrouter_model;
+  } else if (provider === 'cerebras') {
+    settingsPayload.cerebras_model = providerDefaults.cerebras.cerebras_model;
+  } else if (provider === 'gemini') {
+    settingsPayload.gemini_model = providerDefaults.gemini.gemini_model;
+  } else {
+    throw new Error(`Unhandled provider in settings update: ${provider}`);
+  }
+
+  const url = `${serverBaseUrl}/api/settings`;
+  const settingsUrl = `${settingsBaseUrl}/api/settings`;
+  logStep(`Updating settings for ${provider} via ${url}`);
+
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = await getBearerToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  } else {
+    headers['X-Test-Bypass-Auth'] = 'true';
+    headers['X-Test-User-ID'] = userId;
+  }
+
+  await fetchJson(
+    settingsUrl,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(settingsPayload),
+    },
+    `Update settings (${provider})`,
+  );
+}
+
 async function checkToolsList() {
   logStep('Testing tools/list endpoint');
   const payload = await callRpc('tools/list');
@@ -261,8 +550,8 @@ async function checkToolsList() {
   return payload;
 }
 
-async function testCampaignCreation(userId) {
-  logStep('Testing campaign creation via create_campaign tool');
+async function testCampaignCreation(userId, providerLabel = 'gemini') {
+  logStep(`Testing campaign creation via create_campaign tool (${providerLabel})`);
 
   const payload = await callRpc(
     'tools/call',
@@ -293,6 +582,7 @@ async function testCampaignCreation(userId) {
   logInfo(`✅ Campaign created: ${result.campaign_id}`);
   addLogEntry({
     kind: 'campaign-created',
+    provider: providerLabel,
     campaign_id: result.campaign_id,
     title: result.title,
     full_response: result
@@ -301,8 +591,8 @@ async function testCampaignCreation(userId) {
   return result;
 }
 
-async function testCampaignCreationWithDefaultWorld(userId) {
-  logStep('Testing campaign creation with defaultWorld enabled');
+async function testCampaignCreationWithDefaultWorld(userId, providerLabel = 'gemini') {
+  logStep(`Testing campaign creation with defaultWorld enabled (${providerLabel})`);
 
   const payload = await callRpc(
     'tools/call',
@@ -346,6 +636,7 @@ async function testCampaignCreationWithDefaultWorld(userId) {
   logInfo(`✅ Campaign with defaultWorld created: ${result.campaign_id}`);
   addLogEntry({
     kind: 'campaign-created-defaultworld',
+    provider: providerLabel,
     campaign_id: result.campaign_id,
     title: result.title,
     full_response: result
@@ -354,8 +645,8 @@ async function testCampaignCreationWithDefaultWorld(userId) {
   return result;
 }
 
-async function testGameplayAction(userId, campaignId, contextLabel = 'campaign') {
-  logStep(`Testing gameplay action via process_action tool (${contextLabel})`);
+async function testGameplayAction(userId, campaignId, contextLabel = 'campaign', providerLabel = 'gemini') {
+  logStep(`Testing gameplay action via process_action tool (${contextLabel}, ${providerLabel})`);
 
   const payload = await callRpc(
     'tools/call',
@@ -399,6 +690,7 @@ async function testGameplayAction(userId, campaignId, contextLabel = 'campaign')
     campaign_id: campaignId,
     dice_rolls_count: result.dice_rolls?.length || 0,
     narrative_length: result.narrative?.length || 0,
+    provider: providerLabel,
     full_response: result
   });
 
@@ -471,23 +763,35 @@ async function main() {
 
     // Tests 3-5: Full campaign workflows (ONLY in real mode)
     if (!useQuickValidation) {
-      // Generate consistent user ID for campaign tests
-      const userId = `smoke-test-${Date.now()}`;
+      for (const provider of providersToTest) {
+        // Generate consistent user ID for campaign tests
+        const userId = `smoke-test-${provider}-${Date.now()}`;
 
-      // Test 3: Campaign creation (basic)
-      const campaign = await testCampaignCreation(userId);
+        await updateUserSettings(userId, provider);
 
-      // Test 3b: Campaign creation with defaultWorld (catches missing world files)
-      const defaultWorldCampaign = await testCampaignCreationWithDefaultWorld(userId);
+        // Test 3: Campaign creation (basic)
+        const campaign = await testCampaignCreation(userId, provider);
 
-      // Test 4: Gameplay action (only if we got a real campaign ID)
-      if (campaign.campaign_id) {
-        await testGameplayAction(userId, campaign.campaign_id, 'basic campaign');
-      }
+        // Test 3b: Campaign creation with defaultWorld (catches missing world files)
+        const defaultWorldCampaign = await testCampaignCreationWithDefaultWorld(
+          userId,
+          provider,
+        );
 
-      // Test 4b: Gameplay with defaultWorld campaign (verifies campaign can progress)
-      if (defaultWorldCampaign.campaign_id) {
-        await testGameplayAction(userId, defaultWorldCampaign.campaign_id, 'defaultWorld campaign');
+        // Test 4: Gameplay action (only if we got a real campaign ID)
+        if (campaign.campaign_id) {
+          await testGameplayAction(userId, campaign.campaign_id, 'basic campaign', provider);
+        }
+
+        // Test 4b: Gameplay with defaultWorld campaign (verifies campaign can progress)
+        if (defaultWorldCampaign.campaign_id) {
+          await testGameplayAction(
+            userId,
+            defaultWorldCampaign.campaign_id,
+            'defaultWorld campaign',
+            provider,
+          );
+        }
       }
 
       // Test 5: Error handling
