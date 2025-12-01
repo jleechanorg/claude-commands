@@ -760,9 +760,27 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             )
 
         # Convert LLMResponse to dict format for compatibility
+        # Apply preventive guards to enforce continuity safeguards
+        state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
+            current_game_state, llm_response_obj, mode
+        )
+
+        # Add temporal correction warning if corrections were needed
+        if temporal_correction_attempts > 0:
+            temporal_warning = (
+                f"⚠️ TEMPORAL CORRECTION: The AI initially generated a response that jumped "
+                f"backward in time. {temporal_correction_attempts} correction(s) were required "
+                f"to fix the timeline continuity."
+            )
+            prevention_extras["temporal_correction_warning"] = temporal_warning
+            prevention_extras["temporal_correction_attempts"] = temporal_correction_attempts
+            logging_util.info(
+                f"✅ TEMPORAL_WARNING added to response: {temporal_correction_attempts} correction(s)"
+            )
+
         response = {
             "story": llm_response_obj.narrative_text,
-            "state_changes": llm_response_obj.get_state_updates(),
+            "state_changes": state_changes,
         }
 
         # Update game state with changes
@@ -894,6 +912,22 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["god_mode_response"] = (
                     structured_response.god_mode_response
                 )
+
+        if prevention_extras.get("god_mode_response"):
+            # Prefer synthesized god mode responses from preventive guards when present
+            # because they fill gaps left by the model.
+            unified_response["god_mode_response"] = prevention_extras[
+                "god_mode_response"
+            ]
+
+        # Add temporal correction warning to response if present
+        if prevention_extras.get("temporal_correction_warning"):
+            unified_response["temporal_correction_warning"] = prevention_extras[
+                "temporal_correction_warning"
+            ]
+            unified_response["temporal_correction_attempts"] = prevention_extras.get(
+                "temporal_correction_attempts", 0
+            )
 
         # Track story mode sequence ID for character mode
         if mode == constants.MODE_CHARACTER:
