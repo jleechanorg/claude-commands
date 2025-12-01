@@ -760,10 +760,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             )
 
         # Convert LLMResponse to dict format for compatibility
-        # Apply preventive guards to enforce continuity safeguards
-        state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
-            current_game_state, llm_response_obj, mode
-        )
+        # Get state updates from LLM response
+        state_changes = llm_response_obj.get_state_updates()
+        prevention_extras = {}
 
         # Add temporal correction warning if corrections were needed
         if temporal_correction_attempts > 0:
