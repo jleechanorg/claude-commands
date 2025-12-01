@@ -7,6 +7,7 @@ import json
 
 from mvp_site import logging_util
 
+from mvp_site.serialization import json_default_serializer
 from .mock_firestore_service import MockFirestoreClient
 
 # Module constants from the real service
@@ -169,19 +170,6 @@ def get_story_context(user_id, campaign_id, max_turns=15, include_all=False):
     """Get story context for a campaign."""
     client = get_client()
     return client.get_story_context(user_id, campaign_id, max_turns, include_all)
-
-
-# --- Helper Functions ---
-
-
-def json_default_serializer(obj):
-    """JSON serializer for objects not serializable by default json code."""
-    if hasattr(obj, "isoformat"):
-        return obj.isoformat()
-    if hasattr(obj, "__dict__"):
-        return obj.__dict__
-    return str(obj)
-
 
 def _truncate_log_json(state_dict, max_length=1000):
     """Truncate a state dictionary for logging purposes."""

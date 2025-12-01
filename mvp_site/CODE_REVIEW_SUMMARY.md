@@ -607,3 +607,84 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 The WorldArchitect.AI codebase demonstrates sophisticated architecture and comprehensive functionality. The main areas for improvement focus on reducing complexity through better separation of concerns, improving test coverage, and optimizing performance. The suggested refactoring plan prioritizes maintainability while preserving the robust feature set that makes the platform effective as an AI-powered Game Master.
 
 The codebase shows strong engineering practices in testing, error handling, and modular design. With the recommended cleanup and optimization efforts, it will be well-positioned for continued development and scaling.
+
+---
+
+## Mega-File Decomposition Plan (December 2025)
+
+### Current State Analysis
+
+| File | Lines | Status |
+|------|-------|--------|
+| `llm_service.py` | 2,902 | Largest - needs decomposition |
+| `main.py` | 1,618 | Large - needs route extraction |
+| `world_logic.py` | 1,592 | Large - needs modularization |
+| `firestore_service.py` | 1,363 | Moderate - can benefit from splitting |
+| **Total** | **7,475** | Well above 800-line target |
+
+### Proposed Module Extractions
+
+#### 1. `llm_service.py` (2,902 lines) → `llm/` package
+
+| New Module | Contents | Priority |
+|------------|----------|----------|
+| `llm/providers.py` | ProviderSelection class, model selection functions | **High** |
+| `llm/context.py` | Token counting, context window management, truncation | **High** |
+| `llm/prompts.py` | PromptBuilder class, debug instructions, static prompts | Medium |
+| `llm/api.py` | LLM API calls, response parsing, model cycling | Medium |
+| `llm/story.py` | get_initial_story, continue_story, timeline building | Low |
+
+#### 2. `main.py` (1,618 lines) → Flask Blueprints
+
+| New Module | Contents | Priority |
+|------------|----------|----------|
+| `routes/campaigns.py` | Campaign CRUD routes | **High** |
+| `routes/actions.py` | Action/interaction routes | **High** |
+| `routes/users.py` | User settings routes | Medium |
+| `routes/admin.py` | Admin/test routes | Low |
+| Keep `main.py` | create_app factory, middleware setup | - |
+
+#### 3. `world_logic.py` (1,592 lines) → `world/` package
+
+| New Module | Contents | Priority |
+|------------|----------|----------|
+| `world/game_state.py` | State preparation, cleanup, enrichment | **High** |
+| `world/unified_api.py` | Unified API functions (create/process/get campaign) | Medium |
+| `world/commands.py` | Command parsing (set, ask_state, update) | Medium |
+| `world/combat.py` | Combat cleanup, automatic processing | Low |
+
+#### 4. `firestore_service.py` (1,363 lines) → `firestore/` package
+
+| New Module | Contents | Priority |
+|------------|----------|----------|
+| `firestore/mock.py` | In-memory mock Firestore classes | Low |
+| `firestore/state_updates.py` | State update logic, append handling, dict merge | Medium |
+| `firestore/campaigns.py` | Campaign CRUD operations | **High** |
+| `firestore/stories.py` | Story entry management | Medium |
+| `firestore/users.py` | User settings operations | Low |
+
+### Recommended Execution Order
+
+1. **Phase 1** (High Impact, Self-Contained):
+   - Extract `llm/providers.py` and `llm/context.py`
+   - These have clear boundaries and high reuse value
+
+2. **Phase 2** (Route Separation):
+   - Convert `main.py` routes to Flask Blueprints
+   - Reduces cognitive load and improves testability
+
+3. **Phase 3** (Data Layer):
+   - Extract `firestore/campaigns.py` with clear CRUD boundaries
+   - Add integration tests before splitting
+
+4. **Phase 4** (Completion):
+   - Remaining extractions based on test coverage
+   - `world/` package last due to cross-cutting concerns
+
+### Success Criteria
+
+- [ ] No file exceeds 800 lines
+- [ ] Each new module has >80% test coverage
+- [ ] Import cycles eliminated
+- [ ] Public APIs documented with docstrings
+- [ ] Performance regression tests pass

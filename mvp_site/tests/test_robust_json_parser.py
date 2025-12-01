@@ -13,7 +13,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.robust_json_parser import RobustJSONParser, parse_llm_json_response
+from mvp_site.json_utils import RobustJSONParser, parse_llm_json_response
 
 
 class TestRobustJSONParser(unittest.TestCase):
@@ -92,7 +92,7 @@ class TestRobustJSONParser(unittest.TestCase):
         if result:
             assert "narrative" in result
 
-    @patch("robust_json_parser.logging_util")
+    @patch("mvp_site.json_utils.logging_util")
     def test_logging_on_successful_fix(self, mock_logging):
         """Test that successful fixes are logged"""
         incomplete = '{"narrative": "Test"'
@@ -223,7 +223,7 @@ class TestParseLLMJsonResponse(unittest.TestCase):
         assert result["entities_mentioned"] == []  # Default added
         assert result["location_confirmed"] == "Unknown"  # Default added
 
-    @patch("robust_json_parser.logging_util")
+    @patch("mvp_site.json_utils.logging_util")
     def test_logging_when_no_json_found(self, mock_logging):
         """Test that appropriate logging occurs when no JSON is found"""
         response = "Just plain text"

@@ -111,7 +111,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
             "structured_fields_utils",
             "custom_types",
             "debug_hybrid_system",
-            "debug_mode_parser",
             "game_state",
             # Also clear firebase modules if they exist
             "firebase_admin",
@@ -132,7 +131,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
             "structured_fields_utils",
             "custom_types",
             "debug_hybrid_system",
-            "debug_mode_parser",
             "game_state",
         ]
 

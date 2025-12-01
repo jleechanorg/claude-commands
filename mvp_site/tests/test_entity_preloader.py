@@ -50,7 +50,7 @@ class TestEntityPreloader(unittest.TestCase):
             }
         }
 
-    @patch("entity_preloader.create_from_game_state")
+    @patch("mvp_site.entity_instructions.create_from_game_state")
     def test_generate_entity_manifest_caching(self, mock_create):
         """Test that entity manifest generation uses caching properly"""
         mock_manifest = Mock()
@@ -68,7 +68,7 @@ class TestEntityPreloader(unittest.TestCase):
         mock_create.assert_called_once()
         assert result1 == result2
 
-    @patch("entity_preloader.create_from_game_state")
+    @patch("mvp_site.entity_instructions.create_from_game_state")
     def test_create_entity_preload_text_basic(self, mock_create):
         """Test basic entity preload text generation"""
         # Setup mock manifest
@@ -105,7 +105,7 @@ class TestEntityPreloader(unittest.TestCase):
         assert "Location: Throne Room" in result
         assert "Do not let any of these entities disappear" in result
 
-    @patch("entity_preloader.create_from_game_state")
+    @patch("mvp_site.entity_instructions.create_from_game_state")
     def test_create_entity_preload_text_with_location(self, mock_create):
         """Test entity preload text with location-specific entities"""
         mock_npc = Mock()
@@ -126,7 +126,7 @@ class TestEntityPreloader(unittest.TestCase):
         assert "Lady Cressida (resident)" in result
         assert "Personal furnishings" in result
 
-    @patch("entity_preloader.create_from_game_state")
+    @patch("mvp_site.entity_instructions.create_from_game_state")
     def test_get_entity_count(self, mock_create):
         """Test entity counting functionality"""
         mock_manifest = Mock()
