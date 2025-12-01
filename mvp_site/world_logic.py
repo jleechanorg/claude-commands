@@ -20,7 +20,6 @@ Concurrency:
 
 import asyncio
 import collections
-import datetime
 import json
 import os
 import re
@@ -56,6 +55,7 @@ from mvp_site.firestore_service import (
 )
 from mvp_site.game_state import GameState
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
+from mvp_site.serialization import json_default_serializer
 
 # Initialize Firebase if not already initialized (testing mode removed)
 # WORLDAI_* vars take precedence for WorldArchitect.AI repo-specific config
@@ -93,55 +93,6 @@ KEY_SELECTED_PROMPTS = "selected_prompts"
 KEY_USER_INPUT = "user_input"
 KEY_RESPONSE = "response"
 KEY_TRACEBACK = "traceback"
-
-
-# --- Helper Functions ---
-
-
-def json_default_serializer(obj):
-    """
-    Default JSON serializer for objects that are not naturally JSON serializable.
-    Handles specific known types with targeted exception handling.
-    """
-    # Handle datetime objects
-    if isinstance(obj, (datetime.datetime, datetime.date)):
-        return obj.isoformat()
-
-    # Handle objects with to_dict method (like GameState, entities)
-    if hasattr(obj, "to_dict") and callable(obj.to_dict):
-        try:
-            return obj.to_dict()
-        except (AttributeError, TypeError) as e:
-            logging_util.warning(
-                f"Failed to serialize {type(obj).__name__} via to_dict(): {e}"
-            )
-            return f"<{type(obj).__name__}: to_dict_failed>"
-
-    # Handle objects with __dict__ attribute
-    if hasattr(obj, "__dict__"):
-        try:
-            return obj.__dict__
-        except (AttributeError, TypeError) as e:
-            logging_util.warning(
-                f"Failed to serialize {type(obj).__name__} via __dict__: {e}"
-            )
-            return f"<{type(obj).__name__}: dict_failed>"
-
-    # Final fallback with specific error types
-    try:
-        return str(obj)
-    except (UnicodeDecodeError, UnicodeEncodeError) as e:
-        logging_util.error(f"Unicode error serializing {type(obj).__name__}: {e}")
-        return f"<{type(obj).__name__}: unicode_error>"
-    except (AttributeError, TypeError) as e:
-        logging_util.error(f"Type error serializing {type(obj).__name__}: {e}")
-        return f"<{type(obj).__name__}: type_error>"
-    except Exception as e:
-        # Only catch truly unexpected exceptions with detailed logging
-        logging_util.error(
-            f"Unexpected error serializing {type(obj).__name__}: {type(e).__name__}: {e}"
-        )
-        return f"<{type(obj).__name__}: unexpected_error>"
 
 
 def truncate_game_state_for_logging(

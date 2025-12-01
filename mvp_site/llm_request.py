@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mvp_site import logging_util
+from mvp_site.serialization import json_default_serializer
 
 logger = logging_util.getLogger(__name__)
 
@@ -336,46 +337,3 @@ class LLMRequest:
             use_default_world=use_default_world,
             world_data=world_data or {},
         )
-
-
-def json_default_serializer(obj: Any) -> Any:  # noqa: PLR0911
-    """
-    JSON serializer for objects that aren't serializable by default.
-
-    Handles datetime objects and other non-JSON-serializable types with
-    improved error handling and type safety.
-
-    Args:
-        obj: Object to serialize
-
-    Returns:
-        JSON-serializable representation of the object
-
-    Raises:
-        LLMRequestError: If object cannot be serialized
-    """
-    try:
-        if hasattr(obj, "isoformat"):
-            # Handle datetime objects
-            return obj.isoformat()
-        if isinstance(obj, (set, frozenset)):
-            # Handle sets by converting to lists
-            return list(obj)
-        if isinstance(obj, bytes):
-            # Handle bytes by decoding to string
-            return obj.decode("utf-8", errors="replace")
-        if hasattr(obj, "__dict__"):
-            # Handle objects with __dict__ (convert to dict)
-            return obj.__dict__
-        if hasattr(obj, "__str__"):
-            # Fall back to string representation
-            str_repr = str(obj)
-            # Limit string length to prevent huge serializations
-            if len(str_repr) > MAX_STRING_LENGTH:
-                return str_repr[:MAX_STRING_LENGTH] + "...[truncated]"
-            return str_repr
-        # Last resort - return type name
-        return f"<{type(obj).__name__} object>"
-    except Exception as e:
-        logger.warning(f"Failed to serialize object of type {type(obj)}: {e}")
-        return f"<{type(obj).__name__} serialization failed>"

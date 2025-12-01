@@ -43,6 +43,9 @@ from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.decorators import log_exceptions
 from mvp_site.game_state import GameState
 from mvp_site.numeric_field_converter import NumericFieldConverter
+from mvp_site.serialization import json_default_serializer, json_serial
+
+__all__ = ["json_default_serializer", "json_serial"]
 
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20
@@ -191,7 +194,9 @@ def _mock_firestore_client():
 
 
 def _truncate_log_json(
-    data: Any, max_lines: int = MAX_LOG_LINES, json_serializer=None
+    data: Any,
+    max_lines: int = MAX_LOG_LINES,
+    json_serializer=json_default_serializer,
 ) -> str:
     """Truncate JSON logs to max_lines to prevent log spam."""
     try:
@@ -545,28 +550,7 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
     return expanded_dict
 
 
-def json_serial(obj: Any) -> str | None:
-    """JSON serializer for objects not serializable by default json code"""
-    if hasattr(obj, "isoformat"):
-        return obj.isoformat()
-    if type(obj).__name__ == "Sentinel":
-        return "<SERVER_TIMESTAMP>"
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
-
-def json_default_serializer(o: Any) -> str | None | dict[str, Any]:
-    """Handles serialization of data types json doesn't know, like datetimes."""
-    if isinstance(o, (datetime.datetime, datetime.date)):
-        return o.isoformat()
-    # Check for Firestore's special DELETE_FIELD sentinel.
-    if o is firestore.DELETE_FIELD:
-        return None  # Or another appropriate serializable value
-    if o is firestore.SERVER_TIMESTAMP:
-        return "<SERVER_TIMESTAMP>"
-    # Handle SceneManifest objects from entity tracking
-    if hasattr(o, "to_dict") and callable(o.to_dict):
-        return o.to_dict()
-    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+# json_serial and json_default_serializer are now imported from mvp_site.serialization
 
 
 def get_db() -> firestore.Client:

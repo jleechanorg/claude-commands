@@ -57,7 +57,8 @@ from mvp_site.entity_preloader import EntityPreloader
 from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
-from mvp_site.firestore_service import get_user_settings, json_default_serializer
+from mvp_site.firestore_service import get_user_settings
+from mvp_site.serialization import json_default_serializer
 from mvp_site.game_state import GameState
 from mvp_site.llm_providers import (
     cerebras_provider,
@@ -969,30 +970,8 @@ def _call_llm_api_with_llm_request(
 
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
-
-    def json_serializer(obj):
-        """JSON serializer for objects not serializable by default json code"""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        # Handle Sentinel objects (testing framework)
-        if hasattr(obj, "__class__") and obj.__class__.__name__ == "Sentinel":
-            # Add critical logging for data loss prevention
-            logging_util.warning(
-                f"Converting Sentinel object {obj} to None during JSON serialization. "
-                f"This may indicate unexpected test framework objects in production data."
-            )
-            # Validate this is expected behavior
-            if not obj.__class__.__module__.startswith(("unittest", "pytest", "mock")):
-                logging_util.error(
-                    f"Unexpected Sentinel object from module {obj.__class__.__module__} "
-                    f"- potential data corruption risk"
-                )
-            return None  # Convert Sentinel to None for JSON serialization
-        raise TypeError(
-            f"Object of type {obj.__class__.__name__} is not JSON serializable"
-        )
-
-    json_string = json.dumps(json_data, indent=2, default=json_serializer)
+    # Uses centralized json_default_serializer from mvp_site.serialization
+    json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
 
     # Send the structured JSON as string to the API
     return _call_llm_api_with_model_cycling(
