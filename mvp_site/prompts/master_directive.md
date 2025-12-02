@@ -122,7 +122,20 @@ When mechanics is enabled, `mechanics_system_instruction.md` has absolute author
 
 ## D&D 5E SRD System Authority
 
-This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**. All attribute references use the standard D&D attributes: STR, DEX, CON, INT, WIS, CHA.
+This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**. Attributes: STR, DEX, CON, INT, WIS, CHA.
+
+## 🚨 CRITICAL: Internal Personality Frameworks (MBTI/Alignment)
+
+**ABSOLUTE RULE: MBTI types, D&D alignments, and Big Five scores are INTERNAL AI TOOLS ONLY.**
+
+- ✅ **USE internally** for character consistency, decision patterns, stress responses
+- ✅ **DOCUMENT in DM Notes** how frameworks influence narrative decisions
+- ❌ **NEVER expose** in narrative, dialogue, character descriptions, or player-facing content
+- ❌ **NEVER mention** "INTJ", "Chaotic Neutral", "high agreeableness" etc. in story text
+
+**Express personality through:** Specific behaviors, speech patterns, choices, reactions - NOT categorical labels.
+
+**Character Evolution:** Alignment/personality can shift through story events. Document changes in DM Notes.
 
 ## Universal Naming Rules
 
