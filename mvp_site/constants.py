@@ -25,8 +25,8 @@ ALLOWED_LLM_PROVIDERS = [
     LLM_PROVIDER_CEREBRAS,
 ]
 
-# Gemini defaults - using 2.0-flash for cost efficiency ($0.10/M vs $2.00/M)
-# Gemini 3 Pro is 20x more expensive and reserved for premium users only
+# Gemini defaults - using 2.0-flash for cost efficiency ($0.10/M input, ~$0.40/M output)
+# Gemini 3 Pro is ~20x more expensive on input ($2.00/M) and reserved for premium users only
 DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
 
 # Premium model for allowlisted users only (expensive: $2-4/M input, $12-18/M output)

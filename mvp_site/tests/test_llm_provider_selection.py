@@ -1,7 +1,9 @@
 
+from types import SimpleNamespace
+
 import pytest
 
-from mvp_site import llm_service
+from mvp_site import constants, llm_service
 
 
 @pytest.fixture(autouse=True)
@@ -15,7 +17,7 @@ def test_selects_gemini_by_default(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == "gemini"
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
     assert selection.model == llm_service.DEFAULT_MODEL
 
 
@@ -58,7 +60,7 @@ def test_invalid_provider_falls_back_to_gemini(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == "gemini"
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
     assert selection.model == llm_service.DEFAULT_MODEL
 
 
@@ -66,7 +68,7 @@ def test_no_user_id_returns_defaults(monkeypatch):
     """When no user_id is provided, return default provider and model."""
     selection = llm_service._select_provider_and_model(None)
 
-    assert selection.provider == "gemini"
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
     assert selection.model == llm_service.DEFAULT_MODEL
 
 
@@ -77,7 +79,7 @@ def test_force_test_model_env(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == "gemini"
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
     assert selection.model == llm_service.TEST_MODEL
 
 
@@ -96,7 +98,7 @@ def test_mock_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
     selection = llm_service._select_provider_and_model("user-1")
 
     # Should return defaults despite user having openrouter configured
-    assert selection.provider == "gemini"
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
     assert selection.model == llm_service.TEST_MODEL
 
 
@@ -115,5 +117,78 @@ def test_testing_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
     selection = llm_service._select_provider_and_model("user-1")
 
     # Should return defaults despite user having cerebras configured
-    assert selection.provider == "gemini"
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
     assert selection.model == llm_service.TEST_MODEL
+
+
+def test_allowlisted_user_gets_gemini_3(monkeypatch):
+    mock_user = SimpleNamespace(email="jleechan@gmail.com")
+    monkeypatch.setattr(llm_service.firebase_auth, "get_user", lambda uid: mock_user)
+    monkeypatch.setattr(
+        llm_service,
+        "get_user_settings",
+        lambda user_id: {"llm_provider": "gemini", "gemini_model": constants.GEMINI_PREMIUM_MODEL},
+    )
+
+    selection = llm_service._select_provider_and_model("user-1")
+
+    assert selection.provider == constants.LLM_PROVIDER_GEMINI
+    assert selection.model == constants.GEMINI_PREMIUM_MODEL
+
+
+def test_non_allowlisted_user_falls_back(monkeypatch):
+    mock_user = SimpleNamespace(email="other@example.com")
+    monkeypatch.setattr(llm_service.firebase_auth, "get_user", lambda uid: mock_user)
+    monkeypatch.setattr(
+        llm_service,
+        "get_user_settings",
+        lambda user_id: {"llm_provider": "gemini", "gemini_model": constants.GEMINI_PREMIUM_MODEL},
+    )
+
+    selection = llm_service._select_provider_and_model("user-1")
+
+    assert selection.provider == constants.LLM_PROVIDER_GEMINI
+    assert selection.model == constants.DEFAULT_GEMINI_MODEL
+
+
+def test_firebase_error_falls_back(monkeypatch):
+    def _raise(_):
+        raise RuntimeError("firebase unavailable")
+
+    monkeypatch.setattr(llm_service.firebase_auth, "get_user", _raise)
+    monkeypatch.setattr(
+        llm_service,
+        "get_user_settings",
+        lambda user_id: {"llm_provider": "gemini", "gemini_model": constants.GEMINI_PREMIUM_MODEL},
+    )
+
+    selection = llm_service._select_provider_and_model("user-1")
+
+    assert selection.provider == constants.LLM_PROVIDER_GEMINI
+    assert selection.model == constants.DEFAULT_GEMINI_MODEL
+
+
+def test_legacy_gemini_models_are_mapped(monkeypatch):
+    monkeypatch.setattr(
+        llm_service,
+        "get_user_settings",
+        lambda user_id: {"llm_provider": "gemini", "gemini_model": "gemini-2.5-flash"},
+    )
+
+    selection = llm_service._select_provider_and_model("user-1")
+
+    assert selection.provider == constants.LLM_PROVIDER_GEMINI
+    assert selection.model == constants.DEFAULT_GEMINI_MODEL
+
+
+def test_invalid_gemini_model_defaults(monkeypatch):
+    monkeypatch.setattr(
+        llm_service,
+        "get_user_settings",
+        lambda user_id: {"llm_provider": "gemini", "gemini_model": "unsupported"},
+    )
+
+    selection = llm_service._select_provider_and_model("user-1")
+
+    assert selection.provider == constants.LLM_PROVIDER_GEMINI
+    assert selection.model == constants.DEFAULT_GEMINI_MODEL

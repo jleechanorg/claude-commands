@@ -110,7 +110,7 @@ const providerDefaults = {
       process.env.MCP_OPENROUTER_MODEL || 'meta-llama/llama-3.1-70b-instruct',
   },
   cerebras: {
-    // Qwen 3 235B - highest context (131K) and best for RPG campaigns
+    // Qwen 3 235B (a22b-instruct-2507) - highest context (131K) and best for RPG campaigns
     cerebras_model: process.env.MCP_CEREBRAS_MODEL || 'qwen-3-235b-a22b-instruct-2507',
   },
 };

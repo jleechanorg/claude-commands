@@ -9,6 +9,15 @@ import { apiService } from '../services/api.service'
 // Only models that support code_execution + JSON mode together
 type GeminiModel = 'gemini-3-pro-preview' | 'gemini-2.0-flash'
 
+const GEMINI_MODEL_MAPPING: Record<string, GeminiModel> = {
+  'gemini-3-pro-preview': 'gemini-3-pro-preview',
+  'gemini-2.0-flash': 'gemini-2.0-flash',
+  'gemini-2.5-flash': 'gemini-2.0-flash',
+  'gemini-2.5-pro': 'gemini-2.0-flash',
+  'pro-2.5': 'gemini-2.0-flash',
+  'flash-2.5': 'gemini-2.0-flash'
+}
+
 // Users allowed to see Gemini 3 Pro option (expensive model)
 const GEMINI_3_ALLOWED_USERS = ['jleechan@gmail.com', 'jleechantest@gmail.com']
 
@@ -22,7 +31,9 @@ export function SettingsPage() {
   const { user, signOut } = useAuth()
 
   // Check if current user can access Gemini 3
-  const canUseGemini3 = user?.email && GEMINI_3_ALLOWED_USERS.includes(user.email)
+  const canUseGemini3 = !!(
+    user?.email && GEMINI_3_ALLOWED_USERS.includes(user.email)
+  )
 
   const [settings, setSettings] = useState<UserSettings>({
     geminiModel: 'gemini-2.0-flash',
@@ -35,23 +46,19 @@ export function SettingsPage() {
   const hasLoadedRef = useRef(false)
   const isInitialLoadRef = useRef(true)
 
-  // Load settings on component mount
-  useEffect(() => {
-    loadSettings()
-  }, [])
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setLoading(true)
     setErrorMessage('')
 
     try {
       const data = await apiService.getUserSettings()
       // Load saved model, default to gemini-2.0-flash
-      let model: GeminiModel = data.gemini_model || 'gemini-2.0-flash'
-      // Non-premium users always get 2.0-flash regardless of saved setting
-      if (model === 'gemini-3-pro-preview' && !canUseGemini3) {
-        model = 'gemini-2.0-flash'
-      }
+      const mappedModel = GEMINI_MODEL_MAPPING[data.gemini_model] || 'gemini-2.0-flash'
+      // Non-premium users always get 2.0-flash regardless of saved setting, but keep premium for allowlisted
+      const model: GeminiModel =
+        mappedModel === 'gemini-3-pro-preview' && !canUseGemini3
+          ? 'gemini-2.0-flash'
+          : mappedModel
       setSettings({
         geminiModel: model,
         debugMode: data.debug_mode || false
@@ -67,7 +74,13 @@ export function SettingsPage() {
         isInitialLoadRef.current = false
       }, 100)
     }
-  }
+  }, [canUseGemini3])
+
+  // Load settings once auth state is available
+  useEffect(() => {
+    if (!user) return
+    loadSettings()
+  }, [user, loadSettings])
 
   const saveSettings = useCallback(async () => {
     setSaving(true)

@@ -46,6 +46,15 @@ const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
 
 // Users allowed to see Gemini 3 Pro option (expensive model)
 const GEMINI_3_ALLOWED_USERS = ['jleechan@gmail.com', 'jleechantest@gmail.com'];
+const GEMINI_MODEL_MAPPING = {
+  'gemini-3-pro-preview': 'gemini-3-pro-preview',
+  'gemini-2.0-flash': 'gemini-2.0-flash',
+  'gemini-2.5-flash': 'gemini-2.0-flash',
+  'gemini-2.5-pro': 'gemini-2.0-flash',
+  'pro-2.5': 'gemini-2.0-flash',
+  'flash-2.5': 'gemini-2.0-flash'
+};
+let pendingAuthReload = false;
 
 /**
  * Load user settings from the API and update the UI
@@ -66,7 +75,17 @@ async function loadSettings() {
 
     // Get current user email from Firebase Auth
     const userEmail = window.firebase?.auth()?.currentUser?.email || '';
-    const canUseGemini3 = GEMINI_3_ALLOWED_USERS.includes(userEmail);
+    if (!userEmail && window.firebase?.auth && !pendingAuthReload) {
+      pendingAuthReload = true;
+      window.firebase.auth().onAuthStateChanged((user) => {
+        if (user?.email) {
+          pendingAuthReload = false;
+          loadSettings();
+        }
+      });
+    }
+
+    const canUseGemini3 = userEmail && GEMINI_3_ALLOWED_USERS.includes(userEmail);
 
     // Dynamically add Gemini 3 option for allowed users
     const geminiSelect = document.getElementById('geminiModel');
@@ -95,11 +114,12 @@ async function loadSettings() {
     }
     toggleProviderSections(selectedProvider);
 
-    let geminiModel = settings.gemini_model || DEFAULT_GEMINI_MODEL;
-    // Non-premium users can't use Gemini 3 even if it's saved
-    if (geminiModel === 'gemini-3-pro-preview' && !canUseGemini3) {
-      geminiModel = DEFAULT_GEMINI_MODEL;
-    }
+    const mappedGeminiModel = GEMINI_MODEL_MAPPING[settings.gemini_model] || DEFAULT_GEMINI_MODEL;
+    // Only downgrade premium selection if we know the user isn't allowlisted
+    const geminiModel =
+      mappedGeminiModel === 'gemini-3-pro-preview' && !canUseGemini3
+        ? DEFAULT_GEMINI_MODEL
+        : mappedGeminiModel;
     if (geminiSelect) {
       const hasOption = Array.from(geminiSelect.options).some(
         (opt) => opt.value === geminiModel,
