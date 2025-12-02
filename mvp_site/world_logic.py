@@ -701,10 +701,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking
         # TEMPORAL VALIDATION LOOP: Retry if LLM generates backward time
+        # EXCEPTION: GOD_MODE commands can move time backward
         original_user_input = user_input  # Preserve for Firestore
         llm_input = user_input  # Separate variable for LLM calls
         temporal_correction_attempts = 0
         llm_response_obj = None
+
+        # Check if this is a GOD_MODE command that can bypass temporal validation
+        is_god_mode = user_input.strip().startswith("GOD_MODE")
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             llm_response_obj = await asyncio.to_thread(
@@ -719,13 +723,19 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             )
 
             # Check for temporal violation (time going backward)
+            # GOD_MODE commands are exempt from temporal validation
             new_world_time = _extract_world_time_from_response(llm_response_obj)
 
-            if not _check_temporal_violation(old_world_time, new_world_time):
+            if is_god_mode or not _check_temporal_violation(old_world_time, new_world_time):
                 # No violation - time is moving forward, accept response
+                # OR this is a GOD_MODE command which can move time backward
                 if temporal_correction_attempts > 0:
                     logging_util.info(
                         f"✅ TEMPORAL_CORRECTION: Response accepted after {temporal_correction_attempts} correction(s)"
+                    )
+                if is_god_mode and _check_temporal_violation(old_world_time, new_world_time):
+                    logging_util.info(
+                        f"🔓 GOD_MODE: Temporal validation bypassed - allowing backward time movement"
                     )
                 break
 
