@@ -44,6 +44,7 @@ from mvp_site import (
     firestore_service,
     llm_service,
     logging_util,
+    preventive_guards,
     structured_fields_utils,
 )
 from mvp_site.custom_types import CampaignId, UserId
@@ -774,9 +775,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             )
 
         # Convert LLMResponse to dict format for compatibility
-        # Get state updates from LLM response
-        state_changes = llm_response_obj.get_state_updates()
-        prevention_extras = {}
+        # Apply preventive guards to enforce continuity safeguards
+        state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
+            current_game_state, llm_response_obj, mode
+        )
 
         # Add temporal correction warning if corrections were needed
         if temporal_correction_attempts > 0:
@@ -828,6 +830,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             structured_fields_utils.extract_structured_fields(llm_response_obj),
             updated_game_state_dict,
         )
+        structured_fields.update(prevention_extras)
 
         await asyncio.to_thread(
             firestore_service.add_story_entry,

@@ -101,12 +101,17 @@ EXPECTED_COMPANION_COUNT = 3
 
 
 # --- CONSTANTS ---
-# Use Gemini 3 Pro Preview for official code_execution + JSON mode support
-# Per Google AI docs: "Gemini 3 lets you combine Structured Outputs with built-in tools"
-# Tested 2025-11-18: gemini-3-pro-preview works perfectly for dice rolls (avg 9.0)
-DEFAULT_MODEL: str = constants.DEFAULT_GEMINI_MODEL
-# Use Gemini 3 for testing as well (needed for code_execution + JSON mode)
-TEST_MODEL: str = constants.DEFAULT_GEMINI_MODEL
+# Default model selection based on the configured DEFAULT_LLM_PROVIDER
+# This ensures provider-model consistency across all code paths
+if constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_CEREBRAS:
+    DEFAULT_MODEL: str = constants.DEFAULT_CEREBRAS_MODEL
+    TEST_MODEL: str = constants.DEFAULT_CEREBRAS_MODEL
+elif constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_OPENROUTER:
+    DEFAULT_MODEL: str = constants.DEFAULT_OPENROUTER_MODEL
+    TEST_MODEL: str = constants.DEFAULT_OPENROUTER_MODEL
+else:  # Gemini (default fallback)
+    DEFAULT_MODEL: str = constants.DEFAULT_GEMINI_MODEL
+    TEST_MODEL: str = constants.DEFAULT_GEMINI_MODEL
 
 # Model cycling order for 503 errors - try these in sequence
 # CRITICAL: Only include models that support code_execution + JSON mode
