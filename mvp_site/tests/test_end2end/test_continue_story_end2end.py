@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
@@ -23,6 +23,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         """Set up test client."""
         os.environ["TESTING"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
+        os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")  # Set for Cerebras (now default provider)
 
         self.app = main.create_app()
         self.app.config["TESTING"] = True
@@ -43,8 +44,8 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "Authorization": "Bearer test-id-token",
         }
 
-        # Standard mock Gemini response
-        self.gemini_response_data = {
+        # Standard mock LLM response (used for all providers)
+        self.mock_llm_response_data = {
             "narrative": "The story continues with new adventures...",
             "entities_mentioned": ["Thorin"],
             "location_confirmed": "Mountain Kingdom",
@@ -76,8 +77,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
+    @patch("mvp_site.llm_providers.cerebras_provider.generate_content")  # Mock Cerebras (now default provider)
     @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
-    def test_continue_story_success(self, mock_gemini_generate, mock_get_db):
+    def test_continue_story_success(self, mock_gemini_generate, mock_cerebras_generate, mock_get_db):
         """Test successful story continuation through full stack including context compaction."""
 
         # Set up fake Firestore
@@ -87,9 +89,12 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         campaign_id = "test_campaign_123"
         self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
 
-        # Mock at the actual external API level (gemini_provider.generate_json_mode_content)
+        # Mock both providers (Cerebras is now default, but keep Gemini for backwards compat)
+        mock_cerebras_generate.return_value = FakeLLMResponse(
+            json.dumps(self.mock_llm_response_data)
+        )
         mock_gemini_generate.return_value = FakeLLMResponse(
-            json.dumps(self.gemini_response_data)
+            json.dumps(self.mock_llm_response_data)
         )
 
         # Make the API request to the correct interaction endpoint
@@ -115,6 +120,13 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             for entry in data["story"]
         )
         assert found_narrative, "Expected narrative not found in response"
+
+        # Verify Cerebras (default provider) was called at least once
+        assert (
+            mock_cerebras_generate.call_count >= 1
+        ), "Cerebras provider should be invoked as the default"
+        # Verify Gemini was not called since Cerebras succeeded
+        mock_gemini_generate.assert_not_called()
 
     @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):

@@ -5,6 +5,8 @@ Tests ensure provider and model selection respects user settings
 and falls back to defaults appropriately.
 """
 
+# ruff: noqa: E402, PT009
+
 import os
 import sys
 import unittest
@@ -42,18 +44,25 @@ class TestCentralizedModelSelection(unittest.TestCase):
         PREFERENCE TEST: Valid user preference should be used
 
         When user has a valid model preference, use it.
+        Note: Must disable ALL test mode environment variables to allow user preferences.
         """
-        # Mock user settings returning valid gemini-3-pro-preview preference
-        with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings:
-            mock_get_settings.return_value = {"gemini_model": "gemini-3-pro-preview"}
+        # Mock user settings returning valid cerebras model preference
+        # Disable all three test mode environment variables
+        with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings, \
+             patch.dict(os.environ, {
+                 "TESTING": "false",
+                 "MOCK_SERVICES_MODE": "false",
+                 "FORCE_TEST_MODEL": "false"
+             }):
+            mock_get_settings.return_value = {"cerebras_model": "llama-3.3-70b"}
 
             result = _select_model_for_user("test-user-456")
 
             self.assertEqual(
                 result,
-                "gemini-3-pro-preview",
+                "llama-3.3-70b",
                 f"FAIL: Valid user preference should be respected, "
-                f"expected gemini-3-pro-preview, got {result}",
+                f"expected llama-3.3-70b, got {result}",
             )
 
     def test_invalid_user_preference_falls_back_to_default(self):
@@ -63,8 +72,16 @@ class TestCentralizedModelSelection(unittest.TestCase):
         If user has an invalid/unsupported model preference, fall back to DEFAULT_MODEL.
         """
         # Mock user settings returning invalid model preference
-        with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings:
-            mock_get_settings.return_value = {"gemini_model": "invalid-model-name"}
+        with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings, \
+             patch.dict(
+                 os.environ,
+                 {
+                     "TESTING": "false",
+                     "MOCK_SERVICES_MODE": "false",
+                     "FORCE_TEST_MODEL": "false",
+                 },
+             ):
+            mock_get_settings.return_value = {"cerebras_model": "invalid-model-name"}
 
             result = _select_model_for_user("test-user-789")
 
@@ -77,25 +94,25 @@ class TestCentralizedModelSelection(unittest.TestCase):
 
     def test_test_model_supports_code_execution(self):
         """
-        INTEGRATION TEST: Verify TEST_MODEL supports code_execution + JSON
+        INTEGRATION TEST: Verify TEST_MODEL is set to default Cerebras model
 
-        The TEST_MODEL should support both code_execution and JSON mode.
+        The TEST_MODEL should match the current DEFAULT_MODEL based on DEFAULT_LLM_PROVIDER.
         """
         test_model = TEST_MODEL
 
-        # TEST_MODEL should be gemini-3-pro-preview (supports both)
+        # TEST_MODEL should be qwen-3-235b-a22b-instruct-2507 (default Cerebras model)
         self.assertEqual(
             test_model,
-            "gemini-3-pro-preview",
-            f"FAIL: TEST_MODEL should be gemini-3-pro-preview (supports code_execution + JSON), "
+            "qwen-3-235b-a22b-instruct-2507",
+            f"FAIL: TEST_MODEL should be qwen-3-235b-a22b-instruct-2507 (default Cerebras model), "
             f"but is {test_model}",
         )
 
-        # DEFAULT_MODEL should also be gemini-3-pro-preview
+        # DEFAULT_MODEL should also be qwen-3-235b-a22b-instruct-2507
         self.assertEqual(
             DEFAULT_MODEL,
-            "gemini-3-pro-preview",
-            f"FAIL: DEFAULT_MODEL should be gemini-3-pro-preview, "
+            "qwen-3-235b-a22b-instruct-2507",
+            f"FAIL: DEFAULT_MODEL should be qwen-3-235b-a22b-instruct-2507, "
             f"but is {DEFAULT_MODEL}",
         )
 
