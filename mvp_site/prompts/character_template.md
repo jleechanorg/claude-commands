@@ -66,3 +66,15 @@
 - **Fractures:** What breaks under pressure
 - **Immediate Cost:** Negative aftermath reaction
 - **Liberation:** Potential growth from overcoming
+
+## VII. Prose Example (Express Personality Through Behavior)
+
+> **AI Directive:** Generate rich, narrative descriptions like this—NOT dry lists.
+
+**Example - Cynical Detective (ISTP, Chaotic Good):**
+
+*Marcus never announces his presence. He materializes at crime scenes like smoke—cigarette already lit, eyes cataloging exit routes before victims. When the rookie asks questions, Marcus answers with silence and a raised eyebrow that says "figure it out." But watch him with grieving families: the hard edges soften. He'll crouch to child-height, produce a coin from nowhere, make it vanish while promising he'll find who did this. That promise is the only thing he keeps besides his gun clean.*
+
+*Under pressure, he becomes colder, not louder. The more dangerous the situation, the more his voice drops to a whisper. Partners learn that his trademark "This is fine" means imminent explosion.*
+
+**Key technique:** Show personality through specific actions, objects, and speech patterns—not labels.
