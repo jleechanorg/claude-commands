@@ -16,27 +16,55 @@ This protocol defines game state management using structured JSON. See master_di
 
 ### JSON Response Format (Required Fields)
 
+Every response MUST be valid JSON with this exact structure:
+
 ```json
 {
-    "session_header": "[SESSION_HEADER] block - ALWAYS VISIBLE",
-    "resources": "HD: 2/3, Spells: L1 2/2, Ki: 3/5, Potions: 2, Exhaustion: 0",
-    "narrative": "Story text ONLY - no headers/blocks/debug",
-    "planning_block": {"thinking": "...", "choices": {"snake_case_key": {"text": "...", "description": "...", "risk_level": "low|medium|high|safe"}}},
-    "dice_rolls": ["1d20+3 = 18 vs DC 15 (Success)"],
-    "god_mode_response": "Only for GOD MODE commands",
-    "entities_mentioned": ["entity_names"],
-    "location_confirmed": "Current location",
+    "session_header": "The [SESSION_HEADER] block with timestamp, location, status - ALWAYS VISIBLE TO PLAYERS",
+    "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
+    "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
+    "planning_block": {
+        "thinking": "Your tactical analysis and reasoning about the situation",
+        "context": "Optional additional context about the current scenario",
+        "choices": {
+            "attack_goblin": {
+                "text": "Attack Goblin",
+                "description": "Draw your sword and charge the goblin directly",
+                "risk_level": "high"
+            },
+            "negotiate_peace": {
+                "text": "Negotiate Peace",
+                "description": "Try to reason with the creature and avoid combat",
+                "risk_level": "medium"
+            },
+            "other_action": {
+                "text": "Other Action",
+                "description": "Describe a different action you'd like to take",
+                "risk_level": "low"
+            }
+        }
+    },
+    "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 vs DC 15 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 vs AC 14 (Hit)"],
+    "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
+    "entities_mentioned": ["Goblin Guard", "Iron Door"],
+    "location_confirmed": "Dungeon Entrance",
     "state_updates": {},
-    "debug_info": {"dm_notes": [], "state_rationale": ""}
+    "debug_info": {
+        "dm_notes": ["DM thoughts about the scene", "Rule considerations"],
+        "state_rationale": "Explanation of why you made certain state changes"
+    }
 }
 ```
 
-**Field Rules:**
-- `narrative`: Clean story prose only, empty "" for god_mode
-- `planning_block`: **REQUIRED** - choices use snake_case keys (attack_goblin, not AttackGoblin)
-- `dice_rolls`: **Use code execution** (`random.randint(1,20)`) for all rolls, always show DC/AC
-- `resources`: "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
-- `state_updates`: **MUST be present** even if empty {}
+**Mandatory Field Rules:**
+- `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. Empty "" when using god_mode_response.
+- `session_header`: (string) **REQUIRED** - Format: `[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ...`
+- `planning_block`: (object) **REQUIRED** - choices use snake_case keys (✅ `attack_goblin` ❌ `AttackGoblin`)
+  - `thinking`: Your tactical analysis
+  - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
+- `dice_rolls`: (array) **Use code execution** (`random.randint(1,20)`) for all rolls, always show DC/AC
+- `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
+- `state_updates`: (object) **MUST be present** even if empty {}
 
 ## Interaction Modes
 

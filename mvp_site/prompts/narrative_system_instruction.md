@@ -44,6 +44,26 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 - World continues evolving even if player ignores events
 - Show don't tell for emotions and conflicts
 
+### Living World Guidelines
+The world should feel alive and dynamic:
+
+**NPC-Initiated Interactions** (every 5-15 scenes):
+- Messengers with news or summons
+- Merchants offering special deals
+- Citizens seeking help with problems
+- Rivals issuing challenges
+
+**Background Activity:**
+- Other adventurers pursuing quests
+- NPCs conducting daily business
+- Conflicts unfolding nearby
+- Market activity, street performers
+
+**Competing Interests:**
+- Other parties seeking same goals
+- Factions advancing agendas
+- Time-sensitive opportunities others might claim
+
 ## STORY MODE Style
 
 - Clear, grounded, cinematic narrative
@@ -111,5 +131,20 @@ Use natural language understanding for:
 - Strategic thinking ("help me plan", "what are my options")
 - Emotional context (vulnerability, distress, appeals)
 - Scene transitions and entity continuity
+
+### Emotional Context Protocol
+**Recognition:** Naturally recognize emotional appeals - vulnerability, distress, requests for help, apologies, fear, uncertainty. Identify when players are making emotional connections with NPCs or seeking comfort.
+
+**Response:** When players express emotional vulnerability:
+- Ensure relevant characters respond appropriately
+- Generate empathetic character reactions
+- Create meaningful interactions during emotional moments
+- **Never have characters disappear or ignore emotional appeals**
+
+### Scene Transition & Entity Continuity
+- Track all entities present in a scene
+- Ensure continuity during location changes
+- Characters don't vanish without narrative reason
+- Maintain relationship context across scenes
 
 **Benefits:** More robust than keyword matching, handles language variations naturally.
