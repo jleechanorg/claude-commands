@@ -42,9 +42,9 @@ import re
 import sys
 import traceback
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
+from firebase_admin import auth as firebase_auth
 from google.genai import types
 
 from mvp_site import constants, logging_util
@@ -58,7 +58,6 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.serialization import json_default_serializer
 from mvp_site.game_state import GameState
 from mvp_site.llm_providers import (
     cerebras_provider,
@@ -77,6 +76,7 @@ from mvp_site.narrative_response_schema import (
 )
 from mvp_site.narrative_sync_validator import NarrativeSyncValidator
 from mvp_site.schemas.entities_pydantic import sanitize_entity_name_for_id
+from mvp_site.serialization import json_default_serializer
 from mvp_site.token_utils import estimate_tokens, log_with_tokens
 from mvp_site.world_loader import load_world_content_for_system_instruction
 
@@ -166,6 +166,7 @@ GEMINI_COMPACTION_TOKEN_LIMIT: int = 300_000  # Cap compaction well below 1M max
 OUTPUT_TOKEN_RESERVE_DEFAULT: int = 12_000  # Typical responses are 1-3k tokens
 OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
 OUTPUT_TOKEN_RESERVE_MIN: int = 1024
+OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output tokens
 
 
 def _get_context_window_tokens(model_name: str) -> int:
@@ -190,7 +191,6 @@ def _get_safe_context_token_budget(provider: str, model_name: str) -> int:
 
 
 def _get_safe_output_token_limit(
-    provider: str,
     model_name: str,
     prompt_tokens: int,
     system_tokens: int,
@@ -200,7 +200,7 @@ def _get_safe_output_token_limit(
 
     - Uses actual model context window (not compaction limit) for output calculation.
     - Compaction limit is only for INPUT compaction decisions, not output budgeting.
-    - Ensures minimum output reserve when headroom exists, avoids overflow when exceeded.
+    - Reserves 20% of context for output tokens to ensure quality responses.
     - Caps by JSON_MODE_MAX_OUTPUT_TOKENS so we don't exceed API limits.
     """
     # Use actual model context window for output calculation
@@ -210,13 +210,26 @@ def _get_safe_output_token_limit(
     )
     safe_context = int(model_context * constants.CONTEXT_WINDOW_SAFETY_RATIO)
 
-    raw_remaining = safe_context - (prompt_tokens + system_tokens)
-    if raw_remaining <= 0:
-        # Context exceeded - return minimal to avoid API overflow error
-        remaining = 1
-    else:
-        # Have headroom - ensure at least minimum reserve for quality output
-        remaining = max(OUTPUT_TOKEN_RESERVE_MIN, raw_remaining)
+    # Reserve 20% of context for output tokens
+    output_reserve = int(safe_context * OUTPUT_TOKEN_RESERVE_RATIO)
+    max_input_allowed = safe_context - output_reserve
+
+    total_input = prompt_tokens + system_tokens
+    if total_input > max_input_allowed:
+        # Input exceeds 80% of context - not enough room for output
+        # Fail fast with a clear error instead of sending a doomed request
+        raise ValueError(
+            f"Context too large for model {model_name}: "
+            f"input uses {total_input:,} tokens, "
+            f"max allowed is {max_input_allowed:,} tokens (80% of {safe_context:,}), "
+            f"reserving {output_reserve:,} tokens (20%) for output. "
+            "Reduce prompt size or use a model with larger context window."
+        )
+
+    # Calculate remaining space for output
+    raw_remaining = safe_context - total_input
+    # Ensure at least the minimum reserve or the remaining context, whichever is larger
+    remaining = max(OUTPUT_TOKEN_RESERVE_MIN, raw_remaining)
 
     model_cap = constants.MODEL_MAX_OUTPUT_TOKENS.get(
         model_name, JSON_MODE_MAX_OUTPUT_TOKENS
@@ -915,7 +928,7 @@ def _log_token_count(
         total_tokens = prompt_tokens + system_tokens
 
         current_output_limit = _get_safe_output_token_limit(
-            provider_name, model_name, prompt_tokens, system_tokens
+            model_name, prompt_tokens, system_tokens
         )
         logging_util.debug(
             f"🔍 TOKEN_ANALYSIS: Sending {total_tokens} input tokens to API (Prompt: {prompt_tokens or 0}, System: {system_tokens or 0})"
@@ -1093,7 +1106,6 @@ def _call_llm_api_with_model_cycling(
                 )
 
             safe_output_limit = _get_safe_output_token_limit(
-                provider_name,
                 current_model,
                 prompt_tokens,
                 system_tokens,
@@ -1615,41 +1627,40 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
             else:
                 model = constants.DEFAULT_CEREBRAS_MODEL
         else:
+            model = constants.DEFAULT_GEMINI_MODEL
             user_preferred_model = user_settings.get("gemini_model")
 
-            fallback_reason = None
-
-            if (
-                user_preferred_model
-                and user_preferred_model in constants.GEMINI_MODEL_MAPPING
-            ):
+            if user_preferred_model in constants.GEMINI_MODEL_MAPPING:
                 mapped_model = constants.GEMINI_MODEL_MAPPING[user_preferred_model]
+                logging_util.info(
+                    f"Remapping Gemini model {user_preferred_model} -> {mapped_model}"
+                )
+                user_preferred_model = mapped_model
 
-                if user_preferred_model != mapped_model:
+            # Check if user wants Gemini 3 (premium model)
+            if user_preferred_model in constants.PREMIUM_GEMINI_MODELS:
+                # Get user email to check allowlist
+                try:
+                    user_record = firebase_auth.get_user(user_id)
+                    user_email = (user_record.email or "").lower()
+                    allowed_users = [email.lower() for email in constants.GEMINI_3_ALLOWED_USERS]
+                    if user_email in allowed_users:
+                        model = constants.GEMINI_PREMIUM_MODEL
+                        logging_util.info(f"Premium user {user_email} using Gemini 3")
+                        return ProviderSelection(provider, model)
                     logging_util.info(
-                        f"Auto-redirecting legacy model '{user_preferred_model}' "
-                        f"to compatible model '{mapped_model}'"
+                        f"User {user_email} not in Gemini 3 allowlist, falling back to default"
                     )
+                    user_preferred_model = constants.DEFAULT_GEMINI_MODEL
+                except Exception as e:
+                    logging_util.warning(f"Failed to check Gemini 3 allowlist: {e}")
+                    user_preferred_model = constants.DEFAULT_GEMINI_MODEL
 
-                if mapped_model in constants.ALLOWED_GEMINI_MODELS:
-                    model = mapped_model
-                    return ProviderSelection(provider, model)
-
-                fallback_reason = (
-                    f"Mapped model '{mapped_model}' not in allowed models, using default"
-                )
-            elif (
-                user_preferred_model
-                and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
-            ):
+            # Standard model selection
+            if user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
                 model = user_preferred_model
-            elif user_preferred_model is not None:
-                fallback_reason = (
-                    f"Invalid user model preference: {user_preferred_model}"
-                )
-
-            if fallback_reason:
-                logging_util.warning(fallback_reason)
+            else:
+                model = constants.DEFAULT_GEMINI_MODEL
 
         return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:
