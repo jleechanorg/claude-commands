@@ -91,9 +91,16 @@ def generate_content(
     data = response.json()
 
     try:
-        message = data["choices"][0]["message"]
+        choice = data["choices"][0]
+        message = choice["message"]
         if not isinstance(message, dict):
             raise TypeError("message is not a dict")
+
+        # Check for context-too-large scenario: finish_reason='length' with no content
+        finish_reason = choice.get("finish_reason")
+        usage = data.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
 
         # Qwen 3 reasoning models may return content in 'content' or 'reasoning'
         lowered_keys = {str(key).lower(): key for key in message}
@@ -105,8 +112,18 @@ def generate_content(
             text = message[content_key]
         if text is None and reasoning_key is not None:
             text = message[reasoning_key]
+
         if text is None:
+            # Provide specific error for context-too-large scenario
+            if finish_reason == "length" and completion_tokens <= 1:
+                raise ValueError(
+                    f"Context too large: prompt used {prompt_tokens:,} tokens, "
+                    f"model could only generate {completion_tokens} completion token(s). "
+                    "The prompt must be reduced to allow room for output."
+                )
             raise KeyError("No 'content' or 'reasoning' field in message")
+    except ValueError:
+        raise  # Re-raise our specific ValueError without wrapping
     except Exception as exc:  # noqa: BLE001 - defensive parsing
         raise ValueError(f"Invalid Cerebras response structure: {data}") from exc
 
