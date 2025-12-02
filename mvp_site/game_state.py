@@ -440,7 +440,10 @@ class GameState:
 
             # Calculate time_of_day from hour if not present
             if "time_of_day" not in world_data["world_time"]:
-                hour = world_data["world_time"].get("hour", 12)
+                try:
+                    hour = int(world_data["world_time"].get("hour", 12))
+                except (ValueError, TypeError):
+                    hour = 12  # Default to midday if conversion fails
                 world_data["world_time"]["time_of_day"] = self._calculate_time_of_day(
                     hour
                 )

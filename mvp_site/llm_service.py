@@ -593,7 +593,13 @@ class PromptBuilder:
         if world_time.get("month"):
             time_parts.append(f"{world_time.get('month')} {world_time.get('day', '')}")
         if world_time.get("hour") is not None:
-            time_parts.append(f"{world_time.get('hour', 0):02d}:{world_time.get('minute', 0):02d}:{world_time.get('second', 0):02d}")
+            try:
+                hour = int(world_time.get("hour", 0))
+                minute = int(world_time.get("minute", 0))
+                second = int(world_time.get("second", 0))
+                time_parts.append(f"{hour:02d}:{minute:02d}:{second:02d}")
+            except (ValueError, TypeError):
+                time_parts.append("00:00:00")  # Fallback for invalid time values
         current_time_str = ", ".join(time_parts) if time_parts else "current timestamp"
 
         # Include microsecond for precise temporal tracking
