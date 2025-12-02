@@ -44,6 +44,9 @@ const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-70b-instruct';
 const DEFAULT_CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // 131K context - best for RPG
 const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
 
+// Users allowed to see Gemini 3 Pro option (expensive model)
+const GEMINI_3_ALLOWED_USERS = ['jleechan@gmail.com', 'jleechantest@gmail.com'];
+
 /**
  * Load user settings from the API and update the UI
  */
@@ -61,6 +64,24 @@ async function loadSettings() {
     const settings = await response.json();
     console.log('Loaded settings:', settings);
 
+    // Get current user email from Firebase Auth
+    const userEmail = window.firebase?.auth()?.currentUser?.email || '';
+    const canUseGemini3 = GEMINI_3_ALLOWED_USERS.includes(userEmail);
+
+    // Dynamically add Gemini 3 option for allowed users
+    const geminiSelect = document.getElementById('geminiModel');
+    if (geminiSelect && canUseGemini3) {
+      const hasGemini3 = Array.from(geminiSelect.options).some(
+        (opt) => opt.value === 'gemini-3-pro-preview',
+      );
+      if (!hasGemini3) {
+        const option = document.createElement('option');
+        option.value = 'gemini-3-pro-preview';
+        option.textContent = 'Gemini 3 Pro Preview (premium)';
+        geminiSelect.insertBefore(option, geminiSelect.firstChild);
+      }
+    }
+
     const allowedProviders = ['gemini', 'openrouter', 'cerebras'];
     const selectedProvider = allowedProviders.includes(settings.llm_provider)
       ? settings.llm_provider
@@ -74,8 +95,11 @@ async function loadSettings() {
     }
     toggleProviderSections(selectedProvider);
 
-    const geminiModel = settings.gemini_model || DEFAULT_GEMINI_MODEL;
-    const geminiSelect = document.getElementById('geminiModel');
+    let geminiModel = settings.gemini_model || DEFAULT_GEMINI_MODEL;
+    // Non-premium users can't use Gemini 3 even if it's saved
+    if (geminiModel === 'gemini-3-pro-preview' && !canUseGemini3) {
+      geminiModel = DEFAULT_GEMINI_MODEL;
+    }
     if (geminiSelect) {
       const hasOption = Array.from(geminiSelect.options).some(
         (opt) => opt.value === geminiModel,
