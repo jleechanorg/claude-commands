@@ -3,6 +3,7 @@ import types
 import pytest
 
 from mvp_site.llm_providers import cerebras_provider
+from mvp_site.llm_providers.provider_utils import ContextTooLargeError
 
 
 class DummyResponse:
@@ -187,3 +188,53 @@ def test_handles_empty_content_field(monkeypatch):
 
     # Empty content should be preserved, not fall back to reasoning
     assert response.text == ""
+
+
+def test_context_too_large_error_message(monkeypatch):
+    """When finish_reason='length' and no content, raise clear context-too-large error."""
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        # Simulate the exact response from the GCP logs:
+        # - finish_reason: 'length' (hit token limit)
+        # - completion_tokens: 1 (couldn't generate meaningful output)
+        # - message has only 'role', no 'content'
+        return DummyResponse(
+            {
+                "id": "chatcmpl-test",
+                "choices": [
+                    {
+                        "finish_reason": "length",
+                        "index": 0,
+                        "message": {"role": "assistant"},
+                    }
+                ],
+                "usage": {
+                    "total_tokens": 113038,
+                    "completion_tokens": 1,
+                    "prompt_tokens": 113037,
+                },
+            }
+        )
+
+    monkeypatch.setattr(
+        cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
+    )
+
+    with pytest.raises(ContextTooLargeError) as exc_info:
+        cerebras_provider.generate_content(
+            prompt_contents=["test"],
+            model_name="zai-glm-4.6",
+            system_instruction_text=None,
+            temperature=0.5,
+            max_output_tokens=100,
+        )
+
+    error_msg = str(exc_info.value)
+    assert "Context too large" in error_msg
+    assert "113,037" in error_msg  # Should show prompt tokens with commas
+    assert "prompt must be reduced" in error_msg.lower()
+
+    # Verify exception attributes are set correctly
+    assert exc_info.value.prompt_tokens == 113037
+    assert exc_info.value.completion_tokens == 1
+    assert exc_info.value.finish_reason == "length"

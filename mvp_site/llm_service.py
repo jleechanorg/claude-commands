@@ -166,6 +166,7 @@ GEMINI_COMPACTION_TOKEN_LIMIT: int = 300_000  # Cap compaction well below 1M max
 OUTPUT_TOKEN_RESERVE_DEFAULT: int = 12_000  # Typical responses are 1-3k tokens
 OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
 OUTPUT_TOKEN_RESERVE_MIN: int = 1024
+OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output tokens
 
 
 def _get_context_window_tokens(model_name: str) -> int:
@@ -190,7 +191,6 @@ def _get_safe_context_token_budget(provider: str, model_name: str) -> int:
 
 
 def _get_safe_output_token_limit(
-    provider: str,
     model_name: str,
     prompt_tokens: int,
     system_tokens: int,
@@ -200,7 +200,7 @@ def _get_safe_output_token_limit(
 
     - Uses actual model context window (not compaction limit) for output calculation.
     - Compaction limit is only for INPUT compaction decisions, not output budgeting.
-    - Ensures minimum output reserve when headroom exists, avoids overflow when exceeded.
+    - Reserves 20% of context for output tokens to ensure quality responses.
     - Caps by JSON_MODE_MAX_OUTPUT_TOKENS so we don't exceed API limits.
     """
     # Use actual model context window for output calculation
@@ -210,13 +210,26 @@ def _get_safe_output_token_limit(
     )
     safe_context = int(model_context * constants.CONTEXT_WINDOW_SAFETY_RATIO)
 
-    raw_remaining = safe_context - (prompt_tokens + system_tokens)
-    if raw_remaining <= 0:
-        # Context exceeded - return minimal to avoid API overflow error
-        remaining = 1
-    else:
-        # Have headroom - ensure at least minimum reserve for quality output
-        remaining = max(OUTPUT_TOKEN_RESERVE_MIN, raw_remaining)
+    # Reserve 20% of context for output tokens
+    output_reserve = int(safe_context * OUTPUT_TOKEN_RESERVE_RATIO)
+    max_input_allowed = safe_context - output_reserve
+
+    total_input = prompt_tokens + system_tokens
+    if total_input > max_input_allowed:
+        # Input exceeds 80% of context - not enough room for output
+        # Fail fast with a clear error instead of sending a doomed request
+        raise ValueError(
+            f"Context too large for model {model_name}: "
+            f"input uses {total_input:,} tokens, "
+            f"max allowed is {max_input_allowed:,} tokens (80% of {safe_context:,}), "
+            f"reserving {output_reserve:,} tokens (20%) for output. "
+            "Reduce prompt size or use a model with larger context window."
+        )
+
+    # Calculate remaining space for output
+    raw_remaining = safe_context - total_input
+    # Ensure at least the minimum reserve or the remaining context, whichever is larger
+    remaining = max(OUTPUT_TOKEN_RESERVE_MIN, raw_remaining)
 
     model_cap = constants.MODEL_MAX_OUTPUT_TOKENS.get(
         model_name, JSON_MODE_MAX_OUTPUT_TOKENS
@@ -883,7 +896,7 @@ def _log_token_count(
         total_tokens = prompt_tokens + system_tokens
 
         current_output_limit = _get_safe_output_token_limit(
-            provider_name, model_name, prompt_tokens, system_tokens
+            model_name, prompt_tokens, system_tokens
         )
         logging_util.debug(
             f"🔍 TOKEN_ANALYSIS: Sending {total_tokens} input tokens to API (Prompt: {prompt_tokens or 0}, System: {system_tokens or 0})"
@@ -1061,7 +1074,6 @@ def _call_llm_api_with_model_cycling(
                 )
 
             safe_output_limit = _get_safe_output_token_limit(
-                provider_name,
                 current_model,
                 prompt_tokens,
                 system_tokens,

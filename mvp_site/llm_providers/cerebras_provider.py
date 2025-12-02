@@ -13,6 +13,10 @@ from typing import Any
 import requests
 
 from mvp_site import logging_util
+from mvp_site.llm_providers.provider_utils import (
+    ContextTooLargeError,
+    check_context_too_large,
+)
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 
@@ -91,9 +95,16 @@ def generate_content(
     data = response.json()
 
     try:
-        message = data["choices"][0]["message"]
+        choice = data["choices"][0]
+        message = choice["message"]
         if not isinstance(message, dict):
             raise TypeError("message is not a dict")
+
+        # Check for context-too-large scenario: finish_reason='length' with no content
+        finish_reason = choice.get("finish_reason")
+        usage = data.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
 
         # Qwen 3 reasoning models may return content in 'content' or 'reasoning'
         lowered_keys = {str(key).lower(): key for key in message}
@@ -105,8 +116,18 @@ def generate_content(
             text = message[content_key]
         if text is None and reasoning_key is not None:
             text = message[reasoning_key]
+
         if text is None:
+            # Check for context-too-large scenario using shared utility
+            check_context_too_large(
+                finish_reason=finish_reason,
+                completion_tokens=completion_tokens,
+                prompt_tokens=prompt_tokens,
+                has_content=False,
+            )
             raise KeyError("No 'content' or 'reasoning' field in message")
+    except ContextTooLargeError:
+        raise  # Re-raise without wrapping for proper handling upstream
     except Exception as exc:  # noqa: BLE001 - defensive parsing
         raise ValueError(f"Invalid Cerebras response structure: {data}") from exc
 
