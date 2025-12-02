@@ -1,5 +1,7 @@
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 import mvp_site.llm_service as llm_service
 from mvp_site import constants
 from mvp_site.llm_providers import gemini_provider
@@ -31,7 +33,6 @@ def test_safe_output_limit_uses_model_context_window():
 
     assert (
         llm_service._get_safe_output_token_limit(
-            constants.LLM_PROVIDER_GEMINI,
             constants.DEFAULT_GEMINI_MODEL,
             prompt_tokens,
             system_tokens,
@@ -55,7 +56,6 @@ def test_safe_output_limit_high_input_does_not_starve_output():
     system_tokens = 5_000  # Total input: 305K tokens (within 900K safe context)
 
     output_limit = llm_service._get_safe_output_token_limit(
-        constants.LLM_PROVIDER_GEMINI,
         constants.DEFAULT_GEMINI_MODEL,
         prompt_tokens,
         system_tokens,
@@ -68,35 +68,42 @@ def test_safe_output_limit_high_input_does_not_starve_output():
     )
 
 
-def test_safe_output_limit_context_exceeded_avoids_overflow():
+def test_safe_output_limit_context_exceeded_raises_error():
     """
-    Edge case: When input exceeds safe context, return 1 to avoid API overflow.
+    Edge case: When input exceeds 80% of safe context, raise ValueError.
 
-    If input is 901K tokens and safe_context is 900K, we should NOT request 1024
-    output tokens as that would overflow the context window. Return 1 instead.
+    We reserve 20% of context for output tokens. If input uses more than 80%,
+    there's not enough room for quality output, so fail fast with a clear error.
+
+    This allows model cycling to try a model with larger context, or the caller
+    can handle the error appropriately.
     """
     # Gemini safe context = 1M * 0.9 = 900K tokens
-    # Simulate input exceeding safe context
+    # Max input allowed = 900K * 0.8 = 720K tokens (reserve 20% = 180K for output)
     model_context = constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
         constants.DEFAULT_GEMINI_MODEL, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
     )
     safe_context = int(model_context * constants.CONTEXT_WINDOW_SAFETY_RATIO)
+    output_reserve = int(safe_context * llm_service.OUTPUT_TOKEN_RESERVE_RATIO)
+    max_input_allowed = safe_context - output_reserve
 
-    # Input exceeds safe context by 1K tokens
-    prompt_tokens = safe_context + 1_000
+    # Input exceeds 80% threshold by 1K tokens
+    prompt_tokens = max_input_allowed + 1_000
     system_tokens = 0
 
-    output_limit = llm_service._get_safe_output_token_limit(
-        constants.LLM_PROVIDER_GEMINI,
-        constants.DEFAULT_GEMINI_MODEL,
-        prompt_tokens,
-        system_tokens,
-    )
+    with pytest.raises(ValueError) as exc_info:
+        llm_service._get_safe_output_token_limit(
+            constants.DEFAULT_GEMINI_MODEL,
+            prompt_tokens,
+            system_tokens,
+        )
 
-    # Should return 1 (minimal) to avoid overflow, NOT 1024
-    assert output_limit == 1, (
-        f"Expected output limit of 1 when context exceeded, got {output_limit}. "
-        f"Requesting {output_limit} tokens would overflow the context window!"
+    error_msg = str(exc_info.value)
+    assert "context" in error_msg.lower() or "token" in error_msg.lower(), (
+        f"Error should mention context or tokens, got: {error_msg}"
+    )
+    assert "20%" in error_msg or "80%" in error_msg, (
+        f"Error should mention the 20%/80% reserve ratio, got: {error_msg}"
     )
 
 
@@ -121,7 +128,6 @@ def test_output_budget_independent_of_input_size():
     output_budgets = []
     for prompt_tokens, system_tokens in input_sizes:
         output_limit = llm_service._get_safe_output_token_limit(
-            constants.LLM_PROVIDER_GEMINI,
             constants.DEFAULT_GEMINI_MODEL,
             prompt_tokens,
             system_tokens,
@@ -159,7 +165,6 @@ def test_safe_output_limit_respects_context_budget_for_llama():
 
     assert (
         llm_service._get_safe_output_token_limit(
-            constants.LLM_PROVIDER_CEREBRAS,  # Updated: test with Cerebras provider
             "llama-3.3-70b",  # Updated: 3.1-70b retired from Cerebras
             prompt_tokens,
             system_tokens,

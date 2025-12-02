@@ -44,6 +44,7 @@ from mvp_site import (
     firestore_service,
     llm_service,
     logging_util,
+    preventive_guards,
     structured_fields_utils,
 )
 from mvp_site.custom_types import CampaignId, UserId
@@ -204,12 +205,8 @@ def _enrich_session_header_with_progress(
     xp_next_level = player_data.get("xp_next_level")
     gold_amount = player_data.get("gold")
 
-    contains_xp = re.search(
-        r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE
-    )
-    contains_gold = re.search(
-        r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE
-    )
+    contains_xp = re.search(r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE)
+    contains_gold = re.search(r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE)
 
     remove_prefixes: tuple[str, ...] = ()
     additions: list[str] = []
@@ -570,9 +567,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Convert LLMResponse to dict format for compatibility
+        # Apply preventive guards to enforce continuity safeguards
+        state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
+            current_game_state, llm_response_obj, mode
+        )
+
         response = {
             "story": llm_response_obj.narrative_text,
-            "state_changes": llm_response_obj.get_state_updates(),
+            "state_changes": state_changes,
         }
 
         # Update game state with changes
@@ -607,6 +609,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             structured_fields_utils.extract_structured_fields(llm_response_obj),
             updated_game_state_dict,
         )
+        structured_fields.update(prevention_extras)
 
         await asyncio.to_thread(
             firestore_service.add_story_entry,
@@ -704,6 +707,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["god_mode_response"] = (
                     structured_response.god_mode_response
                 )
+
+        if prevention_extras.get("god_mode_response"):
+            # Prefer synthesized god mode responses from preventive guards when present
+            # because they fill gaps left by the model.
+            unified_response["god_mode_response"] = prevention_extras[
+                "god_mode_response"
+            ]
 
         # Track story mode sequence ID for character mode
         if mode == constants.MODE_CHARACTER:
@@ -1173,7 +1183,12 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
 
             # Case-insensitive validation to prevent case manipulation attacks
             model_lower = model.lower()
-            allowed_models = {m.lower() for m in constants.ALLOWED_GEMINI_MODELS}
+            allowed_models = {
+                m.lower()
+                for m in (
+                    constants.ALLOWED_GEMINI_MODELS + constants.PREMIUM_GEMINI_MODELS
+                )
+            }
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model
@@ -1183,7 +1198,9 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
             if not isinstance(model, str):
                 return create_error_response("Invalid model selection")
 
-            allowed_openrouter = {m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS}
+            allowed_openrouter = {
+                m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS
+            }
             if model.lower() not in allowed_openrouter:
                 return create_error_response("Invalid model selection")
             settings_to_update["openrouter_model"] = model
