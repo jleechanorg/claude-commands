@@ -3,6 +3,7 @@
 Uses the Cerebras OpenAI-compatible chat completions endpoint to keep
 llm_service orchestration provider-agnostic.
 """
+
 from __future__ import annotations
 
 import json
@@ -91,11 +92,19 @@ def generate_content(
 
     try:
         message = data["choices"][0]["message"]
-        # Qwen 3 reasoning models return content in 'reasoning' field, not 'content'
-        # Use 'is None' to properly handle empty strings (don't fall back if content is "")
-        text = message.get("content")
-        if text is None:
-            text = message.get("reasoning")
+        if not isinstance(message, dict):
+            raise TypeError("message is not a dict")
+
+        # Qwen 3 reasoning models may return content in 'content' or 'reasoning'
+        lowered_keys = {str(key).lower(): key for key in message}
+        content_key = lowered_keys.get("content")
+        reasoning_key = lowered_keys.get("reasoning")
+
+        text = None
+        if content_key is not None:
+            text = message[content_key]
+        if text is None and reasoning_key is not None:
+            text = message[reasoning_key]
         if text is None:
             raise KeyError("No 'content' or 'reasoning' field in message")
     except Exception as exc:  # noqa: BLE001 - defensive parsing
