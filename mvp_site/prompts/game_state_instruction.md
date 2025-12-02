@@ -1,5 +1,13 @@
 # Game State Management Protocol
 
+<!-- ESSENTIALS (token-constrained mode)
+- JSON responses required with session_header, narrative, planning_block
+- State updates mandatory every turn, entity IDs required (format: type_name_###)
+- Dice format: XdY+Z = result vs DC (Success/Failure)
+- Planning block: thinking + snake_case choice keys with risk levels
+- Modes: STORY (default), GOD (admin), CHAT (OOC conversation)
+/ESSENTIALS -->
+
 This protocol defines game state management using structured JSON. See `master_directive.md` for MBTI/alignment rules.
 
 ## JSON Communication Protocol

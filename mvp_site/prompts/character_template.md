@@ -1,5 +1,12 @@
 # Character Profile Template
 
+<!-- ESSENTIALS (token-constrained mode)
+- MBTI/alignment internal only (see master_directive.md)
+- Required: name, archetype, motivation, fear, speech patterns
+- Express personality through behaviors, NOT labels
+- Evolution possible through story events
+/ESSENTIALS -->
+
 **See `master_directive.md` for MBTI/Alignment rules: INTERNAL USE ONLY, never in narrative.**
 
 ## I. Core Identity

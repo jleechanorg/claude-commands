@@ -1,5 +1,13 @@
 # Game Mechanics Protocol
 
+<!-- ESSENTIALS (token-constrained mode)
+- Character creation: META-GAME only, no narrative until approval
+- Options: [AIGenerated], [StandardDND], [CustomClass]
+- Require: 6 abilities, HP/AC, skills, equipment, background
+- XP by CR: 0=10, 1=200, 2=450, 3=700, 4=1100, 5=1800
+- Combat: initiative → turns → state blocks → XP award
+/ESSENTIALS -->
+
 ## Character Creation (Mechanics Enabled)
 
 ⚠️ **NO NARRATIVE DURING CHARACTER CREATION** - META-GAME process only: stats, abilities, equipment. Story begins AFTER approval.

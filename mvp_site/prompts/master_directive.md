@@ -1,6 +1,14 @@
 # Master Directive: WorldArchitect.AI Prompt Hierarchy
-**Version: 1.5**
-**Last Updated: 2025-07-04**
+**Version: 1.6**
+**Last Updated: 2025-12-02**
+
+<!-- ESSENTIALS (token-constrained mode)
+- Load order: game_state → dnd_srd → mechanics → narrative → character_template
+- State management wins all conflicts, D&D 5E SRD for mechanics
+- MBTI/alignment: INTERNAL ONLY, never in player-facing content
+- Banned names: check CRITICAL NAMING RESTRICTIONS before any name
+- Player agency paramount: never silently substitute choices
+/ESSENTIALS -->
 
 ## Critical Loading Order and Precedence
 
@@ -168,6 +176,7 @@ This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**.
 - Version 1.3: Added Campaign Initialization Protocol and character design flow
 - Version 1.4: Added player override authority for names and absolute transparency requirement
 - Version 1.5: Added mandatory pre-generation check for banned names during ALL character design (PCs and NPCs)
+- Version 1.6: Added ESSENTIALS micro-summaries to all prompt files for token-constrained mode
 - Future versions will be marked with clear changelog
 
 ## CRITICAL REMINDERS

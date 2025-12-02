@@ -1,5 +1,13 @@
 # Narrative Directives
 
+<!-- ESSENTIALS (token-constrained mode)
+- Subtlety/realism over drama, player-driven narratives
+- Complication system: 20% base + 10%/streak, cap 75%
+- NPC autonomy: own goals/schedules, react to world independently
+- Time: short rest=1hr, long rest=8hr, travel=context-dependent
+- Companions: max 3, distinct personalities, MBTI internal only
+/ESSENTIALS -->
+
 Core protocols (planning blocks, session header, modes) defined in `game_state_instruction.md`. Character creation in `mechanics_system_instruction.md`.
 
 ## Master Game Weaver Philosophy
