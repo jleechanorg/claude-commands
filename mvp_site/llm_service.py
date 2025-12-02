@@ -42,9 +42,9 @@ import re
 import sys
 import traceback
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
+from firebase_admin import auth as firebase_auth
 from google.genai import types
 
 from mvp_site import constants, logging_util
@@ -58,7 +58,6 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.serialization import json_default_serializer
 from mvp_site.game_state import GameState
 from mvp_site.llm_providers import (
     cerebras_provider,
@@ -77,6 +76,7 @@ from mvp_site.narrative_response_schema import (
 )
 from mvp_site.narrative_sync_validator import NarrativeSyncValidator
 from mvp_site.schemas.entities_pydantic import sanitize_entity_name_for_id
+from mvp_site.serialization import json_default_serializer
 from mvp_site.token_utils import estimate_tokens, log_with_tokens
 from mvp_site.world_loader import load_world_content_for_system_instruction
 
@@ -1583,41 +1583,40 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
             else:
                 model = constants.DEFAULT_CEREBRAS_MODEL
         else:
+            model = constants.DEFAULT_GEMINI_MODEL
             user_preferred_model = user_settings.get("gemini_model")
 
-            fallback_reason = None
-
-            if (
-                user_preferred_model
-                and user_preferred_model in constants.GEMINI_MODEL_MAPPING
-            ):
+            if user_preferred_model in constants.GEMINI_MODEL_MAPPING:
                 mapped_model = constants.GEMINI_MODEL_MAPPING[user_preferred_model]
+                logging_util.info(
+                    f"Remapping Gemini model {user_preferred_model} -> {mapped_model}"
+                )
+                user_preferred_model = mapped_model
 
-                if user_preferred_model != mapped_model:
+            # Check if user wants Gemini 3 (premium model)
+            if user_preferred_model in constants.PREMIUM_GEMINI_MODELS:
+                # Get user email to check allowlist
+                try:
+                    user_record = firebase_auth.get_user(user_id)
+                    user_email = (user_record.email or "").lower()
+                    allowed_users = [email.lower() for email in constants.GEMINI_3_ALLOWED_USERS]
+                    if user_email in allowed_users:
+                        model = constants.GEMINI_PREMIUM_MODEL
+                        logging_util.info(f"Premium user {user_email} using Gemini 3")
+                        return ProviderSelection(provider, model)
                     logging_util.info(
-                        f"Auto-redirecting legacy model '{user_preferred_model}' "
-                        f"to compatible model '{mapped_model}'"
+                        f"User {user_email} not in Gemini 3 allowlist, falling back to default"
                     )
+                    user_preferred_model = constants.DEFAULT_GEMINI_MODEL
+                except Exception as e:
+                    logging_util.warning(f"Failed to check Gemini 3 allowlist: {e}")
+                    user_preferred_model = constants.DEFAULT_GEMINI_MODEL
 
-                if mapped_model in constants.ALLOWED_GEMINI_MODELS:
-                    model = mapped_model
-                    return ProviderSelection(provider, model)
-
-                fallback_reason = (
-                    f"Mapped model '{mapped_model}' not in allowed models, using default"
-                )
-            elif (
-                user_preferred_model
-                and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
-            ):
+            # Standard model selection
+            if user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
                 model = user_preferred_model
-            elif user_preferred_model is not None:
-                fallback_reason = (
-                    f"Invalid user model preference: {user_preferred_model}"
-                )
-
-            if fallback_reason:
-                logging_util.warning(fallback_reason)
+            else:
+                model = constants.DEFAULT_GEMINI_MODEL
 
         return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:

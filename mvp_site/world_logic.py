@@ -205,12 +205,8 @@ def _enrich_session_header_with_progress(
     xp_next_level = player_data.get("xp_next_level")
     gold_amount = player_data.get("gold")
 
-    contains_xp = re.search(
-        r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE
-    )
-    contains_gold = re.search(
-        r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE
-    )
+    contains_xp = re.search(r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE)
+    contains_gold = re.search(r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE)
 
     remove_prefixes: tuple[str, ...] = ()
     additions: list[str] = []
@@ -1187,7 +1183,12 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
 
             # Case-insensitive validation to prevent case manipulation attacks
             model_lower = model.lower()
-            allowed_models = {m.lower() for m in constants.ALLOWED_GEMINI_MODELS}
+            allowed_models = {
+                m.lower()
+                for m in (
+                    constants.ALLOWED_GEMINI_MODELS + constants.PREMIUM_GEMINI_MODELS
+                )
+            }
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model
@@ -1197,7 +1198,9 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
             if not isinstance(model, str):
                 return create_error_response("Invalid model selection")
 
-            allowed_openrouter = {m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS}
+            allowed_openrouter = {
+                m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS
+            }
             if model.lower() not in allowed_openrouter:
                 return create_error_response("Invalid model selection")
             settings_to_update["openrouter_model"] = model

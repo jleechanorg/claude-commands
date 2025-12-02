@@ -25,27 +25,43 @@ ALLOWED_LLM_PROVIDERS = [
     LLM_PROVIDER_CEREBRAS,
 ]
 
-# Gemini defaults
-DEFAULT_GEMINI_MODEL = "gemini-3-pro-preview"
+# Gemini defaults - using 2.0-flash for cost efficiency ($0.10/M input, ~$0.40/M output)
+# Gemini 3 Pro is ~20x more expensive on input ($2.00/M) and reserved for premium users only
+DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
 
-# Allowed Gemini model selections for user preferences
+# Premium model for allowlisted users only (expensive: $2-4/M input, $12-18/M output)
+GEMINI_PREMIUM_MODEL = "gemini-3-pro-preview"
+
+# Users allowed to access Gemini 3 Pro (expensive model)
+# These users can select gemini-3-pro-preview in settings
+GEMINI_3_ALLOWED_USERS = [
+    "jleechan@gmail.com",
+    "jleechantest@gmail.com",
+]
+
+# Allowed Gemini model selections for user preferences (default - all users)
 # NOTE: Only models that support BOTH code_execution AND JSON response mode are allowed
 # Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
 # See PR #2052 for compatibility testing details
 ALLOWED_GEMINI_MODELS = [
-    DEFAULT_GEMINI_MODEL,  # ✅ WORKS with code_execution + JSON
-    "gemini-2.0-flash",  # ✅ WORKS (unofficial but tested)
+    DEFAULT_GEMINI_MODEL,  # ✅ WORKS with code_execution + JSON (cheap: $0.10/M)
+    GEMINI_PREMIUM_MODEL,  # ✅ Premium option (allowlist enforced downstream)
+]
+
+# Premium Gemini models (only for GEMINI_3_ALLOWED_USERS)
+PREMIUM_GEMINI_MODELS = [
+    GEMINI_PREMIUM_MODEL,  # ✅ WORKS with code_execution + JSON (expensive: $2-4/M)
 ]
 
 # Gemini model mapping from user preference to full model name
 GEMINI_MODEL_MAPPING = {
     "gemini-3-pro-preview": "gemini-3-pro-preview",
     "gemini-2.0-flash": "gemini-2.0-flash",
-    # Legacy compatibility - redirect 2.5 users to compatible model
-    "gemini-2.5-flash": "gemini-3-pro-preview",  # Auto-redirect to compatible
-    "gemini-2.5-pro": "gemini-3-pro-preview",  # Auto-redirect to compatible
-    "pro-2.5": "gemini-3-pro-preview",  # Auto-redirect to compatible
-    "flash-2.5": "gemini-3-pro-preview",  # Auto-redirect to compatible
+    # Legacy compatibility - redirect 2.5 users to cost-efficient model
+    "gemini-2.5-flash": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
+    "gemini-2.5-pro": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
+    "pro-2.5": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
+    "flash-2.5": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
 }
 
 # OpenRouter model selection tuned for narrative-heavy D&D play
