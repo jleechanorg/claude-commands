@@ -234,6 +234,16 @@ Append significant events to `custom_campaign_state.core_memories`:
 - `active_missions`: **ALWAYS a LIST** of `{mission_id, title, status, objective}`
 - `core_memories`: **ALWAYS a LIST** of strings (use `{"append": "..."}` to add)
 
+### ❌ INVALID FORMAT WARNING
+**Never use dictionary format for `active_missions`:**
+```json
+// WRONG - will cause errors:
+{"active_missions": {"main_quest": {"title": "...", "status": "..."}}}
+
+// CORRECT - must be array:
+{"active_missions": [{"mission_id": "main_quest", "title": "...", "status": "accepted", "objective": "..."}]}
+```
+
 ## Time Pressure System
 
 **time_sensitive_events:** `{description, deadline, consequences, urgency_level, status, warnings_given, related_npcs}`

@@ -136,3 +136,23 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 | `wait X` | Advance time, autonomous goal pursuit, pause for major decisions |
 | `rewind list` | Show last 5 STORY MODE hash IDs for potential reversion |
 | `save state` | Mark current timeline as protected ("golden"), require confirmation code "confirm 1234" to revert |
+
+### `wait X` Detailed Protocol
+When player uses `wait X` (e.g., "wait 7 days", "wait 3 weeks"):
+
+**During Wait:**
+- PC autonomously pursues active quests + stated long-term goals
+- AI manages rest cycles (short/long rests) for resource recovery
+- Resource scarcity may limit accomplishments
+
+**🚨 PAUSE for Major Decisions:**
+- **MUST pause** before major strategic decisions, significant risks, or substantial resource expenditure
+- Present brief proposed plan and ask for player confirmation before proceeding
+- Player Agency is Absolute - never commit major resources without consent
+
+**Interruptions:**
+- Interrupt immediately for critical external events (attacks, urgent summons, quest developments)
+
+**Autonomous Action Report (at conclusion):**
+- Estimated number of major strategic actions taken
+- Narrative summary of top 3-5 most impactful actions and outcomes
