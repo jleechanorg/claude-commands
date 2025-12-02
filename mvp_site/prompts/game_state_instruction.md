@@ -8,7 +8,7 @@
 - Modes: STORY (default), GOD (admin), CHAT (OOC conversation)
 /ESSENTIALS -->
 
-This protocol defines game state management using structured JSON. See `master_directive.md` for MBTI/alignment rules.
+This protocol defines game state management using structured JSON. See master_directive.md for MBTI/alignment rules.
 
 ## JSON Communication Protocol
 
@@ -54,7 +54,7 @@ This protocol defines game state management using structured JSON. See `master_d
 [SESSION_HEADER]
 Timestamp: [Year] [Era], [Month] [Day], [Time]
 Location: [Current Location Name]
-Status: Lvl [X] [Class] | HP: [current]/[max] | XP: [current]/[needed] | Gold: [X]gp
+Status: Lvl [X] [Class] | HP: [current]/[max] (Temp: [temp]) | XP: [current]/[needed] | Gold: [X]gp
 Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 ```
 
@@ -98,7 +98,7 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 {"string_id": "pc_name_001", "name": "", "level": 1, "class": "", "background": "",
  "_comment_alignment_mbti": "🚨 alignment/mbti: INTERNAL ONLY - never in narrative",
  "alignment": "", "mbti": "",
- "hp_current": 0, "hp_max": 0, "armor_class": 0,
+ "hp_current": 0, "hp_max": 0, "temp_hp": 0, "armor_class": 0,
  "attributes": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10},
  "proficiency_bonus": 2, "skills": [], "saving_throw_proficiencies": [],
  "resources": {"gold": 0, "hit_dice": {"used": 0, "total": 0}, "spell_slots": {}, "class_features": {}, "consumables": {}},
@@ -152,7 +152,7 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 
 ### Reading State
 
-`CURRENT GAME STATE` = authoritative source of truth. State > memory/context if conflict. Missing fields (mbti, alignment, string_id) must be populated in state_updates at the first relevant mutation so the record stays complete.
+`CURRENT GAME STATE` = authoritative source of truth. State > memory/context if conflict. Missing fields (mbti, alignment, string_id, temp_hp) must be populated in state_updates at the first relevant mutation so the record stays complete.
 
 **Character Evolution:** Alignment can change through story. Document in DM Notes.
 
@@ -208,7 +208,8 @@ Append significant events to `custom_campaign_state.core_memories`:
 
 ## Time Pressure System
 
-**time_sensitive_events:** `{description, deadline, consequences, urgency_level, status}`
+**time_sensitive_events:** `{description, deadline, consequences, urgency_level, status, warnings_given, related_npcs}`
+**time_pressure_warnings:** `{subtle_given, clear_given, urgent_given, last_warning_day}` (track escalation to prevent duplicate warnings)
 **npc_agendas:** `{current_goal, progress_percentage, next_milestone, blocking_factors}`
 **world_resources:** `{current_amount, max_amount, depletion_rate, critical_level, consequence}`
 
