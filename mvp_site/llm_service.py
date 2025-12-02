@@ -191,7 +191,6 @@ def _get_safe_context_token_budget(provider: str, model_name: str) -> int:
 
 
 def _get_safe_output_token_limit(
-    provider: str,
     model_name: str,
     prompt_tokens: int,
     system_tokens: int,
@@ -229,8 +228,8 @@ def _get_safe_output_token_limit(
 
     # Calculate remaining space for output
     raw_remaining = safe_context - total_input
-    # Ensure at least the 20% reserve or minimum, whichever is larger
-    remaining = max(OUTPUT_TOKEN_RESERVE_MIN, output_reserve, raw_remaining)
+    # Ensure at least the minimum reserve or the remaining context, whichever is larger
+    remaining = max(OUTPUT_TOKEN_RESERVE_MIN, raw_remaining)
 
     model_cap = constants.MODEL_MAX_OUTPUT_TOKENS.get(
         model_name, JSON_MODE_MAX_OUTPUT_TOKENS
@@ -897,7 +896,7 @@ def _log_token_count(
         total_tokens = prompt_tokens + system_tokens
 
         current_output_limit = _get_safe_output_token_limit(
-            provider_name, model_name, prompt_tokens, system_tokens
+            model_name, prompt_tokens, system_tokens
         )
         logging_util.debug(
             f"🔍 TOKEN_ANALYSIS: Sending {total_tokens} input tokens to API (Prompt: {prompt_tokens or 0}, System: {system_tokens or 0})"
@@ -1075,7 +1074,6 @@ def _call_llm_api_with_model_cycling(
                 )
 
             safe_output_limit = _get_safe_output_token_limit(
-                provider_name,
                 current_model,
                 prompt_tokens,
                 system_tokens,

@@ -1,5 +1,7 @@
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 import mvp_site.llm_service as llm_service
 from mvp_site import constants
 from mvp_site.llm_providers import gemini_provider
@@ -31,7 +33,6 @@ def test_safe_output_limit_uses_model_context_window():
 
     assert (
         llm_service._get_safe_output_token_limit(
-            constants.LLM_PROVIDER_GEMINI,
             constants.DEFAULT_GEMINI_MODEL,
             prompt_tokens,
             system_tokens,
@@ -55,7 +56,6 @@ def test_safe_output_limit_high_input_does_not_starve_output():
     system_tokens = 5_000  # Total input: 305K tokens (within 900K safe context)
 
     output_limit = llm_service._get_safe_output_token_limit(
-        constants.LLM_PROVIDER_GEMINI,
         constants.DEFAULT_GEMINI_MODEL,
         prompt_tokens,
         system_tokens,
@@ -84,17 +84,15 @@ def test_safe_output_limit_context_exceeded_raises_error():
         constants.DEFAULT_GEMINI_MODEL, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
     )
     safe_context = int(model_context * constants.CONTEXT_WINDOW_SAFETY_RATIO)
-    max_input_allowed = int(safe_context * (1 - llm_service.OUTPUT_TOKEN_RESERVE_RATIO))
+    output_reserve = int(safe_context * llm_service.OUTPUT_TOKEN_RESERVE_RATIO)
+    max_input_allowed = safe_context - output_reserve
 
     # Input exceeds 80% threshold by 1K tokens
     prompt_tokens = max_input_allowed + 1_000
     system_tokens = 0
 
-    import pytest
-
     with pytest.raises(ValueError) as exc_info:
         llm_service._get_safe_output_token_limit(
-            constants.LLM_PROVIDER_GEMINI,
             constants.DEFAULT_GEMINI_MODEL,
             prompt_tokens,
             system_tokens,
@@ -130,7 +128,6 @@ def test_output_budget_independent_of_input_size():
     output_budgets = []
     for prompt_tokens, system_tokens in input_sizes:
         output_limit = llm_service._get_safe_output_token_limit(
-            constants.LLM_PROVIDER_GEMINI,
             constants.DEFAULT_GEMINI_MODEL,
             prompt_tokens,
             system_tokens,
@@ -168,7 +165,6 @@ def test_safe_output_limit_respects_context_budget_for_llama():
 
     assert (
         llm_service._get_safe_output_token_limit(
-            constants.LLM_PROVIDER_CEREBRAS,  # Updated: test with Cerebras provider
             "llama-3.3-70b",  # Updated: 3.1-70b retired from Cerebras
             prompt_tokens,
             system_tokens,
