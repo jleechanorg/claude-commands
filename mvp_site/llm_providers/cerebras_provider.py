@@ -90,7 +90,14 @@ def generate_content(
     data = response.json()
 
     try:
-        text = data["choices"][0]["message"]["content"]
+        message = data["choices"][0]["message"]
+        # Qwen 3 reasoning models return content in 'reasoning' field, not 'content'
+        # Use 'is None' to properly handle empty strings (don't fall back if content is "")
+        text = message.get("content")
+        if text is None:
+            text = message.get("reasoning")
+        if text is None:
+            raise KeyError("No 'content' or 'reasoning' field in message")
     except Exception as exc:  # noqa: BLE001 - defensive parsing
         raise ValueError(f"Invalid Cerebras response structure: {data}") from exc
 
