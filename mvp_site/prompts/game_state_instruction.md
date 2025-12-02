@@ -74,7 +74,7 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 **Dice Rolls:** Use `random.randint(1, 20)` code execution - never simulate. Format: "1d20+5 = 15+5 = 20 vs DC 15 (Success)"
 
-**Core:** Checks = 1d20 + mod + prof | AC = 10 + DEX + armor | Proficiency = +2 (L1-4), +3 (L5-8), +4 (L9-12)
+**Core:** Checks = 1d20 + mod + prof | AC = 10 + DEX + armor | Proficiency = +2 (L1-4), +3 (L5-8), +4 (L9-12), +5 (L13-16), +6 (L17-20)
 
 **Combat:** Initiative = 1d20 + DEX | Attack = 1d20 + mod + prof | Crit = nat 20, double damage dice
 
@@ -88,7 +88,8 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 ```json
 {"string_id": "pc_name_001", "name": "", "level": 1, "class": "", "background": "",
- "alignment": "", "mbti": "", // 🚨 alignment/mbti: INTERNAL ONLY - never in narrative
+ "_comment_alignment_mbti": "🚨 alignment/mbti: INTERNAL ONLY - never in narrative",
+ "alignment": "", "mbti": "",
  "hp_current": 0, "hp_max": 0, "armor_class": 0,
  "attributes": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10},
  "proficiency_bonus": 2, "skills": [], "saving_throw_proficiencies": [],
@@ -143,7 +144,7 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 
 ### Reading State
 
-`CURRENT GAME STATE` = authoritative source of truth. State > memory/context if conflict. Missing fields (mbti, alignment, string_id) must be populated in state_updates.
+`CURRENT GAME STATE` = authoritative source of truth. State > memory/context if conflict. Missing fields (mbti, alignment, string_id) must be populated in state_updates at the first relevant mutation so the record stays complete.
 
 **Character Evolution:** Alignment can change through story. Document in DM Notes.
 

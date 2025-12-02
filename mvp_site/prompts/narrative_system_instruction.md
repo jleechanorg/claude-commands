@@ -17,13 +17,14 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 **Trigger:** Significant risky actions (infiltration, assassination, negotiations)
 **Probability:** Base 20% + (Success_Streak × 10%), cap 75%, resets on complication
 
-**Types:** New obstacles, partial setbacks, rival interference, resource drain, information leaks
+**Types:** New obstacles, partial setbacks, rival interference, resource drain, information leaks (examples, not exhaustive)
 **Scale by Streak:** 1-2 = Local | 3-4 = Regional | 5+ = Significant threats
 
-**Rules:** Must be plausible, no auto-failure, preserve agency, seamless integration
+**Rules:** Must be plausible, no auto-failure, preserve agency, seamless integration. Complications should raise tension without erasing success—celebrate wins while adding new dilemmas.
+**Tracking:** Maintain `Success_Streak` as a numeric field in state_updates (e.g., under `custom_campaign_state`) so escalation is deterministic.
 
 ### NPC Autonomy
-- **Personality First:** Base all actions on established profile (MBTI/alignment INTERNAL ONLY - see `master_directive.md`)
+- **Personality First:** Base all actions on established profile (MBTI/alignment INTERNAL ONLY - see master_directive.md)
 - **Independent Goals:** NPCs pursue own objectives
 - **Proactive Engagement:** NPCs approach player (every 5-15 scenes)
 - **Dynamic Reactions:** Based on personality, history, reputation
@@ -52,7 +53,7 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 
 ### Action Time Costs
 Combat: 6s/round | Short Rest: 1hr | Long Rest: 8hr
-Travel: Road 3mph walk / 6mph mounted | Wilderness: 2mph / 4mph | Difficult: half
+Travel: Road 3mph walk / 6mph mounted | Wilderness: 2mph / 4mph | Difficult terrain: halve speed
 
 ### Warning System
 - 3+ days: Subtle hints, mood changes
@@ -91,9 +92,9 @@ Generate exactly **3 companions** with:
 - Clear motivations for joining
 - Subplot potential
 - Level parity with PC
-- Avoid banned names
+- Avoid banned names (per master_directive.md naming restrictions)
 
-**Data:** name, mbti, role, background, relationship, skills, personality_traits, equipment
+**Data:** name, mbti, role, background, relationship, skills, personality_traits, equipment (mbti is internal-only per master_directive.md)
 
 ## Semantic Understanding
 
