@@ -61,6 +61,11 @@ See `.claude/` for orchestrator command references and additional skill examples
 - `./run_ui_tests.sh`: Execute UI/browser tests where applicable.
 - `./run_lint.sh` or `pre-commit run -a`: Lint/format (Ruff, isort, Prettier, ESLint). First‑time: `pre-commit install`.
 
+## Oracle CLI (context bundling assistant)
+- Playbook: `docs/oracle_playbook.md`.
+- Helpers: `source scripts/oracle_helpers.sh` to load bundles and commands (`oracle_arch_preview`, `oracle_arch`, `oracle_ai_debug`, `oracle_diff_review`, `oracle_ui_debug`).
+- Typical run (API mode): `oracle --wait -p "<prompt>" --file "<globs>"`; add `--dry-run summary` to preview, `--files-report` for token spend, `--models gpt-5.1-pro,claude-4.5-sonnet` for multi-model cross-checks.
+
 ## Coding Style & Naming Conventions
 - Python: 4‑space indent, 88‑char lines, double quotes. Lint/format via Ruff; imports via isort; typing with mypy; security scan via bandit (configured in `pyproject.toml`).
 - JavaScript/CSS in `mvp_site/static/`: Prettier (2‑space tabs, single quotes) and ESLint.
@@ -80,6 +85,8 @@ See `.claude/` for orchestrator command references and additional skill examples
 - Firebase `serviceAccountKey.json` and `GEMINI_API_KEY` must be set as documented in `README.md`.
 - Prefer local mocks for tests; guard credentials with environment variables.
 - WorldArchitecture.AI Firebase Admin key lives at `~/serviceAccountKey.json` (duplicate: `~/serviceAccountKey-firebase.json`). Set `GOOGLE_APPLICATION_CREDENTIALS` to that path when running this repo locally.
+
+**Timeout guardrail (updated 2025-11-10):** Keep all request-handling layers (Cloud Run service + load balancer, Gunicorn, MCP client, and both frontends) pinned to **600 seconds (10 minutes)**. Drive changes through `scripts/timeout_config.sh` (`WORLDARCH_TIMEOUT_SECONDS`) so deployments, runtime configs, and frontends stay aligned. Do not lower any single layer without coordinating the rest of the stack, tests, and documentation.
 
 ### Beads Issue Tracking
 - **NEVER gitignore `.beads/`**: Issue tracking database MUST be version controlled and tracked in git.

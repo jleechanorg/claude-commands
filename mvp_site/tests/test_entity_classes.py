@@ -124,13 +124,12 @@ class TestHealthStatus(unittest.TestCase):
         assert health.conditions == conditions
 
     def test_health_status_hp_validation(self):
-        """Test HP validation - should reject hp > hp_max"""
+        """Test HP validation - should clamp hp to hp_max"""
 
-        # Pydantic should reject hp > hp_max rather than clamping
-        with pytest.raises(ValidationError) as context:
-            HealthStatus(hp=20, hp_max=10)
-
-        assert "cannot exceed max HP" in str(context.value)
+        # Pydantic should clamp hp to hp_max when hp > hp_max
+        health = HealthStatus(hp=20, hp_max=10)
+        assert health.hp == 10  # Clamped to hp_max
+        assert health.hp_max == 10
 
         # Valid HP should work
         health = HealthStatus(hp=10, hp_max=10)

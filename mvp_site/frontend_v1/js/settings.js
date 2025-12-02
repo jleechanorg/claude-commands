@@ -9,11 +9,28 @@ document.addEventListener('DOMContentLoaded', function () {
   // Load current settings
   loadSettings();
 
-  // Add change listeners to radio buttons
-  const radioButtons = document.querySelectorAll('input[name="geminiModel"]');
-  radioButtons.forEach((radio) => {
-    radio.addEventListener('change', saveSettings);
+  const geminiModelSelect = document.getElementById('geminiModel');
+  if (geminiModelSelect) {
+    geminiModelSelect.addEventListener('change', saveSettings);
+  }
+
+  const providerRadios = document.querySelectorAll('input[name="llmProvider"]');
+  providerRadios.forEach((radio) => {
+    radio.addEventListener('change', () => {
+      toggleProviderSections(radio.value);
+      saveSettings();
+    });
   });
+
+  const openrouterModelSelect = document.getElementById('openrouterModel');
+  if (openrouterModelSelect) {
+    openrouterModelSelect.addEventListener('change', saveSettings);
+  }
+
+  const cerebrasModelSelect = document.getElementById('cerebrasModel');
+  if (cerebrasModelSelect) {
+    cerebrasModelSelect.addEventListener('change', saveSettings);
+  }
 
   // Add change listener to debug mode switch
   const debugSwitch = document.getElementById('debugModeSwitch');
@@ -23,6 +40,9 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 let saveTimeout = null;
+const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-70b-instruct';
+const DEFAULT_CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // 131K context - best for RPG
+const DEFAULT_GEMINI_MODEL = 'gemini-3-pro-preview';
 
 /**
  * Load user settings from the API and update the UI
@@ -41,23 +61,38 @@ async function loadSettings() {
     const settings = await response.json();
     console.log('Loaded settings:', settings);
 
-    // Validate the model value before using it
-    // NOTE: Only models that support code_execution + JSON mode are allowed
-    if (
-      settings.gemini_model &&
-      ['gemini-3-pro-preview', 'gemini-2.0-flash'].includes(settings.gemini_model)
-    ) {
-      const radio = document.querySelector(
-        `input[value="${settings.gemini_model}"]`,
+    const allowedProviders = ['gemini', 'openrouter', 'cerebras'];
+    const selectedProvider = allowedProviders.includes(settings.llm_provider)
+      ? settings.llm_provider
+      : 'gemini';
+
+    const providerRadio = document.querySelector(
+      `input[name="llmProvider"][value="${selectedProvider}"]`,
+    );
+    if (providerRadio) {
+      providerRadio.checked = true;
+    }
+    toggleProviderSections(selectedProvider);
+
+    const geminiModel = settings.gemini_model || DEFAULT_GEMINI_MODEL;
+    const geminiSelect = document.getElementById('geminiModel');
+    if (geminiSelect) {
+      const hasOption = Array.from(geminiSelect.options).some(
+        (opt) => opt.value === geminiModel,
       );
-      if (radio) {
-        radio.checked = true;
-        console.log(`Set model to: ${settings.gemini_model}`);
-      }
-    } else {
-      console.log(
-        'No saved model preference or invalid value, using default (gemini-3-pro-preview)',
-      );
+      geminiSelect.value = hasOption ? geminiModel : DEFAULT_GEMINI_MODEL;
+    }
+
+    const openrouterModel = settings.openrouter_model || DEFAULT_OPENROUTER_MODEL;
+    const openrouterSelect = document.getElementById('openrouterModel');
+    if (openrouterSelect) {
+      openrouterSelect.value = openrouterModel;
+    }
+
+    const cerebrasModel = settings.cerebras_model || DEFAULT_CEREBRAS_MODEL;
+    const cerebrasSelect = document.getElementById('cerebrasModel');
+    if (cerebrasSelect) {
+      cerebrasSelect.value = cerebrasModel;
     }
 
     // Set debug mode switch
@@ -82,20 +117,35 @@ async function saveSettings() {
   }
 
   saveTimeout = setTimeout(async () => {
-    const checkedRadio = document.querySelector(
-      'input[name="geminiModel"]:checked',
+    const geminiSelect = document.getElementById('geminiModel');
+    const providerRadio = document.querySelector(
+      'input[name="llmProvider"]:checked',
     );
-    if (!checkedRadio) {
-      console.warn('No radio button is selected. Aborting save operation.');
+    const openrouterSelect = document.getElementById('openrouterModel');
+    const cerebrasSelect = document.getElementById('cerebrasModel');
+
+    if (!providerRadio) {
+      console.warn('No provider is selected. Aborting save operation.');
       return;
     }
-    const selectedModel = checkedRadio.value;
+
+    const provider = providerRadio.value;
+    const selectedModel = geminiSelect ? geminiSelect.value : DEFAULT_GEMINI_MODEL;
+    const openrouterModel = openrouterSelect
+      ? openrouterSelect.value
+      : DEFAULT_OPENROUTER_MODEL;
+    const cerebrasModel = cerebrasSelect
+      ? cerebrasSelect.value
+      : DEFAULT_CEREBRAS_MODEL;
     const debugSwitch = document.getElementById('debugModeSwitch');
-    const radioButtons = document.querySelectorAll('input[name="geminiModel"]');
+    const providerRadios = document.querySelectorAll('input[name="llmProvider"]');
 
     // Collect all settings to save
     const settingsToSave = {
+      llm_provider: provider,
       gemini_model: selectedModel,
+      openrouter_model: openrouterModel,
+      cerebras_model: cerebrasModel,
       debug_mode: debugSwitch ? debugSwitch.checked : false,
     };
 
@@ -105,7 +155,10 @@ async function saveSettings() {
     showLoadingIndicator(true);
 
     // Disable inputs during save
-    radioButtons.forEach((radio) => (radio.disabled = true));
+    if (geminiSelect) geminiSelect.disabled = true;
+    providerRadios.forEach((radio) => (radio.disabled = true));
+    if (openrouterSelect) openrouterSelect.disabled = true;
+    if (cerebrasSelect) cerebrasSelect.disabled = true;
     if (debugSwitch) debugSwitch.disabled = true;
 
     try {
@@ -136,17 +189,38 @@ async function saveSettings() {
       );
     } finally {
       // Re-enable inputs and hide loading
-      radioButtons.forEach((radio) => (radio.disabled = false));
+      if (geminiSelect) geminiSelect.disabled = false;
+      providerRadios.forEach((radio) => (radio.disabled = false));
+      if (openrouterSelect) openrouterSelect.disabled = false;
+      if (cerebrasSelect) cerebrasSelect.disabled = false;
       if (debugSwitch) debugSwitch.disabled = false;
       showLoadingIndicator(false);
     }
   }, 300); // 300ms debounce
 }
 
+function toggleProviderSections(provider) {
+  const geminiSection = document.getElementById('gemini-model-selection');
+  const openrouterSection = document.getElementById('openrouter-model-selection');
+  const cerebrasSection = document.getElementById('cerebras-model-selection');
+
+  if (!geminiSection || !openrouterSection || !cerebrasSection) {
+    return;
+  }
+
+  geminiSection.classList.toggle('d-none', provider !== 'gemini');
+  openrouterSection.classList.toggle('d-none', provider !== 'openrouter');
+  cerebrasSection.classList.toggle('d-none', provider !== 'cerebras');
+}
+
 /**
  * Get authentication headers for API requests
  */
 async function getAuthHeaders() {
+  if (window.authTokenManager) {
+    return window.authTokenManager.getAuthHeaders();
+  }
+
   const headers = {};
 
   // Check for test mode parameters in URL

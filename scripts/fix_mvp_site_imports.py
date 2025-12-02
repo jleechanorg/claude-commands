@@ -25,8 +25,8 @@ INTERNAL_MODULES = {
     "memory_integration", "numeric_field_converter", "file_cache",
     "robust_json_parser", "structured_fields_utils",
     "narrative_response_schema", "narrative_sync_validator",
-    "dual_pass_generator", "debug_mode_parser", "debug_hybrid_system",
-    "debug_json_response", "gemini_request", "gemini_response",
+    "dual_pass_generator", "debug_hybrid_system",
+    "gemini_request", "gemini_response", "serialization",
     "mcp_client", "memory_mcp_real", "mcp_memory_real"
 }
 

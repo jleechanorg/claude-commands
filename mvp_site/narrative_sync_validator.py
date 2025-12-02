@@ -85,89 +85,11 @@ class NarrativeSyncValidator:
             "guilt": ["guilty", "ashamed", "remorseful"],
         }
 
-    def _compile_patterns(self):
-        """Pre-compile regex patterns for better performance"""
-        # Compile physical state patterns
-        self._compiled_patterns["physical_states"] = [
-            re.compile(pattern, re.IGNORECASE)
-            for pattern in self.physical_state_patterns
-        ]
-
-    def _analyze_entity_presence(
-        self, narrative: str, entity: str
-    ) -> EntityPresenceType:
-        """Determine if an entity is physically present or just mentioned"""
-        narrative_lower = narrative.lower()
-        entity_lower = entity.lower()
-
-        # Check for explicit absence indicators first
-        for pattern in self.presence_patterns["absent_reference"]:
-            if re.search(pattern.replace(r"(\w+)", entity_lower), narrative_lower):
-                return EntityPresenceType.MENTIONED_ABSENT
-
-        # Check if only mentioned in dialogue or thoughts
-        thought_patterns = [
-            f"thought of {entity_lower}",
-            f"remembered {entity_lower}",
-            f"thinking of {entity_lower}",
-            f"spoke of {entity_lower}",
-        ]
-
-        for pattern in thought_patterns:
-            if pattern in narrative_lower:
-                return EntityPresenceType.MENTIONED_ABSENT
-
-        # If entity is mentioned in narrative, assume physically present unless proven otherwise
-        # This is more appropriate for our use case where entities should be mentioned if present
-        if entity_lower in narrative_lower:
-            return EntityPresenceType.PHYSICALLY_PRESENT
-
-        # Not found at all
-        return None
-
-    def _extract_physical_states(self, narrative: str) -> dict[str, list[str]]:
-        """Extract physical state descriptions from narrative"""
-        states = {}
-
-        # Use pre-compiled patterns for better performance
-        compiled_patterns = self._compiled_patterns.get("physical_states", [])
-        for pattern in compiled_patterns:
-            matches = pattern.finditer(narrative)
-            for match in matches:
-                state = match.group(0)
-                # Try to associate with nearby entity names
-                context = narrative[
-                    max(0, match.start() - 50) : min(len(narrative), match.end() + 50)
-                ]
-
-                # Simple heuristic: look for capitalized words nearby
-                entities = re.findall(r"\b[A-Z][a-z]+\b", context)
-                for entity in entities:
-                    if entity not in states:
-                        states[entity] = []
-                    states[entity].append(state)
-
-        return states
-
-    def _detect_scene_transitions(self, narrative: str) -> list[str]:
-        """Detect location transitions in the narrative"""
-        transitions = []
-
-        for pattern_list in self.presence_patterns["location_transition"]:
-            matches = re.finditer(pattern_list, narrative, re.IGNORECASE)
-            for match in matches:
-                transitions.append(match.group(0))
-
-        return transitions
-
     def _check_continuity(
         self, narrative: str, previous_states: dict[str, EntityContext]
     ) -> list[str]:
         """Check for continuity issues with previous states"""
         issues = []
-
-        # Extract current physical states
-        self._extract_physical_states(narrative)
 
         # Check if previously noted physical states are maintained
         for entity, context in previous_states.items():

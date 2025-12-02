@@ -35,7 +35,6 @@ class TestCIFirebaseInitialization(unittest.TestCase):
             "structured_fields_utils",
             "custom_types",
             "debug_hybrid_system",
-            "debug_mode_parser",
             "game_state",
             # Fully-qualified (when importing as mvp_site.*)
             "mvp_site.world_logic",

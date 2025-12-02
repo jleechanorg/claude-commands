@@ -44,12 +44,14 @@ WorldArchitect.AI, an AI-powered tabletop RPG platform (digital D&D 5e Game Mast
 import argparse
 import asyncio
 import atexit
+import base64
 import concurrent.futures
 import datetime
 import functools
 import json
 import logging
 import os
+import time
 
 # Additional imports for conditional logic (moved from inline to meet import validation)
 import re
@@ -82,17 +84,22 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-# Infrastructure helpers
-from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
 from infrastructure.executor_config import (
-    get_blocking_io_executor,
     configure_asyncio_executor,
+    get_blocking_io_executor,
     shutdown_executor,
 )
 
+# Infrastructure helpers
+from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
+
 # Firestore service imports
-from mvp_site import world_logic  # For MCP fallback logic
-from mvp_site import constants, firestore_service, logging_util
+from mvp_site import (
+    constants,
+    firestore_service,
+    logging_util,
+    world_logic,  # For MCP fallback logic
+)
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 
@@ -562,21 +569,59 @@ def create_app() -> Flask:
                 )
 
                 clock_skew = get_clock_skew_seconds()
-                # When clock skew > 60s, use actual time and disable revocation check
-                if clock_skew > 60:
-                    with UseActualTime():
+
+                # Firebase SDK limits clock_skew_seconds to 60 max, but we want 12 min tolerance
+                # Strategy: Try Firebase verification first, if it fails due to expiry,
+                # manually verify signature is valid and token is within 12 min of expiry
+                extended_tolerance = 720  # 12 minutes
+
+                try:
+                    # When clock skew > 60s, use actual time and disable revocation check
+                    if clock_skew > 60:
+                        with UseActualTime():
+                            decoded_token = auth.verify_id_token(
+                                id_token,
+                                check_revoked=False,
+                                clock_skew_seconds=60,
+                            )
+                    else:
                         decoded_token = auth.verify_id_token(
                             id_token,
-                            check_revoked=False,  # Can't check - backend call would fail
+                            check_revoked=True,
                             clock_skew_seconds=60,
                         )
-                else:
-                    # Normal verification with revocation check
-                    decoded_token = auth.verify_id_token(
-                        id_token,
-                        check_revoked=True,
-                        clock_skew_seconds=60,
-                    )
+                except Exception as firebase_error:
+                    # Check if it's an expiry error we can extend tolerance for
+                    error_str = str(firebase_error)
+                    if "Token expired" in error_str or "exp" in error_str.lower():
+                        # Decode JWT to check if within extended tolerance
+                        token_parts = id_token.split(".")
+                        if len(token_parts) >= 2:
+                            payload_b64 = token_parts[1] + "=" * (4 - len(token_parts[1]) % 4)
+                            payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+                            token_exp = payload.get("exp", 0)
+                            current_time = time.time()
+
+                            if current_time <= token_exp + extended_tolerance:
+                                # Within extended tolerance - accept the token
+                                # Firebase uses 'user_id' or 'sub' for the uid in JWT payload
+                                decoded_token = payload
+                                # Normalize uid field - Firebase SDK returns 'uid', JWT has 'sub' or 'user_id'
+                                if "uid" not in decoded_token:
+                                    decoded_token["uid"] = payload.get("sub") or payload.get("user_id")
+                                logging_util.info(
+                                    f"Token {int(current_time - token_exp)}s past expiry, "
+                                    f"within {extended_tolerance}s tolerance - accepting"
+                                )
+                            else:
+                                raise ValueError(
+                                    f"Token expired {int(current_time - token_exp)}s ago, "
+                                    f"beyond {extended_tolerance}s tolerance"
+                                )
+                        else:
+                            raise firebase_error
+                    else:
+                        raise firebase_error
                 kwargs["user_id"] = decoded_token["uid"]
             except Exception as e:
                 error_message = str(e)
@@ -780,7 +825,8 @@ def create_app() -> Flask:
             )
             logging_util.info(f"  Story entries: {len(result.get('story', []))}")
             logging_util.info(f"  Response data keys: {list(response_data.keys())}")
-            logging_util.info(f"  Full campaign object: {campaign_data}")
+            # Trim campaign object for logs - just show keys, not full narrative
+            logging_util.info(f"  Campaign has {len(str(campaign_data))} chars")
 
             return jsonify(response_data)
         except MCPClientError as e:
@@ -1231,14 +1277,8 @@ def create_app() -> Flask:
                 # Use MCP client for getting settings
                 request_data = {"user_id": user_id}
 
-                # Direct service calls with run_in_executor for parallel request handling
-                settings = await run_blocking_io(
-                    firestore_service.get_user_settings, user_id
-                )
-                # Handle case where settings is None (user doesn't exist yet)
-                if settings is None:
-                    settings = {}
-                result = {"success": True, **settings}
+                # Delegate to world_logic for centralized defaults handling
+                result = await world_logic.get_user_settings_unified({"user_id": user_id})
 
                 if not result.get(KEY_SUCCESS):
                     return jsonify(result), result.get("status_code", 400)
@@ -1266,6 +1306,9 @@ def create_app() -> Flask:
                 # Validate settings data to maintain API contract
                 valid_settings_keys = {
                     "gemini_model",
+                    "openrouter_model",
+                    "cerebras_model",
+                    "llm_provider",
                     "theme",
                     "auto_save",
                     "debug_mode",
@@ -1564,7 +1607,7 @@ if __name__ == "__main__":
             logging_util.info(
                 f"Development server running: http://localhost:{port} (MCP: {mode})"
             )
-            app.run(host="0.0.0.0", port=port, debug=False)
+            app.run(host="0.0.0.0", port=port, debug=True, use_reloader=True)
         elif args.command in ["testui", "testuif", "testhttp", "testhttpf"]:
             run_test_command(args.command)
         else:

@@ -8,6 +8,7 @@ import { Badge } from './ui/badge'
 import { Checkbox } from './ui/checkbox'
 import { ArrowLeft, ChevronDown, ChevronUp, Sparkles, Users, Settings, Globe, Loader2, Clock, Zap, RefreshCw, AlertTriangle, CheckCircle, WifiOff } from 'lucide-react'
 import { DRAGON_KNIGHT_DESCRIPTION, DRAGON_KNIGHT_DESCRIPTION_SHORT, DRAGON_KNIGHT_SUMMARY, DRAGON_KNIGHT_CHARACTER, MAX_DESCRIPTION_LENGTH } from '../constants/campaignDescriptions'
+import { validateCampaignCombinedLength } from '../utils/campaignValidation'
 
 import type { Campaign, Theme } from '../types'
 
@@ -163,6 +164,19 @@ export function CampaignCreationV2({ onCreateCampaign, onBack, isCreating }: Cam
           setError(`Campaign description must be ${MAX_DESCRIPTION_LENGTH.toLocaleString()} characters or less`)
           return false
         }
+
+        // Validate combined length using centralized validation utility
+        const lengthValidation = validateCampaignCombinedLength(
+          campaignData.character,
+          campaignData.setting,
+          campaignData.description
+        );
+
+        if (!lengthValidation.isValid) {
+          setError(lengthValidation.errorMessage);
+          return false;
+        }
+
         return true
       case 2:
         if (!Object.values(campaignData.aiPersonalities).some(Boolean)) {

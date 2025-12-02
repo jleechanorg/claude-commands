@@ -5,33 +5,9 @@ Mock Firestore Service wrapper that provides the same interface as the real fire
 import copy
 import json
 
-# Handle logging_util import with triple fallback
-logging_util = None
-try:
-    from mvp_site import logging_util
-except ImportError:
-    try:
-        # Handle import from different contexts (e.g., tests run from project root)
-        from mvp_site import logging_util
-    except ImportError:
-        try:
-            # Handle import from testing framework context
-            import os
-            import sys
+from mvp_site import logging_util
 
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-            from mvp_site import logging_util
-        except ImportError:
-            # Final fallback - create minimal logging interface
-            import logging
-
-            class MinimalLoggingUtil:
-                @staticmethod
-                def get_logger(name):
-                    return logging.getLogger(name)
-
-            logging_util = MinimalLoggingUtil()
-
+from mvp_site.serialization import json_default_serializer
 from .mock_firestore_service import MockFirestoreClient
 
 # Module constants from the real service
@@ -194,19 +170,6 @@ def get_story_context(user_id, campaign_id, max_turns=15, include_all=False):
     """Get story context for a campaign."""
     client = get_client()
     return client.get_story_context(user_id, campaign_id, max_turns, include_all)
-
-
-# --- Helper Functions ---
-
-
-def json_default_serializer(obj):
-    """JSON serializer for objects not serializable by default json code."""
-    if hasattr(obj, "isoformat"):
-        return obj.isoformat()
-    if hasattr(obj, "__dict__"):
-        return obj.__dict__
-    return str(obj)
-
 
 def _truncate_log_json(state_dict, max_length=1000):
     """Truncate a state dictionary for logging purposes."""

@@ -65,6 +65,10 @@ Key environment variables used by the Flask app:
 - `WORLDAI_*` Firebase variables – Override Firebase project/credentials when running
   outside production.
 
+**Timeout guardrail:** All HTTP layers (Cloud Run service + load balancer, Gunicorn, MCP client, and both frontends) are pinned to a
+10-minute/600-second ceiling for long-running Gemini/API calls. Source the value from `scripts/timeout_config.sh` so deploys, builds,
+and runtime configs share the same number; do not lower any single layer without updating the others and the related tests/documentation.
+
 ## Running tests
 - **Unit / integration**
   ```bash

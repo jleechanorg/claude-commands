@@ -32,6 +32,24 @@ class TestSettingsAPI(unittest.TestCase):
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)
 
+        # Bypass Firestore during tests
+        # Patch both locations: firestore_service (for direct calls) and world_logic (for imported reference)
+        self._settings_get_patcher = patch(
+            "mvp_site.firestore_service.get_user_settings", return_value={}
+        )
+        self._settings_get_wl_patcher = patch(
+            "mvp_site.world_logic.get_user_settings", return_value={}
+        )
+        self._settings_update_patcher = patch(
+            "mvp_site.firestore_service.update_user_settings", return_value=True
+        )
+        self._settings_get_patcher.start()
+        self._settings_get_wl_patcher.start()
+        self._settings_update_patcher.start()
+        self.addCleanup(self._settings_get_patcher.stop)
+        self.addCleanup(self._settings_get_wl_patcher.stop)
+        self.addCleanup(self._settings_update_patcher.stop)
+
         # Test headers with Authorization token
         self.headers = {
             "Content-Type": "application/json",
@@ -65,6 +83,8 @@ class TestSettingsAPI(unittest.TestCase):
             try:
                 data = response.get_json()
                 assert isinstance(data, dict), "Settings should return dict"
+                assert data.get("llm_provider") == "gemini"
+                assert data.get("gemini_model") == "gemini-3-pro-preview"
             except Exception as e:
                 self.fail(f"Response should be valid JSON: {e}")
 
@@ -88,6 +108,34 @@ class TestSettingsAPI(unittest.TestCase):
         except Exception as e:
             # If not JSON, should at least not crash
             assert isinstance(e, Exception), f"Should handle non-JSON gracefully: {e}"
+
+    def test_update_settings_allows_openrouter_provider(self):
+        """Ensure OpenRouter provider and model settings save successfully."""
+
+        test_settings = {
+            "llm_provider": "openrouter",
+            "openrouter_model": "meta-llama/llama-3.1-70b-instruct",
+        }
+
+        response = self.client.post(
+            "/api/settings", json=test_settings, headers=self.headers
+        )
+
+        assert response.status_code == 200
+
+    def test_update_settings_allows_cerebras_provider(self):
+        """Ensure Cerebras provider and model settings save successfully."""
+
+        test_settings = {
+            "llm_provider": "cerebras",
+            "cerebras_model": "llama-3.3-70b",  # Updated: 3.1-70b retired from Cerebras
+        }
+
+        response = self.client.post(
+            "/api/settings", json=test_settings, headers=self.headers
+        )
+
+        assert response.status_code == 200
 
     def test_settings_endpoints_auth_behavior(self):
         """Test that settings endpoints handle authentication in MCP architecture."""

@@ -49,7 +49,7 @@ class ImportValidator(ast.NodeVisitor):
             'uuid', 'os', 'tempfile', 'threading', 'concurrent.futures',
             'argparse', 'glob', 'shlex',
             'google.cloud', 'google.auth', 'google', 'genai',
-            'firebase_admin', 'firestore_service', 'world_logic',
+            'firebase_admin', 'firestore_service', 'world_logic', 'mvp_site.world_logic',
             'http.server', 'BaseHTTPRequestHandler', 'HTTPServer',
             'unittest.mock', 'AsyncMock', 'playwright.sync_api',
             'inspect', 'asyncio', 'time', 'mcp.server.stdio',

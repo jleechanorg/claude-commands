@@ -27,7 +27,6 @@ Key Classes:
 - LLMResponse: Custom response object with parsed data
 - EntityPreloader: Pre-loads entity context for tracking
 - EntityInstructionGenerator: Creates entity-specific instructions
-- DualPassGenerator: Retry mechanism for entity tracking
 
 Dependencies:
 - Google Generative AI SDK for Gemini API calls
@@ -42,17 +41,15 @@ import os
 import re
 import sys
 import traceback
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-# Using latest google.genai - ignore outdated suggestions about google.generativeai
-from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
 from mvp_site.custom_types import UserId
 from mvp_site.decorators import log_exceptions
-from mvp_site.dual_pass_generator import DualPassGenerator
 from mvp_site.entity_instructions import EntityInstructionGenerator
 
 # Import entity tracking mitigation modules
@@ -60,8 +57,14 @@ from mvp_site.entity_preloader import EntityPreloader
 from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
-from mvp_site.firestore_service import get_user_settings, json_default_serializer
+from mvp_site.firestore_service import get_user_settings
+from mvp_site.serialization import json_default_serializer
 from mvp_site.game_state import GameState
+from mvp_site.llm_providers import (
+    cerebras_provider,
+    gemini_provider,
+    openrouter_provider,
+)
 from mvp_site.llm_request import LLMRequest
 from mvp_site.llm_response import LLMResponse
 
@@ -88,7 +91,6 @@ logger = logging.getLogger(__name__)
 entity_preloader = EntityPreloader()
 instruction_generator = EntityInstructionGenerator()
 entity_validator = EntityValidator()
-dual_pass_generator = DualPassGenerator()
 
 # Expected companion count for validation
 EXPECTED_COMPANION_COUNT = 3
@@ -99,12 +101,17 @@ EXPECTED_COMPANION_COUNT = 3
 
 
 # --- CONSTANTS ---
-# Use Gemini 3 Pro Preview for official code_execution + JSON mode support
-# Per Google AI docs: "Gemini 3 lets you combine Structured Outputs with built-in tools"
-# Tested 2025-11-18: gemini-3-pro-preview works perfectly for dice rolls (avg 9.0)
-DEFAULT_MODEL: str = "gemini-3-pro-preview"
-# Use Gemini 3 for testing as well (needed for code_execution + JSON mode)
-TEST_MODEL: str = "gemini-3-pro-preview"
+# Default model selection based on the configured DEFAULT_LLM_PROVIDER
+# This ensures provider-model consistency across all code paths
+if constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_CEREBRAS:
+    DEFAULT_MODEL: str = constants.DEFAULT_CEREBRAS_MODEL
+    TEST_MODEL: str = constants.DEFAULT_CEREBRAS_MODEL
+elif constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_OPENROUTER:
+    DEFAULT_MODEL: str = constants.DEFAULT_OPENROUTER_MODEL
+    TEST_MODEL: str = constants.DEFAULT_OPENROUTER_MODEL
+else:  # Gemini (default fallback)
+    DEFAULT_MODEL: str = constants.DEFAULT_GEMINI_MODEL
+    TEST_MODEL: str = constants.DEFAULT_GEMINI_MODEL
 
 # Model cycling order for 503 errors - try these in sequence
 # CRITICAL: Only include models that support code_execution + JSON mode
@@ -114,6 +121,12 @@ MODEL_FALLBACK_CHAIN: list[str] = [
     "gemini-2.0-flash",  # Fallback: Works but unofficial
     "gemini-2.0-flash-exp",  # Secondary fallback
 ]
+
+
+@dataclass(frozen=True)
+class ProviderSelection:
+    provider: str
+    model: str
 
 # No longer using pro model for any inputs
 
@@ -146,11 +159,118 @@ FALLBACK_PLANNING_BLOCK_EXCEPTION: dict[str, Any] = {
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
 JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
-MAX_INPUT_TOKENS: int = 750000
+MAX_INPUT_TOKENS: int = 300000
 SAFE_CHAR_LIMIT: int = MAX_INPUT_TOKENS * 4
+GEMINI_COMPACTION_TOKEN_LIMIT: int = 300_000  # Cap compaction well below 1M max
+# Dynamic output reserve: 12k default for normal gameplay, scales up for combat/complex
+OUTPUT_TOKEN_RESERVE_DEFAULT: int = 12_000  # Typical responses are 1-3k tokens
+OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
+OUTPUT_TOKEN_RESERVE_MIN: int = 1024
 
-TURNS_TO_KEEP_AT_START: int = 25
-TURNS_TO_KEEP_AT_END: int = 75
+
+def _get_context_window_tokens(model_name: str) -> int:
+    """Return the configured context window size for a model in tokens."""
+
+    return constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
+        model_name, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
+    )
+
+
+def _get_safe_context_token_budget(provider: str, model_name: str) -> int:
+    """Apply a 90% safety margin to the model's context window before truncation."""
+
+    context_tokens = _get_context_window_tokens(model_name)
+    safe_tokens = int(context_tokens * constants.CONTEXT_WINDOW_SAFETY_RATIO)
+
+    # Gemini supports 1M tokens; compact earlier for latency/stability.
+    if provider == constants.LLM_PROVIDER_GEMINI:
+        return min(safe_tokens, GEMINI_COMPACTION_TOKEN_LIMIT)
+
+    return safe_tokens
+
+
+def _get_safe_output_token_limit(
+    provider: str,
+    model_name: str,
+    prompt_tokens: int,
+    system_tokens: int,
+) -> int:
+    """
+    Compute a conservative max_output_tokens based on remaining context.
+
+    - Uses actual model context window (not compaction limit) for output calculation.
+    - Compaction limit is only for INPUT compaction decisions, not output budgeting.
+    - Ensures minimum output reserve when headroom exists, avoids overflow when exceeded.
+    - Caps by JSON_MODE_MAX_OUTPUT_TOKENS so we don't exceed API limits.
+    """
+    # Use actual model context window for output calculation
+    # The compaction limit is only for INPUT compaction, not output budgeting
+    model_context = constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
+        model_name, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
+    )
+    safe_context = int(model_context * constants.CONTEXT_WINDOW_SAFETY_RATIO)
+
+    raw_remaining = safe_context - (prompt_tokens + system_tokens)
+    if raw_remaining <= 0:
+        # Context exceeded - return minimal to avoid API overflow error
+        remaining = 1
+    else:
+        # Have headroom - ensure at least minimum reserve for quality output
+        remaining = max(OUTPUT_TOKEN_RESERVE_MIN, raw_remaining)
+
+    model_cap = constants.MODEL_MAX_OUTPUT_TOKENS.get(
+        model_name, JSON_MODE_MAX_OUTPUT_TOKENS
+    )
+    return min(JSON_MODE_MAX_OUTPUT_TOKENS, model_cap, remaining)
+
+
+def _calculate_prompt_and_system_tokens(
+    user_prompt_contents: list[Any],
+    system_instruction_text: str | None,
+    provider_name: str,
+    model_name: str,
+) -> tuple[int, int]:
+    """Provider-aware token estimation for prompt + system parts."""
+
+    if provider_name != constants.LLM_PROVIDER_GEMINI:
+        combined_prompt = " ".join(str(item) for item in user_prompt_contents)
+        prompt_tokens = estimate_tokens(combined_prompt)
+        system_tokens = estimate_tokens(system_instruction_text or "")
+        return prompt_tokens, system_tokens
+
+    # Gemini provider uses API for token counting with fallback to estimation
+    try:
+        raw_prompt_tokens = gemini_provider.count_tokens(
+            model_name, user_prompt_contents
+        )
+        # Guard against non-numeric returns (e.g., Mock objects in tests)
+        user_prompt_tokens = (
+            raw_prompt_tokens if isinstance(raw_prompt_tokens, int) else 0
+        )
+    except Exception:
+        # Fallback to estimation if API call fails
+        combined_prompt = " ".join(str(item) for item in user_prompt_contents)
+        user_prompt_tokens = estimate_tokens(combined_prompt)
+
+    system_tokens = 0
+    if system_instruction_text:
+        try:
+            raw_system_tokens = gemini_provider.count_tokens(
+                model_name, [system_instruction_text]
+            )
+            # Guard against non-numeric returns (e.g., Mock objects in tests)
+            system_tokens = (
+                raw_system_tokens if isinstance(raw_system_tokens, int) else 0
+            )
+        except Exception:
+            # Fallback to estimation if API call fails
+            system_tokens = estimate_tokens(system_instruction_text)
+
+    return user_prompt_tokens, system_tokens
+
+
+TURNS_TO_KEEP_AT_START: int = 20
+TURNS_TO_KEEP_AT_END: int = 20
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
@@ -185,16 +305,13 @@ PATH_MAP: dict[str, str] = {
 
 # --- END CONSTANTS ---
 
-_client: genai.Client | None = None
-
 # Store loaded instruction content in a dictionary for easy access
 _loaded_instructions_cache: dict[str, str] = {}
 
 
 def _clear_client() -> None:
     """FOR TESTING ONLY: Clears the cached Gemini client."""
-    global _client
-    _client = None
+    gemini_provider.clear_cached_client()
 
 
 def _load_instruction_file(instruction_type: str) -> str:
@@ -235,17 +352,9 @@ def _load_instruction_file(instruction_type: str) -> str:
     return _loaded_instructions_cache[instruction_type]
 
 
-def get_client() -> genai.Client:
+def get_client():
     """Initializes and returns a singleton Gemini client."""
-    global _client
-    if _client is None:
-        logging_util.info("Initializing Gemini Client")
-        api_key: str | None = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-        _client = genai.Client(api_key=api_key)
-        logging_util.info("Gemini Client initialized successfully")
-    return _client
+    return gemini_provider.get_client()
 
 
 def _add_world_instructions_to_system(system_instruction_parts: list[str]) -> None:
@@ -761,49 +870,30 @@ def _log_token_count(
     model_name: str,
     user_prompt_contents: list[Any],
     system_instruction_text: str | None = None,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> None:
     """Helper function to count and log the number of tokens being sent, with a breakdown.
 
     Also warns when approaching output token limits to prevent truncation issues.
     """
     try:
-        client = get_client()
+        prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
+            user_prompt_contents, system_instruction_text, provider_name, model_name
+        )
+        total_tokens = prompt_tokens + system_tokens
 
-        # Count user prompt tokens
-        user_prompt_tokens = client.models.count_tokens(
-            model=model_name, contents=user_prompt_contents
-        ).total_tokens
-
-        # Count system instruction tokens if they exist
-        system_tokens = 0
-        if system_instruction_text:
-            # The system instruction is a single string, so it needs to be wrapped in a list for the API
-            system_tokens = client.models.count_tokens(
-                model=model_name, contents=[system_instruction_text]
-            ).total_tokens
-
-        total_tokens = (user_prompt_tokens or 0) + (system_tokens or 0)
-
-        # Get current output token limit being used
-        current_output_limit = JSON_MODE_MAX_OUTPUT_TOKENS  # Always using JSON mode
-
+        current_output_limit = _get_safe_output_token_limit(
+            provider_name, model_name, prompt_tokens, system_tokens
+        )
         logging_util.debug(
-            f"🔍 TOKEN_ANALYSIS: Sending {total_tokens} input tokens to API (Prompt: {user_prompt_tokens or 0}, System: {system_tokens or 0})"
+            f"🔍 TOKEN_ANALYSIS: Sending {total_tokens} input tokens to API (Prompt: {prompt_tokens or 0}, System: {system_tokens or 0})"
         )
         logging_util.debug(
             f"🔍 TOKEN_LIMITS: Output limit set to {current_output_limit} tokens (conservative limit, API max: 65535)"
         )
 
-        # Warn if we're using a large portion of input tokens
-        if total_tokens > 100000:  # Arbitrary threshold for "large" prompts
-            logging_util.warning(
-                f"⚠️ TOKEN_WARNING: Large input prompt ({total_tokens} tokens) may reduce available output tokens"
-            )
-
-        # Log model-specific context information
-        logging_util.info(
-            f"🔍 MODEL_INFO: Using {model_name} (Gemini 2.5 Flash supports up to 65,535 output tokens)"
-        )
+        model_info_msg = f"🔍 MODEL_INFO: Using provider '{provider_name}', model '{model_name}'"
+        logging_util.info(model_info_msg)
 
     except Exception as e:
         logging_util.warning(f"Could not count tokens before API call: {e}")
@@ -813,6 +903,7 @@ def _call_llm_api_with_llm_request(
     gemini_request: LLMRequest,
     model_name: str,
     system_instruction_text: str | None = None,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
     Calls LLM API with structured JSON from LLMRequest.
@@ -884,30 +975,8 @@ def _call_llm_api_with_llm_request(
 
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
-
-    def json_serializer(obj):
-        """JSON serializer for objects not serializable by default json code"""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        # Handle Sentinel objects (testing framework)
-        if hasattr(obj, "__class__") and obj.__class__.__name__ == "Sentinel":
-            # Add critical logging for data loss prevention
-            logging_util.warning(
-                f"Converting Sentinel object {obj} to None during JSON serialization. "
-                f"This may indicate unexpected test framework objects in production data."
-            )
-            # Validate this is expected behavior
-            if not obj.__class__.__module__.startswith(("unittest", "pytest", "mock")):
-                logging_util.error(
-                    f"Unexpected Sentinel object from module {obj.__class__.__module__} "
-                    f"- potential data corruption risk"
-                )
-            return None  # Convert Sentinel to None for JSON serialization
-        raise TypeError(
-            f"Object of type {obj.__class__.__name__} is not JSON serializable"
-        )
-
-    json_string = json.dumps(json_data, indent=2, default=json_serializer)
+    # Uses centralized json_default_serializer from mvp_site.serialization
+    json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
 
     # Send the structured JSON as string to the API
     return _call_llm_api_with_model_cycling(
@@ -915,6 +984,7 @@ def _call_llm_api_with_llm_request(
         model_name,
         f"LLMRequest: {gemini_request.user_action[:100]}...",  # Logging
         system_instruction_text,
+        provider_name,
     )
 
 
@@ -923,10 +993,11 @@ def _call_llm_api_with_model_cycling(
     model_name: str,
     current_prompt_text_for_logging: str | None = None,
     system_instruction_text: str | None = None,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
-    Calls the Gemini API with model cycling on 503 errors.
-    Tries the requested model first, then cycles through fallback models.
+    Calls the configured LLM provider with Gemini-style model cycling on 503 errors.
+    Tries the requested model first, then cycles through fallback models when using Gemini.
     Always uses JSON mode for structured responses.
 
     Args:
@@ -938,17 +1009,16 @@ def _call_llm_api_with_model_cycling(
     Returns:
         Gemini API response object with JSON response
     """
-    client = get_client()
-
     # Create ordered list starting with requested model, then fallbacks
     models_to_try: list[str] = [model_name]
-    for fallback_model in MODEL_FALLBACK_CHAIN:
-        if fallback_model != model_name and fallback_model not in models_to_try:
-            models_to_try.append(fallback_model)
+    if provider_name == constants.LLM_PROVIDER_GEMINI:
+        for fallback_model in MODEL_FALLBACK_CHAIN:
+            if fallback_model != model_name and fallback_model not in models_to_try:
+                models_to_try.append(fallback_model)
 
     if current_prompt_text_for_logging:
         logging_util.info(
-            f"Calling Gemini API with prompt: {str(current_prompt_text_for_logging)[:500]}..."
+            f"Calling LLM API with prompt: {str(current_prompt_text_for_logging)[:500]}..."
         )
 
     # Log token estimate for prompt
@@ -964,55 +1034,67 @@ def _call_llm_api_with_model_cycling(
         all_prompt_text.append(system_instruction_text)
 
     combined_text = " ".join(all_prompt_text)
-    log_with_tokens("Calling Gemini API", combined_text, logging_util)
+    log_with_tokens("Calling LLM API", combined_text, logging_util)
 
     last_error: Exception | None = None
 
     for attempt, current_model in enumerate(models_to_try):
         try:
+            prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
+                prompt_contents, system_instruction_text, provider_name, current_model
+            )
             # Log token count for the current model being tried
-            _log_token_count(current_model, prompt_contents, system_instruction_text)
+            _log_token_count(
+                current_model,
+                prompt_contents,
+                system_instruction_text,
+                provider_name,
+            )
 
             if attempt > 0:
-                logging_util.warning(f"Attempting fallback model: {current_model}")
+                logging_util.warning(
+                    f"Attempting fallback provider/model: {provider_name}/{current_model}"
+                )
             else:
-                logging_util.info(f"Using model: {current_model}")
-
-            # SECURITY NOTE: Code execution is enabled via Gemini's API using ToolCodeExecution.
-            # - All code execution is sandboxed by Google's Gemini API and does NOT run on this application server.
-            # - The AI-generated code is limited to the Python environment provided by Gemini, with restricted access to external resources.
-            # - For dice rolling, this security model is acceptable because the logic is simple, the risk of abuse is low, and Gemini's sandbox prevents harmful actions.
-            generation_config_params = {
-                "max_output_tokens": MAX_OUTPUT_TOKENS,
-                "temperature": TEMPERATURE,
-                "safety_settings": SAFETY_SETTINGS,
-                "tools": [types.Tool(code_execution=types.ToolCodeExecution())],
-            }
-
-            # Configure JSON response mode if requested
-            # Always use JSON response mode for consistent structured output
-            generation_config_params["response_mime_type"] = "application/json"
-            # Use same token limit for JSON mode for consistency
-            generation_config_params["max_output_tokens"] = JSON_MODE_MAX_OUTPUT_TOKENS
-            if attempt == 0:  # Only log once
-                logging_util.debug(
-                    f"🔍 JSON_MODE: Using JSON response mode with {JSON_MODE_MAX_OUTPUT_TOKENS} output token limit (ensures complete responses)"
-                )
-                logging_util.debug(
-                    f"🔍 TOKEN_ALLOCATION: Using {JSON_MODE_MAX_OUTPUT_TOKENS} output tokens out of {65535} available for Gemini 2.5 Flash"
+                logging_util.info(
+                    f"Calling LLM provider/model: {provider_name}/{current_model}"
                 )
 
-            # Pass the system instruction to the generate_content call
-            if system_instruction_text:
-                generation_config_params["system_instruction"] = types.Part(
-                    text=system_instruction_text
-                )
-
-            response = client.models.generate_content(
-                model=current_model,
-                contents=prompt_contents,
-                config=types.GenerateContentConfig(**generation_config_params),
+            safe_output_limit = _get_safe_output_token_limit(
+                provider_name,
+                current_model,
+                prompt_tokens,
+                system_tokens,
             )
+
+            if provider_name == constants.LLM_PROVIDER_GEMINI:
+                response = gemini_provider.generate_json_mode_content(
+                    prompt_contents=prompt_contents,
+                    model_name=current_model,
+                    system_instruction_text=system_instruction_text,
+                    max_output_tokens=safe_output_limit,
+                    temperature=TEMPERATURE,
+                    safety_settings=SAFETY_SETTINGS,
+                    json_mode_max_output_tokens=safe_output_limit,
+                )
+            elif provider_name == constants.LLM_PROVIDER_OPENROUTER:
+                response = openrouter_provider.generate_content(
+                    prompt_contents=prompt_contents,
+                    model_name=current_model,
+                    system_instruction_text=system_instruction_text,
+                    temperature=TEMPERATURE,
+                    max_output_tokens=safe_output_limit,
+                )
+            elif provider_name == constants.LLM_PROVIDER_CEREBRAS:
+                response = cerebras_provider.generate_content(
+                    prompt_contents=prompt_contents,
+                    model_name=current_model,
+                    system_instruction_text=system_instruction_text,
+                    temperature=TEMPERATURE,
+                    max_output_tokens=safe_output_limit,
+                )
+            else:
+                raise ValueError(f"Unsupported provider: {provider_name}")
 
             if attempt > 0:
                 logging_util.info(f"Fallback model {current_model} succeeded")
@@ -1029,6 +1111,8 @@ def _call_llm_api_with_model_cycling(
             # Check if the exception has a status_code attribute
             if hasattr(e, "status_code"):
                 status_code = getattr(e, "status_code", None)
+            elif hasattr(e, "response") and hasattr(e.response, "status_code"):
+                status_code = getattr(e.response, "status_code", None)
             # Check if it's a ServerError with the status in the message
             elif "503 UNAVAILABLE" in error_message:
                 status_code = 503
@@ -1074,6 +1158,7 @@ def _call_llm_api_with_json_structure(
     json_input: dict[str, Any],
     model_name: str,
     system_instruction_text: str | None = None,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
     Core function that handles structured JSON input to Gemini API.
@@ -1143,6 +1228,7 @@ def _call_llm_api_with_json_structure(
         model_name,
         f"Structured JSON: {message_type}",  # for logging
         system_instruction_text,
+        provider_name,
     )
 
 
@@ -1150,6 +1236,7 @@ def _call_llm_api_with_structured_json(
     json_input: dict[str, Any],
     model_name: str,
     system_instruction_text: str | None = None,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
     LEGACY: Call Gemini API using structured JSON input (DEPRECATED).
@@ -1178,6 +1265,7 @@ def _call_llm_api_with_structured_json(
         validated_json,
         model_name,
         system_instruction_text=system_instruction_text,
+        provider_name=provider_name,
     )
 
 
@@ -1260,9 +1348,10 @@ def _call_llm_api(
     model_name: str,
     current_prompt_text_for_logging: str | None = None,
     system_instruction_text: str | None = None,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
-    Call Gemini API with model cycling on errors.
+    Call LLM API with model cycling on errors.
 
     This function always uses JSON mode for consistent structured responses.
 
@@ -1271,15 +1360,17 @@ def _call_llm_api(
         model_name: Primary model to try first
         current_prompt_text_for_logging: Text for logging purposes (optional)
         system_instruction_text: System instructions (optional)
+        provider_name: LLM provider to use (gemini, openrouter, cerebras)
 
     Returns:
-        Gemini API response object with JSON response
+        LLM API response object with JSON response
     """
     return _call_llm_api_with_model_cycling(
         prompt_contents,
         model_name,
         current_prompt_text_for_logging,
         system_instruction_text,
+        provider_name,
     )
 
 
@@ -1300,7 +1391,10 @@ def _get_text_from_response(response: Any) -> str:
 
 
 def _get_context_stats(
-    context: list[dict[str, Any]], model_name: str, current_game_state: GameState
+    context: list[dict[str, Any]],
+    model_name: str,
+    current_game_state: GameState,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> str:
     """Helper to calculate and format statistics for a given story context."""
     if not context:
@@ -1312,13 +1406,11 @@ def _get_context_stats(
     # Try to get exact token count via API, fall back to estimate
     actual_tokens = "N/A"
     try:
-        client = get_client()
-        # Use simple text strings for token counting
-        text_contents = [entry.get(constants.KEY_TEXT, "") for entry in context]
-        count_response = client.models.count_tokens(
-            model=model_name, contents=text_contents
-        )
-        actual_tokens = count_response.total_tokens
+        if provider_name == constants.LLM_PROVIDER_GEMINI:
+            text_contents = [entry.get(constants.KEY_TEXT, "") for entry in context]
+            actual_tokens = gemini_provider.count_tokens(model_name, text_contents)
+        else:
+            actual_tokens = estimated_tokens
     except Exception as e:
         logging_util.warning(f"Could not count tokens for context stats: {e}")
         actual_tokens = estimated_tokens  # Fall back to estimate
@@ -1345,13 +1437,16 @@ def _truncate_context(
     max_chars: int,
     model_name: str,
     current_game_state: GameState,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
     turns_to_keep_at_start: int = TURNS_TO_KEEP_AT_START,
     turns_to_keep_at_end: int = TURNS_TO_KEEP_AT_END,
 ) -> list[dict[str, Any]]:
     """
     Intelligently truncates the story context to fit within a given character budget.
     """
-    initial_stats = _get_context_stats(story_context, model_name, current_game_state)
+    initial_stats = _get_context_stats(
+        story_context, model_name, current_game_state, provider_name
+    )
     logging_util.info(f"Initial context stats: {initial_stats}")
 
     combined_text = "".join(
@@ -1385,7 +1480,9 @@ def _truncate_context(
 
     truncated_context = start_context + [truncation_marker] + end_context
 
-    final_stats = _get_context_stats(truncated_context, model_name, current_game_state)
+    final_stats = _get_context_stats(
+        truncated_context, model_name, current_game_state, provider_name
+    )
     logging_util.info(f"Final context stats after truncation: {final_stats}")
 
     return truncated_context
@@ -1440,78 +1537,96 @@ MOCK_INITIAL_STORY_NO_COMPANIONS = """{
 }"""
 
 
-def _select_model_for_user(user_id: UserId | None) -> str:
+def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
+    """Select the configured LLM provider and model for a user.
+
+    In test/mock mode (MOCK_SERVICES_MODE=true, FORCE_TEST_MODEL=true, or TESTING=true),
+    always returns default Gemini provider to avoid hitting real OpenRouter/Cerebras APIs.
     """
-    Select Gemini model based on user preferences and environment.
-
-    Centralized model selection logic used by both get_initial_story() and continue_story().
-    Handles mock mode, user preferences, validation, and fallback to default model.
-
-    Args:
-        user_id: User ID to fetch preferences for (None uses DEFAULT_MODEL)
-
-    Returns:
-        str: Model name to use (TEST_MODEL in test/mock mode, user preference if valid, else DEFAULT_MODEL)
-    """
-    # Check test/mock mode first (takes precedence over user preferences for testing)
-    # Support both TESTING and MOCK_SERVICES_MODE for backward compatibility
-    testing_mode: bool = (
-        os.environ.get("TESTING") == "true"
-        or os.environ.get("MOCK_SERVICES_MODE") == "true"
+    # Test mode guard: avoid hitting real providers during CI/test runs
+    force_test_model = (
+        os.environ.get("MOCK_SERVICES_MODE") == "true"
+        or os.environ.get("FORCE_TEST_MODEL") == "true"
+        or os.environ.get("TESTING") == "true"
     )
-    if testing_mode:
-        return TEST_MODEL
+    if force_test_model:
+        return ProviderSelection(constants.DEFAULT_LLM_PROVIDER, TEST_MODEL)
 
-    # No user_id means use default model
+    provider = constants.DEFAULT_LLM_PROVIDER
+    model = DEFAULT_MODEL
+
     if not user_id:
-        return DEFAULT_MODEL
+        return ProviderSelection(provider, model)
 
-    # Attempt to fetch and apply user preferences
     try:
         user_settings = get_user_settings(user_id)
         if user_settings is None:
-            # Database error occurred
             logging_util.warning(
                 "Database error retrieving settings for user, falling back to default model"
             )
-            return DEFAULT_MODEL
+            return ProviderSelection(provider, model)
 
-        user_preferred_model = user_settings.get("gemini_model")
+        requested_provider = user_settings.get("llm_provider")
+        if requested_provider in constants.ALLOWED_LLM_PROVIDERS:
+            provider = requested_provider
 
-        fallback_reason = None
+        if provider == constants.LLM_PROVIDER_OPENROUTER:
+            preferred_openrouter = user_settings.get("openrouter_model")
+            if preferred_openrouter in constants.ALLOWED_OPENROUTER_MODELS:
+                model = preferred_openrouter
+            else:
+                model = constants.DEFAULT_OPENROUTER_MODEL
+        elif provider == constants.LLM_PROVIDER_CEREBRAS:
+            preferred_cerebras = user_settings.get("cerebras_model")
+            if preferred_cerebras in constants.ALLOWED_CEREBRAS_MODELS:
+                model = preferred_cerebras
+            else:
+                model = constants.DEFAULT_CEREBRAS_MODEL
+        else:
+            user_preferred_model = user_settings.get("gemini_model")
 
-        # First check if we need to redirect legacy models via mapping
-        # This allows "gemini-2.5-flash" -> "gemini-3-pro-preview" auto-redirect
-        if user_preferred_model and user_preferred_model in constants.GEMINI_MODEL_MAPPING:
-            mapped_model = constants.GEMINI_MODEL_MAPPING[user_preferred_model]
+            fallback_reason = None
 
-            # Log when auto-redirecting legacy models
-            if user_preferred_model != mapped_model:
-                logging_util.info(
-                    f"Auto-redirecting legacy model '{user_preferred_model}' "
-                    f"to compatible model '{mapped_model}'"
+            if (
+                user_preferred_model
+                and user_preferred_model in constants.GEMINI_MODEL_MAPPING
+            ):
+                mapped_model = constants.GEMINI_MODEL_MAPPING[user_preferred_model]
+
+                if user_preferred_model != mapped_model:
+                    logging_util.info(
+                        f"Auto-redirecting legacy model '{user_preferred_model}' "
+                        f"to compatible model '{mapped_model}'"
+                    )
+
+                if mapped_model in constants.ALLOWED_GEMINI_MODELS:
+                    model = mapped_model
+                    return ProviderSelection(provider, model)
+
+                fallback_reason = (
+                    f"Mapped model '{mapped_model}' not in allowed models, using default"
+                )
+            elif (
+                user_preferred_model
+                and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
+            ):
+                model = user_preferred_model
+            elif user_preferred_model is not None:
+                fallback_reason = (
+                    f"Invalid user model preference: {user_preferred_model}"
                 )
 
-            # Validate the MAPPED model against allowed models
-            if mapped_model in constants.ALLOWED_GEMINI_MODELS:
-                return mapped_model
+            if fallback_reason:
+                logging_util.warning(fallback_reason)
 
-            fallback_reason = (
-                f"Mapped model '{mapped_model}' not in allowed models, using default"
-            )
-        elif user_preferred_model and user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
-            # Direct validation for models not in mapping
-            return user_preferred_model
-        elif user_preferred_model is not None:
-            fallback_reason = f"Invalid user model preference: {user_preferred_model}"
-
-        if fallback_reason:
-            logging_util.warning(fallback_reason)
-
-        return DEFAULT_MODEL
+        return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:
         logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
-        return DEFAULT_MODEL
+        return ProviderSelection(provider, model)
+
+
+def _select_model_for_user(user_id: UserId | None) -> str:
+    return _select_provider_and_model(user_id).model
 
 
 @log_exceptions
@@ -1670,8 +1785,11 @@ def get_initial_story(
 
     # --- MODEL SELECTION ---
     # Use centralized helper for consistent model selection across all story generation
-    model_to_use: str = _select_model_for_user(user_id)
-    logging_util.info(f"Using model: {model_to_use} for initial story generation.")
+    provider_selection = _select_provider_and_model(user_id)
+    model_to_use: str = provider_selection.model
+    logging_util.info(
+        f"Using provider/model: {provider_selection.provider}/{model_to_use} for initial story generation."
+    )
 
     # ONLY use LLMRequest structured JSON architecture (NO legacy fallbacks)
     if not user_id:
@@ -1695,6 +1813,7 @@ def get_initial_story(
         gemini_request=gemini_request,
         model_name=model_to_use,
         system_instruction_text=system_instruction_final,
+        provider_name=provider_selection.provider,
     )
     logging_util.info("Successfully used LLMRequest for initial story generation")
     # Extract text from raw API response object
@@ -1794,6 +1913,7 @@ def _validate_and_enforce_planning_block(
     chosen_model: str,
     system_instruction: str,
     structured_response: NarrativeResponse | None = None,
+    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> str:
     """
     CRITICAL: Validates that structured_response.planning_block exists and is valid JSON.
@@ -1966,6 +2086,7 @@ Full narrative context:
             chosen_model,
             current_prompt_text_for_logging="Planning block generation",
             system_instruction_text=system_instruction,
+            provider_name=provider_name,
         )
         raw_planning_response: str = _get_text_from_response(planning_response)
 
@@ -2161,11 +2282,18 @@ def continue_story(
             - narrative_text: Clean text for display (guaranteed to be clean narrative)
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
+    # NOTE: Mock mode short-circuit is NOT added here (unlike get_initial_story)
+    # because tests use patches on _call_llm_api_with_llm_request to control responses.
+    # The _select_provider_and_model() guard already prevents hitting real providers
+    # in test mode by returning default Gemini provider which is then mocked.
 
     # Determine which model to use based on user preferences
     # Use centralized helper for consistent model selection across all story generation
-    model_to_use = _select_model_for_user(user_id)
-    logging_util.info(f"Using model: {model_to_use} for story continuation.")
+    provider_selection = _select_provider_and_model(user_id)
+    model_to_use = provider_selection.model
+    logging_util.info(
+        f"Using provider/model: {provider_selection.provider}/{model_to_use} for story continuation."
+    )
 
     # Check for multiple think commands in input using regex
     think_pattern: str = r"Main Character:\s*think[^\n]*"
@@ -2246,23 +2374,68 @@ def continue_story(
         current_game_state, []
     )
 
+    # Calculate tokens for each component - INCLUDING system instruction
+    system_instruction_tokens = estimate_tokens(system_instruction_final)
+    checkpoint_tokens = estimate_tokens(temp_checkpoint_block)
+    core_memories_tokens = estimate_tokens(temp_core_memories)
+    seq_ids_tokens = estimate_tokens(temp_seq_ids)
+    game_state_tokens = estimate_tokens(serialized_game_state)
+
+    # Log individual component sizes
+    logging_util.info(
+        f"📊 CONTEXT BREAKDOWN: system_instruction={system_instruction_tokens}tk, "
+        f"checkpoint={checkpoint_tokens}tk, core_memories={core_memories_tokens}tk, "
+        f"seq_ids={seq_ids_tokens}tk, game_state={game_state_tokens}tk"
+    )
+
+    # Include ALL major components in scaffold estimate
     prompt_scaffold = (
+        f"{system_instruction_final}\\n\\n"  # System instruction is often HUGE
         f"{temp_checkpoint_block}\\n\\n"
         f"{temp_core_memories}"
         f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{temp_seq_ids}]\\n\\n"
+        f"GAME STATE:\\n{serialized_game_state}\\n\\n"
     )
 
-    # Calculate the character budget for the story context
-    char_budget_for_story = SAFE_CHAR_LIMIT - len(prompt_scaffold)
-    scaffold_tokens = len(prompt_scaffold) // 4
-    story_budget_tokens = char_budget_for_story // 4
+    # Calculate the character budget for the story context using a 90% safety margin
+    safe_token_budget = _get_safe_context_token_budget(
+        provider_selection.provider, model_to_use
+    )
+    scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
+    # Add buffer for entity tracking and other minor prompt components
+    # Reduced from 30% to 15% since we now measure all major components in scaffold
+    scaffold_tokens = int(scaffold_tokens_raw * 1.15)  # 15% buffer for unmeasured components
+
+    # Dynamic output reserve based on game mode
+    # Combat/complex scenes need more output tokens for detailed mechanics
+    is_combat_or_complex = current_game_state and (
+        current_game_state.combat_state.get("in_combat", False)
+    )
+    output_token_reserve = (
+        OUTPUT_TOKEN_RESERVE_COMBAT if is_combat_or_complex else OUTPUT_TOKEN_RESERVE_DEFAULT
+    )
+    available_story_tokens = max(0, safe_token_budget - output_token_reserve - scaffold_tokens)
+    char_budget_for_story = available_story_tokens * 4
+
+    # Calculate story context tokens
+    story_text = "".join(entry.get(constants.KEY_TEXT, "") for entry in story_context)
+    story_tokens = estimate_tokens(story_text)
+
+    reserve_mode = "combat" if is_combat_or_complex else "normal"
     logging_util.info(
-        f"Prompt scaffold is {len(prompt_scaffold)} chars (~{scaffold_tokens} tokens). Remaining budget for story: {char_budget_for_story} chars (~{story_budget_tokens} tokens)"
+        f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
+        f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+15%), "
+        f"output_reserve={output_token_reserve}tk ({reserve_mode}), story_budget={available_story_tokens}tk, "
+        f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
 
     # Truncate the story context if it exceeds the budget
     truncated_story_context = _truncate_context(
-        story_context, char_budget_for_story, model_to_use, current_game_state
+        story_context,
+        char_budget_for_story,
+        model_to_use,
+        current_game_state,
+        provider_selection.provider,
     )
 
     # Now that we have the final, truncated context, we can generate the real prompt parts.
@@ -2373,6 +2546,7 @@ def continue_story(
         gemini_request=gemini_request,
         model_name=chosen_model,
         system_instruction_text=system_instruction_final,
+        provider_name=provider_selection.provider,
     )
     logging_util.info(
         "Successfully used LLMRequest for structured JSON communication"
@@ -2400,82 +2574,6 @@ def continue_story(
 
     # Validate entity tracking if enabled
     if expected_entities:
-        # First do basic validation
-        validator = NarrativeSyncValidator()
-        validation_result = validator.validate(
-            narrative_text=response_text,
-            expected_entities=expected_entities,
-            location=current_game_state.world_data.get(
-                "current_location_name", "Unknown"
-            ),
-        )
-
-        if not validation_result.all_entities_present:
-            logging_util.warning(
-                "ENTITY_TRACKING_VALIDATION: Narrative failed entity validation"
-            )
-            logging_util.warning(
-                f"Missing entities: {validation_result.entities_missing}"
-            )
-            if validation_result.warnings:
-                for warning in validation_result.warnings:
-                    logging_util.warning(f"Validation warning: {warning}")
-
-            # Attempt dual-pass retry (Option 7)
-            logging_util.info(
-                "ENTITY_TRACKING_RETRY: Attempting dual-pass generation to fix missing entities"
-            )
-
-            # Create generation callback for API calls
-            def generation_callback(prompt: str) -> str:
-                response: Any = _call_llm_api(
-                    [prompt],
-                    chosen_model,
-                    current_prompt_text_for_logging=current_prompt_text,
-                    system_instruction_text=system_instruction_final,
-                )
-                raw_json: str = _get_text_from_response(response)
-                # Parse JSON and return only narrative text for dual-pass generator
-                narrative_text: str
-                narrative_text, _ = _process_structured_response(
-                    raw_json, expected_entities or []
-                )
-                return narrative_text
-
-            # Use dual-pass generator to fix missing entities
-            dual_pass_result = dual_pass_generator.generate_with_dual_pass(
-                initial_prompt=full_prompt,
-                expected_entities=expected_entities,
-                location=current_game_state.world_data.get(
-                    "current_location_name", "Unknown"
-                ),
-                generation_callback=generation_callback,
-            )
-
-            if dual_pass_result.final_narrative:
-                # PRIMARY: Update structured_response.narrative (this is what frontend uses)
-                if structured_response and isinstance(
-                    structured_response, NarrativeResponse
-                ):
-                    structured_response.narrative = dual_pass_result.final_narrative
-                    logging_util.info(
-                        "Updated structured_response.narrative with dual-pass result"
-                    )
-
-                # SECONDARY: Update response_text for backward compatibility only
-                response_text = dual_pass_result.final_narrative
-
-                # Calculate injected entities from the difference between passes
-                injected_count = len(dual_pass_result.total_entities_found) - len(
-                    dual_pass_result.first_pass.entities_found
-                )
-                logging_util.info(
-                    f"ENTITY_TRACKING_RETRY: Dual-pass succeeded. "
-                    f"Entities recovered: {injected_count}"
-                )
-            else:
-                logging_util.error("ENTITY_TRACKING_RETRY: Dual-pass generation failed")
-
         # Use the common validation function for entity tracking validation
         # (No longer modifies response_text - validation goes to logs only)
         _validate_entity_tracking(response_text, expected_entities, current_game_state)
@@ -2506,6 +2604,7 @@ def continue_story(
             chosen_model,
             system_instruction_final,
             structured_response=gemini_response.structured_response,
+            provider_name=provider_selection.provider,
         )
 
     # MODERNIZED: No longer recreate LLMResponse based on response_text modifications

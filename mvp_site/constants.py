@@ -13,13 +13,28 @@ ACTOR_UNKNOWN = "NO_ACTOR"  # Default when actor is missing from data
 
 
 # --- SETTINGS ---
+# Provider selection
+LLM_PROVIDER_GEMINI = "gemini"
+LLM_PROVIDER_OPENROUTER = "openrouter"
+LLM_PROVIDER_CEREBRAS = "cerebras"
+
+DEFAULT_LLM_PROVIDER = LLM_PROVIDER_CEREBRAS
+ALLOWED_LLM_PROVIDERS = [
+    LLM_PROVIDER_GEMINI,
+    LLM_PROVIDER_OPENROUTER,
+    LLM_PROVIDER_CEREBRAS,
+]
+
+# Gemini defaults
+DEFAULT_GEMINI_MODEL = "gemini-3-pro-preview"
+
 # Allowed Gemini model selections for user preferences
 # NOTE: Only models that support BOTH code_execution AND JSON response mode are allowed
 # Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
 # See PR #2052 for compatibility testing details
 ALLOWED_GEMINI_MODELS = [
-    "gemini-3-pro-preview",  # ✅ WORKS with code_execution + JSON
-    "gemini-2.0-flash",       # ✅ WORKS (unofficial but tested)
+    DEFAULT_GEMINI_MODEL,  # ✅ WORKS with code_execution + JSON
+    "gemini-2.0-flash",  # ✅ WORKS (unofficial but tested)
 ]
 
 # Gemini model mapping from user preference to full model name
@@ -28,9 +43,66 @@ GEMINI_MODEL_MAPPING = {
     "gemini-2.0-flash": "gemini-2.0-flash",
     # Legacy compatibility - redirect 2.5 users to compatible model
     "gemini-2.5-flash": "gemini-3-pro-preview",  # Auto-redirect to compatible
-    "gemini-2.5-pro": "gemini-3-pro-preview",     # Auto-redirect to compatible
-    "pro-2.5": "gemini-3-pro-preview",            # Auto-redirect to compatible
-    "flash-2.5": "gemini-3-pro-preview",          # Auto-redirect to compatible
+    "gemini-2.5-pro": "gemini-3-pro-preview",  # Auto-redirect to compatible
+    "pro-2.5": "gemini-3-pro-preview",  # Auto-redirect to compatible
+    "flash-2.5": "gemini-3-pro-preview",  # Auto-redirect to compatible
+}
+
+# OpenRouter model selection tuned for narrative-heavy D&D play
+DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
+ALLOWED_OPENROUTER_MODELS = [
+    DEFAULT_OPENROUTER_MODEL,
+    "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
+    "z-ai/glm-4.6",  # 200K context, fast tools
+    "x-ai/grok-4.1-fast:free",  # 2M context, free until Dec 3 then $0.20/$0.50 per M
+]
+
+# Cerebras direct provider defaults (per Cerebras docs as of 2025-12-01)
+# Qwen3-235B has highest context (131K) - best for long RPG campaigns
+DEFAULT_CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507"
+ALLOWED_CEREBRAS_MODELS = [
+    DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M
+    "zai-glm-4.6",  # 131K context, preview
+    "llama-3.3-70b",  # 65K context
+]
+
+# Context window budgeting (tokens)
+DEFAULT_CONTEXT_WINDOW_TOKENS = 128_000
+CONTEXT_WINDOW_SAFETY_RATIO = 0.9
+MODEL_CONTEXT_WINDOW_TOKENS = {
+    # Gemini
+    DEFAULT_GEMINI_MODEL: 1_000_000,
+    "gemini-2.0-flash": 1_000_000,
+    # OpenRouter
+    "meta-llama/llama-3.1-70b-instruct": 131_072,
+    "meta-llama/llama-3.1-405b-instruct": 131_072,
+    "z-ai/glm-4.6": 200_000,
+    "x-ai/grok-4.1-fast:free": 2_000_000,  # Grok 4.1 Fast - 2M context
+    # Cerebras
+    "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
+    "zai-glm-4.6": 131_072,
+    "llama-3.3-70b": 65_536,
+}
+
+# Provider/model-specific max output tokens (conservative to avoid API 400s)
+# Values pulled from provider docs as of 2025-12-01.
+MODEL_MAX_OUTPUT_TOKENS = {
+    # Gemini (we cap at JSON_MODE_MAX_OUTPUT_TOKENS in code; keep for completeness)
+    DEFAULT_GEMINI_MODEL: 50_000,
+    "gemini-2.0-flash": 50_000,
+    # OpenRouter
+    # Llama 3.1 caps are not reported in the model catalog; OpenRouter commonly limits
+    # completion tokens to ~8k for these models, so we adopt 8,192 to avoid 400s while
+    # still allowing larger replies than the previous 4k cap.
+    "meta-llama/llama-3.1-70b-instruct": 8_192,
+    "meta-llama/llama-3.1-405b-instruct": 8_192,
+    # Pulled from OpenRouter model metadata (2025-12-01 curl https://openrouter.ai/api/v1/models)
+    "z-ai/glm-4.6": 202_752,
+    "x-ai/grok-4.1-fast:free": 30_000,
+    # Cerebras (actual limit ~64K, using conservative 32K for safety)
+    "qwen-3-235b-a22b-instruct-2507": 32_000,
+    "zai-glm-4.6": 32_000,
+    "llama-3.3-70b": 32_000,
 }
 
 # Debug mode settings

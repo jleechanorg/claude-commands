@@ -102,13 +102,25 @@ class TestGunicornConfiguration(unittest.TestCase):
         )
 
     def test_timeout_is_sufficient_for_ai_operations(self):
-        """RED→GREEN: Timeout should be 300s (5 minutes) for long AI operations"""
+        """RED→GREEN: Timeout should be 600s (10 minutes) for long AI operations"""
         self._reload_config()
 
         self.assertEqual(
             self.config.timeout,
-            300,
-            "Timeout should be 300 seconds for Gemini API calls"
+            600,
+            "Timeout should be 600 seconds for Gemini API calls"
+        )
+
+    def test_timeout_respects_central_environment_variable(self):
+        """Timeout should follow WORLDARCH_TIMEOUT_SECONDS when provided"""
+        os.environ["WORLDARCH_TIMEOUT_SECONDS"] = "720"
+
+        self._reload_config()
+
+        self.assertEqual(
+            self.config.timeout,
+            720,
+            "Timeout should honor WORLDARCH_TIMEOUT_SECONDS for stack-wide sync",
         )
 
     def test_workers_respects_environment_variable(self):

@@ -11,7 +11,6 @@ import unittest
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mvp_site.dual_pass_generator import DualPassGenerator
 from mvp_site.entity_tracking import create_from_game_state, get_validation_info
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.narrative_sync_validator import NarrativeSyncValidator
@@ -401,21 +400,6 @@ class TestEntityTracking(unittest.TestCase):
         assert "Sariel" in result.found_entities
         assert "Rowan" in result.missing_entities
         assert not result.all_entities_present
-
-    def test_dual_pass_generator_integration(self):
-        """Test DualPassGenerator uses EntityValidator properly"""
-
-        dual_pass = DualPassGenerator()
-
-        # Verify it uses EntityValidator
-        assert isinstance(dual_pass.validator, EntityValidator)
-
-        # Test injection snippet creation
-        snippet = dual_pass.create_entity_injection_snippet(
-            "Gideon", "tavern", "speaks up"
-        )
-        assert isinstance(snippet, str)
-        assert "Gideon" in snippet
 
     def test_validation_result_compatibility(self):
         """Test ValidationResult supports both old and new interfaces"""

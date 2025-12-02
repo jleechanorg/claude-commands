@@ -161,7 +161,6 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
 - **gemini_response.py** (487 lines) - AI response processing and transformation
 - **entity_instructions.py** (407 lines) - Entity handling and instruction generation
 - **json_utils.py** (324 lines) - JSON parsing and utility functions
-- **dual_pass_generator.py** (326 lines) - Advanced AI generation with dual-pass system
 - **memory_integration.py** (303 lines) - Memory and context management
 - **entity_preloader.py** (283 lines) - Entity preloading and optimization
 - **robust_json_parser.py** (254 lines) - Robust JSON parsing with error handling
@@ -245,12 +244,12 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
   - Support for PDF, DOCX, and TXT formats
 
 ### 6. Advanced AI Generation
-- **Purpose**: Sophisticated AI content generation with dual-pass system
-- **Main Files**: `dual_pass_generator.py`, `gemini_response.py`, `robust_json_parser.py`
+- **Purpose**: Sophisticated AI content generation and structured parsing
+- **Main Files**: `gemini_response.py`, `robust_json_parser.py`
 - **Public Methods**:
-  - `DualPassGenerator.generate()` - Advanced multi-pass AI generation
   - `GeminiResponse.parse()` - Structured response parsing
   - `RobustJSONParser.parse()` - Error-resilient JSON parsing
+  - Dual-pass retry flow has been retired to reduce latency and token spend; validation now relies on single-pass outputs.
 
 ### 7. Entity & State Management
 - **Purpose**: Comprehensive entity validation and state synchronization
@@ -287,7 +286,6 @@ mvp_site/
 ├── game_state.py              # Game state management (488 lines)
 ├── gemini_response.py         # AI response processing (487 lines)
 ├── entity_instructions.py     # Entity handling (407 lines)
-├── dual_pass_generator.py     # Advanced AI generation (326 lines)
 ├── json_utils.py              # JSON parsing utilities (324 lines)
 ├── memory_integration.py      # Memory and context management (303 lines)
 ├── entity_preloader.py        # Entity preloading (283 lines)
@@ -527,7 +525,8 @@ The recent **Model Context Protocol (MCP)** refactor has dramatically improved t
 ## Configuration
 
 ### Environment Variables
-- `TESTING` - Enable test mode
+- `TESTING` - Enable test mode (does **not** switch the LLM to a test model)
+- `FORCE_TEST_MODEL` - Force the LLM to use the test model regardless of user preference
 - `GEMINI_API_KEY` - AI service API key
 - `PORT` - Server port (default: 8080)
 - `FIREBASE_CONFIG` - Firebase configuration

@@ -3,11 +3,16 @@ Test file to verify world_logic.py structure and basic functionality.
 This test doesn't require external dependencies.
 """
 
+import ast
 import asyncio
 import inspect
 import os
+import re
 import sys
+import threading
+import time
 import unittest
+from contextlib import ExitStack
 from unittest.mock import MagicMock, Mock, patch
 
 from mvp_site import world_logic
@@ -106,7 +111,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
             "structured_fields_utils",
             "custom_types",
             "debug_hybrid_system",
-            "debug_mode_parser",
             "game_state",
             # Also clear firebase modules if they exist
             "firebase_admin",
@@ -127,7 +131,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
             "structured_fields_utils",
             "custom_types",
             "debug_hybrid_system",
-            "debug_mode_parser",
             "game_state",
         ]
 
@@ -748,6 +751,572 @@ class TestCodeHealthChecks(unittest.TestCase):
                 self.assertTrue(
                     uses_random_settings,
                     "RANDOM_SETTINGS constant is defined but never used - this is dead code",
+                )
+
+
+# =============================================================================
+# PARALLELIZATION TESTS - Prevent Regression of PR #2157 Fix
+# =============================================================================
+# These tests ensure that async functions in world_logic.py always use
+# asyncio.to_thread() for blocking I/O operations. Without this, the shared
+# event loop blocks and concurrent requests serialize.
+# =============================================================================
+
+
+def _calculate_parallel_threshold(serial_time: float, buffer_ratio: float = 0.8) -> float:
+    """Helper to keep parallel timing thresholds consistent across tests."""
+    return serial_time * buffer_ratio
+class TestAsyncNonBlocking(unittest.TestCase):
+    """
+    Verify async functions don't block the event loop.
+
+    PR #2157 Context:
+    - Symptom: Users couldn't load another campaign while an action was processing
+    - Root cause: Blocking I/O (Gemini/Firestore) called directly in async functions
+    - Fix: Wrap all blocking calls with asyncio.to_thread()
+
+    These tests prevent regression by verifying concurrent operations execute in parallel.
+    """
+
+    def test_concurrent_operations_execute_in_parallel(self):
+        """
+        CRITICAL: Concurrent coroutines must not serialize.
+
+        If blocking I/O isn't wrapped in asyncio.to_thread():
+        - Serial execution: total_time ≈ N × single_duration
+        - Parallel execution: total_time ≈ max(single_durations)
+
+        This test mocks blocking calls with delays and verifies parallel timing.
+        """
+        SIMULATED_BLOCKING_TIME = 0.05  # 50ms simulated blocking per call
+        NUM_CONCURRENT = 3
+        call_count = 0
+
+        def mock_blocking_call(*args, **kwargs):
+            """Simulate blocking I/O that takes time."""
+            nonlocal call_count
+            call_count += 1
+            time.sleep(SIMULATED_BLOCKING_TIME)
+            return MagicMock(
+                narrative_text="Test response",
+                get_state_updates=dict,
+                structured_response=None,
+            )
+
+        def mock_get_campaign(*args, **kwargs):
+            """Mock campaign retrieval with delay."""
+            time.sleep(SIMULATED_BLOCKING_TIME)
+            return (
+                {"selected_prompts": [], "use_default_world": False},
+                [{"actor": "user", "sequence_id": 1, "text": "test"}],
+            )
+
+        def mock_prepare_game_state(*args, **kwargs):
+            """Mock game state preparation."""
+            mock_state = MagicMock()
+            mock_state.debug_mode = False
+            mock_state.to_dict.return_value = {"test": "state"}
+            return (mock_state, False, 0)
+
+        async def run_concurrent_test():
+            """Run multiple async operations concurrently and measure timing."""
+            with ExitStack() as stack:
+                mock_gemini = stack.enter_context(
+                    patch.object(world_logic, "gemini_service", MagicMock())
+                )
+                mock_gemini.continue_story = mock_blocking_call
+
+                mock_firestore = stack.enter_context(
+                    patch.object(world_logic, "firestore_service", MagicMock())
+                )
+                mock_firestore.get_campaign_by_id = mock_get_campaign
+                mock_firestore.update_campaign_game_state = MagicMock()
+                mock_firestore.add_story_entry = MagicMock()
+                mock_firestore.update_story_context = MagicMock()
+
+                stack.enter_context(
+                    patch.object(world_logic, "_prepare_game_state", mock_prepare_game_state)
+                )
+                stack.enter_context(
+                    patch.object(
+                        world_logic, "get_user_settings", lambda x: {"debug_mode": False}
+                    )
+                )
+
+                request_data = {
+                    "user_id": "test-user",
+                    "campaign_id": "test-campaign",
+                    "user_input": "test action",
+                    "mode": "character",
+                }
+
+                start = time.time()
+
+                # Run concurrent operations
+                tasks = [
+                    world_logic.process_action_unified(request_data.copy())
+                    for _ in range(NUM_CONCURRENT)
+                ]
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+                elapsed = time.time() - start
+                return elapsed
+
+        # Run the test
+        wall_time = asyncio.run(run_concurrent_test())
+
+        # Calculate expected times
+        serial_time = NUM_CONCURRENT * SIMULATED_BLOCKING_TIME * 2  # 2 blocking calls per op
+        # CI systems may have scheduling overhead; allow buffer to reduce flakiness
+        parallel_threshold = _calculate_parallel_threshold(serial_time)
+
+        # Debug info for failure diagnosis
+        debug_info = (
+            f"wall_time={wall_time:.3f}s, "
+            f"serial_expected={serial_time:.3f}s, "
+            f"parallel_threshold={parallel_threshold:.3f}s, "
+            f"calls_made={call_count}"
+        )
+
+        self.assertLess(
+            wall_time,
+            parallel_threshold,
+            f"Operations appear to be SERIALIZED! {debug_info}. "
+            f"Check that all blocking calls use asyncio.to_thread().",
+        )
+
+
+class TestThreadPoolExecution(unittest.TestCase):
+    """
+    Verify blocking I/O runs in thread pool, not main event loop thread.
+
+    asyncio.to_thread() moves blocking operations to ThreadPoolExecutor.
+    This test verifies blocking calls execute in worker threads.
+    """
+
+    def test_blocking_calls_execute_in_worker_threads(self):
+        """
+        Blocking calls wrapped in asyncio.to_thread() should NOT run in main thread.
+
+        If asyncio.to_thread() is missing, blocking calls run in the main event
+        loop thread, which blocks ALL other coroutines.
+        """
+        main_thread_id = threading.current_thread().ident
+        blocking_call_threads = []
+
+        def tracking_call(*args, **kwargs):
+            """Track which thread executes the blocking call."""
+            blocking_call_threads.append(threading.current_thread().ident)
+            return MagicMock(
+                narrative_text="Test response",
+                get_state_updates=dict,
+                structured_response=None,
+            )
+
+        def mock_get_campaign(*args, **kwargs):
+            """Mock that tracks thread."""
+            blocking_call_threads.append(threading.current_thread().ident)
+            return (
+                {"selected_prompts": [], "use_default_world": False},
+                [{"actor": "user", "sequence_id": 1, "text": "test"}],
+            )
+
+        def mock_prepare_game_state(*args, **kwargs):
+            mock_state = MagicMock()
+            mock_state.debug_mode = False
+            mock_state.to_dict.return_value = {"test": "state"}
+            return (mock_state, False, 0)
+
+        async def run_test():
+            with ExitStack() as stack:
+                mock_gemini = stack.enter_context(
+                    patch.object(world_logic, "gemini_service", MagicMock())
+                )
+                mock_gemini.continue_story = tracking_call
+
+                mock_firestore = stack.enter_context(
+                    patch.object(world_logic, "firestore_service", MagicMock())
+                )
+                mock_firestore.get_campaign_by_id = mock_get_campaign
+                mock_firestore.update_campaign_game_state = MagicMock()
+                mock_firestore.add_story_entry = MagicMock()
+                mock_firestore.update_story_context = MagicMock()
+
+                stack.enter_context(
+                    patch.object(world_logic, "_prepare_game_state", mock_prepare_game_state)
+                )
+                stack.enter_context(
+                    patch.object(
+                        world_logic, "get_user_settings", lambda x: {"debug_mode": False}
+                    )
+                )
+
+                await world_logic.process_action_unified(
+                    {
+                        "user_id": "test-user",
+                        "campaign_id": "test-campaign",
+                        "user_input": "test action",
+                        "mode": "character",
+                    }
+                )
+
+        asyncio.run(run_test())
+
+        # Verify blocking calls ran in worker threads, not main thread
+        # Note: With asyncio.to_thread(), calls SHOULD be in different threads
+        # If all calls are in main thread, asyncio.to_thread() is missing
+        worker_thread_calls = [
+            tid for tid in blocking_call_threads if tid != main_thread_id
+        ]
+
+        debug_info = (
+            f"main_thread={main_thread_id}, "
+            f"blocking_threads={blocking_call_threads}, "
+            f"worker_calls={len(worker_thread_calls)}/{len(blocking_call_threads)}"
+        )
+
+        self.assertTrue(
+            len(blocking_call_threads) > 0,
+            f"No blocking calls were tracked. {debug_info}",
+        )
+
+        all_in_main = all(tid == main_thread_id for tid in blocking_call_threads)
+        self.assertFalse(
+            all_in_main,
+            f"All blocking calls executed in main event loop thread. {debug_info}",
+        )
+
+
+class TestBlockingCallStaticAnalysis(unittest.TestCase):
+    """
+    Static AST analysis to detect unwrapped blocking calls.
+
+    This catches regressions at parse time, before runtime.
+    Scans world_logic.py for calls to known blocking services
+    that are NOT wrapped in asyncio.to_thread().
+
+    CRITICAL: Only checks async functions - sync functions don't have
+    the event loop blocking issue.
+    """
+
+    # Known blocking service functions that MUST be wrapped in async functions
+    BLOCKING_SERVICES = {
+        "firestore_service": [
+            "get_campaign_by_id",
+            "get_campaign_state",
+            "update_game_state",
+            "update_campaign_game_state",
+            "create_campaign",
+            "get_campaigns_list",
+            "add_story_entry",
+            "update_story_context",
+            "get_user_settings",
+            "update_user_settings",
+        ],
+        "gemini_service": [
+            "continue_story",
+            "get_initial_story",
+        ],
+    }
+
+    @staticmethod
+    def _get_world_logic_path():
+        return os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "world_logic.py"
+        )
+
+    def test_all_blocking_calls_wrapped_in_async_functions(self):
+        """
+        Parse world_logic.py AST and verify all blocking service calls
+        within async functions are wrapped in asyncio.to_thread().
+
+        Uses a hybrid AST + source line analysis for accurate detection:
+        1. AST identifies async function boundaries and line ranges
+        2. Regex finds service calls on each line
+        3. Context analysis checks for asyncio.to_thread wrapper
+        """
+        # Get the path to world_logic.py
+        world_logic_path = self._get_world_logic_path()
+
+        with open(world_logic_path) as f:
+            source = f.read()
+
+        tree = ast.parse(source)
+        source_lines = source.split("\n")
+
+        # Build map of line number -> (function_name, is_async)
+        line_to_func = {}
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                is_async = isinstance(node, ast.AsyncFunctionDef)
+                end_line = (
+                    node.end_lineno
+                    if hasattr(node, "end_lineno")
+                    else len(source_lines)
+                )
+                for lineno in range(node.lineno, end_line + 1):
+                    line_to_func[lineno] = (node.name, is_async)
+
+        # Find service calls using regex (more reliable than pure AST for this)
+        service_patterns = [
+            (r"firestore_service\.(\w+)\(", "firestore_service"),
+            (r"gemini_service\.(\w+)\(", "gemini_service"),
+        ]
+
+        violations = []
+
+        for i, line in enumerate(source_lines, 1):
+            for pattern, service in service_patterns:
+                match = re.search(pattern, line)
+                if match:
+                    method = match.group(1)
+
+                    # Check if this is a blocking service method
+                    if service in self.BLOCKING_SERVICES:
+                        if method not in self.BLOCKING_SERVICES[service]:
+                            continue  # Not a blocking method we care about
+
+                    # Check if we're in an async function
+                    func_info = line_to_func.get(i)
+                    if not func_info or not func_info[1]:  # Not async
+                        continue
+
+                    func_name = func_info[0]
+
+                    # Check if line or previous few lines have asyncio.to_thread
+                    has_to_thread = "asyncio.to_thread" in line
+                    if not has_to_thread:
+                        for offset in range(1, 4):
+                            if i - offset >= 1:
+                                prev_line = source_lines[i - offset - 1]
+                                if "asyncio.to_thread" in prev_line:
+                                    has_to_thread = True
+                                    break
+
+                    if not has_to_thread:
+                        violations.append(
+                            f"async {func_name}() line {i}: {service}.{method}() "
+                            f"not wrapped in asyncio.to_thread()\n"
+                            f"      Code: {line.strip()[:70]}..."
+                        )
+
+        self.assertEqual(
+            violations,
+            [],
+            f"Found {len(violations)} unwrapped blocking call(s) in async functions:\n"
+            + "\n".join(f"  - {v}" for v in violations)
+            + "\n\nFIX: Wrap with 'await asyncio.to_thread(service.function, args)'",
+        )
+
+    def test_asyncio_import_present(self):
+        """Verify asyncio is imported in world_logic.py (required for to_thread)."""
+        world_logic_path = self._get_world_logic_path()
+
+        with open(world_logic_path) as f:
+            source = f.read()
+
+        self.assertIn(
+            "import asyncio",
+            source,
+            "world_logic.py must import asyncio for asyncio.to_thread() usage",
+        )
+
+    def test_to_thread_call_count_matches_expectations(self):
+        """
+        Verify that asyncio.to_thread() is used a reasonable number of times.
+
+        This acts as a canary - if the count drops significantly, it may
+        indicate that someone removed the wrappers.
+        """
+        world_logic_path = self._get_world_logic_path()
+
+        with open(world_logic_path) as f:
+            source = f.read()
+
+        to_thread_count = source.count("asyncio.to_thread(")
+
+        # PR #2157 added ~25 asyncio.to_thread() calls
+        # Allow some variance but catch major regressions
+        MIN_EXPECTED = 20  # Minimum expected calls
+        self.assertGreaterEqual(
+            to_thread_count,
+            MIN_EXPECTED,
+            f"Only found {to_thread_count} asyncio.to_thread() calls. "
+            f"Expected at least {MIN_EXPECTED}. "
+            f"Did someone remove the blocking I/O wrappers?",
+        )
+
+
+class TestParallelismIntegration(unittest.TestCase):
+    """
+    CI-compatible integration tests for parallelism.
+
+    These tests verify concurrent behavior without requiring a live server.
+    Uses mocked services with controlled timing to detect serialization.
+    """
+
+    def test_concurrent_campaign_retrieval_parallel(self):
+        """
+        Multiple campaign retrievals should execute in parallel.
+
+        Tests get_campaign_state_unified() which retrieves campaign data
+        from Firestore. With asyncio.to_thread(), these should overlap.
+        """
+        DELAY = 0.03  # 30ms per operation
+        NUM_OPS = 3
+
+        def mock_get_state(*args, **kwargs):
+            time.sleep(DELAY)
+            mock_state = MagicMock()
+            mock_state.to_dict.return_value = {"test": "state"}
+            return mock_state, False, 0
+
+        def mock_get_campaign(*args, **kwargs):
+            time.sleep(DELAY)
+            return (
+                {"title": "Test Campaign", "selected_prompts": []},
+                [{"actor": "user", "sequence_id": 1, "text": "test"}],
+            )
+
+        async def run_parallel_test():
+            with patch.object(
+                world_logic, "firestore_service", MagicMock()
+            ) as mock_fs:
+                mock_fs.get_campaign_state = mock_get_state
+                mock_fs.get_campaign_by_id = mock_get_campaign
+
+                with patch.object(
+                    world_logic, "get_user_settings", lambda x: {"debug_mode": False}
+                ), patch.object(
+                    world_logic, "_prepare_game_state", mock_get_state
+                ):
+                    start = time.time()
+
+                    # Run concurrent operations
+                    tasks = [
+                        world_logic.get_campaign_state_unified({
+                            "user_id": f"user-{i}",
+                            "campaign_id": f"campaign-{i}",
+                        })
+                        for i in range(NUM_OPS)
+                    ]
+                    await asyncio.gather(*tasks, return_exceptions=True)
+
+                    return time.time() - start
+
+        elapsed = asyncio.run(run_parallel_test())
+
+        # Serial would be: NUM_OPS * DELAY * 2 (two blocking calls)
+        # Parallel should be much less
+        serial_time = NUM_OPS * DELAY * 2
+        # Allow buffer for CI scheduling overhead
+        parallel_threshold = _calculate_parallel_threshold(serial_time)
+
+        self.assertLess(
+            elapsed,
+            parallel_threshold,
+            f"Campaign retrievals serialized: {elapsed:.3f}s vs expected <{parallel_threshold:.3f}s. "
+            f"asyncio.to_thread() may be missing for Firestore calls.",
+        )
+
+    def test_overlap_percentage_calculation(self):
+        """
+        Verify the overlap calculation logic for concurrent operations.
+
+        If operations truly run in parallel, overlap percentage should be high.
+        This is a unit test for the parallelism detection metric.
+        """
+        # Simulate overlapping operations
+        results = [
+            {"abs_start": 0.0, "abs_end": 0.5},  # 0.0 - 0.5
+            {"abs_start": 0.1, "abs_end": 0.6},  # 0.1 - 0.6
+            {"abs_start": 0.2, "abs_end": 0.7},  # 0.2 - 0.7
+        ]
+
+        overlap_pct = self._calculate_overlap_percentage(results)
+
+        # With this setup, all 3 overlap from 0.2-0.5 = 0.3 seconds
+        # Wall time is 0.7 seconds
+        # Overlap time with >1 concurrent = 0.5 seconds (0.1-0.6)
+        # Expected overlap: ~71%
+        self.assertGreater(
+            overlap_pct,
+            50.0,
+            f"Overlapping operations should have >50% overlap, got {overlap_pct:.1f}%",
+        )
+
+    def _calculate_overlap_percentage(self, results: list) -> float:
+        """Calculate overlap percentage for overlapping operations."""
+        if not results:
+            return 0.0
+
+        min_start = min(r["abs_start"] for r in results)
+        max_end = max(r["abs_end"] for r in results)
+        wall_time = max_end - min_start
+
+        if wall_time <= 0:
+            return 0.0
+
+        events = []
+        for r in results:
+            events.append((r["abs_start"], 1))
+            events.append((r["abs_end"], -1))
+
+        events.sort(key=lambda x: (x[0], -x[1]))
+
+        concurrent_count = 0
+        last_time = min_start
+        overlap_time = 0.0
+
+        for event_time, delta in events:
+            if concurrent_count > 1:
+                overlap_time += event_time - last_time
+            concurrent_count += delta
+            last_time = event_time
+
+        return (overlap_time / wall_time) * 100
+
+
+class TestAsyncToThreadDocumentation(unittest.TestCase):
+    """
+    Verify documentation requirements for asyncio.to_thread() usage.
+
+    Good documentation prevents future developers from removing the wrappers.
+    """
+
+    def test_concurrency_documented_in_module_docstring(self):
+        """Module docstring should document the concurrency requirement."""
+        module_doc = world_logic.__doc__ or ""
+
+        self.assertIn(
+            "asyncio.to_thread()",
+            module_doc,
+            "world_logic.py docstring should document asyncio.to_thread() requirement",
+        )
+
+        self.assertIn(
+            "blocking",
+            module_doc.lower(),
+            "world_logic.py docstring should mention 'blocking' I/O",
+        )
+
+    def test_critical_functions_documented(self):
+        """Critical async functions should have docstrings mentioning blocking I/O."""
+        critical_functions = [
+            "create_campaign_unified",
+            "process_action_unified",
+            "get_campaign_state_unified",
+        ]
+
+        for func_name in critical_functions:
+            func = getattr(world_logic, func_name, None)
+            if func and asyncio.iscoroutinefunction(func):
+                doc = func.__doc__ or ""
+                # Should mention blocking I/O handling
+                self.assertTrue(
+                    "asyncio.to_thread()" in doc or "blocking" in doc.lower(),
+                    f"{func_name}() docstring should document blocking I/O handling. "
+                    f"Current docstring: {doc[:100]}...",
                 )
 
 

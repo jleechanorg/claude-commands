@@ -10,28 +10,66 @@
                     <h3><i class="bi bi-gear me-2"></i>Settings</h3>
                 </div>
                 <div class="card-body">
-                    <h5>AI Model Selection</h5>
-                    <p class="text-muted">Choose your preferred Gemini model for all AI interactions</p>
+                    <h5>AI Provider & Model</h5>
+                    <p class="text-muted">Choose which LLM provider powers your adventures.</p>
 
-                    <div id="model-selection">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="geminiModel"
-                                   id="modelPro3" value="gemini-3-pro-preview" checked>
-                            <label class="form-check-label" for="modelPro3">
-                                <strong>Gemini 3 Pro Preview</strong> (Default)
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="llmProvider" id="providerGemini" value="gemini" checked>
+                            <label class="form-check-label" for="providerGemini">
+                                <strong>Gemini</strong>
                                 <br>
-                                <small class="text-muted">High-quality responses with advanced reasoning and dice roll support</small>
+                                <small class="text-muted">Official Google models with structured output.</small>
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="geminiModel"
-                                   id="modelFlash" value="gemini-2.0-flash">
-                            <label class="form-check-label" for="modelFlash">
-                                <strong>Gemini 2.0 Flash</strong>
+                            <input class="form-check-input" type="radio" name="llmProvider" id="providerOpenRouter" value="openrouter">
+                            <label class="form-check-label" for="providerOpenRouter">
+                                <strong>OpenRouter</strong>
                                 <br>
-                                <small class="text-muted">Faster responses, good for quick interactions</small>
+                                <small class="text-muted">Community frontier models tuned for tabletop creativity.</small>
                             </label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="llmProvider" id="providerCerebras" value="cerebras">
+                            <label class="form-check-label" for="providerCerebras">
+                                <strong>Cerebras</strong>
+                                <br>
+                                <small class="text-muted">Direct Cerebras inference for low-latency roleplay-ready Llama 3.3 models.</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="gemini-model-selection">
+                        <h6 class="mt-3">Gemini Models</h6>
+                        <label class="form-label" for="geminiModel">Select your preferred Gemini model</label>
+                        <select id="geminiModel" class="form-select" name="geminiModel">
+                            <option value="gemini-3-pro-preview">Gemini 3 Pro Preview (default)</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                        </select>
+                    </div>
+
+                    <div id="openrouter-model-selection" class="mt-4 d-none">
+                        <h6>OpenRouter Models</h6>
+                        <label class="form-label" for="openrouterModel">Recommended for narrative-heavy RPG sessions</label>
+                        <select id="openrouterModel" class="form-select" name="openrouterModel">
+                            <option value="meta-llama/llama-3.1-70b-instruct">Meta Llama 3.1 70B Instruct (default)</option>
+                            <option value="meta-llama/llama-3.1-405b-instruct">Meta Llama 3.1 405B Instruct (131K context)</option>
+                            <option value="z-ai/glm-4.6">GLM 4.6 (200K context, fast tools)</option>
+                            <option value="x-ai/grok-4.1-fast:free">Grok 4.1 Fast (2M context, xAI flagship)</option>
+                        </select>
+                        <small class="text-muted">Large-context frontier models via OpenRouter.</small>
+                    </div>
+
+                    <div id="cerebras-model-selection" class="mt-4 d-none">
+                        <h6>Cerebras Models</h6>
+                        <label class="form-label" for="cerebrasModel">Direct Cerebras-hosted models optimized for storytelling</label>
+                        <select id="cerebrasModel" class="form-select" name="cerebrasModel">
+                            <option value="qwen-3-235b-a22b-instruct-2507">Qwen 3 235B (131K context, best for RPG campaigns)</option>
+                            <option value="zai-glm-4.6">GLM 4.6 (131K context, fast tools)</option>
+                            <option value="llama-3.3-70b">Llama 3.3 70B (65K context, fast narrative)</option>
+                        </select>
+                        <small class="text-muted">Bypass aggregators and call Cerebras directly for lower latency.</small>
                     </div>
 
                     <hr class="my-4">
