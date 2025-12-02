@@ -117,6 +117,7 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
+    "llama-4-maverick-17b-128e-instruct": 32_000,  # 2522 TPS, intentionally kept
 }
 
 # Debug mode settings
