@@ -64,6 +64,7 @@ ALLOWED_CEREBRAS_MODELS = [
     DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M
     "zai-glm-4.6",  # 131K context, preview
     "llama-3.3-70b",  # 65K context
+    "llama-4-maverick-17b-128e-instruct",  # 32K context, DEPRECATED Oct 15 2025
 ]
 
 # Context window budgeting (tokens)
@@ -82,6 +83,7 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
+    "llama-4-maverick-17b-128e-instruct": 32_768,  # DEPRECATED Oct 15 2025
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
@@ -103,6 +105,7 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
+    "llama-4-maverick-17b-128e-instruct": 32_000,  # DEPRECATED Oct 15 2025
 }
 
 # Debug mode settings
