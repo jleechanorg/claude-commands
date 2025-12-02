@@ -167,8 +167,12 @@ def _format_world_time_for_prompt(world_time: dict[str, Any] | None) -> str:
     year = world_time.get("year", "????")
     month = world_time.get("month", "??")
     day = world_time.get("day", "??")
-    hour = world_time.get("hour", 0)
-    minute = world_time.get("minute", 0)
+    # Ensure hour/minute are integers to prevent TypeError in format string
+    try:
+        hour = int(world_time.get("hour", 0))
+        minute = int(world_time.get("minute", 0))
+    except (ValueError, TypeError):
+        hour, minute = 0, 0
     time_of_day = world_time.get("time_of_day", "")
 
     time_str = f"{hour:02d}:{minute:02d}"
@@ -700,6 +704,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking
         # TEMPORAL VALIDATION LOOP: Retry if LLM generates backward time
+        # EXCEPTION: GOD MODE commands can intentionally move time backward
+        is_god_mode = user_input.strip().upper().startswith("GOD MODE:")
         original_user_input = user_input  # Preserve for Firestore
         llm_input = user_input  # Separate variable for LLM calls
         temporal_correction_attempts = 0
@@ -718,11 +724,18 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             )
 
             # Check for temporal violation (time going backward)
+            # EXCEPTION: Skip validation for GOD MODE (backward time is intentional)
             new_world_time = _extract_world_time_from_response(llm_response_obj)
 
-            if not _check_temporal_violation(old_world_time, new_world_time):
-                # No violation - time is moving forward, accept response
-                if temporal_correction_attempts > 0:
+            if is_god_mode or not _check_temporal_violation(old_world_time, new_world_time):
+                # No violation - time is moving forward (or GOD MODE allows backward), accept response
+                if is_god_mode and _check_temporal_violation(old_world_time, new_world_time):
+                    logging_util.info(
+                        f"⏪ GOD_MODE: Allowing backward time travel from "
+                        f"{_format_world_time_for_prompt(old_world_time)} to "
+                        f"{_format_world_time_for_prompt(new_world_time)}"
+                    )
+                elif temporal_correction_attempts > 0:
                     logging_util.info(
                         f"✅ TEMPORAL_CORRECTION: Response accepted after {temporal_correction_attempts} correction(s)"
                     )
