@@ -47,6 +47,8 @@ from typing import Any
 
 from google.genai import types
 
+from firebase_admin import auth as firebase_auth
+
 from mvp_site import constants, logging_util
 from mvp_site.custom_types import UserId
 from mvp_site.decorators import log_exceptions
@@ -1585,39 +1587,26 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
         else:
             user_preferred_model = user_settings.get("gemini_model")
 
-            fallback_reason = None
+            # Check if user wants Gemini 3 (premium model)
+            if user_preferred_model == constants.GEMINI_PREMIUM_MODEL:
+                # Get user email to check allowlist
+                try:
+                    user_record = firebase_auth.get_user(user_id)
+                    user_email = user_record.email
+                    if user_email in constants.GEMINI_3_ALLOWED_USERS:
+                        model = constants.GEMINI_PREMIUM_MODEL
+                        logging_util.info(f"Premium user {user_email} using Gemini 3")
+                        return ProviderSelection(provider, model)
+                    else:
+                        logging_util.info(
+                            f"User {user_email} not in Gemini 3 allowlist, using default"
+                        )
+                except Exception as e:
+                    logging_util.warning(f"Failed to check Gemini 3 allowlist: {e}")
 
-            if (
-                user_preferred_model
-                and user_preferred_model in constants.GEMINI_MODEL_MAPPING
-            ):
-                mapped_model = constants.GEMINI_MODEL_MAPPING[user_preferred_model]
-
-                if user_preferred_model != mapped_model:
-                    logging_util.info(
-                        f"Auto-redirecting legacy model '{user_preferred_model}' "
-                        f"to compatible model '{mapped_model}'"
-                    )
-
-                if mapped_model in constants.ALLOWED_GEMINI_MODELS:
-                    model = mapped_model
-                    return ProviderSelection(provider, model)
-
-                fallback_reason = (
-                    f"Mapped model '{mapped_model}' not in allowed models, using default"
-                )
-            elif (
-                user_preferred_model
-                and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
-            ):
+            # Standard model selection
+            if user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
                 model = user_preferred_model
-            elif user_preferred_model is not None:
-                fallback_reason = (
-                    f"Invalid user model preference: {user_preferred_model}"
-                )
-
-            if fallback_reason:
-                logging_util.warning(fallback_reason)
 
         return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:

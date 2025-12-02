@@ -7,7 +7,8 @@ import { useAuth } from '../hooks/useAuth'
 import { apiService } from '../services/api.service'
 
 // Only models that support code_execution + JSON mode together
-type GeminiModel = 'gemini-3-pro-preview' | 'gemini-2.0-flash'
+// Gemini 3 is restricted to allowlisted users only (backend enforced)
+type GeminiModel = 'gemini-2.0-flash'
 
 interface UserSettings {
   geminiModel: GeminiModel
@@ -19,7 +20,7 @@ export function SettingsPage() {
   const { user, signOut } = useAuth()
 
   const [settings, setSettings] = useState<UserSettings>({
-    geminiModel: 'gemini-3-pro-preview',
+    geminiModel: 'gemini-2.0-flash',
     debugMode: false
   })
   const [loading, setLoading] = useState(true)
@@ -40,13 +41,9 @@ export function SettingsPage() {
 
     try {
       const data = await apiService.getUserSettings()
-      // Map any legacy 2.5 models to compatible default
-      let model = data.gemini_model || 'gemini-3-pro-preview'
-      if (model === 'gemini-2.5-pro' || model === 'gemini-2.5-flash') {
-        model = 'gemini-3-pro-preview'
-      }
+      // All users default to gemini-2.0-flash (Gemini 3 is backend-only for allowlisted users)
       setSettings({
-        geminiModel: model as GeminiModel,
+        geminiModel: 'gemini-2.0-flash',
         debugMode: data.debug_mode || false
       })
     } catch (error) {
@@ -155,41 +152,14 @@ export function SettingsPage() {
             </CardHeader>
 
             <CardContent className="space-y-8">
-              {/* AI Model Selection */}
+              {/* AI Model Info */}
               <div>
-                <h3 className="text-white text-xl mb-2">AI Model Selection</h3>
-                <p className="text-purple-200 mb-4">Choose your preferred Gemini model for all AI interactions</p>
+                <h3 className="text-white text-xl mb-2">AI Model</h3>
+                <p className="text-purple-200 mb-4">Your current AI model for all interactions</p>
 
-                <div className="space-y-3">
-                  <label className="flex items-start gap-3 p-4 rounded-lg border border-purple-500/30 hover:border-purple-400/50 cursor-pointer transition-colors">
-                    <input
-                      type="radio"
-                      name="geminiModel"
-                      value="gemini-3-pro-preview"
-                      checked={settings.geminiModel === 'gemini-3-pro-preview'}
-                      onChange={() => handleModelChange('gemini-3-pro-preview')}
-                      className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
-                    />
-                    <div>
-                      <div className="text-white font-semibold">Gemini 3 Pro Preview (Default)</div>
-                      <div className="text-purple-200 text-sm">High-quality responses with advanced reasoning and dice roll support</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start gap-3 p-4 rounded-lg border border-purple-500/30 hover:border-purple-400/50 cursor-pointer transition-colors">
-                    <input
-                      type="radio"
-                      name="geminiModel"
-                      value="gemini-2.0-flash"
-                      checked={settings.geminiModel === 'gemini-2.0-flash'}
-                      onChange={() => handleModelChange('gemini-2.0-flash')}
-                      className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
-                    />
-                    <div>
-                      <div className="text-white font-semibold">Gemini 2.0 Flash</div>
-                      <div className="text-purple-200 text-sm">Faster responses, good for quick interactions</div>
-                    </div>
-                  </label>
+                <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-900/20">
+                  <div className="text-white font-semibold">Gemini 2.0 Flash</div>
+                  <div className="text-purple-200 text-sm">Fast responses with code execution and dice roll support</div>
                 </div>
               </div>
 

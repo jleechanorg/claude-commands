@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
 let saveTimeout = null;
 const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-70b-instruct';
 const DEFAULT_CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // 131K context - best for RPG
-const DEFAULT_GEMINI_MODEL = 'gemini-3-pro-preview';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
 
 /**
  * Load user settings from the API and update the UI
