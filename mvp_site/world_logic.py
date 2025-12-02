@@ -700,7 +700,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Extract current world_time and location for temporal validation
         old_world_time = current_game_state.world_data.get("world_time") if hasattr(current_game_state, "world_data") else None
-        old_location = current_game_state.world_data.get("current_location") if hasattr(current_game_state, "world_data") else None
+        old_location = current_game_state.world_data.get("current_location_name") if hasattr(current_game_state, "world_data") else None
 
         # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking
@@ -747,16 +747,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
             if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
                 # Max retries exceeded - log warning and accept the response anyway
+                # NOTE: Correction FAILED - we're accepting a bad response, not a successful fix
                 logging_util.warning(
-                    f"⚠️ TEMPORAL_VIOLATION: Max correction attempts ({MAX_TEMPORAL_CORRECTION_ATTEMPTS}) exceeded. "
-                    f"Accepting response with backward time: {_format_world_time_for_prompt(new_world_time)} "
+                    f"❌ TEMPORAL_CORRECTION_FAILED: Max correction attempts ({MAX_TEMPORAL_CORRECTION_ATTEMPTS}) exceeded. "
+                    f"Giving up and accepting response with backward time: {_format_world_time_for_prompt(new_world_time)} "
                     f"< {_format_world_time_for_prompt(old_world_time)}"
                 )
                 break
 
             # Extract new location for error message
             new_state_updates = llm_response_obj.get_state_updates() if hasattr(llm_response_obj, "get_state_updates") else {}
-            new_location = new_state_updates.get("world_data", {}).get("current_location", old_location)
+            new_location = new_state_updates.get("world_data", {}).get("current_location_name", old_location)
 
             # Log the violation and retry
             logging_util.warning(
