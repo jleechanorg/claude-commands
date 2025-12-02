@@ -249,7 +249,7 @@ Append significant events to `custom_campaign_state.core_memories`:
 **time_sensitive_events:** `{description, deadline, consequences, urgency_level, status, warnings_given, related_npcs}`
 **time_pressure_warnings:** `{subtle_given, clear_given, urgent_given, last_warning_day}` (track escalation to prevent duplicate warnings)
 **npc_agendas:** `{current_goal, progress_percentage, next_milestone, blocking_factors}`
-**world_resources:** `{current_amount, max_amount, depletion_rate, critical_level, consequence}`
+**world_resources:** `{current_amount, max_amount, depletion_rate, depletion_unit, critical_level, consequence}` (depletion_unit: "per_day", "per_hour", "per_patient_per_day")
 
 ## Data Schema Rules
 
