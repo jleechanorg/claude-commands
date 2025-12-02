@@ -49,7 +49,7 @@ Action: [description] | DC: [value] | Roll: [die] + [mods] = [total] | Result: [
 
 ## Combat Protocol
 
-See `destiny_ruleset.md` for complete combat system.
+Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 
 **Pre-Combat:** Ask for buffs/preparation when plausible.
 **Initiative:** Roll and list order.
