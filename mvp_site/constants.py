@@ -96,6 +96,7 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
+    "llama-4-maverick-17b-128e-instruct": 131_072,  # 128K context (intentionally kept)
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
