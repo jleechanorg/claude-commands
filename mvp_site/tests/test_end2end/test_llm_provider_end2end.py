@@ -54,12 +54,12 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         }
 
     def test_round_trips_openrouter_and_gemini_preferences(self):
-        # Initial fetch should include default Gemini provider
+        # Initial fetch should include default Cerebras provider
         response = self.client.get("/api/settings", headers=self.headers)
         assert response.status_code == 200
         payload = json.loads(response.data)
-        assert payload["llm_provider"] == "gemini"
-        assert payload["gemini_model"] == "gemini-3-pro-preview"
+        assert payload["llm_provider"] == "cerebras"
+        assert payload["cerebras_model"] == "qwen-3-235b-a22b-instruct-2507"
 
         # Switch to OpenRouter and persist
         update_payload = {
