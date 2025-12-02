@@ -788,7 +788,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 # Max attempts exceeded - corrections DID NOT fix the issue
                 temporal_warning = (
                     f"⚠️ TEMPORAL CORRECTION EXCEEDED: The AI repeatedly generated responses that jumped "
-                    f"backward in time. After {temporal_correction_attempts} failed correction attempts, "
+                    f"backward in time. After {MAX_TEMPORAL_CORRECTION_ATTEMPTS} failed correction attempts, "
                     f"the system accepted the response to avoid infinite loops. Timeline consistency may be compromised."
                 )
                 logging_util.warning(

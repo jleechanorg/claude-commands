@@ -570,8 +570,8 @@ class PromptBuilder:
         Includes temporal enforcement to prevent backward time jumps.
         """
         # Extract current world_time for temporal enforcement
-        world_time = self.game_state.world_data.get("world_time", {}) if hasattr(self.game_state, "world_data") else {}
-        current_location = self.game_state.world_data.get("current_location_name", "current location") if hasattr(self.game_state, "world_data") else "current location"
+        world_time = self.game_state.world_data.get("world_time", {}) if (hasattr(self.game_state, "world_data") and self.game_state.world_data) else {}
+        current_location = self.game_state.world_data.get("current_location_name", "current location") if (hasattr(self.game_state, "world_data") and self.game_state.world_data) else "current location"
 
         # Format current time for the prompt (including hidden microsecond for uniqueness)
         time_parts = []
