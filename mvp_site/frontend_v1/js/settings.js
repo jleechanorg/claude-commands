@@ -2,6 +2,7 @@
  * Settings page JavaScript functionality
  * Handles model selection with auto-save, debouncing, and error handling
  */
+/* global firebase */
 
 document.addEventListener('DOMContentLoaded', function () {
   console.log('Settings page loaded');
@@ -74,6 +75,7 @@ async function loadSettings() {
     console.log('Loaded settings:', settings);
 
     // Get current user email from Firebase Auth
+    const allowedEmails = GEMINI_3_ALLOWED_USERS.map((email) => email.toLowerCase());
     const userEmail = window.firebase?.auth()?.currentUser?.email || '';
     if (!userEmail && window.firebase?.auth && !pendingAuthReload) {
       pendingAuthReload = true;
@@ -85,7 +87,8 @@ async function loadSettings() {
       });
     }
 
-    const canUseGemini3 = userEmail && GEMINI_3_ALLOWED_USERS.includes(userEmail);
+    const canUseGemini3 =
+      userEmail && allowedEmails.includes(userEmail.toLowerCase());
 
     // Dynamically add Gemini 3 option for allowed users
     const geminiSelect = document.getElementById('geminiModel');

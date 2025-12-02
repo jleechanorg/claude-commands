@@ -45,6 +45,7 @@ GEMINI_3_ALLOWED_USERS = [
 # See PR #2052 for compatibility testing details
 ALLOWED_GEMINI_MODELS = [
     DEFAULT_GEMINI_MODEL,  # ✅ WORKS with code_execution + JSON (cheap: $0.10/M)
+    GEMINI_PREMIUM_MODEL,  # ✅ Premium option (allowlist enforced downstream)
 ]
 
 # Premium Gemini models (only for GEMINI_3_ALLOWED_USERS)

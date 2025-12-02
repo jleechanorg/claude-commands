@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -31,8 +31,13 @@ export function SettingsPage() {
   const { user, signOut } = useAuth()
 
   // Check if current user can access Gemini 3
+  const allowedGeminiEmails = useMemo(
+    () => GEMINI_3_ALLOWED_USERS.map((email) => email.toLowerCase()),
+    [],
+  )
+
   const canUseGemini3 = !!(
-    user?.email && GEMINI_3_ALLOWED_USERS.includes(user.email)
+    user?.email && allowedGeminiEmails.includes(user.email.toLowerCase())
   )
 
   const [settings, setSettings] = useState<UserSettings>({
