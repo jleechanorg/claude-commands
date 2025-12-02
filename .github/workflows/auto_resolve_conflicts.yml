@@ -24,15 +24,32 @@ jobs:
           echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
           # Use GitHub API to check mergeable state (faster than checkout)
-          MERGE_STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json mergeStateStatus --jq '.mergeStateStatus')
-          echo "Merge state: $MERGE_STATE"
+          # Retry up to 5 times if mergeStateStatus is UNKNOWN (GitHub still calculating)
+          MAX_RETRIES=5
+          RETRY_DELAY=3
+          for ((i=1; i<=MAX_RETRIES; i++)); do
+            MERGE_STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json mergeStateStatus --jq '.mergeStateStatus')
+            echo "Merge state: $MERGE_STATE"
+            if [ "$MERGE_STATE" != "UNKNOWN" ]; then
+              break
+            fi
+            echo "Merge state is UNKNOWN, retrying in $RETRY_DELAY seconds... ($i/$MAX_RETRIES)"
+            sleep $RETRY_DELAY
+          done
 
           if [ "$MERGE_STATE" = "DIRTY" ]; then
             echo "has-conflicts=true" >> $GITHUB_OUTPUT
             echo "🔄 PR #$PR_NUMBER has conflicts - will attempt auto-resolution"
-          else
+          elif [ "$MERGE_STATE" = "CLEAN" ]; then
             echo "has-conflicts=false" >> $GITHUB_OUTPUT
             echo "✅ PR #$PR_NUMBER has no conflicts - skipping"
+          elif [ "$MERGE_STATE" = "UNKNOWN" ]; then
+            echo "has-conflicts=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Merge state is still UNKNOWN after retries. Skipping auto-resolution. Please re-run workflow later."
+          else
+            # Handle other states: BLOCKED, BEHIND, UNSTABLE, HAS_HOOKS
+            echo "has-conflicts=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Merge state is '$MERGE_STATE' (not CLEAN or DIRTY). Skipping auto-resolution. See https://docs.github.com/en/graphql/reference/enums#mergestatestatus for details."
           fi
 
   # Heavy resolution job - only runs if conflicts detected
@@ -46,6 +63,9 @@ jobs:
       pull-requests: write # Required for gh pr commands (list, view, comment)
 
     steps:
+    # Pinning actions/checkout to a specific SHA (v4.1.1) for security compliance.
+    # Rationale: Prevents supply chain attacks by ensuring a known, trusted version is used.
+    # Review periodically and update this SHA to incorporate security patches from newer releases.
     - name: Checkout code
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
