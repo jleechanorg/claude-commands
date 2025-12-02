@@ -110,12 +110,31 @@ def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, .
 
     # Month name to number mapping for Forgotten Realms calendar
     month_map = {
-        "hammer": 1, "alturiak": 2, "ches": 3, "tarsakh": 4,
-        "mirtul": 5, "kythorn": 6, "flamerule": 7, "eleasis": 8,
-        "eleint": 9, "marpenoth": 10, "uktar": 11, "nightal": 12,
+        "hammer": 1,
+        "alturiak": 2,
+        "ches": 3,
+        "tarsakh": 4,
+        "mirtul": 5,
+        "kythorn": 6,
+        "flamerule": 7,
+        "eleasis": 8,
+        "eleint": 9,
+        "marpenoth": 10,
+        "uktar": 11,
+        "nightal": 12,
         # Common abbreviations
-        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+        "jan": 1,
+        "feb": 2,
+        "mar": 3,
+        "apr": 4,
+        "may": 5,
+        "jun": 6,
+        "jul": 7,
+        "aug": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dec": 12,
     }
 
     year = world_time.get("year", 0)
@@ -134,7 +153,11 @@ def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, .
 def _extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None:
     """Extract world_time from LLM response state_updates."""
     try:
-        state_updates = llm_response.get_state_updates() if hasattr(llm_response, "get_state_updates") else {}
+        state_updates = (
+            llm_response.get_state_updates()
+            if hasattr(llm_response, "get_state_updates")
+            else {}
+        )
         world_data = state_updates.get("world_data", {})
         return world_data.get("world_time")
     except Exception:
@@ -195,7 +218,7 @@ def _build_temporal_correction_prompt(
     old_loc = old_location or "Unknown location"
     new_loc = new_location or "Unknown location"
 
-    correction = f"""⚠️ TEMPORAL VIOLATION - FULL REGENERATION REQUIRED
+    return f"""⚠️ TEMPORAL VIOLATION - FULL REGENERATION REQUIRED
 
 Your previous response was REJECTED because time went BACKWARD:
 - CORRECT current state: {old_time_str} at {old_loc}
@@ -229,8 +252,6 @@ This caused you to generate a response for a scene that already happened in the 
 {original_user_input}
 
 Generate a NEW response that is the NEXT logical entry in the timeline, continuing from the CURRENT state."""
-
-    return correction
 
 
 def truncate_game_state_for_logging(
@@ -342,12 +363,8 @@ def _enrich_session_header_with_progress(
     xp_next_level = player_data.get("xp_next_level")
     gold_amount = player_data.get("gold")
 
-    contains_xp = re.search(
-        r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE
-    )
-    contains_gold = re.search(
-        r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE
-    )
+    contains_xp = re.search(r"\b(XP|experience)\b", session_header, flags=re.IGNORECASE)
+    contains_gold = re.search(r"\b(Gold|gp)\b", session_header, flags=re.IGNORECASE)
 
     remove_prefixes: tuple[str, ...] = ()
     additions: list[str] = []
@@ -695,8 +712,16 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         use_default_world = campaign_data.get("use_default_world", False)
 
         # Extract current world_time and location for temporal validation
-        old_world_time = current_game_state.world_data.get("world_time") if hasattr(current_game_state, "world_data") else None
-        old_location = current_game_state.world_data.get("current_location_name") if hasattr(current_game_state, "world_data") else None
+        old_world_time = (
+            current_game_state.world_data.get("world_time")
+            if hasattr(current_game_state, "world_data")
+            else None
+        )
+        old_location = (
+            current_game_state.world_data.get("current_location_name")
+            if hasattr(current_game_state, "world_data")
+            else None
+        )
 
         # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking
@@ -708,7 +733,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         llm_response_obj = None
 
         # Check if this is a GOD_MODE command that can bypass temporal validation
-        is_god_mode = user_input.strip().startswith("GOD_MODE")
+        is_god_mode = mode == constants.MODE_GOD or (
+            isinstance(user_input, str) and user_input.strip().startswith("GOD_MODE")
+        )
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             llm_response_obj = await asyncio.to_thread(
@@ -726,16 +753,20 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             # GOD_MODE commands are exempt from temporal validation
             new_world_time = _extract_world_time_from_response(llm_response_obj)
 
-            if is_god_mode or not _check_temporal_violation(old_world_time, new_world_time):
+            if is_god_mode or not _check_temporal_violation(
+                old_world_time, new_world_time
+            ):
                 # No violation - time is moving forward, accept response
                 # OR this is a GOD_MODE command which can move time backward
                 if temporal_correction_attempts > 0:
                     logging_util.info(
                         f"✅ TEMPORAL_CORRECTION: Response accepted after {temporal_correction_attempts} correction(s)"
                     )
-                if is_god_mode and _check_temporal_violation(old_world_time, new_world_time):
+                if is_god_mode and _check_temporal_violation(
+                    old_world_time, new_world_time
+                ):
                     logging_util.info(
-                        f"🔓 GOD_MODE: Temporal validation bypassed - allowing backward time movement"
+                        "🔓 GOD_MODE: Temporal validation bypassed - allowing backward time movement"
                     )
                 break
 
@@ -752,8 +783,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 break
 
             # Extract new location for error message
-            new_state_updates = llm_response_obj.get_state_updates() if hasattr(llm_response_obj, "get_state_updates") else {}
-            new_location = new_state_updates.get("world_data", {}).get("current_location_name", old_location)
+            new_state_updates = (
+                llm_response_obj.get_state_updates()
+                if hasattr(llm_response_obj, "get_state_updates")
+                else {}
+            )
+            new_location = new_state_updates.get("world_data", {}).get(
+                "current_location_name", old_location
+            )
 
             # Log the violation and retry
             logging_util.warning(
@@ -785,7 +822,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"to fix the timeline continuity."
             )
             prevention_extras["temporal_correction_warning"] = temporal_warning
-            prevention_extras["temporal_correction_attempts"] = temporal_correction_attempts
+            prevention_extras["temporal_correction_attempts"] = (
+                temporal_correction_attempts
+            )
             logging_util.info(
                 f"✅ TEMPORAL_WARNING added to response: {temporal_correction_attempts} correction(s)"
             )
@@ -1420,7 +1459,9 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
             if not isinstance(model, str):
                 return create_error_response("Invalid model selection")
 
-            allowed_openrouter = {m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS}
+            allowed_openrouter = {
+                m.lower() for m in constants.ALLOWED_OPENROUTER_MODELS
+            }
             if model.lower() not in allowed_openrouter:
                 return create_error_response("Invalid model selection")
             settings_to_update["openrouter_model"] = model

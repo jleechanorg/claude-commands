@@ -60,7 +60,7 @@
 ```
 
 **Impact Analysis**:
-- `prevention_extras` is used later in the file (lines 616, 715-718) to inject god_mode_response
+- `prevention_extras` is used later in the file (around lines 778 and 931-934) to inject god_mode_response
 - This variable MUST be defined for those later usages to work
 - The resolution ensures both the naming update AND the preventive guards feature work together
 - No data loss - all functionality from both branches preserved
