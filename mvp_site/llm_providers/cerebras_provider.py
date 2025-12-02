@@ -13,6 +13,10 @@ from typing import Any
 import requests
 
 from mvp_site import logging_util
+from mvp_site.llm_providers.provider_utils import (
+    ContextTooLargeError,
+    check_context_too_large,
+)
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 
@@ -114,16 +118,16 @@ def generate_content(
             text = message[reasoning_key]
 
         if text is None:
-            # Provide specific error for context-too-large scenario
-            if finish_reason == "length" and completion_tokens <= 1:
-                raise ValueError(
-                    f"Context too large: prompt used {prompt_tokens:,} tokens, "
-                    f"model could only generate {completion_tokens} completion token(s). "
-                    "The prompt must be reduced to allow room for output."
-                )
+            # Check for context-too-large scenario using shared utility
+            check_context_too_large(
+                finish_reason=finish_reason,
+                completion_tokens=completion_tokens,
+                prompt_tokens=prompt_tokens,
+                has_content=False,
+            )
             raise KeyError("No 'content' or 'reasoning' field in message")
-    except ValueError:
-        raise  # Re-raise our specific ValueError without wrapping
+    except ContextTooLargeError:
+        raise  # Re-raise without wrapping for proper handling upstream
     except Exception as exc:  # noqa: BLE001 - defensive parsing
         raise ValueError(f"Invalid Cerebras response structure: {data}") from exc
 

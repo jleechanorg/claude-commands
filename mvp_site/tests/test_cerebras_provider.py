@@ -3,6 +3,7 @@ import types
 import pytest
 
 from mvp_site.llm_providers import cerebras_provider
+from mvp_site.llm_providers.provider_utils import ContextTooLargeError
 
 
 class DummyResponse:
@@ -219,7 +220,7 @@ def test_context_too_large_error_message(monkeypatch):
         cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
     )
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ContextTooLargeError) as exc_info:
         cerebras_provider.generate_content(
             prompt_contents=["test"],
             model_name="zai-glm-4.6",
@@ -232,3 +233,8 @@ def test_context_too_large_error_message(monkeypatch):
     assert "Context too large" in error_msg
     assert "113,037" in error_msg  # Should show prompt tokens with commas
     assert "prompt must be reduced" in error_msg.lower()
+
+    # Verify exception attributes are set correctly
+    assert exc_info.value.prompt_tokens == 113037
+    assert exc_info.value.completion_tokens == 1
+    assert exc_info.value.finish_reason == "length"
