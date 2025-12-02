@@ -89,9 +89,9 @@ class TestTimeConsolidation(unittest.TestCase):
                 state = GameState(
                     world_data={"world_time": {"hour": hour, "minute": 0, "second": 0}}
                 )
-                assert state.world_data["world_time"]["time_of_day"] == expected, (
-                    f"Hour {hour} should map to '{expected}'"
-                )
+                assert (
+                    state.world_data["world_time"]["time_of_day"] == expected
+                ), f"Hour {hour} should map to '{expected}'"
 
     def test_missing_world_data(self):
         """Test handling of missing world_data."""
@@ -178,6 +178,7 @@ class TestTimeConsolidation(unittest.TestCase):
             }
         )
 
+        # Should add microsecond field with default value 0
         assert "microsecond" in state.world_data["world_time"]
         assert state.world_data["world_time"]["microsecond"] == 0
 
@@ -189,13 +190,28 @@ class TestTimeConsolidation(unittest.TestCase):
                     "hour": 9,
                     "minute": 15,
                     "second": 45,
-                    "microsecond": 123,
+                    "microsecond": 12345,
                     "time_of_day": "Morning",
                 }
             }
         )
 
-        assert state.world_data["world_time"]["microsecond"] == 123
+        # Should preserve existing microsecond value
+        assert state.world_data["world_time"]["microsecond"] == 12345
+
+    def test_microsecond_in_legacy_migration(self):
+        """Test that microsecond is included when migrating from legacy time_of_day."""
+        state = GameState(
+            world_data={
+                "current_location": "Tavern",
+                "time_of_day": "Evening",  # Legacy format triggers migration
+            }
+        )
+
+        # Should create world_time with microsecond included
+        assert "world_time" in state.world_data
+        assert "microsecond" in state.world_data["world_time"]
+        assert state.world_data["world_time"]["microsecond"] == 0
 
 
 if __name__ == "__main__":
