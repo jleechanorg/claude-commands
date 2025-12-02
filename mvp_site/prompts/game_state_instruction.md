@@ -852,6 +852,7 @@ The `state_updates` field should contain all initial world data:
     "hour": 9,
     "minute": 51,
     "second": 10,
+    "microsecond": 0,
     "time_of_day": "Morning"
   },
   "custom_campaign_state": {
@@ -1034,6 +1035,7 @@ The `world_time` object now contains BOTH structured time AND descriptive time-o
     "hour": 9,
     "minute": 51,
     "second": 10,
+    "microsecond": 0,
     "time_of_day": "Morning"
   }
 }
@@ -1041,6 +1043,7 @@ The `world_time` object now contains BOTH structured time AND descriptive time-o
 
 **CRITICAL FIELDS**:
 - `year`, `month`, `day`, `hour`, `minute`, `second`: The structured time components
+- `microsecond`: Sub-second precision (0-999999) for think-block uniqueness (see TEMPORAL CONSISTENCY PROTOCOL)
 - `time_of_day`: The descriptive text that MUST match the hour value
 
 ### Time-of-Day Mapping (MANDATORY)
@@ -1072,6 +1075,96 @@ The `time_of_day` field MUST always match the `hour` field according to this map
 -   **Advancing Time:** As the character takes actions, you must update this object. Resting might advance the day and reset the time, traveling a long distance could take hours, and a short action might advance the clock by minutes or seconds.
 
 This is critical for tracking time-sensitive quests and creating a realistic world.
+
+## 🚨 TEMPORAL CONSISTENCY PROTOCOL (MANDATORY)
+
+**CRITICAL: Time MUST always move FORWARD. Backward time travel is FORBIDDEN unless explicitly authorized via GOD MODE.**
+
+### Core Rule: Time-Forward-Only
+
+Every response that updates `world_time` MUST result in a timestamp that is **strictly greater than** the previous timestamp. This prevents:
+- Accidental time loops
+- Duplicate timestamps across turns
+- Narrative inconsistency from time jumps backward
+
+### Time Increment Guidelines
+
+**1. Think/Plan Actions (No Narrative Advancement):**
+When player uses think/plan/consider/strategize/options keywords and you generate a Deep Think Planning Block:
+- Increment `microsecond` field by +1
+- Do NOT increment seconds, minutes, or hours
+- This maintains temporal uniqueness without advancing narrative time
+
+**2. Story-Advancing Actions:**
+| Action Type | Time Increment |
+|-------------|----------------|
+| Brief dialogue exchange | +1-5 minutes |
+| Combat round (D&D) | +6 seconds |
+| Short rest | +1 hour |
+| Long rest | +8 hours |
+| Travel | Calculate from distance/speed |
+| Quick action (look around, check item) | +10-30 seconds |
+| Scene transition | +5-15 minutes |
+
+### Updated World Time Object (with Microseconds)
+
+```json
+{
+  "world_time": {
+    "year": 1492,
+    "month": "Mirtul",
+    "day": 10,
+    "hour": 14,
+    "minute": 30,
+    "second": 25,
+    "microsecond": 0,
+    "time_of_day": "Afternoon"
+  }
+}
+```
+
+**New Field:**
+- `microsecond`: (integer 0-999999) Sub-second precision for think-block uniqueness
+
+### Backward Time Travel (GOD MODE ONLY)
+
+Time can ONLY move backward when:
+1. User input explicitly starts with "GOD MODE:"
+2. AND the god mode command explicitly requests time manipulation (e.g., "GOD MODE: Reset to Mirtul 10 evening", "GOD MODE: Flashback to...")
+
+**Example God Mode Time Reset:**
+```json
+{
+  "god_mode_response": "Time reset to Mirtul 10, Evening as requested.",
+  "state_updates": {
+    "world_data": {
+      "world_time": {
+        "year": 1492,
+        "month": "Mirtul",
+        "day": 10,
+        "hour": 19,
+        "minute": 0,
+        "second": 0,
+        "microsecond": 0,
+        "time_of_day": "Evening"
+      }
+    }
+  }
+}
+```
+
+### Validation Rule
+
+Before outputting any `state_updates` containing `world_time`, mentally verify:
+1. Is the new timestamp > previous timestamp? ✅ Proceed
+2. Is the new timestamp ≤ previous timestamp?
+   - Is this a GOD MODE time manipulation request? ✅ Proceed with warning in god_mode_response
+   - Is this normal gameplay? ❌ **HALT** - Do not output backward time. Increment forward instead.
+
+**FORBIDDEN (unless GOD MODE):**
+- Setting time to an earlier date/hour/minute than current state
+- Replaying scenes at their original timestamp
+- "Resuming" from an earlier point without god mode authorization
 
 
 ## NEW: The Core Memory Log Protocol
