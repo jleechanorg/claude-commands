@@ -5,7 +5,58 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  # Fast check job - runs first, no checkout needed
+  # gh CLI is pre-installed on ubuntu-latest, no installation required
+  check-conflicts:
+    runs-on: ubuntu-latest
+    outputs:
+      has-conflicts: ${{ steps.check.outputs.has-conflicts }}
+      pr-number: ${{ steps.check.outputs.pr-number }}
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check if PR has merge conflicts
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          # Use GitHub API to check mergeable state (faster than checkout)
+          # Retry up to 5 times if mergeStateStatus is UNKNOWN (GitHub still calculating)
+          MAX_RETRIES=5
+          RETRY_DELAY=3
+          for ((i=1; i<=MAX_RETRIES; i++)); do
+            MERGE_STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json mergeStateStatus --jq '.mergeStateStatus')
+            echo "Merge state: $MERGE_STATE"
+            if [ "$MERGE_STATE" != "UNKNOWN" ]; then
+              break
+            fi
+            echo "Merge state is UNKNOWN, retrying in $RETRY_DELAY seconds... ($i/$MAX_RETRIES)"
+            sleep $RETRY_DELAY
+          done
+
+          if [ "$MERGE_STATE" = "DIRTY" ]; then
+            echo "has-conflicts=true" >> $GITHUB_OUTPUT
+            echo "🔄 PR #$PR_NUMBER has conflicts - will attempt auto-resolution"
+          elif [ "$MERGE_STATE" = "CLEAN" ]; then
+            echo "has-conflicts=false" >> $GITHUB_OUTPUT
+            echo "✅ PR #$PR_NUMBER has no conflicts - skipping"
+          elif [ "$MERGE_STATE" = "UNKNOWN" ]; then
+            echo "has-conflicts=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Merge state is still UNKNOWN after retries. Skipping auto-resolution. Please re-run workflow later."
+          else
+            # Handle other states: BLOCKED, BEHIND, UNSTABLE, HAS_HOOKS
+            echo "has-conflicts=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Merge state is '$MERGE_STATE' (not CLEAN or DIRTY). Skipping auto-resolution. See https://docs.github.com/en/graphql/reference/enums#mergestatestatus for details."
+          fi
+
+  # Heavy resolution job - only runs if conflicts detected
   auto-resolve-conflicts:
+    needs: check-conflicts
+    if: needs.check-conflicts.outputs.has-conflicts == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -13,8 +64,11 @@ jobs:
       pull-requests: write # Required for gh pr commands (list, view, comment)
 
     steps:
+    # Pinning actions/checkout to a specific SHA (v4.1.1) for security compliance.
+    # Rationale: Prevents supply chain attacks by ensuring a known, trusted version is used.
+    # Review periodically and update this SHA to incorporate security patches from newer releases.
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
@@ -24,64 +78,91 @@ jobs:
         git config user.name "Claude Auto-Resolver"
         git config user.email "claude@anthropic.com"
 
-    - name: Install GitHub CLI
-      run: |
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-        sudo apt update
-        sudo apt install gh
-
-    - name: Check PR merge status
-      id: check_conflicts
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        PR_NUMBER="${{ github.event.pull_request.number }}"
-
-        echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-        MERGE_STATE=$(gh pr view $PR_NUMBER --json mergeStateStatus --jq '.mergeStateStatus')
-        echo "merge_state=$MERGE_STATE" >> $GITHUB_OUTPUT
-
-        if [ "$MERGE_STATE" = "DIRTY" ]; then
-          echo "conflicts=true" >> $GITHUB_OUTPUT
-        else
-          echo "conflicts=false" >> $GITHUB_OUTPUT
-        fi
+    # Note: gh CLI is pre-installed on ubuntu-latest runners - no installation needed
 
     - name: Auto-resolve conflicts
-      if: steps.check_conflicts.outputs.conflicts == 'true'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NUMBER: ${{ needs.check-conflicts.outputs.pr-number }}
       run: |
-        echo "🔄 Auto-resolving conflicts for PR #${{ steps.check_conflicts.outputs.pr_number }}"
+        echo "🔄 Auto-resolving conflicts for PR #$PR_NUMBER"
 
         # Make script executable
         chmod +x scripts/auto_resolve_conflicts.sh
 
-        # Run auto-resolution
-        if ./scripts/auto_resolve_conflicts.sh ${{ steps.check_conflicts.outputs.pr_number }}; then
+        # Run auto-resolution and capture output
+        RESOLVE_OUTPUT=$(./scripts/auto_resolve_conflicts.sh "$PR_NUMBER" 2>&1)
+        EXIT_CODE=$?
+        echo "$RESOLVE_OUTPUT" | tee /tmp/resolution_output.txt
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "success" > /tmp/resolution_status.txt
           echo "✅ Conflicts resolved successfully"
         else
+          echo "failure" > /tmp/resolution_status.txt
           echo "⚠️  Auto-resolution failed, manual intervention required"
-          exit 1
+          exit $EXIT_CODE
         fi
 
     - name: Update PR with resolution status
-      if: steps.check_conflicts.outputs.conflicts == 'true'
+      if: always()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NUMBER: ${{ needs.check-conflicts.outputs.pr-number }}
       run: |
-        gh pr comment ${{ steps.check_conflicts.outputs.pr_number }} --body "🤖 **Auto-Conflict Resolution**
+        set -euo pipefail
+        STATUS=$(cat /tmp/resolution_status.txt 2>/dev/null || echo "unknown")
+        COMMENT_FILE=/tmp/resolution_comment.md
+        LOG_FILE=/tmp/resolution_output.txt
 
-        ✅ Merge conflicts have been automatically resolved and pushed to this PR.
+        # Trim resolver output for readability; include only the last 200 lines
+        if [ -f "$LOG_FILE" ]; then
+          tail -n 200 "$LOG_FILE" > /tmp/resolution_output_trimmed.txt
+          LOG_FILE=/tmp/resolution_output_trimmed.txt
+        fi
 
-        **Changes made:**
-        - Merged latest main branch changes
-        - Auto-resolved common conflict patterns in learnings.md and CLAUDE.md
-        - Preserved all valuable content from both branches
+        if [ "$STATUS" = "success" ]; then
+          cat > "$COMMENT_FILE" <<'EOF'
+🤖 **Auto-Conflict Resolution**
 
-        The PR is now ready for review and should be mergeable.
+✅ Merge conflicts have been automatically resolved and pushed to this PR.
 
-        ---
-        *Generated by Claude Auto-Resolver*"
+The PR is now ready for review and should be mergeable.
+
+**Resolver output:**
+```
+EOF
+        elif [ "$STATUS" = "failure" ]; then
+          cat > "$COMMENT_FILE" <<'EOF'
+🤖 **Auto-Conflict Resolution**
+
+⚠️ Auto-resolution failed. Please review the workflow logs and resolve conflicts manually.
+
+**Resolver output:**
+```
+EOF
+        else
+          cat > "$COMMENT_FILE" <<'EOF'
+🤖 **Auto-Conflict Resolution**
+
+⚠️ Auto-resolution status unknown. Please rerun the workflow or check logs for details.
+
+**Resolver output:**
+```
+EOF
+        fi
+
+        if [ -f "$LOG_FILE" ]; then
+          cat "$LOG_FILE" >> "$COMMENT_FILE"
+        else
+          echo "No resolver output captured." >> "$COMMENT_FILE"
+        fi
+
+        echo "```" >> "$COMMENT_FILE"
+
+        {
+          echo ""
+          echo "---"
+          echo "*Generated by Claude Auto-Resolver*"
+        } >> "$COMMENT_FILE"
+
+        gh pr comment "$PR_NUMBER" --body-file "$COMMENT_FILE"
