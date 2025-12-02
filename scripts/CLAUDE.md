@@ -28,6 +28,65 @@ scripts/
 - `debug_firebase_connection.py` - Firebase connectivity diagnostics
 - `validate_firebase_auth.py` - Authentication configuration validation
 - `test_firebase_read_write.py` - Read/write operation testing
+- **`campaign_manager.py`** - **PRODUCTION CAMPAIGN MANAGEMENT** (see below)
+
+## 🔥 Production Campaign Queries (campaign_manager.py)
+
+**CRITICAL: Use this script to query REAL production campaigns by email.**
+
+The Firestore database uses Firebase Auth UIDs (not emails) as user identifiers. This script
+handles the email-to-UID conversion automatically.
+
+### Prerequisites
+```bash
+# Set environment for clock skew fix
+export WORLDAI_DEV_MODE=true
+export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json
+```
+
+### Commands
+
+**1. Find User by Email:**
+```bash
+WORLDAI_DEV_MODE=true python scripts/campaign_manager.py find-user jleechan@gmail.com
+```
+Output: Firebase UID and user metadata
+
+**2. Analyze User Activity (with token estimation):**
+```bash
+# Analyze last 3 months
+WORLDAI_DEV_MODE=true python scripts/campaign_manager.py analytics jleechan@gmail.com
+
+# Analyze specific month
+WORLDAI_DEV_MODE=true python scripts/campaign_manager.py analytics jleechan@gmail.com --month 2025-11
+```
+Output: Campaigns, story entries, estimated token usage, and cost projections
+
+**3. Query Campaigns by Name:**
+```bash
+WORLDAI_DEV_MODE=true python scripts/campaign_manager.py query <UID> "My Epic Adventure"
+```
+
+**4. Delete Campaigns (dry-run first!):**
+```bash
+# Dry run - shows what would be deleted
+WORLDAI_DEV_MODE=true python scripts/campaign_manager.py delete <UID> "My Epic Adventure"
+
+# Actual deletion (requires typing 'DELETE' to confirm)
+WORLDAI_DEV_MODE=true python scripts/campaign_manager.py delete <UID> "My Epic Adventure" --confirm
+```
+
+### Token Estimation Constants
+The analytics command uses these constants from `llm_service.py`:
+- Base system instructions: ~43,000 tokens
+- World content estimate: ~50,000 tokens
+- Tokens per story entry: ~500 tokens
+- Max history turns: 100 (truncation limit)
+- 200K threshold: Above this, requests use "long context" pricing (2x cost)
+
+### Cost Tiers (Gemini 3 Pro)
+- Short context (≤200K tokens): $2/M input, $12/M output
+- Long context (>200K tokens): $4/M input, $18/M output
 
 ### Development Utilities
 - `analyze_git_stats.py` - Git repository statistics and analysis
