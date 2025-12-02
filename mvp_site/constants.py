@@ -60,17 +60,24 @@ ALLOWED_OPENROUTER_MODELS = [
 # Cerebras direct provider defaults (per Cerebras docs as of 2025-12-01)
 # Pricing comparison (input/output per M tokens):
 #   Llama 3.1 8B: $0.10/$0.10 (CHEAPEST, not in list - too small for RPG campaigns)
+#   Llama 4 Maverick: $0.14/$0.68 (BEST VALUE - deprecated but cheap, 128K context)
 #   GPT OSS 120B: $0.35/$0.75 (not in list)
 #   Qwen 3 32B: $0.40/$0.80 (not in list - lower context)
 #   Qwen 3 235B: $0.60/$1.20 (highest context 131K)
 #   Llama 3.3 70B: $0.85/$1.20 (65K context)
 #   ZAI GLM 4.6: $2.25/$2.75 (preview, 131K context)
-#   Llama 3.1 405B: $6.00/$12.00 (MOST EXPENSIVE tier)
+#   Llama 3.1 405B: $6.00/$12.00 (MOST EXPENSIVE - 43x more than Maverick!)
+#
+# INTENTIONAL: Llama 4 Maverick is kept despite deprecation (Oct 15 2025) because:
+#   1. It's 43x cheaper than alternatives ($0.14 vs $6.00 input)
+#   2. Best cost/performance ratio for large-context RPG campaigns
+#   3. Still functions on Cerebras API (deprecation != removal)
 DEFAULT_CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507"
 ALLOWED_CEREBRAS_MODELS = [
     DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M
     "zai-glm-4.6",  # 131K context, $2.25/$2.75 per M (preview)
     "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
+    "llama-4-maverick-17b-128e-instruct",  # 128K context, $0.14/$0.68 per M (INTENTIONALLY KEPT - see comment above)
 ]
 
 # Context window budgeting (tokens)
