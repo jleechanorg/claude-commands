@@ -113,3 +113,32 @@ def test_prefers_content_over_reasoning_when_both_present(monkeypatch):
 
     assert "from_content" in response.text
     assert "from_reasoning" not in response.text
+
+
+def test_handles_empty_content_field(monkeypatch):
+    """Empty content should be preserved, not fall back to reasoning."""
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        return DummyResponse({
+            "choices": [{
+                "message": {
+                    "content": "",
+                    "reasoning": '{"from_reasoning": true}'
+                }
+            }]
+        })
+
+    monkeypatch.setattr(
+        cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
+    )
+
+    response = cerebras_provider.generate_content(
+        prompt_contents=["test"],
+        model_name="test-model",
+        system_instruction_text=None,
+        temperature=0.5,
+        max_output_tokens=100,
+    )
+
+    # Empty content should be preserved, not fall back to reasoning
+    assert response.text == ""
