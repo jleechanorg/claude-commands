@@ -33,6 +33,10 @@ MAX_STRING_LENGTH = 1000000
 class LLMRequestError(Exception):
     """Custom exception for LLMRequest validation and serialization errors."""
 
+    def __init__(self, message: str, status_code: int | None = 422):
+        super().__init__(message)
+        self.status_code = status_code
+
 
 class PayloadTooLargeError(LLMRequestError):
     """Raised when JSON payload exceeds size limits."""
@@ -212,9 +216,7 @@ class LLMRequest:
 
         except (TypeError, ValueError) as e:
             logger.error(f"JSON serialization failed for LLMRequest: {e}")
-            raise LLMRequestError(
-                f"Failed to serialize LLMRequest to JSON: {e}"
-            ) from e
+            raise LLMRequestError(f"Failed to serialize LLMRequest to JSON: {e}") from e
 
     def _validate_payload_size(self, json_data: dict[str, Any]):
         """Validate that JSON payload is within size limits."""

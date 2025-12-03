@@ -75,12 +75,9 @@ class TestLLMRequestTDD(unittest.TestCase):
 
     @patch("mvp_site.llm_service.get_client")  # Mock client to prevent API key requirement
     @patch("mvp_site.llm_service._get_text_from_response")
-    @patch(
-        "mvp_site.llm_service._call_llm_api_with_model_cycling"
-    )  # Mock the underlying API
-    @patch("mvp_site.llm_service._call_llm_api")  # Mock planning block API calls
+    @patch("mvp_site.llm_service._call_llm_api")  # Mock underlying API calls
     def test_continue_story_sends_structured_json_to_gemini(
-        self, mock_planning_api, mock_api_call, mock_get_text, mock_get_client
+        self, mock_api_call, mock_get_text, mock_get_client
     ):
         """
         FAILING TEST: Verify continue_story sends structured JSON directly to Gemini API.
@@ -94,12 +91,8 @@ class TestLLMRequestTDD(unittest.TestCase):
         # Arrange: Set up mock responses
         mock_get_client.return_value = MagicMock()  # Mock Gemini client
         mock_response = MagicMock()
-        mock_api_call.return_value = mock_response
-        mock_get_text.return_value = '{"narrative": "You continue your adventure..."}'
-
-        # Mock planning block API call to return simple response
         mock_planning_response = MagicMock()
-        mock_planning_api.return_value = mock_planning_response
+        mock_api_call.side_effect = [mock_response, mock_planning_response]
         mock_get_text.return_value = '{"narrative": "You continue your adventure..."}'
 
         # Act: Call continue_story (this will currently FAIL the assertions)
@@ -115,15 +108,11 @@ class TestLLMRequestTDD(unittest.TestCase):
         # Assert: Verify API was called with structured JSON, NOT string concatenation
         self.assertTrue(mock_api_call.called, "Gemini API should have been called")
 
-        # Get the actual call arguments - we want the MAIN story API call, not planning block
-        # The main call should be to _call_llm_api_with_model_cycling with structured JSON
-        call_args = mock_api_call.call_args
+        # The first API call should be the main story generation
+        first_call = mock_api_call.call_args_list[0]
 
-        # The EXPECTED behavior: First argument should be structured JSON dict, not string list
-        # This assertion will FAIL with current implementation
-        prompt_content = (
-            call_args.args[0][0] if call_args.args and call_args.args[0] else None
-        )
+        # The EXPECTED behavior: First argument should be structured JSON string, not string list
+        prompt_content = first_call.args[0][0] if first_call.args and first_call.args[0] else None
 
         # CRITICAL TEST: The content sent to Gemini should be structured JSON string, not concatenated blob
         self.assertIsInstance(

@@ -227,7 +227,7 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
   - `get_initial_story()` - Generate campaign opening story
   - `continue_story()` - Process user input and generate responses
   - `PromptBuilder.build_core_system_instructions()` - Construct AI prompts
-  - `_call_llm_api_with_model_cycling()` - Robust API calls with fallback
+  - `_call_llm_api()` - Single-shot API calls with explicit error surfacing
 
 ### 4. Authentication & Authorization
 - **Purpose**: Secure user access using Firebase Authentication

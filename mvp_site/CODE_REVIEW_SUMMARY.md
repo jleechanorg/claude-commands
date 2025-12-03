@@ -215,11 +215,11 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - `get_initial_story()` - Campaign opening generation
 - `continue_story()` - User interaction processing
 - `PromptBuilder` class - System instruction construction
-- `_call_llm_api_with_model_cycling()` - Robust API calls with fallback
+- `_call_llm_api()` - Single-shot API calls with explicit error surfacing
 - `_validate_and_enforce_planning_block()` - Planning block requirement
 
 **Key Features**:
-- Model cycling for reliability (4 fallback models)
+- Single-shot LLM calls with explicit error surfacing
 - Entity tracking with multiple mitigation strategies
 - Context truncation for large conversations
 - JSON mode enforcement for structured responses
