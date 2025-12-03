@@ -86,7 +86,7 @@ def _ensure_location_progress(
     world_data = state_changes.setdefault("world_data", {})
     custom_state = state_changes.setdefault("custom_campaign_state", {})
 
-    if location and location != "Unknown":
+    if location and location.lower() != "unknown":
         world_data["current_location_name"] = location
         custom_state["last_location"] = location
         return

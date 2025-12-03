@@ -201,7 +201,7 @@ jobs:
       - name: Run MCP smoke tests
         if: steps.service_url.outputs.deployed == 'true'
         id: smoke_tests
-        timeout-minutes: 12
+        timeout-minutes: 25  # Extended for real mode: 3 providers x ~8min each
         env:
           MCP_SERVER_URL: ${{ steps.service_url.outputs.service_url }}
           MCP_TEST_MODE: ${{ steps.test_config.outputs.mode }}

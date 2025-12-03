@@ -64,6 +64,7 @@ from mvp_site.llm_providers import (
     gemini_provider,
     openrouter_provider,
 )
+from mvp_site.llm_providers.provider_utils import ContextTooLargeError
 from mvp_site.llm_request import LLMRequest
 from mvp_site.llm_response import LLMResponse
 
@@ -113,6 +114,12 @@ else:  # Gemini (default fallback)
     DEFAULT_MODEL: str = constants.DEFAULT_GEMINI_MODEL
     TEST_MODEL: str = constants.DEFAULT_GEMINI_MODEL
 
+@dataclass(frozen=True)
+class ProviderSelection:
+    provider: str
+    model: str
+
+
 # Model cycling order for 503 errors - try these in sequence
 # CRITICAL: Only include models that support code_execution + JSON mode
 # Gemini 2.5 models are EXCLUDED - they don't support this combination
@@ -122,11 +129,14 @@ MODEL_FALLBACK_CHAIN: list[str] = [
     "gemini-2.0-flash-exp",  # Secondary fallback
 ]
 
-
-@dataclass(frozen=True)
-class ProviderSelection:
-    provider: str
-    model: str
+# Ordered by increasing provider capability for context-too-large fallbacks
+CONTEXT_FALLBACK_CHAIN: list[ProviderSelection] = [
+    ProviderSelection(constants.LLM_PROVIDER_GEMINI, "gemini-3-pro-preview"),
+    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "x-ai/grok-4.1-fast:free"),
+    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "z-ai/glm-4.6"),
+    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "meta-llama/llama-3.1-405b-instruct"),
+    ProviderSelection(constants.LLM_PROVIDER_CEREBRAS, "qwen-3-235b-a22b-instruct-2507"),
+]
 
 # No longer using pro model for any inputs
 
@@ -169,6 +179,12 @@ OUTPUT_TOKEN_RESERVE_MIN: int = 1024
 OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output tokens
 
 
+def _get_model_context_window(model_name: str) -> int:
+    return constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
+        model_name, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
+    )
+
+
 def _get_context_window_tokens(model_name: str) -> int:
     """Return the configured context window size for a model in tokens."""
 
@@ -188,6 +204,42 @@ def _get_safe_context_token_budget(provider: str, model_name: str) -> int:
         return min(safe_tokens, GEMINI_COMPACTION_TOKEN_LIMIT)
 
     return safe_tokens
+
+
+def _calculate_context_budget(
+    provider: str,
+    model_name: str,
+    is_combat_or_complex: bool = False,
+) -> tuple[int, int, int]:
+    """
+    CENTRALIZED context budget calculation for both truncation and validation.
+
+    This single function ensures truncation and validation use identical logic,
+    preventing bugs where content passes truncation but fails validation.
+
+    Args:
+        provider: LLM provider name (e.g., 'gemini', 'cerebras')
+        model_name: Model identifier
+        is_combat_or_complex: Whether combat/complex scenes need extra output reserve
+
+    Returns:
+        tuple of (safe_token_budget, output_reserve, max_input_allowed)
+        - safe_token_budget: Total safe tokens for this model (90% of context)
+        - output_reserve: Tokens reserved for output (20% of safe budget, or combat minimum)
+        - max_input_allowed: Maximum tokens allowed for input (80% of safe budget)
+    """
+    safe_token_budget = _get_safe_context_token_budget(provider, model_name)
+
+    # Use consistent 20% ratio for output reserve
+    output_reserve = int(safe_token_budget * OUTPUT_TOKEN_RESERVE_RATIO)
+
+    # For combat/complex scenes, use the larger of ratio-based or fixed reserve
+    if is_combat_or_complex:
+        output_reserve = max(output_reserve, OUTPUT_TOKEN_RESERVE_COMBAT)
+
+    max_input_allowed = safe_token_budget - output_reserve
+
+    return safe_token_budget, output_reserve, max_input_allowed
 
 
 def _get_safe_output_token_limit(
@@ -218,12 +270,16 @@ def _get_safe_output_token_limit(
     if total_input > max_input_allowed:
         # Input exceeds 80% of context - not enough room for output
         # Fail fast with a clear error instead of sending a doomed request
-        raise ValueError(
+        # Use ContextTooLargeError for proper handling in model cycling
+        raise ContextTooLargeError(
             f"Context too large for model {model_name}: "
             f"input uses {total_input:,} tokens, "
             f"max allowed is {max_input_allowed:,} tokens (80% of {safe_context:,}), "
             f"reserving {output_reserve:,} tokens (20%) for output. "
-            "Reduce prompt size or use a model with larger context window."
+            "Reduce prompt size or use a model with larger context window.",
+            prompt_tokens=total_input,
+            completion_tokens=0,
+            finish_reason="context_exceeded",
         )
 
     # Calculate remaining space for output
@@ -580,9 +636,47 @@ class PromptBuilder:
     def build_continuation_reminder(self) -> str:
         """
         Build reminders for story continuation, especially planning blocks.
+        Includes temporal enforcement to prevent backward time jumps.
         """
+        # Extract current world_time for temporal enforcement
+        world_time = self.game_state.world_data.get("world_time", {}) if (hasattr(self.game_state, "world_data") and self.game_state.world_data) else {}
+        current_location = self.game_state.world_data.get("current_location_name", "current location") if (hasattr(self.game_state, "world_data") and self.game_state.world_data) else "current location"
+
+        # Format current time for the prompt (including hidden microsecond for uniqueness)
+        time_parts = []
+        if world_time.get("year"):
+            time_parts.append(f"{world_time.get('year')} DR")
+        if world_time.get("month"):
+            time_parts.append(f"{world_time.get('month')} {world_time.get('day', '')}")
+        if world_time.get("hour") is not None:
+            try:
+                hour = int(world_time.get("hour", 0))
+                minute = int(world_time.get("minute", 0))
+                second = int(world_time.get("second", 0))
+                time_parts.append(f"{hour:02d}:{minute:02d}:{second:02d}")
+            except (ValueError, TypeError):
+                time_parts.append("00:00:00")  # Fallback for invalid time values
+        current_time_str = ", ".join(time_parts) if time_parts else "current timestamp"
+
+        # Include microsecond for precise temporal tracking
+        current_microsecond = world_time.get("microsecond", 0)
+
+        temporal_enforcement = (
+            f"\n**🚨 TEMPORAL CONSISTENCY ENFORCEMENT**\n"
+            f"CURRENT STORY STATE: {current_time_str} at {current_location}\n"
+            f"HIDDEN TIMESTAMP: microsecond={current_microsecond} (for think-block uniqueness)\n"
+            f"⚠️ TIME BOUNDARY: Your response MUST have a timestamp AFTER {current_time_str}\n"
+            f"- DO NOT generate events from before this time\n"
+            f"- DO NOT jump backward to earlier scenes or locations\n"
+            f"- Focus on the LATEST entries in the TIMELINE LOG (not older ones)\n"
+            f"- For THINK/PLAN actions: increment microsecond by +1 (no narrative time advancement)\n"
+            f"- For STORY actions: increment by meaningful time units (minutes/hours)\n"
+            f"- EXCEPTION: Only GOD MODE commands can move time backward\n\n"
+        )
+
         return (
-            "\n**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
+            temporal_enforcement +
+            "**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
             "1. **MANDATORY PLANNING BLOCK**: Every STORY MODE response MUST end with '--- PLANNING BLOCK ---'\n"
             "2. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options', "
             "generate ONLY internal thoughts with a deep think block. Each choice MUST have an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string. DO NOT take narrative actions.\n"
@@ -1023,11 +1117,14 @@ def _call_llm_api_with_model_cycling(
         Gemini API response object with JSON response
     """
     # Create ordered list starting with requested model, then fallbacks
-    models_to_try: list[str] = [model_name]
+    models_to_try: list[ProviderSelection] = [
+        ProviderSelection(provider_name, model_name)
+    ]
     if provider_name == constants.LLM_PROVIDER_GEMINI:
         for fallback_model in MODEL_FALLBACK_CHAIN:
-            if fallback_model != model_name and fallback_model not in models_to_try:
-                models_to_try.append(fallback_model)
+            selection = ProviderSelection(constants.LLM_PROVIDER_GEMINI, fallback_model)
+            if selection not in models_to_try:
+                models_to_try.append(selection)
 
     if current_prompt_text_for_logging:
         logging_util.info(
@@ -1051,26 +1148,30 @@ def _call_llm_api_with_model_cycling(
 
     last_error: Exception | None = None
 
-    for attempt, current_model in enumerate(models_to_try):
+    attempt = 0
+    while attempt < len(models_to_try):
+        current_selection = models_to_try[attempt]
+        current_model = current_selection.model
+        current_provider = current_selection.provider
         try:
             prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
-                prompt_contents, system_instruction_text, provider_name, current_model
+                prompt_contents, system_instruction_text, current_provider, current_model
             )
             # Log token count for the current model being tried
             _log_token_count(
                 current_model,
                 prompt_contents,
                 system_instruction_text,
-                provider_name,
+                current_provider,
             )
 
             if attempt > 0:
                 logging_util.warning(
-                    f"Attempting fallback provider/model: {provider_name}/{current_model}"
+                    f"Attempting fallback provider/model: {current_provider}/{current_model}"
                 )
             else:
                 logging_util.info(
-                    f"Calling LLM provider/model: {provider_name}/{current_model}"
+                    f"Calling LLM provider/model: {current_provider}/{current_model}"
                 )
 
             safe_output_limit = _get_safe_output_token_limit(
@@ -1079,7 +1180,7 @@ def _call_llm_api_with_model_cycling(
                 system_tokens,
             )
 
-            if provider_name == constants.LLM_PROVIDER_GEMINI:
+            if current_provider == constants.LLM_PROVIDER_GEMINI:
                 response = gemini_provider.generate_json_mode_content(
                     prompt_contents=prompt_contents,
                     model_name=current_model,
@@ -1089,7 +1190,7 @@ def _call_llm_api_with_model_cycling(
                     safety_settings=SAFETY_SETTINGS,
                     json_mode_max_output_tokens=safe_output_limit,
                 )
-            elif provider_name == constants.LLM_PROVIDER_OPENROUTER:
+            elif current_provider == constants.LLM_PROVIDER_OPENROUTER:
                 response = openrouter_provider.generate_content(
                     prompt_contents=prompt_contents,
                     model_name=current_model,
@@ -1097,7 +1198,7 @@ def _call_llm_api_with_model_cycling(
                     temperature=TEMPERATURE,
                     max_output_tokens=safe_output_limit,
                 )
-            elif provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            elif current_provider == constants.LLM_PROVIDER_CEREBRAS:
                 response = cerebras_provider.generate_content(
                     prompt_contents=prompt_contents,
                     model_name=current_model,
@@ -1106,10 +1207,12 @@ def _call_llm_api_with_model_cycling(
                     max_output_tokens=safe_output_limit,
                 )
             else:
-                raise ValueError(f"Unsupported provider: {provider_name}")
+                raise ValueError(f"Unsupported provider: {current_provider}")
 
             if attempt > 0:
-                logging_util.info(f"Fallback model {current_model} succeeded")
+                logging_util.info(
+                    f"Fallback model {current_model} ({current_provider}) succeeded"
+                )
 
             return response
 
@@ -1137,11 +1240,13 @@ def _call_llm_api_with_model_cycling(
                 logging_util.warning(
                     f"Model {current_model} overloaded (503), trying next model"
                 )
+                attempt += 1
                 continue
             if status_code == 429:  # Rate limit
                 logging_util.warning(
                     f"Model {current_model} rate limited (429), trying next model"
                 )
+                attempt += 1
                 continue
             if (
                 status_code == 400 and "not found" in error_message.lower()
@@ -1149,10 +1254,28 @@ def _call_llm_api_with_model_cycling(
                 logging_util.warning(
                     f"Model {current_model} not found (400), trying next model"
                 )
+                attempt += 1
+                continue
+            # Handle ContextTooLargeError - could fallback to larger context model
+            if isinstance(e, ContextTooLargeError):
+                logging_util.warning(
+                    f"🔴 Context too large for model {current_model} "
+                    f"({e.prompt_tokens:,} tokens), trying next model with larger context"
+                )
+                current_window = _get_model_context_window(current_model)
+                for selection in CONTEXT_FALLBACK_CHAIN:
+                    target_window = _get_model_context_window(selection.model)
+                    if (
+                        selection not in models_to_try
+                        and target_window > current_window
+                    ):
+                        models_to_try.append(selection)
+                attempt += 1
                 continue
             # For other errors, don't continue cycling - raise immediately
-            logging_util.error(f"Non-recoverable error with model {current_model}: {e}")
+            logging_util.error(f"🔥🔴 Non-recoverable error with model {current_model}: {e}")
             raise e
+        attempt += 1
 
     # If we get here, all models failed
     logging_util.error(f"All models failed: {models_to_try}")
@@ -2408,24 +2531,23 @@ def continue_story(
         f"GAME STATE:\\n{serialized_game_state}\\n\\n"
     )
 
-    # Calculate the character budget for the story context using a 90% safety margin
-    safe_token_budget = _get_safe_context_token_budget(
-        provider_selection.provider, model_to_use
+    # Calculate the character budget for the story context using CENTRALIZED budget logic
+    # This ensures truncation uses the same formula as validation in _get_safe_output_token_limit
+    is_combat_or_complex = current_game_state and (
+        current_game_state.combat_state.get("in_combat", False)
     )
+    safe_token_budget, output_token_reserve, max_input_allowed = _calculate_context_budget(
+        provider_selection.provider, model_to_use, is_combat_or_complex
+    )
+
     scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
     # Add buffer for entity tracking and other minor prompt components
     # Reduced from 30% to 15% since we now measure all major components in scaffold
     scaffold_tokens = int(scaffold_tokens_raw * 1.15)  # 15% buffer for unmeasured components
 
-    # Dynamic output reserve based on game mode
-    # Combat/complex scenes need more output tokens for detailed mechanics
-    is_combat_or_complex = current_game_state and (
-        current_game_state.combat_state.get("in_combat", False)
-    )
-    output_token_reserve = (
-        OUTPUT_TOKEN_RESERVE_COMBAT if is_combat_or_complex else OUTPUT_TOKEN_RESERVE_DEFAULT
-    )
-    available_story_tokens = max(0, safe_token_budget - output_token_reserve - scaffold_tokens)
+    # Use max_input_allowed from centralized budget (accounts for output reserve)
+    # Then subtract scaffold tokens to get available story budget
+    available_story_tokens = max(0, max_input_allowed - scaffold_tokens)
     char_budget_for_story = available_story_tokens * 4
 
     # Calculate story context tokens
