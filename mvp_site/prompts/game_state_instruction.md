@@ -266,7 +266,7 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 ```json
 {
   "narrative": "Kira deflects the goblin's blow and drives her blade home. The creature crumples.",
-  "planning_block": { "options": { "1_loot_body": "Search the goblin", "2_press_on": "Continue deeper" } },
+  "planning_block": { "choices": { "loot_body": "Search the goblin", "press_on": "Continue deeper", "other_action": "Describe a different action" } },
   "state_updates": { "combat_state": { "goblin_1": { "hp_current": 0, "status": "dead" } } }
 }
 ```
@@ -420,7 +420,7 @@ Long-term narrative memory. Append significant events to `custom_campaign_state.
 
 ## Custom Campaign State
 
-- `attribute_system`: "dnd" or "destiny" (immutable)
+- `attribute_system`: "dnd" (legacy "destiny" values are deprecated; migrate to D&D 6-attribute system)
 - `active_missions`: **ALWAYS a LIST** of `{mission_id, title, status, objective}`
 - `core_memories`: **ALWAYS a LIST** of strings (use `{"append": "..."}` to add)
 
