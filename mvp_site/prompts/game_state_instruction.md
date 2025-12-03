@@ -233,7 +233,7 @@ world_data.npcs.man_tibbet.current_status = __DELETE__
 
 **Calendar:** Forgotten Realms = Harptos (1492 DR), Modern = Gregorian, Custom = specify
 
-**world_time object:** `{year, month, day, hour, minute, second, time_of_day}`
+**world_time object:** `{year, month, day, hour, minute, second, microsecond, time_of_day}`
 
 **Time-of-Day Mapping:** 0-4: Deep Night | 5-6: Dawn | 7-11: Morning | 12-13: Midday | 14-17: Afternoon | 18-19: Evening | 20-23: Night
 
@@ -243,6 +243,97 @@ world_data.npcs.man_tibbet.current_status = __DELETE__
 - Combat: 6 seconds/round | Short Rest: 1 hour | Long Rest: 8 hours
 - Road travel: 3 mph walk, 6 mph mounted | Wilderness: 2 mph walk, 4 mph mounted
 - Difficult terrain: half speed | Investigation: 10-30 min/scene
+
+## 🚨 TEMPORAL CONSISTENCY PROTOCOL (MANDATORY)
+
+**CRITICAL: Time MUST always move FORWARD. Backward time travel is FORBIDDEN unless explicitly authorized via GOD MODE.**
+
+### Core Rule: Time-Forward-Only
+
+Every response that updates `world_time` MUST result in a timestamp that is **strictly greater than** the previous timestamp. This prevents:
+- Accidental time loops
+- Duplicate timestamps across turns
+- Narrative inconsistency from time jumps backward
+
+### Time Increment Guidelines
+
+**1. Think/Plan Actions (No Narrative Advancement):**
+When player uses think/plan/consider/strategize/options keywords and you generate a Deep Think Planning Block:
+- Increment `microsecond` field by +1
+- Do NOT increment seconds, minutes, or hours
+- This maintains temporal uniqueness without advancing narrative time
+
+**2. Story-Advancing Actions:**
+| Action Type | Time Increment |
+|-------------|----------------|
+| Think/plan action | +1 microsecond (no narrative time) |
+| Brief dialogue exchange | +1-5 minutes |
+| Combat round (D&D) | +6 seconds |
+| Short rest | +1 hour |
+| Long rest | +8 hours |
+| Travel | Calculate from distance/speed |
+| Quick action (look around, check item) | +10-30 seconds |
+| Scene transition | +5-15 minutes |
+
+### Updated World Time Object (with Microseconds)
+
+```json
+{
+  "world_time": {
+    "year": 1492,
+    "month": "Mirtul",
+    "day": 10,
+    "hour": 14,
+    "minute": 30,
+    "second": 25,
+    "microsecond": 0,
+    "time_of_day": "Afternoon"
+  }
+}
+```
+
+**New Field:**
+- `microsecond`: (integer 0-999999) Sub-second precision for think-block uniqueness
+
+### Backward Time Travel (GOD MODE ONLY)
+
+Time can ONLY move backward when:
+1. User input explicitly starts with "GOD MODE:"
+2. AND the god mode command explicitly requests time manipulation (e.g., "GOD MODE: Reset to Mirtul 10 evening", "GOD MODE: Flashback to...")
+
+**Example God Mode Time Reset:**
+```json
+{
+  "god_mode_response": "Time reset to Mirtul 10, Evening as requested.",
+  "state_updates": {
+    "world_data": {
+      "world_time": {
+        "year": 1492,
+        "month": "Mirtul",
+        "day": 10,
+        "hour": 19,
+        "minute": 0,
+        "second": 0,
+        "microsecond": 0,
+        "time_of_day": "Evening"
+      }
+    }
+  }
+}
+```
+
+### Validation Rule
+
+Before outputting any `state_updates` containing `world_time`, mentally verify:
+1. Is the new timestamp > previous timestamp? ✅ Proceed
+2. Is the new timestamp ≤ previous timestamp?
+   - Is this a GOD MODE time manipulation request? ✅ Proceed with warning in god_mode_response
+   - Is this normal gameplay? ❌ **HALT** - Do not output backward time. Increment forward instead.
+
+**FORBIDDEN (unless GOD MODE):**
+- Setting time to an earlier date/hour/minute than current state
+- Replaying scenes at their original timestamp
+- "Resuming" from an earlier point without god mode authorization
 
 ## Core Memory Log
 

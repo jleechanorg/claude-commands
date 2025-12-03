@@ -1,6 +1,6 @@
 # Preventing Scene Backtracking and Missed God-Mode Corrections
 
-*Last updated: 2025-11-29*
+*Last updated: 2025-12-02*
 
 This plan reorients the safeguards away from emitting blocking errors and toward
 proactive prevention, automatic state repair, and low-friction guidance. Current
@@ -10,7 +10,7 @@ implementation covers preventive guards in `mvp_site/preventive_guards.py`
 described below remain planned follow-ups.
 
 ## 1) God-mode directives are applied automatically
-- Detect god-mode directives in `gemini_service.continue_story` prompt prep and
+- Detect god-mode directives in `llm_service.continue_story` prompt prep and
   set `pending_god_mode` on `GameState.custom_campaign_state`.
 - When the flag is set, pre-apply the directive as a state delta (e.g., forced
   location/time rewrites, inventory tweaks) before generating narrative so the
