@@ -112,12 +112,31 @@ def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, .
 
     # Month name to number mapping for Forgotten Realms calendar
     month_map = {
-        "hammer": 1, "alturiak": 2, "ches": 3, "tarsakh": 4,
-        "mirtul": 5, "kythorn": 6, "flamerule": 7, "eleasis": 8,
-        "eleint": 9, "marpenoth": 10, "uktar": 11, "nightal": 12,
+        "hammer": 1,
+        "alturiak": 2,
+        "ches": 3,
+        "tarsakh": 4,
+        "mirtul": 5,
+        "kythorn": 6,
+        "flamerule": 7,
+        "eleasis": 8,
+        "eleint": 9,
+        "marpenoth": 10,
+        "uktar": 11,
+        "nightal": 12,
         # Common abbreviations
-        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+        "jan": 1,
+        "feb": 2,
+        "mar": 3,
+        "apr": 4,
+        "may": 5,
+        "jun": 6,
+        "jul": 7,
+        "aug": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dec": 12,
     }
 
     def _safe_int(value: Any) -> int:
@@ -145,7 +164,11 @@ def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, .
 def _extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None:
     """Extract world_time from LLM response state_updates."""
     try:
-        state_updates = llm_response.get_state_updates() if hasattr(llm_response, "get_state_updates") else {}
+        state_updates = (
+            llm_response.get_state_updates()
+            if hasattr(llm_response, "get_state_updates")
+            else {}
+        )
         world_data = state_updates.get("world_data", {})
         return world_data.get("world_time")
     except Exception:
@@ -210,7 +233,7 @@ def _build_temporal_correction_prompt(
     old_loc = old_location or "Unknown location"
     new_loc = new_location or "Unknown location"
 
-    correction = f"""⚠️ TEMPORAL VIOLATION - FULL REGENERATION REQUIRED
+    return f"""⚠️ TEMPORAL VIOLATION - FULL REGENERATION REQUIRED
 
 Your previous response was REJECTED because time went BACKWARD:
 - CORRECT current state: {old_time_str} at {old_loc}
@@ -245,13 +268,16 @@ This caused you to generate a response for a scene that already happened in the 
 
 Generate a NEW response that is the NEXT logical entry in the timeline, continuing from the CURRENT state."""
 
-    return correction
-
 
 def _build_temporal_warning_message(
     temporal_correction_attempts: int,
 ) -> str | None:
     """Build user-facing temporal warning text based on attempts taken."""
+
+    # When retries are disabled (MAX=0), we surface the anomaly earlier via
+    # god_mode_response and skip legacy warning text entirely.
+    if MAX_TEMPORAL_CORRECTION_ATTEMPTS == 0:
+        return None
 
     if temporal_correction_attempts <= 0:
         return None
@@ -761,9 +787,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             # EXCEPTION: Skip validation for GOD MODE (backward time is intentional)
             new_world_time = _extract_world_time_from_response(llm_response_obj)
 
-            if is_god_mode or not _check_temporal_violation(old_world_time, new_world_time):
+            if is_god_mode or not _check_temporal_violation(
+                old_world_time, new_world_time
+            ):
                 # No violation - time is moving forward (or GOD MODE allows backward), accept response
-                if is_god_mode and _check_temporal_violation(old_world_time, new_world_time):
+                if is_god_mode and _check_temporal_violation(
+                    old_world_time, new_world_time
+                ):
                     logging_util.info(
                         f"⏪ GOD_MODE: Allowing backward time travel from "
                         f"{_format_world_time_for_prompt(old_world_time)} to "
@@ -789,8 +819,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 break
 
             # Extract new location for error message
-            new_state_updates = llm_response_obj.get_state_updates() if hasattr(llm_response_obj, "get_state_updates") else {}
-            new_location = new_state_updates.get("world_data", {}).get("current_location_name", old_location)
+            new_state_updates = (
+                llm_response_obj.get_state_updates()
+                if hasattr(llm_response_obj, "get_state_updates")
+                else {}
+            )
+            new_location = new_state_updates.get("world_data", {}).get(
+                "current_location_name", old_location
+            )
 
             # Log the violation and retry
             logging_util.warning(
@@ -816,7 +852,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Add temporal violation error as god_mode_response for user-facing display
         # Note: new_world_time is already extracted in the temporal validation loop above
-        temporal_violation_detected = _check_temporal_violation(old_world_time, new_world_time)
+        temporal_violation_detected = _check_temporal_violation(
+            old_world_time, new_world_time
+        )
 
         if temporal_violation_detected and not is_god_mode:
             old_time_str = _format_world_time_for_prompt(old_world_time)
@@ -836,12 +874,16 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"⚠️ TEMPORAL_VIOLATION surfaced to user: {new_time_str} < {old_time_str}"
             )
 
-            prevention_extras["temporal_correction_warning"] = prevention_extras["god_mode_response"]
+            prevention_extras["temporal_correction_warning"] = prevention_extras[
+                "god_mode_response"
+            ]
             prevention_extras["temporal_correction_attempts"] = 1
 
         # Add temporal correction warning if corrections were needed (legacy path when retries enabled)
         elif temporal_correction_attempts > 0:
-            temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
+            temporal_warning = _build_temporal_warning_message(
+                temporal_correction_attempts
+            )
             if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
                 logging_util.warning(
                     f"⚠️ TEMPORAL_WARNING (exceeded): {temporal_correction_attempts} attempts, max was {MAX_TEMPORAL_CORRECTION_ATTEMPTS}"
@@ -852,7 +894,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 )
 
             prevention_extras["temporal_correction_warning"] = temporal_warning
-            prevention_extras["temporal_correction_attempts"] = temporal_correction_attempts
+            prevention_extras["temporal_correction_attempts"] = (
+                temporal_correction_attempts
+            )
 
         response = {
             "story": llm_response_obj.narrative_text,
