@@ -2,6 +2,7 @@
  * Settings page JavaScript functionality
  * Handles model selection with auto-save, debouncing, and error handling
  */
+/* global firebase */
 
 document.addEventListener('DOMContentLoaded', function () {
   console.log('Settings page loaded');
@@ -42,7 +43,19 @@ document.addEventListener('DOMContentLoaded', function () {
 let saveTimeout = null;
 const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-70b-instruct';
 const DEFAULT_CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // 131K context - best for RPG
-const DEFAULT_GEMINI_MODEL = 'gemini-3-pro-preview';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
+
+// Users allowed to see Gemini 3 Pro option (expensive model)
+const GEMINI_3_ALLOWED_USERS = ['jleechan@gmail.com', 'jleechantest@gmail.com'];
+const GEMINI_MODEL_MAPPING = {
+  'gemini-3-pro-preview': 'gemini-3-pro-preview',
+  'gemini-2.0-flash': 'gemini-2.0-flash',
+  'gemini-2.5-flash': 'gemini-2.0-flash',
+  'gemini-2.5-pro': 'gemini-2.0-flash',
+  'pro-2.5': 'gemini-2.0-flash',
+  'flash-2.5': 'gemini-2.0-flash'
+};
+let pendingAuthReload = false;
 
 /**
  * Load user settings from the API and update the UI
@@ -61,6 +74,36 @@ async function loadSettings() {
     const settings = await response.json();
     console.log('Loaded settings:', settings);
 
+    // Get current user email from Firebase Auth
+    const allowedEmails = GEMINI_3_ALLOWED_USERS.map((email) => email.toLowerCase());
+    const userEmail = window.firebase?.auth()?.currentUser?.email || '';
+    if (!userEmail && window.firebase?.auth && !pendingAuthReload) {
+      pendingAuthReload = true;
+      window.firebase.auth().onAuthStateChanged((user) => {
+        if (user?.email) {
+          pendingAuthReload = false;
+          loadSettings();
+        }
+      });
+    }
+
+    const canUseGemini3 =
+      userEmail && allowedEmails.includes(userEmail.toLowerCase());
+
+    // Dynamically add Gemini 3 option for allowed users
+    const geminiSelect = document.getElementById('geminiModel');
+    if (geminiSelect && canUseGemini3) {
+      const hasGemini3 = Array.from(geminiSelect.options).some(
+        (opt) => opt.value === 'gemini-3-pro-preview',
+      );
+      if (!hasGemini3) {
+        const option = document.createElement('option');
+        option.value = 'gemini-3-pro-preview';
+        option.textContent = 'Gemini 3 Pro Preview (premium)';
+        geminiSelect.insertBefore(option, geminiSelect.firstChild);
+      }
+    }
+
     const allowedProviders = ['gemini', 'openrouter', 'cerebras'];
     const selectedProvider = allowedProviders.includes(settings.llm_provider)
       ? settings.llm_provider
@@ -74,8 +117,12 @@ async function loadSettings() {
     }
     toggleProviderSections(selectedProvider);
 
-    const geminiModel = settings.gemini_model || DEFAULT_GEMINI_MODEL;
-    const geminiSelect = document.getElementById('geminiModel');
+    const mappedGeminiModel = GEMINI_MODEL_MAPPING[settings.gemini_model] || DEFAULT_GEMINI_MODEL;
+    // Only downgrade premium selection if we know the user isn't allowlisted
+    const geminiModel =
+      mappedGeminiModel === 'gemini-3-pro-preview' && !canUseGemini3
+        ? DEFAULT_GEMINI_MODEL
+        : mappedGeminiModel;
     if (geminiSelect) {
       const hasOption = Array.from(geminiSelect.options).some(
         (opt) => opt.value === geminiModel,

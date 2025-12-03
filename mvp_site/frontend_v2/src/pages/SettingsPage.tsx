@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -9,6 +9,18 @@ import { apiService } from '../services/api.service'
 // Only models that support code_execution + JSON mode together
 type GeminiModel = 'gemini-3-pro-preview' | 'gemini-2.0-flash'
 
+const GEMINI_MODEL_MAPPING: Record<string, GeminiModel> = {
+  'gemini-3-pro-preview': 'gemini-3-pro-preview',
+  'gemini-2.0-flash': 'gemini-2.0-flash',
+  'gemini-2.5-flash': 'gemini-2.0-flash',
+  'gemini-2.5-pro': 'gemini-2.0-flash',
+  'pro-2.5': 'gemini-2.0-flash',
+  'flash-2.5': 'gemini-2.0-flash'
+}
+
+// Users allowed to see Gemini 3 Pro option (expensive model)
+const GEMINI_3_ALLOWED_USERS = ['jleechan@gmail.com', 'jleechantest@gmail.com']
+
 interface UserSettings {
   geminiModel: GeminiModel
   debugMode: boolean
@@ -18,8 +30,18 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
 
+  // Check if current user can access Gemini 3
+  const allowedGeminiEmails = useMemo(
+    () => GEMINI_3_ALLOWED_USERS.map((email) => email.toLowerCase()),
+    [],
+  )
+
+  const canUseGemini3 = !!(
+    user?.email && allowedGeminiEmails.includes(user.email.toLowerCase())
+  )
+
   const [settings, setSettings] = useState<UserSettings>({
-    geminiModel: 'gemini-3-pro-preview',
+    geminiModel: 'gemini-2.0-flash',
     debugMode: false
   })
   const [loading, setLoading] = useState(true)
@@ -29,24 +51,21 @@ export function SettingsPage() {
   const hasLoadedRef = useRef(false)
   const isInitialLoadRef = useRef(true)
 
-  // Load settings on component mount
-  useEffect(() => {
-    loadSettings()
-  }, [])
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setLoading(true)
     setErrorMessage('')
 
     try {
       const data = await apiService.getUserSettings()
-      // Map any legacy 2.5 models to compatible default
-      let model = data.gemini_model || 'gemini-3-pro-preview'
-      if (model === 'gemini-2.5-pro' || model === 'gemini-2.5-flash') {
-        model = 'gemini-3-pro-preview'
-      }
+      // Load saved model, default to gemini-2.0-flash
+      const mappedModel = GEMINI_MODEL_MAPPING[data.gemini_model] || 'gemini-2.0-flash'
+      // Non-premium users always get 2.0-flash regardless of saved setting, but keep premium for allowlisted
+      const model: GeminiModel =
+        mappedModel === 'gemini-3-pro-preview' && !canUseGemini3
+          ? 'gemini-2.0-flash'
+          : mappedModel
       setSettings({
-        geminiModel: model as GeminiModel,
+        geminiModel: model,
         debugMode: data.debug_mode || false
       })
     } catch (error) {
@@ -60,7 +79,13 @@ export function SettingsPage() {
         isInitialLoadRef.current = false
       }, 100)
     }
-  }
+  }, [canUseGemini3])
+
+  // Load settings once auth state is available
+  useEffect(() => {
+    if (!user) return
+    loadSettings()
+  }, [user, loadSettings])
 
   const saveSettings = useCallback(async () => {
     setSaving(true)
@@ -157,37 +182,43 @@ export function SettingsPage() {
             <CardContent className="space-y-8">
               {/* AI Model Selection */}
               <div>
-                <h3 className="text-white text-xl mb-2">AI Model Selection</h3>
-                <p className="text-purple-200 mb-4">Choose your preferred Gemini model for all AI interactions</p>
+                <h3 className="text-white text-xl mb-2">AI Model</h3>
+                <p className="text-purple-200 mb-4">
+                  {canUseGemini3 ? 'Choose your preferred Gemini model' : 'Your AI model for all interactions'}
+                </p>
 
                 <div className="space-y-3">
-                  <label className="flex items-start gap-3 p-4 rounded-lg border border-purple-500/30 hover:border-purple-400/50 cursor-pointer transition-colors">
-                    <input
-                      type="radio"
-                      name="geminiModel"
-                      value="gemini-3-pro-preview"
-                      checked={settings.geminiModel === 'gemini-3-pro-preview'}
-                      onChange={() => handleModelChange('gemini-3-pro-preview')}
-                      className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
-                    />
-                    <div>
-                      <div className="text-white font-semibold">Gemini 3 Pro Preview (Default)</div>
-                      <div className="text-purple-200 text-sm">High-quality responses with advanced reasoning and dice roll support</div>
-                    </div>
-                  </label>
+                  {canUseGemini3 && (
+                    <label className="flex items-start gap-3 p-4 rounded-lg border border-purple-500/30 hover:border-purple-400/50 cursor-pointer transition-colors">
+                      <input
+                        type="radio"
+                        name="geminiModel"
+                        value="gemini-3-pro-preview"
+                        checked={settings.geminiModel === 'gemini-3-pro-preview'}
+                        onChange={() => handleModelChange('gemini-3-pro-preview')}
+                        className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
+                      />
+                      <div>
+                        <div className="text-white font-semibold">Gemini 3 Pro Preview</div>
+                        <div className="text-purple-200 text-sm">Premium model with advanced reasoning (higher cost)</div>
+                      </div>
+                    </label>
+                  )}
 
-                  <label className="flex items-start gap-3 p-4 rounded-lg border border-purple-500/30 hover:border-purple-400/50 cursor-pointer transition-colors">
-                    <input
-                      type="radio"
-                      name="geminiModel"
-                      value="gemini-2.0-flash"
-                      checked={settings.geminiModel === 'gemini-2.0-flash'}
-                      onChange={() => handleModelChange('gemini-2.0-flash')}
-                      className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
-                    />
+                  <label className={`flex items-start gap-3 p-4 rounded-lg border border-purple-500/30 ${canUseGemini3 ? 'hover:border-purple-400/50 cursor-pointer' : 'bg-purple-900/20'} transition-colors`}>
+                    {canUseGemini3 ? (
+                      <input
+                        type="radio"
+                        name="geminiModel"
+                        value="gemini-2.0-flash"
+                        checked={settings.geminiModel === 'gemini-2.0-flash'}
+                        onChange={() => handleModelChange('gemini-2.0-flash')}
+                        className="mt-1 text-purple-500 focus:ring-purple-500 focus:ring-2"
+                      />
+                    ) : null}
                     <div>
-                      <div className="text-white font-semibold">Gemini 2.0 Flash</div>
-                      <div className="text-purple-200 text-sm">Faster responses, good for quick interactions</div>
+                      <div className="text-white font-semibold">Gemini 2.0 Flash {!canUseGemini3 && '(Default)'}</div>
+                      <div className="text-purple-200 text-sm">Fast responses with code execution and dice roll support</div>
                     </div>
                   </label>
                 </div>

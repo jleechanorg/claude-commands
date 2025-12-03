@@ -101,7 +101,8 @@ const retryDelayMs = parsePositiveInt(process.env.MCP_TEST_RETRY_DELAY_MS, 2000)
 
 const providerDefaults = {
   gemini: {
-    gemini_model: process.env.MCP_GEMINI_MODEL || 'gemini-3-pro-preview',
+    // Cost-efficient default (Gemini 3 is 20x more expensive and restricted to allowlisted users)
+    gemini_model: process.env.MCP_GEMINI_MODEL || 'gemini-2.0-flash',
   },
   openrouter: {
     // Must match backend allowlist (constants.ALLOWED_OPENROUTER_MODELS)
@@ -109,7 +110,8 @@ const providerDefaults = {
       process.env.MCP_OPENROUTER_MODEL || 'meta-llama/llama-3.1-70b-instruct',
   },
   cerebras: {
-    cerebras_model: process.env.MCP_CEREBRAS_MODEL || 'llama-3.3-70b',
+    // Qwen 3 235B (a22b-instruct-2507) - highest context (131K) and best for RPG campaigns
+    cerebras_model: process.env.MCP_CEREBRAS_MODEL || 'qwen-3-235b-a22b-instruct-2507',
   },
 };
 
@@ -327,7 +329,9 @@ async function getBearerToken() {
   return effectiveBearerToken;
 }
 
-const providersToTest = (process.env.MCP_TEST_PROVIDERS || 'gemini,openrouter,cerebras')
+// Default to Cerebras (cheapest real API) for smoke tests
+// Can override with MCP_TEST_PROVIDERS env var (e.g., 'gemini,openrouter,cerebras')
+const providersToTest = (process.env.MCP_TEST_PROVIDERS || 'cerebras')
   .split(',')
   .map((p) => p.trim())
   .filter(Boolean)

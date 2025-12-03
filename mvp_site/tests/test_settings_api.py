@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import create_app
 
+from mvp_site import constants
+
 
 class TestSettingsAPI(unittest.TestCase):
     """Tests for settings API endpoints in MCP architecture."""
@@ -61,9 +63,9 @@ class TestSettingsAPI(unittest.TestCase):
         # Test with auth headers - should not crash
         response = self.client.get("/settings", headers=self.headers)
         # In MCP architecture, may return various status codes depending on server state
-        assert (
-            response.status_code == 200
-        ), "Settings page should return successfully with test headers"
+        assert response.status_code == 200, (
+            "Settings page should return successfully with test headers"
+        )
 
         # If successful, should return HTML
         if response.status_code == 200:
@@ -74,17 +76,17 @@ class TestSettingsAPI(unittest.TestCase):
         response = self.client.get("/api/settings", headers=self.headers)
 
         # Should handle request gracefully in MCP architecture
-        assert (
-            response.status_code == 200
-        ), "Settings API should return successfully with test headers"
+        assert response.status_code == 200, (
+            "Settings API should return successfully with test headers"
+        )
 
         # Response should be valid JSON if successful
         if response.status_code == 200:
             try:
                 data = response.get_json()
                 assert isinstance(data, dict), "Settings should return dict"
-                assert data.get("llm_provider") == "gemini"
-                assert data.get("gemini_model") == "gemini-3-pro-preview"
+                assert data.get("llm_provider") == constants.DEFAULT_LLM_PROVIDER
+                assert data.get("gemini_model") == constants.DEFAULT_GEMINI_MODEL
             except Exception as e:
                 self.fail(f"Response should be valid JSON: {e}")
 
@@ -97,17 +99,17 @@ class TestSettingsAPI(unittest.TestCase):
         )
 
         # Should handle request gracefully in MCP architecture
-        assert (
-            response.status_code == 200
-        ), "Settings update should return successfully with valid data and test headers"
+        assert response.status_code == 200, (
+            "Settings update should return successfully with valid data and test headers"
+        )
 
         # Response should be valid JSON
         try:
             data = response.get_json()
             assert data is not None, "Should return valid JSON response"
         except Exception as e:
-            # If not JSON, should at least not crash
-            assert isinstance(e, Exception), f"Should handle non-JSON gracefully: {e}"
+            # If not JSON, surface failure explicitly for debugging
+            self.fail(f"Should handle non-JSON gracefully: {e}")
 
     def test_update_settings_allows_openrouter_provider(self):
         """Ensure OpenRouter provider and model settings save successfully."""
@@ -143,17 +145,17 @@ class TestSettingsAPI(unittest.TestCase):
         no_auth_response = self.client.get("/api/settings")
 
         # Should either require auth (401) or handle gracefully (500)
-        assert (
-            no_auth_response.status_code == 401
-        ), "Should require authentication without test headers"
+        assert no_auth_response.status_code == 401, (
+            "Should require authentication without test headers"
+        )
 
         # Test with auth headers
         auth_response = self.client.get("/api/settings", headers=self.headers)
 
         # Should not return 401 when auth headers are provided
-        assert (
-            auth_response.status_code != 401
-        ), "Should not return 401 when auth headers provided"
+        assert auth_response.status_code != 401, (
+            "Should not return 401 when auth headers provided"
+        )
 
 
 if __name__ == "__main__":
