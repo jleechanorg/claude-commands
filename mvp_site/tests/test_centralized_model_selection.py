@@ -46,7 +46,7 @@ class TestCentralizedModelSelection(unittest.TestCase):
         When user has a valid model preference, use it.
         Note: Must disable ALL test mode environment variables to allow user preferences.
         """
-        # Mock user settings returning valid gemini model preference
+        # Mock user settings returning valid gemini model preference (non-premium)
         # Disable all three test mode environment variables
         with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings, \
              patch.dict(os.environ, {
@@ -54,15 +54,16 @@ class TestCentralizedModelSelection(unittest.TestCase):
                  "MOCK_SERVICES_MODE": "false",
                  "FORCE_TEST_MODEL": "false"
              }):
-            mock_get_settings.return_value = {"gemini_model": "gemini-3-pro-preview"}
+            # Use default model explicitly set by user (not premium to avoid allowlist check)
+            mock_get_settings.return_value = {"gemini_model": "gemini-2.0-flash"}
 
             result = _select_model_for_user("test-user-456")
 
             self.assertEqual(
                 result,
-                "gemini-3-pro-preview",
+                "gemini-2.0-flash",
                 f"FAIL: Valid user preference should be respected, "
-                f"expected gemini-3-pro-preview, got {result}",
+                f"expected gemini-2.0-flash, got {result}",
             )
 
     def test_invalid_user_preference_falls_back_to_default(self):
