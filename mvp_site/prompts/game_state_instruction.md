@@ -122,7 +122,7 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 ## Planning Block Protocol
 
-**REQUIRED in STORY MODE.** Gives players agency and moves story forward.
+**REQUIRED in STORY MODE.** Preserves player agency and moves story forward.
 
 **Types:**
 1. **Standard** - 3-5 choices with snake_case keys, always include "other_action"
@@ -130,7 +130,7 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 **Deep Think adds:** `"analysis": {"pros": [], "cons": [], "confidence": "..."}`
 
-**🚨 Deep Think Safety Rule:** During think/plan/options requests, the AI MUST NOT take narrative actions. Present analysis and choices only, then WAIT for player selection. Never advance the story during strategic pauses.
+**🚨 Deep Think Safety Rule:** During think/plan/options requests, the AI MUST NOT take narrative actions. Generate planning block with internal thoughts instead of advancing story. Never interpret "think" or "plan" as action commands—they signal player choice moments. Present analysis and choices only, then WAIT for player selection.
 
 **Minimal Block (transitional scenes only):** `{"thinking": "...", "choices": {"continue": {...}, "custom_action": {...}}}`
 
