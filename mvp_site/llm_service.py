@@ -1965,10 +1965,11 @@ def get_initial_story(
     )
     if len(narrative_text) == 0:
         # Include preview suffix only if response was truncated
+        raw_preview = raw_response_text[:500]
         preview_suffix = "..." if len(raw_response_text) > 500 else ""
         logging_util.warning(
             f"⚠️ EMPTY_NARRATIVE (initial_story): LLM returned empty narrative. "
-            f"Raw response preview: {raw_response_text[:500]}{preview_suffix}"
+            f"Raw response preview: {raw_preview}{preview_suffix}"
         )
         # Log structured response fields if available (consistent with continue_story)
         if structured_response:
@@ -2732,10 +2733,11 @@ def continue_story(
     )
     if len(narrative_text) == 0:
         # Include preview suffix only if response was truncated
+        raw_preview = raw_response_text[:500]
         preview_suffix = "..." if len(raw_response_text) > 500 else ""
         logging_util.warning(
             f"⚠️ EMPTY_NARRATIVE: LLM returned empty narrative. "
-            f"Raw response preview: {raw_response_text[:500]}{preview_suffix}"
+            f"Raw response preview: {raw_preview}{preview_suffix}"
         )
         # Log structured response fields if available
         if structured_response:
