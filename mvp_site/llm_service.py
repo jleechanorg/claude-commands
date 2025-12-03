@@ -60,11 +60,11 @@ from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
 from mvp_site.game_state import GameState
 from mvp_site.llm_providers import (
+    ContextTooLargeError,
     cerebras_provider,
     gemini_provider,
     openrouter_provider,
 )
-from mvp_site.llm_providers.provider_utils import ContextTooLargeError
 from mvp_site.llm_request import LLMRequest, LLMRequestError
 from mvp_site.llm_response import LLMResponse
 
@@ -120,6 +120,56 @@ class ProviderSelection:
     model: str
 
 
+def _select_provider_with_fallback() -> tuple[str, str]:
+    """Select the best available provider based on API key availability.
+
+    Returns the default provider if its API key is available, otherwise falls
+    back to an alternative provider with an available key.
+
+    This prevents hard failures when the default provider's API key is missing
+    but other provider keys are available.
+
+    Returns:
+        tuple[str, str]: (provider_name, model_name)
+    """
+    default_provider = constants.DEFAULT_LLM_PROVIDER
+
+    # Check if default provider's API key is available
+    api_key_map = {
+        constants.LLM_PROVIDER_GEMINI: os.environ.get("GEMINI_API_KEY", ""),
+        constants.LLM_PROVIDER_CEREBRAS: os.environ.get("CEREBRAS_API_KEY", ""),
+        constants.LLM_PROVIDER_OPENROUTER: os.environ.get("OPENROUTER_API_KEY", ""),
+    }
+
+    model_map = {
+        constants.LLM_PROVIDER_GEMINI: constants.DEFAULT_GEMINI_MODEL,
+        constants.LLM_PROVIDER_CEREBRAS: constants.DEFAULT_CEREBRAS_MODEL,
+        constants.LLM_PROVIDER_OPENROUTER: constants.DEFAULT_OPENROUTER_MODEL,
+    }
+
+    # Try default provider first
+    if api_key_map.get(default_provider):
+        return default_provider, model_map[default_provider]
+
+    # Fall back to first available provider
+    fallback_order = [
+        constants.LLM_PROVIDER_CEREBRAS,
+        constants.LLM_PROVIDER_GEMINI,
+        constants.LLM_PROVIDER_OPENROUTER,
+    ]
+
+    for provider in fallback_order:
+        if api_key_map.get(provider):
+            logging_util.warning(
+                f"Default provider {default_provider} API key missing, "
+                f"falling back to {provider}"
+            )
+            return provider, model_map[provider]
+
+    # No API keys available - return default and let it fail with clear error
+    return default_provider, model_map[default_provider]
+
+
 # No longer using pro model for any inputs
 
 # Gemini 2.5 Flash OUTPUT token limits (corrected based on updated specs)
@@ -167,12 +217,6 @@ OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output to
 # - entity_tracking_instruction: ~1000-1500 tokens (tracking rules)
 # - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
 ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
-
-
-def _get_model_context_window(model_name: str) -> int:
-    return constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
-        model_name, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
-    )
 
 
 def _get_context_window_tokens(model_name: str) -> int:

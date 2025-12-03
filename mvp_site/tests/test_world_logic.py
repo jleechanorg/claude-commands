@@ -821,10 +821,10 @@ class TestAsyncNonBlocking(unittest.TestCase):
         async def run_concurrent_test():
             """Run multiple async operations concurrently and measure timing."""
             with ExitStack() as stack:
-                mock_gemini = stack.enter_context(
-                    patch.object(world_logic, "gemini_service", MagicMock())
+                mock_llm = stack.enter_context(
+                    patch.object(world_logic, "llm_service", MagicMock())
                 )
-                mock_gemini.continue_story = mock_blocking_call
+                mock_llm.continue_story = mock_blocking_call
 
                 mock_firestore = stack.enter_context(
                     patch.object(world_logic, "firestore_service", MagicMock())
@@ -929,10 +929,10 @@ class TestThreadPoolExecution(unittest.TestCase):
 
         async def run_test():
             with ExitStack() as stack:
-                mock_gemini = stack.enter_context(
-                    patch.object(world_logic, "gemini_service", MagicMock())
+                mock_llm = stack.enter_context(
+                    patch.object(world_logic, "llm_service", MagicMock())
                 )
-                mock_gemini.continue_story = tracking_call
+                mock_llm.continue_story = tracking_call
 
                 mock_firestore = stack.enter_context(
                     patch.object(world_logic, "firestore_service", MagicMock())
@@ -1013,7 +1013,7 @@ class TestBlockingCallStaticAnalysis(unittest.TestCase):
             "get_user_settings",
             "update_user_settings",
         ],
-        "gemini_service": [
+        "llm_service": [
             "continue_story",
             "get_initial_story",
         ],
@@ -1060,7 +1060,7 @@ class TestBlockingCallStaticAnalysis(unittest.TestCase):
         # Find service calls using regex (more reliable than pure AST for this)
         service_patterns = [
             (r"firestore_service\.(\w+)\(", "firestore_service"),
-            (r"gemini_service\.(\w+)\(", "gemini_service"),
+            (r"llm_service\.(\w+)\(", "llm_service"),
         ]
 
         violations = []

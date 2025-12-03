@@ -139,6 +139,9 @@ def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, .
         "dec": 12,
     }
 
+    # CRITICAL: Convert all values to int for numeric comparison
+    # LLM responses often return string values ("10", "9") which would
+    # compare lexicographically ("10" < "9" = False), allowing backward time jumps
     def _safe_int(value: Any) -> int:
         try:
             return int(value)
@@ -760,6 +763,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         use_default_world = campaign_data.get("use_default_world", False)
 
         # Extract current world_time and location for temporal validation
+        # CRITICAL: world_data can be None or non-dict in existing saves - normalize to {} first
         world_data = getattr(current_game_state, "world_data", None)
         if not isinstance(world_data, dict):
             world_data = {}

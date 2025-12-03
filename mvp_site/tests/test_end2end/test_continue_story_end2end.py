@@ -23,7 +23,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         """Set up test client."""
         os.environ["TESTING"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
-        os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")  # Set for Cerebras (now default provider)
+        os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 
         self.app = main.create_app()
         self.app.config["TESTING"] = True
@@ -77,9 +77,8 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.cerebras_provider.generate_content")  # Mock Cerebras (now default provider)
     @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
-    def test_continue_story_success(self, mock_gemini_generate, mock_cerebras_generate, mock_get_db):
+    def test_continue_story_success(self, mock_gemini_generate, mock_get_db):
         """Test successful story continuation through full stack including context compaction."""
 
         # Set up fake Firestore
@@ -89,10 +88,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         campaign_id = "test_campaign_123"
         self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
 
-        # Mock both providers (Cerebras is now default, but keep Gemini for backwards compat)
-        mock_cerebras_generate.return_value = FakeLLMResponse(
-            json.dumps(self.mock_llm_response_data)
-        )
+        # Mock Gemini provider (default)
         mock_gemini_generate.return_value = FakeLLMResponse(
             json.dumps(self.mock_llm_response_data)
         )
@@ -121,12 +117,10 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
         assert found_narrative, "Expected narrative not found in response"
 
-        # Verify Cerebras (default provider) was called at least once
+        # Verify Gemini (default provider) was called at least once
         assert (
-            mock_cerebras_generate.call_count >= 1
-        ), "Cerebras provider should be invoked as the default"
-        # Verify Gemini was not called since Cerebras succeeded
-        mock_gemini_generate.assert_not_called()
+            mock_gemini_generate.call_count >= 1
+        ), "Gemini provider should be invoked as the default"
 
     @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):
