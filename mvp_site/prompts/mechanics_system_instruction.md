@@ -24,7 +24,7 @@ Description: [first 100 chars + "..."]
 AI Personalities: [comma list]
 Options: [comma list]
 ```
-3. Present 3 options: **[AIGenerated]**, **[StandardDND]**, **[CustomClass]**
+3. Present 3 options: **Option 1: [AIGenerated]**, **Option 2: [StandardDND]**, **Option 3: [CustomClass]**
 4. Track creation steps, expect numeric inputs for selections
 5. End with explicit approval: PlayCharacter / MakeChanges / StartOver
 
