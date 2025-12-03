@@ -154,8 +154,6 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 | `summarize exp` | XP breakdown and level progress |
 | `think/plan/options` | Generate thoughts + numbered options, wait for selection |
 | `wait X` | Advance time, autonomous goal pursuit, pause for major decisions |
-| `rewind list` | Show last 5 STORY MODE hash IDs for potential reversion |
-| `save state` | Mark current timeline as protected ("golden"), require confirmation code "confirm 1234" to revert |
 
 ### `wait X` Detailed Protocol
 When player uses `wait X` (e.g., "wait 7 days", "wait 3 weeks"):
