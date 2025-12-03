@@ -46,7 +46,7 @@ class TestCentralizedModelSelection(unittest.TestCase):
         When user has a valid model preference, use it.
         Note: Must disable ALL test mode environment variables to allow user preferences.
         """
-        # Mock user settings returning valid cerebras model preference
+        # Mock user settings returning valid gemini model preference (non-premium)
         # Disable all three test mode environment variables
         with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings, \
              patch.dict(os.environ, {
@@ -54,15 +54,16 @@ class TestCentralizedModelSelection(unittest.TestCase):
                  "MOCK_SERVICES_MODE": "false",
                  "FORCE_TEST_MODEL": "false"
              }):
-            mock_get_settings.return_value = {"cerebras_model": "llama-3.3-70b"}
+            # Use default model explicitly set by user (not premium to avoid allowlist check)
+            mock_get_settings.return_value = {"gemini_model": "gemini-2.0-flash"}
 
             result = _select_model_for_user("test-user-456")
 
             self.assertEqual(
                 result,
-                "llama-3.3-70b",
+                "gemini-2.0-flash",
                 f"FAIL: Valid user preference should be respected, "
-                f"expected llama-3.3-70b, got {result}",
+                f"expected gemini-2.0-flash, got {result}",
             )
 
     def test_invalid_user_preference_falls_back_to_default(self):
@@ -81,7 +82,7 @@ class TestCentralizedModelSelection(unittest.TestCase):
                      "FORCE_TEST_MODEL": "false",
                  },
              ):
-            mock_get_settings.return_value = {"cerebras_model": "invalid-model-name"}
+            mock_get_settings.return_value = {"gemini_model": "invalid-model-name"}
 
             result = _select_model_for_user("test-user-789")
 
@@ -94,25 +95,25 @@ class TestCentralizedModelSelection(unittest.TestCase):
 
     def test_test_model_supports_code_execution(self):
         """
-        INTEGRATION TEST: Verify TEST_MODEL is set to default Cerebras model
+        INTEGRATION TEST: Verify TEST_MODEL is set to default Gemini model
 
         The TEST_MODEL should match the current DEFAULT_MODEL based on DEFAULT_LLM_PROVIDER.
         """
         test_model = TEST_MODEL
 
-        # TEST_MODEL should be qwen-3-235b-a22b-instruct-2507 (default Cerebras model)
+        # TEST_MODEL should be gemini-2.0-flash (default Gemini model)
         self.assertEqual(
             test_model,
-            "qwen-3-235b-a22b-instruct-2507",
-            f"FAIL: TEST_MODEL should be qwen-3-235b-a22b-instruct-2507 (default Cerebras model), "
+            "gemini-2.0-flash",
+            f"FAIL: TEST_MODEL should be gemini-2.0-flash (default Gemini model), "
             f"but is {test_model}",
         )
 
-        # DEFAULT_MODEL should also be qwen-3-235b-a22b-instruct-2507
+        # DEFAULT_MODEL should also be gemini-2.0-flash
         self.assertEqual(
             DEFAULT_MODEL,
-            "qwen-3-235b-a22b-instruct-2507",
-            f"FAIL: DEFAULT_MODEL should be qwen-3-235b-a22b-instruct-2507, "
+            "gemini-2.0-flash",
+            f"FAIL: DEFAULT_MODEL should be gemini-2.0-flash, "
             f"but is {DEFAULT_MODEL}",
         )
 

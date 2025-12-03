@@ -164,6 +164,15 @@ Embed debug info in assertions, not print statements. Order: Environment → Fun
 ### Testing
 Run ALL tests, fix ALL failures: `./run_tests.sh` | `./run_ui_tests.sh mock`
 
+### MCP Smoke Tests - USE EXISTING SCRIPT
+**NEVER write ad-hoc curl commands for smoke tests.** Always use the official script:
+```bash
+MCP_SERVER_URL="https://..." MCP_TEST_MODE=real node scripts/mcp-smoke-tests.mjs
+```
+- Script hard-fails on any non-200 response
+- Runs full campaign workflows in `real` mode
+- Results saved to `/tmp/<repo>/<branch>/smoke_tests/`
+
 ## Git Workflow
 
 Main = Truth | All changes via PRs | `git push origin HEAD:branch-name` | Fresh branches from main
