@@ -33,7 +33,7 @@ MAX_STRING_LENGTH = 1000000
 class LLMRequestError(Exception):
     """Custom exception for LLMRequest validation and serialization errors."""
 
-    def __init__(self, message: str, status_code: int | None = None):
+    def __init__(self, message: str, status_code: int | None = 422):
         super().__init__(message)
         self.status_code = status_code
 
