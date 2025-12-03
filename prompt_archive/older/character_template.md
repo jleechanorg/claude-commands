@@ -1,5 +1,7 @@
 # Character Profile Template & Standard
 
+> **⚠️ ARCHIVED VERSION** - See `mvp_site/prompts/character_template.md` for current. Master directive v1.6+ requires MBTI/Big Five/alignment to be **internal-only for ALL outputs**.
+
 **🚨 CRITICAL AI DIRECTIVE: Myers-Briggs (MBTI) and D&D Alignment are INTERNAL DEVELOPMENT TOOLS ONLY. Use these frameworks to create consistent character psychology but they must NEVER appear in any player-facing content including narrative text, character descriptions, or dialogue. Express personality through specific behaviors, speech patterns, and choices - never through categorical labels. Big Five traits can be referenced mechanically during dice rolls but never as character descriptors in narrative text.**
 
 **DM NOTES TRANSPARENCY: When using DM Notes, explain how psychological frameworks influence your character portrayal decisions. Example: "DM Note: Character's ISFP type makes them avoid direct confrontation, choosing subtle persuasion instead" or "DM Note: Chaotic Neutral alignment drives unpredictable choice here."
@@ -45,7 +47,7 @@ This document defines the standard for the Player Character (PC) and all major N
 
 | Dimension | Reading | Personal twist |
 |-----------|---------|----------------|
-| **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Note: These scores can shift over time and may be referenced during mechanical checks (e.g., 'Your high Agreeableness helps you in this negotiation'), but should not be stated in general narrative.] |
+| **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Note: When master_directive v1.6+ is loaded, treat Big Five as INTERNAL-ONLY (no player-visible references). Any mechanical influence belongs in DM notes/modifiers, not narrative text.] |
 | **Dominant defenses** | [e.g., Humor, Denial] | [Explain how these defenses are used to manage stress or uncomfortable truths.] |
 | **Attachment color** | [e.g., Secure, Anxious] | [Describe their attachment style and how it impacts their relationships.] |
 

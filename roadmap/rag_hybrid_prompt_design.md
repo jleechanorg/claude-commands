@@ -1,5 +1,7 @@
 # Hybrid Core+RAG Prompt Delivery (Design)
 
+**Status:** 📋 DESIGN COMPLETE | **Implementation:** See `rag_hybrid_impl_plan.md`
+
 ## Context (what this repo/app is)
 - **WorldArchitect.AI**: A browser-based narrative + mechanics runner for D&D‑style RPG campaigns. It uses large prompts to instruct an LLM (Story/DM/God modes) to manage state, narrate, roll dice, and enforce safety rules (e.g., MBTI/alignment internal-only). Prompts live in `mvp_site/prompts/` and are versioned snapshots in `prompt_archive/`.
 - Current pain: prompts are long; truncation drops safety/format rules. We need a hybrid approach that pins critical rules and retrieves the rest via RAG.

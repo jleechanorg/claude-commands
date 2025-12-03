@@ -1,5 +1,7 @@
 # Game State Management Protocol
 
+> **⚠️ ARCHIVED VERSION** - See `mvp_site/prompts/game_state_instruction.md` for current. Note: `destiny_ruleset.md` is **DEPRECATED** - use `dnd_srd_instruction.md` for all combat/attribute rules.
+
 🚨 **CRITICAL NARRATIVE RULE: NEVER mention Myers-Briggs types, D&D alignment labels, or personality categories in any player-facing narrative text. These are internal AI tools for character consistency ONLY.**
 
 This protocol defines how to manage game state using structured JSON for both input and output. The system expects a specific JSON structure with required fields for narrative content, game state updates, and player choices.
@@ -1247,7 +1249,7 @@ Your goal is to propose a JSON "patch" that updates the game state. For maximum 
 
 The `custom_campaign_state` object is used for tracking narrative progress and campaign configuration. It must adhere to the following structure:
 
-*   **`attribute_system` (String):** Must be either "dnd" or "destiny". Set at campaign creation and cannot be changed. Determines whether to use D&D 6-attribute or Destiny 5-aptitude system.
+*   **`attribute_system` (String):** Must be "dnd". (Legacy "destiny" values may appear in old saves but are deprecated; migrate to D&D 6-attribute system.)
 *   **`active_missions` (List of Objects):** This **must** be a list of mission objects. It must **not** be a dictionary. Each object in the list should contain at least:
     *   `mission_id`: A unique string identifier.
     *   `title`: A human-readable title.
@@ -1312,12 +1314,12 @@ The `custom_campaign_state` object is used for tracking narrative progress and c
 
 ## Combat State Schema
 
-The `combat_state` object is used to track the status of combat encounters. For the complete combat state structure and management rules, see the **Combat State Management** section in `destiny_ruleset.md`.
+The `combat_state` object is used to track the status of combat encounters. For the complete combat state structure and management rules, see the **Combat State Management** section in `dnd_srd_instruction.md` (destiny_ruleset is deprecated).
 
 **Key Points:**
 - Combat state tracks initiative order, current round/turn, and all combatants
 - Must be updated when combat begins, progresses, and ends
-- See `destiny_ruleset.md` Section VI for complete schema and examples
+- See `dnd_srd_instruction.md` Section VI for complete schema and examples
 
 ## Time Pressure System
 
