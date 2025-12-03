@@ -1216,15 +1216,6 @@ def _call_llm_api_with_model_cycling(
 
             return response
 
-        except ContextTooLargeError as e:
-            # Context too large - try next model with larger context window
-            last_error = e
-            logging_util.warning(
-                f"Context too large for model {current_model} "
-                f"({e.prompt_tokens:,} tokens), trying next model"
-            )
-            continue
-
         except Exception as e:
             last_error = e
             error_message = str(e)
