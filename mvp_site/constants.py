@@ -73,13 +73,19 @@ ALLOWED_OPENROUTER_MODELS = [
     "x-ai/grok-4.1-fast:free",  # 2M context, free until Dec 3 then $0.20/$0.50 per M
 ]
 
-# Cerebras direct provider defaults (per Cerebras docs as of 2025-12-01)
-# Qwen3-235B has highest context (131K) - best for long RPG campaigns
+# Cerebras direct provider defaults (per Cerebras docs as of 2025-12-03)
+# Pricing comparison (input/output per M tokens):
+#   Llama 3.1 8B: $0.10/$0.10 (CHEAPEST, not in list - too small for RPG campaigns)
+#   GPT OSS 120B: $0.35/$0.75 (not in list - good budget option)
+#   Qwen 3 32B: $0.40/$0.80 (not in list - lower context)
+#   Qwen 3 235B: $0.60/$1.20 (highest context 131K) <- DEFAULT
+#   Llama 3.3 70B: $0.85/$1.20 (65K context)
+#   ZAI GLM 4.6: $2.25/$2.75 (preview, 131K context)
 DEFAULT_CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507"
 ALLOWED_CEREBRAS_MODELS = [
     DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M
-    "zai-glm-4.6",  # 131K context, preview
-    "llama-3.3-70b",  # 65K context
+    "zai-glm-4.6",  # 131K context, $2.25/$2.75 per M (preview)
+    "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
 ]
 
 # Context window budgeting (tokens)
