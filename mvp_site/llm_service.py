@@ -120,6 +120,56 @@ class ProviderSelection:
     model: str
 
 
+def _select_provider_with_fallback() -> tuple[str, str]:
+    """Select the best available provider based on API key availability.
+
+    Returns the default provider if its API key is available, otherwise falls
+    back to an alternative provider with an available key.
+
+    This prevents hard failures when the default provider's API key is missing
+    but other provider keys are available.
+
+    Returns:
+        tuple[str, str]: (provider_name, model_name)
+    """
+    default_provider = constants.DEFAULT_LLM_PROVIDER
+
+    # Check if default provider's API key is available
+    api_key_map = {
+        constants.LLM_PROVIDER_GEMINI: os.environ.get("GEMINI_API_KEY", ""),
+        constants.LLM_PROVIDER_CEREBRAS: os.environ.get("CEREBRAS_API_KEY", ""),
+        constants.LLM_PROVIDER_OPENROUTER: os.environ.get("OPENROUTER_API_KEY", ""),
+    }
+
+    model_map = {
+        constants.LLM_PROVIDER_GEMINI: constants.DEFAULT_GEMINI_MODEL,
+        constants.LLM_PROVIDER_CEREBRAS: constants.DEFAULT_CEREBRAS_MODEL,
+        constants.LLM_PROVIDER_OPENROUTER: constants.DEFAULT_OPENROUTER_MODEL,
+    }
+
+    # Try default provider first
+    if api_key_map.get(default_provider):
+        return default_provider, model_map[default_provider]
+
+    # Fall back to first available provider
+    fallback_order = [
+        constants.LLM_PROVIDER_CEREBRAS,
+        constants.LLM_PROVIDER_GEMINI,
+        constants.LLM_PROVIDER_OPENROUTER,
+    ]
+
+    for provider in fallback_order:
+        if api_key_map.get(provider):
+            logging_util.warning(
+                f"Default provider {default_provider} API key missing, "
+                f"falling back to {provider}"
+            )
+            return provider, model_map[provider]
+
+    # No API keys available - return default and let it fail with clear error
+    return default_provider, model_map[default_provider]
+
+
 # Model cycling order for 503 errors - try these in sequence
 # CRITICAL: Only include models that support code_execution + JSON mode
 # Gemini 2.5 models are EXCLUDED - they don't support this combination
@@ -128,6 +178,7 @@ MODEL_FALLBACK_CHAIN: list[str] = [
     "gemini-2.0-flash",  # Fallback: Works but unofficial
     "gemini-2.0-flash-exp",  # Secondary fallback
 ]
+
 
 # No longer using pro model for any inputs
 
@@ -1220,6 +1271,15 @@ def _call_llm_api_with_model_cycling(
                 status_code = 429
             elif "400" in error_message and "not found" in error_message.lower():
                 status_code = 400
+
+            # Handle ContextTooLargeError - try next model with larger context window
+            if isinstance(e, ContextTooLargeError):
+                logging_util.warning(
+                    f"Context too large for {current_model} "
+                    f"({e.prompt_tokens:,} tokens), trying next model"
+                )
+                attempt += 1
+                continue
 
             if status_code == 503:  # Service unavailable
                 logging_util.warning(
