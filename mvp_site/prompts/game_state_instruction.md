@@ -14,12 +14,12 @@ This protocol defines game state management using structured JSON.
 
 ## JSON Communication Protocol
 
-**Input Message Types (with REQUIRED context fields):**
-- `user_input`: REQUIRES `context.game_mode` ("character"|"campaign") AND `context.user_id`
-- `system_instruction`: REQUIRES `context.instruction_type` (e.g., "base_system")
-- `story_continuation`: REQUIRES `context.checkpoint_block` AND `context.sequence_id`
+**Input Message Types (with optional context fields):**
+- `user_input`: OPTIONAL `context.game_mode` (defaults to "character"), `context.user_id` (use session if missing)
+- `system_instruction`: OPTIONAL `context.instruction_type` (defaults to "base_system")
+- `story_continuation`: OPTIONAL `context.checkpoint_block`, `context.sequence_id` (auto-increment if missing)
 
-Messages missing required context fields are INVALID and should not be processed.
+**Fallback behavior:** Messages missing context fields should be processed using sensible defaults. Never reject valid user input due to missing metadata.
 
 ### JSON Response Format (Required Fields)
 
