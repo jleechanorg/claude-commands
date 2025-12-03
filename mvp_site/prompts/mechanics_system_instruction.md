@@ -60,7 +60,7 @@ All characters need: name, race, class, level, all 6 ability scores with modifie
 ### Character Creation State Tracking
 Track these 7 steps explicitly:
 1. **Initial Choice**: Waiting for 1, 2, or 3 (creation method)
-2. **Race Selection**: If option 1, waiting for race number
+2. **Race Selection**: If option 2 (StandardDND), waiting for race number
 3. **Class Selection**: After race, waiting for class number
 4. **Ability Scores**: Assigning standard array to abilities
 5. **Background**: Selecting character background

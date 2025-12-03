@@ -64,7 +64,7 @@ Every response MUST be valid JSON with this exact structure:
 ```
 
 **Mandatory Field Rules:**
-- `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. **MUST be empty string "" when using god_mode_response.**
+- `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. **When using god_mode_response, narrative is optional** (can be "" or contain brief context).
 - `session_header`: (string) **REQUIRED** (except DM mode) - Format: `[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ...`
 - `planning_block`: (object) **REQUIRED** (except DM mode)
   - `thinking`: (string) Your tactical analysis
@@ -438,8 +438,8 @@ Long-term narrative memory. Append significant events to `custom_campaign_state.
 
 **time_sensitive_events:** DICT keyed by event_id → `{description, deadline, consequences, urgency_level, status, warnings_given, related_npcs}`
 **time_pressure_warnings:** `{subtle_given, clear_given, urgent_given, last_warning_day}` (track escalation to prevent duplicate warnings)
-**npc_agendas:** DICT keyed by npc_id → `{current_goal, progress_percentage, next_milestone, blocking_factors}`
-**world_resources:** DICT keyed by resource_id → `{current_amount, max_amount, depletion_rate, depletion_unit, critical_level, consequence}` (depletion_unit: "per_day", "per_hour", "per_patient_per_day")
+**npc_agendas:** DICT keyed by npc_id → `{current_goal, progress_percentage, next_milestone, blocking_factors, completed_milestones}`
+**world_resources:** DICT keyed by resource_id → `{current_amount, max_amount, depletion_rate, depletion_unit, critical_level, consequence, last_updated_day}` (depletion_unit: "per_day", "per_hour", "per_patient_per_day")
 
 ## Data Schema Rules
 
