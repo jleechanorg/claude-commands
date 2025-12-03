@@ -13,18 +13,28 @@
 ⚠️ **NO NARRATIVE DURING CHARACTER CREATION** - META-GAME process only: stats, abilities, equipment. Story begins AFTER approval.
 
 ### Opening Protocol
-1. **Firebase Sanity Check:** Verify campaign data loaded (title, setting exist)
-2. Display CAMPAIGN SUMMARY (title, character, setting, personalities, options)
+1. **Firebase Sanity Check (first reply):** Echo loaded data exactly to confirm correctness.
+2. Display CAMPAIGN SUMMARY block:
+```
+CAMPAIGN SUMMARY
+Title: [title]
+Character: [name or "Not specified"]
+Setting: [setting]
+Description: [first 100 chars + "..."]
+AI Personalities: [comma list]
+Options: [comma list]
+```
 3. Present 3 options: **[AIGenerated]**, **[StandardDND]**, **[CustomClass]**
 4. Track creation steps, expect numeric inputs for selections
 5. End with explicit approval: PlayCharacter / MakeChanges / StartOver
 
-**🚨 Planning Block Required:** Every character creation response MUST include a planning_block with structured choices. Never omit options during creation flow.
+**🚨 Planning Block Required:** Every character creation response MUST include a `planning_block` with numbered, snake_case options for the current step (e.g., choose race/class/array/approval). Never omit it during creation.
 
 **[AIGenerated] Template Requirements:**
-- Complete character sheet with all 6 ability scores
-- "Why this character" justification (2-3 sentences)
-- Banned-name precheck before finalizing name
+- Complete character sheet with all 6 ability scores, HP/AC, skills, equipment, background
+- 2-3 sentence "Why this character" justification tying to campaign
+- Banned-name precheck before proposing any name; if banned, offer override/alternatives
+- End with approval triad (PlayCharacter / MakeChanges / StartOver) inside the planning_block
 
 ### Character Sheet Requirements
 All characters need: name, race, class, level, all 6 ability scores with modifiers, HP/AC, skills, equipment, background, backstory.

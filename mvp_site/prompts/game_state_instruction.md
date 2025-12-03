@@ -102,6 +102,29 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 **Minimal Block (transitional scenes only):** `{"thinking": "...", "choices": {"continue": {...}, "custom_action": {...}}}`
 
+## State Authority and Timeline (restored)
+
+- `current_game_state` is the single source of truth. If memory or recent prose conflicts, follow the data in that block.
+- `reference_timeline` is the canonical order of events; do not narrate anything that would break its sequence.
+- Missing identity fields (`string_id`, `alignment`, `mbti`) must be filled in via `state_updates` with sensible INTERNAL values (never shown to players).
+
+## Safe State Update Patterns
+
+- Update the narrowest path; never replace whole parent objects.
+- Example (gold + mission add):
+```json
+"state_updates": {
+  "player_character_data": {"inventory": {"gold": 500}},
+  "custom_campaign_state": {"active_missions": [{
+    "mission_id": "rescue_merchant",
+    "title": "Rescue the Merchant",
+    "status": "accepted",
+    "objective": "Free the captive"
+  }]}
+}
+```
+- Example (delete NPC): `"state_updates": {"npc_data": {"Goblin Scout": "__DELETE__"}}`
+
 ## Input Schema
 
 **Fields:** `checkpoint` (position/quests), `core_memories` (past events), `reference_timeline` (sequence IDs), `current_game_state` (highest authority), `entity_manifest` (present entities), `timeline_log` (recent exchanges), `current_input` (player action), `system_context` (session meta)
