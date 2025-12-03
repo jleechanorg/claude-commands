@@ -5,6 +5,11 @@ Tests the specific code block (world_logic.py:809-819) directly without full int
 """
 import unittest
 
+from mvp_site.world_logic import (
+    MAX_TEMPORAL_CORRECTION_ATTEMPTS,
+    _build_temporal_warning_message,
+)
+
 
 class TestTemporalMisleadingMessageSimple(unittest.TestCase):
     """
@@ -30,27 +35,9 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
         This test should FAIL until the bug is fixed.
         """
         # Simulate the scenario: temporal correction exceeded max attempts
-        MAX_TEMPORAL_CORRECTION_ATTEMPTS = 2
         temporal_correction_attempts = 3  # EXCEEDED (gave up)
 
-        # FIXED code logic from world_logic.py:809-833
-        temporal_warning = None
-        if temporal_correction_attempts > 0:
-            # Check if max attempts were exceeded (corrections failed)
-            if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
-                # Max attempts exceeded - corrections DID NOT fix the issue
-                temporal_warning = (
-                    f"⚠️ TEMPORAL CORRECTION EXCEEDED: The AI repeatedly generated responses that jumped "
-                    f"backward in time. After {temporal_correction_attempts} failed correction attempts, "
-                    f"the system accepted the response to avoid infinite loops. Timeline consistency may be compromised."
-                )
-            else:
-                # Corrections succeeded (within max attempts)
-                temporal_warning = (
-                    f"⚠️ TEMPORAL CORRECTION: The AI initially generated a response that jumped "
-                    f"backward in time. {temporal_correction_attempts} correction(s) were required "
-                    f"to fix the timeline continuity."
-                )
+        temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
 
         # ASSERTION: Verify fix is working correctly
         # When temporal_correction_attempts > MAX, message should mention "exceeded"
@@ -60,7 +47,7 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
                 "exceeded",
                 temporal_warning.lower(),
                 f"When max attempts exceeded, warning should mention 'exceeded'.\n"
-                f"temporal_correction_attempts={temporal_correction_attempts} > MAX={MAX_TEMPORAL_CORRECTION_ATTEMPTS}\n"
+                f"temporal_correction_attempts={temporal_correction_attempts}\n"
                 f"Actual warning: '{temporal_warning}'"
             )
 
@@ -86,17 +73,9 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
 
         This test should PASS even with current buggy code.
         """
-        MAX_TEMPORAL_CORRECTION_ATTEMPTS = 2
         temporal_correction_attempts = 1  # SUCCESS (within limits)
 
-        # Current code logic
-        temporal_warning = None
-        if temporal_correction_attempts > 0:
-            temporal_warning = (
-                f"⚠️ TEMPORAL CORRECTION: The AI initially generated a response that jumped "
-                f"backward in time. {temporal_correction_attempts} correction(s) were required "
-                f"to fix the timeline continuity."
-            )
+        temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
 
         # When corrections succeed (attempts <= MAX), saying "fix" is correct
         self.assertIsNotNone(temporal_warning, "Warning should exist when corrections succeeded")

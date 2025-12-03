@@ -121,23 +121,24 @@ def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, .
     # CRITICAL: Convert all values to int for numeric comparison
     # LLM responses often return string values ("10", "9") which would
     # compare lexicographically ("10" < "9" = False), allowing backward time jumps
-    def _safe_int(value: Any, default: int = 0) -> int:
-        """Safely convert value to int, handling strings and None."""
+    def _safe_int(value: Any) -> int:
         try:
-            return int(value) if value is not None else default
-        except (ValueError, TypeError):
-            return default
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
 
-    year = _safe_int(world_time.get("year"), 0)
-    month = world_time.get("month", 0)
-    if isinstance(month, str):
-        month = month_map.get(month.lower(), 0)
-    month = _safe_int(month, 0)
-    day = _safe_int(world_time.get("day"), 0)
-    hour = _safe_int(world_time.get("hour"), 0)
-    minute = _safe_int(world_time.get("minute"), 0)
-    second = _safe_int(world_time.get("second"), 0)
-    microsecond = _safe_int(world_time.get("microsecond"), 0)
+    year = _safe_int(world_time.get("year", 0))
+    month_raw = world_time.get("month", 0)
+    if isinstance(month_raw, str):
+        mapped = month_map.get(month_raw.lower())
+        month = mapped if mapped is not None else _safe_int(month_raw)
+    else:
+        month = _safe_int(month_raw)
+    day = _safe_int(world_time.get("day", 0))
+    hour = _safe_int(world_time.get("hour", 0))
+    minute = _safe_int(world_time.get("minute", 0))
+    second = _safe_int(world_time.get("second", 0))
+    microsecond = _safe_int(world_time.get("microsecond", 0))
 
     return (year, month, day, hour, minute, second, microsecond)
 
@@ -246,6 +247,29 @@ This caused you to generate a response for a scene that already happened in the 
 Generate a NEW response that is the NEXT logical entry in the timeline, continuing from the CURRENT state."""
 
     return correction
+
+
+def _build_temporal_warning_message(
+    temporal_correction_attempts: int,
+) -> str | None:
+    """Build user-facing temporal warning text based on attempts taken."""
+
+    if temporal_correction_attempts <= 0:
+        return None
+
+    if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
+        return (
+            f"⚠️ TEMPORAL CORRECTION EXCEEDED: The AI repeatedly generated responses that jumped "
+            f"backward in time. After {temporal_correction_attempts} failed correction attempts "
+            f"(configured max {MAX_TEMPORAL_CORRECTION_ATTEMPTS}), the system accepted the response "
+            f"to avoid infinite loops. Timeline consistency may be compromised."
+        )
+
+    return (
+        f"⚠️ TEMPORAL CORRECTION: The AI initially generated a response that jumped "
+        f"backward in time. {temporal_correction_attempts} correction(s) were required "
+        f"to fix the timeline continuity."
+    )
 
 
 def truncate_game_state_for_logging(
@@ -794,24 +818,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Add temporal correction warning if corrections were needed
         if temporal_correction_attempts > 0:
-            # Check if max attempts were exceeded (corrections failed)
+            temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
             if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
-                # Max attempts exceeded - corrections DID NOT fix the issue
-                temporal_warning = (
-                    f"⚠️ TEMPORAL CORRECTION EXCEEDED: The AI repeatedly generated responses that jumped "
-                    f"backward in time. After {MAX_TEMPORAL_CORRECTION_ATTEMPTS} failed correction attempts, "
-                    f"the system accepted the response to avoid infinite loops. Timeline consistency may be compromised."
-                )
                 logging_util.warning(
                     f"⚠️ TEMPORAL_WARNING (exceeded): {temporal_correction_attempts} attempts, max was {MAX_TEMPORAL_CORRECTION_ATTEMPTS}"
                 )
             else:
-                # Corrections succeeded (within max attempts)
-                temporal_warning = (
-                    f"⚠️ TEMPORAL CORRECTION: The AI initially generated a response that jumped "
-                    f"backward in time. {temporal_correction_attempts} correction(s) were required "
-                    f"to fix the timeline continuity."
-                )
                 logging_util.info(
                     f"✅ TEMPORAL_WARNING added to response: {temporal_correction_attempts} correction(s) fixed the issue"
                 )

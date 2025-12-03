@@ -1098,6 +1098,7 @@ When player uses think/plan/consider/strategize/options keywords and you generat
 **2. Story-Advancing Actions:**
 | Action Type | Time Increment |
 |-------------|----------------|
+| Think/plan action | +1 microsecond (no narrative time) |
 | Brief dialogue exchange | +1-5 minutes |
 | Combat round (D&D) | +6 seconds |
 | Short rest | +1 hour |

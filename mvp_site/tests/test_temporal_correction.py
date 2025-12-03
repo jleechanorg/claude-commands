@@ -173,7 +173,8 @@ async def test_temporal_correction_preserves_original_user_input():
 
     # 5. Verify second call received correction prompt
     second_call_args = mock_llm.continue_story.call_args_list[1]
-    second_call_input = second_call_args[0][0]  # First positional arg
+    # continue_story(user_input, mode, story_context, ...) - first positional arg is user_input
+    second_call_input = second_call_args[0][0]
     assert "TEMPORAL VIOLATION" in second_call_input, (
         "Second LLM call should have received correction prompt"
     )
