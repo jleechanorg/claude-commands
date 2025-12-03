@@ -1,6 +1,6 @@
 # Hybrid Core+RAG Prompt Delivery (Design)
 
-**Status:** 📋 DESIGN COMPLETE | **Implementation:** See `rag_hybrid_impl_plan.md`
+**Status:** ✅ DESIGN COMPLETE (implementation not started) | **Implementation:** See `rag_hybrid_impl_plan.md`
 
 ## Context (what this repo/app is)
 - **WorldArchitect.AI**: A browser-based narrative + mechanics runner for D&D‑style RPG campaigns. It uses large prompts to instruct an LLM (Story/DM/God modes) to manage state, narrate, roll dice, and enforce safety rules (e.g., MBTI/alignment internal-only). Prompts live in `mvp_site/prompts/` and are versioned snapshots in `prompt_archive/`.
@@ -39,7 +39,7 @@
 - Metadata tags per chunk: filename, version, domain (schema|safety|mechanics|narrative|worldgen|examples), mode (story|dm|god|general), section (heading path), date, length.
 
 ## Retrieval strategy
-- Hybrid: BM25 (or SPLADE) + dense embeddings; weighted fusion; take top 12, re-rank to top 6 with bonuses for domain/mode match and same version; enforce score floor (e.g., 0.25 fused).
+- Hybrid: BM25 (or SPLADE) + dense embeddings; weighted fusion; take top 12, re-rank to top 6 with bonuses for domain/mode match and same version; enforce score floor (e.g., 0.25 fused). _Decision pending: exact BM25 vs dense fusion weights (see impl plan)._
 - Budget: cap retrieved context to ~1–1.5k tokens; drop lowest-scoring chunks if over budget.
 - Normalization: prepend each chunk with its heading and wrap in a standard delimiter to keep formatting consistent.
 - Cache: LRU on (mode, query hash) for top chunks.
