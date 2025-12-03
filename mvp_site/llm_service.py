@@ -120,23 +120,13 @@ class ProviderSelection:
     model: str
 
 
-# Model cycling order for 503 errors - try these in sequence
-# CRITICAL: Only include models that support code_execution + JSON mode
-# Gemini 2.5 models are EXCLUDED - they don't support this combination
-MODEL_FALLBACK_CHAIN: list[str] = [
-    "gemini-3-pro-preview",  # Primary: Official support (preview feature)
-    "gemini-2.0-flash",  # Fallback: Works but unofficial
-    "gemini-2.0-flash-exp",  # Secondary fallback
-]
+class LLMRequestError(Exception):
+    """Raised when an LLM request fails in a user-visible way."""
 
-# Ordered by increasing provider capability for context-too-large fallbacks
-CONTEXT_FALLBACK_CHAIN: list[ProviderSelection] = [
-    ProviderSelection(constants.LLM_PROVIDER_GEMINI, "gemini-3-pro-preview"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "x-ai/grok-4.1-fast:free"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "z-ai/glm-4.6"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "meta-llama/llama-3.1-405b-instruct"),
-    ProviderSelection(constants.LLM_PROVIDER_CEREBRAS, "qwen-3-235b-a22b-instruct-2507"),
-]
+    def __init__(self, message: str, status_code: int = 400) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
 
 # No longer using pro model for any inputs
 
@@ -1103,9 +1093,10 @@ def _call_llm_api_with_model_cycling(
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
-    Calls the configured LLM provider with Gemini-style model cycling on 503 errors.
-    Tries the requested model first, then cycles through fallback models when using Gemini.
-    Always uses JSON mode for structured responses.
+    Calls the configured LLM provider without fallback or retry behavior.
+
+    Errors such as context overflow or provider overload surface immediately
+    as LLMRequestError for user-facing handling.
 
     Args:
         prompt_contents: The content to send to the API
@@ -1116,16 +1107,6 @@ def _call_llm_api_with_model_cycling(
     Returns:
         Gemini API response object with JSON response
     """
-    # Create ordered list starting with requested model, then fallbacks
-    models_to_try: list[ProviderSelection] = [
-        ProviderSelection(provider_name, model_name)
-    ]
-    if provider_name == constants.LLM_PROVIDER_GEMINI:
-        for fallback_model in MODEL_FALLBACK_CHAIN:
-            selection = ProviderSelection(constants.LLM_PROVIDER_GEMINI, fallback_model)
-            if selection not in models_to_try:
-                models_to_try.append(selection)
-
     if current_prompt_text_for_logging:
         logging_util.info(
             f"Calling LLM API with prompt: {str(current_prompt_text_for_logging)[:500]}..."
@@ -1146,147 +1127,93 @@ def _call_llm_api_with_model_cycling(
     combined_text = " ".join(all_prompt_text)
     log_with_tokens("Calling LLM API", combined_text, logging_util)
 
-    last_error: Exception | None = None
-
-    attempt = 0
-    while attempt < len(models_to_try):
-        current_selection = models_to_try[attempt]
-        current_model = current_selection.model
-        current_provider = current_selection.provider
-        try:
-            prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
-                prompt_contents, system_instruction_text, current_provider, current_model
-            )
-            # Log token count for the current model being tried
-            _log_token_count(
-                current_model,
-                prompt_contents,
-                system_instruction_text,
-                current_provider,
-            )
-
-            if attempt > 0:
-                logging_util.warning(
-                    f"Attempting fallback provider/model: {current_provider}/{current_model}"
-                )
-            else:
-                logging_util.info(
-                    f"Calling LLM provider/model: {current_provider}/{current_model}"
-                )
-
-            safe_output_limit = _get_safe_output_token_limit(
-                current_model,
-                prompt_tokens,
-                system_tokens,
-            )
-
-            if current_provider == constants.LLM_PROVIDER_GEMINI:
-                response = gemini_provider.generate_json_mode_content(
-                    prompt_contents=prompt_contents,
-                    model_name=current_model,
-                    system_instruction_text=system_instruction_text,
-                    max_output_tokens=safe_output_limit,
-                    temperature=TEMPERATURE,
-                    safety_settings=SAFETY_SETTINGS,
-                    json_mode_max_output_tokens=safe_output_limit,
-                )
-            elif current_provider == constants.LLM_PROVIDER_OPENROUTER:
-                response = openrouter_provider.generate_content(
-                    prompt_contents=prompt_contents,
-                    model_name=current_model,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                )
-            elif current_provider == constants.LLM_PROVIDER_CEREBRAS:
-                response = cerebras_provider.generate_content(
-                    prompt_contents=prompt_contents,
-                    model_name=current_model,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                )
-            else:
-                raise ValueError(f"Unsupported provider: {current_provider}")
-
-            if attempt > 0:
-                logging_util.info(
-                    f"Fallback model {current_model} ({current_provider}) succeeded"
-                )
-
-            return response
-
-        except Exception as e:
-            last_error = e
-            error_message = str(e)
-
-            # Try to extract status code from different exception types
-            status_code = None
-
-            # Check if the exception has a status_code attribute
-            if hasattr(e, "status_code"):
-                status_code = getattr(e, "status_code", None)
-            elif hasattr(e, "response") and hasattr(e.response, "status_code"):
-                status_code = getattr(e.response, "status_code", None)
-            # Check if it's a ServerError with the status in the message
-            elif "503 UNAVAILABLE" in error_message:
-                status_code = 503
-            elif "429" in error_message:
-                status_code = 429
-            elif "400" in error_message and "not found" in error_message.lower():
-                status_code = 400
-
-            if status_code == 503:  # Service unavailable
-                logging_util.warning(
-                    f"Model {current_model} overloaded (503), trying next model"
-                )
-                attempt += 1
-                continue
-            if status_code == 429:  # Rate limit
-                logging_util.warning(
-                    f"Model {current_model} rate limited (429), trying next model"
-                )
-                attempt += 1
-                continue
-            if (
-                status_code == 400 and "not found" in error_message.lower()
-            ):  # Model not found
-                logging_util.warning(
-                    f"Model {current_model} not found (400), trying next model"
-                )
-                attempt += 1
-                continue
-            # Handle ContextTooLargeError - could fallback to larger context model
-            if isinstance(e, ContextTooLargeError):
-                logging_util.warning(
-                    f"🔴 Context too large for model {current_model} "
-                    f"({e.prompt_tokens:,} tokens), trying next model with larger context"
-                )
-                current_window = _get_model_context_window(current_model)
-                for selection in CONTEXT_FALLBACK_CHAIN:
-                    target_window = _get_model_context_window(selection.model)
-                    if (
-                        selection not in models_to_try
-                        and target_window > current_window
-                    ):
-                        models_to_try.append(selection)
-                attempt += 1
-                continue
-            # For other errors, don't continue cycling - raise immediately
-            logging_util.error(f"🔥🔴 Non-recoverable error with model {current_model}: {e}")
-            raise e
-        attempt += 1
-
-    # If we get here, all models failed
-    logging_util.error(f"All models failed: {models_to_try}")
-    logging_util.error(f"Last error: {last_error}")
-
-    # Ensure we have a meaningful error to raise
-    if last_error is None:
-        raise RuntimeError(
-            f"All {len(models_to_try)} Gemini models failed but no specific error was captured"
+    current_selection = ProviderSelection(provider_name, model_name)
+    try:
+        prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
+            prompt_contents, system_instruction_text, provider_name, model_name
         )
-    raise last_error
+        _log_token_count(
+            model_name,
+            prompt_contents,
+            system_instruction_text,
+            provider_name,
+        )
+
+        logging_util.info(
+            f"Calling LLM provider/model: {provider_name}/{model_name}"
+        )
+
+        safe_output_limit = _get_safe_output_token_limit(
+            model_name,
+            prompt_tokens,
+            system_tokens,
+        )
+
+        if provider_name == constants.LLM_PROVIDER_GEMINI:
+            return gemini_provider.generate_json_mode_content(
+                prompt_contents=prompt_contents,
+                model_name=model_name,
+                system_instruction_text=system_instruction_text,
+                max_output_tokens=safe_output_limit,
+                temperature=TEMPERATURE,
+                safety_settings=SAFETY_SETTINGS,
+                json_mode_max_output_tokens=safe_output_limit,
+            )
+        if provider_name == constants.LLM_PROVIDER_OPENROUTER:
+            return openrouter_provider.generate_content(
+                prompt_contents=prompt_contents,
+                model_name=model_name,
+                system_instruction_text=system_instruction_text,
+                temperature=TEMPERATURE,
+                max_output_tokens=safe_output_limit,
+            )
+        if provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            return cerebras_provider.generate_content(
+                prompt_contents=prompt_contents,
+                model_name=model_name,
+                system_instruction_text=system_instruction_text,
+                temperature=TEMPERATURE,
+                max_output_tokens=safe_output_limit,
+            )
+        raise ValueError(f"Unsupported provider: {provider_name}")
+    except ContextTooLargeError as e:
+        logging_util.error(
+            "Context too large for selected model. "
+            "Reduce prompt size or choose a model with a larger context window."
+        )
+        raise LLMRequestError(str(e), status_code=422) from e
+    except ValueError as e:
+        message = str(e)
+        if "context" in message.lower() or "too large" in message.lower():
+            raise LLMRequestError(message, status_code=422) from e
+        raise
+    except Exception as e:
+        error_message = str(e)
+        status_code = None
+
+        if hasattr(e, "status_code"):
+            status_code = getattr(e, "status_code", None)
+        elif hasattr(e, "response") and hasattr(e.response, "status_code"):
+            status_code = getattr(e.response, "status_code", None)
+        elif "503" in error_message:
+            status_code = 503
+        elif "429" in error_message:
+            status_code = 429
+
+        if status_code in (503, 429):
+            human_reason = "service unavailable" if status_code == 503 else "rate limited"
+            logging_util.error(
+                f"Provider {current_selection.provider}/{current_selection.model} {human_reason}: {error_message}"
+            )
+            raise LLMRequestError(
+                f"LLM provider error ({status_code}): {human_reason}. Please try again shortly.",
+                status_code=status_code,
+            ) from e
+
+        logging_util.error(
+            f"🔥🔴 Non-recoverable error with model {current_selection.model}: {e}"
+        )
+        raise
 
 
 def _call_llm_api_with_json_structure(

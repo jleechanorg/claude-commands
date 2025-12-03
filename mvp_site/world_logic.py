@@ -619,14 +619,18 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         use_default_world = "defaultWorld" in custom_options
 
         # Generate opening story using LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
-        opening_story_response = await asyncio.to_thread(
-            llm_service.get_initial_story,
-            prompt,
-            user_id,
-            selected_prompts,
-            generate_companions,
-            use_default_world,
-        )
+        try:
+            opening_story_response = await asyncio.to_thread(
+                llm_service.get_initial_story,
+                prompt,
+                user_id,
+                selected_prompts,
+                generate_companions,
+                use_default_world,
+            )
+        except llm_service.LLMRequestError as e:
+            logging_util.error(f"LLM request failed during campaign creation: {e}")
+            return create_error_response(str(e), getattr(e, "status_code", 422))
 
         # Extract structured fields
         opening_story_structured_fields = _ensure_session_header_resources(
@@ -744,16 +748,20 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         llm_response_obj = None
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
-            llm_response_obj = await asyncio.to_thread(
-                llm_service.continue_story,
-                llm_input,  # Use llm_input, NOT user_input
-                mode,
-                story_context,
-                current_game_state,
-                selected_prompts,
-                use_default_world,
-                user_id,  # Pass user_id to enable user model preference selection
-            )
+            try:
+                llm_response_obj = await asyncio.to_thread(
+                    llm_service.continue_story,
+                    llm_input,  # Use llm_input, NOT user_input
+                    mode,
+                    story_context,
+                    current_game_state,
+                    selected_prompts,
+                    use_default_world,
+                    user_id,  # Pass user_id to enable user model preference selection
+                )
+            except llm_service.LLMRequestError as e:
+                logging_util.error(f"LLM request failed during story continuation: {e}")
+                return create_error_response(str(e), getattr(e, "status_code", 422))
 
             # Check for temporal violation (time going backward)
             # EXCEPTION: Skip validation for GOD MODE (backward time is intentional)
