@@ -160,6 +160,14 @@ OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
 OUTPUT_TOKEN_RESERVE_MIN: int = 1024
 OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output tokens
 
+# Entity tracking token reserves - these are added AFTER truncation so must be pre-budgeted
+# Sizes based on production data with 10+ NPCs:
+# - entity_preload_text: ~2000-3000 tokens (NPC summaries)
+# - entity_specific_instructions: ~1500-2000 tokens (per-turn instructions)
+# - entity_tracking_instruction: ~1000-1500 tokens (tracking rules)
+# - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
+ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
+
 
 def _get_model_context_window(model_name: str) -> int:
     return constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
@@ -2459,9 +2467,11 @@ def continue_story(
     )
 
     scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
-    # Add buffer for entity tracking and other minor prompt components
-    # Reduced from 30% to 15% since we now measure all major components in scaffold
-    scaffold_tokens = int(scaffold_tokens_raw * 1.15)  # 15% buffer for unmeasured components
+    # FIX: Add explicit reserve for entity tracking tokens that are added AFTER truncation
+    # The old 15% buffer was insufficient (~2700 tokens) vs entity overhead (~3500-10500 tokens)
+    # Entity tracking includes: entity_preload_text, entity_specific_instructions,
+    # entity_tracking_instruction, and timeline_log - all generated AFTER truncation
+    scaffold_tokens = scaffold_tokens_raw + ENTITY_TRACKING_TOKEN_RESERVE
 
     # Use max_input_allowed from centralized budget (accounts for output reserve)
     # Then subtract scaffold tokens to get available story budget
@@ -2475,7 +2485,7 @@ def continue_story(
     reserve_mode = "combat" if is_combat_or_complex else "normal"
     logging_util.info(
         f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
-        f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+15%), "
+        f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+entity_reserve:{ENTITY_TRACKING_TOKEN_RESERVE}), "
         f"output_reserve={output_token_reserve}tk ({reserve_mode}), story_budget={available_story_tokens}tk, "
         f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
