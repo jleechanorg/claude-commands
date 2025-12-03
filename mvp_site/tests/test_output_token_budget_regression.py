@@ -1,9 +1,8 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-import mvp_site.llm_service as llm_service
-from mvp_site import constants
+from mvp_site import constants, llm_service
 from mvp_site.llm_providers import gemini_provider
 
 
@@ -282,7 +281,7 @@ def test_e2e_large_context_does_not_starve_output_tokens():
         gemini_provider, "generate_json_mode_content", side_effect=mock_generate_json_mode_content
     ):
         # Call the full LLM service flow
-        llm_service._call_llm_api_with_model_cycling(
+        llm_service._call_llm_api(
             prompt_contents=["Large prompt content..."],
             model_name=constants.DEFAULT_GEMINI_MODEL,
             current_prompt_text_for_logging="Test large context",
