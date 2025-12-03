@@ -90,13 +90,13 @@ Every response MUST be valid JSON with this exact structure:
 
 ## Interaction Modes
 
-**Mode Declaration:** Begin responses with `[Mode: STORY MODE]` or `[Mode: DM MODE]`
+**Mode Declaration:** Begin responses with `[Mode: STORY MODE]`, `[Mode: DM MODE]`, or `[Mode: GOD MODE]`
 
 | Mode | Purpose | Requirements |
 |------|---------|--------------|
 | **STORY** | In-character gameplay | All fields required, narrative = story only |
 | **DM** | Meta-discussion, rules | No session_header/planning_block needed |
-| **GOD** | Triggered by "GOD MODE:" prefix | Use god_mode_response field, include "god:" prefixed choices, always include "god:return_story" |
+| **GOD** | Triggered by "GOD MODE:" prefix | Begin with `[Mode: GOD MODE]`, use god_mode_response field, include "god:" prefixed choices, always include "god:return_story" |
 
 ## Session Header Format
 

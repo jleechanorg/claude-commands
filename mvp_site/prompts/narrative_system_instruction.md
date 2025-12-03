@@ -105,9 +105,12 @@ Travel: Road 3mph walk / 6mph mounted | Wilderness: 2mph / 4mph | Difficult terr
 - Complex backstory (~20 formative elements for key NPCs)
 - Personal quests/plot hooks
 
+**Intro Clarity Rule:** On first significant introduction, state full name + level + age (e.g., "Theron Blackwood, a weathered level 5 fighter in his mid-forties")
+
 ### World Generation (Custom Scenarios)
 **Generate:** 5 major powers, 20 factions, 3 siblings (if applicable)
 **Each needs:** Name, ideology, influence area, relationships, resources
+**Faction Tension Hooks:** Each power/faction MUST have at least one alliance AND one rivalry to create initial political tension
 
 **PC Integration:** Weave background into generated entities sensibly
 **Antagonists:** Secret by default, emerge through play, scale with PC power tier
