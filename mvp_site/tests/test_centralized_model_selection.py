@@ -94,25 +94,25 @@ class TestCentralizedModelSelection(unittest.TestCase):
 
     def test_test_model_supports_code_execution(self):
         """
-        INTEGRATION TEST: Verify TEST_MODEL is set to default Cerebras model
+        INTEGRATION TEST: Verify TEST_MODEL is set to default Gemini model
 
         The TEST_MODEL should match the current DEFAULT_MODEL based on DEFAULT_LLM_PROVIDER.
         """
         test_model = TEST_MODEL
 
-        # TEST_MODEL should be qwen-3-235b-a22b-instruct-2507 (default Cerebras model)
+        # TEST_MODEL should be gemini-2.0-flash (default Gemini model)
         self.assertEqual(
             test_model,
-            "qwen-3-235b-a22b-instruct-2507",
-            f"FAIL: TEST_MODEL should be qwen-3-235b-a22b-instruct-2507 (default Cerebras model), "
+            "gemini-2.0-flash",
+            f"FAIL: TEST_MODEL should be gemini-2.0-flash (default Gemini model), "
             f"but is {test_model}",
         )
 
-        # DEFAULT_MODEL should also be qwen-3-235b-a22b-instruct-2507
+        # DEFAULT_MODEL should also be gemini-2.0-flash
         self.assertEqual(
             DEFAULT_MODEL,
-            "qwen-3-235b-a22b-instruct-2507",
-            f"FAIL: DEFAULT_MODEL should be qwen-3-235b-a22b-instruct-2507, "
+            "gemini-2.0-flash",
+            f"FAIL: DEFAULT_MODEL should be gemini-2.0-flash, "
             f"but is {DEFAULT_MODEL}",
         )
 
