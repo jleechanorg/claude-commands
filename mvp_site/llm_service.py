@@ -1957,6 +1957,18 @@ def get_initial_story(
     # Parse the structured response to extract clean narrative and debug data
     narrative_text, structured_response = parse_structured_response(raw_response_text)
 
+    # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
+    logging_util.info(
+        f"📊 PARSED_RESPONSE (initial_story): narrative_length={len(narrative_text)}, "
+        f"structured_response={'present' if structured_response else 'None'}, "
+        f"raw_response_length={len(raw_response_text)}"
+    )
+    if len(narrative_text) == 0:
+        logging_util.warning(
+            f"⚠️ EMPTY_NARRATIVE (initial_story): LLM returned empty narrative. "
+            f"Raw response preview: {raw_response_text[:500]}..."
+        )
+
     # Create LLMResponse with proper debug content separation
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
@@ -1983,9 +1995,10 @@ def get_initial_story(
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
 
-    # Log LLMResponse creation for debugging
-    logging_util.debug(
-        f"Created LLMResponse with narrative_text length: {len(gemini_response.narrative_text)}"
+    # Log LLMResponse creation - INFO level for production visibility
+    logging_util.info(
+        f"📝 FINAL_RESPONSE (initial_story): narrative_length={len(gemini_response.narrative_text)}, "
+        f"has_structured_response={gemini_response.structured_response is not None}"
     )
 
     # Companion validation (moved from world_logic.py for proper SRP)
@@ -2693,6 +2706,34 @@ def continue_story(
     structured_response: NarrativeResponse | None
     narrative_text, structured_response = parse_structured_response(raw_response_text)
 
+    # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
+    logging_util.info(
+        f"📊 PARSED_RESPONSE: narrative_length={len(narrative_text)}, "
+        f"structured_response={'present' if structured_response else 'None'}, "
+        f"raw_response_length={len(raw_response_text)}"
+    )
+    if len(narrative_text) == 0:
+        logging_util.warning(
+            f"⚠️ EMPTY_NARRATIVE: LLM returned empty narrative. "
+            f"Raw response preview: {raw_response_text[:500]}..."
+        )
+        # Log structured response fields if available
+        if structured_response:
+            has_planning = bool(
+                structured_response.planning_block
+                if hasattr(structured_response, "planning_block")
+                else False
+            )
+            has_session = bool(
+                structured_response.session_header
+                if hasattr(structured_response, "session_header")
+                else False
+            )
+            logging_util.warning(
+                f"⚠️ EMPTY_NARRATIVE: structured_response has planning_block={has_planning}, "
+                f"session_header={has_session}"
+            )
+
     # Create LLMResponse with proper debug content separation
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
@@ -2744,9 +2785,10 @@ def continue_story(
     # The structured_response is now the authoritative source, response_text is for backward compatibility only
     # The frontend uses gemini_response.structured_response directly, not narrative_text
 
-    # Log LLMResponse creation for debugging
-    logging_util.debug(
-        f"Created LLMResponse with narrative_text length: {len(gemini_response.narrative_text)}"
+    # Log LLMResponse creation - INFO level for production visibility
+    logging_util.info(
+        f"📝 FINAL_RESPONSE: narrative_length={len(gemini_response.narrative_text)}, "
+        f"has_structured_response={gemini_response.structured_response is not None}"
     )
 
     # Return our custom LLMResponse object (not raw API response)
