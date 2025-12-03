@@ -220,6 +220,43 @@ def uses_big_five(system):
     return False  # No current systems use Big Five
 
 
+def infer_provider_from_model(model_name: str) -> str:
+    """Infer the LLM provider from a model name.
+
+    This function automatically determines which provider should be used based on
+    the model name provided. This is critical for settings updates where the frontend
+    only sends the model name without the provider.
+
+    Args:
+        model_name: The model name (e.g., "gemini-2.0-flash", "meta-llama/llama-3.1-70b-instruct")
+
+    Returns:
+        str: The provider name ("gemini", "openrouter", or "cerebras")
+
+    Examples:
+        >>> infer_provider_from_model("gemini-2.0-flash")
+        "gemini"
+        >>> infer_provider_from_model("meta-llama/llama-3.1-70b-instruct")
+        "openrouter"
+        >>> infer_provider_from_model("qwen-3-235b-a22b-instruct-2507")
+        "cerebras"
+    """
+    # Check if model is in Gemini models list
+    if model_name in ALLOWED_GEMINI_MODELS or model_name in GEMINI_MODEL_MAPPING:
+        return LLM_PROVIDER_GEMINI
+
+    # Check if model is in OpenRouter models list
+    if model_name in ALLOWED_OPENROUTER_MODELS:
+        return LLM_PROVIDER_OPENROUTER
+
+    # Check if model is in Cerebras models list
+    if model_name in ALLOWED_CEREBRAS_MODELS:
+        return LLM_PROVIDER_CEREBRAS
+
+    # Default to gemini if model not recognized (safe default)
+    return DEFAULT_LLM_PROVIDER
+
+
 # --- EXPORT FORMATS ---
 FORMAT_PDF = "pdf"
 FORMAT_DOCX = "docx"

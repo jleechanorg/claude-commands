@@ -1320,6 +1320,24 @@ def create_app() -> Flask:
                 filtered_data = {
                     k: v for k, v in data.items() if k in valid_settings_keys
                 }
+
+                # Auto-infer provider from model selection if provider not explicitly set
+                # This ensures frontend-only model updates correctly set the provider
+                if "llm_provider" not in filtered_data:
+                    # Check if any model-specific settings were updated
+                    if "gemini_model" in filtered_data:
+                        filtered_data["llm_provider"] = constants.infer_provider_from_model(
+                            filtered_data["gemini_model"]
+                        )
+                    elif "openrouter_model" in filtered_data:
+                        filtered_data["llm_provider"] = constants.infer_provider_from_model(
+                            filtered_data["openrouter_model"]
+                        )
+                    elif "cerebras_model" in filtered_data:
+                        filtered_data["llm_provider"] = constants.infer_provider_from_model(
+                            filtered_data["cerebras_model"]
+                        )
+
                 request_data = {"user_id": user_id, "settings": filtered_data}
 
                 # Direct service calls with run_in_executor for parallel request handling
