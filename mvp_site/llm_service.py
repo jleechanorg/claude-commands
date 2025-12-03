@@ -129,15 +129,6 @@ MODEL_FALLBACK_CHAIN: list[str] = [
     "gemini-2.0-flash-exp",  # Secondary fallback
 ]
 
-# Ordered by increasing provider capability for context-too-large fallbacks
-CONTEXT_FALLBACK_CHAIN: list[ProviderSelection] = [
-    ProviderSelection(constants.LLM_PROVIDER_GEMINI, "gemini-3-pro-preview"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "x-ai/grok-4.1-fast:free"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "z-ai/glm-4.6"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "meta-llama/llama-3.1-405b-instruct"),
-    ProviderSelection(constants.LLM_PROVIDER_CEREBRAS, "qwen-3-235b-a22b-instruct-2507"),
-]
-
 # No longer using pro model for any inputs
 
 # Gemini 2.5 Flash OUTPUT token limits (corrected based on updated specs)
@@ -177,12 +168,6 @@ OUTPUT_TOKEN_RESERVE_DEFAULT: int = 12_000  # Typical responses are 1-3k tokens
 OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
 OUTPUT_TOKEN_RESERVE_MIN: int = 1024
 OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output tokens
-
-
-def _get_model_context_window(model_name: str) -> int:
-    return constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
-        model_name, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
-    )
 
 
 def _get_context_window_tokens(model_name: str) -> int:
@@ -1254,22 +1239,6 @@ def _call_llm_api_with_model_cycling(
                 logging_util.warning(
                     f"Model {current_model} not found (400), trying next model"
                 )
-                attempt += 1
-                continue
-            # Handle ContextTooLargeError - could fallback to larger context model
-            if isinstance(e, ContextTooLargeError):
-                logging_util.warning(
-                    f"🔴 Context too large for model {current_model} "
-                    f"({e.prompt_tokens:,} tokens), trying next model with larger context"
-                )
-                current_window = _get_model_context_window(current_model)
-                for selection in CONTEXT_FALLBACK_CHAIN:
-                    target_window = _get_model_context_window(selection.model)
-                    if (
-                        selection not in models_to_try
-                        and target_window > current_window
-                    ):
-                        models_to_try.append(selection)
                 attempt += 1
                 continue
             # For other errors, don't continue cycling - raise immediately
