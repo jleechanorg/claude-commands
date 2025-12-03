@@ -114,6 +114,12 @@ else:  # Gemini (default fallback)
     DEFAULT_MODEL: str = constants.DEFAULT_GEMINI_MODEL
     TEST_MODEL: str = constants.DEFAULT_GEMINI_MODEL
 
+@dataclass(frozen=True)
+class ProviderSelection:
+    provider: str
+    model: str
+
+
 # Model cycling order for 503 errors - try these in sequence
 # CRITICAL: Only include models that support code_execution + JSON mode
 # Gemini 2.5 models are EXCLUDED - they don't support this combination
@@ -123,11 +129,14 @@ MODEL_FALLBACK_CHAIN: list[str] = [
     "gemini-2.0-flash-exp",  # Secondary fallback
 ]
 
-
-@dataclass(frozen=True)
-class ProviderSelection:
-    provider: str
-    model: str
+# Ordered by increasing provider capability for context-too-large fallbacks
+CONTEXT_FALLBACK_CHAIN: list[ProviderSelection] = [
+    ProviderSelection(constants.LLM_PROVIDER_GEMINI, "gemini-3-pro-preview"),
+    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "x-ai/grok-4.1-fast:free"),
+    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "z-ai/glm-4.6"),
+    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "meta-llama/llama-3.1-405b-instruct"),
+    ProviderSelection(constants.LLM_PROVIDER_CEREBRAS, "qwen-3-235b-a22b-instruct-2507"),
+]
 
 # No longer using pro model for any inputs
 
@@ -168,6 +177,12 @@ OUTPUT_TOKEN_RESERVE_DEFAULT: int = 12_000  # Typical responses are 1-3k tokens
 OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
 OUTPUT_TOKEN_RESERVE_MIN: int = 1024
 OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output tokens
+
+
+def _get_model_context_window(model_name: str) -> int:
+    return constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
+        model_name, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
+    )
 
 
 def _get_context_window_tokens(model_name: str) -> int:
@@ -1102,11 +1117,14 @@ def _call_llm_api_with_model_cycling(
         Gemini API response object with JSON response
     """
     # Create ordered list starting with requested model, then fallbacks
-    models_to_try: list[str] = [model_name]
+    models_to_try: list[ProviderSelection] = [
+        ProviderSelection(provider_name, model_name)
+    ]
     if provider_name == constants.LLM_PROVIDER_GEMINI:
         for fallback_model in MODEL_FALLBACK_CHAIN:
-            if fallback_model != model_name and fallback_model not in models_to_try:
-                models_to_try.append(fallback_model)
+            selection = ProviderSelection(constants.LLM_PROVIDER_GEMINI, fallback_model)
+            if selection not in models_to_try:
+                models_to_try.append(selection)
 
     if current_prompt_text_for_logging:
         logging_util.info(
@@ -1130,26 +1148,30 @@ def _call_llm_api_with_model_cycling(
 
     last_error: Exception | None = None
 
-    for attempt, current_model in enumerate(models_to_try):
+    attempt = 0
+    while attempt < len(models_to_try):
+        current_selection = models_to_try[attempt]
+        current_model = current_selection.model
+        current_provider = current_selection.provider
         try:
             prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
-                prompt_contents, system_instruction_text, provider_name, current_model
+                prompt_contents, system_instruction_text, current_provider, current_model
             )
             # Log token count for the current model being tried
             _log_token_count(
                 current_model,
                 prompt_contents,
                 system_instruction_text,
-                provider_name,
+                current_provider,
             )
 
             if attempt > 0:
                 logging_util.warning(
-                    f"Attempting fallback provider/model: {provider_name}/{current_model}"
+                    f"Attempting fallback provider/model: {current_provider}/{current_model}"
                 )
             else:
                 logging_util.info(
-                    f"Calling LLM provider/model: {provider_name}/{current_model}"
+                    f"Calling LLM provider/model: {current_provider}/{current_model}"
                 )
 
             safe_output_limit = _get_safe_output_token_limit(
@@ -1158,7 +1180,7 @@ def _call_llm_api_with_model_cycling(
                 system_tokens,
             )
 
-            if provider_name == constants.LLM_PROVIDER_GEMINI:
+            if current_provider == constants.LLM_PROVIDER_GEMINI:
                 response = gemini_provider.generate_json_mode_content(
                     prompt_contents=prompt_contents,
                     model_name=current_model,
@@ -1168,7 +1190,7 @@ def _call_llm_api_with_model_cycling(
                     safety_settings=SAFETY_SETTINGS,
                     json_mode_max_output_tokens=safe_output_limit,
                 )
-            elif provider_name == constants.LLM_PROVIDER_OPENROUTER:
+            elif current_provider == constants.LLM_PROVIDER_OPENROUTER:
                 response = openrouter_provider.generate_content(
                     prompt_contents=prompt_contents,
                     model_name=current_model,
@@ -1176,7 +1198,7 @@ def _call_llm_api_with_model_cycling(
                     temperature=TEMPERATURE,
                     max_output_tokens=safe_output_limit,
                 )
-            elif provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            elif current_provider == constants.LLM_PROVIDER_CEREBRAS:
                 response = cerebras_provider.generate_content(
                     prompt_contents=prompt_contents,
                     model_name=current_model,
@@ -1185,10 +1207,12 @@ def _call_llm_api_with_model_cycling(
                     max_output_tokens=safe_output_limit,
                 )
             else:
-                raise ValueError(f"Unsupported provider: {provider_name}")
+                raise ValueError(f"Unsupported provider: {current_provider}")
 
             if attempt > 0:
-                logging_util.info(f"Fallback model {current_model} succeeded")
+                logging_util.info(
+                    f"Fallback model {current_model} ({current_provider}) succeeded"
+                )
 
             return response
 
@@ -1216,11 +1240,13 @@ def _call_llm_api_with_model_cycling(
                 logging_util.warning(
                     f"Model {current_model} overloaded (503), trying next model"
                 )
+                attempt += 1
                 continue
             if status_code == 429:  # Rate limit
                 logging_util.warning(
                     f"Model {current_model} rate limited (429), trying next model"
                 )
+                attempt += 1
                 continue
             if (
                 status_code == 400 and "not found" in error_message.lower()
@@ -1228,6 +1254,7 @@ def _call_llm_api_with_model_cycling(
                 logging_util.warning(
                     f"Model {current_model} not found (400), trying next model"
                 )
+                attempt += 1
                 continue
             # Handle ContextTooLargeError - could fallback to larger context model
             if isinstance(e, ContextTooLargeError):
@@ -1235,10 +1262,20 @@ def _call_llm_api_with_model_cycling(
                     f"🔴 Context too large for model {current_model} "
                     f"({e.prompt_tokens:,} tokens), trying next model with larger context"
                 )
+                current_window = _get_model_context_window(current_model)
+                for selection in CONTEXT_FALLBACK_CHAIN:
+                    target_window = _get_model_context_window(selection.model)
+                    if (
+                        selection not in models_to_try
+                        and target_window > current_window
+                    ):
+                        models_to_try.append(selection)
+                attempt += 1
                 continue
             # For other errors, don't continue cycling - raise immediately
             logging_util.error(f"🔥🔴 Non-recoverable error with model {current_model}: {e}")
             raise e
+        attempt += 1
 
     # If we get here, all models failed
     logging_util.error(f"All models failed: {models_to_try}")

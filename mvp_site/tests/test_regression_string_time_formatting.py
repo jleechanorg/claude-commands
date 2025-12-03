@@ -7,7 +7,6 @@ Using :02d format specifier without int() conversion causes ValueError.
 Related cursor[bot] comment: PR #2235
 """
 import unittest
-from unittest.mock import MagicMock
 from mvp_site.llm_service import PromptBuilder
 from mvp_site.game_state import GameState
 
@@ -21,10 +20,10 @@ class TestStringTimeFormattingRegression(unittest.TestCase):
 
     def test_string_time_values_should_not_crash(self):
         """
-        🔴 RED TEST - This should FAIL initially
+        Regression test for string time values from LLM.
 
-        Reproduces bug where LLM returns string time values like "15"
-        instead of integers, causing ValueError with :02d format.
+        Ensures that when LLM returns string time values like "15"
+        instead of integers, the code handles them gracefully via int() conversion.
         """
         # Create GameState with STRING time values (bug scenario)
         game_state = GameState(world_data={
