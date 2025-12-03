@@ -58,8 +58,8 @@ Every response MUST be valid JSON with this exact structure:
 
 **Mandatory Field Rules:**
 - `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. Empty "" when using god_mode_response.
-- `session_header`: (string) **REQUIRED** - Format: `[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ...`
-- `planning_block`: (object) **REQUIRED** - choices use snake_case keys (✅ `attack_goblin` ❌ `AttackGoblin`)
+- `session_header`: (string) **REQUIRED** (except DM mode) - Format: `[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ...`
+- `planning_block`: (object) **REQUIRED** (except DM mode) - choices use snake_case keys (✅ `attack_goblin` ❌ `AttackGoblin`)
   - `thinking`: Your tactical analysis
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
 - `dice_rolls`: (array) **Use code execution** (`random.randint(1,20)`) for all rolls, always show DC/AC
@@ -394,10 +394,10 @@ Long-term narrative memory. Append significant events to `custom_campaign_state.
 
 ## Time Pressure System
 
-**time_sensitive_events:** `{description, deadline, consequences, urgency_level, status, warnings_given, related_npcs}`
+**time_sensitive_events:** DICT keyed by event_id → `{description, deadline, consequences, urgency_level, status, warnings_given, related_npcs}`
 **time_pressure_warnings:** `{subtle_given, clear_given, urgent_given, last_warning_day}` (track escalation to prevent duplicate warnings)
-**npc_agendas:** `{current_goal, progress_percentage, next_milestone, blocking_factors}`
-**world_resources:** `{current_amount, max_amount, depletion_rate, depletion_unit, critical_level, consequence}` (depletion_unit: "per_day", "per_hour", "per_patient_per_day")
+**npc_agendas:** DICT keyed by npc_id → `{current_goal, progress_percentage, next_milestone, blocking_factors}`
+**world_resources:** DICT keyed by resource_id → `{current_amount, max_amount, depletion_rate, depletion_unit, critical_level, consequence}` (depletion_unit: "per_day", "per_hour", "per_patient_per_day")
 
 ## Data Schema Rules
 

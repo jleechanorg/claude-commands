@@ -71,7 +71,7 @@
 
 > **AI Directive:** Generate rich, narrative descriptions like this—NOT dry lists.
 
-**Example - Cynical Detective (ISTP, Chaotic Good):**
+**Example - Cynical Detective:** *(MBTI/alignment omitted per master_directive)*
 
 *Marcus never announces his presence. He materializes at crime scenes like smoke—cigarette already lit, eyes cataloging exit routes before victims. When the rookie asks questions, Marcus answers with silence and a raised eyebrow that says "figure it out." But watch him with grieving families: the hard edges soften. He'll crouch to child-height, produce a coin from nowhere, make it vanish while promising he'll find who did this. That promise is the only thing he keeps besides his gun clean.*
 

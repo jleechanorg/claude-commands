@@ -4,7 +4,7 @@
 - Character creation: META-GAME only, no narrative until approval
 - Options: [AIGenerated], [StandardDND], [CustomClass]
 - Require: 6 abilities, HP/AC, skills, equipment, background
-- XP by CR: 0=10, 1=200, 2=450, 3=700, 4=1100, 5=1800
+- XP by CR: 0=10, 1/8=25, 1/4=50, 1/2=100, 1=200, 2=450, 3=700, 4=1100, 5=1800
 - Combat: initiative → turns → state blocks → XP award
 /ESSENTIALS -->
 
