@@ -775,6 +775,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         llm_input = user_input  # Separate variable for LLM calls
         temporal_correction_attempts = 0
         llm_response_obj = None
+        new_world_time: dict[str, Any] | None = None
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             try:
