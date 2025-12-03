@@ -220,7 +220,7 @@ def uses_big_five(system):
     return False  # No current systems use Big Five
 
 
-def infer_provider_from_model(model_name: str) -> str:
+def infer_provider_from_model(model_name: str, provider_hint: str | None = None) -> str:
     """Infer the LLM provider from a model name.
 
     This function automatically determines which provider should be used based on
@@ -229,6 +229,7 @@ def infer_provider_from_model(model_name: str) -> str:
 
     Args:
         model_name: The model name (e.g., "gemini-2.0-flash", "meta-llama/llama-3.1-70b-instruct")
+        provider_hint: Optional provider hint to respect when model_name is unknown
 
     Returns:
         str: The provider name ("gemini", "openrouter", or "cerebras")
@@ -240,6 +241,8 @@ def infer_provider_from_model(model_name: str) -> str:
         "openrouter"
         >>> infer_provider_from_model("qwen-3-235b-a22b-instruct-2507")
         "cerebras"
+        >>> infer_provider_from_model("custom-openrouter-model", provider_hint="openrouter")
+        "openrouter"
     """
     # Check if model is in Gemini models list
     if model_name in ALLOWED_GEMINI_MODELS or model_name in GEMINI_MODEL_MAPPING:
@@ -252,6 +255,9 @@ def infer_provider_from_model(model_name: str) -> str:
     # Check if model is in Cerebras models list
     if model_name in ALLOWED_CEREBRAS_MODELS:
         return LLM_PROVIDER_CEREBRAS
+
+    if provider_hint in {LLM_PROVIDER_GEMINI, LLM_PROVIDER_OPENROUTER, LLM_PROVIDER_CEREBRAS}:
+        return provider_hint
 
     # Default to gemini if model not recognized (safe default)
     return DEFAULT_LLM_PROVIDER

@@ -69,6 +69,14 @@ class TestProviderInference(unittest.TestCase):
         provider = infer_provider_from_model(model)
         self.assertEqual(provider, DEFAULT_LLM_PROVIDER)
 
+    def test_respects_provider_hint_for_unknown_model(self):
+        """Use provider_hint when model name is unrecognized."""
+        model = "custom-openrouter-model"
+        provider = infer_provider_from_model(
+            model, provider_hint=LLM_PROVIDER_OPENROUTER
+        )
+        self.assertEqual(provider, LLM_PROVIDER_OPENROUTER)
+
     def test_infer_gemini_from_legacy_mapping(self):
         """Infer gemini provider from legacy model names in mapping."""
         # Legacy models that redirect to gemini-2.0-flash
