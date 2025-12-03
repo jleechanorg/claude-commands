@@ -84,16 +84,12 @@ ALLOWED_OPENROUTER_MODELS = [
 #   ZAI GLM 4.6: $2.25/$2.75 (preview, 131K context)
 #   Llama 3.1 405B: $6.00/$12.00 (MOST EXPENSIVE - 43x more than Maverick!)
 #
-# INTENTIONAL: Llama 4 Maverick is kept despite deprecation (Oct 15 2025) because:
-#   1. It's 43x cheaper than alternatives ($0.14 vs $6.00 input)
-#   2. Best cost/performance ratio for large-context RPG campaigns
-#   3. Still functions on Cerebras API (deprecation != removal)
+# NOTE: Llama 4 Maverick was removed from Cerebras API (Dec 2025) - model_not_found error.
 DEFAULT_CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507"
 ALLOWED_CEREBRAS_MODELS = [
     DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M
     "zai-glm-4.6",  # 131K context, $2.25/$2.75 per M (preview)
     "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
-    "llama-4-maverick-17b-128e-instruct",  # ~131K context (131,072 tokens), $0.14/$0.68 per M (INTENTIONALLY KEPT)
 ]
 
 # Context window budgeting (tokens)
@@ -112,7 +108,6 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
-    "llama-4-maverick-17b-128e-instruct": 131_072,  # ~131K context (intentionally kept)
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
@@ -134,7 +129,6 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
-    "llama-4-maverick-17b-128e-instruct": 32_000,  # Conservative 32K limit (actual ~64K; 2522 TPS)
 }
 
 # Debug mode settings
