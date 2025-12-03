@@ -64,6 +64,7 @@ from mvp_site.llm_providers import (
     gemini_provider,
     openrouter_provider,
 )
+from mvp_site.llm_providers.provider_utils import ContextTooLargeError
 from mvp_site.llm_request import LLMRequest
 from mvp_site.llm_response import LLMResponse
 
@@ -190,6 +191,42 @@ def _get_safe_context_token_budget(provider: str, model_name: str) -> int:
     return safe_tokens
 
 
+def _calculate_context_budget(
+    provider: str,
+    model_name: str,
+    is_combat_or_complex: bool = False,
+) -> tuple[int, int, int]:
+    """
+    CENTRALIZED context budget calculation for both truncation and validation.
+
+    This single function ensures truncation and validation use identical logic,
+    preventing bugs where content passes truncation but fails validation.
+
+    Args:
+        provider: LLM provider name (e.g., 'gemini', 'cerebras')
+        model_name: Model identifier
+        is_combat_or_complex: Whether combat/complex scenes need extra output reserve
+
+    Returns:
+        tuple of (safe_token_budget, output_reserve, max_input_allowed)
+        - safe_token_budget: Total safe tokens for this model (90% of context)
+        - output_reserve: Tokens reserved for output (20% of safe budget, or combat minimum)
+        - max_input_allowed: Maximum tokens allowed for input (80% of safe budget)
+    """
+    safe_token_budget = _get_safe_context_token_budget(provider, model_name)
+
+    # Use consistent 20% ratio for output reserve
+    output_reserve = int(safe_token_budget * OUTPUT_TOKEN_RESERVE_RATIO)
+
+    # For combat/complex scenes, use the larger of ratio-based or fixed reserve
+    if is_combat_or_complex:
+        output_reserve = max(output_reserve, OUTPUT_TOKEN_RESERVE_COMBAT)
+
+    max_input_allowed = safe_token_budget - output_reserve
+
+    return safe_token_budget, output_reserve, max_input_allowed
+
+
 def _get_safe_output_token_limit(
     model_name: str,
     prompt_tokens: int,
@@ -218,12 +255,16 @@ def _get_safe_output_token_limit(
     if total_input > max_input_allowed:
         # Input exceeds 80% of context - not enough room for output
         # Fail fast with a clear error instead of sending a doomed request
-        raise ValueError(
+        # Use ContextTooLargeError for proper handling in model cycling
+        raise ContextTooLargeError(
             f"Context too large for model {model_name}: "
             f"input uses {total_input:,} tokens, "
             f"max allowed is {max_input_allowed:,} tokens (80% of {safe_context:,}), "
             f"reserving {output_reserve:,} tokens (20%) for output. "
-            "Reduce prompt size or use a model with larger context window."
+            "Reduce prompt size or use a model with larger context window.",
+            prompt_tokens=total_input,
+            completion_tokens=0,
+            finish_reason="context_exceeded",
         )
 
     # Calculate remaining space for output
@@ -1188,8 +1229,15 @@ def _call_llm_api_with_model_cycling(
                     f"Model {current_model} not found (400), trying next model"
                 )
                 continue
+            # Handle ContextTooLargeError - could fallback to larger context model
+            if isinstance(e, ContextTooLargeError):
+                logging_util.warning(
+                    f"🔴 Context too large for model {current_model} "
+                    f"({e.prompt_tokens:,} tokens), trying next model with larger context"
+                )
+                continue
             # For other errors, don't continue cycling - raise immediately
-            logging_util.error(f"Non-recoverable error with model {current_model}: {e}")
+            logging_util.error(f"🔥🔴 Non-recoverable error with model {current_model}: {e}")
             raise e
 
     # If we get here, all models failed
@@ -2446,24 +2494,23 @@ def continue_story(
         f"GAME STATE:\\n{serialized_game_state}\\n\\n"
     )
 
-    # Calculate the character budget for the story context using a 90% safety margin
-    safe_token_budget = _get_safe_context_token_budget(
-        provider_selection.provider, model_to_use
+    # Calculate the character budget for the story context using CENTRALIZED budget logic
+    # This ensures truncation uses the same formula as validation in _get_safe_output_token_limit
+    is_combat_or_complex = current_game_state and (
+        current_game_state.combat_state.get("in_combat", False)
     )
+    safe_token_budget, output_token_reserve, max_input_allowed = _calculate_context_budget(
+        provider_selection.provider, model_to_use, is_combat_or_complex
+    )
+
     scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
     # Add buffer for entity tracking and other minor prompt components
     # Reduced from 30% to 15% since we now measure all major components in scaffold
     scaffold_tokens = int(scaffold_tokens_raw * 1.15)  # 15% buffer for unmeasured components
 
-    # Dynamic output reserve based on game mode
-    # Combat/complex scenes need more output tokens for detailed mechanics
-    is_combat_or_complex = current_game_state and (
-        current_game_state.combat_state.get("in_combat", False)
-    )
-    output_token_reserve = (
-        OUTPUT_TOKEN_RESERVE_COMBAT if is_combat_or_complex else OUTPUT_TOKEN_RESERVE_DEFAULT
-    )
-    available_story_tokens = max(0, safe_token_budget - output_token_reserve - scaffold_tokens)
+    # Use max_input_allowed from centralized budget (accounts for output reserve)
+    # Then subtract scaffold tokens to get available story budget
+    available_story_tokens = max(0, max_input_allowed - scaffold_tokens)
     char_budget_for_story = available_story_tokens * 4
 
     # Calculate story context tokens
