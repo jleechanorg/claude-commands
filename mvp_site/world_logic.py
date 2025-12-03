@@ -274,6 +274,11 @@ def _build_temporal_warning_message(
 ) -> str | None:
     """Build user-facing temporal warning text based on attempts taken."""
 
+    # When retries are disabled (MAX=0), we surface the anomaly earlier via
+    # god_mode_response and skip legacy warning text entirely.
+    if MAX_TEMPORAL_CORRECTION_ATTEMPTS == 0:
+        return None
+
     if temporal_correction_attempts <= 0:
         return None
 
@@ -857,7 +862,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Add temporal violation error as god_mode_response for user-facing display
         # Note: new_world_time is already extracted in the temporal validation loop above
-        temporal_violation_detected = _check_temporal_violation(old_world_time, new_world_time)
+        temporal_violation_detected = _check_temporal_violation(
+            old_world_time, new_world_time
+        )
 
         if temporal_violation_detected and not is_god_mode:
             old_time_str = _format_world_time_for_prompt(old_world_time)
@@ -877,7 +884,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"⚠️ TEMPORAL_VIOLATION surfaced to user: {new_time_str} < {old_time_str}"
             )
 
-            prevention_extras["temporal_correction_warning"] = prevention_extras["god_mode_response"]
+            prevention_extras["temporal_correction_warning"] = prevention_extras[
+                "god_mode_response"
+            ]
             prevention_extras["temporal_correction_attempts"] = 1
 
         # Add temporal correction warning if corrections were needed (legacy path when retries enabled)
