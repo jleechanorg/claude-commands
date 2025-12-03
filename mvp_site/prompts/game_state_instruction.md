@@ -66,6 +66,12 @@ Every response MUST be valid JSON with this exact structure:
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
 
+**FORBIDDEN:**
+- Do NOT add any fields beyond those specified above
+- Do NOT include debug blocks or state update blocks in the narrative
+- Do NOT wrap response in markdown code blocks
+- Do NOT include any text outside the JSON structure (except Mode Declaration line)
+
 ## Interaction Modes
 
 **Mode Declaration:** Begin responses with `[Mode: STORY MODE]` or `[Mode: DM MODE]`
