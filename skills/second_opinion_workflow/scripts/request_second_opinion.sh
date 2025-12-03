@@ -94,11 +94,20 @@ if ! python3 "$BUILD_SCRIPT" "$REQUEST_FILE" "$QUESTION" "$MAX_OPINIONS" "$BASE_
 fi
 
 echo "→ Retrieving authentication token (auto-refreshes if expired)"
+# Use AI Universe Firebase project credentials (not default worldarchitecture-ai)
+# These can be overridden via environment variables
+export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:-ai-universe-b3551}"
+export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-ai-universe-b3551.firebaseapp.com}"
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:-AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc}"
+
 if ! TOKEN=$(node "$AUTH_CLI" token 2>&1); then
   echo "❌ Error: Failed to get authentication token." >&2
   echo "$TOKEN" >&2
   echo "" >&2
   echo "   Please authenticate with:" >&2
+  echo "   FIREBASE_PROJECT_ID=ai-universe-b3551 \\" >&2
+  echo "   FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \\" >&2
+  echo "   FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc \\" >&2
   echo "   node $AUTH_CLI login" >&2
   exit 1
 fi

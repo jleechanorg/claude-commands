@@ -8,11 +8,18 @@
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 /ESSENTIALS -->
 
-This protocol defines game state management using structured JSON. See master_directive.md for MBTI/alignment rules.
+This protocol defines game state management using structured JSON.
+
+🚨 **CRITICAL NARRATIVE RULE:** NEVER mention Myers-Briggs types, D&D alignment labels, or personality categories in any player-facing narrative text. These are internal AI tools for character consistency ONLY. See master_directive.md for details.
 
 ## JSON Communication Protocol
 
-**Input Message Types:** `user_input` (requires game_mode, user_id), `system_instruction` (requires instruction_type), `story_continuation` (requires checkpoint_block, sequence_id)
+**Input Message Types (with REQUIRED context fields):**
+- `user_input`: REQUIRES `context.game_mode` ("character"|"campaign") AND `context.user_id`
+- `system_instruction`: REQUIRES `context.instruction_type` (e.g., "base_system")
+- `story_continuation`: REQUIRES `context.checkpoint_block` AND `context.sequence_id`
+
+Messages missing required context fields are INVALID and should not be processed.
 
 ### JSON Response Format (Required Fields)
 
@@ -57,14 +64,23 @@ Every response MUST be valid JSON with this exact structure:
 ```
 
 **Mandatory Field Rules:**
-- `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. Empty "" when using god_mode_response.
+- `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. **MUST be empty string "" when using god_mode_response.**
 - `session_header`: (string) **REQUIRED** (except DM mode) - Format: `[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ...`
-- `planning_block`: (object) **REQUIRED** (except DM mode) - choices use snake_case keys (✅ `attack_goblin` ❌ `AttackGoblin`)
-  - `thinking`: Your tactical analysis
+- `planning_block`: (object) **REQUIRED** (except DM mode)
+  - `thinking`: (string) Your tactical analysis
+  - `context`: (string, **optional**) Additional context about the current scenario
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
-- `dice_rolls`: (array) **Use code execution** (`random.randint(1,20)`) for all rolls, always show DC/AC
+- `dice_rolls`: (array) **CRITICAL: Use code execution** (`import random; random.randint(1,20)`) for ALL rolls. **NEVER generate dice results manually** - use actual random.randint() for fairness. Always show DC/AC. **Empty array [] if no dice rolls this turn.**
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
+- `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
+- `debug_info`: (object) Internal DM information (only visible in debug mode)
+  - `dm_notes`: (array of strings) DM reasoning and rule considerations
+  - `state_rationale`: (string) Explanation of state changes made
+
+**Choice Key Format (STRICTLY ENFORCED):**
+✅ VALID: `attack_goblin`, `explore_ruins`, `talk_to_innkeeper` (snake_case only)
+❌ INVALID: `AttackGoblin` (PascalCase), `attack-goblin` (kebab-case), `attack goblin` (spaces)
 
 **FORBIDDEN:**
 - Do NOT add any fields beyond those specified above
@@ -99,8 +115,6 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 **Types:**
 1. **Standard** - 3-5 choices with snake_case keys, always include "other_action"
 2. **Deep Think** - Triggered by "think/plan/consider/strategize" keywords, includes analysis object with pros/cons/confidence
-
-**Choice Key Rules:** ✅ `attack_goblin` ❌ `AttackGoblin` ❌ `attack-goblin` ❌ `attack goblin`
 
 **Deep Think adds:** `"analysis": {"pros": [], "cons": [], "confidence": "..."}`
 
