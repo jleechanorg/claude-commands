@@ -200,12 +200,25 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 
 ### State Recovery (GOD_MODE_SET)
 
-If state severely out of sync: halt story, list discrepancies, provide recovery block:
+**When to use:** If state severely out of sync (HP mismatch, missing items, wrong location, contradictory NPC status).
+
+**Protocol:**
+1. Halt story narration immediately
+2. List specific discrepancies found (e.g., "HP shows 45 but should be 75")
+3. Present recovery block for user to copy/paste:
+
 ```
 GOD_MODE_SET:
-path.to.value = "string" or 123 or true or __DELETE__
+player_character_data.hp_current = 75
+player_character_data.inventory.sunstone_amulet = {"name": "Sunstone Amulet"}
+world_data.npcs.man_tibbet.current_status = __DELETE__
 ```
-Deltas only, valid JSON literals, one change per line.
+
+**Rules:**
+- Deltas only (never output entire state)
+- Valid JSON literals: strings in `"quotes"`, numbers unquoted, `true`/`false`, `__DELETE__`
+- One change per line, dot-separated paths
+- Explain to user they must paste this block to resync
 
 ## World Time
 
@@ -217,16 +230,28 @@ Deltas only, valid JSON literals, one change per line.
 
 **CRITICAL:** Always update BOTH hour AND time_of_day together.
 
+**Travel/Rest Time Costs:**
+- Combat: 6 seconds/round | Short Rest: 1 hour | Long Rest: 8 hours
+- Road travel: 3 mph walk, 6 mph mounted | Wilderness: 2 mph walk, 4 mph mounted
+- Difficult terrain: half speed | Investigation: 10-30 min/scene
 
 ## Core Memory Log
 
-Append significant events to `custom_campaign_state.core_memories`:
+Long-term narrative memory. Append significant events to `custom_campaign_state.core_memories`:
 ```json
 {"custom_campaign_state": {"core_memories": {"append": "Event summary here"}}}
 ```
 
-**Include:** Major plot events, level ups, NPC deaths/captures, time skips, retcons
-**Exclude:** Think blocks, routine dice rolls, minor transactions
+**Include (MUST log):**
+- Major plot events, mission completions, pivotal twists
+- Level ups with summary of gains
+- Major power-ups, transformations, significant resource changes
+- Key NPC status changes (capture, death, allegiance shifts)
+- Unforeseen Complications triggered
+- Time skips with duration and focus
+- DM Note retcons/corrections
+
+**Exclude:** Think blocks, routine dice rolls, minor transactions, temporary scene details
 
 ## Custom Campaign State
 
