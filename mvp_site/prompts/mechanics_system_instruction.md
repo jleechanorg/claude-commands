@@ -125,6 +125,8 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 
 **Player Agency Bonus:** +50% for player-initiated solutions.
 
+**🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.xp_current`. If XP crosses level threshold, also update `level` and recalculate `xp_next_level`.
+
 ### XP Progression Table
 
 | Lvl | Total XP | To Next | | Lvl | Total XP | To Next |
