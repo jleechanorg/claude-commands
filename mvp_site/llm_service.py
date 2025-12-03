@@ -18,7 +18,7 @@ Architecture:
 - Uses Google Generative AI (Gemini) for story generation
 - Implements robust prompt building with PromptBuilder class
 - Provides entity tracking with multiple mitigation strategies
-- Includes comprehensive error handling and model cycling
+- Includes comprehensive error handling
 - Supports both initial story generation and continuation
 - Manages complex state interactions and validation
 
@@ -65,7 +65,7 @@ from mvp_site.llm_providers import (
     openrouter_provider,
 )
 from mvp_site.llm_providers.provider_utils import ContextTooLargeError
-from mvp_site.llm_request import LLMRequest
+from mvp_site.llm_request import LLMRequest, LLMRequestError
 from mvp_site.llm_response import LLMResponse
 
 # Removed old json_input_schema import - now using LLMRequest for structured JSON
@@ -120,24 +120,6 @@ class ProviderSelection:
     model: str
 
 
-# Model cycling order for 503 errors - try these in sequence
-# CRITICAL: Only include models that support code_execution + JSON mode
-# Gemini 2.5 models are EXCLUDED - they don't support this combination
-MODEL_FALLBACK_CHAIN: list[str] = [
-    "gemini-3-pro-preview",  # Primary: Official support (preview feature)
-    "gemini-2.0-flash",  # Fallback: Works but unofficial
-    "gemini-2.0-flash-exp",  # Secondary fallback
-]
-
-# Ordered by increasing provider capability for context-too-large fallbacks
-CONTEXT_FALLBACK_CHAIN: list[ProviderSelection] = [
-    ProviderSelection(constants.LLM_PROVIDER_GEMINI, "gemini-3-pro-preview"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "x-ai/grok-4.1-fast:free"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "z-ai/glm-4.6"),
-    ProviderSelection(constants.LLM_PROVIDER_OPENROUTER, "meta-llama/llama-3.1-405b-instruct"),
-    ProviderSelection(constants.LLM_PROVIDER_CEREBRAS, "qwen-3-235b-a22b-instruct-2507"),
-]
-
 # No longer using pro model for any inputs
 
 # Gemini 2.5 Flash OUTPUT token limits (corrected based on updated specs)
@@ -177,6 +159,14 @@ OUTPUT_TOKEN_RESERVE_DEFAULT: int = 12_000  # Typical responses are 1-3k tokens
 OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
 OUTPUT_TOKEN_RESERVE_MIN: int = 1024
 OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output tokens
+
+# Entity tracking token reserves - these are added AFTER truncation so must be pre-budgeted
+# Sizes based on production data with 10+ NPCs:
+# - entity_preload_text: ~2000-3000 tokens (NPC summaries)
+# - entity_specific_instructions: ~1500-2000 tokens (per-turn instructions)
+# - entity_tracking_instruction: ~1000-1500 tokens (tracking rules)
+# - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
+ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
 
 
 def _get_model_context_window(model_name: str) -> int:
@@ -270,7 +260,7 @@ def _get_safe_output_token_limit(
     if total_input > max_input_allowed:
         # Input exceeds 80% of context - not enough room for output
         # Fail fast with a clear error instead of sending a doomed request
-        # Use ContextTooLargeError for proper handling in model cycling
+        # Use ContextTooLargeError for consistent upstream handling
         raise ContextTooLargeError(
             f"Context too large for model {model_name}: "
             f"input uses {total_input:,} tokens, "
@@ -1086,7 +1076,7 @@ def _call_llm_api_with_llm_request(
     json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
 
     # Send the structured JSON as string to the API
-    return _call_llm_api_with_model_cycling(
+    return _call_llm_api(
         [json_string],  # Send JSON as formatted string
         model_name,
         f"LLMRequest: {gemini_request.user_action[:100]}...",  # Logging
@@ -1095,7 +1085,7 @@ def _call_llm_api_with_llm_request(
     )
 
 
-def _call_llm_api_with_model_cycling(
+def _call_llm_api(
     prompt_contents: list[Any],
     model_name: str,
     current_prompt_text_for_logging: str | None = None,
@@ -1103,9 +1093,10 @@ def _call_llm_api_with_model_cycling(
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
-    Calls the configured LLM provider with Gemini-style model cycling on 503 errors.
-    Tries the requested model first, then cycles through fallback models when using Gemini.
-    Always uses JSON mode for structured responses.
+    Calls the configured LLM provider without fallback or retry behavior.
+
+    Errors such as context overflow or provider overload surface immediately
+    as LLMRequestError for user-facing handling.
 
     Args:
         prompt_contents: The content to send to the API
@@ -1114,18 +1105,8 @@ def _call_llm_api_with_model_cycling(
         system_instruction_text: System instructions (optional)
 
     Returns:
-        Gemini API response object with JSON response
+        Provider-specific response object (Gemini, OpenRouter, or Cerebras)
     """
-    # Create ordered list starting with requested model, then fallbacks
-    models_to_try: list[ProviderSelection] = [
-        ProviderSelection(provider_name, model_name)
-    ]
-    if provider_name == constants.LLM_PROVIDER_GEMINI:
-        for fallback_model in MODEL_FALLBACK_CHAIN:
-            selection = ProviderSelection(constants.LLM_PROVIDER_GEMINI, fallback_model)
-            if selection not in models_to_try:
-                models_to_try.append(selection)
-
     if current_prompt_text_for_logging:
         logging_util.info(
             f"Calling LLM API with prompt: {str(current_prompt_text_for_logging)[:500]}..."
@@ -1146,147 +1127,93 @@ def _call_llm_api_with_model_cycling(
     combined_text = " ".join(all_prompt_text)
     log_with_tokens("Calling LLM API", combined_text, logging_util)
 
-    last_error: Exception | None = None
-
-    attempt = 0
-    while attempt < len(models_to_try):
-        current_selection = models_to_try[attempt]
-        current_model = current_selection.model
-        current_provider = current_selection.provider
-        try:
-            prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
-                prompt_contents, system_instruction_text, current_provider, current_model
-            )
-            # Log token count for the current model being tried
-            _log_token_count(
-                current_model,
-                prompt_contents,
-                system_instruction_text,
-                current_provider,
-            )
-
-            if attempt > 0:
-                logging_util.warning(
-                    f"Attempting fallback provider/model: {current_provider}/{current_model}"
-                )
-            else:
-                logging_util.info(
-                    f"Calling LLM provider/model: {current_provider}/{current_model}"
-                )
-
-            safe_output_limit = _get_safe_output_token_limit(
-                current_model,
-                prompt_tokens,
-                system_tokens,
-            )
-
-            if current_provider == constants.LLM_PROVIDER_GEMINI:
-                response = gemini_provider.generate_json_mode_content(
-                    prompt_contents=prompt_contents,
-                    model_name=current_model,
-                    system_instruction_text=system_instruction_text,
-                    max_output_tokens=safe_output_limit,
-                    temperature=TEMPERATURE,
-                    safety_settings=SAFETY_SETTINGS,
-                    json_mode_max_output_tokens=safe_output_limit,
-                )
-            elif current_provider == constants.LLM_PROVIDER_OPENROUTER:
-                response = openrouter_provider.generate_content(
-                    prompt_contents=prompt_contents,
-                    model_name=current_model,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                )
-            elif current_provider == constants.LLM_PROVIDER_CEREBRAS:
-                response = cerebras_provider.generate_content(
-                    prompt_contents=prompt_contents,
-                    model_name=current_model,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                )
-            else:
-                raise ValueError(f"Unsupported provider: {current_provider}")
-
-            if attempt > 0:
-                logging_util.info(
-                    f"Fallback model {current_model} ({current_provider}) succeeded"
-                )
-
-            return response
-
-        except Exception as e:
-            last_error = e
-            error_message = str(e)
-
-            # Try to extract status code from different exception types
-            status_code = None
-
-            # Check if the exception has a status_code attribute
-            if hasattr(e, "status_code"):
-                status_code = getattr(e, "status_code", None)
-            elif hasattr(e, "response") and hasattr(e.response, "status_code"):
-                status_code = getattr(e.response, "status_code", None)
-            # Check if it's a ServerError with the status in the message
-            elif "503 UNAVAILABLE" in error_message:
-                status_code = 503
-            elif "429" in error_message:
-                status_code = 429
-            elif "400" in error_message and "not found" in error_message.lower():
-                status_code = 400
-
-            if status_code == 503:  # Service unavailable
-                logging_util.warning(
-                    f"Model {current_model} overloaded (503), trying next model"
-                )
-                attempt += 1
-                continue
-            if status_code == 429:  # Rate limit
-                logging_util.warning(
-                    f"Model {current_model} rate limited (429), trying next model"
-                )
-                attempt += 1
-                continue
-            if (
-                status_code == 400 and "not found" in error_message.lower()
-            ):  # Model not found
-                logging_util.warning(
-                    f"Model {current_model} not found (400), trying next model"
-                )
-                attempt += 1
-                continue
-            # Handle ContextTooLargeError - could fallback to larger context model
-            if isinstance(e, ContextTooLargeError):
-                logging_util.warning(
-                    f"🔴 Context too large for model {current_model} "
-                    f"({e.prompt_tokens:,} tokens), trying next model with larger context"
-                )
-                current_window = _get_model_context_window(current_model)
-                for selection in CONTEXT_FALLBACK_CHAIN:
-                    target_window = _get_model_context_window(selection.model)
-                    if (
-                        selection not in models_to_try
-                        and target_window > current_window
-                    ):
-                        models_to_try.append(selection)
-                attempt += 1
-                continue
-            # For other errors, don't continue cycling - raise immediately
-            logging_util.error(f"🔥🔴 Non-recoverable error with model {current_model}: {e}")
-            raise e
-        attempt += 1
-
-    # If we get here, all models failed
-    logging_util.error(f"All models failed: {models_to_try}")
-    logging_util.error(f"Last error: {last_error}")
-
-    # Ensure we have a meaningful error to raise
-    if last_error is None:
-        raise RuntimeError(
-            f"All {len(models_to_try)} Gemini models failed but no specific error was captured"
+    current_selection = ProviderSelection(provider_name, model_name)
+    try:
+        prompt_tokens, system_tokens = _calculate_prompt_and_system_tokens(
+            prompt_contents, system_instruction_text, provider_name, model_name
         )
-    raise last_error
+        _log_token_count(
+            model_name,
+            prompt_contents,
+            system_instruction_text,
+            provider_name,
+        )
+
+        logging_util.info(
+            f"Calling LLM provider/model: {provider_name}/{model_name}"
+        )
+
+        safe_output_limit = _get_safe_output_token_limit(
+            model_name,
+            prompt_tokens,
+            system_tokens,
+        )
+
+        if provider_name == constants.LLM_PROVIDER_GEMINI:
+            return gemini_provider.generate_json_mode_content(
+                prompt_contents=prompt_contents,
+                model_name=model_name,
+                system_instruction_text=system_instruction_text,
+                max_output_tokens=safe_output_limit,
+                temperature=TEMPERATURE,
+                safety_settings=SAFETY_SETTINGS,
+                json_mode_max_output_tokens=safe_output_limit,
+            )
+        if provider_name == constants.LLM_PROVIDER_OPENROUTER:
+            return openrouter_provider.generate_content(
+                prompt_contents=prompt_contents,
+                model_name=model_name,
+                system_instruction_text=system_instruction_text,
+                temperature=TEMPERATURE,
+                max_output_tokens=safe_output_limit,
+            )
+        if provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            return cerebras_provider.generate_content(
+                prompt_contents=prompt_contents,
+                model_name=model_name,
+                system_instruction_text=system_instruction_text,
+                temperature=TEMPERATURE,
+                max_output_tokens=safe_output_limit,
+            )
+        raise ValueError(f"Unsupported provider: {provider_name}")
+    except ContextTooLargeError as e:
+        logging_util.error(
+            "Context too large for selected model. "
+            "Reduce prompt size or choose a model with a larger context window."
+        )
+        raise LLMRequestError(str(e), status_code=422) from e
+    except ValueError as e:
+        message = str(e)
+        if "context" in message.lower() or "too large" in message.lower():
+            raise LLMRequestError(message, status_code=422) from e
+        raise
+    except Exception as e:
+        error_message = str(e)
+        status_code = None
+
+        if hasattr(e, "status_code"):
+            status_code = e.status_code
+        elif hasattr(e, "response") and hasattr(e.response, "status_code"):
+            status_code = e.response.status_code
+        elif "503" in error_message:
+            status_code = 503
+        elif "429" in error_message:
+            status_code = 429
+
+        if status_code in (503, 429):
+            human_reason = "service unavailable" if status_code == 503 else "rate limited"
+            logging_util.error(
+                f"Provider {current_selection.provider}/{current_selection.model} {human_reason}: {error_message}"
+            )
+            raise LLMRequestError(
+                f"LLM provider error ({status_code}): {human_reason}. Please try again shortly.",
+                status_code=status_code,
+            ) from e
+
+        logging_util.error(
+            f"🔥🔴 Non-recoverable error with model {current_selection.model}: {e}"
+        )
+        raise
 
 
 def _call_llm_api_with_json_structure(
@@ -1358,7 +1285,7 @@ def _call_llm_api_with_json_structure(
         prompt_content = json.dumps(json_input, indent=2)
 
     # Call the existing API with structured content
-    return _call_llm_api_with_model_cycling(
+    return _call_llm_api(
         [prompt_content],
         model_name,
         f"Structured JSON: {message_type}",  # for logging
@@ -1463,7 +1390,7 @@ def _call_llm_api_with_json_schema(
     else:
         # For unknown message types, use basic structure that bypasses validation
         # by directly formatting for Gemini API without JSON schema validation
-        return _call_llm_api_with_model_cycling(
+        return _call_llm_api(
             [content],  # Direct string content bypass
             model_name,
             content,  # for logging
@@ -1476,39 +1403,6 @@ def _call_llm_api_with_json_schema(
         model_name,
         system_instruction_text,
     )
-
-
-def _call_llm_api(
-    prompt_contents: list[Any],
-    model_name: str,
-    current_prompt_text_for_logging: str | None = None,
-    system_instruction_text: str | None = None,
-    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
-) -> Any:
-    """
-    Call LLM API with model cycling on errors.
-
-    This function always uses JSON mode for consistent structured responses.
-
-    Args:
-        prompt_contents: The content to send to the API
-        model_name: Primary model to try first
-        current_prompt_text_for_logging: Text for logging purposes (optional)
-        system_instruction_text: System instructions (optional)
-        provider_name: LLM provider to use (gemini, openrouter, cerebras)
-
-    Returns:
-        LLM API response object with JSON response
-    """
-    return _call_llm_api_with_model_cycling(
-        prompt_contents,
-        model_name,
-        current_prompt_text_for_logging,
-        system_instruction_text,
-        provider_name,
-    )
-
-
 def _get_text_from_response(response: Any) -> str:
     """Safely extracts text from a Gemini response object."""
     try:
@@ -1957,6 +1851,37 @@ def get_initial_story(
     # Parse the structured response to extract clean narrative and debug data
     narrative_text, structured_response = parse_structured_response(raw_response_text)
 
+    # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
+    logging_util.info(
+        f"📊 PARSED_RESPONSE (initial_story): narrative_length={len(narrative_text)}, "
+        f"structured_response={'present' if structured_response else 'None'}, "
+        f"raw_response_length={len(raw_response_text)}"
+    )
+    if len(narrative_text) == 0:
+        # Include preview suffix only if response was truncated
+        raw_preview = raw_response_text[:500]
+        preview_suffix = "..." if len(raw_response_text) > 500 else ""
+        logging_util.warning(
+            f"⚠️ EMPTY_NARRATIVE (initial_story): LLM returned empty narrative. "
+            f"Raw response preview: {raw_preview}{preview_suffix}"
+        )
+        # Log structured response fields if available (consistent with continue_story)
+        if structured_response:
+            has_planning = bool(
+                structured_response.planning_block
+                if hasattr(structured_response, "planning_block")
+                else False
+            )
+            has_session = bool(
+                structured_response.session_header
+                if hasattr(structured_response, "session_header")
+                else False
+            )
+            logging_util.warning(
+                f"⚠️ EMPTY_NARRATIVE (initial_story): structured_response has "
+                f"planning_block={has_planning}, session_header={has_session}"
+            )
+
     # Create LLMResponse with proper debug content separation
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
@@ -1983,9 +1908,10 @@ def get_initial_story(
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
 
-    # Log LLMResponse creation for debugging
-    logging_util.debug(
-        f"Created LLMResponse with narrative_text length: {len(gemini_response.narrative_text)}"
+    # Log LLMResponse creation - INFO level for production visibility
+    logging_util.info(
+        f"📝 FINAL_RESPONSE (initial_story): narrative_length={len(gemini_response.narrative_text)}, "
+        f"has_structured_response={gemini_response.structured_response is not None}"
     )
 
     # Companion validation (moved from world_logic.py for proper SRP)
@@ -2541,9 +2467,11 @@ def continue_story(
     )
 
     scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
-    # Add buffer for entity tracking and other minor prompt components
-    # Reduced from 30% to 15% since we now measure all major components in scaffold
-    scaffold_tokens = int(scaffold_tokens_raw * 1.15)  # 15% buffer for unmeasured components
+    # FIX: Add explicit reserve for entity tracking tokens that are added AFTER truncation
+    # The old 15% buffer was insufficient (~2700 tokens) vs entity overhead (~3500-10500 tokens)
+    # Entity tracking includes: entity_preload_text, entity_specific_instructions,
+    # entity_tracking_instruction, and timeline_log - all generated AFTER truncation
+    scaffold_tokens = scaffold_tokens_raw + ENTITY_TRACKING_TOKEN_RESERVE
 
     # Use max_input_allowed from centralized budget (accounts for output reserve)
     # Then subtract scaffold tokens to get available story budget
@@ -2557,7 +2485,7 @@ def continue_story(
     reserve_mode = "combat" if is_combat_or_complex else "normal"
     logging_util.info(
         f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
-        f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+15%), "
+        f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+entity_reserve:{ENTITY_TRACKING_TOKEN_RESERVE}), "
         f"output_reserve={output_token_reserve}tk ({reserve_mode}), story_budget={available_story_tokens}tk, "
         f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
@@ -2693,6 +2621,37 @@ def continue_story(
     structured_response: NarrativeResponse | None
     narrative_text, structured_response = parse_structured_response(raw_response_text)
 
+    # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
+    logging_util.info(
+        f"📊 PARSED_RESPONSE: narrative_length={len(narrative_text)}, "
+        f"structured_response={'present' if structured_response else 'None'}, "
+        f"raw_response_length={len(raw_response_text)}"
+    )
+    if len(narrative_text) == 0:
+        # Include preview suffix only if response was truncated
+        raw_preview = raw_response_text[:500]
+        preview_suffix = "..." if len(raw_response_text) > 500 else ""
+        logging_util.warning(
+            f"⚠️ EMPTY_NARRATIVE: LLM returned empty narrative. "
+            f"Raw response preview: {raw_preview}{preview_suffix}"
+        )
+        # Log structured response fields if available
+        if structured_response:
+            has_planning = bool(
+                structured_response.planning_block
+                if hasattr(structured_response, "planning_block")
+                else False
+            )
+            has_session = bool(
+                structured_response.session_header
+                if hasattr(structured_response, "session_header")
+                else False
+            )
+            logging_util.warning(
+                f"⚠️ EMPTY_NARRATIVE: structured_response has planning_block={has_planning}, "
+                f"session_header={has_session}"
+            )
+
     # Create LLMResponse with proper debug content separation
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
@@ -2744,9 +2703,10 @@ def continue_story(
     # The structured_response is now the authoritative source, response_text is for backward compatibility only
     # The frontend uses gemini_response.structured_response directly, not narrative_text
 
-    # Log LLMResponse creation for debugging
-    logging_util.debug(
-        f"Created LLMResponse with narrative_text length: {len(gemini_response.narrative_text)}"
+    # Log LLMResponse creation - INFO level for production visibility
+    logging_util.info(
+        f"📝 FINAL_RESPONSE: narrative_length={len(gemini_response.narrative_text)}, "
+        f"has_structured_response={gemini_response.structured_response is not None}"
     )
 
     # Return our custom LLMResponse object (not raw API response)

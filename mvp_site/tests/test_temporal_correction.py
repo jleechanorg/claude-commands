@@ -2,7 +2,12 @@
 Tests for temporal correction loop to ensure player input preservation.
 
 This test verifies that when the LLM generates a backward time jump,
-the correction loop does NOT overwrite the original player input.
+the original player input is always preserved and saved to Firestore.
+
+NOTE: Temporal corrections are currently DISABLED (MAX_TEMPORAL_CORRECTION_ATTEMPTS=0)
+to reduce multiple LLM calls. This test verifies the core behavior still works:
+- Original player input is preserved
+- Backward time responses are accepted without retry
 """
 
 from unittest.mock import MagicMock, patch
@@ -17,14 +22,14 @@ from mvp_site.llm_response import LLMResponse
 @pytest.mark.asyncio
 async def test_temporal_correction_preserves_original_user_input():
     """
-    RED TEST: Verify that temporal correction does not corrupt player input history.
+    Verify that player input is preserved even when LLM generates backward time.
 
-    Scenario:
+    With temporal corrections DISABLED (MAX_TEMPORAL_CORRECTION_ATTEMPTS=0):
     1. Player inputs: "Can I subjugate Tiamat?"
     2. LLM generates backward time (15:15 -> 15:00)
-    3. Correction loop should send correction prompt to LLM
-    4. But original "Can I subjugate Tiamat?" must be saved to Firestore
-    5. NOT the correction prompt
+    3. System accepts the response (no retry) but logs a warning
+    4. Original "Can I subjugate Tiamat?" must be saved to Firestore
+    5. Only 1 LLM call is made (no correction retries)
     """
     # Setup
     user_id = "test_user_123"
@@ -102,12 +107,12 @@ async def test_temporal_correction_preserves_original_user_input():
         )
         mock_firestore.get_user_settings.return_value = {}
 
-        # LLM returns backward time first, then corrected
-        mock_llm.continue_story.side_effect = [backward_response, corrected_response]
+        # With corrections disabled, LLM only returns backward time response (no retry)
+        mock_llm.continue_story.return_value = backward_response
 
-        # Preventive guards passthrough
+        # Preventive guards passthrough - uses backward_response since no correction happens
         mock_guards.enforce_preventive_guards.return_value = (
-            corrected_response.get_state_updates(),
+            backward_response.get_state_updates(),
             {},
         )
 
@@ -141,7 +146,7 @@ async def test_temporal_correction_preserves_original_user_input():
                 side_effect=mock_to_thread,
             ),
         ):
-            await world_logic.process_action_unified(request_data)
+            result = await world_logic.process_action_unified(request_data)
 
     # ASSERTIONS
     # 1. Should have saved exactly one user input (not multiple)
@@ -166,15 +171,27 @@ async def test_temporal_correction_preserves_original_user_input():
         "FAIL: Correction prompt text leaked into saved player input!"
     )
 
-    # 4. Verify LLM was called twice (initial + correction)
-    assert mock_llm.continue_story.call_count == 2, (
-        f"Expected 2 LLM calls (initial + correction), got {mock_llm.continue_story.call_count}"
+    # 4. Verify LLM was called only ONCE (corrections disabled)
+    assert mock_llm.continue_story.call_count == 1, (
+        f"Expected 1 LLM call (corrections disabled), got {mock_llm.continue_story.call_count}"
     )
 
-    # 5. Verify second call received correction prompt
-    second_call_args = mock_llm.continue_story.call_args_list[1]
+    # 5. Verify the single call received the ORIGINAL player input (not correction prompt)
+    single_call_args = mock_llm.continue_story.call_args_list[0]
     # continue_story(user_input, mode, story_context, ...) - first positional arg is user_input
-    second_call_input = second_call_args[0][0]
-    assert "TEMPORAL VIOLATION" in second_call_input, (
-        "Second LLM call should have received correction prompt"
+    call_input = single_call_args[0][0]
+    assert call_input == original_player_input, (
+        f"LLM should receive original player input, got: {call_input}"
+    )
+
+    # 6. Verify god_mode_response contains temporal anomaly warning for user
+    assert "god_mode_response" in result, (
+        "Expected god_mode_response in result when temporal violation occurs"
+    )
+    god_mode_response = result["god_mode_response"]
+    assert "TEMPORAL ANOMALY DETECTED" in god_mode_response, (
+        f"god_mode_response should contain temporal anomaly warning, got: {god_mode_response}"
+    )
+    assert "time moved backward" in god_mode_response, (
+        "god_mode_response should explain time moved backward"
     )
