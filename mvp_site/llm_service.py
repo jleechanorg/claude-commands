@@ -1105,7 +1105,7 @@ def _call_llm_api(
         system_instruction_text: System instructions (optional)
 
     Returns:
-        Gemini API response object with JSON response
+        Provider-specific response object (Gemini, OpenRouter, or Cerebras)
     """
     if current_prompt_text_for_logging:
         logging_util.info(
@@ -1192,9 +1192,9 @@ def _call_llm_api(
         status_code = None
 
         if hasattr(e, "status_code"):
-            status_code = getattr(e, "status_code", None)
+            status_code = e.status_code
         elif hasattr(e, "response") and hasattr(e.response, "status_code"):
-            status_code = getattr(e.response, "status_code", None)
+            status_code = e.response.status_code
         elif "503" in error_message:
             status_code = 503
         elif "429" in error_message:
