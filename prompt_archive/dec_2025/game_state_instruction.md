@@ -71,9 +71,6 @@ Every response MUST be valid JSON with this exact structure:
   - `context`: (string, **optional**) Additional context about the current scenario
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
 - `dice_rolls`: (array) **CRITICAL: Use code execution** (`import random; random.randint(1,20)`) for ALL rolls. **NEVER generate dice results manually** - use actual random.randint() for fairness. Always show DC/AC. **Empty array [] if no dice rolls this turn.**
-  - **Attack:** `"Attack roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit)"`
-  - **Damage:** `"Damage: 1d8+3 = 6+3 = 9 slashing"`
-  - **Advantage:** `"Attack (advantage): 1d20+5 = [14, 8]+5 = 19 (took higher) vs AC 15 (Hit)"`
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
@@ -100,15 +97,6 @@ Every response MUST be valid JSON with this exact structure:
 | **STORY** | In-character gameplay | All fields required, narrative = story only |
 | **DM** | Meta-discussion, rules | No session_header/planning_block needed |
 | **GOD** | Triggered by "GOD MODE:" prefix | Begin with `[Mode: GOD MODE]`, use god_mode_response field, include "god:" prefixed choices, always include "god:return_story" |
-
-**GOD MODE Choices Example:**
-```json
-"choices": {
-  "god:set_hp": {"text": "Set HP", "description": "Modify character HP", "risk_level": "safe"},
-  "god:spawn_npc": {"text": "Spawn NPC", "description": "Create new entity", "risk_level": "safe"},
-  "god:return_story": {"text": "Return to Story", "description": "Exit GOD MODE", "risk_level": "safe"}
-}
-```
 
 ## Session Header Format
 
@@ -261,16 +249,6 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 
 **Track:** HP, XP, inventory, quest status, relationships, locations (objective facts)
 **Don't Track:** Feelings, descriptions, temporary scene details (narrative content)
-
-**Separation Example:**
-```json
-{
-  "narrative": "Kira deflects the goblin's blow and drives her blade home. The creature crumples.",
-  "planning_block": { "options": { "1_loot_body": "Search the goblin", "2_press_on": "Continue deeper" } },
-  "state_updates": { "combat_state": { "goblin_1": { "hp_current": 0, "status": "dead" } } }
-}
-```
-*Narrative = prose. Planning = choices. State = facts.*
 
 ### State Recovery (GOD_MODE_SET)
 
