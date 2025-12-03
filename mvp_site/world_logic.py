@@ -118,15 +118,26 @@ def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, .
         "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
     }
 
-    year = world_time.get("year", 0)
+    # CRITICAL: Convert all values to int for numeric comparison
+    # LLM responses often return string values ("10", "9") which would
+    # compare lexicographically ("10" < "9" = False), allowing backward time jumps
+    def _safe_int(value: Any, default: int = 0) -> int:
+        """Safely convert value to int, handling strings and None."""
+        try:
+            return int(value) if value is not None else default
+        except (ValueError, TypeError):
+            return default
+
+    year = _safe_int(world_time.get("year"), 0)
     month = world_time.get("month", 0)
     if isinstance(month, str):
         month = month_map.get(month.lower(), 0)
-    day = world_time.get("day", 0)
-    hour = world_time.get("hour", 0)
-    minute = world_time.get("minute", 0)
-    second = world_time.get("second", 0)
-    microsecond = world_time.get("microsecond", 0)
+    month = _safe_int(month, 0)
+    day = _safe_int(world_time.get("day"), 0)
+    hour = _safe_int(world_time.get("hour"), 0)
+    minute = _safe_int(world_time.get("minute"), 0)
+    second = _safe_int(world_time.get("second"), 0)
+    microsecond = _safe_int(world_time.get("microsecond"), 0)
 
     return (year, month, day, hour, minute, second, microsecond)
 
@@ -695,8 +706,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         use_default_world = campaign_data.get("use_default_world", False)
 
         # Extract current world_time and location for temporal validation
-        old_world_time = current_game_state.world_data.get("world_time") if hasattr(current_game_state, "world_data") else None
-        old_location = current_game_state.world_data.get("current_location_name") if hasattr(current_game_state, "world_data") else None
+        # CRITICAL: world_data can be None or non-dict in existing saves - normalize to {} first
+        world_data = getattr(current_game_state, "world_data", None)
+        if not isinstance(world_data, dict):
+            world_data = {}
+        old_world_time = world_data.get("world_time")
+        old_location = world_data.get("current_location_name")
 
         # Process regular game action with LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
         # This is the most important call to run in a thread to prevent blocking

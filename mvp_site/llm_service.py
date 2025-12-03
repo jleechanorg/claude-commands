@@ -60,6 +60,7 @@ from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
 from mvp_site.game_state import GameState
 from mvp_site.llm_providers import (
+    ContextTooLargeError,
     cerebras_provider,
     gemini_provider,
     openrouter_provider,
@@ -217,13 +218,15 @@ def _get_safe_output_token_limit(
     total_input = prompt_tokens + system_tokens
     if total_input > max_input_allowed:
         # Input exceeds 80% of context - not enough room for output
-        # Fail fast with a clear error instead of sending a doomed request
-        raise ValueError(
+        # Raise ContextTooLargeError to trigger fallback to larger-context model
+        raise ContextTooLargeError(
             f"Context too large for model {model_name}: "
             f"input uses {total_input:,} tokens, "
             f"max allowed is {max_input_allowed:,} tokens (80% of {safe_context:,}), "
             f"reserving {output_reserve:,} tokens (20%) for output. "
-            "Reduce prompt size or use a model with larger context window."
+            "Reduce prompt size or use a model with larger context window.",
+            prompt_tokens=total_input,
+            completion_tokens=0,
         )
 
     # Calculate remaining space for output
@@ -1150,6 +1153,15 @@ def _call_llm_api_with_model_cycling(
                 logging_util.info(f"Fallback model {current_model} succeeded")
 
             return response
+
+        except ContextTooLargeError as e:
+            # Context too large - try next model with larger context window
+            last_error = e
+            logging_util.warning(
+                f"Context too large for model {current_model} "
+                f"({e.prompt_tokens:,} tokens), trying next model"
+            )
+            continue
 
         except Exception as e:
             last_error = e
