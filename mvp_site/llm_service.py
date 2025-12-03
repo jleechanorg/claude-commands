@@ -1964,10 +1964,28 @@ def get_initial_story(
         f"raw_response_length={len(raw_response_text)}"
     )
     if len(narrative_text) == 0:
+        # Include preview suffix only if response was truncated
+        preview_suffix = "..." if len(raw_response_text) > 500 else ""
         logging_util.warning(
             f"⚠️ EMPTY_NARRATIVE (initial_story): LLM returned empty narrative. "
-            f"Raw response preview: {raw_response_text[:500]}..."
+            f"Raw response preview: {raw_response_text[:500]}{preview_suffix}"
         )
+        # Log structured response fields if available (consistent with continue_story)
+        if structured_response:
+            has_planning = bool(
+                structured_response.planning_block
+                if hasattr(structured_response, "planning_block")
+                else False
+            )
+            has_session = bool(
+                structured_response.session_header
+                if hasattr(structured_response, "session_header")
+                else False
+            )
+            logging_util.warning(
+                f"⚠️ EMPTY_NARRATIVE (initial_story): structured_response has "
+                f"planning_block={has_planning}, session_header={has_session}"
+            )
 
     # Create LLMResponse with proper debug content separation
     if structured_response:
@@ -2713,9 +2731,11 @@ def continue_story(
         f"raw_response_length={len(raw_response_text)}"
     )
     if len(narrative_text) == 0:
+        # Include preview suffix only if response was truncated
+        preview_suffix = "..." if len(raw_response_text) > 500 else ""
         logging_util.warning(
             f"⚠️ EMPTY_NARRATIVE: LLM returned empty narrative. "
-            f"Raw response preview: {raw_response_text[:500]}..."
+            f"Raw response preview: {raw_response_text[:500]}{preview_suffix}"
         )
         # Log structured response fields if available
         if structured_response:
