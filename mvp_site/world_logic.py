@@ -97,7 +97,7 @@ KEY_TRACEBACK = "traceback"
 
 # Temporal validation constants
 # DISABLED: Set to 0 to prevent multiple LLM calls for temporal correction
-# Previously was 2, but this causes 3x LLM calls when time goes backward
+# Previously was 2, but this causes 3 LLM calls total when time goes backward
 MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0  # Max retries before accepting response
 
 
@@ -815,8 +815,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Add temporal violation error as god_mode_response for user-facing display
-        # Extract new world time for error message
-        new_world_time = _extract_world_time_from_response(llm_response_obj)
+        # Note: new_world_time is already extracted in the temporal validation loop above
         temporal_violation_detected = _check_temporal_violation(old_world_time, new_world_time)
 
         if temporal_violation_detected and not is_god_mode:

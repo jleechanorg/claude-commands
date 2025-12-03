@@ -146,7 +146,7 @@ async def test_temporal_correction_preserves_original_user_input():
                 side_effect=mock_to_thread,
             ),
         ):
-            await world_logic.process_action_unified(request_data)
+            result = await world_logic.process_action_unified(request_data)
 
     # ASSERTIONS
     # 1. Should have saved exactly one user input (not multiple)
@@ -182,4 +182,16 @@ async def test_temporal_correction_preserves_original_user_input():
     call_input = single_call_args[0][0]
     assert call_input == original_player_input, (
         f"LLM should receive original player input, got: {call_input}"
+    )
+
+    # 6. Verify god_mode_response contains temporal anomaly warning for user
+    assert "god_mode_response" in result, (
+        "Expected god_mode_response in result when temporal violation occurs"
+    )
+    god_mode_response = result["god_mode_response"]
+    assert "TEMPORAL ANOMALY DETECTED" in god_mode_response, (
+        f"god_mode_response should contain temporal anomaly warning, got: {god_mode_response}"
+    )
+    assert "time moved backward" in god_mode_response, (
+        "god_mode_response should explain time moved backward"
     )
