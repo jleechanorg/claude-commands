@@ -5,7 +5,7 @@
 - State updates mandatory every turn, entity IDs required (format: type_name_###)
 - Dice format: XdY+Z = result vs DC (Success/Failure)
 - Planning block: thinking + snake_case choice keys with risk levels
-- Modes: STORY (default), GOD (admin), CHAT (OOC conversation)
+- Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 /ESSENTIALS -->
 
 This protocol defines game state management using structured JSON. See master_directive.md for MBTI/alignment rules.
