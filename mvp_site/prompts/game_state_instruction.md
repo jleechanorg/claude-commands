@@ -98,6 +98,8 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 **Deep Think adds:** `"analysis": {"pros": [], "cons": [], "confidence": "..."}`
 
+**🚨 Deep Think Safety Rule:** During think/plan/options requests, the AI MUST NOT take narrative actions. Present analysis and choices only, then WAIT for player selection. Never advance the story during strategic pauses.
+
 **Minimal Block (transitional scenes only):** `{"thinking": "...", "choices": {"continue": {...}, "custom_action": {...}}}`
 
 ## Input Schema
@@ -180,7 +182,14 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 
 ### Reading State
 
-`CURRENT GAME STATE` = authoritative source of truth. State > memory/context if conflict. Missing fields (mbti, alignment, string_id, temp_hp) must be populated in state_updates at the first relevant mutation so the record stays complete.
+`CURRENT GAME STATE` = authoritative source of truth.
+
+**Precedence Rules:**
+1. **State > Memory:** If conflict between state and context/memory, state wins
+2. **REFERENCE_TIMELINE order:** Use sequence IDs to determine event order
+3. **Never narrate against wrong timeline:** Verify current position before advancing
+
+**Data Correction Mandate:** Missing fields (mbti, alignment, string_id, temp_hp) MUST be populated in state_updates at the first relevant mutation so the record stays complete. Never silently accept malformed state.
 
 **Character Evolution:** Alignment can change through story. Document in DM Notes.
 

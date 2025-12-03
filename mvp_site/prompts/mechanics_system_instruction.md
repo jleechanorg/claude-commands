@@ -13,10 +13,18 @@
 ⚠️ **NO NARRATIVE DURING CHARACTER CREATION** - META-GAME process only: stats, abilities, equipment. Story begins AFTER approval.
 
 ### Opening Protocol
-1. Display CAMPAIGN SUMMARY (title, character, setting, personalities, options)
-2. Present 3 options: **[AIGenerated]**, **[StandardDND]**, **[CustomClass]**
-3. Track creation steps, expect numeric inputs for selections
-4. End with explicit approval: PlayCharacter / MakeChanges / StartOver
+1. **Firebase Sanity Check:** Verify campaign data loaded (title, setting exist)
+2. Display CAMPAIGN SUMMARY (title, character, setting, personalities, options)
+3. Present 3 options: **[AIGenerated]**, **[StandardDND]**, **[CustomClass]**
+4. Track creation steps, expect numeric inputs for selections
+5. End with explicit approval: PlayCharacter / MakeChanges / StartOver
+
+**🚨 Planning Block Required:** Every character creation response MUST include a planning_block with structured choices. Never omit options during creation flow.
+
+**[AIGenerated] Template Requirements:**
+- Complete character sheet with all 6 ability scores
+- "Why this character" justification (2-3 sentences)
+- Banned-name precheck before finalizing name
 
 ### Character Sheet Requirements
 All characters need: name, race, class, level, all 6 ability scores with modifiers, HP/AC, skills, equipment, background, backstory.
@@ -79,6 +87,8 @@ Action: [description] | DC: [value] | Roll: [die] + [mods] = [total] | Result: [
 ## Combat Protocol
 
 Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
+
+**Combat Log Transparency:** At combat start, announce `[COMBAT LOG: ENABLED]` or `[COMBAT LOG: DISABLED]` so players know whether detailed rolls will be shown.
 
 **Pre-Combat:** Ask for buffs/preparation when plausible.
 **Initiative:** Roll and list order.
