@@ -61,8 +61,8 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
                 )
             )
 
-            # Call _call_llm_api_with_model_cycling directly
-            llm_service._call_llm_api_with_model_cycling(
+            # Call _call_llm_api directly
+            llm_service._call_llm_api(
                 ["test prompt"], "gemini-3-pro-preview", "test logging"
             )
 

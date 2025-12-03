@@ -26,8 +26,9 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site import llm_service, constants
 from google.genai import types
+
+from mvp_site import constants, llm_service
 
 
 class TestCodeExecutionForDiceRolls(unittest.TestCase):
@@ -53,7 +54,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
             )
 
             # Call the API function with explicit Gemini provider
-            llm_service._call_llm_api_with_model_cycling(
+            llm_service._call_llm_api(
                 ["test prompt"],
                 "gemini-3-pro-preview",
                 "test logging",
@@ -119,7 +120,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
             "game_state_instruction.md"
         )
 
-        with open(instruction_path, "r") as f:
+        with open(instruction_path) as f:
             instruction_content = f.read()
 
         # CRITICAL ASSERTIONS: Verify code execution instructions are present
@@ -181,7 +182,7 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
                 )
             )
 
-            llm_service._call_llm_api_with_model_cycling(
+            llm_service._call_llm_api(
                 ["test prompt"],
                 "gemini-3-pro-preview",
                 "test logging",

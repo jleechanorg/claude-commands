@@ -20,7 +20,7 @@ def test_model_call_surfaces_context_too_large_error():
     ), patch("mvp_site.llm_service._log_token_count"), patch(
         "mvp_site.llm_service._get_safe_output_token_limit", side_effect=context_error
     ), pytest.raises(llm_service.LLMRequestError) as exc_info:
-        llm_service._call_llm_api_with_model_cycling(["prompt"], "model")
+        llm_service._call_llm_api(["prompt"], "model")
 
     assert exc_info.value.status_code == 422
     assert "context" in str(exc_info.value).lower()
@@ -38,7 +38,7 @@ def test_model_call_surfaces_provider_overload_without_retry():
         "mvp_site.llm_service.gemini_provider.generate_json_mode_content",
         side_effect=overload_error,
     ) as mock_generate, pytest.raises(llm_service.LLMRequestError) as exc_info:
-        llm_service._call_llm_api_with_model_cycling(
+        llm_service._call_llm_api(
             ["prompt"], "model", provider_name=constants.LLM_PROVIDER_GEMINI
         )
 

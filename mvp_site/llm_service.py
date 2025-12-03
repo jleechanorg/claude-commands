@@ -18,7 +18,7 @@ Architecture:
 - Uses Google Generative AI (Gemini) for story generation
 - Implements robust prompt building with PromptBuilder class
 - Provides entity tracking with multiple mitigation strategies
-- Includes comprehensive error handling and model cycling
+- Includes comprehensive error handling
 - Supports both initial story generation and continuation
 - Manages complex state interactions and validation
 
@@ -260,7 +260,7 @@ def _get_safe_output_token_limit(
     if total_input > max_input_allowed:
         # Input exceeds 80% of context - not enough room for output
         # Fail fast with a clear error instead of sending a doomed request
-        # Use ContextTooLargeError for proper handling in model cycling
+        # Use ContextTooLargeError for consistent upstream handling
         raise ContextTooLargeError(
             f"Context too large for model {model_name}: "
             f"input uses {total_input:,} tokens, "
@@ -1076,7 +1076,7 @@ def _call_llm_api_with_llm_request(
     json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
 
     # Send the structured JSON as string to the API
-    return _call_llm_api_with_model_cycling(
+    return _call_llm_api(
         [json_string],  # Send JSON as formatted string
         model_name,
         f"LLMRequest: {gemini_request.user_action[:100]}...",  # Logging
@@ -1085,7 +1085,7 @@ def _call_llm_api_with_llm_request(
     )
 
 
-def _call_llm_api_with_model_cycling(
+def _call_llm_api(
     prompt_contents: list[Any],
     model_name: str,
     current_prompt_text_for_logging: str | None = None,
@@ -1285,7 +1285,7 @@ def _call_llm_api_with_json_structure(
         prompt_content = json.dumps(json_input, indent=2)
 
     # Call the existing API with structured content
-    return _call_llm_api_with_model_cycling(
+    return _call_llm_api(
         [prompt_content],
         model_name,
         f"Structured JSON: {message_type}",  # for logging
@@ -1390,7 +1390,7 @@ def _call_llm_api_with_json_schema(
     else:
         # For unknown message types, use basic structure that bypasses validation
         # by directly formatting for Gemini API without JSON schema validation
-        return _call_llm_api_with_model_cycling(
+        return _call_llm_api(
             [content],  # Direct string content bypass
             model_name,
             content,  # for logging
@@ -1403,39 +1403,6 @@ def _call_llm_api_with_json_schema(
         model_name,
         system_instruction_text,
     )
-
-
-def _call_llm_api(
-    prompt_contents: list[Any],
-    model_name: str,
-    current_prompt_text_for_logging: str | None = None,
-    system_instruction_text: str | None = None,
-    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
-) -> Any:
-    """
-    Call LLM API with model cycling on errors.
-
-    This function always uses JSON mode for consistent structured responses.
-
-    Args:
-        prompt_contents: The content to send to the API
-        model_name: Primary model to try first
-        current_prompt_text_for_logging: Text for logging purposes (optional)
-        system_instruction_text: System instructions (optional)
-        provider_name: LLM provider to use (gemini, openrouter, cerebras)
-
-    Returns:
-        LLM API response object with JSON response
-    """
-    return _call_llm_api_with_model_cycling(
-        prompt_contents,
-        model_name,
-        current_prompt_text_for_logging,
-        system_instruction_text,
-        provider_name,
-    )
-
-
 def _get_text_from_response(response: Any) -> str:
     """Safely extracts text from a Gemini response object."""
     try:
