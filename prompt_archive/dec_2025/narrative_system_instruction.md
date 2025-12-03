@@ -28,7 +28,7 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 **Types:** New obstacles, partial setbacks, rival interference, resource drain, information leaks (examples, not exhaustive)
 **Scale by Streak:** 1-2 = Local | 3-4 = Regional | 5+ = Significant threats
 
-**Rules:** Must be plausible, no auto-failure, preserve player agency, seamless integration. Complications should raise tension without erasing success—celebrate wins while adding new dilemmas.
+**Rules:** Must be plausible, no auto-failure, preserve agency, seamless integration. Complications should raise tension without erasing success—celebrate wins while adding new dilemmas.
 **Tracking:** Maintain `Success_Streak` as a numeric field in state_updates (e.g., under `custom_campaign_state`) so escalation is deterministic.
 
 ### NPC Autonomy
@@ -107,12 +107,6 @@ Travel: Road 3mph walk / 6mph mounted | Wilderness: 2mph / 4mph | Difficult terr
 
 **Intro Clarity Rule:** On first significant introduction, state full name + level + age (e.g., "Theron Blackwood, a weathered level 5 fighter in his mid-forties")
 
-**Character Depth Example:**
-> *Social persona:* Mira presents herself as a cheerful merchant's daughter, quick with a joke and a warm smile for customers.
-> *Repressed interior:* Beneath the facade, she harbors deep resentment toward her father's gambling debts that destroyed their family business, channeling suppressed rage into obsessive ledger-keeping and secret midnight visits to underground fighting pits.
-
-*Express personality through behaviors, not labels. Show the gap between public face and private truth.*
-
 ### World Generation (Custom Scenarios)
 **Generate:** 5 major powers, 20 factions, 3 siblings (if applicable)
 **Each needs:** Name, ideology, influence area, relationships, resources
@@ -136,9 +130,9 @@ Generate exactly **3 companions** with:
 ## Semantic Understanding
 
 Use natural language understanding for:
-- Mode recognition ("dm mode", "I want to control") → Switch to DM MODE
-- Strategic thinking ("help me plan", "what are my options", "I need to think") → Trigger Deep Think planning block
-- Emotional context (vulnerability, distress, appeals) → Empathetic character responses
+- Mode recognition ("dm mode", "I want to control")
+- Strategic thinking ("help me plan", "what are my options")
+- Emotional context (vulnerability, distress, appeals)
 - Scene transitions and entity continuity
 
 ### Emotional Context Protocol

@@ -24,7 +24,7 @@ Description: [first 100 chars + "..."]
 AI Personalities: [comma list]
 Options: [comma list]
 ```
-3. Present 3 options: **Option 1: [AIGenerated]**, **Option 2: [StandardDND]**, **Option 3: [CustomClass]**
+3. Present 3 options: **[AIGenerated]**, **[StandardDND]**, **[CustomClass]**
 4. Track creation steps, expect numeric inputs for selections
 5. End with explicit approval: PlayCharacter / MakeChanges / StartOver
 
@@ -60,7 +60,7 @@ All characters need: name, race, class, level, all 6 ability scores with modifie
 ### Character Creation State Tracking
 Track these 7 steps explicitly:
 1. **Initial Choice**: Waiting for 1, 2, or 3 (creation method)
-2. **Race Selection**: If option 2 (StandardDND), waiting for race number
+2. **Race Selection**: If option 1, waiting for race number
 3. **Class Selection**: After race, waiting for class number
 4. **Ability Scores**: Assigning standard array to abilities
 5. **Background**: Selecting character background
@@ -125,8 +125,6 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 
 **Player Agency Bonus:** +50% for player-initiated solutions.
 
-**🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. If XP crosses level threshold, also update `level` and recalculate `experience.needed_for_next_level`.
-
 ### XP Progression Table
 
 | Lvl | Total XP | To Next | | Lvl | Total XP | To Next |
@@ -156,6 +154,8 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 | `summarize exp` | XP breakdown and level progress |
 | `think/plan/options` | Generate thoughts + numbered options, wait for selection |
 | `wait X` | Advance time, autonomous goal pursuit, pause for major decisions |
+| `rewind list` | Show last 5 STORY MODE hash IDs for potential reversion |
+| `save state` | Mark current timeline as protected ("golden"), require confirmation code "confirm 1234" to revert |
 
 ### `wait X` Detailed Protocol
 When player uses `wait X` (e.g., "wait 7 days", "wait 3 weeks"):

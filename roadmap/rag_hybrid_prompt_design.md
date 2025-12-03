@@ -1,0 +1,83 @@
+# Hybrid Core+RAG Prompt Delivery (Design)
+
+**Status:** ✅ DESIGN COMPLETE (implementation not started) | **Implementation:** See `rag_hybrid_impl_plan.md`
+
+## Context (what this repo/app is)
+- **WorldArchitect.AI**: A browser-based narrative + mechanics runner for D&D‑style RPG campaigns. It uses large prompts to instruct an LLM (Story/DM/God modes) to manage state, narrate, roll dice, and enforce safety rules (e.g., MBTI/alignment internal-only). Prompts live in `mvp_site/prompts/` and are versioned snapshots in `prompt_archive/`.
+- Current pain: prompts are long; truncation drops safety/format rules. We need a hybrid approach that pins critical rules and retrieves the rest via RAG.
+
+## Goals
+- Keep non-negotiable schema/safety instructions **always present** (no truncation risk).
+- Shrink per-turn prompt tokens by retrieving only relevant sections from archived prompts.
+- Support versioned prompt sets (starting with `prompt_archive/dec_2025`) and easy rollbacks.
+- Improve faithfulness vs. truncation while keeping latency manageable.
+
+## High-level approach
+- **Pinned Core Header** (authoritative): Small, static text injected every turn with essential rules. Precedence: Core Policy > Runtime State/Timeline > Retrieved Chunks (reference-only) > User Input.
+- **RAG Layer**: Retrieve top, relevant chunks from archived prompts (hybrid BM25 + dense) and append below the core header; retrieved chunks are labeled reference-only and may be ignored if conflicting.
+- **Fallback**: If retrieval fails/low-score, respond with core header only (flag for logs).
+
+## What must be in the Core Header (always present)
+- Mode declaration and requirements: Story, DM, God; mode header line required; God uses `god_mode_response`, `god:` prefixed choices, default `god:return_story`.
+- JSON response schema + **FORBIDDEN** list (no extra fields, no debug/state in narrative, no markdown code fences, no text outside JSON except mode line). Provide a single JSON Schema artifact to be enforced by providers.
+- Planning blocks required in Story; snake_case; Deep Think rule (no narrative advance; pros/cons/confidence).
+- Dice policy: prefer server/tool-owned rolls; model-rolled dice only as fallback.
+- Session header/resources format; Level 1 half‑casters show “No Spells Yet (Level 2+).”
+- `state_updates` mandatory every turn; narrow-path updates; entity ID format; deletes via "__DELETE__".
+- Time-forward-only; rest/travel costs; +1 microsecond for think blocks; backward time only via explicit God.
+- Safety: MBTI/alignment/Big Five INTERNAL ONLY—never in narrative.
+- Token target: keep core header ~700–1200 tokens; long tables/examples live in RAG.
+
+## What lives in RAG
+- Mechanics detail: XP by CR table, class resources, leveling tables.
+- Narrative protocols: complication system, NPC autonomy, living world, world-gen hooks.
+- Examples and extended guidance (e.g., companion generation rules, opening scene tips) — **quarantined**; retrieve only on explicit need.
+- Less-frequent schemas (location/NPC details), long-form explanations.
+
+## Corpus & chunking
+- Source: `prompt_archive/dec_2025/*.md` (later versions via env `PROMPT_VERSION`).
+- Chunking: 350–600 tokens, 10–15% overlap; keep headings with chunks; store preview (first ~200 chars) for logging. Keep tables atomic; avoid mid-table splits.
+- Metadata tags per chunk: filename, version, domain (schema|safety|mechanics|narrative|worldgen|examples), mode (story|dm|god|general), priority (normative vs example), section (heading path), hash, token_len.
+- Bundle immutability: `manifest.json` with file hashes + build timestamp; indices under `data/prompt_index/<bundle_version>/` never mutated post-build.
+
+## Retrieval strategy
+- Hybrid: BM25 (or SPLADE) + dense embeddings; weighted fusion; take top 12, re-rank to top 6 with bonuses for domain/mode match and same version; enforce score floor (e.g., 0.25 fused). _Decision pending: exact BM25 vs dense fusion weights (see impl plan)._
+- Apply MMR/diversity; cap retrieved context to ~1–1.5k tokens, dropping lowest.
+- Normalization: prepend each chunk with its heading and wrap in a standard delimiter to keep formatting consistent; mark as reference-only.
+- Cache: LRU on (mode, query hash) for top chunks.
+- Domain allowlist per mode: schema/safety pinned (never retrieved); mechanics/narrative/worldgen retrievable; examples only when formatting/examples are explicitly needed.
+
+## Assembly flow
+1) Core header (static file `prompt_archive/core_header.txt`, authoritative).
+2) Retrieved context wrapped as reference-only blocks with metadata (domain/file/heading); assembler states they are subordinate to core/state.
+3) Runtime state/system turn content.
+4) User message.
+5) If retrieval empty/low-score → core only, set `retrieval_sparse` flag in logs.
+
+## Storage & refresh
+- Index artifacts under `data/prompt_index/<version>/` (FAISS or similar + bm25 + meta JSONL) plus manifest hash.
+- Rebuild index when `PROMPT_VERSION` changes or prompts update; never mutate an existing bundle/version.
+
+## Telemetry & safety
+- Log bundle_version + manifest hash, chunk IDs, scores (sparse/dense/fused), domains, token counts, retrieval_sparse flag, validation/repair status, latency breakdown.
+- Core header enforces MBTI/alignment ban even if retrieval misses.
+- If we later add private data, ensure ACL-aware retrieval + redaction before assembly.
+
+## Evaluation (acceptance gates)
+- Needle tests: CR XP queries pull correct chunk; time-forward rule retrieved; forbidden list intact.
+- Policy tests: no MBTI/alignment/Big Five leakage in narrative.
+- Schema tests: responses validate against JSON contract with core header only (no retrieval).
+- Prompt-injection tests: retrieved chunks containing “ignore core/output markdown” must not change behavior.
+- Schema-hardening tests: user attempts extra fields are rejected or repaired via structured outputs.
+- Retrieval quality: >90% recall on curated queries (RAGAS or similar), manual spot-checks.
+- Latency: cold/hot cache benchmarks; track cache hit-rate.
+
+## Risks & mitigations
+- Retrieval miss → core header + score floor + logging to detect.
+- Latency → cache, fused retrieval, trimmed context budget.
+- Stale index → re-index on prompt change; store versioned indices.
+- Formatting drift → normalization wrapper; tests on assembled prompt.
+
+## Artifacts to produce (separate plan file covers implementation)
+- `prompt_archive/core_header.txt`
+- Index build script; runtime retriever/assembler; tests; docs/README for ops.
