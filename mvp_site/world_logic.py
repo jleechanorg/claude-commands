@@ -96,7 +96,9 @@ KEY_RESPONSE = "response"
 KEY_TRACEBACK = "traceback"
 
 # Temporal validation constants
-MAX_TEMPORAL_CORRECTION_ATTEMPTS = 2  # Max retries before accepting response
+# DISABLED: Set to 0 to prevent multiple LLM calls for temporal correction
+# Previously was 2, but this causes 3x LLM calls when time goes backward
+MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0  # Max retries before accepting response
 
 
 def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, ...]:
@@ -812,8 +814,34 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             current_game_state, llm_response_obj, mode
         )
 
-        # Add temporal correction warning if corrections were needed
-        if temporal_correction_attempts > 0:
+        # Add temporal violation error as god_mode_response for user-facing display
+        # Extract new world time for error message
+        new_world_time = _extract_world_time_from_response(llm_response_obj)
+        temporal_violation_detected = _check_temporal_violation(old_world_time, new_world_time)
+
+        if temporal_violation_detected and not is_god_mode:
+            old_time_str = _format_world_time_for_prompt(old_world_time)
+            new_time_str = _format_world_time_for_prompt(new_world_time)
+
+            # User-facing error message as god_mode_response
+            prevention_extras["god_mode_response"] = (
+                f"⚠️ **TEMPORAL ANOMALY DETECTED**\n\n"
+                f"The AI generated a response where time moved backward:\n"
+                f"- **Previous time:** {old_time_str}\n"
+                f"- **Response time:** {new_time_str}\n\n"
+                f"This may indicate the AI lost track of the story timeline. "
+                f"The response was accepted but timeline consistency may be affected."
+            )
+
+            logging_util.warning(
+                f"⚠️ TEMPORAL_VIOLATION surfaced to user: {new_time_str} < {old_time_str}"
+            )
+
+            prevention_extras["temporal_correction_warning"] = prevention_extras["god_mode_response"]
+            prevention_extras["temporal_correction_attempts"] = 1
+
+        # Add temporal correction warning if corrections were needed (legacy path when retries enabled)
+        elif temporal_correction_attempts > 0:
             temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
             if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
                 logging_util.warning(
