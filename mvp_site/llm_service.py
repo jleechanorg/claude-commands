@@ -65,7 +65,7 @@ from mvp_site.llm_providers import (
     openrouter_provider,
 )
 from mvp_site.llm_providers.provider_utils import ContextTooLargeError
-from mvp_site.llm_request import LLMRequest
+from mvp_site.llm_request import LLMRequest, LLMRequestError
 from mvp_site.llm_response import LLMResponse
 
 # Removed old json_input_schema import - now using LLMRequest for structured JSON
@@ -118,14 +118,6 @@ else:  # Gemini (default fallback)
 class ProviderSelection:
     provider: str
     model: str
-
-
-class LLMRequestError(Exception):
-    """Raised when an LLM request fails in a user-visible way."""
-
-    def __init__(self, message: str, status_code: int = 400) -> None:
-        super().__init__(message)
-        self.status_code = status_code
 
 
 # No longer using pro model for any inputs

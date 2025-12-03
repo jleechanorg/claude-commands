@@ -629,7 +629,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                 use_default_world,
             )
         except llm_service.LLMRequestError as e:
-            logging_util.debug(f"LLM request failed during campaign creation: {e}")
+            logging_util.error(f"LLM request failed during campaign creation: {e}")
             return create_error_response(str(e), getattr(e, "status_code", 422))
 
         # Extract structured fields
