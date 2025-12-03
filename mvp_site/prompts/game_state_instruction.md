@@ -213,7 +213,7 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 ### NPC Schema
 
-Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gender`, `age`, `level`, `hp_current/max`, `armor_class`, `attributes`, `present`, `conscious`, `hidden`, `status`, `relationships`
+Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gender`, `age`, `level`, `hp_current/max`, `armor_class`, `attributes`, `combat_stats` (initiative/speed/passive_perception), `present`, `conscious`, `hidden`, `status`, `relationships`
 
 ### Location Schema
 
