@@ -23,6 +23,7 @@ from unittest.mock import MagicMock, patch
 from mvp_site import constants
 from mvp_site.llm_providers.provider_utils import ContextTooLargeError
 from mvp_site.llm_request import LLMRequestError
+from mvp_site.llm_service import _call_llm_api, _get_larger_context_model
 
 
 class TestAutoFallbackToLargerContext(unittest.TestCase):
@@ -44,7 +45,7 @@ class TestAutoFallbackToLargerContext(unittest.TestCase):
         self, mock_cerebras, mock_gemini
     ):
         """
-        RED TEST: When Cerebras model context is too large, should fallback to Gemini.
+        When Cerebras model context is too large, should fallback to Gemini.
 
         Scenario:
         - User is on Cerebras zai-glm-4.6 (131K context)
@@ -52,8 +53,6 @@ class TestAutoFallbackToLargerContext(unittest.TestCase):
         - System should automatically try Gemini 2.0 Flash (1M context)
         - Request should succeed with the larger model
         """
-        from mvp_site.llm_service import _call_llm_api
-
         # Cerebras raises ContextTooLargeError (input 95K > 94K max)
         mock_cerebras.generate_content.side_effect = ContextTooLargeError(
             "Context too large for model zai-glm-4.6: input uses 95,622 tokens, "
@@ -87,13 +86,11 @@ class TestAutoFallbackToLargerContext(unittest.TestCase):
         self, mock_gemini
     ):
         """
-        When Gemini (largest model) context is too large, should raise error.
+        When Gemini (large context model) context is too large, should raise error.
 
-        Gemini 2.0 Flash has the largest context (1M), so if it fails
+        Gemini 2.0 Flash has a large context (1M), so if it fails
         there's no larger model to fallback to - error should propagate.
         """
-        from mvp_site.llm_service import _call_llm_api
-
         # Even Gemini with 1M context is exceeded
         mock_gemini.generate_json_mode_content.side_effect = ContextTooLargeError(
             "Context too large for model gemini-2.0-flash: input uses 850,000 tokens",
@@ -124,8 +121,6 @@ class TestAutoFallbackToLargerContext(unittest.TestCase):
 
         Some users may prefer to fail immediately rather than switch models.
         """
-        from mvp_site.llm_service import _call_llm_api
-
         # Cerebras raises ContextTooLargeError
         mock_cerebras.generate_content.side_effect = ContextTooLargeError(
             "Context too large for model zai-glm-4.6",
@@ -150,14 +145,44 @@ class TestAutoFallbackToLargerContext(unittest.TestCase):
 
     @patch("mvp_site.llm_service.gemini_provider")
     @patch("mvp_site.llm_service.cerebras_provider")
+    def test_fallback_skipped_when_gemini_key_missing(
+        self, mock_cerebras, mock_gemini
+    ):
+        """
+        When GEMINI_API_KEY is missing, fallback should be skipped and 422 returned.
+
+        This avoids bubbling a ValueError from gemini_provider when environments
+        intentionally omit Gemini credentials.
+        """
+
+        mock_cerebras.generate_content.side_effect = ContextTooLargeError(
+            "Context too large for model zai-glm-4.6",
+            prompt_tokens=95622,
+            completion_tokens=0,
+            finish_reason="context_exceeded",
+        )
+
+        with patch.dict(os.environ, {"TESTING": "true"}, clear=True):
+            with self.assertRaises(LLMRequestError) as ctx:
+                _call_llm_api(
+                    prompt_contents=["Long story context..."],
+                    model_name="zai-glm-4.6",
+                    system_instruction_text="System instruction",
+                    provider_name=constants.LLM_PROVIDER_CEREBRAS,
+                    allow_context_fallback=True,
+                )
+
+        mock_gemini.generate_json_mode_content.assert_not_called()
+        self.assertEqual(ctx.exception.status_code, 422)
+
+    @patch("mvp_site.llm_service.gemini_provider")
+    @patch("mvp_site.llm_service.cerebras_provider")
     def test_openrouter_context_too_large_falls_back_to_gemini(
         self, mock_cerebras, mock_gemini
     ):
         """
         When OpenRouter model context is too large, should fallback to Gemini.
         """
-        from mvp_site.llm_service import _call_llm_api
-
         # Mock OpenRouter via the same pattern (openrouter raises error)
         with patch("mvp_site.llm_service.openrouter_provider") as mock_openrouter:
             mock_openrouter.generate_content.side_effect = ContextTooLargeError(
@@ -192,21 +217,17 @@ class TestContextFallbackModelSelection(unittest.TestCase):
 
     def test_get_larger_context_model_for_cerebras(self):
         """Should return Gemini as fallback for Cerebras models."""
-        from mvp_site.llm_service import _get_larger_context_model
-
         provider, model = _get_larger_context_model(
             current_provider=constants.LLM_PROVIDER_CEREBRAS,
             current_model="zai-glm-4.6",
         )
 
-        # Gemini 2.0 Flash has the largest context window (1M)
+        # Gemini 2.0 Flash has a large context window (1M)
         self.assertEqual(provider, constants.LLM_PROVIDER_GEMINI)
         self.assertEqual(model, "gemini-2.0-flash")
 
     def test_get_larger_context_model_for_openrouter(self):
         """Should return Gemini as fallback for OpenRouter models."""
-        from mvp_site.llm_service import _get_larger_context_model
-
         provider, model = _get_larger_context_model(
             current_provider=constants.LLM_PROVIDER_OPENROUTER,
             current_model="meta-llama/llama-3.1-70b-instruct",
@@ -216,8 +237,7 @@ class TestContextFallbackModelSelection(unittest.TestCase):
         self.assertEqual(model, "gemini-2.0-flash")
 
     def test_get_larger_context_model_for_gemini_returns_none(self):
-        """Should return None for Gemini since it already has the largest context."""
-        from mvp_site.llm_service import _get_larger_context_model
+        """Should return None for Gemini since no larger fallback is currently configured."""
 
         result = _get_larger_context_model(
             current_provider=constants.LLM_PROVIDER_GEMINI,

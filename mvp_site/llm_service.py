@@ -343,14 +343,16 @@ def _get_larger_context_model(
 
     Returns:
         (provider, model) tuple for fallback, or None if no larger model available.
-        Gemini 2.0 Flash has 1M context, making it the best fallback option.
+        Gemini 2.0 Flash has a large context window (1M tokens) and is a reliable
+        fallback choice, though some OpenRouter models (e.g., x-ai/grok-4.1-fast:free)
+        advertise larger context limits.
     """
     # Get current model's context window
     current_context = constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
         current_model, constants.DEFAULT_CONTEXT_WINDOW_TOKENS
     )
 
-    # Gemini 2.0 Flash has the largest context window (1M tokens)
+    # Gemini 2.0 Flash has a large context window (1M tokens)
     gemini_context = constants.MODEL_CONTEXT_WINDOW_TOKENS.get(
         constants.DEFAULT_GEMINI_MODEL, 1_000_000
     )
@@ -1270,20 +1272,31 @@ def _call_llm_api(
             fallback = _get_larger_context_model(provider_name, model_name)
             if fallback:
                 fallback_provider, fallback_model = fallback
-                logging_util.warning(
-                    f"Context too large for {provider_name}/{model_name}. "
-                    f"Attempting fallback to {fallback_provider}/{fallback_model} "
-                    f"(larger context window)."
-                )
-                # Recursive call with fallback model, but disable further fallback
-                return _call_llm_api(
-                    prompt_contents=prompt_contents,
-                    model_name=fallback_model,
-                    current_prompt_text_for_logging=current_prompt_text_for_logging,
-                    system_instruction_text=system_instruction_text,
-                    provider_name=fallback_provider,
-                    allow_context_fallback=False,  # Prevent infinite recursion
-                )
+                gemini_api_key = os.environ.get("GEMINI_API_KEY")
+                if fallback_provider == constants.LLM_PROVIDER_GEMINI and (
+                    gemini_api_key is None or gemini_api_key == ""
+                ):
+                    logging_util.warning(
+                        "Skipping fallback to Gemini due to missing GEMINI_API_KEY; "
+                        "propagating context error."
+                    )
+                    fallback_provider = None
+                    fallback_model = None
+                if fallback_provider and fallback_model:
+                    logging_util.warning(
+                        f"Context too large for {provider_name}/{model_name}. "
+                        f"Attempting fallback to {fallback_provider}/{fallback_model} "
+                        f"(larger context window)."
+                    )
+                    # Recursive call with fallback model, but disable further fallback
+                    return _call_llm_api(
+                        prompt_contents=prompt_contents,
+                        model_name=fallback_model,
+                        current_prompt_text_for_logging=current_prompt_text_for_logging,
+                        system_instruction_text=system_instruction_text,
+                        provider_name=fallback_provider,
+                        allow_context_fallback=False,  # Prevent infinite recursion
+                    )
 
         logging_util.error(
             "Context too large for selected model. "
