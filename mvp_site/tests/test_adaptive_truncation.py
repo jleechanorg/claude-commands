@@ -17,6 +17,8 @@ from mvp_site import constants
 from mvp_site.game_state import GameState
 from mvp_site.llm_service import (
     _calculate_percentage_based_turns,
+    _compact_middle_turns,
+    estimate_tokens,
     _truncate_context,
 )
 
@@ -146,14 +148,14 @@ class TestAdaptiveTruncation(unittest.TestCase):
 
 
 class TestPercentageBasedTruncation(unittest.TestCase):
-    """Test percentage-based context allocation (25% start, 70% end)."""
+    """Test percentage-based context allocation (25% start, 10% middle, 60% end)."""
 
     def setUp(self):
         """Set up test environment."""
         os.environ["TESTING"] = "true"
 
     def test_calculate_percentage_based_turns(self):
-        """Percentage-based calculation should allocate 25% start / 70% end."""
+        """Percentage-based calculation should allocate 25% start / 60% end."""
         # Create 100 entries with ~100 tokens each (400 chars = 100 tokens)
         story_context = [
             {"actor": "user" if i % 2 == 0 else "gemini", "text": "x" * 400}
@@ -172,6 +174,7 @@ class TestPercentageBasedTruncation(unittest.TestCase):
         self.assertLessEqual(start_turns, 20)
         self.assertGreaterEqual(end_turns, 5)
         self.assertLessEqual(end_turns, 20)
+        self.assertLessEqual(start_turns + end_turns, len(story_context))
 
     def test_percentage_based_turns_scales_with_budget(self):
         """Turn allocation should scale down for smaller budgets."""
@@ -194,6 +197,19 @@ class TestPercentageBasedTruncation(unittest.TestCase):
         # Larger budget should allow more turns (or equal if capped)
         self.assertGreaterEqual(large_start + large_end, small_start + small_end)
 
+    def test_percentage_based_turns_do_not_overlap_small_context(self):
+        """Start + end allocations should never exceed available turns."""
+        story_context = [
+            {"actor": "user" if i % 2 == 0 else "gemini", "text": "x" * 800}
+            for i in range(6)
+        ]
+
+        start_turns, end_turns = _calculate_percentage_based_turns(
+            story_context, max_tokens=2000
+        )
+
+        self.assertLessEqual(start_turns + end_turns, len(story_context))
+
 
 class TestMiddleCompaction(unittest.TestCase):
     """Test middle turn compaction instead of dropping."""
@@ -204,8 +220,6 @@ class TestMiddleCompaction(unittest.TestCase):
 
     def test_compact_middle_turns_extracts_key_events(self):
         """Middle compaction should extract sentences with important keywords."""
-        from mvp_site.llm_service import _compact_middle_turns
-
         # Create turns with mix of important and filler content
         middle_turns = [
             {"actor": "gemini", "text": "The party rested by the campfire."},
@@ -228,8 +242,6 @@ class TestMiddleCompaction(unittest.TestCase):
 
     def test_compact_middle_turns_respects_token_limit(self):
         """Middle compaction should not exceed token budget."""
-        from mvp_site.llm_service import _compact_middle_turns, estimate_tokens
-
         # Create many turns with important content
         middle_turns = [
             {"actor": "gemini", "text": f"You defeat enemy number {i}. The battle was fierce." * 5}
@@ -241,13 +253,11 @@ class TestMiddleCompaction(unittest.TestCase):
 
         # Result should not exceed budget significantly
         result_tokens = estimate_tokens(result.get("text", ""))
-        # Allow some overhead for formatting
-        self.assertLess(result_tokens, 200)
+        # Allow bounded overhead for formatting
+        self.assertLess(result_tokens, 150)
 
     def test_compact_middle_turns_empty_list(self):
         """Empty middle turns should return minimal marker."""
-        from mvp_site.llm_service import _compact_middle_turns
-
         result = _compact_middle_turns([], max_tokens=500)
 
         self.assertEqual(result.get("actor"), "system")
@@ -255,8 +265,6 @@ class TestMiddleCompaction(unittest.TestCase):
 
     def test_compact_middle_turns_no_keywords(self):
         """Turns without keywords should still produce output."""
-        from mvp_site.llm_service import _compact_middle_turns
-
         # Create turns with no important keywords
         middle_turns = [
             {"actor": "gemini", "text": "The sun shines brightly today."},
@@ -272,8 +280,6 @@ class TestMiddleCompaction(unittest.TestCase):
 
     def test_truncation_includes_middle_summary(self):
         """Full truncation should include compacted middle, not just drop it."""
-        from mvp_site.llm_service import _truncate_context
-
         mock_game_state = MagicMock(spec=GameState)
         mock_game_state.custom_campaign_state = {}
         mock_game_state.world_data = {}
@@ -335,8 +341,6 @@ class TestTruncationBudgetGuarantees(unittest.TestCase):
         BUG: When total_turns <= start+end, code returns without checking budget.
         Two very long turns should still be truncated if over budget.
         """
-        from mvp_site.llm_service import _truncate_context, estimate_tokens
-
         # Create 2 HUGE turns (~50K tokens each = 200K chars)
         huge_text = "x" * 200_000  # ~50K tokens
         story_context = [
@@ -370,8 +374,6 @@ class TestTruncationBudgetGuarantees(unittest.TestCase):
         BUG: Last resort returns truncated_context without checking budget.
         Even with minimum turns, result should fit in budget.
         """
-        from mvp_site.llm_service import _truncate_context, estimate_tokens
-
         # Create 10 huge turns that won't fit even with minimums (3+5=8 turns)
         huge_text = "x" * 80_000  # ~20K tokens per turn
         story_context = [
@@ -405,8 +407,6 @@ class TestTruncationBudgetGuarantees(unittest.TestCase):
         BUG: Middle compaction adds bullets/wrappers after capping sentences.
         The final summary can exceed the allocated middle_token_budget.
         """
-        from mvp_site.llm_service import _compact_middle_turns, estimate_tokens
-
         # Create many turns with keyword-rich content that will be extracted
         middle_turns = [
             {"actor": "gemini", "text": f"You attack the goblin {i}! " * 20}

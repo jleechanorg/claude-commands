@@ -1615,20 +1615,28 @@ def _calculate_percentage_based_turns(
     end_token_budget = int(max_tokens * STORY_BUDGET_END_RATIO)
 
     # Convert to turn counts (cap at legacy maximums for safety)
-    start_turns = min(
+    raw_start_turns = min(
         int(start_token_budget / avg_tokens_per_turn),
         TURNS_TO_KEEP_AT_START,
-        total_turns // 2  # Never take more than half for start
-    )
-    end_turns = min(
-        int(end_token_budget / avg_tokens_per_turn),
-        TURNS_TO_KEEP_AT_END,
-        total_turns - start_turns  # Don't overlap
+        total_turns // 2,  # Never take more than half for start
     )
 
-    # Ensure minimums
-    start_turns = max(3, start_turns)
-    end_turns = max(5, end_turns)
+    # Apply start minimum but never exceed total turns
+    start_turns = min(max(3, raw_start_turns), total_turns)
+
+    raw_end_turns = min(
+        int(end_token_budget / avg_tokens_per_turn),
+        TURNS_TO_KEEP_AT_END,
+    )
+    desired_end_turns = max(5, raw_end_turns) if total_turns >= 5 else min(total_turns, raw_end_turns)
+
+    # Enforce non-overlap using the post-minimum start_turns value
+    remaining_turns = max(0, total_turns - start_turns)
+    end_turns = min(desired_end_turns, remaining_turns)
+
+    # Final safety: if minimums still force overlap, trim the start portion first
+    if start_turns + end_turns > total_turns:
+        end_turns = max(0, total_turns - start_turns)
 
     logging_util.info(
         f"📊 PERCENTAGE-BASED TURNS: avg_tokens/turn={avg_tokens_per_turn:.0f}, "
@@ -1667,6 +1675,10 @@ def _compact_middle_turns(
     important_events: list[str] = []
     total_tokens = 0
 
+    # Reserve tokens for formatting overhead (header + footer + bullets buffer)
+    FORMATTING_OVERHEAD = 30
+    effective_max_tokens = max(10, max_tokens - FORMATTING_OVERHEAD)
+
     for turn in middle_turns:
         text = turn.get(constants.KEY_TEXT, "")
         if not text:
@@ -1690,7 +1702,7 @@ def _compact_middle_turns(
 
             if has_keyword:
                 sentence_tokens = estimate_tokens(sentence)
-                if total_tokens + sentence_tokens <= max_tokens:
+                if total_tokens + sentence_tokens <= effective_max_tokens:
                     important_events.append(sentence)
                     total_tokens += sentence_tokens
                 else:
@@ -1805,9 +1817,9 @@ def _truncate_context(
             trimmed_entries = []
             for entry in candidate:
                 text = entry.get(constants.KEY_TEXT, "")
-                max_chars = max(50, int(len(text) * trim_ratio))
-                if len(text) > max_chars:
-                    trimmed_text = text[:max_chars] + "... [truncated]"
+                entry_max_chars = max(50, int(len(text) * trim_ratio))
+                if len(text) > entry_max_chars:
+                    trimmed_text = text[:entry_max_chars] + "... [truncated]"
                     trimmed_entries.append({**entry, constants.KEY_TEXT: trimmed_text})
                 else:
                     trimmed_entries.append(entry)
@@ -1930,9 +1942,9 @@ def _truncate_context(
             hard_trimmed = []
             for entry in original_context:
                 text = entry.get(constants.KEY_TEXT, "")
-                max_chars = max(50, int(len(text) * trim_ratio))
-                if len(text) > max_chars:
-                    trimmed_text = text[:max_chars] + "... [truncated]"
+                entry_max_chars = max(50, int(len(text) * trim_ratio))
+                if len(text) > entry_max_chars:
+                    trimmed_text = text[:entry_max_chars] + "... [truncated]"
                     hard_trimmed.append({**entry, constants.KEY_TEXT: trimmed_text})
                 else:
                     hard_trimmed.append(entry)
