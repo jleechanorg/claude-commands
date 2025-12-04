@@ -318,5 +318,114 @@ class TestMiddleCompaction(unittest.TestCase):
         )
 
 
+class TestTruncationBudgetGuarantees(unittest.TestCase):
+    """Test that truncation ALWAYS returns content within budget."""
+
+    def setUp(self):
+        """Set up test environment."""
+        os.environ["TESTING"] = "true"
+        self.mock_game_state = MagicMock(spec=GameState)
+        self.mock_game_state.custom_campaign_state = {}
+        self.mock_game_state.world_data = {}
+        self.mock_game_state.to_dict.return_value = {}
+        self.mock_game_state.combat_state = {"in_combat": False}
+
+    def test_short_transcript_respects_budget(self):
+        """
+        BUG: When total_turns <= start+end, code returns without checking budget.
+        Two very long turns should still be truncated if over budget.
+        """
+        from mvp_site.llm_service import _truncate_context, estimate_tokens
+
+        # Create 2 HUGE turns (~50K tokens each = 200K chars)
+        huge_text = "x" * 200_000  # ~50K tokens
+        story_context = [
+            {"actor": "user", "text": huge_text},
+            {"actor": "gemini", "text": huge_text},
+        ]
+
+        # Budget that can only fit ~10K tokens (~40K chars)
+        max_chars = 40_000
+
+        result = _truncate_context(
+            story_context=story_context,
+            max_chars=max_chars,
+            model_name="zai-glm-4.6",
+            current_game_state=self.mock_game_state,
+            provider_name=constants.LLM_PROVIDER_CEREBRAS,
+        )
+
+        # Result MUST fit within budget
+        result_text = "".join(e.get("text", "") for e in result)
+        result_tokens = estimate_tokens(result_text)
+        max_tokens = estimate_tokens(" " * max_chars)
+
+        self.assertLessEqual(
+            result_tokens, max_tokens,
+            f"Short transcript still over budget: {result_tokens} > {max_tokens}"
+        )
+
+    def test_last_resort_respects_budget(self):
+        """
+        BUG: Last resort returns truncated_context without checking budget.
+        Even with minimum turns, result should fit in budget.
+        """
+        from mvp_site.llm_service import _truncate_context, estimate_tokens
+
+        # Create 10 huge turns that won't fit even with minimums (3+5=8 turns)
+        huge_text = "x" * 80_000  # ~20K tokens per turn
+        story_context = [
+            {"actor": "user" if i % 2 == 0 else "gemini", "text": huge_text}
+            for i in range(10)
+        ]
+
+        # Tiny budget that can't fit 8 turns of 20K tokens each
+        max_chars = 20_000  # ~5K tokens
+
+        result = _truncate_context(
+            story_context=story_context,
+            max_chars=max_chars,
+            model_name="zai-glm-4.6",
+            current_game_state=self.mock_game_state,
+            provider_name=constants.LLM_PROVIDER_CEREBRAS,
+        )
+
+        # Result MUST fit within budget (or raise error, not silently overflow)
+        result_text = "".join(e.get("text", "") for e in result)
+        result_tokens = estimate_tokens(result_text)
+        max_tokens = estimate_tokens(" " * max_chars)
+
+        self.assertLessEqual(
+            result_tokens, max_tokens,
+            f"Last resort still over budget: {result_tokens} > {max_tokens}"
+        )
+
+    def test_middle_summary_respects_budget(self):
+        """
+        BUG: Middle compaction adds bullets/wrappers after capping sentences.
+        The final summary can exceed the allocated middle_token_budget.
+        """
+        from mvp_site.llm_service import _compact_middle_turns, estimate_tokens
+
+        # Create many turns with keyword-rich content that will be extracted
+        middle_turns = [
+            {"actor": "gemini", "text": f"You attack the goblin {i}! " * 20}
+            for i in range(50)
+        ]
+
+        # Very small budget
+        max_tokens = 100
+
+        result = _compact_middle_turns(middle_turns, max_tokens)
+        result_text = result.get("text", "")
+        result_tokens = estimate_tokens(result_text)
+
+        # Result MUST fit within budget (including wrapper overhead)
+        self.assertLessEqual(
+            result_tokens, max_tokens,
+            f"Middle summary exceeds budget: {result_tokens} > {max_tokens}"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

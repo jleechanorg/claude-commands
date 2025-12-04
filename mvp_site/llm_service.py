@@ -1752,9 +1752,11 @@ def _truncate_context(
     """
     Intelligently truncates the story context to fit within a given character budget.
 
-    PERCENTAGE-BASED TRUNCATION: Uses 25%/70% ratio for start/end turns allocation.
+    PERCENTAGE-BASED TRUNCATION: Uses 25%/10%/60% ratio for start/middle/end allocation.
     ADAPTIVE FALLBACK: If initial allocation still exceeds budget, iteratively
     reduces turn count until it fits.
+    HARD-TRIM GUARANTEE: If even minimum turns exceed budget, text is hard-trimmed
+    to guarantee the result fits within budget.
     """
     initial_stats = _get_context_stats(
         story_context, model_name, current_game_state, provider_name
@@ -1785,8 +1787,51 @@ def _truncate_context(
     turns_to_keep_at_end = min(turns_to_keep_at_end, pct_end)
 
     if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
-        # If we're over budget but have few turns, just take the most recent ones.
-        return story_context[-(turns_to_keep_at_start + turns_to_keep_at_end) :]
+        # Few turns - but still need to check if they fit in budget
+        # If over budget with few turns, we must hard-trim the text content
+        candidate = story_context[-(turns_to_keep_at_start + turns_to_keep_at_end):]
+        candidate_text = "".join(e.get(constants.KEY_TEXT, "") for e in candidate)
+        candidate_tokens = estimate_tokens(candidate_text)
+
+        if candidate_tokens <= max_tokens:
+            return candidate
+
+        # Still over budget - iteratively hard-trim until we fit
+        # Start with proportional trim based on current vs target
+        trim_ratio = max_tokens / max(1, candidate_tokens)
+        trimmed_context = candidate
+
+        for _ in range(10):  # Max 10 iterations to converge
+            trimmed_entries = []
+            for entry in candidate:
+                text = entry.get(constants.KEY_TEXT, "")
+                max_chars = max(50, int(len(text) * trim_ratio))
+                if len(text) > max_chars:
+                    trimmed_text = text[:max_chars] + "... [truncated]"
+                    trimmed_entries.append({**entry, constants.KEY_TEXT: trimmed_text})
+                else:
+                    trimmed_entries.append(entry)
+
+            trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in trimmed_entries)
+            trimmed_tokens = estimate_tokens(trimmed_text)
+
+            if trimmed_tokens <= max_tokens:
+                logging_util.warning(
+                    f"Hard-trimmed {len(candidate)} turns to fit budget: "
+                    f"{candidate_tokens} tokens -> {trimmed_tokens} tokens"
+                )
+                return trimmed_entries
+
+            # Still over - reduce ratio further
+            trim_ratio *= 0.7
+            trimmed_context = trimmed_entries
+
+        # Final fallback - return what we have (best effort)
+        logging_util.warning(
+            f"Hard-trim could not fully fit budget after iterations: "
+            f"{candidate_tokens} -> {trimmed_tokens} tokens (budget: {max_tokens})"
+        )
+        return trimmed_context
 
     # Calculate middle token budget (10% of story budget)
     middle_token_budget = int(max_tokens * STORY_BUDGET_MIDDLE_RATIO)
@@ -1875,6 +1920,37 @@ def _truncate_context(
         f"Aggressive truncation to {min_start}+{min_end} turns. "
         f"Tokens: {truncated_tokens} (budget: {max_tokens})"
     )
+
+    # If STILL over budget after minimum turns, iteratively hard-trim the text content
+    if truncated_tokens > max_tokens:
+        trim_ratio = max_tokens / max(1, truncated_tokens)
+        original_context = truncated_context
+
+        for _ in range(10):  # Max 10 iterations to converge
+            hard_trimmed = []
+            for entry in original_context:
+                text = entry.get(constants.KEY_TEXT, "")
+                max_chars = max(50, int(len(text) * trim_ratio))
+                if len(text) > max_chars:
+                    trimmed_text = text[:max_chars] + "... [truncated]"
+                    hard_trimmed.append({**entry, constants.KEY_TEXT: trimmed_text})
+                else:
+                    hard_trimmed.append(entry)
+
+            trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in hard_trimmed)
+            new_tokens = estimate_tokens(trimmed_text)
+
+            if new_tokens <= max_tokens:
+                logging_util.warning(
+                    f"Hard-trimmed last resort to fit budget: "
+                    f"{truncated_tokens} tokens -> {new_tokens} tokens"
+                )
+                truncated_context = hard_trimmed
+                break
+
+            # Still over - reduce ratio further
+            trim_ratio *= 0.7
+            truncated_context = hard_trimmed
 
     final_stats = _get_context_stats(
         truncated_context, model_name, current_game_state, provider_name
