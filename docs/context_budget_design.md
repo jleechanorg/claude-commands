@@ -59,8 +59,8 @@ Model Context Window (100%)
 │       │
 │       └── Story Budget (remaining ~50-60%)
 │           ├── Start turns (25% of story budget)
-│           ├── Middle (currently dropped, future: 5-10% summarized)
-│           ├── End turns (70% of story budget)
+│           ├── Middle summary (10% - compacted key events)
+│           ├── End turns (60% of story budget)
 │           └── Truncation marker (5% safety margin)
 ```
 
@@ -74,8 +74,8 @@ Model Context Window (100%)
 | Core memories | 2,000-3,000 | Character/companion data |
 | Entity tracking | 10,500 (fixed) | Added post-truncation |
 | Story start | 25% of story budget | Context setup turns |
-| Story middle | 0% (future: 5-10%) | Currently dropped, needs summarization |
-| Story end | 70% of story budget | Recent action turns |
+| Story middle | 10% of story budget | Compacted key events from dropped turns |
+| Story end | 60% of story budget | Recent action turns |
 | Truncation marker | 5% of story budget | Safety margin |
 
 ## Budget Constants
@@ -95,7 +95,8 @@ Model Context Window (100%)
 | Constant | Value | Purpose |
 |----------|-------|---------|
 | `STORY_BUDGET_START_RATIO` | 0.25 | 25% for context setup turns |
-| `STORY_BUDGET_END_RATIO` | 0.70 | 70% for recent action turns |
+| `STORY_BUDGET_MIDDLE_RATIO` | 0.10 | 10% for compacted key events |
+| `STORY_BUDGET_END_RATIO` | 0.60 | 60% for recent action turns |
 | Reserved | 0.05 | Truncation marker + safety |
 
 ### Legacy Maximums (Caps)

@@ -426,9 +426,28 @@ TURNS_TO_KEEP_AT_END: int = 20
 # Story budget = available tokens after scaffold and output reserve
 # These ratios ensure turns scale with model context size
 STORY_BUDGET_START_RATIO: float = 0.25  # 25% of story budget for first turns (context setup)
-STORY_BUDGET_END_RATIO: float = 0.70    # 70% of story budget for recent turns (most important)
+STORY_BUDGET_MIDDLE_RATIO: float = 0.10  # 10% for compacted middle (key events summary)
+STORY_BUDGET_END_RATIO: float = 0.60    # 60% of story budget for recent turns (most important)
 # Remaining 5% reserved for truncation marker and safety margin
-# FUTURE: Add STORY_BUDGET_MIDDLE_RATIO for summarized middle content
+
+# Keywords that indicate important events worth preserving in middle compaction
+MIDDLE_COMPACTION_KEYWORDS: set[str] = {
+    # Combat and conflict
+    "attack", "hit", "damage", "kill", "defeat", "victory", "died", "death",
+    "combat", "fight", "battle", "wound", "heal", "critical",
+    # Discovery and acquisition
+    "discover", "find", "found", "acquire", "obtain", "receive", "gain",
+    "treasure", "gold", "item", "weapon", "armor", "artifact", "key",
+    # Story progression
+    "quest", "mission", "objective", "complete", "accomplish", "learn",
+    "reveal", "secret", "clue", "mystery", "truth",
+    # Location and movement
+    "arrive", "enter", "leave", "travel", "reach", "escape",
+    # Character interactions
+    "meet", "ally", "betray", "join", "hire", "recruit",
+    # Major events
+    "level", "experience", "rest", "camp", "merchant", "shop",
+}
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
@@ -1565,8 +1584,9 @@ def _calculate_percentage_based_turns(
     """
     Calculate how many turns to keep based on percentage of story budget.
 
-    Uses STORY_BUDGET_START_RATIO (25%) and STORY_BUDGET_END_RATIO (70%)
-    to allocate tokens proportionally, then converts to turn counts.
+    Uses STORY_BUDGET_START_RATIO (25%), STORY_BUDGET_MIDDLE_RATIO (10%),
+    and STORY_BUDGET_END_RATIO (60%) to allocate tokens proportionally,
+    then converts to turn counts. Middle turns are compacted separately.
 
     Args:
         story_context: Full story context to analyze
@@ -1613,10 +1633,111 @@ def _calculate_percentage_based_turns(
     logging_util.info(
         f"📊 PERCENTAGE-BASED TURNS: avg_tokens/turn={avg_tokens_per_turn:.0f}, "
         f"start_budget={start_token_budget}tk→{start_turns} turns (25%), "
-        f"end_budget={end_token_budget}tk→{end_turns} turns (70%)"
+        f"end_budget={end_token_budget}tk→{end_turns} turns (60%), "
+        f"middle_budget={int(max_tokens * STORY_BUDGET_MIDDLE_RATIO)}tk (10% for compaction)"
     )
 
     return (start_turns, end_turns)
+
+
+def _compact_middle_turns(
+    middle_turns: list[dict[str, Any]],
+    max_tokens: int,
+) -> dict[str, Any]:
+    """
+    Compact middle turns into a summary preserving key events.
+
+    Instead of completely dropping middle turns, extract important sentences
+    that mention combat, discoveries, acquisitions, and story progression.
+
+    Args:
+        middle_turns: The turns being dropped from the middle section
+        max_tokens: Maximum tokens allowed for the compacted summary
+
+    Returns:
+        A system message containing the compacted middle summary
+    """
+    if not middle_turns:
+        return {
+            "actor": "system",
+            "text": "[...time passes...]",
+        }
+
+    # Extract important sentences from middle turns
+    important_events: list[str] = []
+    total_tokens = 0
+
+    for turn in middle_turns:
+        text = turn.get(constants.KEY_TEXT, "")
+        if not text:
+            continue
+
+        # Split into sentences (simple split on period, exclamation, question)
+        sentences = []
+        current = ""
+        for char in text:
+            current += char
+            if char in ".!?" and len(current.strip()) > 10:
+                sentences.append(current.strip())
+                current = ""
+        if current.strip():
+            sentences.append(current.strip())
+
+        # Check each sentence for important keywords
+        for sentence in sentences:
+            sentence_lower = sentence.lower()
+            has_keyword = any(kw in sentence_lower for kw in MIDDLE_COMPACTION_KEYWORDS)
+
+            if has_keyword:
+                sentence_tokens = estimate_tokens(sentence)
+                if total_tokens + sentence_tokens <= max_tokens:
+                    important_events.append(sentence)
+                    total_tokens += sentence_tokens
+                else:
+                    # Reached token limit
+                    break
+
+        if total_tokens >= max_tokens:
+            break
+
+    # Format the compacted summary
+    if important_events:
+        # Deduplicate while preserving order
+        seen: set[str] = set()
+        unique_events: list[str] = []
+        for event in important_events:
+            # Normalize for dedup (lowercase, strip)
+            normalized = event.lower().strip()
+            if normalized not in seen:
+                seen.add(normalized)
+                unique_events.append(event)
+
+        # Limit to reasonable number of events
+        max_events = 15
+        if len(unique_events) > max_events:
+            unique_events = unique_events[:max_events]
+
+        summary_text = (
+            "[...time passes, and these key events occurred...]\n\n"
+            + "\n".join(f"- {event}" for event in unique_events)
+            + "\n\n[...the story continues from the most recent events...]"
+        )
+    else:
+        # No important events found - use minimal marker
+        summary_text = (
+            f"[...{len(middle_turns)} turns of exploration and conversation passed...]\n"
+            "[...the story continues from the most recent events...]"
+        )
+
+    logging_util.info(
+        f"📊 MIDDLE COMPACTION: {len(middle_turns)} turns → "
+        f"{len(important_events)} key events, {total_tokens} tokens"
+    )
+
+    return {
+        "actor": "system",
+        "text": summary_text,
+    }
 
 
 def _truncate_context(
@@ -1667,10 +1788,8 @@ def _truncate_context(
         # If we're over budget but have few turns, just take the most recent ones.
         return story_context[-(turns_to_keep_at_start + turns_to_keep_at_end) :]
 
-    truncation_marker = {
-        "actor": "system",
-        "text": "[...several moments, scenes, or days have passed...]\\n[...the story continues from the most recent relevant events...]",
-    }
+    # Calculate middle token budget (10% of story budget)
+    middle_token_budget = int(max_tokens * STORY_BUDGET_MIDDLE_RATIO)
 
     # ADAPTIVE LOOP: Reduce turns until content fits within token budget
     # Use absolute minimums but respect passed-in values if they're smaller
@@ -1685,7 +1804,16 @@ def _truncate_context(
     while current_start >= min_start and current_end >= min_end:
         start_context = story_context[:current_start] if current_start > 0 else []
         end_context = story_context[-current_end:] if current_end > 0 else []
-        truncated_context = start_context + [truncation_marker] + end_context
+
+        # Extract and compact middle turns instead of dropping them
+        middle_start_idx = current_start
+        middle_end_idx = total_turns - current_end
+        middle_turns = story_context[middle_start_idx:middle_end_idx] if middle_end_idx > middle_start_idx else []
+
+        # Compact middle turns to preserve key events
+        middle_summary = _compact_middle_turns(middle_turns, middle_token_budget)
+
+        truncated_context = start_context + [middle_summary] + end_context
 
         truncated_text = "".join(
             entry.get(constants.KEY_TEXT, "") for entry in truncated_context
@@ -1701,7 +1829,13 @@ def _truncate_context(
                 logging_util.warning(
                     f"Adaptive truncation reduced to {current_start}+{current_end} turns "
                     f"(from {turns_to_keep_at_start}+{turns_to_keep_at_end}) to fit budget. "
+                    f"Middle: {len(middle_turns)} turns compacted. "
                     f"Final: {truncated_tokens} tokens <= {max_tokens} budget"
+                )
+            else:
+                logging_util.info(
+                    f"Truncation: {current_start} start + {len(middle_turns)} middle (compacted) + "
+                    f"{current_end} end = {truncated_tokens} tokens"
                 )
             logging_util.info(f"Final context stats after truncation: {final_stats}")
             return truncated_context
@@ -1720,10 +1854,17 @@ def _truncate_context(
             # Can't reduce further - exit loop and use last resort
             break
 
-    # Last resort: minimum turns
+    # Last resort: minimum turns with compacted middle
     start_context = story_context[:min_start] if min_start > 0 else []
     end_context = story_context[-min_end:] if min_end > 0 else []
-    truncated_context = start_context + [truncation_marker] + end_context
+
+    # Extract and compact middle turns for last resort
+    middle_start_idx = min_start
+    middle_end_idx = total_turns - min_end
+    middle_turns = story_context[middle_start_idx:middle_end_idx] if middle_end_idx > middle_start_idx else []
+    middle_summary = _compact_middle_turns(middle_turns, middle_token_budget)
+
+    truncated_context = start_context + [middle_summary] + end_context
 
     truncated_text = "".join(
         entry.get(constants.KEY_TEXT, "") for entry in truncated_context

@@ -195,5 +195,128 @@ class TestPercentageBasedTruncation(unittest.TestCase):
         self.assertGreaterEqual(large_start + large_end, small_start + small_end)
 
 
+class TestMiddleCompaction(unittest.TestCase):
+    """Test middle turn compaction instead of dropping."""
+
+    def setUp(self):
+        """Set up test environment."""
+        os.environ["TESTING"] = "true"
+
+    def test_compact_middle_turns_extracts_key_events(self):
+        """Middle compaction should extract sentences with important keywords."""
+        from mvp_site.llm_service import _compact_middle_turns
+
+        # Create turns with mix of important and filler content
+        middle_turns = [
+            {"actor": "gemini", "text": "The party rested by the campfire."},
+            {"actor": "gemini", "text": "You attack the goblin! The creature takes 15 damage and falls."},
+            {"actor": "user", "text": "I search the room."},
+            {"actor": "gemini", "text": "You discover a hidden treasure chest containing gold coins."},
+            {"actor": "gemini", "text": "The night passes uneventfully."},
+        ]
+
+        result = _compact_middle_turns(middle_turns, max_tokens=500)
+
+        # Should be a system message
+        self.assertEqual(result.get("actor"), "system")
+
+        # Should contain key events (attack, discover, treasure)
+        text = result.get("text", "")
+        self.assertIn("key events occurred", text)
+        # Should have extracted sentences with keywords
+        self.assertTrue("attack" in text.lower() or "damage" in text.lower() or "discover" in text.lower())
+
+    def test_compact_middle_turns_respects_token_limit(self):
+        """Middle compaction should not exceed token budget."""
+        from mvp_site.llm_service import _compact_middle_turns, estimate_tokens
+
+        # Create many turns with important content
+        middle_turns = [
+            {"actor": "gemini", "text": f"You defeat enemy number {i}. The battle was fierce." * 5}
+            for i in range(20)
+        ]
+
+        # Very small token budget
+        result = _compact_middle_turns(middle_turns, max_tokens=100)
+
+        # Result should not exceed budget significantly
+        result_tokens = estimate_tokens(result.get("text", ""))
+        # Allow some overhead for formatting
+        self.assertLess(result_tokens, 200)
+
+    def test_compact_middle_turns_empty_list(self):
+        """Empty middle turns should return minimal marker."""
+        from mvp_site.llm_service import _compact_middle_turns
+
+        result = _compact_middle_turns([], max_tokens=500)
+
+        self.assertEqual(result.get("actor"), "system")
+        self.assertIn("time passes", result.get("text", ""))
+
+    def test_compact_middle_turns_no_keywords(self):
+        """Turns without keywords should still produce output."""
+        from mvp_site.llm_service import _compact_middle_turns
+
+        # Create turns with no important keywords
+        middle_turns = [
+            {"actor": "gemini", "text": "The sun shines brightly today."},
+            {"actor": "user", "text": "I look around."},
+            {"actor": "gemini", "text": "You see trees and grass."},
+        ]
+
+        result = _compact_middle_turns(middle_turns, max_tokens=500)
+
+        # Should still produce a marker
+        self.assertEqual(result.get("actor"), "system")
+        self.assertIn("turns", result.get("text", ""))
+
+    def test_truncation_includes_middle_summary(self):
+        """Full truncation should include compacted middle, not just drop it."""
+        from mvp_site.llm_service import _truncate_context
+
+        mock_game_state = MagicMock(spec=GameState)
+        mock_game_state.custom_campaign_state = {}
+        mock_game_state.world_data = {}
+        mock_game_state.to_dict.return_value = {}
+        mock_game_state.combat_state = {"in_combat": False}
+
+        # Create 80 turns with combat in the middle - large enough to force truncation
+        story_context = []
+        for i in range(80):
+            if 25 <= i < 55:
+                # Middle section with combat - will be compacted
+                text = f"Turn {i}: You attack the goblin! The enemy takes {i} damage and retreats."
+            else:
+                # Long filler turns
+                text = f"Turn {i}: " + "x" * 4000  # ~1000 tokens each
+            story_context.append({"actor": "gemini", "text": text})
+
+        # Small budget that forces aggressive truncation
+        max_chars = 80_000  # ~20K tokens - small enough to force truncation
+
+        result = _truncate_context(
+            story_context=story_context,
+            max_chars=max_chars,
+            model_name="zai-glm-4.6",
+            current_game_state=mock_game_state,
+            provider_name=constants.LLM_PROVIDER_CEREBRAS,
+        )
+
+        # Should have fewer turns than original
+        self.assertLess(len(result), len(story_context))
+
+        # Find the system message (middle summary)
+        system_messages = [e for e in result if e.get("actor") == "system"]
+        self.assertGreater(len(system_messages), 0, "Should have a middle summary")
+
+        # Check that combat events were preserved in the summary
+        middle_summary = system_messages[0].get("text", "")
+        self.assertTrue(
+            "attack" in middle_summary.lower() or "damage" in middle_summary.lower() or
+            "key events" in middle_summary.lower() or "turns" in middle_summary.lower(),
+            f"Middle summary should mention events or turns: {middle_summary[:200]}"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
