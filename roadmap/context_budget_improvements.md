@@ -21,7 +21,6 @@ The context budget system was implemented to solve `ContextTooLargeError` for us
 | Percentage-Based Allocation | Done | 25% start / 70% end / 5% reserved |
 | Adaptive Reduction Loop | Done | Iteratively reduces turns until fit |
 | Minimum Turn Guarantees | Done | 3 start + 5 end minimum |
-| Auto-Fallback to Larger Model | Done | Falls back to Gemini 2.0 Flash (1M) |
 | Budget Logging | Done | Detailed token budget diagnostics |
 
 ### Test Coverage
@@ -29,7 +28,6 @@ The context budget system was implemented to solve `ContextTooLargeError` for us
 | Test File | Tests | Status |
 |-----------|-------|--------|
 | `test_adaptive_truncation.py` | 6 | Passing |
-| `test_auto_fallback_larger_context.py` | 7 | Passing |
 | `test_context_truncation.py` | 3 | Passing |
 | `test_output_token_budget_regression.py` | 9 | Passing |
 
@@ -110,7 +108,7 @@ Tier 3: Static world state (character sheets, quest log, NPC relationships)
 Track in GCP logs:
 - Truncation events per model
 - Average turns dropped per request
-- Fallback trigger frequency
+- ContextTooLargeError frequency
 - User narrative coherence ratings (future)
 
 ### 4.2 A/B Testing Framework
@@ -139,16 +137,15 @@ Create test campaigns with known "important" moments:
 
 | Risk | Mitigation | Owner |
 |------|------------|-------|
-| Fallback cost spike | Monitor fallback rate, alert at >10% | DevOps |
-| Voice inconsistency on fallback | Consider response blending | AI Team |
 | Important context dropped | Phase 2 importance scoring | AI Team |
 | Legacy 20-cap conflicts | Evaluate removal in Phase 3 | Dev |
+| Excessive truncation | Monitor truncation severity | DevOps |
 
 ### Monitoring Alerts
 
-1. **Fallback Rate**: Alert if >10% of requests fallback to Gemini
-2. **Truncation Severity**: Alert if average truncation >80%
-3. **Error Rate**: Alert on any `ContextTooLargeError` after fallback
+1. **Truncation Severity**: Alert if average truncation >80%
+2. **Error Rate**: Alert on any `ContextTooLargeError`
+3. **Model Context Usage**: Track % of context window used
 
 ---
 
@@ -207,4 +204,4 @@ Implementation order based on impact and complexity:
 ### Key Recommendations Incorporated
 1. Consider semantic importance scoring (Phase 2)
 2. Make percentages configurable per model (Phase 3)
-3. Add monitoring for fallback frequency (Phase 4)
+3. Add monitoring for truncation metrics (Phase 4)

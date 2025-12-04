@@ -145,19 +145,6 @@ while current_start >= min_start and current_end >= min_end:
         break  # Can't reduce further
 ```
 
-### Step 4: Fallback to Larger Model
-
-If truncation still fails, auto-fallback to Gemini 2.0 Flash (1M context):
-
-```python
-if allow_context_fallback:
-    fallback = _get_larger_context_model(provider_name, model_name)
-    if fallback:
-        return _call_llm_api(..., provider_name=fallback_provider,
-                            model_name=fallback_model,
-                            allow_context_fallback=False)  # Prevent recursion
-```
-
 ## Example Calculations
 
 ### Cerebras zai-glm-4.6 (131K context)
@@ -198,7 +185,6 @@ Story allocation:
 | 1 | Percentage-based allocation | Scales with model context |
 | 2 | Adaptive reduction loop | Handles variable turn lengths |
 | 3 | Minimum turn guarantees | Maintains narrative coherence |
-| 4 | Auto-fallback to larger model | Last resort safety net |
 
 ## Logging
 
@@ -222,7 +208,6 @@ The system logs budget calculations for debugging:
 | Test File | Tests | Purpose |
 |-----------|-------|---------|
 | `test_adaptive_truncation.py` | 6 | Adaptive + percentage-based |
-| `test_auto_fallback_larger_context.py` | 7 | Model fallback |
 | `test_context_truncation.py` | 3 | Legacy behavior |
 | `test_output_token_budget_regression.py` | 9 | Budget calculations |
 
@@ -231,4 +216,4 @@ The system logs budget calculations for debugging:
 - PR #2284: Add 20% output token reserve
 - PR #2294: Centralize context budget calculation
 - PR #2201: Adjust compaction to 20+20 turns
-- PR #2311: Add percentage-based allocation + auto-fallback
+- PR #2311: Add percentage-based allocation + adaptive truncation
