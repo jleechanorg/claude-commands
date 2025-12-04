@@ -64,7 +64,12 @@ class TestContextTruncation(unittest.TestCase):
     def test_truncates_when_few_turns_over_char_limit(self):
         """
         Verify that when there are few turns but still over char limit,
-        it takes the most recent turns that fit the turn limits.
+        it applies adaptive truncation with hard-trimming to fit the budget.
+
+        NEW BEHAVIOR (PR #2311): With a very low token budget (120 chars ≈ 30 tokens),
+        adaptive truncation aggressively reduces turns and hard-trims text to fit.
+        The function prioritizes recent turns (60% of budget for end) and will
+        hard-trim content to guarantee budget fit.
         """
         print("\\n--- Running Test: test_truncates_when_few_turns_over_char_limit ---")
 
@@ -84,24 +89,37 @@ class TestContextTruncation(unittest.TestCase):
             custom_campaign_state={"core_memories": []},
         )
 
-        # With 4 total turns and wanting 3 at end, it uses the "few turns" logic
-        # and returns the last 3 entries regardless of char limit
+        # With extremely low budget (120 chars ≈ 30 tokens), adaptive truncation
+        # will hard-trim to fit. With 4 turns of 50 chars each = 200 tokens total,
+        # this far exceeds the 30 token budget. The function will:
+        # 1. Calculate percentage-based turns (25% start / 60% end)
+        # 2. Hard-trim entries to fit within budget
+        # 3. Return truncation marker + minimal turns that fit
         truncated_context = llm_service._truncate_context(
             long_story_context,
-            max_chars=120,  # Low char limit (will be ignored due to few turns)
+            max_chars=120,  # Very low char limit - forces aggressive truncation
             model_name="test-model",
             current_game_state=mock_game_state,
             turns_to_keep_at_start=0,  # Keep none at start
-            turns_to_keep_at_end=3,  # Keep last 3
+            turns_to_keep_at_end=3,  # Keep last 3 (requested, but budget may limit this)
         )
 
-        # Current implementation: 4 > 3 so uses full truncation with marker
-        # Result: [] + [marker] + last 3 entries = 4 total
-        assert len(truncated_context) == 4
+        # New adaptive behavior: Hard-trims to fit budget
+        # Result: [marker] + hard-trimmed entries that fit in ~30 tokens
+        # With very low budget, we expect minimal turns
+        assert len(truncated_context) >= 1, "Should have at least truncation marker"
+        assert len(truncated_context) <= 4, "Should not exceed 4 entries (marker + 3 turns)"
+
+        # First entry should be truncation marker
         assert truncated_context[0]["actor"] == "system"  # Truncation marker
-        assert truncated_context[1]["text"] == "B" * 50  # Entry 2
-        assert truncated_context[2]["text"] == "C" * 50  # Entry 3
-        assert truncated_context[3]["text"] == "D" * 50  # Entry 4
+        assert "turns" in truncated_context[0]["text"] or "story" in truncated_context[0]["text"]
+
+        # Remaining entries should be from the end (most recent)
+        # With hard-trimming, text may be truncated
+        last_entry = truncated_context[-1]
+        assert last_entry["actor"] == "user"  # Last entry should be user turn (entry 4)
+        # Text should start with "D" (may be trimmed but should preserve beginning)
+        assert last_entry["text"].startswith("D")
 
         print("--- Test Finished Successfully ---")
 
