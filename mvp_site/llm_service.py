@@ -1616,7 +1616,11 @@ def _calculate_percentage_based_turns(
         entry.get(constants.KEY_TEXT, "") for entry in story_context
     )
     total_story_tokens = estimate_tokens(combined_text)
-    avg_tokens_per_turn = total_story_tokens / total_turns if total_turns > 0 else 500
+    if total_story_tokens <= 0 or total_turns <= 0:
+        # Fallback average when text is empty or invalid; keeps math safe.
+        avg_tokens_per_turn = 500
+    else:
+        avg_tokens_per_turn = total_story_tokens / total_turns
 
     # Calculate token budgets for start and end
     start_token_budget = int(max_tokens * STORY_BUDGET_START_RATIO)
@@ -1711,8 +1715,8 @@ def _truncate_context(
     current_end = turns_to_keep_at_end
 
     while current_start >= min_start and current_end >= min_end:
-        start_context = story_context[:current_start]
-        end_context = story_context[-current_end:]
+        start_context = story_context[:current_start] if current_start > 0 else []
+        end_context = story_context[-current_end:] if current_end > 0 else []
         truncated_context = start_context + [truncation_marker] + end_context
 
         truncated_text = "".join(
@@ -1737,9 +1741,11 @@ def _truncate_context(
         # Still over budget - reduce turns (alternate between start and end)
         # Prioritize keeping recent context, reduce start turns faster
         if current_start > min_start and current_start >= current_end:
-            current_start -= 2
+            step = 2 if current_start - 2 >= min_start else 1
+            current_start -= step
         elif current_end > min_end:
-            current_end -= 2
+            step = 2 if current_end - 2 >= min_end else 1
+            current_end -= step
         elif current_start > min_start:
             current_start -= 1
         else:
@@ -1748,7 +1754,7 @@ def _truncate_context(
 
     # Last resort: minimum turns
     start_context = story_context[:min_start] if min_start > 0 else []
-    end_context = story_context[-min_end:] if min_end > 0 else story_context
+    end_context = story_context[-min_end:] if min_end > 0 else []
     truncated_context = start_context + [truncation_marker] + end_context
 
     truncated_text = "".join(

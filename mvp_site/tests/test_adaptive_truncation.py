@@ -15,6 +15,10 @@ from unittest.mock import MagicMock, patch
 
 from mvp_site import constants
 from mvp_site.game_state import GameState
+from mvp_site.llm_service import (
+    _calculate_percentage_based_turns,
+    _truncate_context,
+)
 
 
 class TestAdaptiveTruncation(unittest.TestCase):
@@ -36,8 +40,6 @@ class TestAdaptiveTruncation(unittest.TestCase):
         Simulates long narrative entries (~2400 tokens each) that would overflow
         Cerebras's 94K input limit with 40 turns.
         """
-        from mvp_site.llm_service import _truncate_context
-
         # Create 50 story entries with ~2400 tokens each (simulated via long text)
         # 2400 tokens ≈ 9600 chars (4 chars per token estimate)
         long_entry_text = "x" * 9600  # ~2400 tokens per entry
@@ -69,8 +71,6 @@ class TestAdaptiveTruncation(unittest.TestCase):
 
     def test_truncation_keeps_minimum_turns(self):
         """Should keep at least 3 start + 5 end turns even with extreme budget."""
-        from mvp_site.llm_service import _truncate_context
-
         # Create entries that are very long
         huge_entry_text = "x" * 40000  # ~10,000 tokens per entry
         story_context = [
@@ -92,9 +92,9 @@ class TestAdaptiveTruncation(unittest.TestCase):
         # Should have minimum turns (3 start + 1 marker + 5 end = 9)
         self.assertEqual(len(result), 9)
 
-    def test_truncation_no_change_when_under_budget(self):
+    @patch("mvp_site.llm_service.gemini_provider.count_tokens", return_value=100)
+    def test_truncation_no_change_when_under_budget(self, mock_count_tokens):
         """When content is within budget, should return unchanged."""
-        from mvp_site.llm_service import _truncate_context
 
         # Create 10 short entries
         story_context = [
@@ -118,8 +118,6 @@ class TestAdaptiveTruncation(unittest.TestCase):
 
     def test_truncation_preserves_recent_context(self):
         """Adaptive truncation should prioritize recent (end) context."""
-        from mvp_site.llm_service import _truncate_context
-
         # Create numbered entries so we can verify which are kept
         story_context = [
             {"actor": "user", "text": f"Entry number {i} " + "x" * 4000}
@@ -156,8 +154,6 @@ class TestPercentageBasedTruncation(unittest.TestCase):
 
     def test_calculate_percentage_based_turns(self):
         """Percentage-based calculation should allocate 25% start / 70% end."""
-        from mvp_site.llm_service import _calculate_percentage_based_turns
-
         # Create 100 entries with ~100 tokens each (400 chars = 100 tokens)
         story_context = [
             {"actor": "user" if i % 2 == 0 else "gemini", "text": "x" * 400}
@@ -179,8 +175,6 @@ class TestPercentageBasedTruncation(unittest.TestCase):
 
     def test_percentage_based_turns_scales_with_budget(self):
         """Turn allocation should scale down for smaller budgets."""
-        from mvp_site.llm_service import _calculate_percentage_based_turns
-
         # Create entries with ~500 tokens each
         story_context = [
             {"actor": "user", "text": "x" * 2000}  # ~500 tokens
