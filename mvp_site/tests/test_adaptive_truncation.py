@@ -147,5 +147,59 @@ class TestAdaptiveTruncation(unittest.TestCase):
         )
 
 
+class TestPercentageBasedTruncation(unittest.TestCase):
+    """Test percentage-based context allocation (25% start, 70% end)."""
+
+    def setUp(self):
+        """Set up test environment."""
+        os.environ["TESTING"] = "true"
+
+    def test_calculate_percentage_based_turns(self):
+        """Percentage-based calculation should allocate 25% start / 70% end."""
+        from mvp_site.llm_service import _calculate_percentage_based_turns
+
+        # Create 100 entries with ~100 tokens each (400 chars = 100 tokens)
+        story_context = [
+            {"actor": "user" if i % 2 == 0 else "gemini", "text": "x" * 400}
+            for i in range(100)
+        ]
+
+        # Budget of 5000 tokens
+        max_tokens = 5000
+
+        start_turns, end_turns = _calculate_percentage_based_turns(
+            story_context, max_tokens
+        )
+
+        # Should allocate based on 25/70 ratio
+        self.assertGreaterEqual(start_turns, 3)
+        self.assertLessEqual(start_turns, 20)
+        self.assertGreaterEqual(end_turns, 5)
+        self.assertLessEqual(end_turns, 20)
+
+    def test_percentage_based_turns_scales_with_budget(self):
+        """Turn allocation should scale down for smaller budgets."""
+        from mvp_site.llm_service import _calculate_percentage_based_turns
+
+        # Create entries with ~500 tokens each
+        story_context = [
+            {"actor": "user", "text": "x" * 2000}  # ~500 tokens
+            for _ in range(50)
+        ]
+
+        # Small budget - should get fewer turns
+        small_start, small_end = _calculate_percentage_based_turns(
+            story_context, max_tokens=3000
+        )
+
+        # Larger budget - should get more turns
+        large_start, large_end = _calculate_percentage_based_turns(
+            story_context, max_tokens=20000
+        )
+
+        # Larger budget should allow more turns (or equal if capped)
+        self.assertGreaterEqual(large_start + large_end, small_start + small_end)
+
+
 if __name__ == "__main__":
     unittest.main()

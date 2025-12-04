@@ -413,8 +413,16 @@ def _calculate_prompt_and_system_tokens(
     return user_prompt_tokens, system_tokens
 
 
+# Fixed turn counts (legacy - used as maximums)
 TURNS_TO_KEEP_AT_START: int = 20
 TURNS_TO_KEEP_AT_END: int = 20
+
+# Percentage-based story budget allocation
+# Story budget = available tokens after scaffold and output reserve
+# These ratios ensure turns scale with model context size
+STORY_BUDGET_START_RATIO: float = 0.25  # 25% of story budget for first turns (context setup)
+STORY_BUDGET_END_RATIO: float = 0.70    # 70% of story budget for recent turns (most important)
+# Remaining 5% reserved for truncation marker and safety margin
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
@@ -1582,6 +1590,63 @@ def _get_context_stats(
     return stats_string
 
 
+def _calculate_percentage_based_turns(
+    story_context: list[dict[str, Any]],
+    max_tokens: int,
+) -> tuple[int, int]:
+    """
+    Calculate how many turns to keep based on percentage of story budget.
+
+    Uses STORY_BUDGET_START_RATIO (25%) and STORY_BUDGET_END_RATIO (70%)
+    to allocate tokens proportionally, then converts to turn counts.
+
+    Args:
+        story_context: Full story context to analyze
+        max_tokens: Maximum tokens available for story
+
+    Returns:
+        (start_turns, end_turns) tuple based on percentage allocation
+    """
+    total_turns = len(story_context)
+    if total_turns == 0:
+        return (0, 0)
+
+    # Calculate average tokens per turn
+    combined_text = "".join(
+        entry.get(constants.KEY_TEXT, "") for entry in story_context
+    )
+    total_story_tokens = estimate_tokens(combined_text)
+    avg_tokens_per_turn = total_story_tokens / total_turns if total_turns > 0 else 500
+
+    # Calculate token budgets for start and end
+    start_token_budget = int(max_tokens * STORY_BUDGET_START_RATIO)
+    end_token_budget = int(max_tokens * STORY_BUDGET_END_RATIO)
+
+    # Convert to turn counts (cap at legacy maximums for safety)
+    start_turns = min(
+        int(start_token_budget / avg_tokens_per_turn),
+        TURNS_TO_KEEP_AT_START,
+        total_turns // 2  # Never take more than half for start
+    )
+    end_turns = min(
+        int(end_token_budget / avg_tokens_per_turn),
+        TURNS_TO_KEEP_AT_END,
+        total_turns - start_turns  # Don't overlap
+    )
+
+    # Ensure minimums
+    start_turns = max(3, start_turns)
+    end_turns = max(5, end_turns)
+
+    logging_util.info(
+        f"📊 PERCENTAGE-BASED TURNS: avg_tokens/turn={avg_tokens_per_turn:.0f}, "
+        f"start_budget={start_token_budget}tk→{start_turns} turns (25%), "
+        f"end_budget={end_token_budget}tk→{end_turns} turns (70%)"
+    )
+
+    return (start_turns, end_turns)
+
+
 def _truncate_context(
     story_context: list[dict[str, Any]],
     max_chars: int,
@@ -1594,9 +1659,9 @@ def _truncate_context(
     """
     Intelligently truncates the story context to fit within a given character budget.
 
-    ADAPTIVE TRUNCATION: If initial 20+20 turns still exceeds budget, iteratively
-    reduces turn count until it fits. This handles long narrative entries that would
-    otherwise overflow smaller context models (e.g., Cerebras 131K).
+    PERCENTAGE-BASED TRUNCATION: Uses 25%/70% ratio for start/end turns allocation.
+    ADAPTIVE FALLBACK: If initial allocation still exceeds budget, iteratively
+    reduces turn count until it fits.
     """
     initial_stats = _get_context_stats(
         story_context, model_name, current_game_state, provider_name
@@ -1620,6 +1685,12 @@ def _truncate_context(
     )
 
     total_turns = len(story_context)
+
+    # Calculate percentage-based turn limits instead of using fixed counts
+    pct_start, pct_end = _calculate_percentage_based_turns(story_context, max_tokens)
+    turns_to_keep_at_start = min(turns_to_keep_at_start, pct_start)
+    turns_to_keep_at_end = min(turns_to_keep_at_end, pct_end)
+
     if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
         # If we're over budget but have few turns, just take the most recent ones.
         return story_context[-(turns_to_keep_at_start + turns_to_keep_at_end) :]
