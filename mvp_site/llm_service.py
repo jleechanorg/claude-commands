@@ -1593,6 +1593,10 @@ def _truncate_context(
 ) -> list[dict[str, Any]]:
     """
     Intelligently truncates the story context to fit within a given character budget.
+
+    ADAPTIVE TRUNCATION: If initial 20+20 turns still exceeds budget, iteratively
+    reduces turn count until it fits. This handles long narrative entries that would
+    otherwise overflow smaller context models (e.g., Cerebras 131K).
     """
     initial_stats = _get_context_stats(
         story_context, model_name, current_game_state, provider_name
@@ -1620,15 +1624,71 @@ def _truncate_context(
         # If we're over budget but have few turns, just take the most recent ones.
         return story_context[-(turns_to_keep_at_start + turns_to_keep_at_end) :]
 
-    start_context = story_context[:turns_to_keep_at_start]
-    end_context = story_context[-turns_to_keep_at_end:]
-
     truncation_marker = {
         "actor": "system",
         "text": "[...several moments, scenes, or days have passed...]\\n[...the story continues from the most recent relevant events...]",
     }
 
+    # ADAPTIVE LOOP: Reduce turns until content fits within token budget
+    # Use absolute minimums but respect passed-in values if they're smaller
+    ABS_MIN_START = 3
+    ABS_MIN_END = 5
+    min_start = min(ABS_MIN_START, turns_to_keep_at_start) if turns_to_keep_at_start > 0 else 0
+    min_end = min(ABS_MIN_END, turns_to_keep_at_end)
+
+    current_start = turns_to_keep_at_start
+    current_end = turns_to_keep_at_end
+
+    while current_start >= min_start and current_end >= min_end:
+        start_context = story_context[:current_start]
+        end_context = story_context[-current_end:]
+        truncated_context = start_context + [truncation_marker] + end_context
+
+        truncated_text = "".join(
+            entry.get(constants.KEY_TEXT, "") for entry in truncated_context
+        )
+        truncated_tokens = estimate_tokens(truncated_text)
+
+        if truncated_tokens <= max_tokens:
+            # Found a fit
+            final_stats = _get_context_stats(
+                truncated_context, model_name, current_game_state, provider_name
+            )
+            if current_start < turns_to_keep_at_start or current_end < turns_to_keep_at_end:
+                logging_util.warning(
+                    f"Adaptive truncation reduced to {current_start}+{current_end} turns "
+                    f"(from {turns_to_keep_at_start}+{turns_to_keep_at_end}) to fit budget. "
+                    f"Final: {truncated_tokens} tokens <= {max_tokens} budget"
+                )
+            logging_util.info(f"Final context stats after truncation: {final_stats}")
+            return truncated_context
+
+        # Still over budget - reduce turns (alternate between start and end)
+        # Prioritize keeping recent context, reduce start turns faster
+        if current_start > min_start and current_start >= current_end:
+            current_start -= 2
+        elif current_end > min_end:
+            current_end -= 2
+        elif current_start > min_start:
+            current_start -= 1
+        else:
+            # Can't reduce further - exit loop and use last resort
+            break
+
+    # Last resort: minimum turns
+    start_context = story_context[:min_start] if min_start > 0 else []
+    end_context = story_context[-min_end:] if min_end > 0 else story_context
     truncated_context = start_context + [truncation_marker] + end_context
+
+    truncated_text = "".join(
+        entry.get(constants.KEY_TEXT, "") for entry in truncated_context
+    )
+    truncated_tokens = estimate_tokens(truncated_text)
+
+    logging_util.warning(
+        f"Aggressive truncation to {min_start}+{min_end} turns. "
+        f"Tokens: {truncated_tokens} (budget: {max_tokens})"
+    )
 
     final_stats = _get_context_stats(
         truncated_context, model_name, current_game_state, provider_name
