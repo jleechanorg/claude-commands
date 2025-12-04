@@ -38,11 +38,30 @@ The context budget system was implemented to solve `ContextTooLargeError` for us
 
 ---
 
-## Phase 2: Semantic Prioritization (PLANNED)
+## Phase 2: Middle Compaction + Semantic Prioritization (PLANNED)
 
-**Goal**: Improve truncation quality by considering narrative importance, not just position.
+**Goal**: Summarize middle turns instead of dropping them entirely.
 
-### 2.1 Importance Scoring System
+**Tracking**: Bead WA-1
+
+### 2.1 Middle Compaction (NEW)
+
+Currently middle turns are completely dropped. Should be summarized:
+
+```
+Story Budget Allocation (Future):
+- Start turns: 25% (raw content)
+- Middle summary: 5-10% (LLM-generated summary of dropped turns)
+- End turns: 65-70% (raw content)
+```
+
+**Implementation**:
+1. Identify turns that will be dropped (middle section)
+2. Generate compact summary of plot-critical events
+3. Insert summary between start and end sections
+4. Target 5-10% of story budget for middle summary
+
+### 2.2 Importance Scoring System
 
 Add importance scores to story turns:
 
@@ -57,9 +76,10 @@ class TurnImportance:
 **Implementation**:
 1. LLM tags turns with importance during generation
 2. Store importance in turn metadata
-3. Truncation prioritizes low-importance turns for removal
+3. Middle compaction prioritizes high-importance turns for summary
+4. Low-importance turns can be dropped entirely
 
-### 2.2 Hierarchical Memory
+### 2.3 Hierarchical Memory
 
 Replace simple truncation with tiered compression:
 

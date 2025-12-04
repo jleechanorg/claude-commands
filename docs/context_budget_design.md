@@ -21,6 +21,18 @@ max allowed is 94,372 tokens (80% of 117,964)
 2. Different model context windows (Cerebras 131K vs Gemini 1M)
 3. Story budget varies based on scaffold overhead
 
+## Architecture Decision: No Auto-Fallback
+
+**DO NOT add automatic fallback to larger context models.**
+
+This was explicitly removed in PR #2311. See bead WA-1 for tracking. Reasons:
+1. **Cost unpredictability** - larger models cost more per token
+2. **Voice inconsistency** - different models have different personalities
+3. **Latency variance** - larger contexts increase response time
+4. **Proper solution** - improve truncation, not switch models
+
+If `ContextTooLargeError` occurs, the solution is to improve truncation logic.
+
 ## Context Budget Hierarchy
 
 ```
@@ -33,19 +45,38 @@ Model Context Window (100%)
 │   │
 │   └── Max Input Allowed (80%)
 │       │
-│       ├── Scaffold (~15-20%)
-│       │   ├── System instruction
-│       │   ├── Checkpoint block
-│       │   ├── Core memories
-│       │   ├── Sequence IDs
-│       │   ├── Game state JSON
-│       │   └── Entity tracking reserve (10.5K tokens)
+│       ├── Scaffold (~15-20% of input)
+│       │   ├── System instruction (~5-8K tokens)
+│       │   ├── Game state JSON (~2-4K tokens)
+│       │   ├── Checkpoint block (~1-2K tokens)
+│       │   └── Core memories/companions (~2-3K tokens)
+│       │
+│       ├── Entity Tracking Reserve (10.5K tokens fixed)
+│       │   ├── entity_preload_text (~2-3K)
+│       │   ├── entity_specific_instructions (~1.5-2K)
+│       │   ├── entity_tracking_instruction (~1-1.5K)
+│       │   └── timeline_log (~3-4K)
 │       │
 │       └── Story Budget (remaining ~50-60%)
 │           ├── Start turns (25% of story budget)
+│           ├── Middle (currently dropped, future: 5-10% summarized)
 │           ├── End turns (70% of story budget)
 │           └── Truncation marker (5% safety margin)
 ```
+
+### Component Token Targets
+
+| Component | Target Tokens | Notes |
+|-----------|---------------|-------|
+| System instruction | 5,000-8,000 | Core rules and world context |
+| Game state JSON | 2,000-4,000 | Current state snapshot |
+| Checkpoint block | 1,000-2,000 | Session continuity |
+| Core memories | 2,000-3,000 | Character/companion data |
+| Entity tracking | 10,500 (fixed) | Added post-truncation |
+| Story start | 25% of story budget | Context setup turns |
+| Story middle | 0% (future: 5-10%) | Currently dropped, needs summarization |
+| Story end | 70% of story budget | Recent action turns |
+| Truncation marker | 5% of story budget | Safety margin |
 
 ## Budget Constants
 

@@ -376,12 +376,59 @@ def _calculate_prompt_and_system_tokens(
 TURNS_TO_KEEP_AT_START: int = 20
 TURNS_TO_KEEP_AT_END: int = 20
 
+# =============================================================================
+# CONTEXT BUDGET ALLOCATION SYSTEM
+# =============================================================================
+#
+# This system ensures LLM prompts fit within model-specific token limits.
+# See docs/context_budget_design.md for full design documentation.
+#
+# ARCHITECTURE DECISION: NO AUTO-FALLBACK TO LARGER MODELS
+# ---------------------------------------------------------
+# DO NOT add automatic fallback to larger context models (e.g., Gemini 1M).
+# This was explicitly removed in PR #2311. Reasons:
+# 1. Cost unpredictability - larger models cost more per token
+# 2. Voice inconsistency - different models have different personalities
+# 3. Latency variance - larger contexts increase response time
+# 4. Proper solution is adaptive truncation, not model switching
+#
+# If ContextTooLargeError occurs, the solution is to improve truncation,
+# not to silently switch models. See bead WA-1 for tracking.
+#
+# CONTEXT BUDGET HIERARCHY (% of model context window)
+# ----------------------------------------------------
+# Model Context Window (100%)
+# └── Safe Budget (90% - CONTEXT_WINDOW_SAFETY_RATIO)
+#     ├── Output Reserve (20% - OUTPUT_TOKEN_RESERVE_RATIO)
+#     │   └── Reserved for LLM response generation
+#     └── Max Input Allowed (80%)
+#         ├── Scaffold (~15-20% of input)
+#         │   ├── System instruction (~5-8K tokens)
+#         │   ├── Game state JSON (~2-4K tokens)
+#         │   ├── Checkpoint block (~1-2K tokens)
+#         │   └── Core memories/companions (~2-3K tokens)
+#         ├── Entity Tracking Reserve (10.5K tokens fixed)
+#         │   ├── entity_preload_text (~2-3K)
+#         │   ├── entity_specific_instructions (~1.5-2K)
+#         │   ├── entity_tracking_instruction (~1-1.5K)
+#         │   └── timeline_log (~3-4K)
+#         └── Story Budget (remaining ~50-60%)
+#             ├── Start Turns (25% - STORY_BUDGET_START_RATIO)
+#             ├── Middle (currently dropped, future: summarized)
+#             ├── End Turns (70% - STORY_BUDGET_END_RATIO)
+#             └── Truncation marker (5% safety margin)
+#
+# FUTURE: Middle compaction could summarize dropped turns instead of
+# discarding them entirely. This would preserve plot-critical events.
+# =============================================================================
+
 # Percentage-based story budget allocation
 # Story budget = available tokens after scaffold and output reserve
 # These ratios ensure turns scale with model context size
 STORY_BUDGET_START_RATIO: float = 0.25  # 25% of story budget for first turns (context setup)
 STORY_BUDGET_END_RATIO: float = 0.70    # 70% of story budget for recent turns (most important)
 # Remaining 5% reserved for truncation marker and safety margin
+# FUTURE: Add STORY_BUDGET_MIDDLE_RATIO for summarized middle content
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
