@@ -431,23 +431,147 @@ STORY_BUDGET_END_RATIO: float = 0.60    # 60% of story budget for recent turns (
 # Remaining 5% reserved for truncation marker and safety margin
 
 # Keywords that indicate important events worth preserving in middle compaction
+# Organized by category for maintainability
 MIDDLE_COMPACTION_KEYWORDS: set[str] = {
-    # Combat and conflict
+    # Combat and conflict (English)
     "attack", "hit", "damage", "kill", "defeat", "victory", "died", "death",
-    "combat", "fight", "battle", "wound", "heal", "critical",
+    "combat", "fight", "battle", "wound", "heal", "critical", "strike", "slash",
+    "stab", "shoot", "cast", "spell", "miss", "dodge", "block", "parry",
     # Discovery and acquisition
-    "discover", "find", "found", "acquire", "obtain", "receive", "gain",
-    "treasure", "gold", "item", "weapon", "armor", "artifact", "key",
+    "discover", "find", "found", "acquire", "obtain", "receive", "gain", "loot",
+    "treasure", "gold", "item", "weapon", "armor", "artifact", "key", "unlock",
+    "open", "chest", "reward", "coins", "gems", "potion", "scroll", "map",
     # Story progression
-    "quest", "mission", "objective", "complete", "accomplish", "learn",
-    "reveal", "secret", "clue", "mystery", "truth",
+    "quest", "mission", "objective", "complete", "accomplish", "learn", "warn",
+    "reveal", "secret", "clue", "mystery", "truth", "prophecy", "legend", "oath",
+    "promise", "vow", "betray", "deceive", "lie", "confess", "admit",
     # Location and movement
-    "arrive", "enter", "leave", "travel", "reach", "escape",
+    "arrive", "enter", "leave", "travel", "reach", "escape", "flee", "run",
+    "climb", "descend", "cross", "portal", "gate", "door", "passage", "hidden",
     # Character interactions
-    "meet", "ally", "betray", "join", "hire", "recruit",
-    # Major events
-    "level", "experience", "rest", "camp", "merchant", "shop",
+    "meet", "ally", "join", "hire", "recruit", "dismiss", "farewell", "greet",
+    "negotiate", "bargain", "trade", "buy", "sell", "steal", "pickpocket",
+    # Major events and mechanics
+    "level", "experience", "rest", "camp", "merchant", "shop", "inn", "tavern",
+    "save", "rescue", "capture", "imprison", "free", "liberate", "transform",
+    # Emotional/dramatic markers
+    "suddenly", "finally", "unfortunately", "fortunately", "surprisingly",
+    "importantly", "critically", "desperately", "triumphantly",
 }
+
+# Regex patterns for importance detection (language-agnostic)
+# Pattern for dice rolls (e.g., "d20", "2d6", "1d8+3", "rolls a 15")
+DICE_ROLL_PATTERN = re.compile(r'\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b|\brolls?\s+(?:a\s+)?\d+\b', re.IGNORECASE)
+
+# Pattern for numeric results (damage, HP, gold amounts - "15 damage", "50 gold", "-10 HP")
+NUMERIC_RESULT_PATTERN = re.compile(r'\b[+\-]?\d+\s*(?:damage|hp|gold|coins|xp|exp|points?|gp|sp|cp)\b', re.IGNORECASE)
+
+# Pattern for quoted dialogue (may contain important information)
+DIALOGUE_PATTERN = re.compile(r'"[^"]{20,}"')
+
+# Common abbreviations to avoid splitting on (case-insensitive)
+ABBREVIATIONS = {
+    "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "vs", "etc", "inc", "ltd",
+    "st", "ave", "blvd", "no", "vol", "pg", "pp", "fig", "approx", "dept",
+}
+
+
+def _split_into_sentences(text: str) -> list[str]:
+    """
+    Split text into sentences, handling abbreviations and decimal numbers.
+
+    This is more robust than simple split on '.!?' because it:
+    - Preserves abbreviations like "Dr.", "Mr.", "etc."
+    - Preserves decimal numbers like "3.14"
+    - Handles multiple punctuation like "..." and "!?"
+
+    Args:
+        text: The text to split into sentences
+
+    Returns:
+        List of sentence strings
+    """
+    if not text:
+        return []
+
+    sentences = []
+    current = []
+    words = text.split()
+
+    for i, word in enumerate(words):
+        current.append(word)
+
+        # Check if this word ends a sentence
+        if word and word[-1] in '.!?':
+            # Check if it's an abbreviation (word without punctuation, lowercase)
+            word_base = word.rstrip('.!?').lower()
+
+            # Don't split on abbreviations
+            if word_base in ABBREVIATIONS:
+                continue
+
+            # Don't split on single letters followed by period (initials like "J.")
+            if len(word_base) == 1 and word.endswith('.'):
+                continue
+
+            # Don't split on numbers (decimal numbers like "3.14")
+            if word_base.replace('.', '').replace(',', '').isdigit():
+                continue
+
+            # This looks like a real sentence ending
+            sentence = ' '.join(current).strip()
+            if len(sentence) > 10:  # Minimum sentence length
+                sentences.append(sentence)
+            current = []
+
+    # Add any remaining text as final sentence
+    if current:
+        sentence = ' '.join(current).strip()
+        if len(sentence) > 10:
+            sentences.append(sentence)
+
+    return sentences
+
+
+def _is_important_sentence(sentence: str) -> bool:
+    """
+    Determine if a sentence is important using keywords AND patterns.
+
+    This is more robust than keyword-only matching because it also detects:
+    - Dice rolls (language-agnostic game mechanics)
+    - Numeric results (damage, gold, HP changes)
+    - Long quoted dialogue (often contains important information)
+    - Exclamatory sentences (often dramatic moments)
+
+    Args:
+        sentence: The sentence to evaluate
+
+    Returns:
+        True if the sentence appears important
+    """
+    sentence_lower = sentence.lower()
+
+    # Check for keywords (fast path)
+    if any(kw in sentence_lower for kw in MIDDLE_COMPACTION_KEYWORDS):
+        return True
+
+    # Check for dice roll patterns (language-agnostic)
+    if DICE_ROLL_PATTERN.search(sentence):
+        return True
+
+    # Check for numeric results (damage, gold, etc.)
+    if NUMERIC_RESULT_PATTERN.search(sentence):
+        return True
+
+    # Check for significant dialogue (long quoted text)
+    if DIALOGUE_PATTERN.search(sentence):
+        return True
+
+    # Exclamatory sentences are often important dramatic moments
+    if sentence.rstrip().endswith('!') and len(sentence) > 30:
+        return True
+
+    return False
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
@@ -1656,7 +1780,14 @@ def _compact_middle_turns(
     Compact middle turns into a summary preserving key events.
 
     Instead of completely dropping middle turns, extract important sentences
-    that mention combat, discoveries, acquisitions, and story progression.
+    using multiple detection methods:
+    1. Keyword matching (expanded set with action verbs, story markers)
+    2. Pattern matching (dice rolls, damage numbers - language-agnostic)
+    3. Structural markers (dialogue, exclamations)
+    4. Fallback sampling (when no important sentences found)
+
+    The sentence splitting is robust against abbreviations (Dr., Mr.) and
+    decimal numbers (3.14, 2.5).
 
     Args:
         middle_turns: The turns being dropped from the middle section
@@ -1673,6 +1804,7 @@ def _compact_middle_turns(
 
     # Extract important sentences from middle turns
     important_events: list[str] = []
+    all_sentences: list[str] = []  # For fallback sampling
     total_tokens = 0
 
     # Reserve tokens for formatting overhead (header + footer + bullets buffer)
@@ -1684,23 +1816,13 @@ def _compact_middle_turns(
         if not text:
             continue
 
-        # Split into sentences (simple split on period, exclamation, question)
-        sentences = []
-        current = ""
-        for char in text:
-            current += char
-            if char in ".!?" and len(current.strip()) > 10:
-                sentences.append(current.strip())
-                current = ""
-        if current.strip():
-            sentences.append(current.strip())
+        # Use robust sentence splitting (handles abbreviations, decimals)
+        sentences = _split_into_sentences(text)
+        all_sentences.extend(sentences)
 
-        # Check each sentence for important keywords
+        # Check each sentence for importance using keywords AND patterns
         for sentence in sentences:
-            sentence_lower = sentence.lower()
-            has_keyword = any(kw in sentence_lower for kw in MIDDLE_COMPACTION_KEYWORDS)
-
-            if has_keyword:
+            if _is_important_sentence(sentence):
                 sentence_tokens = estimate_tokens(sentence)
                 if total_tokens + sentence_tokens <= effective_max_tokens:
                     important_events.append(sentence)
@@ -1709,8 +1831,22 @@ def _compact_middle_turns(
                     # Reached token limit
                     break
 
-        if total_tokens >= max_tokens:
+        if total_tokens >= effective_max_tokens:
             break
+
+    # Fallback: If no important events found, sample evenly from all sentences
+    if not important_events and all_sentences:
+        # Sample every Nth sentence to get representative coverage
+        sample_count = min(5, len(all_sentences))
+        if sample_count > 0:
+            step = max(1, len(all_sentences) // sample_count)
+            sampled = all_sentences[::step][:sample_count]
+
+            for sentence in sampled:
+                sentence_tokens = estimate_tokens(sentence)
+                if total_tokens + sentence_tokens <= effective_max_tokens:
+                    important_events.append(sentence)
+                    total_tokens += sentence_tokens
 
     # Format the compacted summary
     if important_events:
@@ -1735,7 +1871,7 @@ def _compact_middle_turns(
             + "\n\n[...the story continues from the most recent events...]"
         )
     else:
-        # No important events found - use minimal marker
+        # No sentences at all - use minimal marker
         summary_text = (
             f"[...{len(middle_turns)} turns of exploration and conversation passed...]\n"
             "[...the story continues from the most recent events...]"
