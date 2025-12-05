@@ -1849,10 +1849,10 @@ def _compact_middle_turns(
                     total_tokens += sentence_tokens
 
     # Format the compacted summary
+    unique_events: list[str] = []  # Initialize for post-format budget check
     if important_events:
         # Deduplicate while preserving order
         seen: set[str] = set()
-        unique_events: list[str] = []
         for event in important_events:
             # Normalize for dedup (lowercase, strip)
             normalized = event.lower().strip()
@@ -1877,9 +1877,33 @@ def _compact_middle_turns(
             "[...the story continues from the most recent events...]"
         )
 
+    # FIX Bug 3: Post-format budget verification
+    # Ensure the formatted output actually fits in the budget
+    actual_tokens = estimate_tokens(summary_text)
+    if actual_tokens > max_tokens:
+        logging_util.warning(
+            f"Middle compaction exceeded budget: {actual_tokens} > {max_tokens} tokens. Trimming events."
+        )
+        # Progressively remove events until we fit
+        while unique_events and actual_tokens > max_tokens:
+            unique_events.pop()  # Remove last event
+            if unique_events:
+                summary_text = (
+                    "[...time passes, and these key events occurred...]\n\n"
+                    + "\n".join(f"- {event}" for event in unique_events)
+                    + "\n\n[...the story continues from the most recent events...]"
+                )
+            else:
+                # All events removed - use minimal marker
+                summary_text = (
+                    f"[...{len(middle_turns)} turns passed...]\n"
+                    "[...the story continues...]"
+                )
+            actual_tokens = estimate_tokens(summary_text)
+
     logging_util.info(
         f"📊 MIDDLE COMPACTION: {len(middle_turns)} turns → "
-        f"{len(important_events)} key events, {total_tokens} tokens"
+        f"{len(important_events)} key events, {actual_tokens} tokens (budget: {max_tokens})"
     )
 
     return {
@@ -1937,7 +1961,14 @@ def _truncate_context(
     if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
         # Few turns - but still need to check if they fit in budget
         # If over budget with few turns, we must hard-trim the text content
-        candidate = story_context[-(turns_to_keep_at_start + turns_to_keep_at_end):]
+        total_keep = turns_to_keep_at_start + turns_to_keep_at_end
+        # FIX: Handle [-0:] which returns full list in Python
+        candidate = story_context[-total_keep:] if total_keep > 0 else []
+
+        if not candidate:
+            # No turns to keep - return empty
+            return []
+
         candidate_text = "".join(e.get(constants.KEY_TEXT, "") for e in candidate)
         candidate_tokens = estimate_tokens(candidate_text)
 
@@ -1947,18 +1978,43 @@ def _truncate_context(
         # Still over budget - iteratively hard-trim until we fit
         # Start with proportional trim based on current vs target
         trim_ratio = max_tokens / max(1, candidate_tokens)
-        trimmed_context = candidate
+        trimmed_context = list(candidate)  # Copy to avoid mutation
 
-        for _ in range(10):  # Max 10 iterations to converge
+        # FIX: Loop until we actually fit, not just 10 iterations
+        max_iterations = 50  # Increased from 10
+        for iteration in range(max_iterations):
             trimmed_entries = []
-            for entry in candidate:
+            for entry in trimmed_context:
                 text = entry.get(constants.KEY_TEXT, "")
-                entry_max_chars = max(50, int(len(text) * trim_ratio))
+                # FIX: Remove 50-char floor - allow trimming to any size
+                entry_max_chars = int(len(text) * trim_ratio)
+
+                # FIX: If entry would be empty or near-empty, drop it entirely
+                if entry_max_chars <= 10:
+                    # Skip this entry (drop it)
+                    continue
+
+                # FIX: Check for JSON/structured content - don't corrupt it
+                if text.strip().startswith('{') or text.strip().startswith('['):
+                    # This looks like JSON - either keep fully or drop
+                    if len(text) > entry_max_chars:
+                        continue  # Drop JSON entry rather than corrupt it
+                    else:
+                        trimmed_entries.append(entry)
+                        continue
+
                 if len(text) > entry_max_chars:
                     trimmed_text = text[:entry_max_chars] + "... [truncated]"
                     trimmed_entries.append({**entry, constants.KEY_TEXT: trimmed_text})
                 else:
                     trimmed_entries.append(entry)
+
+            # If we've dropped all entries, keep at least one minimal marker
+            if not trimmed_entries:
+                trimmed_entries = [{
+                    "actor": "system",
+                    "text": "[...context truncated to fit budget...]"
+                }]
 
             trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in trimmed_entries)
             trimmed_tokens = estimate_tokens(trimmed_text)
@@ -1970,16 +2026,19 @@ def _truncate_context(
                 )
                 return trimmed_entries
 
-            # Still over - reduce ratio further
+            # Still over - reduce ratio further and try again
             trim_ratio *= 0.7
             trimmed_context = trimmed_entries
 
-        # Final fallback - return what we have (best effort)
+        # Final fallback - return minimal marker if still over budget
         logging_util.warning(
-            f"Hard-trim could not fully fit budget after iterations: "
-            f"{candidate_tokens} -> {trimmed_tokens} tokens (budget: {max_tokens})"
+            f"Hard-trim exhausted iterations, returning minimal marker: "
+            f"{candidate_tokens} tokens -> budget: {max_tokens}"
         )
-        return trimmed_context
+        return [{
+            "actor": "system",
+            "text": "[...context truncated to fit budget...]"
+        }]
 
     # Calculate middle token budget (10% of story budget)
     middle_token_budget = int(max_tokens * STORY_BUDGET_MIDDLE_RATIO)
@@ -2074,16 +2133,36 @@ def _truncate_context(
         trim_ratio = max_tokens / max(1, truncated_tokens)
         original_context = truncated_context
 
-        for _ in range(10):  # Max 10 iterations to converge
+        for iteration in range(50):  # Increased iterations for convergence
             hard_trimmed = []
             for entry in original_context:
                 text = entry.get(constants.KEY_TEXT, "")
-                entry_max_chars = max(50, int(len(text) * trim_ratio))
+                # FIX: Remove 50-char floor - allow trimming to any size
+                entry_max_chars = int(len(text) * trim_ratio)
+
+                # FIX: If entry would be too small, drop it entirely
+                if entry_max_chars <= 10:
+                    # Drop this entry - not enough content to be useful
+                    continue
+
+                # FIX: Detect JSON content and drop instead of corrupting
+                text_stripped = text.strip()
+                if (text_stripped.startswith("{") or text_stripped.startswith("[")) and len(text) > entry_max_chars:
+                    # JSON content would be corrupted by truncation - drop it
+                    continue
+
                 if len(text) > entry_max_chars:
                     trimmed_text = text[:entry_max_chars] + "... [truncated]"
                     hard_trimmed.append({**entry, constants.KEY_TEXT: trimmed_text})
                 else:
                     hard_trimmed.append(entry)
+
+            # If we dropped all entries, return minimal marker
+            if not hard_trimmed:
+                hard_trimmed = [{
+                    "actor": "system",
+                    "text": "[...previous context truncated to fit model limits...]",
+                }]
 
             trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in hard_trimmed)
             new_tokens = estimate_tokens(trimmed_text)
@@ -2091,7 +2170,7 @@ def _truncate_context(
             if new_tokens <= max_tokens:
                 logging_util.warning(
                     f"Hard-trimmed last resort to fit budget: "
-                    f"{truncated_tokens} tokens -> {new_tokens} tokens"
+                    f"{truncated_tokens} tokens -> {new_tokens} tokens (iteration {iteration + 1})"
                 )
                 truncated_context = hard_trimmed
                 break
