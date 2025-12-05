@@ -1389,7 +1389,19 @@ def _call_llm_api(
             system_tokens,
         )
 
+        # DIAGNOSTIC: Log which provider branch we're about to execute
+        logging_util.info(
+            f"🔍 CALL_LLM_API_DISPATCH: provider_name={provider_name}, "
+            f"model_name={model_name}, "
+            f"is_gemini={provider_name == constants.LLM_PROVIDER_GEMINI}, "
+            f"is_cerebras={provider_name == constants.LLM_PROVIDER_CEREBRAS}, "
+            f"is_openrouter={provider_name == constants.LLM_PROVIDER_OPENROUTER}"
+        )
+
         if provider_name == constants.LLM_PROVIDER_GEMINI:
+            logging_util.info(
+                f"🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
+            )
             return gemini_provider.generate_json_mode_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
@@ -1408,6 +1420,9 @@ def _call_llm_api(
                 max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            logging_util.info(
+                f"🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
+            )
             return cerebras_provider.generate_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
@@ -1415,6 +1430,9 @@ def _call_llm_api(
                 temperature=TEMPERATURE,
                 max_output_tokens=safe_output_limit,
             )
+        logging_util.error(
+            f"🔍 CALL_LLM_API_UNSUPPORTED: provider_name={provider_name} is not supported!"
+        )
         raise ValueError(f"Unsupported provider: {provider_name}")
     except ContextTooLargeError as e:
         logging_util.error(
@@ -2242,6 +2260,14 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     In test/mock mode (MOCK_SERVICES_MODE=true, FORCE_TEST_MODEL=true, or TESTING=true),
     always returns default Gemini provider to avoid hitting real OpenRouter/Cerebras APIs.
     """
+    # DIAGNOSTIC: Log entry with all relevant env vars
+    logging_util.info(
+        f"🔍 PROVIDER_SELECTION_START: user_id={user_id}, "
+        f"MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE')}, "
+        f"FORCE_TEST_MODEL={os.environ.get('FORCE_TEST_MODEL')}, "
+        f"TESTING={os.environ.get('TESTING')}"
+    )
+
     # Test mode guard: avoid hitting real providers during CI/test runs
     force_test_model = (
         os.environ.get("MOCK_SERVICES_MODE") == "true"
@@ -2249,19 +2275,30 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
         or os.environ.get("TESTING") == "true"
     )
     if force_test_model:
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
+        )
         return ProviderSelection(constants.DEFAULT_LLM_PROVIDER, TEST_MODEL)
 
     provider = constants.DEFAULT_LLM_PROVIDER
     model = DEFAULT_MODEL
 
     if not user_id:
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
+        )
         return ProviderSelection(provider, model)
 
     try:
         user_settings = get_user_settings(user_id)
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_SETTINGS: user_id={user_id}, "
+            f"settings={user_settings}"
+        )
         if user_settings is None:
             logging_util.warning(
-                "Database error retrieving settings for user, falling back to default model"
+                f"🔍 PROVIDER_SELECTION_NULL_SETTINGS: Database error retrieving settings "
+                f"for user {user_id}, falling back to default model (Gemini)"
             )
             return ProviderSelection(provider, model)
 
@@ -2317,9 +2354,16 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
             else:
                 model = constants.DEFAULT_GEMINI_MODEL
 
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_FINAL: user_id={user_id}, "
+            f"provider={provider}, model={model}"
+        )
         return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:
-        logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
+        logging_util.warning(
+            f"🔍 PROVIDER_SELECTION_EXCEPTION: Failed to get user settings for {user_id}: {e}, "
+            f"falling back to provider={provider}, model={model}"
+        )
         return ProviderSelection(provider, model)
 
 
