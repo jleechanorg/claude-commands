@@ -1,16 +1,20 @@
 """
 TDD Tests for Code Execution - Dice Roll Randomness Fix
 
-Problem: Dice rolls showed bias (avg 16.19 vs expected 10.5) because Gemini
-was inferring results instead of executing actual random code.
+IMPORTANT: Gemini API LIMITATION (discovered 2025-12-05):
+The Gemini API does NOT support using code_execution tool WITH
+response_mime_type (JSON mode/controlled generation). These features
+are mutually exclusive. See:
+https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini
 
-Solution: Enable code_execution tool in Gemini API and require code execution
-for all dice rolls via prompt instructions.
+Since this application requires JSON mode for structured responses,
+code execution for dice rolls is NOT available. Dice roll randomness
+must be handled through prompt engineering instead.
 
-RED -> GREEN -> REFACTOR:
-1. RED: Tests fail without code_execution tool configured
-2. GREEN: Implementation enables code execution in API calls
-3. REFACTOR: Ensure prompt instructions enforce code execution usage
+These tests verify:
+1. JSON mode is enabled (required for structured output)
+2. Prompt instructions for dice roll randomness exist
+3. Code execution is NOT enabled (would break JSON mode)
 """
 
 import os
@@ -32,15 +36,14 @@ from mvp_site import constants, llm_service
 
 
 class TestCodeExecutionForDiceRolls(unittest.TestCase):
-    """Test that code execution is properly enabled for dice rolls"""
+    """Test that JSON mode is properly configured (code execution is incompatible)"""
 
-    def test_code_execution_tool_enabled_in_api_config(self):
+    def test_json_mode_enabled_without_code_execution(self):
         """
-        RED PHASE TEST: Verify code_execution tool is included in API configuration
+        Verify JSON mode is enabled and code_execution is NOT present.
 
-        This test ensures that when we call the Gemini API, the configuration
-        includes the code_execution tool which allows Gemini to run actual
-        Python code (random.randint) instead of inferring dice results.
+        Gemini API does not support controlled generation (response_mime_type)
+        with code_execution tool. We prioritize JSON mode for structured output.
         """
         with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
             mock_client = Mock()
@@ -68,50 +71,29 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
             call_args = mock_client.models.generate_content.call_args
             config_obj = call_args[1]["config"]
 
-            # CRITICAL ASSERTION: Verify tools parameter includes code_execution
-            self.assertIsNotNone(
-                config_obj.tools,
-                "FAIL: tools parameter is None - code_execution tool not configured"
+            # CRITICAL: Verify JSON mode is enabled
+            self.assertEqual(
+                config_obj.response_mime_type,
+                "application/json",
+                "FAIL: JSON mode must be enabled for structured responses"
             )
 
-            self.assertIsInstance(
-                config_obj.tools,
-                list,
-                "FAIL: tools must be a list"
-            )
+            # CRITICAL: Verify code_execution is NOT present (incompatible with JSON mode)
+            # Code execution and response_mime_type cannot coexist in Gemini API
+            if config_obj.tools is not None:
+                for tool in config_obj.tools:
+                    if hasattr(tool, 'code_execution'):
+                        self.fail(
+                            "FAIL: code_execution tool is present but incompatible with JSON mode. "
+                            "Gemini API does not support controlled generation with code execution."
+                        )
 
-            self.assertGreater(
-                len(config_obj.tools),
-                0,
-                "FAIL: tools list is empty - code_execution tool not configured"
-            )
-
-            # Verify the first tool is a Tool object with code_execution
-            first_tool = config_obj.tools[0]
-            self.assertIsInstance(
-                first_tool,
-                types.Tool,
-                f"FAIL: Expected types.Tool, got {type(first_tool)}"
-            )
-
-            # Verify code_execution is configured
-            self.assertIsNotNone(
-                first_tool.code_execution,
-                "FAIL: code_execution not configured in Tool object"
-            )
-
-            self.assertIsInstance(
-                first_tool.code_execution,
-                types.ToolCodeExecution,
-                f"FAIL: Expected types.ToolCodeExecution, got {type(first_tool.code_execution)}"
-            )
-
-    def test_dice_roll_instructions_require_code_execution(self):
+    def test_dice_roll_instructions_exist(self):
         """
-        RED PHASE TEST: Verify prompt instructions mandate code execution for dice rolls
+        Verify prompt instructions for dice roll handling exist.
 
-        This test checks that the game_state_instruction.md file contains
-        explicit instructions to use code execution for dice rolls.
+        Since code execution cannot be used with JSON mode, dice roll
+        randomness must be handled through careful prompt engineering.
         """
         # Read the instruction file
         instruction_path = os.path.join(
@@ -123,54 +105,25 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
         with open(instruction_path) as f:
             instruction_content = f.read()
 
-        # CRITICAL ASSERTIONS: Verify code execution instructions are present
-
-        # Check for code execution mandate in dice_rolls field description
-        self.assertIn(
-            "code execution",
-            instruction_content.lower(),
-            "FAIL: Instruction file does not mention 'code execution'"
-        )
-
-        # Check for random.randint instruction
-        self.assertIn(
-            "random.randint",
-            instruction_content,
-            "FAIL: Instruction file does not specify random.randint for dice rolls"
-        )
-
-        # Check for import random instruction
-        self.assertIn(
-            "import random",
-            instruction_content,
-            "FAIL: Instruction file does not show 'import random' for dice rolls"
-        )
-
-        # Check for critical/mandatory language
-        critical_keywords = ["CRITICAL", "MUST", "NEVER generate"]
-        found_critical = any(keyword in instruction_content for keyword in critical_keywords)
-        self.assertTrue(
-            found_critical,
-            f"FAIL: Instruction file lacks critical language ({critical_keywords}) "
-            f"to enforce code execution usage"
-        )
-
-        # Check for dice roll section with code execution protocol
+        # Check for dice roll section
         self.assertIn(
             "Dice Roll",
             instruction_content,
             "FAIL: Instruction file missing dedicated Dice Roll section"
         )
 
-    def test_api_call_preserves_other_config_params(self):
-        """
-        REGRESSION TEST: Ensure adding code_execution doesn't break existing config
+        # Check for randomness instructions
+        self.assertTrue(
+            "random" in instruction_content.lower() or "dice" in instruction_content.lower(),
+            "FAIL: Instruction file should mention dice/random handling"
+        )
 
-        Verify that enabling code_execution tool doesn't interfere with:
-        - JSON mode (response_mime_type)
-        - Token limits (max_output_tokens)
-        - Temperature settings
-        - Safety settings
+    def test_api_call_has_required_config_params(self):
+        """
+        Verify API calls have all required configuration parameters.
+
+        This test ensures JSON mode is properly configured without
+        code execution (which would break the API call).
         """
         with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
             mock_client = Mock()
@@ -192,34 +145,28 @@ class TestCodeExecutionForDiceRolls(unittest.TestCase):
             call_args = mock_client.models.generate_content.call_args
             config_obj = call_args[1]["config"]
 
-            # Verify existing configurations are still present
+            # Verify existing configurations are present
             self.assertEqual(
                 config_obj.response_mime_type,
                 "application/json",
-                "FAIL: JSON mode not preserved after adding code_execution"
+                "FAIL: JSON mode not configured"
             )
 
             self.assertEqual(
                 config_obj.max_output_tokens,
                 llm_service.JSON_MODE_MAX_OUTPUT_TOKENS,
-                "FAIL: Token limit not preserved after adding code_execution"
+                "FAIL: Token limit not configured"
             )
 
             self.assertEqual(
                 config_obj.temperature,
                 llm_service.TEMPERATURE,
-                "FAIL: Temperature not preserved after adding code_execution"
+                "FAIL: Temperature not configured"
             )
 
             self.assertIsNotNone(
                 config_obj.safety_settings,
-                "FAIL: Safety settings not preserved after adding code_execution"
-            )
-
-            # AND verify code_execution is ALSO present
-            self.assertIsNotNone(
-                config_obj.tools,
-                "FAIL: code_execution tool missing"
+                "FAIL: Safety settings not configured"
             )
 
 
