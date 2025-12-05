@@ -90,8 +90,8 @@ class TestContextTruncation(unittest.TestCase):
         )
 
         # With extremely low budget (120 chars ≈ 30 tokens), adaptive truncation
-        # will hard-trim to fit. With 4 turns of 50 chars each = 200 tokens total,
-        # this far exceeds the 30 token budget. The function will:
+        # will hard-trim to fit. With 4 turns of 50 chars each = 200 chars total
+        # (≈50 tokens), this exceeds the 30 token budget. The function will:
         # 1. Calculate percentage-based turns (25% start / 60% end)
         # 2. Hard-trim entries to fit within budget
         # 3. Return truncation marker + minimal turns that fit
