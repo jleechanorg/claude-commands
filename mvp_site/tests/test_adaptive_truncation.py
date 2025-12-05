@@ -520,6 +520,8 @@ class TestImportanceDetection(unittest.TestCase):
         """Generic sentences without patterns should not be marked important."""
         self.assertFalse(_is_important_sentence("The sun shines brightly."))
         self.assertFalse(_is_important_sentence("You look around the room."))
+        self.assertFalse(_is_important_sentence("The sky is blue today."))
+        self.assertFalse(_is_important_sentence("Birds are singing nearby."))
 
 
 class TestFallbackSampling(unittest.TestCase):
