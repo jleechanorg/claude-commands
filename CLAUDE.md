@@ -94,9 +94,20 @@ Set `PYPI_TOKEN` env var. Local index: `http://localhost:4875/` (auth: automatio
 | No false ✅ | Only for 100% complete |
 | Integration verification | Config + Trigger + Log evidence |
 | Test failures | Fix ALL, no excuses |
+| No "pre-existing" excuses | Fix ALL broken tests vs origin/main |
 | Solo dev context | No enterprise advice |
 | No fake code | Audit existing first |
 | Timeout integrity | 10min/600s across all layers |
+
+## No Pre-Existing Issues Policy
+
+**CRITICAL: There are no "pre-existing" issues.** If a test fails, FIX IT.
+
+- Every test failure vs `origin/main` must be fixed in the current PR
+- Never dismiss failures as "pre-existing" or "not related to this PR"
+- If tests on `main` are broken, fix them as part of your work
+- Green CI is a hard requirement - no exceptions, no excuses
+- The phrase "pre-existing issue" is BANNED - it's just "a bug to fix"
 
 ## System Understanding
 

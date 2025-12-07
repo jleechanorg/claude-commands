@@ -372,8 +372,206 @@ def _calculate_prompt_and_system_tokens(
     return user_prompt_tokens, system_tokens
 
 
+# Fixed turn counts (legacy - used as maximums)
 TURNS_TO_KEEP_AT_START: int = 20
 TURNS_TO_KEEP_AT_END: int = 20
+
+# =============================================================================
+# CONTEXT BUDGET ALLOCATION SYSTEM
+# =============================================================================
+#
+# This system ensures LLM prompts fit within model-specific token limits.
+# See docs/context_budget_design.md for full design documentation.
+#
+# ARCHITECTURE DECISION: NO AUTO-FALLBACK TO LARGER MODELS
+# ---------------------------------------------------------
+# DO NOT add automatic fallback to larger context models (e.g., Gemini 1M).
+# This was explicitly removed in PR #2311. Reasons:
+# 1. Cost unpredictability - larger models cost more per token
+# 2. Voice inconsistency - different models have different personalities
+# 3. Latency variance - larger contexts increase response time
+# 4. Proper solution is adaptive truncation, not model switching
+#
+# If ContextTooLargeError occurs, the solution is to improve truncation,
+# not to silently switch models. See bead WA-1 for tracking.
+#
+# CONTEXT BUDGET HIERARCHY (% of model context window)
+# ----------------------------------------------------
+# Model Context Window (100%)
+# └── Safe Budget (90% - CONTEXT_WINDOW_SAFETY_RATIO)
+#     ├── Output Reserve (20% - OUTPUT_TOKEN_RESERVE_RATIO)
+#     │   └── Reserved for LLM response generation
+#     └── Max Input Allowed (80%)
+#         ├── Scaffold (~15-20% of input)
+#         │   ├── System instruction (~5-8K tokens)
+#         │   ├── Game state JSON (~2-4K tokens)
+#         │   ├── Checkpoint block (~1-2K tokens)
+#         │   └── Core memories/companions (~2-3K tokens)
+#         ├── Entity Tracking Reserve (10.5K tokens fixed)
+#         │   ├── entity_preload_text (~2-3K)
+#         │   ├── entity_specific_instructions (~1.5-2K)
+#         │   ├── entity_tracking_instruction (~1-1.5K)
+#         │   └── timeline_log (~3-4K)
+#         └── Story Budget (remaining ~50-60%)
+#             ├── Start Turns (25% - STORY_BUDGET_START_RATIO)
+#             ├── Middle Compaction (10% - STORY_BUDGET_MIDDLE_RATIO)
+#             ├── End Turns (60% - STORY_BUDGET_END_RATIO)
+#             └── Truncation marker (5% safety margin)
+#
+# Middle compaction is implemented via _compact_middle_turns() which extracts
+# key events (deaths, level-ups, discoveries) from dropped middle turns.
+# =============================================================================
+
+# Percentage-based story budget allocation
+# Story budget = available tokens after scaffold and output reserve
+# These ratios ensure turns scale with model context size
+STORY_BUDGET_START_RATIO: float = 0.25  # 25% of story budget for first turns (context setup)
+STORY_BUDGET_MIDDLE_RATIO: float = 0.10  # 10% for compacted middle (key events summary)
+STORY_BUDGET_END_RATIO: float = 0.60    # 60% of story budget for recent turns (most important)
+# Remaining 5% reserved for truncation marker and safety margin
+
+# Keywords that indicate important events worth preserving in middle compaction
+# Organized by category for maintainability
+MIDDLE_COMPACTION_KEYWORDS: set[str] = {
+    # Combat and conflict (English)
+    "attack", "hit", "damage", "kill", "defeat", "victory", "died", "death",
+    "combat", "fight", "battle", "wound", "heal", "critical", "strike", "slash",
+    "stab", "shoot", "cast", "spell", "miss", "dodge", "block", "parry",
+    # Discovery and acquisition
+    "discover", "find", "found", "acquire", "obtain", "receive", "gain", "loot",
+    "treasure", "gold", "item", "weapon", "armor", "artifact", "key", "unlock",
+    "open", "chest", "reward", "coins", "gems", "potion", "scroll", "map",
+    # Story progression
+    "quest", "mission", "objective", "complete", "accomplish", "learn", "warn",
+    "reveal", "secret", "clue", "mystery", "truth", "prophecy", "legend", "oath",
+    "promise", "vow", "betray", "deceive", "lie", "confess", "admit",
+    # Location and movement
+    "arrive", "enter", "leave", "travel", "reach", "escape", "flee", "run",
+    "climb", "descend", "cross", "portal", "gate", "door", "passage", "hidden",
+    # Character interactions
+    "meet", "ally", "join", "hire", "recruit", "dismiss", "farewell", "greet",
+    "negotiate", "bargain", "trade", "buy", "sell", "steal", "pickpocket",
+    # Major events and mechanics
+    "level", "experience", "rest", "camp", "merchant", "shop", "inn", "tavern",
+    "save", "rescue", "capture", "imprison", "free", "liberate", "transform",
+    # Emotional/dramatic markers
+    "suddenly", "finally", "unfortunately", "fortunately", "surprisingly",
+    "importantly", "critically", "desperately", "triumphantly",
+}
+
+# Regex patterns for importance detection (language-agnostic)
+# Pattern for dice rolls (e.g., "d20", "2d6", "1d8+3", "rolls a 15")
+DICE_ROLL_PATTERN = re.compile(r'\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b|\brolls?\s+(?:a\s+)?\d+\b', re.IGNORECASE)
+
+# Pattern for numeric results (damage, HP, gold amounts - "15 damage", "50 gold", "-10 HP")
+NUMERIC_RESULT_PATTERN = re.compile(r'\b[+\-]?\d+\s*(?:damage|hp|gold|coins|xp|exp|points?|gp|sp|cp)\b', re.IGNORECASE)
+
+# Pattern for quoted dialogue (may contain important information)
+DIALOGUE_PATTERN = re.compile(r'"[^"]{20,}"')
+
+# Common abbreviations to avoid splitting on (case-insensitive)
+ABBREVIATIONS = {
+    "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "vs", "etc", "inc", "ltd",
+    "st", "ave", "blvd", "no", "vol", "pg", "pp", "fig", "approx", "dept",
+}
+
+
+def _split_into_sentences(text: str) -> list[str]:
+    """
+    Split text into sentences, handling abbreviations and decimal numbers.
+
+    This is more robust than simple split on '.!?' because it:
+    - Preserves abbreviations like "Dr.", "Mr.", "etc."
+    - Preserves decimal numbers like "3.14"
+    - Handles multiple punctuation like "..." and "!?"
+
+    Args:
+        text: The text to split into sentences
+
+    Returns:
+        List of sentence strings
+    """
+    if not text:
+        return []
+
+    sentences = []
+    current = []
+    words = text.split()
+
+    for i, word in enumerate(words):
+        current.append(word)
+
+        # Check if this word ends a sentence
+        if word and word[-1] in '.!?':
+            # Check if it's an abbreviation (word without punctuation, lowercase)
+            word_base = word.rstrip('.!?').lower()
+
+            # Don't split on abbreviations
+            if word_base in ABBREVIATIONS:
+                continue
+
+            # Don't split on single letters followed by period (initials like "J.")
+            if len(word_base) == 1 and word.endswith('.'):
+                continue
+
+            # Don't split on numbers (decimal numbers like "3.14")
+            if word_base.replace('.', '').replace(',', '').isdigit():
+                continue
+
+            # This looks like a real sentence ending
+            sentence = ' '.join(current).strip()
+            if len(sentence) > 10:  # Minimum sentence length
+                sentences.append(sentence)
+            current = []
+
+    # Add any remaining text as final sentence
+    if current:
+        sentence = ' '.join(current).strip()
+        if len(sentence) > 10:
+            sentences.append(sentence)
+
+    return sentences
+
+
+def _is_important_sentence(sentence: str) -> bool:
+    """
+    Determine if a sentence is important using keywords AND patterns.
+
+    This is more robust than keyword-only matching because it also detects:
+    - Dice rolls (language-agnostic game mechanics)
+    - Numeric results (damage, gold, HP changes)
+    - Long quoted dialogue (often contains important information)
+    - Exclamatory sentences (often dramatic moments)
+
+    Args:
+        sentence: The sentence to evaluate
+
+    Returns:
+        True if the sentence appears important
+    """
+    sentence_lower = sentence.lower()
+
+    # Check for keywords (fast path)
+    if any(kw in sentence_lower for kw in MIDDLE_COMPACTION_KEYWORDS):
+        return True
+
+    # Check for dice roll patterns (language-agnostic)
+    if DICE_ROLL_PATTERN.search(sentence):
+        return True
+
+    # Check for numeric results (damage, gold, etc.)
+    if NUMERIC_RESULT_PATTERN.search(sentence):
+        return True
+
+    # Check for significant dialogue (long quoted text)
+    if DIALOGUE_PATTERN.search(sentence):
+        return True
+
+    # Exclamatory sentences are often important dramatic moments
+    if sentence.rstrip().endswith('!') and len(sentence) > 30:
+        return True
+
+    return False
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
@@ -1137,16 +1335,14 @@ def _call_llm_api(
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
-    Calls the configured LLM provider without fallback or retry behavior.
-
-    Errors such as context overflow or provider overload surface immediately
-    as LLMRequestError for user-facing handling.
+    Calls the configured LLM provider.
 
     Args:
         prompt_contents: The content to send to the API
-        model_name: Primary model to try first
+        model_name: Primary model to use
         current_prompt_text_for_logging: Text for logging purposes (optional)
         system_instruction_text: System instructions (optional)
+        provider_name: LLM provider name (gemini, openrouter, cerebras)
 
     Returns:
         Provider-specific response object (Gemini, OpenRouter, or Cerebras)
@@ -1193,7 +1389,19 @@ def _call_llm_api(
             system_tokens,
         )
 
+        # DIAGNOSTIC: Log which provider branch we're about to execute
+        logging_util.info(
+            f"🔍 CALL_LLM_API_DISPATCH: provider_name={provider_name}, "
+            f"model_name={model_name}, "
+            f"is_gemini={provider_name == constants.LLM_PROVIDER_GEMINI}, "
+            f"is_cerebras={provider_name == constants.LLM_PROVIDER_CEREBRAS}, "
+            f"is_openrouter={provider_name == constants.LLM_PROVIDER_OPENROUTER}"
+        )
+
         if provider_name == constants.LLM_PROVIDER_GEMINI:
+            logging_util.info(
+                f"🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
+            )
             return gemini_provider.generate_json_mode_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
@@ -1212,6 +1420,9 @@ def _call_llm_api(
                 max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            logging_util.info(
+                f"🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
+            )
             return cerebras_provider.generate_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
@@ -1219,6 +1430,9 @@ def _call_llm_api(
                 temperature=TEMPERATURE,
                 max_output_tokens=safe_output_limit,
             )
+        logging_util.error(
+            f"🔍 CALL_LLM_API_UNSUPPORTED: provider_name={provider_name} is not supported!"
+        )
         raise ValueError(f"Unsupported provider: {provider_name}")
     except ContextTooLargeError as e:
         logging_util.error(
@@ -1505,6 +1719,217 @@ def _get_context_stats(
     return stats_string
 
 
+def _calculate_percentage_based_turns(
+    story_context: list[dict[str, Any]],
+    max_tokens: int,
+) -> tuple[int, int]:
+    """
+    Calculate how many turns to keep based on percentage of story budget.
+
+    Uses STORY_BUDGET_START_RATIO (25%), STORY_BUDGET_MIDDLE_RATIO (10%),
+    and STORY_BUDGET_END_RATIO (60%) to allocate tokens proportionally,
+    then converts to turn counts. Middle turns are compacted separately.
+
+    Args:
+        story_context: Full story context to analyze
+        max_tokens: Maximum tokens available for story
+
+    Returns:
+        (start_turns, end_turns) tuple based on percentage allocation
+    """
+    total_turns = len(story_context)
+    if total_turns == 0:
+        return (0, 0)
+
+    # Calculate average tokens per turn
+    combined_text = "".join(
+        entry.get(constants.KEY_TEXT, "") for entry in story_context
+    )
+    total_story_tokens = estimate_tokens(combined_text)
+    if total_story_tokens <= 0 or total_turns <= 0:
+        # Fallback average when text is empty or invalid; keeps math safe.
+        avg_tokens_per_turn = 500
+    else:
+        avg_tokens_per_turn = total_story_tokens / total_turns
+
+    # Calculate token budgets for start and end
+    start_token_budget = int(max_tokens * STORY_BUDGET_START_RATIO)
+    end_token_budget = int(max_tokens * STORY_BUDGET_END_RATIO)
+
+    # Convert to turn counts (cap at legacy maximums for safety)
+    raw_start_turns = min(
+        int(start_token_budget / avg_tokens_per_turn),
+        TURNS_TO_KEEP_AT_START,
+        total_turns // 2,  # Never take more than half for start
+    )
+
+    # Apply start minimum but never exceed total turns
+    start_turns = min(max(3, raw_start_turns), total_turns)
+
+    raw_end_turns = min(
+        int(end_token_budget / avg_tokens_per_turn),
+        TURNS_TO_KEEP_AT_END,
+    )
+    desired_end_turns = max(5, raw_end_turns) if total_turns >= 5 else min(total_turns, raw_end_turns)
+
+    # Enforce non-overlap using the post-minimum start_turns value
+    remaining_turns = max(0, total_turns - start_turns)
+    end_turns = min(desired_end_turns, remaining_turns)
+
+    # Final safety: if minimums still force overlap, trim the start portion first
+    if start_turns + end_turns > total_turns:
+        end_turns = max(0, total_turns - start_turns)
+
+    logging_util.info(
+        f"📊 PERCENTAGE-BASED TURNS: avg_tokens/turn={avg_tokens_per_turn:.0f}, "
+        f"start_budget={start_token_budget}tk→{start_turns} turns (25%), "
+        f"end_budget={end_token_budget}tk→{end_turns} turns (60%), "
+        f"middle_budget={int(max_tokens * STORY_BUDGET_MIDDLE_RATIO)}tk (10% for compaction)"
+    )
+
+    return (start_turns, end_turns)
+
+
+def _compact_middle_turns(
+    middle_turns: list[dict[str, Any]],
+    max_tokens: int,
+) -> dict[str, Any]:
+    """
+    Compact middle turns into a summary preserving key events.
+
+    Instead of completely dropping middle turns, extract important sentences
+    using multiple detection methods:
+    1. Keyword matching (expanded set with action verbs, story markers)
+    2. Pattern matching (dice rolls, damage numbers - language-agnostic)
+    3. Structural markers (dialogue, exclamations)
+    4. Fallback sampling (when no important sentences found)
+
+    The sentence splitting is robust against abbreviations (Dr., Mr.) and
+    decimal numbers (3.14, 2.5).
+
+    Args:
+        middle_turns: The turns being dropped from the middle section
+        max_tokens: Maximum tokens allowed for the compacted summary
+
+    Returns:
+        A system message containing the compacted middle summary
+    """
+    if not middle_turns:
+        return {
+            "actor": "system",
+            "text": "[...time passes...]",
+        }
+
+    # Extract important sentences from middle turns
+    important_events: list[str] = []
+    all_sentences: list[str] = []  # For fallback sampling
+    total_tokens = 0
+
+    # Reserve tokens for formatting overhead (header + footer + bullets buffer)
+    FORMATTING_OVERHEAD = 30
+    effective_max_tokens = max(10, max_tokens - FORMATTING_OVERHEAD)
+
+    for turn in middle_turns:
+        text = turn.get(constants.KEY_TEXT, "")
+        if not text:
+            continue
+
+        # Use robust sentence splitting (handles abbreviations, decimals)
+        sentences = _split_into_sentences(text)
+        all_sentences.extend(sentences)
+
+        # Check each sentence for importance using keywords AND patterns
+        for sentence in sentences:
+            if _is_important_sentence(sentence):
+                sentence_tokens = estimate_tokens(sentence)
+                if total_tokens + sentence_tokens <= effective_max_tokens:
+                    important_events.append(sentence)
+                    total_tokens += sentence_tokens
+                else:
+                    # Reached token limit
+                    break
+
+        if total_tokens >= effective_max_tokens:
+            break
+
+    # Fallback: If no important events found, sample evenly from all sentences
+    if not important_events and all_sentences:
+        # Sample every Nth sentence to get representative coverage
+        sample_count = min(5, len(all_sentences))
+        if sample_count > 0:
+            step = max(1, len(all_sentences) // sample_count)
+            sampled = all_sentences[::step][:sample_count]
+
+            for sentence in sampled:
+                sentence_tokens = estimate_tokens(sentence)
+                if total_tokens + sentence_tokens <= effective_max_tokens:
+                    important_events.append(sentence)
+                    total_tokens += sentence_tokens
+
+    # Format the compacted summary
+    unique_events: list[str] = []  # Initialize for post-format budget check
+    if important_events:
+        # Deduplicate while preserving order
+        seen: set[str] = set()
+        for event in important_events:
+            # Normalize for dedup (lowercase, strip)
+            normalized = event.lower().strip()
+            if normalized not in seen:
+                seen.add(normalized)
+                unique_events.append(event)
+
+        # Limit to reasonable number of events
+        max_events = 15
+        if len(unique_events) > max_events:
+            unique_events = unique_events[:max_events]
+
+        summary_text = (
+            "[...time passes, and these key events occurred...]\n\n"
+            + "\n".join(f"- {event}" for event in unique_events)
+            + "\n\n[...the story continues from the most recent events...]"
+        )
+    else:
+        # No sentences at all - use minimal marker
+        summary_text = (
+            f"[...{len(middle_turns)} turns of exploration and conversation passed...]\n"
+            "[...the story continues from the most recent events...]"
+        )
+
+    # FIX Bug 3: Post-format budget verification
+    # Ensure the formatted output actually fits in the budget
+    actual_tokens = estimate_tokens(summary_text)
+    if actual_tokens > max_tokens:
+        logging_util.warning(
+            f"Middle compaction exceeded budget: {actual_tokens} > {max_tokens} tokens. Trimming events."
+        )
+        # Progressively remove events until we fit
+        while unique_events and actual_tokens > max_tokens:
+            unique_events.pop()  # Remove last event
+            if unique_events:
+                summary_text = (
+                    "[...time passes, and these key events occurred...]\n\n"
+                    + "\n".join(f"- {event}" for event in unique_events)
+                    + "\n\n[...the story continues from the most recent events...]"
+                )
+            else:
+                # All events removed - use minimal marker
+                summary_text = (
+                    f"[...{len(middle_turns)} turns passed...]\n"
+                    "[...the story continues...]"
+                )
+            actual_tokens = estimate_tokens(summary_text)
+
+    logging_util.info(
+        f"📊 MIDDLE COMPACTION: {len(middle_turns)} turns → "
+        f"{len(important_events)} key events, {actual_tokens} tokens (budget: {max_tokens})"
+    )
+
+    return {
+        "actor": "system",
+        "text": summary_text,
+    }
+
+
 def _truncate_context(
     story_context: list[dict[str, Any]],
     max_chars: int,
@@ -1516,6 +1941,12 @@ def _truncate_context(
 ) -> list[dict[str, Any]]:
     """
     Intelligently truncates the story context to fit within a given character budget.
+
+    PERCENTAGE-BASED TRUNCATION: Uses 25%/10%/60% ratio for start/middle/end allocation.
+    ADAPTIVE FALLBACK: If initial allocation still exceeds budget, iteratively
+    reduces turn count until it fits.
+    HARD-TRIM GUARANTEE: If even minimum turns exceed budget, text is hard-trimmed
+    to guarantee the result fits within budget.
     """
     initial_stats = _get_context_stats(
         story_context, model_name, current_game_state, provider_name
@@ -1539,19 +1970,232 @@ def _truncate_context(
     )
 
     total_turns = len(story_context)
+
+    # Calculate percentage-based turn limits instead of using fixed counts
+    pct_start, pct_end = _calculate_percentage_based_turns(story_context, max_tokens)
+    turns_to_keep_at_start = min(turns_to_keep_at_start, pct_start)
+    turns_to_keep_at_end = min(turns_to_keep_at_end, pct_end)
+
     if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
-        # If we're over budget but have few turns, just take the most recent ones.
-        return story_context[-(turns_to_keep_at_start + turns_to_keep_at_end) :]
+        # Few turns - but still need to check if they fit in budget
+        # If over budget with few turns, we must hard-trim the text content
+        total_keep = turns_to_keep_at_start + turns_to_keep_at_end
+        # FIX: Handle [-0:] which returns full list in Python
+        candidate = story_context[-total_keep:] if total_keep > 0 else []
 
-    start_context = story_context[:turns_to_keep_at_start]
-    end_context = story_context[-turns_to_keep_at_end:]
+        if not candidate:
+            # No turns to keep - return empty
+            return []
 
-    truncation_marker = {
-        "actor": "system",
-        "text": "[...several moments, scenes, or days have passed...]\\n[...the story continues from the most recent relevant events...]",
-    }
+        candidate_text = "".join(e.get(constants.KEY_TEXT, "") for e in candidate)
+        candidate_tokens = estimate_tokens(candidate_text)
 
-    truncated_context = start_context + [truncation_marker] + end_context
+        if candidate_tokens <= max_tokens:
+            return candidate
+
+        # Still over budget - iteratively hard-trim until we fit
+        # Start with proportional trim based on current vs target
+        trim_ratio = max_tokens / max(1, candidate_tokens)
+        trimmed_context = list(candidate)  # Copy to avoid mutation
+
+        # FIX: Loop until we actually fit, not just 10 iterations
+        max_iterations = 50  # Increased from 10
+        for iteration in range(max_iterations):
+            trimmed_entries = []
+            for entry in trimmed_context:
+                text = entry.get(constants.KEY_TEXT, "")
+                # FIX: Remove 50-char floor - allow trimming to any size
+                entry_max_chars = int(len(text) * trim_ratio)
+
+                # FIX: If entry would be empty or near-empty, drop it entirely
+                if entry_max_chars <= 10:
+                    # Skip this entry (drop it)
+                    continue
+
+                # FIX: Check for JSON/structured content - don't corrupt it
+                if text.strip().startswith('{') or text.strip().startswith('['):
+                    # This looks like JSON - either keep fully or drop
+                    if len(text) > entry_max_chars:
+                        continue  # Drop JSON entry rather than corrupt it
+                    else:
+                        trimmed_entries.append(entry)
+                        continue
+
+                if len(text) > entry_max_chars:
+                    trimmed_text = text[:entry_max_chars] + "... [truncated]"
+                    trimmed_entries.append({**entry, constants.KEY_TEXT: trimmed_text})
+                else:
+                    trimmed_entries.append(entry)
+
+            # If we've dropped all entries, keep at least one minimal marker
+            if not trimmed_entries:
+                trimmed_entries = [{
+                    "actor": "system",
+                    "text": "[...context truncated to fit budget...]"
+                }]
+
+            trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in trimmed_entries)
+            trimmed_tokens = estimate_tokens(trimmed_text)
+
+            if trimmed_tokens <= max_tokens:
+                logging_util.warning(
+                    f"Hard-trimmed {len(candidate)} turns to fit budget: "
+                    f"{candidate_tokens} tokens -> {trimmed_tokens} tokens"
+                )
+                return trimmed_entries
+
+            # Still over - reduce ratio further and try again
+            trim_ratio *= 0.7
+            trimmed_context = trimmed_entries
+
+        # Final fallback - return minimal marker if still over budget
+        logging_util.warning(
+            f"Hard-trim exhausted iterations, returning minimal marker: "
+            f"{candidate_tokens} tokens -> budget: {max_tokens}"
+        )
+        return [{
+            "actor": "system",
+            "text": "[...context truncated to fit budget...]"
+        }]
+
+    # Calculate middle token budget (10% of story budget)
+    middle_token_budget = int(max_tokens * STORY_BUDGET_MIDDLE_RATIO)
+
+    # ADAPTIVE LOOP: Reduce turns until content fits within token budget
+    # Use absolute minimums but respect passed-in values if they're smaller
+    ABS_MIN_START = 3
+    ABS_MIN_END = 5
+    min_start = min(ABS_MIN_START, turns_to_keep_at_start) if turns_to_keep_at_start > 0 else 0
+    min_end = min(ABS_MIN_END, turns_to_keep_at_end)
+
+    current_start = turns_to_keep_at_start
+    current_end = turns_to_keep_at_end
+
+    while current_start >= min_start and current_end >= min_end:
+        start_context = story_context[:current_start] if current_start > 0 else []
+        end_context = story_context[-current_end:] if current_end > 0 else []
+
+        # Extract and compact middle turns instead of dropping them
+        middle_start_idx = current_start
+        middle_end_idx = total_turns - current_end
+        middle_turns = story_context[middle_start_idx:middle_end_idx] if middle_end_idx > middle_start_idx else []
+
+        # Compact middle turns to preserve key events
+        middle_summary = _compact_middle_turns(middle_turns, middle_token_budget)
+
+        truncated_context = start_context + [middle_summary] + end_context
+
+        truncated_text = "".join(
+            entry.get(constants.KEY_TEXT, "") for entry in truncated_context
+        )
+        truncated_tokens = estimate_tokens(truncated_text)
+
+        if truncated_tokens <= max_tokens:
+            # Found a fit
+            final_stats = _get_context_stats(
+                truncated_context, model_name, current_game_state, provider_name
+            )
+            if current_start < turns_to_keep_at_start or current_end < turns_to_keep_at_end:
+                logging_util.warning(
+                    f"Adaptive truncation reduced to {current_start}+{current_end} turns "
+                    f"(from {turns_to_keep_at_start}+{turns_to_keep_at_end}) to fit budget. "
+                    f"Middle: {len(middle_turns)} turns compacted. "
+                    f"Final: {truncated_tokens} tokens <= {max_tokens} budget"
+                )
+            else:
+                logging_util.info(
+                    f"Truncation: {current_start} start + {len(middle_turns)} middle (compacted) + "
+                    f"{current_end} end = {truncated_tokens} tokens"
+                )
+            logging_util.info(f"Final context stats after truncation: {final_stats}")
+            return truncated_context
+
+        # Still over budget - reduce turns (alternate between start and end)
+        # Prioritize keeping recent context, reduce start turns faster
+        if current_start > min_start and current_start >= current_end:
+            step = 2 if current_start - 2 >= min_start else 1
+            current_start -= step
+        elif current_end > min_end:
+            step = 2 if current_end - 2 >= min_end else 1
+            current_end -= step
+        elif current_start > min_start:
+            current_start -= 1
+        else:
+            # Can't reduce further - exit loop and use last resort
+            break
+
+    # Last resort: minimum turns with compacted middle
+    start_context = story_context[:min_start] if min_start > 0 else []
+    end_context = story_context[-min_end:] if min_end > 0 else []
+
+    # Extract and compact middle turns for last resort
+    middle_start_idx = min_start
+    middle_end_idx = total_turns - min_end
+    middle_turns = story_context[middle_start_idx:middle_end_idx] if middle_end_idx > middle_start_idx else []
+    middle_summary = _compact_middle_turns(middle_turns, middle_token_budget)
+
+    truncated_context = start_context + [middle_summary] + end_context
+
+    truncated_text = "".join(
+        entry.get(constants.KEY_TEXT, "") for entry in truncated_context
+    )
+    truncated_tokens = estimate_tokens(truncated_text)
+
+    logging_util.warning(
+        f"Aggressive truncation to {min_start}+{min_end} turns. "
+        f"Tokens: {truncated_tokens} (budget: {max_tokens})"
+    )
+
+    # If STILL over budget after minimum turns, iteratively hard-trim the text content
+    if truncated_tokens > max_tokens:
+        trim_ratio = max_tokens / max(1, truncated_tokens)
+        original_context = truncated_context
+
+        for iteration in range(50):  # Increased iterations for convergence
+            hard_trimmed = []
+            for entry in original_context:
+                text = entry.get(constants.KEY_TEXT, "")
+                # FIX: Remove 50-char floor - allow trimming to any size
+                entry_max_chars = int(len(text) * trim_ratio)
+
+                # FIX: If entry would be too small, drop it entirely
+                if entry_max_chars <= 10:
+                    # Drop this entry - not enough content to be useful
+                    continue
+
+                # FIX: Detect JSON content and drop instead of corrupting
+                text_stripped = text.strip()
+                if (text_stripped.startswith("{") or text_stripped.startswith("[")) and len(text) > entry_max_chars:
+                    # JSON content would be corrupted by truncation - drop it
+                    continue
+
+                if len(text) > entry_max_chars:
+                    trimmed_text = text[:entry_max_chars] + "... [truncated]"
+                    hard_trimmed.append({**entry, constants.KEY_TEXT: trimmed_text})
+                else:
+                    hard_trimmed.append(entry)
+
+            # If we dropped all entries, return minimal marker
+            if not hard_trimmed:
+                hard_trimmed = [{
+                    "actor": "system",
+                    "text": "[...previous context truncated to fit model limits...]",
+                }]
+
+            trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in hard_trimmed)
+            new_tokens = estimate_tokens(trimmed_text)
+
+            if new_tokens <= max_tokens:
+                logging_util.warning(
+                    f"Hard-trimmed last resort to fit budget: "
+                    f"{truncated_tokens} tokens -> {new_tokens} tokens (iteration {iteration + 1})"
+                )
+                truncated_context = hard_trimmed
+                break
+
+            # Still over - reduce ratio further
+            trim_ratio *= 0.7
+            truncated_context = hard_trimmed
 
     final_stats = _get_context_stats(
         truncated_context, model_name, current_game_state, provider_name
@@ -1616,6 +2260,14 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     In test/mock mode (MOCK_SERVICES_MODE=true, FORCE_TEST_MODEL=true, or TESTING=true),
     always returns default Gemini provider to avoid hitting real OpenRouter/Cerebras APIs.
     """
+    # DIAGNOSTIC: Log entry with all relevant env vars
+    logging_util.info(
+        f"🔍 PROVIDER_SELECTION_START: user_id={user_id}, "
+        f"MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE')}, "
+        f"FORCE_TEST_MODEL={os.environ.get('FORCE_TEST_MODEL')}, "
+        f"TESTING={os.environ.get('TESTING')}"
+    )
+
     # Test mode guard: avoid hitting real providers during CI/test runs
     force_test_model = (
         os.environ.get("MOCK_SERVICES_MODE") == "true"
@@ -1623,19 +2275,30 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
         or os.environ.get("TESTING") == "true"
     )
     if force_test_model:
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
+        )
         return ProviderSelection(constants.DEFAULT_LLM_PROVIDER, TEST_MODEL)
 
     provider = constants.DEFAULT_LLM_PROVIDER
     model = DEFAULT_MODEL
 
     if not user_id:
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
+        )
         return ProviderSelection(provider, model)
 
     try:
         user_settings = get_user_settings(user_id)
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_SETTINGS: user_id={user_id}, "
+            f"settings={user_settings}"
+        )
         if user_settings is None:
             logging_util.warning(
-                "Database error retrieving settings for user, falling back to default model"
+                f"🔍 PROVIDER_SELECTION_NULL_SETTINGS: Database error retrieving settings "
+                f"for user {user_id}, falling back to default model (Gemini)"
             )
             return ProviderSelection(provider, model)
 
@@ -1691,9 +2354,16 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
             else:
                 model = constants.DEFAULT_GEMINI_MODEL
 
+        logging_util.info(
+            f"🔍 PROVIDER_SELECTION_FINAL: user_id={user_id}, "
+            f"provider={provider}, model={model}"
+        )
         return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:
-        logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
+        logging_util.warning(
+            f"🔍 PROVIDER_SELECTION_EXCEPTION: Failed to get user settings for {user_id}: {e}, "
+            f"falling back to provider={provider}, model={model}"
+        )
         return ProviderSelection(provider, model)
 
 
