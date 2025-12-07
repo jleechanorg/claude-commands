@@ -102,7 +102,6 @@ KEY_TRACEBACK = "traceback"
 MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0  # Max retries before accepting response
 
 _world_time_to_comparable = world_time.world_time_to_comparable
-_parse_timestamp_to_world_time = world_time.parse_timestamp_to_world_time
 _extract_world_time_from_response = world_time.extract_world_time_from_response
 _check_temporal_violation = world_time.check_temporal_violation
 _apply_timestamp_to_world_time = world_time.apply_timestamp_to_world_time
@@ -766,7 +765,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             user_input=original_user_input,
             is_god_mode=is_god_mode,
         )
-        if not new_world_time:
+        if not isinstance(new_world_time, dict) or not new_world_time:
             new_world_time = state_changes.get("world_data", {}).get("world_time")
 
         # Add temporal violation error as god_mode_response for user-facing display

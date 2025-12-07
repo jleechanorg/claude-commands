@@ -34,7 +34,7 @@ def test_extract_world_time_from_timestamp_only_response():
         "year": 2026,
         "month": 12,
         "day": 1,
-        "hour": 8,
+        "hour": 6,
         "minute": 0,
         "second": 0,
         "microsecond": 0,

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from copy import deepcopy
-from datetime import datetime
-from typing import Any
 import re
-
+from copy import deepcopy
+from datetime import UTC, datetime
+from typing import Any
 
 MONTH_MAP = {
     "hammer": 1,
@@ -73,7 +72,11 @@ def world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, ..
 
 
 def parse_timestamp_to_world_time(timestamp: Any) -> dict[str, int] | None:
-    """Parse an ISO-like timestamp into a world_time dict."""
+    """Parse an ISO-like timestamp into a world_time dict.
+
+    Timestamps with timezone offsets are normalized to UTC to keep temporal
+    comparisons consistent regardless of source timezone.
+    """
 
     if timestamp is None:
         return None
@@ -88,6 +91,9 @@ def parse_timestamp_to_world_time(timestamp: Any) -> dict[str, int] | None:
         parsed = datetime.fromisoformat(normalized)
     except (TypeError, ValueError):
         return None
+
+    if parsed.tzinfo:
+        parsed = parsed.astimezone(UTC)
 
     return {
         "year": parsed.year,
@@ -195,6 +201,13 @@ def _with_default_microsecond(world_time: dict[str, Any]) -> dict[str, Any]:
 
 
 def _add_elapsed_seconds(world_time: dict[str, Any], seconds: int) -> dict[str, Any]:
+    """Add elapsed seconds while preserving the provided month/year context.
+
+    This helper intentionally limits normalization to hours/minutes/seconds and
+    rolls into the ``day`` field only. Campaign calendars vary, so month/year
+    rollover is left to upstream systems that understand the active calendar.
+    """
+
     time_copy = _with_default_microsecond(world_time)
 
     day = _safe_int(time_copy.get("day", 0))
@@ -236,15 +249,28 @@ def ensure_progressive_world_time(
             return state_changes
 
     if isinstance(candidate_time, dict) and candidate_time:
-        world_data["world_time"] = _with_default_microsecond(candidate_time)
-        return state_changes
+        normalized_candidate = _with_default_microsecond(candidate_time)
+        if previous_world_time:
+            previous_default = _with_default_microsecond(previous_world_time)
+            if normalized_candidate == previous_default:
+                candidate_time = None
+            else:
+                world_data["world_time"] = normalized_candidate
+                return state_changes
+        else:
+            world_data["world_time"] = normalized_candidate
+            return state_changes
 
     if not previous_world_time:
         return state_changes
 
     inferred_time = _with_default_microsecond(previous_world_time)
     if _looks_like_think_request(user_input):
-        inferred_time["microsecond"] = inferred_time.get("microsecond", 0) + THINK_MICROSECOND_INCREMENT
+        micro = inferred_time.get("microsecond", 0) + THINK_MICROSECOND_INCREMENT
+        extra_seconds, normalized_micro = divmod(max(micro, 0), 1_000_000)
+        inferred_time["microsecond"] = normalized_micro
+        if extra_seconds:
+            inferred_time = _add_elapsed_seconds(inferred_time, extra_seconds)
     else:
         inferred_time = _add_elapsed_seconds(inferred_time, ACTION_MIN_SECOND_INCREMENT)
 

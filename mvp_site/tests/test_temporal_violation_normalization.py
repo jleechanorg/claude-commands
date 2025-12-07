@@ -1,5 +1,3 @@
-import pytest
-
 from mvp_site import world_logic
 
 

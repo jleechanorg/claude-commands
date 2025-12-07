@@ -1,7 +1,5 @@
 import copy
 
-import pytest
-
 from mvp_site import world_time
 
 
@@ -51,6 +49,22 @@ def test_story_actions_get_minimum_elapsed_time_when_missing():
     assert new_time["minute"] == previous_time["minute"]
 
 
+def test_story_actions_roll_over_minutes():
+    previous_time = _base_time(second=59, minute=12)
+    state_changes = {"world_data": {}}
+
+    updated = world_time.ensure_progressive_world_time(
+        copy.deepcopy(state_changes),
+        previous_time,
+        user_input="attack the bandit",
+        is_god_mode=False,
+    )
+
+    new_time = updated["world_data"]["world_time"]
+    assert new_time["minute"] == 13
+    assert new_time["second"] == 0
+
+
 def test_preserves_llm_supplied_world_time():
     supplied_time = _base_time(second=42, microsecond=123)
     state_changes = {"world_data": {"world_time": supplied_time}}
@@ -63,3 +77,4 @@ def test_preserves_llm_supplied_world_time():
     )
 
     assert updated["world_data"]["world_time"] == supplied_time
+    assert updated["world_data"]["world_time"]["microsecond"] == 123

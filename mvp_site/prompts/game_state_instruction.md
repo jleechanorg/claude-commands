@@ -76,7 +76,10 @@ Every response MUST be valid JSON with this exact structure:
   - **Advantage:** `"Attack (advantage): 1d20+5 = [14, 8]+5 = 19 (took higher) vs AC 15 (Hit)"`
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
-  - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`) so the engine can convert it into structured `world_time` for temporal enforcement and session headers. Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting) and let the backend format the session header time for you—do not invent a new calendar mid-session.
+  - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
+  - The engine converts this into structured `world_time` for temporal enforcement and session headers.
+  - Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting).
+  - Let the backend format the session header time for you—do not invent a new calendar mid-session.
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
 - `debug_info`: (object) Internal DM information (only visible in debug mode)
   - `dm_notes`: (array of strings) DM reasoning and rule considerations
