@@ -414,12 +414,12 @@ TURNS_TO_KEEP_AT_END: int = 20
 #         │   └── timeline_log (~3-4K)
 #         └── Story Budget (remaining ~50-60%)
 #             ├── Start Turns (25% - STORY_BUDGET_START_RATIO)
-#             ├── Middle (currently dropped, future: summarized)
-#             ├── End Turns (70% - STORY_BUDGET_END_RATIO)
+#             ├── Middle Compaction (10% - STORY_BUDGET_MIDDLE_RATIO)
+#             ├── End Turns (60% - STORY_BUDGET_END_RATIO)
 #             └── Truncation marker (5% safety margin)
 #
-# FUTURE: Middle compaction could summarize dropped turns instead of
-# discarding them entirely. This would preserve plot-critical events.
+# Middle compaction is implemented via _compact_middle_turns() which extracts
+# key events (deaths, level-ups, discoveries) from dropped middle turns.
 # =============================================================================
 
 # Percentage-based story budget allocation
