@@ -25,6 +25,50 @@ WHITESPACE_PATTERN = re.compile(
     r"[^\S\r\n]+"
 )  # Normalize spaces while preserving line breaks
 
+# Mixed language detection - CJK (Chinese/Japanese/Korean) characters
+# These can appear due to LLM training data leakage
+CJK_PATTERN = re.compile(
+    r"[\u4e00-\u9fff"  # CJK Unified Ideographs (Chinese)
+    r"\u3040-\u309f"  # Hiragana (Japanese)
+    r"\u30a0-\u30ff"  # Katakana (Japanese)
+    r"\uac00-\ud7af"  # Hangul Syllables (Korean)
+    r"\u3400-\u4dbf"  # CJK Unified Ideographs Extension A
+    r"\U00020000-\U0002a6df"  # CJK Unified Ideographs Extension B
+    r"]+"
+)
+
+
+def strip_mixed_language_characters(text: str) -> str:
+    """
+    Strip CJK (Chinese/Japanese/Korean) characters from text.
+
+    These can appear due to LLM training data leakage and should be removed
+    to maintain narrative consistency in English-language campaigns.
+
+    Args:
+        text: Input text that may contain mixed language characters
+
+    Returns:
+        Text with CJK characters removed
+    """
+    if not text:
+        return text
+
+    # Check if there are any CJK characters
+    if CJK_PATTERN.search(text):
+        original_len = len(text)
+        cleaned = CJK_PATTERN.sub("", text)
+        removed_count = original_len - len(cleaned)
+        logging_util.warning(
+            f"⚠️ MIXED_LANGUAGE_STRIPPED: Removed {removed_count} CJK characters from narrative. "
+            f"This indicates LLM training data leakage."
+        )
+        # Clean up any double spaces left behind
+        cleaned = re.sub(r"  +", " ", cleaned)
+        return cleaned.strip()
+
+    return text
+
 
 class NarrativeResponse:
     """Schema for structured narrative generation response"""
@@ -65,11 +109,14 @@ class NarrativeResponse:
         self.extra_fields = kwargs
 
     def _validate_narrative(self, narrative: str) -> str:
-        """Validate narrative content"""
+        """Validate narrative content and strip mixed language characters"""
         if not isinstance(narrative, str):
             raise ValueError("Narrative must be a string")
 
-        return narrative.strip()
+        # Strip any mixed language characters (CJK) that may have leaked from LLM training
+        cleaned = strip_mixed_language_characters(narrative)
+
+        return cleaned.strip()
 
     def _validate_entities(self, entities: list[str]) -> list[str]:
         """Validate and clean entity list"""

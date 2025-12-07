@@ -1,13 +1,12 @@
 """
-RED-GREEN TEST: Firestore Empty Narrative Persistence Bug
+RED-GREEN TEST: Firestore Empty Narrative Error Handling
 
-This test demonstrates the bug described in roadmap/scratchpad_planb_rates.md:
-- Think commands with empty narrative weren't being saved to Firestore
-- Bug: chunks=0 logic prevented database writes for empty narratives
-- Impact: AI responses disappeared on page reload
+This test demonstrates the new behavior for empty AI narratives:
+- Empty narrative from AI is now an ERROR (LLM compliance failure)
+- The system prompts require AI to ALWAYS provide narrative content
+- Even Deep Think responses must include brief narrative (character pausing to think)
 
-RED: Test fails when empty narrative + structured fields aren't saved
-GREEN: Test passes after fix handles empty narrative correctly
+Updated behavior: Empty AI narrative raises FirestoreWriteError
 """
 
 import os
@@ -27,17 +26,17 @@ sys.path.insert(
 from tests.fake_firestore import FakeFirestoreClient
 
 from mvp_site import constants
-from mvp_site.firestore_service import add_story_entry
+from mvp_site.firestore_service import add_story_entry, FirestoreWriteError
 
 
-class TestFirestoreEmptyNarrativeBug(unittest.TestCase):
+class TestFirestoreEmptyNarrativeError(unittest.TestCase):
     """
-    RED-GREEN demonstration of the Firestore empty narrative persistence bug.
+    Test that empty AI narratives now raise errors instead of using placeholders.
 
-    The Bug Scenario:
-    1. AI generates response with empty narrative but valid structured fields
-    2. Original code: chunks=0 → no database write → data lost
-    3. Fixed code: handles empty narrative + structured fields correctly
+    New Behavior:
+    1. AI generates response with empty narrative = LLM compliance error
+    2. System prompts require narrative even during Deep Think
+    3. Empty narrative from AI raises FirestoreWriteError
     """
 
     def setUp(self):
@@ -45,23 +44,21 @@ class TestFirestoreEmptyNarrativeBug(unittest.TestCase):
         self.fake_firestore = FakeFirestoreClient()
 
     @patch("firestore_service.get_db")
-    def test_empty_narrative_with_structured_fields_persists(self, mock_get_db):
+    def test_empty_narrative_from_ai_raises_error(self, mock_get_db):
         """
-        RED-GREEN TEST: Empty narrative + structured fields should be saved.
+        TEST: Empty narrative from AI should raise FirestoreWriteError.
 
-        This tests the specific bug from planb_rates scratchpad:
-        - Think commands generate empty narrative but valid structured fields
-        - Original bug: chunks=0 prevented any database write
-        - Fix: empty narrative with structured fields should still save
+        The AI MUST always provide narrative content per system prompts.
+        Even Deep Think responses require brief narrative showing character thinking.
         """
         # Arrange: Set up fake Firestore client
         mock_get_db.return_value = self.fake_firestore
 
-        # Test data: Empty narrative but with structured fields (think command scenario)
+        # Test data: Empty narrative from AI (this is now an error condition)
         user_id = "test-user-123"
         campaign_id = "test-campaign-456"
         actor = constants.ACTOR_GEMINI
-        narrative_text = ""  # EMPTY NARRATIVE (the bug scenario)
+        narrative_text = ""  # EMPTY NARRATIVE (now an error for AI actor)
         structured_fields = {
             "planning_block": {
                 "choices": [
@@ -77,95 +74,84 @@ class TestFirestoreEmptyNarrativeBug(unittest.TestCase):
             "state_changes": {"thinking_mode": {"active": True, "depth": "deep"}},
         }
 
-        # Act: Add story entry with empty narrative + structured fields
-        # This is the exact scenario that caused the bug
-        try:
+        # Act & Assert: Empty AI narrative should raise FirestoreWriteError
+        with self.assertRaises(FirestoreWriteError) as context:
             add_story_entry(
                 user_id=user_id,
                 campaign_id=campaign_id,
                 actor=actor,
-                text=narrative_text,  # Empty!
+                text=narrative_text,  # Empty - should error!
                 mode=None,
                 structured_fields=structured_fields,
             )
-            story_saved = True
-        except Exception as e:
-            story_saved = False
-            str(e)
 
-        # Assert: Story should be saved despite empty narrative
-        # GREEN: After fix, this should work
-        # RED: Before fix, this would fail due to chunks=0 logic
-        assert (
-            story_saved
-        ), "Empty narrative with structured fields should be saved to Firestore"
+        # Verify error message indicates LLM compliance issue
+        error_message = str(context.exception)
+        self.assertIn("empty narrative", error_message.lower())
+        self.assertIn(campaign_id, error_message)
 
-        # Verify the story was actually written to fake Firestore
-        # This simulates what would happen on page reload
+    @patch("firestore_service.get_db")
+    def test_empty_user_input_still_saves_with_placeholder(self, mock_get_db):
+        """
+        TEST: Empty USER input should still save with placeholder.
+
+        Empty user submissions are valid (user pressed enter without typing).
+        Only AI responses require non-empty narrative.
+        """
+        # Arrange: Set up fake Firestore client
+        mock_get_db.return_value = self.fake_firestore
+
+        # Test data: Empty narrative from USER (this is still valid)
+        user_id = "test-user-123"
+        campaign_id = "test-campaign-456"
+        actor = "user"  # User actor, not AI
+        narrative_text = ""  # Empty user input is valid
+
+        # Act: Add story entry with empty user input
+        add_story_entry(
+            user_id=user_id,
+            campaign_id=campaign_id,
+            actor=actor,
+            text=narrative_text,  # Empty but valid for user
+            mode=None,
+            structured_fields=None,
+        )
+
+        # Assert: Story should be saved with placeholder
         user_campaigns = (
             self.fake_firestore.collection("users")
             .document(user_id)
             .collection("campaigns")
         )
         campaign_doc = user_campaigns.document(campaign_id)
-
-        # Check if story collection exists and has entries
         story_collection = campaign_doc.collection("story")
-        story_docs = story_collection._docs  # Access internal storage
+        story_docs = story_collection._docs
 
-        assert len(story_docs) > 0, "Story entry should exist despite empty narrative"
-
-        # Verify structured fields were preserved in the story entry
-        story_entry = list(story_docs.values())[0]  # Get first story entry
+        assert len(story_docs) > 0, "Empty user input should still save"
+        story_entry = list(story_docs.values())[0]
         entry_data = story_entry._data
+        assert entry_data["text"] == "[Empty input]", "Empty user input gets placeholder"
 
-        # Verify structured fields were preserved (they're flattened into the entry)
-        assert "planning_block" in entry_data, "Planning block should be preserved"
-        assert "state_changes" in entry_data, "State changes should be preserved"
-
-        # Verify empty narrative was handled properly
-        assert (
-            entry_data["text"] != ""
-        ), "Empty narrative should be replaced with placeholder text"
-        assert (
-            "Internal thoughts" in entry_data["text"]
-        ), "Empty narrative should have meaningful placeholder"
-
-    def test_bug_reproduction_scenario(self):
+    def test_empty_narrative_detection_logic(self):
         """
-        Reproduce the exact bug scenario from the scratchpad:
-        1. Think command generates response with empty narrative
-        2. Response has valid structured fields (planning block, state changes)
-        3. Original bug: chunks=0 → no save → response disappears on reload
+        Document the detection logic for empty narratives.
         """
-        # This test documents the exact scenario that caused the bug
-        narrative = ""  # Think commands often generate empty narrative
-        structured_fields = {
-            "planning_block": {
-                "choices": [{"action": "think", "analysis": {"pros": [], "cons": []}}]
-            },
-            "state_changes": {"thinking_mode": {"active": True}},
-        }
+        # Empty narrative detection
+        narrative = ""
+        text_bytes = narrative.encode("utf-8")
+        max_bytes = 10000
+        chunks = [
+            text_bytes[i : i + max_bytes]
+            for i in range(0, len(text_bytes), max_bytes)
+        ]
 
-        # Calculate chunks using the original logic
-        chunks = [narrative[i : i + 10000] for i in range(0, len(narrative), 10000)]
-        chunks = [chunk.strip() for chunk in chunks if chunk.strip()]
+        # Empty narratives produce no chunks
+        assert len(chunks) == 0, "Empty narrative produces no chunks"
 
-        # Original bug logic: if no chunks, don't save anything
-        would_save_with_original_logic = len(chunks) > 0
-
-        # Document the bug scenario
-        assert (
-            not would_save_with_original_logic
-        ), "Original logic would NOT save empty narrative + structured fields"
-
-        # The fix should save structured fields even with empty narrative
-        should_save_with_fix = (
-            structured_fields is not None and len(structured_fields) > 0
-        )
-        assert (
-            should_save_with_fix
-        ), "Fixed logic SHOULD save empty narrative + structured fields"
+        # For AI actor, this should now be an error condition
+        actor = constants.ACTOR_GEMINI
+        should_error = actor == constants.ACTOR_GEMINI and len(chunks) == 0
+        assert should_error, "Empty AI narrative should trigger error"
 
 
 if __name__ == "__main__":

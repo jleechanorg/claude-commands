@@ -272,6 +272,46 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         assert "negotiate" in response.planning_block["choices"]
         assert len(response.planning_block["choices"]) == 5
 
+    def test_mixed_language_character_stripping(self):
+        """Test that CJK characters are stripped from narrative (LLM training data leakage)"""
+        # Example from real campaign: Chinese character 夜晚 (night) mixed into English
+        narrative_with_chinese = "The negotiation is complete, and now the夜晚 stretches before you"
+        response = NarrativeResponse(narrative=narrative_with_chinese)
+
+        # Chinese characters should be stripped
+        assert "夜晚" not in response.narrative
+        assert "stretches before you" in response.narrative
+        # Should clean up double spaces left behind
+        assert "  " not in response.narrative
+
+    def test_japanese_character_stripping(self):
+        """Test that Japanese characters are stripped from narrative"""
+        # Hiragana and Katakana mixed into English
+        narrative_with_japanese = "You walkこんにちは through the marketカタカナ"
+        response = NarrativeResponse(narrative=narrative_with_japanese)
+
+        # Japanese characters should be stripped
+        assert "こんにちは" not in response.narrative
+        assert "カタカナ" not in response.narrative
+        assert "walk" in response.narrative
+        assert "through the market" in response.narrative
+
+    def test_korean_character_stripping(self):
+        """Test that Korean characters are stripped from narrative"""
+        narrative_with_korean = "The hero한국어 draws their sword"
+        response = NarrativeResponse(narrative=narrative_with_korean)
+
+        # Korean characters should be stripped
+        assert "한국어" not in response.narrative
+        assert "hero" in response.narrative
+        assert "draws their sword" in response.narrative
+
+    def test_clean_narrative_unchanged(self):
+        """Test that narratives without CJK characters are unchanged"""
+        clean_narrative = "You pause to consider your options, mind racing through the possibilities..."
+        response = NarrativeResponse(narrative=clean_narrative)
+        assert response.narrative == clean_narrative
+
 
 if __name__ == "__main__":
     unittest.main()
