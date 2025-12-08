@@ -101,7 +101,6 @@ KEY_TRACEBACK = "traceback"
 # Previously was 2, but this causes 3 LLM calls total when time goes backward
 MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0  # Max retries before accepting response
 
-_world_time_to_comparable = world_time.world_time_to_comparable
 _extract_world_time_from_response = world_time.extract_world_time_from_response
 _check_temporal_violation = world_time.check_temporal_violation
 _apply_timestamp_to_world_time = world_time.apply_timestamp_to_world_time

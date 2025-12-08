@@ -121,14 +121,17 @@ def extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None
             parsed_from_string = parse_timestamp_to_world_time(candidate_time)
             if parsed_from_string:
                 return parsed_from_string
+            candidate_time = None
 
-        if not candidate_time:
-            timestamp_raw = world_data.get("timestamp_iso") or world_data.get("timestamp")
+        if not isinstance(candidate_time, dict) or not candidate_time:
+            timestamp_raw = world_data.get("timestamp_iso") or world_data.get(
+                "timestamp"
+            )
             parsed_timestamp = parse_timestamp_to_world_time(timestamp_raw)
             if parsed_timestamp:
                 return parsed_timestamp
 
-        return candidate_time
+        return candidate_time if isinstance(candidate_time, dict) else None
     except Exception:
         return None
 
@@ -276,4 +279,3 @@ def ensure_progressive_world_time(
 
     world_data["world_time"] = inferred_time
     return state_changes
-
