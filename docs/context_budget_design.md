@@ -56,11 +56,6 @@ Model Context Window (100%)
 │       │   ├── entity_specific_instructions (~1.5-2K)
 │       │   └── entity_tracking_instruction (~1-1.5K)
 │       │
-│       ├── Timeline Log (DUPLICATES story content!)
-│       │   └── ~story_tokens × 1.05 (story + SEQ_ID prefixes)
-│       │   NOTE: This is NOT a small fixed reserve - it scales
-│       │   with story size and can be 25K+ tokens for long campaigns!
-│       │
 │       └── Story Budget (remaining ~50-60%)
 │           ├── Start turns (25% of story budget)
 │           ├── Middle summary (10% - compacted key events)
@@ -260,33 +255,18 @@ The system logs budget calculations for debugging:
 
 **Status**: ✅ Fixed (Dec 7, 2025)
 
-**Problem**: The scaffold calculation did NOT include `timeline_log_string`, but the final prompt DOES include it. This caused story content to be counted once but included twice, leading to `ContextTooLargeError` in production.
+**Problem**: A legacy prompt-concatenation flow appended `timeline_log_string` alongside `story_context` without budgeting the duplicate content. In production (story=26,795 tokens, timeline_log=27,817 tokens, final prompt=54,612 tokens), this overflowed the available budget and raised `ContextTooLargeError`.
 
-**Production Evidence**:
-```
-Model: zai-glm-4.6 (131K context)
-Budget check: story=26,795 tokens ✓ OK
-Timeline log: 27,817 tokens (reformatted story with ~5% overhead)
-Final prompt: 54,612 tokens ✗ OVERFLOW (expected ~53K)
-Root cause: timeline_log added another full copy of story content not counted in the scaffold
-```
-
-**Why This Happens**:
-- `_build_timeline_log()` reformats the entire story context with `[SEQ_ID: X] Actor:` prefixes
-- This is essentially the same content as `story_context` with ~5% overhead
-- The scaffold estimate includes story_context tokens but NOT timeline_log tokens
-- Result: Final prompt is approximately `scaffold + story + story×1.05` instead of `scaffold + story`
+**Current Behavior**:
+- The structured `LLMRequest` path serializes `story_history` plus metadata (game state, entity tracking, memories) and **excludes** `timeline_log_string`.
+- A duplication guard exists (`TIMELINE_LOG_DUPLICATION_FACTOR = 2.05`) but is gated by `TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST = False`; the guard is dormant unless timeline_log text is explicitly serialized again.
+- `timeline_log_string` is still constructed for diagnostics/entity-instruction heuristics. If we reintroduce it into the payload, we must flip the flag and rebaseline the budgeting tests.
 
 **Test**: `mvp_site/tests/test_end2end/test_timeline_log_budget_end2end.py`
 
-**Fix Applied**:
-The story budget is now divided by `TIMELINE_LOG_DUPLICATION_FACTOR = 2.05` to account for timeline_log duplicating the story content. This ensures truncation happens earlier, preventing overflow.
-
-```python
-# llm_service.py line 3193-3201
-TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
-available_story_tokens = int(available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR)
-```
+**Remediation**:
+- Keep timeline_log excluded from the structured request (current default).
+- Retain the guarded duplication factor for any future prompt path that serializes timeline text; flipping the guard will re-enable the budget split and should be accompanied by updated docs/tests.
 
 ## Policy: No Model Switching
 

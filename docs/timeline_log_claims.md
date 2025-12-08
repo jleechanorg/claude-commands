@@ -14,9 +14,9 @@ This note reviews the claims from the "Align timeline log budgeting evidence and
 3. The only remaining consumer of `timeline_log_string` before the request is built is `EntityInstructionGenerator.generate_entity_instructions`, which uses the string for heuristic classification but does not embed it in the serialized payload.
 
 ## Impact
-- The code now divides the story budget by 2.05 despite no duplicated timeline text being sent to the LLM. This reduces the retained story context and can cause unnecessary truncation or loss of recent turns while providing no protection against actual token overflow.
-- The regression test documenting "timeline_log duplication" is therefore verifying behavior that does not occur in the structured request path.
+- Early revisions divided the story budget by 2.05 even though no duplicated timeline text was sent, which reduced retained context without preventing overflow. The guard is now gated via `TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST = False`, so the structured request path keeps the full story budget.
+- Tests document both behaviors: current (timeline_log not serialized, guard dormant) and hypothetical (guard active if we re-enable serialization).
 
 ## Suggested Next Steps
-- Remove the `TIMELINE_LOG_DUPLICATION_FACTOR` adjustment (or gate it to the legacy prompt-concatenation path, if that path is restored) and re-baseline the end-to-end budget test against the real serialized payload.
-- If timeline log text must be sent, explicitly add it to `LLMRequest` and the serialized prompt and size it accordingly; otherwise, keep the budget aligned with the actual payload shape.
+- Keep the duplication guard gated unless a prompt path explicitly serializes timeline_log text; flip the flag and update tests/docs if that happens.
+- If timeline log text must be sent, add it to `LLMRequest` and size it explicitly instead of relying on legacy prompt concatenation.

@@ -215,13 +215,17 @@ OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output to
 # - entity_preload_text: ~2000-3000 tokens (NPC summaries)
 # - entity_specific_instructions: ~1500-2000 tokens (per-turn instructions)
 # - entity_tracking_instruction: ~1000-1500 tokens (tracking rules)
-# - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
+# NOTE: timeline_log text is constructed for diagnostics/entity instructions but is NOT
+# serialized into the structured LLMRequest payload. If serialization is ever enabled,
+# TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST must be flipped and budgeting adjusted.
 ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
 
 # Timeline log handling
 # The structured LLMRequest path serializes only `story_history` (no timeline log).
-# Keep the duplication factor as a guardrail for prompt paths that include both
-# `story_context` and timeline_log text in the same request.
+# The duplication factor remains available as a guardrail for any prompt path that
+# explicitly serializes timeline_log text alongside story_history. Prompt builders must
+# flip TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST to True and update docs/tests if they
+# start sending the timeline log string again.
 TIMELINE_LOG_DUPLICATION_FACTOR: float = 2.05
 TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST: bool = False
 
@@ -654,8 +658,7 @@ TURNS_TO_KEEP_AT_END: int = 20
 #         ├── Entity Tracking Reserve (10.5K tokens fixed)
 #         │   ├── entity_preload_text (~2-3K)
 #         │   ├── entity_specific_instructions (~1.5-2K)
-#         │   ├── entity_tracking_instruction (~1-1.5K)
-#         │   └── timeline_log (~3-4K)
+#         │   └── entity_tracking_instruction (~1-1.5K)
 #         └── Story Budget (remaining ~50-60%)
 #             ├── Start Turns (25% - STORY_BUDGET_START_RATIO)
 #             ├── Middle Compaction (10% - STORY_BUDGET_MIDDLE_RATIO)
@@ -3521,6 +3524,11 @@ def continue_story(
             f"{entity_tracking_instruction}"
         )
 
+    # Legacy/debug-only: we still assemble the string prompt for diagnostics and
+    # future prompt-experiment branches. The structured request path below sends
+    # only the serialized LLMRequest JSON (story_history, game_state, etc.), not
+    # `full_prompt`. If timeline_log text is ever re-serialized, flip
+    # TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST and update budgeting/tests.
     full_prompt = _build_continuation_prompt(
         checkpoint_block,
         core_memories_summary,
