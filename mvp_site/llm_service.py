@@ -3182,14 +3182,23 @@ def continue_story(
 
     scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
     # FIX: Add explicit reserve for entity tracking tokens that are added AFTER truncation
-    # The old 15% buffer was insufficient (~2700 tokens) vs entity overhead (~3500-10500 tokens)
     # Entity tracking includes: entity_preload_text, entity_specific_instructions,
-    # entity_tracking_instruction, and timeline_log - all generated AFTER truncation
+    # entity_tracking_instruction (NOT timeline_log - that's handled separately below)
     scaffold_tokens = scaffold_tokens_raw + ENTITY_TRACKING_TOKEN_RESERVE
 
     # Use max_input_allowed from centralized budget (accounts for output reserve)
     # Then subtract scaffold tokens to get available story budget
-    available_story_tokens = max(0, max_input_allowed - scaffold_tokens)
+    available_story_tokens_raw = max(0, max_input_allowed - scaffold_tokens)
+
+    # CRITICAL FIX (Dec 2025): Account for timeline_log DUPLICATING story content
+    # The final prompt includes BOTH:
+    #   1. story_context entries (used in some places)
+    #   2. timeline_log_string (story reformatted with [SEQ_ID: X] Actor: prefixes)
+    # Timeline log is approximately story_tokens × 1.05 (5% overhead for prefixes)
+    # So total story content in prompt = story_tokens × 2.05
+    # We must divide available budget by 2.05 to get actual story budget
+    TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
+    available_story_tokens = int(available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR)
     char_budget_for_story = available_story_tokens * 4
 
     # Calculate story context tokens
@@ -3200,7 +3209,8 @@ def continue_story(
     logging_util.info(
         f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
         f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+entity_reserve:{ENTITY_TRACKING_TOKEN_RESERVE}), "
-        f"output_reserve={output_token_reserve}tk ({reserve_mode}), story_budget={available_story_tokens}tk, "
+        f"output_reserve={output_token_reserve}tk ({reserve_mode}), "
+        f"story_budget={available_story_tokens}tk (raw:{available_story_tokens_raw}tk / {TIMELINE_LOG_DUPLICATION_FACTOR} for timeline_log), "
         f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
 

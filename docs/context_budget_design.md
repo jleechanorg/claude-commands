@@ -1,7 +1,7 @@
 # Context Budget Design Document
 
-**Status**: Implemented (PR #2311)
-**Last Updated**: 2025-12-04
+**Status**: Implemented (PR #2311) - **Timeline log fix applied (Dec 2025)**
+**Last Updated**: 2025-12-07
 **Author**: Claude Code
 
 ## Overview
@@ -54,8 +54,12 @@ Model Context Window (100%)
 │       ├── Entity Tracking Reserve (10.5K tokens fixed)
 │       │   ├── entity_preload_text (~2-3K)
 │       │   ├── entity_specific_instructions (~1.5-2K)
-│       │   ├── entity_tracking_instruction (~1-1.5K)
-│       │   └── timeline_log (~3-4K)
+│       │   └── entity_tracking_instruction (~1-1.5K)
+│       │
+│       ├── Timeline Log (DUPLICATES story content!)
+│       │   └── ~story_tokens × 1.05 (story + SEQ_ID prefixes)
+│       │   NOTE: This is NOT a small fixed reserve - it scales
+│       │   with story size and can be 25K+ tokens for long campaigns!
 │       │
 │       └── Story Budget (remaining ~50-60%)
 │           ├── Start turns (25% of story budget)
@@ -249,3 +253,52 @@ The system logs budget calculations for debugging:
 - PR #2294: Centralize context budget calculation
 - PR #2201: Adjust compaction to 20+20 turns
 - PR #2311: Add percentage-based allocation + adaptive truncation
+
+## Known Issues
+
+### Timeline Log Budget Bug (Dec 2025) - FIXED
+
+**Status**: ✅ Fixed (Dec 7, 2025)
+
+**Problem**: The scaffold calculation did NOT include `timeline_log_string`, but the final prompt DOES include it. This caused story content to be counted once but included twice, leading to `ContextTooLargeError` in production.
+
+**Production Evidence**:
+```
+Model: zai-glm-4.6 (131K context)
+Budget check: story=25,127 tokens ✓ OK
+Final prompt: 96,396 tokens ✗ OVERFLOW (expected ~53K)
+Root cause: timeline_log added ~27K tokens NOT in budget
+```
+
+**Why This Happens**:
+- `_build_timeline_log()` reformats the entire story context with `[SEQ_ID: X] Actor:` prefixes
+- This is essentially the same content as `story_context` with ~5% overhead
+- The scaffold estimate includes story_context tokens but NOT timeline_log tokens
+- Result: Final prompt is approximately `scaffold + story + story×1.05` instead of `scaffold + story`
+
+**Test**: `mvp_site/tests/test_end2end/test_timeline_log_budget_end2end.py`
+
+**Fix Applied**:
+The story budget is now divided by `TIMELINE_LOG_DUPLICATION_FACTOR = 2.05` to account for timeline_log duplicating the story content. This ensures truncation happens earlier, preventing overflow.
+
+```python
+# llm_service.py line 3193-3201
+TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
+available_story_tokens = int(available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR)
+```
+
+## Policy: No Model Switching
+
+**Model cycling and auto-fallback are NOT supported.**
+
+The system uses a single configured model per request. If errors occur:
+- API errors: Fail and let user retry
+- Context too large: Fix truncation logic, don't switch models
+
+**Reasons**:
+1. Cost unpredictability - larger models cost more per token
+2. Voice inconsistency - different models have different personalities
+3. Latency variance - larger contexts increase response time
+4. Debugging complexity - model switching hides root causes
+
+If `ContextTooLargeError` occurs, the proper fix is to improve the truncation/compaction logic.
