@@ -3567,11 +3567,17 @@ def continue_story(
     )
 
     # Build LLMRequest with structured data (NO string concatenation)
+    # CRITICAL: Exclude npc_data from game_state - it's ~500 tokens per NPC
+    # Entity data is now provided via trimmed entity_tracking_data instead
+    game_state_for_llm = {
+        k: v for k, v in current_game_state.to_dict().items()
+        if k != "npc_data"
+    }
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
         game_mode=mode,
-        game_state=current_game_state.to_dict(),
+        game_state=game_state_for_llm,
         story_history=truncated_story_context,
         checkpoint_block=checkpoint_block,
         core_memories=core_memories_summary.split("\n")
