@@ -1,315 +1,134 @@
-# jleechanorg-pr-automation
+# GitHub PR Automation System
 
-A comprehensive GitHub PR automation system with safety limits, actionable counting, and intelligent filtering.
+**Autonomous PR fixing and code review automation for the jleechanorg organization**
 
-## ⚠️ CRITICAL: Orchestration Dependency Required
+## Overview
 
-**This package requires the `orchestration` module to function correctly.**
+This automation system provides two core workflows:
 
-The automation system uses `orchestration.task_dispatcher.TaskDispatcher` for orchestrated PR processing. This means:
+1. **@codex Comment Agent** - Monitors PRs and posts intelligent automation comments
+2. **FixPR Workflow** - Autonomously fixes merge conflicts and failing CI checks
 
-- ✅ **For Development/Internal Use**: Clone the full WorldArchitect.AI repository where both `automation/` and `orchestration/` are available
-- ❌ **Standalone PyPI Installation**: Will fail with `ModuleNotFoundError: No module named 'orchestration'` when using CLI commands
-- 🔧 **Solution**: Use within the project repository where `orchestration/` is in the Python path, or wait for the package flattening refactor (tracked in issue worktree_auto3-g7h)
+Both workflows use safety limits, commit tracking, and orchestrated AI agents to process PRs reliably.
 
-**Installation Context:**
-```bash
-# For standalone use (CLI WILL FAIL - orchestration not available):
-pip install jleechanorg-pr-automation  # ❌ CLI commands fail
+---
 
-# For development within WorldArchitect.AI project (WORKS):
-cd ~/worldarchitect.ai
-pip install -e ./automation  # ✅ Full functionality
+## 🤖 Workflow 1: @codex Comment Agent
+
+### What It Does
+
+The @codex comment agent continuously monitors all open PRs across the jleechanorg organization and posts standardized Codex instruction comments when new commits are pushed. This enables AI assistants (@codex, @coderabbitai, @copilot, @cursor) to review and improve PRs automatically.
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. DISCOVERY PHASE                                         │
+│  ───────────────────────────────────────────────────────────│
+│  • Scan all repositories in jleechanorg organization        │
+│  • Find open PRs updated in last 24 hours                   │
+│  • Filter to actionable PRs (new commits, not drafts)       │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  2. COMMIT TRACKING                                         │
+│  ───────────────────────────────────────────────────────────│
+│  • Check if PR has new commits since last processed         │
+│  • Skip if already commented on this commit SHA             │
+│  • Prevent duplicate comments on same commit                │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  3. SAFETY CHECKS                                           │
+│  ───────────────────────────────────────────────────────────│
+│  • Verify PR hasn't exceeded attempt limits (max 5)         │
+│  • Check global automation limit (max 50 runs)              │
+│  • Skip if safety limits reached                            │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  4. POST COMMENT                                            │
+│  ───────────────────────────────────────────────────────────│
+│  • Post standardized @codex instruction comment             │
+│  • Include hidden commit marker: <!-- codex-automation-     │
+│    commit:abc123def -->                                     │
+│  • Record processing in commit history                      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Multi-CLI Agent Support
+### Comment Template
 
-The orchestration system supports multiple AI CLI backends for autonomous PR fixing. When using the `--fixpr` mode, you can select which AI CLI handles the PR processing:
+The agent posts this standardized instruction:
 
-**Supported AI CLIs:**
-- **Claude** (default): Anthropic's Claude Code CLI
-- **Codex**: OpenAI's Codex CLI
-- **Gemini**: Google's Gemini CLI (gemini-3-pro-preview model only)
+```markdown
+@codex @coderabbitai @copilot @cursor [AI automation] Codex will implement
+the code updates while coderabbitai, copilot, and cursor focus on review
+support. Please make the following changes to this PR.
 
-**CLI Selection Methods:**
+Use your judgment to fix comments from everyone or explain why it should
+not be fixed. Follow binary response protocol - every comment needs "DONE"
+or "NOT DONE" classification explicitly with an explanation. Address all
+comments on this PR. Fix any failing tests and resolve merge conflicts.
+Push any commits needed to remote so the PR is updated.
 
-1. **Explicit Flag** (recommended for consistency):
-```bash
-# Force Gemini CLI for all PR fixes
-jleechanorg-pr-monitor --fixpr --max-prs 5 --agent-cli gemini
-
-# Use Codex instead
-jleechanorg-pr-monitor --fixpr --max-prs 5 --agent-cli codex
+<!-- codex-automation-commit:abc123def456 -->
 ```
 
-2. **Keyword Detection** (automatic based on task description):
-```bash
-# Orchestration auto-detects "use gemini" keyword
-# This is handled internally by the TaskDispatcher
-```
+### Tech Stack
 
-3. **Default Behavior** (Claude if available):
-```bash
-# Uses Claude CLI by default when multiple CLIs installed
-jleechanorg-pr-monitor --fixpr --max-prs 5
-```
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **PR Discovery** | GitHub GraphQL API | Organization-wide PR search |
+| **Commit Detection** | `check_codex_comment.py` | Prevents duplicate comments |
+| **Comment Posting** | GitHub REST API (`gh pr comment`) | Posts automation instructions |
+| **Safety Manager** | `AutomationSafetyManager` | File-based rate limiting |
+| **Scheduling** | launchd/cron | Runs every 10 minutes |
 
-**Prerequisites for Multi-CLI:**
-- For Claude: Install Claude Code CLI (see main README)
-- For Codex: Ensure `codex` binary is in PATH
-- For Gemini: `pip install google-gemini-cli` + `GOOGLE_API_KEY` environment variable
+### Usage
 
-**Model Configuration:**
-- Gemini CLI defaults to **gemini-3-pro-preview** model
-- Can be overridden via `GEMINI_MODEL` environment variable if needed
-- Example: `export GEMINI_MODEL=gemini-2.0-flash` before running orchestration
-
-For complete CLI configuration and usage details, see the [orchestration README](../orchestration/README.md#cli-selection-methods).
-
-## Features
-
-- **Actionable PR Counting**: Only processes PRs that need attention, excluding already-processed ones
-- **Safety Limits**: Built-in rate limiting and attempt tracking to prevent automation abuse
-- **Cross-Process Safety**: Thread-safe operations with file-based persistence
-- **Email Notifications**: Optional SMTP integration for automation alerts
-- **Commit-Based Tracking**: Avoids duplicate processing using commit SHAs
-- **Orchestrated PR Runner**: Autonomous agent-based PR fixing using TaskDispatcher
-- **Multi-CLI Support**: Works with Claude, Codex, or Gemini AI agents (via orchestration)
-- **Comprehensive Testing**: 200+ test cases with matrix-driven coverage
-
-## Installation
-
-```bash
-pip install jleechanorg-pr-automation
-```
-
-### Optional Dependencies
-
-For email notifications:
-```bash
-pip install jleechanorg-pr-automation[email]
-```
-
-For development:
-```bash
-pip install jleechanorg-pr-automation[dev]
-```
-
-## Quick Start
-
-### Basic PR Monitoring
-
-```python
-from jleechanorg_pr_automation import JleechanorgPRMonitor
-
-# Initialize monitor
-monitor = JleechanorgPRMonitor()
-
-# Process up to 20 actionable PRs
-result = monitor.run_monitoring_cycle_with_actionable_count(target_actionable_count=20)
-
-print(f"Processed {result['actionable_processed']} actionable PRs")
-print(f"Skipped {result['skipped_count']} non-actionable PRs")
-```
-
-### Safety Management
-
-```python
-from jleechanorg_pr_automation import AutomationSafetyManager
-
-# Initialize safety manager with data directory
-safety = AutomationSafetyManager(data_dir="/tmp/automation_safety")
-
-# Limits are configured via automation_safety_config.json inside the data directory
-# or the AUTOMATION_PR_LIMIT / AUTOMATION_GLOBAL_LIMIT environment variables.
-
-# Check if PR can be processed
-if safety.can_process_pr(pr_number=123, repo="my-repo"):
-    # Process PR...
-    safety.record_pr_attempt(pr_number=123, result="success", repo="my-repo")
-```
-
-## Configuration
-
-### Environment Variables
-
-- `GITHUB_TOKEN`: GitHub personal access token (required)
-- `PR_AUTOMATION_WORKSPACE`: Custom workspace directory (optional)
-- `AUTOMATION_PR_LIMIT`: Maximum attempts per PR (default: 5)
-- `AUTOMATION_GLOBAL_LIMIT`: Maximum global automation runs (default: 50)
-- `AUTOMATION_APPROVAL_HOURS`: Hours before approval expires (default: 24)
-
-### Email Configuration (Optional)
-
-- `SMTP_SERVER`: SMTP server hostname
-- `SMTP_PORT`: SMTP server port (default: 587)
-- `EMAIL_USER`: SMTP username
-- `EMAIL_PASS`: SMTP password
-- `EMAIL_TO`: Notification recipient
-- `EMAIL_FROM`: Sender address (defaults to EMAIL_USER)
-
-## Command Line Interface
-
-### PR Monitor
+#### CLI Commands
 
 ```bash
-# Monitor all repositories
+# Monitor all repositories (posts comments to actionable PRs)
 jleechanorg-pr-monitor
 
-# Process specific repository
+# Monitor specific repository
 jleechanorg-pr-monitor --single-repo worldarchitect.ai
 
 # Process specific PR
 jleechanorg-pr-monitor --target-pr 123 --target-repo jleechanorg/worldarchitect.ai
 
-# Dry run (discovery only)
+# Dry run (discovery only, no comments)
 jleechanorg-pr-monitor --dry-run
-```
 
-### Safety Manager CLI
-
-```bash
-# Check current status
+# Check safety status
 automation-safety-cli status
 
-# Clear all safety data
-automation-safety-cli clear
-
-# Check specific PR
-automation-safety-cli check-pr 123 --repo my-repo
-```
-
-## Architecture
-
-### Actionable PR Logic
-
-The system implements intelligent PR filtering:
-
-1. **State Check**: Only processes open PRs
-2. **Commit Tracking**: Skips PRs already processed with current commit SHA
-3. **Safety Limits**: Respects per-PR and global automation limits
-4. **Ordering**: Processes most recently updated PRs first
-
-### Safety Features
-
-- **Dual Limiting**: Per-PR consecutive failure limits + global run limits
-- **Cross-Process Safety**: File-based locking for concurrent automation instances
-- **Attempt Tracking**: Full history of success/failure with timestamps
-- **Graceful Degradation**: Continues processing other PRs if one fails
-
-### Testing
-
-The library includes comprehensive test coverage:
-
-- **Matrix Testing**: All PR state combinations (Open/Closed × New/Old Commits × Processed/Fresh)
-- **Actionable Counting**: Batch processing with skip exclusion
-- **Safety Limits**: Concurrent access and edge cases
-- **Integration Tests**: Real GitHub API interactions (optional)
-
-## Development
-
-```bash
-# Clone repository
-git clone https://github.com/jleechanorg/worldarchitect.ai.git
-cd worldarchitect.ai/automation
-
-# Install in development mode
-pip install -e .[dev]
-
-# Run tests
-pytest
-
-# Run tests with coverage
-pytest --cov=jleechanorg_pr_automation
-
-# Format code
-black .
-ruff check .
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-## Claude Code Integration
-
-### Slash Command Plugin
-
-This automation system is integrated with Claude Code through a custom slash command plugin located at `.claude/commands/automation.md`. This allows seamless PR automation directly from your Claude Code sessions.
-
-#### Installation
-
-**Option 1: Via `/exportcommands` (Recommended)**
-
-If you're using the WorldArchitect.AI command system, the automation command is automatically exported:
-
-```bash
-/exportcommands
-```
-
-**Option 2: Manual Installation**
-
-Copy the automation command from this repository to your Claude Code commands directory:
-
-```bash
-# From the worldarchitect.ai repository root
-# For project-specific installation
-cp .claude/commands/automation.md <your-project>/.claude/commands/
-
-# For user-wide installation (available across all projects)
-cp .claude/commands/automation.md ~/.claude/commands/
-```
-
-#### Usage in Claude Code
-
-Once installed, you can use the `/automation` command directly in Claude Code:
-
-```bash
-# Check automation status
-/automation status
-
-# Process PRs for a specific repository
-/automation monitor worldarchitect.ai
-
-# Process a specific PR
-/automation process 123 --repo jleechanorg/worldarchitect.ai
-
-# Check safety limits and configuration
-/automation safety check
-
 # Clear safety data (resets limits)
-/automation safety clear
+automation-safety-cli clear
 ```
 
-#### Features Available Through Claude Code
+#### Slash Command Integration
 
-- **PR Monitoring**: Automatically discover and process actionable PRs
-- **Safety Management**: Built-in safety limits prevent automation abuse
-- **Actionable Counting**: Only processes PRs that need attention
-- **Cross-Process Safety**: Thread-safe operations with file-based persistence
-- **Email Notifications**: Optional SMTP integration for automation alerts
+```bash
+# From Claude Code
+/automation status        # View automation state
+/automation monitor       # Process actionable PRs
+/automation safety check  # View safety limits
+```
 
-#### Configuration for Claude Code
-
-The automation system uses environment variables for configuration. Set these in your shell profile or `.env` file:
+### Configuration
 
 ```bash
 # Required
 export GITHUB_TOKEN="your_github_token_here"
 
-# Optional - Customize safety limits
+# Optional - Safety Limits
 export AUTOMATION_PR_LIMIT=5           # Max attempts per PR (default: 5)
 export AUTOMATION_GLOBAL_LIMIT=50      # Max global runs (default: 50)
 export AUTOMATION_APPROVAL_HOURS=24    # Approval expiry (default: 24)
 
-# Optional - Custom workspace
-export PR_AUTOMATION_WORKSPACE="/custom/path"
-
-# Optional - Email notifications
+# Optional - Email Notifications
 export SMTP_SERVER="smtp.gmail.com"
 export SMTP_PORT=587
 export EMAIL_USER="your-email@gmail.com"
@@ -317,114 +136,411 @@ export EMAIL_PASS="your-app-password"
 export EMAIL_TO="recipient@example.com"
 ```
 
-#### Plugin Architecture
+### Key Features
 
-The automation plugin follows Claude Code's plugin architecture:
+- ✅ **Commit-based tracking** - Only comments when new commits appear
+- ✅ **Hidden markers** - Uses HTML comments to track processed commits
+- ✅ **Safety limits** - Prevents automation abuse with dual limits
+- ✅ **Cross-repo support** - Monitors entire organization
+- ✅ **Draft PR filtering** - Skips draft PRs automatically
 
-- **Slash Commands**: `.claude/commands/automation.md` - Main automation interface
-- **Hooks Integration**: Can be triggered via Claude Code hooks for automated workflows
-- **MCP Integration**: Compatible with Memory MCP for learning from automation patterns
-- **TodoWrite Integration**: Tracks automation tasks in Claude Code's todo system
+---
 
-#### Advanced: Automation Hooks
+## 🔧 Workflow 2: FixPR (Autonomous PR Fixing)
 
-You can create Claude Code hooks to automatically trigger PR automation:
+### What It Does
 
-**Example: Post-Push Hook** (`.claude/hooks/post-push.sh`)
+The FixPR workflow autonomously fixes PRs that have merge conflicts or failing CI checks by spawning AI agents in isolated workspaces. Each agent analyzes the PR, reproduces failures locally, applies fixes, and pushes updates.
 
-```bash
-#!/bin/bash
-# Automatically check for PRs after pushing
+### How It Works
 
-# Get current repo and branch
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-BRANCH=$(git branch --show-current)
-
-# Check if there's an open PR for this branch
-PR_NUMBER=$(gh pr list --head "$BRANCH" --json number -q '.[0].number')
-
-if [[ -n "$PR_NUMBER" ]]; then
-    echo "🤖 PR #$PR_NUMBER detected - triggering automation check"
-    jleechanorg-pr-monitor --target-pr "$PR_NUMBER" --target-repo "$REPO"
-fi
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. PR DISCOVERY & FILTERING                                │
+│  ───────────────────────────────────────────────────────────│
+│  • Query PRs updated in last 24 hours                       │
+│  • Filter to PRs with:                                      │
+│    - mergeable: CONFLICTING                                 │
+│    - failing CI checks (FAILURE, ERROR, TIMED_OUT)          │
+│  • Skip PRs without blockers                                │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  2. WORKSPACE ISOLATION                                     │
+│  ───────────────────────────────────────────────────────────│
+│  • Clone base repository to /tmp/pr-orch-bases/             │
+│  • Create worktree at /tmp/{repo}/pr-{number}-{branch}      │
+│  • Checkout PR branch in isolated workspace                 │
+│  • Clean previous tmux sessions with matching names         │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  3. AI AGENT DISPATCH                                       │
+│  ───────────────────────────────────────────────────────────│
+│  • Create TaskDispatcher with workspace config              │
+│  • Spawn agent with:                                        │
+│    - CLI: claude/codex/gemini (configurable)                │
+│    - Task: Fix PR #{number} - resolve conflicts & tests     │
+│    - Workspace: Isolated worktree path                      │
+│  • Agent runs autonomously in tmux session                  │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  4. AGENT WORKFLOW (Autonomous)                             │
+│  ───────────────────────────────────────────────────────────│
+│  • Checkout PR: gh pr checkout {pr_number}                  │
+│  • Analyze failures: gh pr view --json statusCheckRollup    │
+│  • Reproduce locally: Run failing tests                     │
+│  • Apply fixes: Code changes to resolve issues              │
+│  • Verify: Run full test suite                              │
+│  • Commit & Push: git push origin {branch}                  │
+│  • Write report: /tmp/orchestration_results/pr-{num}.json   │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  5. VERIFICATION                                            │
+│  ───────────────────────────────────────────────────────────│
+│  • Agent monitors GitHub CI for updated status              │
+│  • Verifies mergeable: MERGEABLE                            │
+│  • Confirms all checks passing                              │
+│  • Logs success/failure to results file                     │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Example: Scheduled Monitoring** (Cron Job)
+### Tech Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **PR Query** | GitHub GraphQL API | Find PRs with conflicts/failures |
+| **CI Checks** | `gh pr checks` JSON output | Detect failing tests |
+| **Worktree Isolation** | `git worktree add` | Isolated PR workspaces |
+| **Agent Orchestration** | `TaskDispatcher` | Spawn AI agents in tmux |
+| **AI CLI** | Claude/Codex/Gemini | Execute fixes autonomously |
+| **Workspace Management** | `/tmp/{repo}/{pr-branch}/` | Clean isolated environments |
+
+### Usage
+
+#### CLI Commands
 
 ```bash
-# Add to crontab for hourly PR monitoring
-0 * * * * cd ~/worldarchitect.ai && jleechanorg-pr-monitor
+# Fix PRs with default settings (last 24h, max 5 PRs, Claude CLI)
+python3 -m orchestrated_pr_runner
+
+# Custom time window and PR limit
+python3 -m orchestrated_pr_runner --cutoff-hours 48 --max-prs 10
+
+# Use different AI CLI
+python3 -m jleechanorg_pr_automation.orchestrated_pr_runner --agent-cli codex
+python3 -m jleechanorg_pr_automation.orchestrated_pr_runner --agent-cli gemini
+
+# List actionable PRs without fixing
+jleechanorg-pr-monitor --fixpr --dry-run
 ```
 
-#### Slash Command Documentation
+#### Slash Command Integration
 
-The `/automation` slash command provides a multi-phase execution workflow:
+```bash
+# Fix specific PR (from Claude Code)
+/fixpr 123
 
-**Phase 0: Preflight Installation & Token Check**
-- Verifies `jleechanorg-pr-automation` package is installed
-- Checks GitHub token environment variable
-- Validates dependencies before execution
+# With auto-apply for safe fixes
+/fixpr 123 --auto-apply
 
-**Phase 1: Parse Action and Arguments**
-- Extracts action (status, monitor, process, safety) from command
-- Validates action type and parameters
-- Sets defaults for missing values
+# Pattern detection mode (fixes similar issues)
+/fixpr 123 --scope=pattern
+```
 
-**Phase 2: STATUS Action** - `/automation status`
-- Displays global automation runs vs limits
-- Shows per-PR attempt counts
-- Reports safety configuration and active PRs
+#### Integration with PR Monitor
 
-**Phase 3: MONITOR Action** - `/automation monitor [repository]`
-- Discovers and processes actionable PRs
-- Respects safety limits
-- Reports results and skip reasons
+```bash
+# Monitor and fix in one command
+jleechanorg-pr-monitor --fixpr --max-prs 5 --agent-cli claude
+```
 
-**Phase 4: PROCESS Action** - `/automation process <pr_number> --repo <repository>`
-- Processes a specific PR
-- Initializes safety manager
-- Records attempt results
+### Agent CLI Options
 
-**Phase 5: SAFETY Action** - `/automation safety <subaction>`
-- `check`: Display safety limits and status
-- `clear`: Reset all safety data (with warning)
-- `check-pr`: Check specific PR's processability
+The FixPR workflow supports multiple AI CLIs for autonomous fixing:
 
-**Phase 6: TodoWrite Integration**
-- Tracks complex operations as todo items
-- Updates progress in real-time
-- Maintains error context
+| CLI | Model | Best For | Configuration |
+|-----|-------|----------|---------------|
+| **claude** | Claude Sonnet 4.5 | Complex refactors, multi-file changes | Default |
+| **codex** | OpenAI Codex | Code generation, boilerplate fixes | Requires `codex` binary in PATH |
+| **gemini** | Gemini 3 Pro | Large codebases, pattern detection | `pip install google-gemini-cli` + `GOOGLE_API_KEY` |
 
-For complete execution workflow details, see `.claude/commands/automation.md` in this repository.
+**Usage:**
+```bash
+# Explicit CLI selection
+python3 -m orchestrated_pr_runner --agent-cli gemini
 
-#### Plugin Export
+# Via environment variable
+export AGENT_CLI=codex
+python3 -m orchestrated_pr_runner
+```
 
-When you run `/exportcommands`, the automation slash command (`.claude/commands/automation.md`) is automatically included in the export to the `jleechanorg/claude-commands` repository. This allows others to install the automation plugin in their Claude Code environments.
+### Workspace Structure
 
-The export process:
-1. Copies `.claude/commands/automation.md` to the commands export
-2. Includes automation documentation in the exported README
-3. Provides installation instructions for end users
-4. Transforms project-specific paths to generic placeholders
+```
+/tmp/
+├── pr-orch-bases/              # Base clones (shared)
+│   ├── worldarchitect.ai/
+│   └── ai_universe/
+└── {repo}/                     # PR workspaces (isolated)
+    ├── pr-123-fix-auth/
+    ├── pr-456-merge-conflict/
+    └── pr-789-test-failures/
+```
+
+### Key Features
+
+- ✅ **Autonomous fixing** - AI agents work independently
+- ✅ **Worktree isolation** - Each PR gets clean workspace
+- ✅ **Multi-CLI support** - Claude, Codex, or Gemini
+- ✅ **Tmux sessions** - Long-running agents in background
+- ✅ **Result tracking** - JSON reports in `/tmp/orchestration_results/`
+- ✅ **Safety limits** - Respects global and per-PR limits
+
+---
+
+## Installation
+
+### From PyPI
+
+```bash
+# Basic installation
+pip install jleechanorg-pr-automation
+
+# With email notifications
+pip install jleechanorg-pr-automation[email]
+
+# For development
+pip install jleechanorg-pr-automation[dev]
+```
+
+### From Source (Development)
+
+```bash
+# Clone and install from repository
+cd ~/worldarchitect.ai/automation
+pip install -e .
+
+# With optional dependencies
+pip install -e .[email,dev]
+```
+
+### macOS Automation (Scheduled Monitoring)
+
+```bash
+# Install launchd service
+./automation/install_jleechanorg_automation.sh
+
+# Verify service
+launchctl list | grep jleechanorg
+
+# View logs
+tail -f ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
+```
+
+---
+
+## Safety System
+
+Both workflows use `AutomationSafetyManager` for rate limiting:
+
+### Dual Limits
+
+1. **Per-PR Limit**: Max 5 consecutive attempts per PR
+2. **Global Limit**: Max 50 total automation runs per day
+
+### Safety Data Storage
+
+```
+~/Library/Application Support/worldarchitect-automation/
+├── automation_safety_data.json    # Attempt tracking
+└── pr_history/                     # Commit tracking per repo
+    ├── worldarchitect.ai/
+    │   ├── main.json
+    │   └── feature-branch.json
+    └── ai_universe/
+        └── develop.json
+```
+
+### Safety Commands
+
+```bash
+# Check current status
+automation-safety-cli status
+
+# Example output:
+# Global runs: 23/50
+# Requires approval: False
+# PR attempts:
+#   worldarchitect.ai-1634: 2/5 (OK)
+#   ai_universe-42: 5/5 (BLOCKED)
+
+# Clear all data (reset limits)
+automation-safety-cli clear
+
+# Check specific PR
+automation-safety-cli check-pr 123 --repo worldarchitect.ai
+```
+
+---
+
+## Architecture Comparison
+
+| Feature | @codex Comment Agent | FixPR Workflow |
+|---------|---------------------|----------------|
+| **Trigger** | New commits on open PRs | Merge conflicts or failing checks |
+| **Action** | Posts instruction comment | Autonomously fixes code |
+| **Execution** | Quick (API calls only) | Long-running (agent in tmux) |
+| **Workspace** | None (comment-only) | Isolated git worktree |
+| **AI CLI** | N/A (GitHub API) | Claude/Codex/Gemini |
+| **Output** | GitHub PR comment | Code commits + JSON report |
+
+---
+
+## Environment Variables
+
+### Required
+
+```bash
+export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
+```
+
+### Optional
+
+```bash
+# Safety limits
+export AUTOMATION_PR_LIMIT=5           # Default: 5
+export AUTOMATION_GLOBAL_LIMIT=50      # Default: 50
+export AUTOMATION_APPROVAL_HOURS=24    # Default: 24
+
+# Workspace configuration
+export PR_AUTOMATION_WORKSPACE="/custom/path"
+
+# Email notifications
+export SMTP_SERVER="smtp.gmail.com"
+export SMTP_PORT=587
+export EMAIL_USER="your@email.com"
+export EMAIL_PASS="app-password"
+export EMAIL_TO="recipient@email.com"
+
+# Agent CLI selection (for FixPR)
+export AGENT_CLI="claude"              # or "codex" or "gemini"
+export GEMINI_MODEL="gemini-3-pro-preview"
+```
+
+---
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# With coverage
+pytest --cov=jleechanorg_pr_automation
+
+# Specific test suite
+pytest automation/jleechanorg_pr_automation/tests/test_pr_filtering_matrix.py
+```
+
+### Code Quality
+
+```bash
+# Format code
+black .
+ruff check .
+
+# Type checking
+mypy jleechanorg_pr_automation
+```
+
+---
+
+## Troubleshooting
+
+### @codex Comment Agent
+
+**Issue**: No PRs discovered
+```bash
+# Check GitHub authentication
+gh auth status
+
+# Verify organization access
+gh repo list jleechanorg --limit 5
+```
+
+**Issue**: Duplicate comments on same commit
+```bash
+# Check commit marker detection
+python3 -c "from jleechanorg_pr_automation.check_codex_comment import decide; print(decide('<!-- codex-automation-commit:', '-->'))"
+```
+
+### FixPR Workflow
+
+**Issue**: Worktree creation fails
+```bash
+# Clean stale worktrees
+cd ~/worldarchitect.ai
+git worktree prune
+
+# Remove old workspace
+rm -rf /tmp/worldarchitect.ai/pr-*
+```
+
+**Issue**: Agent not spawning
+```bash
+# Check tmux sessions
+tmux ls
+
+# View agent logs
+ls -la /tmp/orchestration_results/
+```
+
+**Issue**: Wrong AI CLI used
+```bash
+# Verify CLI availability
+which claude codex gemini
+
+# Set explicit CLI
+export AGENT_CLI=claude
+python3 -m orchestrated_pr_runner
+```
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass (`pytest`)
+5. Format code (`black . && ruff check .`)
+6. Submit a pull request
+
+---
 
 ## License
 
 MIT License - see LICENSE file for details.
 
+---
+
 ## Changelog
 
-### 0.1.1 (2025-10-06)
+### 0.2.5 (Latest)
+- Enhanced @codex comment detection with actor pattern matching
+- Improved commit marker parsing for multiple AI assistants
+- Added Gemini CLI support for FixPR workflow
 
-- Fix daily reset of global automation limit so automation never stalls overnight
-- Track latest reset timestamp in safety data for observability
-- Expand safety manager tests to cover daily rollover behaviour
+### 0.1.1
+- Fixed daily reset of global automation limit
+- Added last reset timestamp tracking
 
-### 0.1.0 (2025-09-28)
-
-- Initial release
-- Actionable PR counting system
-- Safety management with dual limits
-- Cross-process file-based persistence
-- Email notification support
-- Comprehensive test suite (200+ tests)
-- CLI interfaces for monitoring and safety management
+### 0.1.0
+- Initial release with @codex comment agent and FixPR workflow
+- Comprehensive safety system with dual limits
+- Cross-organization PR monitoring
