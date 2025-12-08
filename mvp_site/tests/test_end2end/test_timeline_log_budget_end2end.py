@@ -1,17 +1,20 @@
 """
-End-to-end test for timeline_log budget fix.
+End-to-end coverage for timeline_log budgeting guardrails.
 
-Tests that story continuation with large context does not cause
-ContextTooLargeError due to timeline_log being excluded from scaffold estimate.
+Context: A Dec 7, 2025 production run (story=26,795 tokens, timeline log=
+27,817 tokens, final prompt=54,612 tokens) overflowed because an older
+prompt-concatenation flow appended the timeline log alongside story_context
+without budgeting the duplicate content.
 
-Production evidence (Dec 7, 2025): story context = 26,795 tokens, timeline log =
-27,817 tokens, final prompt = 54,612 tokens (~2x expected). The scaffold
-budget considered only the story context, but the timeline log (story context
-reformatted with `[SEQ_ID: X] Actor:` prefixes) added ~5% overhead on another
-full copy of the story content.
+Current behavior: The structured LLMRequest path serializes story_history and
+metadata but **excludes** timeline_log_string. A duplication guard
+(`TIMELINE_LOG_DUPLICATION_FACTOR = 2.05`) remains available but is gated by
+`TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST = False`, so the guard is dormant
+unless we intentionally serialize timeline text again.
 
-Expected fix: Budget story context using `TIMELINE_LOG_DUPLICATION_FACTOR`
-so the combined story + timeline content fits within the model limit.
+These tests document the token relationship between story and timeline_log,
+assert the guard is inactive for the structured request, and show how the guard
+would behave if we ever enable timeline_log serialization in the payload.
 """
 
 from __future__ import annotations
@@ -27,7 +30,7 @@ from mvp_site.tests.fake_llm import FakeLLMResponse
 
 
 class TestTimelineLogBudgetEnd2End(unittest.TestCase):
-    """Test that large story context doesn't overflow due to timeline_log duplication."""
+    """E2E regression for large story contexts and the dormant duplication guard."""
 
     def setUp(self):
         """Set up test client."""
@@ -234,11 +237,13 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
 
     def test_scaffold_estimate_includes_timeline_log(self):
         """
-        Verify that scaffold estimate accounts for timeline_log.
+        Document token relationship between story and timeline_log text.
 
-        The scaffold at lines 3166-3172 should include an estimate for
-        timeline_log which is approximately story_tokens * 1.05 (5% overhead
-        for [SEQ_ID: X] Actor: prefixes).
+        The structured request currently omits timeline_log, but the guardrail
+        constant assumes timeline_log would add ~5% overhead to a duplicated
+        copy of the story if it were serialized. This test keeps that ratio
+        honest and serves as a safety check if the payload ever includes the
+        timeline text again.
         """
 
         # Create story context
@@ -277,24 +282,17 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
 
     def test_timeline_log_budget_bug_reproduction(self):
         """
-        CRITICAL TEST: Reproduce the production timeline_log budget bug.
+        Regression coverage for the Dec 7, 2025 overflow incident.
 
-        This test MUST FAIL until the bug is fixed.
+        Legacy behavior (now disabled): a prompt-concatenation flow appended
+        timeline_log alongside story_context without budgeting the duplicate
+        content. With story=26,795 and timeline=27,817 tokens, the final prompt
+        hit 54,612 tokens and overflowed.
 
-        Bug: The scaffold estimate (lines 3166-3172) does NOT include timeline_log,
-        but the final prompt DOES include it. This means story content is counted
-        once but included twice, causing ContextTooLargeError in production.
-
-        Production evidence (Dec 7, 2025):
-        - Model: zai-glm-4.6 (131K context)
-        - Scaffold budget showed: story=26,795 tokens OK
-        - Timeline log: 27,817 tokens (reformatted story with ~5% overhead)
-        - Final prompt: 54,612 tokens (nearly 2x expected budget)
-        - Root cause: timeline_log added another full copy of story content
-
-        This test validates that:
-        1. The scaffold estimate includes timeline_log OR
-        2. Story tokens + timeline_log tokens <= max_input_allowed after truncation
+        Current behavior: the structured LLMRequest excludes timeline_log, so the
+        guardrail is inactive. This test documents both branches:
+        1) include_timeline_log=True → duplication guard would shrink the budget
+        2) include_timeline_log=False → raw budget applies to story_history only
         """
 
         # Simulate the production scenario with large story context
