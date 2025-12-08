@@ -265,9 +265,10 @@ The system logs budget calculations for debugging:
 **Production Evidence**:
 ```
 Model: zai-glm-4.6 (131K context)
-Budget check: story=25,127 tokens ✓ OK
-Final prompt: 96,396 tokens ✗ OVERFLOW (expected ~53K)
-Root cause: timeline_log added ~27K tokens NOT in budget
+Budget check: story=26,795 tokens ✓ OK
+Timeline log: 27,817 tokens (reformatted story with ~5% overhead)
+Final prompt: 54,612 tokens ✗ OVERFLOW (expected ~53K)
+Root cause: timeline_log added another full copy of story content not counted in the scaffold
 ```
 
 **Why This Happens**:

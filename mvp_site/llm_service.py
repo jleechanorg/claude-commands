@@ -96,11 +96,6 @@ entity_validator = EntityValidator()
 # Expected companion count for validation
 EXPECTED_COMPANION_COUNT = 3
 
-# Timeline log duplicates story content in the final prompt with ~5% overhead
-# (prefixes like [SEQ_ID: X] Actor:). Use this factor to scale story budget
-# calculations so story_context and timeline_log both fit within the model limit.
-TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
-
 
 # Remove redundant json_datetime_serializer - use json_default_serializer instead
 # which properly handles Firestore Sentinels, datetime objects, and other special types
@@ -222,6 +217,250 @@ OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output to
 # - entity_tracking_instruction: ~1000-1500 tokens (tracking rules)
 # - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
 ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
+
+# Timeline log handling
+# The structured LLMRequest path serializes only `story_history` (no timeline log).
+# Keep the duplication factor as a guardrail for prompt paths that include both
+# `story_context` and timeline_log text in the same request.
+TIMELINE_LOG_DUPLICATION_FACTOR: float = 2.05
+TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST: bool = False
+
+# Entity tiering configuration for LRU-style token reduction
+# Reduces entity_tracking from ~40K tokens to ~1K tokens by:
+# 1. Only including recently-active entities (mentioned in last N turns)
+# 2. Trimming fields to essential info only (name, role, status, hp)
+ENTITY_TIER_ACTIVE_MAX: int = 5  # Max entities with essential field tracking
+ENTITY_TIER_PRESENT_MAX: int = 10  # Max entities with minimal (name+role) tracking
+ENTITY_LOOKBACK_TURNS: int = 5  # Turns to scan for recent entity mentions
+
+
+def _apply_timeline_log_duplication_guard(
+    available_story_tokens_raw: int, include_timeline_log_in_prompt: bool
+) -> tuple[int, str]:
+    """Apply the duplication guard only when timeline_log is serialized.
+
+    Args:
+        available_story_tokens_raw: Story tokens available before duplication check.
+        include_timeline_log_in_prompt: Whether the outgoing request will contain
+            a timeline_log string alongside story_history text.
+
+    Returns:
+        tuple[int, str]: (Adjusted story token budget, explanation note)
+    """
+
+    if include_timeline_log_in_prompt:
+        adjusted_budget = int(
+            available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR
+        )
+        note = (
+            "timeline_log included; divided by duplication factor "
+            f"{TIMELINE_LOG_DUPLICATION_FACTOR}"
+        )
+    else:
+        adjusted_budget = available_story_tokens_raw
+        note = (
+            "timeline_log not serialized in structured LLMRequest; no duplication"
+            " factor applied"
+        )
+
+    return adjusted_budget, note
+
+
+def _extract_recently_mentioned_entities(
+    story_context: list[dict[str, Any]],
+    npc_names: list[str],
+    lookback_turns: int = ENTITY_LOOKBACK_TURNS,
+) -> dict[str, int]:
+    """
+    Scan recent story turns to find which NPCs were mentioned.
+
+    Uses LRU-style recency scoring: entities mentioned more recently get higher scores.
+    This allows us to prioritize active entities over dormant ones.
+
+    Args:
+        story_context: List of story turn entries with 'text' field
+        npc_names: List of known NPC names to search for
+        lookback_turns: Number of recent turns to scan
+
+    Returns:
+        Dict of {npc_name: recency_score} where higher = more recent
+    """
+    recent_turns = story_context[-lookback_turns:] if story_context else []
+    mentioned: dict[str, int] = {}
+
+    for turn_idx, turn in enumerate(recent_turns):
+        text = turn.get("text", "").lower()
+        for npc_name in npc_names:
+            if npc_name.lower() in text:
+                # Higher index = more recent = higher score
+                mentioned[npc_name] = turn_idx
+
+    return mentioned
+
+
+def _tier_entities(
+    npc_data: dict[str, Any],
+    recently_mentioned: dict[str, int],
+    current_location: str,
+) -> tuple[list[str], list[str], list[str]]:
+    """
+    Categorize NPCs into ACTIVE, PRESENT, DORMANT tiers for token optimization.
+
+    ACTIVE: Recently mentioned, get essential field tracking (~50 tokens each)
+    PRESENT: In current location, get minimal tracking (~10 tokens each)
+    DORMANT: Not active, excluded from entity_tracking (rely on story_history)
+
+    Args:
+        npc_data: Dict of NPC name -> NPC data from game_state
+        recently_mentioned: Dict of NPC name -> recency score from story scan
+        current_location: Current location name for presence check
+
+    Returns:
+        Tuple of (active_names, present_names, dormant_names)
+    """
+    active_candidates: list[tuple[str, int]] = []
+    present: list[str] = []
+    dormant: list[str] = []
+
+    for name, data in npc_data.items():
+        npc_location = data.get("current_location", data.get("location", ""))
+
+        if name in recently_mentioned:
+            # Recently mentioned - candidate for ACTIVE tier
+            active_candidates.append((name, recently_mentioned[name]))
+        elif npc_location and current_location and npc_location.lower() in current_location.lower():
+            # In same location but not recently mentioned - PRESENT tier
+            present.append(name)
+        else:
+            # Not mentioned, different location - DORMANT (excluded)
+            dormant.append(name)
+
+    # Sort active by recency (higher score = more recent), take top N
+    active_candidates.sort(key=lambda x: x[1], reverse=True)
+    active = [name for name, _ in active_candidates[:ENTITY_TIER_ACTIVE_MAX]]
+
+    # Limit present entities
+    present = present[:ENTITY_TIER_PRESENT_MAX]
+
+    return active, present, dormant
+
+
+def _trim_entity_fields(npc_data: dict[str, Any], tier: str) -> dict[str, Any]:
+    """
+    Extract only essential fields based on entity tier.
+
+    ACTIVE tier (~50 tokens): name, role, attitude, status, hp, location
+    PRESENT tier (~10 tokens): name, role only
+
+    This reduces per-entity tokens from ~500 to ~50 or ~10.
+
+    Args:
+        npc_data: Full NPC data dict from game_state
+        tier: Either "ACTIVE" or "PRESENT"
+
+    Returns:
+        Trimmed dict with only essential fields
+    """
+    if tier == "ACTIVE":
+        # Extract health info safely
+        health = npc_data.get("health", {})
+        if isinstance(health, dict):
+            hp_current = health.get("hp", "?")
+            hp_max = health.get("hp_max", "?")
+        else:
+            hp_current = npc_data.get("hp_current", npc_data.get("hp", "?"))
+            hp_max = npc_data.get("hp_max", "?")
+
+        # Extract status safely
+        status_list = npc_data.get("status", ["conscious"])
+        if isinstance(status_list, list) and status_list:
+            status = status_list[0] if isinstance(status_list[0], str) else "conscious"
+        elif isinstance(status_list, str):
+            status = status_list
+        else:
+            status = "conscious"
+
+        return {
+            "name": npc_data.get("display_name", npc_data.get("name", "Unknown")),
+            "role": npc_data.get("role", "NPC"),
+            "attitude": npc_data.get("attitude_to_party", "neutral"),
+            "status": status,
+            "hp": f"{hp_current}/{hp_max}",
+            "location": npc_data.get("current_location", npc_data.get("location", "unknown")),
+        }
+
+    elif tier == "PRESENT":
+        return {
+            "name": npc_data.get("display_name", npc_data.get("name", "Unknown")),
+            "role": npc_data.get("role", "NPC"),
+        }
+
+    # DORMANT - return empty (should not be called)
+    return {}
+
+
+def _build_trimmed_entity_tracking(
+    npc_data: dict[str, Any],
+    story_context: list[dict[str, Any]],
+    current_location: str,
+) -> tuple[dict[str, Any], str]:
+    """
+    Build entity_tracking_data with tiered, trimmed entities.
+
+    Reduces token usage from ~40K to ~1K by:
+    1. Only including recently-active and present entities
+    2. Trimming fields to essentials only
+
+    Args:
+        npc_data: Dict of NPC name -> NPC data from game_state.npc_data
+        story_context: List of story turn entries
+        current_location: Current location name
+
+    Returns:
+        Tuple of (entity_tracking_data, log_summary)
+    """
+    if not npc_data:
+        return {"active_entities": [], "present_entities": []}, "ENTITY_TIERS: no NPCs"
+
+    # Get NPC names for scanning
+    npc_names = list(npc_data.keys())
+
+    # Find recently mentioned entities via LRU scan
+    recently_mentioned = _extract_recently_mentioned_entities(
+        story_context, npc_names
+    )
+
+    # Tier the entities
+    active, present, dormant = _tier_entities(
+        npc_data, recently_mentioned, current_location
+    )
+
+    # Build trimmed entity lists
+    active_entities = [
+        _trim_entity_fields(npc_data[name], "ACTIVE")
+        for name in active
+        if name in npc_data
+    ]
+    present_entities = [
+        _trim_entity_fields(npc_data[name], "PRESENT")
+        for name in present
+        if name in npc_data
+    ]
+
+    # Build tracking data - much smaller than before
+    entity_tracking_data = {
+        "active_entities": active_entities,
+        "present_entities": present_entities,
+        # DORMANT entities excluded - LLM has story_history for context
+    }
+
+    log_summary = (
+        f"ENTITY_TIERS: active={len(active)}/{ENTITY_TIER_ACTIVE_MAX}, "
+        f"present={len(present)}/{ENTITY_TIER_PRESENT_MAX}, "
+        f"dormant={len(dormant)} (excluded)"
+    )
+
+    return entity_tracking_data, log_summary
 
 
 def _get_context_window_tokens(model_name: str) -> int:
@@ -1405,7 +1644,7 @@ def _call_llm_api(
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
             logging_util.info(
-                f"🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
+                "🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
             )
             return gemini_provider.generate_json_mode_content(
                 prompt_contents=prompt_contents,
@@ -1426,7 +1665,7 @@ def _call_llm_api(
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
             logging_util.info(
-                f"🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
+                "🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
             )
             return cerebras_provider.generate_content(
                 prompt_contents=prompt_contents,
@@ -2022,9 +2261,8 @@ def _truncate_context(
                     # This looks like JSON - either keep fully or drop
                     if len(text) > entry_max_chars:
                         continue  # Drop JSON entry rather than corrupt it
-                    else:
-                        trimmed_entries.append(entry)
-                        continue
+                    trimmed_entries.append(entry)
+                    continue
 
                 if len(text) > entry_max_chars:
                     trimmed_text = text[:entry_max_chars] + "... [truncated]"
@@ -2281,7 +2519,7 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     )
     if force_test_model:
         logging_util.info(
-            f"🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
+            "🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
         )
         return ProviderSelection(constants.DEFAULT_LLM_PROVIDER, TEST_MODEL)
 
@@ -2290,7 +2528,7 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
 
     if not user_id:
         logging_util.info(
-            f"🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
+            "🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
         )
         return ProviderSelection(provider, model)
 
@@ -3195,14 +3433,11 @@ def continue_story(
     # Then subtract scaffold tokens to get available story budget
     available_story_tokens_raw = max(0, max_input_allowed - scaffold_tokens)
 
-    # CRITICAL FIX (Dec 2025): Account for timeline_log DUPLICATING story content
-    # The final prompt includes BOTH:
-    #   1. story_context entries (used in some places)
-    #   2. timeline_log_string (story reformatted with [SEQ_ID: X] Actor: prefixes)
-    # Timeline log is approximately story_tokens × 1.05 (5% overhead for prefixes)
-    # So total story content in prompt = story_tokens × 2.05
-    # We must divide available budget by 2.05 to get actual story budget
-    available_story_tokens = int(available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR)
+    include_timeline_log_in_prompt = TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST
+    available_story_tokens, timeline_log_budget_note = _apply_timeline_log_duplication_guard(
+        available_story_tokens_raw=available_story_tokens_raw,
+        include_timeline_log_in_prompt=include_timeline_log_in_prompt,
+    )
     char_budget_for_story = available_story_tokens * 4
 
     # Calculate story context tokens
@@ -3214,7 +3449,7 @@ def continue_story(
         f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
         f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+entity_reserve:{ENTITY_TRACKING_TOKEN_RESERVE}), "
         f"output_reserve={output_token_reserve}tk ({reserve_mode}), "
-        f"story_budget={available_story_tokens}tk (raw:{available_story_tokens_raw}tk / {TIMELINE_LOG_DUPLICATION_FACTOR} for timeline_log), "
+        f"story_budget={available_story_tokens}tk ({timeline_log_budget_note}), "
         f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
 
@@ -3246,7 +3481,7 @@ def continue_story(
         current_game_state, truncated_story_context, session_number
     )
 
-    # Build timeline log
+    # Build timeline log (used for entity prompts and diagnostics, not serialized in LLMRequest)
     timeline_log_string: str = _build_timeline_log(truncated_story_context)
 
     # Enhanced entity tracking with mitigation strategies
@@ -3304,12 +3539,24 @@ def continue_story(
     if not user_id_from_state:
         raise ValueError("user_id is required in game state for story continuation")
 
-    # Extract entity tracking data
-    entity_tracking_data = {
-        "expected_entities": expected_entities,
-        "entity_instructions": entity_specific_instructions,
-        "entity_preload_text": entity_preload_text,
-    }
+    # Build trimmed entity tracking data using LRU-style tiering
+    # This reduces entity_tracking from ~40K tokens to ~1K tokens
+    current_location = current_game_state.world_data.get(
+        "current_location_name", current_game_state.world_data.get("location", "")
+    )
+    entity_tracking_data, entity_tier_log = _build_trimmed_entity_tracking(
+        npc_data=current_game_state.npc_data,
+        story_context=truncated_story_context,
+        current_location=current_location,
+    )
+    logging_util.info(entity_tier_log)
+
+    # Measure and log actual entity tracking token usage
+    entity_tracking_tokens = estimate_tokens(json.dumps(entity_tracking_data))
+    logging_util.info(
+        f"ENTITY_TRACKING_SIZE: {entity_tracking_tokens}tk "
+        f"(reserve was {ENTITY_TRACKING_TOKEN_RESERVE}tk)"
+    )
 
     # Build LLMRequest with structured data (NO string concatenation)
     gemini_request = LLMRequest.build_story_continuation(
