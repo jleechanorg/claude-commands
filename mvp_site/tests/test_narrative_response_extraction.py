@@ -275,7 +275,7 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
     def test_mixed_language_character_stripping(self):
         """Test that CJK characters are stripped from narrative (LLM training data leakage)"""
         # Example from real campaign: Chinese character 夜晚 (night) mixed into English
-        narrative_with_chinese = "The negotiation is complete, and now the夜晚 stretches before you"
+        narrative_with_chinese = "The negotiation is complete, and now the  夜晚  stretches before you"
         response = NarrativeResponse(narrative=narrative_with_chinese)
 
         # Chinese characters should be stripped
@@ -283,6 +283,7 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         assert "stretches before you" in response.narrative
         # Should clean up double spaces left behind
         assert "  " not in response.narrative
+        assert response.narrative.endswith("stretches before you")
 
     def test_japanese_character_stripping(self):
         """Test that Japanese characters are stripped from narrative"""

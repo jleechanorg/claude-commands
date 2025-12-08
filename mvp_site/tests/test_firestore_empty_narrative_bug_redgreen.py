@@ -43,7 +43,7 @@ class TestFirestoreEmptyNarrativeError(unittest.TestCase):
         """Set up test environment with fake Firestore client."""
         self.fake_firestore = FakeFirestoreClient()
 
-    @patch("firestore_service.get_db")
+    @patch("mvp_site.firestore_service.get_db")
     def test_empty_narrative_from_ai_raises_error(self, mock_get_db):
         """
         TEST: Empty narrative from AI should raise FirestoreWriteError.
@@ -90,7 +90,7 @@ class TestFirestoreEmptyNarrativeError(unittest.TestCase):
         self.assertIn("empty narrative", error_message.lower())
         self.assertIn(campaign_id, error_message)
 
-    @patch("firestore_service.get_db")
+    @patch("mvp_site.firestore_service.get_db")
     def test_empty_user_input_still_saves_with_placeholder(self, mock_get_db):
         """
         TEST: Empty USER input should still save with placeholder.
@@ -131,6 +131,46 @@ class TestFirestoreEmptyNarrativeError(unittest.TestCase):
         story_entry = list(story_docs.values())[0]
         entry_data = story_entry._data
         assert entry_data["text"] == "[Empty input]", "Empty user input gets placeholder"
+
+    @patch("mvp_site.firestore_service.get_db")
+    def test_god_mode_allows_empty_narrative(self, mock_get_db):
+        """GOD mode responses can include an empty narrative with structured data."""
+
+        mock_get_db.return_value = self.fake_firestore
+
+        user_id = "test-user-123"
+        campaign_id = "test-campaign-456"
+        actor = constants.ACTOR_GEMINI
+        narrative_text = ""
+        structured_fields = {
+            "god_mode_response": {
+                "action": "Reveal secret path",
+                "impact": "Opens hidden route",
+            }
+        }
+
+        add_story_entry(
+            user_id=user_id,
+            campaign_id=campaign_id,
+            actor=actor,
+            text=narrative_text,
+            mode=None,
+            structured_fields=structured_fields,
+        )
+
+        story_collection = (
+            self.fake_firestore.collection("users")
+            .document(user_id)
+            .collection("campaigns")
+            .document(campaign_id)
+            .collection("story")
+        )
+        story_docs = story_collection._docs
+
+        assert len(story_docs) == 1, "God mode response with empty narrative should save"
+        entry_data = list(story_docs.values())[0]._data
+        assert entry_data["text"] == ""
+        assert entry_data["god_mode_response"] == structured_fields["god_mode_response"]
 
     def test_empty_narrative_detection_logic(self):
         """
