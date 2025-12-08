@@ -55,6 +55,9 @@ class ClaudeCommandsExporter:
         # Add orchestration for GitHub export
         if 'orchestration' not in self.EXPORT_SUBDIRS:
             self.EXPORT_SUBDIRS.append('orchestration')
+        # Add automation for GitHub export
+        if 'automation' not in self.EXPORT_SUBDIRS:
+            self.EXPORT_SUBDIRS.append('automation')
 
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
@@ -105,7 +108,7 @@ class ClaudeCommandsExporter:
         print("\n📂 Phase 1: Creating Local Export...")
         print("-" * 40)
 
-        print("🔍 Using comprehensive directory export (commands, hooks, agents, scripts, skills, orchestration)")
+        print("🔍 Using comprehensive directory export (commands, hooks, agents, scripts, skills, orchestration, automation)")
 
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, "staging")
@@ -143,6 +146,9 @@ class ClaudeCommandsExporter:
 
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
+
+        # Export automation (GitHub PR automation system)
+        self._export_automation(staging_dir)
 
         # Export GitHub Actions workflows (as examples)
         self._export_github_workflows(staging_dir)
@@ -646,6 +652,39 @@ class ClaudeCommandsExporter:
                 shutil.copy2(src_file, dst_file)
 
         print("✅ Orchestration exported using manual copy (excluded specified directories)")
+
+    def _export_automation(self, staging_dir):
+        """Export automation system (GitHub PR automation)"""
+        print("🤖 Exporting automation system...")
+
+        source_dir = os.path.join(self.project_root, 'automation')
+        if not os.path.exists(source_dir):
+            print("⚠️  Automation directory not found - skipping")
+            return
+
+        target_dir = os.path.join(staging_dir, 'automation')
+
+        # Exclude test directories and temp files
+        excluded_dirs = {'__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info'}
+
+        for root, dirs, files in os.walk(source_dir):
+            # Filter out excluded directories
+            dirs[:] = [d for d in dirs if d not in excluded_dirs and not d.endswith('.egg-info')]
+
+            rel_path = os.path.relpath(root, source_dir)
+            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
+            os.makedirs(target_root, exist_ok=True)
+
+            for file in files:
+                # Skip compiled Python files and temp files
+                if file.endswith(('.pyc', '.pyo', '.swp', '.tmp')):
+                    continue
+
+                src_file = os.path.join(root, file)
+                dst_file = os.path.join(target_root, file)
+                shutil.copy2(src_file, dst_file)
+
+        print("✅ Automation exported successfully")
 
     def _export_github_workflows(self, staging_dir):
         """Export GitHub Actions workflows with project-specific filtering.
