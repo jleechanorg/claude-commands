@@ -3569,10 +3569,23 @@ def continue_story(
     # Build LLMRequest with structured data (NO string concatenation)
     # CRITICAL: Exclude npc_data from game_state - it's ~500 tokens per NPC
     # Entity data is now provided via trimmed entity_tracking_data instead
+    full_game_state = current_game_state.to_dict()
     game_state_for_llm = {
-        k: v for k, v in current_game_state.to_dict().items()
+        k: v for k, v in full_game_state.items()
         if k != "npc_data"
     }
+
+    # DEBUG: Log game_state component sizes to identify bloat sources
+    npc_data_tokens = estimate_tokens(json.dumps(full_game_state.get("npc_data", {})))
+    world_data_tokens = estimate_tokens(json.dumps(full_game_state.get("world_data", {})))
+    player_data_tokens = estimate_tokens(json.dumps(full_game_state.get("player_character_data", {})))
+    remaining_state_tokens = estimate_tokens(json.dumps(game_state_for_llm))
+    logging_util.info(
+        f"GAME_STATE_BREAKDOWN: npc_data={npc_data_tokens}tk (EXCLUDED), "
+        f"world_data={world_data_tokens}tk, player_data={player_data_tokens}tk, "
+        f"remaining_state={remaining_state_tokens}tk"
+    )
+
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
@@ -3590,6 +3603,18 @@ def continue_story(
         selected_prompts=selected_prompts or [],
         use_default_world=use_default_world,
     )
+
+    # DEBUG: Log full LLMRequest payload size breakdown
+    try:
+        payload_json = gemini_request.to_json()
+        story_history_tokens = estimate_tokens(json.dumps(payload_json.get("story_history", [])))
+        total_payload_tokens = estimate_tokens(json.dumps(payload_json))
+        logging_util.info(
+            f"LLMREQUEST_PAYLOAD: story_history={story_history_tokens}tk, "
+            f"total_payload={total_payload_tokens}tk"
+        )
+    except Exception as e:
+        logging_util.warning(f"Could not measure LLMRequest payload: {e}")
 
     # Send structured JSON directly to Gemini API (NO string conversion)
     api_response = _call_llm_api_with_llm_request(
