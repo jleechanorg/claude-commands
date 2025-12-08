@@ -96,6 +96,11 @@ entity_validator = EntityValidator()
 # Expected companion count for validation
 EXPECTED_COMPANION_COUNT = 3
 
+# Timeline log duplicates story content in the final prompt with ~5% overhead
+# (prefixes like [SEQ_ID: X] Actor:). Use this factor to scale story budget
+# calculations so story_context and timeline_log both fit within the model limit.
+TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
+
 
 # Remove redundant json_datetime_serializer - use json_default_serializer instead
 # which properly handles Firestore Sentinels, datetime objects, and other special types
@@ -3197,7 +3202,6 @@ def continue_story(
     # Timeline log is approximately story_tokens × 1.05 (5% overhead for prefixes)
     # So total story content in prompt = story_tokens × 2.05
     # We must divide available budget by 2.05 to get actual story budget
-    TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
     available_story_tokens = int(available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR)
     char_budget_for_story = available_story_tokens * 4
 

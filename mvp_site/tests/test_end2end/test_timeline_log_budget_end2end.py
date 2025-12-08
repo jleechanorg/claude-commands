@@ -23,7 +23,8 @@ import os
 import unittest
 from unittest.mock import patch
 
-from mvp_site import main
+from mvp_site import constants, llm_service, main
+from mvp_site.game_state import GameState
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
 from mvp_site.tests.fake_llm import FakeLLMResponse
 
@@ -242,9 +243,6 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         timeline_log which is approximately story_tokens * 1.1 (10% overhead
         for [SEQ_ID: X] Actor: prefixes).
         """
-        from mvp_site import llm_service
-        from mvp_site.game_state import GameState
-
         # Create story context
         story_context = [
             {"actor": "gm", "text": "Test narrative " * 100, "sequence_id": 1},
@@ -299,9 +297,6 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         1. The scaffold estimate includes timeline_log OR
         2. Story tokens + timeline_log tokens <= max_input_allowed after truncation
         """
-        from mvp_site import llm_service, constants
-        from mvp_site.game_state import GameState
-
         # Simulate the production scenario with large story context
         # Production had 25,127 tokens in story - let's create similar sized context
         story_context = []
@@ -352,8 +347,8 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         raw_story_budget = max_input_allowed - estimated_scaffold - llm_service.ENTITY_TRACKING_TOKEN_RESERVE
 
         # FIXED: Account for timeline_log duplication factor
-        TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
-        fixed_story_budget = int(raw_story_budget / TIMELINE_LOG_DUPLICATION_FACTOR)
+        duplication_factor = llm_service.TIMELINE_LOG_DUPLICATION_FACTOR
+        fixed_story_budget = int(raw_story_budget / duplication_factor)
 
         # Total story content that will appear in final prompt
         total_story_content = story_tokens + timeline_tokens
@@ -364,7 +359,9 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         print(f"Estimated scaffold: {estimated_scaffold:,} tokens")
         print(f"Entity reserve: {llm_service.ENTITY_TRACKING_TOKEN_RESERVE:,} tokens")
         print(f"Raw story budget: {raw_story_budget:,} tokens")
-        print(f"Fixed story budget (÷{TIMELINE_LOG_DUPLICATION_FACTOR}): {fixed_story_budget:,} tokens")
+        print(
+            f"Fixed story budget (÷{duplication_factor}): {fixed_story_budget:,} tokens"
+        )
         print(f"---")
         print(f"Story context tokens: {story_tokens:,}")
         print(f"Timeline log tokens: {timeline_tokens:,}")
@@ -383,7 +380,7 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
                 f"\n\n🔴 FIX VERIFICATION FAILED! 🔴\n"
                 f"Story ({story_tokens:,}) fits in fixed budget ({fixed_story_budget:,})\n"
                 f"But total content ({total_story_content:,}) EXCEEDS raw budget ({raw_story_budget:,})!\n"
-                f"The duplication factor {TIMELINE_LOG_DUPLICATION_FACTOR} may be too small."
+                f"The duplication factor {duplication_factor} may be too small."
             )
             print(f"\n✅ FIX VERIFIED: Timeline log budget calculation is correct!")
         else:
