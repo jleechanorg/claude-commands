@@ -765,8 +765,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             user_input=original_user_input,
             is_god_mode=is_god_mode,
         )
-        if not isinstance(new_world_time, dict) or not new_world_time:
-            new_world_time = state_changes.get("world_data", {}).get("world_time")
+        new_world_time = state_changes.get("world_data", {}).get("world_time")
 
         # Add temporal violation error as god_mode_response for user-facing display
         # Note: new_world_time is already extracted in the temporal validation loop above
