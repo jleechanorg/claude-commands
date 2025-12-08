@@ -92,26 +92,62 @@ if [[ "$local_branch" =~ pr-([0-9]+) ]]; then
 elif [[ "$local_branch" =~ /pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
 else
-    # Check for cached PR lookup first (5-minute cache)
+    # Enhanced PR cache with smart invalidation
+    # - "none" results cached for 30 seconds (PRs may be created soon after push)
+    # - Real PR numbers cached for 5 minutes (stable)
+    # - Bypass cache entirely if last push was < 60 seconds ago
     current_commit=$(git rev-parse HEAD 2>/dev/null)
     cache_file="/tmp/git-header-pr-${current_commit:0:8}"
     cache_valid=false
 
-    # Check if cache exists and is less than 5 minutes old
-    if [ -f "$cache_file" ] && [ -n "$current_commit" ]; then
-        # Portable file modification time detection
+    # Helper function to get file mtime (POSIX-compatible)
+    get_mtime() {
+        local file="$1"
         if command -v perl >/dev/null 2>&1; then
-            # Use perl for maximum portability
-            cache_mtime=$(perl -e 'print((stat($ARGV[0]))[9])' "$cache_file" 2>/dev/null || echo "0")
+            perl -e 'print((stat($ARGV[0]))[9])' "$file" 2>/dev/null || echo "0"
         else
-            # Fallback to platform-specific stat commands
-            cache_mtime=$(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null || echo "0")
+            stat -f%m "$file" 2>/dev/null || stat -c%Y "$file" 2>/dev/null || echo "0"
+        fi
+    }
+
+    current_time=$(date +%s)
+
+    # Check if there was a recent push (within 60 seconds)
+    # Detect by checking mtime of remote tracking ref (updated on push)
+    recent_push=false
+    if [ "$remote" != "no upstream" ]; then
+        remote_branch="${remote#origin/}"
+        ref_file="$git_dir/refs/remotes/origin/$remote_branch"
+
+        # Also check packed-refs as refs may be packed
+        if [ -f "$ref_file" ]; then
+            remote_ref_mtime=$(get_mtime "$ref_file")
+            push_age=$((current_time - remote_ref_mtime))
+            if [ "$push_age" -lt 60 ]; then
+                recent_push=true
+            fi
+        fi
+    fi
+
+    # Check if cache exists and is valid
+    # Skip cache check entirely if recent push detected (user likely just created PR)
+    if [ -f "$cache_file" ] && [ -n "$current_commit" ] && [ "$recent_push" = false ]; then
+        cache_mtime=$(get_mtime "$cache_file")
+        cache_age=$((current_time - cache_mtime))
+        cached_value=$(cat "$cache_file" 2>/dev/null || echo "none")
+
+        # Different TTL based on cached value:
+        # - "none" = 30 seconds (PRs may be created soon)
+        # - Real PR numbers = 5 minutes (stable, unlikely to change)
+        if [ "$cached_value" = "none" ]; then
+            max_cache_age=30
+        else
+            max_cache_age=300
         fi
 
-        cache_age=$(($(date +%s) - cache_mtime))
-        if [ "$cache_age" -lt 300 ]; then  # 300 seconds = 5 minutes
+        if [ "$cache_age" -lt "$max_cache_age" ]; then
             cache_valid=true
-            pr_text=$(cat "$cache_file" 2>/dev/null || echo "none")
+            pr_text="$cached_value"
         fi
     fi
 
