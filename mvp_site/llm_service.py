@@ -3591,12 +3591,20 @@ def continue_story(
     except Exception as e:
         logging_util.warning(f"Could not measure game_state breakdown: {e}")
 
+    # Strip story entries to essential fields only to reduce token bloat
+    # Full entries have ~555 tokens/entry due to metadata; stripped = ~200 tokens/entry
+    ESSENTIAL_STORY_FIELDS = {"text", "actor", "mode", "turn_number"}
+    stripped_story_context = [
+        {k: v for k, v in entry.items() if k in ESSENTIAL_STORY_FIELDS}
+        for entry in truncated_story_context
+    ]
+
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
         game_mode=mode,
         game_state=game_state_for_llm,
-        story_history=truncated_story_context,
+        story_history=stripped_story_context,
         checkpoint_block=checkpoint_block,
         core_memories=core_memories_summary.split("\n")
         if core_memories_summary
