@@ -240,7 +240,6 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         timeline_log which is approximately story_tokens * 1.05 (5% overhead
         for [SEQ_ID: X] Actor: prefixes).
         """
-        from mvp_site.game_state import GameState
 
         # Create story context
         story_context = [
@@ -297,7 +296,6 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         1. The scaffold estimate includes timeline_log OR
         2. Story tokens + timeline_log tokens <= max_input_allowed after truncation
         """
-        from mvp_site.game_state import GameState
 
         # Simulate the production scenario with large story context
         # Production had 26,795 tokens in story - let's create similar sized context
@@ -343,37 +341,48 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
             llm_service._calculate_context_budget(provider, model_name, False)
         )
 
-        # Calculate scaffold and story budget using FIXED logic
-        # The fix divides available budget by the shared duplication factor
+        # Calculate scaffold and story budget using the same guard logic
         estimated_scaffold = 30000  # ~30K for system instruction + game state + other parts
         raw_story_budget = max_input_allowed - estimated_scaffold - llm_service.ENTITY_TRACKING_TOKEN_RESERVE
 
-        # FIXED: Account for timeline_log duplication factor from production code
-        duplication_factor = llm_service.TIMELINE_LOG_DUPLICATION_FACTOR
-        fixed_story_budget = int(raw_story_budget / duplication_factor)
+        include_timeline_log = llm_service.TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST
+        fixed_story_budget, guard_note = llm_service._apply_timeline_log_duplication_guard(
+            available_story_tokens_raw=raw_story_budget,
+            include_timeline_log_in_prompt=include_timeline_log,
+        )
+        self.assertFalse(
+            include_timeline_log,
+            "Structured LLMRequest should not serialize timeline_log; guardrail should be inactive.",
+        )
+        self.assertEqual(
+            fixed_story_budget,
+            raw_story_budget,
+            "When timeline_log is not serialized, the budget should remain unadjusted.",
+        )
+        self.assertIn("not serialized", guard_note)
 
         # Total story content that will appear in final prompt
         total_story_content = story_tokens + timeline_tokens
 
-        print(f"\n=== Timeline Log Budget Fix Verification ===")
+        print("\n=== Timeline Log Budget Fix Verification ===")
         print(f"Model: {model_name}")
         print(f"Max input allowed: {max_input_allowed:,} tokens")
         print(f"Estimated scaffold: {estimated_scaffold:,} tokens")
         print(f"Entity reserve: {llm_service.ENTITY_TRACKING_TOKEN_RESERVE:,} tokens")
         print(f"Raw story budget: {raw_story_budget:,} tokens")
-        print(f"Fixed story budget (÷{duplication_factor}): {fixed_story_budget:,} tokens")
-        print(f"---")
+        print(f"Fixed story budget: {fixed_story_budget:,} tokens ({guard_note})")
+        print("---")
         print(f"Story context tokens: {story_tokens:,}")
         print(f"Timeline log tokens: {timeline_tokens:,}")
         print(f"Total story content: {total_story_content:,} tokens")
-        print(f"---")
+        print("---")
         print(f"Story fits in fixed budget: {story_tokens:,} <= {fixed_story_budget:,} = {story_tokens <= fixed_story_budget}")
         print(f"Total content fits in raw budget: {total_story_content:,} <= {raw_story_budget:,} = {total_story_content <= raw_story_budget}")
 
-        # VERIFY THE FIX: If story_tokens <= fixed_story_budget,
-        # then total_story_content should fit in raw_story_budget
-        if story_tokens <= fixed_story_budget:
-            # The fix should ensure total content fits
+        # VERIFY THE FIX: If timeline_log were serialized, the guardrail would shrink
+        # the story budget. Because it is excluded from LLMRequest, the raw budget is
+        # the authoritative limit for story_history alone.
+        if include_timeline_log:
             self.assertLessEqual(
                 total_story_content,
                 raw_story_budget,
@@ -381,13 +390,56 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
                     "\n\n🔴 FIX VERIFICATION FAILED! 🔴\n"
                     f"Story ({story_tokens:,}) fits in fixed budget ({fixed_story_budget:,})\n"
                     f"But total content ({total_story_content:,}) EXCEEDS raw budget ({raw_story_budget:,})!\n"
-                    f"The duplication factor {duplication_factor} may be too small."
+                    f"Guard note: {guard_note}"
                 ),
             )
-            print(f"\n✅ FIX VERIFIED: Timeline log budget calculation is correct!")
+            print("\n✅ FIX VERIFIED: Timeline log budget calculation is correct!")
         else:
-            # Story would need truncation, which is expected for large contexts
-            print(f"\n📝 Story exceeds fixed budget - truncation would be applied")
+            # Document the current behavior so future changes are explicit
+            self.assertGreater(
+                total_story_content,
+                raw_story_budget,
+                "Timeline log is omitted from structured request; combined content would exceed the raw budget if it were sent.",
+            )
+            print(
+                "\n📝 Timeline log omitted from structured request; duplication guard inactive"
+            )
+
+
+class TestTimelineLogBudgetGuardrails(unittest.TestCase):
+    """Unit tests for the timeline_log duplication guardrail helpers."""
+
+    def test_budget_not_reduced_when_timeline_not_serialized(self):
+        """The structured LLM request excludes timeline_log, so keep full budget."""
+
+        raw_budget = 50_000
+        adjusted_budget, note = llm_service._apply_timeline_log_duplication_guard(
+            available_story_tokens_raw=raw_budget,
+            include_timeline_log_in_prompt=False,
+        )
+
+        self.assertEqual(
+            adjusted_budget,
+            raw_budget,
+            "Timeline log guardrail should not shrink budget when it isn't serialized.",
+        )
+        self.assertIn("not serialized", note)
+
+    def test_budget_reduced_when_timeline_in_prompt(self):
+        """If timeline_log is included, apply the duplication factor."""
+
+        raw_budget = 50_000
+        adjusted_budget, note = llm_service._apply_timeline_log_duplication_guard(
+            available_story_tokens_raw=raw_budget,
+            include_timeline_log_in_prompt=True,
+        )
+
+        expected_budget = int(
+            raw_budget / llm_service.TIMELINE_LOG_DUPLICATION_FACTOR
+        )
+
+        self.assertEqual(adjusted_budget, expected_budget)
+        self.assertIn("duplication factor", note)
 
 
 if __name__ == "__main__":

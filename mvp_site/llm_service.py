@@ -218,11 +218,44 @@ OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output to
 # - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
 ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
 
-# Timeline log duplication factor: timeline_log strings are built directly from
-# story_context with ~5% prefix overhead (e.g., "[SEQ_ID: X] Actor:"). Because
-# story content can appear in both story_history and timeline_log constructions,
-# budgeting should divide the available story allocation by this factor.
+# Timeline log handling
+# The structured LLMRequest path serializes only `story_history` (no timeline log).
+# Keep the duplication factor as a guardrail for prompt paths that include both
+# `story_context` and timeline_log text in the same request.
 TIMELINE_LOG_DUPLICATION_FACTOR: float = 2.05
+TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST: bool = False
+
+
+def _apply_timeline_log_duplication_guard(
+    available_story_tokens_raw: int, include_timeline_log_in_prompt: bool
+) -> tuple[int, str]:
+    """Apply the duplication guard only when timeline_log is serialized.
+
+    Args:
+        available_story_tokens_raw: Story tokens available before duplication check.
+        include_timeline_log_in_prompt: Whether the outgoing request will contain
+            a timeline_log string alongside story_history text.
+
+    Returns:
+        tuple[int, str]: (Adjusted story token budget, explanation note)
+    """
+
+    if include_timeline_log_in_prompt:
+        adjusted_budget = int(
+            available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR
+        )
+        note = (
+            "timeline_log included; divided by duplication factor "
+            f"{TIMELINE_LOG_DUPLICATION_FACTOR}"
+        )
+    else:
+        adjusted_budget = available_story_tokens_raw
+        note = (
+            "timeline_log not serialized in structured LLMRequest; no duplication"
+            " factor applied"
+        )
+
+    return adjusted_budget, note
 
 
 def _get_context_window_tokens(model_name: str) -> int:
@@ -1406,7 +1439,7 @@ def _call_llm_api(
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
             logging_util.info(
-                f"🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
+                "🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
             )
             return gemini_provider.generate_json_mode_content(
                 prompt_contents=prompt_contents,
@@ -1427,7 +1460,7 @@ def _call_llm_api(
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
             logging_util.info(
-                f"🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
+                "🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
             )
             return cerebras_provider.generate_content(
                 prompt_contents=prompt_contents,
@@ -2023,9 +2056,8 @@ def _truncate_context(
                     # This looks like JSON - either keep fully or drop
                     if len(text) > entry_max_chars:
                         continue  # Drop JSON entry rather than corrupt it
-                    else:
-                        trimmed_entries.append(entry)
-                        continue
+                    trimmed_entries.append(entry)
+                    continue
 
                 if len(text) > entry_max_chars:
                     trimmed_text = text[:entry_max_chars] + "... [truncated]"
@@ -2282,7 +2314,7 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     )
     if force_test_model:
         logging_util.info(
-            f"🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
+            "🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
         )
         return ProviderSelection(constants.DEFAULT_LLM_PROVIDER, TEST_MODEL)
 
@@ -2291,7 +2323,7 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
 
     if not user_id:
         logging_util.info(
-            f"🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
+            "🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
         )
         return ProviderSelection(provider, model)
 
@@ -3196,13 +3228,11 @@ def continue_story(
     # Then subtract scaffold tokens to get available story budget
     available_story_tokens_raw = max(0, max_input_allowed - scaffold_tokens)
 
-    # CRITICAL FIX (Dec 2025): Account for timeline_log duplication of story content
-    # NOTE: The structured LLMRequest sent to the API only includes story_history.
-    # timeline_log_string is used in prompt constructions (and entity instructions)
-    # but is not currently serialized into LLMRequest JSON. The duplication factor
-    # remains as a conservative guardrail in case prompt construction paths include
-    # both story_context and timeline_log text.
-    available_story_tokens = int(available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR)
+    include_timeline_log_in_prompt = TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST
+    available_story_tokens, timeline_log_budget_note = _apply_timeline_log_duplication_guard(
+        available_story_tokens_raw=available_story_tokens_raw,
+        include_timeline_log_in_prompt=include_timeline_log_in_prompt,
+    )
     char_budget_for_story = available_story_tokens * 4
 
     # Calculate story context tokens
@@ -3214,7 +3244,7 @@ def continue_story(
         f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
         f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+entity_reserve:{ENTITY_TRACKING_TOKEN_RESERVE}), "
         f"output_reserve={output_token_reserve}tk ({reserve_mode}), "
-        f"story_budget={available_story_tokens}tk (raw:{available_story_tokens_raw}tk / {TIMELINE_LOG_DUPLICATION_FACTOR} for timeline_log), "
+        f"story_budget={available_story_tokens}tk ({timeline_log_budget_note}), "
         f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
 
@@ -3246,7 +3276,7 @@ def continue_story(
         current_game_state, truncated_story_context, session_number
     )
 
-    # Build timeline log
+    # Build timeline log (used for entity prompts and diagnostics, not serialized in LLMRequest)
     timeline_log_string: str = _build_timeline_log(truncated_story_context)
 
     # Enhanced entity tracking with mitigation strategies
