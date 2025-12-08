@@ -1439,6 +1439,14 @@ This is a filtered reference export from a working Claude Code project. Commands
         if result.returncode != 0:
             raise GitRepositoryError(f"Repository clone failed: {result.stderr}")
 
+        # Configure git to use GITHUB_TOKEN for authentication
+        if self.github_token:
+            os.chdir(self.repo_dir)
+            # Set git remote URL to use token authentication
+            remote_url = f"https://{self.github_token}@github.com/jleechanorg/claude-commands.git"
+            subprocess.run(['git', 'remote', 'set-url', 'origin', remote_url], check=True)
+            os.chdir(self.project_root)
+
         print("✅ Repository cloned")
 
     def _create_export_branch(self):
