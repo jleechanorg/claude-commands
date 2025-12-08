@@ -4,16 +4,14 @@ End-to-end test for timeline_log budget fix.
 Tests that story continuation with large context does not cause
 ContextTooLargeError due to timeline_log being excluded from scaffold estimate.
 
-Bug reproduced: zai-glm-4.6 model received 96,396 tokens when max allowed was
-94,372 tokens because timeline_log (which duplicates the entire story context
-in a reformatted form) was NOT included in the scaffold budget calculation.
+Production evidence (Dec 7, 2025): story context = 26,795 tokens, timeline log =
+27,817 tokens, final prompt = 54,612 tokens (~2x expected). The scaffold
+budget considered only the story context, but the timeline log (story context
+reformatted with `[SEQ_ID: X] Actor:` prefixes) added ~5% overhead on another
+full copy of the story content.
 
-Root cause: The scaffold estimate at lines 3166-3172 includes story_context
-but the final prompt ALSO includes timeline_log_string (built from the same
-story_context). This means story content is counted once but included twice.
-
-Expected fix: Include timeline_log size in scaffold estimate OR remove
-the duplicate inclusion of story content.
+Expected fix: Budget story context using `TIMELINE_LOG_DUPLICATION_FACTOR`
+so the combined story + timeline content fits within the model limit.
 """
 
 from __future__ import annotations
@@ -23,7 +21,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from mvp_site import main
+from mvp_site import constants, llm_service, main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
 from mvp_site.tests.fake_llm import FakeLLMResponse
 
@@ -239,10 +237,9 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         Verify that scaffold estimate accounts for timeline_log.
 
         The scaffold at lines 3166-3172 should include an estimate for
-        timeline_log which is approximately story_tokens * 1.1 (10% overhead
+        timeline_log which is approximately story_tokens * 1.05 (5% overhead
         for [SEQ_ID: X] Actor: prefixes).
         """
-        from mvp_site import llm_service
         from mvp_site.game_state import GameState
 
         # Create story context
@@ -263,10 +260,10 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         # The overhead is [SEQ_ID: X] Actor: for each entry
         overhead_ratio = timeline_tokens / story_tokens if story_tokens > 0 else 1
 
-        # Timeline log should be at MOST 20% larger than story (prefixes add ~10-15%)
+        # Timeline log should be at MOST 10% larger than story (prefixes add ~5%)
         self.assertLess(
             overhead_ratio,
-            1.25,
+            1.10,
             f"Timeline log overhead is too high: {overhead_ratio:.2f}x story tokens. "
             f"Story: {story_tokens}, Timeline: {timeline_tokens}"
         )
@@ -291,19 +288,19 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
 
         Production evidence (Dec 7, 2025):
         - Model: zai-glm-4.6 (131K context)
-        - Scaffold budget showed: story=25,127 tokens OK
-        - Final prompt: 96,396 tokens (OVER 94,372 limit)
-        - Root cause: timeline_log added ~25K+ tokens NOT in budget
+        - Scaffold budget showed: story=26,795 tokens OK
+        - Timeline log: 27,817 tokens (reformatted story with ~5% overhead)
+        - Final prompt: 54,612 tokens (nearly 2x expected budget)
+        - Root cause: timeline_log added another full copy of story content
 
         This test validates that:
         1. The scaffold estimate includes timeline_log OR
         2. Story tokens + timeline_log tokens <= max_input_allowed after truncation
         """
-        from mvp_site import llm_service, constants
         from mvp_site.game_state import GameState
 
         # Simulate the production scenario with large story context
-        # Production had 25,127 tokens in story - let's create similar sized context
+        # Production had 26,795 tokens in story - let's create similar sized context
         story_context = []
 
         # Create 200 turns with substantial content to get ~25K tokens
@@ -347,13 +344,13 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         )
 
         # Calculate scaffold and story budget using FIXED logic
-        # The fix divides available budget by 2.05 to account for timeline_log duplication
+        # The fix divides available budget by the shared duplication factor
         estimated_scaffold = 30000  # ~30K for system instruction + game state + other parts
         raw_story_budget = max_input_allowed - estimated_scaffold - llm_service.ENTITY_TRACKING_TOKEN_RESERVE
 
-        # FIXED: Account for timeline_log duplication factor
-        TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
-        fixed_story_budget = int(raw_story_budget / TIMELINE_LOG_DUPLICATION_FACTOR)
+        # FIXED: Account for timeline_log duplication factor from production code
+        duplication_factor = llm_service.TIMELINE_LOG_DUPLICATION_FACTOR
+        fixed_story_budget = int(raw_story_budget / duplication_factor)
 
         # Total story content that will appear in final prompt
         total_story_content = story_tokens + timeline_tokens
@@ -364,7 +361,7 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
         print(f"Estimated scaffold: {estimated_scaffold:,} tokens")
         print(f"Entity reserve: {llm_service.ENTITY_TRACKING_TOKEN_RESERVE:,} tokens")
         print(f"Raw story budget: {raw_story_budget:,} tokens")
-        print(f"Fixed story budget (÷{TIMELINE_LOG_DUPLICATION_FACTOR}): {fixed_story_budget:,} tokens")
+        print(f"Fixed story budget (÷{duplication_factor}): {fixed_story_budget:,} tokens")
         print(f"---")
         print(f"Story context tokens: {story_tokens:,}")
         print(f"Timeline log tokens: {timeline_tokens:,}")
@@ -380,10 +377,12 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
             self.assertLessEqual(
                 total_story_content,
                 raw_story_budget,
-                f"\n\n🔴 FIX VERIFICATION FAILED! 🔴\n"
-                f"Story ({story_tokens:,}) fits in fixed budget ({fixed_story_budget:,})\n"
-                f"But total content ({total_story_content:,}) EXCEEDS raw budget ({raw_story_budget:,})!\n"
-                f"The duplication factor {TIMELINE_LOG_DUPLICATION_FACTOR} may be too small."
+                (
+                    "\n\n🔴 FIX VERIFICATION FAILED! 🔴\n"
+                    f"Story ({story_tokens:,}) fits in fixed budget ({fixed_story_budget:,})\n"
+                    f"But total content ({total_story_content:,}) EXCEEDS raw budget ({raw_story_budget:,})!\n"
+                    f"The duplication factor {duplication_factor} may be too small."
+                ),
             )
             print(f"\n✅ FIX VERIFIED: Timeline log budget calculation is correct!")
         else:

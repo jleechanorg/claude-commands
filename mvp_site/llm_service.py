@@ -218,6 +218,12 @@ OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output to
 # - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
 ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
 
+# Timeline log duplication factor: timeline_log strings are built directly from
+# story_context with ~5% prefix overhead (e.g., "[SEQ_ID: X] Actor:"). Because
+# story content can appear in both story_history and timeline_log constructions,
+# budgeting should divide the available story allocation by this factor.
+TIMELINE_LOG_DUPLICATION_FACTOR: float = 2.05
+
 
 def _get_context_window_tokens(model_name: str) -> int:
     """Return the configured context window size for a model in tokens."""
@@ -3190,14 +3196,12 @@ def continue_story(
     # Then subtract scaffold tokens to get available story budget
     available_story_tokens_raw = max(0, max_input_allowed - scaffold_tokens)
 
-    # CRITICAL FIX (Dec 2025): Account for timeline_log DUPLICATING story content
-    # The final prompt includes BOTH:
-    #   1. story_context entries (used in some places)
-    #   2. timeline_log_string (story reformatted with [SEQ_ID: X] Actor: prefixes)
-    # Timeline log is approximately story_tokens × 1.05 (5% overhead for prefixes)
-    # So total story content in prompt = story_tokens × 2.05
-    # We must divide available budget by 2.05 to get actual story budget
-    TIMELINE_LOG_DUPLICATION_FACTOR = 2.05
+    # CRITICAL FIX (Dec 2025): Account for timeline_log duplication of story content
+    # NOTE: The structured LLMRequest sent to the API only includes story_history.
+    # timeline_log_string is used in prompt constructions (and entity instructions)
+    # but is not currently serialized into LLMRequest JSON. The duplication factor
+    # remains as a conservative guardrail in case prompt construction paths include
+    # both story_context and timeline_log text.
     available_story_tokens = int(available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR)
     char_budget_for_story = available_story_tokens * 4
 
