@@ -1374,5 +1374,279 @@ class TestMainStateFunctions(unittest.TestCase):
         assert KEY_RESPONSE in response
 
 
+class TestD5EMechanicsCalculations(unittest.TestCase):
+    """Test cases for D&D 5E mechanics calculation functions."""
+
+    def test_calculate_modifier_standard_scores(self):
+        """Test modifier calculation for standard ability scores."""
+        from mvp_site.game_state import calculate_modifier
+
+        # Test standard D&D ability scores
+        assert calculate_modifier(10) == 0, "Score 10 should give +0"
+        assert calculate_modifier(11) == 0, "Score 11 should give +0"
+        assert calculate_modifier(8) == -1, "Score 8 should give -1"
+        assert calculate_modifier(9) == -1, "Score 9 should give -1"
+        assert calculate_modifier(14) == 2, "Score 14 should give +2"
+        assert calculate_modifier(15) == 2, "Score 15 should give +2"
+        assert calculate_modifier(18) == 4, "Score 18 should give +4"
+        assert calculate_modifier(20) == 5, "Score 20 should give +5"
+        assert calculate_modifier(1) == -5, "Score 1 should give -5"
+        assert calculate_modifier(30) == 10, "Score 30 should give +10"
+
+    def test_calculate_proficiency_bonus(self):
+        """Test proficiency bonus calculation by level."""
+        from mvp_site.game_state import calculate_proficiency_bonus
+
+        # Test proficiency progression
+        assert calculate_proficiency_bonus(1) == 2
+        assert calculate_proficiency_bonus(4) == 2
+        assert calculate_proficiency_bonus(5) == 3
+        assert calculate_proficiency_bonus(8) == 3
+        assert calculate_proficiency_bonus(9) == 4
+        assert calculate_proficiency_bonus(12) == 4
+        assert calculate_proficiency_bonus(13) == 5
+        assert calculate_proficiency_bonus(16) == 5
+        assert calculate_proficiency_bonus(17) == 6
+        assert calculate_proficiency_bonus(20) == 6
+
+        # Edge cases
+        assert calculate_proficiency_bonus(0) == 2, "Level 0 should default to +2"
+        assert calculate_proficiency_bonus(21) == 6, "Level 21+ should cap at +6"
+
+    def test_calculate_armor_class(self):
+        """Test armor class calculation."""
+        from mvp_site.game_state import calculate_armor_class
+
+        # Base AC (no armor, no shield)
+        assert calculate_armor_class(dex_modifier=0) == 10
+        assert calculate_armor_class(dex_modifier=2) == 12
+        assert calculate_armor_class(dex_modifier=-1) == 9
+
+        # With armor bonus
+        assert calculate_armor_class(dex_modifier=2, armor_bonus=3) == 15
+        assert calculate_armor_class(dex_modifier=0, armor_bonus=5) == 15
+
+        # With shield
+        assert calculate_armor_class(dex_modifier=2, shield_bonus=2) == 14
+        assert calculate_armor_class(dex_modifier=2, armor_bonus=3, shield_bonus=2) == 17
+
+    def test_calculate_passive_perception(self):
+        """Test passive perception calculation."""
+        from mvp_site.game_state import calculate_passive_perception
+
+        # Not proficient
+        assert calculate_passive_perception(wis_modifier=0, proficient=False, proficiency_bonus=2) == 10
+        assert calculate_passive_perception(wis_modifier=3, proficient=False, proficiency_bonus=2) == 13
+
+        # Proficient
+        assert calculate_passive_perception(wis_modifier=0, proficient=True, proficiency_bonus=2) == 12
+        assert calculate_passive_perception(wis_modifier=3, proficient=True, proficiency_bonus=3) == 16
+
+    def test_xp_for_cr(self):
+        """Test XP lookup by Challenge Rating."""
+        from mvp_site.game_state import xp_for_cr
+
+        assert xp_for_cr(0) == 10
+        assert xp_for_cr(0.125) == 25  # CR 1/8
+        assert xp_for_cr(0.25) == 50   # CR 1/4
+        assert xp_for_cr(0.5) == 100   # CR 1/2
+        assert xp_for_cr(1) == 200
+        assert xp_for_cr(3) == 700
+        assert xp_for_cr(5) == 1800
+        assert xp_for_cr(10) == 5900
+        assert xp_for_cr(20) == 25000
+        assert xp_for_cr(999) == 0  # Unknown CR returns 0
+
+    def test_level_from_xp(self):
+        """Test level calculation from total XP."""
+        from mvp_site.game_state import level_from_xp
+
+        assert level_from_xp(0) == 1
+        assert level_from_xp(299) == 1
+        assert level_from_xp(300) == 2
+        assert level_from_xp(899) == 2
+        assert level_from_xp(900) == 3
+        assert level_from_xp(2699) == 3
+        assert level_from_xp(2700) == 4
+        assert level_from_xp(355000) == 20
+        assert level_from_xp(999999) == 20  # Cap at 20
+
+    def test_xp_needed_for_level(self):
+        """Test XP threshold lookup."""
+        from mvp_site.game_state import xp_needed_for_level
+
+        assert xp_needed_for_level(1) == 0
+        assert xp_needed_for_level(2) == 300
+        assert xp_needed_for_level(5) == 6500
+        assert xp_needed_for_level(10) == 64000
+        assert xp_needed_for_level(20) == 355000
+
+    def test_xp_to_next_level(self):
+        """Test XP remaining to next level."""
+        from mvp_site.game_state import xp_to_next_level
+
+        assert xp_to_next_level(current_xp=0, current_level=1) == 300
+        assert xp_to_next_level(current_xp=150, current_level=1) == 150
+        assert xp_to_next_level(current_xp=300, current_level=2) == 600
+        assert xp_to_next_level(current_xp=355000, current_level=20) == 0  # Max level
+
+    def test_roll_dice_basic(self):
+        """Test basic dice rolling."""
+        from mvp_site.game_state import roll_dice
+
+        # Test 1d20
+        for _ in range(10):
+            result = roll_dice("1d20")
+            assert 1 <= result.total <= 20
+            assert len(result.individual_rolls) == 1
+
+        # Test 2d6+3
+        for _ in range(10):
+            result = roll_dice("2d6+3")
+            assert 5 <= result.total <= 15  # 2+3 to 12+3
+            assert len(result.individual_rolls) == 2
+            assert result.modifier == 3
+
+        # Test negative modifier
+        result = roll_dice("1d20-2")
+        assert result.modifier == -2
+
+    def test_roll_dice_invalid_notation(self):
+        """Test dice rolling with invalid notation."""
+        from mvp_site.game_state import roll_dice
+
+        result = roll_dice("invalid")
+        assert result.total == 0
+        assert len(result.individual_rolls) == 0
+
+    def test_calculate_attack_roll(self):
+        """Test attack roll calculation."""
+        from mvp_site.game_state import calculate_attack_roll
+
+        # Normal roll
+        result = calculate_attack_roll(attack_modifier=5)
+        assert "total" in result
+        assert "is_critical" in result
+        assert "is_fumble" in result
+        assert result["modifier"] == 5
+
+        # With advantage
+        result = calculate_attack_roll(attack_modifier=5, advantage=True)
+        assert len(result["rolls"]) == 2
+        assert result["used_roll"] == "higher"
+
+        # With disadvantage
+        result = calculate_attack_roll(attack_modifier=5, disadvantage=True)
+        assert len(result["rolls"]) == 2
+        assert result["used_roll"] == "lower"
+
+    def test_calculate_damage_normal(self):
+        """Test normal damage calculation."""
+        from mvp_site.game_state import calculate_damage
+
+        for _ in range(10):
+            result = calculate_damage("1d8+3")
+            assert 4 <= result.total <= 11  # 1+3 to 8+3
+
+    def test_calculate_damage_critical(self):
+        """Test critical hit damage (doubled dice)."""
+        from mvp_site.game_state import calculate_damage
+
+        for _ in range(10):
+            result = calculate_damage("1d8+3", is_critical=True)
+            # Critical doubles dice: 2d8+3 = 2+3 to 16+3
+            assert 5 <= result.total <= 19
+
+    def test_calculate_skill_check(self):
+        """Test skill check calculation."""
+        from mvp_site.game_state import calculate_skill_check
+
+        # Not proficient
+        result = calculate_skill_check(
+            attribute_modifier=2,
+            proficiency_bonus=3,
+            proficient=False
+        )
+        assert result.modifier == 2
+
+        # Proficient
+        result = calculate_skill_check(
+            attribute_modifier=2,
+            proficiency_bonus=3,
+            proficient=True
+        )
+        assert result.modifier == 5
+
+        # Expertise
+        result = calculate_skill_check(
+            attribute_modifier=2,
+            proficiency_bonus=3,
+            proficient=True,
+            expertise=True
+        )
+        assert result.modifier == 8
+
+    def test_calculate_complication_chance(self):
+        """Test complication probability calculation."""
+        from mvp_site.game_state import calculate_complication_chance
+
+        assert calculate_complication_chance(0) == 20  # Base 20%
+        assert calculate_complication_chance(1) == 30  # 20 + 10
+        assert calculate_complication_chance(3) == 50  # 20 + 30
+        assert calculate_complication_chance(5) == 70  # 20 + 50
+        assert calculate_complication_chance(6) == 75  # Capped at 75
+        assert calculate_complication_chance(10) == 75  # Still capped
+
+    def test_calculate_death_save(self):
+        """Test death saving throw."""
+        from mvp_site.game_state import calculate_death_save
+
+        # Run multiple times to verify structure
+        for _ in range(10):
+            result = calculate_death_save()
+            assert 1 <= result["roll"] <= 20
+            assert isinstance(result["success"], bool)
+            assert result["success"] == (result["roll"] >= 10)
+            assert result["critical_success"] == (result["roll"] == 20)
+            assert result["critical_failure"] == (result["roll"] == 1)
+
+    def test_calculate_hp_for_class(self):
+        """Test HP calculation by class."""
+        from mvp_site.game_state import calculate_hp_for_class
+
+        # Barbarian (d12) at level 1 with +2 CON
+        hp = calculate_hp_for_class("barbarian", level=1, con_modifier=2)
+        assert hp == 14  # 12 + 2
+
+        # Wizard (d6) at level 1 with +0 CON
+        hp = calculate_hp_for_class("wizard", level=1, con_modifier=0)
+        assert hp == 6
+
+        # Fighter (d10) at level 3 with +2 CON (using average)
+        hp = calculate_hp_for_class("fighter", level=3, con_modifier=2)
+        # Level 1: 10+2=12, Level 2-3: 2 * (6+2) = 16, Total = 28
+        assert hp == 28
+
+    def test_calculate_resource_depletion(self):
+        """Test resource depletion calculation."""
+        from mvp_site.game_state import calculate_resource_depletion
+
+        # 100 units at 10/day for 5 days
+        remaining = calculate_resource_depletion(
+            current_amount=100,
+            depletion_rate=10,
+            time_elapsed=5
+        )
+        assert remaining == 50
+
+        # Depleted to 0
+        remaining = calculate_resource_depletion(
+            current_amount=100,
+            depletion_rate=10,
+            time_elapsed=15
+        )
+        assert remaining == 0  # Capped at 0, not negative
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,9 +1,15 @@
 """
 Defines the GameState class, which represents the complete state of a campaign.
+
+Also provides D&D 5E mechanics calculation functions for deterministic game logic.
+The LLM should focus on narrative while code handles all mathematical operations.
 """
 
 import datetime
-from typing import Any, Optional
+import random
+import re
+from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple
 
 from mvp_site import constants, logging_util
 
@@ -501,3 +507,606 @@ class GameState:
         # Normalize and look up
         normalized = time_of_day.lower().strip()
         return time_mapping.get(normalized, 12)  # Default to noon if unknown
+
+
+# =============================================================================
+# D&D 5E MECHANICS CALCULATIONS
+# =============================================================================
+# These functions replace LLM-based calculations with deterministic code.
+# The LLM should focus on narrative; code handles math.
+# =============================================================================
+
+
+@dataclass
+class DiceRollResult:
+    """Result of a dice roll with full transparency."""
+
+    notation: str  # Original notation, e.g., "2d6+3"
+    individual_rolls: List[int]  # Each die result
+    modifier: int  # The +/- modifier
+    total: int  # Final sum
+    natural_20: bool = False  # For d20 rolls
+    natural_1: bool = False  # For d20 rolls
+
+    def __str__(self) -> str:
+        rolls_str = ", ".join(str(r) for r in self.individual_rolls)
+        if self.modifier >= 0:
+            return f"{self.notation} = [{rolls_str}]+{self.modifier} = {self.total}"
+        return f"{self.notation} = [{rolls_str}]{self.modifier} = {self.total}"
+
+
+# XP by Challenge Rating lookup table (D&D 5E SRD)
+XP_BY_CR: dict[float, int] = {
+    0: 10,
+    0.125: 25,  # CR 1/8
+    0.25: 50,  # CR 1/4
+    0.5: 100,  # CR 1/2
+    1: 200,
+    2: 450,
+    3: 700,
+    4: 1100,
+    5: 1800,
+    6: 2300,
+    7: 2900,
+    8: 3900,
+    9: 5000,
+    10: 5900,
+    11: 7200,
+    12: 8400,
+    13: 10000,
+    14: 11500,
+    15: 13000,
+    16: 15000,
+    17: 18000,
+    18: 20000,
+    19: 22000,
+    20: 25000,
+    21: 33000,
+    22: 41000,
+    23: 50000,
+    24: 62000,
+    25: 75000,
+    26: 90000,
+    27: 105000,
+    28: 120000,
+    29: 135000,
+    30: 155000,
+}
+
+# XP thresholds for each level (total XP needed to reach that level)
+XP_THRESHOLDS: dict[int, int] = {
+    1: 0,
+    2: 300,
+    3: 900,
+    4: 2700,
+    5: 6500,
+    6: 14000,
+    7: 23000,
+    8: 34000,
+    9: 48000,
+    10: 64000,
+    11: 85000,
+    12: 100000,
+    13: 120000,
+    14: 140000,
+    15: 165000,
+    16: 195000,
+    17: 225000,
+    18: 265000,
+    19: 305000,
+    20: 355000,
+}
+
+# Proficiency bonus by level
+PROFICIENCY_BY_LEVEL: dict[int, int] = {
+    1: 2,
+    2: 2,
+    3: 2,
+    4: 2,
+    5: 3,
+    6: 3,
+    7: 3,
+    8: 3,
+    9: 4,
+    10: 4,
+    11: 4,
+    12: 4,
+    13: 5,
+    14: 5,
+    15: 5,
+    16: 5,
+    17: 6,
+    18: 6,
+    19: 6,
+    20: 6,
+}
+
+
+def calculate_modifier(attribute: int) -> int:
+    """
+    Calculate ability modifier from attribute score.
+    Formula: (attribute - 10) // 2 (rounded down)
+
+    Args:
+        attribute: Ability score (typically 1-30)
+
+    Returns:
+        Modifier value (can be negative)
+    """
+    return (attribute - 10) // 2
+
+
+def calculate_proficiency_bonus(level: int) -> int:
+    """
+    Get proficiency bonus for a given character level.
+
+    Args:
+        level: Character level (1-20)
+
+    Returns:
+        Proficiency bonus (+2 to +6)
+    """
+    if level < 1:
+        return 2
+    if level > 20:
+        return 6
+    return PROFICIENCY_BY_LEVEL.get(level, 2)
+
+
+def calculate_armor_class(
+    dex_modifier: int, armor_bonus: int = 0, shield_bonus: int = 0
+) -> int:
+    """
+    Calculate Armor Class.
+    Base AC = 10 + DEX modifier + armor bonus + shield bonus
+
+    Args:
+        dex_modifier: Dexterity modifier
+        armor_bonus: Bonus from armor (may cap DEX)
+        shield_bonus: Bonus from shield (typically +2)
+
+    Returns:
+        Armor Class value
+    """
+    return 10 + dex_modifier + armor_bonus + shield_bonus
+
+
+def calculate_passive_perception(
+    wis_modifier: int, proficient: bool, proficiency_bonus: int
+) -> int:
+    """
+    Calculate passive Perception score.
+    Formula: 10 + WIS modifier + (proficiency if proficient)
+
+    Args:
+        wis_modifier: Wisdom modifier
+        proficient: Whether proficient in Perception
+        proficiency_bonus: Character's proficiency bonus
+
+    Returns:
+        Passive Perception value
+    """
+    base = 10 + wis_modifier
+    if proficient:
+        base += proficiency_bonus
+    return base
+
+
+def xp_for_cr(cr: float) -> int:
+    """
+    Get XP award for defeating a creature of given Challenge Rating.
+
+    Args:
+        cr: Challenge Rating (0, 0.125, 0.25, 0.5, 1-30)
+
+    Returns:
+        XP value
+    """
+    return XP_BY_CR.get(cr, 0)
+
+
+def level_from_xp(total_xp: int) -> int:
+    """
+    Determine character level from total XP.
+
+    Args:
+        total_xp: Total accumulated XP
+
+    Returns:
+        Character level (1-20)
+    """
+    level = 1
+    for lvl, threshold in sorted(XP_THRESHOLDS.items()):
+        if total_xp >= threshold:
+            level = lvl
+        else:
+            break
+    return min(level, 20)
+
+
+def xp_needed_for_level(level: int) -> int:
+    """
+    Get total XP needed to reach a specific level.
+
+    Args:
+        level: Target level (1-20)
+
+    Returns:
+        Total XP threshold for that level
+    """
+    if level < 1:
+        return 0
+    if level > 20:
+        return XP_THRESHOLDS[20]
+    return XP_THRESHOLDS.get(level, 0)
+
+
+def xp_to_next_level(current_xp: int, current_level: int) -> int:
+    """
+    Calculate XP remaining until next level.
+
+    Args:
+        current_xp: Current total XP
+        current_level: Current level
+
+    Returns:
+        XP needed for next level (0 if at max level)
+    """
+    if current_level >= 20:
+        return 0
+    next_level_threshold = xp_needed_for_level(current_level + 1)
+    return max(0, next_level_threshold - current_xp)
+
+
+def roll_dice(notation: str) -> DiceRollResult:
+    """
+    Roll dice using standard notation (e.g., "2d6+3", "1d20-1", "4d6").
+
+    This provides TRUE randomness via Python's random module,
+    replacing LLM-simulated dice rolls for fairness.
+
+    Args:
+        notation: Dice notation string (e.g., "1d20+5", "2d6", "1d8-2")
+
+    Returns:
+        DiceRollResult with full transparency
+    """
+    # Parse notation: XdY+Z or XdY-Z or XdY
+    pattern = r"(\d+)d(\d+)([+-]\d+)?"
+    match = re.match(pattern, notation.lower().replace(" ", ""))
+
+    if not match:
+        # Invalid notation, return 0
+        return DiceRollResult(
+            notation=notation,
+            individual_rolls=[],
+            modifier=0,
+            total=0,
+        )
+
+    num_dice = int(match.group(1))
+    die_size = int(match.group(2))
+    modifier = int(match.group(3)) if match.group(3) else 0
+
+    # Roll each die
+    rolls = [random.randint(1, die_size) for _ in range(num_dice)]
+
+    # Calculate total
+    total = sum(rolls) + modifier
+
+    # Check for natural 20/1 on d20 rolls
+    natural_20 = die_size == 20 and num_dice == 1 and rolls[0] == 20
+    natural_1 = die_size == 20 and num_dice == 1 and rolls[0] == 1
+
+    return DiceRollResult(
+        notation=notation,
+        individual_rolls=rolls,
+        modifier=modifier,
+        total=total,
+        natural_20=natural_20,
+        natural_1=natural_1,
+    )
+
+
+def roll_with_advantage(notation: str) -> Tuple[DiceRollResult, DiceRollResult, int]:
+    """
+    Roll with advantage (roll twice, take higher).
+
+    Args:
+        notation: Dice notation (typically "1d20+X")
+
+    Returns:
+        Tuple of (roll1, roll2, final_result)
+    """
+    roll1 = roll_dice(notation)
+    roll2 = roll_dice(notation)
+    final = max(roll1.total, roll2.total)
+    return roll1, roll2, final
+
+
+def roll_with_disadvantage(
+    notation: str,
+) -> Tuple[DiceRollResult, DiceRollResult, int]:
+    """
+    Roll with disadvantage (roll twice, take lower).
+
+    Args:
+        notation: Dice notation (typically "1d20+X")
+
+    Returns:
+        Tuple of (roll1, roll2, final_result)
+    """
+    roll1 = roll_dice(notation)
+    roll2 = roll_dice(notation)
+    final = min(roll1.total, roll2.total)
+    return roll1, roll2, final
+
+
+def calculate_attack_roll(
+    attack_modifier: int, advantage: bool = False, disadvantage: bool = False
+) -> dict:
+    """
+    Perform a complete attack roll.
+
+    Args:
+        attack_modifier: Total attack bonus (ability mod + proficiency + magic)
+        advantage: Rolling with advantage
+        disadvantage: Rolling with disadvantage
+
+    Returns:
+        Dict with roll details, total, is_critical, is_fumble
+    """
+    notation = f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
+
+    if advantage and not disadvantage:
+        roll1, roll2, total = roll_with_advantage(notation)
+        natural = max(roll1.individual_rolls[0], roll2.individual_rolls[0])
+        return {
+            "rolls": [roll1.individual_rolls[0], roll2.individual_rolls[0]],
+            "modifier": attack_modifier,
+            "total": total,
+            "used_roll": "higher",
+            "is_critical": natural == 20,
+            "is_fumble": False,  # Advantage prevents fumble unless both are 1
+            "notation": notation,
+        }
+    elif disadvantage and not advantage:
+        roll1, roll2, total = roll_with_disadvantage(notation)
+        natural = min(roll1.individual_rolls[0], roll2.individual_rolls[0])
+        return {
+            "rolls": [roll1.individual_rolls[0], roll2.individual_rolls[0]],
+            "modifier": attack_modifier,
+            "total": total,
+            "used_roll": "lower",
+            "is_critical": False,  # Disadvantage prevents crit unless both are 20
+            "is_fumble": natural == 1,
+            "notation": notation,
+        }
+    else:
+        roll = roll_dice(notation)
+        return {
+            "rolls": roll.individual_rolls,
+            "modifier": attack_modifier,
+            "total": roll.total,
+            "used_roll": "single",
+            "is_critical": roll.natural_20,
+            "is_fumble": roll.natural_1,
+            "notation": notation,
+        }
+
+
+def calculate_damage(
+    damage_notation: str, is_critical: bool = False
+) -> DiceRollResult:
+    """
+    Calculate damage, doubling dice on critical hit.
+
+    Args:
+        damage_notation: Base damage notation (e.g., "1d8+3")
+        is_critical: Whether this is a critical hit
+
+    Returns:
+        DiceRollResult with damage total
+    """
+    if is_critical:
+        # Double the number of dice for critical hits
+        pattern = r"(\d+)d(\d+)([+-]\d+)?"
+        match = re.match(pattern, damage_notation.lower().replace(" ", ""))
+        if match:
+            num_dice = int(match.group(1)) * 2  # Double dice
+            die_size = match.group(2)
+            modifier = match.group(3) or ""
+            crit_notation = f"{num_dice}d{die_size}{modifier}"
+            return roll_dice(crit_notation)
+
+    return roll_dice(damage_notation)
+
+
+def calculate_skill_check(
+    attribute_modifier: int,
+    proficiency_bonus: int,
+    proficient: bool = False,
+    expertise: bool = False,
+) -> DiceRollResult:
+    """
+    Perform a skill check.
+
+    Args:
+        attribute_modifier: Relevant ability modifier
+        proficiency_bonus: Character's proficiency bonus
+        proficient: Whether proficient in the skill
+        expertise: Whether has expertise (double proficiency)
+
+    Returns:
+        DiceRollResult with the check total
+    """
+    total_modifier = attribute_modifier
+    if proficient:
+        total_modifier += proficiency_bonus
+    if expertise:
+        total_modifier += proficiency_bonus  # Add again for expertise
+
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_saving_throw(
+    attribute_modifier: int, proficiency_bonus: int, proficient: bool = False
+) -> DiceRollResult:
+    """
+    Perform a saving throw.
+
+    Args:
+        attribute_modifier: Relevant ability modifier
+        proficiency_bonus: Character's proficiency bonus
+        proficient: Whether proficient in this save
+
+    Returns:
+        DiceRollResult with the save total
+    """
+    total_modifier = attribute_modifier
+    if proficient:
+        total_modifier += proficiency_bonus
+
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_initiative(dex_modifier: int, bonus: int = 0) -> DiceRollResult:
+    """
+    Roll initiative.
+
+    Args:
+        dex_modifier: Dexterity modifier
+        bonus: Any additional initiative bonus (e.g., from features)
+
+    Returns:
+        DiceRollResult with initiative total
+    """
+    total_modifier = dex_modifier + bonus
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_complication_chance(success_streak: int) -> int:
+    """
+    Calculate complication probability based on success streak.
+    Formula: 20% + (streak × 10%), capped at 75%
+
+    Args:
+        success_streak: Number of consecutive successes
+
+    Returns:
+        Complication percentage (20-75)
+    """
+    base = 20
+    streak_bonus = success_streak * 10
+    return min(75, base + streak_bonus)
+
+
+def check_complication_triggers(success_streak: int) -> bool:
+    """
+    Roll to see if a complication triggers.
+
+    Args:
+        success_streak: Number of consecutive successes
+
+    Returns:
+        True if complication triggers, False otherwise
+    """
+    chance = calculate_complication_chance(success_streak)
+    roll = random.randint(1, 100)
+    return roll <= chance
+
+
+def calculate_death_save() -> dict:
+    """
+    Perform a death saving throw.
+
+    Returns:
+        Dict with roll, success (True if 10+), and critical info
+    """
+    roll = roll_dice("1d20")
+    natural = roll.individual_rolls[0]
+
+    return {
+        "roll": natural,
+        "success": natural >= 10,
+        "critical_success": natural == 20,  # Regain 1 HP
+        "critical_failure": natural == 1,  # Counts as 2 failures
+    }
+
+
+def calculate_hp_for_class(
+    class_name: str, level: int, con_modifier: int, use_average: bool = True
+) -> int:
+    """
+    Calculate HP for a character of given class and level.
+
+    Args:
+        class_name: Character class name
+        level: Character level
+        con_modifier: Constitution modifier
+        use_average: Use average HP (True) or roll (False)
+
+    Returns:
+        Total HP
+    """
+    # Hit dice by class
+    hit_dice = {
+        "barbarian": 12,
+        "fighter": 10,
+        "paladin": 10,
+        "ranger": 10,
+        "bard": 8,
+        "cleric": 8,
+        "druid": 8,
+        "monk": 8,
+        "rogue": 8,
+        "warlock": 8,
+        "sorcerer": 6,
+        "wizard": 6,
+    }
+
+    die = hit_dice.get(class_name.lower(), 8)
+
+    # Level 1: Max hit die + CON
+    hp = die + con_modifier
+
+    # Higher levels
+    if use_average:
+        # Average is (die/2) + 1 per level
+        average_per_level = (die // 2) + 1
+        hp += (level - 1) * (average_per_level + con_modifier)
+    else:
+        # Roll for each level
+        for _ in range(level - 1):
+            roll = roll_dice(f"1d{die}")
+            hp += max(1, roll.total) + con_modifier  # Minimum 1 per level
+
+    return max(1, hp)  # HP can never be less than 1
+
+
+def calculate_resource_depletion(
+    current_amount: float,
+    depletion_rate: float,
+    time_elapsed: float,
+    depletion_unit: str = "per_day",
+) -> float:
+    """
+    Calculate resource depletion over time.
+
+    Args:
+        current_amount: Current resource amount
+        depletion_rate: Rate of depletion
+        time_elapsed: Time elapsed (in the unit specified)
+        depletion_unit: Unit of depletion rate (per_day, per_hour, etc.)
+
+    Returns:
+        Remaining resource amount (minimum 0)
+    """
+    # Convert time_elapsed to match depletion_unit if needed
+    # For simplicity, assume time_elapsed is in the same unit as depletion_rate
+    depleted = depletion_rate * time_elapsed
+    remaining = current_amount - depleted
+    return max(0, remaining)
