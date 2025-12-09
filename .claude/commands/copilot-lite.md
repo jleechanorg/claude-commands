@@ -12,6 +12,11 @@ execution_mode: immediate
 
 Atomic single-pass PR comment processor with ground truth verification.
 
+**SCOPE**: ONLY fixes GitHub PR comments. Does NOT:
+- ❌ Fix merge conflicts (use `/fixpr` separately)
+- ❌ Fix failing tests (handle separately)
+- ❌ Handle CI failures (not in scope)
+
 **Key Principle**: Ground truth over inference - try the fix, report what actually happened.
 
 **Architecture**:
@@ -62,17 +67,18 @@ echo "📥 Comments fetched to $WORK_DIR/comments.json"
 For EACH comment in `/tmp/{branch}/comments.json`:
 
 1. **READ** the comment body and understand what is being requested
-2. **CATEGORIZE** the request:
-   - `CRITICAL`: Security vulnerabilities, production blockers, data corruption
-   - `BLOCKING`: CI failures, build failures, breaking changes
-   - `IMPORTANT`: Performance issues, logic errors, missing validation
-   - `ROUTINE`: Code style, documentation, optional refactoring
+2. **CATEGORIZE** the comment request:
+   - `CRITICAL`: Security vulnerabilities, production blockers, data corruption in PR code
+   - `IMPORTANT`: Performance issues, logic errors, missing validation in PR code
+   - `ROUTINE`: Code style, documentation, optional refactoring suggestions
+   - **SKIP**: Comments about merge conflicts, test failures, or CI issues (not in scope)
 
 3. **ATTEMPT** the fix (if applicable):
    - Read the affected file(s)
    - Make the code change using Edit/MultiEdit tools
-   - Run relevant tests to verify
-   - Commit if tests pass, revert if they fail
+   - Verify syntax is correct
+   - Commit the change with descriptive message
+   - **NOTE**: Do NOT fix tests or merge conflicts - only address the specific comment request
 
 4. **GENERATE** a truthful response based on ACTUAL outcome:
 
@@ -84,6 +90,8 @@ For EACH comment in `/tmp/{branch}/comments.json`:
 - **ACKNOWLEDGED**: Style suggestion noted for future consideration
 - **ALREADY IMPLEMENTED**: Code already does this (MUST show evidence)
   - MUST include: file path, line number, code snippet proving implementation
+- **SKIPPED**: Comment is about merge conflicts, test failures, or CI issues (out of scope)
+  - MUST include: brief note directing to appropriate command (/fixpr for merge conflicts)
 
 ### Phase 4: Build responses.json
 
@@ -130,6 +138,14 @@ For EACH comment in `/tmp/{branch}/comments.json`:
         "code": "branch_name = branch_name.replace('/', '_').replace('\\\\', '_')"
       },
       "reply_text": "[AI responder] ✅ **ALREADY IMPLEMENTED**\n\n**Category**: IMPORTANT\n**Evidence**: Branch sanitization exists at src/utils.py:45\n```python\nbranch_name = branch_name.replace('/', '_').replace('\\\\', '_')\n```\n**Verified**: Actual code shows path-safe character replacement",
+      "in_reply_to": null
+    },
+    {
+      "comment_id": "2357534673",
+      "category": "SKIP",
+      "response": "SKIPPED",
+      "reason": "Comment is about merge conflicts - use /fixpr command",
+      "reply_text": "[AI responder] ⏭️ **SKIPPED**\n\n**Reason**: This comment is about merge conflicts, which is out of scope for /copilot-lite.\n**Action**: Please run `/fixpr` to resolve merge conflicts separately.",
       "in_reply_to": null
     }
   ]
@@ -235,6 +251,7 @@ response = "ALREADY IMPLEMENTED - branch is sanitized"
 - **NOT_DONE**: Attempted but failed (include real reason)
 - **ACKNOWLEDGED**: Style suggestion, noted
 - **ALREADY_IMPLEMENTED**: Code already does this (with evidence)
+- **SKIPPED**: Comment is about merge conflicts, test failures, or CI (out of scope)
 
 **NO COMMENT LEFT BEHIND** - 100% response rate is mandatory.
 
@@ -246,6 +263,7 @@ response = "ALREADY IMPLEMENTED - branch is sanitized"
 | `NOT_DONE` | Attempted but couldn't implement | `reason` (from actual failure) |
 | `ACKNOWLEDGED` | Style/non-blocking suggestion | `explanation` |
 | `ALREADY_IMPLEMENTED` | Code already has this feature | `evidence` (file, line, code snippet) |
+| `SKIPPED` | Comment about merge conflicts, tests, or CI | `reason` (brief explanation + command to use) |
 
 ## 🔧 Integration with Existing Commands
 
@@ -253,8 +271,12 @@ This command composes with:
 - `/commentfetch` - Fetches all PR comments
 - `/commentreply` - Posts responses with proper threading
 - `/commentcheck` - Verifies 100% coverage
-- `/fixpr` - For complex merge conflict resolution
 - `/pushl` - For pushing changes
+
+**NOT included** (handle separately):
+- `/fixpr` - Use separately for merge conflict resolution
+- Test fixing - Handle via separate test commands
+- CI troubleshooting - Handle via separate debugging
 
 ## ✅ SUCCESS CRITERIA
 
@@ -264,6 +286,7 @@ This command composes with:
 - [ ] Every "ALREADY IMPLEMENTED" includes code evidence
 - [ ] Every "FIXED" includes commit hash and verification
 - [ ] Every "NOT DONE" includes real failure reason from actual attempt
+- [ ] Every "SKIPPED" correctly identifies out-of-scope comments (merge conflicts, tests, CI)
 
 ### Coverage Requirements (MANDATORY)
 - [ ] 100% comment response rate (human + bot comments)
@@ -292,9 +315,15 @@ This command composes with:
 4. Verifies 100% coverage
 5. Pushes all committed fixes
 
+**What this does NOT handle:**
+- ❌ Merge conflicts (use `/fixpr`)
+- ❌ Test failures (handle separately)
+- ❌ CI issues (debug separately)
+
 **Key Difference from /copilot:**
 - `/copilot`: Multi-phase (Phase 0-3), can lose state between phases
 - `/copilot-lite`: Single-pass atomic, each comment fully processed before moving to next
+- `/copilot-lite`: ONLY fixes code comments, not merge conflicts or tests
 
 ## 🚨 Autonomous Operation
 
