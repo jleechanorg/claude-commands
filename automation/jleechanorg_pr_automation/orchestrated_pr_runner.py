@@ -174,8 +174,8 @@ def ensure_base_clone(repo_full: str) -> Path:
         log(f"Refreshing base repo for {repo_full}")
         try:
             run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        except subprocess.CalledProcessError as exc:
-            stderr_msg = exc.stderr.strip() if exc.stderr else "No stderr available"
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            stderr_msg = getattr(exc, "stderr", "") or str(exc) or "No stderr available"
             log(f"Fetch failed for {repo_full}: {stderr_msg}. Re-cloning base repo.")
             shutil.rmtree(base_dir, ignore_errors=True)
             run_cmd(
