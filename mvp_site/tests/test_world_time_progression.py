@@ -17,64 +17,43 @@ def _base_time(**overrides):
     return base
 
 
-def test_think_requests_get_microsecond_tick_when_time_missing():
-    previous_time = _base_time(microsecond=5)
+def test_missing_world_time_is_not_inferred():
     state_changes = {"world_data": {}}
 
     updated = world_time.ensure_progressive_world_time(
         copy.deepcopy(state_changes),
-        previous_time,
-        user_input="think about options",
         is_god_mode=False,
     )
 
-    new_time = updated["world_data"]["world_time"]
-    assert new_time["microsecond"] == 6
-    assert new_time | {"microsecond": 6} == _base_time(microsecond=6)
+    assert "world_time" not in updated["world_data"]
 
 
-def test_story_actions_get_minimum_elapsed_time_when_missing():
-    previous_time = _base_time(second=58, minute=12)
-    state_changes = {"world_data": {}}
+def test_parses_string_world_time_from_llm():
+    state_changes = {"world_data": {"world_time": "2025-03-15T10:45:30.123456Z"}}
 
     updated = world_time.ensure_progressive_world_time(
         copy.deepcopy(state_changes),
-        previous_time,
-        user_input="attack the bandit",
         is_god_mode=False,
     )
 
-    new_time = updated["world_data"]["world_time"]
-    assert new_time["second"] > previous_time["second"]
-    assert new_time["minute"] == previous_time["minute"]
+    assert updated["world_data"]["world_time"] == {
+        "year": 2025,
+        "month": 3,
+        "day": 15,
+        "hour": 10,
+        "minute": 45,
+        "second": 30,
+        "microsecond": 123456,
+    }
 
 
-def test_story_actions_roll_over_minutes():
-    previous_time = _base_time(second=59, minute=12)
-    state_changes = {"world_data": {}}
-
-    updated = world_time.ensure_progressive_world_time(
-        copy.deepcopy(state_changes),
-        previous_time,
-        user_input="attack the bandit",
-        is_god_mode=False,
-    )
-
-    new_time = updated["world_data"]["world_time"]
-    assert new_time["minute"] == 13
-    assert new_time["second"] == 0
-
-
-def test_preserves_llm_supplied_world_time():
-    supplied_time = _base_time(second=42, microsecond=123)
+def test_normalizes_microsecond_field_to_int():
+    supplied_time = _base_time(second=42, microsecond="123")
     state_changes = {"world_data": {"world_time": supplied_time}}
 
     updated = world_time.ensure_progressive_world_time(
         copy.deepcopy(state_changes),
-        _base_time(),
-        user_input="advance the plot",
         is_god_mode=False,
     )
 
-    assert updated["world_data"]["world_time"] == supplied_time
     assert updated["world_data"]["world_time"]["microsecond"] == 123

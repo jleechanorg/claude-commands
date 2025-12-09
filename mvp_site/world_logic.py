@@ -757,11 +757,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # structured world_time object expected by the engine.
         state_changes = _apply_timestamp_to_world_time(state_changes)
 
-        # Ensure time always advances, even when the model omits world_time.
+        # Normalize any world_time values without inventing new timestamps; the
+        # LLM remains responsible for choosing timeline values.
         state_changes = world_time.ensure_progressive_world_time(
             state_changes,
-            old_world_time,
-            user_input=original_user_input,
             is_god_mode=is_god_mode,
         )
         new_world_time = state_changes.get("world_data", {}).get("world_time")

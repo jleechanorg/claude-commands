@@ -344,7 +344,7 @@ When player uses think/plan/consider/strategize/options keywords and you generat
 | Quick action (look around, check item) | +10-30 seconds |
 | Scene transition | +5-15 minutes |
 
-If you ever omit `world_time`, the engine will auto-advance the timeline (think/plan = +1 microsecond, story actions = at least a few seconds). Always provide `world_data.timestamp_iso` so the session header and backward-time checks reflect your intended calendar and era.
+If you omit `world_time`, the engine will keep the existing timeline unchanged. Always provide `world_data.timestamp_iso` so the session header and backward-time checks reflect your intended calendar and era.
 
 ### Updated World Time Object (with Microseconds)
 

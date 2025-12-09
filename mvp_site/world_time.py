@@ -33,10 +33,6 @@ MONTH_MAP = {
     "dec": 12,
 }
 
-THINK_KEYWORDS = ("think", "plan", "consider", "strategize", "options")
-THINK_MICROSECOND_INCREMENT = 1
-ACTION_MIN_SECOND_INCREMENT = 1
-
 
 def _safe_int(value: Any) -> int:
     try:
@@ -192,52 +188,24 @@ def format_world_time_for_prompt(world_time: dict[str, Any] | None) -> str:
     return f"{year} DR, {month} {day}, {time_str}"
 
 
-def _looks_like_think_request(user_input: str) -> bool:
-    lowered = (user_input or "").lower()
-    return any(keyword in lowered for keyword in THINK_KEYWORDS)
-
-
 def _with_default_microsecond(world_time: dict[str, Any]) -> dict[str, Any]:
     updated = deepcopy(world_time)
-    updated.setdefault("microsecond", 0)
+    updated["microsecond"] = _safe_int(updated.get("microsecond", 0))
     return updated
-
-
-def _add_elapsed_seconds(world_time: dict[str, Any], seconds: int) -> dict[str, Any]:
-    """Add elapsed seconds while preserving the provided month/year context.
-
-    This helper intentionally limits normalization to hours/minutes/seconds and
-    rolls into the ``day`` field only. Campaign calendars vary, so month/year
-    rollover is left to upstream systems that understand the active calendar.
-    """
-
-    time_copy = _with_default_microsecond(world_time)
-
-    day = _safe_int(time_copy.get("day", 0))
-    hour = _safe_int(time_copy.get("hour", 0))
-    minute = _safe_int(time_copy.get("minute", 0))
-    second = _safe_int(time_copy.get("second", 0))
-
-    total_seconds = hour * 3600 + minute * 60 + second + max(seconds, 0)
-    extra_days, remainder = divmod(total_seconds, 86400)
-    new_hour, remainder = divmod(remainder, 3600)
-    new_minute, new_second = divmod(remainder, 60)
-
-    time_copy["day"] = day + extra_days
-    time_copy["hour"] = new_hour
-    time_copy["minute"] = new_minute
-    time_copy["second"] = new_second
-    return time_copy
 
 
 def ensure_progressive_world_time(
     state_changes: dict[str, Any],
-    previous_world_time: dict[str, Any] | None,
     *,
-    user_input: str,
     is_god_mode: bool,
 ) -> dict[str, Any]:
-    """Guarantee world_time exists and advances when absent from model output."""
+    """Normalize world_time without inferring or advancing time.
+
+    The LLM is authoritative for timeline control. When the model supplies a
+    timestamp string, we parse it; when it supplies a structured world_time, we
+    normalize the microsecond field. If world_time is missing or empty, we leave
+    it untouched.
+    """
 
     if is_god_mode:
         return state_changes
@@ -249,33 +217,14 @@ def ensure_progressive_world_time(
         parsed_str = parse_timestamp_to_world_time(candidate_time)
         if parsed_str:
             world_data["world_time"] = parsed_str
-            return state_changes
-
-    if isinstance(candidate_time, dict) and candidate_time:
-        normalized_candidate = _with_default_microsecond(candidate_time)
-        if previous_world_time:
-            previous_default = _with_default_microsecond(previous_world_time)
-            if normalized_candidate == previous_default:
-                candidate_time = None
-            else:
-                world_data["world_time"] = normalized_candidate
-                return state_changes
         else:
-            world_data["world_time"] = normalized_candidate
-            return state_changes
-
-    if not previous_world_time:
+            world_data.pop("world_time", None)
         return state_changes
 
-    inferred_time = _with_default_microsecond(previous_world_time)
-    if _looks_like_think_request(user_input):
-        micro = inferred_time.get("microsecond", 0) + THINK_MICROSECOND_INCREMENT
-        extra_seconds, normalized_micro = divmod(max(micro, 0), 1_000_000)
-        inferred_time["microsecond"] = normalized_micro
-        if extra_seconds:
-            inferred_time = _add_elapsed_seconds(inferred_time, extra_seconds)
-    else:
-        inferred_time = _add_elapsed_seconds(inferred_time, ACTION_MIN_SECOND_INCREMENT)
+    if isinstance(candidate_time, dict):
+        world_data["world_time"] = _with_default_microsecond(candidate_time)
+        return state_changes
 
-    world_data["world_time"] = inferred_time
+    # If the model omitted world_time entirely, leave it unchanged.
+    world_data.pop("world_time", None)
     return state_changes
