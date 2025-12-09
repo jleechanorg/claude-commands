@@ -1435,97 +1435,35 @@ vulture . --min-confidence 80 --exclude="*/venv/*,*/tests/*"
 
 ## 🔍 EVIDENCE STANDARD OF PROOF (December 2025)
 
-### The Problem: Anecdotal vs Auditable Evidence
-
-When claiming a fix works, there's a spectrum of evidence quality:
-
-| Level | Evidence Type | Auditability | Risk |
-|-------|--------------|--------------|------|
-| 1 | "I ran it and it worked" | None | High - can't verify |
-| 2 | Log snippets in chat | Low - no source file | Medium |
-| 3 | Saved artifacts + commands | High - reproducible | Low |
-| 4 | Automated tests + CI | Very High | Very Low |
-
-### Key Principles
-
-#### 1. Save Artifacts, Not Just Observations
-```bash
-# BAD: Just claim it worked
-"S1 returned narrative_len=1531"
-
-# GOOD: Save the actual response
-curl ... > /tmp/evidence/s1_response.json
-cat /tmp/evidence/s1_response.json | jq '.result.narrative_len'
-```
-**Why:** Artifacts can be re-examined; verbal claims cannot.
-
-#### 2. Document Repeatable Commands
-```bash
-# Include the exact command anyone can run
-curl -s -X POST https://service-url.run.app/endpoint \
-  -H "Content-Type: application/json" \
-  -d '{"param": "value"}'
-```
-**Why:** Reproducibility is the gold standard of proof.
-
-#### 3. Capture Wrong Hypotheses Too
-```
-# Document what you ruled out
-entity_tracking was 47tk, NOT the hypothesized 40K
-timeline_log is NOT serialized in LLMRequest (flag = False)
-```
-**Why:** Prevents future debugging from repeating dead ends.
-
-#### 4. Verify Infrastructure Before Debugging Code
-```bash
-# FIRST: Is the service even reachable?
-curl -s https://service/health
-
-# THEN: Debug the logic
-```
-**Why:** "S1 is down" might just be "wrong URL" - always verify basics first.
-
-#### 5. Test Twice for Transient Issues
-```
-# If a test fails once, try again before assuming code bug
-Test 1: narrative_len=0 (fail)
-Test 2: narrative_len=1531 (success)
-Conclusion: Transient API issue, not code bug
-```
-**Why:** Transient failures ≠ systematic bugs.
-
-### Implementation Pattern
-
-When claiming any fix works:
-
-1. **Save the response artifact** to a predictable path
-2. **Document the exact command** used to generate it
-3. **Log token/metric breakdowns** with structured format
-4. **Compare before/after** with concrete numbers
-5. **Create tracking items** (beads) to force explicit closure
-
-### Anti-Patterns to Avoid
-
-| Anti-Pattern | Problem | Better Approach |
-|--------------|---------|-----------------|
-| "It works now" | No proof | Save JSON response |
-| "Logs show 30K tokens" | No source | Screenshot or grep command |
-| "S1 is down" | Unverified | Check health endpoint first |
-| "Fixed the bug" | No measurement | Before/after token counts |
-| "Closing the bead" | No evidence | Attach artifact or command |
-
-### The Meta-Rule
-
+### Core Principle
 **Claim validity = reproducibility × artifacts × documentation**
 
-A fix that "works because I saw it work" is weaker than a fix that "works because here's the saved response, here's the command to reproduce it, and here's why the old hypothesis was wrong."
+Evidence quality spectrum:
+1. "I ran it and it worked" - None (can't verify)
+2. Log snippets in chat - Low (no source file)
+3. Saved artifacts + commands - High (reproducible)
+4. Automated tests + CI - Very High
 
-### Practical Checklist Before Claiming Success
+### Key Practices
 
-- [ ] Response saved to file (not just described in chat)
+**Save Artifacts**: `curl ... > /tmp/evidence/response.json` (not just verbal claims)
+**Document Commands**: Include exact repeatable commands with full curl syntax
+**Capture Dead Ends**: Document ruled-out hypotheses to prevent future repeats
+**Verify Infrastructure First**: Check health endpoints before debugging logic
+**Test Twice**: Transient failures ≠ systematic bugs
+
+### Anti-Patterns
+- "It works now" → Save JSON response
+- "Logs show 30K tokens" → Screenshot or grep command
+- "S1 is down" → Check health endpoint first
+- "Fixed the bug" → Before/after token counts
+- "Closing the bead" → Attach artifact or command
+
+### Checklist Before Claiming Success
+- [ ] Response saved to file
 - [ ] Curl/command documented and repeatable
-- [ ] Token/metric measurements logged with structure
+- [ ] Token/metric measurements logged
 - [ ] Before/after comparison with numbers
-- [ ] Wrong hypotheses documented (what you ruled out)
-- [ ] Infrastructure verified (correct URLs, services healthy)
+- [ ] Wrong hypotheses documented
+- [ ] Infrastructure verified (URLs, services healthy)
 - [ ] Multiple runs if failure was intermittent
