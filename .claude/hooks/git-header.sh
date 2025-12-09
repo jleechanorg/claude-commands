@@ -116,15 +116,37 @@ else
     # Detect by checking mtime of remote tracking ref (updated on push)
     recent_push=false
     if [ "$remote" != "no upstream" ]; then
-        remote_branch="${remote#origin/}"
-        ref_file="$git_dir/refs/remotes/origin/$remote_branch"
+        # Parse remote name and branch from upstream ref (e.g., "origin/main" or "upstream/feature")
+        # Handle any remote name, not just "origin"
+        remote_name="${remote%%/*}"
+        remote_branch="${remote#*/}"
+        ref_file="$git_dir/refs/remotes/$remote_name/$remote_branch"
 
-        # Also check packed-refs as refs may be packed
+        # Check unpacked ref file first
         if [ -f "$ref_file" ]; then
             remote_ref_mtime=$(get_mtime "$ref_file")
-            push_age=$((current_time - remote_ref_mtime))
-            if [ "$push_age" -lt 60 ]; then
-                recent_push=true
+            # Explicitly check for mtime extraction failure (returns "0" or empty)
+            # "0" means epoch time which indicates extraction failed
+            if [ -n "$remote_ref_mtime" ] && [ "$remote_ref_mtime" != "0" ]; then
+                push_age=$((current_time - remote_ref_mtime))
+                if [ "$push_age" -lt 60 ]; then
+                    recent_push=true
+                fi
+            fi
+        fi
+
+        # Fallback: check packed-refs if unpacked ref not found or mtime extraction failed
+        # Modern git may pack refs into .git/packed-refs without updating individual file mtimes
+        if [ "$recent_push" = false ]; then
+            packed_refs_file="$git_dir/packed-refs"
+            if [ -f "$packed_refs_file" ]; then
+                packed_refs_mtime=$(get_mtime "$packed_refs_file")
+                if [ -n "$packed_refs_mtime" ] && [ "$packed_refs_mtime" != "0" ]; then
+                    packed_push_age=$((current_time - packed_refs_mtime))
+                    if [ "$packed_push_age" -lt 60 ]; then
+                        recent_push=true
+                    fi
+                fi
             fi
         fi
     fi
