@@ -585,17 +585,21 @@ class JleechanorgPRMonitor:
         # Get current PR state including commit SHA
         head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
         head_commit_details = None
+        # Flag to bypass skip checks when new bot comments require attention
+        force_process_due_to_bot_comments = False
+
         if head_sha:
             head_commit_details = self._get_head_commit_details(repo_full, pr_number, head_sha)
             if head_commit_details and self._is_head_commit_from_codex(head_commit_details):
                 # Check if there are new bot comments that need attention
                 if self._has_new_bot_comments_since_codex(comments):
                     self.logger.info(
-                        "🤖 Head commit %s for %s#%s is from Codex, but new bot comments detected - proceeding",
+                        "🤖 Head commit %s for %s#%s is from Codex, but new bot comments detected - forcing re-run",
                         head_sha[:8],
                         repo_full,
                         pr_number,
                     )
+                    force_process_due_to_bot_comments = True
                 else:
                     self.logger.debug(
                         "🆔 Head commit %s for %s#%s already attributed to Codex",
@@ -610,7 +614,8 @@ class JleechanorgPRMonitor:
             self.logger.warning(
                 f"⚠️ Could not determine commit SHA for PR #{pr_number}; proceeding without marker gating"
             )
-        else:
+        elif not force_process_due_to_bot_comments:
+            # Only apply skip checks if we're not forcing a re-run due to new bot comments
             # Check if we should skip this PR based on commit-based tracking
             if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
                 self.logger.info(f"⏭️ Skipping PR #{pr_number} - already processed this commit")
