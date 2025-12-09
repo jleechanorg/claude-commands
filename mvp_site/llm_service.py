@@ -216,58 +216,17 @@ OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output to
 # - entity_specific_instructions: ~1500-2000 tokens (per-turn instructions)
 # - entity_tracking_instruction: ~1000-1500 tokens (tracking rules)
 # NOTE: timeline_log text is constructed for diagnostics/entity instructions but is NOT
-# serialized into the structured LLMRequest payload. If serialization is ever enabled,
-# TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST must be flipped and budgeting adjusted.
+# serialized into the structured LLMRequest payload.
 ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
 
-# Timeline log handling
-# The structured LLMRequest path serializes only `story_history` (no timeline log).
-# The duplication factor remains available as a guardrail for any prompt path that
-# explicitly serializes timeline_log text alongside story_history. Prompt builders must
-# flip TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST to True and update docs/tests if they
-# start sending the timeline log string again.
-TIMELINE_LOG_DUPLICATION_FACTOR: float = 2.05
-TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST: bool = False
-
 # Entity tiering configuration for LRU-style token reduction
-# Reduces entity_tracking from ~40K tokens to ~1K tokens by:
+# Caps entity_tracking growth for campaigns with many NPCs by:
 # 1. Only including recently-active entities (mentioned in last N turns)
 # 2. Trimming fields to essential info only (name, role, status, hp)
+# Note: Typical campaigns have ~50-200 tokens; this guards against edge cases.
 ENTITY_TIER_ACTIVE_MAX: int = 5  # Max entities with essential field tracking
 ENTITY_TIER_PRESENT_MAX: int = 10  # Max entities with minimal (name+role) tracking
 ENTITY_LOOKBACK_TURNS: int = 5  # Turns to scan for recent entity mentions
-
-
-def _apply_timeline_log_duplication_guard(
-    available_story_tokens_raw: int, include_timeline_log_in_prompt: bool
-) -> tuple[int, str]:
-    """Apply the duplication guard only when timeline_log is serialized.
-
-    Args:
-        available_story_tokens_raw: Story tokens available before duplication check.
-        include_timeline_log_in_prompt: Whether the outgoing request will contain
-            a timeline_log string alongside story_history text.
-
-    Returns:
-        tuple[int, str]: (Adjusted story token budget, explanation note)
-    """
-
-    if include_timeline_log_in_prompt:
-        adjusted_budget = int(
-            available_story_tokens_raw / TIMELINE_LOG_DUPLICATION_FACTOR
-        )
-        note = (
-            "timeline_log included; divided by duplication factor "
-            f"{TIMELINE_LOG_DUPLICATION_FACTOR}"
-        )
-    else:
-        adjusted_budget = available_story_tokens_raw
-        note = (
-            "timeline_log not serialized in structured LLMRequest; no duplication"
-            " factor applied"
-        )
-
-    return adjusted_budget, note
 
 
 def _extract_recently_mentioned_entities(
@@ -411,7 +370,7 @@ def _build_trimmed_entity_tracking(
     """
     Build entity_tracking_data with tiered, trimmed entities.
 
-    Reduces token usage from ~40K to ~1K by:
+    Reduces token usage by limiting entity count and field depth:
     1. Only including recently-active and present entities
     2. Trimming fields to essentials only
 
@@ -3434,13 +3393,7 @@ def continue_story(
 
     # Use max_input_allowed from centralized budget (accounts for output reserve)
     # Then subtract scaffold tokens to get available story budget
-    available_story_tokens_raw = max(0, max_input_allowed - scaffold_tokens)
-
-    include_timeline_log_in_prompt = TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST
-    available_story_tokens, timeline_log_budget_note = _apply_timeline_log_duplication_guard(
-        available_story_tokens_raw=available_story_tokens_raw,
-        include_timeline_log_in_prompt=include_timeline_log_in_prompt,
-    )
+    available_story_tokens = max(0, max_input_allowed - scaffold_tokens)
     char_budget_for_story = available_story_tokens * 4
 
     # Calculate story context tokens
@@ -3452,7 +3405,7 @@ def continue_story(
         f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
         f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+entity_reserve:{ENTITY_TRACKING_TOKEN_RESERVE}), "
         f"output_reserve={output_token_reserve}tk ({reserve_mode}), "
-        f"story_budget={available_story_tokens}tk ({timeline_log_budget_note}), "
+        f"story_budget={available_story_tokens}tk, "
         f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
 
@@ -3524,21 +3477,6 @@ def continue_story(
             f"{entity_tracking_instruction}"
         )
 
-    # Legacy/debug-only: we still assemble the string prompt for diagnostics and
-    # future prompt-experiment branches. The structured request path below sends
-    # only the serialized LLMRequest JSON (story_history, game_state, etc.), not
-    # `full_prompt`. If timeline_log text is ever re-serialized, flip
-    # TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST and update budgeting/tests.
-    full_prompt = _build_continuation_prompt(
-        checkpoint_block,
-        core_memories_summary,
-        sequence_id_list_string,
-        serialized_game_state,
-        enhanced_entity_tracking,
-        timeline_log_string,
-        current_prompt_text,
-    )
-
     # Select appropriate model (use user preference if available, otherwise default selection)
     chosen_model: str = model_to_use
 
@@ -3548,7 +3486,7 @@ def continue_story(
         raise ValueError("user_id is required in game state for story continuation")
 
     # Build trimmed entity tracking data using LRU-style tiering
-    # This reduces entity_tracking from ~40K tokens to ~1K tokens
+    # This caps entity_tracking growth for campaigns with many NPCs
     current_location = current_game_state.world_data.get(
         "current_location_name", current_game_state.world_data.get("location", "")
     )
