@@ -6289,21 +6289,21 @@
       "extraction_order": 5668
     },
     {
-      "content": "try this one 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",
+      "content": "try this one <REDACTED_ANTHROPIC_ADMIN_KEY>",
       "timestamp": "2025-08-26T02:54:24.400Z",
       "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-backip",
       "file": "afb4dafb-a8e6-4f02-8d15-78ec18bf7d7c.jsonl",
       "conversation_id": null,
-      "dedup_key": "try this one sk-ant-admin01-0m_vcn80unmzjwhgbvjun50r-3ynxu5kiqlm0jxydmrofykja1-dc1sdqnrb2m1ynjtb4t5u",
+      "dedup_key": "try this one <redacted_anthropic_admin_key>",
       "extraction_order": 5669
     },
     {
-      "content": "<user-prompt-submit-hook>try this one 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</user-prompt-submit-hook>",
+      "content": "<user-prompt-submit-hook>try this one <REDACTED_ANTHROPIC_ADMIN_KEY></user-prompt-submit-hook>",
       "timestamp": "2025-08-26T02:54:24.573Z",
       "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-backip",
       "file": "afb4dafb-a8e6-4f02-8d15-78ec18bf7d7c.jsonl",
       "conversation_id": null,
-      "dedup_key": "<user-prompt-submit-hook>try this one sk-ant-admin01-0m_vcn80unmzjwhgbvjun50r-3ynxu5kiqlm0jxydmrofyk",
+      "dedup_key": "<user-prompt-submit-hook>try this one <redacted_anthropic_admin_key>",
       "extraction_order": 5670
     },
     {

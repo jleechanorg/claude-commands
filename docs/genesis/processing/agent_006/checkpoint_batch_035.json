@@ -1064,7 +1064,7 @@
     {
       "prompt_id": 5669,
       "timestamp": "2025-08-26T02:54:24.400Z",
-      "content_preview": "try this one sk-ant-admin01-0M_VCN80UNMzjWHGBvjun50R-3yNXu5kIqlm0JxYDMroFYkjA1-Dc1Sdqnrb2m1YNJtb4t5U...",
+      "content_preview": "try this one <REDACTED_ANTHROPIC_ADMIN_KEY>...",
       "analysis": {
         "conversation_state": {
           "previous_actions": [],
@@ -1118,7 +1118,7 @@
     {
       "prompt_id": 5670,
       "timestamp": "2025-08-26T02:54:24.573Z",
-      "content_preview": "<user-prompt-submit-hook>try this one sk-ant-admin01-0M_VCN80UNMzjWHGBvjun50R-3yNXu5kIqlm0JxYDMroFYk...",
+      "content_preview": "<user-prompt-submit-hook>try this one <REDACTED_ANTHROPIC_ADMIN_KEY>...",
       "analysis": {
         "conversation_state": {
           "previous_actions": [],
