@@ -462,6 +462,11 @@ class ClaudeCommandsExporter:
             shutil.copy2(path, destination)
             self._apply_content_filtering(str(destination))
 
+            # Fix REPO_ROOT path for scripts exported to .claude/scripts/
+            # Source scripts/ needs ".." to reach repo root
+            # Export .claude/scripts/ needs "../.." to reach repo root
+            self._fix_repo_root_path(str(destination))
+
             if destination.suffix == '.sh':
                 try:
                     os.chmod(destination, 0o755)
@@ -694,10 +699,10 @@ class ClaudeCommandsExporter:
                 content = f.read()
 
             # Replace project-specific values with placeholders
-            # Note: These are marked as examples so users know to replace them
+            # Order matters: match more specific patterns first to avoid partial matches
+            content = re.sub(r'jleechanorg/worldarchitect\.ai', '$GITHUB_REPOSITORY', content)
             content = re.sub(r'worldarchitecture-ai', '$GCP_PROJECT_ID', content)
             content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
-            content = re.sub(r'jleechanorg/worldarchitect\.ai', '$GITHUB_REPOSITORY', content)
             content = re.sub(r'jleechanorg', '$GITHUB_OWNER', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
 
@@ -724,6 +729,38 @@ class ClaudeCommandsExporter:
 
         except Exception as e:
             print(f"⚠️  Warning: Workflow filtering failed for {file_path}: {e}")
+            # Remove partially written file to avoid exporting broken workflows
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"   Removed broken workflow file: {os.path.basename(file_path)}")
+            except Exception as cleanup_error:
+                print(f"⚠️  Warning: Failed to remove broken workflow file {file_path}: {cleanup_error}")
+
+    def _fix_repo_root_path(self, file_path):
+        """Fix REPO_ROOT path calculation for scripts exported to .claude/scripts/.
+
+        Scripts from scripts/ directory use ".." to reach repo root.
+        When exported to .claude/scripts/, they need "../.." instead.
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Fix REPO_ROOT path: scripts/ uses ".." but .claude/scripts/ needs "../.."
+            # Match pattern: REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+            # Replace with: REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+            content = re.sub(
+                r'REPO_ROOT="\$\(cd "\$\{SCRIPT_DIR\}/\.\." && pwd\)"',
+                'REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"',
+                content
+            )
+
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+        except Exception as e:
+            print(f"⚠️  Warning: REPO_ROOT path fix failed for {file_path}: {e}")
 
     def _create_workflows_readme(self, workflows_dir, count):
         """Create a README.md explaining workflows are examples only."""
@@ -1337,7 +1374,7 @@ This is a filtered reference export from a working Claude Code project. Commands
 
     def _clone_repository(self):
         """Clone the target repository"""
-        print("Directory Cloning target repository...")
+        print("Cloning target repository...")
 
         # Use system PATH to find gh command with fallback for common locations
         gh_cmd = shutil.which('gh')
@@ -1346,7 +1383,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             common_paths = [
                 os.path.expanduser("~/.local/bin/gh"),  # Linux user install
                 "/usr/local/bin/gh",                    # Linux system install
-                "C:\\Users\\jnlc3\\bin\\gh",           # Windows user install
+                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Windows/Linux user bin
                 "C:\\Program Files\\GitHub CLI\\gh.exe",
                 "C:\\Program Files (x86)\\GitHub CLI\\gh.exe"
             ]
@@ -1508,6 +1545,8 @@ This is a filtered reference export from a working Claude Code project. Commands
         # Configure git user for commit (needed in clean clone)
         subprocess.run(['git', 'config', 'user.email', 'claude-export@anthropic.com'], check=True)
         subprocess.run(['git', 'config', 'user.name', 'Claude Export'], check=True)
+        # Disable commit signing (may not be configured in cloned repo)
+        subprocess.run(['git', 'config', 'commit.gpgsign', 'false'], check=True)
 
         # Add all changes with error handling
         try:
