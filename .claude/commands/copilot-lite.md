@@ -52,7 +52,7 @@ echo "🎯 Processing PR #$PR_NUMBER on $REPO (branch: $BRANCH_NAME)"
 **Action Steps:**
 Execute `/commentfetch` OR run directly:
 ```bash
-# Fetch all comments from all sources
+# Fetch all comments from all sources (human + bot)
 python3 -m .claude.commands._copilot_modules.commentfetch "$PR_NUMBER" 2>/dev/null || \
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate > "$WORK_DIR/inline_comments.json" && \
     gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate > "$WORK_DIR/issue_comments.json"
@@ -60,18 +60,29 @@ python3 -m .claude.commands._copilot_modules.commentfetch "$PR_NUMBER" 2>/dev/nu
 echo "📥 Comments fetched to $WORK_DIR/comments.json"
 ```
 
+**Important**: This fetches ALL comments including:
+- Human reviewer comments
+- Bot comments (Codex, GitHub bots, etc.)
+- Inline review comments
+- General PR conversation comments
+
 ### Phase 3: Atomic Comment Processing (CORE - LLM RESPONSIBILITY)
 
 **🚨 CRITICAL: Claude (LLM) MUST process each comment atomically:**
 
-For EACH comment in `/tmp/{branch}/comments.json`:
+For EACH comment in `/tmp/{branch}/comments.json` (including bot comments):
 
 1. **READ** the comment body and understand what is being requested
+   - **Bot comments** requesting code changes should be treated like human comments
+   - **Bot status updates** (e.g., "CI passed", "Merge conflict detected") should be SKIPPED
+
 2. **CATEGORIZE** the comment request:
    - `CRITICAL`: Security vulnerabilities, production blockers, data corruption in PR code
    - `IMPORTANT`: Performance issues, logic errors, missing validation in PR code
    - `ROUTINE`: Code style, documentation, optional refactoring suggestions
-   - **SKIP**: Comments about merge conflicts, test failures, or CI issues (not in scope)
+   - **SKIP**: Bot status updates, merge conflicts, test failures, or CI issues (not in scope)
+     - Examples to SKIP: "Merge conflict detected", "Tests failed", "CI check pending"
+     - Examples to PROCESS: "@codex please fix this bug", "Bot: This function has a security issue"
 
 3. **ATTEMPT** the fix (if applicable):
    - Read the affected file(s)
@@ -90,8 +101,10 @@ For EACH comment in `/tmp/{branch}/comments.json`:
 - **ACKNOWLEDGED**: Style suggestion noted for future consideration
 - **ALREADY IMPLEMENTED**: Code already does this (MUST show evidence)
   - MUST include: file path, line number, code snippet proving implementation
-- **SKIPPED**: Comment is about merge conflicts, test failures, or CI issues (out of scope)
+- **SKIPPED**: Comment is about merge conflicts, test failures, CI issues, or bot status updates (out of scope)
   - MUST include: brief note directing to appropriate command (/fixpr for merge conflicts)
+  - Examples: Bot status updates like "Merge conflict detected", "CI pending"
+  - **NOTE**: Bot comments requesting actual code changes should NOT be skipped - treat them like human comments
 
 ### Phase 4: Build responses.json
 
@@ -142,10 +155,23 @@ For EACH comment in `/tmp/{branch}/comments.json`:
     },
     {
       "comment_id": "2357534673",
+      "comment_author": "codex-bot",
+      "category": "IMPORTANT",
+      "response": "FIXED",
+      "action_taken": "Added null check before accessing user.name property",
+      "files_modified": ["src/auth.py:45"],
+      "commit": "abc123def",
+      "verification": "✅ Syntax valid, null pointer exception prevented",
+      "reply_text": "[AI responder] ✅ **FIXED**\n\n**Category**: IMPORTANT\n**Action**: Added null check before accessing user.name property (from @codex-bot comment)\n**Files**: src/auth.py:45\n**Commit**: abc123def\n**Verification**: ✅ Syntax valid, null pointer exception prevented",
+      "in_reply_to": null
+    },
+    {
+      "comment_id": "2357534674",
+      "comment_author": "github-actions[bot]",
       "category": "SKIP",
       "response": "SKIPPED",
-      "reason": "Comment is about merge conflicts - use /fixpr command",
-      "reply_text": "[AI responder] ⏭️ **SKIPPED**\n\n**Reason**: This comment is about merge conflicts, which is out of scope for /copilot-lite.\n**Action**: Please run `/fixpr` to resolve merge conflicts separately.",
+      "reason": "Bot status update about merge conflicts - use /fixpr command",
+      "reply_text": "[AI responder] ⏭️ **SKIPPED**\n\n**Reason**: This is a bot status update about merge conflicts, which is out of scope for /copilot-lite.\n**Action**: Please run `/fixpr` to resolve merge conflicts separately.",
       "in_reply_to": null
     }
   ]
@@ -246,24 +272,28 @@ response = "ALREADY IMPLEMENTED - branch is sanitized"
 # Only claim implemented if actual sanitization exists
 ```
 
-### Rule 4: Every Comment Gets Response
+### Rule 4: Every Comment Gets Response (Human + Bot)
 - **FIXED**: Change was made and verified
 - **NOT_DONE**: Attempted but failed (include real reason)
 - **ACKNOWLEDGED**: Style suggestion, noted
 - **ALREADY_IMPLEMENTED**: Code already does this (with evidence)
-- **SKIPPED**: Comment is about merge conflicts, test failures, or CI (out of scope)
+- **SKIPPED**: Bot status updates, merge conflicts, test failures, or CI (out of scope)
 
-**NO COMMENT LEFT BEHIND** - 100% response rate is mandatory.
+**Bot Comment Handling:**
+- Bot comments requesting code changes → Process like human comments (FIXED/NOT_DONE/etc.)
+- Bot status updates (CI, merge conflicts) → SKIPPED
+
+**NO COMMENT LEFT BEHIND** - 100% response rate is mandatory (human + bot).
 
 ## 📊 Response Categories
 
 | Response | When to Use | Required Fields |
 |----------|-------------|-----------------|
-| `FIXED` | Successfully implemented change | `action_taken`, `files_modified`, `commit`, `verification` |
-| `NOT_DONE` | Attempted but couldn't implement | `reason` (from actual failure) |
-| `ACKNOWLEDGED` | Style/non-blocking suggestion | `explanation` |
-| `ALREADY_IMPLEMENTED` | Code already has this feature | `evidence` (file, line, code snippet) |
-| `SKIPPED` | Comment about merge conflicts, tests, or CI | `reason` (brief explanation + command to use) |
+| `FIXED` | Successfully implemented change (human or bot comment) | `action_taken`, `files_modified`, `commit`, `verification` |
+| `NOT_DONE` | Attempted but couldn't implement (human or bot comment) | `reason` (from actual failure) |
+| `ACKNOWLEDGED` | Style/non-blocking suggestion (human or bot comment) | `explanation` |
+| `ALREADY_IMPLEMENTED` | Code already has this feature (human or bot comment) | `evidence` (file, line, code snippet) |
+| `SKIPPED` | Bot status updates, merge conflicts, tests, or CI | `reason` (brief explanation + command to use) |
 
 ## 🔧 Integration with Existing Commands
 
