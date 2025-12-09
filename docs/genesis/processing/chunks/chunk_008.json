@@ -7900,12 +7900,12 @@
       "extraction_order": 7834
     },
     {
-      "content": "ok add it to bashrc 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 and read it from there",
+      "content": "ok add it to bashrc <REDACTED_PERPLEXITY_KEY> and read it from there",
       "timestamp": "2025-09-11T18:48:20.626Z",
       "project": "-Users-jleechan-project-ai-universe-ai-universe",
       "file": "2e0bd5dd-f267-461b-855a-657848503980.jsonl",
       "conversation_id": null,
-      "dedup_key": "ok add it to bashrc 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 and read it from there",
+      "dedup_key": "ok add it to bashrc <redacted_perplexity_key> and read it from there",
       "extraction_order": 7835
     },
     {
@@ -8125,12 +8125,12 @@
       "extraction_order": 7859
     },
     {
-      "content": "test this key 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",
+      "content": "test this key <REDACTED_ANTHROPIC_KEY>",
       "timestamp": "2025-09-12T03:34:34.645Z",
       "project": "-Users-jleechan-project-ai-universe-ai-universe",
       "file": "2e0bd5dd-f267-461b-855a-657848503980.jsonl",
       "conversation_id": null,
-      "dedup_key": "test this key sk-ant-api03-iyjvqmbqnklv9ozdmlbmh1g27hltxjerez8smlyd3jduttwyeeharwncext2tgcm2xcp5y4v5",
+      "dedup_key": "test this key <redacted_anthropic_key>",
       "extraction_order": 7860
     },
     {

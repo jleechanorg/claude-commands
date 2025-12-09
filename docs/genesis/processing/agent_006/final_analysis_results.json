@@ -41926,7 +41926,7 @@
     {
       "prompt_id": 5667,
       "timestamp": "2025-08-26T02:53:32.281Z",
-      "content_preview": "try this one sk-ant-api03-9pB1QZuMEtaq4OY7VWmIi-dY0bUuwyavUkJg_1wHg-_no7D4_GrKWgAnYvpwqdZ1_JfEiwY9zh...",
+      "content_preview": "try this one <REDACTED_ANTHROPIC_KEY>",
       "analysis": {
         "conversation_state": {
           "previous_actions": [],
@@ -41982,7 +41982,7 @@
     {
       "prompt_id": 5668,
       "timestamp": "2025-08-26T02:53:32.427Z",
-      "content_preview": "<user-prompt-submit-hook>try this one sk-ant-api03-9pB1QZuMEtaq4OY7VWmIi-dY0bUuwyavUkJg_1wHg-_no7D4_...",
+      "content_preview": "<user-prompt-submit-hook>try this one <REDACTED_ANTHROPIC_KEY>",
       "analysis": {
         "conversation_state": {
           "previous_actions": [],
