@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-pr-automation"
-version = "0.2.5"
+version = "0.2.6"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },
@@ -35,7 +35,7 @@ keywords = [
 requires-python = ">=3.9"
 dependencies = [
     "requests>=2.25.0",
-    "jleechanorg-orchestration>=0.1.10",
+    "jleechanorg-orchestration>=0.1.11",
 ]
 
 [project.optional-dependencies]

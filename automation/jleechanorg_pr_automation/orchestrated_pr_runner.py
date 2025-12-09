@@ -172,7 +172,16 @@ def ensure_base_clone(repo_full: str) -> Path:
         )
     else:
         log(f"Refreshing base repo for {repo_full}")
-        run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        try:
+            run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        except subprocess.CalledProcessError as exc:
+            stderr_msg = exc.stderr.strip() if exc.stderr else "No stderr available"
+            log(f"Fetch failed for {repo_full}: {stderr_msg}. Re-cloning base repo.")
+            shutil.rmtree(base_dir, ignore_errors=True)
+            run_cmd(
+                ["git", "clone", f"https://github.com/{repo_full}.git", str(base_dir)],
+                timeout=CLONE_TIMEOUT,
+            )
     # Reset base clone to main to ensure clean worktrees
     try:
         run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
