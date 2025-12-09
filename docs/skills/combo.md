@@ -24842,9 +24842,9 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-  ⎿  export RUNPOD_API_KEY="rpa_FY3SLASDVUXAT90A9WDTVSF7UGHVKSZ0EXXJ892D1quw6s"
+  ⎿  export RUNPOD_API_KEY="<REDACTED_RUNPOD_API_KEY>"
 
-     export RUNPOD_API_KEY="rpa_FY3SLASDVUXAT90A9WDTVSF7UGHVKSZ0EXXJ892D1quw6s"
+     export RUNPOD_API_KEY="<REDACTED_RUNPOD_API_KEY>"
 
      export CEREBRAS_API_KEY="your_cerebras_key_here"  # Qwen Coder via Cerebras
 
@@ -25454,7 +25454,7 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-  ⎿  export RUNPOD_API_KEY="rpa_FY3SLASDVUXAT90A9WDTVSF7UGHVKSZ0EXXJ892D1quw6s"
+  ⎿  export RUNPOD_API_KEY="<REDACTED_RUNPOD_API_KEY>"
 
      export CEREBRAS_API_KEY="$CEREBRAS_API_KEY"  # Qwen Coder via Cerebras
 
