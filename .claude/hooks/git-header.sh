@@ -23,6 +23,10 @@ if [ $? -ne 0 ]; then
     exit 0
 fi
 
+# Get the common git directory (for worktrees, refs are stored in the shared directory)
+# In a normal repo, this equals git_dir. In a worktree, it points to the main repo's .git
+git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null || echo "$git_dir")
+
 # Get the root of the working tree
 git_root=$(git rev-parse --show-toplevel 2>/dev/null)
 if [ $? -ne 0 ]; then
@@ -120,7 +124,7 @@ else
         # Handle any remote name, not just "origin"
         remote_name="${remote%%/*}"
         remote_branch="${remote#*/}"
-        ref_file="$git_dir/refs/remotes/$remote_name/$remote_branch"
+        ref_file="$git_common_dir/refs/remotes/$remote_name/$remote_branch"
 
         # Check unpacked ref file first
         if [ -f "$ref_file" ]; then
@@ -138,7 +142,7 @@ else
         # Fallback: check packed-refs if unpacked ref not found or mtime extraction failed
         # Modern git may pack refs into .git/packed-refs without updating individual file mtimes
         if [ "$recent_push" = false ]; then
-            packed_refs_file="$git_dir/packed-refs"
+            packed_refs_file="$git_common_dir/packed-refs"
             if [ -f "$packed_refs_file" ]; then
                 packed_refs_mtime=$(get_mtime "$packed_refs_file")
                 if [ -n "$packed_refs_mtime" ] && [ "$packed_refs_mtime" != "0" ]; then
