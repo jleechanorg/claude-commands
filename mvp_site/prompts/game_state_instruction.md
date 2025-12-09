@@ -70,11 +70,15 @@ Every response MUST be valid JSON with this exact structure:
   - `thinking`: (string) Your tactical analysis
   - `context`: (string, **optional**) Additional context about the current scenario
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
-- `dice_rolls`: (array) **Dice rolls are PRE-COMPUTED by the backend for fairness.** When dice rolls are needed, the backend provides `dice_rolls_provided` in input. You MUST use these exact values. If you need a roll not provided, include a `dice_rolls_requested` field in your response specifying what rolls you need (e.g., `["1d20+5", "2d6+3"]`). The backend will provide results in the next turn. **Empty array [] if no dice rolls this turn.**
-  - **Attack:** `"Attack roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit)"`
-  - **Damage:** `"Damage: 1d8+3 = 6+3 = 9 slashing"`
-  - **Advantage:** `"Attack (advantage): 1d20+5 = [14, 8]+5 = 19 (took higher) vs AC 15 (Hit)"`
-  - **NEVER invent dice results** - use ONLY values from `dice_rolls_provided`
+- `dice_rolls`: (array) **Dice rolling strategy depends on model capabilities:**
+  - **Code Execution (Gemini 2.0/3.0):** Use `import random; random.randint(1, 20)` for TRUE randomness. Execute code directly.
+  - **Tool Use (Cerebras, OpenRouter):** Call `roll_dice`, `roll_attack`, `roll_skill_check` tools. Backend executes and returns results.
+  - **Pre-computed (fallback):** Use values from `dice_rolls_provided` in input. Request more via `dice_rolls_requested` field.
+  - **Format Examples:**
+    - **Attack:** `"Attack roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit)"`
+    - **Damage:** `"Damage: 1d8+3 = 6+3 = 9 slashing"`
+    - **Advantage:** `"Attack (advantage): 1d20+5 = [14, 8]+5 = 19 (took higher) vs AC 15 (Hit)"`
+  - **NEVER invent dice results** - always use code execution, tool calls, or pre-computed values
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
@@ -166,7 +170,11 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 **Attributes:** STR (power), DEX (agility/AC), CON (HP), INT (knowledge), WIS (perception), CHA (social)
 
-**Dice Rolls:** Backend provides pre-rolled values in `dice_rolls_provided`. Format: "1d20+5 = 15+5 = 20 vs DC 15 (Success)"
+**Dice Rolls (Hybrid System):**
+- **Gemini 2.0/3.0:** Use code execution - `import random; random.randint(1, 20)` for true randomness
+- **Cerebras/OpenRouter:** Use tool calls - `roll_dice("1d20+5")`, `roll_attack(...)`, etc.
+- **Fallback:** Use `dice_rolls_provided` values from input
+- **Format:** "1d20+5 = 15+5 = 20 vs DC 15 (Success)"
 
 **Core Formulas (BACKEND-COMPUTED):**
 - Modifier = (attribute - 10) ÷ 2 (rounded down) → Backend calculates

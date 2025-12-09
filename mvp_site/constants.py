@@ -53,6 +53,51 @@ PREMIUM_GEMINI_MODELS = [
     GEMINI_PREMIUM_MODEL,  # ✅ WORKS with code_execution + JSON (expensive: $2-4/M)
 ]
 
+# =============================================================================
+# MODEL CAPABILITIES FOR DICE ROLLING
+# =============================================================================
+# Models that support native code_execution WITH JSON response mode
+# These can run Python code (random.randint) directly during inference
+MODELS_WITH_CODE_EXECUTION = {
+    "gemini-2.0-flash",      # ✅ Confirmed working
+    "gemini-3-pro-preview",  # ✅ Confirmed working (preview feature)
+}
+
+# Models that support tool use / function calling
+# These require two-stage inference: LLM requests tool → we execute → send result back
+MODELS_WITH_TOOL_USE = {
+    # Cerebras models
+    "qwen-3-235b-a22b-instruct-2507",
+    "zai-glm-4.6",
+    "llama-3.3-70b",
+    # OpenRouter models (most support function calling)
+    "meta-llama/llama-3.1-70b-instruct",
+    "meta-llama/llama-3.1-405b-instruct",
+}
+
+# Models that need pre-computed dice rolls (no code_execution or tool_use)
+# Fallback: we pre-roll dice and pass values to LLM
+MODELS_PRECOMPUTE_ONLY = {
+    # Add any models here that don't support either approach
+}
+
+
+def get_dice_roll_strategy(model_name: str) -> str:
+    """
+    Determine the dice rolling strategy for a given model.
+
+    Returns:
+        'code_execution' - Model can run Python code directly
+        'tool_use' - Model supports function calling (two-stage)
+        'precompute' - Must pre-roll dice before LLM call
+    """
+    if model_name in MODELS_WITH_CODE_EXECUTION:
+        return "code_execution"
+    elif model_name in MODELS_WITH_TOOL_USE:
+        return "tool_use"
+    else:
+        return "precompute"
+
 # Gemini model mapping from user preference to full model name
 GEMINI_MODEL_MAPPING = {
     "gemini-3-pro-preview": "gemini-3-pro-preview",

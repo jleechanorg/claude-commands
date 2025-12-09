@@ -516,6 +516,103 @@ class GameState:
 # The LLM should focus on narrative; code handles math.
 # =============================================================================
 
+# =============================================================================
+# DICE ROLL TOOL DEFINITIONS (for tool use / function calling)
+# =============================================================================
+# These tool definitions are used by models that support function calling
+# (Cerebras, OpenRouter) but not native code_execution (Gemini-specific).
+# The LLM requests a tool call, we execute it, then send the result back.
+# =============================================================================
+
+DICE_ROLL_TOOLS: List[dict] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_dice",
+            "description": "Roll dice using standard notation (e.g., '1d20+5', '2d6'). "
+            "Use for ALL dice rolls to ensure true randomness.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "notation": {
+                        "type": "string",
+                        "description": "Dice notation (e.g., '1d20+5', '2d6+3')",
+                    },
+                    "purpose": {
+                        "type": "string",
+                        "description": "What this roll is for (e.g., 'attack', 'damage')",
+                    },
+                },
+                "required": ["notation"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_attack",
+            "description": "Roll a complete attack with hit check and damage if hit.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attack_modifier": {
+                        "type": "integer",
+                        "description": "Total attack bonus",
+                    },
+                    "damage_notation": {
+                        "type": "string",
+                        "description": "Damage dice (e.g., '1d8+3')",
+                    },
+                    "target_ac": {
+                        "type": "integer",
+                        "description": "Target's Armor Class",
+                    },
+                    "advantage": {"type": "boolean", "default": False},
+                    "disadvantage": {"type": "boolean", "default": False},
+                },
+                "required": ["attack_modifier", "damage_notation", "target_ac"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_skill_check",
+            "description": "Roll a skill check with modifiers.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attribute_modifier": {"type": "integer"},
+                    "proficiency_bonus": {"type": "integer"},
+                    "proficient": {"type": "boolean", "default": False},
+                    "expertise": {"type": "boolean", "default": False},
+                    "dc": {"type": "integer", "description": "Difficulty Class"},
+                    "skill_name": {"type": "string"},
+                },
+                "required": ["attribute_modifier", "proficiency_bonus", "dc"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_saving_throw",
+            "description": "Roll a saving throw.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attribute_modifier": {"type": "integer"},
+                    "proficiency_bonus": {"type": "integer"},
+                    "proficient": {"type": "boolean", "default": False},
+                    "dc": {"type": "integer"},
+                    "save_type": {"type": "string", "description": "DEX, WIS, CON, etc."},
+                },
+                "required": ["attribute_modifier", "proficiency_bonus", "dc"],
+            },
+        },
+    },
+]
+
 
 @dataclass
 class DiceRollResult:
@@ -1110,3 +1207,119 @@ def calculate_resource_depletion(
     depleted = depletion_rate * time_elapsed
     remaining = current_amount - depleted
     return max(0, remaining)
+
+
+# =============================================================================
+# TOOL EXECUTION (for two-stage inference with tool use models)
+# =============================================================================
+
+
+def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
+    """
+    Execute a dice roll tool call and return the result.
+
+    Used for models that support function calling but not code_execution
+    (e.g., Cerebras, OpenRouter). The LLM requests a tool, we execute it,
+    then send the result back in a second inference call.
+
+    Args:
+        tool_name: Name of the tool to execute
+        arguments: Tool arguments from the LLM
+
+    Returns:
+        Dict with the tool execution result
+    """
+    if tool_name == "roll_dice":
+        notation = arguments.get("notation", "1d20")
+        purpose = arguments.get("purpose", "")
+        result = roll_dice(notation)
+        return {
+            "notation": result.notation,
+            "rolls": result.individual_rolls,
+            "modifier": result.modifier,
+            "total": result.total,
+            "natural_20": result.natural_20,
+            "natural_1": result.natural_1,
+            "purpose": purpose,
+            "formatted": str(result),
+        }
+
+    elif tool_name == "roll_attack":
+        attack_mod = arguments.get("attack_modifier", 0)
+        damage_notation = arguments.get("damage_notation", "1d6")
+        target_ac = arguments.get("target_ac", 10)
+        advantage = arguments.get("advantage", False)
+        disadvantage = arguments.get("disadvantage", False)
+
+        attack = calculate_attack_roll(attack_mod, advantage, disadvantage)
+        hit = attack["total"] >= target_ac or attack["is_critical"]
+
+        result = {
+            "attack_roll": attack,
+            "target_ac": target_ac,
+            "hit": hit,
+            "critical": attack["is_critical"],
+            "fumble": attack["is_fumble"],
+        }
+
+        if hit:
+            damage = calculate_damage(damage_notation, attack["is_critical"])
+            result["damage"] = {
+                "notation": damage.notation,
+                "rolls": damage.individual_rolls,
+                "modifier": damage.modifier,
+                "total": damage.total,
+                "critical": attack["is_critical"],
+            }
+        else:
+            result["damage"] = None
+
+        return result
+
+    elif tool_name == "roll_skill_check":
+        attr_mod = arguments.get("attribute_modifier", 0)
+        prof_bonus = arguments.get("proficiency_bonus", 2)
+        proficient = arguments.get("proficient", False)
+        expertise = arguments.get("expertise", False)
+        dc = arguments.get("dc", 10)
+        skill_name = arguments.get("skill_name", "")
+
+        result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
+        success = result.total >= dc
+
+        return {
+            "skill": skill_name,
+            "roll": result.individual_rolls[0] if result.individual_rolls else 0,
+            "modifier": result.modifier,
+            "total": result.total,
+            "dc": dc,
+            "success": success,
+            "natural_20": result.natural_20,
+            "natural_1": result.natural_1,
+            "formatted": f"{skill_name}: {result} vs DC {dc} ({'Success' if success else 'Fail'})",
+        }
+
+    elif tool_name == "roll_saving_throw":
+        attr_mod = arguments.get("attribute_modifier", 0)
+        prof_bonus = arguments.get("proficiency_bonus", 2)
+        proficient = arguments.get("proficient", False)
+        dc = arguments.get("dc", 10)
+        save_type = arguments.get("save_type", "")
+
+        result = calculate_saving_throw(attr_mod, prof_bonus, proficient)
+        success = result.total >= dc
+
+        return {
+            "save_type": save_type,
+            "roll": result.individual_rolls[0] if result.individual_rolls else 0,
+            "modifier": result.modifier,
+            "total": result.total,
+            "dc": dc,
+            "success": success,
+            "natural_20": result.natural_20,
+            "natural_1": result.natural_1,
+            "formatted": f"{save_type} save: {result} vs DC {dc} ({'Success' if success else 'Fail'})",
+        }
+
+    else:
+        return {"error": f"Unknown tool: {tool_name}"}
