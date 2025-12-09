@@ -254,7 +254,9 @@ def _extract_recently_mentioned_entities(
     for turn_idx, turn in enumerate(recent_turns):
         text = turn.get("text", "").lower()
         for npc_name in npc_names:
-            if npc_name.lower() in text:
+            # Use word boundary regex to avoid "King" matching "Kingsley"
+            pattern = rf"\b{re.escape(npc_name.lower())}\b"
+            if re.search(pattern, text):
                 # Higher index = more recent = higher score
                 mentioned[npc_name] = turn_idx
 
@@ -283,20 +285,21 @@ def _tier_entities(
     """
     active_candidates: list[tuple[str, int]] = []
     present: list[str] = []
-    dormant: list[str] = []
 
     for name, data in npc_data.items():
         npc_location = data.get("current_location", data.get("location", ""))
+        # Normalize locations for comparison (strip whitespace, lowercase)
+        npc_location_normalized = npc_location.strip().lower() if npc_location else ""
+        current_location_normalized = current_location.strip().lower() if current_location else ""
 
         if name in recently_mentioned:
             # Recently mentioned - candidate for ACTIVE tier
             active_candidates.append((name, recently_mentioned[name]))
-        elif npc_location and current_location and npc_location.lower() in current_location.lower():
+        elif npc_location_normalized and current_location_normalized and (
+            npc_location_normalized == current_location_normalized
+        ):
             # In same location but not recently mentioned - PRESENT tier
             present.append(name)
-        else:
-            # Not mentioned, different location - DORMANT (excluded)
-            dormant.append(name)
 
     # Sort active by recency (higher score = more recent), take top N
     active_candidates.sort(key=lambda x: x[1], reverse=True)
@@ -304,6 +307,11 @@ def _tier_entities(
 
     # Limit present entities
     present = present[:ENTITY_TIER_PRESENT_MAX]
+
+    # Everything not ACTIVE or PRESENT is considered DORMANT (for logging only)
+    dormant = [
+        name for name in npc_data.keys() if name not in active and name not in present
+    ]
 
     return active, present, dormant
 
@@ -3481,9 +3489,11 @@ def continue_story(
     chosen_model: str = model_to_use
 
     # ONLY use LLMRequest structured JSON architecture (NO legacy fallbacks)
-    user_id_from_state = getattr(current_game_state, "user_id", None)
+    user_id_from_state = getattr(current_game_state, "user_id", None) or user_id
     if not user_id_from_state:
-        raise ValueError("user_id is required in game state for story continuation")
+        raise ValueError(
+            "user_id is required for story continuation (provide in GameState or argument)"
+        )
 
     # Build trimmed entity tracking data using LRU-style tiering
     # This caps entity_tracking growth for campaigns with many NPCs
@@ -3531,7 +3541,7 @@ def continue_story(
 
     # Strip story entries to essential fields only to reduce token bloat
     # Full entries have ~555 tokens/entry due to metadata; stripped = ~200 tokens/entry
-    ESSENTIAL_STORY_FIELDS = {"text", "actor", "mode", "turn_number"}
+    ESSENTIAL_STORY_FIELDS = {"text", "actor", "mode", "sequence_id"}
     stripped_story_context = [
         {k: v for k, v in entry.items() if k in ESSENTIAL_STORY_FIELDS}
         for entry in truncated_story_context
