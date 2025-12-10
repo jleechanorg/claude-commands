@@ -6,6 +6,11 @@ llm_service orchestration provider-agnostic.
 Supports tool use (function calling) for dice rolling when code_execution
 is not available. Uses two-stage inference: LLM requests tool -> execute locally
 -> send result back -> LLM generates final response.
+
+IMPORTANT: Uses json_schema (strict:false) instead of legacy json_object
+to prevent schema echo issues where API returns {"type": "object"} instead
+of actual content. strict:false keeps planning_block flexible for dynamic
+choice keys.
 """
 
 from __future__ import annotations
@@ -20,9 +25,74 @@ from mvp_site import logging_util
 from mvp_site.llm_providers.provider_utils import (
     ContextTooLargeError,
     check_context_too_large,
+    get_openai_json_schema_format,
 )
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
+
+
+class CerebrasSchemaEchoError(Exception):
+    """Raised when Cerebras API returns the response_format schema instead of content.
+
+    This is a retriable error - the API echoed back the schema configuration
+    instead of generating content.
+    """
+
+    pass
+
+
+def _is_schema_echo(text: str) -> bool:
+    """Check if response is a schema echo (API returning config instead of content)."""
+    if not text:
+        return False
+    stripped = text.strip()
+    # Known schema echo patterns
+    schema_echo_patterns = [
+        '{"type": "object"}',
+        '{"type":"object"}',
+        '{ "type": "object" }',
+        '{"type": "json_object"}',
+        '{"type":"json_object"}',
+    ]
+    if stripped in schema_echo_patterns:
+        return True
+    # Also check for minimal object with only "type" key
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, dict) and list(parsed.keys()) == ["type"]:
+            return True
+    except json.JSONDecodeError:
+        # Not valid JSON, so can't be a schema echo
+        pass
+    return False
+
+
+def _unwrap_nested_json(text: str) -> tuple[str, bool]:
+    """Unwrap nested JSON wrapper pattern from Cerebras API.
+
+    Cerebras sometimes wraps actual content in: {"type": "object", "json": {...actual...}}
+
+    Returns:
+        tuple: (unwrapped_content, was_unwrapped)
+    """
+    if not text:
+        return text, False
+    try:
+        parsed = json.loads(text.strip())
+        if isinstance(parsed, dict):
+            # Check for nested "json" key with actual content
+            for key in ("json", "response", "content"):
+                if key in parsed and isinstance(parsed[key], dict):
+                    inner = parsed[key]
+                    if "narrative" in inner or "entities_mentioned" in inner:
+                        logging_util.info(
+                            f"CEREBRAS_WRAPPER_UNWRAP: Extracted content from nested '{key}' wrapper"
+                        )
+                        return json.dumps(inner), True
+    except json.JSONDecodeError:
+        # If parsing fails, return the original text and indicate no unwrapping occurred
+        pass
+    return text, False
 
 
 class CerebrasResponse:
@@ -118,7 +188,9 @@ def generate_content(
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_output_tokens,
-        "response_format": {"type": "json_object"},
+        # Use json_schema with strict:false instead of legacy json_object
+        # This prevents schema echo issues where API returns {"type": "object"}
+        "response_format": get_openai_json_schema_format(),
     }
 
     # Add tools if provided (for function calling)
@@ -182,8 +254,24 @@ def generate_content(
         # If we have tool_calls but no text, use empty string (tool loop will handle)
         if text is None:
             text = ""
+        else:
+            # Check for schema echo (API returning config instead of content)
+            if _is_schema_echo(text):
+                logging_util.warning(
+                    "CEREBRAS_SCHEMA_ECHO: API returned schema config instead of content"
+                )
+                raise CerebrasSchemaEchoError(
+                    f"Cerebras API echoed schema config instead of content: {text[:100]}"
+                )
+
+            # Try to unwrap nested JSON wrapper pattern
+            text, was_unwrapped = _unwrap_nested_json(text)
+            if was_unwrapped:
+                logging_util.info("CEREBRAS_WRAPPER_FIX: Unwrapped nested JSON wrapper in response")
     except ContextTooLargeError:
         raise  # Re-raise without wrapping for proper handling upstream
+    except CerebrasSchemaEchoError:
+        raise  # Re-raise schema echo for retry handling
     except Exception as exc:  # noqa: BLE001 - defensive parsing
         raise ValueError(f"Invalid Cerebras response structure: {data}") from exc
 

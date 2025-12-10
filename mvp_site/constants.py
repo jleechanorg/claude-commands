@@ -119,7 +119,7 @@ ALLOWED_OPENROUTER_MODELS = [
     DEFAULT_OPENROUTER_MODEL,
     "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
     "z-ai/glm-4.6",  # 200K context, fast tools
-    "x-ai/grok-4.1-fast:free",  # 2M context, free until Dec 3 then $0.20/$0.50 per M
+    "x-ai/grok-4.1-fast",  # 2M context, $0.20/$0.50 per M tokens (supports json_schema)
 ]
 
 # Cerebras direct provider defaults (per Cerebras docs as of 2025-12-03)
@@ -148,7 +148,8 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "meta-llama/llama-3.1-70b-instruct": 131_072,
     "meta-llama/llama-3.1-405b-instruct": 131_072,
     "z-ai/glm-4.6": 200_000,
-    "x-ai/grok-4.1-fast:free": 2_000_000,  # Grok 4.1 Fast - 2M context
+    "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
+    "x-ai/grok-4.1-fast:free": 2_000_000,  # Free tier shares same window
     # Cerebras
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
@@ -169,7 +170,7 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "meta-llama/llama-3.1-405b-instruct": 8_192,
     # Pulled from OpenRouter model metadata (2025-12-01 curl https://openrouter.ai/api/v1/models)
     "z-ai/glm-4.6": 202_752,
-    "x-ai/grok-4.1-fast:free": 30_000,
+    "x-ai/grok-4.1-fast": 30_000,
     # Cerebras (actual limit ~64K, using conservative 32K for safety)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,

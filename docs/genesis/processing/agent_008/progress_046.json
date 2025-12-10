@@ -200,7 +200,7 @@
     },
     {
       "prompt_id": "chunk_008_prompt_903",
-      "raw_prompt": "test this key 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",
+      "raw_prompt": "test this key <REDACTED_ANTHROPIC_KEY>",
       "timestamp": "2025-09-12T03:34:34.645Z",
       "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
       "extraction_order": 7860,

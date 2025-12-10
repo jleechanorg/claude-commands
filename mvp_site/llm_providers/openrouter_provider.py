@@ -3,6 +3,9 @@
 Supports tool use (function calling) for dice rolling when code_execution
 is not available. Uses two-stage inference: LLM requests tool -> execute locally
 -> send result back -> LLM generates final response.
+
+Uses json_schema (strict:false) for models that support it (e.g., Grok).
+Other models fall back to json_object mode.
 """
 
 from __future__ import annotations
@@ -14,10 +17,18 @@ from typing import Any
 import requests
 
 from mvp_site import logging_util
+from mvp_site.llm_providers.provider_utils import get_openai_json_schema_format
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_SITE = "https://worldarchitect.ai"
 DEFAULT_TITLE = "WorldArchitect.AI"
+
+# Models that support json_schema with strict:false (dynamic choices)
+# Other models ignore strict and fall back to best-effort JSON
+MODELS_WITH_JSON_SCHEMA_SUPPORT = {
+    "x-ai/grok-4.1-fast",  # xAI direct provider - enforces schema
+    "x-ai/grok-4.1",  # Full Grok 4.1 also supports it
+}
 
 
 class OpenRouterResponse:
@@ -119,12 +130,20 @@ def generate_content(
             messages.append({"role": "system", "content": system_instruction_text})
         messages.append({"role": "user", "content": user_message})
 
+    # Use json_schema (strict:false) for models that support it
+    # Other models fall back to json_object (best-effort JSON)
+    if model_name in MODELS_WITH_JSON_SCHEMA_SUPPORT:
+        response_format = get_openai_json_schema_format()
+        logging_util.info(f"OpenRouter using json_schema (strict:false) for {model_name}")
+    else:
+        response_format = {"type": "json_object"}
+
     payload: dict[str, Any] = {
         "model": model_name,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_output_tokens,
-        "response_format": {"type": "json_object"},
+        "response_format": response_format,
     }
 
     # Add tools if provided (for function calling)

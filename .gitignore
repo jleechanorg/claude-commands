@@ -168,6 +168,9 @@ ci_logs.zip
 fresh_*.json
 temp_*.json
 
+# Generated genesis processing artifacts
+docs/genesis/processing/checkpoints/
+
 # MCP and React logs
 logs/
 logs/*.json
