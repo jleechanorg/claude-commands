@@ -95,7 +95,8 @@ execution_mode: immediate
 ## Smart Test Selection Examples:
 
 - Changes to `$PROJECT_ROOT/main.py` → Run `test_main*.py` files
-- Changes to `$PROJECT_ROOT/gemini_service.py` → Run `test_gemini*.py` files  
+- Changes to `$PROJECT_ROOT/llm_service.py` → Run `test_gemini*.py` files  
+- Changes to `$PROJECT_ROOT/llm_service.py` → Run `test_llm*.py` files  
 - Changes to frontend files → Run frontend test suite
 - Changes to > 20 files → Full test suite
 - No changes detected → Run minimal smoke test suite

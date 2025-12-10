@@ -22,13 +22,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Dict, Optional, Union
 
-# Import shared utilities
-from .utils import (
-    get_automation_limits,
-    json_manager,
-    setup_logging,
-)
-
 REAL_DATETIME = datetime
 
 # Number of characters in the ISO 8601 date prefix ("YYYY-MM-DD").
@@ -42,6 +35,13 @@ if _keyring_spec:
 else:
     keyring = None  # type: ignore
     HAS_KEYRING = False
+
+# Import shared utilities
+from .utils import (
+    get_automation_limits,
+    json_manager,
+    setup_logging,
+)
 
 
 class AutomationSafetyManager:
@@ -80,7 +80,7 @@ class AutomationSafetyManager:
 
     def _ensure_files_exist(self):
         """Initialize tracking files if they don't exist"""
-        os.makedirs(self.data_dir, exist_ok=True)
+        os.makedirs(self.data_dir, mode=0o700, exist_ok=True)
 
         if not os.path.exists(self.pr_attempts_file):
             self._write_json_file(self.pr_attempts_file, {})
@@ -607,7 +607,7 @@ class AutomationSafetyManager:
 Time: {datetime.now().isoformat()}
 System: PR Automation Safety Manager
 
-This is an automated notification from the Your Project automation system.
+This is an automated notification from the WorldArchitect.AI automation system.
 """
 
             msg.attach(MIMEText(body, "plain"))
@@ -713,8 +713,9 @@ def main():
     parser = argparse.ArgumentParser(description="Automation Safety Manager")
     parser.add_argument(
         "--data-dir",
-        default=os.path.join(os.path.expanduser("~"), ".automation_safety"),
-        help="Directory for safety data files")
+        default=os.path.expanduser("~/.automation_safety"),
+        help="Directory for safety data files",
+    )
     parser.add_argument("--check-pr", type=int, metavar="PR_NUMBER",
                         help="Check if PR can be processed")
     parser.add_argument("--record-pr", nargs=2, metavar=("PR_NUMBER", "RESULT"),
@@ -735,7 +736,7 @@ def main():
     args = parser.parse_args()
 
     # Ensure data directory exists
-    os.makedirs(args.data_dir, exist_ok=True)
+    os.makedirs(args.data_dir, mode=0o700, exist_ok=True)
 
     manager = AutomationSafetyManager(args.data_dir)
 
