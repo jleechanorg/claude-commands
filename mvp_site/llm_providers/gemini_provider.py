@@ -1,4 +1,8 @@
-"""Gemini provider implementation isolated from llm_service."""
+"""Gemini provider implementation isolated from llm_service.
+
+Uses response_json_schema for structured output enforcement.
+See: https://ai.google.dev/gemini-api/docs/structured-output
+"""
 
 from __future__ import annotations
 
@@ -9,6 +13,7 @@ from google import genai
 from google.genai import types
 
 from mvp_site import logging_util
+from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
 
 _client: genai.Client | None = None
 
@@ -64,6 +69,8 @@ def generate_json_mode_content(
         "temperature": temperature,
         "safety_settings": safety_settings,
         "response_mime_type": "application/json",
+        # Enforce NarrativeResponse schema structure (not just valid JSON syntax)
+        "response_json_schema": NARRATIVE_RESPONSE_SCHEMA,
     }
 
     if system_instruction_text:

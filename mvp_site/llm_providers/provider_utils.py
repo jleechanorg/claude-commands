@@ -3,6 +3,71 @@
 from __future__ import annotations
 
 
+# =============================================================================
+# NARRATIVE_RESPONSE_SCHEMA - Shared JSON schema for structured LLM outputs
+# =============================================================================
+# Used by: Cerebras (json_schema), Gemini (response_json_schema), OpenRouter (Grok)
+# This schema enforces the structure that NarrativeResponse expects.
+#
+# Format variations by provider:
+# - Cerebras/OpenRouter: {"type": "json_schema", "json_schema": {"schema": THIS}}
+# - Gemini: {"response_json_schema": THIS}
+# =============================================================================
+
+NARRATIVE_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "narrative": {
+            "type": "string",
+            "description": "The main narrative text describing what happens",
+        },
+        "planning_block": {
+            "type": "string",
+            "description": "Internal GM planning and analysis (shown to user)",
+        },
+        "entities_mentioned": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of entity names mentioned in the narrative",
+        },
+        "location_confirmed": {
+            "type": "string",
+            "description": "Current location name",
+        },
+        "session_header": {
+            "type": "string",
+            "description": "Session context header",
+        },
+        "dice_rolls": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of dice roll results",
+        },
+        "resources": {
+            "type": "string",
+            "description": "Resource tracking information",
+        },
+    },
+    "required": ["narrative", "planning_block", "entities_mentioned"],
+    "additionalProperties": False,
+}
+
+
+def get_openai_json_schema_format(name: str = "narrative_response") -> dict:
+    """Get schema in OpenAI/Cerebras json_schema format.
+
+    Returns the schema wrapped for use with response_format.type="json_schema"
+    """
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": name,
+            "strict": True,
+            "schema": NARRATIVE_RESPONSE_SCHEMA,
+        },
+    }
+
+
 class ContextTooLargeError(ValueError):
     """Raised when the prompt context is too large for meaningful output.
 

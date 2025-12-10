@@ -20,6 +20,7 @@ from mvp_site import logging_util
 from mvp_site.llm_providers.provider_utils import (
     ContextTooLargeError,
     check_context_too_large,
+    get_openai_json_schema_format,
 )
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
@@ -33,51 +34,6 @@ class CerebrasSchemaEchoError(Exception):
     """
 
     pass
-
-
-# NarrativeResponse JSON Schema for strict mode
-# This schema enforces the structure that NarrativeResponse expects
-NARRATIVE_RESPONSE_SCHEMA = {
-    "name": "narrative_response",
-    "strict": True,
-    "schema": {
-        "type": "object",
-        "properties": {
-            "narrative": {
-                "type": "string",
-                "description": "The main narrative text describing what happens",
-            },
-            "planning_block": {
-                "type": "string",
-                "description": "Internal GM planning and analysis (shown to user)",
-            },
-            "entities_mentioned": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of entity names mentioned in the narrative",
-            },
-            "location_confirmed": {
-                "type": "string",
-                "description": "Current location name",
-            },
-            "session_header": {
-                "type": "string",
-                "description": "Session context header",
-            },
-            "dice_rolls": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of dice roll results",
-            },
-            "resources": {
-                "type": "string",
-                "description": "Resource tracking information",
-            },
-        },
-        "required": ["narrative", "planning_block", "entities_mentioned"],
-        "additionalProperties": False,
-    },
-}
 
 
 def _is_schema_echo(text: str) -> bool:
@@ -187,10 +143,7 @@ def generate_content(
         "max_tokens": max_output_tokens,
         # Use json_schema with strict:true instead of legacy json_object
         # This prevents schema echo issues where API returns {"type": "object"}
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": NARRATIVE_RESPONSE_SCHEMA,
-        },
+        "response_format": get_openai_json_schema_format(),
     }
 
     headers = {
