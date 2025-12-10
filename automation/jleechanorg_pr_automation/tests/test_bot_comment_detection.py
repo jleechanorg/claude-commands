@@ -72,8 +72,8 @@ class TestBotCommentDetection(unittest.TestCase):
             "Should not detect bot comment that came before Codex comment",
         )
 
-    def test_no_detection_when_no_codex_comment_exists(self) -> None:
-        """Should return False when there is no Codex automation comment."""
+    def test_detects_bot_comment_without_prior_codex_comment(self) -> None:
+        """Should treat any bot comment as new when no Codex automation comment exists."""
         comments = [
             {
                 "author": {"login": "github-actions[bot]"},
@@ -87,9 +87,9 @@ class TestBotCommentDetection(unittest.TestCase):
             },
         ]
 
-        self.assertFalse(
+        self.assertTrue(
             self.monitor._has_new_bot_comments_since_codex(comments),
-            "Should return False when no Codex automation comment exists",
+            "Should treat bot comments as new when there is no prior Codex automation comment",
         )
 
     def test_excludes_codex_bot_comments(self) -> None:

@@ -1032,8 +1032,17 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         """
         last_codex_time = self._get_last_codex_automation_comment_time(comments)
 
-        # If no Codex automation comment exists, there can't be new comments "since" it
+        # If no Codex automation comment exists, treat any bot comment as new
         if not last_codex_time:
+            for comment in comments:
+                if self._is_github_bot_comment(comment):
+                    created_at = comment.get("createdAt") or comment.get("updatedAt")
+                    self.logger.debug(
+                        "🤖 Found bot comment from %s at %s with no prior Codex automation comment",
+                        self._get_comment_author_login(comment),
+                        created_at,
+                    )
+                    return True
             return False
 
         for comment in comments:
