@@ -227,40 +227,51 @@ class TestGitHeaderPRCache:
     """Tests for PR cache invalidation and recent push detection."""
 
     @pytest.fixture
-    def temp_git_repo_with_remote(self):
-        """Create a temporary git repository with a local remote configured."""
-        temp_dir = tempfile.mkdtemp()
-        os.chdir(temp_dir)
+    def make_temp_repo_with_remote(self, request, tmp_path_factory):
+        """Factory fixture that creates a temp repo with a configurable remote name."""
 
-        subprocess.run(["git", "init"], check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True)
-        subprocess.run(["git", "config", "user.name", "Test User"], check=True)
+        repos = []
 
-        with open("README.md", "w") as f:
-            f.write("# Test Repo\n")
-        subprocess.run(["git", "add", "README.md"], check=True)
-        subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
-        current_branch = (
-            subprocess.check_output(["git", "symbolic-ref", "--short", "HEAD"])
-            .decode()
-            .strip()
-        )
+        def _make(remote_name: str = "origin"):
+            temp_dir = tmp_path_factory.mktemp("repo")
+            os.chdir(temp_dir)
 
-        # Create a local bare remote and push to it so the upstream is configured
-        remote_dir = Path(temp_dir) / "remote"
-        remote_dir.mkdir()
-        subprocess.run(["git", "init", "--bare", str(remote_dir)], check=True)
-        subprocess.run(["git", "remote", "add", "origin", str(remote_dir)], check=True)
-        subprocess.run(["git", "push", "-u", "origin", current_branch], check=True)
+            subprocess.run(["git", "init"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], check=True)
 
-        # Ensure the remote tracking ref exists locally for mtime checks
-        subprocess.run(["git", "fetch", "origin"], check=True)
-        subprocess.run(["git", "branch", "--set-upstream-to", f"origin/{current_branch}"], check=True)
+            with open("README.md", "w") as f:
+                f.write("# Test Repo\n")
+            subprocess.run(["git", "add", "README.md"], check=True)
+            subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
+            current_branch = (
+                subprocess.check_output(["git", "symbolic-ref", "--short", "HEAD"])
+                .decode()
+                .strip()
+            )
 
-        yield Path(temp_dir), current_branch
+            remote_dir = Path(temp_dir) / "remote"
+            remote_dir.mkdir()
+            subprocess.run(["git", "init", "--bare", str(remote_dir)], check=True)
+            subprocess.run(["git", "remote", "add", remote_name, str(remote_dir)], check=True)
+            subprocess.run(["git", "push", "-u", remote_name, current_branch], check=True)
 
-        os.chdir("/")
-        shutil.rmtree(temp_dir, ignore_errors=True)
+            subprocess.run(["git", "fetch", remote_name], check=True)
+            subprocess.run(
+                ["git", "branch", "--set-upstream-to", f"{remote_name}/{current_branch}"],
+                check=True,
+            )
+
+            repos.append(temp_dir)
+            return Path(temp_dir), current_branch, remote_name
+
+        def cleanup():
+            os.chdir("/")
+            for repo in repos:
+                shutil.rmtree(repo, ignore_errors=True)
+
+        request.addfinalizer(cleanup)
+        return _make
 
     @pytest.fixture
     def gh_stub(self, tmp_path):
@@ -292,12 +303,12 @@ echo "called" >>"${GH_CALL_LOG}"
         return Path("/tmp") / f"git-header-pr-{commit[:8]}"
 
     def test_pr_cache_uses_cached_value_when_fresh(
-        self, temp_git_repo_with_remote, git_header_script, gh_stub
+        self, make_temp_repo_with_remote, git_header_script, gh_stub
     ):
         """Cache should prevent repeated gh calls while within PR TTL."""
 
         _script, call_log, env = gh_stub
-        repo_dir, branch_name = temp_git_repo_with_remote
+        repo_dir, branch_name, _ = make_temp_repo_with_remote()
 
         git_dir = (
             subprocess.check_output(["git", "rev-parse", "--git-common-dir"], cwd=repo_dir)
@@ -328,12 +339,12 @@ echo "called" >>"${GH_CALL_LOG}"
         assert call_log.read_text().strip() == ""
 
     def test_stale_cache_expires_and_refreshes(
-        self, temp_git_repo_with_remote, git_header_script, gh_stub
+        self, make_temp_repo_with_remote, git_header_script, gh_stub
     ):
         """Stale cache entries should be refreshed after the TTL expires."""
 
         _script, call_log, env = gh_stub
-        repo_dir, branch_name = temp_git_repo_with_remote
+        repo_dir, branch_name, _ = make_temp_repo_with_remote()
 
         # Seed cache with a stale value that would otherwise be valid
         cache_file = self._cache_file_for_repo(repo_dir)
@@ -350,6 +361,69 @@ echo "called" >>"${GH_CALL_LOG}"
 
         stdout, _, _ = run_git_header(str(git_header_script), env=env, cwd=repo_dir)
         assert "#99" in stdout
+        assert call_log.read_text().strip() == "called"
+
+    def test_recent_push_bypasses_cache_for_non_origin_remote(
+        self, make_temp_repo_with_remote, git_header_script, gh_stub
+    ):
+        """Recent push detection should ignore cache for any remote name."""
+
+        _script, call_log, env = gh_stub
+        repo_dir, branch_name, remote_name = make_temp_repo_with_remote("upstream")
+
+        cache_file = self._cache_file_for_repo(repo_dir)
+        cache_file.write_text("cached-pr")
+        os.utime(cache_file, None)
+
+        git_dir = (
+            subprocess.check_output(["git", "rev-parse", "--git-common-dir"], cwd=repo_dir)
+            .decode()
+            .strip()
+        )
+        ref_file = Path(git_dir) / "refs" / "remotes" / remote_name / branch_name
+        ref_file.parent.mkdir(parents=True, exist_ok=True)
+        ref_file.touch()
+        os.utime(ref_file, None)
+
+        env["GH_STUB_OUTPUT"] = "77 https://example.com/pr/77"
+        call_log.write_text("")
+
+        stdout, _, _ = run_git_header(str(git_header_script), env=env, cwd=repo_dir)
+        assert "#77" in stdout
+        assert call_log.read_text().strip() == "called"
+
+    def test_packed_refs_used_for_recent_push_detection(
+        self, make_temp_repo_with_remote, git_header_script, gh_stub
+    ):
+        """Packed refs mtime should trigger cache bypass when loose ref is absent."""
+
+        _script, call_log, env = gh_stub
+        repo_dir, branch_name, remote_name = make_temp_repo_with_remote()
+
+        cache_file = self._cache_file_for_repo(repo_dir)
+        cache_file.write_text("cached-pr")
+        os.utime(cache_file, None)
+
+        git_dir = (
+            subprocess.check_output(["git", "rev-parse", "--git-common-dir"], cwd=repo_dir)
+            .decode()
+            .strip()
+        )
+        packed_refs = Path(git_dir) / "packed-refs"
+
+        subprocess.run(["git", "pack-refs", "--all", "--prune"], cwd=repo_dir, check=True)
+        loose_ref = Path(git_dir) / "refs" / "remotes" / remote_name / branch_name
+        if loose_ref.exists():
+            loose_ref.unlink()
+
+        packed_refs.touch()
+        os.utime(packed_refs, None)
+
+        env["GH_STUB_OUTPUT"] = "88 https://example.com/pr/88"
+        call_log.write_text("")
+
+        stdout, _, _ = run_git_header(str(git_header_script), env=env, cwd=repo_dir)
+        assert "#88" in stdout
         assert call_log.read_text().strip() == "called"
 
 
