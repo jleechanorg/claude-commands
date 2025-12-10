@@ -34,7 +34,7 @@ PR_FIXTURES: Dict[str, Dict] = {
         "title": "Fix eligible automation path",
         "headRefName": "feature/eligible",
         "baseRefName": "main",
-        "url": "https://github.com/jleechanorg/worldarchitect.ai/pull/101",
+        "url": "https://github.com/$GITHUB_ORG/your-project.com/pull/101",
         "author": {"login": "dev-user"},
         "headRefOid": "abc1234def5678abc1234def5678abc1234def5",
         "comments": [
@@ -49,7 +49,7 @@ PR_FIXTURES: Dict[str, Dict] = {
         "title": "Pending Codex automation commit",
         "headRefName": "feature/pending",
         "baseRefName": "main",
-        "url": "https://github.com/jleechanorg/worldarchitect.ai/pull/102",
+        "url": "https://github.com/$GITHUB_ORG/your-project.com/pull/102",
         "author": {"login": "automation-bot"},
         "headRefOid": "ffeeddbcaa99887766554433221100ffeeddccbb",
         "comments": [
@@ -64,7 +64,7 @@ PR_FIXTURES: Dict[str, Dict] = {
         "title": "No codex involvement",
         "headRefName": "feature/manual",
         "baseRefName": "main",
-        "url": "https://github.com/jleechanorg/worldarchitect.ai/pull/103",
+        "url": "https://github.com/$GITHUB_ORG/your-project.com/pull/103",
         "author": {"login": "dev-two"},
         "headRefOid": "1234567890abcdef1234567890abcdef12345678",
         "comments": [

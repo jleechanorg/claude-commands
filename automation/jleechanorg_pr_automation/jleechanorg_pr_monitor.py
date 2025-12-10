@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-jleechanorg PR Monitor - Cross-Organization Automation
+$GITHUB_ORG PR Monitor - Cross-Organization Automation
 
-Discovers and processes open PRs across the jleechanorg organization by
+Discovers and processes open PRs across the $GITHUB_ORG organization by
 posting configurable automation comments with safety limits integration.
 """
 
@@ -144,22 +144,22 @@ class JleechanorgPRMonitor:
         self.wrapper_managed = os.environ.get("AUTOMATION_SAFETY_WRAPPER") == "1"
 
         # Processing history persisted to permanent location
-        self.history_base_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation" / "pr_history"
+        self.history_base_dir = Path.home() / "Library" / "Logs" / "automation" / "pr_history"
         self.history_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Organization settings
-        self.organization = "jleechanorg"
+        self.organization = "$GITHUB_ORG"
         self.base_project_dir = Path.home() / "projects"
 
         safety_data_dir = os.environ.get("AUTOMATION_SAFETY_DATA_DIR")
         if not safety_data_dir:
-            default_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
+            default_dir = Path.home() / "Library" / "Application Support" / "automation"
             default_dir.mkdir(parents=True, exist_ok=True)
             safety_data_dir = str(default_dir)
 
         self.safety_manager = AutomationSafetyManager(safety_data_dir)
 
-        self.logger.info("🏢 Initialized jleechanorg PR monitor")
+        self.logger.info("🏢 Initialized $GITHUB_ORG PR monitor")
         self.logger.info(f"📁 History storage: {self.history_base_dir}")
         self.logger.info("💬 Comment-only automation mode")
     def _get_history_file(self, repo_name: str, branch_name: str) -> Path:
@@ -292,7 +292,7 @@ class JleechanorgPRMonitor:
         actionable = []
         for pr in prs:
             repo = pr.get("repository")
-            owner = pr.get("owner", "jleechanorg")
+            owner = pr.get("owner", "$GITHUB_ORG")
             pr_number = pr.get("number")
             if not repo or pr_number is None:
                 continue
@@ -340,7 +340,7 @@ class JleechanorgPRMonitor:
             # Attempt to process the PR
             repo_name = pr.get("repository", "")
             pr_number = pr.get("number", 0)
-            repo_full = pr.get("repositoryFullName", f"jleechanorg/{repo_name}")
+            repo_full = pr.get("repositoryFullName", f"$GITHUB_ORG/{repo_name}")
 
             # Reserve a processing slot for this PR
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full):
@@ -372,7 +372,7 @@ class JleechanorgPRMonitor:
         """Process a PR by posting a comment (used by tests and enhanced monitoring)"""
         try:
             # Use the existing comment posting method
-            repo_full_name = pr_data.get("repositoryFullName", f"jleechanorg/{repo_name}")
+            repo_full_name = pr_data.get("repositoryFullName", f"$GITHUB_ORG/{repo_name}")
             result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr_data)
             # Return True only if comment was actually posted
             return result == "posted"
@@ -526,7 +526,7 @@ class JleechanorgPRMonitor:
         current_dir = Path.cwd()
         if is_git_repository(current_dir):
             # Check if this is related to the target repository
-            if repo_name.lower() in current_dir.name.lower() or "worldarchitect" in current_dir.name.lower():
+            if repo_name.lower() in current_dir.name.lower() or "your-project" in current_dir.name.lower():
                 self.logger.debug(f"🎯 Found local repo (current dir): {current_dir}")
                 return current_dir
 
@@ -1178,7 +1178,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
     def run_monitoring_cycle(self, single_repo=None, max_prs=10):
         """Run a complete monitoring cycle with actionable PR counting"""
-        self.logger.info("🚀 Starting jleechanorg PR monitoring cycle")
+        self.logger.info("🚀 Starting $GITHUB_ORG PR monitoring cycle")
 
         if not self.safety_manager.can_start_global_run():
             current_runs = self.safety_manager.get_global_runs()
@@ -1300,9 +1300,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
 
 def main():
-    """CLI interface for jleechanorg PR monitor"""
+    """CLI interface for $GITHUB_ORG PR monitor"""
 
-    parser = argparse.ArgumentParser(description="jleechanorg PR Monitor")
+    parser = argparse.ArgumentParser(description="$GITHUB_ORG PR Monitor")
     parser.add_argument("--dry-run", action="store_true",
                         help="Discover PRs but do not process them")
     parser.add_argument("--fixpr", action="store_true",

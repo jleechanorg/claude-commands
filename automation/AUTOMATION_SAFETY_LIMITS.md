@@ -57,10 +57,10 @@ COMMENT_TIMEOUT=1200    # 20 minutes per Codex comment attempt
 ### **Cron Configuration**
 ```bash
 # ENABLED (processes every 10 minutes)
-*/10 * * * * cd ~/projects/worldarchitect.ai && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
+*/10 * * * * cd ~/projects/your-project.com && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
 
 # DISABLED (commented out for safety)
-# */10 * * * * cd ~/projects/worldarchitect.ai/worktree_autofix && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
+# */10 * * * * cd ~/projects/your-project.com/worktree_autofix && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
 ```
 
 ## ⚡ **Performance Impact**
@@ -118,7 +118,7 @@ rm -rf /tmp/pr-automation-*
 ### **Manual Processing**
 ```bash
 # Run manually for specific PR
-cd ~/projects/worldarchitect.ai
+cd ~/projects/your-project.com
 ./automation/simple_pr_batch.sh
 
 # Or trigger the orchestrator to post a Codex instruction for a specific PR

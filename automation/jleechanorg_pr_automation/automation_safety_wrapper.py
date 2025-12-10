@@ -19,7 +19,7 @@ from .automation_safety_manager import AutomationSafetyManager
 
 def setup_logging() -> logging.Logger:
     """Set up logging for automation wrapper"""
-    log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
+    log_dir = Path.home() / "Library" / "Logs" / "automation"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
@@ -39,7 +39,7 @@ def main() -> int:
     logger.info("🛡️  Starting automation safety wrapper")
 
     # Data directory for safety tracking
-    data_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
+    data_dir = Path.home() / "Library" / "Application Support" / "automation"
     data_dir.mkdir(parents=True, exist_ok=True)
 
     # Initialize safety manager
@@ -63,7 +63,7 @@ def main() -> int:
             f"/{manager.global_limit}"
         )
 
-        logger.info("🚀 Executing PR automation monitor: jleechanorg_pr_automation.jleechanorg_pr_monitor")
+        logger.info("🚀 Executing PR automation monitor: $GITHUB_ORG_pr_automation.$GITHUB_ORG_pr_monitor")
 
         # Execute with environment variables for safety integration
         env = os.environ.copy()
@@ -79,7 +79,7 @@ def main() -> int:
         )
 
         result = subprocess.run(
-            [sys.executable, "-m", "jleechanorg_pr_automation.jleechanorg_pr_monitor"],
+            [sys.executable, "-m", "$GITHUB_ORG_pr_automation.$GITHUB_ORG_pr_monitor"],
             check=False, env=env,
             capture_output=True,
             text=True,
