@@ -90,6 +90,7 @@ For EACH comment in `/tmp/{branch}/comments.json` (including bot comments):
    - Verify syntax is correct
    - Commit the change with descriptive message
    - **NOTE**: Do NOT fix tests or merge conflicts - only address the specific comment request
+     - If the comment is about merge conflicts, failing tests, or CI status, categorize it as **SKIP** in Step 2 and respond with a `SKIPPED` entry (no ATTEMPT changes)
 
 4. **GENERATE** a truthful response based on ACTUAL outcome:
 
