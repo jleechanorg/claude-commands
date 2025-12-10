@@ -179,6 +179,67 @@ For EACH comment in `/tmp/{branch}/comments.json` (including bot comments):
 }
 ```
 
+#### Phase 4.5: MANDATORY VERIFICATION GATE (HARD REQUIREMENT)
+
+**🚨 CRITICAL: You CANNOT proceed to Phase 5 until this gate passes.**
+
+**Action Steps:**
+```bash
+# Get working directory
+BRANCH_NAME=$(git branch --show-current)
+SAFE_BRANCH=$(echo "$BRANCH_NAME" | tr -cd '[:alnum:]._-')
+WORK_DIR="/tmp/$SAFE_BRANCH"
+
+# Get repo info
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+PR_NUMBER=$(gh pr view --json number -q '.number')
+
+# Count ALL top-level review comments (comments that are not replies)
+TOTAL_INLINE=$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
+TOTAL_ISSUE=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq 'length')
+TOTAL=$((TOTAL_INLINE + TOTAL_ISSUE))
+echo "📊 Total top-level comments requiring response: $TOTAL"
+
+# Count comments addressed in responses.json
+ADDRESSED=$(jq '.responses | length' "$WORK_DIR/responses.json")
+echo "📋 Comments addressed in responses.json: $ADDRESSED"
+
+# HARD GATE: Assert 100% coverage
+if [ "$ADDRESSED" -ne "$TOTAL" ]; then
+    echo "❌ VERIFICATION FAILED: $ADDRESSED / $TOTAL comments addressed"
+    echo "⚠️ MISSING: $((TOTAL - ADDRESSED)) comments without responses"
+    echo ""
+    echo "🔍 Identifying missing comment IDs..."
+    # List all comment IDs from API
+    gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq -r '.[] | select(.in_reply_to_id == null) | .id' > "$WORK_DIR/all_comment_ids.txt"
+    gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq -r '.[].id' >> "$WORK_DIR/all_comment_ids.txt"
+    # List addressed comment IDs
+    jq -r '.responses[].comment_id' "$WORK_DIR/responses.json" > "$WORK_DIR/addressed_ids.txt"
+    # Find missing
+    echo "📌 Missing comment IDs (must address before proceeding):"
+    comm -23 <(sort "$WORK_DIR/all_comment_ids.txt") <(sort "$WORK_DIR/addressed_ids.txt")
+    echo ""
+    echo "🛑 STOP: Return to Phase 3 and address missing comments"
+    # DO NOT PROCEED - loop back to Phase 3
+fi
+
+# SUCCESS: Gate passed
+echo "✅ VERIFICATION PASSED: $ADDRESSED / $TOTAL (100% coverage)"
+echo "➡️ Proceeding to Phase 5..."
+```
+
+**Gate Rules:**
+1. **TOTAL** = All top-level comments (inline + issue) that are NOT replies
+2. **ADDRESSED** = Number of entries in responses.json
+3. **PASS** = ADDRESSED == TOTAL
+4. **FAIL** = Any mismatch → identify missing IDs → return to Phase 3
+
+**If Gate Fails:**
+- List all missing comment IDs
+- Return to Phase 3 and process each missing comment
+- Re-run Phase 4.5 verification
+- Repeat until 100% coverage achieved
+
 ### Phase 5: Post Responses with Threading
 
 **Action Steps:**
