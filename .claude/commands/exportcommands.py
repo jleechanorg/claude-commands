@@ -1651,6 +1651,7 @@ This is a filtered reference export from a working Claude Code project. Commands
                 claude_dir, "settings.json"
             ),  # .claude/settings.json file
             "orchestration": "orchestration",  # Goes to repo root
+            "automation": "automation",  # Goes to repo root
             "scripts": None,  # Goes to repo root within scripts/
             "workflows": "workflows",  # GitHub workflows - goes to repo root as examples
         }
@@ -1843,16 +1844,24 @@ Starting MANUAL INSTALLATION: Copy commands to .claude/commands/ and hooks to .c
     def _reset_remote_to_default(self):
         """Remove inlined token from git remote configuration"""
 
-        subprocess.run(
-            [
-                "git",
-                "remote",
-                "set-url",
-                "origin",
-                "https://github.com/jleechanorg/claude-commands.git",
-            ],
-            check=True,
-        )
+        if not getattr(self, "repo_dir", None) or not os.path.exists(self.repo_dir):
+            return
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.repo_dir)
+            subprocess.run(
+                [
+                    "git",
+                    "remote",
+                    "set-url",
+                    "origin",
+                    "https://github.com/jleechanorg/claude-commands.git",
+                ],
+                check=True,
+            )
+        finally:
+            os.chdir(original_cwd)
 
     def _create_pull_request(self):
         """Create pull request using GitHub API"""
@@ -1961,6 +1970,13 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(f"📂 Partial export may be available at: {self.export_dir}")
         if hasattr(self, "repo_dir") and os.path.exists(self.repo_dir):
             print(f"🗂️  Repository clone: {self.repo_dir}")
+            if self.github_token:
+                try:
+                    self._reset_remote_to_default()
+                except subprocess.CalledProcessError:
+                    print(
+                        "⚠️  Warning: Could not reset remote to tokenless URL during error handling"
+                    )
         print("\n🔧 Debug information:")
         print(f"   Project root: {self.project_root}")
         print(f"   GitHub token set: {'Yes' if self.github_token else 'No'}")
