@@ -58,7 +58,7 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import GameState
+from mvp_site.game_state import DICE_ROLL_TOOLS, GameState
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -1412,6 +1412,20 @@ def _call_llm_api(
                 json_mode_max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
+            # Check if this model should use tool-based dice rolling
+            dice_strategy = constants.get_dice_roll_strategy(model_name)
+            if dice_strategy == "tool_use":
+                logging_util.info(
+                    f"🔍 CALL_LLM_API_OPENROUTER: Using tool loop for dice rolls (model={model_name})"
+                )
+                return openrouter_provider.generate_content_with_tool_loop(
+                    prompt_contents=prompt_contents,
+                    model_name=model_name,
+                    system_instruction_text=system_instruction_text,
+                    temperature=TEMPERATURE,
+                    max_output_tokens=safe_output_limit,
+                    tools=DICE_ROLL_TOOLS,
+                )
             return openrouter_provider.generate_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
@@ -1420,6 +1434,20 @@ def _call_llm_api(
                 max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            # Check if this model should use tool-based dice rolling
+            dice_strategy = constants.get_dice_roll_strategy(model_name)
+            if dice_strategy == "tool_use":
+                logging_util.info(
+                    f"🔍 CALL_LLM_API_CEREBRAS: Using tool loop for dice rolls (model={model_name})"
+                )
+                return cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=prompt_contents,
+                    model_name=model_name,
+                    system_instruction_text=system_instruction_text,
+                    temperature=TEMPERATURE,
+                    max_output_tokens=safe_output_limit,
+                    tools=DICE_ROLL_TOOLS,
+                )
             logging_util.info(
                 f"🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
             )

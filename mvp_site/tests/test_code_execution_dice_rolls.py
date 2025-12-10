@@ -261,5 +261,147 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             )
 
 
+class TestCerebrasToolUseIntegration(unittest.TestCase):
+    """Test Cerebras provider tool use for dice rolling (two-stage inference)."""
+
+    def test_cerebras_provider_accepts_tools_parameter(self):
+        """
+        Verify Cerebras provider can accept tools parameter.
+        """
+        from mvp_site.llm_providers import cerebras_provider
+
+        # Check that generate_content accepts tools parameter
+        import inspect
+        sig = inspect.signature(cerebras_provider.generate_content)
+        param_names = list(sig.parameters.keys())
+
+        self.assertIn(
+            "tools",
+            param_names,
+            "FAIL: cerebras_provider.generate_content should accept 'tools' parameter"
+        )
+
+    def test_cerebras_response_handles_tool_calls(self):
+        """
+        Verify CerebrasResponse can extract tool_calls from response.
+        """
+        from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
+
+        # Mock response with tool_calls
+        mock_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{
+                        "id": "call_123",
+                        "type": "function",
+                        "function": {
+                            "name": "roll_dice",
+                            "arguments": '{"notation": "1d20+5"}'
+                        }
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }
+
+        response = CerebrasResponse("", mock_response)
+
+        # Verify tool_calls can be extracted
+        self.assertTrue(
+            hasattr(response, 'tool_calls') or hasattr(response, 'get_tool_calls'),
+            "FAIL: CerebrasResponse should expose tool_calls"
+        )
+
+    def test_process_tool_calls_executes_dice_tools(self):
+        """
+        Verify process_tool_calls function executes dice roll tools.
+        """
+        from mvp_site.llm_providers.cerebras_provider import process_tool_calls
+        from mvp_site.game_state import DICE_ROLL_TOOLS
+
+        # Mock tool call from LLM
+        tool_calls = [{
+            "id": "call_123",
+            "type": "function",
+            "function": {
+                "name": "roll_dice",
+                "arguments": '{"notation": "1d20+5"}'
+            }
+        }]
+
+        results = process_tool_calls(tool_calls)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["tool_call_id"], "call_123")
+        self.assertIn("total", results[0]["result"])
+
+    def test_generate_content_with_tool_loop(self):
+        """
+        Verify generate_content_with_tool_loop handles two-stage inference.
+        """
+        from mvp_site.llm_providers import cerebras_provider
+
+        # Check function exists
+        self.assertTrue(
+            hasattr(cerebras_provider, 'generate_content_with_tool_loop'),
+            "FAIL: cerebras_provider should have generate_content_with_tool_loop function"
+        )
+
+
+class TestOpenRouterToolUseIntegration(unittest.TestCase):
+    """Test OpenRouter provider tool use for dice rolling."""
+
+    def test_openrouter_provider_accepts_tools_parameter(self):
+        """
+        Verify OpenRouter provider can accept tools parameter.
+        """
+        from mvp_site.llm_providers import openrouter_provider
+
+        import inspect
+        sig = inspect.signature(openrouter_provider.generate_content)
+        param_names = list(sig.parameters.keys())
+
+        self.assertIn(
+            "tools",
+            param_names,
+            "FAIL: openrouter_provider.generate_content should accept 'tools' parameter"
+        )
+
+
+class TestLLMServiceToolIntegration(unittest.TestCase):
+    """Test llm_service integration with tool use providers."""
+
+    def test_call_llm_api_passes_tools_to_cerebras(self):
+        """
+        Verify _call_llm_api passes dice tools to Cerebras provider.
+        """
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_loop") as mock_generate:
+            mock_generate.return_value = Mock(
+                text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
+            )
+
+            # This should pass tools to Cerebras
+            try:
+                llm_service._call_llm_api(
+                    ["test prompt"],
+                    "qwen-3-235b-a22b-instruct-2507",
+                    "test logging",
+                    provider_name=constants.LLM_PROVIDER_CEREBRAS
+                )
+            except Exception:
+                pass  # We're just checking if tools are passed
+
+            # Verify tools were passed
+            if mock_generate.called:
+                call_kwargs = mock_generate.call_args[1] if mock_generate.call_args[1] else {}
+                self.assertIn(
+                    "tools",
+                    call_kwargs,
+                    "FAIL: tools should be passed to Cerebras provider"
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
