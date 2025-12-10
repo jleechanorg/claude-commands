@@ -17,8 +17,8 @@ from .utils import (
 )
 
 __version__ = "0.1.8"
-__author__ = "jleechan"
-__email__ = "jlee@jleechan.org"
+__author__ = "$USER"
+__email__ = "<your-email@example.com>"
 
 __all__ = [
     "AutomationSafetyManager",

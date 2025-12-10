@@ -1,6 +1,6 @@
 # GitHub PR Automation System
 
-**Autonomous PR fixing and code review automation for the jleechanorg organization**
+**Autonomous PR fixing and code review automation for the $GITHUB_ORG organization**
 
 ## Overview
 
@@ -17,7 +17,7 @@ Both workflows use safety limits, commit tracking, and orchestrated AI agents to
 
 ### What It Does
 
-The @codex comment agent continuously monitors all open PRs across the jleechanorg organization and posts standardized Codex instruction comments when new commits are pushed. This enables AI assistants (@codex, @coderabbitai, @copilot, @cursor) to review and improve PRs automatically.
+The @codex comment agent continuously monitors all open PRs across the $GITHUB_ORG organization and posts standardized Codex instruction comments when new commits are pushed. This enables AI assistants (@codex, @coderabbitai, @copilot, @cursor) to review and improve PRs automatically.
 
 ### How It Works
 
@@ -25,7 +25,7 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 ┌─────────────────────────────────────────────────────────────┐
 │  1. DISCOVERY PHASE                                         │
 │  ───────────────────────────────────────────────────────────│
-│  • Scan all repositories in jleechanorg organization        │
+│  • Scan all repositories in $GITHUB_ORG organization        │
 │  • Find open PRs updated in last 24 hours                   │
 │  • Filter to actionable PRs (new commits, not drafts)       │
 └─────────────────────────────────────────────────────────────┘
@@ -90,16 +90,16 @@ Push any commits needed to remote so the PR is updated.
 
 ```bash
 # Monitor all repositories (posts comments to actionable PRs)
-jleechanorg-pr-monitor
+$GITHUB_ORG-pr-monitor
 
 # Monitor specific repository
-jleechanorg-pr-monitor --single-repo worldarchitect.ai
+$GITHUB_ORG-pr-monitor --single-repo your-project.com
 
 # Process specific PR
-jleechanorg-pr-monitor --target-pr 123 --target-repo jleechanorg/worldarchitect.ai
+$GITHUB_ORG-pr-monitor --target-pr 123 --target-repo $GITHUB_ORG/your-project.com
 
 # Dry run (discovery only, no comments)
-jleechanorg-pr-monitor --dry-run
+$GITHUB_ORG-pr-monitor --dry-run
 
 # Check safety status
 automation-safety-cli status
@@ -230,11 +230,11 @@ python3 -m orchestrated_pr_runner
 python3 -m orchestrated_pr_runner --cutoff-hours 48 --max-prs 10
 
 # Use different AI CLI
-python3 -m jleechanorg_pr_automation.orchestrated_pr_runner --agent-cli codex
-python3 -m jleechanorg_pr_automation.orchestrated_pr_runner --agent-cli gemini
+python3 -m $GITHUB_ORG_pr_automation.orchestrated_pr_runner --agent-cli codex
+python3 -m $GITHUB_ORG_pr_automation.orchestrated_pr_runner --agent-cli gemini
 
 # List actionable PRs without fixing
-jleechanorg-pr-monitor --fixpr --dry-run
+$GITHUB_ORG-pr-monitor --fixpr --dry-run
 ```
 
 #### Slash Command Integration
@@ -254,7 +254,7 @@ jleechanorg-pr-monitor --fixpr --dry-run
 
 ```bash
 # Monitor and fix in one command
-jleechanorg-pr-monitor --fixpr --max-prs 5 --agent-cli claude
+$GITHUB_ORG-pr-monitor --fixpr --max-prs 5 --agent-cli claude
 ```
 
 ### Agent CLI Options
@@ -282,7 +282,7 @@ python3 -m orchestrated_pr_runner
 ```
 /tmp/
 ├── pr-orch-bases/              # Base clones (shared)
-│   ├── worldarchitect.ai/
+│   ├── your-project.com/
 │   └── ai_universe/
 └── {repo}/                     # PR workspaces (isolated)
     ├── pr-123-fix-auth/
@@ -307,20 +307,20 @@ python3 -m orchestrated_pr_runner
 
 ```bash
 # Basic installation
-pip install jleechanorg-pr-automation
+pip install $GITHUB_ORG-pr-automation
 
 # With email notifications
-pip install jleechanorg-pr-automation[email]
+pip install $GITHUB_ORG-pr-automation[email]
 
 # For development
-pip install jleechanorg-pr-automation[dev]
+pip install $GITHUB_ORG-pr-automation[dev]
 ```
 
 ### From Source (Development)
 
 ```bash
 # Clone and install from repository
-cd ~/worldarchitect.ai/automation
+cd ~/your-project.com/automation
 pip install -e .
 
 # With optional dependencies
@@ -331,13 +331,13 @@ pip install -e .[email,dev]
 
 ```bash
 # Install launchd service
-./automation/install_jleechanorg_automation.sh
+./automation/install_$GITHUB_ORG_automation.sh
 
 # Verify service
-launchctl list | grep jleechanorg
+launchctl list | grep $GITHUB_ORG
 
 # View logs
-tail -f ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
+tail -f ~/Library/Logs/automation/$GITHUB_ORG_pr_monitor.log
 ```
 
 ---
@@ -354,10 +354,10 @@ Both workflows use `AutomationSafetyManager` for rate limiting:
 ### Safety Data Storage
 
 ```
-~/Library/Application Support/worldarchitect-automation/
+~/Library/Application Support/automation/
 ├── automation_safety_data.json    # Attempt tracking
 └── pr_history/                     # Commit tracking per repo
-    ├── worldarchitect.ai/
+    ├── your-project.com/
     │   ├── main.json
     │   └── feature-branch.json
     └── ai_universe/
@@ -374,14 +374,14 @@ automation-safety-cli status
 # Global runs: 23/50
 # Requires approval: False
 # PR attempts:
-#   worldarchitect.ai-1634: 2/5 (OK)
+#   your-project.com-1634: 2/5 (OK)
 #   ai_universe-42: 5/5 (BLOCKED)
 
 # Clear all data (reset limits)
 automation-safety-cli clear
 
 # Check specific PR
-automation-safety-cli check-pr 123 --repo worldarchitect.ai
+automation-safety-cli check-pr 123 --repo your-project.com
 ```
 
 ---
@@ -441,10 +441,10 @@ export GEMINI_MODEL="gemini-3-pro-preview"
 pytest
 
 # With coverage
-pytest --cov=jleechanorg_pr_automation
+pytest --cov=$GITHUB_ORG_pr_automation
 
 # Specific test suite
-pytest automation/jleechanorg_pr_automation/tests/test_pr_filtering_matrix.py
+pytest automation/$GITHUB_ORG_pr_automation/tests/test_pr_filtering_matrix.py
 ```
 
 ### Code Quality
@@ -455,7 +455,7 @@ black .
 ruff check .
 
 # Type checking
-mypy jleechanorg_pr_automation
+mypy $GITHUB_ORG_pr_automation
 ```
 
 ---
@@ -470,13 +470,13 @@ mypy jleechanorg_pr_automation
 gh auth status
 
 # Verify organization access
-gh repo list jleechanorg --limit 5
+gh repo list $GITHUB_ORG --limit 5
 ```
 
 **Issue**: Duplicate comments on same commit
 ```bash
 # Check commit marker detection
-python3 -c "from jleechanorg_pr_automation.check_codex_comment import decide; print(decide('<!-- codex-automation-commit:', '-->'))"
+python3 -c "from $GITHUB_ORG_pr_automation.check_codex_comment import decide; print(decide('<!-- codex-automation-commit:', '-->'))"
 ```
 
 ### FixPR Workflow
@@ -484,11 +484,11 @@ python3 -c "from jleechanorg_pr_automation.check_codex_comment import decide; pr
 **Issue**: Worktree creation fails
 ```bash
 # Clean stale worktrees
-cd ~/worldarchitect.ai
+cd ~/your-project.com
 git worktree prune
 
 # Remove old workspace
-rm -rf /tmp/worldarchitect.ai/pr-*
+rm -rf /tmp/your-project.com/pr-*
 ```
 
 **Issue**: Agent not spawning

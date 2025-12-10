@@ -568,8 +568,8 @@ class AutomationSafetyManager:
 
         if HAS_KEYRING:
             try:
-                username = keyring.get_password("worldarchitect-automation", "smtp_username")
-                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+                username = keyring.get_password("automation", "smtp_username")
+                password = keyring.get_password("automation", "smtp_password")
             except Exception:
                 self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
                 username = None

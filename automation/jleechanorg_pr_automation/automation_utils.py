@@ -37,8 +37,8 @@ class AutomationUtils:
     DEFAULT_CONFIG = {
         "SMTP_SERVER": "smtp.gmail.com",
         "SMTP_PORT": 587,
-        "LOG_DIR": "~/Library/Logs/worldarchitect-automation",
-        "DATA_DIR": "~/Library/Application Support/worldarchitect-automation",
+        "LOG_DIR": "~/Library/Logs/automation",
+        "DATA_DIR": "~/Library/Application Support/automation",
         "MAX_SUBPROCESS_TIMEOUT": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300")),  # 5 minutes (configurable)
         "EMAIL_SUBJECT_PREFIX": "[WorldArchitect Automation]"
     }
@@ -108,8 +108,8 @@ class AutomationUtils:
 
         if KEYRING_AVAILABLE:
             try:
-                username = keyring.get_password("worldarchitect-automation", "smtp_username")
-                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+                username = keyring.get_password("automation", "smtp_username")
+                password = keyring.get_password("automation", "smtp_password")
             except Exception:
                 pass  # Fall back to environment variables
 

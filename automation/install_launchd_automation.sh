@@ -6,9 +6,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-PLIST_SOURCE="$SCRIPT_DIR/com.worldarchitect.pr-automation.plist"
-PLIST_DEST="$HOME/Library/LaunchAgents/com.worldarchitect.pr-automation.plist"
-LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+PLIST_SOURCE="$SCRIPT_DIR/com.your-project.pr-automation.plist"
+PLIST_DEST="$HOME/Library/LaunchAgents/com.your-project.pr-automation.plist"
+LOG_DIR="$HOME/Library/Logs/automation"
 
 echo "🚀 Installing WorldArchitect PR Automation for macOS"
 echo "   Project: $PROJECT_ROOT"
@@ -20,11 +20,11 @@ echo "📁 Created log directory: $LOG_DIR"
 
 # Update plist with correct paths
 echo "🔧 Updating plist paths..."
-sed "s|/Users/jleechan/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
+sed "s|/Users/\$USER/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
 
 # Update username in plist
 CURRENT_USER=$(whoami)
-sed -i '' "s|jleechan|$CURRENT_USER|g" "$PLIST_DEST"
+sed -i '' "s|\$USER|$CURRENT_USER|g" "$PLIST_DEST"
 
 echo "📄 Installed plist: $PLIST_DEST"
 
@@ -35,7 +35,7 @@ chmod +x "$SCRIPT_DIR/simple_pr_batch.sh"
 echo "🔐 Made scripts executable"
 
 # Unload existing job if running
-if launchctl list | grep -q "com.worldarchitect.pr-automation"; then
+if launchctl list | grep -q "com.your-project.pr-automation"; then
     echo "🔄 Unloading existing automation job..."
     launchctl unload "$PLIST_DEST" 2>/dev/null || true
 fi
@@ -45,7 +45,7 @@ echo "⚡ Loading automation job..."
 launchctl load "$PLIST_DEST"
 
 # Verify it's loaded
-if launchctl list | grep -q "com.worldarchitect.pr-automation"; then
+if launchctl list | grep -q "com.your-project.pr-automation"; then
     echo "✅ Automation job loaded successfully!"
 else
     echo "❌ Failed to load automation job"
@@ -63,7 +63,7 @@ echo "   • Safety Wrapper: automation_safety_wrapper.py"
 echo "   • Logs: $LOG_DIR"
 echo ""
 echo "🔧 Management Commands:"
-echo "   • Status: launchctl list | grep worldarchitect"
+echo "   • Status: launchctl list | grep your-project"
 echo "   • Stop: launchctl unload '$PLIST_DEST'"
 echo "   • Start: launchctl load '$PLIST_DEST'"
 echo "   • Logs: tail -f '$LOG_DIR/automation_safety.log'"

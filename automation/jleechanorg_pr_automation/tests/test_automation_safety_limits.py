@@ -400,7 +400,7 @@ class TestAutomationIntegration(unittest.TestCase):
 
     def setUp(self):
         self.launchd_root = Path(tempfile.mkdtemp(prefix="launchd-plist-"))
-        self.plist_path = self.launchd_root / "com.worldarchitect.pr-automation.plist"
+        self.plist_path = self.launchd_root / "com.your-project.pr-automation.plist"
         plist_dir = self.plist_path.parent
         plist_dir.mkdir(parents=True, exist_ok=True)
         plist_dir.chmod(0o755)
@@ -410,7 +410,7 @@ class TestAutomationIntegration(unittest.TestCase):
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/jleechan/projects/worldarchitect.ai/automation/automation_safety_wrapper.py</string>
+        <string>/Users/$USER/projects/your-project.com/automation/automation_safety_wrapper.py</string>
     </array>
 </dict>
 </plist>
@@ -444,7 +444,7 @@ class TestAutomationIntegration(unittest.TestCase):
         """Helper to run automation script"""
         import subprocess
         return subprocess.run([
-            "/Users/jleechan/projects/worktree_worker2/automation/simple_pr_batch.sh"
+            "/Users/$USER/projects/worktree_worker2/automation/simple_pr_batch.sh"
         ], check=False, capture_output=True, text=True)
 
     def read_launchd_plist(self):
