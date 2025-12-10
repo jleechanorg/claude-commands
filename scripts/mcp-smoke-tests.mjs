@@ -118,7 +118,7 @@ const providerDefaults = {
   },
   cerebras: {
     // Qwen 3 235B (a22b-instruct-2507) - highest context (131K) and best for RPG campaigns
-    // Uses json_schema with strict:true for structured output enforcement
+    // Uses json_schema with strict:false to allow dynamic choice keys in planning_block
     cerebras_model: process.env.MCP_CEREBRAS_MODEL || 'qwen-3-235b-a22b-instruct-2507',
   },
 };

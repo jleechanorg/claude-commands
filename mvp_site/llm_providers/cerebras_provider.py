@@ -3,9 +3,10 @@
 Uses the Cerebras OpenAI-compatible chat completions endpoint to keep
 llm_service orchestration provider-agnostic.
 
-IMPORTANT: Uses json_schema (with strict:false) instead of legacy json_object
+IMPORTANT: Uses json_schema (strict:false) instead of legacy json_object
 to prevent schema echo issues where API returns {"type": "object"} instead
-of actual content. strict:false allows dynamic choice keys in planning_block.
+of actual content. strict:false keeps planning_block flexible for dynamic
+choice keys.
 """
 
 from __future__ import annotations
@@ -143,7 +144,7 @@ def generate_content(
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_output_tokens,
-        # Use json_schema with strict:true instead of legacy json_object
+        # Use json_schema with strict:false instead of legacy json_object
         # This prevents schema echo issues where API returns {"type": "object"}
         "response_format": get_openai_json_schema_format(),
     }
