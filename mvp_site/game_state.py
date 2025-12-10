@@ -1182,16 +1182,19 @@ def calculate_hp_for_class(
     # Level 1: Max hit die + CON
     hp = die + con_modifier
 
-    # Higher levels
+    # Higher levels: 5e guarantees at least 1 HP per level (after CON modifier)
     if use_average:
         # Average is (die/2) + 1 per level
         average_per_level = (die // 2) + 1
-        hp += (level - 1) * (average_per_level + con_modifier)
+        # Clamp per-level gain to minimum 1 (including CON modifier)
+        per_level_gain = max(1, average_per_level + con_modifier)
+        hp += (level - 1) * per_level_gain
     else:
         # Roll for each level
         for _ in range(level - 1):
             roll = roll_dice(f"1d{die}")
-            hp += max(1, roll.total) + con_modifier  # Minimum 1 per level
+            # 5e: minimum 1 HP per level after CON modifier is applied
+            hp += max(1, roll.total + con_modifier)
 
     return max(1, hp)  # HP can never be less than 1
 

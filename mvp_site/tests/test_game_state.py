@@ -1709,6 +1709,29 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         # Level 1: 10+2=12, Level 2-3: 2 * (6+2) = 16, Total = 28
         assert hp == 28
 
+    def test_calculate_hp_for_class_negative_con(self):
+        """Test HP calculation with negative CON - 5e guarantees min 1 HP per level."""
+        from mvp_site.game_state import calculate_hp_for_class
+
+        # Wizard (d6) at level 3 with -5 CON (use_average=True)
+        # Level 1: 6 + (-5) = 1 (clamped to 1)
+        # Level 2-3: average is 4, but 4 + (-5) = -1 -> clamped to 1 per level
+        # Total: 1 + 2*1 = 3
+        hp = calculate_hp_for_class("wizard", level=3, con_modifier=-5)
+        assert hp >= 3, f"Level 3 wizard with -5 CON should have at least 3 HP (1 per level), got {hp}"
+
+        # Sorcerer (d6) at level 5 with -4 CON
+        # Level 1: 6 + (-4) = 2
+        # Level 2-5: average is 4, 4 + (-4) = 0 -> clamped to 1 per level
+        # Total: 2 + 4*1 = 6
+        hp = calculate_hp_for_class("sorcerer", level=5, con_modifier=-4)
+        assert hp >= 5, f"Level 5 sorcerer with -4 CON should have at least 5 HP, got {hp}"
+
+        # Fighter (d10) at level 1 with -5 CON
+        # Level 1: 10 + (-5) = 5 (no per-level minimum needed at level 1)
+        hp = calculate_hp_for_class("fighter", level=1, con_modifier=-5)
+        assert hp == 5, f"Level 1 fighter with -5 CON should have 5 HP, got {hp}"
+
     def test_calculate_resource_depletion(self):
         """Test resource depletion calculation."""
         from mvp_site.game_state import calculate_resource_depletion
