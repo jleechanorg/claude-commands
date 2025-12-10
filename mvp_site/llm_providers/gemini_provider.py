@@ -47,7 +47,7 @@ def generate_json_mode_content(
     prompt_contents: list[Any],
     model_name: str,
     system_instruction_text: str | None,
-    _max_output_tokens: int,
+    max_output_tokens: int,
     temperature: float,
     safety_settings: list[Any],
     json_mode_max_output_tokens: int,
