@@ -96,7 +96,7 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
         The system now blocks excessive runs even with manual override.
         """
         # Grant approval (simulating what happened Sept 27)
-        self.manager.grant_manual_approval("$USER@anthropic.com")
+        self.manager.grant_manual_approval("jleechan@anthropic.com")
 
         # Simulate running 346 times (what actually happened)
         # We need to write to the file since get_global_runs() reads from file
