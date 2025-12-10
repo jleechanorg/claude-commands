@@ -1519,6 +1519,15 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         assert result.total == 0
         assert len(result.individual_rolls) == 0
 
+    def test_roll_dice_zero_sided_die_returns_modifier(self):
+        """Invalid die sizes should not crash and should return the modifier only."""
+        from mvp_site.game_state import roll_dice
+
+        result = roll_dice("1d0")
+        assert result.total == 0
+        assert result.individual_rolls == []
+        assert result.modifier == 0
+
     def test_calculate_attack_roll(self):
         """Test attack roll calculation."""
         from mvp_site.game_state import calculate_attack_roll

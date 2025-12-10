@@ -228,6 +228,9 @@ def generate_content_with_tool_loop(
     Returns:
         Final OpenRouterResponse with complete text
     """
+    if max_iterations < 1:
+        raise ValueError("max_iterations must be at least 1")
+
     # Build initial messages
     messages = []
     if system_instruction_text:

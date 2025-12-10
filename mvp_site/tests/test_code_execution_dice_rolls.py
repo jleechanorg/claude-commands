@@ -30,7 +30,6 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from google.genai import types
 
 from mvp_site import constants, llm_service
 
@@ -274,10 +273,10 @@ class TestCerebrasToolUseIntegration(unittest.TestCase):
         """
         Verify Cerebras provider can accept tools parameter.
         """
-        from mvp_site.llm_providers import cerebras_provider
-
         # Check that generate_content accepts tools parameter
         import inspect
+
+        from mvp_site.llm_providers import cerebras_provider
         sig = inspect.signature(cerebras_provider.generate_content)
         param_names = list(sig.parameters.keys())
 
@@ -325,7 +324,6 @@ class TestCerebrasToolUseIntegration(unittest.TestCase):
         Verify process_tool_calls function executes dice roll tools.
         """
         from mvp_site.llm_providers.cerebras_provider import process_tool_calls
-        from mvp_site.game_state import DICE_ROLL_TOOLS
 
         # Mock tool call from LLM
         tool_calls = [{
@@ -355,6 +353,21 @@ class TestCerebrasToolUseIntegration(unittest.TestCase):
             "FAIL: cerebras_provider should have generate_content_with_tool_loop function"
         )
 
+    def test_cerebras_tool_loop_requires_positive_iterations(self):
+        """Guard against invalid iteration counts to avoid uninitialized responses."""
+        from mvp_site.llm_providers import cerebras_provider
+
+        with self.assertRaises(ValueError):
+            cerebras_provider.generate_content_with_tool_loop(
+                prompt_contents=["test"],
+                model_name="qwen-3-235b-a22b-instruct-2507",
+                system_instruction_text=None,
+                temperature=0.2,
+                max_output_tokens=128,
+                tools=[],
+                max_iterations=0,
+            )
+
 
 class TestOpenRouterToolUseIntegration(unittest.TestCase):
     """Test OpenRouter provider tool use for dice rolling."""
@@ -363,9 +376,9 @@ class TestOpenRouterToolUseIntegration(unittest.TestCase):
         """
         Verify OpenRouter provider can accept tools parameter.
         """
-        from mvp_site.llm_providers import openrouter_provider
-
         import inspect
+
+        from mvp_site.llm_providers import openrouter_provider
         sig = inspect.signature(openrouter_provider.generate_content)
         param_names = list(sig.parameters.keys())
 
@@ -374,6 +387,21 @@ class TestOpenRouterToolUseIntegration(unittest.TestCase):
             param_names,
             "FAIL: openrouter_provider.generate_content should accept 'tools' parameter"
         )
+
+    def test_openrouter_tool_loop_requires_positive_iterations(self):
+        """Guard against invalid iteration counts to avoid None returns."""
+        from mvp_site.llm_providers import openrouter_provider
+
+        with self.assertRaises(ValueError):
+            openrouter_provider.generate_content_with_tool_loop(
+                prompt_contents=["test"],
+                model_name="gpt-4o-mini",
+                system_instruction_text=None,
+                temperature=0.2,
+                max_output_tokens=128,
+                tools=[],
+                max_iterations=0,
+            )
 
 
 class TestLLMServiceToolIntegration(unittest.TestCase):
@@ -389,24 +417,24 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
             )
 
             # This should pass tools to Cerebras
-            try:
-                llm_service._call_llm_api(
-                    ["test prompt"],
-                    "qwen-3-235b-a22b-instruct-2507",
-                    "test logging",
-                    provider_name=constants.LLM_PROVIDER_CEREBRAS
-                )
-            except Exception:
-                pass  # We're just checking if tools are passed
+            llm_service._call_llm_api(
+                ["test prompt"],
+                "qwen-3-235b-a22b-instruct-2507",
+                "test logging",
+                provider_name=constants.LLM_PROVIDER_CEREBRAS
+            )
 
             # Verify tools were passed
-            if mock_generate.called:
-                call_kwargs = mock_generate.call_args[1] if mock_generate.call_args[1] else {}
-                self.assertIn(
-                    "tools",
-                    call_kwargs,
-                    "FAIL: tools should be passed to Cerebras provider"
-                )
+            self.assertTrue(
+                mock_generate.called,
+                "generate_content_with_tool_loop should be called",
+            )
+            call_kwargs = mock_generate.call_args[1] if mock_generate.call_args[1] else {}
+            self.assertIn(
+                "tools",
+                call_kwargs,
+                "FAIL: tools should be passed to Cerebras provider"
+            )
 
 
 if __name__ == "__main__":

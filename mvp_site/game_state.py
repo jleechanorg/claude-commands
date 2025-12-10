@@ -887,6 +887,15 @@ def roll_dice(notation: str) -> DiceRollResult:
     die_size = int(match.group(2))
     modifier = int(match.group(3)) if match.group(3) else 0
 
+    # Validate die_size to prevent crashes on invalid notations like "1d0"
+    if die_size < 1:
+        return DiceRollResult(
+            notation=notation,
+            individual_rolls=[],
+            modifier=modifier,
+            total=modifier,
+        )
+
     # Roll each die
     rolls = [random.randint(1, die_size) for _ in range(num_dice)]
 
