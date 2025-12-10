@@ -2,10 +2,6 @@
 
 Uses the Cerebras OpenAI-compatible chat completions endpoint to keep
 llm_service orchestration provider-agnostic.
-
-IMPORTANT: Uses json_schema with strict:true instead of legacy json_object
-to prevent schema echo issues where API returns {"type": "object"} instead
-of actual content.
 """
 
 from __future__ import annotations
@@ -23,113 +19,6 @@ from mvp_site.llm_providers.provider_utils import (
 )
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
-
-
-class CerebrasSchemaEchoError(Exception):
-    """Raised when Cerebras API returns the response_format schema instead of content.
-
-    This is a retriable error - the API echoed back the schema configuration
-    instead of generating content.
-    """
-
-    pass
-
-
-# NarrativeResponse JSON Schema for strict mode
-# This schema enforces the structure that NarrativeResponse expects
-NARRATIVE_RESPONSE_SCHEMA = {
-    "name": "narrative_response",
-    "strict": True,
-    "schema": {
-        "type": "object",
-        "properties": {
-            "narrative": {
-                "type": "string",
-                "description": "The main narrative text describing what happens",
-            },
-            "planning_block": {
-                "type": "string",
-                "description": "Internal GM planning and analysis (shown to user)",
-            },
-            "entities_mentioned": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of entity names mentioned in the narrative",
-            },
-            "location_confirmed": {
-                "type": "string",
-                "description": "Current location name",
-            },
-            "session_header": {
-                "type": "string",
-                "description": "Session context header",
-            },
-            "dice_rolls": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of dice roll results",
-            },
-            "resources": {
-                "type": "string",
-                "description": "Resource tracking information",
-            },
-        },
-        "required": ["narrative", "planning_block", "entities_mentioned"],
-        "additionalProperties": False,
-    },
-}
-
-
-def _is_schema_echo(text: str) -> bool:
-    """Check if response is a schema echo (API returning config instead of content)."""
-    if not text:
-        return False
-    stripped = text.strip()
-    # Known schema echo patterns
-    schema_echo_patterns = [
-        '{"type": "object"}',
-        '{"type":"object"}',
-        '{ "type": "object" }',
-        '{"type": "json_object"}',
-        '{"type":"json_object"}',
-    ]
-    if stripped in schema_echo_patterns:
-        return True
-    # Also check for minimal object with only "type" key
-    try:
-        parsed = json.loads(stripped)
-        if isinstance(parsed, dict) and list(parsed.keys()) == ["type"]:
-            return True
-    except json.JSONDecodeError:
-        pass
-    return False
-
-
-def _unwrap_nested_json(text: str) -> tuple[str, bool]:
-    """Unwrap nested JSON wrapper pattern from Cerebras API.
-
-    Cerebras sometimes wraps actual content in: {"type": "object", "json": {...actual...}}
-
-    Returns:
-        tuple: (unwrapped_content, was_unwrapped)
-    """
-    if not text:
-        return text, False
-    try:
-        parsed = json.loads(text.strip())
-        if isinstance(parsed, dict):
-            # Check for nested "json" key with actual content
-            for key in ("json", "response", "content"):
-                if key in parsed and isinstance(parsed[key], dict):
-                    inner = parsed[key]
-                    if "narrative" in inner or "entities_mentioned" in inner:
-                        logging_util.info(
-                            f"CEREBRAS_WRAPPER_UNWRAP: Extracted content from nested '{key}' wrapper"
-                        )
-                        return json.dumps(inner), True
-    except json.JSONDecodeError:
-        pass
-    return text, False
 
 
 class CerebrasResponse:
@@ -185,12 +74,7 @@ def generate_content(
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_output_tokens,
-        # Use json_schema with strict:true instead of legacy json_object
-        # This prevents schema echo issues where API returns {"type": "object"}
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": NARRATIVE_RESPONSE_SCHEMA,
-        },
+        "response_format": {"type": "json_object"},
     }
 
     headers = {
@@ -242,25 +126,8 @@ def generate_content(
                 has_content=False,
             )
             raise KeyError("No 'content' or 'reasoning' field in message")
-
-        # Check for schema echo (API returning config instead of content)
-        if _is_schema_echo(text):
-            logging_util.warning(
-                "CEREBRAS_SCHEMA_ECHO: API returned schema config instead of content"
-            )
-            raise CerebrasSchemaEchoError(
-                f"Cerebras API echoed schema config instead of content: {text[:100]}"
-            )
-
-        # Try to unwrap nested JSON wrapper pattern
-        text, was_unwrapped = _unwrap_nested_json(text)
-        if was_unwrapped:
-            logging_util.info("CEREBRAS_WRAPPER_FIX: Unwrapped nested JSON wrapper in response")
-
     except ContextTooLargeError:
         raise  # Re-raise without wrapping for proper handling upstream
-    except CerebrasSchemaEchoError:
-        raise  # Re-raise schema echo for retry handling
     except Exception as exc:  # noqa: BLE001 - defensive parsing
         raise ValueError(f"Invalid Cerebras response structure: {data}") from exc
 
