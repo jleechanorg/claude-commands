@@ -77,9 +77,10 @@ if [ ! -f "$HOME/.claude/scripts/auth-cli.mjs" ]; then
 fi
 
 # CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
-export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:-ai-universe-b3551}"
-export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-ai-universe-b3551.firebaseapp.com}"
-export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:-AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc}"
+# Set these before running; no defaults are provided to avoid leaking secrets.
+export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:?set FIREBASE_PROJECT_ID}"
+export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:?set FIREBASE_AUTH_DOMAIN}"
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:?set FIREBASE_API_KEY}"
 
 # Get token (auto-refreshes if expired using refresh token)
 # This is silent - only prompts for login if refresh token is invalid/missing
@@ -87,10 +88,7 @@ TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 
 # If this fails, user needs to authenticate with AI Universe credentials
 if [ $? -ne 0 ]; then
-  echo "❌ Authentication failed. Please run:"
-  echo "   FIREBASE_PROJECT_ID=ai-universe-b3551 \\"
-  echo "   FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \\"
-  echo "   FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc \\"
+  echo "❌ Authentication failed. Please set FIREBASE_PROJECT_ID, FIREBASE_AUTH_DOMAIN, and FIREBASE_API_KEY for AI Universe, then run:"
   echo "   node ~/.claude/scripts/auth-cli.mjs login"
   exit 1
 fi

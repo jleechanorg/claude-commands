@@ -702,7 +702,7 @@ class ClaudeCommandsExporter:
             # Order matters: match more specific patterns first to avoid partial matches
             content = re.sub(r'jleechanorg/worldarchitect\.ai', '$GITHUB_REPOSITORY', content)
             content = re.sub(r'worldarchitecture-ai', '$GCP_PROJECT_ID', content)
-            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
+            content = re.sub(r'(?<!/)worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'jleechanorg', '$GITHUB_OWNER', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
 

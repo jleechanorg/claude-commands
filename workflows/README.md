@@ -4,7 +4,7 @@
 
 ## What This Directory Contains
 
-This directory contains **16 GitHub Actions workflow examples** exported from a working Claude Code project. These serve as reference implementations and templates for common CI/CD patterns.
+This directory contains **18 GitHub Actions workflow examples** exported from a working Claude Code project. These serve as reference implementations and templates for common CI/CD patterns.
 
 ## ⚠️ Why These Cannot Be Used As-Is
 

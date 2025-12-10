@@ -3,12 +3,12 @@
 ## Log File Locations
 
 **Flask server logs:**
-```
+```plaintext
 /tmp/your-project.com/<branch-name>/flask-server.log
 ```
 
 **MCP server logs:**
-```
+```plaintext
 /tmp/your-project.com/<branch-name>/mcp-server.log
 ```
 
@@ -16,13 +16,13 @@
 
 ```bash
 # Tail recent logs for current branch
-tail -100 /tmp/your-project.com/codex_integrate-gemini-and-openrouter-apis-czdlzo/flask-server.log
+tail -100 /tmp/your-project.com/<branch-name>/flask-server.log
 
 # Search for errors
-grep -i "error\|cerebras\|400\|500" /tmp/your-project.com/*/flask-server.log | tail -50
+grep -i "error\|cerebras\|400\|500" /tmp/your-project.com/<branch-name>/flask-server.log | tail -50
 
 # Watch logs in real-time
-tail -f /tmp/your-project.com/*/flask-server.log
+tail -f /tmp/your-project.com/<branch-name>/flask-server.log
 ```
 
 ## When Server Restart is Required

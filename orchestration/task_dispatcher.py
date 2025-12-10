@@ -127,21 +127,25 @@ def _kill_tmux_session_if_exists(name: str) -> None:
             base_tmux_safe, f"{base_tmux_safe}_"   # Tmux-safe without trailing dot
         ]
 
-        # Try direct has-session matches
+        list_result = subprocess.run(
+            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            check=False,
+            capture_output=True,
+            timeout=30,
+        )
+
+        existing_sessions = {
+            line.strip() for line in list_result.stdout.decode().splitlines() if line.strip()
+        }
+
         for candidate in candidates:
-            check = subprocess.run(
-                ["tmux", "has-session", "-t", candidate],
-                check=False,
-                capture_output=True,
-                timeout=30
-            )
-            if check.returncode == 0:
+            if candidate in existing_sessions:
                 print(f"🧹 Killing existing tmux session {candidate} to allow reuse")
                 subprocess.run(
                     ["tmux", "kill-session", "-t", candidate],
                     check=False,
                     capture_output=True,
-                    timeout=30
+                    timeout=30,
                 )
     except Exception as exc:
         print(f"⚠️ Warning: unable to check/kill tmux session {name}: {exc}")

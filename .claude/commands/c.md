@@ -1,4 +1,4 @@
 ---
-description: Generate large amounts of code using Cerebras (alias for /cerebras)
+description: Shortcut alias for Cerebras code generation (/cerebras)
 ---
-Execute `/cerebras` with all provided arguments.
+Execute `/cerebras` with all provided arguments. Maintained for quick typing; see `/cerebras` for canonical docs.

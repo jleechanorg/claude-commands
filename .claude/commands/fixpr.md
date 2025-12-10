@@ -17,7 +17,7 @@ execution_mode: immediate
 
 ### 📋 MANDATORY WORKFLOW SEQUENCE (NO EXCEPTIONS)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │  PHASE 1: LOCAL REPRODUCTION (MANDATORY FIRST STEP)                 │
 │  ───────────────────────────────────────────────────────────────────│
@@ -1173,7 +1173,7 @@ The focus is on describing intent and letting Claude determine the best implemen
 
 **Before ANY `git push`, verify ALL items are checked:**
 
-```
+```text
 □ 1. REPRODUCED failure locally (saw the exact error locally)
 □ 2. Project test suite passes (ALL tests, not just some)
 □ 3. If merge conflicts existed:
