@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -59,13 +60,11 @@ def test_query_recent_prs_skips_incomplete_data(monkeypatch):
     "exc_factory, expected_fragment",
     [
         (
-            lambda cmd, timeout: subprocess.CalledProcessError(
-                1, cmd, stderr="fetch failed"
-            ),
+            partial(subprocess.CalledProcessError, 1, stderr="fetch failed"),
             "fetch failed",
         ),
         (
-            lambda cmd, timeout: subprocess.TimeoutExpired(cmd, timeout),
+            subprocess.TimeoutExpired,
             "timed out",
         ),
     ],
