@@ -6,12 +6,19 @@ from __future__ import annotations
 # =============================================================================
 # NARRATIVE_RESPONSE_SCHEMA - Shared JSON schema for structured LLM outputs
 # =============================================================================
-# Used by: Cerebras (json_schema), Gemini (response_json_schema), OpenRouter (Grok)
-# This schema enforces the structure that NarrativeResponse expects.
+# SOURCE OF TRUTH: mvp_site/prompts/game_state_instruction.md
+#   Section: "JSON Response Format (Required Fields)" - lines 24-64
+#   This prompt tells the LLM what structure to generate.
+#
+# VALIDATION LAYER: mvp_site/narrative_response_schema.py
+#   NarrativeResponse class validates and processes the parsed response.
+#   planning_block internal structure (choices with dynamic keys) is validated there.
+#
+# Used by: Cerebras (json_schema), Gemini (response_schema), OpenRouter (Grok)
 #
 # Format variations by provider:
 # - Cerebras/OpenRouter: {"type": "json_schema", "json_schema": {"schema": THIS}}
-# - Gemini: {"response_json_schema": THIS}
+# - Gemini: {"response_schema": THIS}
 # =============================================================================
 
 NARRATIVE_RESPONSE_SCHEMA = {
