@@ -85,6 +85,12 @@ def load_token(token_file: str, auto_refresh: bool = True) -> str | None:
     If auto_refresh is True (default), will automatically refresh
     the token if it's expired or about to expire.
     """
+    is_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
+
+    # In CI, skip refresh attempts (node deps like express aren't installed)
+    if is_ci:
+        auto_refresh = False
+
     if not os.path.exists(token_file):
         return None
 

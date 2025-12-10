@@ -256,6 +256,8 @@ class DependencyAnalyzer:
         # This prevents the broad "tests/test_*.py" pattern from matching everything
         dirs_to_check = [file_dir, file_dir.parent] if file_dir.parent != file_dir else [file_dir]
 
+        project_root = Path(self.project_root)
+
         for current_dir in dirs_to_check:
             # Stop if we've gone above project root
             if not (project_root in current_dir.parents or current_dir == project_root):
@@ -399,8 +401,13 @@ class DependencyAnalyzer:
         always_run = self.config.get("mappings", {}).get("always_run", [])
         for test_pattern in always_run:
             expanded = self.expand_test_patterns([test_pattern])
-            self.selected_tests.update(expanded)
-            logger.debug(f"Always run: {test_pattern} -> {len(expanded)} tests")
+            if expanded:
+                self.selected_tests.update(expanded)
+                logger.debug(f"Always run: {test_pattern} -> {len(expanded)} tests")
+            else:
+                # If no files match (e.g., placeholder integration mocks), keep the pattern
+                self.selected_tests.add(test_pattern)
+                logger.debug(f"Always run placeholder added: {test_pattern}")
 
     def add_modified_test_files(self, changed_files: list[str]):
         """Add any test files that were directly modified."""

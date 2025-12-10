@@ -1620,7 +1620,6 @@ def _call_llm_api(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
-                max_output_tokens=safe_output_limit,
                 temperature=TEMPERATURE,
                 safety_settings=SAFETY_SETTINGS,
                 json_mode_max_output_tokens=safe_output_limit,

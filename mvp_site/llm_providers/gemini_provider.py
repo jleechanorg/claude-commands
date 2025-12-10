@@ -1,4 +1,8 @@
-"""Gemini provider implementation isolated from llm_service."""
+"""Gemini provider implementation isolated from llm_service.
+
+Uses response_json_schema for structured output enforcement.
+See: https://ai.google.dev/gemini-api/docs/structured-output
+"""
 
 from __future__ import annotations
 
@@ -9,13 +13,14 @@ from google import genai
 from google.genai import types
 
 from mvp_site import logging_util
+from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
 
 _client: genai.Client | None = None
 
 
 def get_client() -> genai.Client:
     """Initialize and return a singleton Gemini client."""
-    global _client
+    global _client  # noqa: PLW0603
     if _client is None:
         logging_util.info("Initializing Gemini Client")
         api_key: str | None = os.environ.get("GEMINI_API_KEY")
@@ -28,7 +33,7 @@ def get_client() -> genai.Client:
 
 def clear_cached_client() -> None:
     """Clear the cached client (primarily for tests)."""
-    global _client
+    global _client  # noqa: PLW0603
     _client = None
 
 
@@ -42,7 +47,6 @@ def generate_json_mode_content(
     prompt_contents: list[Any],
     model_name: str,
     system_instruction_text: str | None,
-    max_output_tokens: int,
     temperature: float,
     safety_settings: list[Any],
     json_mode_max_output_tokens: int,
@@ -64,6 +68,10 @@ def generate_json_mode_content(
         "temperature": temperature,
         "safety_settings": safety_settings,
         "response_mime_type": "application/json",
+        # Enforce NarrativeResponse schema structure (not just valid JSON syntax)
+        # Use response_schema (preferred SDK name; response_json_schema is accepted but
+        # we follow documented parameter for clarity and forward compatibility).
+        "response_schema": NARRATIVE_RESPONSE_SCHEMA,
     }
 
     if system_instruction_text:
