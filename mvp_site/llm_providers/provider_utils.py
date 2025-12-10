@@ -22,8 +22,53 @@ NARRATIVE_RESPONSE_SCHEMA = {
             "description": "The main narrative text describing what happens",
         },
         "planning_block": {
-            "type": "string",
-            "description": "Internal GM planning and analysis (shown to user)",
+            "type": "object",
+            "description": "Internal GM planning and analysis with choices for player",
+            "properties": {
+                "thinking": {
+                    "type": "string",
+                    "description": "GM's internal reasoning and analysis",
+                },
+                "context": {
+                    "type": "string",
+                    "description": "Optional context information",
+                },
+                "choices": {
+                    "type": "object",
+                    "description": "Available choices for the player (use snake_case keys)",
+                    "properties": {
+                        "choice_1": {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string"},
+                                "description": {"type": "string"},
+                                "risk_level": {"type": "string"},
+                            },
+                            "required": ["text", "description"],
+                        },
+                        "choice_2": {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string"},
+                                "description": {"type": "string"},
+                                "risk_level": {"type": "string"},
+                            },
+                            "required": ["text", "description"],
+                        },
+                        "choice_3": {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string"},
+                                "description": {"type": "string"},
+                                "risk_level": {"type": "string"},
+                            },
+                            "required": ["text", "description"],
+                        },
+                    },
+                    "required": ["choice_1", "choice_2"],
+                },
+            },
+            "required": ["thinking", "choices"],
         },
         "entities_mentioned": {
             "type": "array",
@@ -47,9 +92,25 @@ NARRATIVE_RESPONSE_SCHEMA = {
             "type": "string",
             "description": "Resource tracking information",
         },
+        "turn_summary": {
+            "type": "string",
+            "description": "Summary of what happened this turn",
+        },
+        "state_updates": {
+            "type": "object",
+            "description": "Game state updates (HP, inventory, conditions, etc.)",
+        },
+        "debug_info": {
+            "type": "object",
+            "description": "Debug information for development",
+        },
+        "god_mode_response": {
+            "type": "string",
+            "description": "Response for god mode commands",
+        },
     },
     "required": ["narrative", "planning_block", "entities_mentioned"],
-    "additionalProperties": False,
+    # Note: additionalProperties NOT set to false - allows extra fields for flexibility
 }
 
 
