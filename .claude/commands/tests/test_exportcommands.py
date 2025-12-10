@@ -624,6 +624,153 @@ export DOMAIN="your-project.com"
             # Test GitHub phase would be called
             mock_github.return_value = 'https://github.com/test/pr/1'
 
+class TestGenericDirectoryExport(unittest.TestCase):
+    """TDD tests for generic directory export refactor."""
+
+    def setUp(self):
+        """Set up test environment for generic export tests."""
+        if ClaudeCommandsExporter is None:
+            self.skipTest("ClaudeCommandsExporter not available")
+
+        self.temp_dir = tempfile.mkdtemp(prefix='test_generic_export_')
+        self.project_root = os.path.join(self.temp_dir, 'test_project')
+        self.export_dir = os.path.join(self.temp_dir, 'export')
+
+        os.makedirs(self.project_root)
+
+        # Mock git operations
+        self.git_patcher = patch('subprocess.run')
+        self.mock_subprocess = self.git_patcher.start()
+        self.mock_subprocess.return_value.returncode = 0
+        self.mock_subprocess.return_value.stdout = self.project_root
+
+        # Setup exporter
+        with patch.object(ClaudeCommandsExporter, '_get_project_root', return_value=self.project_root):
+            self.exporter = ClaudeCommandsExporter()
+            self.exporter.export_dir = self.export_dir
+
+    def tearDown(self):
+        """Clean up test environment."""
+        self.git_patcher.stop()
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_export_directory_config_exists(self):
+        """Test that EXPORT_DIRECTORIES configuration exists."""
+        self.assertTrue(hasattr(self.exporter, 'EXPORT_DIRECTORIES'))
+        self.assertIsInstance(self.exporter.EXPORT_DIRECTORIES, dict)
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_export_directory_has_required_keys(self):
+        """Test that each export config has required keys."""
+        required_configs = ['commands', 'hooks', 'orchestration', 'automation']
+
+        for config_name in required_configs:
+            self.assertIn(config_name, self.exporter.EXPORT_DIRECTORIES)
+            config = self.exporter.EXPORT_DIRECTORIES[config_name]
+            self.assertIn('source', config)
+            self.assertIsInstance(config.get('exclude_dirs', []), list)
+            self.assertIsInstance(config.get('exclude_files', []), list)
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_generic_export_directory_method_exists(self):
+        """Test that _export_directory generic method exists."""
+        self.assertTrue(hasattr(self.exporter, '_export_directory'))
+        self.assertTrue(callable(getattr(self.exporter, '_export_directory')))
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_export_directory_with_file_exclusions(self):
+        """Test generic export with file exclusions."""
+        # Create test directory with files to exclude
+        source_dir = os.path.join(self.project_root, 'test_source')
+        os.makedirs(source_dir)
+
+        # Create test files
+        files = ['include.py', 'exclude.pyc', 'include.md', 'exclude.tmp']
+        for f in files:
+            with open(os.path.join(source_dir, f), 'w') as file:
+                file.write(f"Content of {f}")
+
+        # Export config
+        config = {
+            'source': 'test_source',
+            'exclude_files': ['*.pyc', '*.tmp']
+        }
+
+        staging_dir = os.path.join(self.export_dir, 'staging')
+        os.makedirs(staging_dir, exist_ok=True)
+
+        # Force manual copy by making rsync raise FileNotFoundError
+        with patch('subprocess.run', side_effect=FileNotFoundError("rsync not found")):
+            self.exporter._export_directory('test', config, staging_dir)
+
+        # Verify only included files were copied
+        target_dir = os.path.join(staging_dir, 'test')
+        copied_files = os.listdir(target_dir)
+
+        self.assertIn('include.py', copied_files)
+        self.assertIn('include.md', copied_files)
+        self.assertNotIn('exclude.pyc', copied_files)
+        self.assertNotIn('exclude.tmp', copied_files)
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_export_directory_with_dir_exclusions(self):
+        """Test generic export with directory exclusions."""
+        # Create test directory structure
+        source_dir = os.path.join(self.project_root, 'test_source')
+        os.makedirs(os.path.join(source_dir, 'include_dir'))
+        os.makedirs(os.path.join(source_dir, '__pycache__'))
+
+        # Create test files
+        with open(os.path.join(source_dir, 'include_dir', 'file.py'), 'w') as f:
+            f.write("Included")
+        with open(os.path.join(source_dir, '__pycache__', 'file.pyc'), 'w') as f:
+            f.write("Excluded")
+
+        # Export config
+        config = {
+            'source': 'test_source',
+            'exclude_dirs': ['__pycache__']
+        }
+
+        staging_dir = os.path.join(self.export_dir, 'staging')
+        os.makedirs(staging_dir, exist_ok=True)
+
+        # Force manual copy by making rsync raise FileNotFoundError
+        with patch('subprocess.run', side_effect=FileNotFoundError("rsync not found")):
+            self.exporter._export_directory('test', config, staging_dir)
+
+        # Verify directory structure
+        target_dir = os.path.join(staging_dir, 'test')
+        self.assertTrue(os.path.exists(os.path.join(target_dir, 'include_dir', 'file.py')))
+        self.assertFalse(os.path.exists(os.path.join(target_dir, '__pycache__')))
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_export_directory_uses_rsync_when_available(self):
+        """Test that generic export uses rsync when available."""
+        source_dir = os.path.join(self.project_root, 'test_source')
+        os.makedirs(source_dir)
+
+        config = {
+            'source': 'test_source',
+            'exclude_dirs': ['test_exclude']
+        }
+
+        staging_dir = os.path.join(self.export_dir, 'staging')
+        os.makedirs(staging_dir, exist_ok=True)
+
+        # Mock subprocess to capture rsync call
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value.returncode = 0
+            self.exporter._export_directory('test', config, staging_dir)
+
+            # Verify rsync was called with correct exclusions
+            if mock_run.called:
+                args = mock_run.call_args[0][0]
+                self.assertEqual(args[0], 'rsync')
+                self.assertIn('-av', args)
+                self.assertIn('--exclude=test_exclude/', args)
+
 if __name__ == '__main__':
     # Run tests with verbose output
     unittest.main(verbosity=2)
