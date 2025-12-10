@@ -403,9 +403,9 @@ class TestOpenRouterToolUseIntegration(unittest.TestCase):
             )
 
 
-class TestToolLoopMaxIterationsEdgeCase(unittest.TestCase):
+class TestToolLoopAllCodePaths(unittest.TestCase):
     """
-    TDD test for tool loop max iterations edge case.
+    Comprehensive TDD tests for tool loop - ALL code paths.
 
     Bug discovered 2025-12-10 (Scene #302, #307):
     When tool loop hits max iterations and the model STILL wants to call
@@ -414,9 +414,213 @@ class TestToolLoopMaxIterationsEdgeCase(unittest.TestCase):
 
     Fix: When max iterations reached with empty text + pending tool_calls,
     make one final API call WITHOUT tools to force text generation.
+
+    Code Paths Tested:
+    1. Happy path: Model generates text on first call (no tools)
+    2. Happy path: Model calls tool once, then generates text
+    3. Happy path: Model calls tools multiple times, generates text within limit
+    4. Edge case: Max iterations with text (no forced call needed)
+    5. Edge case: Max iterations with empty text + tool_calls (forced call)
     """
 
-    def test_tool_loop_forces_text_when_max_iterations_reached_with_empty_text(self):
+    def test_path_1_immediate_text_response_no_tools(self):
+        """Path 1: Model generates text immediately without calling any tools."""
+        text_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": '{"narrative": "Direct text response"}',
+                    "tool_calls": None
+                },
+                "finish_reason": "stop"
+            }]
+        }
+
+        def mock_post(*args, **kwargs):
+            mock_resp = Mock()
+            mock_resp.ok = True
+            mock_resp.raise_for_status = Mock()
+            mock_resp.json.return_value = text_response
+            return mock_resp
+
+        with patch("requests.post", side_effect=mock_post):
+            with patch.dict(os.environ, {"CEREBRAS_API_KEY": "test-key"}):
+                from mvp_site.llm_providers import cerebras_provider
+
+                result = cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=["Generate narrative"],
+                    model_name="zai-glm-4.6",
+                    system_instruction_text=None,
+                    temperature=0.7,
+                    max_output_tokens=8000,
+                    tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+                    max_iterations=5,
+                )
+
+                self.assertIn("narrative", result.text)
+                self.assertEqual(result.text, '{"narrative": "Direct text response"}')
+
+    def test_path_2_single_tool_call_then_text(self):
+        """Path 2: Model calls one tool, then generates text."""
+        call_count = [0]
+
+        tool_call_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {
+                            "name": "roll_dice",
+                            "arguments": '{"notation": "1d20"}'
+                        }
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }
+
+        text_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": '{"narrative": "After the dice roll..."}',
+                    "tool_calls": None
+                },
+                "finish_reason": "stop"
+            }]
+        }
+
+        def mock_post(*args, **kwargs):
+            call_count[0] += 1
+            mock_resp = Mock()
+            mock_resp.ok = True
+            mock_resp.raise_for_status = Mock()
+            mock_resp.json.return_value = tool_call_response if call_count[0] == 1 else text_response
+            return mock_resp
+
+        with patch("requests.post", side_effect=mock_post):
+            with patch.dict(os.environ, {"CEREBRAS_API_KEY": "test-key"}):
+                from mvp_site.llm_providers import cerebras_provider
+
+                result = cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=["Generate narrative"],
+                    model_name="zai-glm-4.6",
+                    system_instruction_text=None,
+                    temperature=0.7,
+                    max_output_tokens=8000,
+                    tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+                    max_iterations=5,
+                )
+
+                self.assertEqual(call_count[0], 2, "Should make 2 API calls")
+                self.assertIn("After the dice roll", result.text)
+
+    def test_path_3_multiple_tool_calls_within_limit(self):
+        """Path 3: Model calls tools 3 times, then generates text (within limit)."""
+        call_count = [0]
+
+        tool_call_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{
+                        "id": "call_x",
+                        "type": "function",
+                        "function": {"name": "roll_dice", "arguments": '{"notation": "1d20"}'}
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }
+
+        text_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": '{"narrative": "Three rolls complete"}',
+                    "tool_calls": None
+                },
+                "finish_reason": "stop"
+            }]
+        }
+
+        def mock_post(*args, **kwargs):
+            call_count[0] += 1
+            mock_resp = Mock()
+            mock_resp.ok = True
+            mock_resp.raise_for_status = Mock()
+            # First 3 calls return tool_calls, 4th returns text
+            mock_resp.json.return_value = tool_call_response if call_count[0] <= 3 else text_response
+            return mock_resp
+
+        with patch("requests.post", side_effect=mock_post):
+            with patch.dict(os.environ, {"CEREBRAS_API_KEY": "test-key"}):
+                from mvp_site.llm_providers import cerebras_provider
+
+                result = cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=["Generate narrative"],
+                    model_name="zai-glm-4.6",
+                    system_instruction_text=None,
+                    temperature=0.7,
+                    max_output_tokens=8000,
+                    tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+                    max_iterations=5,
+                )
+
+                self.assertEqual(call_count[0], 4, "Should make 4 API calls (3 tools + 1 text)")
+                self.assertIn("Three rolls complete", result.text)
+
+    def test_path_4_max_iterations_with_text_already_present(self):
+        """Path 4: Max iterations reached but last response HAS text (no forced call)."""
+        call_count = [0]
+
+        # Response with BOTH tool_calls AND text (some models do this)
+        mixed_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": '{"narrative": "Partial response with text"}',
+                    "tool_calls": [{
+                        "id": "call_x",
+                        "type": "function",
+                        "function": {"name": "roll_dice", "arguments": '{"notation": "1d20"}'}
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }
+
+        def mock_post(*args, **kwargs):
+            call_count[0] += 1
+            mock_resp = Mock()
+            mock_resp.ok = True
+            mock_resp.raise_for_status = Mock()
+            mock_resp.json.return_value = mixed_response
+            return mock_resp
+
+        with patch("requests.post", side_effect=mock_post):
+            with patch.dict(os.environ, {"CEREBRAS_API_KEY": "test-key"}):
+                from mvp_site.llm_providers import cerebras_provider
+
+                result = cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=["Generate narrative"],
+                    model_name="zai-glm-4.6",
+                    system_instruction_text=None,
+                    temperature=0.7,
+                    max_output_tokens=8000,
+                    tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+                    max_iterations=5,
+                )
+
+                # Text already present, no extra call needed
+                self.assertEqual(call_count[0], 5, "Should make exactly 5 API calls")
+                self.assertIn("Partial response with text", result.text)
+
+    def test_path_5_max_iterations_empty_text_forces_final_call(self):
         """
         RED-GREEN test: Tool loop should NEVER return empty text.
 
