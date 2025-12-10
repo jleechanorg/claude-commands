@@ -1430,3 +1430,40 @@ vulture . --min-confidence 80 --exclude="*/venv/*,*/tests/*"
 - **After**: 15-20 minute systematic identification and resolution
 - **Verification**: Comparative screenshots showing V2 rich content matching V1 functionality
 - **Evidence**: Screenshots saved showing both V1 and V2 displaying equivalent rich campaign content
+
+---
+
+## 🔍 EVIDENCE STANDARD OF PROOF (December 2025)
+
+### Core Principle
+**Claim validity = reproducibility × artifacts × documentation**
+
+Evidence quality spectrum:
+1. "I ran it and it worked" - None (can't verify)
+2. Log snippets in chat - Low (no source file)
+3. Saved artifacts + commands - High (reproducible)
+4. Automated tests + CI - Very High
+
+### Key Practices
+
+**Save Artifacts**: `curl ... > /tmp/evidence/response.json` (not just verbal claims)
+**Document Commands**: Include exact repeatable commands with full curl syntax
+**Capture Dead Ends**: Document ruled-out hypotheses to prevent future repeats
+**Verify Infrastructure First**: Check health endpoints before debugging logic
+**Test Twice**: Transient failures ≠ systematic bugs
+
+### Anti-Patterns
+- "It works now" → Save JSON response
+- "Logs show 30K tokens" → Screenshot or grep command
+- "S1 is down" → Check health endpoint first
+- "Fixed the bug" → Before/after token counts
+- "Closing the bead" → Attach artifact or command
+
+### Checklist Before Claiming Success
+- [ ] Response saved to file
+- [ ] Curl/command documented and repeatable
+- [ ] Token/metric measurements logged
+- [ ] Before/after comparison with numbers
+- [ ] Wrong hypotheses documented
+- [ ] Infrastructure verified (URLs, services healthy)
+- [ ] Multiple runs if failure was intermittent

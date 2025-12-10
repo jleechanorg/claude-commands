@@ -1,7 +1,7 @@
 # Context Budget Design Document
 
-**Status**: Implemented (PR #2311)
-**Last Updated**: 2025-12-04
+**Status**: Implemented (PR #2311) - **Timeline log fix applied (Dec 2025)**
+**Last Updated**: 2025-12-07
 **Author**: Claude Code
 
 ## Overview
@@ -54,8 +54,7 @@ Model Context Window (100%)
 │       ├── Entity Tracking Reserve (10.5K tokens fixed)
 │       │   ├── entity_preload_text (~2-3K)
 │       │   ├── entity_specific_instructions (~1.5-2K)
-│       │   ├── entity_tracking_instruction (~1-1.5K)
-│       │   └── timeline_log (~3-4K)
+│       │   └── entity_tracking_instruction (~1-1.5K)
 │       │
 │       └── Story Budget (remaining ~50-60%)
 │           ├── Start turns (25% of story budget)
@@ -249,3 +248,38 @@ The system logs budget calculations for debugging:
 - PR #2294: Centralize context budget calculation
 - PR #2201: Adjust compaction to 20+20 turns
 - PR #2311: Add percentage-based allocation + adaptive truncation
+
+## Known Issues
+
+### Timeline Log Budget Bug (Dec 2025) - FIXED
+
+**Status**: ✅ Fixed (Dec 7, 2025)
+
+**Problem**: A legacy prompt-concatenation flow appended `timeline_log_string` alongside `story_context` without budgeting the duplicate content. In production (story=26,795 tokens, timeline_log=27,817 tokens, final prompt=54,612 tokens), this overflowed the available budget and raised `ContextTooLargeError`.
+
+**Current Behavior**:
+- The structured `LLMRequest` path serializes `story_history` plus metadata (game state, entity tracking, memories) and **excludes** `timeline_log_string`.
+- A duplication guard exists (`TIMELINE_LOG_DUPLICATION_FACTOR = 2.05`) but is gated by `TIMELINE_LOG_INCLUDED_IN_STRUCTURED_REQUEST = False`; the guard is dormant unless timeline_log text is explicitly serialized again.
+- `timeline_log_string` is still constructed for diagnostics/entity-instruction heuristics. If we reintroduce it into the payload, we must flip the flag and rebaseline the budgeting tests.
+
+**Test**: `mvp_site/tests/test_end2end/test_timeline_log_budget_end2end.py`
+
+**Remediation**:
+- Keep timeline_log excluded from the structured request (current default).
+- Retain the guarded duplication factor for any future prompt path that serializes timeline text; flipping the guard will re-enable the budget split and should be accompanied by updated docs/tests.
+
+## Policy: No Model Switching
+
+**Model cycling and auto-fallback are NOT supported.**
+
+The system uses a single configured model per request. If errors occur:
+- API errors: Fail and let user retry
+- Context too large: Fix truncation logic, don't switch models
+
+**Reasons**:
+1. Cost unpredictability - larger models cost more per token
+2. Voice inconsistency - different models have different personalities
+3. Latency variance - larger contexts increase response time
+4. Debugging complexity - model switching hides root causes
+
+If `ContextTooLargeError` occurs, the proper fix is to improve the truncation/compaction logic.

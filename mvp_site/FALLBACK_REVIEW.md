@@ -18,7 +18,7 @@ This document inventories fallback logic in `mvp_site/`, explains the rationale 
 
 - **Testing framework fallbacks (`testing_framework/` tests and README)**: These files include fallback implementations and assertions to ensure the test harness degrades gracefully when integration utilities are unavailable. Because they run only in the test suite and explicitly report when fallbacks are used, they do not affect runtime behavior.
 
-- **LLM/model fallback tests (`llm_service.py` references)**: The test suites and documentation cite fallback model cycling to validate resilience to upstream model errors; the logic under test is about external provider instability, not local configuration.
+- **LLM error handling tests (`llm_service.py` references)**: The test suites validate error handling for upstream model errors. Note: Model cycling/switching is NOT supported - errors fail fast and let users retry.
 
 - **Mock wrappers (`mocks/mock_llm_service_wrapper.py`, `mocks/mock_firestore_service_wrapper.py`)**: These wrappers now use direct imports (`from mvp_site import logging_util`) instead of fallback import chains. Missing dependencies will cause immediate import failures, ensuring test environment configuration errors are surfaced rather than masked.
 

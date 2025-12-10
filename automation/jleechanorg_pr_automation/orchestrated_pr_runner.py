@@ -172,7 +172,19 @@ def ensure_base_clone(repo_full: str) -> Path:
         )
     else:
         log(f"Refreshing base repo for {repo_full}")
-        run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        try:
+            run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            stderr_msg = getattr(exc, "stderr", "") or str(exc) or "No stderr available"
+            log(
+                f"Fetch failed for {repo_full} ({exc.__class__.__name__}): {stderr_msg}. "
+                "Re-cloning base repo."
+            )
+            shutil.rmtree(base_dir, ignore_errors=True)
+            run_cmd(
+                ["git", "clone", f"https://github.com/{repo_full}.git", str(base_dir)],
+                timeout=CLONE_TIMEOUT,
+            )
     # Reset base clone to main to ensure clean worktrees
     try:
         run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
@@ -303,7 +315,7 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str =
         f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"
         "4) Identify failing checks (gh pr view --json statusCheckRollup) and reproduce locally (tests/linters as needed)\n"
         "5) Apply fixes\n"
-        f"6) git add -A && git commit -m \"[{agent_cli}-automation-commit] fix PR #{pr_number}\" && git push\n"
+        f'6) git add -A && git commit -m "[{agent_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
         f"7) gh pr view {pr_number} --json mergeable,mergeStateStatus,statusCheckRollup\n"
         "8) Write completion report to /tmp/orchestration_results/pr-{pr_number}._results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
