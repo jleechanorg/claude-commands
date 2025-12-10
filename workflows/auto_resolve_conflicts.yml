@@ -41,7 +41,18 @@ jobs:
           MAX_RETRIES=5
           RETRY_DELAY=3
           for ((i=1; i<=MAX_RETRIES; i++)); do
-            MERGE_STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json mergeStateStatus --jq '.mergeStateStatus')
+            if ! MERGE_STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json mergeStateStatus --jq '.mergeStateStatus'); then
+              echo "⚠️ gh pr view failed (attempt $i/$MAX_RETRIES)."
+              if [ $i -lt $MAX_RETRIES ]; then
+                sleep $RETRY_DELAY
+                continue
+              else
+                echo "has-conflicts=false" >> $GITHUB_OUTPUT
+                echo "⚠️ Unable to determine merge state after $MAX_RETRIES attempts; skipping auto-resolution."
+                exit 1
+              fi
+            fi
+
             echo "Merge state: $MERGE_STATE"
             if [ "$MERGE_STATE" != "UNKNOWN" ]; then
               break

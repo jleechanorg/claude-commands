@@ -751,7 +751,7 @@ class ClaudeCommandsExporter:
             # Match pattern: REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
             # Replace with: REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
             content = re.sub(
-                r'REPO_ROOT="\$\(cd "\$\{SCRIPT_DIR\}/\.\." && pwd\)"',
+                r'REPO_ROOT="\$\(\s*cd\s+"\$\{SCRIPT_DIR\}/\.\."\s+&&\s+pwd\s*\)"',
                 'REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"',
                 content
             )

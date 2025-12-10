@@ -796,7 +796,8 @@ class TaskDispatcher:
 
 🚧 Checkout rule:
 - If `gh pr checkout {pr_number}` fails because the branch is already checked out elsewhere, create a fresh worktree and use it:
-  git worktree add /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun {pr_number}
+  git fetch origin pull/{pr_number}/head:pr-{pr_number}-rerun
+  git worktree add /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun pr-{pr_number}-rerun
   cd /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun
 
 IMPORTANT INSTRUCTIONS:

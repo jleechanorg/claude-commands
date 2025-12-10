@@ -77,9 +77,12 @@ if [ ! -f "$HOME/.claude/scripts/auth-cli.mjs" ]; then
 fi
 
 # CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
-export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:-ai-universe-b3551}"
-export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-ai-universe-b3551.firebaseapp.com}"
-export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:-AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc}"
+: "${AI_UNIVERSE_FIREBASE_PROJECT_ID:?Set AI_UNIVERSE_FIREBASE_PROJECT_ID (see /skills/ai-universe-auth.md)}"
+: "${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:?Set AI_UNIVERSE_FIREBASE_AUTH_DOMAIN (see /skills/ai-universe-auth.md)}"
+: "${AI_UNIVERSE_FIREBASE_API_KEY:?Set AI_UNIVERSE_FIREBASE_API_KEY (see /skills/ai-universe-auth.md)}"
+export FIREBASE_PROJECT_ID="$AI_UNIVERSE_FIREBASE_PROJECT_ID"
+export FIREBASE_AUTH_DOMAIN="$AI_UNIVERSE_FIREBASE_AUTH_DOMAIN"
+export FIREBASE_API_KEY="$AI_UNIVERSE_FIREBASE_API_KEY"
 
 # Get token (auto-refreshes if expired using refresh token)
 # This is silent - only prompts for login if refresh token is invalid/missing

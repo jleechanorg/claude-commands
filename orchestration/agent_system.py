@@ -100,24 +100,6 @@ class AgentBase:
                 print(f"Error processing message: {e}")
                 time.sleep(1)
 
-    def _handle_a2a_message(self, message: dict[str, Any]):
-        """Handle A2A message - override in subclasses."""
-        print(f"Agent {self.agent_id} received A2A message: {message.get('payload', {})}")
-
-        # Basic protocol handling
-        payload = message.get("payload", {})
-        if payload.get("action") == "ping":
-            # Respond to ping via A2A wrapper
-            response_data = {
-                "action": "pong",
-                "agent_id": self.agent_id,
-                "timestamp": time.time(),
-            }
-            print(f"Agent {self.agent_id} responding to ping")
-            return response_data
-
-        return None
-
     def _collect_health_data(self) -> dict[str, Any]:
         """Build heartbeat payload for broker visibility."""
         return {
@@ -131,7 +113,7 @@ class AgentBase:
     def _heartbeat_tick(self) -> bool:
         """Send a single heartbeat and report success."""
         health_data = self._collect_health_data()
-        return bool(self.broker.heartbeat(self.agent_id, health_data))
+        return self.broker.heartbeat(self.agent_id, health_data)
 
     def _heartbeat_loop(self):
         """Send periodic heartbeats with health monitoring."""
