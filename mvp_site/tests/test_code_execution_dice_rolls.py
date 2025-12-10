@@ -1,8 +1,10 @@
 """
 TDD Tests for Hybrid Dice Roll System
 
-UPDATE (2025-12): Gemini 2.0 and 3.0 models now support code_execution
-WITH JSON response mode. This hybrid system supports:
+UPDATE (2025-12): Gemini 2.0 and 3.0 models support code_execution, but
+Vertex rejects code_execution tools when using controlled generation
+(JSON/response schemas). In JSON mode we disable code_execution to avoid
+Vertex API errors while keeping the hybrid system:
 
 1. Code Execution (Gemini 2.0/3.0): Native Python code execution for dice rolls
 2. Tool Use (Cerebras, OpenRouter): Function calling with local execution
@@ -12,7 +14,8 @@ See: https://ai.google.dev/gemini-api/docs/structured-output
 
 These tests verify:
 1. JSON mode is enabled (required for structured output)
-2. Code execution is enabled for supported models (Gemini 2.0/3.0)
+2. Code execution is intentionally disabled in JSON mode to avoid Vertex
+   "controlled generation" errors
 3. Tool schemas are defined for non-code-execution models
 4. Prompt instructions cover all dice roll strategies
 """
@@ -37,14 +40,12 @@ from mvp_site import constants, llm_service
 class TestHybridDiceRollSystem(unittest.TestCase):
     """Test the hybrid dice roll system across different model types."""
 
-    def test_code_execution_enabled_for_supported_models(self):
+    def test_code_execution_disabled_in_json_mode(self):
         """
-        Verify code_execution IS enabled for Gemini 2.0/3.0 models.
-
-        Gemini 2.0 and 3.0 support code_execution WITH JSON response mode.
-        This allows true randomness for dice rolls via Python's random module.
+        Verify code_execution is disabled when using JSON/controlled generation
+        to avoid Vertex API errors.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
+        with patch('mvp_site.llm_providers.gemini_provider.get_client') as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
 
@@ -55,11 +56,11 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 )
             )
 
-            # Call the API function with Gemini 2.0 model (supports code execution)
+            # Call the API function with Gemini 2.0 model
             llm_service._call_llm_api(
-                ["test prompt"],
-                "gemini-2.0-flash",
-                "test logging",
+                ['test prompt'],
+                'gemini-2.0-flash',
+                'test logging',
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
@@ -68,26 +69,19 @@ class TestHybridDiceRollSystem(unittest.TestCase):
 
             # Get the configuration object passed to the API
             call_args = mock_client.models.generate_content.call_args
-            config_obj = call_args[1]["config"]
+            config_obj = call_args[1]['config']
 
             # CRITICAL: Verify JSON mode is enabled
             self.assertEqual(
                 config_obj.response_mime_type,
-                "application/json",
-                "FAIL: JSON mode must be enabled for structured responses"
+                'application/json',
+                'FAIL: JSON mode must be enabled for structured responses'
             )
 
-            # CRITICAL: Verify code_execution IS present for supported models
-            code_execution_found = False
-            if config_obj.tools is not None:
-                for tool in config_obj.tools:
-                    if hasattr(tool, 'code_execution'):
-                        code_execution_found = True
-                        break
-
-            self.assertTrue(
-                code_execution_found,
-                "FAIL: code_execution should be enabled for gemini-2.0-flash"
+            # Code execution must be disabled in JSON mode due to Vertex restrictions
+            self.assertIsNone(
+                config_obj.tools,
+                'FAIL: code_execution tools should be disabled for gemini JSON mode',
             )
 
     def test_model_capability_detection(self):

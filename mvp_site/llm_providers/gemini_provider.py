@@ -70,16 +70,26 @@ def generate_json_mode_content(
     """
     client = get_client()
 
-    # Auto-detect code execution capability if not explicitly set
-    if enable_code_execution is None:
-        enable_code_execution = model_name in constants.MODELS_WITH_CODE_EXECUTION
-
     generation_config_params = {
         "max_output_tokens": json_mode_max_output_tokens,
         "temperature": temperature,
         "safety_settings": safety_settings,
         "response_mime_type": "application/json",
     }
+
+    # Auto-detect code execution capability if not explicitly set
+    if enable_code_execution is None:
+        enable_code_execution = model_name in constants.MODELS_WITH_CODE_EXECUTION
+
+    # Controlled generation (JSON/response schema) currently rejects code_execution tools.
+    # Disable code execution in JSON mode to avoid Vertex API errors like:
+    # "Unable to submit request because controlled generation is not supported with Code Execution tool."
+    if enable_code_execution and generation_config_params.get("response_mime_type"):
+        logging_util.warning(
+            "Gemini JSON mode does not support code_execution; disabling for model %s",
+            model_name,
+        )
+        enable_code_execution = False
 
     # Enable code_execution for supported models (Gemini 2.0/3.0)
     # This allows the LLM to run Python code for true dice roll randomness
