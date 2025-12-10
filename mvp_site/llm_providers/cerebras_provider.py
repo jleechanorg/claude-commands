@@ -406,8 +406,40 @@ def generate_content_with_tool_loop(
                 "content": result["content"],
             })
 
-    # Max iterations reached
+    # Max iterations reached - make one final call WITHOUT tools to force text generation
     logging_util.warning(
-        f"Tool loop reached max iterations ({max_iterations}), returning last response"
+        f"Tool loop reached max iterations ({max_iterations}), forcing final response without tools"
     )
+
+    # If the last response still has tool_calls but no text, we need to force text generation
+    # by making one more API call without the tools parameter
+    if response.text == "" and response.get_tool_calls():
+        logging_util.info("Forcing final text generation (no tools)")
+        # Get the raw message to add to conversation
+        raw_message = response.raw_response.get("choices", [{}])[0].get("message", {})
+        messages.append({
+            "role": "assistant",
+            "content": raw_message.get("content"),
+            "tool_calls": response.get_tool_calls(),
+        })
+        # Execute the pending tools
+        tool_results = process_tool_calls(response.get_tool_calls())
+        for result in tool_results:
+            messages.append({
+                "role": "tool",
+                "tool_call_id": result["tool_call_id"],
+                "name": result["name"],
+                "content": result["content"],
+            })
+        # Final call WITHOUT tools to force text generation
+        response = generate_content(
+            prompt_contents=[],
+            model_name=model_name,
+            system_instruction_text=None,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            tools=None,  # No tools - force text response
+            messages=messages,
+        )
+
     return response
