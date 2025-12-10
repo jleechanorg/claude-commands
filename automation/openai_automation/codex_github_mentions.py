@@ -231,13 +231,15 @@ class CodexGitHubMentionsAutomation:
 
                 # Find all task links - they typically have href and are clickable
                 # Adjust selector based on Codex UI structure
-                all_task_links = await self.page.locator('a[href*="/codex/"]').all()
+                locator = self.page.locator('a[href*="/codex/"]')
+                all_task_links = await locator.all()
 
                 if not all_task_links:
                     print("⚠️  No tasks found")
                     print("   Retrying with longer wait...")
                     await asyncio.sleep(5)
-                    all_task_links = await self.page.locator('a[href*="/codex/"]').all()
+                    locator = self.page.locator('a[href*="/codex/"]')
+                    all_task_links = await locator.all()
 
                 # Limit to first N tasks
                 task_links = all_task_links[:self.task_limit]
@@ -248,13 +250,15 @@ class CodexGitHubMentionsAutomation:
                 # Original behavior: Find only "Github Mention:" tasks
                 print("\n🔍 Searching for 'Github Mention:' tasks...")
 
-                task_links = await self.page.locator('a:has-text("Github Mention:")').all()
+                locator = self.page.locator('a:has-text("Github Mention:")')
+                task_links = await locator.all()
 
                 if not task_links:
                     print("⚠️  No tasks found with 'Github Mention:'")
                     print("   Retrying with longer wait...")
                     await asyncio.sleep(5)
-                    task_links = await self.page.locator('a:has-text("Github Mention:")').all()
+                    locator = self.page.locator('a:has-text("Github Mention:")')
+                    task_links = await locator.all()
 
                     if not task_links:
                         print("⚠️  Still no tasks found")

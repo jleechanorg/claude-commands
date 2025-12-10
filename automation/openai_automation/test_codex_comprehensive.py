@@ -73,10 +73,10 @@ class TestLimitParameter:
         automation.page = AsyncMock()
 
         # Mock locator that returns mock_task_count tasks
-        mock_locator = AsyncMock()
+        mock_locator = Mock()
         mock_tasks = [Mock() for _ in range(mock_task_count)]
-        mock_locator.all.return_value = mock_tasks
-        automation.page.locator.return_value = mock_locator
+        mock_locator.all = AsyncMock(return_value=mock_tasks)
+        automation.page.locator = Mock(return_value=mock_locator)
 
         tasks = await automation.find_github_mention_tasks()
         assert len(tasks) == expected_return
@@ -177,10 +177,10 @@ class TestTaskFinding:
         automation.page = AsyncMock()
 
         # Mock task locator
-        mock_locator = AsyncMock()
+        mock_locator = Mock()
         mock_tasks = [Mock() for _ in range(task_count)]
-        mock_locator.all.return_value = mock_tasks
-        automation.page.locator.return_value = mock_locator
+        mock_locator.all = AsyncMock(return_value=mock_tasks)
+        automation.page.locator = Mock(return_value=mock_locator)
 
         tasks = await automation.find_github_mention_tasks()
 
@@ -193,9 +193,9 @@ class TestTaskFinding:
         automation = CodexGitHubMentionsAutomation(task_limit=None)
         automation.page = AsyncMock()
 
-        mock_locator = AsyncMock()
-        mock_locator.all.return_value = []
-        automation.page.locator.return_value = mock_locator
+        mock_locator = Mock()
+        mock_locator.all = AsyncMock(return_value=[])
+        automation.page.locator = Mock(return_value=mock_locator)
 
         await automation.find_github_mention_tasks()
 
@@ -209,9 +209,9 @@ class TestTaskFinding:
         automation = CodexGitHubMentionsAutomation(task_limit=50)
         automation.page = AsyncMock()
 
-        mock_locator = AsyncMock()
-        mock_locator.all.return_value = []
-        automation.page.locator.return_value = mock_locator
+        mock_locator = Mock()
+        mock_locator.all = AsyncMock(return_value=[])
+        automation.page.locator = Mock(return_value=mock_locator)
 
         await automation.find_github_mention_tasks()
 
@@ -268,10 +268,12 @@ class TestNavigationInteraction:
         automation = CodexGitHubMentionsAutomation()
         automation.page = AsyncMock()
 
-        mock_locator = AsyncMock()
-        mock_locator.count.return_value = 1
-        mock_locator.first = AsyncMock()
-        automation.page.locator.return_value = mock_locator
+        mock_first = Mock()
+        mock_first.count = AsyncMock(return_value=1)
+        mock_locator = Mock()
+        mock_locator.first = mock_first
+        mock_locator.count = AsyncMock(return_value=1)
+        automation.page.locator = Mock(return_value=mock_locator)
 
         # Simulate button check
         button = automation.page.locator('button:has-text("Update branch")').first
@@ -286,9 +288,9 @@ class TestNavigationInteraction:
         automation = CodexGitHubMentionsAutomation()
         automation.page = AsyncMock()
 
-        mock_locator = AsyncMock()
-        mock_locator.count.return_value = 0
-        automation.page.locator.return_value = mock_locator
+        mock_locator = Mock()
+        mock_locator.count = AsyncMock(return_value=0)
+        automation.page.locator = Mock(return_value=mock_locator)
 
         button_locator = automation.page.locator('button:has-text("Update branch")')
         count = await button_locator.count()
