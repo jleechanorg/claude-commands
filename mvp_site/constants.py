@@ -121,7 +121,7 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "meta-llama/llama-3.1-405b-instruct": 8_192,
     # Pulled from OpenRouter model metadata (2025-12-01 curl https://openrouter.ai/api/v1/models)
     "z-ai/glm-4.6": 202_752,
-    "x-ai/grok-4.1-fast:free": 30_000,
+    "x-ai/grok-4.1-fast": 30_000,
     # Cerebras (actual limit ~64K, using conservative 32K for safety)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
