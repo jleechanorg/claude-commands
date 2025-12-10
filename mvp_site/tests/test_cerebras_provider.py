@@ -24,7 +24,7 @@ class TestJsonSchemaSupport:
     """Tests for json_schema support with strict:false (allows dynamic choice keys)."""
 
     def test_uses_json_schema_format_in_payload(self, monkeypatch):
-        """RED: Verify request payload uses json_schema, not legacy json_object."""
+        """Verify request payload uses json_schema, not legacy json_object."""
         captured = {}
 
         def fake_post(url, headers=None, json=None, timeout=None):
@@ -57,7 +57,7 @@ class TestJsonSchemaSupport:
         )
 
     def test_json_schema_has_narrative_response_structure(self, monkeypatch):
-        """RED: Verify json_schema includes NarrativeResponse fields."""
+        """Verify json_schema includes NarrativeResponse fields."""
         captured = {}
 
         def fake_post(url, headers=None, json=None, timeout=None):
@@ -87,7 +87,7 @@ class TestJsonSchemaSupport:
         assert "entities_mentioned" in properties, "Schema must include 'entities_mentioned' field"
 
     def test_detects_schema_echo_response(self, monkeypatch):
-        """RED: Detect when API returns schema config instead of content."""
+        """Detect when API returns schema config instead of content."""
         from mvp_site.llm_providers.cerebras_provider import CerebrasSchemaEchoError
 
         def fake_post(url, headers=None, json=None, timeout=None):
@@ -110,7 +110,7 @@ class TestJsonSchemaSupport:
             )
 
     def test_unwraps_nested_json_wrapper(self, monkeypatch):
-        """RED: Extract content from nested {"type": "object", "json": {...}} wrapper."""
+        """Extract content from nested {"type": "object", "json": {...}} wrapper."""
 
         def fake_post(url, headers=None, json=None, timeout=None):
             # API wraps content in nested structure
@@ -151,7 +151,7 @@ class TestJsonSchemaSupport:
         ],
     )
     def test_all_cerebras_models_use_json_schema(self, monkeypatch, model_name):
-        """RED: All supported Cerebras models should use json_schema format."""
+        """All supported Cerebras models should use json_schema format."""
         captured = {}
 
         def fake_post(url, headers=None, json=None, timeout=None):
