@@ -260,15 +260,15 @@ class CodexGitHubMentionsAutomation:
                     print(f"🐛 Debug: Page title: {await self.page.title()}")
 
                 # Find all task links - they typically have href and are clickable
-                # Adjust selector based on Codex UI structure
-                locator = self.page.locator('a[href*="/codex/"]')
+                # Use /codex/tasks/ to exclude navigation links like Settings, Docs
+                locator = self.page.locator('a[href*="/codex/tasks/"]')
                 all_task_links = await locator.all()
 
                 if not all_task_links:
                     print("⚠️  No tasks found")
                     print("   Retrying with longer wait...")
                     await asyncio.sleep(5)
-                    locator = self.page.locator('a[href*="/codex/"]')
+                    locator = self.page.locator('a[href*="/codex/tasks/"]')
                     all_task_links = await locator.all()
 
                 # Limit to first N tasks
