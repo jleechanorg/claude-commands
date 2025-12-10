@@ -67,7 +67,7 @@ NARRATIVE_RESPONSE_SCHEMA = {
         },
     },
     "required": ["narrative", "planning_block", "entities_mentioned"],
-    # Note: additionalProperties NOT set to false - allows extra fields for flexibility
+    # Note: With strict:False, additionalProperties defaults to true (allows extra fields)
 }
 
 
