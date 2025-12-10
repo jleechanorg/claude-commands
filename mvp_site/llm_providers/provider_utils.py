@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 # =============================================================================
-# NARRATIVE_RESPONSE_SCHEMA - Shared JSON schema for structured LLM outputs
+# NARRATIVE_RESPONSE_SCHEMA - JSON schema for structured LLM outputs
 # =============================================================================
 # SOURCE OF TRUTH: mvp_site/prompts/game_state_instruction.md
 #   Section: "JSON Response Format (Required Fields)" - lines 24-64
@@ -14,13 +14,15 @@ from __future__ import annotations
 #   NarrativeResponse class validates and processes the parsed response.
 #   planning_block internal structure (choices with dynamic keys) is validated there.
 #
-# Used by: Cerebras (json_schema), Gemini (response_schema), OpenRouter (Grok)
-#
-# Format variations by provider:
-# - Cerebras/OpenRouter: {"type": "json_schema", "json_schema": {"schema": THIS}}
-# - Gemini: {"response_schema": THIS}
+# PROVIDER USAGE:
+# - Cerebras/OpenRouter: Uses NARRATIVE_RESPONSE_SCHEMA via get_openai_json_schema_format()
+#   with strict:false to allow dynamic choice keys
+# - Gemini: Does NOT use response_schema (Gemini requires ALL object types to have
+#   non-empty properties, which conflicts with dynamic choice keys). Gemini uses
+#   response_mime_type="application/json" + prompt instruction instead.
 # =============================================================================
 
+# Schema for Cerebras/OpenRouter - supports additionalProperties for dynamic objects
 NARRATIVE_RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -31,8 +33,7 @@ NARRATIVE_RESPONSE_SCHEMA = {
         "planning_block": {
             "type": "object",
             "description": "GM planning with thinking field and dynamic choices (snake_case keys like explore_tavern, attack_goblin, god:option_1)",
-            # Gemini requires properties to be non-empty for object types
-            # Using additionalProperties:true allows dynamic choice keys
+            # additionalProperties:true allows dynamic choice keys
             "additionalProperties": True,
         },
         "entities_mentioned": {
