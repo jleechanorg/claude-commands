@@ -156,6 +156,9 @@ jobs:
           project: ${{ env.GCP_PROJECT }}
           branch: ${{ env.REF_NAME }}
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          # pr_url will normally be empty here because this workflow runs via workflow_dispatch or workflow_call, not pull request events.
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: ${{ steps.get-url.outputs.url }}
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
@@ -172,6 +175,9 @@ jobs:
           project: ${{ env.GCP_PROJECT }}
           branch: ${{ env.REF_NAME }}
           commit_sha: ${{ github.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          # pr_url will normally be empty here because this workflow runs via workflow_dispatch or workflow_call, not pull request events.
+          pr_url: ${{ github.event.pull_request.html_url || '' }}
           deployment_url: ${{ steps.get-url.outputs.url }}
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
