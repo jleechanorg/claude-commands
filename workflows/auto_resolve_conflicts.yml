@@ -76,11 +76,11 @@ jobs:
       pull-requests: write # Required for gh pr commands (list, view, comment)
 
     steps:
-    # Pinning actions/checkout to a specific SHA (v4.1.1) for security compliance.
+    # Pinning actions/checkout to a specific SHA (v4.3.1) for security compliance.
     # Rationale: Prevents supply chain attacks by ensuring a known, trusted version is used.
     # Review periodically and update this SHA to incorporate security patches from newer releases.
     - name: Checkout code
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
