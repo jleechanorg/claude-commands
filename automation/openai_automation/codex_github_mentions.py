@@ -32,16 +32,18 @@ from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
 
-    def __init__(self, cdp_url: str = "http://localhost:9222", headless: bool = False):
+    def __init__(self, cdp_url: str = "http://localhost:9222", headless: bool = False, task_limit: int | None = None):
         """
         Initialize the automation.
 
         Args:
             cdp_url: Chrome DevTools Protocol WebSocket URL
             headless: Run in headless mode (not recommended - may be detected)
+            task_limit: Maximum number of tasks to process (None = all Github Mention tasks)
         """
         self.cdp_url = cdp_url
         self.headless = headless
+        self.task_limit = task_limit
         self.browser: Browser | None = None
         self.context: BrowserContext | None = None
         self.page: Page | None = None
@@ -138,33 +140,55 @@ class CodexGitHubMentionsAutomation:
 
     async def find_github_mention_tasks(self) -> List:
         """
-        Find all task links containing 'Github Mention:' in Codex.
+        Find task links in Codex.
+
+        If task_limit is set, finds ALL tasks (limited to first N).
+        Otherwise, finds only tasks containing 'Github Mention:'.
 
         Returns:
             List of task link elements
         """
-        print("\n🔍 Searching for 'Github Mention:' tasks...")
-
         try:
             # Wait for tasks to load on the page
             print("   Waiting for content to load...")
             await asyncio.sleep(5)  # Extra wait for dynamic content
 
-            # Find all links with "Github Mention:" text
-            task_links = await self.page.locator('a:has-text("Github Mention:")').all()
+            if self.task_limit is not None:
+                # Find ALL tasks (limited to first N)
+                print(f"\n🔍 Searching for first {self.task_limit} tasks...")
 
-            if not task_links:
-                print("⚠️  No tasks found with 'Github Mention:'")
-                print("   Retrying with longer wait...")
-                await asyncio.sleep(5)
+                # Find all task links - they typically have href and are clickable
+                # Adjust selector based on Codex UI structure
+                all_task_links = await self.page.locator('a[href*="/codex/"]').all()
+
+                if not all_task_links:
+                    print("⚠️  No tasks found")
+                    print("   Retrying with longer wait...")
+                    await asyncio.sleep(5)
+                    all_task_links = await self.page.locator('a[href*="/codex/"]').all()
+
+                # Limit to first N tasks
+                task_links = all_task_links[:self.task_limit]
+                print(f"✅ Found {len(all_task_links)} total tasks, limiting to first {len(task_links)}")
+                return task_links
+            else:
+                # Original behavior: Find only "Github Mention:" tasks
+                print("\n🔍 Searching for 'Github Mention:' tasks...")
+
                 task_links = await self.page.locator('a:has-text("Github Mention:")').all()
 
                 if not task_links:
-                    print("⚠️  Still no tasks found")
-                    return []
+                    print("⚠️  No tasks found with 'Github Mention:'")
+                    print("   Retrying with longer wait...")
+                    await asyncio.sleep(5)
+                    task_links = await self.page.locator('a:has-text("Github Mention:")').all()
 
-            print(f"✅ Found {len(task_links)} task(s) with 'Github Mention:'")
-            return task_links
+                    if not task_links:
+                        print("⚠️  Still no tasks found")
+                        return []
+
+                print(f"✅ Found {len(task_links)} task(s) with 'Github Mention:'")
+                return task_links
 
         except Exception as e:
             print(f"❌ Error finding tasks: {e}")
@@ -329,13 +353,20 @@ Examples:
         help="Enable verbose logging"
     )
 
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of tasks to process (default: all Github Mention tasks)"
+    )
+
     args = parser.parse_args()
 
     # Build CDP URL
     cdp_url = f"http://{args.cdp_host}:{args.cdp_port}"
 
     # Run automation
-    automation = CodexGitHubMentionsAutomation(cdp_url=cdp_url)
+    automation = CodexGitHubMentionsAutomation(cdp_url=cdp_url, task_limit=args.limit)
 
     try:
         success = await automation.run()
