@@ -29,7 +29,6 @@ from pathlib import Path
 from typing import List
 
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
-from playwright_stealth import Stealth
 
 
 # Set up logging to /tmp
@@ -69,12 +68,12 @@ logger = setup_logging()
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
 
-    def __init__(self, cdp_url: str = "http://127.0.0.1:9222", headless: bool = False, task_limit: int | None = 50):
+    def __init__(self, cdp_url: str | None = None, headless: bool = False, task_limit: int | None = 50):
         """
         Initialize the automation.
 
         Args:
-            cdp_url: Chrome DevTools Protocol WebSocket URL
+            cdp_url: Chrome DevTools Protocol WebSocket URL (None = launch new browser)
             headless: Run in headless mode (not recommended - may be detected)
             task_limit: Maximum number of tasks to process (default: 50, None = all Github Mention tasks)
         """
@@ -85,57 +84,55 @@ class CodexGitHubMentionsAutomation:
         self.context: BrowserContext | None = None
         self.page: Page | None = None
 
-    async def connect_to_existing_browser(self):
-        """Connect to existing Chrome browser via CDP."""
-        print(f"🔌 Connecting to existing Chrome at {self.cdp_url}...")
-        logger.info(f"Connecting to Chrome at {self.cdp_url}")
-
+    async def setup(self):
+        """Set up browser connection (Oracle-style: CDP or launch new)."""
         playwright = await async_playwright().start()
 
-        try:
-            # Connect to existing browser (not headless, uses real profile)
-            self.browser = await playwright.chromium.connect_over_cdp(self.cdp_url)
-            print(f"✅ Connected to Chrome (version: {self.browser.version})")
-            logger.info(f"Successfully connected to Chrome (version: {self.browser.version})")
+        if self.cdp_url:
+            # Connect to existing browser
+            print(f"🔌 Connecting to existing Chrome at {self.cdp_url}...")
+            logger.info(f"Connecting to Chrome at {self.cdp_url}")
 
-            # Use existing context or create new one
-            contexts = self.browser.contexts
-            if contexts:
-                self.context = contexts[0]
-                print(f"📱 Using existing context with {len(self.context.pages)} page(s)")
-            else:
-                self.context = await self.browser.new_context()
-                print("📱 Created new browser context")
+            try:
+                self.browser = await playwright.chromium.connect_over_cdp(self.cdp_url)
+                print(f"✅ Connected to Chrome (version: {self.browser.version})")
+                logger.info(f"Successfully connected to Chrome (version: {self.browser.version})")
 
-            # Get or create a page
-            if self.context.pages:
-                self.page = self.context.pages[0]
-                print(f"📄 Using existing page: {await self.page.title()}")
-            else:
-                self.page = await self.context.new_page()
-                print("📄 Created new page")
+                # Use existing context
+                contexts = self.browser.contexts
+                if contexts:
+                    self.context = contexts[0]
+                    print(f"📱 Using existing context with {len(self.context.pages)} page(s)")
+                else:
+                    self.context = await self.browser.new_context()
+                    print("📱 Created new browser context")
 
-            # Apply stealth patches to mask automation
-            print("🥷 Applying stealth patches to evade detection...")
-            stealth_config = Stealth(
-                navigator_webdriver=True,
-                chrome_runtime=True,
-                navigator_languages=True,
-                navigator_vendor=True,
-                navigator_platform=True,
-                webgl_vendor=True,
-                navigator_user_agent=True
+                # Get or create page
+                if self.context.pages:
+                    self.page = self.context.pages[0]
+                    print(f"📄 Using existing page: {await self.page.title()}")
+                else:
+                    self.page = await self.context.new_page()
+                    print("📄 Created new page")
+
+            except Exception as e:
+                print(f"❌ Failed to connect via CDP: {e}")
+                print("💡 Falling back to launching new browser...")
+                logger.warning(f"CDP connection failed: {e}, launching new browser")
+                self.cdp_url = None  # Disable CDP for cleanup
+
+        if not self.cdp_url:
+            # Launch new browser (Oracle approach)
+            print("🚀 Launching new Chrome browser...")
+            self.browser = await playwright.chromium.launch(
+                headless=self.headless,
+                args=["--disable-blink-features=AutomationControlled"]
             )
-            await stealth_config.apply_stealth_async(self.page)
-            logger.info("Applied stealth patches to page")
+            self.context = await self.browser.new_context()
+            self.page = await self.context.new_page()
+            print("✅ Browser ready")
 
-            return True
-
-        except Exception as e:
-            print(f"❌ Failed to connect to Chrome: {e}")
-            print("\n💡 Make sure Chrome is running with remote debugging:")
-            print("   ./scripts/openai_automation/start_chrome_debug.sh")
-            return False
+        return True
 
     async def ensure_openai_login(self):
         """Navigate to OpenAI and ensure user is logged in."""
@@ -361,9 +358,8 @@ class CodexGitHubMentionsAutomation:
         logger.info("Starting Codex automation workflow")
 
         try:
-            # Step 1: Connect to existing browser
-            if not await self.connect_to_existing_browser():
-                return False
+            # Step 1: Setup browser (connect or launch)
+            await self.setup()
 
             # Step 2: Skip login check - user is already logged in
             print("\n✅ Assuming already logged in to OpenAI")
@@ -402,8 +398,12 @@ class CodexGitHubMentionsAutomation:
             return False
 
         finally:
-            # Keep browser open (we're using existing instance)
-            print("\n💡 Browser left open (using existing instance)")
+            # Only close if we launched it (not using existing browser)
+            if self.browser and not self.cdp_url:
+                print("\n🔒 Closing browser (launched by automation)")
+                await self.browser.close()
+            else:
+                print("\n💡 Browser left open (using existing instance)")
 
     async def cleanup(self):
         """Clean up resources (but keep browser open)."""
@@ -437,9 +437,15 @@ Examples:
     )
 
     parser.add_argument(
+        "--use-existing-browser",
+        action="store_true",
+        help="Connect to existing Chrome (requires start_chrome_debug.sh)"
+    )
+
+    parser.add_argument(
         "--cdp-host",
-        default="localhost",
-        help="CDP host (default: localhost)"
+        default="127.0.0.1",
+        help="CDP host (default: 127.0.0.1)"
     )
 
     parser.add_argument(
@@ -457,8 +463,8 @@ Examples:
 
     args = parser.parse_args()
 
-    # Build CDP URL
-    cdp_url = f"http://{args.cdp_host}:{args.cdp_port}"
+    # Build CDP URL only if using existing browser
+    cdp_url = f"http://{args.cdp_host}:{args.cdp_port}" if args.use_existing_browser else None
 
     # Run automation
     automation = CodexGitHubMentionsAutomation(cdp_url=cdp_url, task_limit=args.limit)
