@@ -17,6 +17,8 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 
 ## Authentication Flow
 
+> **Shared development credentials:** All `/secondo` users share the same AI Universe Firebase project for the MCP server. Do **not** modify these values unless you are provisioning a private instance; if you need a private deployment, create your own Firebase project and update the single credential block documented below.
+
 ### 1. Initial Login
 
 ```bash
@@ -157,6 +159,8 @@ source ~/.bashrc
 - Browser-based authentication (similar to gh CLI, gcloud CLI)
 - Never commit authentication tokens
 - Firebase security best practices enforced
+- Credential ownership: the canonical credential values live in this file; if rotation is required, update this section **once** and ensure dependent scripts source the new values from here.
+- Private deployments: for your own MCP server, create a separate Firebase project and replace the credential block above instead of reusing the shared development keys.
 
 ## Integration with Commands
 

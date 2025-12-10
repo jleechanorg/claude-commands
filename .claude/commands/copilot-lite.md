@@ -6,7 +6,8 @@ execution_mode: immediate
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 **This is NOT documentation - these are COMMANDS to execute right now.**
-**Use TodoWrite to track progress through multi-phase workflows.**
+
+**Available tools/capabilities:** Shell commands (`gh`, `git`, `python3`), local file reads/writes, `commentfetch/commentreply/commentcheck` modules, and git commit/push. No external plugins beyond these.
 
 ## 🎯 MISSION
 
@@ -69,10 +70,10 @@ For EACH comment in `/tmp/{branch}/comments.json`:
    - `ROUTINE`: Code style, documentation, optional refactoring
 
 3. **ATTEMPT** the fix (if applicable):
-   - Read the affected file(s)
-   - Make the code change using Edit/MultiEdit tools
-   - Run relevant tests to verify
-   - Commit if tests pass, revert if they fail
+   - Read affected files via shell (`cat`, `sed`) or repo-aware tools
+   - Edit code using the built-in `Edit/MultiEdit` capabilities of Claude Code (no external editor required)
+   - Run relevant tests with project scripts (e.g., `./run_tests_with_coverage.sh`, `pytest path/to/test.py`)
+   - Stage and commit with `git` when tests pass; revert or leave a NOT DONE reply if they fail
 
 4. **GENERATE** a truthful response based on ACTUAL outcome:
 

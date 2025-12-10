@@ -87,11 +87,8 @@ TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 
 # If this fails, user needs to authenticate with AI Universe credentials
 if [ $? -ne 0 ]; then
-  echo "❌ Authentication failed. Please run:"
-  echo "   FIREBASE_PROJECT_ID=ai-universe-b3551 \\"
-  echo "   FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \\"
-  echo "   FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc \\"
-  echo "   node ~/.claude/scripts/auth-cli.mjs login"
+  echo "❌ Authentication failed."
+  echo "Please follow the setup steps in /skills/ai-universe-auth.md to authenticate with the shared AI Universe credentials."
   exit 1
 fi
 ```

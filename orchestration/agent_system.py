@@ -38,6 +38,7 @@ class AgentBase:
         self.children = []
         self.heartbeat_interval = heartbeat_interval or self.DEFAULT_HEARTBEAT_INTERVAL
         self.error_retry_interval = error_retry_interval or self.DEFAULT_ERROR_RETRY_INTERVAL
+        self.last_task_time = None
 
         # A2A Integration
         self.enable_a2a = enable_a2a
@@ -89,6 +90,7 @@ class AgentBase:
                 message = self.broker.get_task(self.agent_id)
                 if message:
                     if message.type == MessageType.TASK_ASSIGNMENT:
+                        self.last_task_time = time.time()
                         self._handle_task(message)
                     elif message.type == MessageType.TASK_RESULT:
                         self._handle_result(message)

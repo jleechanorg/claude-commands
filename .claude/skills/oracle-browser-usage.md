@@ -11,8 +11,8 @@ scope: oracle
 - Tasks: architecture review, debug triage, diff review, frontend/backend issue analysis.
 
 ## Quick start (browser)
-1. Ensure you are logged into chatgpt.com in your default Chrome/Chromium profile.
-2. Source helper bundles: `source scripts/oracle_helpers.sh` (exports globs and helper commands).
+1. Ensure you are logged into chatgpt.com in your default browser (Chrome/Chromium recommended; other browsers may require additional auth setup).
+2. Source helper bundles: `source scripts/oracle_helpers.sh` (exports globs and helper commands). **Note:** this helper script and the Oracle CLI are external dependencies and are not shipped in this repository—install the Oracle CLI toolkit and helper scripts from your internal tooling source before running these commands.
 3. Run helpers (browser auto-selected when no API key):
    - `oracle_arch_preview` (dry-run bundle preview).
    - `oracle_arch` (architecture review).
@@ -26,9 +26,9 @@ scope: oracle
 - `--files-report` to see token spend per file.
 
 ## Prompts (adapt as needed)
-- Architecture: “Fast architecture review of Your Project; describe components, how MCP/Flask/Gemini/Firestore fit; top 5 cleanup opportunities.”
+- Architecture: “Fast architecture review of WorldArchitect; describe components, how MCP/Flask/Gemini/Firestore fit; top 5 cleanup opportunities.”
 - AI bug: “We have a bug in the AI story pipeline… walk HTTP→MCP→Gemini→parsing→state/validators; propose minimal patch + tests.”
-- Diff review: “Senior review of this diff for Your Project (correctness, perf, security, architecture alignment).”
+- Diff review: “Senior review of this diff for WorldArchitect (correctness, perf, security, architecture alignment).”
 - Frontend: “Frontend bug described in note; find likely causes in campaign wizard; propose JS/CSS fixes and a minimal regression test.”
 
 ## Troubleshooting

@@ -1383,7 +1383,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             common_paths = [
                 os.path.expanduser("~/.local/bin/gh"),  # Linux user install
                 "/usr/local/bin/gh",                    # Linux system install
-                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Windows/Linux user bin
+                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Unix/Linux user bin
                 "C:\\Program Files\\GitHub CLI\\gh.exe",
                 "C:\\Program Files (x86)\\GitHub CLI\\gh.exe"
             ]
