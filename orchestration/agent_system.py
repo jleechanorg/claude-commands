@@ -15,7 +15,10 @@ from orchestration.message_broker import MessageBroker, MessageType, TaskMessage
 
 
 class AgentBase:
-    """Base class for all agents with A2A support."""
+    """Base class for all agents with A2A support and heartbeats."""
+
+    DEFAULT_HEARTBEAT_INTERVAL = 30.0
+    DEFAULT_ERROR_RETRY_INTERVAL = 5.0
 
     def __init__(
         self,
@@ -23,7 +26,9 @@ class AgentBase:
         agent_type: str,
         broker: MessageBroker,
         enable_a2a: bool = True,
-        capabilities: list = None,
+        capabilities: list[str] | None = None,
+        heartbeat_interval: float | None = None,
+        error_retry_interval: float | None = None,
     ):
         self.agent_id = agent_id
         self.agent_type = agent_type
@@ -31,6 +36,8 @@ class AgentBase:
         self.running = False
         self.capabilities = capabilities or []
         self.children = []
+        self.heartbeat_interval = heartbeat_interval or self.DEFAULT_HEARTBEAT_INTERVAL
+        self.error_retry_interval = error_retry_interval or self.DEFAULT_ERROR_RETRY_INTERVAL
 
         # A2A Integration
         self.enable_a2a = enable_a2a
@@ -63,14 +70,6 @@ class AgentBase:
         self.message_thread.daemon = True
         self.message_thread.start()
 
-        # Start A2A message processing thread
-        if self.enable_a2a:
-            self.a2a_message_thread = threading.Thread(
-                target=self._process_a2a_messages
-            )
-            self.a2a_message_thread.daemon = True
-            self.a2a_message_thread.start()
-
         # Start heartbeat thread
         self.heartbeat_thread = threading.Thread(target=self._heartbeat_loop)
         self.heartbeat_thread.daemon = True
@@ -99,21 +98,7 @@ class AgentBase:
                 print(f"Error processing message: {e}")
                 time.sleep(1)
 
-    def _process_a2a_messages(self):
-        """Process A2A messages."""
-        while self.running:
-            try:
-                if self.a2a_wrapper:
-                    # A2A wrapper handles message processing internally
-                    # This thread is reserved for future direct message handling
-                    pass
-
-                time.sleep(1)
-            except Exception as e:
-                print(f"Error processing A2A message: {e}")
-                time.sleep(1)
-
-    def _handle_a2a_message(self, message: dict):
+    def _handle_a2a_message(self, message: dict[str, Any]):
         """Handle A2A message - override in subclasses."""
         print(f"Agent {self.agent_id} received A2A message: {message.get('payload', {})}")
 
@@ -126,39 +111,49 @@ class AgentBase:
                 "agent_id": self.agent_id,
                 "timestamp": time.time(),
             }
-            # A2A wrapper handles response sending
             print(f"Agent {self.agent_id} responding to ping")
+            return response_data
+
+        return None
+
+    def _collect_health_data(self) -> dict[str, Any]:
+        """Build heartbeat payload for broker visibility."""
+        return {
+            "agent_id": self.agent_id,
+            "status": "healthy",
+            "uptime": time.time() - getattr(self, "start_time", time.time()),
+            "capabilities": self.capabilities,
+            "last_task": getattr(self, "last_task_time", None),
+        }
+
+    def _heartbeat_tick(self) -> bool:
+        """Send a single heartbeat and report success."""
+        health_data = self._collect_health_data()
+        return bool(self.broker.heartbeat(self.agent_id, health_data))
 
     def _heartbeat_loop(self):
         """Send periodic heartbeats with health monitoring."""
         consecutive_failures = 0
         while self.running:
             try:
-                # Send heartbeat with health status
-                health_data = {
-                    "agent_id": self.agent_id,
-                    "status": "healthy",
-                    "uptime": time.time() - self.start_time,
-                    "capabilities": self.capabilities,
-                    "last_task": getattr(self, "last_task_time", None),
-                }
-
-                success = self.broker.heartbeat(self.agent_id, health_data)
+                success = self._heartbeat_tick()
 
                 if success:
                     consecutive_failures = 0
+                    sleep_time = self.heartbeat_interval
                 else:
                     consecutive_failures += 1
                     if consecutive_failures >= 3:
                         print(
                             f"Agent {self.agent_id} heartbeat failed {consecutive_failures} times - may be disconnected"
                         )
-
-                time.sleep(30)
+                    sleep_time = self.error_retry_interval
             except Exception as e:
                 print(f"Heartbeat error for {self.agent_id}: {e}")
                 consecutive_failures += 1
-                time.sleep(5)  # Shorter retry on error
+                sleep_time = self.error_retry_interval
+
+            time.sleep(sleep_time)
 
     def _handle_task(self, message: TaskMessage):
         """Handle incoming task - override in subclasses."""
@@ -356,9 +351,7 @@ while True:
         if "analyze" in desc_lower:
             # Perform analysis
             components = description.split()
-            return (
-                f"Analysis complete: Found {len(components)} components in request"
-            )
+            return f"Analysis complete: Found {len(components)} components in request"
         if "validate" in desc_lower:
             # Perform validation
             return f"Validation passed: Task '{description}' meets requirements"
@@ -435,9 +428,7 @@ def create_tmux_session(session_name: str, command: str):
 def list_tmux_sessions():
     """List all tmux sessions."""
     try:
-        result = subprocess.run(
-            ["tmux", "list-sessions"], check=False, capture_output=True, text=True
-        )
+        result = subprocess.run(["tmux", "list-sessions"], check=False, capture_output=True, text=True)
         return result.stdout.strip().split("\n") if result.stdout else []
     except subprocess.CalledProcessError:
         return []

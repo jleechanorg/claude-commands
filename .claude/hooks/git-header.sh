@@ -23,6 +23,10 @@ if [ $? -ne 0 ]; then
     exit 0
 fi
 
+# Get the common git directory (for worktrees, refs are stored in the shared directory)
+# In a normal repo, this equals git_dir. In a worktree, it points to the main repo's .git
+git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null || echo "$git_dir")
+
 # Get the root of the working tree
 git_root=$(git rev-parse --show-toplevel 2>/dev/null)
 if [ $? -ne 0 ]; then
@@ -92,26 +96,87 @@ if [[ "$local_branch" =~ pr-([0-9]+) ]]; then
 elif [[ "$local_branch" =~ /pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
 else
-    # Check for cached PR lookup first (5-minute cache)
+    # Enhanced PR cache with smart invalidation
+    # - "none" results cached for CACHE_TTL_NONE seconds (PRs may be created soon after push)
+    # - Real PR numbers cached for CACHE_TTL_PR seconds (stable)
+    # - Bypass cache entirely if last push was < RECENT_PUSH_WINDOW seconds ago
+    readonly CACHE_TTL_NONE=30      # 30 seconds for "none" results
+    readonly CACHE_TTL_PR=300       # 5 minutes for PR numbers
+    readonly RECENT_PUSH_WINDOW=60  # 60 seconds for recent push detection
     current_commit=$(git rev-parse HEAD 2>/dev/null)
     cache_file="/tmp/git-header-pr-${current_commit:0:8}"
     cache_valid=false
 
-    # Check if cache exists and is less than 5 minutes old
-    if [ -f "$cache_file" ] && [ -n "$current_commit" ]; then
-        # Portable file modification time detection
+    # Helper function to get file mtime (POSIX-compatible)
+    get_mtime() {
+        local file="$1"
         if command -v perl >/dev/null 2>&1; then
-            # Use perl for maximum portability
-            cache_mtime=$(perl -e 'print((stat($ARGV[0]))[9])' "$cache_file" 2>/dev/null || echo "0")
+            perl -e 'print((stat($ARGV[0]))[9])' "$file" 2>/dev/null || echo "0"
         else
-            # Fallback to platform-specific stat commands
-            cache_mtime=$(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null || echo "0")
+            stat -f%m "$file" 2>/dev/null || stat -c%Y "$file" 2>/dev/null || echo "0"
+        fi
+    }
+
+    current_time=$(date +%s)
+
+    # Check if there was a recent push (within RECENT_PUSH_WINDOW seconds)
+    # Detect by checking mtime of remote tracking ref (updated on push)
+    recent_push=false
+    if [ "$remote" != "no upstream" ]; then
+        # Parse remote name and branch from upstream ref (e.g., "origin/main" or "upstream/feature")
+        # Handle any remote name, not just "origin"
+        remote_name="${remote%%/*}"
+        remote_branch="${remote#*/}"
+        ref_file="$git_common_dir/refs/remotes/$remote_name/$remote_branch"
+
+        # Check unpacked ref file first
+        if [ -f "$ref_file" ]; then
+            remote_ref_mtime=$(get_mtime "$ref_file")
+            # Explicitly check for mtime extraction failure (returns "0" or empty)
+            # "0" means epoch time which indicates extraction failed
+            if [ -n "$remote_ref_mtime" ] && [ "$remote_ref_mtime" != "0" ]; then
+                push_age=$((current_time - remote_ref_mtime))
+                if [ "$push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
+                    recent_push=true
+                fi
+            fi
         fi
 
-        cache_age=$(($(date +%s) - cache_mtime))
-        if [ "$cache_age" -lt 300 ]; then  # 300 seconds = 5 minutes
+        # Fallback: check packed-refs if unpacked ref not found or mtime extraction failed
+        # Modern git may pack refs into .git/packed-refs without updating individual file mtimes
+        if [ "$recent_push" = false ]; then
+            packed_refs_file="$git_common_dir/packed-refs"
+            if [ -f "$packed_refs_file" ]; then
+                packed_refs_mtime=$(get_mtime "$packed_refs_file")
+                if [ -n "$packed_refs_mtime" ] && [ "$packed_refs_mtime" != "0" ]; then
+                    packed_push_age=$((current_time - packed_refs_mtime))
+                    if [ "$packed_push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
+                        recent_push=true
+                    fi
+                fi
+            fi
+        fi
+    fi
+
+    # Check if cache exists and is valid
+    # Skip cache check entirely if recent push detected (user likely just created PR)
+    if [ -f "$cache_file" ] && [ -n "$current_commit" ] && [ "$recent_push" = false ]; then
+        cache_mtime=$(get_mtime "$cache_file")
+        cache_age=$((current_time - cache_mtime))
+        cached_value=$(cat "$cache_file" 2>/dev/null || echo "none")
+
+        # Different TTL based on cached value:
+        # - "none" = CACHE_TTL_NONE seconds (PRs may be created soon)
+        # - Real PR numbers = CACHE_TTL_PR seconds (stable, unlikely to change)
+        if [ "$cached_value" = "none" ]; then
+            max_cache_age="$CACHE_TTL_NONE"
+        else
+            max_cache_age="$CACHE_TTL_PR"
+        fi
+
+        if [ "$cache_age" -lt "$max_cache_age" ]; then
             cache_valid=true
-            pr_text=$(cat "$cache_file" 2>/dev/null || echo "none")
+            pr_text="$cached_value"
         fi
     fi
 
