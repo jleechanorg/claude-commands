@@ -13,6 +13,7 @@ scope: oracle
 ## Quick start (browser)
 1. Ensure you are logged into chatgpt.com in your default Chrome/Chromium profile.
 2. Source helper bundles: `source scripts/oracle_helpers.sh` (exports globs and helper commands).
+   - **Note:** The helper script and functions are not included in this export. Create them locally or update the doc once they are available. Until then, treat the commands below as placeholders.
 3. Run helpers (browser auto-selected when no API key):
    - `oracle_arch_preview` (dry-run bundle preview).
    - `oracle_arch` (architecture review).

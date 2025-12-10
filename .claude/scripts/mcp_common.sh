@@ -42,6 +42,11 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+if [ ! -d "$REPO_ROOT" ]; then
+    echo "❌ Error: Failed to resolve repository root at: $REPO_ROOT" >&2
+    safe_exit 1
+fi
+
 # Allow callers to preconfigure behaviour while providing sensible defaults.
 TEST_MODE=${TEST_MODE:-false}
 MCP_PRODUCT_NAME=${MCP_PRODUCT_NAME:-"Claude"}

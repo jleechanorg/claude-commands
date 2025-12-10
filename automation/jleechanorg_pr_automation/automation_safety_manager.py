@@ -711,7 +711,8 @@ def main():
     """CLI interface for safety manager"""
 
     parser = argparse.ArgumentParser(description="Automation Safety Manager")
-    parser.add_argument("--data-dir", default="/tmp/automation_safety",
+    default_data_dir = os.path.join(os.path.expanduser("~"), ".local", "share", "automation_safety")
+    parser.add_argument("--data-dir", default=default_data_dir,
                         help="Directory for safety data files")
     parser.add_argument("--check-pr", type=int, metavar="PR_NUMBER",
                         help="Check if PR can be processed")

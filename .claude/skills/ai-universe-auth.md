@@ -23,9 +23,9 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 # CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
 # Start browser-based OAuth authentication
 # Note: Run this outside Claude Code in a regular terminal
-FIREBASE_PROJECT_ID=ai-universe-b3551 \
-FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \
-FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc \
+export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID}"
+export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN}"
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY}"
 node ~/.claude/scripts/auth-cli.mjs login
 ```
 
@@ -54,9 +54,9 @@ node ~/.claude/scripts/auth-cli.mjs status
 
 ```bash
 # CRITICAL: Set AI Universe Firebase credentials
-export FIREBASE_PROJECT_ID=ai-universe-b3551
-export FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com
-export FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc
+export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID}"
+export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN}"
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY}"
 
 # Get token (auto-refreshes if expired, does nothing if valid)
 TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
@@ -127,9 +127,9 @@ If you see errors about Firebase configuration or `PROJECT_NUMBER_MISMATCH`:
 
 ```bash
 # Use AI Universe Firebase credentials (REQUIRED for /secondo)
-export FIREBASE_PROJECT_ID=ai-universe-b3551
-export FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com
-export FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc
+export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID}"
+export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN}"
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY}"
 
 # Then run login or token command
 node ~/.claude/scripts/auth-cli.mjs login

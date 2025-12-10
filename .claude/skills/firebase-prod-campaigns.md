@@ -6,7 +6,7 @@ This skill documents how to query the **production Firestore database** for Your
 ## Critical Information
 
 ### Database Structure
-```
+```bash
 Firestore Database: worldarchitecture-ai
 └── users/
     └── {Firebase_Auth_UID}/
@@ -130,13 +130,13 @@ From `$PROJECT_ROOT/llm_service.py`:
 ## Common Issues
 
 ### Clock Skew Error
-```
+```text
 Invalid JWT: Token must be a short-lived token (60 minutes)
 ```
 **Solution:** Ensure `apply_clock_skew_patch()` is called BEFORE importing Firebase.
 
 ### Auth Provider Not Found
-```
+```text
 No auth provider found for the given identifier
 ```
 **Solution:** Use explicit credentials with `credentials.Certificate()`.

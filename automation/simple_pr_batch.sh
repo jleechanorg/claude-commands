@@ -83,7 +83,7 @@ send_email_notification() {
 Issue Type: $issue_type
 Details: $details
 
-PR URL: https://github.com/jleechanorg/worldarchitect.ai/pull/$pr_number
+PR URL: https://github.com/$GH_REPO/pull/$pr_number
 
 Automated fix attempts have been exhausted. Please review and fix manually.
 

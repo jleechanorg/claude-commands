@@ -60,6 +60,10 @@ echo "   Logs: $LOG_DIR"
 # Update plist with correct paths and user
 echo "🔧 Configuring launchd service..."
 CURRENT_USER=$(whoami)
+if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+    echo "❌ GITHUB_TOKEN environment variable is not set"
+    exit 1
+fi
 sed "s|/Users/jleechan/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" | \
 sed "s|jleechan|$CURRENT_USER|g" | \
 sed "s|\\$GITHUB_TOKEN|$GITHUB_TOKEN|g" > "$PLIST_DEST"

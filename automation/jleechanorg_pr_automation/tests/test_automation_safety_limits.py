@@ -404,13 +404,15 @@ class TestAutomationIntegration(unittest.TestCase):
         plist_dir = self.plist_path.parent
         plist_dir.mkdir(parents=True, exist_ok=True)
         plist_dir.chmod(0o755)
-        plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+        repo_root = Path(__file__).resolve().parents[4]
+        wrapper_path = repo_root / "automation" / "automation_safety_wrapper.py"
+        plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/jleechan/projects/worldarchitect.ai/automation/automation_safety_wrapper.py</string>
+        <string>{wrapper_path}</string>
     </array>
 </dict>
 </plist>
@@ -443,9 +445,8 @@ class TestAutomationIntegration(unittest.TestCase):
     def run_automation_script(self):
         """Helper to run automation script"""
         import subprocess
-        return subprocess.run([
-            "/Users/jleechan/projects/worktree_worker2/automation/simple_pr_batch.sh"
-        ], check=False, capture_output=True, text=True)
+        script_path = Path(__file__).resolve().parents[4] / "automation" / "simple_pr_batch.sh"
+        return subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
 
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""
