@@ -21,12 +21,48 @@ Usage:
 
 import argparse
 import asyncio
+import logging
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
+
+
+# Set up logging to /tmp
+def setup_logging():
+    """Set up logging to /tmp directory."""
+    log_dir = Path("/tmp/automate_codex_update")
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    log_file = log_dir / "codex_automation.log"
+
+    # Create logger
+    logger = logging.getLogger("codex_automation")
+    logger.setLevel(logging.INFO)
+
+    # File handler
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(logging.INFO)
+
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
+    # Formatter
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
+    return logger
+
+
+logger = setup_logging()
 
 
 class CodexGitHubMentionsAutomation:
@@ -51,6 +87,7 @@ class CodexGitHubMentionsAutomation:
     async def connect_to_existing_browser(self):
         """Connect to existing Chrome browser via CDP."""
         print(f"🔌 Connecting to existing Chrome at {self.cdp_url}...")
+        logger.info(f"Connecting to Chrome at {self.cdp_url}")
 
         playwright = await async_playwright().start()
 
@@ -58,6 +95,7 @@ class CodexGitHubMentionsAutomation:
             # Connect to existing browser (not headless, uses real profile)
             self.browser = await playwright.chromium.connect_over_cdp(self.cdp_url)
             print(f"✅ Connected to Chrome (version: {self.browser.version})")
+            logger.info(f"Successfully connected to Chrome (version: {self.browser.version})")
 
             # Use existing context or create new one
             contexts = self.browser.contexts
@@ -271,6 +309,7 @@ class CodexGitHubMentionsAutomation:
             await asyncio.sleep(1)
 
         print(f"\n✅ Successfully updated {success_count}/{len(tasks)} task(s)")
+        logger.info(f"Successfully updated {success_count}/{len(tasks)} tasks")
         return success_count
 
     async def run(self):
