@@ -31,8 +31,9 @@ NARRATIVE_RESPONSE_SCHEMA = {
         "planning_block": {
             "type": "object",
             "description": "GM planning with thinking field and dynamic choices (snake_case keys like explore_tavern, attack_goblin, god:option_1)",
-            # Internal structure validated by narrative_response_schema.py, not JSON schema
-            # This allows dynamic choice keys which strict mode cannot support
+            # Gemini requires properties to be non-empty for object types
+            # Using additionalProperties:true allows dynamic choice keys
+            "additionalProperties": True,
         },
         "entities_mentioned": {
             "type": "array",
@@ -63,10 +64,12 @@ NARRATIVE_RESPONSE_SCHEMA = {
         "state_updates": {
             "type": "object",
             "description": "Game state updates (HP, inventory, conditions, etc.)",
+            "additionalProperties": True,
         },
         "debug_info": {
             "type": "object",
             "description": "Debug information for development",
+            "additionalProperties": True,
         },
         "god_mode_response": {
             "type": "string",
