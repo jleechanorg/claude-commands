@@ -13,7 +13,10 @@ from google import genai
 from google.genai import types
 
 from mvp_site import logging_util
-from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+# NOTE: Gemini response_schema is NOT used due to strict property requirements
+# Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
+# We rely on response_mime_type="application/json" + prompt instruction instead
+# Post-response validation in narrative_response_schema.py handles structure enforcement
 
 _client: genai.Client | None = None
 
@@ -68,10 +71,12 @@ def generate_json_mode_content(
         "temperature": temperature,
         "safety_settings": safety_settings,
         "response_mime_type": "application/json",
-        # Enforce NarrativeResponse schema structure (not just valid JSON syntax)
-        # Use response_schema (preferred SDK name; response_json_schema is accepted but
-        # we follow documented parameter for clarity and forward compatibility).
-        "response_schema": NARRATIVE_RESPONSE_SCHEMA,
+        # NOTE: response_schema is NOT used because Gemini requires ALL object types
+        # to have non-empty properties - this conflicts with dynamic choice keys
+        # (e.g., explore_tavern, attack_goblin) that can't be pre-defined.
+        # Structure enforcement relies on:
+        # 1. Prompt instruction (game_state_instruction.md)
+        # 2. Post-response validation (narrative_response_schema.py)
     }
 
     if system_instruction_text:
