@@ -15,7 +15,7 @@ sys.path.insert(
 )
 
 from mvp_site.llm_response import LLMResponse
-from mvp_site.narrative_response_schema import NarrativeResponse
+from mvp_site.narrative_response_schema import CJK_PATTERN, NarrativeResponse
 
 
 class TestNarrativeResponseExtraction(unittest.TestCase):
@@ -275,7 +275,9 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
     def test_mixed_language_character_stripping(self):
         """Test that CJK characters are stripped from narrative (LLM training data leakage)"""
         # Example from real campaign: Chinese character 夜晚 (night) mixed into English
-        narrative_with_chinese = "The negotiation is complete, and now the  夜晚  stretches before you"
+        narrative_with_chinese = (
+            "The negotiation is complete, and now the  夜晚  stretches before you"
+        )
         response = NarrativeResponse(narrative=narrative_with_chinese)
 
         # Chinese characters should be stripped
@@ -284,6 +286,14 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         # Should clean up double spaces left behind
         assert "  " not in response.narrative
         assert response.narrative.endswith("stretches before you")
+
+    def test_cjk_pattern_compiles_and_matches_common_ranges(self):
+        """Ensure the CJK regex compiles and matches representative characters."""
+
+        sample_text = "中文テスト한국어"
+
+        assert CJK_PATTERN.search(sample_text)
+        assert CJK_PATTERN.search("plain ASCII text") is None
 
     def test_japanese_character_stripping(self):
         """Test that Japanese characters are stripped from narrative"""
