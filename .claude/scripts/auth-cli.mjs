@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * CLI Authentication Tool for AI Universe
+ * Multi-project Firebase CLI Authentication Tool (AI Universe by default)
  *
  * Implements browser-based OAuth flow with localhost callback server
  * Pattern used by: gcloud CLI, Firebase CLI, GitHub CLI
@@ -37,7 +37,6 @@ const DEFAULT_PROJECT = {
 
 // Known project configurations for convenience
 const KNOWN_PROJECTS = {
-  'ai-universe': DEFAULT_PROJECT,
   'ai-universe-b3551': DEFAULT_PROJECT,
   'worldarchitecture-ai': {
     id: 'worldarchitecture-ai',
