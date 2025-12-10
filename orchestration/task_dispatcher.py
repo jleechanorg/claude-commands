@@ -1076,13 +1076,15 @@ Complete the task, then use /pr to create a new pull request."""
         # If collision detected, generate a unique variation
         if agent_name in existing:
             timestamp = int(time.time() * 1000000) % 10000
-            counter = 1
-            original_candidate = f"{base_name}-{timestamp}"
-            agent_name = original_candidate
+            # First try base_name-{timestamp}
+            agent_name = f"{base_name}-{timestamp}"
             
-            while agent_name in existing:
-                agent_name = f"{original_candidate}-{counter}"
-                counter += 1
+            # If that's also taken, add counter: base_name-{timestamp}-{counter}
+            if agent_name in existing:
+                counter = 1
+                while f"{base_name}-{timestamp}-{counter}" in existing:
+                    counter += 1
+                agent_name = f"{base_name}-{timestamp}-{counter}"
             
             print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
 

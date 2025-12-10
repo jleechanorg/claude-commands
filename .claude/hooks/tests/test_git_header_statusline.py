@@ -156,7 +156,7 @@ class TestGitHeaderStatusline:
         import time
 
         start_time = time.time()
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        run_git_header(git_header_script)
         execution_time = time.time() - start_time
 
         # Must complete in under 5 seconds (actually under 1 second target)
