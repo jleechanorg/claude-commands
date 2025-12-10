@@ -17,11 +17,24 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 
 ## Authentication Flow
 
+> **Shared development credentials:** All `/secondo` users share the same AI Universe Firebase project for the MCP server. Do **not** modify these values unless you are provisioning a private instance; if you need a private deployment, create your own Firebase project and update the single credential block documented below.
+
+```bash
+# Canonical AI Universe credentials (obtain from secure vault/secret manager)
+: "${AI_UNIVERSE_FIREBASE_PROJECT_ID:?Set AI_UNIVERSE_FIREBASE_PROJECT_ID from the shared secret vault}"
+: "${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:?Set AI_UNIVERSE_FIREBASE_AUTH_DOMAIN from the shared secret vault}"
+: "${AI_UNIVERSE_FIREBASE_API_KEY:?Set AI_UNIVERSE_FIREBASE_API_KEY from the shared secret vault}"
+```
+
 ### 1. Initial Login
 
 ```bash
+# CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
 # Start browser-based OAuth authentication
 # Note: Run this outside Claude Code in a regular terminal
+FIREBASE_PROJECT_ID="$AI_UNIVERSE_FIREBASE_PROJECT_ID" \
+FIREBASE_AUTH_DOMAIN="$AI_UNIVERSE_FIREBASE_AUTH_DOMAIN" \
+FIREBASE_API_KEY="$AI_UNIVERSE_FIREBASE_API_KEY" \
 node ~/.claude/scripts/auth-cli.mjs login
 ```
 
@@ -49,6 +62,11 @@ node ~/.claude/scripts/auth-cli.mjs status
 ### 3. Get Token for Scripts
 
 ```bash
+# CRITICAL: Set AI Universe Firebase credentials
+export FIREBASE_PROJECT_ID="$AI_UNIVERSE_FIREBASE_PROJECT_ID"
+export FIREBASE_AUTH_DOMAIN="$AI_UNIVERSE_FIREBASE_AUTH_DOMAIN"
+export FIREBASE_API_KEY="$AI_UNIVERSE_FIREBASE_API_KEY"
+
 # Get token (auto-refreshes if expired, does nothing if valid)
 TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 echo $TOKEN
@@ -112,19 +130,24 @@ node ~/.claude/scripts/auth-cli.mjs refresh
 node ~/.claude/scripts/auth-cli.mjs login
 ```
 
-### Firebase Config Missing
+### Firebase Config Missing or PROJECT_NUMBER_MISMATCH
 
-If you see errors about Firebase configuration:
+If you see errors about Firebase configuration or `PROJECT_NUMBER_MISMATCH`:
 
 ```bash
-# Set environment variables
-export FIREBASE_API_KEY="your-api-key"
-export FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
-export FIREBASE_PROJECT_ID="your-project-id"
+# Use AI Universe Firebase credentials (REQUIRED for /secondo)
+export FIREBASE_PROJECT_ID="$AI_UNIVERSE_FIREBASE_PROJECT_ID"
+export FIREBASE_AUTH_DOMAIN="$AI_UNIVERSE_FIREBASE_AUTH_DOMAIN"
+export FIREBASE_API_KEY="$AI_UNIVERSE_FIREBASE_API_KEY"
 
-# Or run setup script if available
-./scripts/setup-firebase-config.sh
+# Then run login or token command
+node ~/.claude/scripts/auth-cli.mjs login
+
+# Or if you have env vars in ~/.bashrc:
+source ~/.bashrc
 ```
+
+**Note:** The MCP server (`ai-universe-backend-dev`) requires authentication with the `ai-universe-b3551` Firebase project, NOT `worldarchitecture-ai`.
 
 ## Rate Limits
 
@@ -143,6 +166,8 @@ export FIREBASE_PROJECT_ID="your-project-id"
 - Browser-based authentication (similar to gh CLI, gcloud CLI)
 - Never commit authentication tokens
 - Firebase security best practices enforced
+- Credential ownership: the canonical credential values live in this file; if rotation is required, update this section **once** and ensure dependent scripts source the new values from here.
+- Private deployments: for your own MCP server, create a separate Firebase project and replace the credential block above instead of reusing the shared development keys.
 
 ## Integration with Commands
 
