@@ -1,6 +1,6 @@
 """OpenRouter provider implementation for LLM interactions.
 
-Uses json_schema with strict mode for models that support it (e.g., Grok).
+Uses json_schema (strict:false) for models that support it (e.g., Grok).
 Other models fall back to json_object mode.
 """
 

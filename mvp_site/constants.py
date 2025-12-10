@@ -99,7 +99,7 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "meta-llama/llama-3.1-70b-instruct": 131_072,
     "meta-llama/llama-3.1-405b-instruct": 131_072,
     "z-ai/glm-4.6": 200_000,
-    "x-ai/grok-4.1-fast:free": 2_000_000,  # Grok 4.1 Fast - 2M context
+    "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
     # Cerebras
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
