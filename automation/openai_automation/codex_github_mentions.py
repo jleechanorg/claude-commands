@@ -169,12 +169,14 @@ class CodexGitHubMentionsAutomation:
     async def navigate_to_codex(self):
         """Navigate to OpenAI Codex tasks page."""
         print("\n📍 Navigating to Codex...")
+        logger.info("Navigating to Codex...")
 
         codex_url = "https://chatgpt.com/codex"
 
         await self.page.goto(codex_url, wait_until="domcontentloaded", timeout=30000)
         await asyncio.sleep(3)  # Extra wait for dynamic content
         print(f"✅ Navigated to {codex_url}")
+        logger.info(f"Successfully navigated to {codex_url}")
 
     async def find_github_mention_tasks(self) -> List:
         """
@@ -208,6 +210,7 @@ class CodexGitHubMentionsAutomation:
                 # Limit to first N tasks
                 task_links = all_task_links[:self.task_limit]
                 print(f"✅ Found {len(all_task_links)} total tasks, limiting to first {len(task_links)}")
+                logger.info(f"Found {len(all_task_links)} total tasks, limiting to first {len(task_links)}")
                 return task_links
             else:
                 # Original behavior: Find only "Github Mention:" tasks
@@ -226,10 +229,12 @@ class CodexGitHubMentionsAutomation:
                         return []
 
                 print(f"✅ Found {len(task_links)} task(s) with 'Github Mention:'")
+                logger.info(f"Found {len(task_links)} 'Github Mention:' tasks")
                 return task_links
 
         except Exception as e:
             print(f"❌ Error finding tasks: {e}")
+            logger.error(f"Error finding tasks: {e}")
             return []
 
     async def update_pr_for_task(self, task_link):
@@ -285,6 +290,7 @@ class CodexGitHubMentionsAutomation:
 
         if not tasks:
             print("\n🎯 No GitHub mention tasks to process")
+            logger.info("No tasks found to process")
             return 0
 
         print(f"\n🎯 Processing {len(tasks)} task(s)...")
@@ -316,6 +322,7 @@ class CodexGitHubMentionsAutomation:
         """Main automation workflow."""
         print("🤖 OpenAI Codex GitHub Mentions Automation")
         print("=" * 60)
+        logger.info("Starting Codex automation workflow")
 
         try:
             # Step 1: Connect to existing browser
@@ -333,14 +340,17 @@ class CodexGitHubMentionsAutomation:
 
             print("\n" + "=" * 60)
             print(f"✅ Automation complete! Processed {count} task(s)")
+            logger.info(f"Automation completed successfully - processed {count} task(s)")
             return True
 
         except KeyboardInterrupt:
             print("\n⚠️  Automation interrupted by user")
+            logger.warning("Automation interrupted by user")
             return False
 
         except Exception as e:
             print(f"\n❌ Automation failed: {e}")
+            logger.error(f"Automation failed: {e}")
             import traceback
             traceback.print_exc()
             return False
