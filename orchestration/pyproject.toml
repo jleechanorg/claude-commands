@@ -1,16 +1,18 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ai_orch"
-version = "0.1.0"
+name = "jleechanorg-orchestration"
+version = "0.1.10"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
 authors = [
-    {name = "jleechan", email = "jlee@jleechan.org"}
+    { name = "jleechan", email = "jlee@jleechan.org" },
 ]
 readme = "README.md"
-license = "MIT"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,11 +24,24 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Shells",
     "Topic :: Terminals",
-    "License :: OSI Approved :: MIT License",
 ]
-keywords = ["ai", "orchestration", "tmux", "claude", "codex", "cli", "automation", "agents", "terminal", "interactive"]
+keywords = [
+    "ai",
+    "orchestration",
+    "tmux",
+    "claude",
+    "codex",
+    "cli",
+    "automation",
+    "agents",
+    "terminal",
+    "interactive",
+]
 requires-python = ">=3.9"
 dependencies = []
+
+[project.license]
+text = "MIT"
 
 [project.optional-dependencies]
 dev = [
@@ -47,23 +62,43 @@ ai_orch = "orchestration.live_mode:main"
 orch = "orchestration.live_mode:main"
 
 [tool.setuptools]
-# PyPI package name is 'ai_orch' but Python package name is 'orchestration'
-# This allows 'pip install ai_orch' while using 'from orchestration import ...'
-packages = ["orchestration"]
+packages = [
+    "orchestration",
+]
+
+[tool.setuptools.package-dir]
+orchestration = "."
 
 [tool.setuptools.package-data]
-orchestration = ["*.md", "*.txt", "*.yaml", "*.conf", "config/*.yaml"]
+orchestration = [
+    "*.md",
+    "*.txt",
+    "*.yaml",
+    "*.conf",
+    "config/*.yaml",
+]
 
 [tool.black]
 line-length = 120
-target-version = ['py39']
+target-version = [
+    "py39",
+]
 
 [tool.ruff]
 line-length = 120
 target-version = "py39"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]
