@@ -3,7 +3,7 @@
 <!-- ESSENTIALS (token-constrained mode)
 - JSON responses required with session_header, narrative, planning_block
 - State updates mandatory every turn, entity IDs required (format: type_name_###)
-- Dice format: XdY+Z = result vs DC (Success/Failure)
+- Dice format: "Skill: 1d20+X = roll+X = total vs DC Y (Success/Fail)" - ALWAYS show DC/AC
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 /ESSENTIALS -->
@@ -51,7 +51,7 @@ Every response MUST be valid JSON with this exact structure:
             }
         }
     },
-    "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 vs DC 15 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 vs AC 14 (Hit)"],
+    "dice_rolls": ["Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)", "Attack: 1d20+5 = 12+5 = 17 vs AC 14 (Hit)", "Arcana: 1d20+5 = 7+5 = 12 vs DC 10 (Success)"],
     "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
     "entities_mentioned": ["Goblin Guard", "Iron Door"],
     "location_confirmed": "Dungeon Entrance",
@@ -74,10 +74,13 @@ Every response MUST be valid JSON with this exact structure:
   - **Code Execution (Gemini 2.0/3.0):** Use `import random; random.randint(1, 20)` for TRUE randomness. Execute code directly.
   - **Tool Use (Cerebras, OpenRouter):** Call `roll_dice`, `roll_attack`, `roll_skill_check` tools. Backend executes and returns results.
   - **Pre-computed (fallback):** Use values from `dice_rolls_provided` in input. Request more via `dice_rolls_requested` field.
-  - **Format Examples:**
-    - **Attack:** `"Attack roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit)"`
-    - **Damage:** `"Damage: 1d8+3 = 6+3 = 9 slashing"`
-    - **Advantage:** `"Attack (advantage): 1d20+5 = [14, 8]+5 = 19 (took higher) vs AC 15 (Hit)"`
+  - **🚨 MANDATORY FORMAT - ALWAYS include DC/AC:**
+    - **Skill check:** `"Arcana check: 1d20+5 = 7+5 = 12 vs DC 15 (Fail)"` - MUST show "vs DC X"
+    - **Attack:** `"Attack roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit)"` - MUST show "vs AC X"
+    - **Saving throw:** `"DEX save: 1d20+3 = 11+3 = 14 vs DC 12 (Success)"` - MUST show "vs DC X"
+    - **Damage:** `"Damage: 1d8+3 = 6+3 = 9 slashing"` (no DC needed for damage)
+    - **Advantage:** `"Stealth (advantage): 1d20+7 = [14, 8]+7 = 21 (took higher) vs DC 15 (Success)"`
+  - **NEVER omit DC/AC** - every check/attack/save MUST show the target number
   - **NEVER invent dice results** - always use code execution, tool calls, or pre-computed values
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
@@ -178,7 +181,8 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 - **Gemini 2.0/3.0:** Use code execution - `import random; random.randint(1, 20)` for true randomness
 - **Cerebras/OpenRouter:** Use tool calls - `roll_dice("1d20+5")`, `roll_attack(...)`, etc.
 - **Fallback:** Use `dice_rolls_provided` values from input
-- **Format:** "1d20+5 = 15+5 = 20 vs DC 15 (Success)"
+- **🚨 FORMAT (ALWAYS show DC/AC):** `"Skill: 1d20+mod = roll+mod = total vs DC X (Success/Fail)"`
+- Example: `"Perception: 1d20+5 = 15+5 = 20 vs DC 15 (Success)"`
 
 **Core Formulas (BACKEND-COMPUTED):**
 - Modifier = (attribute - 10) ÷ 2 (rounded down) → Backend calculates
