@@ -753,6 +753,17 @@ class ClaudeCommandsExporter:
         self._export_directory(
             "automation", self.EXPORT_DIRECTORIES["automation"], staging_dir
         )
+        self._apply_filtering_to_directory(os.path.join(staging_dir, "automation"))
+
+    def _apply_filtering_to_directory(self, target_dir: str):
+        """Apply content filtering to all files within a directory."""
+        if not os.path.exists(target_dir):
+            return
+
+        for root, _, files in os.walk(target_dir):
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
+                self._apply_content_filtering(file_path)
 
     def _export_github_workflows(self, staging_dir):
         """Export GitHub Actions workflows with project-specific filtering.

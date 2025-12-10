@@ -80,7 +80,7 @@ class AutomationSafetyManager:
 
     def _ensure_files_exist(self):
         """Initialize tracking files if they don't exist"""
-        os.makedirs(self.data_dir, exist_ok=True)
+        os.makedirs(self.data_dir, mode=0o700, exist_ok=True)
 
         if not os.path.exists(self.pr_attempts_file):
             self._write_json_file(self.pr_attempts_file, {})
@@ -711,8 +711,11 @@ def main():
     """CLI interface for safety manager"""
 
     parser = argparse.ArgumentParser(description="Automation Safety Manager")
-    parser.add_argument("--data-dir", default="/tmp/automation_safety",
-                        help="Directory for safety data files")
+    parser.add_argument(
+        "--data-dir",
+        default=os.path.expanduser("~/.automation_safety"),
+        help="Directory for safety data files",
+    )
     parser.add_argument("--check-pr", type=int, metavar="PR_NUMBER",
                         help="Check if PR can be processed")
     parser.add_argument("--record-pr", nargs=2, metavar=("PR_NUMBER", "RESULT"),
@@ -733,7 +736,7 @@ def main():
     args = parser.parse_args()
 
     # Ensure data directory exists
-    os.makedirs(args.data_dir, exist_ok=True)
+    os.makedirs(args.data_dir, mode=0o700, exist_ok=True)
 
     manager = AutomationSafetyManager(args.data_dir)
 

@@ -87,8 +87,8 @@ Analyze the code across multiple dimensions with focus on correctness, architect
 echo "🤖 Starting Gemini CLI consultation..."
 
 # Configuration variables for model management
-GEMINI_PRO_MODEL="${GEMINI_PRO_MODEL:-gemini-3-pro-preview}"
-GEMINI_FLASH_MODEL="${GEMINI_FLASH_MODEL:-gemini-2.0-flash}"
+GEMINI_PRO_MODEL="${GEMINI_PRO_MODEL:-gemini-2.5-pro}"
+GEMINI_FLASH_MODEL="${GEMINI_FLASH_MODEL:-gemini-2.5-flash}"
 GEMINI_FALLBACK="${GEMINI_FALLBACK:-1}"  # Allow opt-out with GEMINI_FALLBACK=0
 
 # Prepare consultation prompt (preserve exact prompt across retries)

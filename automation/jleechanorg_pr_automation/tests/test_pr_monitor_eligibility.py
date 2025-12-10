@@ -1,5 +1,3 @@
-import types
-
 from automation.jleechanorg_pr_automation import jleechanorg_pr_monitor as mon
 
 
@@ -7,9 +5,9 @@ def test_list_actionable_prs_conflicts_and_failing(monkeypatch, capsys):
     monitor = mon.JleechanorgPRMonitor()
 
     sample_prs = [
-        {"repository": "repo/a", "number": 1, "title": "conflict", "mergeable": "CONFLICTING"},
-        {"repository": "repo/b", "number": 2, "title": "failing", "mergeable": "MERGEABLE"},
-        {"repository": "repo/c", "number": 3, "title": "passing", "mergeable": "MERGEABLE"},
+        {"repository": "repo-a", "number": 1, "title": "conflict", "mergeable": "CONFLICTING"},
+        {"repository": "repo-b", "number": 2, "title": "failing", "mergeable": "MERGEABLE"},
+        {"repository": "repo-c", "number": 3, "title": "passing", "mergeable": "MERGEABLE"},
     ]
 
     monkeypatch.setattr(monitor, "discover_open_prs", lambda: sample_prs)

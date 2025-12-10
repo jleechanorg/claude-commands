@@ -25,8 +25,8 @@ from .constants import (
 
 A2A_AVAILABLE = True
 
-# Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-3-pro-preview by default
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+# Default Gemini model can be overridden via GEMINI_MODEL; prefer a stable public model by default
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
 
 CLI_PROFILES = {
     "claude": {
