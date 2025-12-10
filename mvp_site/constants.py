@@ -70,7 +70,7 @@ ALLOWED_OPENROUTER_MODELS = [
     DEFAULT_OPENROUTER_MODEL,
     "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
     "z-ai/glm-4.6",  # 200K context, fast tools
-    "x-ai/grok-4.1-fast:free",  # 2M context, free until Dec 3 then $0.20/$0.50 per M
+    "x-ai/grok-4.1-fast",  # 2M context, $0.20/$0.50 per M tokens (supports json_schema)
 ]
 
 # Cerebras direct provider defaults (per Cerebras docs as of 2025-12-03)
