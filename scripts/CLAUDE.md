@@ -89,7 +89,7 @@ The analytics command uses these constants from `llm_service.py`:
 - Short context (≤200K tokens): $2/M input, $12/M output
 - Long context (>200K tokens): $4/M input, $18/M output
 
-### OpenAI Automation (openai_automation/)
+### OpenAI Automation (../automation/openai_automation/)
 - **`codex_github_mentions.py`** - Automate "github mention" tasks in OpenAI Codex
 - **`oracle_cli.py`** - CLI tool for asking GPT-5 Pro questions via browser
 - **`start_chrome_debug.sh`** - Launch Chrome with remote debugging (CDP)
@@ -100,6 +100,8 @@ The analytics command uses these constants from `llm_service.py`:
 - Reuses existing browser session to preserve login state
 - No headless mode to avoid detection
 - Automated PR updates for Codex GitHub mention tasks
+
+**Location:** Files moved to `automation/openai_automation/` directory
 
 ### Development Utilities
 - `analyze_git_stats.py` - Git repository statistics and analysis
@@ -183,19 +185,19 @@ Comprehensive testing infrastructure includes:
 ### OpenAI Automation
 ```bash
 # Start Chrome in debug mode (required first)
-./scripts/openai_automation/start_chrome_debug.sh
+./automation/openai_automation/start_chrome_debug.sh
 
 # Log into OpenAI in the opened Chrome window
 # Then run automation scripts:
 
 # Automate Codex GitHub mention tasks
-python3 scripts/openai_automation/codex_github_mentions.py
+python3 automation/openai_automation/codex_github_mentions.py
 
 # Ask GPT-5 Pro a question
-python3 scripts/openai_automation/oracle_cli.py "What is quantum computing?"
+python3 automation/openai_automation/oracle_cli.py "What is quantum computing?"
 
 # Interactive mode
-python3 scripts/openai_automation/oracle_cli.py --interactive
+python3 automation/openai_automation/oracle_cli.py --interactive
 ```
 
 ### Memory Backup
