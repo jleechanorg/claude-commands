@@ -102,15 +102,23 @@ const retryDelayMs = parsePositiveInt(process.env.MCP_TEST_RETRY_DELAY_MS, 2000)
 const providerDefaults = {
   gemini: {
     // Cost-efficient default (Gemini 3 is 20x more expensive and restricted to allowlisted users)
+    // Uses response_json_schema for structured output enforcement
     gemini_model: process.env.MCP_GEMINI_MODEL || 'gemini-2.0-flash',
   },
   openrouter: {
     // Must match backend allowlist (constants.ALLOWED_OPENROUTER_MODELS)
+    // Note: Llama models don't enforce json_schema - use 'openrouter_grok' for strict schema testing
     openrouter_model:
       process.env.MCP_OPENROUTER_MODEL || 'meta-llama/llama-3.1-70b-instruct',
   },
+  openrouter_grok: {
+    // Grok 4.1 Fast - ONLY OpenRouter model that enforces json_schema with strict mode
+    // Use this provider to test structured output enforcement on OpenRouter
+    openrouter_model: 'x-ai/grok-4.1-fast',
+  },
   cerebras: {
     // Qwen 3 235B (a22b-instruct-2507) - highest context (131K) and best for RPG campaigns
+    // Uses json_schema with strict:true for structured output enforcement
     cerebras_model: process.env.MCP_CEREBRAS_MODEL || 'qwen-3-235b-a22b-instruct-2507',
   },
 };
@@ -330,7 +338,12 @@ async function getBearerToken() {
 }
 
 // Default to Cerebras (cheapest real API) for smoke tests
-// Can override with MCP_TEST_PROVIDERS env var (e.g., 'gemini,openrouter,cerebras')
+// Can override with MCP_TEST_PROVIDERS env var
+// Examples:
+//   - 'cerebras' (default) - cheapest, tests json_schema
+//   - 'gemini,cerebras,openrouter_grok' - all providers with json_schema enforcement
+//   - 'gemini,openrouter,cerebras' - all providers (openrouter uses Llama without strict schema)
+// Note: 'openrouter_grok' tests Grok 4.1 which enforces json_schema; 'openrouter' tests Llama which doesn't
 const providersToTest = (process.env.MCP_TEST_PROVIDERS || 'cerebras')
   .split(',')
   .map((p) => p.trim())
@@ -490,9 +503,12 @@ async function updateUserSettings(userId, provider) {
     throw new Error(`Unknown provider: ${provider}. Valid options: ${Object.keys(providerDefaults).join(', ')}`);
   }
 
-  const settingsPayload = { llm_provider: provider };
-  if (provider === 'openrouter') {
-    settingsPayload.openrouter_model = providerDefaults.openrouter.openrouter_model;
+  // Map openrouter_grok to openrouter provider with Grok model
+  const actualProvider = provider === 'openrouter_grok' ? 'openrouter' : provider;
+  const settingsPayload = { llm_provider: actualProvider };
+
+  if (provider === 'openrouter' || provider === 'openrouter_grok') {
+    settingsPayload.openrouter_model = providerDefaults[provider].openrouter_model;
   } else if (provider === 'cerebras') {
     settingsPayload.cerebras_model = providerDefaults.cerebras.cerebras_model;
   } else if (provider === 'gemini') {
