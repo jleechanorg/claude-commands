@@ -403,6 +403,103 @@ class TestOpenRouterToolUseIntegration(unittest.TestCase):
             )
 
 
+class TestToolLoopMaxIterationsEdgeCase(unittest.TestCase):
+    """
+    TDD test for tool loop max iterations edge case.
+
+    Bug discovered 2025-12-10 (Scene #302, #307):
+    When tool loop hits max iterations and the model STILL wants to call
+    another tool, we returned CerebrasResponse(text_length=0, tool_calls=1).
+    This caused "non-text response" errors.
+
+    Fix: When max iterations reached with empty text + pending tool_calls,
+    make one final API call WITHOUT tools to force text generation.
+    """
+
+    def test_tool_loop_forces_text_when_max_iterations_reached_with_empty_text(self):
+        """
+        RED-GREEN test: Tool loop should NEVER return empty text.
+
+        When max iterations reached and response has empty text with pending
+        tool_calls, the loop should make one final call without tools to
+        force text generation.
+        """
+        from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
+
+        # Simulate: Model keeps calling tools 5 times, never generates text
+        tool_call_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": None,  # Empty text!
+                    "tool_calls": [{
+                        "id": "call_infinite",
+                        "type": "function",
+                        "function": {
+                            "name": "roll_dice",
+                            "arguments": '{"notation": "1d20", "purpose": "endless loop"}'
+                        }
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }
+
+        # Final response with actual text (after tools disabled)
+        text_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": '{"narrative": "The dice roll resulted in success."}',
+                    "tool_calls": None
+                },
+                "finish_reason": "stop"
+            }]
+        }
+
+        call_count = [0]
+
+        def mock_post(*args, **kwargs):
+            call_count[0] += 1
+            mock_resp = Mock()
+            mock_resp.ok = True
+            mock_resp.raise_for_status = Mock()
+
+            # First 5 calls: return tool_calls with no text
+            # 6th call (final, no tools): return text
+            if call_count[0] <= 5:
+                mock_resp.json.return_value = tool_call_response
+            else:
+                mock_resp.json.return_value = text_response
+
+            return mock_resp
+
+        with patch("requests.post", side_effect=mock_post):
+            with patch.dict(os.environ, {"CEREBRAS_API_KEY": "test-key"}):
+                from mvp_site.llm_providers import cerebras_provider
+
+                result = cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=["Generate a narrative"],
+                    model_name="zai-glm-4.6",
+                    system_instruction_text="You are a DM",
+                    temperature=0.7,
+                    max_output_tokens=8000,
+                    tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+                    max_iterations=5,
+                )
+
+                # CRITICAL ASSERTION: We should NEVER get empty text
+                self.assertIsNotNone(result.text, "Tool loop should never return None text")
+                self.assertNotEqual(result.text, "", "Tool loop should never return empty text")
+                self.assertIn("narrative", result.text, "Final response should be valid JSON")
+
+                # Should have made 6 calls: 5 with tools + 1 final without tools
+                self.assertEqual(
+                    call_count[0], 6,
+                    f"Expected 6 API calls (5 with tools + 1 final), got {call_count[0]}"
+                )
+
+
 class TestLLMServiceToolIntegration(unittest.TestCase):
     """Test llm_service integration with tool use providers."""
 
