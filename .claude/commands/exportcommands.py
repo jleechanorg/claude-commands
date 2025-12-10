@@ -81,6 +81,31 @@ class ClaudeCommandsExporter:
         self.current_version = None
         self.change_summary = ""
 
+        # Data-driven directory export configuration
+        # Single source of truth for all directory exports
+        self.EXPORT_DIRECTORIES = {
+            'commands': {
+                'source': '.claude/commands',
+                'exclude_dirs': [],
+                'exclude_files': self.COMMANDS_SKIP_LIST,
+            },
+            'hooks': {
+                'source': '.claude/hooks',
+                'exclude_dirs': ['.claude'],  # Avoid nested .claude directories
+                'exclude_files': [],
+            },
+            'orchestration': {
+                'source': 'orchestration',
+                'exclude_dirs': ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'],
+                'exclude_files': [],
+            },
+            'automation': {
+                'source': 'automation',
+                'exclude_dirs': ['__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info'],
+                'exclude_files': ['*.pyc', '*.pyo', '*.swp', '*.tmp'],
+            },
+        }
+
     def _get_project_root(self):
         """Get the project root directory"""
         result = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
@@ -88,6 +113,112 @@ class ClaudeCommandsExporter:
         if result.returncode != 0:
             raise GitRepositoryError("Not in a git repository")
         return result.stdout.strip()
+
+    def _export_directory(self, name, config, staging_dir):
+        """Generic directory export with rsync or manual fallback.
+
+        Args:
+            name: Display name for the directory (e.g., 'commands', 'hooks')
+            config: Export configuration dict with keys:
+                - source: Source directory relative to project root
+                - exclude_dirs: List of directory names to exclude
+                - exclude_files: List of file patterns to exclude
+            staging_dir: Target staging directory for export
+        """
+        source_dir = os.path.join(self.project_root, config['source'])
+
+        if not os.path.exists(source_dir):
+            print(f"⚠️  {name.title()} directory not found - skipping")
+            return
+
+        target_dir = os.path.join(staging_dir, name)
+        os.makedirs(target_dir, exist_ok=True)
+
+        exclude_dirs = config.get('exclude_dirs', [])
+        exclude_files = config.get('exclude_files', [])
+
+        # Try rsync first for better performance
+        try:
+            # Build exclusion patterns
+            exclude_patterns = []
+            for exc_dir in exclude_dirs:
+                if exc_dir.endswith('.egg-info'):
+                    exclude_patterns.append('--exclude=*.egg-info/')
+                else:
+                    exclude_patterns.append(f'--exclude={exc_dir}/')
+
+            for exc_file in exclude_files:
+                if exc_file.startswith('*.'):
+                    exclude_patterns.append(f'--exclude={exc_file}')
+                else:
+                    exclude_patterns.append(f'--exclude={exc_file}')
+
+            cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode != 0:
+                print(f"⏭ rsync failed for {name}, using manual copy")
+                raise FileNotFoundError("rsync failed")
+
+            print(f"✅ {name.title()} exported using rsync")
+
+        except (FileNotFoundError, PermissionError):
+            # Fallback to manual copy for Windows or when rsync unavailable
+            self._manual_directory_copy(source_dir, target_dir, exclude_dirs, exclude_files)
+            print(f"✅ {name.title()} exported using manual copy")
+
+    def _manual_directory_copy(self, source_dir, target_dir, exclude_dirs, exclude_files):
+        """Manual directory copy with exclusions for cross-platform compatibility.
+
+        Args:
+            source_dir: Source directory path
+            target_dir: Target directory path
+            exclude_dirs: List of directory names to exclude
+            exclude_files: List of file patterns to exclude (supports wildcards)
+        """
+        import fnmatch
+
+        # Normalize exclude_dirs to handle .egg-info pattern
+        normalized_exclude_dirs = set()
+        for exc_dir in exclude_dirs:
+            if exc_dir == '*.egg-info':
+                normalized_exclude_dirs.add('*.egg-info')
+            else:
+                normalized_exclude_dirs.add(exc_dir)
+
+        for root, dirs, files in os.walk(source_dir):
+            # Filter directories in-place to prevent walking into excluded dirs
+            dirs[:] = [
+                d for d in dirs
+                if d not in normalized_exclude_dirs
+                and not d.endswith('.egg-info')
+            ]
+
+            rel_path = os.path.relpath(root, source_dir)
+            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
+            os.makedirs(target_root, exist_ok=True)
+
+            for file in files:
+                # Check if file should be excluded
+                should_exclude = False
+
+                # Check against exclude_files patterns
+                for pattern in exclude_files:
+                    if pattern.startswith('*.'):
+                        # Wildcard pattern
+                        if fnmatch.fnmatch(file, pattern):
+                            should_exclude = True
+                            break
+                    else:
+                        # Exact match
+                        if file == pattern:
+                            should_exclude = True
+                            break
+
+                if not should_exclude:
+                    src_file = os.path.join(root, file)
+                    dst_file = os.path.join(target_root, file)
+                    shutil.copy2(src_file, dst_file)
 
     def export(self):
         """Main export workflow"""
@@ -189,63 +320,18 @@ class ClaudeCommandsExporter:
 
         print(f"✅ Exported {self.commands_count} commands (whole directory structure)")
 
-    def _copy_hooks_manual(self, hooks_dir, target_dir):
-        """Windows fallback - manual directory copy with filtering"""
-        for root, dirs, files in os.walk(hooks_dir):
-            # Filter out nested .claude directories during traversal
-            dirs[:] = [d for d in dirs if d != '.claude']
-
-            rel_path = os.path.relpath(root, hooks_dir)
-            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
-            os.makedirs(target_root, exist_ok=True)
-
-            for file in files:
-                if file.endswith(('.sh', '.py', '.md')):
-                    src_file = os.path.join(root, file)
-                    dst_file = os.path.join(target_root, file)
-                    shutil.copy2(src_file, dst_file)
-
-        print("   ✅ Hooks exported using manual copy")
-
     def _export_hooks(self, staging_dir):
         """Export Claude Code hooks with proper permissions, avoiding duplicates"""
         print("📎 Exporting Claude Code hooks...")
 
-        hooks_dir = os.path.join(self.project_root, '.claude', 'hooks')
-        if not os.path.exists(hooks_dir):
-            print("⚠️  Warning: .claude/hooks directory not found")
+        # Use generic export with hooks configuration
+        self._export_directory('hooks', self.EXPORT_DIRECTORIES['hooks'], staging_dir)
+
+        # Post-processing: apply content filtering, set permissions, and count files
+        target_dir = os.path.join(staging_dir, 'hooks')
+        if not os.path.exists(target_dir):
             return
 
-        target_dir = os.path.join(staging_dir, 'hooks')
-
-        # Try rsync first, fallback to manual copy for Windows compatibility
-        try:
-            cmd = [
-                'rsync', '-av',
-                '--exclude=*/.claude/',      # Exclude nested .claude directories FIRST
-                '--exclude=*/.claude/**',    # Exclude all content within nested .claude directories
-                '--include=*/',              # Then include directories
-                '--include=*.sh',
-                '--include=*.py',
-                '--include=*.md',
-                '--exclude=*',               # Finally exclude everything else
-                f"{hooks_dir}/",
-                f"{target_dir}/"
-            ]
-
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"   rsync failed ({result.stderr}), using manual copy fallback...")
-                self._copy_hooks_manual(hooks_dir, target_dir)
-            else:
-                print("   ✅ Hooks exported using rsync")
-
-        except FileNotFoundError:
-            # Windows fallback - manual directory copy with filtering
-            print("   rsync not found, using Windows-compatible manual copy...")
-            self._copy_hooks_manual(hooks_dir, target_dir)
-
-        # Apply content filtering and count files
         for root, dirs, files in os.walk(target_dir):
             for file in files:
                 if file.endswith(('.sh', '.py', '.md')):
@@ -603,88 +689,12 @@ class ClaudeCommandsExporter:
     def _export_orchestration(self, staging_dir):
         """Export orchestration system with directory exclusions"""
         print("🤖 Exporting orchestration system (with exclusions)...")
-
-        source_dir = os.path.join(self.project_root, 'orchestration')
-        if not os.path.exists(source_dir):
-            print("⚠️  Orchestration directory not found - skipping")
-            return
-
-        target_dir = os.path.join(staging_dir, 'orchestration')
-
-        # Use rsync with explicit exclusions
-        exclude_patterns = [
-            '--exclude=analysis/',
-            '--exclude=claude-bot-commands/',
-            '--exclude=coding_prompts/',
-            '--exclude=prototype/',
-            '--exclude=tasks/',
-            '--exclude=task-agent-create-autono-slash/',
-        ]
-
-        cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
-
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"⏭ Orchestration export failed with rsync, trying fallback: {result.stderr}")
-                # Fallback: manual directory copy with exclusions
-                self._copy_orchestration_manual(source_dir, target_dir)
-            else:
-                print("✅ Orchestration exported (excluded specified directories)")
-        except FileNotFoundError:
-            print("⏭ rsync not found, using manual copy fallback")
-            self._copy_orchestration_manual(source_dir, target_dir)
-
-    def _copy_orchestration_manual(self, source_dir, target_dir):
-        """Manual orchestration copy with exclusions for Windows compatibility"""
-        excluded_dirs = {'analysis', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'}
-        for root, dirs, files in os.walk(source_dir):
-            # Filter out excluded directories
-            dirs[:] = [d for d in dirs if d not in excluded_dirs]
-
-            rel_path = os.path.relpath(root, source_dir)
-            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
-            os.makedirs(target_root, exist_ok=True)
-
-            for file in files:
-                src_file = os.path.join(root, file)
-                dst_file = os.path.join(target_root, file)
-                shutil.copy2(src_file, dst_file)
-
-        print("✅ Orchestration exported using manual copy (excluded specified directories)")
+        self._export_directory('orchestration', self.EXPORT_DIRECTORIES['orchestration'], staging_dir)
 
     def _export_automation(self, staging_dir):
         """Export automation system (GitHub PR automation)"""
         print("🤖 Exporting automation system...")
-
-        source_dir = os.path.join(self.project_root, 'automation')
-        if not os.path.exists(source_dir):
-            print("⚠️  Automation directory not found - skipping")
-            return
-
-        target_dir = os.path.join(staging_dir, 'automation')
-
-        # Exclude test directories and temp files
-        excluded_dirs = {'__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info'}
-
-        for root, dirs, files in os.walk(source_dir):
-            # Filter out excluded directories
-            dirs[:] = [d for d in dirs if d not in excluded_dirs and not d.endswith('.egg-info')]
-
-            rel_path = os.path.relpath(root, source_dir)
-            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
-            os.makedirs(target_root, exist_ok=True)
-
-            for file in files:
-                # Skip compiled Python files and temp files
-                if file.endswith(('.pyc', '.pyo', '.swp', '.tmp')):
-                    continue
-
-                src_file = os.path.join(root, file)
-                dst_file = os.path.join(target_root, file)
-                shutil.copy2(src_file, dst_file)
-
-        print("✅ Automation exported successfully")
+        self._export_directory('automation', self.EXPORT_DIRECTORIES['automation'], staging_dir)
 
     def _export_github_workflows(self, staging_dir):
         """Export GitHub Actions workflows with project-specific filtering.
