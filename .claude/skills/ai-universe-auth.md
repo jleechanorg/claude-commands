@@ -14,7 +14,7 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 
 | Location | Description | Has node_modules |
 |----------|-------------|------------------|
-| `.claude/scripts/auth-cli.mjs` | Project-local (recommended) | Needs parent project |
+| `scripts/auth-cli.mjs` | Project-local (recommended) | Needs parent project |
 | `~/.claude/scripts/auth-cli.mjs` | User-global fallback | Yes (if installed) |
 | `~/projects/ai_universe/scripts/auth-cli.mjs` | Source of truth | Yes |
 
@@ -34,8 +34,8 @@ The script supports **two Firebase projects**. Use the correct one for your use 
 
 | Project | Firebase ID | Use Case | Command |
 |---------|-------------|----------|---------|
-| **AI Universe** | `ai-universe-b3551` | `/secondo`, multi-model synthesis | `node auth-cli.mjs token` (default) |
-| **WorldAI** | `worldarchitecture-ai` | WorldArchitect.AI app auth | `node auth-cli.mjs token --project worldarchitecture-ai` |
+| **AI Universe** | `ai-universe-b3551` | `/secondo`, multi-model synthesis | `node scripts/auth-cli.mjs token` (default) |
+| **WorldAI** | `worldarchitecture-ai` | WorldArchitect.AI app auth | `node scripts/auth-cli.mjs token --project worldarchitecture-ai` |
 
 ### When to Use Each Project
 
@@ -46,8 +46,8 @@ The script supports **two Firebase projects**. Use the correct one for your use 
 
 ```bash
 # Default - no flag needed
-node ~/.claude/scripts/auth-cli.mjs login
-node ~/.claude/scripts/auth-cli.mjs token
+node scripts/auth-cli.mjs login
+node scripts/auth-cli.mjs token
 ```
 
 #### WorldAI (`worldarchitecture-ai`)
@@ -57,8 +57,8 @@ node ~/.claude/scripts/auth-cli.mjs token
 
 ```bash
 # Explicit project flag required
-node ~/.claude/scripts/auth-cli.mjs login --project worldarchitecture-ai
-node ~/.claude/scripts/auth-cli.mjs token --project worldarchitecture-ai
+node scripts/auth-cli.mjs login --project worldarchitecture-ai
+node scripts/auth-cli.mjs token --project worldarchitecture-ai
 ```
 
 ## Prerequisites
@@ -73,24 +73,24 @@ node ~/.claude/scripts/auth-cli.mjs token --project worldarchitecture-ai
 
 ```bash
 # AI Universe (default) - for /secondo
-node ~/.claude/scripts/auth-cli.mjs login
+node scripts/auth-cli.mjs login
 
 # WorldAI - for WorldArchitect.AI
-node ~/.claude/scripts/auth-cli.mjs login --project worldarchitecture-ai
+node scripts/auth-cli.mjs login --project worldarchitecture-ai
 ```
 
 **What happens:**
 - Starts local callback server on port 9005
 - Opens browser to Firebase Google sign-in
 - User signs in with Google account
-- ID token and refresh token saved to `~/.ai-universe/auth-token.json`
+- ID token and refresh token saved to `~/.ai-universe/auth-token-<project-id>.json`
 - ID token expires after 1 hour (Firebase security policy)
 - Refresh token enables automatic token renewal
 
 ### 2. Check Authentication Status
 
 ```bash
-node ~/.claude/scripts/auth-cli.mjs status
+node scripts/auth-cli.mjs status
 ```
 
 **Output includes:**
@@ -104,11 +104,11 @@ node ~/.claude/scripts/auth-cli.mjs status
 
 ```bash
 # Get token (auto-refreshes if expired, does nothing if valid)
-TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
+TOKEN=$(node scripts/auth-cli.mjs token)
 echo $TOKEN
 
 # For WorldAI project
-TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token --project worldarchitecture-ai)
+TOKEN=$(node scripts/auth-cli.mjs token --project worldarchitecture-ai)
 ```
 
 **Token Behavior:**
@@ -121,19 +121,19 @@ This enables seamless 30+ day sessions.
 ### 4. Manual Token Refresh
 
 ```bash
-node ~/.claude/scripts/auth-cli.mjs refresh
+node scripts/auth-cli.mjs refresh
 ```
 
 ### 5. Test MCP Connection
 
 ```bash
-node ~/.claude/scripts/auth-cli.mjs test
+node scripts/auth-cli.mjs test
 ```
 
 ### 6. Logout
 
 ```bash
-node ~/.claude/scripts/auth-cli.mjs logout
+node scripts/auth-cli.mjs logout
 ```
 
 ## Troubleshooting
@@ -157,12 +157,12 @@ This means the token was created for a different Firebase project than you're tr
 
 ```bash
 # Check which project your token is for
-node ~/.claude/scripts/auth-cli.mjs status
+node scripts/auth-cli.mjs status
 # Look for "Firebase Project:" line
 
 # Re-login for the correct project
-node ~/.claude/scripts/auth-cli.mjs login                              # AI Universe
-node ~/.claude/scripts/auth-cli.mjs login --project worldarchitecture-ai  # WorldAI
+node scripts/auth-cli.mjs login                              # AI Universe
+node scripts/auth-cli.mjs login --project worldarchitecture-ai  # WorldAI
 ```
 
 ### Port 9005 Already in Use
@@ -175,18 +175,18 @@ lsof -ti:9005 | xargs kill -9
 
 ```bash
 # Auto-refresh (silent)
-TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
+TOKEN=$(node scripts/auth-cli.mjs token)
 
 # Or manual refresh
-node ~/.claude/scripts/auth-cli.mjs refresh
+node scripts/auth-cli.mjs refresh
 
 # If refresh token expired, re-login
-node ~/.claude/scripts/auth-cli.mjs login
+node scripts/auth-cli.mjs login
 ```
 
 ## Token Storage
 
-- **Location**: `~/.ai-universe/auth-token.json`
+- **Location**: `~/.ai-universe/auth-token-<project-id>.json` (separate file per project)
 - **ID Token**: 1-hour expiration (Firebase policy)
 - **Refresh Token**: ~30 days, enables silent renewal
 - **Security**: Never commit tokens, localhost OAuth only
@@ -195,8 +195,8 @@ node ~/.claude/scripts/auth-cli.mjs login
 
 | Command | Project | Authentication |
 |---------|---------|----------------|
-| `/secondo` | AI Universe | `node auth-cli.mjs token` (default) |
-| WorldAI API | WorldAI | `node auth-cli.mjs token --project worldarchitecture-ai` |
+| `/secondo` | AI Universe | `node scripts/auth-cli.mjs token` (default) |
+| WorldAI API | WorldAI | `node scripts/auth-cli.mjs token --project worldarchitecture-ai` |
 
 ## Keeping Scripts in Sync
 

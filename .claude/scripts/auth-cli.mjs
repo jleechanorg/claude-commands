@@ -16,7 +16,7 @@
 
 import express from 'express';
 import { createServer } from 'http';
-import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
+import { readFile, writeFile, unlink, mkdir, chmod } from 'fs/promises';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -57,6 +57,10 @@ function parseArgs() {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--project' || args[i] === '-p') {
+      if (!args[i + 1] || args[i + 1].startsWith('-')) {
+        console.error('❌ --project flag requires a value');
+        process.exit(1);
+      }
       projectOverride = args[i + 1];
       i++; // Skip next arg
     } else if (!args[i].startsWith('-')) {
@@ -111,7 +115,7 @@ const CONFIG = {
   },
   callbackPort: 9005,
   callbackPath: '/auth/callback',
-  tokenPath: join(homedir(), '.ai-universe', 'auth-token.json'),
+  tokenPath: join(homedir(), '.ai-universe', `auth-token-${ACTIVE_PROJECT.id}.json`),
   productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp',
   activeProject: ACTIVE_PROJECT
 };
@@ -156,8 +160,14 @@ const tokenDir = join(homedir(), '.ai-universe');
 
 async function ensureTokenDir() {
   if (!existsSync(tokenDir)) {
-    await mkdir(tokenDir, { recursive: true });
+    await mkdir(tokenDir, { recursive: true, mode: 0o700 });
   }
+}
+
+async function writeTokenFile(tokenData) {
+  await ensureTokenDir();
+  await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2));
+  await chmod(CONFIG.tokenPath, 0o600);
 }
 
 /**
@@ -224,14 +234,14 @@ function validateTokenProject(idToken, context) {
   if (aud !== EXPECTED_FIREBASE_PROJECT_ID) {
     throw new Error(
       `[${context}] Token project mismatch: expected "${EXPECTED_FIREBASE_PROJECT_ID}", received "${aud || 'unknown'}". ` +
-      'Run `node scripts/auth-cli.mjs login` after authenticating with the AI Universe Firebase project.'
+      `Run \`node scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
     );
   }
 
   if (!iss || !iss.endsWith(`/${EXPECTED_FIREBASE_PROJECT_ID}`)) {
     throw new Error(
       `[${context}] Token issuer mismatch: expected Firebase issuer for "${EXPECTED_FIREBASE_PROJECT_ID}", got "${iss || 'unknown'}". ` +
-      'Run `node scripts/auth-cli.mjs login` after authenticating with the AI Universe Firebase project.'
+      `Run \`node scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
     );
   }
 
@@ -325,7 +335,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
       tokenData.firebaseProjectId = EXPECTED_FIREBASE_PROJECT_ID;
 
       // Save updated token
-      await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2));
+      await writeTokenFile(tokenData);
 
       // Return refreshed data
       return {
@@ -486,7 +496,7 @@ async function login() {
         firebaseProjectId: EXPECTED_FIREBASE_PROJECT_ID
       };
 
-      await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2));
+      await writeTokenFile(tokenData);
 
       res.json({ success: true });
       tokenReceived = true;
@@ -591,7 +601,7 @@ async function refresh() {
       firebaseProjectId: EXPECTED_FIREBASE_PROJECT_ID
     };
 
-    await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2));
+    await writeTokenFile(tokenData);
 
     console.log('✅ Token refreshed successfully!');
     console.log(`   User: ${tokenData.user.displayName} (${tokenData.user.email})`);
@@ -612,7 +622,7 @@ async function status() {
 
     if (!tokenData) {
       console.log('❌ Not authenticated. Run: node scripts/auth-cli.mjs login');
-      return;
+      process.exit(1);
     }
 
     console.log('📊 Authentication Status:');
@@ -625,6 +635,7 @@ async function status() {
 
     if (expired) {
       console.log('⚠️  Token expired. Run: node scripts/auth-cli.mjs login');
+      process.exit(1);
     }
   } catch (error) {
     console.error('❌ Error reading status:', error.message);
@@ -675,9 +686,10 @@ async function testMcp() {
         jsonrpc: '2.0',
         method: 'tools/call',
         params: {
-          name: 'rate_limit.status',
+          name: 'get_second_opinion',
           arguments: {
-            userId: tokenData.user.uid
+            feedback_type: 'design',
+            question: 'Authentication connectivity check'
           }
         },
         id: 1
@@ -690,33 +702,16 @@ async function testMcp() {
 
     const result = await response.json();
 
-    // Validate response structure
-    if (!result || typeof result !== 'object' ||
-        !result.result || typeof result.result !== 'object' ||
-        !Array.isArray(result.result.content) ||
-        result.result.content.length === 0 ||
-        typeof result.result.content[0]?.text !== 'string') {
-      throw new Error('Unexpected MCP response structure. Cannot find rate limit data.');
+    const content = result?.result?.content;
+    if (!Array.isArray(content) || typeof content[0]?.text !== 'string') {
+      throw new Error('Unexpected MCP response structure. Cannot read tool output.');
     }
 
-    let rateLimitData;
-    try {
-      rateLimitData = JSON.parse(result.result.content[0].text);
-    } catch (err) {
-      throw new Error(`Failed to parse rate limit data: ${err.message}`);
-    }
-
-    // Validate rate limit data structure
-    if (!rateLimitData.userType || rateLimitData.limit === undefined) {
-      throw new Error('Incomplete rate limit data in response');
-    }
+    const text = content[0].text;
 
     console.log('✅ Authentication successful!\n');
-    console.log('📊 Rate Limit Status:');
-    console.log(`   User Type: ${rateLimitData.userType}`);
-    console.log(`   Usage: ${rateLimitData.usage}/${rateLimitData.limit}`);
-    console.log(`   Remaining: ${rateLimitData.remaining}`);
-    console.log(`   Reset Time: ${new Date(rateLimitData.resetTime).toLocaleString()}\n`);
+    console.log('🧪 MCP Response Preview:');
+    console.log(text);
 
   } catch (error) {
     console.error('❌ MCP test failed:', error.message);
