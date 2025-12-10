@@ -1,9 +1,190 @@
+import json
 import types
 
 import pytest
 
 from mvp_site.llm_providers import cerebras_provider
 from mvp_site.llm_providers.provider_utils import ContextTooLargeError
+
+# =============================================================================
+# TDD MATRIX: json_schema with strict:false support
+# =============================================================================
+# | Test Case                | Model    | Expected Behavior                    |
+# |--------------------------|----------|--------------------------------------|
+# | json_schema in payload   | any      | Uses json_schema, not json_object    |
+# | schema echo detection    | any      | Raises CerebrasSchemaEchoError       |
+# | nested wrapper unwrap    | any      | Extracts content from {"json": {...}}|
+# | valid json_schema resp   | qwen-3   | Returns valid structured JSON        |
+# | valid json_schema resp   | glm-4.6  | Returns valid structured JSON        |
+# | valid json_schema resp   | llama-3  | Returns valid structured JSON        |
+# =============================================================================
+
+
+class TestJsonSchemaSupport:
+    """Tests for json_schema support with strict:false (allows dynamic choice keys)."""
+
+    def test_uses_json_schema_format_in_payload(self, monkeypatch):
+        """Verify request payload uses json_schema, not legacy json_object."""
+        captured = {}
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            captured["json"] = json
+            return DummyResponse(
+                {"choices": [{"message": {"content": '{"narrative": "test"}'}}]}
+            )
+
+        monkeypatch.setattr(
+            cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
+        )
+
+        cerebras_provider.generate_content(
+            prompt_contents=["test prompt"],
+            model_name="qwen-3-235b-a22b-instruct-2507",
+            system_instruction_text="system",
+            temperature=0.7,
+            max_output_tokens=4096,
+        )
+
+        # Should use json_schema (not legacy json_object) with strict:false
+        # strict:false allows dynamic choice keys in planning_block
+        response_format = captured["json"]["response_format"]
+        assert response_format["type"] == "json_schema", (
+            f"Expected json_schema but got {response_format.get('type')}"
+        )
+        assert "json_schema" in response_format, "Missing json_schema field"
+        assert response_format["json_schema"].get("strict") is False, (
+            "json_schema must have strict:false to allow dynamic choice keys"
+        )
+
+    def test_json_schema_has_narrative_response_structure(self, monkeypatch):
+        """Verify json_schema includes NarrativeResponse fields."""
+        captured = {}
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            captured["json"] = json
+            return DummyResponse(
+                {"choices": [{"message": {"content": '{"narrative": "test"}'}}]}
+            )
+
+        monkeypatch.setattr(
+            cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
+        )
+
+        cerebras_provider.generate_content(
+            prompt_contents=["test"],
+            model_name="llama-3.3-70b",
+            system_instruction_text=None,
+            temperature=0.5,
+            max_output_tokens=100,
+        )
+
+        schema = captured["json"]["response_format"]["json_schema"]["schema"]
+        properties = schema.get("properties", {})
+
+        # Must have core NarrativeResponse fields
+        assert "narrative" in properties, "Schema must include 'narrative' field"
+        assert "planning_block" in properties, "Schema must include 'planning_block' field"
+        assert properties["planning_block"].get("type") == "object"
+        assert "entities_mentioned" in properties, "Schema must include 'entities_mentioned' field"
+        assert "state_updates" in properties, "Schema must include 'state_updates' field"
+        assert "turn_summary" in properties, "Schema must include 'turn_summary' field"
+        assert "debug_info" in properties, "Schema must include 'debug_info' field"
+        assert "god_mode_response" in properties, "Schema must include 'god_mode_response' field"
+
+    def test_detects_schema_echo_response(self, monkeypatch):
+        """Detect when API returns schema config instead of content."""
+        from mvp_site.llm_providers.cerebras_provider import CerebrasSchemaEchoError
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            # API returns the response_format schema instead of content
+            return DummyResponse(
+                {"choices": [{"message": {"content": '{"type": "object"}'}}]}
+            )
+
+        monkeypatch.setattr(
+            cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
+        )
+
+        with pytest.raises(CerebrasSchemaEchoError):
+            cerebras_provider.generate_content(
+                prompt_contents=["test"],
+                model_name="zai-glm-4.6",
+                system_instruction_text=None,
+                temperature=0.5,
+                max_output_tokens=100,
+            )
+
+    def test_unwraps_nested_json_wrapper(self, monkeypatch):
+        """Extract content from nested {"type": "object", "json": {...}} wrapper."""
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            # API wraps content in nested structure
+            return DummyResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"type": "object", "json": {"narrative": "unwrapped content", "entities_mentioned": []}}'
+                            }
+                        }
+                    ]
+                }
+            )
+
+        monkeypatch.setattr(
+            cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
+        )
+
+        response = cerebras_provider.generate_content(
+            prompt_contents=["test"],
+            model_name="qwen-3-235b-a22b-instruct-2507",
+            system_instruction_text=None,
+            temperature=0.5,
+            max_output_tokens=100,
+        )
+
+        # Should extract the inner content
+        parsed = json.loads(response.text)
+        assert parsed == {
+            "narrative": "unwrapped content",
+            "entities_mentioned": [],
+        }, f"Expected unwrapped structure but got {parsed}"
+        assert "type" not in parsed, "Unwrapped response should not contain 'type' field"
+
+    @pytest.mark.parametrize(
+        "model_name",
+        [
+            "qwen-3-235b-a22b-instruct-2507",
+            "zai-glm-4.6",
+            "llama-3.3-70b",
+        ],
+    )
+    def test_all_cerebras_models_use_json_schema(self, monkeypatch, model_name):
+        """All supported Cerebras models should use json_schema format."""
+        captured = {}
+
+        def fake_post(url, headers=None, json=None, timeout=None):
+            captured["json"] = json
+            return DummyResponse(
+                {"choices": [{"message": {"content": '{"narrative": "ok"}'}}]}
+            )
+
+        monkeypatch.setattr(
+            cerebras_provider, "requests", types.SimpleNamespace(post=fake_post)
+        )
+
+        cerebras_provider.generate_content(
+            prompt_contents=["test"],
+            model_name=model_name,
+            system_instruction_text=None,
+            temperature=0.5,
+            max_output_tokens=100,
+        )
+
+        response_format = captured["json"]["response_format"]
+        assert response_format["type"] == "json_schema", (
+            f"Model {model_name} should use json_schema"
+        )
 
 
 class DummyResponse:
