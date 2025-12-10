@@ -83,7 +83,7 @@ send_email_notification() {
 Issue Type: $issue_type
 Details: $details
 
-PR URL: https://github.com/$GH_REPO/pull/$pr_number
+PR URL: https://github.com/jleechanorg/worldarchitect.ai/pull/$pr_number
 
 Automated fix attempts have been exhausted. Please review and fix manually.
 
@@ -373,9 +373,9 @@ post_threaded_comment() {
 # Main processing logic
 log "🚀 Starting simplified PR batch processing with Codex instruction comments"
 
-# Get PRs updated in last 24 hours
-RECENT_PRS=$(gh pr list --repo "$GH_REPO" --state open --limit 20 --json number,updatedAt | \
-    jq -r '.[] | select((.updatedAt | fromdateiso8601) > (now - 86400)) | .number')
+# Get PRs updated in last 24 hours (excluding drafts)
+RECENT_PRS=$(gh pr list --repo "$GH_REPO" --state open --limit 20 --json number,updatedAt,isDraft | \
+    jq -r '.[] | select(.isDraft == false) | select((.updatedAt | fromdateiso8601) > (now - 86400)) | .number')
 
 if [ -z "$RECENT_PRS" ]; then
     log "No PRs updated in the last 24 hours"

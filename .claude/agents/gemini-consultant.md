@@ -87,8 +87,8 @@ Analyze the code across multiple dimensions with focus on correctness, architect
 echo "🤖 Starting Gemini CLI consultation..."
 
 # Configuration variables for model management
-GEMINI_PRO_MODEL="${GEMINI_PRO_MODEL:-gemini-2.5-pro}"
-GEMINI_FLASH_MODEL="${GEMINI_FLASH_MODEL:-gemini-2.5-flash}"
+GEMINI_PRO_MODEL="${GEMINI_PRO_MODEL:-gemini-3-pro-preview}"
+GEMINI_FLASH_MODEL="${GEMINI_FLASH_MODEL:-gemini-2.0-flash}"
 GEMINI_FALLBACK="${GEMINI_FALLBACK:-1}"  # Allow opt-out with GEMINI_FALLBACK=0
 
 # Prepare consultation prompt (preserve exact prompt across retries)
@@ -170,7 +170,7 @@ fi
 - Make sure to tell Gemini that you don't want it to write any code and this is just for guidance and consultation
 - Your primary function is to execute `gemini -p` commands, not to provide your own analysis
 - If you're not using the gemini command, you're not doing your job correctly
-- **Pro quota handling:** If the CLI reports that `gemini-2.5-pro` quota has been exceeded (HTTP 429, "quota exceeded", "daily limit reached", etc.), immediately retry the exact same prompt with Gemini Flash. Use the CLI's model flag to switch models: `timeout 300s gemini --model gemini-2.5-flash -p "..."`. Clearly note in your response that the consultation used Flash due to Pro quota exhaustion.
+- **Pro quota handling:** If the CLI reports that `gemini-3-pro-preview` quota has been exceeded (HTTP 429, "quota exceeded", "daily limit reached", etc.), immediately retry the exact same prompt with Gemini Flash. Use the CLI's model flag to switch models: `timeout 300s gemini --model gemini-2.0-flash -p "..."`. Clearly note in your response that the consultation used Flash due to Pro quota exhaustion.
 
 ## Integration with Review Systems
 
