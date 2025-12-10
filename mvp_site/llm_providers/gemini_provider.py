@@ -91,24 +91,17 @@ def generate_json_mode_content(
     }
 
     # Auto-detect code execution capability if not explicitly set
+    # Gemini 2.0 and 3.0 support code_execution + JSON mode together
+    # Gemini 2.5 does NOT support this combination (use precompute fallback)
     if enable_code_execution is None:
         enable_code_execution = model_name in constants.MODELS_WITH_CODE_EXECUTION
 
-    # Controlled generation (JSON/response schema) currently rejects code_execution tools.
-    # Disable code execution in JSON mode to avoid Vertex API errors like:
-    # "Unable to submit request because controlled generation is not supported with Code Execution tool."
-    if enable_code_execution and generation_config_params.get("response_mime_type"):
-        logging_util.warning(
-            "Gemini JSON mode does not support code_execution; disabling for model %s",
-            model_name,
-        )
-        enable_code_execution = False
-
     # Enable code_execution for supported models (Gemini 2.0/3.0)
     # This allows the LLM to run Python code for true dice roll randomness
+    # Note: Gemini 2.0+ supports code_execution with JSON response mode
     if enable_code_execution:
         generation_config_params["tools"] = [types.Tool(code_execution={})]
-        logging_util.debug(f"Code execution enabled for model: {model_name}")
+        logging_util.info(f"Code execution enabled for model: {model_name}")
 
     if system_instruction_text:
         generation_config_params["system_instruction"] = types.Part(
