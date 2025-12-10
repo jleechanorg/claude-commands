@@ -69,7 +69,7 @@ logger = setup_logging()
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
 
-    def __init__(self, cdp_url: str = "http://localhost:9222", headless: bool = False, task_limit: int | None = 50):
+    def __init__(self, cdp_url: str = "http://127.0.0.1:9222", headless: bool = False, task_limit: int | None = 50):
         """
         Initialize the automation.
 
@@ -126,7 +126,7 @@ class CodexGitHubMentionsAutomation:
                 webgl_vendor=True,
                 navigator_user_agent=True
             )
-            await stealth_config.apply_async(self.page)
+            await stealth_config.apply_stealth_async(self.page)
             logger.info("Applied stealth patches to page")
 
             return True
