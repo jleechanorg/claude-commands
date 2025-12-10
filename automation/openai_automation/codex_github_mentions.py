@@ -68,7 +68,7 @@ logger = setup_logging()
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
 
-    def __init__(self, cdp_url: str | None = None, headless: bool = False, task_limit: int | None = 50):
+    def __init__(self, cdp_url: str | None = None, headless: bool = False, task_limit: int | None = 50, user_data_dir: str | None = None):
         """
         Initialize the automation.
 
@@ -76,10 +76,12 @@ class CodexGitHubMentionsAutomation:
             cdp_url: Chrome DevTools Protocol WebSocket URL (None = launch new browser)
             headless: Run in headless mode (not recommended - may be detected)
             task_limit: Maximum number of tasks to process (default: 50, None = all Github Mention tasks)
+            user_data_dir: Chrome profile directory for persistent login (default: ~/.chrome-codex-automation)
         """
         self.cdp_url = cdp_url
         self.headless = headless
         self.task_limit = task_limit
+        self.user_data_dir = user_data_dir or str(Path.home() / ".chrome-codex-automation")
         self.browser: Browser | None = None
         self.context: BrowserContext | None = None
         self.page: Page | None = None
@@ -122,15 +124,27 @@ class CodexGitHubMentionsAutomation:
                 self.cdp_url = None  # Disable CDP for cleanup
 
         if not self.cdp_url:
-            # Launch new browser (Oracle approach)
-            print("🚀 Launching new Chrome browser...")
-            self.browser = await playwright.chromium.launch(
+            # Launch new browser with persistent profile (proper Playwright way)
+            print(f"🚀 Launching Chrome with persistent profile: {self.user_data_dir}")
+            logger.info(f"Launching Chrome with profile: {self.user_data_dir}")
+
+            # Ensure profile directory exists
+            Path(self.user_data_dir).mkdir(parents=True, exist_ok=True)
+
+            # Use launch_persistent_context for persistent profiles
+            self.context = await playwright.chromium.launch_persistent_context(
+                self.user_data_dir,
                 headless=self.headless,
                 args=["--disable-blink-features=AutomationControlled"]
             )
-            self.context = await self.browser.new_context()
-            self.page = await self.context.new_page()
-            print("✅ Browser ready")
+
+            # Get or create page
+            if self.context.pages:
+                self.page = self.context.pages[0]
+            else:
+                self.page = await self.context.new_page()
+
+            print("✅ Browser ready (login will persist across runs)")
 
         return True
 
@@ -398,9 +412,11 @@ class CodexGitHubMentionsAutomation:
             return False
 
         finally:
-            # Only close if we launched it (not using existing browser)
-            if self.browser and not self.cdp_url:
+            # Close context or browser depending on how it was created
+            if self.context and not self.cdp_url:
                 print("\n🔒 Closing browser (launched by automation)")
+                await self.context.close()
+            elif self.browser and not self.cdp_url:
                 await self.browser.close()
             else:
                 print("\n💡 Browser left open (using existing instance)")
@@ -461,13 +477,22 @@ Examples:
         help="Maximum number of tasks to process (default: 50)"
     )
 
+    parser.add_argument(
+        "--profile-dir",
+        help="Chrome profile directory for persistent login (default: ~/.chrome-codex-automation)"
+    )
+
     args = parser.parse_args()
 
     # Build CDP URL only if using existing browser
     cdp_url = f"http://{args.cdp_host}:{args.cdp_port}" if args.use_existing_browser else None
 
     # Run automation
-    automation = CodexGitHubMentionsAutomation(cdp_url=cdp_url, task_limit=args.limit)
+    automation = CodexGitHubMentionsAutomation(
+        cdp_url=cdp_url,
+        task_limit=args.limit,
+        user_data_dir=args.profile_dir
+    )
 
     try:
         success = await automation.run()
