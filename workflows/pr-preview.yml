@@ -141,6 +141,11 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview" \
+            # IMPORTANT: These secrets must exist in Google Secret Manager before deployment:
+            # - gemini-api-key (required for Gemini API access)
+            # - cerebras-api-key (required for Cerebras API access)
+            # - openrouter-api-key (required for OpenRouter API access)
+            # Ensure the Cloud Run service account has secretAccessor permissions for each secret
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
             --memory=512Mi \
             --cpu=1 \

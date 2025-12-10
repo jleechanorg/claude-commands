@@ -75,8 +75,13 @@ class MessageBroker:
     def heartbeat(self, agent_id: str, health_data: dict[str, Any] | None = None) -> bool:
         """Send heartbeat for an agent (file-based tracking only).
 
-        Returns True when the heartbeat is recorded and False when the agent is
-        unknown. Health payloads are persisted in the registry for visibility.
+        Args:
+            agent_id: The ID of the agent sending the heartbeat
+            health_data: Optional health status information to persist with the heartbeat
+
+        Returns:
+            True when the heartbeat is recorded, False when the agent is unknown.
+            Health payloads are persisted in the registry for visibility.
         """
         registration = self.agent_registry.get(agent_id)
         if registration is None:
