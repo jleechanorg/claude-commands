@@ -174,9 +174,26 @@ class CodexGitHubMentionsAutomation:
         codex_url = "https://chatgpt.com/codex"
 
         await self.page.goto(codex_url, wait_until="domcontentloaded", timeout=30000)
-        await asyncio.sleep(3)  # Extra wait for dynamic content
-        print(f"✅ Navigated to {codex_url}")
-        logger.info(f"Successfully navigated to {codex_url}")
+
+        # Wait for Cloudflare challenge to complete
+        print("   Waiting for Cloudflare challenge (if any)...")
+        max_wait = 30  # 30 seconds max wait
+        waited = 0
+        while waited < max_wait:
+            title = await self.page.title()
+            if title != "Just a moment...":
+                break
+            await asyncio.sleep(2)
+            waited += 2
+            if waited % 10 == 0:
+                print(f"   Still waiting... ({waited}s)")
+
+        # Extra wait for dynamic content to load after Cloudflare
+        await asyncio.sleep(5)
+
+        final_title = await self.page.title()
+        print(f"✅ Navigated to {codex_url} (title: {final_title})")
+        logger.info(f"Successfully navigated to {codex_url} (title: {final_title})")
 
     async def find_github_mention_tasks(self) -> List:
         """
@@ -332,8 +349,18 @@ class CodexGitHubMentionsAutomation:
             # Step 2: Skip login check - user is already logged in
             print("\n✅ Assuming already logged in to OpenAI")
 
-            # Step 3: Navigate to Codex
-            await self.navigate_to_codex()
+            # Step 3: Check if already on Codex page, otherwise navigate
+            current_url = self.page.url
+            if "chatgpt.com/codex" in current_url:
+                print(f"\n✅ Already on Codex page: {current_url}")
+                logger.info(f"Already on Codex page: {current_url}")
+                # Just wait a bit for content to load
+                await asyncio.sleep(3)
+            else:
+                print(f"\n⚠️  Not on Codex page (currently: {current_url})")
+                print("💡 TIP: Manually navigate to https://chatgpt.com/codex in your browser")
+                print("   to avoid Cloudflare challenges, then run this automation.")
+                await self.navigate_to_codex()
 
             # Step 4: Process all GitHub mention tasks
             count = await self.process_all_github_mentions()
