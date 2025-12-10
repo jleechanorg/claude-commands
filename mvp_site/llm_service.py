@@ -183,7 +183,7 @@ TARGET_WORD_COUNT: int = 300
 # Add a safety margin for JSON responses to prevent mid-response cutoffs
 
 # Default planning block generation has been REMOVED
-# If the LLM doesn't generate a planning block, we return an empty one
+# If the LLM doesn't generate a planning block, we return the response as-is
 # and let the error propagate to the UI rather than generating fake content
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
@@ -2946,11 +2946,13 @@ def _validate_and_enforce_planning_block(
                 logging_util.warning(
                     "⚠️ PLANNING_BLOCK_EMPTY: Planning block exists but has no content"
                 )
+                return response_text
         else:
             # String format no longer supported
             logging_util.error(
                 f"❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: Found {type(planning_block).__name__} planning block, only JSON format is allowed"
             )
+            return response_text
 
     # Planning block is missing - log warning but DO NOT generate defaults
     # The LLM is responsible for generating planning blocks, not this function
