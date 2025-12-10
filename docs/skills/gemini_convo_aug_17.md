@@ -20244,9 +20244,9 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-  ⎿  export RUNPOD_API_KEY="rpa_FY3SLASDVUXAT90A9WDTVSF7UGHVKSZ0EXXJ892D1quw6s"
+  ⎿  export RUNPOD_API_KEY="<REDACTED_RUNPOD_API_KEY>"
 
-     export RUNPOD_API_KEY="rpa_FY3SLASDVUXAT90A9WDTVSF7UGHVKSZ0EXXJ892D1quw6s"
+     export RUNPOD_API_KEY="<REDACTED_RUNPOD_API_KEY>"
 
      export CEREBRAS_API_KEY="your_cerebras_key_here"  # Qwen Coder via Cerebras
 
@@ -20808,7 +20808,7 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
   ⎿  # Cerebras API configuration (Qwen3-Coder)
 
-     export OPENAI_API_KEY="csk-288xevyemwjp9h33hxhketrhx8w4rdh9yhx8tjt9cx8y396e"
+     export OPENAI_API_KEY="$CEREBRAS_API_KEY"
 
      export OPENAI_BASE_URL="https://api.cerebras.ai/v1"
 
@@ -20856,9 +20856,9 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-  ⎿  export RUNPOD_API_KEY="rpa_FY3SLASDVUXAT90A9WDTVSF7UGHVKSZ0EXXJ892D1quw6s"
+  ⎿  export RUNPOD_API_KEY="<REDACTED_RUNPOD_API_KEY>"
 
-     export CEREBRAS_API_KEY="csk-288xevyemwjp9h33hxhketrhx8w4rdh9yhx8tjt9cx8y396e"  # Qwen Coder via Cerebras
+     export CEREBRAS_API_KEY="$CEREBRAS_API_KEY"  # Qwen Coder via Cerebras
 
      export EMAIL_USER="jleechan@gmail.com"
 
@@ -20898,7 +20898,7 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-● Bash(export CEREBRAS_API_KEY="csk-288xevyemwjp9h33hxhketrhx8w4rdh9yhx8tjt9cx8y396e"
+● Bash(export CEREBRAS_API_KEY="$CEREBRAS_API_KEY"
 
       echo "CEREBRAS_API_KEY: ${CEREBRAS_API_KEY:0:10}..."…)
 
@@ -21034,7 +21034,7 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-  ⎿  export OPENAI_API_KEY="csk-288xevyemwjp9h33hxhketrhx8w4rdh9yhx8tjt9cx8y396e"
+  ⎿  export OPENAI_API_KEY="$CEREBRAS_API_KEY"
 
 
 
@@ -21056,7 +21056,7 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-  ⎿  231:export CEREBRAS_API_KEY="csk-288xevyemwjp9h33hxhketrhx8w4rdh9yhx8tjt9cx8y396e"  # Qwen Coder via Cerebras
+  ⎿  231:export CEREBRAS_API_KEY="$CEREBRAS_API_KEY"  # Qwen Coder via Cerebras
 
 
 
@@ -21078,9 +21078,9 @@ ect! Now let me add CEREBRAS_API_KEY to .bashrc in an appropriate location near 
 
 
 
-  ⎿  export OPENAI_API_KEY="csk-288xevyemwjp9h33hxhketrhx8w4rdh9yhx8tjt9cx8y396e"
+  ⎿  export OPENAI_API_KEY="$CEREBRAS_API_KEY"
 
-     export CEREBRAS_API_KEY="csk-288xevyemwjp9h33hxhketrhx8w4rdh9yhx8tjt9cx8y396e"  # Qwen Coder via Cerebras
+     export CEREBRAS_API_KEY="$CEREBRAS_API_KEY"  # Qwen Coder via Cerebras
 
 
 
