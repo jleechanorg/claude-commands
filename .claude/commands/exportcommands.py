@@ -353,28 +353,36 @@ class ClaudeCommandsExporter:
         # Use generic export with hooks configuration
         self._export_directory("hooks", self.EXPORT_DIRECTORIES["hooks"], staging_dir)
 
-        # Post-processing: apply content filtering, set permissions, and count files
+        # Post-processing: filter to only .sh/.py/.md files, apply content filtering, set permissions, and count
         target_dir = os.path.join(staging_dir, "hooks")
         if not os.path.exists(target_dir):
             return
 
+        allowed_extensions = (".sh", ".py", ".md")
+
         for root, dirs, files in os.walk(target_dir):
             for file in files:
-                if file.endswith((".sh", ".py", ".md")):
-                    file_path = os.path.join(root, file)
-                    self._apply_content_filtering(file_path)
+                file_path = os.path.join(root, file)
 
-                    # Ensure scripts are executable (with Windows compatibility)
-                    if file.endswith((".sh", ".py")):
-                        try:
-                            os.chmod(file_path, 0o755)
-                        except (OSError, NotImplementedError):
-                            # On Windows or unsupported filesystems, ignore chmod errors
-                            pass
+                # Remove files that don't match allowed extensions
+                if not file.endswith(allowed_extensions):
+                    os.remove(file_path)
+                    continue
 
-                    self.hooks_count += 1
-                    rel_path = os.path.relpath(file_path, target_dir)
-                    print(f"   📎 {rel_path}")
+                # Process allowed files
+                self._apply_content_filtering(file_path)
+
+                # Ensure scripts are executable (with Windows compatibility)
+                if file.endswith((".sh", ".py")):
+                    try:
+                        os.chmod(file_path, 0o755)
+                    except (OSError, NotImplementedError):
+                        # On Windows or unsupported filesystems, ignore chmod errors
+                        pass
+
+                self.hooks_count += 1
+                rel_path = os.path.relpath(file_path, target_dir)
+                print(f"   📎 {rel_path}")
 
         print(f"✅ Exported {self.hooks_count} hooks")
 
