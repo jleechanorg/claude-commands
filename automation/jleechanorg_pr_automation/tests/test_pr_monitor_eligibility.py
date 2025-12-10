@@ -1,5 +1,3 @@
-import types
-
 from automation.jleechanorg_pr_automation import jleechanorg_pr_monitor as mon
 
 

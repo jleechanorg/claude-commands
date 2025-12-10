@@ -97,6 +97,7 @@ class SafeJSONManager:
                         try:
                             os.remove(temp_path)
                         except OSError:
+                            # Ignore errors - file may already be deleted by another process
                             pass
 
             except OSError as e:
