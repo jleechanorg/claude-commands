@@ -615,7 +615,7 @@ export DOMAIN="your-project.com"
                             content = f.read()
                             # Project-specific content should be filtered
                             self.assertNotIn('mvp_site/', content)
-                            self.assertNotIn('$USER', content)
+                            self.assertNotIn('jleechan', content)
                             self.assertNotIn('your-project.com', content)
                             # Should contain generic replacements
                             self.assertIn('$PROJECT_ROOT/', content)
