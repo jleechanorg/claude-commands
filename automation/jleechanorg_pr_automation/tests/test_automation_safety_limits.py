@@ -11,9 +11,7 @@ RED Phase: All tests should FAIL initially
 import json
 import os
 import shutil
-import subprocess
 import tempfile
-import threading
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -219,6 +217,8 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     # Matrix 6: Concurrent Access Safety
     def test_concurrent_pr_attempts_thread_safe(self):
         """RED: Concurrent PR attempts should be thread-safe"""
+        import threading
+
         # Create a single manager instance explicitly for this test
         manager = AutomationSafetyManager(self.test_dir)
         results = []
@@ -322,7 +322,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         # Day 1: Record 50 runs
         day1 = datetime(2025, 10, 1, 10, 0, 0)
         mock_datetime.now.return_value = day1
-        mock_datetime.side_effect = datetime
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         for _ in range(50):
             self.automation_manager.record_global_run()
@@ -343,7 +343,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     @patch("jleechanorg_pr_automation.automation_safety_manager.datetime")
     def test_daily_reset_multiple_days(self, mock_datetime):
         """RED: Counter should reset each day for multiple days"""
-        mock_datetime.side_effect = datetime
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         # Day 1: 50 runs
         day1 = datetime(2025, 10, 1, 10, 0, 0)
@@ -368,7 +368,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     @patch("jleechanorg_pr_automation.automation_safety_manager.datetime")
     def test_daily_reset_midnight_transition(self, mock_datetime):
         """RED: Counter should reset at midnight transition"""
-        mock_datetime.side_effect = datetime
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         # 23:59:59 on Day 1 - at limit
         before_midnight = datetime(2025, 10, 1, 23, 59, 59)
@@ -410,7 +410,7 @@ class TestAutomationIntegration(unittest.TestCase):
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/$USER/projects/your-project.com/automation/automation_safety_wrapper.py</string>
+        <string>/Users/jleechan/projects/worldarchitect.ai/automation/automation_safety_wrapper.py</string>
     </array>
 </dict>
 </plist>
@@ -442,8 +442,10 @@ class TestAutomationIntegration(unittest.TestCase):
 
     def run_automation_script(self):
         """Helper to run automation script"""
-        script_path = Path.home() / "projects" / "worktree_worker2" / "automation" / "simple_pr_batch.sh"
-        return subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
+        import subprocess
+        return subprocess.run([
+            "/Users/jleechan/projects/worktree_worker2/automation/simple_pr_batch.sh"
+        ], check=False, capture_output=True, text=True)
 
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""
