@@ -1002,7 +1002,9 @@ Claude Code can assist with adapting these workflows to your specific project. J
             # - Python test files (contain literal assertion strings that must be preserved)
             # - loc_simple.sh (uses relative paths intentionally)
             # Compare by filename because the staging copy lives in a different directory than the source file.
-            is_test_file = filename.startswith("test_") and filename.endswith(".py") and "/tests/" in file_path
+            # Normalize path for cross-platform compatibility (Windows uses backslashes)
+            normalized_path = file_path.replace(os.sep, '/')
+            is_test_file = filename.startswith("test_") and filename.endswith(".py") and "/tests/" in normalized_path
             skip_all_transforms = filename == Path(__file__).name or is_test_file
             skip_mvp_transform = filename == "loc_simple.sh"
 
@@ -1791,7 +1793,7 @@ This is a filtered reference export from a working Claude Code project. Commands
                     for file in files:
                         try:
                             subprocess.run(
-                                ["git", "add", os.path.join(root, file)], check=False
+                                ["git", "add", os.path.join(root, file)], check=True
                             )
                         except subprocess.CalledProcessError:
                             print(
