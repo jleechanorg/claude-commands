@@ -728,7 +728,7 @@ if (projectOverride && command) {
 }
 
 // Validate configuration for commands that need it
-if (command === 'login' || command === 'test' || command === 'refresh') {
+if (command === 'login' || command === 'test' || command === 'refresh' || command === 'token') {
   validateConfig();
 }
 
