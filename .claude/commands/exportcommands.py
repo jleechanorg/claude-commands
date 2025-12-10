@@ -999,9 +999,13 @@ Claude Code can assist with adapting these workflows to your specific project. J
             filename = os.path.basename(file_path)
             # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
             # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
+            # Skip mvp_site transformation for Python test files (contain literal assertion strings)
             # Compare by filename because the staging copy lives in a different directory than the source file.
             skip_all_transforms = filename == Path(__file__).name
-            skip_mvp_transform = filename == "loc_simple.sh"
+            skip_mvp_transform = (
+                filename == "loc_simple.sh" or
+                (filename.startswith("test_") and filename.endswith(".py") and "/tests/" in file_path)
+            )
 
             # Apply transformations - Enhanced for portability
             # Skip all transformations for exportcommands.py to preserve regex patterns
