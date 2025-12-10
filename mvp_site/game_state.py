@@ -529,18 +529,19 @@ DICE_ROLL_TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "roll_dice",
-            "description": "Roll dice using standard notation (e.g., '1d20+5', '2d6'). "
-            "Use for ALL dice rolls to ensure true randomness.",
+            "description": "Roll dice for damage, healing, or random effects ONLY. "
+            "DO NOT use for skill checks, attacks, or saving throws - use the specific tools instead. "
+            "This tool just returns numbers, it does NOT determine success/failure.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "notation": {
                         "type": "string",
-                        "description": "Dice notation (e.g., '1d20+5', '2d6+3')",
+                        "description": "Dice notation (e.g., '2d6+3' for damage, '1d8' for healing)",
                     },
                     "purpose": {
                         "type": "string",
-                        "description": "What this roll is for (e.g., 'attack', 'damage')",
+                        "description": "What this roll is for (e.g., 'damage', 'healing', 'random table')",
                     },
                 },
                 "required": ["notation"],
@@ -551,7 +552,7 @@ DICE_ROLL_TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "roll_attack",
-            "description": "Roll a complete attack with hit check and damage if hit.",
+            "description": "Roll a COMPLETE attack with hit check vs AC and damage if hit. Returns success/failure.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -578,18 +579,20 @@ DICE_ROLL_TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "roll_skill_check",
-            "description": "Roll a skill check with modifiers.",
+            "description": "Roll a skill check (Perception, Stealth, Thieves' Tools, etc.) vs a DC. "
+            "ALWAYS use this for skill checks - it returns success/failure based on DC comparison. "
+            "Example: Thieves' Tools check to pick a lock, Stealth check to sneak past guards.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "attribute_modifier": {"type": "integer"},
-                    "proficiency_bonus": {"type": "integer"},
-                    "proficient": {"type": "boolean", "default": False},
-                    "expertise": {"type": "boolean", "default": False},
-                    "dc": {"type": "integer", "description": "Difficulty Class"},
-                    "skill_name": {"type": "string"},
+                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier (DEX for Stealth, INT for Investigation, etc.)"},
+                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus (typically 2-6)"},
+                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this skill"},
+                    "expertise": {"type": "boolean", "default": False, "description": "True if character has expertise (double proficiency)"},
+                    "dc": {"type": "integer", "description": "Difficulty Class to beat (10=easy, 15=medium, 20=hard, 25=very hard)"},
+                    "skill_name": {"type": "string", "description": "Name of the skill (e.g., 'Thieves Tools', 'Stealth', 'Perception')"},
                 },
-                "required": ["attribute_modifier", "proficiency_bonus", "dc"],
+                "required": ["attribute_modifier", "proficiency_bonus", "dc", "skill_name"],
             },
         },
     },
@@ -597,17 +600,18 @@ DICE_ROLL_TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "roll_saving_throw",
-            "description": "Roll a saving throw.",
+            "description": "Roll a saving throw vs a DC (e.g., DEX save vs fireball, WIS save vs charm). "
+            "ALWAYS use this for saving throws - it returns success/failure based on DC comparison.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "attribute_modifier": {"type": "integer"},
-                    "proficiency_bonus": {"type": "integer"},
-                    "proficient": {"type": "boolean", "default": False},
-                    "dc": {"type": "integer"},
-                    "save_type": {"type": "string", "description": "DEX, WIS, CON, etc."},
+                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier for the save"},
+                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus"},
+                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this saving throw"},
+                    "dc": {"type": "integer", "description": "Difficulty Class to beat"},
+                    "save_type": {"type": "string", "description": "Type of save: STR, DEX, CON, INT, WIS, or CHA"},
                 },
-                "required": ["attribute_modifier", "proficiency_bonus", "dc"],
+                "required": ["attribute_modifier", "proficiency_bonus", "dc", "save_type"],
             },
         },
     },
