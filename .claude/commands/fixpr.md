@@ -17,7 +17,7 @@ execution_mode: immediate
 
 ### 📋 MANDATORY WORKFLOW SEQUENCE (NO EXCEPTIONS)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │  PHASE 1: LOCAL REPRODUCTION (MANDATORY FIRST STEP)                 │
 │  ───────────────────────────────────────────────────────────────────│
@@ -59,14 +59,19 @@ execution_mode: immediate
 **ALWAYS follow this exact sequence for merge conflicts:**
 
 ```bash
-# Step 1: ALWAYS pull latest main first
-git pull origin main
+# Step 1: ALWAYS pull latest base branch first
+PR_NUMBER="<actual_pr_number>"
+BASE_BRANCH=$(gh pr view "$PR_NUMBER" --json baseRefName --jq '.baseRefName' 2>/dev/null || echo "")
+if [ -z "$BASE_BRANCH" ]; then
+  echo "⚠️ Could not detect base branch automatically. Please enter the base branch (e.g., main, master):"
+  read -r BASE_BRANCH
+fi
+git pull origin "$BASE_BRANCH"
 
 # Step 2: If conflicts exist, resolve them
 # (Git will show conflict markers in files)
 
 # Step 3: Create documentation directory
-PR_NUMBER="<actual_pr_number>"
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | tr '/' '-')
 DOCS_DIR="docs/conflicts/${SANITIZED_BRANCH}-pr${PR_NUMBER}"
@@ -847,7 +852,9 @@ ci_failure_log=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '
   | map("\((.context // .name) // \"unknown\"): \((.description // \"no description\"))")
   | join("\n")
 ')
-/redgreen --pr "$PR_NUMBER" --check "$failing_check" --gh-log "$ci_failure_log"
+
+# Provide the PR number, failing check, and CI log in the task context and invoke /redgreen without extra CLI flags.
+/redgreen
 
 # ✅ fixpr MUST wait for /redgreen to finish and confirm a matching local failure before attempting any fixes
 
@@ -1173,11 +1180,11 @@ The focus is on describing intent and letting Claude determine the best implemen
 
 **Before ANY `git push`, verify ALL items are checked:**
 
-```
+```text
 □ 1. REPRODUCED failure locally (saw the exact error locally)
 □ 2. Project test suite passes (ALL tests, not just some)
 □ 3. If merge conflicts existed:
-   □ 3a. Ran: git pull origin main
+   □ 3a. Ran: git pull origin <base_branch>
    □ 3b. Resolved all conflicts
    □ 3c. Created docs/conflicts/{branch}-pr{number}/conflict_summary.md
    □ 3d. Documented WHY each resolution was chosen

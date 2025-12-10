@@ -25,7 +25,7 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 # Note: Run this outside Claude Code in a regular terminal
 FIREBASE_PROJECT_ID=ai-universe-b3551 \
 FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \
-FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc \
+FIREBASE_API_KEY=${AI_UNIVERSE_FIREBASE_API_KEY:?Set AI_UNIVERSE_FIREBASE_API_KEY} \
 node ~/.claude/scripts/auth-cli.mjs login
 ```
 
@@ -56,7 +56,7 @@ node ~/.claude/scripts/auth-cli.mjs status
 # CRITICAL: Set AI Universe Firebase credentials
 export FIREBASE_PROJECT_ID=ai-universe-b3551
 export FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com
-export FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc
+export FIREBASE_API_KEY=${AI_UNIVERSE_FIREBASE_API_KEY:?Set AI_UNIVERSE_FIREBASE_API_KEY}
 
 # Get token (auto-refreshes if expired, does nothing if valid)
 TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)

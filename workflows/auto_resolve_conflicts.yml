@@ -76,11 +76,11 @@ jobs:
       pull-requests: write # Required for gh pr commands (list, view, comment)
 
     steps:
-    # Pinning actions/checkout to a specific SHA (v4.1.1) for security compliance.
+    # Pinning actions/checkout to a specific SHA (v4.3.1) for security compliance.
     # Rationale: Prevents supply chain attacks by ensuring a known, trusted version is used.
     # Review periodically and update this SHA to incorporate security patches from newer releases.
     - name: Checkout code
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f  # v4.3.1
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
@@ -134,33 +134,33 @@ jobs:
 
         if [ "$STATUS" = "success" ]; then
           cat > "$COMMENT_FILE" <<'EOF'
-🤖 **Auto-Conflict Resolution**
+Auto-Conflict Resolution
 
-✅ Merge conflicts have been automatically resolved and pushed to this PR.
+Merge conflicts have been automatically resolved and pushed to this PR.
 
 The PR is now ready for review and should be mergeable.
 
 **Resolver output:**
 ```
-EOF
+        EOF
         elif [ "$STATUS" = "failure" ]; then
           cat > "$COMMENT_FILE" <<'EOF'
-🤖 **Auto-Conflict Resolution**
+Auto-Conflict Resolution
 
-⚠️ Auto-resolution failed. Please review the workflow logs and resolve conflicts manually.
+Auto-resolution failed. Please review the workflow logs and resolve conflicts manually.
 
 **Resolver output:**
 ```
-EOF
+        EOF
         else
           cat > "$COMMENT_FILE" <<'EOF'
-🤖 **Auto-Conflict Resolution**
+Auto-Conflict Resolution
 
-⚠️ Auto-resolution status unknown. Please rerun the workflow or check logs for details.
+Auto-resolution status unknown. Please rerun the workflow or check logs for details.
 
 **Resolver output:**
 ```
-EOF
+        EOF
         fi
 
         if [ -f "$LOG_FILE" ]; then

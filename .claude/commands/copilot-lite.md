@@ -53,11 +53,13 @@ echo "🎯 Processing PR #$PR_NUMBER on $REPO (branch: $BRANCH_NAME)"
 Execute `/commentfetch` OR run directly:
 ```bash
 # Fetch all comments from all sources (human + bot)
-python3 -m .claude.commands._copilot_modules.commentfetch "$PR_NUMBER" 2>/dev/null || \
-    gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate > "$WORK_DIR/inline_comments.json" && \
-    gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate > "$WORK_DIR/issue_comments.json"
+python3 -m .claude.commands._copilot_modules.commentfetch "$PR_NUMBER" 2>/dev/null || {
+    gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate > "$WORK_DIR/inline_comments.json" &&
+    gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate > "$WORK_DIR/issue_comments.json" &&
+    jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
+}
 
-echo "📥 Comments fetched to $WORK_DIR/comments.json"
+echo "📥 Comments fetched. Consolidated file: $WORK_DIR/comments.json"
 ```
 
 **Important**: This fetches ALL comments including:

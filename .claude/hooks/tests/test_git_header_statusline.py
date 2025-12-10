@@ -100,7 +100,7 @@ class TestGitHeaderStatusline:
     def test_red_synced_clean_status(self, temp_git_repo, git_header_script):
         """RED: Test synced clean status shows (synced)"""
         # This test will fail initially because we need to set up remote tracking
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _stderr, _returncode = run_git_header(git_header_script)
 
         # Should contain directory name, branch, and status in parentheses
         assert "Local:" in stdout
@@ -153,10 +153,9 @@ class TestGitHeaderStatusline:
 
     def test_red_performance_under_5_seconds(self, temp_git_repo, git_header_script):
         """RED: Test script completes in under 5 seconds"""
-        import time
 
         start_time = time.time()
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _stderr, _returncode = run_git_header(git_header_script)
         execution_time = time.time() - start_time
 
         # Must complete in under 5 seconds (actually under 1 second target)
@@ -165,7 +164,7 @@ class TestGitHeaderStatusline:
 
     def test_red_essential_output_format(self, temp_git_repo, git_header_script):
         """RED: Test essential output format components"""
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _stderr, _returncode = run_git_header(git_header_script)
 
         # Must contain all essential components
         assert "Dir:" in stdout
@@ -179,14 +178,14 @@ class TestGitHeaderStatusline:
         # Create PR-style branch
         subprocess.run(["git", "checkout", "-b", "pr-1234"], check=True)
 
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _stderr, _returncode = run_git_header(git_header_script)
 
         # Should detect PR number from branch name
         assert "pr-1234" in stdout.lower() or "#1234" in stdout
 
     def test_red_directory_name_display(self, temp_git_repo, git_header_script):
         """RED: Test directory name is correctly displayed"""
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _stderr, _returncode = run_git_header(git_header_script)
 
         # Should show current directory name
         current_dir_name = os.path.basename(os.getcwd())

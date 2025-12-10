@@ -796,8 +796,8 @@ class TaskDispatcher:
 
 🚧 Checkout rule:
 - If `gh pr checkout {pr_number}` fails because the branch is already checked out elsewhere, create a fresh worktree and use it:
-  git worktree add /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun {pr_number}
-  cd /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun
+  git worktree add /private/tmp/{self._sanitized_repository_name()}/pr-{pr_number}-rerun {pr_number}
+  cd /private/tmp/{self._sanitized_repository_name()}/pr-{pr_number}-rerun
 
 IMPORTANT INSTRUCTIONS:
 1. First, checkout the PR branch: gh pr checkout {pr_number}
@@ -832,8 +832,8 @@ Key points:
 
 🚧 Checkout rule:
 - If `gh pr checkout` fails because the branch is already checked out elsewhere, create a fresh worktree and use it:
-  git worktree add /private/tmp/{self._extract_repository_name()}/pr-update-rerun <branch-or-pr-number>
-  cd /private/tmp/{self._extract_repository_name()}/pr-update-rerun
+  git worktree add /private/tmp/{self._sanitized_repository_name()}/pr-update-rerun <branch-or-pr-number>
+  cd /private/tmp/{self._sanitized_repository_name()}/pr-update-rerun
 
 The user referenced "the PR" but didn't specify which one. You must:
 1. List recent PRs: gh pr list --author @me --limit 5
@@ -950,6 +950,12 @@ Complete the task, then use /pr to create a new pull request."""
             current_dir = os.getcwd()
             return os.path.basename(current_dir)
 
+    def _sanitized_repository_name(self):
+        """Return a repository name safe for shell usage (alnum, dash, underscore)."""
+        repo_name = self._extract_repository_name()
+        safe_name = re.sub(r"[^A-Za-z0-9_-]", "", repo_name)
+        return safe_name or "repository"
+
     def _expand_path(self, path):
         """Expand ~ and resolve paths."""
         try:
@@ -963,7 +969,7 @@ Complete the task, then use /pr to create a new pull request."""
     def _get_worktree_base_path(self):
         """Calculate ~/projects/orch_{repo_name}/ base path."""
         try:
-            repo_name = self._extract_repository_name()
+            repo_name = self._sanitized_repository_name()
             base_path = os.path.join("~", "projects", f"orch_{repo_name}")
             return self._expand_path(base_path)
         except Exception as e:
@@ -1076,14 +1082,15 @@ Complete the task, then use /pr to create a new pull request."""
         # If collision detected, generate a unique variation
         if agent_name in existing:
             timestamp = int(time.time() * 1000000) % 10000
-            counter = 1
-            original_candidate = f"{base_name}-{timestamp}"
-            agent_name = original_candidate
-            
+            base_with_timestamp = f"{base_name}-{timestamp}"
+            counter = 0
+
             while agent_name in existing:
-                agent_name = f"{original_candidate}-{counter}"
+                agent_name = (
+                    base_with_timestamp if counter == 0 else f"{base_with_timestamp}-{counter}"
+                )
                 counter += 1
-            
+
             print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
 
         # 3. Update agent_spec to reflect the final unique name
