@@ -67,19 +67,23 @@ MODELS_WITH_CODE_EXECUTION = {
 # These require two-stage inference: LLM requests tool → we execute → send result back
 # NOTE: Only add models with 100k+ token context window
 # NOTE: llama-3.3-70b does NOT support multi-turn tool calling (uses precompute fallback)
+# NOTE: Gemini 2.5 has known issues with code execution + JSON mode (don't add)
 MODELS_WITH_TOOL_USE = {
     # Cerebras models with multi-turn tool support (100k+ context)
     "qwen-3-235b-a22b-instruct-2507",  # 131K context - Confirmed working
-    "zai-glm-4.6",  # 131K context - Working with tool use
+    "zai-glm-4.6",  # 131K context - #1 on Berkeley Function Calling Leaderboard
     # OpenRouter models with tool support (100k+ context)
     "meta-llama/llama-3.1-70b-instruct",  # 128K context
-    "meta-llama/llama-3.1-405b-instruct",  # 128K context
+    # Note: llama-3.1-405b removed (too expensive)
 }
 
 # Models that need pre-computed dice rolls (no code_execution or tool_use)
-# Fallback: we pre-roll dice and pass values to LLM
+# Fallback: LLM generates dice values (not truly random, but works)
+# Any model NOT in the above sets falls back to precompute automatically
+# Note: Precompute is "good enough" - LLM just picks plausible dice values
 MODELS_PRECOMPUTE_ONLY = {
-    # Add any models here that don't support either approach
+    # Explicitly list models that should never use tool_use even if capable
+    # (empty - all unlisted models auto-fallback to precompute)
 }
 
 
