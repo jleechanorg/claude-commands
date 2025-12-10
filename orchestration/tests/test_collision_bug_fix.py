@@ -148,7 +148,8 @@ class TestCollisionBugFix(unittest.TestCase):
 
             with patch.object(self.dispatcher, '_cleanup_stale_prompt_files') as mock_cleanup:
                 with patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
-                    mock_run.return_value = MagicMock(returncode=0)
+                    # Ensure no collisions are detected by returning empty stdout for tmux list-sessions
+                    mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
                     with patch('os.makedirs'):
                         with patch('os.path.exists', return_value=True):
                             with patch('builtins.open', create=True):
