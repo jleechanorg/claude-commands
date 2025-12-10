@@ -97,9 +97,12 @@ elif [[ "$local_branch" =~ /pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
 else
     # Enhanced PR cache with smart invalidation
-    # - "none" results cached for 30 seconds (PRs may be created soon after push)
-    # - Real PR numbers cached for 5 minutes (stable)
-    # - Bypass cache entirely if last push was < 60 seconds ago
+    # - "none" results cached for CACHE_TTL_NONE seconds (PRs may be created soon after push)
+    # - Real PR numbers cached for CACHE_TTL_PR seconds (stable)
+    # - Bypass cache entirely if last push was < RECENT_PUSH_WINDOW seconds ago
+    readonly CACHE_TTL_NONE=30      # 30 seconds for "none" results
+    readonly CACHE_TTL_PR=300       # 5 minutes for PR numbers
+    readonly RECENT_PUSH_WINDOW=60  # 60 seconds for recent push detection
     current_commit=$(git rev-parse HEAD 2>/dev/null)
     cache_file="/tmp/git-header-pr-${current_commit:0:8}"
     cache_valid=false
@@ -116,7 +119,7 @@ else
 
     current_time=$(date +%s)
 
-    # Check if there was a recent push (within 60 seconds)
+    # Check if there was a recent push (within RECENT_PUSH_WINDOW seconds)
     # Detect by checking mtime of remote tracking ref (updated on push)
     recent_push=false
     if [ "$remote" != "no upstream" ]; then
@@ -133,7 +136,7 @@ else
             # "0" means epoch time which indicates extraction failed
             if [ -n "$remote_ref_mtime" ] && [ "$remote_ref_mtime" != "0" ]; then
                 push_age=$((current_time - remote_ref_mtime))
-                if [ "$push_age" -lt 60 ]; then
+                if [ "$push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
                     recent_push=true
                 fi
             fi
@@ -147,7 +150,7 @@ else
                 packed_refs_mtime=$(get_mtime "$packed_refs_file")
                 if [ -n "$packed_refs_mtime" ] && [ "$packed_refs_mtime" != "0" ]; then
                     packed_push_age=$((current_time - packed_refs_mtime))
-                    if [ "$packed_push_age" -lt 60 ]; then
+                    if [ "$packed_push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
                         recent_push=true
                     fi
                 fi
@@ -163,12 +166,12 @@ else
         cached_value=$(cat "$cache_file" 2>/dev/null || echo "none")
 
         # Different TTL based on cached value:
-        # - "none" = 30 seconds (PRs may be created soon)
-        # - Real PR numbers = 5 minutes (stable, unlikely to change)
+        # - "none" = CACHE_TTL_NONE seconds (PRs may be created soon)
+        # - Real PR numbers = CACHE_TTL_PR seconds (stable, unlikely to change)
         if [ "$cached_value" = "none" ]; then
-            max_cache_age=30
+            max_cache_age="$CACHE_TTL_NONE"
         else
-            max_cache_age=300
+            max_cache_age="$CACHE_TTL_PR"
         fi
 
         if [ "$cache_age" -lt "$max_cache_age" ]; then
