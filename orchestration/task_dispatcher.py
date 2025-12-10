@@ -26,7 +26,9 @@ from .constants import (
 A2A_AVAILABLE = True
 
 # Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-3-pro-preview by default
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+def _get_gemini_model():
+    """Get GEMINI_MODEL at runtime to support dynamic environment variable updates."""
+    return os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
 
 CLI_PROFILES = {
     "claude": {
@@ -75,9 +77,11 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "GEMINI_RESTART",
-        # Stick to configured GEMINI_MODEL (default gemini-3-pro-preview) unless overridden
+        # Note: GEMINI_MODEL is evaluated at runtime via _get_gemini_model() to support
+        # dynamic environment variable updates after module import
         # YOLO mode enabled to allow file access outside workspace (user directive)
-        "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo -p {{prompt_file}}",
+        "command_template": "{{binary}} -m {model} --yolo -p {{prompt_file}}",
+        "command_template_runtime_params": {"model": _get_gemini_model},
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         "detection_keywords": [
@@ -127,22 +131,28 @@ def _kill_tmux_session_if_exists(name: str) -> None:
             base_tmux_safe, f"{base_tmux_safe}_"   # Tmux-safe without trailing dot
         ]
 
-        # Try direct has-session matches
-        for candidate in candidates:
-            check = subprocess.run(
-                ["tmux", "has-session", "-t", candidate],
-                check=False,
-                capture_output=True,
-                timeout=30
-            )
-            if check.returncode == 0:
-                print(f"🧹 Killing existing tmux session {candidate} to allow reuse")
-                subprocess.run(
-                    ["tmux", "kill-session", "-t", candidate],
-                    check=False,
-                    capture_output=True,
-                    timeout=30
-                )
+        # Get all active tmux sessions once (more efficient than checking each candidate)
+        list_result = subprocess.run(
+            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            check=False,
+            capture_output=True,
+            timeout=30,
+            text=True
+        )
+        
+        if list_result.returncode == 0:
+            active_sessions = set(list_result.stdout.strip().split('\n')) if list_result.stdout.strip() else set()
+            
+            # Check if any candidate exists in active sessions
+            for candidate in candidates:
+                if candidate in active_sessions:
+                    print(f"🧹 Killing existing tmux session {candidate} to allow reuse")
+                    subprocess.run(
+                        ["tmux", "kill-session", "-t", candidate],
+                        check=False,
+                        capture_output=True,
+                        timeout=30
+                    )
     except Exception as exc:
         print(f"⚠️ Warning: unable to check/kill tmux session {name}: {exc}")
 
@@ -1077,11 +1087,11 @@ Complete the task, then use /pr to create a new pull request."""
         if agent_name in existing:
             timestamp = int(time.time() * 1000000) % 10000
             counter = 1
-            original_candidate = f"{base_name}-{timestamp}"
-            agent_name = original_candidate
+            candidate_with_timestamp = f"{base_name}-{timestamp}"
+            agent_name = candidate_with_timestamp
             
             while agent_name in existing:
-                agent_name = f"{original_candidate}-{counter}"
+                agent_name = f"{candidate_with_timestamp}-{counter}"
                 counter += 1
             
             print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
@@ -1328,16 +1338,24 @@ Agent Configuration:
             prompt_value = prompt_value_quoted if cli_profile.get("quote_prompt") else prompt_value_raw
             binary_value = shlex.quote(cli_path)
             try:
+                # Build format parameters, including any runtime-evaluated parameters
+                format_params = {
+                    "binary": binary_value,
+                    "binary_path": cli_path,
+                    "prompt_file": prompt_value,
+                    "prompt_file_path": prompt_value_raw,
+                    "prompt_file_quoted": prompt_value_quoted,
+                    "continue_flag": continue_segment,
+                }
+                
+                # Add runtime parameters if specified (e.g., for dynamic GEMINI_MODEL)
+                runtime_params = cli_profile.get("command_template_runtime_params", {})
+                for key, func in runtime_params.items():
+                    format_params[key] = func() if callable(func) else func
+                
                 cli_command = (
                     cli_profile["command_template"]
-                    .format(
-                        binary=binary_value,
-                        binary_path=cli_path,
-                        prompt_file=prompt_value,
-                        prompt_file_path=prompt_value_raw,
-                        prompt_file_quoted=prompt_value_quoted,
-                        continue_flag=continue_segment,
-                    )
+                    .format(**format_params)
                     .strip()
                 )
             except KeyError as exc:

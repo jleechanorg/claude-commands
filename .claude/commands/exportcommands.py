@@ -702,7 +702,8 @@ class ClaudeCommandsExporter:
             # Order matters: match more specific patterns first to avoid partial matches
             content = re.sub(r'jleechanorg/worldarchitect\.ai', '$GITHUB_REPOSITORY', content)
             content = re.sub(r'worldarchitecture-ai', '$GCP_PROJECT_ID', content)
-            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
+            # Use negative lookbehind to match worldarchitect.ai only when NOT preceded by /
+            content = re.sub(r'(?<!/)worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'jleechanorg', '$GITHUB_OWNER', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
 
@@ -1380,12 +1381,14 @@ This is a filtered reference export from a working Claude Code project. Commands
         gh_cmd = shutil.which('gh')
         if not gh_cmd:
             # Try common locations for gh (Linux and Windows)
+            # Note: ~/bin is more common on Linux; Windows typically uses PATH or Program Files
+            # Consider using ~/.local/bin or platform-specific paths for better cross-platform support
             common_paths = [
                 os.path.expanduser("~/.local/bin/gh"),  # Linux user install
                 "/usr/local/bin/gh",                    # Linux system install
-                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Windows/Linux user bin
-                "C:\\Program Files\\GitHub CLI\\gh.exe",
-                "C:\\Program Files (x86)\\GitHub CLI\\gh.exe"
+                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Linux/macOS user bin
+                "C:\\Program Files\\GitHub CLI\\gh.exe",       # Windows standard install
+                "C:\\Program Files (x86)\\GitHub CLI\\gh.exe"  # Windows x86 install
             ]
             for path in common_paths:
                 if os.path.exists(path):

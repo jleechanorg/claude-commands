@@ -47,6 +47,8 @@ jobs:
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: $GCP_PROJECT_ID
+      # Extended timeout: Real-mode tests involve actual API calls to multiple providers,
+      # each requiring network round-trips and API processing time (typically 30-40s per provider)
       MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '120000' }}
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
@@ -213,7 +215,11 @@ jobs:
       - name: Run MCP smoke tests
         if: steps.service_url.outputs.deployed == 'true'
         id: smoke_tests
-        timeout-minutes: 25  # Extended for real mode: 3 providers x ~8min each
+        # Extended timeout for comprehensive real-mode testing:
+        # - 3 providers (Cerebras, OpenRouter, Gemini) tested sequentially
+        # - Each provider: ~8min (includes API calls, retries, validation)
+        # - Total: ~24min + buffer for CI overhead
+        timeout-minutes: 25
         env:
           MCP_SERVER_URL: ${{ steps.service_url.outputs.service_url }}
           MCP_TEST_MODE: ${{ steps.test_config.outputs.mode }}
