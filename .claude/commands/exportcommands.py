@@ -12,6 +12,7 @@ import shutil
 import re
 import json
 import requests
+import fnmatch
 from pathlib import Path
 from export_config import get_exportable_components
 
@@ -201,8 +202,6 @@ class ClaudeCommandsExporter:
             exclude_dirs: List of directory names to exclude
             exclude_files: List of file patterns to exclude (supports wildcards)
         """
-        import fnmatch
-
         # Normalize exclude_dirs to handle .egg-info pattern
         normalized_exclude_dirs = set()
         for exc_dir in exclude_dirs:
