@@ -23,52 +23,9 @@ NARRATIVE_RESPONSE_SCHEMA = {
         },
         "planning_block": {
             "type": "object",
-            "description": "Internal GM planning and analysis with choices for player",
-            "properties": {
-                "thinking": {
-                    "type": "string",
-                    "description": "GM's internal reasoning and analysis",
-                },
-                "context": {
-                    "type": "string",
-                    "description": "Optional context information",
-                },
-                "choices": {
-                    "type": "object",
-                    "description": "Available choices for the player (use snake_case keys)",
-                    "properties": {
-                        "choice_1": {
-                            "type": "object",
-                            "properties": {
-                                "text": {"type": "string"},
-                                "description": {"type": "string"},
-                                "risk_level": {"type": "string"},
-                            },
-                            "required": ["text", "description"],
-                        },
-                        "choice_2": {
-                            "type": "object",
-                            "properties": {
-                                "text": {"type": "string"},
-                                "description": {"type": "string"},
-                                "risk_level": {"type": "string"},
-                            },
-                            "required": ["text", "description"],
-                        },
-                        "choice_3": {
-                            "type": "object",
-                            "properties": {
-                                "text": {"type": "string"},
-                                "description": {"type": "string"},
-                                "risk_level": {"type": "string"},
-                            },
-                            "required": ["text", "description"],
-                        },
-                    },
-                    "required": ["choice_1", "choice_2"],
-                },
-            },
-            "required": ["thinking", "choices"],
+            "description": "GM planning with thinking field and dynamic choices (snake_case keys like explore_tavern, attack_goblin, god:option_1)",
+            # Internal structure validated by narrative_response_schema.py, not JSON schema
+            # This allows dynamic choice keys which strict mode cannot support
         },
         "entities_mentioned": {
             "type": "array",
@@ -118,12 +75,20 @@ def get_openai_json_schema_format(name: str = "narrative_response") -> dict:
     """Get schema in OpenAI/Cerebras json_schema format.
 
     Returns the schema wrapped for use with response_format.type="json_schema"
+
+    NOTE: Uses strict=False to allow dynamic choice keys in planning_block.
+    The game design requires semantic keys like 'explore_tavern', 'attack_goblin',
+    'god:option_1' which cannot be pre-defined in a strict schema.
+
+    Structure enforcement still happens via:
+    - Top-level fields (narrative, entities_mentioned) are validated
+    - planning_block internal structure validated by narrative_response_schema.py
     """
     return {
         "type": "json_schema",
         "json_schema": {
             "name": name,
-            "strict": True,
+            "strict": False,  # Allow dynamic choice keys in planning_block
             "schema": NARRATIVE_RESPONSE_SCHEMA,
         },
     }

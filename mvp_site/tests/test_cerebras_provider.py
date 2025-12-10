@@ -21,7 +21,7 @@ from mvp_site.llm_providers.provider_utils import ContextTooLargeError
 
 
 class TestJsonSchemaSupport:
-    """Tests for json_schema with strict:true support (TDD Matrix)."""
+    """Tests for json_schema support with strict:false (allows dynamic choice keys)."""
 
     def test_uses_json_schema_format_in_payload(self, monkeypatch):
         """RED: Verify request payload uses json_schema, not legacy json_object."""
@@ -45,14 +45,15 @@ class TestJsonSchemaSupport:
             max_output_tokens=4096,
         )
 
-        # Should use json_schema with strict:true, NOT legacy json_object
+        # Should use json_schema (not legacy json_object) with strict:false
+        # strict:false allows dynamic choice keys in planning_block
         response_format = captured["json"]["response_format"]
         assert response_format["type"] == "json_schema", (
             f"Expected json_schema but got {response_format.get('type')}"
         )
         assert "json_schema" in response_format, "Missing json_schema field"
-        assert response_format["json_schema"].get("strict") is True, (
-            "json_schema must have strict:true"
+        assert response_format["json_schema"].get("strict") is False, (
+            "json_schema must have strict:false to allow dynamic choice keys"
         )
 
     def test_json_schema_has_narrative_response_structure(self, monkeypatch):
