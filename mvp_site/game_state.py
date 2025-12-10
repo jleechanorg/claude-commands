@@ -959,25 +959,27 @@ def calculate_attack_roll(
 
     if advantage and not disadvantage:
         roll1, roll2, total = roll_with_advantage(notation)
-        natural = max(roll1.individual_rolls[0], roll2.individual_rolls[0])
+        natural_rolls = [roll1.individual_rolls[0], roll2.individual_rolls[0]]
+        natural = max(natural_rolls)
         return {
-            "rolls": [roll1.individual_rolls[0], roll2.individual_rolls[0]],
+            "rolls": natural_rolls,
             "modifier": attack_modifier,
             "total": total,
             "used_roll": "higher",
             "is_critical": natural == 20,
-            "is_fumble": False,  # Advantage prevents fumble unless both are 1
+            "is_fumble": natural_rolls[0] == 1 and natural_rolls[1] == 1,
             "notation": notation,
         }
     if disadvantage and not advantage:
         roll1, roll2, total = roll_with_disadvantage(notation)
-        natural = min(roll1.individual_rolls[0], roll2.individual_rolls[0])
+        natural_rolls = [roll1.individual_rolls[0], roll2.individual_rolls[0]]
+        natural = min(natural_rolls)
         return {
-            "rolls": [roll1.individual_rolls[0], roll2.individual_rolls[0]],
+            "rolls": natural_rolls,
             "modifier": attack_modifier,
             "total": total,
             "used_roll": "lower",
-            "is_critical": False,  # Disadvantage prevents crit unless both are 20
+            "is_critical": natural_rolls[0] == 20 and natural_rolls[1] == 20,
             "is_fumble": natural == 1,
             "notation": notation,
         }

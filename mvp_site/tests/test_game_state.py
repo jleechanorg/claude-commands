@@ -1540,6 +1540,38 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         assert len(result["rolls"]) == 2
         assert result["used_roll"] == "lower"
 
+    @patch("mvp_site.game_state.roll_dice")
+    def test_calculate_attack_roll_advantage_double_fumble(self, mock_roll_dice):
+        """With advantage, only double 1s should trigger a fumble."""
+        from mvp_site.game_state import DiceRollResult, calculate_attack_roll
+
+        mock_roll_dice.side_effect = [
+            DiceRollResult("1d20+5", [1], 5, 6, natural_1=True),
+            DiceRollResult("1d20+5", [1], 5, 6, natural_1=True),
+        ]
+
+        result = calculate_attack_roll(attack_modifier=5, advantage=True)
+
+        self.assertTrue(result["is_fumble"])
+        self.assertFalse(result["is_critical"])
+        self.assertEqual(result["used_roll"], "higher")
+
+    @patch("mvp_site.game_state.roll_dice")
+    def test_calculate_attack_roll_disadvantage_double_critical(self, mock_roll_dice):
+        """With disadvantage, only double 20s should keep critical flag."""
+        from mvp_site.game_state import DiceRollResult, calculate_attack_roll
+
+        mock_roll_dice.side_effect = [
+            DiceRollResult("1d20+5", [20], 5, 25, natural_20=True),
+            DiceRollResult("1d20+5", [20], 5, 25, natural_20=True),
+        ]
+
+        result = calculate_attack_roll(attack_modifier=5, disadvantage=True)
+
+        self.assertTrue(result["is_critical"])
+        self.assertFalse(result["is_fumble"])
+        self.assertEqual(result["used_roll"], "lower")
+
     def test_calculate_damage_normal(self):
         """Test normal damage calculation."""
         from mvp_site.game_state import calculate_damage
