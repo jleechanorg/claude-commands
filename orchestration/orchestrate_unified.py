@@ -155,16 +155,16 @@ class UnifiedOrchestration:
                 missing.append(name)
 
         llm_cli_available = any(
-            shutil.which(cli_name) for cli_name in ("claude", "codex")
+            shutil.which(cli_name) for cli_name in ("claude", "codex", "gemini", "cursor-agent")
         )
         if not llm_cli_available:
-            missing.append("claude/codex CLI")
+            missing.append("agent CLI")
 
         if missing:
             print(f"⚠️  Missing dependencies: {', '.join(missing)}")
-            if "claude/codex CLI" in missing:
+            if "agent CLI" in missing:
                 print(
-                    "   Install Claude Code CLI (claude) or Codex CLI (codex) and ensure at least one is on your PATH"
+                    "   Install at least one agent CLI (claude, codex, gemini, or cursor-agent) and ensure it is on your PATH"
                 )
             if "gh" in missing:
                 print("   Install GitHub CLI: https://cli.github.com/")

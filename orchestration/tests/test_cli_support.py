@@ -478,7 +478,7 @@ class TestGeminiCliIntegration(unittest.TestCase):
         self.assertFalse(gemini["quote_prompt"])
 
     def test_all_cli_profiles_have_consistent_structure(self):
-        """Integration: All CLI profiles (claude, codex, gemini) have same structure."""
+        """Integration: All CLI profiles (claude, codex, gemini, cursor) have same structure."""
 
         expected_keys = set(CLI_PROFILES["claude"].keys())
 
@@ -490,6 +490,85 @@ class TestGeminiCliIntegration(unittest.TestCase):
                 f"CLI profile '{cli_name}' has inconsistent keys. "
                 f"Missing: {expected_keys - profile_keys}, Extra: {profile_keys - expected_keys}",
             )
+
+
+class TestCursorCliIntegration(unittest.TestCase):
+    """Tests for Cursor Agent CLI integration."""
+
+    def setUp(self):
+        self.dispatcher = TaskDispatcher()
+
+    def test_cursor_profile_exists(self):
+        """Cursor CLI profile should be registered in CLI_PROFILES."""
+        self.assertIn("cursor", CLI_PROFILES)
+
+    def test_cursor_profile_structure(self):
+        """Cursor profile should have all required fields."""
+        cursor = CLI_PROFILES["cursor"]
+        required_fields = [
+            "binary",
+            "display_name",
+            "generated_with",
+            "co_author",
+            "supports_continue",
+            "conversation_dir",
+            "continue_flag",
+            "restart_env",
+            "command_template",
+            "stdin_template",
+            "quote_prompt",
+            "detection_keywords",
+        ]
+        for field in required_fields:
+            self.assertIn(field, cursor, f"Missing field: {field}")
+
+    def test_cursor_binary_name(self):
+        """Cursor profile should use cursor-agent binary."""
+        cursor = CLI_PROFILES["cursor"]
+        self.assertEqual(cursor["binary"], "cursor-agent")
+
+    def test_cursor_command_template(self):
+        """Cursor command template should include grok model and output format."""
+        cursor = CLI_PROFILES["cursor"]
+        template = cursor["command_template"]
+        self.assertIn("--model grok", template)
+        self.assertIn("--output-format text", template)
+        self.assertIn("-p @{prompt_file}", template)
+
+    def test_cursor_detection_keywords(self):
+        """Cursor should be detected by relevant keywords."""
+        cursor = CLI_PROFILES["cursor"]
+        expected_keywords = ["cursor", "cursor-agent", "grok"]
+        for keyword in expected_keywords:
+            self.assertIn(keyword, cursor["detection_keywords"])
+
+    def test_cursor_keyword_detection(self):
+        """Task with cursor keywords should select cursor CLI."""
+        with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
+            mock_which.side_effect = lambda cmd: f"/usr/bin/{cmd}" if cmd in ["claude", "cursor-agent"] else None
+
+            task = "Use cursor to analyze the latest trends"
+            agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+
+        self.assertEqual(agent_specs[0]["cli"], "cursor")
+
+    def test_cursor_forced_cli(self):
+        """Forced CLI selection should work for cursor."""
+        task = "Analyze the codebase for fresh insights"
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="cursor")
+        self.assertEqual(agent_specs[0]["cli"], "cursor")
+
+    def test_cursor_stdin_template(self):
+        """Cursor uses /dev/null for stdin (prompt passed via -p flag)."""
+        cursor = CLI_PROFILES["cursor"]
+        self.assertEqual(cursor["stdin_template"], "/dev/null")
+        self.assertFalse(cursor["quote_prompt"])
+
+    def test_cursor_does_not_support_continue(self):
+        """Cursor should not support conversation continuation."""
+        cursor = CLI_PROFILES["cursor"]
+        self.assertFalse(cursor["supports_continue"])
+        self.assertIsNone(cursor["conversation_dir"])
 
 
 if __name__ == "__main__":

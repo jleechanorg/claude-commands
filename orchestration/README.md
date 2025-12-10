@@ -86,7 +86,7 @@ The orchestration system uses **tmux (terminal multiplexer)** as the core proces
 
 2. TASK ANALYSIS (orchestrate_unified.py)
    └─> TaskDispatcher.analyze_task_and_create_agents()
-       ├─> Detect CLI (claude or codex)
+       ├─> Detect CLI (claude, codex, gemini, or cursor)
        ├─> Detect PR context (new vs update)
        └─> Generate agent specifications
 
@@ -127,6 +127,13 @@ The orchestration system uses **tmux (terminal multiplexer)** as the core proces
    └─> Codex CLI:
        ├─> codex exec --yolo
        └─> < {prompt_file}
+   └─> Gemini CLI:
+       ├─> gemini -m {model} --yolo
+       └─> -p {prompt_file}
+   └─> Cursor Agent CLI:
+       ├─> cursor-agent -p @{prompt_file}
+       ├─> --model grok
+       └─> --output-format text
 
 8. AGENT WORK (Inside tmux session)
    └─> Agent reads prompt
@@ -174,6 +181,16 @@ The system supports multiple LLM CLIs through a profile-based architecture:
     "command_template": "{binary} exec --yolo",
     "stdin_template": "{prompt_file}",
     "quote_prompt": True
+}
+```
+
+**Cursor Agent CLI Profile:**
+```python
+{
+    "binary": "cursor-agent",
+    "command_template": "{binary} -p @{prompt_file} --model grok --output-format text",
+    "stdin_template": "/dev/null",
+    "quote_prompt": False
 }
 ```
 
@@ -288,6 +305,8 @@ sudo apt-get install tmux
 # Install an LLM CLI (at least one of the following)
 # - Claude Code CLI (`claude`) – see main README for setup
 # - Codex CLI (`codex`) – ensure the `codex` binary is on your PATH
+# - Gemini CLI (`gemini`) – install from https://github.com/google-gemini/gemini-cli
+# - Cursor Agent CLI (`cursor-agent`) – install from https://www.cursor.com/
 
 # Ensure git and gh CLI are available
 which git gh  # Should show both commands
@@ -299,7 +318,7 @@ which git gh  # Should show both commands
 # Start the orchestration system (starts agent monitor)
 ./orchestration/start_system.sh start
 
-# Create agents via your preferred CLI (Claude Code or Codex)
+# Create agents via your preferred CLI (Claude, Codex, Gemini, or Cursor)
 /orch "Find and fix all inline imports"
 
 # Direct orchestration command (for testing)
@@ -359,7 +378,7 @@ ai_orch kill my-coding-session
 ### Live Mode Features
 
 **Interactive Terminal Access:**
-- Direct interaction with Claude or Codex CLI
+- Direct interaction with Claude, Codex, Gemini, or Cursor CLI
 - Full tmux session management
 - Persistent sessions that survive disconnects
 - Multiple concurrent sessions supported
@@ -421,6 +440,8 @@ Live mode uses the same CLI profiles as the orchestration system:
 
 - **Claude Profile**: Interactive `claude` CLI with model selection
 - **Codex Profile**: Interactive `codex exec` mode
+- **Gemini Profile**: Interactive `gemini` CLI with Grok model
+- **Cursor Profile**: Fresh-data analysis via `cursor-agent` CLI
 - **tmux Wrapper**: Each session runs in isolated tmux session
 - **Working Directory**: Sessions start in specified directory
 - **Persistence**: Sessions survive terminal disconnects

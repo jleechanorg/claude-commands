@@ -89,6 +89,30 @@ CLI_PROFILES = {
             "google gemini",
         ],
     },
+    "cursor": {
+        "binary": "cursor-agent",
+        "display_name": "Cursor",
+        "generated_with": "🤖 Generated with [Cursor Agent](https://www.cursor.com/)",
+        "co_author": "Cursor <noreply@cursor.com>",
+        "supports_continue": False,
+        "conversation_dir": None,
+        "continue_flag": "",
+        "restart_env": "CURSOR_RESTART",
+        # Cursor Agent CLI with Grok model for fresh-data analysis
+        "command_template": "{binary} -p @{prompt_file} --model grok --output-format text",
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        "detection_keywords": [
+            "cursor",
+            "cursor-agent",
+            "cursor agent",
+            "cursor cli",
+            "use cursor",
+            "use the cursor cli",
+            "cursor ai",
+            "grok",
+        ],
+    },
 }
 
 
