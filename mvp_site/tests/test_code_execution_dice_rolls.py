@@ -1,12 +1,11 @@
 """
 TDD Tests for Hybrid Dice Roll System
 
-UPDATE (2025-12): Gemini 2.0 and 3.0 models support code_execution, but
-Vertex rejects code_execution tools when using controlled generation
-(JSON/response schemas). In JSON mode we disable code_execution to avoid
-Vertex API errors while keeping the hybrid system:
+Gemini 2.0 and 3.0 models support BOTH code_execution AND JSON mode together.
+Gemini 2.5 does NOT support this combination - it uses precompute fallback.
 
-1. Code Execution (Gemini 2.0/3.0): Native Python code execution for dice rolls
+The hybrid dice roll system:
+1. Code Execution (Gemini 2.0/3.0): Native Python code execution + JSON mode
 2. Tool Use (Cerebras, OpenRouter): Function calling with local execution
 3. Pre-computed (fallback): Backend pre-rolls dice and provides values
 
@@ -14,10 +13,10 @@ See: https://ai.google.dev/gemini-api/docs/structured-output
 
 These tests verify:
 1. JSON mode is enabled (required for structured output)
-2. Code execution is intentionally disabled in JSON mode to avoid Vertex
-   "controlled generation" errors
-3. Tool schemas are defined for non-code-execution models
-4. Prompt instructions cover all dice roll strategies
+2. Code execution IS enabled for Gemini 2.0/3.0 models (they support both)
+3. Code execution is NOT enabled for Gemini 2.5 models
+4. Tool schemas are defined for non-code-execution models
+5. Prompt instructions cover all dice roll strategies
 """
 
 import os
@@ -40,10 +39,10 @@ from mvp_site import constants, llm_service
 class TestHybridDiceRollSystem(unittest.TestCase):
     """Test the hybrid dice roll system across different model types."""
 
-    def test_code_execution_disabled_in_json_mode(self):
+    def test_code_execution_enabled_for_gemini_2_and_3(self):
         """
-        Verify code_execution is disabled when using JSON/controlled generation
-        to avoid Vertex API errors.
+        Verify code_execution IS enabled for Gemini 2.0/3.0 with JSON mode.
+        These models support both features together.
         """
         with patch('mvp_site.llm_providers.gemini_provider.get_client') as mock_get_client:
             mock_client = Mock()
@@ -78,10 +77,16 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 'FAIL: JSON mode must be enabled for structured responses'
             )
 
-            # Code execution must be disabled in JSON mode due to Vertex restrictions
-            self.assertIsNone(
+            # CRITICAL: Code execution MUST be enabled for Gemini 2.0/3.0
+            # These models support code_execution + JSON mode together
+            self.assertIsNotNone(
                 config_obj.tools,
-                'FAIL: code_execution tools should be disabled for gemini JSON mode',
+                'FAIL: code_execution tools MUST be enabled for Gemini 2.0/3.0'
+            )
+            # Verify it's the code_execution tool
+            self.assertTrue(
+                len(config_obj.tools) > 0,
+                'FAIL: tools list should contain code_execution tool'
             )
 
     def test_model_capability_detection(self):
