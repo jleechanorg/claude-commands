@@ -40,12 +40,14 @@ GEMINI_3_ALLOWED_USERS = [
 ]
 
 # Allowed Gemini model selections for user preferences (default - all users)
-# NOTE: Only models that support BOTH code_execution AND JSON response mode are allowed
-# Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
-# See PR #2052 for compatibility testing details
+# Model capabilities:
+#   - gemini-2.0-flash: code_execution + JSON mode together ✅ (true dice randomness)
+#   - gemini-3-pro-preview: code_execution + JSON mode together ✅ (premium)
+#   - gemini-2.5-flash: JSON mode only, NO code_execution combo (uses precompute dice)
 ALLOWED_GEMINI_MODELS = [
-    DEFAULT_GEMINI_MODEL,  # ✅ WORKS with code_execution + JSON (cheap: $0.10/M)
-    GEMINI_PREMIUM_MODEL,  # ✅ Premium option (allowlist enforced downstream)
+    DEFAULT_GEMINI_MODEL,  # ✅ gemini-2.0-flash: code_execution + JSON (cheap: $0.10/M)
+    "gemini-2.5-flash",    # ✅ JSON mode only, precompute dice (alternative option)
+    GEMINI_PREMIUM_MODEL,  # ✅ gemini-3-pro-preview: code_execution + JSON (allowlist)
 ]
 
 # Premium Gemini models (only for GEMINI_3_ALLOWED_USERS)
@@ -58,16 +60,30 @@ PREMIUM_GEMINI_MODELS = [
 # =============================================================================
 # Models that support native code_execution WITH JSON response mode
 # These can run Python code (random.randint) directly during inference
+#
+# GEMINI MODEL BEHAVIOR (as of Dec 2024):
+# ┌─────────────────────┬───────────────┬───────────┬──────────────┬───────────────┐
+# │ Model               │ Code Exec     │ JSON Mode │ Both Together│ Dice Strategy │
+# ├─────────────────────┼───────────────┼───────────┼──────────────┼───────────────┤
+# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ✅ Yes       │ code_execution│
+# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ✅ Yes       │ code_execution│
+# │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
+# │ gemini-2.5-pro      │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
+# └─────────────────────┴───────────────┴───────────┴──────────────┴───────────────┘
+#
+# gemini-2.5-* models throw API errors when code_execution + JSON mode are combined.
+# They work fine with either feature alone, but not together.
+#
 MODELS_WITH_CODE_EXECUTION = {
-    "gemini-2.0-flash",      # ✅ Confirmed working
-    "gemini-3-pro-preview",  # ✅ Confirmed working (preview feature)
+    "gemini-2.0-flash",      # ✅ Confirmed: code_execution + JSON mode works
+    "gemini-3-pro-preview",  # ✅ Confirmed: code_execution + JSON mode works
+    # NOTE: gemini-2.5-* NOT included - they don't support code_exec + JSON together
 }
 
 # Models that support tool use / function calling
 # These require two-stage inference: LLM requests tool → we execute → send result back
 # NOTE: Only add models with 100k+ token context window
 # NOTE: llama-3.3-70b does NOT support multi-turn tool calling (uses precompute fallback)
-# NOTE: Gemini 2.5 has known issues with code execution + JSON mode (don't add)
 MODELS_WITH_TOOL_USE = {
     # Cerebras models with multi-turn tool support (100k+ context)
     "qwen-3-235b-a22b-instruct-2507",  # 131K context - Confirmed working
@@ -103,14 +119,16 @@ def get_dice_roll_strategy(model_name: str) -> str:
     return "precompute"
 
 # Gemini model mapping from user preference to full model name
+# Maps user-selected values to actual API model names
 GEMINI_MODEL_MAPPING = {
-    "gemini-3-pro-preview": "gemini-3-pro-preview",
-    "gemini-2.0-flash": "gemini-2.0-flash",
-    # Legacy compatibility - redirect 2.5 users to cost-efficient model
-    "gemini-2.5-flash": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
-    "gemini-2.5-pro": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
-    "pro-2.5": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
-    "flash-2.5": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
+    # Primary models (selectable in settings)
+    "gemini-2.0-flash": "gemini-2.0-flash",      # Default: code_execution + JSON
+    "gemini-2.5-flash": "gemini-2.5-flash",      # Alternative: JSON only, precompute dice
+    "gemini-3-pro-preview": "gemini-3-pro-preview",  # Premium: code_execution + JSON
+    # Legacy aliases (redirect to 2.0 for backwards compatibility)
+    "gemini-2.5-pro": "gemini-2.0-flash",  # Redirect: 2.5-pro → 2.0-flash
+    "pro-2.5": "gemini-2.0-flash",         # Redirect: legacy alias
+    "flash-2.5": "gemini-2.5-flash",       # Alias: maps to actual 2.5-flash
 }
 
 # OpenRouter model selection tuned for narrative-heavy D&D play
