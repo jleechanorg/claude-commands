@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import List
 
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
+from playwright_stealth import Stealth
 
 
 # Set up logging to /tmp
@@ -113,6 +114,20 @@ class CodexGitHubMentionsAutomation:
             else:
                 self.page = await self.context.new_page()
                 print("📄 Created new page")
+
+            # Apply stealth patches to mask automation
+            print("🥷 Applying stealth patches to evade detection...")
+            stealth_config = Stealth(
+                navigator_webdriver=True,
+                chrome_runtime=True,
+                navigator_languages=True,
+                navigator_vendor=True,
+                navigator_platform=True,
+                webgl_vendor=True,
+                navigator_user_agent=True
+            )
+            await stealth_config.apply_async(self.page)
+            logger.info("Applied stealth patches to page")
 
             return True
 
