@@ -32,14 +32,14 @@ from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
 
-    def __init__(self, cdp_url: str = "http://localhost:9222", headless: bool = False, task_limit: int | None = None):
+    def __init__(self, cdp_url: str = "http://localhost:9222", headless: bool = False, task_limit: int | None = 50):
         """
         Initialize the automation.
 
         Args:
             cdp_url: Chrome DevTools Protocol WebSocket URL
             headless: Run in headless mode (not recommended - may be detected)
-            task_limit: Maximum number of tasks to process (None = all Github Mention tasks)
+            task_limit: Maximum number of tasks to process (default: 50, None = all Github Mention tasks)
         """
         self.cdp_url = cdp_url
         self.headless = headless
@@ -356,8 +356,8 @@ Examples:
     parser.add_argument(
         "--limit",
         type=int,
-        default=None,
-        help="Maximum number of tasks to process (default: all Github Mention tasks)"
+        default=50,
+        help="Maximum number of tasks to process (default: 50)"
     )
 
     args = parser.parse_args()
