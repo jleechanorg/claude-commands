@@ -65,16 +65,15 @@ MODELS_WITH_CODE_EXECUTION = {
 
 # Models that support tool use / function calling
 # These require two-stage inference: LLM requests tool → we execute → send result back
-# NOTE: llama-3.3-70b does NOT support multi-turn tool calling per Cerebras docs
+# NOTE: Only add models with 100k+ token context window
+# NOTE: llama-3.3-70b does NOT support multi-turn tool calling (uses precompute fallback)
 MODELS_WITH_TOOL_USE = {
-    # Cerebras models with multi-turn tool support
-    "qwen-3-235b-a22b-instruct-2507",  # Confirmed working
-    "qwen-3-32b",  # Smaller Qwen variant
-    "gpt-oss-120b",  # OpenAI GPT OSS model
-    # zai-glm-4.6 - REMOVED: needs verification, may not support tool use properly
-    # OpenRouter models (most support function calling)
-    "meta-llama/llama-3.1-70b-instruct",
-    "meta-llama/llama-3.1-405b-instruct",
+    # Cerebras models with multi-turn tool support (100k+ context)
+    "qwen-3-235b-a22b-instruct-2507",  # 131K context - Confirmed working
+    "zai-glm-4.6",  # 131K context - Working with tool use
+    # OpenRouter models with tool support (100k+ context)
+    "meta-llama/llama-3.1-70b-instruct",  # 128K context
+    "meta-llama/llama-3.1-405b-instruct",  # 128K context
 }
 
 # Models that need pre-computed dice rolls (no code_execution or tool_use)
