@@ -68,7 +68,7 @@ logger = setup_logging()
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
 
-    def __init__(self, cdp_url: str | None = None, headless: bool = False, task_limit: int | None = 50, user_data_dir: str | None = None):
+    def __init__(self, cdp_url: str | None = None, headless: bool = False, task_limit: int | None = 50, user_data_dir: str | None = None, debug: bool = False):
         """
         Initialize the automation.
 
@@ -77,11 +77,13 @@ class CodexGitHubMentionsAutomation:
             headless: Run in headless mode (not recommended - may be detected)
             task_limit: Maximum number of tasks to process (default: 50, None = all Github Mention tasks)
             user_data_dir: Chrome profile directory for persistent login (default: ~/.chrome-codex-automation)
+            debug: Enable debug mode (screenshots, HTML dump, keep browser open)
         """
         self.cdp_url = cdp_url
         self.headless = headless
         self.task_limit = task_limit
         self.user_data_dir = user_data_dir or str(Path.home() / ".chrome-codex-automation")
+        self.debug = debug
         self.browser: Browser | None = None
         self.context: BrowserContext | None = None
         self.page: Page | None = None
@@ -239,6 +241,23 @@ class CodexGitHubMentionsAutomation:
             if self.task_limit is not None:
                 # Find ALL tasks (limited to first N)
                 print(f"\n🔍 Searching for first {self.task_limit} tasks...")
+
+                # Debug: Save screenshot and HTML before searching
+                if self.debug:
+                    debug_dir = Path("/tmp/automate_codex_update")
+                    debug_dir.mkdir(parents=True, exist_ok=True)
+
+                    screenshot_path = debug_dir / f"debug_screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    html_path = debug_dir / f"debug_html_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+
+                    await self.page.screenshot(path=str(screenshot_path))
+                    html_content = await self.page.content()
+                    html_path.write_text(html_content)
+
+                    print(f"🐛 Debug: Screenshot saved to {screenshot_path}")
+                    print(f"🐛 Debug: HTML saved to {html_path}")
+                    print(f"🐛 Debug: Current URL: {self.page.url}")
+                    print(f"🐛 Debug: Page title: {await self.page.title()}")
 
                 # Find all task links - they typically have href and are clickable
                 # Adjust selector based on Codex UI structure
@@ -413,10 +432,18 @@ class CodexGitHubMentionsAutomation:
 
         finally:
             # Close context or browser depending on how it was created
-            if self.context and not self.cdp_url:
+            if self.debug:
+                print("\n🐛 Debug mode: Keeping browser open for inspection")
+                print("   Press Ctrl+C to exit when done inspecting")
+                try:
+                    await asyncio.sleep(3600)  # Wait 1 hour for inspection
+                except KeyboardInterrupt:
+                    print("\n🐛 Debug inspection complete")
+
+            if self.context and not self.cdp_url and not self.debug:
                 print("\n🔒 Closing browser (launched by automation)")
                 await self.context.close()
-            elif self.browser and not self.cdp_url:
+            elif self.browser and not self.cdp_url and not self.debug:
                 await self.browser.close()
             else:
                 print("\n💡 Browser left open (using existing instance)")
@@ -482,6 +509,12 @@ Examples:
         help="Chrome profile directory for persistent login (default: ~/.chrome-codex-automation)"
     )
 
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Debug mode: take screenshots, save HTML, keep browser open"
+    )
+
     args = parser.parse_args()
 
     # Build CDP URL only if using existing browser
@@ -491,7 +524,8 @@ Examples:
     automation = CodexGitHubMentionsAutomation(
         cdp_url=cdp_url,
         task_limit=args.limit,
-        user_data_dir=args.profile_dir
+        user_data_dir=args.profile_dir,
+        debug=args.debug
     )
 
     try:
