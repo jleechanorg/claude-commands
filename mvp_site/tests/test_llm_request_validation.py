@@ -110,7 +110,7 @@ class TestLLMRequestValidation(unittest.TestCase):
             LLMRequest(
                 user_action=long_action, game_mode="character", user_id="test-user"
             )
-        self.assertIn("user_action too long", str(cm.exception))
+        self.assertIn("User action is too long", str(cm.exception))
 
     def test_too_long_checkpoint_block_raises_validation_error(self):
         """Test that overly long checkpoint_block raises ValidationError."""
@@ -122,7 +122,7 @@ class TestLLMRequestValidation(unittest.TestCase):
                 user_id="test-user",
                 checkpoint_block=long_checkpoint,
             )
-        self.assertIn("checkpoint_block too long", str(cm.exception))
+        self.assertIn("Checkpoint block is too long", str(cm.exception))
 
     def test_large_payload_raises_payload_too_large_error(self):
         """Test that oversized JSON payload raises PayloadTooLargeError."""

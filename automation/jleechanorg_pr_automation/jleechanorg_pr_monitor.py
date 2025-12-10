@@ -585,23 +585,37 @@ class JleechanorgPRMonitor:
         # Get current PR state including commit SHA
         head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
         head_commit_details = None
+        # Flag to bypass skip checks when new bot comments require attention
+        force_process_due_to_bot_comments = False
+
         if head_sha:
             head_commit_details = self._get_head_commit_details(repo_full, pr_number, head_sha)
             if head_commit_details and self._is_head_commit_from_codex(head_commit_details):
-                self.logger.debug(
-                    "🆔 Head commit %s for %s#%s already attributed to Codex",
-                    head_sha[:8],
-                    repo_full,
-                    pr_number,
-                )
-                self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
-                return "skipped"
+                # Check if there are new bot comments that need attention
+                if self._has_new_bot_comments_since_codex(comments):
+                    self.logger.info(
+                        "🤖 Head commit %s for %s#%s is from Codex, but new bot comments detected - forcing re-run",
+                        head_sha[:8],
+                        repo_full,
+                        pr_number,
+                    )
+                    force_process_due_to_bot_comments = True
+                else:
+                    self.logger.debug(
+                        "🆔 Head commit %s for %s#%s already attributed to Codex",
+                        head_sha[:8],
+                        repo_full,
+                        pr_number,
+                    )
+                    self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+                    return "skipped"
 
         if not head_sha:
             self.logger.warning(
                 f"⚠️ Could not determine commit SHA for PR #{pr_number}; proceeding without marker gating"
             )
-        else:
+        elif not force_process_due_to_bot_comments:
+            # Only apply skip checks if we're not forcing a re-run due to new bot comments
             # Check if we should skip this PR based on commit-based tracking
             if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
                 self.logger.info(f"⏭️ Skipping PR #{pr_number} - already processed this commit")
@@ -975,6 +989,75 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             if message and isinstance(message, str):
                 if self._codex_commit_message_pattern.search(message):
                     return True
+
+        return False
+
+    def _is_github_bot_comment(self, comment: Dict) -> bool:
+        """Check if comment is from a GitHub bot (not Codex/AI automation)."""
+        author_login = self._get_comment_author_login(comment)
+        if not author_login:
+            return False
+
+        # GitHub bots have [bot] suffix
+        if author_login.endswith("[bot]"):
+            # Exclude our own Codex/AI automation bots
+            lower_login = author_login.lower()
+            for pattern in self._codex_actor_patterns:
+                if pattern.search(lower_login):
+                    return False
+            return True
+
+        return False
+
+    def _get_last_codex_automation_comment_time(self, comments: List[Dict]) -> Optional[str]:
+        """Find the timestamp of the last Codex automation comment (with commit marker)."""
+        last_time = None
+
+        for comment in comments:
+            body = comment.get("body", "")
+            # Check if this is a Codex automation comment (has our marker)
+            if self.CODEX_COMMIT_MARKER_PREFIX in body:
+                created_at = comment.get("createdAt") or comment.get("updatedAt")
+                if created_at and (last_time is None or created_at > last_time):
+                    last_time = created_at
+
+        return last_time
+
+    def _has_new_bot_comments_since_codex(self, comments: List[Dict]) -> bool:
+        """Check if there are new GitHub bot comments since the last Codex automation comment.
+
+        This allows automation to run even when head commit is from Codex if
+        there are new bot comments (like CI failures, review bot comments) that
+        need attention.
+        """
+        last_codex_time = self._get_last_codex_automation_comment_time(comments)
+
+        # If no Codex automation comment exists, treat any bot comment as new
+        if not last_codex_time:
+            for comment in comments:
+                if self._is_github_bot_comment(comment):
+                    created_at = comment.get("createdAt") or comment.get("updatedAt")
+                    self.logger.debug(
+                        "🤖 Found bot comment from %s at %s with no prior Codex automation comment",
+                        self._get_comment_author_login(comment),
+                        created_at,
+                    )
+                    return True
+            return False
+
+        for comment in comments:
+            if not self._is_github_bot_comment(comment):
+                continue
+
+            created_at = comment.get("createdAt") or comment.get("updatedAt")
+            if created_at and created_at > last_codex_time:
+                self.logger.debug(
+                    "🤖 Found new bot comment from %s at %s (after Codex comment at %s)",
+                    self._get_comment_author_login(comment),
+                    created_at,
+                    last_codex_time,
+                )
+                return True
 
         return False
 

@@ -47,18 +47,24 @@ def generate_json_mode_content(
     safety_settings: list[Any],
     json_mode_max_output_tokens: int,
 ) -> Any:
-    """Generate content from Gemini using JSON response mode."""
+    """Generate content from Gemini using JSON response mode.
+
+    NOTE: Code execution tool is NOT included here because Gemini API
+    does not support controlled generation (response_mime_type) with
+    code execution. See:
+    https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini
+    """
     client = get_client()
 
+    # IMPORTANT: Do NOT add code_execution tool here - it's incompatible with
+    # response_mime_type (controlled generation). The Gemini API will reject
+    # requests that include both.
     generation_config_params = {
-        "max_output_tokens": max_output_tokens,
+        "max_output_tokens": json_mode_max_output_tokens,
         "temperature": temperature,
         "safety_settings": safety_settings,
-        "tools": [types.Tool(code_execution=types.ToolCodeExecution())],
+        "response_mime_type": "application/json",
     }
-
-    generation_config_params["response_mime_type"] = "application/json"
-    generation_config_params["max_output_tokens"] = json_mode_max_output_tokens
 
     if system_instruction_text:
         generation_config_params["system_instruction"] = types.Part(

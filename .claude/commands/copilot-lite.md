@@ -12,6 +12,11 @@ execution_mode: immediate
 
 Atomic single-pass PR comment processor with ground truth verification.
 
+**SCOPE**: ONLY fixes GitHub PR comments. Does NOT:
+- ❌ Fix merge conflicts (use `/fixpr` separately)
+- ❌ Fix failing tests (handle separately)
+- ❌ Handle CI failures (not in scope)
+
 **Key Principle**: Ground truth over inference - try the fix, report what actually happened.
 
 **Architecture**:
@@ -47,7 +52,7 @@ echo "🎯 Processing PR #$PR_NUMBER on $REPO (branch: $BRANCH_NAME)"
 **Action Steps:**
 Execute `/commentfetch` OR run directly:
 ```bash
-# Fetch all comments from all sources
+# Fetch all comments from all sources (human + bot)
 python3 -m .claude.commands._copilot_modules.commentfetch "$PR_NUMBER" 2>/dev/null || \
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate > "$WORK_DIR/inline_comments.json" && \
     gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate > "$WORK_DIR/issue_comments.json"
@@ -55,24 +60,37 @@ python3 -m .claude.commands._copilot_modules.commentfetch "$PR_NUMBER" 2>/dev/nu
 echo "📥 Comments fetched to $WORK_DIR/comments.json"
 ```
 
+**Important**: This fetches ALL comments including:
+- Human reviewer comments
+- Bot comments (Codex, GitHub bots, etc.)
+- Inline review comments
+- General PR conversation comments
+
 ### Phase 3: Atomic Comment Processing (CORE - LLM RESPONSIBILITY)
 
 **🚨 CRITICAL: Claude (LLM) MUST process each comment atomically:**
 
-For EACH comment in `/tmp/{branch}/comments.json`:
+For EACH comment in `/tmp/{branch}/comments.json` (including bot comments):
 
 1. **READ** the comment body and understand what is being requested
-2. **CATEGORIZE** the request:
-   - `CRITICAL`: Security vulnerabilities, production blockers, data corruption
-   - `BLOCKING`: CI failures, build failures, breaking changes
-   - `IMPORTANT`: Performance issues, logic errors, missing validation
-   - `ROUTINE`: Code style, documentation, optional refactoring
+   - **Bot comments** requesting code changes should be treated like human comments
+   - **Bot status updates** (e.g., "CI passed", "Merge conflict detected") should be SKIPPED
+
+2. **CATEGORIZE** the comment request:
+   - `CRITICAL`: Security vulnerabilities, production blockers, data corruption in PR code
+   - `IMPORTANT`: Performance issues, logic errors, missing validation in PR code
+   - `ROUTINE`: Code style, documentation, optional refactoring suggestions
+   - **SKIP**: Bot status updates, merge conflicts, test failures, or CI issues (not in scope)
+     - Examples to SKIP: "Merge conflict detected", "Tests failed", "CI check pending"
+     - Examples to PROCESS: "@codex please fix this bug", "Bot: This function has a security issue"
 
 3. **ATTEMPT** the fix (if applicable):
    - Read the affected file(s)
    - Make the code change using Edit/MultiEdit tools
-   - Run relevant tests to verify
-   - Commit if tests pass, revert if they fail
+   - Verify syntax is correct
+   - Commit the change with descriptive message
+   - **NOTE**: Do NOT fix tests or merge conflicts - only address the specific comment request
+     - If the comment is about merge conflicts, failing tests, or CI status, categorize it as **SKIP** in Step 2 and respond with a `SKIPPED` entry (no ATTEMPT changes)
 
 4. **GENERATE** a truthful response based on ACTUAL outcome:
 
@@ -84,6 +102,10 @@ For EACH comment in `/tmp/{branch}/comments.json`:
 - **ACKNOWLEDGED**: Style suggestion noted for future consideration
 - **ALREADY IMPLEMENTED**: Code already does this (MUST show evidence)
   - MUST include: file path, line number, code snippet proving implementation
+- **SKIPPED**: Comment is about merge conflicts, test failures, CI issues, or bot status updates (out of scope)
+  - MUST include: brief note directing to appropriate command (/fixpr for merge conflicts)
+  - Examples: Bot status updates like "Merge conflict detected", "CI pending"
+  - **NOTE**: Bot comments requesting actual code changes should NOT be skipped - treat them like human comments
 
 ### Phase 4: Build responses.json
 
@@ -130,6 +152,27 @@ For EACH comment in `/tmp/{branch}/comments.json`:
         "code": "branch_name = branch_name.replace('/', '_').replace('\\\\', '_')"
       },
       "reply_text": "[AI responder] ✅ **ALREADY IMPLEMENTED**\n\n**Category**: IMPORTANT\n**Evidence**: Branch sanitization exists at src/utils.py:45\n```python\nbranch_name = branch_name.replace('/', '_').replace('\\\\', '_')\n```\n**Verified**: Actual code shows path-safe character replacement",
+      "in_reply_to": null
+    },
+    {
+      "comment_id": "2357534673",
+      "comment_author": "codex-bot",
+      "category": "IMPORTANT",
+      "response": "FIXED",
+      "action_taken": "Added null check before accessing user.name property",
+      "files_modified": ["src/auth.py:45"],
+      "commit": "abc123def",
+      "verification": "✅ Syntax valid, null pointer exception prevented",
+      "reply_text": "[AI responder] ✅ **FIXED**\n\n**Category**: IMPORTANT\n**Action**: Added null check before accessing user.name property (from @codex-bot comment)\n**Files**: src/auth.py:45\n**Commit**: abc123def\n**Verification**: ✅ Syntax valid, null pointer exception prevented",
+      "in_reply_to": null
+    },
+    {
+      "comment_id": "2357534674",
+      "comment_author": "github-actions[bot]",
+      "category": "SKIP",
+      "response": "SKIPPED",
+      "reason": "Bot status update about merge conflicts - use /fixpr command",
+      "reply_text": "[AI responder] ⏭️ **SKIPPED**\n\n**Reason**: This is a bot status update about merge conflicts, which is out of scope for /copilot-lite.\n**Action**: Please run `/fixpr` to resolve merge conflicts separately.",
       "in_reply_to": null
     }
   ]
@@ -230,22 +273,28 @@ response = "ALREADY IMPLEMENTED - branch is sanitized"
 # Only claim implemented if actual sanitization exists
 ```
 
-### Rule 4: Every Comment Gets Response
+### Rule 4: Every Comment Gets Response (Human + Bot)
 - **FIXED**: Change was made and verified
 - **NOT_DONE**: Attempted but failed (include real reason)
 - **ACKNOWLEDGED**: Style suggestion, noted
 - **ALREADY_IMPLEMENTED**: Code already does this (with evidence)
+- **SKIPPED**: Bot status updates, merge conflicts, test failures, or CI (out of scope)
 
-**NO COMMENT LEFT BEHIND** - 100% response rate is mandatory.
+**Bot Comment Handling:**
+- Bot comments requesting code changes → Process like human comments (FIXED/NOT_DONE/etc.)
+- Bot status updates (CI, merge conflicts) → SKIPPED
+
+**NO COMMENT LEFT BEHIND** - 100% response rate is mandatory (human + bot).
 
 ## 📊 Response Categories
 
 | Response | When to Use | Required Fields |
 |----------|-------------|-----------------|
-| `FIXED` | Successfully implemented change | `action_taken`, `files_modified`, `commit`, `verification` |
-| `NOT_DONE` | Attempted but couldn't implement | `reason` (from actual failure) |
-| `ACKNOWLEDGED` | Style/non-blocking suggestion | `explanation` |
-| `ALREADY_IMPLEMENTED` | Code already has this feature | `evidence` (file, line, code snippet) |
+| `FIXED` | Successfully implemented change (human or bot comment) | `action_taken`, `files_modified`, `commit`, `verification` |
+| `NOT_DONE` | Attempted but couldn't implement (human or bot comment) | `reason` (from actual failure) |
+| `ACKNOWLEDGED` | Style/non-blocking suggestion (human or bot comment) | `explanation` |
+| `ALREADY_IMPLEMENTED` | Code already has this feature (human or bot comment) | `evidence` (file, line, code snippet) |
+| `SKIPPED` | Bot status updates, merge conflicts, tests, or CI | `reason` (brief explanation + command to use) |
 
 ## 🔧 Integration with Existing Commands
 
@@ -253,8 +302,12 @@ This command composes with:
 - `/commentfetch` - Fetches all PR comments
 - `/commentreply` - Posts responses with proper threading
 - `/commentcheck` - Verifies 100% coverage
-- `/fixpr` - For complex merge conflict resolution
 - `/pushl` - For pushing changes
+
+**NOT included** (handle separately):
+- `/fixpr` - Use separately for merge conflict resolution
+- Test fixing - Handle via separate test commands
+- CI troubleshooting - Handle via separate debugging
 
 ## ✅ SUCCESS CRITERIA
 
@@ -264,6 +317,7 @@ This command composes with:
 - [ ] Every "ALREADY IMPLEMENTED" includes code evidence
 - [ ] Every "FIXED" includes commit hash and verification
 - [ ] Every "NOT DONE" includes real failure reason from actual attempt
+- [ ] Every "SKIPPED" correctly identifies out-of-scope comments (merge conflicts, tests, CI)
 
 ### Coverage Requirements (MANDATORY)
 - [ ] 100% comment response rate (human + bot comments)
@@ -292,9 +346,15 @@ This command composes with:
 4. Verifies 100% coverage
 5. Pushes all committed fixes
 
+**What this does NOT handle:**
+- ❌ Merge conflicts (use `/fixpr`)
+- ❌ Test failures (handle separately)
+- ❌ CI issues (debug separately)
+
 **Key Difference from /copilot:**
 - `/copilot`: Multi-phase (Phase 0-3), can lose state between phases
 - `/copilot-lite`: Single-pass atomic, each comment fully processed before moving to next
+- `/copilot-lite`: ONLY fixes code comments, not merge conflicts or tests
 
 ## 🚨 Autonomous Operation
 
