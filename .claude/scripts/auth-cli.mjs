@@ -1,34 +1,22 @@
 #!/usr/bin/env node
 
 /**
- * CLI Authentication Tool (Configurable)
+ * CLI Authentication Tool for AI Universe
  *
  * Implements browser-based OAuth flow with localhost callback server
  * Pattern used by: gcloud CLI, Firebase CLI, GitHub CLI
  *
- * Configuration via environment variables:
- *   FIREBASE_API_KEY      - Firebase web API key
- *   FIREBASE_AUTH_DOMAIN  - Firebase auth domain
- *   FIREBASE_PROJECT_ID   - Firebase project ID
- *   AUTH_TOKEN_DIR        - Directory for token storage (default: ~/.worldarchitect-ai)
- *
  * Usage:
- *   node ~/.claude/scripts/auth-cli.mjs login
- *   node ~/.claude/scripts/auth-cli.mjs logout
- *   node ~/.claude/scripts/auth-cli.mjs status
- *   node ~/.claude/scripts/auth-cli.mjs token
- *
- * Wrapper scripts for specific projects:
- *   node ~/.claude/scripts/auth-worldai.mjs login    # WorldArchitect.AI
- *   node ~/.claude/scripts/auth-aiuniverse.mjs login # AI Universe
- *
- * Note: Wrapper scripts should set FIREBASE_* environment variables
- * to override the default configuration.
+ *   node scripts/auth-cli.mjs login                    # Login to ai-universe (default)
+ *   node scripts/auth-cli.mjs login --project custom   # Login to custom project
+ *   node scripts/auth-cli.mjs logout
+ *   node scripts/auth-cli.mjs status
+ *   node scripts/auth-cli.mjs token
  */
 
 import express from 'express';
 import { createServer } from 'http';
-import { readFile, writeFile, unlink, mkdir, chmod } from 'fs/promises';
+import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -39,47 +27,136 @@ const TOKEN_EXPIRATION_MS = 3600000; // 1 hour
 const AUTH_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_TOKEN_URL = 'https://securetoken.googleapis.com/v1/token';
 
+// Default project configuration (AI Universe)
+const DEFAULT_PROJECT = {
+  id: 'ai-universe-b3551',
+  authDomain: 'ai-universe-b3551.firebaseapp.com',
+  envPrefix: 'VITE_AI_UNIVERSE_FIREBASE',
+  name: 'AI Universe'
+};
+
+// Known project configurations for convenience
+const KNOWN_PROJECTS = {
+  'ai-universe': DEFAULT_PROJECT,
+  'ai-universe-b3551': DEFAULT_PROJECT,
+  'worldarchitecture-ai': {
+    id: 'worldarchitecture-ai',
+    authDomain: 'worldarchitecture-ai.firebaseapp.com',
+    envPrefix: 'VITE_FIREBASE',
+    name: 'World Architecture AI'
+  }
+};
+
+/**
+ * Parse command-line arguments for --project flag
+ */
+function parseArgs() {
+  const args = process.argv.slice(2);
+  let command = null;
+  let projectOverride = null;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--project' || args[i] === '-p') {
+      projectOverride = args[i + 1];
+      i++; // Skip next arg
+    } else if (!args[i].startsWith('-')) {
+      command = args[i];
+    }
+  }
+
+  return { command, projectOverride };
+}
+
+const { command: parsedCommand, projectOverride } = parseArgs();
+
+/**
+ * Get project configuration based on --project flag or default
+ */
+function getProjectConfig(projectOverride) {
+  // If no override, use AI Universe (default)
+  if (!projectOverride) {
+    return DEFAULT_PROJECT;
+  }
+
+  // Check known projects first
+  const knownProject = KNOWN_PROJECTS[projectOverride];
+  if (knownProject) {
+    return knownProject;
+  }
+
+  // Assume custom project ID format: project-id
+  return {
+    id: projectOverride,
+    authDomain: `${projectOverride}.firebaseapp.com`,
+    envPrefix: `VITE_${projectOverride.toUpperCase().replace(/-/g, '_')}_FIREBASE`,
+    name: projectOverride
+  };
+}
+
+const ACTIVE_PROJECT = getProjectConfig(projectOverride);
+
+// Project-specific constants (derived from ACTIVE_PROJECT for backwards compatibility)
+const EXPECTED_FIREBASE_PROJECT_ID = ACTIVE_PROJECT.id;
+const EXPECTED_FIREBASE_AUTH_DOMAIN = ACTIVE_PROJECT.authDomain;
+
 // Configuration
+const REQUIRED_API_KEY_PLACEHOLDER = `__REQUIRED_${ACTIVE_PROJECT.id.toUpperCase().replace(/-/g, '_')}_FIREBASE_API_KEY__`;
+
 const CONFIG = {
-  // Firebase config for WorldArchitect.AI
-  // Note: Firebase web API keys are safe to include in client code (public by design)
-  // See: https://firebase.google.com/docs/projects/api-keys
+  // Firebase config - reads from environment with project-specific prefix
   firebaseConfig: {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'worldarchitecture-ai.firebaseapp.com',
-    projectId: process.env.FIREBASE_PROJECT_ID || 'worldarchitecture-ai'
+    apiKey: process.env[`${ACTIVE_PROJECT.envPrefix}_API_KEY`] || REQUIRED_API_KEY_PLACEHOLDER,
+    authDomain: process.env[`${ACTIVE_PROJECT.envPrefix}_AUTH_DOMAIN`] || ACTIVE_PROJECT.authDomain,
+    projectId: process.env[`${ACTIVE_PROJECT.envPrefix}_PROJECT_ID`] || ACTIVE_PROJECT.id
   },
   callbackPort: 9005,
   callbackPath: '/auth/callback',
-  tokenPath: join(homedir(), '.worldarchitect-ai', 'auth-token.json'),
-  mcpUrl: process.env.MCP_URL || 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app'
+  tokenPath: join(homedir(), '.ai-universe', 'auth-token.json'),
+  productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp',
+  activeProject: ACTIVE_PROJECT
 };
 
 // Validate required configuration
 function validateConfig() {
-  if (!CONFIG.firebaseConfig.apiKey || CONFIG.firebaseConfig.apiKey.length < 10) {
-    console.error('❌ Firebase configuration invalid.');
-    console.error('   API key is missing or invalid.');
-    console.error('');
-    console.error('Set environment variable to override:');
-    console.error('   export FIREBASE_API_KEY="your-firebase-web-api-key"');
+  const missingEnvVars = [];
+  const envPrefix = ACTIVE_PROJECT.envPrefix;
+
+  if (CONFIG.firebaseConfig.apiKey === REQUIRED_API_KEY_PLACEHOLDER) {
+    missingEnvVars.push(`${envPrefix}_API_KEY (${ACTIVE_PROJECT.name} web API key)`);
+  }
+
+  if (missingEnvVars.length > 0) {
+    console.error(`❌ Firebase configuration missing for ${ACTIVE_PROJECT.name}.`);
+    if (ACTIVE_PROJECT.id === 'ai-universe-b3551') {
+      console.error('   Please run: ./scripts/setup-firebase-config.sh');
+      console.error('');
+    }
+    console.error('Or set environment variables:');
+    for (const variable of missingEnvVars) {
+      console.error(`   ${variable}`);
+    }
+    process.exit(1);
+  }
+
+  if (CONFIG.firebaseConfig.projectId !== EXPECTED_FIREBASE_PROJECT_ID) {
+    console.error(`❌ ${envPrefix}_PROJECT_ID must be set to "${EXPECTED_FIREBASE_PROJECT_ID}" (found "${CONFIG.firebaseConfig.projectId}").`);
+    console.error(`   Run: export ${envPrefix}_PROJECT_ID=${EXPECTED_FIREBASE_PROJECT_ID}`);
+    process.exit(1);
+  }
+
+  if (CONFIG.firebaseConfig.authDomain !== EXPECTED_FIREBASE_AUTH_DOMAIN) {
+    console.error(`❌ ${envPrefix}_AUTH_DOMAIN must be "${EXPECTED_FIREBASE_AUTH_DOMAIN}" (found "${CONFIG.firebaseConfig.authDomain}").`);
+    console.error(`   Run: export ${envPrefix}_AUTH_DOMAIN=${EXPECTED_FIREBASE_AUTH_DOMAIN}`);
     process.exit(1);
   }
 }
 
 // Ensure token directory exists when needed
-const tokenDir = join(homedir(), '.worldarchitect-ai');
+const tokenDir = join(homedir(), '.ai-universe');
 
 async function ensureTokenDir() {
   if (!existsSync(tokenDir)) {
-    await mkdir(tokenDir, { recursive: true, mode: 0o700 });
-  } else {
-    // Ensure correct permissions on existing directory
-    try {
-      await chmod(tokenDir, 0o700);
-    } catch (err) {
-      // Ignore chmod errors on Windows or permission-restricted systems
-    }
+    await mkdir(tokenDir, { recursive: true });
   }
 }
 
@@ -112,6 +189,56 @@ function openBrowser(url) {
 }
 
 /**
+ * Decode JWT payload (base64url)
+ * @param {string} token
+ * @returns {Record<string, unknown>}
+ */
+function decodeJwtPayload(token) {
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    throw new Error('Token has an invalid format.');
+  }
+
+  const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  const json = Buffer.from(padded, 'base64').toString('utf-8');
+
+  try {
+    return JSON.parse(json);
+  } catch (error) {
+    throw new Error(`Token payload is not valid JSON: ${(error instanceof Error && error.message) || String(error)}`);
+  }
+}
+
+/**
+ * Ensure the Firebase token belongs to the expected project.
+ * @param {string} idToken
+ * @param {string} context
+ * @returns {{ projectId: string, issuer: string }}
+ */
+function validateTokenProject(idToken, context) {
+  const payload = decodeJwtPayload(idToken);
+  const aud = typeof payload.aud === 'string' ? payload.aud : null;
+  const iss = typeof payload.iss === 'string' ? payload.iss : null;
+
+  if (aud !== EXPECTED_FIREBASE_PROJECT_ID) {
+    throw new Error(
+      `[${context}] Token project mismatch: expected "${EXPECTED_FIREBASE_PROJECT_ID}", received "${aud || 'unknown'}". ` +
+      'Run `node scripts/auth-cli.mjs login` after authenticating with the AI Universe Firebase project.'
+    );
+  }
+
+  if (!iss || !iss.endsWith(`/${EXPECTED_FIREBASE_PROJECT_ID}`)) {
+    throw new Error(
+      `[${context}] Token issuer mismatch: expected Firebase issuer for "${EXPECTED_FIREBASE_PROJECT_ID}", got "${iss || 'unknown'}". ` +
+      'Run `node scripts/auth-cli.mjs login` after authenticating with the AI Universe Firebase project.'
+    );
+  }
+
+  return { projectId: aud, issuer: iss };
+}
+
+/**
  * Refresh ID token using refresh token via Firebase REST API
  * @param {string} refreshToken - The refresh token
  * @returns {Promise<{idToken: string, refreshToken: string, expiresIn: number}>}
@@ -136,6 +263,8 @@ async function refreshIdToken(refreshToken) {
 
     const data = await response.json();
 
+    validateTokenProject(data.id_token, 'refresh');
+
     return {
       idToken: data.id_token,
       refreshToken: data.refresh_token,
@@ -153,7 +282,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
     if (returnNullIfMissing) {
       return { tokenData: null, expiresAt: null, now: new Date(), expired: false };
     }
-    throw new Error('Not authenticated. Run: node ~/.claude/scripts/auth-cli.mjs login');
+    throw new Error('Not authenticated. Run: node scripts/auth-cli.mjs login');
   }
 
   let rawToken;
@@ -175,6 +304,12 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
     throw new Error('Token has an invalid expiration timestamp. Please login again.');
   }
 
+  try {
+    validateTokenProject(tokenData.idToken, 'token');
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+
   const now = new Date();
   const expired = now > expiresAt;
 
@@ -187,10 +322,10 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
       tokenData.idToken = refreshed.idToken;
       tokenData.refreshToken = refreshed.refreshToken; // Firebase may rotate refresh tokens
       tokenData.expiresAt = new Date(Date.now() + refreshed.expiresIn * 1000).toISOString();
+      tokenData.firebaseProjectId = EXPECTED_FIREBASE_PROJECT_ID;
 
       // Save updated token
       await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2));
-      await chmod(CONFIG.tokenPath, 0o600);
 
       // Return refreshed data
       return {
@@ -206,7 +341,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
   }
 
   if (expired && !allowExpired) {
-    throw new Error('Token expired. Run: node ~/.claude/scripts/auth-cli.mjs login');
+    throw new Error('Token expired. Run: node scripts/auth-cli.mjs login');
   }
 
   return { tokenData, expiresAt, now, expired };
@@ -220,7 +355,7 @@ function getAuthHtml(callbackUrl) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>WorldArchitect.AI - Sign In</title>
+  <title>AI Universe - Sign In</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
            max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
@@ -233,8 +368,8 @@ function getAuthHtml(callbackUrl) {
   </style>
 </head>
 <body>
-  <h1>🎮 WorldArchitect.AI Authentication</h1>
-  <p>Sign in with your Google account to access WorldArchitect.AI</p>
+  <h1>🚀 AI Universe Authentication</h1>
+  <p>Sign in with your Google account to access the AI Universe MCP server</p>
   <button onclick="signIn()">Sign in with Google</button>
   <div id="status"></div>
 
@@ -330,6 +465,16 @@ async function login() {
         return;
       }
 
+      // Validate that the token belongs to the expected Firebase project
+      try {
+        validateTokenProject(idToken, 'login');
+      } catch (validationError) {
+        const message = validationError instanceof Error ? validationError.message : String(validationError);
+        console.error(`❌ ${message}`);
+        res.status(400).json({ error: message });
+        return;
+      }
+
       // Save token to file
       await ensureTokenDir();
       const tokenData = {
@@ -337,11 +482,11 @@ async function login() {
         refreshToken,
         user,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + TOKEN_EXPIRATION_MS).toISOString()
+        expiresAt: new Date(Date.now() + TOKEN_EXPIRATION_MS).toISOString(),
+        firebaseProjectId: EXPECTED_FIREBASE_PROJECT_ID
       };
 
       await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2));
-      await chmod(CONFIG.tokenPath, 0o600);
 
       res.json({ success: true });
       tokenReceived = true;
@@ -442,18 +587,18 @@ async function refresh() {
       ...oldTokenData,
       idToken: refreshed.idToken,
       refreshToken: refreshed.refreshToken,
-      expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000).toISOString()
+      expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000).toISOString(),
+      firebaseProjectId: EXPECTED_FIREBASE_PROJECT_ID
     };
 
     await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2));
-    await chmod(CONFIG.tokenPath, 0o600);
 
     console.log('✅ Token refreshed successfully!');
     console.log(`   User: ${tokenData.user.displayName} (${tokenData.user.email})`);
     console.log(`   New expiration: ${new Date(tokenData.expiresAt).toLocaleString()}\n`);
   } catch (error) {
     console.error('❌ Refresh failed:', error.message);
-    console.error('   Please run: node ~/.claude/scripts/auth-cli.mjs login');
+    console.error('   Please run: node scripts/auth-cli.mjs login');
     process.exit(1);
   }
 }
@@ -466,20 +611,20 @@ async function status() {
     const { tokenData, expiresAt, expired } = await readTokenData({ allowExpired: true, returnNullIfMissing: true });
 
     if (!tokenData) {
-      console.log('❌ Not authenticated. Run: node ~/.claude/scripts/auth-cli.mjs login');
-      process.exit(1);
+      console.log('❌ Not authenticated. Run: node scripts/auth-cli.mjs login');
+      return;
     }
 
     console.log('📊 Authentication Status:');
     console.log(`   User: ${tokenData.user.displayName} (${tokenData.user.email})`);
     console.log(`   UID: ${tokenData.user.uid}`);
+    console.log(`   Firebase Project: ${tokenData.firebaseProjectId || EXPECTED_FIREBASE_PROJECT_ID}`);
     console.log(`   Created: ${new Date(tokenData.createdAt).toLocaleString()}`);
     console.log(`   Expires: ${expiresAt.toLocaleString()}`);
     console.log(`   Status: ${expired ? '❌ EXPIRED' : '✅ VALID'}\n`);
 
     if (expired) {
-      console.log('⚠️  Token expired. Run: node ~/.claude/scripts/auth-cli.mjs login');
-      process.exit(1);
+      console.log('⚠️  Token expired. Run: node scripts/auth-cli.mjs login');
     }
   } catch (error) {
     console.error('❌ Error reading status:', error.message);
@@ -519,7 +664,7 @@ async function testMcp() {
 
     console.log('🧪 Testing authenticated MCP connection...\n');
 
-    const response = await fetch(CONFIG.mcpUrl, {
+    const response = await fetch(CONFIG.productionMcpUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -530,7 +675,7 @@ async function testMcp() {
         jsonrpc: '2.0',
         method: 'tools/call',
         params: {
-          name: 'rate-limit.status',
+          name: 'rate_limit.status',
           arguments: {
             userId: tokenData.user.uid
           }
@@ -580,7 +725,12 @@ async function testMcp() {
 }
 
 // Main CLI handler
-const command = process.argv[2];
+const command = parsedCommand;
+
+// Show active project if not default
+if (projectOverride && command) {
+  console.log(`🎯 Using project: ${ACTIVE_PROJECT.name} (${ACTIVE_PROJECT.id})\n`);
+}
 
 // Validate configuration for commands that need it
 if (command === 'login' || command === 'test' || command === 'refresh') {
@@ -608,10 +758,10 @@ switch (command) {
     break;
   default:
     console.log(`
-WorldArchitect.AI CLI Authentication Tool
+AI Universe CLI Authentication Tool
 
 Usage:
-  node ~/.claude/scripts/auth-cli.mjs <command>
+  node scripts/auth-cli.mjs <command> [--project <project-id>]
 
 Commands:
   login    - Start browser-based authentication flow
@@ -621,6 +771,13 @@ Commands:
   refresh  - Manually refresh the authentication token
   test     - Test authenticated connection to MCP server
 
+Options:
+  --project, -p <id>  - Use a specific Firebase project instead of default
+                        Known projects: ai-universe, worldarchitecture-ai
+                        Custom project IDs are also supported
+
+Default Project: ai-universe (ai-universe-b3551)
+
 Token Refresh:
   - ID tokens expire after 1 hour (Firebase security policy)
   - Refresh tokens allow automatic renewal without re-authentication
@@ -628,22 +785,26 @@ Token Refresh:
   - Use 'refresh' command to manually refresh before expiration
 
 Examples:
-  # Authenticate
-  node ~/.claude/scripts/auth-cli.mjs login
+  # Authenticate with AI Universe (default)
+  node scripts/auth-cli.mjs login
+
+  # Authenticate with a different project
+  node scripts/auth-cli.mjs login --project worldarchitecture-ai
+  node scripts/auth-cli.mjs login -p my-custom-project
 
   # Check status
-  node ~/.claude/scripts/auth-cli.mjs status
+  node scripts/auth-cli.mjs status
 
   # Get token (auto-refreshes if expired)
-  TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
+  TOKEN=$(node scripts/auth-cli.mjs token)
 
   # Manually refresh token
-  node ~/.claude/scripts/auth-cli.mjs refresh
+  node scripts/auth-cli.mjs refresh
 
   # Use token in HTTPie request
-  TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
+  TOKEN=$(node scripts/auth-cli.mjs token)
   echo '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}' | \\
-    http POST ${CONFIG.mcpUrl} \\
+    http POST ${CONFIG.productionMcpUrl} \\
     Accept:'application/json, text/event-stream' \\
     Authorization:"Bearer $TOKEN"
 `);
