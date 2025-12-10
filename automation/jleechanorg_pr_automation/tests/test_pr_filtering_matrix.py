@@ -8,7 +8,6 @@ Test Matrix Coverage:
 - Eligible PR Detection and Filtering
 """
 
-import shutil
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -27,6 +26,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test files"""
+        import shutil
         shutil.rmtree(self.temp_dir)
 
     # Matrix 1: PR Status × Commit Changes × Processing History
@@ -104,8 +104,8 @@ class TestPRFilteringMatrix(unittest.TestCase):
         result = self.monitor.is_pr_actionable(pr_data)
         self.assertFalse(result)
 
-    def test_matrix_draft_pr_new_commit_never_processed_should_be_actionable(self):
-        """RED: Draft PR with new commit, never processed → Should be actionable"""
+    def test_matrix_draft_pr_new_commit_never_processed_should_be_skipped(self):
+        """Draft PRs are skipped even with new commits"""
         pr_data = {
             "number": 1001,
             "title": "Test PR",
@@ -117,9 +117,8 @@ class TestPRFilteringMatrix(unittest.TestCase):
             "headRefOid": "abc123new"
         }
 
-        # RED: This will fail - no is_pr_actionable method exists
         result = self.monitor.is_pr_actionable(pr_data)
-        self.assertTrue(result)
+        self.assertFalse(result)
 
     def test_matrix_open_pr_no_commits_should_not_be_actionable(self):
         """RED: Open PR with no commits → Should not be actionable"""
@@ -230,7 +229,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
 
     # Matrix 3: Eligible PR Detection
     def test_matrix_filter_eligible_prs_from_mixed_list(self):
-        """RED: Filter eligible PRs from mixed list → Should return only actionable ones"""
+        """Filter eligible PRs from mixed list skips drafts"""
         mixed_prs = [
             # Actionable: Open, new commit
             {
@@ -250,7 +249,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
                 "headRefOid": "old789", "repository": "repo3",
                 "headRefName": "branch3", "repositoryFullName": "org/repo3"
             },
-            # Actionable: Draft but new commit
+            # Skipped: Draft even with new commit
             {
                 "number": 1004, "state": "open", "isDraft": True,
                 "headRefOid": "new999", "repository": "repo4",
@@ -261,16 +260,15 @@ class TestPRFilteringMatrix(unittest.TestCase):
         # Mark one as already processed
         self.monitor._record_pr_processing("repo3", "branch3", 1003, "old789")
 
-        # RED: This will fail - no filter_eligible_prs method exists
         eligible_prs = self.monitor.filter_eligible_prs(mixed_prs)
 
-        # Should return only the 2 actionable PRs
-        self.assertEqual(len(eligible_prs), 2)
+        # Should return only the 1 actionable PR (draft skipped)
+        self.assertEqual(len(eligible_prs), 1)
         actionable_numbers = [pr["number"] for pr in eligible_prs]
         self.assertIn(1001, actionable_numbers)
-        self.assertIn(1004, actionable_numbers)
         self.assertNotIn(1002, actionable_numbers)  # Closed
         self.assertNotIn(1003, actionable_numbers)  # Already processed
+        self.assertNotIn(1004, actionable_numbers)  # Draft skipped
 
     def test_matrix_find_5_eligible_prs_from_live_data(self):
         """RED: Find 5 eligible PRs from live GitHub data → Should return 5 actionable PRs"""
