@@ -105,14 +105,20 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             "code_execution"
         )
 
-        # Cerebras/OpenRouter models use tool_use
+        # Cerebras/OpenRouter models with 100k+ context use tool_use
         self.assertEqual(
             constants.get_dice_roll_strategy("qwen-3-235b-a22b-instruct-2507"),
             "tool_use"
         )
         self.assertEqual(
-            constants.get_dice_roll_strategy("llama-3.3-70b"),
+            constants.get_dice_roll_strategy("zai-glm-4.6"),
             "tool_use"
+        )
+
+        # llama-3.3-70b does NOT support multi-turn tool calling, falls back to precompute
+        self.assertEqual(
+            constants.get_dice_roll_strategy("llama-3.3-70b"),
+            "precompute"
         )
 
         # Unknown models fall back to precompute
