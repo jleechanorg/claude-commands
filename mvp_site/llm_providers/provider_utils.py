@@ -1,25 +1,19 @@
-"""Shared utilities for LLM provider implementations."""
+"""Shared utilities for LLM provider implementations.
+
+Schema reference:
+- SOURCE OF TRUTH: mvp_site/prompts/game_state_instruction.md (Section: "JSON Response Format (Required Fields)")
+- VALIDATION LAYER: mvp_site/schemas/narrative_response_schema.py
+- Hierarchy: prompt → NARRATIVE_RESPONSE_SCHEMA → NarrativeResponse
+
+Provider notes:
+- Cerebras/OpenRouter uses NARRATIVE_RESPONSE_SCHEMA via get_openai_json_schema_format(strict=False)
+- Gemini avoids response_schema and uses response_mime_type="application/json" + prompt instruction
+"""
 
 from __future__ import annotations
 
-
 # =============================================================================
 # NARRATIVE_RESPONSE_SCHEMA - JSON schema for structured LLM outputs
-# =============================================================================
-# SOURCE OF TRUTH: mvp_site/prompts/game_state_instruction.md
-#   Section: "JSON Response Format (Required Fields)" - lines 24-64
-#   This prompt tells the LLM what structure to generate.
-#
-# VALIDATION LAYER: mvp_site/narrative_response_schema.py
-#   NarrativeResponse class validates and processes the parsed response.
-#   planning_block internal structure (choices with dynamic keys) is validated there.
-#
-# PROVIDER USAGE:
-# - Cerebras/OpenRouter: Uses NARRATIVE_RESPONSE_SCHEMA via get_openai_json_schema_format()
-#   with strict:false to allow dynamic choice keys
-# - Gemini: Does NOT use response_schema (Gemini requires ALL object types to have
-#   non-empty properties, which conflicts with dynamic choice keys). Gemini uses
-#   response_mime_type="application/json" + prompt instruction instead.
 # =============================================================================
 
 # Schema for Cerebras/OpenRouter - supports additionalProperties for dynamic objects
