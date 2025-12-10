@@ -1878,7 +1878,7 @@
     },
     {
       "prompt_id": "chunk_008_prompt_878",
-      "raw_prompt": "ok add it to bashrc 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 and read it from there",
+      "raw_prompt": "ok add it to bashrc <REDACTED_PERPLEXITY_KEY> and read it from there",
       "timestamp": "2025-09-11T18:48:20.626Z",
       "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
       "extraction_order": 7835,
