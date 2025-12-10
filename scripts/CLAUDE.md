@@ -10,6 +10,7 @@ This document inherits from the root project documentation. Please refer to `../
 scripts/
 ├── debug/ # Debugging utilities (3 scripts)
 ├── tests/ # Testing infrastructure (3 scripts)
+├── openai_automation/ # OpenAI browser automation (4 files)
 └── [root] # Core utility scripts (40+ files)
 ```
 
@@ -87,6 +88,18 @@ The analytics command uses these constants from `llm_service.py`:
 ### Cost Tiers (Gemini 3 Pro)
 - Short context (≤200K tokens): $2/M input, $12/M output
 - Long context (>200K tokens): $4/M input, $18/M output
+
+### OpenAI Automation (openai_automation/)
+- **`codex_github_mentions.py`** - Automate "github mention" tasks in OpenAI Codex
+- **`oracle_cli.py`** - CLI tool for asking GPT-5 Pro questions via browser
+- **`start_chrome_debug.sh`** - Launch Chrome with remote debugging (CDP)
+- **`README.md`** - Comprehensive documentation and usage guide
+
+**Key Features:**
+- Non-detectable automation using Chrome DevTools Protocol (CDP)
+- Reuses existing browser session to preserve login state
+- No headless mode to avoid detection
+- Automated PR updates for Codex GitHub mention tasks
 
 ### Development Utilities
 - `analyze_git_stats.py` - Git repository statistics and analysis
@@ -166,6 +179,24 @@ Comprehensive testing infrastructure includes:
 - Race condition detection and mitigation testing
 
 ## Common Usage Patterns
+
+### OpenAI Automation
+```bash
+# Start Chrome in debug mode (required first)
+./scripts/openai_automation/start_chrome_debug.sh
+
+# Log into OpenAI in the opened Chrome window
+# Then run automation scripts:
+
+# Automate Codex GitHub mention tasks
+python3 scripts/openai_automation/codex_github_mentions.py
+
+# Ask GPT-5 Pro a question
+python3 scripts/openai_automation/oracle_cli.py "What is quantum computing?"
+
+# Interactive mode
+python3 scripts/openai_automation/oracle_cli.py --interactive
+```
 
 ### Memory Backup
 ```bash
