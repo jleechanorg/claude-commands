@@ -73,6 +73,7 @@ MODELS_WITH_TOOL_USE = {
     # OpenRouter models (most support function calling)
     "meta-llama/llama-3.1-70b-instruct",
     "meta-llama/llama-3.1-405b-instruct",
+    "z-ai/glm-4.6",  # OpenRouter identifier
 }
 
 # Models that need pre-computed dice rolls (no code_execution or tool_use)
@@ -93,10 +94,9 @@ def get_dice_roll_strategy(model_name: str) -> str:
     """
     if model_name in MODELS_WITH_CODE_EXECUTION:
         return "code_execution"
-    elif model_name in MODELS_WITH_TOOL_USE:
+    if model_name in MODELS_WITH_TOOL_USE:
         return "tool_use"
-    else:
-        return "precompute"
+    return "precompute"
 
 # Gemini model mapping from user preference to full model name
 GEMINI_MODEL_MAPPING = {

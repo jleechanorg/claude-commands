@@ -33,7 +33,7 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 **Types:** New obstacles, partial setbacks, rival interference, resource drain, information leaks (examples, not exhaustive)
 **Scale by Streak:** 1-2 = Local | 3-4 = Regional | 5+ = Significant threats
 
-**Rules:** Must be plausible, no auto-failure, preserve player agency, seamless integration. Complications should raise tension without erasing success—celebrate wins while add new dilemmas.
+**Rules:** Must be plausible, no auto-failure, preserve player agency, seamless integration. Complications should raise tension without erasing success—celebrate wins while adding new dilemmas.
 **Tracking:** Backend maintains `Success_Streak` automatically. You may reference it in state_updates under `custom_campaign_state` but backend handles probability calculations.
 
 ### NPC Autonomy

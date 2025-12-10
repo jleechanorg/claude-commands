@@ -9,7 +9,7 @@ import datetime
 import random
 import re
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 from mvp_site import constants, logging_util
 
@@ -524,7 +524,7 @@ class GameState:
 # The LLM requests a tool call, we execute it, then send the result back.
 # =============================================================================
 
-DICE_ROLL_TOOLS: List[dict] = [
+DICE_ROLL_TOOLS: list[dict] = [
     {
         "type": "function",
         "function": {
@@ -619,7 +619,7 @@ class DiceRollResult:
     """Result of a dice roll with full transparency."""
 
     notation: str  # Original notation, e.g., "2d6+3"
-    individual_rolls: List[int]  # Each die result
+    individual_rolls: list[int]  # Each die result
     modifier: int  # The +/- modifier
     total: int  # Final sum
     natural_20: bool = False  # For d20 rolls
@@ -627,7 +627,9 @@ class DiceRollResult:
 
     def __str__(self) -> str:
         rolls_str = ", ".join(str(r) for r in self.individual_rolls)
-        if self.modifier >= 0:
+        if self.modifier == 0:
+            return f"{self.notation} = [{rolls_str}] = {self.total}"
+        if self.modifier > 0:
             return f"{self.notation} = [{rolls_str}]+{self.modifier} = {self.total}"
         return f"{self.notation} = [{rolls_str}]{self.modifier} = {self.total}"
 
@@ -905,7 +907,7 @@ def roll_dice(notation: str) -> DiceRollResult:
     )
 
 
-def roll_with_advantage(notation: str) -> Tuple[DiceRollResult, DiceRollResult, int]:
+def roll_with_advantage(notation: str) -> tuple[DiceRollResult, DiceRollResult, int]:
     """
     Roll with advantage (roll twice, take higher).
 
@@ -923,7 +925,7 @@ def roll_with_advantage(notation: str) -> Tuple[DiceRollResult, DiceRollResult, 
 
 def roll_with_disadvantage(
     notation: str,
-) -> Tuple[DiceRollResult, DiceRollResult, int]:
+) -> tuple[DiceRollResult, DiceRollResult, int]:
     """
     Roll with disadvantage (roll twice, take lower).
 
@@ -967,7 +969,7 @@ def calculate_attack_roll(
             "is_fumble": False,  # Advantage prevents fumble unless both are 1
             "notation": notation,
         }
-    elif disadvantage and not advantage:
+    if disadvantage and not advantage:
         roll1, roll2, total = roll_with_disadvantage(notation)
         natural = min(roll1.individual_rolls[0], roll2.individual_rolls[0])
         return {
@@ -979,17 +981,16 @@ def calculate_attack_roll(
             "is_fumble": natural == 1,
             "notation": notation,
         }
-    else:
-        roll = roll_dice(notation)
-        return {
-            "rolls": roll.individual_rolls,
-            "modifier": attack_modifier,
-            "total": roll.total,
-            "used_roll": "single",
-            "is_critical": roll.natural_20,
-            "is_fumble": roll.natural_1,
-            "notation": notation,
-        }
+    roll = roll_dice(notation)
+    return {
+        "rolls": roll.individual_rolls,
+        "modifier": attack_modifier,
+        "total": roll.total,
+        "used_roll": "single",
+        "is_critical": roll.natural_20,
+        "is_fumble": roll.natural_1,
+        "notation": notation,
+    }
 
 
 def calculate_damage(
@@ -1038,8 +1039,8 @@ def calculate_skill_check(
         DiceRollResult with the check total
     """
     total_modifier = attribute_modifier
-    if proficient:
-        total_modifier += proficiency_bonus
+    if proficient or expertise:
+        total_modifier += proficiency_bonus  # Expertise implies proficiency
     if expertise:
         total_modifier += proficiency_bonus  # Add again for expertise
 
@@ -1244,7 +1245,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "formatted": str(result),
         }
 
-    elif tool_name == "roll_attack":
+    if tool_name == "roll_attack":
         attack_mod = arguments.get("attack_modifier", 0)
         damage_notation = arguments.get("damage_notation", "1d6")
         target_ac = arguments.get("target_ac", 10)
@@ -1252,7 +1253,9 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         disadvantage = arguments.get("disadvantage", False)
 
         attack = calculate_attack_roll(attack_mod, advantage, disadvantage)
-        hit = attack["total"] >= target_ac or attack["is_critical"]
+        hit = not attack["is_fumble"] and (
+            attack["total"] >= target_ac or attack["is_critical"]
+        )
 
         result = {
             "attack_roll": attack,
@@ -1276,7 +1279,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
 
         return result
 
-    elif tool_name == "roll_skill_check":
+    if tool_name == "roll_skill_check":
         attr_mod = arguments.get("attribute_modifier", 0)
         prof_bonus = arguments.get("proficiency_bonus", 2)
         proficient = arguments.get("proficient", False)
@@ -1299,7 +1302,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "formatted": f"{skill_name}: {result} vs DC {dc} ({'Success' if success else 'Fail'})",
         }
 
-    elif tool_name == "roll_saving_throw":
+    if tool_name == "roll_saving_throw":
         attr_mod = arguments.get("attribute_modifier", 0)
         prof_bonus = arguments.get("proficiency_bonus", 2)
         proficient = arguments.get("proficient", False)
@@ -1321,5 +1324,4 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "formatted": f"{save_type} save: {result} vs DC {dc} ({'Success' if success else 'Fail'})",
         }
 
-    else:
-        return {"error": f"Unknown tool: {tool_name}"}
+    return {"error": f"Unknown tool: {tool_name}"}

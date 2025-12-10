@@ -1586,6 +1586,30 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         )
         assert result.modifier == 8
 
+    def test_calculate_saving_throw(self):
+        """Test saving throw calculation with and without proficiency."""
+        from mvp_site.game_state import calculate_saving_throw
+
+        result = calculate_saving_throw(
+            attribute_modifier=1, proficiency_bonus=2, proficient=False
+        )
+        assert result.modifier == 1
+
+        result = calculate_saving_throw(
+            attribute_modifier=1, proficiency_bonus=2, proficient=True
+        )
+        assert result.modifier == 3
+
+    def test_calculate_initiative(self):
+        """Test initiative calculation with dex modifier and bonus."""
+        from mvp_site.game_state import calculate_initiative
+
+        result = calculate_initiative(dex_modifier=3)
+        assert result.modifier == 3
+
+        result = calculate_initiative(dex_modifier=2, bonus=2)
+        assert result.modifier == 4
+
     def test_calculate_complication_chance(self):
         """Test complication probability calculation."""
         from mvp_site.game_state import calculate_complication_chance
@@ -1596,6 +1620,23 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         assert calculate_complication_chance(5) == 70  # 20 + 50
         assert calculate_complication_chance(6) == 75  # Capped at 75
         assert calculate_complication_chance(10) == 75  # Still capped
+
+    def test_check_complication_triggers(self):
+        """Test complication trigger randomness and edge cases."""
+        from mvp_site import game_state
+
+        with patch.object(game_state, "random") as random_mock:
+            # Guaranteed trigger at high chance
+            random_mock.randint.return_value = 10
+            assert game_state.check_complication_triggers(success_streak=6)
+
+            # Guaranteed miss at 0% chance (if ever allowed)
+            random_mock.randint.return_value = 100
+            assert not game_state.check_complication_triggers(success_streak=-2)
+
+            # Boundary: exactly at threshold should trigger
+            random_mock.randint.return_value = 30
+            assert game_state.check_complication_triggers(success_streak=1)
 
     def test_calculate_death_save(self):
         """Test death saving throw."""
