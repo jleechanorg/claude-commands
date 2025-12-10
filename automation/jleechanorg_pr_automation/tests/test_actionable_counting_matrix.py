@@ -6,7 +6,6 @@ Test Matrix: Actionable PR counting should exclude skipped PRs and only count
 PRs that actually get processed with comments.
 """
 
-import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -25,6 +24,7 @@ class TestActionableCountingMatrix(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test files"""
+        import shutil
         shutil.rmtree(self.temp_dir)
 
     def test_run_monitoring_cycle_should_process_exactly_target_actionable_prs(self):
