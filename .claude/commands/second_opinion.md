@@ -76,19 +76,31 @@ if [ ! -f "$HOME/.claude/scripts/auth-cli.mjs" ]; then
   exit 1
 fi
 
+# CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
+export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID}"
+export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN}"
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY}"
+
 # Get token (auto-refreshes if expired using refresh token)
 # This is silent - only prompts for login if refresh token is invalid/missing
 TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 
-# If this fails, user needs to authenticate
+# If this fails, user needs to authenticate with AI Universe credentials
 if [ $? -ne 0 ]; then
   echo "❌ Authentication failed. Please run:"
+  echo "   FIREBASE_PROJECT_ID=<your-project-id> \\"
+  echo "   FIREBASE_AUTH_DOMAIN=<your-auth-domain> \\"
+  echo "   FIREBASE_API_KEY=<your-api-key> \\"
   echo "   node ~/.claude/scripts/auth-cli.mjs login"
+  echo ""
+  echo "Get your Firebase credentials from:"
+  echo "   https://console.firebase.google.com/project/ai-universe-b3551/settings/serviceaccounts/adminsdk"
   exit 1
 fi
 ```
 
 **Key Behavior**:
+- **AI Universe Credentials Required**: Uses `ai-universe-b3551` Firebase project (NOT worldarchitecture-ai)
 - **Seamless Auto-Refresh**: Automatically renews ID tokens using refresh token (no browser popup)
 - **30+ Day Sessions**: Refresh tokens enable long-lived sessions without re-authentication
 - **Browser Only When Needed**: Only opens browser for initial login or if refresh token expires

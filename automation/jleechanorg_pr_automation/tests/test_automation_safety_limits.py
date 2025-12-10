@@ -11,9 +11,7 @@ RED Phase: All tests should FAIL initially
 import json
 import os
 import shutil
-import subprocess
 import tempfile
-import threading
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -219,6 +217,8 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     # Matrix 6: Concurrent Access Safety
     def test_concurrent_pr_attempts_thread_safe(self):
         """RED: Concurrent PR attempts should be thread-safe"""
+        import threading
+
         # Create a single manager instance explicitly for this test
         manager = AutomationSafetyManager(self.test_dir)
         results = []
@@ -404,13 +404,15 @@ class TestAutomationIntegration(unittest.TestCase):
         plist_dir = self.plist_path.parent
         plist_dir.mkdir(parents=True, exist_ok=True)
         plist_dir.chmod(0o755)
-        plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+        repo_root = Path(__file__).resolve().parents[4]
+        wrapper_path = repo_root / "automation" / "automation_safety_wrapper.py"
+        plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/$USER/projects/your-project.com/automation/automation_safety_wrapper.py</string>
+        <string>{wrapper_path}</string>
     </array>
 </dict>
 </plist>
@@ -442,7 +444,8 @@ class TestAutomationIntegration(unittest.TestCase):
 
     def run_automation_script(self):
         """Helper to run automation script"""
-        script_path = Path.home() / "projects" / "worktree_worker2" / "automation" / "simple_pr_batch.sh"
+        import subprocess
+        script_path = Path(__file__).resolve().parents[4] / "automation" / "simple_pr_batch.sh"
         return subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
 
     def read_launchd_plist(self):

@@ -161,7 +161,7 @@ class AutomationUtils:
 Time: {datetime.now().isoformat()}
 System: WorldArchitect Automation
 
-This is an automated notification from the Your Project automation system."""
+This is an automated notification from the WorldArchitect.AI automation system."""
 
             msg.attach(MIMEText(full_message, "plain"))
 

@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PLIST_SOURCE="$SCRIPT_DIR/com.worldarchitect.pr-automation.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.worldarchitect.pr-automation.plist"
-LOG_DIR="$HOME/Library/Logs/jleechanorg-automation"
+LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
 
 echo "🚀 Installing WorldArchitect PR Automation for macOS"
 echo "   Project: $PROJECT_ROOT"
@@ -20,21 +20,17 @@ echo "📁 Created log directory: $LOG_DIR"
 
 # Update plist with correct paths
 echo "🔧 Updating plist paths..."
-sed "s|__PROJECT_ROOT__|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
+sed "s|/Users/jleechan/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
 
 # Update username in plist
 CURRENT_USER=$(whoami)
-sed -i '' "s|$USER|$CURRENT_USER|g" "$PLIST_DEST"
+sed -i '' "s|jleechan|$CURRENT_USER|g" "$PLIST_DEST"
 
 echo "📄 Installed plist: $PLIST_DEST"
 
-# Secure plist file permissions (contains GITHUB_TOKEN)
-chmod 600 "$PLIST_DEST"
-echo "🔒 Set restrictive permissions on plist (chmod 600)"
-
 # Make scripts executable
-chmod +x "$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_wrapper.py"
-chmod +x "$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py"
+chmod +x "$SCRIPT_DIR/automation_safety_wrapper.py"
+chmod +x "$SCRIPT_DIR/automation_safety_manager.py"
 chmod +x "$SCRIPT_DIR/simple_pr_batch.sh"
 echo "🔐 Made scripts executable"
 
@@ -79,7 +75,7 @@ echo "   • Thread-safe PR attempt tracking"
 echo "   • 1-hour timeout per automation cycle"
 echo ""
 echo "💡 Grant manual approval when needed:"
-echo "   python3 '$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py' --approve user@example.com"
+echo "   python3 '$SCRIPT_DIR/automation_safety_manager.py' --approve user@example.com"
 echo ""
 echo "📈 Check status:"
-echo "   python3 '$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py' --status"
+echo "   python3 '$SCRIPT_DIR/automation_safety_manager.py' --status"

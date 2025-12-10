@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PLIST_SOURCE="$SCRIPT_DIR/com.jleechanorg.pr-automation.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.jleechanorg.pr-automation.plist"
-LOG_DIR="$HOME/Library/Logs/jleechanorg-automation"
+LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
 
 echo "🚀 Installing jleechanorg PR Automation for macOS"
 echo "   🏢 Organization: jleechanorg (all repositories)"
@@ -60,16 +60,19 @@ echo "   Logs: $LOG_DIR"
 # Update plist with correct paths and user
 echo "🔧 Configuring launchd service..."
 CURRENT_USER=$(whoami)
-ESCAPED_TOKEN=$(printf '%s\n' "${GITHUB_TOKEN:-}" | sed 's/[&/\\]/\\&/g')
-sed "s|__PROJECT_ROOT__|$PROJECT_ROOT|g" "$PLIST_SOURCE" | \
-sed "s|$USER|$CURRENT_USER|g" | \
-sed "s|\\\$GITHUB_TOKEN|$ESCAPED_TOKEN|g" > "$PLIST_DEST"
+if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+    echo "❌ GITHUB_TOKEN environment variable is not set"
+    exit 1
+fi
+sed "s|/Users/jleechan/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" | \
+sed "s|jleechan|$CURRENT_USER|g" | \
+sed "s|\\$GITHUB_TOKEN|$GITHUB_TOKEN|g" > "$PLIST_DEST"
 
 echo "📄 Created plist: $PLIST_DEST"
 
 # Make scripts executable
-chmod +x "$SCRIPT_DIR/jleechanorg_pr_automation/jleechanorg_pr_monitor.py"
-chmod +x "$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py"
+chmod +x "$SCRIPT_DIR/jleechanorg_pr_monitor.py"
+chmod +x "$SCRIPT_DIR/automation_safety_manager.py"
 echo "🔐 Made scripts executable"
 
 # Unload existing job if running
@@ -103,7 +106,7 @@ fi
 # Test discovery functionality
 echo ""
 echo "🧪 Testing PR discovery..."
-if python3 "$SCRIPT_DIR/jleechanorg_pr_automation/jleechanorg_pr_monitor.py" --dry-run --max-prs 5; then
+if python3 "$SCRIPT_DIR/jleechanorg_pr_monitor.py" --dry-run --max-prs 5; then
     echo "✅ PR discovery test successful"
 else
     echo "⚠️ PR discovery test failed - check configuration"
@@ -131,12 +134,12 @@ echo "   • Start: launchctl load '$PLIST_DEST'"
 echo "   • Logs: tail -f '$LOG_DIR/jleechanorg_pr_monitor.log'"
 echo ""
 echo "🧪 Manual Testing:"
-echo "   • Dry run: python3 '$SCRIPT_DIR/jleechanorg_pr_automation/jleechanorg_pr_monitor.py' --dry-run"
-echo "   • Single repo: python3 '$SCRIPT_DIR/jleechanorg_pr_automation/jleechanorg_pr_monitor.py' --dry-run --single-repo repo-name"
-echo "   • Safety status: python3 '$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py' --status"
+echo "   • Dry run: python3 '$SCRIPT_DIR/jleechanorg_pr_monitor.py' --dry-run"
+echo "   • Single repo: python3 '$SCRIPT_DIR/jleechanorg_pr_monitor.py' --dry-run --single-repo repo-name"
+echo "   • Safety status: python3 '$SCRIPT_DIR/automation_safety_manager.py' --status"
 echo ""
 echo "💡 Grant manual approval when needed:"
-echo "   python3 '$SCRIPT_DIR/jleechanorg_pr_automation/automation_safety_manager.py' --approve user@example.com"
+echo "   python3 '$SCRIPT_DIR/automation_safety_manager.py' --approve user@example.com"
 echo ""
 echo "🔍 Monitor real-time activity:"
 echo "   tail -f '$LOG_DIR/jleechanorg_pr_monitor.log'"
