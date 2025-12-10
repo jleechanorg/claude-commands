@@ -141,7 +141,7 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview" \
-            --set-secrets="GEMINI_API_KEY=gemini-api-key:latest" \
+            --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
             --memory=512Mi \
             --cpu=1 \
             --max-instances=2 \
