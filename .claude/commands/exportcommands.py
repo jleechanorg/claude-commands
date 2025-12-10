@@ -1589,10 +1589,11 @@ This is a filtered reference export from a working Claude Code project. Commands
             except subprocess.CalledProcessError as exc:
                 masked_cmd = []
                 for arg in exc.cmd if hasattr(exc, "cmd") else []:
-                    if isinstance(arg, str) and self.github_token in arg:
-                        masked_cmd.append(arg.replace(self.github_token, "***"))
+                    arg_str = str(arg)
+                    if self.github_token in arg_str:
+                        masked_cmd.append(arg_str.replace(self.github_token, "***"))
                     else:
-                        masked_cmd.append(arg)
+                        masked_cmd.append(arg_str)
                 raise GitRepositoryError(
                     f"Failed to configure authenticated remote: {' '.join(masked_cmd) or 'git remote set-url origin <redacted>'}"
                 ) from None
