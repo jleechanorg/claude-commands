@@ -283,6 +283,7 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
     repo = pr.get("repo")
     pr_number = pr.get("number")
     branch = pr.get("branch")
+    agent_cli = os.environ.get("AGENT_CLI", "claude")
 
     if not all([repo_full, repo, pr_number is not None, branch]):
         log(f"Skipping PR with missing required fields: {pr}")
@@ -296,7 +297,7 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
         f"Update PR #{pr_number} in {repo_full} (branch {branch}). "
         "Goal: resolve merge conflicts and CI failures with /fixpr. "
         "Skip /copilot for now—only run /fixpr. "
-        "Use commit messages prefixed with [claude-automation-commit]. "
+        f"Use commit messages prefixed with [{agent_cli}-automation-commit]. "
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
         f"Work directly on the PR branch (gh pr checkout {pr_number}) and push changes when done."
     )
@@ -306,7 +307,7 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
     for spec in agent_specs:
         agent_spec = {
             **spec,
-            "cli": "claude",
+            "cli": agent_cli,
         }
         # Ensure tmux session name is available for reuse
         session_name = agent_spec.get("name") or workspace_name

@@ -1002,7 +1002,12 @@ Claude Code can assist with adapting these workflows to your specific project. J
             # - Python test files (contain literal assertion strings that must be preserved)
             # - loc_simple.sh (uses relative paths intentionally)
             # Compare by filename because the staging copy lives in a different directory than the source file.
-            is_test_file = filename.startswith("test_") and filename.endswith(".py") and "/tests/" in file_path
+            normalized_path = Path(file_path)
+            is_test_file = (
+                filename.startswith("test_")
+                and filename.endswith(".py")
+                and "tests" in normalized_path.parts
+            )
             skip_all_transforms = filename == Path(__file__).name or is_test_file
             skip_mvp_transform = filename == "loc_simple.sh"
 
@@ -1789,13 +1794,15 @@ This is a filtered reference export from a working Claude Code project. Commands
                 print("   Bulk git add failed, adding files individually...")
                 for root, dirs, files in os.walk("."):
                     for file in files:
-                        try:
-                            subprocess.run(
-                                ["git", "add", os.path.join(root, file)], check=False
-                            )
-                        except subprocess.CalledProcessError:
+                        file_path = os.path.join(root, file)
+                        result = subprocess.run([
+                            "git",
+                            "add",
+                            file_path,
+                        ])
+                        if result.returncode != 0:
                             print(
-                                f"   Warning: Could not add {os.path.join(root, file)}"
+                                f"   Warning: Could not add {file_path} (exit code {result.returncode})"
                             )
 
             # Create commit message
