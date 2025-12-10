@@ -5,9 +5,9 @@ Tests all key functions with mocking for subprocess calls and file operations.
 """
 
 import os
-import pytest
 import subprocess
 import tempfile
+import unittest
 from unittest.mock import Mock, patch
 
 from orchestration.cleanup_completed_agents import (
@@ -21,7 +21,7 @@ from orchestration.cleanup_completed_agents import (
 )
 
 
-class TestGetTmuxSessions:
+class TestGetTmuxSessions(unittest.TestCase):
     """Test tmux session discovery functionality."""
 
     @patch('orchestration.cleanup_completed_agents.subprocess.run')
@@ -99,7 +99,7 @@ class TestGetTmuxSessions:
         assert result == ["task-agent-123", "copilot-test"]
 
 
-class TestGetAllMonitoringSessions:
+class TestGetAllMonitoringSessions(unittest.TestCase):
     """Test monitoring session pattern matching functionality."""
 
     @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
@@ -211,7 +211,7 @@ class TestGetAllMonitoringSessions:
         assert result == []
 
 
-class TestGetSessionTimeout:
+class TestGetSessionTimeout(unittest.TestCase):
     """Test pattern-based timeout logic functionality."""
 
     def test_get_session_timeout_task_agent_returns_one_hour(self):
@@ -252,7 +252,7 @@ class TestGetSessionTimeout:
         assert get_session_timeout("atask-agent-123") == 86400  # Doesn't start with pattern
 
 
-class TestCheckSessionTimeout:
+class TestCheckSessionTimeout(unittest.TestCase):
     """Test session timeout calculation and validation functionality."""
 
     @patch('orchestration.cleanup_completed_agents.time.time')
@@ -356,7 +356,7 @@ class TestCheckSessionTimeout:
         assert "#{session_activity}" in call_args
 
 
-class TestCheckAgentCompletion:
+class TestCheckAgentCompletion(unittest.TestCase):
     """Test log file analysis for agent completion."""
 
     @patch('orchestration.cleanup_completed_agents.os.path.exists')
@@ -465,7 +465,7 @@ class TestCheckAgentCompletion:
         assert "error" in result["reason"]
 
 
-class TestCleanupAgentSession:
+class TestCleanupAgentSession(unittest.TestCase):
     """Test session termination functionality."""
 
     @patch('orchestration.cleanup_completed_agents.subprocess.run')
@@ -527,7 +527,7 @@ class TestCleanupAgentSession:
         )
 
 
-class TestCleanupCompletedAgents:
+class TestCleanupCompletedAgents(unittest.TestCase):
     """Test main cleanup workflow with various scenarios."""
 
     @patch('orchestration.cleanup_completed_agents.get_all_monitoring_sessions')
@@ -671,32 +671,8 @@ class TestCleanupCompletedAgents:
                 assert session in timeout_calls
 
 
-# Test Fixtures and Utilities
-@pytest.fixture
-def temp_log_file():
-    """Create a temporary log file for testing."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-        f.write("Test log content\n")
-        temp_path = f.name
-
-    yield temp_path
-
-    # Cleanup
-    try:
-        os.unlink(temp_path)
-    except OSError:
-        pass
-
-
-@pytest.fixture
-def mock_constants():
-    """Mock the constants module import."""
-    with patch('cleanup_completed_agents.IDLE_MINUTES_THRESHOLD', 30):
-        yield
-
-
 # Integration Test Examples
-class TestCleanupIntegration:
+class TestCleanupIntegration(unittest.TestCase):
     """Integration tests combining multiple functions."""
 
     @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
