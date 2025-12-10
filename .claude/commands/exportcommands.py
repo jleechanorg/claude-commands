@@ -126,8 +126,8 @@ class ClaudeCommandsExporter:
             },
             'automation': {
                 'source': 'automation',
-                'exclude_dirs': ['__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info'],
-                'exclude_files': ['*.pyc', '*.pyo', '*.swp', '*.tmp'],
+                'exclude_dirs': ['__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info', 'testing_util'],
+                'exclude_files': ['*.pyc', '*.pyo', '*.swp', '*.tmp', 'simple_pr_batch.sh'],
             },
         }
 
@@ -815,6 +815,14 @@ class ClaudeCommandsExporter:
             content = re.sub(r"jleechanorg", "$GITHUB_OWNER", content)
             content = re.sub(r"\bjleechan\b", "$USER", content)
 
+            # Update outdated GitHub Actions to latest secure versions
+            # actions/checkout v4.1.1 (Dec 2023) → v4.3.1 (Nov 2024)
+            content = re.sub(
+                r"actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11",
+                "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1",
+                content
+            )
+
             # Add header comment to the file indicating it's an example
             header = """# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
 # This workflow was exported from a working project and serves as an EXAMPLE ONLY.
@@ -1033,6 +1041,15 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 content = re.sub(
                     r"jleechantest@gmail\.com", "<your-email@gmail.com>", content
                 )
+
+                # Scrub Firebase/GCP credentials
+                content = re.sub(
+                    r"AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc", "<YOUR_FIREBASE_API_KEY>", content
+                )
+                content = re.sub(
+                    r"ai-universe-b3551", "<your-firebase-project-id>", content
+                )
+
                 content = re.sub(
                     r"/tmp/worldarchitectai", "/tmp/$PROJECT_NAME", content
                 )
