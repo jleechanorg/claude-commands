@@ -128,7 +128,7 @@ class TestCodexAutomation:
     @requires_chrome
     @pytest.mark.asyncio
     async def test_can_find_github_mention_tasks(self):
-        """Test finding Github Mention tasks on Codex page."""
+        """Test finding GitHub Mention tasks on Codex page."""
         playwright = await async_playwright().start()
 
         try:
@@ -140,11 +140,11 @@ class TestCodexAutomation:
             await page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(5)  # Wait for dynamic content
 
-            # Find Github Mention tasks
-            task_links = await page.locator('a:has-text("Github Mention:")').all()
+            # Find GitHub Mention tasks
+            task_links = await page.locator('a:has-text("GitHub Mention:")').all()
 
             # We may or may not have tasks at any given time
-            print(f"✅ Found {len(task_links)} Github Mention tasks")
+            print(f"✅ Found {len(task_links)} GitHub Mention tasks")
             assert isinstance(task_links, list)
 
         finally:
@@ -166,7 +166,7 @@ class TestCodexAutomation:
             await asyncio.sleep(5)
 
             # Find tasks
-            task_links = await page.locator('a:has-text("Github Mention:")').all()
+            task_links = await page.locator('a:has-text("GitHub Mention:")').all()
 
             if len(task_links) > 0:
                 # Click first task
@@ -186,7 +186,7 @@ class TestCodexAutomation:
                 await page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
             else:
                 print("⚠️  No tasks available to test with")
-                pytest.skip("No Github Mention tasks available")
+                pytest.skip("No GitHub Mention tasks available")
 
         finally:
             await playwright.stop()
@@ -235,7 +235,7 @@ class TestCodexAutomationClass:
     @requires_chrome
     @pytest.mark.asyncio
     async def test_automation_can_find_tasks(self):
-        """Test that automation class can find Github Mention tasks."""
+        """Test that automation class can find GitHub Mention tasks."""
         import sys
         sys.path.insert(0, 'automation/openai_automation')
         from codex_github_mentions import CodexGitHubMentionsAutomation

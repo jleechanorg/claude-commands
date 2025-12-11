@@ -40,7 +40,7 @@ async def debug_page():
 
     selectors = [
         'a[href*="/codex/"]',
-        'a:has-text("Github Mention:")',
+        'a:has-text("GitHub Mention:")',
         'a[href^="https://chatgpt.com/codex/"]',
         '[role="link"]',
         'a',

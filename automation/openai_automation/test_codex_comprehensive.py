@@ -51,16 +51,16 @@ requires_chrome = pytest.mark.skipif(
 class TestLimitParameter:
     """Matrix 1: Test limit parameter combinations."""
 
-    @pytest.mark.parametrize("limit,expected_behavior,selector", [
-        (None, "Github Mention tasks only", 'a:has-text("Github Mention:")'),
-        (50, "First 50 ALL tasks", 'a[href*="/codex/"]'),
-        (10, "First 10 ALL tasks", 'a[href*="/codex/"]'),
-        (100, "First 100 ALL tasks", 'a[href*="/codex/"]'),
-        (0, "No tasks processed", None),
-        (1, "First 1 ALL task", 'a[href*="/codex/"]'),
-        (5, "First 5 ALL tasks", 'a[href*="/codex/"]'),
+    @pytest.mark.parametrize("limit,expected_behavior", [
+        (None, "GitHub Mention tasks only"),
+        (50, "Limit GitHub Mention tasks to 50"),
+        (10, "Limit GitHub Mention tasks to 10"),
+        (100, "Limit GitHub Mention tasks to 100"),
+        (0, "No tasks processed"),
+        (1, "Limit GitHub Mention tasks to 1"),
+        (5, "Limit GitHub Mention tasks to 5"),
     ])
-    def test_limit_initialization(self, limit, expected_behavior, selector):
+    def test_limit_initialization(self, limit, expected_behavior):
         """Test automation initialization with different limit values."""
         automation = CodexGitHubMentionsAutomation(task_limit=limit)
         assert automation.task_limit == limit
@@ -78,7 +78,7 @@ class TestLimitParameter:
         automation = CodexGitHubMentionsAutomation(task_limit=limit)
         automation.page = AsyncMock()
 
-        mock_locator = Mock()
+        mock_locator = AsyncMock()
         task_items = []
         for i in range(mock_task_count):
             item = Mock()
@@ -179,7 +179,7 @@ class TestTaskFinding:
         (0, 50, 0, "Graceful empty"),
         (5, 50, 5, "All found"),
         (100, 50, 50, "Limited"),
-        (10, None, 10, "Github only filter"),
+        (10, None, 10, "GitHub only filter"),
         (25, 10, 10, "Limited to 10"),
         (3, 100, 3, "All found (fewer than limit)"),
     ])
@@ -189,9 +189,16 @@ class TestTaskFinding:
         automation.page = AsyncMock()
 
         # Mock task locator
-        mock_locator = Mock()
-        mock_tasks = [Mock() for _ in range(task_count)]
-        mock_locator.all = AsyncMock(return_value=mock_tasks)
+        mock_locator = AsyncMock()
+        mock_tasks = []
+        for idx in range(task_count):
+            item = Mock()
+            item.get_attribute = AsyncMock(return_value=f"/codex/{idx}")
+            item.text_content = AsyncMock(return_value=f"Task {idx}")
+            mock_tasks.append(item)
+
+        mock_locator.count = AsyncMock(return_value=task_count)
+        mock_locator.nth = Mock(side_effect=lambda idx: mock_tasks[idx])
         automation.page.locator = Mock(return_value=mock_locator)
 
         tasks = await automation.find_github_mention_tasks()
@@ -201,28 +208,28 @@ class TestTaskFinding:
 
     @pytest.mark.asyncio
     async def test_github_mention_selector_used_when_no_limit(self):
-        """Test that Github Mention selector is used when limit is None."""
+        """Test that GitHub Mention selector is used when limit is None."""
         automation = CodexGitHubMentionsAutomation(task_limit=None)
         automation.page = AsyncMock()
 
-        mock_locator = Mock()
-        mock_locator.all = AsyncMock(return_value=[])
+        mock_locator = AsyncMock()
+        mock_locator.count = AsyncMock(return_value=0)
         automation.page.locator = Mock(return_value=mock_locator)
 
         await automation.find_github_mention_tasks()
 
         # Verify correct selector was used
-        automation.page.locator.assert_called_with('a:has-text("Github Mention:")')
+        automation.page.locator.assert_called_with('a:has-text("GitHub Mention:")')
         print("✅ Correct selector used for None limit")
 
     @pytest.mark.asyncio
     async def test_all_tasks_selector_used_when_limit_set(self):
         """Test that ALL tasks selector is used when limit is set."""
-        automation = CodexGitHubMentionsAutomation(task_limit=50)
+        automation = CodexGitHubMentionsAutomation(task_limit=50, all_tasks=True)
         automation.page = AsyncMock()
 
-        mock_locator = Mock()
-        mock_locator.all = AsyncMock(return_value=[])
+        mock_locator = AsyncMock()
+        mock_locator.count = AsyncMock(return_value=0)
         automation.page.locator = Mock(return_value=mock_locator)
 
         await automation.find_github_mention_tasks()
@@ -273,14 +280,15 @@ class TestNavigationInteraction:
 
         automation.page = AsyncMock()
         automation.page.goto = AsyncMock()
-        automation.page.locator.return_value = _Locator()
+        locator = _Locator()
+        automation.page.locator.return_value = locator
 
         task = {"href": "/codex/123", "text": "Test Task"}
         result = await automation.update_pr_for_task(task)
 
         assert result is True
         automation.page.goto.assert_called()
-        mock_locator.click.assert_awaited()
+        locator.click.assert_awaited()
         print("✅ Task navigation and update simulated successfully")
 
     @pytest.mark.asyncio

@@ -91,7 +91,7 @@ class CodexGitHubMentionsAutomation:
         Args:
             cdp_url: Chrome DevTools Protocol WebSocket URL (None = launch new browser)
             headless: Run in headless mode (not recommended - may be detected)
-            task_limit: Maximum number of tasks to process (default: 50, None = all Github Mention tasks)
+            task_limit: Maximum number of tasks to process (default: 50, None = all GitHub Mention tasks)
             user_data_dir: Chrome profile directory for persistent login (default: ~/.chrome-codex-automation)
             debug: Enable debug mode (screenshots, HTML dump, keep browser open)
         """
