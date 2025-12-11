@@ -42,10 +42,13 @@ jobs:
     name: Test Email Notification Action
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      # Replace with your actual GCP project ID during integration
+      GCP_PROJECT_ID: your-gcp-project-id
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Simulate deployment (success scenario)
         if: inputs.notification_type == 'success'
@@ -69,7 +72,7 @@ jobs:
           environment: ${{ inputs.environment }}
           service_name: mvp-site-app-test
           region: us-central1
-          project: $GCP_PROJECT_ID
+          project: ${{ env.GCP_PROJECT_ID }}
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
@@ -88,7 +91,7 @@ jobs:
           environment: ${{ inputs.environment }}
           service_name: mvp-site-app-test
           region: us-central1
-          project: $GCP_PROJECT_ID
+          project: ${{ env.GCP_PROJECT_ID }}
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}

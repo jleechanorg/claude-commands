@@ -6,6 +6,9 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
+# Note: Package name is "jleechanorg-orchestration" for PyPI, but import path is "orchestration"
+# Install with: pip install jleechanorg-orchestration
+# Import with: from orchestration import ...
 name = "jleechanorg-orchestration"
 version = "0.1.11"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"

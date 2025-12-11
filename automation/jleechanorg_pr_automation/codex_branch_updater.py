@@ -228,6 +228,7 @@ async def _close_task_detail(page: Page) -> None:
         await page.go_back(wait_until="domcontentloaded")
         await wait_for_task_list(page)
     except PlaywrightError:
+        # Gracefully handle navigation errors - page may be in unexpected state
         pass
 
 
