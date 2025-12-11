@@ -66,6 +66,9 @@ packages = [
     "orchestration",
 ]
 
+[tool.setuptools.package-dir]
+orchestration = "."
+
 [tool.setuptools.package-data]
 orchestration = [
     "*.md",
