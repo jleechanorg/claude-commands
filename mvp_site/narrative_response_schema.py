@@ -26,6 +26,154 @@ WHITESPACE_PATTERN = re.compile(
     r"[^\S\r\n]+"
 )  # Normalize spaces while preserving line breaks
 
+# Pattern to detect embedded planning block JSON in narrative text
+# Matches JSON objects that have "thinking" and "choices" keys (planning block structure)
+EMBEDDED_PLANNING_JSON_PATTERN = re.compile(
+    r'\{\s*"thinking"\s*:\s*"[^"]*(?:\\.[^"]*)*"'  # Opening brace and thinking field
+    r'[^}]*'  # Any content between thinking and choices
+    r'"choices"\s*:\s*\{'  # choices field opening
+    r'(?:[^{}]|\{[^{}]*\})*'  # Content inside choices (allowing one level of nesting)
+    r'\}\s*\}',  # Closing braces
+    re.DOTALL
+)
+
+# Simpler fallback pattern for deeply nested JSON
+EMBEDDED_JSON_BLOCK_PATTERN = re.compile(
+    r'\{\s*\n\s*"thinking"\s*:.*?"choices"\s*:\s*\{.*?\}\s*\}',
+    re.DOTALL
+)
+
+
+def _strip_embedded_planning_json(text: str) -> str:
+    """
+    Strip embedded planning block JSON from narrative text.
+
+    The LLM sometimes outputs planning block JSON directly in the narrative field.
+    This JSON should be stripped because the planning_block is a separate structured field.
+
+    Detects and removes JSON blocks that contain:
+    - "thinking" key (GM reasoning)
+    - "choices" key (player options)
+
+    Args:
+        text: The narrative text that may contain embedded JSON
+
+    Returns:
+        The narrative text with embedded planning JSON removed
+    """
+    if not text or not isinstance(text, str):
+        return text
+
+    # Quick check - if no planning block indicators, return as-is
+    if '"thinking"' not in text or '"choices"' not in text:
+        return text
+
+    cleaned = text
+
+    # Try to find and remove embedded planning JSON using recursive brace matching
+    # This is more robust than regex for deeply nested JSON
+    cleaned = _remove_planning_json_blocks(cleaned)
+
+    # Clean up multiple consecutive newlines that might result from removal
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+
+    if cleaned != text:
+        logging_util.info("Stripped embedded planning block JSON from narrative text")
+
+    return cleaned
+
+
+def _remove_planning_json_blocks(text: str) -> str:
+    """
+    Remove JSON blocks that look like planning blocks (have thinking and choices keys).
+
+    Uses brace matching to handle arbitrarily nested JSON.
+    """
+    result = []
+    i = 0
+    text_len = len(text)
+
+    while i < text_len:
+        # Look for potential JSON object start
+        if text[i] == '{':
+            # Try to extract the full JSON object
+            json_end = _find_matching_brace(text, i)
+            if json_end != -1:
+                json_block = text[i:json_end + 1]
+                # Check if this looks like a planning block
+                if _is_planning_block_json(json_block):
+                    # Skip this JSON block (don't add to result)
+                    i = json_end + 1
+                    continue
+
+        result.append(text[i])
+        i += 1
+
+    return ''.join(result)
+
+
+def _find_matching_brace(text: str, start: int) -> int:
+    """
+    Find the index of the closing brace that matches the opening brace at start.
+
+    Returns -1 if no matching brace is found.
+    """
+    if start >= len(text) or text[start] != '{':
+        return -1
+
+    depth = 0
+    in_string = False
+    i = start
+
+    while i < len(text):
+        char = text[i]
+
+        # Handle string boundaries (but not escaped quotes)
+        if char == '"' and (i == 0 or text[i-1] != '\\'):
+            in_string = not in_string
+        elif not in_string:
+            if char == '{':
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0:
+                    return i
+
+        i += 1
+
+    return -1  # No matching brace found
+
+
+def _is_planning_block_json(json_text: str) -> bool:
+    """
+    Check if a JSON block looks like a planning block structure.
+
+    Planning blocks have "thinking" and "choices" keys.
+    """
+    # Quick string check first (faster than parsing)
+    if '"thinking"' not in json_text or '"choices"' not in json_text:
+        return False
+
+    # Verify it's actually valid JSON with these keys
+    try:
+        parsed = json.loads(json_text)
+        if isinstance(parsed, dict):
+            has_thinking = "thinking" in parsed
+            has_choices = "choices" in parsed
+            return has_thinking and has_choices
+    except json.JSONDecodeError:
+        # If it looks like planning JSON but doesn't parse,
+        # still remove it (it's likely malformed planning block)
+        # Use a looser check
+        return (
+            '"thinking"' in json_text and
+            '"choices"' in json_text and
+            json_text.strip().startswith('{') and
+            json_text.strip().endswith('}')
+        )
+
+    return False
+
 
 class NarrativeResponse:
     """Schema for structured narrative generation response"""
@@ -66,11 +214,14 @@ class NarrativeResponse:
         self.extra_fields = kwargs
 
     def _validate_narrative(self, narrative: str) -> str:
-        """Validate narrative content"""
+        """Validate narrative content and strip embedded planning block JSON"""
         if not isinstance(narrative, str):
             raise ValueError("Narrative must be a string")
 
-        return narrative.strip()
+        # Strip embedded planning block JSON from narrative
+        cleaned_narrative = _strip_embedded_planning_json(narrative)
+
+        return cleaned_narrative.strip()
 
     def _validate_entities(self, entities: list[str]) -> list[str]:
         """Validate and clean entity list"""
