@@ -960,9 +960,9 @@ class PromptBuilder:
 
     def build_god_mode_instructions(self) -> list[str]:
         """
-        Build lightweight system instructions for GOD MODE.
+        Build system instructions for GOD MODE.
         God mode is for administrative control (correcting mistakes, modifying campaign),
-        NOT for playing the game. Uses a simplified prompt set.
+        NOT for playing the game. Includes game rules knowledge for proper corrections.
         """
         parts = []
 
@@ -975,6 +975,14 @@ class PromptBuilder:
         # Load game state instruction for state structure reference
         # (AI needs to know the schema to make valid state_updates)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
+        # Load D&D SRD for game rules knowledge
+        # (AI needs to understand game mechanics to make proper corrections)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+
+        # Load mechanics instruction for detailed game rules
+        # (spell slots, class features, combat rules, etc.)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
 
         return parts
 
