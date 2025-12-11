@@ -21,13 +21,17 @@ sys.path.insert(
 )
 
 from mvp_site import constants
-from mvp_site.llm_service import (
+
+# Import from agents module (canonical location)
+from mvp_site.agents import (
     BaseAgent,
     StoryModeAgent,
     GodModeAgent,
     get_agent_for_input,
-    PromptBuilder,
 )
+
+# PromptBuilder remains in llm_service
+from mvp_site.llm_service import PromptBuilder
 
 
 class TestBaseAgent(unittest.TestCase):
