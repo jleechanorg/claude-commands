@@ -435,7 +435,6 @@ The family has been completely broken. Choose your approach.""",
         assert "PLANNING BLOCK" in all_narrative_text or "Tactical Analysis" in all_narrative_text, \
             f"Non-JSON context should be preserved. Got: {all_narrative_text[:500]}"
 
-        print(f"SUCCESS: Narrative is clean of embedded JSON:\n{all_narrative_text[:500]}")
 
 
 if __name__ == "__main__":

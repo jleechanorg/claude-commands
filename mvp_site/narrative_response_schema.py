@@ -26,22 +26,12 @@ WHITESPACE_PATTERN = re.compile(
     r"[^\S\r\n]+"
 )  # Normalize spaces while preserving line breaks
 
-# Pattern to detect embedded planning block JSON in narrative text
-# Matches JSON objects that have "thinking" and "choices" keys (planning block structure)
-EMBEDDED_PLANNING_JSON_PATTERN = re.compile(
-    r'\{\s*"thinking"\s*:\s*"[^"]*(?:\\.[^"]*)*"'  # Opening brace and thinking field
-    r'[^}]*'  # Any content between thinking and choices
-    r'"choices"\s*:\s*\{'  # choices field opening
-    r'(?:[^{}]|\{[^{}]*\})*'  # Content inside choices (allowing one level of nesting)
-    r'\}\s*\}',  # Closing braces
-    re.DOTALL
-)
+PLANNING_BLOCK_QUICK_CHECK = re.compile(r"\{\s*\"thinking\"\s*:")
 
-# Simpler fallback pattern for deeply nested JSON
-EMBEDDED_JSON_BLOCK_PATTERN = re.compile(
-    r'\{\s*\n\s*"thinking"\s*:.*?"choices"\s*:\s*\{.*?\}\s*\}',
-    re.DOTALL
-)
+
+# Planning block detection is handled via brace matching in
+# `_remove_planning_json_blocks`; regex explorations are intentionally omitted
+# to keep the implementation single-sourced.
 
 # Mixed language detection - CJK (Chinese/Japanese/Korean) characters
 # These can appear due to LLM training data leakage
@@ -54,6 +44,9 @@ CJK_PATTERN = re.compile(
     r"\U00020000-\U0002a6df"  # CJK Unified Ideographs Extension B
     r"]+"
 )
+
+
+MAX_PLANNING_JSON_BLOCK_CHARS = 50000
 
 
 def _strip_embedded_planning_json(text: str) -> str:
@@ -77,25 +70,25 @@ def _strip_embedded_planning_json(text: str) -> str:
         return text
 
     # Quick check - if no planning block indicators, return as-is
-    if '"thinking"' not in text or '"choices"' not in text:
+    if not PLANNING_BLOCK_QUICK_CHECK.search(text) or '"choices"' not in text:
         return text
 
     cleaned = text
 
     # Try to find and remove embedded planning JSON using recursive brace matching
     # This is more robust than regex for deeply nested JSON
-    cleaned = _remove_planning_json_blocks(cleaned)
+    cleaned, removed = _remove_planning_json_blocks(cleaned)
 
     # Clean up multiple consecutive newlines that might result from removal
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
 
-    if cleaned != text:
+    if removed and cleaned != text:
         logging_util.info("Stripped embedded planning block JSON from narrative text")
 
     return cleaned
 
 
-def _remove_planning_json_blocks(text: str) -> str:
+def _remove_planning_json_blocks(text: str) -> tuple[str, bool]:
     """
     Remove JSON blocks that look like planning blocks (have thinking and choices keys).
 
@@ -104,6 +97,8 @@ def _remove_planning_json_blocks(text: str) -> str:
     result = []
     i = 0
     text_len = len(text)
+
+    removed = False
 
     while i < text_len:
         # Look for potential JSON object start
@@ -115,13 +110,14 @@ def _remove_planning_json_blocks(text: str) -> str:
                 # Check if this looks like a planning block
                 if _is_planning_block_json(json_block):
                     # Skip this JSON block (don't add to result)
+                    removed = True
                     i = json_end + 1
                     continue
 
         result.append(text[i])
         i += 1
 
-    return ''.join(result)
+    return ''.join(result), removed
 
 
 def _find_matching_brace(text: str, start: int) -> int:
@@ -135,13 +131,17 @@ def _find_matching_brace(text: str, start: int) -> int:
 
     depth = 0
     in_string = False
+    escape_next = False
     i = start
 
     while i < len(text):
         char = text[i]
 
-        # Handle string boundaries (but not escaped quotes)
-        if char == '"' and (i == 0 or text[i-1] != '\\'):
+        if escape_next:
+            escape_next = False
+        elif char == '\\':
+            escape_next = True
+        elif char == '"':
             in_string = not in_string
         elif not in_string:
             if char == '{':
@@ -162,6 +162,9 @@ def _is_planning_block_json(json_text: str) -> bool:
 
     Planning blocks have "thinking" and "choices" keys.
     """
+    if len(json_text) > MAX_PLANNING_JSON_BLOCK_CHARS:
+        return False
+
     # Quick string check first (faster than parsing)
     if '"thinking"' not in json_text or '"choices"' not in json_text:
         return False
