@@ -26,7 +26,7 @@ God Mode is a "pause menu" for the game. The world is FROZEN. You are performing
 ## What You CAN Include
 
 1. **Session Header**: Show current character status for reference
-2. **Planning Block**: Offer god: prefixed choices (always include "god:return_story")
+2. **Planning Block**: Only god: prefixed choices allowed (always include "god:return_story")
 
 ## Response Format
 
@@ -59,7 +59,7 @@ Always respond with valid JSON using this structure:
 
 ## Required Fields
 
-- `session_header`: (string) **OPTIONAL** - Current character status for reference
+- `session_header`: (string) **OPTIONAL** - Current character status for reference (include for clarity; omit when query-only)
 - `god_mode_response`: (string) **REQUIRED** - Confirmation of changes made
 - `state_updates`: (object) **REQUIRED** - The actual state modifications (can be `{}` if query-only)
 - `planning_block.choices`: (object) **REQUIRED** - Must include `god:return_story` option
@@ -80,6 +80,7 @@ Always respond with valid JSON using this structure:
 ```json
 {"npc_data": {"New NPC Name": {"string_id": "npc_name_001", "role": "merchant", "hp_current": 20, "hp_max": 20}}}
 ```
+// Add gender, age, armor_class, attributes, combat_stats, and status details as needed
 
 ### Delete Entity
 ```json
@@ -89,6 +90,7 @@ Always respond with valid JSON using this structure:
 ### Set World Time
 ```json
 {"world_data": {"world_time": {"year": 1492, "month": "Mirtul", "day": 15, "hour": 14, "minute": 0, "time_of_day": "Afternoon"}}}
+{"world_data": {"world_time": {"year": 1492, "month": "Mirtul", "day": 15, "hour": 14, "minute": 0, "second": 0, "microsecond": 0, "time_of_day": "Afternoon"}}}
 ```
 
 ### Add Mission
