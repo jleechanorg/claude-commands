@@ -211,7 +211,11 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 ```
 The planning_block MUST be in its own field, NEVER embedded as JSON inside the narrative string.
 
-**Minimal Block (transitional scenes only):** `{"thinking": "...", "choices": {"continue": {...}, "custom_action": {...}}}`
+**Minimal Block (transitional scenes only):** The `planning_block` field contents can be minimal:
+```json
+"planning_block": {"thinking": "...", "choices": {"continue": {...}, "custom_action": {...}}}
+```
+Note: This goes in the `planning_block` field, NOT embedded in narrative.
 
 ## State Authority and Timeline (restored)
 
