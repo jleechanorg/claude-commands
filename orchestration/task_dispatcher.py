@@ -1080,9 +1080,14 @@ Complete the task, then use /pr to create a new pull request."""
             original_candidate = f"{base_name}-{timestamp}"
             agent_name = original_candidate
             
-            while agent_name in existing:
+            # Add max iteration limit to prevent infinite loops
+            max_attempts = 100
+            while agent_name in existing and counter <= max_attempts:
                 agent_name = f"{original_candidate}-{counter}"
                 counter += 1
+            
+            if counter > max_attempts:
+                raise RuntimeError(f"Unable to generate unique agent name after {max_attempts} attempts for base name: {base_name}")
             
             print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
 
