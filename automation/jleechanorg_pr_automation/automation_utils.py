@@ -161,7 +161,7 @@ class AutomationUtils:
 Time: {datetime.now().isoformat()}
 System: WorldArchitect Automation
 
-This is an automated notification from the Your Project automation system."""
+This is an automated notification from the WorldArchitect.AI automation system."""
 
             msg.attach(MIMEText(full_message, "plain"))
 
@@ -261,7 +261,7 @@ This is an automated notification from the Your Project automation system."""
             os.rename(temp_path, file_path)
             temp_path = None  # Successful, don't clean up
 
-        except (OSError, TypeError, ValueError) as e:
+        except (OSError, json.JSONEncodeError) as e:
             # Clean up temp file on error
             if temp_path and os.path.exists(temp_path):
                 try:
