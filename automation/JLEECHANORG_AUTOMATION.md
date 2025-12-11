@@ -9,7 +9,7 @@ A sophisticated automation system that monitors **ALL open PRs across the entire
 **Monitors ALL repositories in jleechanorg:**
 - ai_universe (4 open PRs)
 - ai_universe_frontend (2 open PRs)
-- your-project.com (30 open PRs)
+- worldarchitect.ai (30 open PRs)
 - claude-commands (1 open PR)
 - projects_fake_repo (1 open PR)
 - ai_web_crawler (1 open PR)

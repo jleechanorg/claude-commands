@@ -16,9 +16,9 @@ from .utils import (
     validate_email_config,
 )
 
-__version__ = "0.1.2"
-__author__ = "automation-user"
-__email__ = "automation@example.com"
+__version__ = "0.1.8"
+__author__ = "jleechan"
+__email__ = "jlee@jleechan.org"
 
 __all__ = [
     "AutomationSafetyManager",

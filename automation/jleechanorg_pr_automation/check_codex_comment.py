@@ -5,17 +5,17 @@ from __future__ import annotations
 
 import json
 import sys
+from typing import Tuple
 
 # Safety limits for JSON parsing to prevent memory exhaustion
 MAX_JSON_SIZE = 10 * 1024 * 1024  # 10MB limit for PR data
-EXPECTED_ARGC = 3
 
 
-def decide(marker_prefix: str, marker_suffix: str) -> tuple[str, str]:
+def decide(marker_prefix: str, marker_suffix: str) -> Tuple[str, str]:
     try:
         # Read stdin with size limit to prevent memory exhaustion
-        stdin_data = sys.stdin.read(MAX_JSON_SIZE + 1)
-        if len(stdin_data) > MAX_JSON_SIZE:
+        stdin_data = sys.stdin.read(MAX_JSON_SIZE)
+        if len(stdin_data) >= MAX_JSON_SIZE:
             sys.stderr.write("ERROR: PR data exceeds maximum size limit\n")
             return "post", ""
 
@@ -63,7 +63,7 @@ def decide(marker_prefix: str, marker_suffix: str) -> tuple[str, str]:
 
 
 def main() -> int:
-    if len(sys.argv) != EXPECTED_ARGC:
+    if len(sys.argv) != 3:
         sys.stderr.write("Usage: check_codex_comment.py <marker_prefix> <marker_suffix>\n")
         return 2
 

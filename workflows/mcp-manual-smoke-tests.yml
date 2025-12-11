@@ -47,7 +47,7 @@ jobs:
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: $GCP_PROJECT_ID
-      MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '60000' }}
+      MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '120000' }}
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
 
@@ -93,7 +93,7 @@ jobs:
             return `refs/pull/${pr.data.number}/head`;
 
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
         with:
           ref: ${{ steps.pr_ref.outputs.result || github.ref }}
 
@@ -213,7 +213,7 @@ jobs:
       - name: Run MCP smoke tests
         if: steps.service_url.outputs.deployed == 'true'
         id: smoke_tests
-        timeout-minutes: 5
+        timeout-minutes: 25  # Extended for real mode: 3 providers x ~8min each
         env:
           MCP_SERVER_URL: ${{ steps.service_url.outputs.service_url }}
           MCP_TEST_MODE: ${{ steps.test_config.outputs.mode }}
