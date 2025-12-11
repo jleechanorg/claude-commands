@@ -32,15 +32,15 @@ DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
 # Premium model for allowlisted users only (expensive: $2-4/M input, $12-18/M output)
 GEMINI_PREMIUM_MODEL = "gemini-3-pro-preview"
 
+# Gemini 2.5 Flash model constant
+GEMINI_2_5_FLASH = "gemini-2.5-flash"
+
 # Users allowed to access Gemini 3 Pro (expensive model)
 # These users can select gemini-3-pro-preview in settings
 GEMINI_3_ALLOWED_USERS = [
     "jleechan@gmail.com",
     "jleechantest@gmail.com",
 ]
-
-# Gemini 2.5 Flash model constant
-GEMINI_2_5_FLASH = "gemini-2.5-flash"
 
 # Allowed Gemini model selections for user preferences (default - all users)
 # All models use pre-rolled dice (precompute) - no code_execution needed
