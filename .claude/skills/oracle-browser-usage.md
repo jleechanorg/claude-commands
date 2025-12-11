@@ -12,13 +12,12 @@ scope: oracle
 
 ## Quick start (browser)
 1. Ensure you are logged into chatgpt.com in your default Chrome/Chromium profile.
-2. Source helper bundles: `source scripts/oracle_helpers.sh` (exports globs and helper commands).
-3. Run helpers (browser auto-selected when no API key):
-   - `oracle_arch_preview` (dry-run bundle preview).
-   - `oracle_arch` (architecture review).
-   - `oracle_ai_debug [tmp/bug-report.md]` (AI pipeline bug).
-   - `oracle_diff_review` (reviews current git diff).
-   - `oracle_ui_debug [tmp/ui-bug.md]` (frontend triage).
+2. Run Oracle CLI directly (browser auto-selected when no API key):
+   - `oracle --engine browser --dry-run summary` (bundle preview).
+   - `oracle --engine browser --task architecture` (architecture review).
+   - `oracle --engine browser --task ai_debug --notes tmp/bug-report.md` (AI pipeline bug).
+   - `oracle --engine browser --task diff_review` (current git diff review).
+   - `oracle --engine browser --task ui_debug --notes tmp/ui-bug.md` (frontend triage).
 
 ## Core flags
 - `--engine browser` (implicit when no API key), `--wait` to stay attached.

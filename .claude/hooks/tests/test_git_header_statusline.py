@@ -100,7 +100,7 @@ class TestGitHeaderStatusline:
     def test_red_synced_clean_status(self, temp_git_repo, git_header_script):
         """RED: Test synced clean status shows (synced)"""
         # This test will fail initially because we need to set up remote tracking
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Should contain directory name, branch, and status in parentheses
         assert "Local:" in stdout
@@ -113,7 +113,7 @@ class TestGitHeaderStatusline:
         with open("test_file.txt", "w") as f:
             f.write("uncommitted content")
 
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Should show +uncommitted indicator
         assert "+uncommitted" in stdout
@@ -125,7 +125,7 @@ class TestGitHeaderStatusline:
         with open("test_file.txt", "w") as f:
             f.write("uncommitted content")
 
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Should show both no remote and uncommitted
         assert "(no remote +uncommitted)" in stdout
@@ -137,7 +137,19 @@ class TestGitHeaderStatusline:
             ["git", "remote", "add", "origin", "https://github.com/test/test.git"],
             check=True,
         )
-        subprocess.run(["git", "branch", "--set-upstream-to=origin/main"], check=True)
+        current_branch = (
+            subprocess.check_output(["git", "symbolic-ref", "--short", "HEAD"])
+            .decode()
+            .strip()
+        )
+        subprocess.run(
+            ["git", "update-ref", f"refs/remotes/origin/{current_branch}", "HEAD"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "branch", "--set-upstream-to", f"origin/{current_branch}"],
+            check=True,
+        )
 
         # Create local commits ahead of remote (simulate)
         with open("local_commit.txt", "w") as f:
@@ -145,7 +157,7 @@ class TestGitHeaderStatusline:
         subprocess.run(["git", "add", "local_commit.txt"], check=True)
         subprocess.run(["git", "commit", "-m", "Local commit"], check=True)
 
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Should show ahead status
         assert "ahead" in stdout.lower()
@@ -165,7 +177,7 @@ class TestGitHeaderStatusline:
 
     def test_red_essential_output_format(self, temp_git_repo, git_header_script):
         """RED: Test essential output format components"""
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Must contain all essential components
         assert "Dir:" in stdout
@@ -179,14 +191,14 @@ class TestGitHeaderStatusline:
         # Create PR-style branch
         subprocess.run(["git", "checkout", "-b", "pr-1234"], check=True)
 
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Should detect PR number from branch name
         assert "pr-1234" in stdout.lower() or "#1234" in stdout
 
     def test_red_directory_name_display(self, temp_git_repo, git_header_script):
         """RED: Test directory name is correctly displayed"""
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Should show current directory name
         current_dir_name = os.path.basename(os.getcwd())
@@ -197,7 +209,7 @@ class TestGitHeaderStatusline:
         # Ensure clean state
         subprocess.run(["git", "status", "--porcelain"], check=True)
 
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         # Should NOT show +uncommitted when clean
         if "synced" in stdout:
@@ -215,7 +227,7 @@ class TestGitHeaderStatusline:
             with open("uncommitted.txt", "w") as f:
                 f.write("test")
 
-        stdout, stderr, returncode = run_git_header(git_header_script)
+        stdout, _, _ = run_git_header(git_header_script)
 
         if expected_indicator:
             assert expected_indicator.strip() in stdout
@@ -268,6 +280,17 @@ class TestGitHeaderPRCache:
         def cleanup():
             os.chdir("/")
             for repo in repos:
+                try:
+                    commit = (
+                        subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo)
+                        .decode()
+                        .strip()
+                    )
+                    cache_path = Path("/tmp") / f"git-header-pr-{commit[:8]}"
+                    cache_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+
                 shutil.rmtree(repo, ignore_errors=True)
 
         request.addfinalizer(cleanup)
@@ -321,12 +344,14 @@ echo "called" >>"${GH_CALL_LOG}"
             old_time = int(time.time()) - 120
             os.utime(remote_ref, (old_time, old_time))
 
+        cache_file = self._cache_file_for_repo(repo_dir)
+        cache_file.unlink(missing_ok=True)
+
         # First run populates cache
         stdout, _, _ = run_git_header(str(git_header_script), env=env, cwd=repo_dir)
         assert "#42" in stdout
         assert call_log.read_text().strip() == "called"
 
-        cache_file = self._cache_file_for_repo(repo_dir)
         assert cache_file.exists()
 
         # Reset call log and keep cache fresh

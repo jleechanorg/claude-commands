@@ -227,7 +227,7 @@ source ~/.bashrc
 
 ## Security Notes
 
-- Token stored in `~/.ai-universe/auth-token.json`
+- Token stored in `~/.ai-universe/auth-token-<project-id>.json`
   - ID token: 1-hour expiration
   - Refresh token: enables automatic renewal without re-authentication
 - OAuth flow uses localhost callback (127.0.0.1:9005)

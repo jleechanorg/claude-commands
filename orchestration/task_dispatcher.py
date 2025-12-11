@@ -1079,19 +1079,23 @@ Complete the task, then use /pr to create a new pull request."""
             counter = 1
             original_candidate = f"{base_name}-{timestamp}"
             agent_name = original_candidate
-            
+
             while agent_name in existing:
+                if counter > 100:
+                    raise RuntimeError(
+                        f"Failed to generate unique agent name after {counter} attempts for base '{base_name}'"
+                    )
                 agent_name = f"{original_candidate}-{counter}"
                 counter += 1
-            
+
             print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
 
         # 3. Update agent_spec to reflect the final unique name
         # This ensures _create_worktree_at_location uses the correct, unique name
         agent_spec["name"] = agent_name
-        if workspace_config:
-            # Keep workspace name in sync with agent name
-            workspace_config["workspace_name"] = agent_name
+        if workspace_config is not None:
+            # Keep workspace name in sync with agent name without mutating caller data
+            agent_spec["workspace_config"] = {**workspace_config, "workspace_name": agent_name}
 
         # Clean up any existing stale prompt files for this agent to prevent task reuse
         # Use final agent name for cleanup (after workspace alignment)

@@ -132,9 +132,7 @@ else
         # Check unpacked ref file first
         if [ -f "$ref_file" ]; then
             remote_ref_mtime=$(get_mtime "$ref_file")
-            # Explicitly check for mtime extraction failure (returns "0" or empty)
-            # "0" means epoch time which indicates extraction failed
-            if [ -n "$remote_ref_mtime" ] && [ "$remote_ref_mtime" != "0" ]; then
+            if [ -n "$remote_ref_mtime" ]; then
                 push_age=$((current_time - remote_ref_mtime))
                 if [ "$push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
                     recent_push=true
@@ -148,7 +146,7 @@ else
             packed_refs_file="$git_common_dir/packed-refs"
             if [ -f "$packed_refs_file" ]; then
                 packed_refs_mtime=$(get_mtime "$packed_refs_file")
-                if [ -n "$packed_refs_mtime" ] && [ "$packed_refs_mtime" != "0" ]; then
+                if [ -n "$packed_refs_mtime" ]; then
                     packed_push_age=$((current_time - packed_refs_mtime))
                     if [ "$packed_push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
                         recent_push=true

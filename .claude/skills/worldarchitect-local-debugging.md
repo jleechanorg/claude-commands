@@ -3,12 +3,12 @@
 ## Log File Locations
 
 **Flask server logs:**
-```
+```bash
 /tmp/your-project.com/<branch-name>/flask-server.log
 ```
 
 **MCP server logs:**
-```
+```bash
 /tmp/your-project.com/<branch-name>/mcp-server.log
 ```
 
