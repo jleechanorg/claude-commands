@@ -433,6 +433,27 @@ def parse_structured_response(
     Returns:
         tuple: (narrative_text, parsed_response_or_none)
     """
+
+    def _apply_planning_fallback(
+        narrative_value: str | None, planning_block: Any
+    ) -> str:
+        """Use planning block thinking text when narrative is intentionally blank."""
+
+        narrative_value = (narrative_value or "").strip()
+        if narrative_value:
+            return narrative_value
+
+        if planning_block:
+            if isinstance(planning_block, dict):
+                thinking_text = planning_block.get("thinking", "")
+                if thinking_text and str(thinking_text).strip():
+                    return str(thinking_text).strip()
+
+            elif isinstance(planning_block, str) and planning_block.strip():
+                return planning_block.strip()
+
+        return narrative_value
+
     if not response_text:
         empty_response = NarrativeResponse(
             narrative="The story awaits your input...",  # Default narrative for empty response
@@ -479,6 +500,9 @@ def parse_structured_response(
             planning_block = parsed_data.get("planning_block", "")
 
             validated_response = NarrativeResponse(**parsed_data)
+            validated_response.narrative = _apply_planning_fallback(
+                validated_response.narrative, validated_response.planning_block
+            )
             # If god_mode_response is present, return both god mode response and narrative
             if (
                 hasattr(validated_response, "god_mode_response")
@@ -505,7 +529,9 @@ def parse_structured_response(
                 )
 
                 known_fields = {
-                    "narrative": narrative,
+                    "narrative": _apply_planning_fallback(
+                        narrative, parsed_data.get("planning_block")
+                    ),
                     "god_mode_response": god_mode_response,
                     "entities_mentioned": parsed_data.get("entities_mentioned", []),
                     "location_confirmed": parsed_data.get("location_confirmed")
@@ -531,7 +557,7 @@ def parse_structured_response(
 
             # Extract only the fields we know about, let **kwargs handle the rest
             known_fields = {
-                "narrative": narrative,
+                "narrative": _apply_planning_fallback(narrative, planning_block),
                 "entities_mentioned": parsed_data.get("entities_mentioned", []),
                 "location_confirmed": parsed_data.get("location_confirmed")
                 or "Unknown",
