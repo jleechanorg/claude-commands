@@ -157,6 +157,34 @@ def generate_json_mode_content(
     )
 
 
+def _stringify_prompt_contents(prompt_contents: list[Any]) -> str:
+    """Convert prompt contents list to a single string for history building.
+
+    Args:
+        prompt_contents: List of prompt content items (strings, dicts, etc.)
+
+    Returns:
+        Single string representation of the prompt
+    """
+    if not prompt_contents:
+        return ""
+
+    parts = []
+    for item in prompt_contents:
+        if isinstance(item, str):
+            parts.append(item)
+        elif isinstance(item, dict):
+            # Handle dict-based content (e.g., {"text": "..."})
+            if "text" in item:
+                parts.append(str(item["text"]))
+            else:
+                parts.append(str(item))
+        else:
+            parts.append(str(item))
+
+    return "\n".join(parts)
+
+
 def process_tool_calls(tool_calls: list[Any]) -> list[dict]:
     """Execute Gemini tool calls and return results.
     
@@ -264,17 +292,18 @@ def generate_content_with_tool_loop(
         parts.append(types.Part(function_response=tr["function_response"]))
     history.append(types.Content(role="user", parts=parts))
     
-    # Generate Final
+    # Generate Final - pass history as prompt_contents for Phase 2
+    # When messages=None, generate_json_mode_content uses prompt_contents directly
     return generate_json_mode_content(
-        prompt_contents=[], # Unused since we pass full history contents
-        messages=None, # structure manually built above as 'contents'
+        prompt_contents=history,  # Pass full conversation history!
+        messages=None,
         model_name=model_name,
         system_instruction_text=system_instruction_text,
         temperature=temperature,
         safety_settings=safety_settings,
         json_mode_max_output_tokens=json_mode_max_output_tokens,
-        tools=None, # Tools DISABLED
-        json_mode=True # JSON Mode ENABLED
+        tools=None,  # Tools DISABLED in Phase 2
+        json_mode=True  # JSON Mode ENABLED in Phase 2
     )
 
 

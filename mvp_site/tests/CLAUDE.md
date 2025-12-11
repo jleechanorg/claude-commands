@@ -178,4 +178,63 @@ def test_campaign_creation():
         assert 'campaign_id' in result
 ```
 
+## End-to-End Testing Philosophy
+
+### Key Principle: Mock External APIs, Not Internal Logic
+
+**CRITICAL:** When testing internal function logic (like `generate_content_with_tool_loop`), mock the **lowest-level API calls**, NOT the function you're testing. This ensures internal logic is exercised.
+
+```python
+# ❌ BAD: Mocking the entire function - internal logic NOT tested
+with patch('provider.generate_content_with_tool_loop') as mock:
+    mock.return_value = Mock(text='{"result": "test"}')
+    # Bug in generate_content_with_tool_loop would NOT be caught!
+
+# ✅ GOOD: Mock the low-level API call - internal logic IS tested
+with patch('provider.generate_json_mode_content') as mock_api:
+    # Phase 1: Return response with tool calls
+    mock_api.side_effect = [phase1_response, phase2_response]
+    result = generate_content_with_tool_loop(...)
+    # Now internal logic (building history, passing to Phase 2) is tested!
+```
+
+### Fake Implementations Over Mock Objects
+
+From `README_END2END_TESTS.md`:
+- Mock only **external APIs** (Firebase, Gemini API client)
+- DON'T mock internal service functions
+- Use `FakeLLMResponse` classes that return real Python data structures
+- Avoids JSON serialization errors from `Mock()` objects
+
+### Testing Multi-Phase Functions
+
+For functions with multiple phases (like tool loops):
+
+1. **Mock the lowest-level API call** (e.g., `generate_json_mode_content`)
+2. **Use `side_effect` for sequential responses** (Phase 1, Phase 2, etc.)
+3. **Verify intermediate data is passed correctly** between phases
+4. **Check call arguments** to ensure history/context is preserved
+
+```python
+def test_tool_loop_passes_history_to_phase2():
+    """Verify Phase 2 receives conversation history from Phase 1."""
+    with patch('provider.generate_json_mode_content') as mock_api:
+        # Phase 1: Return tool call
+        phase1_response = create_response_with_tool_call("roll_dice", {"notation": "1d20"})
+        # Phase 2: Return final JSON
+        phase2_response = create_json_response({"narrative": "..."})
+        mock_api.side_effect = [phase1_response, phase2_response]
+
+        result = generate_content_with_tool_loop(prompt, model, ...)
+
+        # Verify Phase 2 was called with history (not empty)
+        phase2_call = mock_api.call_args_list[1]
+        assert phase2_call.kwargs.get('messages') is not None  # History passed!
+```
+
+### Reference Files
+- `fake_llm.py` - `FakeLLMResponse`, `FakePart` with `function_call` attribute
+- `fake_firestore.py` - `FakeFirestoreClient`, `FakeFirestoreDocument`
+- `README_END2END_TESTS.md` - Full philosophy documentation
+
 See also: [../../CLAUDE.md](../../CLAUDE.md) for complete project protocols and development guidelines.
