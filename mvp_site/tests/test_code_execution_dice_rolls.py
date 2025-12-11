@@ -715,6 +715,108 @@ class TestToolLoopAllCodePaths(unittest.TestCase):
                     f"Expected 6 API calls (5 with tools + 1 final), got {call_count[0]}"
                 )
 
+    def test_path_6_cerebras_never_sends_tools_and_response_format_together(self):
+        """
+        Cerebras API rejects requests with both tools AND response_format.
+        Error: {"message":"\"tools\" is incompatible with \"response_format\""}
+
+        This test verifies that:
+        1. Phase 1 calls include tools but NOT response_format
+        2. Phase 2 calls include response_format but NOT tools
+        """
+        from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
+
+        # Phase 1: Tool call response
+        phase1_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{
+                        "id": "call_test",
+                        "type": "function",
+                        "function": {
+                            "name": "roll_dice",
+                            "arguments": '{"notation": "1d20", "purpose": "test"}'
+                        }
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }
+
+        # Phase 2: JSON response (no tools)
+        phase2_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": '{"narrative": "Test complete"}',
+                    "tool_calls": None
+                },
+                "finish_reason": "stop"
+            }]
+        }
+
+        api_payloads = []
+
+        def mock_post(*args, **kwargs):
+            # Capture the payload
+            payload = kwargs.get("json", {})
+            api_payloads.append({
+                "has_tools": "tools" in payload and payload.get("tools") is not None,
+                "has_response_format": "response_format" in payload
+            })
+
+            mock_response = Mock()
+            mock_response.status_code = 200
+
+            # First call = Phase 1, Second call = Phase 2
+            if len(api_payloads) == 1:
+                mock_response.json.return_value = phase1_response
+            else:
+                mock_response.json.return_value = phase2_response
+
+            mock_response.raise_for_status = Mock()
+            return mock_response
+
+        with patch("requests.post", side_effect=mock_post):
+            with patch("mvp_site.game_state.execute_dice_tool") as mock_tool:
+                mock_tool.return_value = {"notation": "1d20", "total": 15, "rolls": [15]}
+
+                from mvp_site.llm_providers import cerebras_provider
+                result = cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=["Test dice roll"],
+                    model_name="qwen-3-235b-a22b-instruct-2507",
+                    system_instruction_text="You are a DM",
+                    temperature=0.7,
+                    max_output_tokens=1000,
+                    tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+                    max_iterations=3,
+                )
+
+                # Must have made exactly 2 API calls (Phase 1 + Phase 2)
+                self.assertEqual(len(api_payloads), 2, "Should make 2 API calls")
+
+                # Phase 1: tools=YES, response_format=NO
+                self.assertTrue(
+                    api_payloads[0]["has_tools"],
+                    "Phase 1 should include tools"
+                )
+                self.assertFalse(
+                    api_payloads[0]["has_response_format"],
+                    "Phase 1 should NOT include response_format (API incompatibility)"
+                )
+
+                # Phase 2: tools=NO, response_format=YES
+                self.assertFalse(
+                    api_payloads[1]["has_tools"],
+                    "Phase 2 should NOT include tools"
+                )
+                self.assertTrue(
+                    api_payloads[1]["has_response_format"],
+                    "Phase 2 should include response_format for JSON mode"
+                )
+
 
 class TestDiceRollTools(unittest.TestCase):
     """Test the dice roll tool definitions."""
