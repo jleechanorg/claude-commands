@@ -25,8 +25,8 @@ from .constants import (
 
 A2A_AVAILABLE = True
 
-# Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-3-pro-preview by default
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+# Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-2.5-pro by default
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
 
 CLI_PROFILES = {
     "claude": {
@@ -75,7 +75,7 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "GEMINI_RESTART",
-        # Stick to configured GEMINI_MODEL (default gemini-3-pro-preview) unless overridden
+        # Stick to configured GEMINI_MODEL (default gemini-2.5-pro) unless overridden
         # YOLO mode enabled to allow file access outside workspace (user directive)
         "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo -p {{prompt_file}}",
         "stdin_template": "/dev/null",
