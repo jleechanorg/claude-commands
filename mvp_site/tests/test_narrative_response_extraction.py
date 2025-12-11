@@ -15,7 +15,11 @@ sys.path.insert(
 )
 
 from mvp_site.llm_response import LLMResponse
-from mvp_site.narrative_response_schema import CJK_PATTERN, NarrativeResponse
+from mvp_site.narrative_response_schema import (
+    CJK_PATTERN,
+    NarrativeResponse,
+    parse_structured_response,
+)
 
 
 class TestNarrativeResponseExtraction(unittest.TestCase):
@@ -322,6 +326,23 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         clean_narrative = "You pause to consider your options, mind racing through the possibilities..."
         response = NarrativeResponse(narrative=clean_narrative)
         assert response.narrative == clean_narrative
+
+    def test_fallback_parsing_strips_cjk_characters(self):
+        """Fallback parsing should still strip mixed-language characters from narrative."""
+
+        raw_response = json.dumps(
+            {
+                "narrative": "The hero 夜晚 reflects on their path",
+                # Invalid type triggers fallback path and forces NarrativeResponse cleaning
+                "entities_mentioned": "not-a-list",
+            }
+        )
+
+        cleaned_text, structured = parse_structured_response(raw_response)
+
+        assert "夜晚" not in cleaned_text
+        assert cleaned_text == structured.narrative
+        assert cleaned_text.startswith("The hero")
 
 
 if __name__ == "__main__":
