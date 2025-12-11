@@ -190,7 +190,10 @@ TARGET_WORD_COUNT: int = 300
 JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
 MAX_INPUT_TOKENS: int = 300000
 SAFE_CHAR_LIMIT: int = MAX_INPUT_TOKENS * 4
-GEMINI_COMPACTION_TOKEN_LIMIT: int = 300_000  # Cap compaction well below 1M max
+# Gemini compaction limit - target 70-90% model context utilization with room for output
+# With 1M context, 850K allows ~85% usage after 90% safety ratio and 20% output reserve
+# Previously 300K was too aggressive, leaving only 20K for story when scaffold is large
+GEMINI_COMPACTION_TOKEN_LIMIT: int = 850_000
 # Dynamic output reserve: 12k default for normal gameplay, scales up for combat/complex
 OUTPUT_TOKEN_RESERVE_DEFAULT: int = 12_000  # Typical responses are 1-3k tokens
 OUTPUT_TOKEN_RESERVE_COMBAT: int = 24_000  # Combat/complex scenes need more
