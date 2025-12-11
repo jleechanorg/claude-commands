@@ -571,9 +571,9 @@ def parse_structured_response(
                 # Handle null narrative
                 if narrative is None:
                     narrative = ""
-                combined_response = _combine_god_mode_and_narrative(
-                    god_mode_response, narrative
-                )
+                entities_value = parsed_data.get("entities_mentioned", [])
+                if not isinstance(entities_value, list):
+                    entities_value = []
 
                 fallback_narrative = _apply_planning_fallback(
                     narrative, parsed_data.get("planning_block")
@@ -582,7 +582,7 @@ def parse_structured_response(
                 known_fields = {
                     "narrative": fallback_narrative,
                     "god_mode_response": god_mode_response,
-                    "entities_mentioned": parsed_data.get("entities_mentioned", []),
+                    "entities_mentioned": entities_value,
                     "location_confirmed": parsed_data.get("location_confirmed")
                     or "Unknown",
                     "state_updates": parsed_data.get("state_updates", {}),
@@ -593,6 +593,9 @@ def parse_structured_response(
                     k: v for k, v in parsed_data.items() if k not in known_fields
                 }
                 fallback_response = NarrativeResponse(**known_fields, **extra_fields)
+                combined_response = _combine_god_mode_and_narrative(
+                    god_mode_response, fallback_response.narrative
+                )
                 return combined_response, fallback_response
 
             # Return the narrative if we at least got that
@@ -607,9 +610,13 @@ def parse_structured_response(
             fallback_narrative = _apply_planning_fallback(narrative, planning_block)
 
             # Extract only the fields we know about, let **kwargs handle the rest
+            entities_value = parsed_data.get("entities_mentioned", [])
+            if not isinstance(entities_value, list):
+                entities_value = []
+
             known_fields = {
-                "narrative": fallback_narrative,
-                "entities_mentioned": parsed_data.get("entities_mentioned", []),
+                "narrative": fallback_narrative,  # Use fallback_narrative with planning fallback applied
+                "entities_mentioned": entities_value,  # Use validated entities_value
                 "location_confirmed": parsed_data.get("location_confirmed")
                 or "Unknown",
                 "state_updates": parsed_data.get("state_updates", {}),
@@ -623,7 +630,7 @@ def parse_structured_response(
                 if k not in known_fields and k != "planning_block"
             }
             fallback_response = NarrativeResponse(**known_fields, **extra_fields)
-            return fallback_narrative, fallback_response
+            return fallback_response.narrative, fallback_response  # Return cleaned narrative from response
 
     # Additional mitigation: Try to extract narrative from raw JSON-like text
     # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."
@@ -640,7 +647,7 @@ def parse_structured_response(
             entities_mentioned=[],
             location_confirmed="Unknown",
         )
-        return extracted_narrative, fallback_response
+        return fallback_response.narrative, fallback_response
 
     # Final fallback: Clean up raw text for display
     # Remove JSON-like structures and format for readability
@@ -749,7 +756,7 @@ def parse_structured_response(
             narrative=cleaned_text, entities_mentioned=[], location_confirmed="Unknown"
         )
 
-    return cleaned_text, fallback_response
+    return fallback_response.narrative, fallback_response
 
 
 def create_generic_json_instruction() -> str:
