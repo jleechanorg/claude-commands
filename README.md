@@ -886,7 +886,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - **194 Commands**: Complete workflow orchestration system
 - **43 Hooks**: Claude Code automation and workflow hooks
 - **19 Scripts**: Development and automation tools (scripts/ directory)
-- **25 Skills**: Shared knowledge references (.claude/skills/)
+- **27 Skills**: Shared knowledge references (.claude/skills/)
 
 **Major Changes**:
 - **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export

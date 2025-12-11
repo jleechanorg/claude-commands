@@ -72,11 +72,13 @@ node scripts/auth-cli.mjs token --project worldarchitecture-ai
 ### 1. Initial Login
 
 ```bash
-# AI Universe (default) - for /secondo
-node scripts/auth-cli.mjs login
-
-# WorldAI - for Your Project
-node scripts/auth-cli.mjs login --project worldarchitecture-ai
+# CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
+# Start browser-based OAuth authentication
+# Note: Run this outside Claude Code in a regular terminal
+FIREBASE_PROJECT_ID=<your-firebase-project-id> \
+FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com \
+FIREBASE_API_KEY=<YOUR_FIREBASE_API_KEY> \
+node ~/.claude/scripts/auth-cli.mjs login
 ```
 
 **What happens:**
@@ -103,6 +105,11 @@ node scripts/auth-cli.mjs status
 ### 3. Get Token for Scripts
 
 ```bash
+# CRITICAL: Set AI Universe Firebase credentials
+export FIREBASE_PROJECT_ID=<your-firebase-project-id>
+export FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com
+export FIREBASE_API_KEY=<YOUR_FIREBASE_API_KEY>
+
 # Get token (auto-refreshes if expired, does nothing if valid)
 TOKEN=$(node scripts/auth-cli.mjs token)
 echo $TOKEN
@@ -190,6 +197,43 @@ node scripts/auth-cli.mjs login
 - **ID Token**: 1-hour expiration (Firebase policy)
 - **Refresh Token**: ~30 days, enables silent renewal
 - **Security**: Never commit tokens, localhost OAuth only
+
+### Firebase Config Missing or PROJECT_NUMBER_MISMATCH
+
+If you see errors about Firebase configuration or `PROJECT_NUMBER_MISMATCH`:
+
+```bash
+# Use AI Universe Firebase credentials (REQUIRED for /secondo)
+export FIREBASE_PROJECT_ID=<your-firebase-project-id>
+export FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com
+export FIREBASE_API_KEY=<YOUR_FIREBASE_API_KEY>
+
+# Then run login or token command
+node ~/.claude/scripts/auth-cli.mjs login
+
+# Or if you have env vars in ~/.bashrc:
+source ~/.bashrc
+```
+
+**Note:** The MCP server (`ai-universe-backend-dev`) requires authentication with the `<your-firebase-project-id>` Firebase project, NOT `worldarchitecture-ai`.
+
+## Rate Limits
+
+**Authenticated Users:**
+- Rate limits applied per Firebase account
+- Multi-model synthesis available
+- ID Token TTL: 1 hour (Firebase security policy)
+- Refresh token enables automatic renewal
+
+## Security Notes
+
+- Token stored in `~/.ai-universe/auth-token.json`
+  - ID token: 1-hour expiration
+  - Refresh token: enables automatic renewal without re-authentication
+- OAuth flow uses localhost callback (127.0.0.1:9005)
+- Browser-based authentication (similar to gh CLI, gcloud CLI)
+- Never commit authentication tokens
+- Firebase security best practices enforced
 
 ## Integration with Commands
 
