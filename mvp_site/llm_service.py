@@ -3649,6 +3649,10 @@ def continue_story(
     user_input_lower: str = user_input.lower().strip()
     is_switching_to_god_mode: bool = user_input_lower in constants.MODE_SWITCH_SIMPLE
 
+    # Check if user sent a "GOD MODE:" prefixed command (administrative mode)
+    # God mode = DM mode behavior: no narrative advancement, no planning blocks
+    is_god_mode_command: bool = user_input.strip().upper().startswith("GOD MODE:")
+
     # Also check if the AI response indicates DM MODE
     is_dm_mode_response: bool = (
         "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
@@ -3658,10 +3662,12 @@ def continue_story(
     # 1. Currently in character mode
     # 2. User isn't switching to god mode
     # 3. AI response isn't in DM mode
+    # 4. User didn't send a GOD MODE: command (administrative, not gameplay)
     if (
         mode == constants.MODE_CHARACTER
         and not is_switching_to_god_mode
         and not is_dm_mode_response
+        and not is_god_mode_command
     ):
         response_text = _validate_and_enforce_planning_block(
             response_text,
