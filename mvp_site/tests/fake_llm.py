@@ -7,6 +7,14 @@ import json
 import re
 
 
+class FakePart:
+    """Fake part object for Gemini response structure."""
+
+    def __init__(self, text: str = ""):
+        self.text = text
+        self.function_call = None  # No tool calls in fake response
+
+
 class FakeLLMResponse:
     """Fake LLM response that behaves like the real thing."""
 
@@ -17,6 +25,8 @@ class FakeLLMResponse:
             "output_tokens": 200,
             "total_tokens": 300,
         }
+        # Create parts list with a FakePart containing the text
+        self.parts = [FakePart(text)]
         self.candidates = [self]
         self.content = self
 
