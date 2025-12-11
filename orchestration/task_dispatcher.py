@@ -27,6 +27,8 @@ A2A_AVAILABLE = True
 
 # Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-3-pro-preview by default
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+# Cursor model can be overridden via CURSOR_MODEL; default to Grok but avoid forcing it
+CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "grok")
 
 CLI_PROFILES = {
     "claude": {
@@ -98,8 +100,8 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "CURSOR_RESTART",
-        # Cursor Agent CLI with Grok model for fresh-data analysis
-        "command_template": "{binary} -p @{prompt_file} --model grok --output-format text",
+        # Cursor Agent CLI with configurable model (defaults to Grok) for fresh-data analysis
+        "command_template": f"{{binary}} -p @{{prompt_file}} --model {CURSOR_MODEL} --output-format text",
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         "detection_keywords": [

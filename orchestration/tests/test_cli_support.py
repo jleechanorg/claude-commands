@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher, GEMINI_MODEL
+from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, TaskDispatcher, GEMINI_MODEL
 
 
 class TestAgentCliSelection(unittest.TestCase):
@@ -528,10 +528,10 @@ class TestCursorCliIntegration(unittest.TestCase):
         self.assertEqual(cursor["binary"], "cursor-agent")
 
     def test_cursor_command_template(self):
-        """Cursor command template should include grok model and output format."""
+        """Cursor command template should include configured model and output format."""
         cursor = CLI_PROFILES["cursor"]
         template = cursor["command_template"]
-        self.assertIn("--model grok", template)
+        self.assertIn(f"--model {CURSOR_MODEL}", template)
         self.assertIn("--output-format text", template)
         self.assertIn("-p @{prompt_file}", template)
 
