@@ -98,6 +98,8 @@ MODELS_WITH_TOOL_USE = {
     # Cerebras models with multi-turn tool support (100k+ context)
     "qwen-3-235b-a22b-instruct-2507",  # 131K context - Confirmed working
     "zai-glm-4.6",  # 131K context - #1 on Berkeley Function Calling Leaderboard
+    "gpt-oss-120b",  # 131K context - OpenAI reasoning model with native tool use
+    "openai/gpt-oss-120b",  # OpenRouter variant
     # OpenRouter models with tool support (100k+ context)
     "meta-llama/llama-3.1-70b-instruct",  # 128K context
     # Note: llama-3.1-405b removed (too expensive)
