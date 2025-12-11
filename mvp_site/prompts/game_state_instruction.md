@@ -71,10 +71,11 @@ Every response MUST be valid JSON with this exact structure:
   - `context`: (string, **optional**) Additional context about the current scenario
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
 - `dice_rolls`: (array) **CRITICAL: Use code execution** (`import random; random.randint(1,20)`) for ALL rolls. **NEVER generate dice results manually** - use actual random.randint() for fairness. Always show DC/AC. **Empty array [] if no dice rolls this turn.**
+  - **Dice roll output format:** All dice roll strings MUST use spaces around plus signs (e.g., `"1d20 +5 DEX +3 PROF"`) and label each modifier by its source and value. This spacing is required for clarity and replaces the old compact format (e.g., `"1d20+5"`). Always use this spacing and labeling convention in all dice roll outputs.
   - **Attack:** `"Attack roll: 1d20 +5 DEX +3 PROF = 14 +5 DEX +3 PROF = 22 vs AC 15 (Hit)"`
   - **Damage:** `"Damage: 1d8 +5 DEX +7 Hunter's Mark = 6 +5 DEX +7 Hunter's Mark = 18 piercing"`
   - **Advantage:** `"Attack (advantage): 1d20 +5 DEX +3 PROF = [14, 8] +5 DEX +3 PROF = 22 (took higher) vs AC 15 (Hit)"`
-  - **Modifier labeling:** **ALWAYS label every modifier by source and value** (ability, proficiency, spell, feature, condition). Example: `"Attack (advantage): 1d20 +5 DEX +3 PROF = [2,16] +5 DEX +3 PROF = 24 (took higher) vs AC 14 (Hit)"` and `"Damage: 1d8 +5 DEX +7 Hunter's Mark = [4] +5 DEX +7 Hunter's Mark = 16"`.
+  - **Modifier labeling:** **ALWAYS label every modifier by source and value** (ability, proficiency, spell, feature, condition).
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
