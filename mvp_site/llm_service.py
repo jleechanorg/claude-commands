@@ -3270,6 +3270,22 @@ Full narrative context:
     return response_text
 
 
+def _is_god_mode_command(user_input: str) -> bool:
+    """Check if the user input is a GOD MODE command.
+
+    A GOD MODE command starts with the "GOD MODE:" prefix (case-insensitive)
+    and should trigger administrative handling with no narrative advancement.
+
+    Args:
+        user_input: Raw user input text before any validation mutations.
+
+    Returns:
+        bool: True if the input requests GOD MODE.
+    """
+
+    return user_input.strip().upper().startswith("GOD MODE:")
+
+
 @log_exceptions
 def continue_story(
     user_input: str,
@@ -3309,6 +3325,9 @@ def continue_story(
     logging_util.info(
         f"Using provider/model: {provider_selection.provider}/{model_to_use} for story continuation."
     )
+
+    # Preserve the raw user input before any validation mutations
+    raw_user_input = user_input
 
     # Check for multiple think commands in input using regex
     think_pattern: str = r"Main Character:\s*think[^\n]*"
@@ -3357,7 +3376,7 @@ def continue_story(
     builder: PromptBuilder = PromptBuilder(current_game_state)
 
     # Check if this is a GOD MODE command (administrative, not gameplay)
-    is_god_mode_command: bool = user_input.strip().upper().startswith("GOD MODE:")
+    is_god_mode_command: bool = _is_god_mode_command(raw_user_input)
 
     if is_god_mode_command:
         # GOD MODE: Use lightweight administrative prompts
@@ -3690,13 +3709,14 @@ def continue_story(
 
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input
-    user_input_lower: str = user_input.lower().strip()
+    user_input_lower: str = raw_user_input.lower().strip()
     is_switching_to_god_mode: bool = user_input_lower in constants.MODE_SWITCH_SIMPLE
 
     # Check if user sent a "GOD MODE:" prefixed command (administrative mode)
     # God mode = DM mode behavior: no narrative advancement, no planning blocks
-    is_god_mode_command: bool = user_input.strip().upper().startswith("GOD MODE:")
-
+    # Reuse the original god mode detection (based on raw input before validation mutations)
+    # to ensure validation prepends don't break the prefix check.
+    
     # Also check if the AI response indicates DM MODE
     is_dm_mode_response: bool = (
         "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
