@@ -204,7 +204,8 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     # Cerebras
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
-    "llama-3.3-70b": 65_536,
+    # Paid tier supports 128k context; use 128k for budgeting
+    "llama-3.3-70b": 128_000,
     "llama-3.1-8b": 131_072,  # 131K context window (Cerebras advertises 128K)
     "gpt-oss-120b": 131_072,  # 131K context window
 }
@@ -228,10 +229,11 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "z-ai/glm-4.6": 202_752,
     "x-ai/grok-4.1-fast": 30_000,
     "x-ai/grok-4.1-fast:free": 30_000,  # Legacy alias shares the same cap
-    # Cerebras (actual limit ~64K, using conservative 32K for safety)
+    # Cerebras (paid tier limits)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
-    "llama-3.3-70b": 32_000,
+    # Llama 3.3: Paid tier supports up to 65k completion tokens
+    "llama-3.3-70b": 65_000,
     "llama-3.1-8b": 32_000,  # Cerebras allows longer completions than OpenRouter
     "gpt-oss-120b": 40_000,  # 40K max output per Cerebras docs
 }
