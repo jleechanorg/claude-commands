@@ -872,7 +872,7 @@ class ClaudeCommandsExporter:
             # Match pattern: REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
             # Replace with: REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
             content = re.sub(
-                r'REPO_ROOT="\$\(cd "\$\{SCRIPT_DIR\}/\.\." && pwd\)"',
+                r'REPO_ROOT=\$\(cd "\$\{SCRIPT_DIR\}/\.\." && pwd\)',
                 'REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"',
                 content,
             )
@@ -1577,10 +1577,15 @@ This is a filtered reference export from a working Claude Code project. Commands
             # Try common locations for gh (Linux and Windows)
             common_paths = [
                 os.path.expanduser("~/.local/bin/gh"),  # Linux user install
+<<<<<<< HEAD
+                "/usr/local/bin/gh",                    # Linux system install
+                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Windows/Linux user bin
+=======
                 "/usr/local/bin/gh",  # Linux system install
                 os.path.join(
                     os.path.expanduser("~"), "bin", "gh"
                 ),  # Windows/Linux user bin
+>>>>>>> origin/main
                 "C:\\Program Files\\GitHub CLI\\gh.exe",
                 "C:\\Program Files (x86)\\GitHub CLI\\gh.exe",
             ]
@@ -1787,8 +1792,16 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Commit changes and push branch"""
         print("💾 Committing and pushing changes...")
 
+<<<<<<< HEAD
+        # Configure git user for commit (needed in clean clone)
+        subprocess.run(['git', 'config', 'user.email', 'claude-export@anthropic.com'], check=True)
+        subprocess.run(['git', 'config', 'user.name', 'Claude Export'], check=True)
+        # Disable commit signing (may not be configured in cloned repo)
+        subprocess.run(['git', 'config', 'commit.gpgsign', 'false'], check=True)
+=======
         original_cwd = os.getcwd()
         os.chdir(self.repo_dir)
+>>>>>>> origin/main
 
         try:
             # Configure git user for commit (needed in clean clone)

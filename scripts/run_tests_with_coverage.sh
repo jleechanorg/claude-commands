@@ -245,7 +245,7 @@ if [ $coverage_report_exit_code -eq 0 ]; then
     # Show key file coverage
     echo
     echo "Key Files Coverage:"
-    grep -E "(main\.py|llm_service\.py|game_state\.py|firestore_service\.py)" coverage_report.txt | head -10
+    grep -E "(orchestration/.*\.py|automation/.*\.py|hooks/.*\.py|commands/.*\.py)" coverage_report.txt | head -10
 
     echo "----------------------------------------"
 

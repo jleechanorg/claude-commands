@@ -51,6 +51,7 @@ execution_mode: immediate
 - `NOT_DONE`: Attempted but failed (includes real error)
 - `ACKNOWLEDGED`: Style suggestion noted
 - `ALREADY_IMPLEMENTED`: Code evidence shown
+- `SKIPPED`: Out of scope (merge conflicts, CI, tests)
 
 ---
 

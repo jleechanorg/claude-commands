@@ -17,7 +17,7 @@ execution_mode: immediate
 
 ### 📋 MANDATORY WORKFLOW SEQUENCE (NO EXCEPTIONS)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │  PHASE 1: LOCAL REPRODUCTION (MANDATORY FIRST STEP)                 │
 │  ───────────────────────────────────────────────────────────────────│
@@ -52,7 +52,7 @@ execution_mode: immediate
 │  2. Wait for GitHub CI to complete                                  │
 │  3. Re-verify GitHub status shows all checks passing                │
 └─────────────────────────────────────────────────────────────────────┘
-```
+```text
 
 ### 🚨 MERGE CONFLICT MANDATORY PROTOCOL
 
@@ -144,6 +144,12 @@ Only proceed once authentication succeeds.
 status=$(gh pr view "$PR" --json mergeStateStatus,statusCheckRollup)
 merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
 
+# Extract and evaluate status checks
+checks=$(echo "$status" | jq '.statusCheckRollup.contexts.nodes // []')
+failed_checks=$(echo "$checks" | jq '[.[] | select((.conclusion // .state // "")
+  | test("^(FAILURE|ERROR|TIMED_OUT|ACTION_REQUIRED|CANCELLED)$"))]')
+failed_count=$(echo "$failed_checks" | jq 'length')
+
 ### Phase 6: Step 3: Analyze Issues with Intelligence & Pattern Detection
 
 **Action Steps:**
@@ -205,21 +211,6 @@ Based on the analysis, apply appropriate fixes:
 **AUTOMATIC ACTIVATION**: When GitHub CI fails but local tests pass, `/fixpr` automatically implements this workflow:
 
 **MANDATORY COMMAND INVOCATION**: `/fixpr` must explicitly call the real `/redgreen` slash command (no aliases) to recreate the GitHub failure locally **before** touching any source files. The run must complete and show the failing local test that mirrors GitHub prior to entering the fix phase.
-
-### RED PHASE: Reproduce GitHub Failure Locally
-
-**Action Steps:**
-```bash
-
-### GREEN PHASE: Fix Code to Pass Both Environments
-
-**Action Steps:**
-```bash
-
-### REFACTOR PHASE: Clean Up and Optimize
-
-**Action Steps:**
-```bash
 
 ### Phase 13: Step 5: Verify Mergeability Status - **MANDATORY GITHUB RE-VERIFICATION**
 
