@@ -1080,9 +1080,13 @@ Complete the task, then use /pr to create a new pull request."""
             original_candidate = f"{base_name}-{timestamp}"
             agent_name = original_candidate
             
-            while agent_name in existing:
+            max_iterations = 100
+            while agent_name in existing and counter < max_iterations:
                 agent_name = f"{original_candidate}-{counter}"
                 counter += 1
+            
+            if agent_name in existing:
+                raise RuntimeError(f"Failed to resolve name collision for {base_name} after {max_iterations} attempts")
             
             print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
 
