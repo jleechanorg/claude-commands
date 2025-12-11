@@ -90,17 +90,22 @@ def generate_json_mode_content(
         # 2. Post-response validation (narrative_response_schema.py)
     }
 
-    # Auto-detect code execution capability if not explicitly set
-    # Gemini 2.0 and 3.0 support code_execution + JSON mode together
-    # Gemini 2.5 does NOT support this combination (not in MODELS_WITH_CODE_EXECUTION)
-    if enable_code_execution is None:
-        enable_code_execution = model_name in constants.MODELS_WITH_CODE_EXECUTION
-
-    # Enable code_execution for supported models (Gemini 2.0/3.0)
-    # These models support code_execution + JSON mode together for true dice randomness
+    # NOTE: code_execution is DISABLED for JSON mode responses
+    # Gemini API does NOT support combining response_mime_type="application/json"
+    # with code_execution tools. The API returns:
+    # "Unable to submit request because controlled generation is not supported with Code Execution tool"
+    #
+    # ARCHITECTURE (Dec 2024): Pre-rolled dice are now injected into every prompt,
+    # eliminating the need for code_execution. The LLM uses these pre-rolled values
+    # instead of generating random numbers via Python code execution.
+    #
+    # The enable_code_execution parameter is kept for API compatibility but is
+    # effectively ignored when response_mime_type is set to JSON.
     if enable_code_execution:
-        generation_config_params["tools"] = [types.Tool(code_execution={})]
-        logging_util.info(f"Code execution enabled for model: {model_name}")
+        logging_util.info(
+            f"Code execution requested for {model_name} but DISABLED - "
+            "incompatible with JSON mode (controlled generation)"
+        )
 
     if system_instruction_text:
         generation_config_params["system_instruction"] = types.Part(

@@ -39,10 +39,17 @@ from mvp_site import constants, llm_service
 class TestHybridDiceRollSystem(unittest.TestCase):
     """Test the hybrid dice roll system across different model types."""
 
-    def test_code_execution_enabled_for_gemini_2_and_3(self):
+    def test_code_execution_disabled_for_json_mode(self):
         """
-        Verify code_execution IS enabled for Gemini 2.0/3.0 with JSON mode.
-        These models support both features together.
+        Verify code_execution is DISABLED for all Gemini models in JSON mode.
+
+        ARCHITECTURE UPDATE (Dec 2024): Gemini API does NOT support combining
+        response_mime_type="application/json" with code_execution tools. The API
+        returns: "Unable to submit request because controlled generation is not
+        supported with Code Execution tool"
+
+        All models now use pre-rolled dice injected into prompts, eliminating
+        the need for code_execution entirely.
         """
         with patch('mvp_site.llm_providers.gemini_provider.get_client') as mock_get_client:
             mock_client = Mock()
@@ -77,16 +84,12 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 'FAIL: JSON mode must be enabled for structured responses'
             )
 
-            # CRITICAL: Code execution MUST be enabled for Gemini 2.0/3.0
-            # These models support code_execution + JSON mode together
-            self.assertIsNotNone(
+            # CRITICAL: Code execution MUST be disabled when JSON mode is used
+            # Gemini API does not support combining these features
+            self.assertIsNone(
                 config_obj.tools,
-                'FAIL: code_execution tools MUST be enabled for Gemini 2.0/3.0'
-            )
-            # Verify it's the code_execution tool
-            self.assertTrue(
-                len(config_obj.tools) > 0,
-                'FAIL: tools list should contain code_execution tool'
+                'FAIL: code_execution tools must NOT be set with JSON mode - '
+                'Gemini API returns "controlled generation is not supported with Code Execution tool"'
             )
 
     def test_model_capability_detection(self):

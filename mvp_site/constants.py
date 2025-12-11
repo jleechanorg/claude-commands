@@ -65,20 +65,21 @@ PREMIUM_GEMINI_MODELS = [
 # ┌─────────────────────┬───────────────┬───────────┬──────────────┬───────────────┐
 # │ Model               │ Code Exec     │ JSON Mode │ Both Together│ Dice Strategy │
 # ├─────────────────────┼───────────────┼───────────┼──────────────┼───────────────┤
-# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ✅ Yes       │ code_execution│
-# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ✅ Yes       │ code_execution│
+# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
+# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
 # │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
 # │ gemini-2.5-pro      │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
 # └─────────────────────┴───────────────┴───────────┴──────────────┴───────────────┘
 #
-# gemini-2.5-* models throw API errors when code_execution + JSON mode are combined.
-# They work fine with either feature alone, but not together.
+# IMPORTANT: Gemini API does NOT support code_execution + JSON mode together
+# for ANY model. The API returns:
+# "Unable to submit request because controlled generation is not supported with Code Execution tool"
 #
-MODELS_WITH_CODE_EXECUTION = {
-    "gemini-2.0-flash",      # ✅ Confirmed: code_execution + JSON mode works
-    "gemini-3-pro-preview",  # ✅ Confirmed: code_execution + JSON mode works
-    # NOTE: gemini-2.5-* NOT included - they don't support code_exec + JSON together
-}
+# ARCHITECTURE (Dec 2024): All models now use pre-rolled dice injected into prompts.
+# This eliminates the need for code_execution entirely.
+#
+# DEPRECATED: This set is kept for backwards compatibility but is no longer used.
+MODELS_WITH_CODE_EXECUTION: set[str] = set()  # Empty - code_execution disabled for all
 
 # Models that support tool use / function calling
 # These require two-stage inference: LLM requests tool → we execute → send result back
