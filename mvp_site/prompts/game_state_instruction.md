@@ -77,6 +77,7 @@ Every response MUST be valid JSON with this exact structure:
   - **NEVER roll dice manually or invent numbers.**
   - **ALWAYS use the provided tools (`check_skills` or `attack_roll`) to generate dice results.**
   - **Tool Usage:** call the appropriate tool with necessary modifiers. The system will handle the roll and return the result.
+  - **COPY EXACTLY:** When tool results are returned, copy their numbers verbatim into `dice_rolls`, session header, and narrative. Do NOT recalc, round, or change outcomes—the tool result is the truth.
   - **Output format:** The tools will return formatted strings like `"Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"`. Include these strings in the `dice_rolls` array.
   - **Empty array [] if no dice rolls this turn.**
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
