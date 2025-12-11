@@ -780,42 +780,43 @@ class TestToolLoopAllCodePaths(unittest.TestCase):
             return mock_response
 
         with patch("requests.post", side_effect=mock_post):
-            with patch("mvp_site.game_state.execute_dice_tool") as mock_tool:
-                mock_tool.return_value = {"notation": "1d20", "total": 15, "rolls": [15]}
+            with patch.dict(os.environ, {"CEREBRAS_API_KEY": "test-key"}):
+                with patch("mvp_site.game_state.execute_dice_tool") as mock_tool:
+                    mock_tool.return_value = {"notation": "1d20", "total": 15, "rolls": [15]}
 
-                from mvp_site.llm_providers import cerebras_provider
-                result = cerebras_provider.generate_content_with_tool_loop(
-                    prompt_contents=["Test dice roll"],
-                    model_name="qwen-3-235b-a22b-instruct-2507",
-                    system_instruction_text="You are a DM",
-                    temperature=0.7,
-                    max_output_tokens=1000,
-                    tools=[{"type": "function", "function": {"name": "roll_dice"}}],
-                    max_iterations=3,
-                )
+                    from mvp_site.llm_providers import cerebras_provider
+                    result = cerebras_provider.generate_content_with_tool_loop(
+                        prompt_contents=["Test dice roll"],
+                        model_name="qwen-3-235b-a22b-instruct-2507",
+                        system_instruction_text="You are a DM",
+                        temperature=0.7,
+                        max_output_tokens=1000,
+                        tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+                        max_iterations=3,
+                    )
 
-                # Must have made exactly 2 API calls (Phase 1 + Phase 2)
-                self.assertEqual(len(api_payloads), 2, "Should make 2 API calls")
+                    # Must have made exactly 2 API calls (Phase 1 + Phase 2)
+                    self.assertEqual(len(api_payloads), 2, "Should make 2 API calls")
 
-                # Phase 1: tools=YES, response_format=NO
-                self.assertTrue(
-                    api_payloads[0]["has_tools"],
-                    "Phase 1 should include tools"
-                )
-                self.assertFalse(
-                    api_payloads[0]["has_response_format"],
-                    "Phase 1 should NOT include response_format (API incompatibility)"
-                )
+                    # Phase 1: tools=YES, response_format=NO
+                    self.assertTrue(
+                        api_payloads[0]["has_tools"],
+                        "Phase 1 should include tools"
+                    )
+                    self.assertFalse(
+                        api_payloads[0]["has_response_format"],
+                        "Phase 1 should NOT include response_format (API incompatibility)"
+                    )
 
-                # Phase 2: tools=NO, response_format=YES
-                self.assertFalse(
-                    api_payloads[1]["has_tools"],
-                    "Phase 2 should NOT include tools"
-                )
-                self.assertTrue(
-                    api_payloads[1]["has_response_format"],
-                    "Phase 2 should include response_format for JSON mode"
-                )
+                    # Phase 2: tools=NO, response_format=YES
+                    self.assertFalse(
+                        api_payloads[1]["has_tools"],
+                        "Phase 2 should NOT include tools"
+                    )
+                    self.assertTrue(
+                        api_payloads[1]["has_response_format"],
+                        "Phase 2 should include response_format for JSON mode"
+                    )
 
 
 class TestDiceRollTools(unittest.TestCase):
