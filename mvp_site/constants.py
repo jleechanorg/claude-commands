@@ -58,6 +58,13 @@ PREMIUM_GEMINI_MODELS = [
     GEMINI_PREMIUM_MODEL,  # ✅ WORKS with code_execution + JSON (expensive: $2-4/M)
 ]
 
+# Gemini 3.x models - can use code_execution + JSON mode together (single phase)
+# All other Gemini models (2.x) require two-phase separation
+GEMINI_3_MODELS: set[str] = {
+    "gemini-3-pro-preview",
+    # Add future Gemini 3 models here as they become available
+}
+
 # =============================================================================
 # MODEL CAPABILITIES FOR DICE ROLLING
 # =============================================================================
@@ -107,29 +114,35 @@ MODELS_PRECOMPUTE_ONLY = {
 }
 
 
-def get_dice_roll_strategy(model_name: str) -> str:  # noqa: ARG001
+def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
     """
     Determine the dice rolling strategy for a given model.
 
-    ARCHITECTURE UPDATE (Dec 2024): All models now use 'precompute' strategy.
-    Pre-rolled dice are injected into every LLM request, eliminating the
-    need for tool loops (2-stage inference). This reduces API calls from
-    2 to 1 and simplifies the code across all providers.
+    ARCHITECTURE UPDATE (Dec 2024): Tool loops restored for all providers.
+    LLM decides what dice to roll, server executes with true randomness.
 
     Args:
-        model_name: Model identifier (kept for API compatibility, not used)
-
-    Legacy strategies (retained for reference):
-        'code_execution' - Model can run Python code directly (Gemini 2.0/3.0)
-        'tool_use' - Model supports function calling (DEPRECATED)
-        'precompute' - Pre-rolled dice in prompt (NOW UNIVERSAL)
+        model_name: Model identifier
+        provider: Provider name (gemini, cerebras, openrouter)
 
     Returns:
-        'precompute' - Always returns precompute for single-inference architecture
+        Strategy string:
+        - 'code_execution' - Gemini 3.x: code_execution + JSON together
+        - 'tool_use_phased' - Gemini 2.x: tools→JSON phase separation
+        - 'tool_use' - Cerebras/OpenRouter: function calling + JSON
+        - 'precompute' - Fallback for models without tool support
     """
-    # All models now use pre-rolled dice for single-inference architecture
-    # Code execution models (Gemini 2.0/3.0) may still use it as a fallback,
-    # but the primary path is pre-rolled dice in the prompt
+    # Gemini provider has special handling
+    if provider == "gemini":
+        if model_name in GEMINI_3_MODELS:
+            return "code_execution"  # Single-phase: code_execution + JSON
+        return "tool_use_phased"  # Two-phase: tools then JSON
+
+    # Cerebras/OpenRouter models with tool support
+    if model_name in MODELS_WITH_TOOL_USE:
+        return "tool_use"
+
+    # Fallback: precompute (pre-rolled dice in prompt)
     return "precompute"
 
 # Gemini model mapping from user preference to full model name

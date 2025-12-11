@@ -39,27 +39,16 @@ from mvp_site import constants, llm_service
 class TestHybridDiceRollSystem(unittest.TestCase):
     """Test the hybrid dice roll system across different model types."""
 
-    def test_code_execution_disabled_for_json_mode(self):
+    def test_gemini_uses_tool_loop_for_dice(self):
         """
-        Verify code_execution is DISABLED for all Gemini models in JSON mode.
+        Verify Gemini models use tool loop for dice rolling.
 
-        ARCHITECTURE UPDATE (Dec 2024): Gemini API does NOT support combining
-        response_mime_type="application/json" with code_execution tools. The API
-        returns: "Unable to submit request because controlled generation is not
-        supported with Code Execution tool"
-
-        All models now use pre-rolled dice injected into prompts, eliminating
-        the need for code_execution entirely.
+        ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use two-phase
+        tool loop. Phase 1 has tools (no JSON), Phase 2 has JSON (no tools).
         """
-        with patch('mvp_site.llm_providers.gemini_provider.get_client') as mock_get_client:
-            mock_client = Mock()
-            mock_get_client.return_value = mock_client
-
-            # Mock successful API response
-            mock_client.models.generate_content = Mock(
-                return_value=Mock(
-                    text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
-                )
+        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_tool_loop') as mock_tool_loop:
+            mock_tool_loop.return_value = Mock(
+                text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
             # Call the API function with Gemini 2.0 model
@@ -70,69 +59,77 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
-            # Verify the API was called
-            self.assertTrue(mock_client.models.generate_content.called)
-
-            # Get the configuration object passed to the API
-            call_args = mock_client.models.generate_content.call_args
-            config_obj = call_args[1]['config']
-
-            # CRITICAL: Verify JSON mode is enabled
-            self.assertEqual(
-                config_obj.response_mime_type,
-                'application/json',
-                'FAIL: JSON mode must be enabled for structured responses'
+            # Verify tool loop was called
+            self.assertTrue(
+                mock_tool_loop.called,
+                "generate_content_with_tool_loop should be called for Gemini models"
             )
 
-            # CRITICAL: Code execution MUST be disabled when JSON mode is used
-            # Gemini API does not support combining these features
-            self.assertIsNone(
-                config_obj.tools,
-                'FAIL: code_execution tools must NOT be set with JSON mode - '
-                'Gemini API returns "controlled generation is not supported with Code Execution tool"'
+            # Verify tools were passed
+            call_kwargs = mock_tool_loop.call_args[1] if mock_tool_loop.call_args[1] else {}
+            self.assertIn(
+                "tools",
+                call_kwargs,
+                "tools should be passed to Gemini tool loop"
             )
 
     def test_model_capability_detection(self):
         """
         Verify the model capability detection function works correctly.
 
-        ARCHITECTURE UPDATE (Dec 2024): All models now use 'precompute' strategy.
-        Pre-rolled dice are injected into every LLM request, eliminating the
-        need for tool loops (2-stage inference). This test verifies the new
-        unified approach.
+        ARCHITECTURE UPDATE (Dec 2024): Strategy now varies by provider:
+        - Gemini 3.x: code_execution (single-phase)
+        - Gemini 2.x: tool_use_phased (two-phase)
+        - Cerebras/OpenRouter with tool support: tool_use (two-phase)
+        - Fallback: precompute (pre-rolled dice in prompt)
         """
-        # All models now return 'precompute' - single-inference architecture
-        # This is intentional: pre-rolled dice are injected before every call
+        # Gemini 3.x models: code_execution (single-phase)
+        self.assertEqual(
+            constants.get_dice_roll_strategy("gemini-3-pro-preview", "gemini"),
+            "code_execution"
+        )
 
-        # Gemini models (previously code_execution) - now precompute
+        # Gemini 2.x models: tool_use_phased (two-phase)
+        self.assertEqual(
+            constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
+            "tool_use_phased"
+        )
+        self.assertEqual(
+            constants.get_dice_roll_strategy("gemini-2.5-flash", "gemini"),
+            "tool_use_phased"
+        )
+
+        # Cerebras models with tool support: tool_use
+        self.assertEqual(
+            constants.get_dice_roll_strategy("qwen-3-235b-a22b-instruct-2507", "cerebras"),
+            "tool_use"
+        )
+        self.assertEqual(
+            constants.get_dice_roll_strategy("zai-glm-4.6", "cerebras"),
+            "tool_use"
+        )
+
+        # OpenRouter models with tool support: tool_use
+        self.assertEqual(
+            constants.get_dice_roll_strategy("meta-llama/llama-3.1-70b-instruct", "openrouter"),
+            "tool_use"
+        )
+
+        # Models without tool support: precompute
+        self.assertEqual(
+            constants.get_dice_roll_strategy("llama-3.3-70b", "cerebras"),
+            "precompute"
+        )
+
+        # Unknown models: precompute
+        self.assertEqual(
+            constants.get_dice_roll_strategy("unknown-model", ""),
+            "precompute"
+        )
+
+        # No provider specified: precompute (backwards compatibility)
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash"),
-            "precompute"
-        )
-        self.assertEqual(
-            constants.get_dice_roll_strategy("gemini-3-pro-preview"),
-            "precompute"
-        )
-
-        # Cerebras/OpenRouter models (previously tool_use) - now precompute
-        self.assertEqual(
-            constants.get_dice_roll_strategy("qwen-3-235b-a22b-instruct-2507"),
-            "precompute"
-        )
-        self.assertEqual(
-            constants.get_dice_roll_strategy("zai-glm-4.6"),
-            "precompute"
-        )
-
-        # llama-3.3-70b - always precompute
-        self.assertEqual(
-            constants.get_dice_roll_strategy("llama-3.3-70b"),
-            "precompute"
-        )
-
-        # Unknown models - precompute
-        self.assertEqual(
-            constants.get_dice_roll_strategy("unknown-model"),
             "precompute"
         )
 
@@ -224,18 +221,13 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             self.assertIsNotNone(result["damage"])
             self.assertIn("total", result["damage"])
 
-    def test_api_call_has_required_config_params(self):
+    def test_api_call_passes_required_params_to_tool_loop(self):
         """
-        Verify API calls have all required configuration parameters.
+        Verify API calls pass required parameters to tool loop.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
-            mock_client = Mock()
-            mock_get_client.return_value = mock_client
-
-            mock_client.models.generate_content = Mock(
-                return_value=Mock(
-                    text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
-                )
+        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_loop") as mock_tool_loop:
+            mock_tool_loop.return_value = Mock(
+                text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
             llm_service._call_llm_api(
@@ -245,34 +237,28 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
-            call_args = mock_client.models.generate_content.call_args
-            config_obj = call_args[1]["config"]
+            # Verify tool loop was called with expected params
+            self.assertTrue(mock_tool_loop.called)
+            call_kwargs = mock_tool_loop.call_args[1]
 
-            # Verify JSON mode is enabled
+            # Verify model name is passed
             self.assertEqual(
-                config_obj.response_mime_type,
-                "application/json",
-                "FAIL: JSON mode not configured"
+                call_kwargs.get("model_name"),
+                "gemini-2.0-flash",
+                "FAIL: model_name not passed to tool loop"
             )
 
-            # Verify token limit is configured
+            # Verify temperature is passed
             self.assertEqual(
-                config_obj.max_output_tokens,
-                llm_service.JSON_MODE_MAX_OUTPUT_TOKENS,
-                "FAIL: Token limit not configured"
-            )
-
-            # Verify temperature is configured
-            self.assertEqual(
-                config_obj.temperature,
+                call_kwargs.get("temperature"),
                 llm_service.TEMPERATURE,
-                "FAIL: Temperature not configured"
+                "FAIL: Temperature not passed to tool loop"
             )
 
-            # Verify safety settings exist
+            # Verify tools are passed
             self.assertIsNotNone(
-                config_obj.safety_settings,
-                "FAIL: Safety settings not configured"
+                call_kwargs.get("tools"),
+                "FAIL: Tools not passed to tool loop"
             )
 
 
@@ -715,91 +701,91 @@ class TestToolLoopAllCodePaths(unittest.TestCase):
                 )
 
 
-class TestPreRolledDiceGeneration(unittest.TestCase):
-    """Test the pre-rolled dice generation function."""
+class TestDiceRollTools(unittest.TestCase):
+    """Test the dice roll tool definitions."""
 
-    def test_generate_pre_rolled_dice_returns_all_die_types(self):
+    def test_dice_roll_tools_exist(self):
         """
-        Verify generate_pre_rolled_dice returns arrays for all standard dice.
+        Verify DICE_ROLL_TOOLS array contains all required tools.
         """
-        from mvp_site.game_state import generate_pre_rolled_dice
+        from mvp_site.game_state import DICE_ROLL_TOOLS
 
-        dice = generate_pre_rolled_dice()
+        # Get tool names
+        tool_names = [t["function"]["name"] for t in DICE_ROLL_TOOLS]
 
-        # Verify all die types are present
-        self.assertIn("d20", dice)
-        self.assertIn("d12", dice)
-        self.assertIn("d10", dice)
-        self.assertIn("d8", dice)
-        self.assertIn("d6", dice)
-        self.assertIn("d4", dice)
-        self.assertIn("d100", dice)
+        # Verify all required tools exist
+        self.assertIn("roll_dice", tool_names)
+        self.assertIn("roll_attack", tool_names)
+        self.assertIn("roll_skill_check", tool_names)
+        self.assertIn("roll_saving_throw", tool_names)
 
-    def test_generate_pre_rolled_dice_default_counts(self):
+    def test_execute_dice_tool_roll_dice(self):
         """
-        Verify default dice counts are sufficient for typical combat.
+        Verify execute_dice_tool handles roll_dice correctly.
         """
-        from mvp_site.game_state import generate_pre_rolled_dice
+        from mvp_site.game_state import execute_dice_tool
 
-        dice = generate_pre_rolled_dice()
+        result = execute_dice_tool("roll_dice", {"notation": "2d6+3", "purpose": "damage"})
 
-        # Default counts from function
-        self.assertEqual(len(dice["d20"]), 100)  # 100 d20s by default
-        self.assertEqual(len(dice["d6"]), 40)    # 40 d6s
-        self.assertEqual(len(dice["d8"]), 30)    # 30 d8s
+        self.assertIn("notation", result)
+        self.assertIn("total", result)
+        self.assertIn("rolls", result)
+        self.assertEqual(result["notation"], "2d6+3")
+        self.assertEqual(result["purpose"], "damage")
 
-    def test_generate_pre_rolled_dice_values_in_range(self):
+    def test_execute_dice_tool_roll_attack(self):
         """
-        Verify all generated dice values are within valid ranges.
+        Verify execute_dice_tool handles roll_attack correctly.
         """
-        from mvp_site.game_state import generate_pre_rolled_dice
+        from mvp_site.game_state import execute_dice_tool
 
-        dice = generate_pre_rolled_dice()
+        result = execute_dice_tool("roll_attack", {
+            "attack_modifier": 5,
+            "damage_notation": "1d8+3",
+            "target_ac": 15
+        })
 
-        # Check d20 values (1-20)
-        for val in dice["d20"]:
-            self.assertGreaterEqual(val, 1)
-            self.assertLessEqual(val, 20)
+        self.assertIn("attack_roll", result)
+        self.assertIn("target_ac", result)
+        self.assertIn("hit", result)
+        self.assertEqual(result["target_ac"], 15)
 
-        # Check d6 values (1-6)
-        for val in dice["d6"]:
-            self.assertGreaterEqual(val, 1)
-            self.assertLessEqual(val, 6)
-
-        # Check d100 values (1-100)
-        for val in dice["d100"]:
-            self.assertGreaterEqual(val, 1)
-            self.assertLessEqual(val, 100)
-
-    def test_generate_pre_rolled_dice_custom_counts(self):
+    def test_execute_dice_tool_roll_skill_check(self):
         """
-        Verify custom dice counts work correctly.
+        Verify execute_dice_tool handles roll_skill_check correctly.
         """
-        from mvp_site.game_state import generate_pre_rolled_dice
+        from mvp_site.game_state import execute_dice_tool
 
-        dice = generate_pre_rolled_dice(num_d20=50, num_d6=10)
+        result = execute_dice_tool("roll_skill_check", {
+            "attribute_modifier": 3,
+            "proficiency_bonus": 2,
+            "proficient": True,
+            "dc": 15,
+            "skill_name": "Stealth"
+        })
 
-        self.assertEqual(len(dice["d20"]), 50)
-        self.assertEqual(len(dice["d6"]), 10)
+        self.assertIn("skill", result)
+        self.assertIn("total", result)
+        self.assertIn("success", result)
+        self.assertEqual(result["skill"], "Stealth")
 
 
 class TestLLMServiceToolIntegration(unittest.TestCase):
     """Test llm_service integration with tool use providers."""
 
-    def test_call_llm_api_uses_direct_call_not_tool_loop(self):
+    def test_call_llm_api_routes_to_tool_loop_for_tool_use_models(self):
         """
-        Verify _call_llm_api uses direct generate_content, NOT tool loop.
+        Verify _call_llm_api routes to tool loop for models with tool_use capability.
 
-        ARCHITECTURE UPDATE (Dec 2024): All models now use pre-rolled dice
-        injected into the prompt. Tool loops are deprecated. This test
-        verifies the new single-inference architecture.
+        ARCHITECTURE UPDATE (Dec 2024): Models in MODELS_WITH_TOOL_USE use
+        generate_content_with_tool_loop for two-phase inference.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content") as mock_generate:
-            mock_generate.return_value = Mock(
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_loop") as mock_tool_loop:
+            mock_tool_loop.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # This should use direct generate_content (not tool loop)
+            # This model is in MODELS_WITH_TOOL_USE, so should use tool loop
             llm_service._call_llm_api(
                 ["test prompt"],
                 "qwen-3-235b-a22b-instruct-2507",
@@ -807,17 +793,50 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
 
-            # Verify direct call was made (not tool loop)
+            # Verify tool loop was called
             self.assertTrue(
-                mock_generate.called,
-                "generate_content should be called (not generate_content_with_tool_loop)",
+                mock_tool_loop.called,
+                "generate_content_with_tool_loop should be called for tool_use models",
             )
-            # Verify tools were NOT passed (pre-rolled dice are in prompt)
-            call_kwargs = mock_generate.call_args[1] if mock_generate.call_args[1] else {}
-            self.assertNotIn(
+            # Verify tools were passed (DICE_ROLL_TOOLS)
+            call_kwargs = mock_tool_loop.call_args[1] if mock_tool_loop.call_args[1] else {}
+            self.assertIn(
                 "tools",
                 call_kwargs,
-                "PASS: tools should NOT be passed - pre-rolled dice are in prompt"
+                "tools should be passed to tool loop"
+            )
+
+    def test_call_llm_api_routes_to_tool_loop_for_all_cerebras_models(self):
+        """
+        Verify _call_llm_api routes ALL Cerebras models to tool loop.
+
+        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use tool loop.
+        The model decides what dice to roll, server executes with true randomness.
+        """
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_loop") as mock_tool_loop:
+            mock_tool_loop.return_value = Mock(
+                text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
+            )
+
+            # Even llama-3.3-70b now uses tool loop
+            llm_service._call_llm_api(
+                ["test prompt"],
+                "llama-3.3-70b",
+                "test logging",
+                provider_name=constants.LLM_PROVIDER_CEREBRAS
+            )
+
+            # Verify tool loop was called
+            self.assertTrue(
+                mock_tool_loop.called,
+                "generate_content_with_tool_loop should be called for ALL Cerebras models",
+            )
+            # Verify tools were passed (DICE_ROLL_TOOLS)
+            call_kwargs = mock_tool_loop.call_args[1] if mock_tool_loop.call_args[1] else {}
+            self.assertIn(
+                "tools",
+                call_kwargs,
+                "tools should be passed to tool loop"
             )
 
 

@@ -3,10 +3,6 @@
 Uses the Cerebras OpenAI-compatible chat completions endpoint to keep
 llm_service orchestration provider-agnostic.
 
-Supports tool use (function calling) for dice rolling when code_execution
-is not available. Uses two-stage inference: LLM requests tool -> execute locally
--> send result back -> LLM generates final response.
-
 IMPORTANT: Uses json_schema (strict:false) instead of legacy json_object
 to prevent schema echo issues where API returns {"type": "object"} instead
 of actual content. strict:false keeps planning_block flexible for dynamic
@@ -96,41 +92,31 @@ def _unwrap_nested_json(text: str) -> tuple[str, bool]:
 
 
 class CerebrasResponse:
-    """Wrapper exposing a `.text` attribute for downstream parsing.
-
-    Also exposes tool_calls for function calling support.
-    """
+    """Wrapper exposing a `.text` attribute for downstream parsing."""
 
     def __init__(self, text: str, raw_response: Any):
         self.text = text
         self.raw_response = raw_response
-        # Extract tool_calls from response if present
-        self._tool_calls: list[dict] | None = None
-        self._finish_reason: str | None = None
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging helper
+        return f"CerebrasResponse(text_length={len(self.text)})"
+
+    def get_tool_calls(self) -> list[dict] | None:
+        """Extract tool_calls from the raw response if present."""
         try:
-            choice = raw_response.get("choices", [{}])[0]
-            message = choice.get("message", {})
-            self._tool_calls = message.get("tool_calls")
-            self._finish_reason = choice.get("finish_reason")
-        except (KeyError, IndexError, TypeError):
-            pass
+            choices = self.raw_response.get("choices", [])
+            if choices:
+                message = choices[0].get("message", {})
+                tool_calls = message.get("tool_calls")
+                return tool_calls if tool_calls else None
+        except (AttributeError, IndexError, KeyError):
+            return None
+        return None
 
     @property
     def tool_calls(self) -> list[dict] | None:
-        """Return tool_calls if the LLM requested function calls."""
-        return self._tool_calls
-
-    @property
-    def finish_reason(self) -> str | None:
-        """Return the finish_reason from the response."""
-        return self._finish_reason
-
-    def get_tool_calls(self) -> list[dict]:
-        """Return tool_calls as a list (empty if none)."""
-        return self._tool_calls or []
-
-    def __repr__(self) -> str:  # pragma: no cover - debugging helper
-        return f"CerebrasResponse(text_length={len(self.text)}, tool_calls={len(self._tool_calls or [])})"
+        """Property accessor for tool_calls."""
+        return self.get_tool_calls()
 
 
 def _stringify_parts(parts: list[Any]) -> str:
@@ -443,3 +429,4 @@ def generate_content_with_tool_loop(
         )
 
     return response
+

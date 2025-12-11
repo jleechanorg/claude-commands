@@ -58,12 +58,7 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import (
-    GameState,
-    compute_combat_results,
-    detect_action_type,
-    generate_pre_rolled_dice,
-)
+from mvp_site.game_state import DICE_ROLL_TOOLS, GameState, execute_dice_tool
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -1552,56 +1547,7 @@ def _call_llm_api_with_llm_request(
 
     # =========================================================================
     # PRE-ROLLED DICE INJECTION (Single-Inference Architecture)
-    # =========================================================================
-    # Generate fresh random dice BEFORE every LLM call. The LLM uses these
-    # pre-rolled values in order, ensuring true randomness with only 1 API call.
-    # This eliminates the tool loop (2-stage inference) for all providers.
-    # =========================================================================
-    if "pre_rolled_dice" not in json_data or not json_data.get("pre_rolled_dice"):
-        json_data["pre_rolled_dice"] = generate_pre_rolled_dice()
-        logging_util.info(
-            f"🎲 Injected pre-rolled dice: d20={len(json_data['pre_rolled_dice']['d20'])}, "
-            f"d6={len(json_data['pre_rolled_dice']['d6'])}"
-        )
 
-    # =========================================================================
-    # PRE-COMPUTED COMBAT RESULTS (Backend-Authoritative Dice)
-    # =========================================================================
-    # Detect action type and compute dice results BEFORE calling LLM.
-    # The LLM receives authoritative outcomes and only needs to narrate them,
-    # eliminating contradictions from LLM math errors.
-    # =========================================================================
-    user_action = json_data.get("user_action", "")
-    player_character = json_data.get("game_state", {}).get("player_character_data", {})
-    conditions = player_character.get("conditions", [])
-
-    action_info = detect_action_type(user_action, json_data.get("game_state"), conditions)
-
-    if action_info.get("type") != "other":
-        # Get target entity from entity_tracking if available
-        entity_tracking = json_data.get("entity_tracking", {})
-        target_entity = None
-        # Try to find target in combat_state or entity_tracking
-        combat_state = json_data.get("game_state", {}).get("combat_state", {})
-        if combat_state.get("combatants"):
-            # Use first enemy as target (simplified)
-            for name, data in combat_state["combatants"].items():
-                if isinstance(data, dict):
-                    target_entity = {"name": name, **data}
-                    break
-
-        pre_computed = compute_combat_results(
-            action_info,
-            json_data["pre_rolled_dice"],
-            player_character,
-            target_entity,
-            json_data.get("game_state"),
-        )
-        json_data["pre_computed_results"] = pre_computed
-        logging_util.info(
-            f"🎯 Pre-computed {action_info['type']}: "
-            f"consumed {pre_computed.get('dice_consumed', {})}"
-        )
 
     # Re-validate payload size after dice injection (~1.8KB overhead, negligible vs 10MB limit)
     # This is a safety check - dice add <0.02% to payload size
@@ -1695,43 +1641,40 @@ def _call_llm_api(
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
             logging_util.info(
-                "🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
+                "🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_content_with_tool_loop"
             )
-            return gemini_provider.generate_json_mode_content(
+            return gemini_provider.generate_content_with_tool_loop(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
                 temperature=TEMPERATURE,
                 safety_settings=SAFETY_SETTINGS,
                 json_mode_max_output_tokens=safe_output_limit,
+                tools=DICE_ROLL_TOOLS,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
-            # =========================================================================
-            # PRE-ROLLED DICE: No tool loop needed - dice are in the prompt
-            # =========================================================================
             logging_util.info(
-                f"🔍 CALL_LLM_API_OPENROUTER: Direct call (pre-rolled dice in prompt, model={model_name})"
+                "🔍 CALL_LLM_API_OPENROUTER: Calling openrouter_provider.generate_content_with_tool_loop"
             )
-            return openrouter_provider.generate_content(
+            return openrouter_provider.generate_content_with_tool_loop(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
                 temperature=TEMPERATURE,
                 max_output_tokens=safe_output_limit,
+                tools=DICE_ROLL_TOOLS,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
-            # =========================================================================
-            # PRE-ROLLED DICE: No tool loop needed - dice are in the prompt
-            # =========================================================================
             logging_util.info(
-                f"🔍 CALL_LLM_API_CEREBRAS: Direct call (pre-rolled dice in prompt, model={model_name})"
+                "🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content_with_tool_loop"
             )
-            return cerebras_provider.generate_content(
+            return cerebras_provider.generate_content_with_tool_loop(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
                 temperature=TEMPERATURE,
                 max_output_tokens=safe_output_limit,
+                tools=DICE_ROLL_TOOLS,
             )
         logging_util.error(
             f"🔍 CALL_LLM_API_UNSUPPORTED: provider_name={provider_name} is not supported!"
