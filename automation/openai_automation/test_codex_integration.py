@@ -20,19 +20,18 @@ import asyncio
 import os
 import sys
 
-try:
-    import aiohttp
-except ModuleNotFoundError:  # pragma: no cover - optional dependency for CI
-    aiohttp = None
+import aiohttp
 import pytest
 from playwright.async_api import async_playwright
+
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_root)
+from codex_github_mentions import CodexGitHubMentionsAutomation
 
 
 # Helper to check if Chrome is running with CDP
 async def chrome_is_running(port=9222):
     """Check if Chrome is running with remote debugging."""
-    if aiohttp is None:
-        return False
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -200,11 +199,6 @@ class TestCodexAutomationClass:
     @pytest.mark.asyncio
     async def test_automation_class_can_connect(self):
         """Test that automation class can connect to Chrome."""
-        # Import here to avoid import errors if playwright not installed
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
-from codex_github_mentions import CodexGitHubMentionsAutomation
-
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
         try:

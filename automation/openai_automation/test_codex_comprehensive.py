@@ -19,10 +19,7 @@ import os
 import sys
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-try:
-    import aiohttp
-except ModuleNotFoundError:  # pragma: no cover - optional dependency for CI
-    aiohttp = None
+import aiohttp
 import pytest
 from playwright.async_api import async_playwright
 
@@ -34,8 +31,6 @@ from codex_github_mentions import CodexGitHubMentionsAutomation
 # Helper to check if Chrome is running with CDP
 async def chrome_is_running(port=9222):
     """Check if Chrome is running with remote debugging."""
-    if aiohttp is None:
-        return False
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
