@@ -415,10 +415,10 @@ class TestConversationContextExtractionBugFix(unittest.TestCase):
     def test_extract_conversation_context_fallback_pattern_bug(self):
         """Test the specific fallback pattern bug - THIS IS THE CORE BUG TEST"""
         # This test captures the exact bug: pattern '*worktree_cereb*' not matching
-        # '-Users-jleechan-projects-worldarchitect-ai-worktree-cereb'
+        # '-Users-USER-projects-your-project-com-worktree-cereb'
 
-        current_path = "/Users/jleechan/projects/worldarchitect.ai/worktree_cereb"
-        claude_dir_name = "-Users-jleechan-projects-worldarchitect-ai-worktree-cereb"
+        current_path = "/Users/USER/projects/your-project.com/worktree_cereb"
+        claude_dir_name = "-Users-USER-projects-your-project-com-worktree-cereb"
 
         # Create Claude directory with the problematic name
         claude_project_dir = self.projects_dir / claude_dir_name
