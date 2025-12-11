@@ -808,20 +808,20 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
 
     def test_call_llm_api_routes_to_tool_loop_for_all_cerebras_models(self):
         """
-        Verify _call_llm_api routes ALL Cerebras models to tool loop.
+        Verify _call_llm_api routes Cerebras models in MODELS_WITH_TOOL_USE to tool loop.
 
-        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use tool loop.
-        The model decides what dice to roll, server executes with true randomness.
+        ARCHITECTURE UPDATE (Dec 2024): Only models in MODELS_WITH_TOOL_USE use tool loop.
+        Other models fall back to direct call without tools.
         """
         with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_loop") as mock_tool_loop:
             mock_tool_loop.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # Even llama-3.3-70b now uses tool loop
+            # qwen-3-235b IS in MODELS_WITH_TOOL_USE - should use tool loop
             llm_service._call_llm_api(
                 ["test prompt"],
-                "llama-3.3-70b",
+                "qwen-3-235b-a22b-instruct-2507",
                 "test logging",
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
@@ -829,7 +829,7 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
             # Verify tool loop was called
             self.assertTrue(
                 mock_tool_loop.called,
-                "generate_content_with_tool_loop should be called for ALL Cerebras models",
+                "generate_content_with_tool_loop should be called for models in MODELS_WITH_TOOL_USE",
             )
             # Verify tools were passed (DICE_ROLL_TOOLS)
             call_kwargs = mock_tool_loop.call_args[1] if mock_tool_loop.call_args[1] else {}
@@ -837,6 +837,32 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 "tools",
                 call_kwargs,
                 "tools should be passed to tool loop"
+            )
+
+    def test_call_llm_api_falls_back_to_direct_call_for_unsupported_models(self):
+        """
+        Verify _call_llm_api falls back to direct call for models NOT in MODELS_WITH_TOOL_USE.
+
+        Models like llama-3.3-70b don't reliably support multi-turn tool calling,
+        so they should use direct call without tools.
+        """
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content") as mock_direct:
+            mock_direct.return_value = Mock(
+                text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
+            )
+
+            # llama-3.3-70b is NOT in MODELS_WITH_TOOL_USE - should use direct call
+            llm_service._call_llm_api(
+                ["test prompt"],
+                "llama-3.3-70b",
+                "test logging",
+                provider_name=constants.LLM_PROVIDER_CEREBRAS
+            )
+
+            # Verify direct call was used (not tool loop)
+            self.assertTrue(
+                mock_direct.called,
+                "generate_content should be called for models NOT in MODELS_WITH_TOOL_USE",
             )
 
 

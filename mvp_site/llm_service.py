@@ -1640,10 +1640,10 @@ def _call_llm_api(
         )
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
-            # Check if this is a Gemini 3 model (supports code_execution + JSON)
+            # Check if this is a Gemini 3 model (supports function calling + JSON)
             if model_name in constants.GEMINI_3_MODELS:
                 logging_util.info(
-                    f"🔍 CALL_LLM_API_GEMINI3: Using code_execution + JSON mode for {model_name}"
+                    f"🔍 CALL_LLM_API_GEMINI3: Using function calling + JSON mode for {model_name}"
                 )
                 return gemini_provider.generate_content_with_code_execution(
                     prompt_contents=prompt_contents,
@@ -1652,6 +1652,7 @@ def _call_llm_api(
                     temperature=TEMPERATURE,
                     safety_settings=SAFETY_SETTINGS,
                     json_mode_max_output_tokens=safe_output_limit,
+                    tools=DICE_ROLL_TOOLS,
                 )
             # Gemini 2.x: Use two-phase tool loop
             logging_util.info(
@@ -1667,28 +1668,54 @@ def _call_llm_api(
                 tools=DICE_ROLL_TOOLS,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
+            # Only use tool loop for models that support multi-turn tool calling
+            if model_name in constants.MODELS_WITH_TOOL_USE:
+                logging_util.info(
+                    f"🔍 CALL_LLM_API_OPENROUTER: Using tool loop for {model_name}"
+                )
+                return openrouter_provider.generate_content_with_tool_loop(
+                    prompt_contents=prompt_contents,
+                    model_name=model_name,
+                    system_instruction_text=system_instruction_text,
+                    temperature=TEMPERATURE,
+                    max_output_tokens=safe_output_limit,
+                    tools=DICE_ROLL_TOOLS,
+                )
+            # Fallback: Direct call without tools for unsupported models
             logging_util.info(
-                "🔍 CALL_LLM_API_OPENROUTER: Calling openrouter_provider.generate_content_with_tool_loop"
+                f"🔍 CALL_LLM_API_OPENROUTER: Direct call (no tools) for {model_name}"
             )
-            return openrouter_provider.generate_content_with_tool_loop(
+            return openrouter_provider.generate_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
                 temperature=TEMPERATURE,
                 max_output_tokens=safe_output_limit,
-                tools=DICE_ROLL_TOOLS,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
+            # Only use tool loop for models that support multi-turn tool calling
+            if model_name in constants.MODELS_WITH_TOOL_USE:
+                logging_util.info(
+                    f"🔍 CALL_LLM_API_CEREBRAS: Using tool loop for {model_name}"
+                )
+                return cerebras_provider.generate_content_with_tool_loop(
+                    prompt_contents=prompt_contents,
+                    model_name=model_name,
+                    system_instruction_text=system_instruction_text,
+                    temperature=TEMPERATURE,
+                    max_output_tokens=safe_output_limit,
+                    tools=DICE_ROLL_TOOLS,
+                )
+            # Fallback: Direct call without tools for unsupported models
             logging_util.info(
-                "🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content_with_tool_loop"
+                f"🔍 CALL_LLM_API_CEREBRAS: Direct call (no tools) for {model_name}"
             )
-            return cerebras_provider.generate_content_with_tool_loop(
+            return cerebras_provider.generate_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
                 temperature=TEMPERATURE,
                 max_output_tokens=safe_output_limit,
-                tools=DICE_ROLL_TOOLS,
             )
         logging_util.error(
             f"🔍 CALL_LLM_API_UNSUPPORTED: provider_name={provider_name} is not supported!"
