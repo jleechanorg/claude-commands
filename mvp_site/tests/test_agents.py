@@ -284,7 +284,7 @@ class TestAgentInstructionBuilding(unittest.TestCase):
         )
 
         self.assertIsInstance(instructions, str)
-        self.assertTrue(len(instructions) > 0)
+        self.assertGreater(len(instructions), 0)
 
     @patch("mvp_site.llm_service._load_instruction_file")
     def test_god_mode_agent_builds_instructions(self, mock_load):
@@ -295,7 +295,7 @@ class TestAgentInstructionBuilding(unittest.TestCase):
         instructions = agent.build_system_instructions()
 
         self.assertIsInstance(instructions, str)
-        self.assertTrue(len(instructions) > 0)
+        self.assertGreater(len(instructions), 0)
 
     @patch("mvp_site.llm_service._load_instruction_file")
     def test_god_mode_ignores_selected_prompts(self, mock_load):

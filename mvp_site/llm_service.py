@@ -2685,18 +2685,14 @@ def get_initial_story(
     agent = StoryModeAgent(game_state=None)  # No game state yet for initial story
     builder = agent.prompt_builder
 
-    # Build core instructions using agent (without continuation reminders for initial story)
-    # We build the base instructions, then add initial-story-specific parts
-    system_instruction_parts: list[str] = builder.build_core_system_instructions()
-
-    # Add character-related instructions
-    builder.add_character_instructions(system_instruction_parts, selected_prompts)
-
-    # Add selected prompt instructions
-    builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts)
-
-    # Add system reference instructions
-    builder.add_system_reference_instructions(system_instruction_parts)
+    # Start from agent’s standard story-mode stack (without continuation reminders)
+    system_instruction_parts: list[str] = [
+        agent.build_system_instructions(
+            selected_prompts=selected_prompts,
+            use_default_world=use_default_world,
+            include_continuation_reminder=False,
+        )
+    ]
 
     # Initial story specific: Add companion generation instruction if requested
     if generate_companions:
@@ -2705,10 +2701,8 @@ def get_initial_story(
     # Initial story specific: Add background summary instruction
     system_instruction_parts.append(builder.build_background_summary_instruction())
 
-    # Finalize with world and debug instructions
-    system_instruction_final = builder.finalize_instructions(
-        system_instruction_parts, use_default_world
-    )
+    # Combine all initial story instructions
+    system_instruction_final = "\n\n".join(system_instruction_parts)
 
     # Add clear indication when using default world setting
     if use_default_world:
@@ -3145,19 +3139,16 @@ def continue_story(
         # STORY MODE: Use StoryModeAgent with full gameplay prompts
         # Include continuation reminders only in character mode
         include_continuation = mode == constants.MODE_CHARACTER
-        # Type narrowing: we know agent is StoryModeAgent when not god mode
-        story_agent = agent
-        if isinstance(story_agent, StoryModeAgent):
-            system_instruction_final = story_agent.build_system_instructions(
+
+        if isinstance(agent, StoryModeAgent):
+            system_instruction_final = agent.build_system_instructions(
                 selected_prompts=selected_prompts,
                 use_default_world=use_default_world,
                 include_continuation_reminder=include_continuation,
             )
         else:
-            # Fallback - should never happen but satisfies type checker
-            system_instruction_final = agent.build_system_instructions(
-                selected_prompts=selected_prompts,
-                use_default_world=use_default_world,
+            raise TypeError(
+                f"Unexpected agent type for story mode flow: {type(agent).__name__}"
             )
 
     # --- NEW: Budget-based Truncation ---

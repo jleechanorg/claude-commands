@@ -86,6 +86,7 @@ class BaseAgent(ABC):
         self,
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
     ) -> str:
         """
         Build the complete system instructions for this agent.
@@ -93,6 +94,7 @@ class BaseAgent(ABC):
         Args:
             selected_prompts: User-selected prompt types (narrative, mechanics, etc.)
             use_default_world: Whether to include world content in instructions
+            include_continuation_reminder: Whether to include continuation reminders
 
         Returns:
             Complete system instruction string for the LLM call
@@ -285,6 +287,7 @@ class GodModeAgent(BaseAgent):
         self,
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
     ) -> str:
         """
         Build system instructions for god mode.
@@ -296,19 +299,15 @@ class GodModeAgent(BaseAgent):
         - D&D SRD (game rules knowledge)
         - Mechanics (detailed game rules)
 
-        Note: selected_prompts is ignored - god mode uses its fixed prompt set.
-        Note: use_default_world is always False - god mode doesn't need world lore.
-
-        Args:
-            selected_prompts: Ignored for god mode
-            use_default_world: Ignored for god mode (always False)
+        Note: selected_prompts and use_default_world parameters are accepted to
+        match the BaseAgent interface but are intentionally ignored because god
+        mode always uses its fixed prompt set without world lore.
 
         Returns:
             Complete system instruction string for administrative commands
         """
-        # Explicitly ignore selected_prompts and use_default_world
-        del selected_prompts
-        del use_default_world
+        # Parameters are unused for god mode but kept for interface consistency
+        _ = (selected_prompts, use_default_world, include_continuation_reminder)
 
         builder = self._prompt_builder
 

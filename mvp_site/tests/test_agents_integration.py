@@ -12,11 +12,10 @@ Tests cover:
 - Integration between agents and PromptBuilder
 """
 
-import json
 import os
 import sys
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 # Add the parent directory to path to enable imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -108,7 +107,7 @@ class TestAgentInstructionBuildingIntegration(unittest.TestCase):
 
         # Verify instruction building
         self.assertIsInstance(instructions, str)
-        self.assertTrue(len(instructions) > 0)
+        self.assertGreater(len(instructions), 0)
 
         # Verify that instruction files were loaded
         self.assertTrue(mock_load.called)
@@ -124,7 +123,7 @@ class TestAgentInstructionBuildingIntegration(unittest.TestCase):
 
         # Verify instruction building
         self.assertIsInstance(instructions, str)
-        self.assertTrue(len(instructions) > 0)
+        self.assertGreater(len(instructions), 0)
 
         # Verify that instruction files were loaded
         self.assertTrue(mock_load.called)
@@ -142,7 +141,7 @@ class TestAgentInstructionBuildingIntegration(unittest.TestCase):
         )
 
         self.assertIsInstance(instructions, str)
-        self.assertTrue(len(instructions) > 0)
+        self.assertGreater(len(instructions), 0)
 
 
 class TestAgentGameStateIntegration(unittest.TestCase):
