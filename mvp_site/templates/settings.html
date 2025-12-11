@@ -57,8 +57,11 @@
                         <select id="openrouterModel" class="form-select" name="openrouterModel">
                             <option value="meta-llama/llama-3.1-70b-instruct">Meta Llama 3.1 70B Instruct (default)</option>
                             <option value="meta-llama/llama-3.1-405b-instruct">Meta Llama 3.1 405B Instruct (131K context)</option>
+                            <option value="meta-llama/llama-3.1-8b-instruct">Meta Llama 3.1 8B Instruct (131K context, $0.10/M)</option>
+                            <option value="openai/gpt-oss-120b">GPT-OSS-120B (131K context, $0.35/$0.75/M)</option>
                             <option value="z-ai/glm-4.6">GLM 4.6 (200K context, fast tools)</option>
-                            <option value="x-ai/grok-4.1-fast:free">Grok 4.1 Fast (2M context, xAI flagship)</option>
+                            <option value="x-ai/grok-4.1-fast">Grok 4.1 Fast (2M context, xAI flagship)</option>
+                            <option value="x-ai/grok-4.1-fast:free">Grok 4.1 Fast (legacy free tier alias)</option>
                         </select>
                         <small class="text-muted">Large-context frontier models via OpenRouter.</small>
                     </div>
@@ -70,6 +73,8 @@
                             <option value="qwen-3-235b-a22b-instruct-2507">Qwen 3 235B (131K context, best for RPG campaigns)</option>
                             <option value="zai-glm-4.6">GLM 4.6 (131K context, fast tools)</option>
                             <option value="llama-3.3-70b">Llama 3.3 70B (65K context, fast narrative)</option>
+                            <option value="llama-3.1-8b">Llama 3.1 8B (131K context, $0.10/M - cheapest)</option>
+                            <option value="gpt-oss-120b">GPT-OSS-120B (131K context, $0.35/$0.75/M)</option>
                         </select>
                         <small class="text-muted">Bypass aggregators and call Cerebras directly for lower latency.</small>
                     </div>
