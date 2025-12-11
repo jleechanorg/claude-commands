@@ -16,6 +16,10 @@ This system implements the **core design philosophy**: **one general agent per t
 - **Production Ready**: Complete A2A implementation with comprehensive testing
 - **Massive Cleanup**: Removed 16,596 lines of outdated POC implementations
 
+## 🔁 Single Source of Truth for Orchestration Code
+
+The only supported package location is `orchestration/`. A historical duplicate lived at `orchestration/orchestration`, but it was an older snapshot missing newer features (for example, Gemini CLI support and the expanded CLI tests). We confirmed the duplicate differed only in `task_dispatcher.py` and `tests/test_cli_support.py`, and those newer behaviors are preserved in the canonical package. A regression test now fails fast if the nested package reappears.
+
 ## 🎯 What It Actually Does
 
 ```bash

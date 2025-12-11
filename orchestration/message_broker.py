@@ -10,6 +10,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+from orchestration.core import AgentRegistration
+
 
 class MessageType(Enum):
     TASK_ASSIGNMENT = "task_assignment"
@@ -37,7 +39,7 @@ class MessageBroker:
 
     def __init__(self, _redis_host="localhost", _redis_port=6379, _redis_password=None):
         # Redis parameters ignored - file-based coordination only
-        self.agent_registry = {}
+        self.agent_registry: dict[str, AgentRegistration] = {}
         self.running = False
         print("📁 File-based MessageBroker initialized (Redis functionality removed)")
 
@@ -53,15 +55,9 @@ class MessageBroker:
 
     def register_agent(self, agent_id: str, agent_type: str, capabilities: list[str]):
         """Register an agent in the system (file-based tracking only)."""
-        agent_info = {
-            "id": agent_id,
-            "type": agent_type,
-            "capabilities": capabilities,
-            "status": "active",
-            "last_heartbeat": datetime.now().isoformat(),
-        }
+        registration = AgentRegistration(agent_id, agent_type, capabilities)
 
-        self.agent_registry[agent_id] = agent_info
+        self.agent_registry[agent_id] = registration
         print(f"📁 Agent {agent_id} registered with type {agent_type} (file-based)")
 
     def send_task(self, from_agent: str, to_agent: str, task_data: dict[str, Any]):
@@ -76,10 +72,18 @@ class MessageBroker:
         """Send task result back to requesting agent (no-op in file-based mode)."""
         print(f"📁 Result coordination via A2A files: {from_agent} -> {to_agent}")
 
-    def heartbeat(self, agent_id: str):
-        """Send heartbeat for an agent (file-based tracking only)."""
-        if agent_id in self.agent_registry:
-            self.agent_registry[agent_id]["last_heartbeat"] = datetime.now().isoformat()
+    def heartbeat(self, agent_id: str, health_data: dict[str, Any] | None = None) -> bool:
+        """Send heartbeat for an agent (file-based tracking only).
+
+        Returns True when the heartbeat is recorded and False when the agent is
+        unknown. Health payloads are persisted in the registry for visibility.
+        """
+        registration = self.agent_registry.get(agent_id)
+        if registration is None:
+            return False
+
+        registration.touch(health_data)
+        return True
 
     def get_active_agents(self) -> list[str]:
         """Get list of active agents (from file-based registry only)."""
@@ -91,11 +95,10 @@ class MessageBroker:
         stale_agents = []
 
         for agent_id, agent_info in self.agent_registry.items():
-            last_heartbeat = agent_info.get("last_heartbeat")
-            if last_heartbeat:
-                heartbeat_time = datetime.fromisoformat(last_heartbeat)
-                if (current_time - heartbeat_time).seconds > timeout_seconds:
-                    stale_agents.append(agent_id)
+            last_heartbeat = agent_info.last_heartbeat
+            heartbeat_time = datetime.fromisoformat(last_heartbeat)
+            if (current_time - heartbeat_time).total_seconds() > timeout_seconds:
+                stale_agents.append(agent_id)
 
         for agent_id in stale_agents:
             del self.agent_registry[agent_id]
