@@ -9,6 +9,8 @@ This test demonstrates the new behavior for empty AI narratives:
 Updated behavior: Empty AI narrative raises FirestoreWriteError
 """
 
+# ruff: noqa: PT027,PT009
+
 import os
 import sys
 import unittest
@@ -26,7 +28,7 @@ sys.path.insert(
 from tests.fake_firestore import FakeFirestoreClient
 
 from mvp_site import constants
-from mvp_site.firestore_service import add_story_entry, FirestoreWriteError
+from mvp_site.firestore_service import FirestoreWriteError, add_story_entry
 
 
 class TestFirestoreEmptyNarrativeError(unittest.TestCase):
@@ -130,7 +132,9 @@ class TestFirestoreEmptyNarrativeError(unittest.TestCase):
         assert len(story_docs) > 0, "Empty user input should still save"
         story_entry = list(story_docs.values())[0]
         entry_data = story_entry._data
-        assert entry_data["text"] == "[Empty input]", "Empty user input gets placeholder"
+        assert entry_data["text"] == "[Empty input]", (
+            "Empty user input gets placeholder"
+        )
 
     @patch("mvp_site.firestore_service.get_db")
     def test_god_mode_allows_empty_narrative(self, mock_get_db):
@@ -143,10 +147,7 @@ class TestFirestoreEmptyNarrativeError(unittest.TestCase):
         actor = constants.ACTOR_GEMINI
         narrative_text = ""
         structured_fields = {
-            "god_mode_response": {
-                "action": "Reveal secret path",
-                "impact": "Opens hidden route",
-            }
+            "god_mode_response": "Reveal secret path (opens hidden route)",
         }
 
         add_story_entry(
@@ -167,7 +168,9 @@ class TestFirestoreEmptyNarrativeError(unittest.TestCase):
         )
         story_docs = story_collection._docs
 
-        assert len(story_docs) == 1, "God mode response with empty narrative should save"
+        assert len(story_docs) == 1, (
+            "God mode response with empty narrative should save"
+        )
         entry_data = list(story_docs.values())[0]._data
         assert entry_data["text"] == ""
         assert entry_data["god_mode_response"] == structured_fields["god_mode_response"]
@@ -181,8 +184,7 @@ class TestFirestoreEmptyNarrativeError(unittest.TestCase):
         text_bytes = narrative.encode("utf-8")
         max_bytes = 10000
         chunks = [
-            text_bytes[i : i + max_bytes]
-            for i in range(0, len(text_bytes), max_bytes)
+            text_bytes[i : i + max_bytes] for i in range(0, len(text_bytes), max_bytes)
         ]
 
         # Empty narratives produce no chunks
