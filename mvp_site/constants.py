@@ -69,10 +69,11 @@ DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
 ALLOWED_OPENROUTER_MODELS = [
     DEFAULT_OPENROUTER_MODEL,
     "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
-    "meta-llama/llama-3.1-8b-instruct",  # 128K context, $0.10/M (Cerebras provider)
+    "meta-llama/llama-3.1-8b-instruct",  # 131K context, $0.10/$0.10 per M (Cerebras provider)
     "openai/gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (reasoning model)
     "z-ai/glm-4.6",  # 200K context, fast tools
     "x-ai/grok-4.1-fast",  # 2M context, $0.20/$0.50 per M tokens (supports json_schema)
+    "x-ai/grok-4.1-fast:free",  # Legacy alias to preserve existing user selections
 ]
 
 # Cerebras direct provider defaults (per Cerebras docs as of 2025-12-11)
@@ -88,7 +89,7 @@ ALLOWED_CEREBRAS_MODELS = [
     DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M
     "zai-glm-4.6",  # 131K context, $2.25/$2.75 per M (preview)
     "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
-    "llama3.1-8b",  # 128K context, $0.10/$0.10 per M (cheapest option)
+    "llama-3.1-8b",  # 131K context, $0.10/$0.10 per M (cheapest option)
     "gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (budget reasoning model)
 ]
 
@@ -102,7 +103,7 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     # OpenRouter
     "meta-llama/llama-3.1-70b-instruct": 131_072,
     "meta-llama/llama-3.1-405b-instruct": 131_072,
-    "meta-llama/llama-3.1-8b-instruct": 131_072,  # 128K context
+    "meta-llama/llama-3.1-8b-instruct": 131_072,  # 131K context
     "openai/gpt-oss-120b": 131_072,  # 131K context
     "z-ai/glm-4.6": 200_000,
     "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
@@ -111,12 +112,12 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
-    "llama3.1-8b": 131_072,  # 128K context window
+    "llama-3.1-8b": 131_072,  # 131K context window (Cerebras advertises 128K)
     "gpt-oss-120b": 131_072,  # 131K context window
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
-# Values pulled from provider docs as of 2025-12-01.
+# Values pulled from provider docs (OpenRouter as of 2025-12-01; Cerebras as of 2025-12-11).
 MODEL_MAX_OUTPUT_TOKENS = {
     # Gemini (we cap at JSON_MODE_MAX_OUTPUT_TOKENS in code; keep for completeness)
     DEFAULT_GEMINI_MODEL: 50_000,
@@ -124,7 +125,8 @@ MODEL_MAX_OUTPUT_TOKENS = {
     # OpenRouter
     # Llama 3.1 caps are not reported in the model catalog; OpenRouter commonly limits
     # completion tokens to ~8k for these models, so we adopt 8,192 to avoid 400s while
-    # still allowing larger replies than the previous 4k cap.
+    # still allowing larger replies than the previous 4k cap. Cerebras-hosted Llama 3.1
+    # can safely emit longer replies (see provider-specific entries below).
     "meta-llama/llama-3.1-70b-instruct": 8_192,
     "meta-llama/llama-3.1-405b-instruct": 8_192,
     "meta-llama/llama-3.1-8b-instruct": 8_192,  # Same cap as other Llama 3.1 models
@@ -132,11 +134,12 @@ MODEL_MAX_OUTPUT_TOKENS = {
     # Pulled from OpenRouter model metadata (2025-12-01 curl https://openrouter.ai/api/v1/models)
     "z-ai/glm-4.6": 202_752,
     "x-ai/grok-4.1-fast": 30_000,
+    "x-ai/grok-4.1-fast:free": 30_000,  # Legacy alias shares the same cap
     # Cerebras (actual limit ~64K, using conservative 32K for safety)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
-    "llama3.1-8b": 32_000,  # Conservative limit for safety
+    "llama-3.1-8b": 32_000,  # Cerebras allows longer completions than OpenRouter
     "gpt-oss-120b": 40_000,  # 40K max output per Cerebras docs
 }
 
@@ -275,7 +278,11 @@ def infer_provider_from_model(model_name: str, provider_hint: str | None = None)
     if model_name in ALLOWED_CEREBRAS_MODELS:
         return LLM_PROVIDER_CEREBRAS
 
-    if provider_hint in {LLM_PROVIDER_GEMINI, LLM_PROVIDER_OPENROUTER, LLM_PROVIDER_CEREBRAS}:
+    if provider_hint in {
+        LLM_PROVIDER_GEMINI,
+        LLM_PROVIDER_OPENROUTER,
+        LLM_PROVIDER_CEREBRAS,
+    }:
         return provider_hint
 
     # Default to gemini if model not recognized (safe default)
