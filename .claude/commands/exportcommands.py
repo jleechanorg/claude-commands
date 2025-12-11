@@ -12,6 +12,7 @@ import shutil
 import re
 import json
 import requests
+import fnmatch
 from pathlib import Path
 from export_config import get_exportable_components
 
@@ -20,30 +21,43 @@ MAX_FILE_SAMPLE_SIZE = 3
 MAX_DIRECTORY_PREVIEW_SIZE = 10
 MAX_FILE_CONTENT_PREVIEW_SIZE = 50
 
+
 # Custom exceptions for better error handling
 class ExportError(Exception):
     """Base exception for export operations"""
+
     pass
+
 
 class GitRepositoryError(ExportError):
     """Raised when git repository operations fail"""
+
     pass
+
 
 class GitHubAPIError(ExportError):
     """Raised when GitHub API operations fail"""
+
     pass
+
 
 class DirectoryOperationError(ExportError):
     """Raised when directory operations fail"""
+
     pass
+
 
 class ClaudeCommandsExporter:
     def __init__(self):
         self.project_root = self._get_project_root()
-        self.export_dir = os.path.join(tempfile.gettempdir(), f"claude_commands_export_{int(time.time())}")
-        self.repo_dir = os.path.join(tempfile.gettempdir(), f"claude_commands_repo_{int(time.time())}")
+        self.export_dir = os.path.join(
+            tempfile.gettempdir(), f"claude_commands_export_{int(time.time())}"
+        )
+        self.repo_dir = os.path.join(
+            tempfile.gettempdir(), f"claude_commands_repo_{int(time.time())}"
+        )
         self.export_branch = f"export-{time.strftime('%Y%m%d-%H%M%S')}"
-        self.github_token = os.environ.get('GITHUB_TOKEN')
+        self.github_token = os.environ.get("GITHUB_TOKEN")
 
         # Export configuration - uses shared config from .claude/commands/export_config.py
         # This ensures both /localexportcommands and /exportcommands export the same directories
@@ -51,18 +65,32 @@ class ClaudeCommandsExporter:
         # Note: 'orchestration' is added here specifically for GitHub export
         base_components = get_exportable_components()
         # Remove 'settings.json' from subdirs list (it's a file, not a directory)
-        self.EXPORT_SUBDIRS = [c for c in base_components if c != 'settings.json']
+        self.EXPORT_SUBDIRS = [c for c in base_components if c != "settings.json"]
         # Add orchestration for GitHub export
-        if 'orchestration' not in self.EXPORT_SUBDIRS:
-            self.EXPORT_SUBDIRS.append('orchestration')
+        if "orchestration" not in self.EXPORT_SUBDIRS:
+            self.EXPORT_SUBDIRS.append("orchestration")
+        # Add automation for GitHub export
+        if "automation" not in self.EXPORT_SUBDIRS:
+            self.EXPORT_SUBDIRS.append("automation")
 
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
-            'testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh',  # project-specific
-            'converge.md', 'converge.py', 'orchc.md', 'orchc.py',          # orchestration commands to exclude
-            'conv.md', 'orchconverge.md',                                   # additional orchestration exclusions
-            'copilotc.md', 'fixprc.md',                                     # new autonomous composition commands
-            'gen.md', 'gene.md', 'pgen.md', 'pgene.md', 'proto_genesis.md' # proto genesis commands (project-specific)
+            "testi.sh",
+            "run_tests.sh",
+            "copilot_inline_reply_example.sh",  # project-specific
+            "converge.md",
+            "converge.py",
+            "orchc.md",
+            "orchc.py",  # orchestration commands to exclude
+            "conv.md",
+            "orchconverge.md",  # additional orchestration exclusions
+            "copilotc.md",
+            "fixprc.md",  # new autonomous composition commands
+            "gen.md",
+            "gene.md",
+            "pgen.md",
+            "pgene.md",
+            "proto_genesis.md",  # proto genesis commands (project-specific)
         ]
 
         # Counters for summary
@@ -78,13 +106,143 @@ class ClaudeCommandsExporter:
         self.current_version = None
         self.change_summary = ""
 
+        # Data-driven directory export configuration
+        # Single source of truth for all directory exports
+        self.EXPORT_DIRECTORIES = {
+            'commands': {
+                'source': '.claude/commands',
+                'exclude_dirs': [],
+                'exclude_files': self.COMMANDS_SKIP_LIST,
+            },
+            'hooks': {
+                'source': '.claude/hooks',
+                'exclude_dirs': ['.claude'],  # Avoid nested .claude directories
+                'exclude_files': [],
+            },
+            'orchestration': {
+                'source': 'orchestration',
+                'exclude_dirs': ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'],
+                'exclude_files': [],
+            },
+            'automation': {
+                'source': 'automation',
+                'exclude_dirs': ['__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info', 'testing_util'],
+                'exclude_files': ['*.pyc', '*.pyo', '*.swp', '*.tmp', 'simple_pr_batch.sh'],
+            },
+        }
+
     def _get_project_root(self):
         """Get the project root directory"""
-        result = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
-                              capture_output=True, text=True)
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
+        )
         if result.returncode != 0:
             raise GitRepositoryError("Not in a git repository")
         return result.stdout.strip()
+
+    def _export_directory(self, name, config, staging_dir):
+        """Generic directory export with rsync or manual fallback.
+
+        Args:
+            name: Display name for the directory (e.g., 'commands', 'hooks')
+            config: Export configuration dict with keys:
+                - source: Source directory relative to project root
+                - exclude_dirs: List of directory names to exclude
+                - exclude_files: List of file patterns to exclude
+            staging_dir: Target staging directory for export
+        """
+        source_dir = os.path.join(self.project_root, config['source'])
+
+        if not os.path.exists(source_dir):
+            print(f"⚠️  {name.title()} directory not found - skipping")
+            return
+
+        target_dir = os.path.join(staging_dir, name)
+        os.makedirs(target_dir, exist_ok=True)
+
+        exclude_dirs = config.get('exclude_dirs', [])
+        exclude_files = config.get('exclude_files', [])
+
+        # Try rsync first for better performance
+        try:
+            # Build exclusion patterns
+            exclude_patterns = []
+            for exc_dir in exclude_dirs:
+                if exc_dir.endswith('.egg-info'):
+                    exclude_patterns.append('--exclude=*.egg-info/')
+                else:
+                    exclude_patterns.append(f'--exclude={exc_dir}/')
+
+            for exc_file in exclude_files:
+                if exc_file.startswith('*.'):
+                    exclude_patterns.append(f'--exclude={exc_file}')
+                else:
+                    exclude_patterns.append(f'--exclude={exc_file}')
+
+            cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode != 0:
+                print(f"⏭ rsync failed for {name}, using manual copy")
+                raise FileNotFoundError("rsync failed")
+
+            print(f"✅ {name.title()} exported using rsync")
+
+        except (FileNotFoundError, PermissionError):
+            # Fallback to manual copy for Windows or when rsync unavailable
+            self._manual_directory_copy(source_dir, target_dir, exclude_dirs, exclude_files)
+            print(f"✅ {name.title()} exported using manual copy")
+
+    def _manual_directory_copy(self, source_dir, target_dir, exclude_dirs, exclude_files):
+        """Manual directory copy with exclusions for cross-platform compatibility.
+
+        Args:
+            source_dir: Source directory path
+            target_dir: Target directory path
+            exclude_dirs: List of directory names to exclude
+            exclude_files: List of file patterns to exclude (supports wildcards)
+        """
+        # Normalize exclude_dirs to handle .egg-info pattern
+        normalized_exclude_dirs = set()
+        for exc_dir in exclude_dirs:
+            if exc_dir == '*.egg-info':
+                normalized_exclude_dirs.add('*.egg-info')
+            else:
+                normalized_exclude_dirs.add(exc_dir)
+
+        for root, dirs, files in os.walk(source_dir):
+            # Filter directories in-place to prevent walking into excluded dirs
+            dirs[:] = [
+                d for d in dirs
+                if d not in normalized_exclude_dirs
+                and not d.endswith('.egg-info')
+            ]
+
+            rel_path = os.path.relpath(root, source_dir)
+            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
+            os.makedirs(target_root, exist_ok=True)
+
+            for file in files:
+                # Check if file should be excluded
+                should_exclude = False
+
+                # Check against exclude_files patterns
+                for pattern in exclude_files:
+                    if pattern.startswith('*.'):
+                        # Wildcard pattern
+                        if fnmatch.fnmatch(file, pattern):
+                            should_exclude = True
+                            break
+                    else:
+                        # Exact match
+                        if file == pattern:
+                            should_exclude = True
+                            break
+
+                if not should_exclude:
+                    src_file = os.path.join(root, file)
+                    dst_file = os.path.join(target_root, file)
+                    shutil.copy2(src_file, dst_file)
 
     def export(self):
         """Main export workflow"""
@@ -105,7 +263,9 @@ class ClaudeCommandsExporter:
         print("\n📂 Phase 1: Creating Local Export...")
         print("-" * 40)
 
-        print("🔍 Using comprehensive directory export (commands, hooks, agents, scripts, skills, orchestration)")
+        print(
+            "🔍 Using comprehensive directory export (commands, hooks, agents, scripts, skills, orchestration, automation)"
+        )
 
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, "staging")
@@ -144,6 +304,9 @@ class ClaudeCommandsExporter:
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
 
+        # Export automation (GitHub PR automation system)
+        self._export_automation(staging_dir)
+
         # Export GitHub Actions workflows (as examples)
         self._export_github_workflows(staging_dir)
 
@@ -159,12 +322,12 @@ class ClaudeCommandsExporter:
         """Export command definitions with whole directory copying and user confirmation"""
         print("📋 Exporting command definitions...")
 
-        commands_dir = os.path.join(self.project_root, '.claude', 'commands')
+        commands_dir = os.path.join(self.project_root, ".claude", "commands")
         if not os.path.exists(commands_dir):
             print("⚠️  Warning: .claude/commands directory not found")
             return
 
-        target_dir = os.path.join(staging_dir, 'commands')
+        target_dir = os.path.join(staging_dir, "commands")
         os.makedirs(target_dir, exist_ok=True)
 
         # First, copy entire .claude/commands directory structure
@@ -174,7 +337,7 @@ class ClaudeCommandsExporter:
         for root, dirs, files in os.walk(target_dir):
             for file in files:
                 # Use same file extension check as copying logic
-                if file.endswith(('.sh', '.py', '.md', '.json', '.toml', '.txt')):
+                if file.endswith((".sh", ".py", ".md", ".json", ".toml", ".txt")):
                     # Skip files in the centralized skip list (same as copying logic)
                     if file not in self.COMMANDS_SKIP_LIST:
                         self.commands_count += 1
@@ -183,80 +346,43 @@ class ClaudeCommandsExporter:
 
         print(f"✅ Exported {self.commands_count} commands (whole directory structure)")
 
-    def _copy_hooks_manual(self, hooks_dir, target_dir):
-        """Windows fallback - manual directory copy with filtering"""
-        for root, dirs, files in os.walk(hooks_dir):
-            # Filter out nested .claude directories during traversal
-            dirs[:] = [d for d in dirs if d != '.claude']
-
-            rel_path = os.path.relpath(root, hooks_dir)
-            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
-            os.makedirs(target_root, exist_ok=True)
-
-            for file in files:
-                if file.endswith(('.sh', '.py', '.md')):
-                    src_file = os.path.join(root, file)
-                    dst_file = os.path.join(target_root, file)
-                    shutil.copy2(src_file, dst_file)
-
-        print("   ✅ Hooks exported using manual copy")
-
     def _export_hooks(self, staging_dir):
         """Export Claude Code hooks with proper permissions, avoiding duplicates"""
         print("📎 Exporting Claude Code hooks...")
 
-        hooks_dir = os.path.join(self.project_root, '.claude', 'hooks')
-        if not os.path.exists(hooks_dir):
-            print("⚠️  Warning: .claude/hooks directory not found")
+        # Use generic export with hooks configuration
+        self._export_directory("hooks", self.EXPORT_DIRECTORIES["hooks"], staging_dir)
+
+        # Post-processing: filter to only .sh/.py/.md files, apply content filtering, set permissions, and count
+        target_dir = os.path.join(staging_dir, "hooks")
+        if not os.path.exists(target_dir):
             return
 
-        target_dir = os.path.join(staging_dir, 'hooks')
+        allowed_extensions = (".sh", ".py", ".md")
 
-        # Try rsync first, fallback to manual copy for Windows compatibility
-        try:
-            cmd = [
-                'rsync', '-av',
-                '--exclude=*/.claude/',      # Exclude nested .claude directories FIRST
-                '--exclude=*/.claude/**',    # Exclude all content within nested .claude directories
-                '--include=*/',              # Then include directories
-                '--include=*.sh',
-                '--include=*.py',
-                '--include=*.md',
-                '--exclude=*',               # Finally exclude everything else
-                f"{hooks_dir}/",
-                f"{target_dir}/"
-            ]
-
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"   rsync failed ({result.stderr}), using manual copy fallback...")
-                self._copy_hooks_manual(hooks_dir, target_dir)
-            else:
-                print("   ✅ Hooks exported using rsync")
-
-        except FileNotFoundError:
-            # Windows fallback - manual directory copy with filtering
-            print("   rsync not found, using Windows-compatible manual copy...")
-            self._copy_hooks_manual(hooks_dir, target_dir)
-
-        # Apply content filtering and count files
         for root, dirs, files in os.walk(target_dir):
             for file in files:
-                if file.endswith(('.sh', '.py', '.md')):
-                    file_path = os.path.join(root, file)
-                    self._apply_content_filtering(file_path)
+                file_path = os.path.join(root, file)
 
-                    # Ensure scripts are executable (with Windows compatibility)
-                    if file.endswith(('.sh', '.py')):
-                        try:
-                            os.chmod(file_path, 0o755)
-                        except (OSError, NotImplementedError):
-                            # On Windows or unsupported filesystems, ignore chmod errors
-                            pass
+                # Remove files that don't match allowed extensions
+                if not file.endswith(allowed_extensions):
+                    os.remove(file_path)
+                    continue
 
-                    self.hooks_count += 1
-                    rel_path = os.path.relpath(file_path, target_dir)
-                    print(f"   📎 {rel_path}")
+                # Process allowed files
+                self._apply_content_filtering(file_path)
+
+                # Ensure scripts are executable (with Windows compatibility)
+                if file.endswith((".sh", ".py")):
+                    try:
+                        os.chmod(file_path, 0o755)
+                    except (OSError, NotImplementedError):
+                        # On Windows or unsupported filesystems, ignore chmod errors
+                        pass
+
+                self.hooks_count += 1
+                rel_path = os.path.relpath(file_path, target_dir)
+                print(f"   📎 {rel_path}")
 
         print(f"✅ Exported {self.hooks_count} hooks")
 
@@ -264,16 +390,18 @@ class ClaudeCommandsExporter:
         """Copy directory recursively with file filtering and content transformation"""
         for root, dirs, files in os.walk(src_dir):
             # Skip nested .claude directories and test directories that might contain sensitive data
-            dirs[:] = [d for d in dirs if d != '.claude']
+            dirs[:] = [d for d in dirs if d != ".claude"]
 
             # Create relative path structure
             rel_path = os.path.relpath(root, src_dir)
-            target_root = os.path.join(dst_dir, rel_path) if rel_path != '.' else dst_dir
+            target_root = (
+                os.path.join(dst_dir, rel_path) if rel_path != "." else dst_dir
+            )
             os.makedirs(target_root, exist_ok=True)
 
             for file in files:
                 # Only copy relevant file types
-                if file.endswith(('.sh', '.py', '.md', '.json', '.toml', '.txt')):
+                if file.endswith((".sh", ".py", ".md", ".json", ".toml", ".txt")):
                     # Skip files in the centralized skip list
                     if file in self.COMMANDS_SKIP_LIST:
                         print(f"   ⏭ Skipping {file} (project-specific/orchestration)")
@@ -287,25 +415,24 @@ class ClaudeCommandsExporter:
                     self._apply_content_filtering(dst_file)
 
                     # Make scripts executable if needed
-                    if file.endswith(('.sh', '.py')):
+                    if file.endswith((".sh", ".py")):
                         try:
                             os.chmod(dst_file, 0o755)
                         except (OSError, NotImplementedError):
                             pass  # Windows compatibility
 
-
     def _export_agents(self, staging_dir):
         """Export Claude Code agent definitions"""
         print("🤖 Exporting Claude Code agents...")
 
-        agents_dir = os.path.join(self.project_root, '.claude', 'agents')
+        agents_dir = os.path.join(self.project_root, ".claude", "agents")
         if not os.path.exists(agents_dir):
             print("⚠️  Warning: .claude/agents directory not found")
             return
 
-        target_dir = os.path.join(staging_dir, 'agents')
-        for file_path in Path(agents_dir).glob('*'):
-            if file_path.is_file() and file_path.suffix == '.md':
+        target_dir = os.path.join(staging_dir, "agents")
+        for file_path in Path(agents_dir).glob("*"):
+            if file_path.is_file() and file_path.suffix == ".md":
                 # Copy file
                 shutil.copy2(file_path, target_dir)
                 self.agents_count += 1
@@ -319,31 +446,35 @@ class ClaudeCommandsExporter:
 
     def _get_scripts_from_settings(self):
         """Parse settings.json to find all referenced scripts"""
-        settings_file = os.path.join(self.project_root, '.claude', 'settings.json')
+        settings_file = os.path.join(self.project_root, ".claude", "settings.json")
         scripts_from_settings = set()
 
         if not os.path.exists(settings_file):
             return scripts_from_settings
 
         try:
-            with open(settings_file, 'r', encoding='utf-8') as f:
+            with open(settings_file, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Find all script references in settings.json
             # Match patterns like: scripts/filename.sh or scripts/filename.py
-            import_pattern = r'scripts/([a-zA-Z0-9_\-]+\.(sh|py))'
+            import_pattern = r"scripts/([a-zA-Z0-9_\-]+\.(sh|py))"
             matches = re.findall(import_pattern, content)
 
             for match in matches:
                 script_name = match[0]  # filename.sh or filename.py
                 scripts_from_settings.add(script_name)
 
-            print(f"   📋 Found {len(scripts_from_settings)} scripts referenced in settings.json")
+            print(
+                f"   📋 Found {len(scripts_from_settings)} scripts referenced in settings.json"
+            )
             for script in sorted(scripts_from_settings):
                 print(f"      • {script}")
 
         except Exception as e:
-            print(f"   ⚠️  Warning: Could not parse settings.json for script references: {e}")
+            print(
+                f"   ⚠️  Warning: Could not parse settings.json for script references: {e}"
+            )
 
         return scripts_from_settings
 
@@ -351,31 +482,42 @@ class ClaudeCommandsExporter:
         """Export reusable scripts (both Claude Code specific and generally useful development tools)"""
         print("🚀 Exporting scripts...")
 
-        target_dir = os.path.join(staging_dir, 'scripts')
+        target_dir = os.path.join(staging_dir, "scripts")
 
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
 
         script_patterns = [
             # Claude Code infrastructure (generally useful for Claude Code users)
-            'claude_start.sh', 'install_mcp_servers.sh',
+            "claude_start.sh",
+            "install_mcp_servers.sh",
             # Generally useful git/development workflow scripts
-            'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
+            "integrate.sh",
+            "resolve_conflicts.sh",
+            "sync_branch.sh",
+            "create_worktree.sh",
             # Code analysis and metrics
-            'codebase_loc.sh', 'coverage.sh', 'loc.sh', 'loc_simple.sh',
+            "codebase_loc.sh",
+            "coverage.sh",
+            "loc.sh",
+            "loc_simple.sh",
             # Testing infrastructure
-            'run_tests_with_coverage.sh', 'run_lint.sh',
+            "run_tests_with_coverage.sh",
+            "run_lint.sh",
             # CI/CD and infrastructure
-            'setup-github-runner.sh', 'setup_email.sh',
+            "setup-github-runner.sh",
+            "setup_email.sh",
             # Development environment
-            'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
+            "create_snapshot.sh",
+            "schedule_branch_work.sh",
+            "push.sh",
         ]
 
         # MCP helper scripts (required by install_mcp_servers.sh) - must be from scripts/ subdirectory
-        mcp_helper_scripts = ['mcp_common.sh', 'load_tokens.sh']
+        mcp_helper_scripts = ["mcp_common.sh", "load_tokens.sh"]
 
         # Secondo command scripts (multi-model AI feedback system)
-        secondo_scripts = ['auth-cli.mjs', 'secondo-cli.sh', 'test_secondo_pr.sh']
+        secondo_scripts = ["auth-cli.mjs", "secondo-cli.sh", "test_secondo_pr.sh"]
 
         # Get scripts referenced in settings.json
         settings_scripts = self._get_scripts_from_settings()
@@ -391,7 +533,7 @@ class ClaudeCommandsExporter:
                 self.scripts_count += 1
 
         # Export MCP helper scripts from scripts/ subdirectory
-        scripts_subdir = os.path.join(self.project_root, 'scripts')
+        scripts_subdir = os.path.join(self.project_root, "scripts")
         for script_name in mcp_helper_scripts:
             script_path = os.path.join(scripts_subdir, script_name)
             if os.path.exists(script_path):
@@ -417,9 +559,7 @@ class ClaudeCommandsExporter:
                 print(f"   • scripts/{script_name} (secondo)")
                 self.scripts_count += 1
             else:
-                print(
-                    f"   ⚠️  Warning: Secondo script not found: scripts/{script_name}"
-                )
+                print(f"   ⚠️  Warning: Secondo script not found: scripts/{script_name}")
 
         # Export scripts referenced in settings.json from scripts/ subdirectory
         for script_name in settings_scripts:
@@ -446,8 +586,8 @@ class ClaudeCommandsExporter:
         """Export .claude/scripts directory and aggregate MCP launchers."""
         print("📜 Exporting .claude/scripts directory...")
 
-        source_dir = Path(self.project_root) / '.claude' / 'scripts'
-        target_dir = Path(staging_dir) / 'claude_scripts'
+        source_dir = Path(self.project_root) / ".claude" / "scripts"
+        target_dir = Path(staging_dir) / "claude_scripts"
         target_dir.mkdir(parents=True, exist_ok=True)
 
         scripts_count = 0
@@ -467,7 +607,7 @@ class ClaudeCommandsExporter:
             # Export .claude/scripts/ needs "../.." to reach repo root
             self._fix_repo_root_path(str(destination))
 
-            if destination.suffix == '.sh':
+            if destination.suffix == ".sh":
                 try:
                     os.chmod(destination, 0o755)
                 except OSError:
@@ -479,39 +619,41 @@ class ClaudeCommandsExporter:
 
         # Export native Claude scripts (.claude/scripts)
         if source_dir.exists():
-            for pattern in ('*.py', '*.sh'):
+            for pattern in ("*.py", "*.sh"):
                 for file_path in source_dir.glob(pattern):
                     if file_path.name in copied_names:
                         continue
                     copy_script(file_path)
         else:
-            print("⚠️  Warning: .claude/scripts directory not found; attempting legacy MCP locations")
+            print(
+                "⚠️  Warning: .claude/scripts directory not found; attempting legacy MCP locations"
+            )
 
         # Backfill MCP launchers/utilities that remain outside .claude/scripts
         legacy_candidates = {
-            'install_mcp_servers.sh': [
-                Path(self.project_root) / 'scripts' / 'install_mcp_servers.sh',
-                Path(self.project_root) / 'install_mcp_servers.sh',
+            "install_mcp_servers.sh": [
+                Path(self.project_root) / "scripts" / "install_mcp_servers.sh",
+                Path(self.project_root) / "install_mcp_servers.sh",
             ],
-            'mcp_common.sh': [
-                Path(self.project_root) / 'scripts' / 'mcp_common.sh',
-                Path(self.project_root) / 'mcp_common.sh',
+            "mcp_common.sh": [
+                Path(self.project_root) / "scripts" / "mcp_common.sh",
+                Path(self.project_root) / "mcp_common.sh",
             ],
-            'mcp_dual_background.sh': [
-                Path(self.project_root) / 'scripts' / 'mcp_dual_background.sh',
-                Path(self.project_root) / 'mcp_dual_background.sh',
+            "mcp_dual_background.sh": [
+                Path(self.project_root) / "scripts" / "mcp_dual_background.sh",
+                Path(self.project_root) / "mcp_dual_background.sh",
             ],
-            'start_mcp_production.sh': [
-                Path(self.project_root) / 'scripts' / 'start_mcp_production.sh',
-                Path(self.project_root) / 'start_mcp_production.sh',
+            "start_mcp_production.sh": [
+                Path(self.project_root) / "scripts" / "start_mcp_production.sh",
+                Path(self.project_root) / "start_mcp_production.sh",
             ],
-            'start_mcp_server.sh': [
-                Path(self.project_root) / 'scripts' / 'start_mcp_server.sh',
-                Path(self.project_root) / 'start_mcp_server.sh',
+            "start_mcp_server.sh": [
+                Path(self.project_root) / "scripts" / "start_mcp_server.sh",
+                Path(self.project_root) / "start_mcp_server.sh",
             ],
-            'mcp_stdio_wrapper.py': [
-                Path(self.project_root) / 'scripts' / 'mcp_stdio_wrapper.py',
-                Path(self.project_root) / 'mcp_stdio_wrapper.py',
+            "mcp_stdio_wrapper.py": [
+                Path(self.project_root) / "scripts" / "mcp_stdio_wrapper.py",
+                Path(self.project_root) / "mcp_stdio_wrapper.py",
             ],
         }
 
@@ -527,24 +669,26 @@ class ClaudeCommandsExporter:
             print("⚠️  Warning: No scripts were exported from available locations")
             return
 
-        print(f"✅ Exported {scripts_count} .claude/scripts files (including MCP launchers)")
+        print(
+            f"✅ Exported {scripts_count} .claude/scripts files (including MCP launchers)"
+        )
 
     def _export_skills(self, staging_dir):
         """Export .claude/skills directory for reference skills"""
         print("🧠 Exporting .claude/skills directory...")
 
-        source_dir = os.path.join(self.project_root, '.claude', 'skills')
+        source_dir = os.path.join(self.project_root, ".claude", "skills")
         if not os.path.exists(source_dir):
             print("⚠️  Warning: .claude/skills directory not found")
             return
 
-        target_dir = os.path.join(staging_dir, 'skills')
+        target_dir = os.path.join(staging_dir, "skills")
         os.makedirs(target_dir, exist_ok=True)
 
         # Reuse directory copy helper for filtering and transformations
         self._copy_directory_with_filtering(source_dir, target_dir)
 
-        allowed_extensions = ('.sh', '.py', '.md', '.json', '.toml', '.txt')
+        allowed_extensions = (".sh", ".py", ".md", ".json", ".toml", ".txt")
         for root, dirs, files in os.walk(target_dir):
             for file in files:
                 if file.endswith(allowed_extensions):
@@ -558,13 +702,13 @@ class ClaudeCommandsExporter:
         """Export settings.json file"""
         print("⚙️  Exporting settings.json...")
 
-        settings_file = os.path.join(self.project_root, '.claude', 'settings.json')
+        settings_file = os.path.join(self.project_root, ".claude", "settings.json")
         if not os.path.exists(settings_file):
             print("⚠️  Warning: settings.json not found")
             return
 
         # Create settings_file in staging (will map to .claude/settings.json in repo)
-        target_file = os.path.join(staging_dir, 'settings_json')
+        target_file = os.path.join(staging_dir, "settings_json")
         shutil.copy2(settings_file, target_file)
         self._apply_content_filtering(target_file)
 
@@ -575,19 +719,21 @@ class ClaudeCommandsExporter:
         print("📦 Exporting Node.js dependencies...")
 
         # Export package.json
-        package_json = os.path.join(self.project_root, 'package.json')
+        package_json = os.path.join(self.project_root, "package.json")
         if os.path.exists(package_json):
-            target_file = os.path.join(staging_dir, 'package.json')
+            target_file = os.path.join(staging_dir, "package.json")
             shutil.copy2(package_json, target_file)
             self._apply_content_filtering(target_file)
             print("   • package.json")
         else:
-            print("   ⚠️  Warning: package.json not found (required for secondo auth-cli.mjs)")
+            print(
+                "   ⚠️  Warning: package.json not found (required for secondo auth-cli.mjs)"
+            )
 
         # Export package-lock.json for reproducible builds
-        package_lock = os.path.join(self.project_root, 'package-lock.json')
+        package_lock = os.path.join(self.project_root, "package-lock.json")
         if os.path.exists(package_lock):
-            target_file = os.path.join(staging_dir, 'package-lock.json')
+            target_file = os.path.join(staging_dir, "package-lock.json")
             shutil.copy2(package_lock, target_file)
             self._apply_content_filtering(target_file)
             print("   • package-lock.json")
@@ -597,55 +743,16 @@ class ClaudeCommandsExporter:
     def _export_orchestration(self, staging_dir):
         """Export orchestration system with directory exclusions"""
         print("🤖 Exporting orchestration system (with exclusions)...")
+        self._export_directory(
+            "orchestration", self.EXPORT_DIRECTORIES["orchestration"], staging_dir
+        )
 
-        source_dir = os.path.join(self.project_root, 'orchestration')
-        if not os.path.exists(source_dir):
-            print("⚠️  Orchestration directory not found - skipping")
-            return
-
-        target_dir = os.path.join(staging_dir, 'orchestration')
-
-        # Use rsync with explicit exclusions
-        exclude_patterns = [
-            '--exclude=analysis/',
-            '--exclude=claude-bot-commands/',
-            '--exclude=coding_prompts/',
-            '--exclude=prototype/',
-            '--exclude=tasks/',
-            '--exclude=task-agent-create-autono-slash/',
-        ]
-
-        cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
-
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"⏭ Orchestration export failed with rsync, trying fallback: {result.stderr}")
-                # Fallback: manual directory copy with exclusions
-                self._copy_orchestration_manual(source_dir, target_dir)
-            else:
-                print("✅ Orchestration exported (excluded specified directories)")
-        except FileNotFoundError:
-            print("⏭ rsync not found, using manual copy fallback")
-            self._copy_orchestration_manual(source_dir, target_dir)
-
-    def _copy_orchestration_manual(self, source_dir, target_dir):
-        """Manual orchestration copy with exclusions for Windows compatibility"""
-        excluded_dirs = {'analysis', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'}
-        for root, dirs, files in os.walk(source_dir):
-            # Filter out excluded directories
-            dirs[:] = [d for d in dirs if d not in excluded_dirs]
-
-            rel_path = os.path.relpath(root, source_dir)
-            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
-            os.makedirs(target_root, exist_ok=True)
-
-            for file in files:
-                src_file = os.path.join(root, file)
-                dst_file = os.path.join(target_root, file)
-                shutil.copy2(src_file, dst_file)
-
-        print("✅ Orchestration exported using manual copy (excluded specified directories)")
+    def _export_automation(self, staging_dir):
+        """Export automation system (GitHub PR automation)"""
+        print("🤖 Exporting automation system...")
+        self._export_directory(
+            "automation", self.EXPORT_DIRECTORIES["automation"], staging_dir
+        )
 
     def _export_github_workflows(self, staging_dir):
         """Export GitHub Actions workflows with project-specific filtering.
@@ -659,12 +766,12 @@ class ClaudeCommandsExporter:
         """
         print("⚙️  Exporting GitHub Actions workflows (examples only)...")
 
-        source_dir = os.path.join(self.project_root, '.github', 'workflows')
+        source_dir = os.path.join(self.project_root, ".github", "workflows")
         if not os.path.exists(source_dir):
             print("⚠️  Warning: .github/workflows directory not found")
             return
 
-        target_dir = os.path.join(staging_dir, 'workflows')
+        target_dir = os.path.join(staging_dir, "workflows")
         os.makedirs(target_dir, exist_ok=True)
 
         # Counter for workflows
@@ -672,7 +779,7 @@ class ClaudeCommandsExporter:
 
         # Copy workflow files with filtering
         for workflow_file in sorted(os.listdir(source_dir)):
-            if workflow_file.endswith(('.yml', '.yaml')):
+            if workflow_file.endswith((".yml", ".yaml")):
                 src_file = os.path.join(source_dir, workflow_file)
                 dst_file = os.path.join(target_dir, workflow_file)
 
@@ -695,16 +802,26 @@ class ClaudeCommandsExporter:
     def _apply_workflow_filtering(self, file_path):
         """Apply project-specific filtering to workflow files."""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Replace project-specific values with placeholders
             # Order matters: match more specific patterns first to avoid partial matches
-            content = re.sub(r'jleechanorg/worldarchitect\.ai', '$GITHUB_REPOSITORY', content)
-            content = re.sub(r'worldarchitecture-ai', '$GCP_PROJECT_ID', content)
-            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
-            content = re.sub(r'jleechanorg', '$GITHUB_OWNER', content)
-            content = re.sub(r'\bjleechan\b', '$USER', content)
+            content = re.sub(
+                r"jleechanorg/worldarchitect\.ai", "$GITHUB_REPOSITORY", content
+            )
+            content = re.sub(r"worldarchitecture-ai", "$GCP_PROJECT_ID", content)
+            content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
+            content = re.sub(r"jleechanorg", "$GITHUB_OWNER", content)
+            content = re.sub(r"\bjleechan\b", "$USER", content)
+
+            # Update outdated GitHub Actions to latest secure versions
+            # actions/checkout v4.1.1 (Dec 2023) → v4.3.1 (Nov 2024)
+            content = re.sub(
+                r"actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11",
+                "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1",
+                content
+            )
 
             # Add header comment to the file indicating it's an example
             header = """# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
@@ -721,10 +838,10 @@ class ClaudeCommandsExporter:
 
 """
             # Only add header if not already present
-            if '⚠️ EXAMPLE WORKFLOW' not in content:
+            if "⚠️ EXAMPLE WORKFLOW" not in content:
                 content = header + content
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
         except Exception as e:
@@ -733,9 +850,13 @@ class ClaudeCommandsExporter:
             try:
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                    print(f"   Removed broken workflow file: {os.path.basename(file_path)}")
+                    print(
+                        f"   Removed broken workflow file: {os.path.basename(file_path)}"
+                    )
             except Exception as cleanup_error:
-                print(f"⚠️  Warning: Failed to remove broken workflow file {file_path}: {cleanup_error}")
+                print(
+                    f"⚠️  Warning: Failed to remove broken workflow file {file_path}: {cleanup_error}"
+                )
 
     def _fix_repo_root_path(self, file_path):
         """Fix REPO_ROOT path calculation for scripts exported to .claude/scripts/.
@@ -744,7 +865,7 @@ class ClaudeCommandsExporter:
         When exported to .claude/scripts/, they need "../.." instead.
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Fix REPO_ROOT path: scripts/ uses ".." but .claude/scripts/ needs "../.."
@@ -753,10 +874,10 @@ class ClaudeCommandsExporter:
             content = re.sub(
                 r'REPO_ROOT="\$\(cd "\$\{SCRIPT_DIR\}/\.\." && pwd\)"',
                 'REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"',
-                content
+                content,
             )
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
         except Exception as e:
@@ -764,7 +885,7 @@ class ClaudeCommandsExporter:
 
     def _create_workflows_readme(self, workflows_dir, count):
         """Create a README.md explaining workflows are examples only."""
-        readme_content = f'''# GitHub Actions Workflows - EXAMPLES ONLY
+        readme_content = f"""# GitHub Actions Workflows - EXAMPLES ONLY
 
 ⚠️ **IMPORTANT: These workflows are EXAMPLES and require integration into your codebase.**
 
@@ -868,10 +989,10 @@ Claude Code can assist with adapting these workflows to your specific project. J
 ---
 
 **Source**: Exported from [WorldArchitect.AI](https://github.com/jleechanorg/worldarchitect.ai) Claude Code configuration
-'''
+"""
 
-        readme_path = os.path.join(workflows_dir, 'README.md')
-        with open(readme_path, 'w', encoding='utf-8') as f:
+        readme_path = os.path.join(workflows_dir, "README.md")
+        with open(readme_path, "w", encoding="utf-8") as f:
             f.write(readme_content)
 
         print("   📝 Created workflows/README.md with integration instructions")
@@ -879,16 +1000,21 @@ Claude Code can assist with adapting these workflows to your specific project. J
     def _apply_content_filtering(self, file_path):
         """Apply content transformations to files"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Skip transformations for files that should preserve patterns
             filename = os.path.basename(file_path)
-            # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
-            # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
+            # Skip ALL transformations for:
+            # - exportcommands.py (contains regex patterns that should not be transformed)
+            # - Python test files (contain literal assertion strings that must be preserved)
+            # - loc_simple.sh (uses relative paths intentionally)
             # Compare by filename because the staging copy lives in a different directory than the source file.
-            skip_all_transforms = filename == Path(__file__).name
-            skip_mvp_transform = filename == 'loc_simple.sh'
+            # Normalize path for cross-platform compatibility (Windows uses backslashes)
+            normalized_path = file_path.replace(os.sep, '/')
+            is_test_file = filename.startswith("test_") and filename.endswith(".py") and "/tests/" in normalized_path
+            skip_all_transforms = filename == Path(__file__).name or is_test_file
+            skip_mvp_transform = filename == "loc_simple.sh"
 
             # Apply transformations - Enhanced for portability
             # Skip all transformations for exportcommands.py to preserve regex patterns
@@ -897,41 +1023,87 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 pass
             else:
                 if not skip_mvp_transform:
-                    content = re.sub(r'mvp_site/', '$PROJECT_ROOT/', content)
-                content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
-                content = re.sub(r'\bjleechan\b', '$USER', content)
-                content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
-                content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
+                    content = re.sub(r"mvp_site/", "$PROJECT_ROOT/", content)
+                content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
+                content = re.sub(r"\bjleechan\b", "$USER", content)
+                content = re.sub(
+                    r"TESTING=true vpython", "TESTING=true python", content
+                )
+                content = re.sub(r"WorldArchitect\.AI", "Your Project", content)
 
                 # New portable patterns
-                content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
-                content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
-                content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
-                content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
-                content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
+                content = re.sub(
+                    r"~/worldarchitect\.ai", "$(git rev-parse --show-toplevel)", content
+                )
+                content = re.sub(
+                    r"~/your-project\.com", "$(git rev-parse --show-toplevel)", content
+                )
+                content = re.sub(
+                    r"jleechantest@gmail\.com", "<your-email@gmail.com>", content
+                )
+
+                # Scrub Firebase/GCP credentials
+                content = re.sub(
+                    r"AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc", "<YOUR_FIREBASE_API_KEY>", content
+                )
+                content = re.sub(
+                    r"ai-universe-b3551", "<your-firebase-project-id>", content
+                )
+
+                content = re.sub(
+                    r"/tmp/worldarchitectai", "/tmp/$PROJECT_NAME", content
+                )
+                content = re.sub(
+                    r"/tmp/worldarchitect\.ai", "/tmp/$PROJECT_NAME", content
+                )
                 # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
-                content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
+                content = re.sub(
+                    r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")',
+                    "$(git config --get remote.origin.url)",
+                    content,
+                )
 
                 # SOURCE_DIR variable patterns - improved matching
-                content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
-                content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+                content = re.sub(
+                    r'\bfind\s+["\']?(?:\./)?mvp_site["\']?',
+                    'find "$SOURCE_DIR"',
+                    content,
+                )
+                content = re.sub(
+                    r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content
+                )
 
                 # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
-                if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
+                if (
+                    "SOURCE_DIR" in content
+                    and not re.search(r"^\s*SOURCE_DIR=", content, re.MULTILINE)
+                    and "mvp_site" in content
+                ):
                     # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
-                    if 'PROJECT_ROOT=' in content:
-                        content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                    if "PROJECT_ROOT=" in content:
+                        content = re.sub(
+                            r"(PROJECT_ROOT=[^\n]*\n)",
+                            r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n',
+                            content,
+                        )
                     else:
                         # Insert after shebang and initial comments (flexible for any shebang)
-                        content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-                content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
+                        content = re.sub(
+                            r"(#![^\n]*\n(?:#[^\n]*\n)*)",
+                            r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n',
+                            content,
+                        )
+                content = re.sub(
+                    r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]',
+                    'if [ ! -d "$SOURCE_DIR" ]',
+                    content,
+                )
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
         except Exception as e:
             print(f"⚠️  Warning: Content filtering failed for {file_path}: {e}")
-
 
     def _determine_version_and_changes(self):
         """DEPRECATED - Version determination is now handled by LLM in exportcommands.md"""
@@ -944,12 +1116,16 @@ Claude Code can assist with adapting these workflows to your specific project. J
         """Intelligently detect version number using multiple strategies"""
         try:
             # Strategy 1: Try to get latest git tag that looks like a version
-            result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'],
-                                  capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                capture_output=True,
+                text=True,
+                cwd=self.project_root,
+            )
             if result.returncode == 0:
                 tag = result.stdout.strip()
                 # Extract version from tag (handle v1.2.3 or 1.2.3 formats)
-                version_match = re.search(r'v?(\d+\.\d+\.\d+)', tag)
+                version_match = re.search(r"v?(\d+\.\d+\.\d+)", tag)
                 if version_match:
                     version = version_match.group(1)
                     print(f"   📋 Found git tag version: {version}")
@@ -960,9 +1136,9 @@ Claude Code can assist with adapting these workflows to your specific project. J
 
         try:
             # Strategy 2: Try reading VERSION file
-            version_file = os.path.join(self.project_root, 'VERSION')
+            version_file = os.path.join(self.project_root, "VERSION")
             if os.path.exists(version_file):
-                with open(version_file, 'r') as f:
+                with open(version_file, "r") as f:
                     version = f.read().strip()
                     print(f"   📋 Found VERSION file: {version}")
                     return self._increment_version(version)
@@ -972,12 +1148,12 @@ Claude Code can assist with adapting these workflows to your specific project. J
 
         try:
             # Strategy 3: Try reading package.json version
-            package_json = os.path.join(self.project_root, 'package.json')
+            package_json = os.path.join(self.project_root, "package.json")
             if os.path.exists(package_json):
-                with open(package_json, 'r') as f:
+                with open(package_json, "r") as f:
                     data = json.load(f)
-                    if 'version' in data:
-                        version = data['version']
+                    if "version" in data:
+                        version = data["version"]
                         print(f"   📋 Found package.json version: {version}")
                         return self._increment_version(version)
         except (FileNotFoundError, json.JSONDecodeError, KeyError, OSError) as e:
@@ -990,7 +1166,9 @@ Claude Code can assist with adapting these workflows to your specific project. J
             existing_version = self._get_existing_version_from_target()
             if existing_version:
                 version = self._increment_version(existing_version)
-                print(f"   📋 Incremented from existing version: {existing_version} → {version}")
+                print(
+                    f"   📋 Incremented from existing version: {existing_version} → {version}"
+                )
                 return version
         except Exception as e:
             print(f"   ⚠️ GitHub repository version detection failed: {e}")
@@ -1010,7 +1188,7 @@ Claude Code can assist with adapting these workflows to your specific project. J
             if response.status_code == 200:
                 content = response.text
                 # Look for version patterns like ### v1.2.3
-                versions = re.findall(r'### v(\d+\.\d+\.\d+)', content)
+                versions = re.findall(r"### v(\d+\.\d+\.\d+)", content)
                 if versions:
                     # Return the latest version (first one found, assuming newest first)
                     latest = versions[0]
@@ -1028,11 +1206,17 @@ Claude Code can assist with adapting these workflows to your specific project. J
             if response.status_code == 200:
                 existing_content = response.text
                 # Extract the version history section
-                version_section_match = re.search(r'## 📚 Version History\s*\n\n(.*?)(?=\n---|\nGenerated with|\Z)', existing_content, re.DOTALL)
+                version_section_match = re.search(
+                    r"## 📚 Version History\s*\n\n(.*?)(?=\n---|\nGenerated with|\Z)",
+                    existing_content,
+                    re.DOTALL,
+                )
                 if version_section_match:
                     existing_history = version_section_match.group(1).strip()
-                    if existing_history and not existing_history.startswith('<!--'):
-                        print(f"   📋 Found existing version history ({len(existing_history)} chars)")
+                    if existing_history and not existing_history.startswith("<!--"):
+                        print(
+                            f"   📋 Found existing version history ({len(existing_history)} chars)"
+                        )
                         return existing_history
         except Exception as e:
             print(f"   ⚠️ Could not fetch existing version history: {e}")
@@ -1041,7 +1225,7 @@ Claude Code can assist with adapting these workflows to your specific project. J
     def _increment_version(self, version):
         """Increment minor version for new export (patch for small changes)"""
         try:
-            major, minor, patch = map(int, version.split('.'))
+            major, minor, patch = map(int, version.split("."))
             # Increment minor version for this update
             new_version = f"{major}.{minor + 1}.0"
             print(f"   📋 Incremented version: {version} → {new_version}")
@@ -1058,13 +1242,13 @@ Claude Code can assist with adapting these workflows to your specific project. J
         content = self._replace_dynamic_placeholders(content)
 
         # Get current date for version
-        current_date = time.strftime('%Y-%m-%d')
+        current_date = time.strftime("%Y-%m-%d")
 
         # Intelligently detect version number using multiple strategies
         version = self._detect_version()
 
         # Generate new version entry for this release
-        new_version_entry = f'''### v{version} ({current_date})
+        new_version_entry = f"""### v{version} ({current_date})
 
 **Export Statistics**:
 - **{self.commands_count} Commands**: Complete workflow orchestration system
@@ -1092,17 +1276,19 @@ Claude Code can assist with adapting these workflows to your specific project. J
 **Documentation**:
 - Updated scripts export description
 - Clear separation between project-specific and generally useful scripts
-- Improved adaptation guidance for cross-project usage'''
+- Improved adaptation guidance for cross-project usage"""
 
         # Try to get existing version history to preserve it
         existing_history = self._get_existing_version_history(content)
 
         # Create full version history (new entry + existing entries)
         if existing_history:
-            version_entry = new_version_entry + '\n\n' + existing_history
+            version_entry = new_version_entry + "\n\n" + existing_history
         else:
             # Fallback: include previous v1.0.0 entry if no existing history found
-            version_entry = new_version_entry + '''
+            version_entry = (
+                new_version_entry
+                + """
 
 ### v1.0.0 (2025-08-14)
 
@@ -1132,10 +1318,11 @@ Claude Code can assist with adapting these workflows to your specific project. J
 **Documentation**:
 - Updated export workflow documentation with accurate statistics
 - Enhanced template system documentation
-- Improved troubleshooting guides for export issues'''
+- Improved troubleshooting guides for export issues"""
+            )
 
         # Replace the LLM placeholder section (with whitespace tolerance)
-        llm_pattern = r'<!--\s*LLM_VERSION_START\s*-->.*?<!--\s*LLM_VERSION_END\s*-->'
+        llm_pattern = r"<!--\s*LLM_VERSION_START\s*-->.*?<!--\s*LLM_VERSION_END\s*-->"
         replacement = version_entry
 
         content = re.sub(llm_pattern, replacement, content, flags=re.DOTALL)
@@ -1149,56 +1336,61 @@ Claude Code can assist with adapting these workflows to your specific project. J
         # Define replacement mappings
         replacements = {
             # Command count - handles various formats
-            r'\*\*144 commands\*\*': f'**{self.commands_count} commands**',
-            r'\*\*118 commands\*\*': f'**{self.commands_count} commands**',  # Handle legacy counts
-            r'144 commands': f'{self.commands_count} commands',
-            r'118 commands': f'{self.commands_count} commands',  # Handle legacy counts
-
+            r"\*\*144 commands\*\*": f"**{self.commands_count} commands**",
+            r"\*\*118 commands\*\*": f"**{self.commands_count} commands**",  # Handle legacy counts
+            r"144 commands": f"{self.commands_count} commands",
+            r"118 commands": f"{self.commands_count} commands",  # Handle legacy counts
             # Export statistics - make them dynamic
-            r'\*\*(\d+) Commands\*\*': f'**{self.commands_count} Commands**',
-            r'\*\*(\d+) Hooks\*\*': f'**{self.hooks_count} Hooks**',
-            r'\*\*(\d+) Scripts\*\*': f'**{self.scripts_count} Scripts**',
-            r'\*\*(\d+) Agents\*\*': f'**{self.agents_count} Agents**',
-            r'\*\*(\d+) Skills\*\*': f'**{self.skills_count} Skills**',
-            r'\*\*(\d+) skills\*\*': f'**{self.skills_count} skills**',
+            r"\*\*(\d+) Commands\*\*": f"**{self.commands_count} Commands**",
+            r"\*\*(\d+) Hooks\*\*": f"**{self.hooks_count} Hooks**",
+            r"\*\*(\d+) Scripts\*\*": f"**{self.scripts_count} Scripts**",
+            r"\*\*(\d+) Agents\*\*": f"**{self.agents_count} Agents**",
+            r"\*\*(\d+) Skills\*\*": f"**{self.skills_count} Skills**",
+            r"\*\*(\d+) skills\*\*": f"**{self.skills_count} skills**",
         }
 
         # Apply all replacements
         for pattern, replacement in replacements.items():
             content = re.sub(pattern, replacement, content)
 
-        print(f"   📊 Dynamic counts: {self.commands_count} commands, {self.hooks_count} hooks, {self.scripts_count} scripts, {self.agents_count} agents, {self.skills_count} skills")
+        print(
+            f"   📊 Dynamic counts: {self.commands_count} commands, {self.hooks_count} hooks, {self.scripts_count} scripts, {self.agents_count} agents, {self.skills_count} skills"
+        )
         return content
 
     def _generate_readme(self):
         """Generate README with LLM placeholder replacement"""
         # Look for README_EXPORT_TEMPLATE.md in the commands directory
-        readme_template_path = os.path.join(self.project_root, '.claude', 'commands', 'README_EXPORT_TEMPLATE.md')
+        readme_template_path = os.path.join(
+            self.project_root, ".claude", "commands", "README_EXPORT_TEMPLATE.md"
+        )
 
         if os.path.exists(readme_template_path):
             print("📖 Processing README_EXPORT_TEMPLATE.md with LLM version generation")
-            readme_dest = os.path.join(self.export_dir, 'README.md')
+            readme_dest = os.path.join(self.export_dir, "README.md")
 
             # Read template content
-            with open(readme_template_path, 'r', encoding='utf-8') as f:
+            with open(readme_template_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Replace LLM placeholders with actual version information
             content = self._replace_llm_placeholders(content)
 
             # Write processed README
-            with open(readme_dest, 'w', encoding='utf-8') as f:
+            with open(readme_dest, "w", encoding="utf-8") as f:
                 f.write(content)
 
             print("✅ Generated README.md with LLM version information")
         else:
-            print(f"Warning: README_EXPORT_TEMPLATE.md not found at {readme_template_path}")
+            print(
+                f"Warning: README_EXPORT_TEMPLATE.md not found at {readme_template_path}"
+            )
             print("Falling back to basic README generation...")
             self._generate_fallback_readme()
 
     def _generate_fallback_readme(self):
         """Fallback README generation if template not found"""
-        readme_content = f'''# Claude Commands - Command Composition System
+        readme_content = f"""# Claude Commands - Command Composition System
 
 ⚠️ **REFERENCE EXPORT** - This is a reference export from a working Claude Code project.
 
@@ -1315,17 +1507,16 @@ This is a filtered reference export from a working Claude Code project. Commands
 🚀 **Generated with [Claude Code](https://claude.ai/code)**
 
 **Co-Authored-By: Claude <noreply@anthropic.com>**
-'''
+"""
 
         # Ensure export directory exists
         os.makedirs(self.export_dir, exist_ok=True)
 
-        readme_path = os.path.join(self.export_dir, 'README.md')
-        with open(readme_path, 'w') as f:
+        readme_path = os.path.join(self.export_dir, "README.md")
+        with open(readme_path, "w") as f:
             f.write(readme_content)
 
         print("✅ Generated README.md based on current export state")
-
 
     def _create_archive(self):
         """Create compressed archive of export"""
@@ -1333,9 +1524,13 @@ This is a filtered reference export from a working Claude Code project. Commands
         archive_path = os.path.join(self.export_dir, archive_name)
 
         cmd = [
-            'tar', '-czf', archive_path,
-            '-C', self.export_dir,
-            'staging/', 'README.md'
+            "tar",
+            "-czf",
+            archive_path,
+            "-C",
+            self.export_dir,
+            "staging/",
+            "README.md",
         ]
 
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -1377,15 +1572,17 @@ This is a filtered reference export from a working Claude Code project. Commands
         print("Cloning target repository...")
 
         # Use system PATH to find gh command with fallback for common locations
-        gh_cmd = shutil.which('gh')
+        gh_cmd = shutil.which("gh")
         if not gh_cmd:
             # Try common locations for gh (Linux and Windows)
             common_paths = [
                 os.path.expanduser("~/.local/bin/gh"),  # Linux user install
-                "/usr/local/bin/gh",                    # Linux system install
-                os.path.join(os.path.expanduser("~"), "bin", "gh"),  # Windows/Linux user bin
+                "/usr/local/bin/gh",  # Linux system install
+                os.path.join(
+                    os.path.expanduser("~"), "bin", "gh"
+                ),  # Windows/Linux user bin
                 "C:\\Program Files\\GitHub CLI\\gh.exe",
-                "C:\\Program Files (x86)\\GitHub CLI\\gh.exe"
+                "C:\\Program Files (x86)\\GitHub CLI\\gh.exe",
             ]
             for path in common_paths:
                 if os.path.exists(path):
@@ -1393,29 +1590,67 @@ This is a filtered reference export from a working Claude Code project. Commands
                     break
 
             if not gh_cmd:
-                raise GitHubAPIError("GitHub CLI (gh) not found in PATH or common locations. Please install GitHub CLI.")
+                raise GitHubAPIError(
+                    "GitHub CLI (gh) not found in PATH or common locations. Please install GitHub CLI."
+                )
 
-        cmd = [gh_cmd, 'repo', 'clone', 'jleechanorg/claude-commands', self.repo_dir]
+        cmd = [gh_cmd, "repo", "clone", "jleechanorg/claude-commands", self.repo_dir]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise GitRepositoryError(f"Repository clone failed: {result.stderr}")
 
+        # Configure git to use GITHUB_TOKEN for authentication
+        if self.github_token:
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(self.repo_dir)
+                self._configure_authenticated_remote()
+            except subprocess.CalledProcessError as exc:
+                masked_cmd = []
+                for arg in exc.cmd if hasattr(exc, "cmd") else []:
+                    arg_str = str(arg)
+                    if self.github_token in arg_str:
+                        masked_cmd.append(arg_str.replace(self.github_token, "***"))
+                    else:
+                        masked_cmd.append(arg_str)
+                raise GitRepositoryError(
+                    f"Failed to configure authenticated remote: {' '.join(masked_cmd) or 'git remote set-url origin <redacted>'}"
+                ) from None
+            finally:
+                os.chdir(original_cwd)
+
         print("✅ Repository cloned")
+
+    def _configure_authenticated_remote(self):
+        """Configure remote to use token authentication without leaking credentials"""
+
+        if not self.github_token:
+            return
+
+        # Use token as password per GitHub requirements
+        remote_url = "https://x-access-token:{token}@github.com/jleechanorg/claude-commands.git".format(
+            token=self.github_token
+        )
+        subprocess.run(["git", "remote", "set-url", "origin", remote_url], check=True)
 
     def _create_export_branch(self):
         """Create and switch to export branch"""
         print(f"🌟 Creating export branch: {self.export_branch}")
 
-        os.chdir(self.repo_dir)
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.repo_dir)
 
-        # Ensure we're on main and up to date
-        subprocess.run(['git', 'checkout', 'main'], check=True)
-        subprocess.run(['git', 'pull', 'origin', 'main'], check=True)
+            # Ensure we're on main and up to date
+            subprocess.run(["git", "checkout", "main"], check=True)
+            subprocess.run(["git", "pull", "origin", "main"], check=True)
 
-        # Create export branch
-        subprocess.run(['git', 'checkout', '-b', self.export_branch], check=True)
+            # Create export branch
+            subprocess.run(["git", "checkout", "-b", self.export_branch], check=True)
 
-        print("✅ Export branch created")
+            print("✅ Export branch created")
+        finally:
+            os.chdir(original_cwd)
 
     def _copy_to_repository(self):
         """Copy exported content to repository with proper .claude/ structure"""
@@ -1423,30 +1658,39 @@ This is a filtered reference export from a working Claude Code project. Commands
 
         # 🚨 FIXED: Copy to proper .claude/ directories instead of repository root
         # Create .claude/ directory structure in target repository
-        claude_dir = os.path.join(self.repo_dir, '.claude')
+        claude_dir = os.path.join(self.repo_dir, ".claude")
         os.makedirs(claude_dir, exist_ok=True)
 
         # Create target directories with proper .claude/ structure
         dirs_mapping = {
-            'commands': os.path.join(claude_dir, 'commands'),
-            'hooks': os.path.join(claude_dir, 'hooks'),
-            'agents': os.path.join(claude_dir, 'agents'),
-            'claude_scripts': os.path.join(claude_dir, 'scripts'),  # .claude/scripts directory
-            'skills': os.path.join(claude_dir, 'skills'),           # .claude/skills directory
-            'settings_json': os.path.join(claude_dir, 'settings.json'),  # .claude/settings.json file
-            'orchestration': 'orchestration',  # Goes to repo root
-            'scripts': None,                   # Goes to repo root within scripts/
-            'workflows': 'workflows'           # GitHub workflows - goes to repo root as examples
+            "commands": os.path.join(claude_dir, "commands"),
+            "hooks": os.path.join(claude_dir, "hooks"),
+            "agents": os.path.join(claude_dir, "agents"),
+            "claude_scripts": os.path.join(
+                claude_dir, "scripts"
+            ),  # .claude/scripts directory
+            "skills": os.path.join(claude_dir, "skills"),  # .claude/skills directory
+            "settings_json": os.path.join(
+                claude_dir, "settings.json"
+            ),  # .claude/settings.json file
+            "orchestration": "orchestration",  # Goes to repo root
+            "automation": "automation",  # Goes to repo root
+            "scripts": None,  # Goes to repo root within scripts/
+            "workflows": "workflows",  # GitHub workflows - goes to repo root as examples
         }
 
         # Create the .claude/ subdirectories (but not for files like settings.json)
         for local_name, target_path in dirs_mapping.items():
             # Create directory only if target_path is a directory (no file extension)
-            if target_path and target_path.startswith(claude_dir) and not Path(target_path).suffix:
+            if (
+                target_path
+                and target_path.startswith(claude_dir)
+                and not Path(target_path).suffix
+            ):
                 os.makedirs(target_path, exist_ok=True)
 
         # Copy content with proper directory mapping
-        staging_dir = os.path.join(self.export_dir, 'staging')
+        staging_dir = os.path.join(self.export_dir, "staging")
         for item in os.listdir(staging_dir):
             src = os.path.join(staging_dir, item)
 
@@ -1455,8 +1699,8 @@ This is a filtered reference export from a working Claude Code project. Commands
                 target_path = dirs_mapping[item]
                 if target_path is None:
                     # Handle scripts specially - copy to scripts/ directory in repo root
-                    if item == 'scripts' and os.path.isdir(src):
-                        scripts_dir = os.path.join(self.repo_dir, 'scripts')
+                    if item == "scripts" and os.path.isdir(src):
+                        scripts_dir = os.path.join(self.repo_dir, "scripts")
                         os.makedirs(scripts_dir, exist_ok=True)
 
                         for script_file in sorted(os.listdir(src)):
@@ -1465,7 +1709,7 @@ This is a filtered reference export from a working Claude Code project. Commands
                             if os.path.isfile(script_src):
                                 shutil.copy2(script_src, script_dst)
                                 # Ensure executability for shell/python scripts (Windows-safe)
-                                if script_file.endswith(('.sh', '.py')):
+                                if script_file.endswith((".sh", ".py")):
                                     try:
                                         os.chmod(script_dst, 0o755)
                                     except (OSError, NotImplementedError):
@@ -1490,7 +1734,7 @@ This is a filtered reference export from a working Claude Code project. Commands
                 shutil.copy2(src, dst)
 
         # Copy README (this can overwrite)
-        shutil.copy2(os.path.join(self.export_dir, 'README.md'), self.repo_dir)
+        shutil.copy2(os.path.join(self.export_dir, "README.md"), self.repo_dir)
 
         print("✅ Content copied to proper .claude/ directory structure")
 
@@ -1503,7 +1747,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             dst_item = os.path.join(dst_dir, item)
 
             # Skip virtual environments, node_modules, and broken symlinks
-            if item in ('venv', 'node_modules', '__pycache__', '.git'):
+            if item in ("venv", "node_modules", "__pycache__", ".git"):
                 continue
             if os.path.islink(src_item) and not os.path.exists(src_item):
                 print(f"   ⏭ Skipping broken symlink: {item}")
@@ -1522,7 +1766,12 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Verify that excluded directories are not present"""
         print("🔍 Verifying directory exclusions...")
 
-        excluded_dirs = ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype']
+        excluded_dirs = [
+            "analysis",
+            "claude-bot-commands",
+            "coding_prompts",
+            "prototype",
+        ]
         found_excluded = []
 
         for dir_name in excluded_dirs:
@@ -1542,27 +1791,38 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Commit changes and push branch"""
         print("💾 Committing and pushing changes...")
 
-        # Configure git user for commit (needed in clean clone)
-        subprocess.run(['git', 'config', 'user.email', 'claude-export@anthropic.com'], check=True)
-        subprocess.run(['git', 'config', 'user.name', 'Claude Export'], check=True)
-        # Disable commit signing (may not be configured in cloned repo)
-        subprocess.run(['git', 'config', 'commit.gpgsign', 'false'], check=True)
+        original_cwd = os.getcwd()
+        os.chdir(self.repo_dir)
 
-        # Add all changes with error handling
         try:
-            subprocess.run(['git', 'add', '.'], check=True)
-        except subprocess.CalledProcessError:
-            # Fallback: add files individually if bulk add fails
-            print("   Bulk git add failed, adding files individually...")
-            for root, dirs, files in os.walk('.'):
-                for file in files:
-                    try:
-                        subprocess.run(['git', 'add', os.path.join(root, file)], check=False)
-                    except subprocess.CalledProcessError:
-                        print(f"   Warning: Could not add {os.path.join(root, file)}")
+            # Configure git user for commit (needed in clean clone)
+            subprocess.run(
+                ["git", "config", "user.email", "claude-export@anthropic.com"],
+                check=True,
+            )
+            subprocess.run(["git", "config", "user.name", "Claude Export"], check=True)
+            # Disable commit signing (may not be configured in cloned repo)
+            subprocess.run(["git", "config", "commit.gpgsign", "false"], check=True)
 
-        # Create commit message
-        commit_message = f"""Fresh Claude Commands Export {time.strftime('%Y-%m-%d')}
+            # Add all changes with error handling
+            try:
+                subprocess.run(["git", "add", "."], check=True)
+            except subprocess.CalledProcessError:
+                # Fallback: add files individually if bulk add fails
+                print("   Bulk git add failed, adding files individually...")
+                for root, dirs, files in os.walk("."):
+                    for file in files:
+                        try:
+                            subprocess.run(
+                                ["git", "add", os.path.join(root, file)], check=True
+                            )
+                        except subprocess.CalledProcessError:
+                            print(
+                                f"   Warning: Could not add {os.path.join(root, file)}"
+                            )
+
+            # Create commit message
+            commit_message = f"""Fresh Claude Commands Export {time.strftime("%Y-%m-%d")}
 
 🚨 DIRECTORY EXCLUSIONS APPLIED:
 - Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/
@@ -1588,12 +1848,43 @@ Starting MANUAL INSTALLATION: Copy commands to .claude/commands/ and hooks to .c
 ⚠️ Reference export - requires adaptation for other projects
 🤖 Generated with Claude Code CLI"""
 
-        subprocess.run(['git', 'commit', '-m', commit_message], check=True)
+            subprocess.run(["git", "commit", "-m", commit_message], check=True)
 
-        # Push branch
-        subprocess.run(['git', 'push', '-u', 'origin', self.export_branch], check=True)
+            # Push branch
+            subprocess.run(
+                ["git", "push", "-u", "origin", self.export_branch], check=True
+            )
 
-        print("✅ Changes committed and pushed")
+            print("✅ Changes committed and pushed")
+        finally:
+            if self.github_token:
+                try:
+                    self._reset_remote_to_default()
+                except subprocess.CalledProcessError:
+                    print("⚠️  Warning: Could not reset remote to tokenless URL")
+            os.chdir(original_cwd)
+
+    def _reset_remote_to_default(self):
+        """Remove inlined token from git remote configuration"""
+
+        if not getattr(self, "repo_dir", None) or not os.path.exists(self.repo_dir):
+            return
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.repo_dir)
+            subprocess.run(
+                [
+                    "git",
+                    "remote",
+                    "set-url",
+                    "origin",
+                    "https://github.com/jleechanorg/claude-commands.git",
+                ],
+                check=True,
+            )
+        finally:
+            os.chdir(original_cwd)
 
     def _create_pull_request(self):
         """Create pull request using GitHub API"""
@@ -1644,28 +1935,30 @@ This is a filtered reference export. Commands may need adaptation for specific e
 🤖 **Generated with [Claude Code](https://claude.ai/code)**"""
 
         headers = {
-            'Authorization': f'token {self.github_token}',
-            'Accept': 'application/vnd.github.v3+json'
+            "Authorization": f"token {self.github_token}",
+            "Accept": "application/vnd.github.v3+json",
         }
 
         data = {
-            'title': pr_title,
-            'body': pr_body,
-            'head': self.export_branch,
-            'base': 'main'
+            "title": pr_title,
+            "body": pr_body,
+            "head": self.export_branch,
+            "base": "main",
         }
 
         response = requests.post(
-            'https://api.github.com/repos/jleechanorg/claude-commands/pulls',
+            "https://api.github.com/repos/jleechanorg/claude-commands/pulls",
             headers=headers,
-            json=data
+            json=data,
         )
 
         if response.status_code != 201:
-            raise GitHubAPIError(f"PR creation failed: {response.status_code} {response.text}")
+            raise GitHubAPIError(
+                f"PR creation failed: {response.status_code} {response.text}"
+            )
 
         pr_data = response.json()
-        pr_url = pr_data['html_url']
+        pr_url = pr_data["html_url"]
 
         print(f"✅ Pull request created: {pr_url}")
         return pr_url
@@ -1675,7 +1968,9 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print("\n🎉 EXPORT COMPLETE!")
         print("=" * 50)
         print(f"📂 Local Export: {self.export_dir}")
-        archive_files = [f for f in os.listdir(self.export_dir) if f.endswith('.tar.gz')]
+        archive_files = [
+            f for f in os.listdir(self.export_dir) if f.endswith(".tar.gz")
+        ]
         if archive_files:
             print(f"📦 Archive: {archive_files[0]}")
         print(f"🌟 Branch: {self.export_branch}")
@@ -1687,18 +1982,28 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Skills: {self.skills_count}")
         print(f"   Workflows: {self.workflows_count} (examples only)")
-        print("   Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/")
+        print(
+            "   Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/"
+        )
         print("\n🎯 The export has been published and is ready for review!")
 
     def handle_error(self, error):
         """Handle export errors gracefully"""
         print(f"\n❌ Export failed: {error}")
         print(f"📂 Partial export may be available at: {self.export_dir}")
-        if hasattr(self, 'repo_dir') and os.path.exists(self.repo_dir):
+        if hasattr(self, "repo_dir") and os.path.exists(self.repo_dir):
             print(f"🗂️  Repository clone: {self.repo_dir}")
+            if self.github_token:
+                try:
+                    self._reset_remote_to_default()
+                except subprocess.CalledProcessError:
+                    print(
+                        "⚠️  Warning: Could not reset remote to tokenless URL during error handling"
+                    )
         print("\n🔧 Debug information:")
         print(f"   Project root: {self.project_root}")
         print(f"   GitHub token set: {'Yes' if self.github_token else 'No'}")
+
 
 def sync_files_differential(source_dir, target_dir):
     """
@@ -1710,7 +2015,7 @@ def sync_files_differential(source_dir, target_dir):
     target_path = Path(target_dir)
 
     # Get all relative paths from source .claude/ directory
-    claude_source_dir = source_path / '.claude'
+    claude_source_dir = source_path / ".claude"
     if not claude_source_dir.exists():
         # If no .claude directory, delete everything in target
         if target_path.exists():
@@ -1730,13 +2035,13 @@ def sync_files_differential(source_dir, target_dir):
     for root, dirs, files in os.walk(claude_source_dir):
         rel_root = Path(root).relative_to(claude_source_dir)
         for file in files:
-            rel_file_path = rel_root / file if rel_root != Path('.') else Path(file)
+            rel_file_path = rel_root / file if rel_root != Path(".") else Path(file)
             source_files.add(rel_file_path)
         for dir in dirs:
-            rel_dir_path = rel_root / dir if rel_root != Path('.') else Path(dir)
+            rel_dir_path = rel_root / dir if rel_root != Path(".") else Path(dir)
             source_dirs.add(rel_dir_path)
         # Add intermediate directory paths
-        if rel_root != Path('.'):
+        if rel_root != Path("."):
             source_dirs.add(rel_root)
 
     # Track what to delete in target
@@ -1749,13 +2054,13 @@ def sync_files_differential(source_dir, target_dir):
 
         # Check files for deletion
         for file in files:
-            rel_file_path = rel_root / file if rel_root != Path('.') else Path(file)
+            rel_file_path = rel_root / file if rel_root != Path(".") else Path(file)
             if rel_file_path not in source_files:
                 files_to_delete.append(Path(root) / file)
 
         # Check directories for deletion
         for dir in dirs:
-            rel_dir_path = rel_root / dir if rel_root != Path('.') else Path(dir)
+            rel_dir_path = rel_root / dir if rel_root != Path(".") else Path(dir)
             if rel_dir_path not in source_dirs:
                 dirs_to_delete.append(Path(root) / dir)
 
@@ -1772,6 +2077,7 @@ def sync_files_differential(source_dir, target_dir):
             shutil.rmtree(dir_path)
         except (PermissionError, OSError):
             pass  # Skip directories we can't delete due to permissions
+
 
 if __name__ == "__main__":
     exporter = ClaudeCommandsExporter()
