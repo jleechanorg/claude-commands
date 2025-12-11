@@ -536,11 +536,15 @@ class TestCursorCliIntegration(unittest.TestCase):
         self.assertIn("-p @{prompt_file}", template)
 
     def test_cursor_detection_keywords(self):
-        """Cursor should be detected by relevant keywords."""
+        """Cursor should be detected by relevant keywords (not model names)."""
         cursor = CLI_PROFILES["cursor"]
-        expected_keywords = ["cursor", "cursor-agent", "grok"]
+        # Note: "grok" removed - model names should not trigger CLI selection
+        # since the model is configurable via CURSOR_MODEL env var
+        expected_keywords = ["cursor", "cursor-agent"]
         for keyword in expected_keywords:
             self.assertIn(keyword, cursor["detection_keywords"])
+        # Ensure model name is NOT in detection keywords (decoupled concerns)
+        self.assertNotIn("grok", cursor["detection_keywords"])
 
     def test_cursor_keyword_detection(self):
         """Task with cursor keywords should select cursor CLI."""

@@ -112,7 +112,6 @@ CLI_PROFILES = {
             "use cursor",
             "use the cursor cli",
             "cursor ai",
-            "grok",
         ],
     },
 }
