@@ -97,6 +97,7 @@ class SafeJSONManager:
                         try:
                             os.remove(temp_path)
                         except OSError:
+                            # Ignore temp file cleanup errors - non-critical
                             pass
 
             except OSError as e:
