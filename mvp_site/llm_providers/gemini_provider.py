@@ -277,3 +277,55 @@ def generate_content_with_tool_loop(
         json_mode=True # JSON Mode ENABLED
     )
 
+
+def generate_content_with_code_execution(
+    prompt_contents: list[Any],
+    model_name: str,
+    system_instruction_text: str | None,
+    temperature: float,
+    safety_settings: list[Any],
+    json_mode_max_output_tokens: int,
+) -> Any:
+    """Single-Phase Inference with code_execution + JSON mode for Gemini 3.
+
+    Gemini 3 models can use code_execution AND JSON mode together in a single call.
+    The model runs Python code (e.g., random.randint for dice) during inference
+    and returns structured JSON output.
+
+    Args:
+        prompt_contents: The prompt content to send
+        model_name: Gemini model name (must be Gemini 3.x)
+        system_instruction_text: Optional system instruction
+        temperature: Sampling temperature
+        safety_settings: Safety settings list
+        json_mode_max_output_tokens: Max output tokens
+
+    Returns:
+        Gemini API response with code execution results in JSON format
+    """
+    client = get_client()
+
+    logging_util.info(f"Gemini 3 code_execution: Single-phase with JSON mode for {model_name}")
+
+    # Build config with BOTH code_execution AND JSON mode
+    generation_config_params = {
+        "max_output_tokens": json_mode_max_output_tokens,
+        "temperature": temperature,
+        "safety_settings": safety_settings,
+        "response_mime_type": "application/json",  # JSON mode enabled
+    }
+
+    config = types.GenerateContentConfig(**generation_config_params)
+
+    # Add code_execution tool - Gemini 3 supports this WITH JSON mode
+    config.tools = [types.Tool(code_execution={})]
+
+    if system_instruction_text:
+        config.system_instruction = types.Part(text=system_instruction_text)
+
+    return client.models.generate_content(
+        model=model_name,
+        contents=prompt_contents,
+        config=config,
+    )
+

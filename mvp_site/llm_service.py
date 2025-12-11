@@ -1640,6 +1640,20 @@ def _call_llm_api(
         )
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
+            # Check if this is a Gemini 3 model (supports code_execution + JSON)
+            if model_name in constants.GEMINI_3_MODELS:
+                logging_util.info(
+                    f"🔍 CALL_LLM_API_GEMINI3: Using code_execution + JSON mode for {model_name}"
+                )
+                return gemini_provider.generate_content_with_code_execution(
+                    prompt_contents=prompt_contents,
+                    model_name=model_name,
+                    system_instruction_text=system_instruction_text,
+                    temperature=TEMPERATURE,
+                    safety_settings=SAFETY_SETTINGS,
+                    json_mode_max_output_tokens=safe_output_limit,
+                )
+            # Gemini 2.x: Use two-phase tool loop
             logging_util.info(
                 "🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_content_with_tool_loop"
             )

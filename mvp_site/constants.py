@@ -75,21 +75,20 @@ GEMINI_3_MODELS: set[str] = {
 # ┌─────────────────────┬───────────────┬───────────┬──────────────┬───────────────┐
 # │ Model               │ Code Exec     │ JSON Mode │ Both Together│ Dice Strategy │
 # ├─────────────────────┼───────────────┼───────────┼──────────────┼───────────────┤
-# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
-# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
-# │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
-# │ gemini-2.5-pro      │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ precompute    │
+# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ✅ YES       │ code_execution│
+# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
+# │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
+# │ gemini-2.5-pro      │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
 # └─────────────────────┴───────────────┴───────────┴──────────────┴───────────────┘
 #
-# IMPORTANT: Gemini API does NOT support code_execution + JSON mode together
-# for ANY model. The API returns:
-# "Unable to submit request because controlled generation is not supported with Code Execution tool"
+# Gemini 3.x: CAN use code_execution + JSON together (single-phase)
+# Gemini 2.x: CANNOT use both together - use tool_use with phase separation
 #
-# ARCHITECTURE (Dec 2024): All models now use pre-rolled dice injected into prompts.
-# This eliminates the need for code_execution entirely.
-#
-# DEPRECATED: This set is kept for backwards compatibility but is no longer used.
-MODELS_WITH_CODE_EXECUTION: set[str] = set()  # Empty - code_execution disabled for all
+# ARCHITECTURE (Dec 2024): Tool loops restored for all providers.
+# - Gemini 3: Single-phase with code_execution + JSON (model runs Python for dice)
+# - Gemini 2.x: Two-phase (tools→JSON phase separation)
+# - Cerebras/OpenRouter: Function calling with tool_use
+MODELS_WITH_CODE_EXECUTION: set[str] = GEMINI_3_MODELS  # Gemini 3 models support code_execution + JSON
 
 # Models that support tool use / function calling
 # These require two-stage inference: LLM requests tool → we execute → send result back
