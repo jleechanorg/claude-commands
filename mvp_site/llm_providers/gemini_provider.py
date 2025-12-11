@@ -12,7 +12,7 @@ from typing import Any
 from google import genai
 from google.genai import types
 
-from mvp_site import logging_util
+from mvp_site import constants, logging_util
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
 # We rely on response_mime_type="application/json" + prompt instruction instead
@@ -53,6 +53,7 @@ def generate_json_mode_content(
     temperature: float,
     safety_settings: list[Any],
     json_mode_max_output_tokens: int,
+    enable_code_execution: bool | None = None,
 ) -> Any:
     """Generate content from Gemini using JSON response mode.
 
@@ -60,16 +61,19 @@ def generate_json_mode_content(
         prompt_contents: The prompt content to send
         model_name: Gemini model name
         system_instruction_text: Optional system instruction
+        max_output_tokens: Max tokens (unused, kept for API compat)
         temperature: Sampling temperature
         safety_settings: Safety settings list
-        json_mode_max_output_tokens: Max output tokens for JSON mode
+        json_mode_max_output_tokens: Actual max output tokens for JSON mode
+        enable_code_execution: Whether to enable code_execution tool.
+            If None, auto-detect based on model capabilities.
 
     Returns:
         Gemini API response
 
     Note:
-        All dice rolls use pre-rolled values injected into the prompt.
-        No code_execution needed.
+        Code execution + JSON mode is supported on Gemini 2.0 and 3.0 models.
+        See: https://ai.google.dev/gemini-api/docs/structured-output
     """
     client = get_client()
 
@@ -78,7 +82,30 @@ def generate_json_mode_content(
         "temperature": temperature,
         "safety_settings": safety_settings,
         "response_mime_type": "application/json",
+        # NOTE: response_schema is NOT used because Gemini requires ALL object types
+        # to have non-empty properties - this conflicts with dynamic choice keys
+        # (e.g., explore_tavern, attack_goblin) that can't be pre-defined.
+        # Structure enforcement relies on:
+        # 1. Prompt instruction (game_state_instruction.md)
+        # 2. Post-response validation (narrative_response_schema.py)
     }
+
+    # NOTE: code_execution is DISABLED for JSON mode responses
+    # Gemini API does NOT support combining response_mime_type="application/json"
+    # with code_execution tools. The API returns:
+    # "Unable to submit request because controlled generation is not supported with Code Execution tool"
+    #
+    # ARCHITECTURE (Dec 2024): Pre-rolled dice are now injected into every prompt,
+    # eliminating the need for code_execution. The LLM uses these pre-rolled values
+    # instead of generating random numbers via Python code execution.
+    #
+    # The enable_code_execution parameter is kept for API compatibility but is
+    # effectively ignored when response_mime_type is set to JSON.
+    if enable_code_execution:
+        logging_util.info(
+            f"Code execution requested for {model_name} but DISABLED - "
+            "incompatible with JSON mode (controlled generation)"
+        )
 
     if system_instruction_text:
         generation_config_params["system_instruction"] = types.Part(

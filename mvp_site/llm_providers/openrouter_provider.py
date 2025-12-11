@@ -1,5 +1,9 @@
 """OpenRouter provider implementation for LLM interactions.
 
+Supports tool use (function calling) for dice rolling when code_execution
+is not available. Uses two-stage inference: LLM requests tool -> execute locally
+-> send result back -> LLM generates final response.
+
 Uses json_schema (strict:false) for models that support it (e.g., Grok).
 Other models fall back to json_object mode.
 """
@@ -28,14 +32,41 @@ MODELS_WITH_JSON_SCHEMA_SUPPORT = {
 
 
 class OpenRouterResponse:
-    """Simple response wrapper matching the .text interface used by llm_service."""
+    """Simple response wrapper matching the .text interface used by llm_service.
+
+    Also exposes tool_calls for function calling support.
+    """
 
     def __init__(self, text: str, raw_response: Any = None):
         self.text = text
         self.raw_response = raw_response or {}
+        # Extract tool_calls from response if present
+        self._tool_calls: list[dict] | None = None
+        self._finish_reason: str | None = None
+        try:
+            choice = raw_response.get("choices", [{}])[0] if raw_response else {}
+            message = choice.get("message", {})
+            self._tool_calls = message.get("tool_calls")
+            self._finish_reason = choice.get("finish_reason")
+        except (KeyError, IndexError, TypeError):
+            pass
+
+    @property
+    def tool_calls(self) -> list[dict] | None:
+        """Return tool_calls if the LLM requested function calls."""
+        return self._tool_calls
+
+    @property
+    def finish_reason(self) -> str | None:
+        """Return the finish_reason from the response."""
+        return self._finish_reason
+
+    def get_tool_calls(self) -> list[dict]:
+        """Return tool_calls as a list (empty if none)."""
+        return self._tool_calls or []
 
     def __repr__(self) -> str:  # pragma: no cover - debugging helper
-        return f"OpenRouterResponse(text_length={len(self.text)})"
+        return f"OpenRouterResponse(text_length={len(self.text)}, tool_calls={len(self._tool_calls or [])})"
 
 
 def _stringify_parts(parts: list[Any]) -> str:
@@ -70,6 +101,8 @@ def generate_content(
     system_instruction_text: str | None,
     temperature: float,
     max_output_tokens: int,
+    tools: list[dict] | None = None,
+    messages: list[dict] | None = None,
 ) -> OpenRouterResponse:
     """Generate JSON-oriented content using OpenRouter's chat API.
 
@@ -79,6 +112,8 @@ def generate_content(
         system_instruction_text: Optional system instruction
         temperature: Sampling temperature
         max_output_tokens: Maximum output tokens
+        tools: Optional list of tool definitions for function calling
+        messages: Optional pre-built messages list (for tool loop continuation)
 
     Raises:
         ValueError: If the API key is missing or the response is invalid.
@@ -87,11 +122,13 @@ def generate_content(
     if not api_key:
         raise ValueError("CRITICAL: OPENROUTER_API_KEY environment variable not found!")
 
-    user_message = _stringify_parts(prompt_contents)
-    messages = []
-    if system_instruction_text:
-        messages.append({"role": "system", "content": system_instruction_text})
-    messages.append({"role": "user", "content": user_message})
+    # Use provided messages or build from prompt_contents
+    if messages is None:
+        user_message = _stringify_parts(prompt_contents)
+        messages = []
+        if system_instruction_text:
+            messages.append({"role": "system", "content": system_instruction_text})
+        messages.append({"role": "user", "content": user_message})
 
     # Use json_schema (strict:false) for models that support it
     # Other models fall back to json_object (best-effort JSON)
@@ -109,6 +146,11 @@ def generate_content(
         "response_format": response_format,
     }
 
+    # Add tools if provided (for function calling)
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = "auto"
+
     logging_util.info(f"Calling OpenRouter model: {model_name}")
     response = requests.post(
         OPENROUTER_URL,
@@ -122,9 +164,179 @@ def generate_content(
     try:
         message = data["choices"][0]["message"]
         text = message.get("content") or ""
-        if not text:
-            raise KeyError("No content in message")
+        # Check for tool_calls - content may be null
+        has_tool_calls = "tool_calls" in message and message["tool_calls"]
+        if not text and not has_tool_calls:
+            raise KeyError("No content or tool_calls in message")
     except Exception as exc:  # noqa: BLE001 - defensive parsing
         raise ValueError(f"Invalid OpenRouter response structure: {data}") from exc
 
     return OpenRouterResponse(text, data)
+
+
+def process_tool_calls(tool_calls: list[dict]) -> list[dict]:
+    """Execute tool calls and return results.
+
+    Args:
+        tool_calls: List of tool call dicts from the LLM response
+
+    Returns:
+        List of tool results in OpenAI-compatible format
+    """
+    # Import here to avoid circular imports
+    from mvp_site.game_state import execute_dice_tool
+
+    results = []
+    for tool_call in tool_calls:
+        tool_id = tool_call.get("id", "")
+        function_info = tool_call.get("function", {})
+        tool_name = function_info.get("name", "")
+        arguments_str = function_info.get("arguments", "{}")
+
+        try:
+            arguments = json.loads(arguments_str)
+        except json.JSONDecodeError:
+            arguments = {}
+
+        logging_util.info(f"Executing tool: {tool_name} with args: {arguments}")
+
+        try:
+            result = execute_dice_tool(tool_name, arguments)
+            result_str = json.dumps(result)
+        except Exception as e:
+            logging_util.error(f"Tool execution error: {tool_name}: {e}")
+            result = {"error": str(e)}
+            result_str = json.dumps(result)
+
+        results.append({
+            "tool_call_id": tool_id,
+            "role": "tool",
+            "name": tool_name,
+            "content": result_str,
+            "result": result,
+        })
+
+    return results
+
+
+def generate_content_with_tool_loop(
+    prompt_contents: list[Any],
+    model_name: str,
+    system_instruction_text: str | None,
+    temperature: float,
+    max_output_tokens: int,
+    tools: list[dict],
+    max_iterations: int = 5,
+) -> OpenRouterResponse:
+    """Generate content with automatic tool call handling.
+
+    Uses two-stage inference:
+    1. LLM generates response (may include tool_calls)
+    2. If tool_calls present, execute tools and send results back
+    3. LLM generates final response with tool results
+
+    Args:
+        prompt_contents: List of prompt content parts
+        model_name: Model name to use
+        system_instruction_text: Optional system instruction
+        temperature: Sampling temperature
+        max_output_tokens: Maximum output tokens
+        tools: List of tool definitions for function calling
+        max_iterations: Maximum tool call iterations (prevent infinite loops)
+
+    Returns:
+        Final OpenRouterResponse with complete text
+    """
+    if max_iterations < 1:
+        raise ValueError("max_iterations must be at least 1")
+
+    # Build initial messages
+    messages = []
+    if system_instruction_text:
+        messages.append({"role": "system", "content": system_instruction_text})
+    messages.append({"role": "user", "content": _stringify_parts(prompt_contents)})
+
+    iteration = 0
+    response = None  # Initialize for the return at the end
+    while iteration < max_iterations:
+        iteration += 1
+
+        # Call API with current messages
+        response = generate_content(
+            prompt_contents=[],  # Not used when messages provided
+            model_name=model_name,
+            system_instruction_text=None,  # Already in messages
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            tools=tools,
+            messages=messages,
+        )
+
+        # Check if we have tool calls
+        tool_calls = response.get_tool_calls()
+        if not tool_calls:
+            # No more tool calls - return final response
+            logging_util.debug(
+                f"Tool loop complete after {iteration} iteration(s)"
+            )
+            return response
+
+        logging_util.info(f"Processing {len(tool_calls)} tool call(s), iteration {iteration}")
+
+        # Get the raw message from response to add to conversation
+        raw_message = response.raw_response.get("choices", [{}])[0].get("message", {})
+
+        # Add assistant message with tool_calls to conversation
+        messages.append({
+            "role": "assistant",
+            "content": raw_message.get("content"),
+            "tool_calls": tool_calls,
+        })
+
+        # Execute tools and add results to conversation
+        tool_results = process_tool_calls(tool_calls)
+        for result in tool_results:
+            messages.append({
+                "role": "tool",
+                "tool_call_id": result["tool_call_id"],
+                "name": result["name"],
+                "content": result["content"],
+            })
+
+    # Max iterations reached - make one final call WITHOUT tools to force text generation
+    logging_util.warning(
+        f"Tool loop reached max iterations ({max_iterations}), forcing final response without tools"
+    )
+
+    # If the last response still has tool_calls but no text, we need to force text generation
+    # by making one more API call without the tools parameter
+    if response.text == "" and response.get_tool_calls():
+        logging_util.info("Forcing final text generation (no tools)")
+        # Get the raw message to add to conversation
+        raw_message = response.raw_response.get("choices", [{}])[0].get("message", {})
+        messages.append({
+            "role": "assistant",
+            "content": raw_message.get("content"),
+            "tool_calls": response.get_tool_calls(),
+        })
+        # Execute the pending tools
+        tool_results = process_tool_calls(response.get_tool_calls())
+        for result in tool_results:
+            messages.append({
+                "role": "tool",
+                "tool_call_id": result["tool_call_id"],
+                "name": result["name"],
+                "content": result["content"],
+            })
+        # Final call WITHOUT tools to force text generation
+        response = generate_content(
+            prompt_contents=[],
+            model_name=model_name,
+            system_instruction_text=None,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            tools=None,  # No tools - force text response
+            messages=messages,
+        )
+
+    return response

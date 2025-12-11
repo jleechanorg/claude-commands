@@ -566,6 +566,107 @@ def generate_pre_rolled_dice(
     }
 
 
+# =============================================================================
+# DICE ROLL TOOL DEFINITIONS (for tool use / function calling)
+# =============================================================================
+# These tool definitions are used by models that support function calling
+# (Cerebras, OpenRouter) but not native code_execution (Gemini-specific).
+# The LLM requests a tool call, we execute it, then send the result back.
+# NOTE: This is DEPRECATED - prefer pre-rolled dice for single-inference.
+# =============================================================================
+
+DICE_ROLL_TOOLS: list[dict] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_dice",
+            "description": "Roll dice for damage, healing, or random effects ONLY. "
+            "DO NOT use for skill checks, attacks, or saving throws - use the specific tools instead. "
+            "This tool just returns numbers, it does NOT determine success/failure.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "notation": {
+                        "type": "string",
+                        "description": "Dice notation (e.g., '2d6+3' for damage, '1d8' for healing)",
+                    },
+                    "purpose": {
+                        "type": "string",
+                        "description": "What this roll is for (e.g., 'damage', 'healing', 'random table')",
+                    },
+                },
+                "required": ["notation"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_attack",
+            "description": "Roll a COMPLETE attack with hit check vs AC and damage if hit. Returns success/failure.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attack_modifier": {
+                        "type": "integer",
+                        "description": "Total attack bonus",
+                    },
+                    "damage_notation": {
+                        "type": "string",
+                        "description": "Damage dice (e.g., '1d8+3')",
+                    },
+                    "target_ac": {
+                        "type": "integer",
+                        "description": "Target's Armor Class",
+                    },
+                    "advantage": {"type": "boolean", "default": False},
+                    "disadvantage": {"type": "boolean", "default": False},
+                },
+                "required": ["attack_modifier", "damage_notation", "target_ac"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_skill_check",
+            "description": "Roll a skill check (Perception, Stealth, Thieves' Tools, etc.) vs a DC. "
+            "ALWAYS use this for skill checks - it returns success/failure based on DC comparison. "
+            "Example: Thieves' Tools check to pick a lock, Stealth check to sneak past guards.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier (DEX for Stealth, INT for Investigation, etc.)"},
+                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus (typically 2-6)"},
+                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this skill"},
+                    "expertise": {"type": "boolean", "default": False, "description": "True if character has expertise (double proficiency)"},
+                    "dc": {"type": "integer", "description": "Difficulty Class to beat (10=easy, 15=medium, 20=hard, 25=very hard)"},
+                    "skill_name": {"type": "string", "description": "Name of the skill (e.g., 'Thieves Tools', 'Stealth', 'Perception')"},
+                },
+                "required": ["attribute_modifier", "proficiency_bonus", "dc", "skill_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_saving_throw",
+            "description": "Roll a saving throw vs a DC (e.g., DEX save vs fireball, WIS save vs charm). "
+            "ALWAYS use this for saving throws - it returns success/failure based on DC comparison.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier for the save"},
+                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus"},
+                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this saving throw"},
+                    "dc": {"type": "integer", "description": "Difficulty Class to beat"},
+                    "save_type": {"type": "string", "description": "Type of save: STR, DEX, CON, INT, WIS, or CHA"},
+                },
+                "required": ["attribute_modifier", "proficiency_bonus", "dc", "save_type"],
+            },
+        },
+    },
+]
 
 
 @dataclass
@@ -870,6 +971,289 @@ def roll_dice(notation: str) -> DiceRollResult:
     )
 
 
+def roll_with_advantage(notation: str) -> tuple[DiceRollResult, DiceRollResult, int]:
+    """
+    Roll with advantage (roll twice, take higher).
+
+    Args:
+        notation: Dice notation (typically "1d20+X")
+
+    Returns:
+        Tuple of (roll1, roll2, final_result)
+    """
+    roll1 = roll_dice(notation)
+    roll2 = roll_dice(notation)
+    final = max(roll1.total, roll2.total)
+    return roll1, roll2, final
+
+
+def roll_with_disadvantage(
+    notation: str,
+) -> tuple[DiceRollResult, DiceRollResult, int]:
+    """
+    Roll with disadvantage (roll twice, take lower).
+
+    Args:
+        notation: Dice notation (typically "1d20+X")
+
+    Returns:
+        Tuple of (roll1, roll2, final_result)
+    """
+    roll1 = roll_dice(notation)
+    roll2 = roll_dice(notation)
+    final = min(roll1.total, roll2.total)
+    return roll1, roll2, final
+
+
+def calculate_attack_roll(
+    attack_modifier: int, advantage: bool = False, disadvantage: bool = False
+) -> dict:
+    """
+    Perform a complete attack roll.
+
+    Args:
+        attack_modifier: Total attack bonus (ability mod + proficiency + magic)
+        advantage: Rolling with advantage
+        disadvantage: Rolling with disadvantage
+
+    Returns:
+        Dict with roll details, total, is_critical, is_fumble
+    """
+    notation = f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
+
+    if advantage and not disadvantage:
+        roll1, roll2, total = roll_with_advantage(notation)
+        natural_rolls = [roll1.individual_rolls[0], roll2.individual_rolls[0]]
+        natural = max(natural_rolls)
+        return {
+            "rolls": natural_rolls,
+            "modifier": attack_modifier,
+            "total": total,
+            "used_roll": "higher",
+            "is_critical": natural == 20,
+            "is_fumble": natural_rolls[0] == 1 and natural_rolls[1] == 1,
+            "notation": notation,
+        }
+    if disadvantage and not advantage:
+        roll1, roll2, total = roll_with_disadvantage(notation)
+        natural_rolls = [roll1.individual_rolls[0], roll2.individual_rolls[0]]
+        natural = min(natural_rolls)
+        return {
+            "rolls": natural_rolls,
+            "modifier": attack_modifier,
+            "total": total,
+            "used_roll": "lower",
+            "is_critical": natural_rolls[0] == 20 and natural_rolls[1] == 20,
+            "is_fumble": natural == 1,
+            "notation": notation,
+        }
+    roll = roll_dice(notation)
+    return {
+        "rolls": roll.individual_rolls,
+        "modifier": attack_modifier,
+        "total": roll.total,
+        "used_roll": "single",
+        "is_critical": roll.natural_20,
+        "is_fumble": roll.natural_1,
+        "notation": notation,
+    }
+
+
+def calculate_damage(
+    damage_notation: str, is_critical: bool = False
+) -> DiceRollResult:
+    """
+    Calculate damage, doubling dice on critical hit.
+
+    Args:
+        damage_notation: Base damage notation (e.g., "1d8+3")
+        is_critical: Whether this is a critical hit
+
+    Returns:
+        DiceRollResult with damage total
+    """
+    if is_critical:
+        # Double the number of dice for critical hits
+        pattern = r"(\d+)d(\d+)([+-]\d+)?"
+        match = re.match(pattern, damage_notation.lower().replace(" ", ""))
+        if match:
+            num_dice = int(match.group(1)) * 2  # Double dice
+            die_size = match.group(2)
+            modifier = match.group(3) or ""
+            crit_notation = f"{num_dice}d{die_size}{modifier}"
+            return roll_dice(crit_notation)
+
+    return roll_dice(damage_notation)
+
+
+def calculate_skill_check(
+    attribute_modifier: int,
+    proficiency_bonus: int,
+    proficient: bool = False,
+    expertise: bool = False,
+) -> DiceRollResult:
+    """
+    Perform a skill check.
+
+    Args:
+        attribute_modifier: Relevant ability modifier
+        proficiency_bonus: Character's proficiency bonus
+        proficient: Whether proficient in the skill
+        expertise: Whether has expertise (double proficiency)
+
+    Returns:
+        DiceRollResult with the check total
+    """
+    total_modifier = attribute_modifier
+    if proficient or expertise:
+        total_modifier += proficiency_bonus  # Expertise implies proficiency
+    if expertise:
+        total_modifier += proficiency_bonus  # Add again for expertise
+
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_saving_throw(
+    attribute_modifier: int, proficiency_bonus: int, proficient: bool = False
+) -> DiceRollResult:
+    """
+    Perform a saving throw.
+
+    Args:
+        attribute_modifier: Relevant ability modifier
+        proficiency_bonus: Character's proficiency bonus
+        proficient: Whether proficient in this save
+
+    Returns:
+        DiceRollResult with the save total
+    """
+    total_modifier = attribute_modifier
+    if proficient:
+        total_modifier += proficiency_bonus
+
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_initiative(dex_modifier: int, bonus: int = 0) -> DiceRollResult:
+    """
+    Roll initiative.
+
+    Args:
+        dex_modifier: Dexterity modifier
+        bonus: Any additional initiative bonus (e.g., from features)
+
+    Returns:
+        DiceRollResult with initiative total
+    """
+    total_modifier = dex_modifier + bonus
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_complication_chance(success_streak: int) -> int:
+    """
+    Calculate complication probability based on success streak.
+    Formula: 20% + (streak × 10%), capped at 75%
+
+    Args:
+        success_streak: Number of consecutive successes
+
+    Returns:
+        Complication percentage (20-75)
+    """
+    base = 20
+    streak_bonus = success_streak * 10
+    return min(75, base + streak_bonus)
+
+
+def check_complication_triggers(success_streak: int) -> bool:
+    """
+    Roll to see if a complication triggers.
+
+    Args:
+        success_streak: Number of consecutive successes
+
+    Returns:
+        True if complication triggers, False otherwise
+    """
+    chance = calculate_complication_chance(success_streak)
+    roll = random.randint(1, 100)
+    return roll <= chance
+
+
+def calculate_death_save() -> dict:
+    """
+    Perform a death saving throw.
+
+    Returns:
+        Dict with roll, success (True if 10+), and critical info
+    """
+    roll = roll_dice("1d20")
+    natural = roll.individual_rolls[0]
+
+    return {
+        "roll": natural,
+        "success": natural >= 10,
+        "critical_success": natural == 20,  # Regain 1 HP
+        "critical_failure": natural == 1,  # Counts as 2 failures
+    }
+
+
+def calculate_hp_for_class(
+    class_name: str, level: int, con_modifier: int, use_average: bool = True
+) -> int:
+    """
+    Calculate HP for a character of given class and level.
+
+    Args:
+        class_name: Character class name
+        level: Character level
+        con_modifier: Constitution modifier
+        use_average: Use average HP (True) or roll (False)
+
+    Returns:
+        Total HP
+    """
+    # Hit dice by class
+    hit_dice = {
+        "barbarian": 12,
+        "fighter": 10,
+        "paladin": 10,
+        "ranger": 10,
+        "bard": 8,
+        "cleric": 8,
+        "druid": 8,
+        "monk": 8,
+        "rogue": 8,
+        "warlock": 8,
+        "sorcerer": 6,
+        "wizard": 6,
+    }
+
+    die = hit_dice.get(class_name.lower(), 8)
+
+    # Level 1: Max hit die + CON
+    hp = die + con_modifier
+
+    # Higher levels: 5e guarantees at least 1 HP per level (after CON modifier)
+    if use_average:
+        # Average is (die/2) + 1 per level
+        average_per_level = (die // 2) + 1
+        # Clamp per-level gain to minimum 1 (including CON modifier)
+        per_level_gain = max(1, average_per_level + con_modifier)
+        hp += (level - 1) * per_level_gain
+    else:
+        # Roll for each level
+        for _ in range(level - 1):
+            roll = roll_dice(f"1d{die}")
+            # 5e: minimum 1 HP per level after CON modifier is applied
+            hp += max(1, roll.total + con_modifier)
+
+    return max(1, hp)  # HP can never be less than 1
+
+
 def calculate_resource_depletion(
     current_amount: float,
     depletion_rate: float,
@@ -896,576 +1280,117 @@ def calculate_resource_depletion(
 
 
 # =============================================================================
-# PRE-COMPUTED COMBAT RESULTS (Backend-Authoritative Dice)
-# =============================================================================
-# These functions compute dice results BEFORE calling the LLM, ensuring the LLM
-# only narrates pre-determined outcomes without contradicting itself.
+# TOOL EXECUTION (for two-stage inference with tool use models)
 # =============================================================================
 
-# Action detection patterns
-ATTACK_PATTERNS = [
-    "attack", "strike", "hit", "slash", "stab", "shoot", "fire at",
-    "swing at", "punch", "kick", "bite", "claw", "smite", "blast"
-]
-SKILL_CHECK_PATTERNS = [
-    "check", "try to", "attempt to", "roll for", "make a",
-    "perception", "stealth", "athletics", "acrobatics", "arcana",
-    "history", "investigation", "nature", "religion", "insight",
-    "medicine", "survival", "persuasion", "deception", "intimidation",
-    "performance", "sleight of hand", "animal handling"
-]
-SAVING_THROW_PATTERNS = [
-    "saving throw", "save against", "resist", "save vs"
-]
-ADVANTAGE_PATTERNS = [
-    "with advantage", "advantageously", "sneak attack", "surprise",
-    "flanking", "help action", "faerie fire", "guiding bolt"
-]
-DISADVANTAGE_PATTERNS = [
-    "with disadvantage", "blinded", "poisoned", "prone",
-    "restrained", "exhausted", "frightened"
-]
 
-# Skill to ability mapping (D&D 5e)
-SKILL_ABILITIES = {
-    "athletics": "strength",
-    "acrobatics": "dexterity",
-    "sleight of hand": "dexterity",
-    "stealth": "dexterity",
-    "arcana": "intelligence",
-    "history": "intelligence",
-    "investigation": "intelligence",
-    "nature": "intelligence",
-    "religion": "intelligence",
-    "animal handling": "wisdom",
-    "insight": "wisdom",
-    "medicine": "wisdom",
-    "perception": "wisdom",
-    "survival": "wisdom",
-    "deception": "charisma",
-    "intimidation": "charisma",
-    "performance": "charisma",
-    "persuasion": "charisma",
-}
-
-
-def detect_action_type(
-    user_action: str,
-    game_state: dict | None = None,
-    conditions: list[str] | None = None,
-) -> dict:
+def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     """
-    Parse user action to determine what dice rolls are needed.
+    Execute a dice roll tool call and return the result.
+
+    Used for models that support function calling but not code_execution
+    (e.g., Cerebras, OpenRouter). The LLM requests a tool, we execute it,
+    then send the result back in a second inference call.
 
     Args:
-        user_action: The player's action text
-        game_state: Optional game state for context (combat status, etc.)
-        conditions: Optional list of character conditions
+        tool_name: Name of the tool to execute
+        arguments: Tool arguments from the LLM
 
     Returns:
-        {
-            "type": "attack" | "skill_check" | "saving_throw" | "other",
-            "has_advantage": bool,
-            "has_disadvantage": bool,
-            "target": str | None,
-            "ability": str | None,
-            "skill": str | None,
-            "is_spell": bool
+        Dict with the tool execution result
+    """
+    if tool_name == "roll_dice":
+        notation = arguments.get("notation", "1d20")
+        purpose = arguments.get("purpose", "")
+        result = roll_dice(notation)
+        return {
+            "notation": result.notation,
+            "rolls": result.individual_rolls,
+            "modifier": result.modifier,
+            "total": result.total,
+            "natural_20": result.natural_20,
+            "natural_1": result.natural_1,
+            "purpose": purpose,
+            "formatted": str(result),
         }
-    """
-    action_lower = user_action.lower()
-    conditions = conditions or []
-    conditions_str = " ".join(c.lower() for c in conditions)
 
-    result = {
-        "type": "other",
-        "has_advantage": False,
-        "has_disadvantage": False,
-        "target": None,
-        "ability": None,
-        "skill": None,
-        "is_spell": False,
-    }
+    if tool_name == "roll_attack":
+        attack_mod = arguments.get("attack_modifier", 0)
+        damage_notation = arguments.get("damage_notation", "1d6")
+        target_ac = arguments.get("target_ac", 10)
+        advantage = arguments.get("advantage", False)
+        disadvantage = arguments.get("disadvantage", False)
 
-    # Check for advantage/disadvantage
-    for pattern in ADVANTAGE_PATTERNS:
-        if pattern in action_lower or pattern in conditions_str:
-            result["has_advantage"] = True
-            break
-
-    for pattern in DISADVANTAGE_PATTERNS:
-        if pattern in action_lower or pattern in conditions_str:
-            result["has_disadvantage"] = True
-            break
-
-    # If both, they cancel out
-    if result["has_advantage"] and result["has_disadvantage"]:
-        result["has_advantage"] = False
-        result["has_disadvantage"] = False
-
-    # Check for spell casting
-    if "cast" in action_lower or "spell" in action_lower:
-        result["is_spell"] = True
-
-    # Detect action type - priority: saving throw > skill check > attack
-    for pattern in SAVING_THROW_PATTERNS:
-        if pattern in action_lower:
-            result["type"] = "saving_throw"
-            # Try to detect ability
-            for ability in ["strength", "dexterity", "constitution",
-                           "intelligence", "wisdom", "charisma",
-                           "str", "dex", "con", "int", "wis", "cha"]:
-                if ability in action_lower:
-                    result["ability"] = ability[:3].upper()
-                    break
-            return result
-
-    for pattern in SKILL_CHECK_PATTERNS:
-        if pattern in action_lower:
-            result["type"] = "skill_check"
-            # Try to detect skill
-            for skill in SKILL_ABILITIES:
-                if skill in action_lower:
-                    result["skill"] = skill
-                    result["ability"] = SKILL_ABILITIES[skill].upper()[:3]
-                    break
-            return result
-
-    for pattern in ATTACK_PATTERNS:
-        if pattern in action_lower:
-            result["type"] = "attack"
-            return result
-
-    return result
-
-
-def _compute_attack_roll(
-    pre_rolled_dice: dict,
-    dice_index: dict,
-    has_advantage: bool,
-    has_disadvantage: bool,
-    attack_modifier: int,
-    modifier_breakdown: str,
-    target_ac: int,
-) -> dict:
-    """
-    Compute an attack roll from pre-rolled dice.
-
-    Args:
-        pre_rolled_dice: Dict of pre-rolled dice arrays
-        dice_index: Tracking dict for consumed dice indices
-        has_advantage: Roll with advantage
-        has_disadvantage: Roll with disadvantage
-        attack_modifier: Total attack bonus
-        modifier_breakdown: String like "+5 STR +4 PROF"
-        target_ac: Target's Armor Class
-
-    Returns:
-        Attack roll result dict with header_text
-    """
-    d20_array = pre_rolled_dice.get("d20", [])
-    d20_idx = dice_index.get("d20", 0)
-
-    # Consume 1 or 2 d20s
-    if has_advantage or has_disadvantage:
-        if d20_idx + 2 > len(d20_array):
-            return {"error": "Not enough d20 rolls available"}
-        d20_values = [d20_array[d20_idx], d20_array[d20_idx + 1]]
-        dice_index["d20"] = d20_idx + 2
-        if has_advantage:
-            roll_used = max(d20_values)
-            roll_type = "Advantage"
-        else:
-            roll_used = min(d20_values)
-            roll_type = "Disadvantage"
-    else:
-        if d20_idx >= len(d20_array):
-            return {"error": "Not enough d20 rolls available"}
-        d20_values = [d20_array[d20_idx]]
-        dice_index["d20"] = d20_idx + 1
-        roll_used = d20_values[0]
-        roll_type = None
-
-    total = roll_used + attack_modifier
-    is_crit = roll_used == 20
-    is_fumble = roll_used == 1
-
-    # Determine hit/miss
-    if is_fumble:
-        outcome = "Miss (Natural 1)"
-        is_hit = False
-    elif is_crit:
-        outcome = "Critical Hit!"
-        is_hit = True
-    elif total >= target_ac:
-        outcome = "Hit"
-        is_hit = True
-    else:
-        outcome = "Miss"
-        is_hit = False
-
-    # Build header text
-    if roll_type:
-        if len(d20_values) == 2:
-            dice_str = f"[{d20_values[0]},{d20_values[1]}]"
-        else:
-            dice_str = str(roll_used)
-        header_text = (
-            f"Attack ({roll_type}): 1d20{modifier_breakdown} = "
-            f"{dice_str}{modifier_breakdown} = {total} vs AC {target_ac} ({outcome})"
-        )
-    else:
-        header_text = (
-            f"Attack: 1d20{modifier_breakdown} = "
-            f"{roll_used}{modifier_breakdown} = {total} vs AC {target_ac} ({outcome})"
+        attack = calculate_attack_roll(attack_mod, advantage, disadvantage)
+        hit = not attack["is_fumble"] and (
+            attack["total"] >= target_ac or attack["is_critical"]
         )
 
-    return {
-        "d20_values": d20_values,
-        "advantage": has_advantage,
-        "disadvantage": has_disadvantage,
-        "roll_used": roll_used,
-        "modifier": attack_modifier,
-        "modifier_breakdown": modifier_breakdown,
-        "total": total,
-        "target_ac": target_ac,
-        "outcome": outcome,
-        "is_hit": is_hit,
-        "is_crit": is_crit,
-        "is_fumble": is_fumble,
-        "header_text": header_text,
-    }
-
-
-def _compute_damage_roll(
-    pre_rolled_dice: dict,
-    dice_index: dict,
-    damage_dice: str,
-    damage_modifier: int,
-    damage_type: str,
-    is_crit: bool = False,
-) -> dict:
-    """
-    Compute damage from pre-rolled dice.
-
-    Args:
-        pre_rolled_dice: Dict of pre-rolled dice arrays
-        dice_index: Tracking dict for consumed dice indices
-        damage_dice: Dice notation like "1d8" or "2d6"
-        damage_modifier: Flat damage bonus
-        damage_type: Damage type (slashing, piercing, etc.)
-        is_crit: Double dice on critical hit
-
-    Returns:
-        Damage roll result dict with header_text
-    """
-    # Parse damage dice notation
-    match = re.match(r"(\d+)d(\d+)", damage_dice.lower())
-    if not match:
-        return {"error": f"Invalid damage dice: {damage_dice}"}
-
-    num_dice = int(match.group(1))
-    die_size = int(match.group(2))
-
-    # Double dice on crit
-    if is_crit:
-        num_dice *= 2
-
-    # Get die array key
-    die_key = f"d{die_size}"
-    die_array = pre_rolled_dice.get(die_key, [])
-    die_idx = dice_index.get(die_key, 0)
-
-    if die_idx + num_dice > len(die_array):
-        return {"error": f"Not enough {die_key} rolls available"}
-
-    dice_values = die_array[die_idx:die_idx + num_dice]
-    dice_index[die_key] = die_idx + num_dice
-
-    dice_sum = sum(dice_values)
-    total = dice_sum + damage_modifier
-
-    # Build header text
-    dice_str = "+".join(str(v) for v in dice_values)
-    modifier_str = f"+{damage_modifier}" if damage_modifier >= 0 else str(damage_modifier)
-
-    crit_note = " (CRIT)" if is_crit else ""
-    header_text = (
-        f"Damage{crit_note}: {num_dice}d{die_size}{modifier_str} = "
-        f"{dice_str}{modifier_str} = {total} {damage_type}"
-    )
-
-    return {
-        "dice_values": dice_values,
-        "modifier": damage_modifier,
-        "total": total,
-        "damage_type": damage_type,
-        "is_crit": is_crit,
-        "header_text": header_text,
-    }
-
-
-def _compute_skill_check(
-    pre_rolled_dice: dict,
-    dice_index: dict,
-    has_advantage: bool,
-    has_disadvantage: bool,
-    ability_modifier: int,
-    proficiency_bonus: int,
-    is_proficient: bool,
-    skill_name: str,
-    target_dc: int,
-) -> dict:
-    """
-    Compute a skill check from pre-rolled dice.
-
-    Args:
-        pre_rolled_dice: Dict of pre-rolled dice arrays
-        dice_index: Tracking dict for consumed dice indices
-        has_advantage: Roll with advantage
-        has_disadvantage: Roll with disadvantage
-        ability_modifier: Relevant ability modifier
-        proficiency_bonus: Character's proficiency bonus
-        is_proficient: Whether character is proficient in skill
-        skill_name: Name of the skill
-        target_dc: Target DC
-
-    Returns:
-        Skill check result dict with header_text
-    """
-    d20_array = pre_rolled_dice.get("d20", [])
-    d20_idx = dice_index.get("d20", 0)
-
-    # Consume 1 or 2 d20s
-    if has_advantage or has_disadvantage:
-        if d20_idx + 2 > len(d20_array):
-            return {"error": "Not enough d20 rolls available"}
-        d20_values = [d20_array[d20_idx], d20_array[d20_idx + 1]]
-        dice_index["d20"] = d20_idx + 2
-        if has_advantage:
-            roll_used = max(d20_values)
-            roll_type = "Advantage"
-        else:
-            roll_used = min(d20_values)
-            roll_type = "Disadvantage"
-    else:
-        if d20_idx >= len(d20_array):
-            return {"error": "Not enough d20 rolls available"}
-        d20_values = [d20_array[d20_idx]]
-        dice_index["d20"] = d20_idx + 1
-        roll_used = d20_values[0]
-        roll_type = None
-
-    # Calculate total modifier
-    total_modifier = ability_modifier
-    if is_proficient:
-        total_modifier += proficiency_bonus
-
-    total = roll_used + total_modifier
-    outcome = "Success" if total >= target_dc else "Failure"
-
-    # Build modifier breakdown
-    modifier_parts = []
-    if ability_modifier != 0:
-        sign = "+" if ability_modifier >= 0 else ""
-        modifier_parts.append(f"{sign}{ability_modifier}")
-    if is_proficient and proficiency_bonus > 0:
-        modifier_parts.append(f"+{proficiency_bonus} PROF")
-    modifier_breakdown = " ".join(modifier_parts) if modifier_parts else "+0"
-
-    # Build header text
-    skill_display = skill_name.title() if skill_name else "Check"
-    if roll_type:
-        dice_str = f"[{d20_values[0]},{d20_values[1]}]"
-        header_text = (
-            f"{skill_display} ({roll_type}): 1d20 {modifier_breakdown} = "
-            f"{dice_str} {modifier_breakdown} = {total} vs DC {target_dc} ({outcome})"
-        )
-    else:
-        header_text = (
-            f"{skill_display}: 1d20 {modifier_breakdown} = "
-            f"{roll_used} {modifier_breakdown} = {total} vs DC {target_dc} ({outcome})"
-        )
-
-    return {
-        "d20_values": d20_values,
-        "advantage": has_advantage,
-        "disadvantage": has_disadvantage,
-        "roll_used": roll_used,
-        "ability_modifier": ability_modifier,
-        "proficiency_bonus": proficiency_bonus if is_proficient else 0,
-        "total_modifier": total_modifier,
-        "total": total,
-        "target_dc": target_dc,
-        "outcome": outcome,
-        "is_success": total >= target_dc,
-        "header_text": header_text,
-    }
-
-
-def compute_combat_results(
-    action_info: dict,
-    pre_rolled_dice: dict,
-    player_character: dict,
-    target_entity: dict | None = None,
-    game_state: dict | None = None,
-) -> dict:
-    """
-    Compute authoritative dice results BEFORE calling LLM.
-
-    This ensures the LLM receives pre-computed outcomes and only needs to
-    narrate them, eliminating contradictions from LLM math errors.
-
-    Args:
-        action_info: Result from detect_action_type()
-        pre_rolled_dice: Dict of pre-rolled dice arrays
-        player_character: Player character data with stats, level, equipment
-        target_entity: Target entity data (for AC, etc.)
-        game_state: Full game state for additional context
-
-    Returns:
-        {
-            "attack_roll": {...} | None,
-            "damage_roll": {...} | None,
-            "skill_check": {...} | None,
-            "saving_throw": {...} | None,
-            "dice_consumed": {"d20": int, "d6": int, ...}
+        result = {
+            "attack_roll": attack,
+            "target_ac": target_ac,
+            "hit": hit,
+            "critical": attack["is_critical"],
+            "fumble": attack["is_fumble"],
         }
-    """
-    result = {
-        "attack_roll": None,
-        "damage_roll": None,
-        "skill_check": None,
-        "saving_throw": None,
-        "dice_consumed": {},
-    }
 
-    # Track dice consumption
-    dice_index = {"d20": 0, "d12": 0, "d10": 0, "d8": 0, "d6": 0, "d4": 0, "d100": 0}
+        if hit:
+            damage = calculate_damage(damage_notation, attack["is_critical"])
+            result["damage"] = {
+                "notation": damage.notation,
+                "rolls": damage.individual_rolls,
+                "modifier": damage.modifier,
+                "total": damage.total,
+                "critical": attack["is_critical"],
+            }
+        else:
+            result["damage"] = None
 
-    action_type = action_info.get("type", "other")
-    if action_type == "other":
         return result
 
-    # Extract character stats with safe defaults
-    stats = player_character.get("stats", {})
-    level = player_character.get("level", 1)
-    proficiency = calculate_proficiency_bonus(level)
+    if tool_name == "roll_skill_check":
+        attr_mod = arguments.get("attribute_modifier", 0)
+        prof_bonus = arguments.get("proficiency_bonus", 2)
+        proficient = arguments.get("proficient", False)
+        expertise = arguments.get("expertise", False)
+        dc = arguments.get("dc", 10)
+        skill_name = arguments.get("skill_name", "")
 
-    # Get ability modifiers
-    str_mod = calculate_modifier(stats.get("strength", 10))
-    dex_mod = calculate_modifier(stats.get("dexterity", 10))
-    con_mod = calculate_modifier(stats.get("constitution", 10))
-    int_mod = calculate_modifier(stats.get("intelligence", 10))
-    wis_mod = calculate_modifier(stats.get("wisdom", 10))
-    cha_mod = calculate_modifier(stats.get("charisma", 10))
+        result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
+        success = result.total >= dc
 
-    ability_mods = {
-        "STR": str_mod, "DEX": dex_mod, "CON": con_mod,
-        "INT": int_mod, "WIS": wis_mod, "CHA": cha_mod,
-    }
-
-    if action_type == "attack":
-        # Determine attack modifier (assume STR for melee, could be DEX for ranged)
-        # Check for finesse/ranged in equipment for proper ability
-        attack_ability = "STR"  # Default to STR
-        attack_mod = ability_mods.get(attack_ability, 0)
-
-        # Add proficiency (assume proficient with weapons)
-        total_attack_mod = attack_mod + proficiency
-        modifier_breakdown = f"+{attack_mod} {attack_ability} +{proficiency} PROF"
-
-        # Get target AC
-        target_ac = 10  # Default AC
-        if target_entity:
-            target_ac = target_entity.get("ac", target_entity.get("armor_class", 10))
-
-        attack_result = _compute_attack_roll(
-            pre_rolled_dice,
-            dice_index,
-            action_info.get("has_advantage", False),
-            action_info.get("has_disadvantage", False),
-            total_attack_mod,
-            modifier_breakdown,
-            target_ac,
-        )
-        result["attack_roll"] = attack_result
-
-        # Compute damage if hit
-        if attack_result.get("is_hit"):
-            # Default damage: 1d8 + STR (longsword-like)
-            damage_dice = "1d8"
-            damage_mod = attack_mod
-            damage_type = "slashing"
-
-            damage_result = _compute_damage_roll(
-                pre_rolled_dice,
-                dice_index,
-                damage_dice,
-                damage_mod,
-                damage_type,
-                attack_result.get("is_crit", False),
-            )
-            result["damage_roll"] = damage_result
-
-    elif action_type == "skill_check":
-        skill_name = action_info.get("skill", "")
-        ability_key = action_info.get("ability", "DEX")
-
-        # Map 3-letter ability to full key
-        ability_map = {
-            "STR": "STR", "DEX": "DEX", "CON": "CON",
-            "INT": "INT", "WIS": "WIS", "CHA": "CHA",
+        return {
+            "skill": skill_name,
+            "roll": result.individual_rolls[0] if result.individual_rolls else 0,
+            "modifier": result.modifier,
+            "total": result.total,
+            "dc": dc,
+            "success": success,
+            "natural_20": result.natural_20,
+            "natural_1": result.natural_1,
+            "formatted": f"{skill_name}: {result} vs DC {dc} ({'Success' if success else 'Fail'})",
         }
-        ability_key = ability_map.get(ability_key.upper()[:3], "DEX")
-        ability_mod = ability_mods.get(ability_key, 0)
 
-        # Check proficiency (simplified - assume proficient if skill detected)
-        is_proficient = bool(skill_name)
+    if tool_name == "roll_saving_throw":
+        attr_mod = arguments.get("attribute_modifier", 0)
+        prof_bonus = arguments.get("proficiency_bonus", 2)
+        proficient = arguments.get("proficient", False)
+        dc = arguments.get("dc", 10)
+        save_type = arguments.get("save_type", "")
 
-        # Default DC
-        target_dc = 15
+        result = calculate_saving_throw(attr_mod, prof_bonus, proficient)
+        success = result.total >= dc
 
-        skill_result = _compute_skill_check(
-            pre_rolled_dice,
-            dice_index,
-            action_info.get("has_advantage", False),
-            action_info.get("has_disadvantage", False),
-            ability_mod,
-            proficiency,
-            is_proficient,
-            skill_name,
-            target_dc,
-        )
-        result["skill_check"] = skill_result
-
-    elif action_type == "saving_throw":
-        ability_key = action_info.get("ability", "DEX")
-        ability_map = {
-            "STR": "STR", "DEX": "DEX", "CON": "CON",
-            "INT": "INT", "WIS": "WIS", "CHA": "CHA",
+        return {
+            "save_type": save_type,
+            "roll": result.individual_rolls[0] if result.individual_rolls else 0,
+            "modifier": result.modifier,
+            "total": result.total,
+            "dc": dc,
+            "success": success,
+            "natural_20": result.natural_20,
+            "natural_1": result.natural_1,
+            "formatted": f"{save_type} save: {result} vs DC {dc} ({'Success' if success else 'Fail'})",
         }
-        ability_key = ability_map.get(ability_key.upper()[:3], "DEX")
-        ability_mod = ability_mods.get(ability_key, 0)
 
-        # Default DC
-        target_dc = 15
-
-        # Saving throws use same logic as skill checks but typically no proficiency
-        save_result = _compute_skill_check(
-            pre_rolled_dice,
-            dice_index,
-            action_info.get("has_advantage", False),
-            action_info.get("has_disadvantage", False),
-            ability_mod,
-            proficiency,
-            False,  # Typically not proficient in saves unless specific class feature
-            f"{ability_key} Save",
-            target_dc,
-        )
-        result["saving_throw"] = save_result
-
-    # Record dice consumed
-    result["dice_consumed"] = {k: v for k, v in dice_index.items() if v > 0}
-
-    return result
+    return {"error": f"Unknown tool: {tool_name}"}
