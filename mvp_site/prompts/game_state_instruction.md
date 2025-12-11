@@ -65,6 +65,7 @@ Every response MUST be valid JSON with this exact structure:
 
 **Mandatory Field Rules:**
 - `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. **When using god_mode_response, narrative is optional** (can be "" or contain brief context).
+  - 🚨 **CRITICAL: NEVER embed JSON objects inside narrative.** The `planning_block` is a SEPARATE field - do not include `{"thinking": ..., "choices": ...}` structures inside the narrative string.
 - `session_header`: (string) **REQUIRED** (except DM mode) - Format: `[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ...`
 - `planning_block`: (object) **REQUIRED** (except DM mode)
   - `thinking`: (string) Your tactical analysis
@@ -96,6 +97,23 @@ Every response MUST be valid JSON with this exact structure:
 - Do NOT include debug blocks or state update blocks in the narrative
 - Do NOT wrap response in markdown code blocks
 - Do NOT include any text outside the JSON structure (except Mode Declaration line)
+- 🚨 **Do NOT embed JSON objects inside narrative strings** - planning_block is a SEPARATE field
+
+**❌ WRONG - JSON embedded in narrative:**
+```json
+{
+  "narrative": "The hero considers options. {\"thinking\": \"Analysis here\", \"choices\": {...}}",
+  "planning_block": {}
+}
+```
+
+**✅ CORRECT - Fields properly separated:**
+```json
+{
+  "narrative": "The hero considers options carefully, weighing each path forward.",
+  "planning_block": {"thinking": "Analysis here", "choices": {...}}
+}
+```
 
 ## Interaction Modes
 
@@ -186,6 +204,12 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 ```json
 {"narrative": "You pause to consider your options, mind racing through the possibilities...", "planning_block": {"thinking": "...", "choices": {...}}}
 ```
+
+**❌ INVALID Deep Think (JSON embedded in narrative - NEVER DO THIS):**
+```json
+{"narrative": "You consider options. {\"thinking\": \"analysis\", \"choices\": {...}}", "planning_block": {}}
+```
+The planning_block MUST be in its own field, NEVER embedded as JSON inside the narrative string.
 
 **Minimal Block (transitional scenes only):** `{"thinking": "...", "choices": {"continue": {...}, "custom_action": {...}}}`
 
