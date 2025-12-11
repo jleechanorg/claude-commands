@@ -803,6 +803,7 @@ PATH_MAP: dict[str, str] = {
     # constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH, # Integrated into game_state
     constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
     constants.PROMPT_TYPE_DND_SRD: constants.DND_SRD_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_GOD_MODE: constants.GOD_MODE_INSTRUCTION_PATH,
 }
 
 # --- END CONSTANTS ---
@@ -941,6 +942,34 @@ class PromptBuilder:
         # Add debug mode instructions THIRD for technical functionality
         # The backend will strip debug content for users when debug_mode is False
         parts.append(_build_debug_instructions())
+
+        return parts
+
+    def build_god_mode_instructions(self) -> list[str]:
+        """
+        Build system instructions for GOD MODE.
+        God mode is for administrative control (correcting mistakes, modifying campaign),
+        NOT for playing the game. Includes game rules knowledge for proper corrections.
+        """
+        parts = []
+
+        # CRITICAL: Load master directive FIRST to establish hierarchy and authority
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+        # Load god mode specific instruction (administrative commands)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GOD_MODE))
+
+        # Load game state instruction for state structure reference
+        # (AI needs to know the schema to make valid state_updates)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
+        # Load D&D SRD for game rules knowledge
+        # (AI needs to understand game mechanics to make proper corrections)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+
+        # Load mechanics instruction for detailed game rules
+        # (spell slots, class features, combat rules, etc.)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
 
         return parts
 
@@ -2964,6 +2993,22 @@ def _validate_and_enforce_planning_block(
     return response_text
 
 
+def _is_god_mode_command(user_input: str) -> bool:
+    """Check if the user input is a GOD MODE command.
+
+    A GOD MODE command starts with the "GOD MODE:" prefix (case-insensitive)
+    and should trigger administrative handling with no narrative advancement.
+
+    Args:
+        user_input: Raw user input text before any validation mutations.
+
+    Returns:
+        bool: True if the input requests GOD MODE.
+    """
+
+    return user_input.strip().upper().startswith("GOD MODE:")
+
+
 @log_exceptions
 def continue_story(
     user_input: str,
@@ -3003,6 +3048,9 @@ def continue_story(
     logging_util.info(
         f"Using provider/model: {provider_selection.provider}/{model_to_use} for story continuation."
     )
+
+    # Preserve the raw user input before any validation mutations
+    raw_user_input = user_input
 
     # Check for multiple think commands in input using regex
     think_pattern: str = r"Main Character:\s*think[^\n]*"
@@ -3050,26 +3098,41 @@ def continue_story(
     # Use PromptBuilder to construct system instructions
     builder: PromptBuilder = PromptBuilder(current_game_state)
 
-    # Build core instructions
-    system_instruction_parts: list[str] = builder.build_core_system_instructions()
+    # Check if this is a GOD MODE command (administrative, not gameplay)
+    is_god_mode_command: bool = _is_god_mode_command(raw_user_input)
 
-    # Add character-related instructions
-    builder.add_character_instructions(system_instruction_parts, selected_prompts)
+    if is_god_mode_command:
+        # GOD MODE: Use lightweight administrative prompts
+        # God mode is for correcting mistakes/changing campaign, NOT playing
+        logging_util.info("🔮 GOD_MODE_DETECTED: Using administrative prompt set")
+        system_instruction_parts: list[str] = builder.build_god_mode_instructions()
+        # No character instructions, no narrative prompts, no continuation reminders
+        # Finalize without world instructions (god mode doesn't need world lore)
+        system_instruction_final = builder.finalize_instructions(
+            system_instruction_parts, use_default_world=False
+        )
+    else:
+        # NORMAL MODE: Full gameplay prompts
+        # Build core instructions
+        system_instruction_parts: list[str] = builder.build_core_system_instructions()
 
-    # Add selected prompt instructions (filter calibration for continue_story)
-    builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts)
+        # Add character-related instructions
+        builder.add_character_instructions(system_instruction_parts, selected_prompts)
 
-    # Add system reference instructions
-    builder.add_system_reference_instructions(system_instruction_parts)
+        # Add selected prompt instructions (filter calibration for continue_story)
+        builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts)
 
-    # Add continuation-specific reminders (planning blocks) only in character mode
-    if mode == constants.MODE_CHARACTER:
-        system_instruction_parts.append(builder.build_continuation_reminder())
+        # Add system reference instructions
+        builder.add_system_reference_instructions(system_instruction_parts)
 
-    # Finalize with world and debug instructions
-    system_instruction_final = builder.finalize_instructions(
-        system_instruction_parts, use_default_world
-    )
+        # Add continuation-specific reminders (planning blocks) only in character mode
+        if mode == constants.MODE_CHARACTER:
+            system_instruction_parts.append(builder.build_continuation_reminder())
+
+        # Finalize with world and debug instructions
+        system_instruction_final = builder.finalize_instructions(
+            system_instruction_parts, use_default_world
+        )
 
     # --- NEW: Budget-based Truncation ---
     # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
@@ -3369,9 +3432,14 @@ def continue_story(
 
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input
-    user_input_lower: str = user_input.lower().strip()
+    user_input_lower: str = raw_user_input.lower().strip()
     is_switching_to_god_mode: bool = user_input_lower in constants.MODE_SWITCH_SIMPLE
 
+    # Check if user sent a "GOD MODE:" prefixed command (administrative mode)
+    # God mode = DM mode behavior: no narrative advancement, no planning blocks
+    # Reuse the original god mode detection (based on raw input before validation mutations)
+    # to ensure validation prepends don't break the prefix check.
+    
     # Also check if the AI response indicates DM MODE
     is_dm_mode_response: bool = (
         "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
@@ -3381,10 +3449,12 @@ def continue_story(
     # 1. Currently in character mode
     # 2. User isn't switching to god mode
     # 3. AI response isn't in DM mode
+    # 4. User didn't send a GOD MODE: command (administrative, not gameplay)
     if (
         mode == constants.MODE_CHARACTER
         and not is_switching_to_god_mode
         and not is_dm_mode_response
+        and not is_god_mode_command
     ):
         response_text = _validate_and_enforce_planning_block(
             response_text,

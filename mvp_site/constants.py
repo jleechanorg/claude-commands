@@ -305,6 +305,7 @@ PROMPT_TYPE_GAME_STATE = "game_state"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
 PROMPT_TYPE_MASTER_DIRECTIVE = "master_directive"
 PROMPT_TYPE_DND_SRD = "dnd_srd"
+PROMPT_TYPE_GOD_MODE = "god_mode"
 
 
 # --- PROMPT PATHS ---
@@ -319,6 +320,7 @@ CHARACTER_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_template.md")
 GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.md")
 MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
+GOD_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "god_mode_instruction.md")
 
 # --- PROMPT LOADING ORDER ---
 # User-selectable prompts that are conditionally added based on campaign settings
