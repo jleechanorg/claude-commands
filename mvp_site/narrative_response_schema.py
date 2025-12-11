@@ -443,14 +443,10 @@ def parse_structured_response(
         if narrative_value:
             return narrative_value
 
-        if planning_block:
-            if isinstance(planning_block, dict):
-                thinking_text = planning_block.get("thinking", "")
-                if thinking_text and str(thinking_text).strip():
-                    return str(thinking_text).strip()
-
-            elif isinstance(planning_block, str) and planning_block.strip():
-                return planning_block.strip()
+        if planning_block and isinstance(planning_block, dict):
+            thinking_text = planning_block.get("thinking", "")
+            if thinking_text and str(thinking_text).strip():
+                return str(thinking_text).strip()
 
         return narrative_value
 
@@ -524,14 +520,15 @@ def parse_structured_response(
                 # Handle null narrative
                 if narrative is None:
                     narrative = ""
+                fallback_narrative = _apply_planning_fallback(
+                    narrative, parsed_data.get("planning_block")
+                )
                 combined_response = _combine_god_mode_and_narrative(
-                    god_mode_response, narrative
+                    god_mode_response, fallback_narrative
                 )
 
                 known_fields = {
-                    "narrative": _apply_planning_fallback(
-                        narrative, parsed_data.get("planning_block")
-                    ),
+                    "narrative": fallback_narrative,
                     "god_mode_response": god_mode_response,
                     "entities_mentioned": parsed_data.get("entities_mentioned", []),
                     "location_confirmed": parsed_data.get("location_confirmed")
@@ -555,9 +552,11 @@ def parse_structured_response(
             # Planning blocks should only come from JSON field
             planning_block = parsed_data.get("planning_block", "")
 
+            fallback_narrative = _apply_planning_fallback(narrative, planning_block)
+
             # Extract only the fields we know about, let **kwargs handle the rest
             known_fields = {
-                "narrative": _apply_planning_fallback(narrative, planning_block),
+                "narrative": fallback_narrative,
                 "entities_mentioned": parsed_data.get("entities_mentioned", []),
                 "location_confirmed": parsed_data.get("location_confirmed")
                 or "Unknown",
@@ -572,7 +571,7 @@ def parse_structured_response(
                 if k not in known_fields and k != "planning_block"
             }
             fallback_response = NarrativeResponse(**known_fields, **extra_fields)
-            return narrative, fallback_response
+            return fallback_narrative, fallback_response
 
     # Additional mitigation: Try to extract narrative from raw JSON-like text
     # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."
