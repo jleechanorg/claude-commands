@@ -496,9 +496,6 @@ def parse_structured_response(
             planning_block = parsed_data.get("planning_block", "")
 
             validated_response = NarrativeResponse(**parsed_data)
-            validated_response.narrative = _apply_planning_fallback(
-                validated_response.narrative, validated_response.planning_block
-            )
             # If god_mode_response is present, return both god mode response and narrative
             if (
                 hasattr(validated_response, "god_mode_response")
@@ -507,7 +504,14 @@ def parse_structured_response(
                 combined_response = _combine_god_mode_and_narrative(
                     validated_response.god_mode_response, validated_response.narrative
                 )
+                validated_response.narrative = _apply_planning_fallback(
+                    validated_response.narrative, validated_response.planning_block
+                )
                 return combined_response, validated_response
+
+            validated_response.narrative = _apply_planning_fallback(
+                validated_response.narrative, validated_response.planning_block
+            )
             return validated_response.narrative, validated_response
 
         except (ValueError, TypeError):
@@ -520,11 +524,12 @@ def parse_structured_response(
                 # Handle null narrative
                 if narrative is None:
                     narrative = ""
+                combined_response = _combine_god_mode_and_narrative(
+                    god_mode_response, narrative
+                )
+
                 fallback_narrative = _apply_planning_fallback(
                     narrative, parsed_data.get("planning_block")
-                )
-                combined_response = _combine_god_mode_and_narrative(
-                    god_mode_response, fallback_narrative
                 )
 
                 known_fields = {
