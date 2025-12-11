@@ -316,6 +316,37 @@ After.'''
 
         assert response.narrative == ""
 
+    def test_key_order_permutation_context_first(self):
+        """
+        Regression test: JSON with 'context' before 'thinking' should still be stripped.
+
+        The quick-check must be order-independent. If it only matches {"thinking":...
+        at the start, this permutation would slip through.
+        """
+        # JSON with context first, then choices, then thinking
+        narrative = 'foo {"context": "pre", "choices": {"a": {"text": "A"}}, "thinking": "later"} bar'
+
+        cleaned = _strip_embedded_planning_json(narrative)
+
+        assert '"thinking"' not in cleaned, "Should strip JSON even when thinking is not first key"
+        assert '"choices"' not in cleaned
+        assert 'foo' in cleaned
+        assert 'bar' in cleaned
+
+    def test_key_order_permutation_choices_first(self):
+        """
+        Regression test: JSON with 'choices' before 'thinking' should still be stripped.
+        """
+        # JSON with choices first
+        narrative = 'before {"choices": {"a": {"text": "A"}}, "thinking": "analysis"} after'
+
+        cleaned = _strip_embedded_planning_json(narrative)
+
+        assert '"thinking"' not in cleaned, "Should strip JSON even when choices comes first"
+        assert '"choices"' not in cleaned
+        assert 'before' in cleaned
+        assert 'after' in cleaned
+
 
 if __name__ == "__main__":
     unittest.main()

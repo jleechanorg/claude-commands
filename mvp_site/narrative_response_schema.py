@@ -26,12 +26,10 @@ WHITESPACE_PATTERN = re.compile(
     r"[^\S\r\n]+"
 )  # Normalize spaces while preserving line breaks
 
-PLANNING_BLOCK_QUICK_CHECK = re.compile(r"\{\s*\"thinking\"\s*:")
-
-
 # Planning block detection is handled via brace matching in
 # `_remove_planning_json_blocks`; regex explorations are intentionally omitted
 # to keep the implementation single-sourced.
+# Quick check just verifies both required keys exist (order-independent).
 
 # Mixed language detection - CJK (Chinese/Japanese/Korean) characters
 # These can appear due to LLM training data leakage
@@ -70,7 +68,8 @@ def _strip_embedded_planning_json(text: str) -> str:
         return text
 
     # Quick check - if no planning block indicators, return as-is
-    if not PLANNING_BLOCK_QUICK_CHECK.search(text) or '"choices"' not in text:
+    # Both keys must be present (order-independent check)
+    if '"thinking"' not in text or '"choices"' not in text:
         return text
 
     cleaned = text
