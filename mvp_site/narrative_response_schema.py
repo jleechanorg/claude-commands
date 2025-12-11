@@ -1,3 +1,4 @@
+# ruff: noqa: PLR0911,PLR0912,PLR0915
 """
 Simplified structured narrative generation schemas
 Based on Milestone 0.4 Combined approach implementation (without pydantic dependency)
@@ -25,6 +26,200 @@ WHITESPACE_PATTERN = re.compile(
     r"[^\S\r\n]+"
 )  # Normalize spaces while preserving line breaks
 
+# Planning block detection is handled via brace matching in
+# `_remove_planning_json_blocks`; regex explorations are intentionally omitted
+# to keep the implementation single-sourced.
+# Quick check just verifies both required keys exist (order-independent).
+
+# Mixed language detection - CJK (Chinese/Japanese/Korean) characters
+# These can appear due to LLM training data leakage
+CJK_PATTERN = re.compile(
+    r"[\u4e00-\u9fff"  # CJK Unified Ideographs (Chinese)
+    r"\u3040-\u309f"  # Hiragana (Japanese)
+    r"\u30a0-\u30ff"  # Katakana (Japanese)
+    r"\uac00-\ud7af"  # Hangul Syllables (Korean)
+    r"\u3400-\u4dbf"  # CJK Unified Ideographs Extension A
+    r"\U00020000-\U0002a6df"  # CJK Unified Ideographs Extension B
+    r"]+"
+)
+
+
+MAX_PLANNING_JSON_BLOCK_CHARS = 50000
+
+
+def _strip_embedded_planning_json(text: str) -> str:
+    """
+    Strip embedded planning block JSON from narrative text.
+
+    The LLM sometimes outputs planning block JSON directly in the narrative field.
+    This JSON should be stripped because the planning_block is a separate structured field.
+
+    Detects and removes JSON blocks that contain:
+    - "thinking" key (GM reasoning)
+    - "choices" key (player options)
+
+    Args:
+        text: The narrative text that may contain embedded JSON
+
+    Returns:
+        The narrative text with embedded planning JSON removed
+    """
+    if not text or not isinstance(text, str):
+        return text
+
+    # Quick check - if no planning block indicators, return as-is
+    # Both keys must be present (order-independent check)
+    if '"thinking"' not in text or '"choices"' not in text:
+        return text
+
+    cleaned = text
+
+    # Try to find and remove embedded planning JSON using recursive brace matching
+    # This is more robust than regex for deeply nested JSON
+    cleaned, removed = _remove_planning_json_blocks(cleaned)
+
+    # Clean up multiple consecutive newlines that might result from removal
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+
+    if removed and cleaned != text:
+        logging_util.info("Stripped embedded planning block JSON from narrative text")
+
+    return cleaned
+
+
+def _remove_planning_json_blocks(text: str) -> tuple[str, bool]:
+    """
+    Remove JSON blocks that look like planning blocks (have thinking and choices keys).
+
+    Uses brace matching to handle arbitrarily nested JSON.
+    """
+    result = []
+    i = 0
+    text_len = len(text)
+
+    removed = False
+
+    while i < text_len:
+        # Look for potential JSON object start
+        if text[i] == '{':
+            # Try to extract the full JSON object
+            json_end = _find_matching_brace(text, i)
+            if json_end != -1:
+                json_block = text[i:json_end + 1]
+                # Check if this looks like a planning block
+                if _is_planning_block_json(json_block):
+                    # Skip this JSON block (don't add to result)
+                    removed = True
+                    i = json_end + 1
+                    continue
+
+        result.append(text[i])
+        i += 1
+
+    return ''.join(result), removed
+
+
+def _find_matching_brace(text: str, start: int) -> int:
+    """
+    Find the index of the closing brace that matches the opening brace at start.
+
+    Returns -1 if no matching brace is found.
+    """
+    if start >= len(text) or text[start] != '{':
+        return -1
+
+    depth = 0
+    in_string = False
+    escape_next = False
+    i = start
+
+    while i < len(text):
+        char = text[i]
+
+        if escape_next:
+            escape_next = False
+        elif char == '\\':
+            escape_next = True
+        elif char == '"':
+            in_string = not in_string
+        elif not in_string:
+            if char == '{':
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0:
+                    return i
+
+        i += 1
+
+    return -1  # No matching brace found
+
+
+def _is_planning_block_json(json_text: str) -> bool:
+    """
+    Check if a JSON block looks like a planning block structure.
+
+    Planning blocks have "thinking" and "choices" keys.
+    """
+    if len(json_text) > MAX_PLANNING_JSON_BLOCK_CHARS:
+        return False
+
+    # Quick string check first (faster than parsing)
+    if '"thinking"' not in json_text or '"choices"' not in json_text:
+        return False
+
+    # Verify it's actually valid JSON with these keys
+    try:
+        parsed = json.loads(json_text)
+        if isinstance(parsed, dict):
+            has_thinking = "thinking" in parsed
+            has_choices = "choices" in parsed
+            return has_thinking and has_choices
+    except json.JSONDecodeError:
+        # If it looks like planning JSON but doesn't parse,
+        # still remove it (it's likely malformed planning block)
+        # Use a looser check
+        return (
+            '"thinking"' in json_text and
+            '"choices"' in json_text and
+            json_text.strip().startswith('{') and
+            json_text.strip().endswith('}')
+        )
+
+    return False
+
+
+def strip_mixed_language_characters(text: str) -> str:
+    """
+    Strip CJK (Chinese/Japanese/Korean) characters from text.
+
+    These can appear due to LLM training data leakage and should be removed
+    to maintain narrative consistency in English-language campaigns.
+
+    Args:
+        text: Input text that may contain mixed language characters
+
+    Returns:
+        Text with CJK characters removed
+    """
+    if not text:
+        return text
+
+    # Check if there are any CJK characters
+    if CJK_PATTERN.search(text):
+        original_len = len(text)
+        cleaned = CJK_PATTERN.sub("", text)
+        removed_count = original_len - len(cleaned)
+        logging_util.warning(
+            f"⚠️ MIXED_LANGUAGE_STRIPPED: Removed {removed_count} CJK characters from narrative. "
+            f"This indicates LLM training data leakage."
+        )
+        # Clean up any double spaces left behind
+        cleaned = re.sub(r"  +", " ", cleaned)
+        return cleaned.strip()
+
+    return text
+
 
 class NarrativeResponse:
     """Schema for structured narrative generation response"""
@@ -39,7 +234,7 @@ class NarrativeResponse:
         debug_info: dict[str, Any] = None,
         god_mode_response: str = None,
         session_header: str = None,
-        planning_block: str = None,
+        planning_block: dict[str, Any] | None = None,
         dice_rolls: list[str] = None,
         resources: str = None,
         **kwargs,
@@ -65,11 +260,17 @@ class NarrativeResponse:
         self.extra_fields = kwargs
 
     def _validate_narrative(self, narrative: str) -> str:
-        """Validate narrative content"""
+        """Validate narrative content, strip embedded JSON and mixed language characters"""
         if not isinstance(narrative, str):
             raise ValueError("Narrative must be a string")
 
-        return narrative.strip()
+        # Strip embedded planning block JSON from narrative
+        cleaned = _strip_embedded_planning_json(narrative)
+
+        # Strip any mixed language characters (CJK) that may have leaked from LLM training
+        cleaned = strip_mixed_language_characters(cleaned)
+
+        return cleaned.strip()
 
     def _validate_entities(self, entities: list[str]) -> list[str]:
         """Validate and clean entity list"""
@@ -169,7 +370,7 @@ class NarrativeResponse:
 
     def _validate_planning_block_json(
         self, planning_block: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any]:  # noqa: PLR0912
         """Validate JSON-format planning block structure"""
         validated = {}
 
@@ -420,7 +621,9 @@ def _combine_god_mode_and_narrative(
     return ""
 
 
-def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:
+def parse_structured_response(
+    response_text: str,
+) -> tuple[str, NarrativeResponse]:  # noqa: PLR0911,PLR0912,PLR0915
     """
     Parse structured response and check for JSON bug issues.
     """
@@ -430,6 +633,23 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     Returns:
         tuple: (narrative_text, parsed_response_or_none)
     """
+
+    def _apply_planning_fallback(
+        narrative_value: str | None, planning_block: Any
+    ) -> str:
+        """Use planning block thinking text when narrative is intentionally blank."""
+
+        narrative_value = (narrative_value or "").strip()
+        if narrative_value:
+            return narrative_value
+
+        if planning_block and isinstance(planning_block, dict):
+            thinking_text = planning_block.get("thinking", "")
+            if thinking_text and str(thinking_text).strip():
+                return str(thinking_text).strip()
+
+        return narrative_value
+
     if not response_text:
         empty_response = NarrativeResponse(
             narrative="The story awaits your input...",  # Default narrative for empty response
@@ -484,7 +704,14 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 combined_response = _combine_god_mode_and_narrative(
                     validated_response.god_mode_response, validated_response.narrative
                 )
+                validated_response.narrative = _apply_planning_fallback(
+                    validated_response.narrative, validated_response.planning_block
+                )
                 return combined_response, validated_response
+
+            validated_response.narrative = _apply_planning_fallback(
+                validated_response.narrative, validated_response.planning_block
+            )
             return validated_response.narrative, validated_response
 
         except (ValueError, TypeError):
@@ -497,14 +724,18 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 # Handle null narrative
                 if narrative is None:
                     narrative = ""
-                combined_response = _combine_god_mode_and_narrative(
-                    god_mode_response, narrative
+                entities_value = parsed_data.get("entities_mentioned", [])
+                if not isinstance(entities_value, list):
+                    entities_value = []
+
+                fallback_narrative = _apply_planning_fallback(
+                    narrative, parsed_data.get("planning_block")
                 )
 
                 known_fields = {
-                    "narrative": narrative,
+                    "narrative": fallback_narrative,
                     "god_mode_response": god_mode_response,
-                    "entities_mentioned": parsed_data.get("entities_mentioned", []),
+                    "entities_mentioned": entities_value,
                     "location_confirmed": parsed_data.get("location_confirmed")
                     or "Unknown",
                     "state_updates": parsed_data.get("state_updates", {}),
@@ -515,6 +746,9 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                     k: v for k, v in parsed_data.items() if k not in known_fields
                 }
                 fallback_response = NarrativeResponse(**known_fields, **extra_fields)
+                combined_response = _combine_god_mode_and_narrative(
+                    god_mode_response, fallback_response.narrative
+                )
                 return combined_response, fallback_response
 
             # Return the narrative if we at least got that
@@ -526,10 +760,16 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             # Planning blocks should only come from JSON field
             planning_block = parsed_data.get("planning_block", "")
 
+            fallback_narrative = _apply_planning_fallback(narrative, planning_block)
+
             # Extract only the fields we know about, let **kwargs handle the rest
+            entities_value = parsed_data.get("entities_mentioned", [])
+            if not isinstance(entities_value, list):
+                entities_value = []
+
             known_fields = {
-                "narrative": narrative,
-                "entities_mentioned": parsed_data.get("entities_mentioned", []),
+                "narrative": fallback_narrative,  # Use fallback_narrative with planning fallback applied
+                "entities_mentioned": entities_value,  # Use validated entities_value
                 "location_confirmed": parsed_data.get("location_confirmed")
                 or "Unknown",
                 "state_updates": parsed_data.get("state_updates", {}),
@@ -543,7 +783,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 if k not in known_fields and k != "planning_block"
             }
             fallback_response = NarrativeResponse(**known_fields, **extra_fields)
-            return narrative, fallback_response
+            return fallback_response.narrative, fallback_response  # Return cleaned narrative from response
 
     # Additional mitigation: Try to extract narrative from raw JSON-like text
     # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."
@@ -560,7 +800,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             entities_mentioned=[],
             location_confirmed="Unknown",
         )
-        return extracted_narrative, fallback_response
+        return fallback_response.narrative, fallback_response
 
     # Final fallback: Clean up raw text for display
     # Remove JSON-like structures and format for readability
@@ -669,7 +909,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             narrative=cleaned_text, entities_mentioned=[], location_confirmed="Unknown"
         )
 
-    return cleaned_text, fallback_response
+    return fallback_response.narrative, fallback_response
 
 
 def create_generic_json_instruction() -> str:

@@ -2,6 +2,7 @@ import unittest
 
 from _pytest.capture import CaptureFixture
 from _pytest.monkeypatch import MonkeyPatch
+
 from automation.jleechanorg_pr_automation import jleechanorg_pr_monitor as mon
 
 FAILED_PR_NUMBER = 2

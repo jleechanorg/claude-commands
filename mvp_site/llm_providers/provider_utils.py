@@ -1,6 +1,102 @@
-"""Shared utilities for LLM provider implementations."""
+"""Shared utilities for LLM provider implementations.
+
+Schema reference:
+- SOURCE OF TRUTH: mvp_site/prompts/game_state_instruction.md (Section: "JSON Response Format (Required Fields)")
+- VALIDATION LAYER: mvp_site/schemas/narrative_response_schema.py
+- Hierarchy: prompt → NARRATIVE_RESPONSE_SCHEMA → NarrativeResponse
+
+Provider notes:
+- Cerebras/OpenRouter uses NARRATIVE_RESPONSE_SCHEMA via get_openai_json_schema_format(strict=False)
+- Gemini avoids response_schema and uses response_mime_type="application/json" + prompt instruction
+"""
 
 from __future__ import annotations
+
+# =============================================================================
+# NARRATIVE_RESPONSE_SCHEMA - JSON schema for structured LLM outputs
+# =============================================================================
+
+# Schema for Cerebras/OpenRouter - supports additionalProperties for dynamic objects
+NARRATIVE_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "narrative": {
+            "type": "string",
+            "description": "The main narrative text describing what happens",
+        },
+        "planning_block": {
+            "type": "object",
+            "description": "GM planning with thinking field and dynamic choices (snake_case keys like explore_tavern, attack_goblin, god:option_1)",
+            # additionalProperties:true allows dynamic choice keys
+            "additionalProperties": True,
+        },
+        "entities_mentioned": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of entity names mentioned in the narrative",
+        },
+        "location_confirmed": {
+            "type": "string",
+            "description": "Current location name",
+        },
+        "session_header": {
+            "type": "string",
+            "description": "Session context header",
+        },
+        "dice_rolls": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of dice roll results",
+        },
+        "resources": {
+            "type": "string",
+            "description": "Resource tracking information",
+        },
+        "turn_summary": {
+            "type": "string",
+            "description": "Summary of what happened this turn",
+        },
+        "state_updates": {
+            "type": "object",
+            "description": "Game state updates (HP, inventory, conditions, etc.)",
+            "additionalProperties": True,
+        },
+        "debug_info": {
+            "type": "object",
+            "description": "Debug information for development",
+            "additionalProperties": True,
+        },
+        "god_mode_response": {
+            "type": "string",
+            "description": "Response for god mode commands",
+        },
+    },
+    "required": ["narrative", "planning_block", "entities_mentioned"],
+    # Note: With strict:False, additionalProperties defaults to true (allows extra fields)
+}
+
+
+def get_openai_json_schema_format(name: str = "narrative_response") -> dict:
+    """Get schema in OpenAI/Cerebras json_schema format.
+
+    Returns the schema wrapped for use with response_format.type="json_schema"
+
+    NOTE: Uses strict=False to allow dynamic choice keys in planning_block.
+    The game design requires semantic keys like 'explore_tavern', 'attack_goblin',
+    'god:option_1' which cannot be pre-defined in a strict schema.
+
+    Structure enforcement still happens via:
+    - Top-level fields (narrative, entities_mentioned) are validated
+    - planning_block internal structure validated by narrative_response_schema.py
+    """
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": name,
+            "strict": False,  # Allow dynamic choice keys in planning_block
+            "schema": NARRATIVE_RESPONSE_SCHEMA,
+        },
+    }
 
 
 class ContextTooLargeError(ValueError):

@@ -46,6 +46,7 @@ from mvp_site import (
     logging_util,
     preventive_guards,
     structured_fields_utils,
+    world_time,
 )
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.debug_hybrid_system import clean_json_artifacts, process_story_for_display
@@ -100,124 +101,10 @@ KEY_TRACEBACK = "traceback"
 # Previously was 2, but this causes 3 LLM calls total when time goes backward
 MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0  # Max retries before accepting response
 
-
-def _world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, ...]:
-    """Convert world_time dict to comparable tuple (year, month_num, day, hour, min, sec, microsec).
-
-    Returns tuple that can be compared with < > operators.
-    Missing fields default to 0.
-    """
-    if not world_time or not isinstance(world_time, dict):
-        return (0, 0, 0, 0, 0, 0, 0)
-
-    # Month name to number mapping for Forgotten Realms calendar
-    month_map = {
-        "hammer": 1,
-        "alturiak": 2,
-        "ches": 3,
-        "tarsakh": 4,
-        "mirtul": 5,
-        "kythorn": 6,
-        "flamerule": 7,
-        "eleasis": 8,
-        "eleint": 9,
-        "marpenoth": 10,
-        "uktar": 11,
-        "nightal": 12,
-        # Common abbreviations
-        "jan": 1,
-        "feb": 2,
-        "mar": 3,
-        "apr": 4,
-        "may": 5,
-        "jun": 6,
-        "jul": 7,
-        "aug": 8,
-        "sep": 9,
-        "oct": 10,
-        "nov": 11,
-        "dec": 12,
-    }
-
-    # CRITICAL: Convert all values to int for numeric comparison
-    # LLM responses often return string values ("10", "9") which would
-    # compare lexicographically ("10" < "9" = False), allowing backward time jumps
-    def _safe_int(value: Any) -> int:
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return 0
-
-    year = _safe_int(world_time.get("year", 0))
-    month_raw = world_time.get("month", 0)
-    if isinstance(month_raw, str):
-        mapped = month_map.get(month_raw.lower())
-        month = mapped if mapped is not None else _safe_int(month_raw)
-    else:
-        month = _safe_int(month_raw)
-    day = _safe_int(world_time.get("day", 0))
-    hour = _safe_int(world_time.get("hour", 0))
-    minute = _safe_int(world_time.get("minute", 0))
-    second = _safe_int(world_time.get("second", 0))
-    microsecond = _safe_int(world_time.get("microsecond", 0))
-
-    return (year, month, day, hour, minute, second, microsecond)
-
-
-def _extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None:
-    """Extract world_time from LLM response state_updates."""
-    try:
-        state_updates = (
-            llm_response.get_state_updates()
-            if hasattr(llm_response, "get_state_updates")
-            else {}
-        )
-        world_data = state_updates.get("world_data", {})
-        return world_data.get("world_time")
-    except Exception:
-        return None
-
-
-def _check_temporal_violation(
-    old_time: dict[str, Any] | None,
-    new_time: dict[str, Any] | None,
-) -> bool:
-    """Check if new_time is backward from old_time (violation).
-
-    Returns True if violation detected, False if OK.
-    """
-    if not old_time or not new_time:
-        return False  # Can't validate without both times
-
-    old_tuple = _world_time_to_comparable(old_time)
-    new_tuple = _world_time_to_comparable(new_time)
-
-    # Violation if new time is less than or equal to old time
-    # (equal is also a violation - time should always advance)
-    return new_tuple <= old_tuple
-
-
-def _format_world_time_for_prompt(world_time: dict[str, Any] | None) -> str:
-    """Format world_time dict for human-readable prompt display."""
-    if not world_time:
-        return "Unknown"
-
-    year = world_time.get("year", "????")
-    month = world_time.get("month", "??")
-    day = world_time.get("day", "??")
-    # Ensure hour/minute are integers to prevent TypeError in format string
-    try:
-        hour = int(world_time.get("hour", 0))
-        minute = int(world_time.get("minute", 0))
-    except (ValueError, TypeError):
-        hour, minute = 0, 0
-    time_of_day = world_time.get("time_of_day", "")
-
-    time_str = f"{hour:02d}:{minute:02d}"
-    if time_of_day:
-        time_str = f"{time_of_day} ({time_str})"
-
-    return f"{year} DR, {month} {day}, {time_str}"
+_extract_world_time_from_response = world_time.extract_world_time_from_response
+_check_temporal_violation = world_time.check_temporal_violation
+_apply_timestamp_to_world_time = world_time.apply_timestamp_to_world_time
+_format_world_time_for_prompt = world_time.format_world_time_for_prompt
 
 
 def _build_temporal_correction_prompt(
@@ -277,15 +164,16 @@ def _build_temporal_warning_message(
 ) -> str | None:
     """Build user-facing temporal warning text based on attempts taken."""
 
-    # When retries are disabled (MAX=0), we surface the anomaly earlier via
-    # god_mode_response and skip legacy warning text entirely.
-    if MAX_TEMPORAL_CORRECTION_ATTEMPTS == 0:
-        return None
-
     if temporal_correction_attempts <= 0:
         return None
 
-    if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
+    # Always surface a warning once at least one correction was attempted.
+    # When MAX_TEMPORAL_CORRECTION_ATTEMPTS is 0 (corrections disabled), we still
+    # emit a warning and treat the effective max as at least one attempt so the
+    # message doesn't silently disappear.
+    effective_max_attempts = max(1, MAX_TEMPORAL_CORRECTION_ATTEMPTS)
+
+    if temporal_correction_attempts > effective_max_attempts:
         return (
             f"⚠️ TEMPORAL CORRECTION EXCEEDED: The AI repeatedly generated responses that jumped "
             f"backward in time. After {temporal_correction_attempts} failed correction attempts "
@@ -864,6 +752,18 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
             current_game_state, llm_response_obj, mode
         )
+
+        # Allow LLMs to return a single timestamp string while we maintain the
+        # structured world_time object expected by the engine.
+        state_changes = _apply_timestamp_to_world_time(state_changes)
+
+        # Normalize any world_time values without inventing new timestamps; the
+        # LLM remains responsible for choosing timeline values.
+        state_changes = world_time.ensure_progressive_world_time(
+            state_changes,
+            is_god_mode=is_god_mode,
+        )
+        new_world_time = state_changes.get("world_data", {}).get("world_time")
 
         # Add temporal violation error as god_mode_response for user-facing display
         # Note: new_world_time is already extracted in the temporal validation loop above

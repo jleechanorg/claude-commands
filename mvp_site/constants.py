@@ -69,14 +69,17 @@ DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
 ALLOWED_OPENROUTER_MODELS = [
     DEFAULT_OPENROUTER_MODEL,
     "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
+    "meta-llama/llama-3.1-8b-instruct",  # 131K context, $0.10/$0.10 per M (Cerebras provider)
+    "openai/gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (reasoning model)
     "z-ai/glm-4.6",  # 200K context, fast tools
-    "x-ai/grok-4.1-fast:free",  # 2M context, free until Dec 3 then $0.20/$0.50 per M
+    "x-ai/grok-4.1-fast",  # 2M context, $0.20/$0.50 per M tokens (supports json_schema)
+    "x-ai/grok-4.1-fast:free",  # Legacy alias to preserve existing user selections
 ]
 
-# Cerebras direct provider defaults (per Cerebras docs as of 2025-12-03)
+# Cerebras direct provider defaults (per Cerebras docs as of 2025-12-11)
 # Pricing comparison (input/output per M tokens):
-#   Llama 3.1 8B: $0.10/$0.10 (CHEAPEST, not in list - too small for RPG campaigns)
-#   GPT OSS 120B: $0.35/$0.75 (not in list - good budget option)
+#   Llama 3.1 8B: $0.10/$0.10 (CHEAPEST - now included)
+#   GPT OSS 120B: $0.35/$0.75 (budget option - now included)
 #   Qwen 3 32B: $0.40/$0.80 (not in list - lower context)
 #   Qwen 3 235B: $0.60/$1.20 (highest context 131K) <- DEFAULT
 #   Llama 3.3 70B: $0.85/$1.20 (65K context)
@@ -86,6 +89,8 @@ ALLOWED_CEREBRAS_MODELS = [
     DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M
     "zai-glm-4.6",  # 131K context, $2.25/$2.75 per M (preview)
     "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
+    "llama-3.1-8b",  # 131K context, $0.10/$0.10 per M (cheapest option)
+    "gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (budget reasoning model)
 ]
 
 # Context window budgeting (tokens)
@@ -98,16 +103,21 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     # OpenRouter
     "meta-llama/llama-3.1-70b-instruct": 131_072,
     "meta-llama/llama-3.1-405b-instruct": 131_072,
+    "meta-llama/llama-3.1-8b-instruct": 131_072,  # 131K context
+    "openai/gpt-oss-120b": 131_072,  # 131K context
     "z-ai/glm-4.6": 200_000,
-    "x-ai/grok-4.1-fast:free": 2_000_000,  # Grok 4.1 Fast - 2M context
+    "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
+    "x-ai/grok-4.1-fast:free": 2_000_000,  # Free tier shares same window
     # Cerebras
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
+    "llama-3.1-8b": 131_072,  # 131K context window (Cerebras advertises 128K)
+    "gpt-oss-120b": 131_072,  # 131K context window
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
-# Values pulled from provider docs as of 2025-12-01.
+# Values pulled from provider docs (OpenRouter as of 2025-12-01; Cerebras as of 2025-12-11).
 MODEL_MAX_OUTPUT_TOKENS = {
     # Gemini (we cap at JSON_MODE_MAX_OUTPUT_TOKENS in code; keep for completeness)
     DEFAULT_GEMINI_MODEL: 50_000,
@@ -115,16 +125,22 @@ MODEL_MAX_OUTPUT_TOKENS = {
     # OpenRouter
     # Llama 3.1 caps are not reported in the model catalog; OpenRouter commonly limits
     # completion tokens to ~8k for these models, so we adopt 8,192 to avoid 400s while
-    # still allowing larger replies than the previous 4k cap.
+    # still allowing larger replies than the previous 4k cap. Cerebras-hosted Llama 3.1
+    # can safely emit longer replies (see provider-specific entries below).
     "meta-llama/llama-3.1-70b-instruct": 8_192,
     "meta-llama/llama-3.1-405b-instruct": 8_192,
+    "meta-llama/llama-3.1-8b-instruct": 8_192,  # Same cap as other Llama 3.1 models
+    "openai/gpt-oss-120b": 40_000,  # 40K max output on Cerebras provider
     # Pulled from OpenRouter model metadata (2025-12-01 curl https://openrouter.ai/api/v1/models)
     "z-ai/glm-4.6": 202_752,
-    "x-ai/grok-4.1-fast:free": 30_000,
+    "x-ai/grok-4.1-fast": 30_000,
+    "x-ai/grok-4.1-fast:free": 30_000,  # Legacy alias shares the same cap
     # Cerebras (actual limit ~64K, using conservative 32K for safety)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
+    "llama-3.1-8b": 32_000,  # Cerebras allows longer completions than OpenRouter
+    "gpt-oss-120b": 40_000,  # 40K max output per Cerebras docs
 }
 
 # Debug mode settings
@@ -262,7 +278,11 @@ def infer_provider_from_model(model_name: str, provider_hint: str | None = None)
     if model_name in ALLOWED_CEREBRAS_MODELS:
         return LLM_PROVIDER_CEREBRAS
 
-    if provider_hint in {LLM_PROVIDER_GEMINI, LLM_PROVIDER_OPENROUTER, LLM_PROVIDER_CEREBRAS}:
+    if provider_hint in {
+        LLM_PROVIDER_GEMINI,
+        LLM_PROVIDER_OPENROUTER,
+        LLM_PROVIDER_CEREBRAS,
+    }:
         return provider_hint
 
     # Default to gemini if model not recognized (safe default)
@@ -304,6 +324,7 @@ PROMPT_TYPE_GAME_STATE = "game_state"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
 PROMPT_TYPE_MASTER_DIRECTIVE = "master_directive"
 PROMPT_TYPE_DND_SRD = "dnd_srd"
+PROMPT_TYPE_GOD_MODE = "god_mode"
 
 
 # --- PROMPT PATHS ---
@@ -318,6 +339,7 @@ CHARACTER_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_template.md")
 GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.md")
 MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
+GOD_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "god_mode_instruction.md")
 
 # --- PROMPT LOADING ORDER ---
 # User-selectable prompts that are conditionally added based on campaign settings

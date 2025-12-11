@@ -148,6 +148,7 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = [
+    "jleechanorg_pr_automation/tests",
     "tests",
 ]
 python_files = [
