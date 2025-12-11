@@ -322,8 +322,10 @@ cd orchestration
 pip install -e .
 
 # Or install from PyPI (when published)
-pip install ai_orch
+pip install jleechanorg-orchestration
 ```
+
+> **📦 Package Naming**: The PyPI package name is `jleechanorg-orchestration` while the Python import name is `orchestration`. This follows Python packaging conventions where the package name can differ from the import name to avoid namespace conflicts.
 
 ### Using Live Mode
 
