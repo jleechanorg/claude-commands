@@ -274,12 +274,12 @@ class TestEndToEndOutputBudget(unittest.TestCase):
 
         This test catches the output starvation bug at the integration level.
         """
-        # Capture what max_output_tokens is actually passed to the provider
+        # Capture what json_mode_max_output_tokens is actually passed to the provider
         captured_max_output_tokens = None
 
         def mock_generate_json_mode_content(**kwargs):
             nonlocal captured_max_output_tokens
-            captured_max_output_tokens = kwargs.get("max_output_tokens")
+            captured_max_output_tokens = kwargs.get("json_mode_max_output_tokens")
             # Return a mock response object
             mock_response = MagicMock()
             mock_response.text = '{"narrative": "Test response"}'
@@ -307,7 +307,7 @@ class TestEndToEndOutputBudget(unittest.TestCase):
         # Verify output tokens were NOT starved
         self.assertIsNotNone(
             captured_max_output_tokens,
-            "max_output_tokens was not passed to provider"
+            "json_mode_max_output_tokens was not passed to provider"
         )
         self.assertGreaterEqual(
             captured_max_output_tokens,

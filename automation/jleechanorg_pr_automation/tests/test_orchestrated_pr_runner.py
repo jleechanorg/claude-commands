@@ -1,4 +1,5 @@
 import json
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -52,6 +53,49 @@ def test_query_recent_prs_skips_incomplete_data(monkeypatch):
         lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(response), stderr=""),
     )
     assert runner.query_recent_prs(24) == []
+
+
+@pytest.mark.parametrize(
+    "exc_factory, expected_fragment",
+    [
+        (
+            lambda cmd, timeout: subprocess.CalledProcessError(
+                1, cmd, stderr="fetch failed"
+            ),
+            "fetch failed",
+        ),
+        (
+            lambda cmd, timeout: subprocess.TimeoutExpired(cmd, timeout),
+            "timed out",
+        ),
+    ],
+)
+def test_ensure_base_clone_recovers_from_fetch_failure(monkeypatch, tmp_path, capsys, exc_factory, expected_fragment):
+    repo_full = "org/repo"
+    runner.BASE_CLONE_ROOT = tmp_path
+    base_dir = tmp_path / "repo"
+    base_dir.mkdir()
+    (base_dir / "stale.txt").write_text("stale")
+
+    def fake_run_cmd(cmd, cwd=None, check=True, timeout=None):
+        if cmd[:2] == ["git", "fetch"]:
+            raise exc_factory(cmd, timeout)
+        if cmd[:2] == ["git", "clone"]:
+            base_dir.mkdir(parents=True, exist_ok=True)
+            (base_dir / "fresh.txt").write_text("fresh")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(runner, "run_cmd", fake_run_cmd)
+
+    result = runner.ensure_base_clone(repo_full)
+
+    assert result == base_dir
+    assert not (base_dir / "stale.txt").exists()
+    assert (base_dir / "fresh.txt").exists()
+
+    output = capsys.readouterr().out
+    assert "Fetch failed for org/repo" in output
+    assert expected_fragment in output
 
 
 def test_prepare_workspace_dir_cleans_worktree(monkeypatch, tmp_path):

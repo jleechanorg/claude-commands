@@ -1,3 +1,4 @@
+# ruff: noqa: PLR0911,PLR0912,PLR0915
 """
 Simplified structured narrative generation schemas
 Based on Milestone 0.4 Combined approach implementation (without pydantic dependency)
@@ -83,7 +84,7 @@ class NarrativeResponse:
         debug_info: dict[str, Any] = None,
         god_mode_response: str = None,
         session_header: str = None,
-        planning_block: str = None,
+        planning_block: dict[str, Any] | None = None,
         dice_rolls: list[str] = None,
         resources: str = None,
         **kwargs,
@@ -216,7 +217,7 @@ class NarrativeResponse:
 
     def _validate_planning_block_json(
         self, planning_block: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any]:  # noqa: PLR0912
         """Validate JSON-format planning block structure"""
         validated = {}
 
@@ -467,7 +468,9 @@ def _combine_god_mode_and_narrative(
     return ""
 
 
-def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:
+def parse_structured_response(
+    response_text: str,
+) -> tuple[str, NarrativeResponse]:  # noqa: PLR0911,PLR0912,PLR0915
     """
     Parse structured response and check for JSON bug issues.
     """
@@ -477,6 +480,23 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     Returns:
         tuple: (narrative_text, parsed_response_or_none)
     """
+
+    def _apply_planning_fallback(
+        narrative_value: str | None, planning_block: Any
+    ) -> str:
+        """Use planning block thinking text when narrative is intentionally blank."""
+
+        narrative_value = (narrative_value or "").strip()
+        if narrative_value:
+            return narrative_value
+
+        if planning_block and isinstance(planning_block, dict):
+            thinking_text = planning_block.get("thinking", "")
+            if thinking_text and str(thinking_text).strip():
+                return str(thinking_text).strip()
+
+        return narrative_value
+
     if not response_text:
         empty_response = NarrativeResponse(
             narrative="The story awaits your input...",  # Default narrative for empty response
@@ -531,7 +551,14 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 combined_response = _combine_god_mode_and_narrative(
                     validated_response.god_mode_response, validated_response.narrative
                 )
+                validated_response.narrative = _apply_planning_fallback(
+                    validated_response.narrative, validated_response.planning_block
+                )
                 return combined_response, validated_response
+
+            validated_response.narrative = _apply_planning_fallback(
+                validated_response.narrative, validated_response.planning_block
+            )
             return validated_response.narrative, validated_response
 
         except (ValueError, TypeError):
@@ -548,8 +575,12 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                     god_mode_response, narrative
                 )
 
+                fallback_narrative = _apply_planning_fallback(
+                    narrative, parsed_data.get("planning_block")
+                )
+
                 known_fields = {
-                    "narrative": narrative,
+                    "narrative": fallback_narrative,
                     "god_mode_response": god_mode_response,
                     "entities_mentioned": parsed_data.get("entities_mentioned", []),
                     "location_confirmed": parsed_data.get("location_confirmed")
@@ -573,9 +604,11 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             # Planning blocks should only come from JSON field
             planning_block = parsed_data.get("planning_block", "")
 
+            fallback_narrative = _apply_planning_fallback(narrative, planning_block)
+
             # Extract only the fields we know about, let **kwargs handle the rest
             known_fields = {
-                "narrative": narrative,
+                "narrative": fallback_narrative,
                 "entities_mentioned": parsed_data.get("entities_mentioned", []),
                 "location_confirmed": parsed_data.get("location_confirmed")
                 or "Unknown",
@@ -590,7 +623,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 if k not in known_fields and k != "planning_block"
             }
             fallback_response = NarrativeResponse(**known_fields, **extra_fields)
-            return narrative, fallback_response
+            return fallback_narrative, fallback_response
 
     # Additional mitigation: Try to extract narrative from raw JSON-like text
     # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."

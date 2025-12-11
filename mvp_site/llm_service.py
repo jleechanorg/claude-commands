@@ -182,22 +182,9 @@ TEMPERATURE: float = 0.9
 TARGET_WORD_COUNT: int = 300
 # Add a safety margin for JSON responses to prevent mid-response cutoffs
 
-# Fallback content constants to avoid code duplication
-DEFAULT_CHOICES: dict[str, str] = {
-    "Continue": "Continue with your current course of action.",
-    "Explore": "Explore your surroundings.",
-    "Other": "Describe a different action you'd like to take.",
-}
-
-FALLBACK_PLANNING_BLOCK_VALIDATION: dict[str, Any] = {
-    "thinking": "The AI response was incomplete. Here are some default options:",
-    "choices": DEFAULT_CHOICES,
-}
-
-FALLBACK_PLANNING_BLOCK_EXCEPTION: dict[str, Any] = {
-    "thinking": "Failed to generate planning block. Here are some default options:",
-    "choices": DEFAULT_CHOICES,
-}
+# Default planning block generation has been REMOVED
+# If the LLM doesn't generate a planning block, we return the response as-is
+# and let the error propagate to the UI rather than generating fake content
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
 JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
@@ -215,8 +202,223 @@ OUTPUT_TOKEN_RESERVE_RATIO: float = 0.20  # Reserve 20% of context for output to
 # - entity_preload_text: ~2000-3000 tokens (NPC summaries)
 # - entity_specific_instructions: ~1500-2000 tokens (per-turn instructions)
 # - entity_tracking_instruction: ~1000-1500 tokens (tracking rules)
-# - timeline_log: ~3000-4000 tokens (story timeline from truncated context)
+# NOTE: timeline_log text is constructed for diagnostics/entity instructions but is NOT
+# serialized into the structured LLMRequest payload.
 ENTITY_TRACKING_TOKEN_RESERVE: int = 10_500  # Conservative reserve for entity tracking
+
+# Entity tiering configuration for LRU-style token reduction
+# Caps entity_tracking growth for campaigns with many NPCs by:
+# 1. Only including recently-active entities (mentioned in last N turns)
+# 2. Trimming fields to essential info only (name, role, status, hp)
+# Note: Typical campaigns have ~50-200 tokens; this guards against edge cases.
+ENTITY_TIER_ACTIVE_MAX: int = 5  # Max entities with essential field tracking
+ENTITY_TIER_PRESENT_MAX: int = 10  # Max entities with minimal (name+role) tracking
+ENTITY_LOOKBACK_TURNS: int = 5  # Turns to scan for recent entity mentions
+
+
+def _extract_recently_mentioned_entities(
+    story_context: list[dict[str, Any]],
+    npc_names: list[str],
+    lookback_turns: int = ENTITY_LOOKBACK_TURNS,
+) -> dict[str, int]:
+    """
+    Scan recent story turns to find which NPCs were mentioned.
+
+    Uses LRU-style recency scoring: entities mentioned more recently get higher scores.
+    This allows us to prioritize active entities over dormant ones.
+
+    Args:
+        story_context: List of story turn entries with 'text' field
+        npc_names: List of known NPC names to search for
+        lookback_turns: Number of recent turns to scan
+
+    Returns:
+        Dict of {npc_name: recency_score} where higher = more recent
+    """
+    recent_turns = story_context[-lookback_turns:] if story_context else []
+    mentioned: dict[str, int] = {}
+
+    for turn_idx, turn in enumerate(recent_turns):
+        text = turn.get("text", "").lower()
+        for npc_name in npc_names:
+            # Use word boundary regex to avoid "King" matching "Kingsley"
+            pattern = rf"\b{re.escape(npc_name.lower())}\b"
+            if re.search(pattern, text):
+                # Higher index = more recent = higher score
+                mentioned[npc_name] = turn_idx
+
+    return mentioned
+
+
+def _tier_entities(
+    npc_data: dict[str, Any],
+    recently_mentioned: dict[str, int],
+    current_location: str,
+) -> tuple[list[str], list[str], list[str]]:
+    """
+    Categorize NPCs into ACTIVE, PRESENT, DORMANT tiers for token optimization.
+
+    ACTIVE: Recently mentioned, get essential field tracking (~50 tokens each)
+    PRESENT: In current location, get minimal tracking (~10 tokens each)
+    DORMANT: Not active, excluded from entity_tracking (rely on story_history)
+
+    Args:
+        npc_data: Dict of NPC name -> NPC data from game_state
+        recently_mentioned: Dict of NPC name -> recency score from story scan
+        current_location: Current location name for presence check
+
+    Returns:
+        Tuple of (active_names, present_names, dormant_names)
+    """
+    active_candidates: list[tuple[str, int]] = []
+    present: list[str] = []
+
+    for name, data in npc_data.items():
+        npc_location = data.get("current_location", data.get("location", ""))
+        # Normalize locations for comparison (strip whitespace, lowercase)
+        npc_location_normalized = npc_location.strip().lower() if npc_location else ""
+        current_location_normalized = current_location.strip().lower() if current_location else ""
+
+        if name in recently_mentioned:
+            # Recently mentioned - candidate for ACTIVE tier
+            active_candidates.append((name, recently_mentioned[name]))
+        elif npc_location_normalized and current_location_normalized and (
+            npc_location_normalized == current_location_normalized
+        ):
+            # In same location but not recently mentioned - PRESENT tier
+            present.append(name)
+
+    # Sort active by recency (higher score = more recent), take top N
+    active_candidates.sort(key=lambda x: x[1], reverse=True)
+    active = [name for name, _ in active_candidates[:ENTITY_TIER_ACTIVE_MAX]]
+
+    # Limit present entities
+    present = present[:ENTITY_TIER_PRESENT_MAX]
+
+    # Everything not ACTIVE or PRESENT is considered DORMANT (for logging only)
+    dormant = [
+        name for name in npc_data.keys() if name not in active and name not in present
+    ]
+
+    return active, present, dormant
+
+
+def _trim_entity_fields(npc_data: dict[str, Any], tier: str) -> dict[str, Any]:
+    """
+    Extract only essential fields based on entity tier.
+
+    ACTIVE tier (~50 tokens): name, role, attitude, status, hp, location
+    PRESENT tier (~10 tokens): name, role only
+
+    This reduces per-entity tokens from ~500 to ~50 or ~10.
+
+    Args:
+        npc_data: Full NPC data dict from game_state
+        tier: Either "ACTIVE" or "PRESENT"
+
+    Returns:
+        Trimmed dict with only essential fields
+    """
+    if tier == "ACTIVE":
+        # Extract health info safely
+        health = npc_data.get("health", {})
+        if isinstance(health, dict):
+            hp_current = health.get("hp", "?")
+            hp_max = health.get("hp_max", "?")
+        else:
+            hp_current = npc_data.get("hp_current", npc_data.get("hp", "?"))
+            hp_max = npc_data.get("hp_max", "?")
+
+        # Extract status safely
+        status_list = npc_data.get("status", ["conscious"])
+        if isinstance(status_list, list) and status_list:
+            status = status_list[0] if isinstance(status_list[0], str) else "conscious"
+        elif isinstance(status_list, str):
+            status = status_list
+        else:
+            status = "conscious"
+
+        return {
+            "name": npc_data.get("display_name", npc_data.get("name", "Unknown")),
+            "role": npc_data.get("role", "NPC"),
+            "attitude": npc_data.get("attitude_to_party", "neutral"),
+            "status": status,
+            "hp": f"{hp_current}/{hp_max}",
+            "location": npc_data.get("current_location", npc_data.get("location", "unknown")),
+        }
+
+    elif tier == "PRESENT":
+        return {
+            "name": npc_data.get("display_name", npc_data.get("name", "Unknown")),
+            "role": npc_data.get("role", "NPC"),
+        }
+
+    # DORMANT - return empty (should not be called)
+    return {}
+
+
+def _build_trimmed_entity_tracking(
+    npc_data: dict[str, Any],
+    story_context: list[dict[str, Any]],
+    current_location: str,
+) -> tuple[dict[str, Any], str]:
+    """
+    Build entity_tracking_data with tiered, trimmed entities.
+
+    Reduces token usage by limiting entity count and field depth:
+    1. Only including recently-active and present entities
+    2. Trimming fields to essentials only
+
+    Args:
+        npc_data: Dict of NPC name -> NPC data from game_state.npc_data
+        story_context: List of story turn entries
+        current_location: Current location name
+
+    Returns:
+        Tuple of (entity_tracking_data, log_summary)
+    """
+    if not npc_data:
+        return {"active_entities": [], "present_entities": []}, "ENTITY_TIERS: no NPCs"
+
+    # Get NPC names for scanning
+    npc_names = list(npc_data.keys())
+
+    # Find recently mentioned entities via LRU scan
+    recently_mentioned = _extract_recently_mentioned_entities(
+        story_context, npc_names
+    )
+
+    # Tier the entities
+    active, present, dormant = _tier_entities(
+        npc_data, recently_mentioned, current_location
+    )
+
+    # Build trimmed entity lists
+    active_entities = [
+        _trim_entity_fields(npc_data[name], "ACTIVE")
+        for name in active
+        if name in npc_data
+    ]
+    present_entities = [
+        _trim_entity_fields(npc_data[name], "PRESENT")
+        for name in present
+        if name in npc_data
+    ]
+
+    # Build tracking data - much smaller than before
+    entity_tracking_data = {
+        "active_entities": active_entities,
+        "present_entities": present_entities,
+        # DORMANT entities excluded - LLM has story_history for context
+    }
+
+    log_summary = (
+        f"ENTITY_TIERS: active={len(active)}/{ENTITY_TIER_ACTIVE_MAX}, "
+        f"present={len(present)}/{ENTITY_TIER_PRESENT_MAX}, "
+        f"dormant={len(dormant)} (excluded)"
+    )
+
+    return entity_tracking_data, log_summary
 
 
 def _get_context_window_tokens(model_name: str) -> int:
@@ -410,8 +612,7 @@ TURNS_TO_KEEP_AT_END: int = 20
 #         ├── Entity Tracking Reserve (10.5K tokens fixed)
 #         │   ├── entity_preload_text (~2-3K)
 #         │   ├── entity_specific_instructions (~1.5-2K)
-#         │   ├── entity_tracking_instruction (~1-1.5K)
-#         │   └── timeline_log (~3-4K)
+#         │   └── entity_tracking_instruction (~1-1.5K)
 #         └── Story Budget (remaining ~50-60%)
 #             ├── Start Turns (25% - STORY_BUDGET_START_RATIO)
 #             ├── Middle Compaction (10% - STORY_BUDGET_MIDDLE_RATIO)
@@ -602,6 +803,7 @@ PATH_MAP: dict[str, str] = {
     # constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH, # Integrated into game_state
     constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
     constants.PROMPT_TYPE_DND_SRD: constants.DND_SRD_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_GOD_MODE: constants.GOD_MODE_INSTRUCTION_PATH,
 }
 
 # --- END CONSTANTS ---
@@ -740,6 +942,34 @@ class PromptBuilder:
         # Add debug mode instructions THIRD for technical functionality
         # The backend will strip debug content for users when debug_mode is False
         parts.append(_build_debug_instructions())
+
+        return parts
+
+    def build_god_mode_instructions(self) -> list[str]:
+        """
+        Build system instructions for GOD MODE.
+        God mode is for administrative control (correcting mistakes, modifying campaign),
+        NOT for playing the game. Includes game rules knowledge for proper corrections.
+        """
+        parts = []
+
+        # CRITICAL: Load master directive FIRST to establish hierarchy and authority
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+        # Load god mode specific instruction (administrative commands)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GOD_MODE))
+
+        # Load game state instruction for state structure reference
+        # (AI needs to know the schema to make valid state_updates)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
+        # Load D&D SRD for game rules knowledge
+        # (AI needs to understand game mechanics to make proper corrections)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+
+        # Load mechanics instruction for detailed game rules
+        # (spell slots, class features, combat rules, etc.)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
 
         return parts
 
@@ -1402,13 +1632,12 @@ def _call_llm_api(
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
             logging_util.info(
-                f"🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
+                "🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_json_mode_content"
             )
             return gemini_provider.generate_json_mode_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
-                max_output_tokens=safe_output_limit,
                 temperature=TEMPERATURE,
                 safety_settings=SAFETY_SETTINGS,
                 json_mode_max_output_tokens=safe_output_limit,
@@ -1423,7 +1652,7 @@ def _call_llm_api(
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
             logging_util.info(
-                f"🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
+                "🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
             )
             return cerebras_provider.generate_content(
                 prompt_contents=prompt_contents,
@@ -2019,9 +2248,8 @@ def _truncate_context(
                     # This looks like JSON - either keep fully or drop
                     if len(text) > entry_max_chars:
                         continue  # Drop JSON entry rather than corrupt it
-                    else:
-                        trimmed_entries.append(entry)
-                        continue
+                    trimmed_entries.append(entry)
+                    continue
 
                 if len(text) > entry_max_chars:
                     trimmed_text = text[:entry_max_chars] + "... [truncated]"
@@ -2278,7 +2506,7 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     )
     if force_test_model:
         logging_util.info(
-            f"🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
+            "🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
         )
         return ProviderSelection(constants.DEFAULT_LLM_PROVIDER, TEST_MODEL)
 
@@ -2287,7 +2515,7 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
 
     if not user_id:
         logging_util.info(
-            f"🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
+            "🔍 PROVIDER_SELECTION_NO_USER: No user_id provided, returning default Gemini"
         )
         return ProviderSelection(provider, model)
 
@@ -2692,21 +2920,24 @@ def _validate_and_enforce_planning_block(
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> str:
     """
-    CRITICAL: Validates that structured_response.planning_block exists and is valid JSON.
+    Validates that structured_response.planning_block exists and is valid JSON.
     The structured_response.planning_block field is the PRIMARY and AUTHORITATIVE source.
 
-    If missing or invalid, asks the LLM to generate an appropriate planning block.
+    IMPORTANT: This function NO LONGER generates default/fallback planning blocks.
+    If the LLM doesn't generate a planning block, we return the response as-is
+    and let the error propagate to the UI.
 
     Args:
         response_text: The AI's response text (for context only)
-        user_input: The user's input to determine if deep think block is needed
-        game_state: Current game state for context
-        chosen_model: Model to use for generation
-        system_instruction: System instruction for the LLM
-        structured_response: NarrativeResponse object to update (REQUIRED)
+        user_input: The user's input (unused but kept for signature compatibility)
+        game_state: Current game state (unused but kept for signature compatibility)
+        chosen_model: Model (unused but kept for signature compatibility)
+        system_instruction: System instruction (unused but kept for signature compatibility)
+        structured_response: NarrativeResponse object to check (REQUIRED)
+        provider_name: Provider name (unused but kept for signature compatibility)
 
     Returns:
-        str: Response text with planning block added (for backward compatibility only)
+        str: Response text unchanged - no modifications are made
     """
     # Handle None response_text gracefully
     if response_text is None:
@@ -2715,23 +2946,14 @@ def _validate_and_enforce_planning_block(
         )
         return ""
 
-    # Note: We now INCLUDE planning blocks during character creation for interactivity
-    # The previous behavior of skipping them has been removed to support
-    # interactive character creation with player choices
-
-    # Skip planning block if user is switching to god/dm mode
-    # Note: Mode detection is now handled by the main Gemini response generation
-    # which naturally understands mode switching requests through system instructions
-
-    # Skip planning block if AI response indicates mode switch
+    # Skip planning block validation if AI response indicates mode switch
     if response_text and (
         "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
     ):
-        logging_util.info("Response indicates mode switch - skipping planning block")
+        logging_util.info("Response indicates mode switch - skipping planning block validation")
         return response_text
 
-    # Check if response already contains a planning block
-    # JSON-ONLY: Only check structured response for JSON planning blocks
+    # Check if response already contains a valid planning block
     if (
         structured_response
         and hasattr(structured_response, "planning_block")
@@ -2748,287 +2970,45 @@ def _validate_and_enforce_planning_block(
             )
 
             if has_content:
-                logging_util.info("Planning block found in JSON structured response")
+                logging_util.info("✅ Planning block found in JSON structured response")
+                return response_text
+            else:
+                logging_util.warning(
+                    "⚠️ PLANNING_BLOCK_EMPTY: Planning block exists but has no content"
+                )
                 return response_text
         else:
             # String format no longer supported
             logging_util.error(
                 f"❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: Found {type(planning_block).__name__} planning block, only JSON format is allowed"
             )
-            # Continue to generate proper planning block below
+            return response_text
 
-    # REMOVED LEGACY FALLBACK: No longer check response text for planning blocks
-    # The JSON field is authoritative - if it's empty, we generate content regardless of text
-
+    # Planning block is missing - log warning but DO NOT generate defaults
+    # The LLM is responsible for generating planning blocks, not this function
     logging_util.warning(
-        "⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block"
+        "⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block. "
+        "The LLM should have generated this - no fallback will be used."
     )
 
-    # Determine if we need a deep think block
-    # Note: Deep thinking detection is now handled by enhanced system instructions
-    # that guide Gemini to naturally recognize when strategic thinking is needed
-    needs_deep_think: bool = (
-        "think" in user_input.lower() or "plan" in user_input.lower()
-    )
-
-    # Strip any trailing whitespace
-    response_text = response_text.rstrip()
-
-    # Create prompt to generate planning block with proper context isolation
-    # Extract current character info for context
-    pc_name: str = (
-        game_state.player_character_data.get("name", "the character")
-        if game_state.player_character_data
-        else "the character"
-    )
-    current_location: str = (
-        game_state.world_data.get("current_location_name", "current location")
-        if game_state.world_data
-        else "current location"
-    )
-
-    planning_prompt: str
-    if needs_deep_think:
-        planning_prompt = f"""
-CRITICAL: Generate planning options ONLY for {pc_name} in {current_location}.
-DO NOT reference other characters, campaigns, or unrelated narrative elements.
-
-The player just said: "{user_input}"
-
-They are asking to think/plan/consider their options. Generate ONLY a planning block using the think_planning_block template format from your system instructions.
-
-Full narrative context:
-{response_text}"""
-    else:
-        # Check if this is character creation approval step
-        response_lower: str = response_text.lower()
-        is_character_approval: bool = (
-            "[character creation" in response_lower
-            and "character sheet" in response_lower
-            and (
-                "would you like to play as this character" in response_lower
-                or "what is your choice?" in response_lower
-                or "approve this character" in response_lower
-                or
-                # Handle truncated responses that contain character creation elements
-                (
-                    "**why this character:**" in response_lower
-                    and (
-                        "ability scores:" in response_lower
-                        or "equipment:" in response_lower
-                        or "background:" in response_lower
-                    )
-                )
-            )
-        )
-
-        if is_character_approval:
-            planning_prompt = f"""
-CRITICAL: This is the CHARACTER CREATION APPROVAL step.
-
-The player has just been shown a complete character sheet and needs to approve it before starting the adventure.
-
-Generate ONLY a planning block with these EXACT options:
-1. **PlayCharacter:** Begin the adventure!
-2. **MakeChanges:** Tell me what you'd like to adjust
-3. **StartOver:** Design a completely different character
-
-Full narrative context:
-{response_text}"""
-        else:
-            planning_prompt = f"""
-CRITICAL: Generate planning options ONLY for {pc_name} in {current_location}.
-DO NOT reference other characters, campaigns, or unrelated narrative elements.
-
-Generate ONLY a planning block using the standard_choice_block template format from your system instructions.
-
-Full narrative context:
-{response_text}"""
-
-    # Early return if planning block is already set
-    if structured_response and structured_response.planning_block:
-        logging_util.info(
-            "🔍 PLANNING_BLOCK_SKIPPED: structured_response.planning_block is already set, skipping API call"
-        )
-        return response_text
-
-    # Generate planning block using LLM
-    try:
-        logging_util.info("🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API")
-        logging_util.info(f"🔍 PLANNING_BLOCK_PROMPT: {planning_prompt[:200]}...")
-
-        planning_response = _call_llm_api(
-            [planning_prompt],
-            chosen_model,
-            current_prompt_text_for_logging="Planning block generation",
-            system_instruction_text=system_instruction,
-            provider_name=provider_name,
-        )
-        raw_planning_response: str = _get_text_from_response(planning_response)
-
-        # CRITICAL LOGGING: Log what we actually received from API
-        _log_api_response_safely(raw_planning_response, "PLANNING_BLOCK_RAW_RESPONSE")
-
-        # Use centralized parsing for planning block
-        logging_util.info("🔍 PLANNING_BLOCK_PARSING: Attempting to parse response")
-        planning_text: str
-        structured_planning_response: NarrativeResponse | None
-        planning_text, structured_planning_response = _parse_gemini_response(
-            raw_planning_response, context="planning_block"
-        )
-
-        # Log parsing results
-        logging_util.info(
-            f"🔍 PLANNING_BLOCK_PARSING_RESULT: planning_text length: {len(planning_text) if planning_text else 0}"
-        )
-        logging_util.info(
-            f"🔍 PLANNING_BLOCK_PARSING_RESULT: structured_response exists: {structured_planning_response is not None}"
-        )
-
-        # If we got a structured response with planning_block field, use that
-        if (
-            structured_planning_response
-            and hasattr(structured_planning_response, "planning_block")
-            and structured_planning_response.planning_block
-        ):
-            planning_block = structured_planning_response.planning_block
-            logging_util.info(
-                f"🔍 PLANNING_BLOCK_SOURCE: Using structured_response.planning_block (type: {type(planning_block)})"
-            )
-            _log_api_response_safely(
-                str(planning_block), "PLANNING_BLOCK_STRUCTURED_CONTENT"
-            )
-        else:
-            # Otherwise use the raw text
-            planning_block = planning_text
-            logging_util.info(
-                f"🔍 PLANNING_BLOCK_SOURCE: Using raw planning_text (length: {len(planning_block) if planning_block else 0})"
-            )
-            _log_api_response_safely(planning_block, "PLANNING_BLOCK_RAW_CONTENT")
-
-        # Handle both string and dict planning blocks
-        if isinstance(planning_block, str):
-            # Ensure it starts with newlines and the header for backward compatibility
-            if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
-                planning_block = "\n\n" + planning_block.strip()
-
-        # PRIMARY: Update structured_response.planning_block (this is what frontend uses)
-        if structured_response and isinstance(structured_response, NarrativeResponse):
-            if isinstance(planning_block, dict):
-                # Already in JSON format
-                structured_response.planning_block = planning_block
-                logging_util.info(
-                    "Updated structured_response.planning_block with JSON content"
-                )
-            elif isinstance(planning_block, str):
-                # Use the actual planning block content we extracted
-                clean_planning_block = planning_block.strip()
-                # Remove the header if present
-                if clean_planning_block.startswith("--- PLANNING BLOCK ---"):
-                    clean_planning_block = clean_planning_block.replace(
-                        "--- PLANNING BLOCK ---", ""
-                    ).strip()
-
-                if clean_planning_block:
-                    # Try to parse the LLM-generated content as structured choices
-                    logging_util.info(
-                        f"🔍 VALIDATION_SUCCESS: String planning block passed validation (length: {len(clean_planning_block)})"
-                    )
-
-                    # Attempt to parse the string content as structured choices
-                    try:
-                        # Try to parse as JSON first
-                        parsed_content = json.loads(clean_planning_block)
-                        if (
-                            isinstance(parsed_content, dict)
-                            and "choices" in parsed_content
-                        ):
-                            structured_response.planning_block = parsed_content
-                            logging_util.info(
-                                "Updated structured_response.planning_block with parsed JSON content"
-                            )
-                        else:
-                            # If it's not structured JSON, treat as raw content but preserve it
-                            structured_response.planning_block = {
-                                "thinking": "Generated planning block based on current situation:",
-                                "raw_content": clean_planning_block,
-                            }
-                            logging_util.info(
-                                "Updated structured_response.planning_block with raw LLM content preserved"
-                            )
-                    except (json.JSONDecodeError, ValueError):
-                        # If JSON parsing fails, preserve the raw content
-                        structured_response.planning_block = {
-                            "thinking": "Generated planning block based on current situation:",
-                            "raw_content": clean_planning_block,
-                        }
-                        logging_util.info(
-                            "Updated structured_response.planning_block with raw LLM content (JSON parse failed)"
-                        )
-                else:
-                    # Log validation failure details
-                    logging_util.warning(
-                        "🔍 VALIDATION_FAILURE: String planning block failed validation"
-                    )
-                    logging_util.warning(
-                        f"🔍 VALIDATION_FAILURE: Original planning_block type: {type(planning_block)}"
-                    )
-                    logging_util.warning(
-                        f"🔍 VALIDATION_FAILURE: Original planning_block content: {repr(planning_block)}"
-                    )
-                    logging_util.warning(
-                        f"🔍 VALIDATION_FAILURE: clean_planning_block after processing: {repr(clean_planning_block)}"
-                    )
-
-                    # Fallback content for empty generation - use JSON format
-                    structured_response.planning_block = (
-                        FALLBACK_PLANNING_BLOCK_VALIDATION
-                    )
-                    logging_util.info(
-                        "Used fallback JSON content for structured_response.planning_block"
-                    )
-
-        # SECONDARY: Update response_text for backward compatibility only
-        if isinstance(planning_block, str):
-            if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
-                planning_block = "\n\n--- PLANNING BLOCK ---\n" + planning_block.strip()
-            response_text = response_text + planning_block
-
-        logging_util.info(
-            f"Added LLM-generated {'deep think' if needs_deep_think else 'standard'} planning block"
-        )
-
-    except Exception as e:
-        logging_util.error(
-            f"🔍 PLANNING_BLOCK_EXCEPTION: Failed to generate planning block: {e}"
-        )
-        logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Exception type: {type(e)}")
-        logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Exception details: {repr(e)}")
-
-        # Log traceback for debugging
-        logging_util.error(
-            f"🔍 PLANNING_BLOCK_EXCEPTION: Traceback: {traceback.format_exc()}"
-        )
-
-        # PRIMARY: Update structured_response.planning_block with fallback in JSON format
-        fallback_content = FALLBACK_PLANNING_BLOCK_EXCEPTION
-        if structured_response and isinstance(structured_response, NarrativeResponse):
-            structured_response.planning_block = fallback_content
-            logging_util.info(
-                "🔍 FALLBACK_USED: Updated structured_response.planning_block with fallback JSON content due to exception"
-            )
-
-        # SECONDARY: Update response_text for backward compatibility
-        fallback_text = "What would you like to do next?\n" + "\n".join(
-            [
-                f"{i + 1}. **[{choice}]:** {description}"
-                for i, (choice, description) in enumerate(DEFAULT_CHOICES.items())
-            ]
-        )
-        fallback_block = "\n\n--- PLANNING BLOCK ---\n" + fallback_text
-        response_text = response_text + fallback_block
-
+    # Return response text unchanged - no fallback content is added
     return response_text
+
+
+def _is_god_mode_command(user_input: str) -> bool:
+    """Check if the user input is a GOD MODE command.
+
+    A GOD MODE command starts with the "GOD MODE:" prefix (case-insensitive)
+    and should trigger administrative handling with no narrative advancement.
+
+    Args:
+        user_input: Raw user input text before any validation mutations.
+
+    Returns:
+        bool: True if the input requests GOD MODE.
+    """
+
+    return user_input.strip().upper().startswith("GOD MODE:")
 
 
 @log_exceptions
@@ -3070,6 +3050,9 @@ def continue_story(
     logging_util.info(
         f"Using provider/model: {provider_selection.provider}/{model_to_use} for story continuation."
     )
+
+    # Preserve the raw user input before any validation mutations
+    raw_user_input = user_input
 
     # Check for multiple think commands in input using regex
     think_pattern: str = r"Main Character:\s*think[^\n]*"
@@ -3117,26 +3100,41 @@ def continue_story(
     # Use PromptBuilder to construct system instructions
     builder: PromptBuilder = PromptBuilder(current_game_state)
 
-    # Build core instructions
-    system_instruction_parts: list[str] = builder.build_core_system_instructions()
+    # Check if this is a GOD MODE command (administrative, not gameplay)
+    is_god_mode_command: bool = _is_god_mode_command(raw_user_input)
 
-    # Add character-related instructions
-    builder.add_character_instructions(system_instruction_parts, selected_prompts)
+    if is_god_mode_command:
+        # GOD MODE: Use lightweight administrative prompts
+        # God mode is for correcting mistakes/changing campaign, NOT playing
+        logging_util.info("🔮 GOD_MODE_DETECTED: Using administrative prompt set")
+        system_instruction_parts: list[str] = builder.build_god_mode_instructions()
+        # No character instructions, no narrative prompts, no continuation reminders
+        # Finalize without world instructions (god mode doesn't need world lore)
+        system_instruction_final = builder.finalize_instructions(
+            system_instruction_parts, use_default_world=False
+        )
+    else:
+        # NORMAL MODE: Full gameplay prompts
+        # Build core instructions
+        system_instruction_parts: list[str] = builder.build_core_system_instructions()
 
-    # Add selected prompt instructions (filter calibration for continue_story)
-    builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts)
+        # Add character-related instructions
+        builder.add_character_instructions(system_instruction_parts, selected_prompts)
 
-    # Add system reference instructions
-    builder.add_system_reference_instructions(system_instruction_parts)
+        # Add selected prompt instructions (filter calibration for continue_story)
+        builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts)
 
-    # Add continuation-specific reminders (planning blocks) only in character mode
-    if mode == constants.MODE_CHARACTER:
-        system_instruction_parts.append(builder.build_continuation_reminder())
+        # Add system reference instructions
+        builder.add_system_reference_instructions(system_instruction_parts)
 
-    # Finalize with world and debug instructions
-    system_instruction_final = builder.finalize_instructions(
-        system_instruction_parts, use_default_world
-    )
+        # Add continuation-specific reminders (planning blocks) only in character mode
+        if mode == constants.MODE_CHARACTER:
+            system_instruction_parts.append(builder.build_continuation_reminder())
+
+        # Finalize with world and debug instructions
+        system_instruction_final = builder.finalize_instructions(
+            system_instruction_parts, use_default_world
+        )
 
     # --- NEW: Budget-based Truncation ---
     # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
@@ -3184,9 +3182,8 @@ def continue_story(
 
     scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
     # FIX: Add explicit reserve for entity tracking tokens that are added AFTER truncation
-    # The old 15% buffer was insufficient (~2700 tokens) vs entity overhead (~3500-10500 tokens)
     # Entity tracking includes: entity_preload_text, entity_specific_instructions,
-    # entity_tracking_instruction, and timeline_log - all generated AFTER truncation
+    # entity_tracking_instruction (NOT timeline_log - that's handled separately below)
     scaffold_tokens = scaffold_tokens_raw + ENTITY_TRACKING_TOKEN_RESERVE
 
     # Use max_input_allowed from centralized budget (accounts for output reserve)
@@ -3202,7 +3199,8 @@ def continue_story(
     logging_util.info(
         f"📊 BUDGET: model_limit={_get_context_window_tokens(model_to_use)}tk, "
         f"safe_budget={safe_token_budget}tk, scaffold={scaffold_tokens}tk (raw:{scaffold_tokens_raw}+entity_reserve:{ENTITY_TRACKING_TOKEN_RESERVE}), "
-        f"output_reserve={output_token_reserve}tk ({reserve_mode}), story_budget={available_story_tokens}tk, "
+        f"output_reserve={output_token_reserve}tk ({reserve_mode}), "
+        f"story_budget={available_story_tokens}tk, "
         f"actual_story={story_tokens}tk {'⚠️ OVER' if story_tokens > available_story_tokens else '✅ OK'}"
     )
 
@@ -3234,7 +3232,7 @@ def continue_story(
         current_game_state, truncated_story_context, session_number
     )
 
-    # Build timeline log
+    # Build timeline log (used for entity prompts and diagnostics, not serialized in LLMRequest)
     timeline_log_string: str = _build_timeline_log(truncated_story_context)
 
     # Enhanced entity tracking with mitigation strategies
@@ -3274,38 +3272,74 @@ def continue_story(
             f"{entity_tracking_instruction}"
         )
 
-    full_prompt = _build_continuation_prompt(
-        checkpoint_block,
-        core_memories_summary,
-        sequence_id_list_string,
-        serialized_game_state,
-        enhanced_entity_tracking,
-        timeline_log_string,
-        current_prompt_text,
-    )
-
     # Select appropriate model (use user preference if available, otherwise default selection)
     chosen_model: str = model_to_use
 
     # ONLY use LLMRequest structured JSON architecture (NO legacy fallbacks)
-    user_id_from_state = getattr(current_game_state, "user_id", None)
+    user_id_from_state = getattr(current_game_state, "user_id", None) or user_id
     if not user_id_from_state:
-        raise ValueError("user_id is required in game state for story continuation")
+        raise ValueError(
+            "user_id is required for story continuation (provide in GameState or argument)"
+        )
 
-    # Extract entity tracking data
-    entity_tracking_data = {
-        "expected_entities": expected_entities,
-        "entity_instructions": entity_specific_instructions,
-        "entity_preload_text": entity_preload_text,
-    }
+    # Build trimmed entity tracking data using LRU-style tiering
+    # This caps entity_tracking growth for campaigns with many NPCs
+    current_location = current_game_state.world_data.get(
+        "current_location_name", current_game_state.world_data.get("location", "")
+    )
+    entity_tracking_data, entity_tier_log = _build_trimmed_entity_tracking(
+        npc_data=current_game_state.npc_data,
+        story_context=truncated_story_context,
+        current_location=current_location,
+    )
+    logging_util.info(entity_tier_log)
+
+    # Measure and log actual entity tracking token usage
+    entity_tracking_tokens = estimate_tokens(json.dumps(entity_tracking_data))
+    logging_util.info(
+        f"ENTITY_TRACKING_SIZE: {entity_tracking_tokens}tk "
+        f"(reserve was {ENTITY_TRACKING_TOKEN_RESERVE}tk)"
+    )
 
     # Build LLMRequest with structured data (NO string concatenation)
+    # CRITICAL: Exclude npc_data from game_state - it's ~500 tokens per NPC
+    # Entity data is now provided via trimmed entity_tracking_data instead
+    full_game_state = current_game_state.to_dict()
+    # Serialize and deserialize to convert Firestore timestamps to JSON-compatible types
+    full_game_state = json.loads(json.dumps(full_game_state, default=json_default_serializer))
+    game_state_for_llm = {
+        k: v for k, v in full_game_state.items()
+        if k != "npc_data"
+    }
+
+    # DEBUG: Log game_state component sizes to identify bloat sources
+    try:
+        npc_data_tokens = estimate_tokens(json.dumps(full_game_state.get("npc_data", {}), default=json_default_serializer))
+        world_data_tokens = estimate_tokens(json.dumps(full_game_state.get("world_data", {}), default=json_default_serializer))
+        player_data_tokens = estimate_tokens(json.dumps(full_game_state.get("player_character_data", {}), default=json_default_serializer))
+        remaining_state_tokens = estimate_tokens(json.dumps(game_state_for_llm, default=json_default_serializer))
+        logging_util.info(
+            f"GAME_STATE_BREAKDOWN: npc_data={npc_data_tokens}tk (EXCLUDED), "
+            f"world_data={world_data_tokens}tk, player_data={player_data_tokens}tk, "
+            f"remaining_state={remaining_state_tokens}tk"
+        )
+    except Exception as e:
+        logging_util.warning(f"Could not measure game_state breakdown: {e}")
+
+    # Strip story entries to essential fields only to reduce token bloat
+    # Full entries have ~555 tokens/entry due to metadata; stripped = ~200 tokens/entry
+    ESSENTIAL_STORY_FIELDS = {"text", "actor", "mode", "sequence_id"}
+    stripped_story_context = [
+        {k: v for k, v in entry.items() if k in ESSENTIAL_STORY_FIELDS}
+        for entry in truncated_story_context
+    ]
+
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
         game_mode=mode,
-        game_state=current_game_state.to_dict(),
-        story_history=truncated_story_context,
+        game_state=game_state_for_llm,
+        story_history=stripped_story_context,
         checkpoint_block=checkpoint_block,
         core_memories=core_memories_summary.split("\n")
         if core_memories_summary
@@ -3317,6 +3351,18 @@ def continue_story(
         selected_prompts=selected_prompts or [],
         use_default_world=use_default_world,
     )
+
+    # DEBUG: Log full LLMRequest payload size breakdown
+    try:
+        payload_json = gemini_request.to_json()
+        story_history_tokens = estimate_tokens(json.dumps(payload_json.get("story_history", []), default=json_default_serializer))
+        total_payload_tokens = estimate_tokens(json.dumps(payload_json, default=json_default_serializer))
+        logging_util.info(
+            f"LLMREQUEST_PAYLOAD: story_history={story_history_tokens}tk, "
+            f"total_payload={total_payload_tokens}tk"
+        )
+    except Exception as e:
+        logging_util.warning(f"Could not measure LLMRequest payload: {e}")
 
     # Send structured JSON directly to Gemini API (NO string conversion)
     api_response = _call_llm_api_with_llm_request(
@@ -3388,9 +3434,14 @@ def continue_story(
 
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input
-    user_input_lower: str = user_input.lower().strip()
+    user_input_lower: str = raw_user_input.lower().strip()
     is_switching_to_god_mode: bool = user_input_lower in constants.MODE_SWITCH_SIMPLE
 
+    # Check if user sent a "GOD MODE:" prefixed command (administrative mode)
+    # God mode = DM mode behavior: no narrative advancement, no planning blocks
+    # Reuse the original god mode detection (based on raw input before validation mutations)
+    # to ensure validation prepends don't break the prefix check.
+    
     # Also check if the AI response indicates DM MODE
     is_dm_mode_response: bool = (
         "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
@@ -3400,10 +3451,12 @@ def continue_story(
     # 1. Currently in character mode
     # 2. User isn't switching to god mode
     # 3. AI response isn't in DM mode
+    # 4. User didn't send a GOD MODE: command (administrative, not gameplay)
     if (
         mode == constants.MODE_CHARACTER
         and not is_switching_to_god_mode
         and not is_dm_mode_response
+        and not is_god_mode_command
     ):
         response_text = _validate_and_enforce_planning_block(
             response_text,

@@ -70,7 +70,7 @@ ALLOWED_OPENROUTER_MODELS = [
     DEFAULT_OPENROUTER_MODEL,
     "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
     "z-ai/glm-4.6",  # 200K context, fast tools
-    "x-ai/grok-4.1-fast:free",  # 2M context, free until Dec 3 then $0.20/$0.50 per M
+    "x-ai/grok-4.1-fast",  # 2M context, $0.20/$0.50 per M tokens (supports json_schema)
 ]
 
 # Cerebras direct provider defaults (per Cerebras docs as of 2025-12-03)
@@ -99,7 +99,8 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "meta-llama/llama-3.1-70b-instruct": 131_072,
     "meta-llama/llama-3.1-405b-instruct": 131_072,
     "z-ai/glm-4.6": 200_000,
-    "x-ai/grok-4.1-fast:free": 2_000_000,  # Grok 4.1 Fast - 2M context
+    "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
+    "x-ai/grok-4.1-fast:free": 2_000_000,  # Free tier shares same window
     # Cerebras
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
@@ -120,7 +121,7 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "meta-llama/llama-3.1-405b-instruct": 8_192,
     # Pulled from OpenRouter model metadata (2025-12-01 curl https://openrouter.ai/api/v1/models)
     "z-ai/glm-4.6": 202_752,
-    "x-ai/grok-4.1-fast:free": 30_000,
+    "x-ai/grok-4.1-fast": 30_000,
     # Cerebras (actual limit ~64K, using conservative 32K for safety)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
@@ -304,6 +305,7 @@ PROMPT_TYPE_GAME_STATE = "game_state"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
 PROMPT_TYPE_MASTER_DIRECTIVE = "master_directive"
 PROMPT_TYPE_DND_SRD = "dnd_srd"
+PROMPT_TYPE_GOD_MODE = "god_mode"
 
 
 # --- PROMPT PATHS ---
@@ -318,6 +320,7 @@ CHARACTER_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_template.md")
 GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.md")
 MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
+GOD_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "god_mode_instruction.md")
 
 # --- PROMPT LOADING ORDER ---
 # User-selectable prompts that are conditionally added based on campaign settings

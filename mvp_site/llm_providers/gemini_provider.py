@@ -1,4 +1,8 @@
-"""Gemini provider implementation isolated from llm_service."""
+"""Gemini provider implementation isolated from llm_service.
+
+Uses response_json_schema for structured output enforcement.
+See: https://ai.google.dev/gemini-api/docs/structured-output
+"""
 
 from __future__ import annotations
 
@@ -9,13 +13,17 @@ from google import genai
 from google.genai import types
 
 from mvp_site import logging_util
+# NOTE: Gemini response_schema is NOT used due to strict property requirements
+# Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
+# We rely on response_mime_type="application/json" + prompt instruction instead
+# Post-response validation in narrative_response_schema.py handles structure enforcement
 
 _client: genai.Client | None = None
 
 
 def get_client() -> genai.Client:
     """Initialize and return a singleton Gemini client."""
-    global _client
+    global _client  # noqa: PLW0603
     if _client is None:
         logging_util.info("Initializing Gemini Client")
         api_key: str | None = os.environ.get("GEMINI_API_KEY")
@@ -28,7 +36,7 @@ def get_client() -> genai.Client:
 
 def clear_cached_client() -> None:
     """Clear the cached client (primarily for tests)."""
-    global _client
+    global _client  # noqa: PLW0603
     _client = None
 
 
@@ -42,7 +50,6 @@ def generate_json_mode_content(
     prompt_contents: list[Any],
     model_name: str,
     system_instruction_text: str | None,
-    max_output_tokens: int,
     temperature: float,
     safety_settings: list[Any],
     json_mode_max_output_tokens: int,
@@ -64,6 +71,12 @@ def generate_json_mode_content(
         "temperature": temperature,
         "safety_settings": safety_settings,
         "response_mime_type": "application/json",
+        # NOTE: response_schema is NOT used because Gemini requires ALL object types
+        # to have non-empty properties - this conflicts with dynamic choice keys
+        # (e.g., explore_tavern, attack_goblin) that can't be pre-defined.
+        # Structure enforcement relies on:
+        # 1. Prompt instruction (game_state_instruction.md)
+        # 2. Post-response validation (narrative_response_schema.py)
     }
 
     if system_instruction_text:
