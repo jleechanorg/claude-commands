@@ -74,14 +74,17 @@ Every response MUST be valid JSON with this exact structure:
   - **Code Execution (Gemini 2.0/3.0):** Use `import random; random.randint(1, 20)` for TRUE randomness. Execute code directly.
   - **Tool Use (Cerebras, OpenRouter):** Call `roll_dice`, `roll_attack`, `roll_skill_check` tools. Backend executes and returns results.
   - **Pre-computed (fallback):** Use values from `dice_rolls_provided` in input. Request more via `dice_rolls_requested` field.
-  - **🚨 MANDATORY FORMAT - ALWAYS include DC/AC:**
-    - **Skill check:** `"Arcana check: 1d20+5 = 7+5 = 12 vs DC 15 (Fail)"` - MUST show "vs DC X"
-    - **Attack:** `"Attack roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit)"` - MUST show "vs AC X"
-    - **Saving throw:** `"DEX save: 1d20+3 = 11+3 = 14 vs DC 12 (Success)"` - MUST show "vs DC X"
-    - **Damage:** `"Damage: 1d8+3 = 6+3 = 9 slashing"` (no DC needed for damage)
-    - **Advantage:** `"Stealth (advantage): 1d20+7 = [14, 8]+7 = 21 (took higher) vs DC 15 (Success)"`
+  - **🚨 MANDATORY FORMAT - ALWAYS include DC/AC and use spaced modifiers with labels:**
+    - **All dice roll strings MUST use spaces around plus signs** (e.g., `"1d20 +5 DEX +3 PROF"`) and **label each modifier by its source and value**.
+    - **Skill check:** `"Arcana check: 1d20 +5 INT +3 PROF = 7 +5 INT +3 PROF = 15 vs DC 15 (Success)"` - MUST show "vs DC X"
+    - **Attack:** `"Attack roll: 1d20 +5 DEX +3 PROF = 14 +5 DEX +3 PROF = 22 vs AC 15 (Hit)"` - MUST show "vs AC X"
+    - **Saving throw:** `"DEX save: 1d20 +3 DEX = 11 +3 DEX = 14 vs DC 12 (Success)"` - MUST show "vs DC X"
+    - **Damage:** `"Damage: 1d8 +5 DEX +7 Hunter's Mark = 6 +5 DEX +7 Hunter's Mark = 18 piercing"` (no DC needed for damage)
+    - **Advantage:** `"Stealth (advantage): 1d20 +7 DEX +3 PROF = [14, 8] +7 DEX +7 PROF = 21 (took higher) vs DC 15 (Success)"`
   - **NEVER omit DC/AC** - every check/attack/save MUST show the target number
   - **NEVER invent dice results** - always use code execution, tool calls, or pre-computed values
+  - **Modifier labeling:** **ALWAYS label every modifier by source and value** (ability, proficiency, spell, feature, condition)
+  - **Empty array [] if no dice rolls this turn.**
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
@@ -181,8 +184,10 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 - **Gemini 2.0/3.0:** Use code execution - `import random; random.randint(1, 20)` for true randomness
 - **Cerebras/OpenRouter:** Use tool calls - `roll_dice("1d20+5")`, `roll_attack(...)`, etc.
 - **Fallback:** Use `dice_rolls_provided` values from input
-- **🚨 FORMAT (ALWAYS show DC/AC):** `"Skill: 1d20+mod = roll+mod = total vs DC X (Success/Fail)"`
-- Example: `"Perception: 1d20+5 = 15+5 = 20 vs DC 15 (Success)"`
+- **🚨 FORMAT (ALWAYS show DC/AC and use spaced modifiers with labels):**
+  - Use spaces around plus signs: `"1d20 +5 DEX +3 PROF"`
+  - Label each modifier by source and value
+  - Example: `"Perception: 1d20 +5 WIS +3 PROF = 15 +5 WIS +3 PROF = 23 vs DC 15 (Success)"`
 
 **Core Formulas (BACKEND-COMPUTED):**
 - Modifier = (attribute - 10) ÷ 2 (rounded down) → Backend calculates
