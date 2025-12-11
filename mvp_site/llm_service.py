@@ -1139,12 +1139,14 @@ class PromptBuilder:
         return (
             temporal_enforcement +
             "**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
-            "1. **MANDATORY PLANNING BLOCK**: Every STORY MODE response MUST end with '--- PLANNING BLOCK ---'\n"
-            "2. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options', "
-            "generate ONLY internal thoughts with a deep think block. Each choice MUST have an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string. DO NOT take narrative actions.\n"
-            "3. **Standard Responses**: All other responses should include narrative continuation followed by "
-            "a standard planning block with 3-4 action options.\n"
-            "4. **Never Skip**: The planning block is MANDATORY - never end a response without one.\n\n"
+            "1. **MANDATORY PLANNING BLOCK**: Every STORY MODE response MUST include a planning_block in JSON.\n"
+            "2. **MANDATORY NARRATIVE**: Every response MUST include a non-empty 'narrative' field. NEVER leave narrative empty.\n"
+            "3. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options':\n"
+            "   - **NARRATIVE**: Include brief text showing the character pausing to think (e.g., 'You pause to consider your options...')\n"
+            "   - **PLANNING BLOCK**: Generate deep think block with 'thinking', 'choices', and 'analysis' (pros/cons/confidence)\n"
+            "   - **NO ACTIONS**: The character MUST NOT take any story-advancing actions - no combat, dialogue, movement, or decisions\n"
+            "4. **Standard Responses**: Include narrative continuation followed by planning block with 3-4 action options.\n"
+            "5. **Never Skip**: Both narrative AND planning_block are MANDATORY - never leave either empty.\n\n"
         )
 
     def finalize_instructions(

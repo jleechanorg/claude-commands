@@ -15,7 +15,11 @@ sys.path.insert(
 )
 
 from mvp_site.llm_response import LLMResponse
-from mvp_site.narrative_response_schema import NarrativeResponse
+from mvp_site.narrative_response_schema import (
+    CJK_PATTERN,
+    NarrativeResponse,
+    parse_structured_response,
+)
 
 
 class TestNarrativeResponseExtraction(unittest.TestCase):
@@ -271,6 +275,74 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         assert "attack_sword" in response.planning_block["choices"]
         assert "negotiate" in response.planning_block["choices"]
         assert len(response.planning_block["choices"]) == 5
+
+    def test_mixed_language_character_stripping(self):
+        """Test that CJK characters are stripped from narrative (LLM training data leakage)"""
+        # Example from real campaign: Chinese character 夜晚 (night) mixed into English
+        narrative_with_chinese = (
+            "The negotiation is complete, and now the  夜晚  stretches before you"
+        )
+        response = NarrativeResponse(narrative=narrative_with_chinese)
+
+        # Chinese characters should be stripped
+        assert "夜晚" not in response.narrative
+        assert "stretches before you" in response.narrative
+        # Should clean up double spaces left behind
+        assert "  " not in response.narrative
+        assert response.narrative.endswith("stretches before you")
+
+    def test_cjk_pattern_compiles_and_matches_common_ranges(self):
+        """Ensure the CJK regex compiles and matches representative characters."""
+
+        sample_text = "中文テスト한국어"
+
+        assert CJK_PATTERN.search(sample_text)
+        assert CJK_PATTERN.search("plain ASCII text") is None
+
+    def test_japanese_character_stripping(self):
+        """Test that Japanese characters are stripped from narrative"""
+        # Hiragana and Katakana mixed into English
+        narrative_with_japanese = "You walkこんにちは through the marketカタカナ"
+        response = NarrativeResponse(narrative=narrative_with_japanese)
+
+        # Japanese characters should be stripped
+        assert "こんにちは" not in response.narrative
+        assert "カタカナ" not in response.narrative
+        assert "walk" in response.narrative
+        assert "through the market" in response.narrative
+
+    def test_korean_character_stripping(self):
+        """Test that Korean characters are stripped from narrative"""
+        narrative_with_korean = "The hero한국어 draws their sword"
+        response = NarrativeResponse(narrative=narrative_with_korean)
+
+        # Korean characters should be stripped
+        assert "한국어" not in response.narrative
+        assert "hero" in response.narrative
+        assert "draws their sword" in response.narrative
+
+    def test_clean_narrative_unchanged(self):
+        """Test that narratives without CJK characters are unchanged"""
+        clean_narrative = "You pause to consider your options, mind racing through the possibilities..."
+        response = NarrativeResponse(narrative=clean_narrative)
+        assert response.narrative == clean_narrative
+
+    def test_fallback_parsing_strips_cjk_characters(self):
+        """Fallback parsing should still strip mixed-language characters from narrative."""
+
+        raw_response = json.dumps(
+            {
+                "narrative": "The hero 夜晚 reflects on their path",
+                # Invalid type triggers fallback path and forces NarrativeResponse cleaning
+                "entities_mentioned": "not-a-list",
+            }
+        )
+
+        cleaned_text, structured = parse_structured_response(raw_response)
+
+        assert "夜晚" not in cleaned_text
+        assert cleaned_text == structured.narrative
+        assert cleaned_text.startswith("The hero")
 
 
 if __name__ == "__main__":
