@@ -1556,6 +1556,10 @@ def _call_llm_api_with_llm_request(
             f"d6={len(json_data['pre_rolled_dice']['d6'])}"
         )
 
+    # Re-validate payload size after dice injection (~1.8KB overhead, negligible vs 10MB limit)
+    # This is a safety check - dice add <0.02% to payload size
+    gemini_request._validate_payload_size(json_data)
+
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
     # Uses centralized json_default_serializer from mvp_site.serialization
