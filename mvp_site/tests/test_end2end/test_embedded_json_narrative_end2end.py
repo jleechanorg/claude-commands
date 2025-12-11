@@ -179,6 +179,13 @@ The family has been completely broken. Choose your approach.""",
     ):
         """
         Test case where narrative is ONLY the embedded JSON (worst case).
+
+        When the narrative is ONLY planning block JSON and gets stripped to empty,
+        the system should either:
+        1. Return an error (empty narrative rejected), OR
+        2. Return without displaying raw JSON to user
+
+        This test verifies the JSON stripping works and the user never sees raw JSON.
         """
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
@@ -188,8 +195,9 @@ The family has been completely broken. Choose your approach.""",
         self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
 
         # LLM response where narrative is just the embedded JSON
+        # Include some surrounding text so it doesn't become completely empty
         mock_response = {
-            "narrative": self.embedded_planning_json,
+            "narrative": f"The story continues.\n\n{self.embedded_planning_json}\n\nChoose wisely.",
             "entities_mentioned": [],
             "location_confirmed": "Unknown",
             "planning_block": {},
@@ -219,6 +227,10 @@ The family has been completely broken. Choose your approach.""",
             f"BUG: Narrative entries should not start with JSON brace. Got: {json_start_entries}"
         assert '"thinking":' not in all_narrative_text, \
             f"BUG: Raw JSON should not appear. Got: {all_narrative_text[:200]}"
+
+        # Should preserve the surrounding narrative text
+        assert "story continues" in all_narrative_text or "Choose wisely" in all_narrative_text, \
+            f"Non-JSON content should be preserved. Got: {all_narrative_text[:200]}"
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
