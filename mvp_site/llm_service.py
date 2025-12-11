@@ -58,7 +58,12 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import GameState, generate_pre_rolled_dice
+from mvp_site.game_state import (
+    GameState,
+    compute_combat_results,
+    detect_action_type,
+    generate_pre_rolled_dice,
+)
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -1557,6 +1562,45 @@ def _call_llm_api_with_llm_request(
         logging_util.info(
             f"🎲 Injected pre-rolled dice: d20={len(json_data['pre_rolled_dice']['d20'])}, "
             f"d6={len(json_data['pre_rolled_dice']['d6'])}"
+        )
+
+    # =========================================================================
+    # PRE-COMPUTED COMBAT RESULTS (Backend-Authoritative Dice)
+    # =========================================================================
+    # Detect action type and compute dice results BEFORE calling LLM.
+    # The LLM receives authoritative outcomes and only needs to narrate them,
+    # eliminating contradictions from LLM math errors.
+    # =========================================================================
+    user_action = json_data.get("user_action", "")
+    player_character = json_data.get("game_state", {}).get("player_character_data", {})
+    conditions = player_character.get("conditions", [])
+
+    action_info = detect_action_type(user_action, json_data.get("game_state"), conditions)
+
+    if action_info.get("type") != "other":
+        # Get target entity from entity_tracking if available
+        entity_tracking = json_data.get("entity_tracking", {})
+        target_entity = None
+        # Try to find target in combat_state or entity_tracking
+        combat_state = json_data.get("game_state", {}).get("combat_state", {})
+        if combat_state.get("combatants"):
+            # Use first enemy as target (simplified)
+            for name, data in combat_state["combatants"].items():
+                if isinstance(data, dict):
+                    target_entity = {"name": name, **data}
+                    break
+
+        pre_computed = compute_combat_results(
+            action_info,
+            json_data["pre_rolled_dice"],
+            player_character,
+            target_entity,
+            json_data.get("game_state"),
+        )
+        json_data["pre_computed_results"] = pre_computed
+        logging_util.info(
+            f"🎯 Pre-computed {action_info['type']}: "
+            f"consumed {pre_computed.get('dice_consumed', {})}"
         )
 
     # Re-validate payload size after dice injection (~1.8KB overhead, negligible vs 10MB limit)

@@ -73,26 +73,25 @@ Every response MUST be valid JSON with this exact structure:
   - `thinking`: (string) Your tactical analysis
   - `context`: (string, **optional**) Additional context about the current scenario
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
-- `dice_rolls`: (array) **🎲 PRE-ROLLED DICE SYSTEM - CRITICAL INSTRUCTIONS:**
-  - **The input contains `pre_rolled_dice` with arrays of pre-generated random values**
-  - **YOU MUST USE THESE VALUES IN ORDER** - consume from the arrays sequentially
-  - **Format:** `{"d20": [14, 7, 19, ...], "d12": [...], "d10": [...], "d8": [...], "d6": [...], "d4": [...], "d100": [...]}`
-  - **Usage Example:**
+- `dice_rolls`: (array) **🎯 AUTHORITATIVE DICE RESULTS - CRITICAL INSTRUCTIONS:**
+  - **CHECK FOR `pre_computed_results` FIRST** - If present, the backend has ALREADY computed all dice rolls:
+    - **COPY the `header_text` values EXACTLY** into your `dice_rolls` array - do NOT recalculate
+    - **Your narrative MUST reflect the `outcome`** - if `outcome` says "Hit", you MUST narrate a hit
+    - **NEVER contradict `pre_computed_results`** - the math is authoritative and verified
+    - Example: If `pre_computed_results.attack_roll.header_text` = "Attack (Advantage): 1d20+8 = [5,14]+8 = 22 vs AC 15 (Hit)", add this exact string to `dice_rolls` and narrate a successful hit
+  - **FALLBACK: If `pre_computed_results` is null/empty**, use `pre_rolled_dice` manually:
+    - The input contains `pre_rolled_dice` with arrays of pre-generated random values
+    - Consume values IN ORDER from the arrays sequentially (d20, d12, d10, d8, d6, d4, d100)
     - Need 1d20? Take the FIRST unused value from `d20` array
-    - Need 2d6? Take the FIRST TWO unused values from `d6` array, sum them
     - Need 1d20 with advantage? Take the FIRST TWO unused values from `d20`, use higher
-  - **Track your position** - keep consuming left-to-right, never reuse values
-  - **If you run out of dice:** Include in your narrative: "The dice seem to pause..." and ask the player what they'd like to do next. The system will provide fresh dice on the next request.
   - **🚨 MANDATORY FORMAT - ALWAYS include DC/AC and use spaced modifiers with labels:**
-    - **All dice roll strings MUST use spaces around plus signs** (e.g., `"1d20 +5 DEX +3 PROF"`) and **label each modifier by its source and value**.
     - **Skill check:** `"Arcana check: 1d20 +5 INT +3 PROF = 7 +5 INT +3 PROF = 15 vs DC 15 (Success)"` - MUST show "vs DC X"
     - **Attack:** `"Attack roll: 1d20 +5 DEX +3 PROF = 14 +5 DEX +3 PROF = 22 vs AC 15 (Hit)"` - MUST show "vs AC X"
     - **Saving throw:** `"DEX save: 1d20 +3 DEX = 11 +3 DEX = 14 vs DC 12 (Success)"` - MUST show "vs DC X"
-    - **Damage:** `"Damage: 1d8 +5 DEX +7 Hunter's Mark = 6 +5 DEX +7 Hunter's Mark = 18 piercing"` (no DC needed for damage)
-    - **Advantage:** `"Stealth (advantage): 1d20 +7 DEX +3 PROF = [14, 8] +7 DEX +7 PROF = 21 (took higher) vs DC 15 (Success)"`
-  - **NEVER omit DC/AC** - every check/attack/save MUST show the target number
-  - **NEVER invent dice results** - ALWAYS use values from `pre_rolled_dice`
-  - **Modifier labeling:** **ALWAYS label every modifier by source and value** (ability, proficiency, spell, feature, condition)
+    - **Damage:** `"Damage: 1d8 +5 DEX = 6 +5 DEX = 11 slashing"` (no DC needed for damage)
+    - **Advantage:** `"Attack (Advantage): 1d20 +8 = [5, 14] +8 = 22 vs AC 15 (Hit)"` - show both rolls, use higher
+  - **CRITICAL: Header and narrative MUST agree** - if dice_rolls says "Hit", narrative MUST describe hitting
+  - **NEVER invent dice results** - use `pre_computed_results` or `pre_rolled_dice` values only
   - **Empty array [] if no dice rolls this turn.**
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
