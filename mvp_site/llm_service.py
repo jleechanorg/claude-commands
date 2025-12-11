@@ -58,7 +58,7 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import DICE_ROLL_TOOLS, GameState
+from mvp_site.game_state import GameState, generate_pre_rolled_dice
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -1526,6 +1526,20 @@ def _call_llm_api_with_llm_request(
 
     logging_util.debug(f"JSON validation passed with {len(json_data)} fields")
 
+    # =========================================================================
+    # PRE-ROLLED DICE INJECTION (Single-Inference Architecture)
+    # =========================================================================
+    # Generate fresh random dice BEFORE every LLM call. The LLM uses these
+    # pre-rolled values in order, ensuring true randomness with only 1 API call.
+    # This eliminates the tool loop (2-stage inference) for all providers.
+    # =========================================================================
+    if "pre_rolled_dice" not in json_data or not json_data.get("pre_rolled_dice"):
+        json_data["pre_rolled_dice"] = generate_pre_rolled_dice()
+        logging_util.info(
+            f"🎲 Injected pre-rolled dice: d20={len(json_data['pre_rolled_dice']['d20'])}, "
+            f"d6={len(json_data['pre_rolled_dice']['d6'])}"
+        )
+
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
     # Uses centralized json_default_serializer from mvp_site.serialization
@@ -1625,20 +1639,12 @@ def _call_llm_api(
                 json_mode_max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
-            # Check if this model should use tool-based dice rolling
-            dice_strategy = constants.get_dice_roll_strategy(model_name)
-            if dice_strategy == "tool_use":
-                logging_util.info(
-                    f"🔍 CALL_LLM_API_OPENROUTER: Using tool loop for dice rolls (model={model_name})"
-                )
-                return openrouter_provider.generate_content_with_tool_loop(
-                    prompt_contents=prompt_contents,
-                    model_name=model_name,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                    tools=DICE_ROLL_TOOLS,
-                )
+            # =========================================================================
+            # PRE-ROLLED DICE: No tool loop needed - dice are in the prompt
+            # =========================================================================
+            logging_util.info(
+                f"🔍 CALL_LLM_API_OPENROUTER: Direct call (pre-rolled dice in prompt, model={model_name})"
+            )
             return openrouter_provider.generate_content(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
@@ -1647,22 +1653,11 @@ def _call_llm_api(
                 max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
-            # Check if this model should use tool-based dice rolling
-            dice_strategy = constants.get_dice_roll_strategy(model_name)
-            if dice_strategy == "tool_use":
-                logging_util.info(
-                    f"🔍 CALL_LLM_API_CEREBRAS: Using tool loop for dice rolls (model={model_name})"
-                )
-                return cerebras_provider.generate_content_with_tool_loop(
-                    prompt_contents=prompt_contents,
-                    model_name=model_name,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                    tools=DICE_ROLL_TOOLS,
-                )
+            # =========================================================================
+            # PRE-ROLLED DICE: No tool loop needed - dice are in the prompt
+            # =========================================================================
             logging_util.info(
-                "🔍 CALL_LLM_API_CEREBRAS: Calling cerebras_provider.generate_content"
+                f"🔍 CALL_LLM_API_CEREBRAS: Direct call (pre-rolled dice in prompt, model={model_name})"
             )
             return cerebras_provider.generate_content(
                 prompt_contents=prompt_contents,

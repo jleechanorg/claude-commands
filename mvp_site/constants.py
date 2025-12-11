@@ -103,19 +103,29 @@ MODELS_PRECOMPUTE_ONLY = {
 }
 
 
-def get_dice_roll_strategy(model_name: str) -> str:
+def get_dice_roll_strategy(model_name: str) -> str:  # noqa: ARG001
     """
     Determine the dice rolling strategy for a given model.
 
+    ARCHITECTURE UPDATE (Dec 2024): All models now use 'precompute' strategy.
+    Pre-rolled dice are injected into every LLM request, eliminating the
+    need for tool loops (2-stage inference). This reduces API calls from
+    2 to 1 and simplifies the code across all providers.
+
+    Args:
+        model_name: Model identifier (kept for API compatibility, not used)
+
+    Legacy strategies (retained for reference):
+        'code_execution' - Model can run Python code directly (Gemini 2.0/3.0)
+        'tool_use' - Model supports function calling (DEPRECATED)
+        'precompute' - Pre-rolled dice in prompt (NOW UNIVERSAL)
+
     Returns:
-        'code_execution' - Model can run Python code directly
-        'tool_use' - Model supports function calling (two-stage)
-        'precompute' - Must pre-roll dice before LLM call
+        'precompute' - Always returns precompute for single-inference architecture
     """
-    if model_name in MODELS_WITH_CODE_EXECUTION:
-        return "code_execution"
-    if model_name in MODELS_WITH_TOOL_USE:
-        return "tool_use"
+    # All models now use pre-rolled dice for single-inference architecture
+    # Code execution models (Gemini 2.0/3.0) may still use it as a fallback,
+    # but the primary path is pre-rolled dice in the prompt
     return "precompute"
 
 # Gemini model mapping from user preference to full model name

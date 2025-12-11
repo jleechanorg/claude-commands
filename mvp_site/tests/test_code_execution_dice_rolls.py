@@ -92,34 +92,42 @@ class TestHybridDiceRollSystem(unittest.TestCase):
     def test_model_capability_detection(self):
         """
         Verify the model capability detection function works correctly.
+
+        ARCHITECTURE UPDATE (Dec 2024): All models now use 'precompute' strategy.
+        Pre-rolled dice are injected into every LLM request, eliminating the
+        need for tool loops (2-stage inference). This test verifies the new
+        unified approach.
         """
-        # Gemini models support code_execution
+        # All models now return 'precompute' - single-inference architecture
+        # This is intentional: pre-rolled dice are injected before every call
+
+        # Gemini models (previously code_execution) - now precompute
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash"),
-            "code_execution"
+            "precompute"
         )
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-3-pro-preview"),
-            "code_execution"
+            "precompute"
         )
 
-        # Cerebras/OpenRouter models with 100k+ context use tool_use
+        # Cerebras/OpenRouter models (previously tool_use) - now precompute
         self.assertEqual(
             constants.get_dice_roll_strategy("qwen-3-235b-a22b-instruct-2507"),
-            "tool_use"
+            "precompute"
         )
         self.assertEqual(
             constants.get_dice_roll_strategy("zai-glm-4.6"),
-            "tool_use"
+            "precompute"
         )
 
-        # llama-3.3-70b does NOT support multi-turn tool calling, falls back to precompute
+        # llama-3.3-70b - always precompute
         self.assertEqual(
             constants.get_dice_roll_strategy("llama-3.3-70b"),
             "precompute"
         )
 
-        # Unknown models fall back to precompute
+        # Unknown models - precompute
         self.assertEqual(
             constants.get_dice_roll_strategy("unknown-model"),
             "precompute"
@@ -146,18 +154,18 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             "FAIL: Instruction file missing Dice Roll section"
         )
 
-        # Check for code execution strategy mention
+        # Check for pre-rolled dice strategy (new architecture Dec 2024)
         self.assertIn(
-            "Code Execution",
+            "pre_rolled_dice",
             instruction_content,
-            "FAIL: Instruction file should mention Code Execution strategy"
+            "FAIL: Instruction file should mention pre_rolled_dice system"
         )
 
-        # Check for tool use strategy mention
+        # Check for usage instructions
         self.assertIn(
-            "Tool Use",
+            "IN ORDER",
             instruction_content,
-            "FAIL: Instruction file should mention Tool Use strategy"
+            "FAIL: Instruction file should mention using dice values IN ORDER"
         )
 
     def test_dice_tool_schemas_defined(self):
@@ -704,19 +712,91 @@ class TestToolLoopAllCodePaths(unittest.TestCase):
                 )
 
 
+class TestPreRolledDiceGeneration(unittest.TestCase):
+    """Test the pre-rolled dice generation function."""
+
+    def test_generate_pre_rolled_dice_returns_all_die_types(self):
+        """
+        Verify generate_pre_rolled_dice returns arrays for all standard dice.
+        """
+        from mvp_site.game_state import generate_pre_rolled_dice
+
+        dice = generate_pre_rolled_dice()
+
+        # Verify all die types are present
+        self.assertIn("d20", dice)
+        self.assertIn("d12", dice)
+        self.assertIn("d10", dice)
+        self.assertIn("d8", dice)
+        self.assertIn("d6", dice)
+        self.assertIn("d4", dice)
+        self.assertIn("d100", dice)
+
+    def test_generate_pre_rolled_dice_default_counts(self):
+        """
+        Verify default dice counts are sufficient for typical combat.
+        """
+        from mvp_site.game_state import generate_pre_rolled_dice
+
+        dice = generate_pre_rolled_dice()
+
+        # Default counts from function
+        self.assertEqual(len(dice["d20"]), 100)  # 100 d20s by default
+        self.assertEqual(len(dice["d6"]), 40)    # 40 d6s
+        self.assertEqual(len(dice["d8"]), 30)    # 30 d8s
+
+    def test_generate_pre_rolled_dice_values_in_range(self):
+        """
+        Verify all generated dice values are within valid ranges.
+        """
+        from mvp_site.game_state import generate_pre_rolled_dice
+
+        dice = generate_pre_rolled_dice()
+
+        # Check d20 values (1-20)
+        for val in dice["d20"]:
+            self.assertGreaterEqual(val, 1)
+            self.assertLessEqual(val, 20)
+
+        # Check d6 values (1-6)
+        for val in dice["d6"]:
+            self.assertGreaterEqual(val, 1)
+            self.assertLessEqual(val, 6)
+
+        # Check d100 values (1-100)
+        for val in dice["d100"]:
+            self.assertGreaterEqual(val, 1)
+            self.assertLessEqual(val, 100)
+
+    def test_generate_pre_rolled_dice_custom_counts(self):
+        """
+        Verify custom dice counts work correctly.
+        """
+        from mvp_site.game_state import generate_pre_rolled_dice
+
+        dice = generate_pre_rolled_dice(num_d20=50, num_d6=10)
+
+        self.assertEqual(len(dice["d20"]), 50)
+        self.assertEqual(len(dice["d6"]), 10)
+
+
 class TestLLMServiceToolIntegration(unittest.TestCase):
     """Test llm_service integration with tool use providers."""
 
-    def test_call_llm_api_passes_tools_to_cerebras(self):
+    def test_call_llm_api_uses_direct_call_not_tool_loop(self):
         """
-        Verify _call_llm_api passes dice tools to Cerebras provider.
+        Verify _call_llm_api uses direct generate_content, NOT tool loop.
+
+        ARCHITECTURE UPDATE (Dec 2024): All models now use pre-rolled dice
+        injected into the prompt. Tool loops are deprecated. This test
+        verifies the new single-inference architecture.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_loop") as mock_generate:
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content") as mock_generate:
             mock_generate.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # This should pass tools to Cerebras
+            # This should use direct generate_content (not tool loop)
             llm_service._call_llm_api(
                 ["test prompt"],
                 "qwen-3-235b-a22b-instruct-2507",
@@ -724,16 +804,17 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
 
-            # Verify tools were passed
+            # Verify direct call was made (not tool loop)
             self.assertTrue(
                 mock_generate.called,
-                "generate_content_with_tool_loop should be called",
+                "generate_content should be called (not generate_content_with_tool_loop)",
             )
+            # Verify tools were NOT passed (pre-rolled dice are in prompt)
             call_kwargs = mock_generate.call_args[1] if mock_generate.call_args[1] else {}
-            self.assertIn(
+            self.assertNotIn(
                 "tools",
                 call_kwargs,
-                "FAIL: tools should be passed to Cerebras provider"
+                "PASS: tools should NOT be passed - pre-rolled dice are in prompt"
             )
 
 

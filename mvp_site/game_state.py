@@ -516,12 +516,63 @@ class GameState:
 # The LLM should focus on narrative; code handles math.
 # =============================================================================
 
+
+def generate_pre_rolled_dice(
+    num_d20: int = 100,
+    num_d12: int = 20,
+    num_d10: int = 20,
+    num_d8: int = 30,
+    num_d6: int = 40,
+    num_d4: int = 20,
+    num_d100: int = 10,
+) -> dict[str, list[int]]:
+    """
+    Generate pre-rolled dice for single-inference LLM architecture.
+
+    Instead of using tool calls (two-stage inference), we pre-roll dice
+    and include them in the LLM request. The LLM uses these values in order,
+    ensuring true randomness with only one API call.
+
+    Args:
+        num_d20: Number of d20 rolls (default 100 - enough for most combat)
+        num_d12: Number of d12 rolls (default 20)
+        num_d10: Number of d10 rolls (default 20)
+        num_d8: Number of d8 rolls (default 30 - common damage die)
+        num_d6: Number of d6 rolls (default 40 - very common)
+        num_d4: Number of d4 rolls (default 20)
+        num_d100: Number of d100 rolls (default 10 - percentile)
+
+    Returns:
+        Dict with die type keys and lists of pre-rolled values:
+        {
+            "d20": [14, 7, 19, 3, ...],
+            "d12": [8, 11, 2, ...],
+            "d10": [5, 9, 1, ...],
+            "d8": [6, 3, 8, ...],
+            "d6": [4, 2, 6, ...],
+            "d4": [3, 1, 4, ...],
+            "d100": [42, 87, 13, ...]
+        }
+    """
+    # S311: Standard random is intentional - dice rolls need randomness, not cryptography
+    return {
+        "d20": [random.randint(1, 20) for _ in range(num_d20)],  # noqa: S311
+        "d12": [random.randint(1, 12) for _ in range(num_d12)],  # noqa: S311
+        "d10": [random.randint(1, 10) for _ in range(num_d10)],  # noqa: S311
+        "d8": [random.randint(1, 8) for _ in range(num_d8)],  # noqa: S311
+        "d6": [random.randint(1, 6) for _ in range(num_d6)],  # noqa: S311
+        "d4": [random.randint(1, 4) for _ in range(num_d4)],  # noqa: S311
+        "d100": [random.randint(1, 100) for _ in range(num_d100)],  # noqa: S311
+    }
+
+
 # =============================================================================
 # DICE ROLL TOOL DEFINITIONS (for tool use / function calling)
 # =============================================================================
 # These tool definitions are used by models that support function calling
 # (Cerebras, OpenRouter) but not native code_execution (Gemini-specific).
 # The LLM requests a tool call, we execute it, then send the result back.
+# NOTE: This is DEPRECATED - prefer pre-rolled dice for single-inference.
 # =============================================================================
 
 DICE_ROLL_TOOLS: list[dict] = [

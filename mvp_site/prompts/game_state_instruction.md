@@ -3,7 +3,7 @@
 <!-- ESSENTIALS (token-constrained mode)
 - JSON responses required with session_header, narrative, planning_block
 - State updates mandatory every turn, entity IDs required (format: type_name_###)
-- Dice format: "Skill: 1d20+X = roll+X = total vs DC Y (Success/Fail)" - ALWAYS show DC/AC
+- 🎲 DICE: Use pre_rolled_dice arrays IN ORDER. Format: "Skill: 1d20+X = roll+X = total vs DC Y (Success/Fail)"
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 /ESSENTIALS -->
@@ -70,10 +70,16 @@ Every response MUST be valid JSON with this exact structure:
   - `thinking`: (string) Your tactical analysis
   - `context`: (string, **optional**) Additional context about the current scenario
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
-- `dice_rolls`: (array) **Dice rolling strategy depends on model capabilities:**
-  - **Code Execution (Gemini 2.0/3.0):** Use `import random; random.randint(1, 20)` for TRUE randomness. Execute code directly.
-  - **Tool Use (Cerebras, OpenRouter):** Call `roll_dice`, `roll_attack`, `roll_skill_check` tools. Backend executes and returns results.
-  - **Pre-computed (fallback):** Use values from `dice_rolls_provided` in input. Request more via `dice_rolls_requested` field.
+- `dice_rolls`: (array) **🎲 PRE-ROLLED DICE SYSTEM - CRITICAL INSTRUCTIONS:**
+  - **The input contains `pre_rolled_dice` with arrays of pre-generated random values**
+  - **YOU MUST USE THESE VALUES IN ORDER** - consume from the arrays sequentially
+  - **Format:** `{"d20": [14, 7, 19, ...], "d12": [...], "d10": [...], "d8": [...], "d6": [...], "d4": [...], "d100": [...]}`
+  - **Usage Example:**
+    - Need 1d20? Take the FIRST unused value from `d20` array
+    - Need 2d6? Take the FIRST TWO unused values from `d6` array, sum them
+    - Need 1d20 with advantage? Take the FIRST TWO unused values from `d20`, use higher
+  - **Track your position** - keep consuming left-to-right, never reuse values
+  - **If you run out of dice:** Include in your narrative: "The dice seem to pause..." and ask the player what they'd like to do next. The system will provide fresh dice on the next request.
   - **🚨 MANDATORY FORMAT - ALWAYS include DC/AC and use spaced modifiers with labels:**
     - **All dice roll strings MUST use spaces around plus signs** (e.g., `"1d20 +5 DEX +3 PROF"`) and **label each modifier by its source and value**.
     - **Skill check:** `"Arcana check: 1d20 +5 INT +3 PROF = 7 +5 INT +3 PROF = 15 vs DC 15 (Success)"` - MUST show "vs DC X"
@@ -82,7 +88,7 @@ Every response MUST be valid JSON with this exact structure:
     - **Damage:** `"Damage: 1d8 +5 DEX +7 Hunter's Mark = 6 +5 DEX +7 Hunter's Mark = 18 piercing"` (no DC needed for damage)
     - **Advantage:** `"Stealth (advantage): 1d20 +7 DEX +3 PROF = [14, 8] +7 DEX +7 PROF = 21 (took higher) vs DC 15 (Success)"`
   - **NEVER omit DC/AC** - every check/attack/save MUST show the target number
-  - **NEVER invent dice results** - always use code execution, tool calls, or pre-computed values
+  - **NEVER invent dice results** - ALWAYS use values from `pre_rolled_dice`
   - **Modifier labeling:** **ALWAYS label every modifier by source and value** (ability, proficiency, spell, feature, condition)
   - **Empty array [] if no dice rolls this turn.**
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
@@ -180,10 +186,12 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 **Attributes:** STR (power), DEX (agility/AC), CON (HP), INT (knowledge), WIS (perception), CHA (social)
 
-**Dice Rolls (Hybrid System):**
-- **Gemini 2.0/3.0:** Use code execution - `import random; random.randint(1, 20)` for true randomness
-- **Cerebras/OpenRouter:** Use tool calls - `roll_dice("1d20+5")`, `roll_attack(...)`, etc.
-- **Fallback:** Use `dice_rolls_provided` values from input
+**Dice Rolls (Pre-Rolled System):**
+- **ALWAYS use `pre_rolled_dice` from input** - contains arrays of truly random values
+- **Consume values IN ORDER** - d20, d12, d10, d8, d6, d4, d100 arrays
+- **Example:** Need 1d20? Take first unused from d20 array. Need 2d6? Take first two from d6 array.
+- **Advantage/Disadvantage:** Take TWO d20 values, use higher/lower
+- **If out of dice:** Say "The dice pause momentarily..." and ask player what to do next
 - **🚨 FORMAT (ALWAYS show DC/AC and use spaced modifiers with labels):**
   - Use spaces around plus signs: `"1d20 +5 DEX +3 PROF"`
   - Label each modifier by source and value
