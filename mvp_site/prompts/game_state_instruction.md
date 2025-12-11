@@ -27,12 +27,12 @@ Every response MUST be valid JSON with this exact structure:
 
 ```json
 {
-    "session_header": "The [SESSION_HEADER] block with timestamp, location, status - ALWAYS VISIBLE TO PLAYERS",
+    "session_header": "[SESSION_HEADER]\nTimestamp: 1492 DR, Mirtul 15, 14:30\nLocation: Dungeon Entrance\nStatus: Lvl 3 Fighter | HP: 28/28 | XP: 900/2700 | Gold: 50gp",
     "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
-    "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
+    "narrative": "The goblin snarls and raises its rusty blade, backing against the cold stone wall. Torchlight flickers across its yellowed teeth as it hisses a warning. The iron door behind it groans in the draft.",
     "planning_block": {
-        "thinking": "Your tactical analysis and reasoning about the situation",
-        "context": "Optional additional context about the current scenario",
+        "thinking": "The goblin is wounded and cornered. A direct attack would be effective but might provoke a desperate counterattack. Negotiation seems unlikely given its hostile posture, but the creature might value its life.",
+        "context": "Combat encounter in dungeon entrance",
         "choices": {
             "attack_goblin": {
                 "text": "Attack Goblin",
@@ -51,17 +51,19 @@ Every response MUST be valid JSON with this exact structure:
             }
         }
     },
-    "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 vs DC 15 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 vs AC 14 (Hit)"],
-    "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
+    "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"],
+    "god_mode_response": "",
     "entities_mentioned": ["Goblin Guard", "Iron Door"],
     "location_confirmed": "Dungeon Entrance",
     "state_updates": {},
     "debug_info": {
-        "dm_notes": ["DM thoughts about the scene", "Rule considerations"],
-        "state_rationale": "Explanation of why you made certain state changes"
+        "dm_notes": ["Goblin is cornered and may fight desperately"],
+        "state_rationale": "No state changes this turn"
     }
 }
 ```
+
+**CRITICAL:** The `narrative` field contains ONLY prose text (no JSON, no headers, no markers). The `planning_block` field is a SEPARATE JSON object.
 
 **Mandatory Field Rules:**
 - `narrative`: (string) Clean story prose ONLY - no headers, planning blocks, or debug content. **When using god_mode_response, narrative is optional** (can be "" or contain brief context).
