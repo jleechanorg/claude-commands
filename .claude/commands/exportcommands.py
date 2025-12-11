@@ -1042,13 +1042,18 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     r"jleechantest@gmail\.com", "<your-email@gmail.com>", content
                 )
 
-                # Scrub Firebase/GCP credentials
+                # Scrub Firebase/GCP credentials using generic patterns
+                # Match Firebase API keys (format: AIza + 35 chars)
                 content = re.sub(
-                    r"AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc", "<YOUR_FIREBASE_API_KEY>", content
+                    r"AIza[A-Za-z0-9_-]{35}", "<YOUR_FIREBASE_API_KEY>", content
                 )
-                content = re.sub(
-                    r"ai-universe-b3551", "<your-firebase-project-id>", content
-                )
+                # Match Firebase project IDs (only specific known patterns to avoid false positives)
+                # Project IDs typically have format: name-word-number
+                if "ai-universe" in content or "firebase" in content.lower():
+                    # Only apply if context suggests Firebase
+                    content = re.sub(
+                        r"\bai-universe-[a-z0-9]+\b", "<your-firebase-project-id>", content
+                    )
 
                 content = re.sub(
                     r"/tmp/worldarchitectai", "/tmp/$PROJECT_NAME", content
