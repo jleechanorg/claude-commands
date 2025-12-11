@@ -174,15 +174,18 @@ def generate_content(
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_output_tokens,
-        # Use json_schema with strict:false instead of legacy json_object
-        # This prevents schema echo issues where API returns {"type": "object"}
-        "response_format": get_openai_json_schema_format(),
     }
 
     # Add tools if provided (for function calling)
+    # NOTE: Cerebras API does NOT support tools + response_format together
+    # When using tools, JSON output is handled by prompt instructions
     if tools:
         payload["tools"] = tools
         payload["tool_choice"] = "auto"
+        # DO NOT set response_format - API rejects tools + response_format
+    else:
+        # Only use JSON schema format when NOT using tools
+        payload["response_format"] = get_openai_json_schema_format()
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -391,6 +394,28 @@ def generate_content_with_tool_loop(
                 "name": result["name"],
                 "content": result["content"],
             })
+
+        # Phase 2: Call WITHOUT tools to get JSON response
+        # Cerebras API doesn't support tools + response_format together
+        # So we need a separate call without tools to enforce JSON output
+        logging_util.info("Phase 2: Generating JSON response (no tools)")
+        response = generate_content(
+            prompt_contents=[],
+            model_name=model_name,
+            system_instruction_text=None,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            tools=None,  # No tools = JSON mode enabled
+            messages=messages,
+        )
+
+        # Check if Phase 2 still has tool calls (shouldn't happen, but handle it)
+        if not response.get_tool_calls():
+            logging_util.debug(f"Tool loop complete after {iteration} iteration(s)")
+            return response
+
+        # If still has tool calls, continue loop (up to max_iterations)
+        logging_util.warning("Phase 2 still has tool calls, continuing loop")
 
     # Max iterations reached - make one final call WITHOUT tools to force text generation
     logging_util.warning(

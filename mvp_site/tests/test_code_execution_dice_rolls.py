@@ -571,16 +571,16 @@ class TestToolLoopAllCodePaths(unittest.TestCase):
                 self.assertEqual(call_count[0], 4, "Should make 4 API calls (3 tools + 1 text)")
                 self.assertIn("Three rolls complete", result.text)
 
-    def test_path_4_max_iterations_with_text_already_present(self):
-        """Path 4: Max iterations reached but last response HAS text (no forced call)."""
+    def test_path_4_two_phase_tool_loop_with_json_response(self):
+        """Path 4: Two-phase tool loop - Phase 1 (tools) then Phase 2 (JSON)."""
         call_count = [0]
 
-        # Response with BOTH tool_calls AND text (some models do this)
-        mixed_response = {
+        # Phase 1 response: tool_calls (triggers Phase 2)
+        phase1_response = {
             "choices": [{
                 "message": {
                     "role": "assistant",
-                    "content": '{"narrative": "Partial response with text"}',
+                    "content": None,
                     "tool_calls": [{
                         "id": "call_x",
                         "type": "function",
@@ -591,12 +591,27 @@ class TestToolLoopAllCodePaths(unittest.TestCase):
             }]
         }
 
+        # Phase 2 response: JSON text (no tool_calls - loop exits)
+        phase2_response = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": '{"narrative": "Final JSON response"}',
+                },
+                "finish_reason": "stop"
+            }]
+        }
+
         def mock_post(*args, **kwargs):
             call_count[0] += 1
             mock_resp = Mock()
             mock_resp.ok = True
             mock_resp.raise_for_status = Mock()
-            mock_resp.json.return_value = mixed_response
+            # Alternate between phase1 (tools) and phase2 (JSON)
+            if call_count[0] % 2 == 1:
+                mock_resp.json.return_value = phase1_response
+            else:
+                mock_resp.json.return_value = phase2_response
             return mock_resp
 
         with patch("requests.post", side_effect=mock_post):
@@ -613,9 +628,9 @@ class TestToolLoopAllCodePaths(unittest.TestCase):
                     max_iterations=5,
                 )
 
-                # Text already present, no extra call needed
-                self.assertEqual(call_count[0], 5, "Should make exactly 5 API calls")
-                self.assertIn("Partial response with text", result.text)
+                # Two-phase: Phase 1 (tools) + Phase 2 (JSON) = 2 calls
+                self.assertEqual(call_count[0], 2, "Should make exactly 2 API calls (Phase 1 + Phase 2)")
+                self.assertIn("Final JSON response", result.text)
 
     def test_path_5_max_iterations_empty_text_forces_final_call(self):
         """
