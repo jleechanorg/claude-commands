@@ -30,3 +30,19 @@ def test_temporal_violation_allows_punctuated_month_names():
     }
 
     assert not world_logic._check_temporal_violation(old_time, new_time)
+
+
+def test_temporal_violation_allows_equal_timestamps():
+    """Equal timestamps should not surface a temporal anomaly warning."""
+
+    timestamp = {
+        "year": 1492,
+        "month": "Mirtul",
+        "day": 15,
+        "hour": 20,
+        "minute": 5,
+        "second": 0,
+        "microsecond": 0,
+    }
+
+    assert not world_logic._check_temporal_violation(timestamp, timestamp)

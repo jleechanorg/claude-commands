@@ -42,106 +42,12 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         self.structured_response.planning_block = None
 
     @patch("mvp_site.llm_service.logging_util", autospec=True)
-    @patch("mvp_site.llm_service._call_llm_api", autospec=True)
-    @patch("mvp_site.llm_service._get_text_from_response", autospec=True)
-    @patch("mvp_site.llm_service._parse_gemini_response", autospec=True)
-    def test_character_creation_detection_case_insensitive(
-        self, mock_parse, mock_get_text, mock_call_api, mock_logging
+    def test_missing_planning_block_logs_warning_and_returns_response(
+        self, mock_logging
     ):
-        """Test character creation detection with case insensitivity."""
-        # Test various case combinations
-        test_cases = [
-            "[CHARACTER CREATION] and CHARACTER SHEET and Would you like to play as this character?",
-            "[character creation] and character sheet and would you like to play as this character?",
-            "[Character Creation] and Character Sheet and Would You Like To Play As This Character?",
-            "[CHARACTER creation] and character SHEET and WOULD you like to PLAY as this character?",
-        ]
-
-        # Setup mocks for API calls that might be triggered
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = (
-            "Generated planning block content",
-            self.structured_response,
-        )
-
-        for response_text in test_cases:
-            with self.subTest(response_text=response_text):
-                # Ensure per-case isolation of call history
-                mock_call_api.reset_mock()
-                mock_get_text.reset_mock()
-                mock_parse.reset_mock()
-                # This should trigger character creation detection and planning block generation
-                try:
-                    _validate_and_enforce_planning_block(
-                        response_text,
-                        "test input",
-                        self.game_state,
-                        "test-model",
-                        "test instruction",
-                        self.structured_response,
-                    )
-                    # Character creation detection now triggers API calls for planning block generation
-                    # This is expected behavior - character creation requires planning blocks
-                    self.assertTrue(True)  # Test passes if no exception is raised
-                except Exception as e:
-                    self.fail(
-                        f"Character creation detection crashed with case variation: {e}"
-                    )
-
-    @patch("mvp_site.llm_service.logging_util")
-    @patch("mvp_site.llm_service._call_llm_api")
-    @patch("mvp_site.llm_service._get_text_from_response")
-    @patch("mvp_site.llm_service._parse_gemini_response")
-    def test_planning_block_regeneration_logging(
-        self, mock_parse, mock_get_text, mock_call_api, mock_logging
-    ):
-        """Test planning block regeneration with all logging paths."""
-        # Setup mocks
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = (
-            "Generated planning block content",
-            self.structured_response,
-        )
-        # Don't set planning_block before the call - it should be None to trigger regeneration
-        self.structured_response.planning_block = None
-
+        """When no planning block is present, return response unchanged and log warning."""
         response_text = "Normal story response without planning block"
 
-        # Call the function
-        _validate_and_enforce_planning_block(
-            response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
-        )
-
-        # Verify logging was called with the expected patterns
-        mock_logging.info.assert_any_call(
-            "🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API"
-        )
-
-        # Verify API response logging was called
-        assert any(
-            "🔍 PLANNING_BLOCK_PROMPT:" in str(call)
-            for call in mock_logging.info.call_args_list
-        )
-
-    @patch("mvp_site.llm_service.logging_util", autospec=True)
-    @patch("mvp_site.llm_service._call_llm_api", autospec=True)
-    def test_planning_block_early_return_when_already_set(
-        self, mock_call_api, mock_logging
-    ):
-        """Test early return when planning_block is already set."""
-        # Setup structured response with planning_block already set
-        self.structured_response.planning_block = "Existing planning block content"
-
-        response_text = "Normal story response"
-
-        # Call the function
         result = _validate_and_enforce_planning_block(
             response_text,
             "test input",
@@ -151,37 +57,19 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             self.structured_response,
         )
 
-        # Verify early return logging was called
-        mock_logging.info.assert_any_call(
-            "🔍 PLANNING_BLOCK_SKIPPED: structured_response.planning_block is already set, skipping API call"
+        mock_logging.warning.assert_any_call(
+            "⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block. "
+            "The LLM should have generated this - no fallback will be used."
         )
-
-        # Verify API was NOT called due to early return
-        mock_call_api.assert_not_called()
-
-        # Verify response_text is returned unchanged
         assert result == response_text
 
     @patch("mvp_site.llm_service.logging_util", autospec=True)
-    @patch("mvp_site.llm_service._call_llm_api", autospec=True)
-    @patch("mvp_site.llm_service._get_text_from_response", autospec=True)
-    @patch("mvp_site.llm_service._parse_gemini_response", autospec=True)
-    def test_planning_block_validation_success_logging(
-        self, mock_parse, mock_get_text, mock_call_api, mock_logging
-    ):
-        """Test planning block validation success logging."""
-        # Setup mocks for successful validation
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Valid planning block content"
-        mock_parse.return_value = (
-            "Valid planning block content",
-            self.structured_response,
-        )
+    def test_empty_planning_block_logs_warning_and_returns_response(self, mock_logging):
+        """Existing but empty planning block logs and returns original response."""
+        self.structured_response.planning_block = {"thinking": "", "choices": {}}
+        response_text = "Story response with empty planning block"
 
-        response_text = "Story without planning block"
-
-        # Call the function
-        _validate_and_enforce_planning_block(
+        result = _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,
@@ -190,31 +78,18 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             self.structured_response,
         )
 
-        # Verify validation success logging
-        success_log_found = any(
-            "🔍 VALIDATION_SUCCESS: String planning block passed validation"
-            in str(call)
-            for call in mock_logging.info.call_args_list
+        mock_logging.warning.assert_any_call(
+            "⚠️ PLANNING_BLOCK_EMPTY: Planning block exists but has no content"
         )
-        assert success_log_found, "Should log validation success"
+        assert result == response_text
 
-    @patch("mvp_site.llm_service.logging_util")
-    @patch("mvp_site.llm_service._call_llm_api")
-    @patch("mvp_site.llm_service._get_text_from_response")
-    @patch("mvp_site.llm_service._parse_gemini_response")
-    def test_planning_block_validation_failure_logging(
-        self, mock_parse, mock_get_text, mock_call_api, mock_logging
-    ):
-        """Test planning block validation failure logging."""
-        # Setup mocks for failed validation (empty content)
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = ""  # Empty response
-        mock_parse.return_value = ("", self.structured_response)
+    @patch("mvp_site.llm_service.logging_util", autospec=True)
+    def test_string_planning_block_logs_error_and_returns_response(self, mock_logging):
+        """String planning blocks are rejected with error log and unchanged response."""
+        self.structured_response.planning_block = "invalid"
+        response_text = "Story response with string planning block"
 
-        response_text = "Story without planning block"
-
-        # Call the function
-        _validate_and_enforce_planning_block(
+        result = _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,
@@ -223,148 +98,20 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             self.structured_response,
         )
 
-        # Verify validation failure logging
-        failure_logs = [
-            "🔍 VALIDATION_FAILURE: String planning block failed validation",
-            "🔍 VALIDATION_FAILURE: Original planning_block type:",
-            "🔍 VALIDATION_FAILURE: Original planning_block content:",
-            "🔍 VALIDATION_FAILURE: clean_planning_block after processing:",
-        ]
-
-        for expected_log in failure_logs:
-            failure_log_found = any(
-                expected_log in str(call)
-                for call in mock_logging.warning.call_args_list
-            )
-            assert failure_log_found, f"Should log validation failure: {expected_log}"
-
-    @patch("mvp_site.llm_service.logging_util")
-    @patch("mvp_site.llm_service._call_llm_api")
-    def test_planning_block_exception_logging(self, mock_call_api, mock_logging):
-        """Test planning block exception logging with traceback."""
-        # Setup mock to raise exception
-        mock_call_api.side_effect = Exception("API call failed")
-
-        response_text = "Story without planning block"
-
-        # Call the function - should handle exception gracefully
-        _validate_and_enforce_planning_block(
-            response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
+        mock_logging.error.assert_any_call(
+            "❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: Found str planning block, only JSON format is allowed"
         )
+        assert result == response_text
 
-        # Verify exception logging
-        exception_logs = [
-            "🔍 PLANNING_BLOCK_EXCEPTION: Failed to generate planning block:",
-            "🔍 PLANNING_BLOCK_EXCEPTION: Exception type:",
-            "🔍 PLANNING_BLOCK_EXCEPTION: Exception details:",
-            "🔍 PLANNING_BLOCK_EXCEPTION: Traceback:",
-        ]
-
-        for expected_log in exception_logs:
-            exception_log_found = any(
-                expected_log in str(call) for call in mock_logging.error.call_args_list
-            )
-            assert exception_log_found, f"Should log exception: {expected_log}"
-
-    @patch("mvp_site.llm_service.logging_util")
-    @patch("mvp_site.llm_service._call_llm_api")
-    @patch("mvp_site.llm_service._get_text_from_response")
-    @patch("mvp_site.llm_service._parse_gemini_response")
-    def test_planning_block_source_logging(
-        self, mock_parse, mock_get_text, mock_call_api, mock_logging
-    ):
-        """Test planning block source logging (structured vs raw)."""
-        # Test structured response path
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "raw_text"
-
-        # Mock structured response with planning_block
-        mock_structured = MagicMock(spec=NarrativeResponse)
-        mock_structured.planning_block = {
-            "thinking": "test",
-            "choices": {"Continue": "test"},
-        }
-        mock_parse.return_value = ("raw_text", mock_structured)
-
-        response_text = "Story without planning block"
-
-        # Call the function
-        _validate_and_enforce_planning_block(
-            response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
-        )
-
-        # Verify source logging
-        source_log_found = any(
-            "🔍 PLANNING_BLOCK_SOURCE: Using structured_response.planning_block"
-            in str(call)
-            for call in mock_logging.info.call_args_list
-        )
-        assert source_log_found, "Should log structured response usage"
-
-    @patch("mvp_site.llm_service.logging_util")
-    @patch("mvp_site.llm_service._call_llm_api")
-    @patch("mvp_site.llm_service._get_text_from_response")
-    @patch("mvp_site.llm_service._parse_gemini_response")
-    def test_planning_block_parsing_logging(
-        self, mock_parse, mock_get_text, mock_call_api, mock_logging
-    ):
-        """Test planning block parsing step logging."""
-        # Setup mocks
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = (
-            "Generated planning block content",
-            self.structured_response,
-        )
-
-        response_text = "Story without planning block"
-
-        # Call the function
-        _validate_and_enforce_planning_block(
-            response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
-        )
-
-        # Verify parsing logging
-        parsing_logs = [
-            "🔍 PLANNING_BLOCK_PARSING: Attempting to parse response",
-            "🔍 PLANNING_BLOCK_PARSING_RESULT: planning_text length:",
-            "🔍 PLANNING_BLOCK_PARSING_RESULT: structured_response exists:",
-        ]
-
-        for expected_log in parsing_logs:
-            parsing_log_found = any(
-                expected_log in str(call) for call in mock_logging.info.call_args_list
-            )
-            assert parsing_log_found, f"Should log parsing step: {expected_log}"
-
-    @patch("mvp_site.llm_service.logging_util")
-    def test_fallback_logging(self, mock_logging):
-        """Test fallback logging when exceptions occur."""
-        # Create a response that will skip regeneration (already has planning block)
-        response_text = "Story with planning block\n\n--- PLANNING BLOCK ---\nExisting planning block"
-
-        # Set up structured response to already have a planning block
+    @patch("mvp_site.llm_service.logging_util", autospec=True)
+    def test_valid_planning_block_passes_without_additional_logging(self, mock_logging):
+        """Valid planning block returns early without warnings or errors."""
         self.structured_response.planning_block = {
-            "thinking": "Already has planning block",
-            "choices": {"Continue": "Continue with story"},
+            "thinking": "Plan",
+            "choices": {"Continue": "Do thing"},
         }
+        response_text = "Story response with planning block"
 
-        # This should not trigger regeneration, so test fallback paths
         result = _validate_and_enforce_planning_block(
             response_text,
             "test input",
@@ -374,24 +121,15 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             self.structured_response,
         )
 
-        # Should return original response without modification
+        mock_logging.info.assert_any_call(
+            "✅ Planning block found in JSON structured response"
+        )
+        mock_logging.warning.assert_not_called()
+        mock_logging.error.assert_not_called()
         assert result == response_text
 
-    @patch("mvp_site.llm_service._call_llm_api")
-    @patch("mvp_site.llm_service._get_text_from_response")
-    @patch("mvp_site.llm_service._parse_gemini_response")
-    def test_crash_safety_with_malformed_inputs(
-        self, mock_parse, mock_get_text, mock_call_api
-    ):
+    def test_crash_safety_with_malformed_inputs(self):
         """Test that the function doesn't crash with malformed inputs."""
-        # Setup mocks for any potential API calls
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = (
-            "Generated planning block content",
-            self.structured_response,
-        )
-
         # Test with None inputs
         try:
             result = _validate_and_enforce_planning_block(
@@ -425,38 +163,6 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             assert result is not None
         except Exception as e:
             self.fail(f"Function crashed with malformed game state: {e}")
-
-    @patch("mvp_site.llm_service._call_llm_api")
-    @patch("mvp_site.llm_service._get_text_from_response")
-    @patch("mvp_site.llm_service._parse_gemini_response")
-    def test_unicode_handling_in_logging(
-        self, mock_parse, mock_get_text, mock_call_api
-    ):
-        """Test that logging handles unicode characters safely."""
-        # Setup mocks for any potential API calls
-        mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = (
-            "Generated planning block content",
-            self.structured_response,
-        )
-
-        # Test with unicode in response text
-        unicode_response = "Story with unicode: 🔍 📊 ✅ ❌ 🚨"
-
-        try:
-            result = _validate_and_enforce_planning_block(
-                unicode_response,
-                "test input",
-                self.game_state,
-                "test-model",
-                "test instruction",
-                self.structured_response,
-            )
-            # Should handle gracefully
-            assert result is not None
-        except Exception as e:
-            self.fail(f"Function crashed with unicode: {e}")
 
 
 if __name__ == "__main__":
