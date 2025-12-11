@@ -111,9 +111,9 @@ else
     get_mtime() {
         local file="$1"
         if command -v perl >/dev/null 2>&1; then
-            perl -e 'print((stat($ARGV[0]))[9])' "$file" 2>/dev/null || echo "0"
+            perl -e 'print((stat($ARGV[0]))[9])' "$file" 2>/dev/null || echo ""
         else
-            stat -f%m "$file" 2>/dev/null || stat -c%Y "$file" 2>/dev/null || echo "0"
+            stat -f%m "$file" 2>/dev/null || stat -c%Y "$file" 2>/dev/null || echo ""
         fi
     }
 
@@ -132,9 +132,8 @@ else
         # Check unpacked ref file first
         if [ -f "$ref_file" ]; then
             remote_ref_mtime=$(get_mtime "$ref_file")
-            # Explicitly check for mtime extraction failure (returns "0" or empty)
-            # "0" means epoch time which indicates extraction failed
-            if [ -n "$remote_ref_mtime" ] && [ "$remote_ref_mtime" != "0" ]; then
+            # Check for mtime extraction failure (returns empty string)
+            if [ -n "$remote_ref_mtime" ]; then
                 push_age=$((current_time - remote_ref_mtime))
                 if [ "$push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
                     recent_push=true
@@ -148,7 +147,7 @@ else
             packed_refs_file="$git_common_dir/packed-refs"
             if [ -f "$packed_refs_file" ]; then
                 packed_refs_mtime=$(get_mtime "$packed_refs_file")
-                if [ -n "$packed_refs_mtime" ] && [ "$packed_refs_mtime" != "0" ]; then
+                if [ -n "$packed_refs_mtime" ]; then
                     packed_push_age=$((current_time - packed_refs_mtime))
                     if [ "$packed_push_age" -lt "$RECENT_PUSH_WINDOW" ]; then
                         recent_push=true
