@@ -142,7 +142,7 @@ Generate exactly **3 companions** with:
 
 Use natural language understanding for:
 - Mode recognition ("dm mode", "I want to control") → Switch to DM MODE
-- Strategic thinking ("help me plan", "what are my options", "I need to think") → Trigger Deep Think planning block
+- Strategic thinking ("help me plan", "what are my options", "I need to think") → Generate Deep Think content in the `planning_block` field (NOT in narrative)
 - Emotional context (vulnerability, distress, appeals) → Empathetic character responses
 - Scene transitions and entity continuity
 

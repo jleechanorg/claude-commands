@@ -1139,14 +1139,15 @@ class PromptBuilder:
         return (
             temporal_enforcement +
             "**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
-            "1. **MANDATORY PLANNING BLOCK**: Every STORY MODE response MUST include a planning_block in JSON.\n"
-            "2. **MANDATORY NARRATIVE**: Every response MUST include a non-empty 'narrative' field. NEVER leave narrative empty.\n"
-            "3. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options':\n"
-            "   - **NARRATIVE**: Include brief text showing the character pausing to think (e.g., 'You pause to consider your options...')\n"
-            "   - **PLANNING BLOCK**: Generate deep think block with 'thinking', 'choices', and 'analysis' (pros/cons/confidence)\n"
+            "1. **MANDATORY PLANNING BLOCK FIELD**: Every STORY MODE response MUST have a `planning_block` field (JSON object) as a SEPARATE top-level field.\n"
+            "2. **MANDATORY NARRATIVE FIELD**: Every response MUST have a `narrative` field with story prose. NEVER embed JSON in narrative.\n"
+            "3. **FIELD SEPARATION**: `narrative` = prose text ONLY. `planning_block` = JSON object with thinking/choices. NEVER mix them.\n"
+            "4. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options':\n"
+            "   - **NARRATIVE FIELD**: Include brief text showing the character pausing to think (e.g., 'You pause to consider your options...')\n"
+            "   - **PLANNING_BLOCK FIELD**: Generate deep think block with 'thinking', 'choices', and 'analysis' (pros/cons/confidence)\n"
             "   - **NO ACTIONS**: The character MUST NOT take any story-advancing actions - no combat, dialogue, movement, or decisions\n"
-            "4. **Standard Responses**: Include narrative continuation followed by planning block with 3-4 action options.\n"
-            "5. **Never Skip**: Both narrative AND planning_block are MANDATORY - never leave either empty.\n\n"
+            "5. **Standard Responses**: Include narrative continuation in `narrative` field, planning block in `planning_block` field with 3-4 action options.\n"
+            "6. **Never Skip**: Both `narrative` AND `planning_block` fields are MANDATORY - never leave either empty.\n\n"
         )
 
     def finalize_instructions(
