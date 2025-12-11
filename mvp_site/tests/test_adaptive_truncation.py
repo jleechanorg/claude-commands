@@ -175,8 +175,8 @@ class TestPercentageBasedTruncation(unittest.TestCase):
 
         # Should allocate based on 25/60 ratio (caps at 500 per side now, not 20)
         # With 5000 tokens budget and ~100 tokens/turn:
-        # - start_budget (25%): 1250 tokens → ~12 turns
-        # - end_budget (60%): 3000 tokens → ~30 turns (may be limited by total_turns//2)
+        # - start_budget (25%): 1250 tokens → ~12 turns (may be limited by total_turns//2)
+        # - end_budget (60%): 3000 tokens → ~30 turns (capped by TURNS_TO_KEEP_AT_END and remaining turns after start allocation)
         self.assertGreaterEqual(start_turns, 3)
         self.assertLessEqual(start_turns, 50)  # Can't exceed half of 100 turns
         self.assertGreaterEqual(end_turns, 5)
