@@ -427,7 +427,7 @@ export EMAIL_TO="recipient@email.com"
 
 # Agent CLI selection (for FixPR)
 export AGENT_CLI="claude"              # or "codex" or "gemini"
-export GEMINI_MODEL="gemini-3-pro-preview"
+export GEMINI_MODEL="gemini-2.0-flash-exp"
 ```
 
 ---
