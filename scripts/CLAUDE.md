@@ -90,7 +90,7 @@ The analytics command uses these constants from `llm_service.py`:
 - Long context (>200K tokens): $4/M input, $18/M output
 
 ### OpenAI Automation (../automation/openai_automation/)
-- **`codex_github_mentions.py`** - Automate "github mention" tasks in OpenAI Codex
+- **`codex_github_mentions.py`** - Automate "GitHub mention" tasks in OpenAI Codex
 - **`oracle_cli.py`** - CLI tool for asking GPT-5 Pro questions via browser
 - **`start_chrome_debug.sh`** - Launch Chrome with remote debugging (CDP)
 - **`README.md`** - Comprehensive documentation and usage guide

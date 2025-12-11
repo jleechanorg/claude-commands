@@ -36,6 +36,8 @@ requires-python = ">=3.9"
 dependencies = [
     "requests>=2.25.0",
     "jleechanorg-orchestration>=0.1.11",
+    "playwright>=1.40.0",
+    "playwright-stealth>=1.0.0",
 ]
 
 [project.optional-dependencies]

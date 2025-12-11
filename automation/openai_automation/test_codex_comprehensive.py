@@ -15,23 +15,34 @@ Run with:
 """
 
 import asyncio
-import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from playwright.async_api import async_playwright
+import os
 import sys
-sys.path.insert(0, 'automation/openai_automation')
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+try:
+    import aiohttp
+except ModuleNotFoundError:  # pragma: no cover - optional dependency for CI
+    aiohttp = None
+import pytest
+from playwright.async_api import async_playwright
+
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_root)
 from codex_github_mentions import CodexGitHubMentionsAutomation
 
 
 # Helper to check if Chrome is running with CDP
 async def chrome_is_running(port=9222):
     """Check if Chrome is running with remote debugging."""
-    import aiohttp
+    if aiohttp is None:
+        return False
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f'http://localhost:{port}/json/version', timeout=aiohttp.ClientTimeout(total=1)) as resp:
+            async with session.get(
+                f"http://localhost:{port}/json/version", timeout=aiohttp.ClientTimeout(total=1)
+            ) as resp:
                 return resp.status == 200
-    except:
+    except Exception:
         return False
 
 
@@ -72,10 +83,16 @@ class TestLimitParameter:
         automation = CodexGitHubMentionsAutomation(task_limit=limit)
         automation.page = AsyncMock()
 
-        # Mock locator that returns mock_task_count tasks
         mock_locator = Mock()
-        mock_tasks = [Mock() for _ in range(mock_task_count)]
-        mock_locator.all = AsyncMock(return_value=mock_tasks)
+        task_items = []
+        for i in range(mock_task_count):
+            item = Mock()
+            item.get_attribute = AsyncMock(return_value=f"/codex/{i}")
+            item.text_content = AsyncMock(return_value=f"Task {i}")
+            task_items.append(item)
+
+        mock_locator.count = AsyncMock(return_value=mock_task_count)
+        mock_locator.nth = Mock(side_effect=lambda idx: task_items[idx])
         automation.page.locator = Mock(return_value=mock_locator)
 
         tasks = await automation.find_github_mention_tasks()
@@ -250,17 +267,26 @@ class TestNavigationInteraction:
     async def test_click_task_success(self):
         """Test clicking task link successfully."""
         automation = CodexGitHubMentionsAutomation()
+        class _Locator:
+            def __init__(self):
+                self.count = AsyncMock(return_value=1)
+                self.click = AsyncMock()
+
+            @property
+            def first(self):
+                return self
+
         automation.page = AsyncMock()
+        automation.page.goto = AsyncMock()
+        automation.page.locator.return_value = _Locator()
 
-        mock_task = AsyncMock()
-        mock_task.text_content.return_value = "Test Task"
-        mock_task.click = AsyncMock()
+        task = {"href": "/codex/123", "text": "Test Task"}
+        result = await automation.update_pr_for_task(task)
 
-        # Simulate clicking task
-        await mock_task.click()
-
-        mock_task.click.assert_called_once()
-        print("✅ Task click successful")
+        assert result is True
+        automation.page.goto.assert_called()
+        mock_locator.click.assert_awaited()
+        print("✅ Task navigation and update simulated successfully")
 
     @pytest.mark.asyncio
     async def test_find_button_when_present(self):

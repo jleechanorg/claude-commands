@@ -25,9 +25,16 @@ Usage:
 import argparse
 import asyncio
 import sys
+import traceback
 from typing import Optional
 
-from playwright.async_api import async_playwright, Browser, Page
+from playwright.async_api import (
+    Browser,
+    Page,
+    Playwright,
+    TimeoutError as PlaywrightTimeoutError,
+    async_playwright,
+)
 
 
 class OracleCLI:
@@ -50,17 +57,19 @@ class OracleCLI:
         self.cdp_url = cdp_url
         self.model = model
         self.timeout = timeout
+        self.playwright: Optional[Playwright] = None
         self.browser: Optional[Browser] = None
         self.page: Optional[Page] = None
 
     async def setup(self):
         """Set up browser connection."""
-        playwright = await async_playwright().start()
+        if self.playwright is None:
+            self.playwright = await async_playwright().start()
 
         if self.cdp_url:
             # Connect to existing browser
             print(f"🔌 Connecting to existing browser at {self.cdp_url}...")
-            self.browser = await playwright.chromium.connect_over_cdp(self.cdp_url)
+            self.browser = await self.playwright.chromium.connect_over_cdp(self.cdp_url)
             contexts = self.browser.contexts
             if contexts:
                 context = contexts[0]
@@ -73,12 +82,7 @@ class OracleCLI:
                 self.page = await context.new_page()
         else:
             # Launch new browser (visible)
-            self.browser = await playwright.chromium.launch(
-                headless=False,
-                args=[
-                    "--disable-blink-features=AutomationControlled"
-                ]
-            )
+            self.browser = await self.playwright.chromium.launch(headless=False)
             context = await self.browser.new_context()
             self.page = await context.new_page()
 
@@ -98,10 +102,13 @@ class OracleCLI:
                 timeout=5000
             )
             print("✅ Logged in to ChatGPT")
-        except:
+        except PlaywrightTimeoutError:
             print("⚠️  Not logged in - please log in manually")
             print("   Waiting 30 seconds for you to log in...")
             await asyncio.sleep(30)
+        except Exception as login_error:
+            print(f"⚠️  Unexpected login check error: {login_error}")
+            await asyncio.sleep(5)
 
     async def select_model(self):
         """Select the specified model (GPT-5 Pro, GPT-4, etc.)."""
@@ -119,7 +126,7 @@ class OracleCLI:
 
             # Click on desired model
             model_option = await self.page.wait_for_selector(
-                f'text="{self.model}", text=/GPT.*{self.model[-1]}/i',
+                f'text="{self.model}"',
                 timeout=3000
             )
 
@@ -198,13 +205,13 @@ class OracleCLI:
 
             if messages:
                 response = await messages[-1].text_content()
-                return response.strip()
+                response_text = (response or "").strip()
+                return response_text or "❌ Empty response received"
             else:
                 return "❌ Could not extract response"
 
         except Exception as e:
             print(f"❌ Error asking question: {e}")
-            import traceback
             traceback.print_exc()
             return f"Error: {e}"
 
@@ -263,7 +270,6 @@ class OracleCLI:
 
         except Exception as e:
             print(f"\n❌ Oracle failed: {e}")
-            import traceback
             traceback.print_exc()
             return None
 
@@ -271,6 +277,9 @@ class OracleCLI:
             if self.browser and not self.cdp_url:
                 # Only close if we launched it (not using existing browser)
                 await self.browser.close()
+            if self.playwright:
+                await self.playwright.stop()
+                self.playwright = None
 
 
 async def main():
