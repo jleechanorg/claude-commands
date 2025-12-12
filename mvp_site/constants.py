@@ -71,7 +71,7 @@ ALLOWED_OPENROUTER_MODELS = [
     "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
     "meta-llama/llama-3.1-8b-instruct",  # 131K context, $0.10/$0.10 per M (Cerebras provider)
     "openai/gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (reasoning model)
-    "z-ai/glm-4.6",  # 200K context, fast tools
+    "z-ai/glm-4.6",  # 200K context, fast tools (OpenRouter spelling differs from Cerebras "zai-glm-4.6")
     "x-ai/grok-4.1-fast",  # 2M context, $0.20/$0.50 per M tokens (supports json_schema)
     "x-ai/grok-4.1-fast:free",  # Legacy alias to preserve existing user selections
 ]
@@ -81,13 +81,13 @@ ALLOWED_OPENROUTER_MODELS = [
 #   Llama 3.1 8B: $0.10/$0.10 (CHEAPEST - now included)
 #   GPT OSS 120B: $0.35/$0.75 (budget option - now included)
 #   Qwen 3 32B: $0.40/$0.80 (not in list - lower context)
-#   Qwen 3 235B: $0.60/$1.20 (highest context 131K)
+#   Qwen 3 235B: $0.60/$1.20 (highest context 131K) <- DEFAULT
 #   Llama 3.3 70B: $0.85/$1.20 (65K context)
-#   ZAI GLM 4.6: $2.25/$2.75 (preview, 131K context) <- DEFAULT
-DEFAULT_CEREBRAS_MODEL = "zai-glm-4.6"
+#   ZAI GLM 4.6: $2.25/$2.75 (preview, 131K context, opt-in due to cost)
+DEFAULT_CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507"
 ALLOWED_CEREBRAS_MODELS = [
-    DEFAULT_CEREBRAS_MODEL,  # 131K context, $2.25/$2.75 per M (preview)
-    "qwen-3-235b-a22b-instruct-2507",  # 131K context, $0.60/$1.20 per M
+    DEFAULT_CEREBRAS_MODEL,  # 131K context, $0.60/$1.20 per M (cost-efficient default)
+    "zai-glm-4.6",  # 131K context, $2.25/$2.75 per M (preview, opt-in)
     "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
     "llama-3.1-8b",  # 131K context, $0.10/$0.10 per M (cheapest option)
     "gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (budget reasoning model)
@@ -105,7 +105,7 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "meta-llama/llama-3.1-405b-instruct": 131_072,
     "meta-llama/llama-3.1-8b-instruct": 131_072,  # 131K context
     "openai/gpt-oss-120b": 131_072,  # 131K context
-    "z-ai/glm-4.6": 200_000,
+    "z-ai/glm-4.6": 200_000,  # OpenRouter spelling differs from Cerebras "zai-glm-4.6"
     "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
     "x-ai/grok-4.1-fast:free": 2_000_000,  # Free tier shares same window
     # Cerebras
