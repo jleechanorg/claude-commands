@@ -72,6 +72,9 @@ def setup_logging():
 
 logger = setup_logging()
 
+# Storage state path for persisting authentication
+AUTH_STATE_PATH = Path.home() / ".chatgpt_codex_auth_state.json"
+
 
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
@@ -155,20 +158,33 @@ class CodexGitHubMentionsAutomation:
             connected = await self.connect_to_existing_browser()
 
         if not connected:
-            # Launch new browser with persistent profile
-            print(f"🚀 Launching Chrome with persistent profile: {self.user_data_dir}")
-            logger.info(f"Launching Chrome with profile: {self.user_data_dir}")
+            # Check if we have saved authentication state
+            storage_state = None
+            if AUTH_STATE_PATH.exists():
+                print(f"📂 Found saved authentication state at {AUTH_STATE_PATH}")
+                logger.info(f"Loading authentication state from {AUTH_STATE_PATH}")
+                storage_state = str(AUTH_STATE_PATH)
 
-            Path(self.user_data_dir).mkdir(parents=True, exist_ok=True)
+            # Launch browser (not persistent context - use storage state instead)
+            print(f"🚀 Launching Chrome...")
+            logger.info(f"Launching Chrome")
 
-            self.context = await self.playwright.chromium.launch_persistent_context(
-                self.user_data_dir,
+            self.browser = await self.playwright.chromium.launch(
                 headless=self.headless,
             )
 
-            self.browser = self.context.browser
-            self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
-            print("✅ Browser ready (login will persist across runs)")
+            # Create context with storage state if available
+            if storage_state:
+                self.context = await self.browser.new_context(storage_state=storage_state)
+                print("✅ Restored previous authentication state")
+                logger.info("Restored authentication state from storage")
+            else:
+                self.context = await self.browser.new_context()
+                print("🆕 Creating new authentication state (will save after login)")
+                logger.info("Creating new browser context")
+
+            # Create page
+            self.page = await self.context.new_page()
 
         return True
 
@@ -192,6 +208,13 @@ class CodexGitHubMentionsAutomation:
                 timeout=5000,
             )
             print("✅ Already logged in to OpenAI")
+
+            # Save authentication state if not already saved
+            if not AUTH_STATE_PATH.exists():
+                await self.context.storage_state(path=str(AUTH_STATE_PATH))
+                print(f"💾 Authentication state saved to {AUTH_STATE_PATH}")
+                logger.info(f"Saved authentication state to {AUTH_STATE_PATH}")
+
             return True
         except PlaywrightTimeoutError:
             try:
@@ -204,10 +227,17 @@ class CodexGitHubMentionsAutomation:
                 print("   1. Log in to OpenAI in the browser window")
                 print("   2. Wait for login to complete")
                 print("   3. Press Enter here to continue...")
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, input)
-                return await self.ensure_openai_login()
-            except PlaywrightTimeoutError:
+                input()
+
+                # After manual login, save the authentication state immediately
+                result = await self.ensure_openai_login()
+                if result:
+                    await self.context.storage_state(path=str(AUTH_STATE_PATH))
+                    print(f"💾 New authentication state saved to {AUTH_STATE_PATH}")
+                    logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
+                return result
+
+            except Exception:
                 print("⚠️  Could not determine login status")
                 print("   Assuming you're logged in and continuing...")
                 return True
@@ -284,7 +314,9 @@ class CodexGitHubMentionsAutomation:
                 print(f"🐛 Debug: Current URL: {self.page.url}")
                 print(f"🐛 Debug: Page title: {await self.page.title()}")
 
-            locator = self.page.locator(locator_selector)
+            # Find all task links - use more specific selector to exclude navigation
+            # Use /codex/tasks/ to exclude navigation links like Settings, Docs
+            locator = self.page.locator('a[href*="/codex/tasks/"]')
             task_count = await locator.count()
 
             if task_count == 0:
@@ -394,10 +426,8 @@ class CodexGitHubMentionsAutomation:
             # Step 1: Setup browser (connect or launch)
             await self.setup()
 
-            # Step 2: Ensure login is active
-            if not await self.ensure_openai_login():
-                print("❌ Unable to confirm OpenAI login; aborting.")
-                return False
+            # Step 2: Ensure logged in to OpenAI (will save auth state on first login)
+            await self.ensure_openai_login()
 
             # Step 3: Navigate to Codex if not already there
             current_url = self.page.url
@@ -437,13 +467,15 @@ class CodexGitHubMentionsAutomation:
                 except KeyboardInterrupt:
                     print("\n🐛 Debug inspection complete")
 
-            if self.context and not self.cdp_url and not self.debug:
+            if not self.cdp_url and not self.debug:
+                # Close both context and browser (we launched them both)
                 print("\n🔒 Closing browser (launched by automation)")
-                await self.context.close()
-            elif self.browser and not self.cdp_url and not self.debug:
-                await self.browser.close()
+                if self.context:
+                    await self.context.close()
+                if self.browser:
+                    await self.browser.close()
             else:
-                print("\n💡 Browser left open (using existing instance)")
+                print("\n💡 Browser left open (CDP mode or debug mode)")
 
             await self.cleanup()
 

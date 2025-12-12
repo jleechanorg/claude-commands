@@ -208,7 +208,7 @@ class TestTaskFinding:
 
     @pytest.mark.asyncio
     async def test_github_mention_selector_used_when_no_limit(self):
-        """Test that GitHub Mention selector is used when limit is None."""
+        """Test that task selector is used (now always uses /codex/tasks/ to exclude navigation)."""
         automation = CodexGitHubMentionsAutomation(task_limit=None)
         automation.page = AsyncMock()
 
@@ -218,13 +218,13 @@ class TestTaskFinding:
 
         await automation.find_github_mention_tasks()
 
-        # Verify correct selector was used
-        automation.page.locator.assert_called_with('a:has-text("GitHub Mention:")')
+        # Verify correct selector was used - now uses /codex/tasks/ to exclude navigation links
+        automation.page.locator.assert_called_with('a[href*="/codex/tasks/"]')
         print("✅ Correct selector used for None limit")
 
     @pytest.mark.asyncio
     async def test_all_tasks_selector_used_when_limit_set(self):
-        """Test that ALL tasks selector is used when limit is set."""
+        """Test that task selector is used (now always uses /codex/tasks/ to exclude navigation)."""
         automation = CodexGitHubMentionsAutomation(task_limit=50, all_tasks=True)
         automation.page = AsyncMock()
 
@@ -234,8 +234,8 @@ class TestTaskFinding:
 
         await automation.find_github_mention_tasks()
 
-        # Verify correct selector was used
-        automation.page.locator.assert_called_with('a[href*="/codex/"]')
+        # Verify correct selector was used - now uses /codex/tasks/ to exclude navigation links
+        automation.page.locator.assert_called_with('a[href*="/codex/tasks/"]')
         print("✅ Correct selector used for limit=50")
 
 
@@ -269,26 +269,26 @@ class TestNavigationInteraction:
     async def test_click_task_success(self):
         """Test clicking task link successfully."""
         automation = CodexGitHubMentionsAutomation()
-        class _Locator:
-            def __init__(self):
-                self.count = AsyncMock(return_value=1)
-                self.click = AsyncMock()
 
-            @property
-            def first(self):
-                return self
+        # Create mock for the button locator (after .first)
+        mock_button = AsyncMock()
+        mock_button.count = AsyncMock(return_value=1)
+        mock_button.click = AsyncMock()
+
+        # Create mock for the main locator that returns the button when .first is accessed
+        mock_locator = Mock()
+        mock_locator.first = mock_button
 
         automation.page = AsyncMock()
         automation.page.goto = AsyncMock()
-        locator = _Locator()
-        automation.page.locator.return_value = locator
+        automation.page.locator = Mock(return_value=mock_locator)
 
         task = {"href": "/codex/123", "text": "Test Task"}
         result = await automation.update_pr_for_task(task)
 
         assert result is True
         automation.page.goto.assert_called()
-        locator.click.assert_awaited()
+        mock_button.click.assert_awaited()
         print("✅ Task navigation and update simulated successfully")
 
     @pytest.mark.asyncio
