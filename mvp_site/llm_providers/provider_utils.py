@@ -27,7 +27,41 @@ NARRATIVE_RESPONSE_SCHEMA = {
         "planning_block": {
             "type": "object",
             "description": "GM planning with thinking field and dynamic choices (snake_case keys like explore_tavern, attack_goblin, god:option_1)",
-            # additionalProperties:true allows dynamic choice keys
+            "properties": {
+                "thinking": {
+                    "type": "string",
+                    "description": "GM tactical analysis of the current situation and what the player might want to do",
+                },
+                "context": {
+                    "type": "string",
+                    "description": "Current scenario context for choice generation",
+                },
+                "choices": {
+                    "type": "object",
+                    "description": "Player choices with snake_case keys (e.g., explore_tavern, attack_goblin)",
+                    "additionalProperties": {
+                        "type": "object",
+                        "description": "A single player choice option",
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "Short display text for the choice",
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Detailed description of what this choice entails",
+                            },
+                            "risk_level": {
+                                "type": "string",
+                                "description": "Risk assessment: low, medium, high, or unknown",
+                            },
+                        },
+                        "required": ["text", "description"],
+                    },
+                },
+            },
+            "required": ["thinking", "choices"],
+            # additionalProperties:true allows extra fields like context
             "additionalProperties": True,
         },
         "entities_mentioned": {
