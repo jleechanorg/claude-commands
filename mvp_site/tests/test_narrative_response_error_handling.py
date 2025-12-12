@@ -36,7 +36,7 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
                 return ""
         return value
 
-    def _validate_list_field(self, value, field_name):
+    def _validate_list_field(self, value, _field_name):
         """Helper method matching NarrativeResponse._validate_list_field"""
         if value is None:
             return []
@@ -221,6 +221,25 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         assert isinstance(response.entities_mentioned, list)
         # location_confirmed should be converted to string
         assert isinstance(response.location_confirmed, str)
+
+    def test_planning_fallback_does_not_override_god_mode_response(self):
+        """Planning fallback should not replace god mode display text."""
+
+        response_text = json.dumps(
+            {
+                "narrative": "",  # Intentionally blank narrative
+                "god_mode_response": "GM: Show this in UI",
+                "planning_block": {"thinking": "Plan-only content"},
+                "entities_mentioned": ["player"],
+            }
+        )
+
+        combined_text, response = parse_structured_response(response_text)
+
+        # Combined text shown to user should come from god_mode_response
+        assert combined_text == "GM: Show this in UI"
+        # The structured response should still capture planning fallback for narrative
+        assert response.narrative == "Plan-only content"
 
 
 if __name__ == "__main__":

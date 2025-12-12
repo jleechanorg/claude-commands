@@ -926,13 +926,31 @@ def _write_story_entry_to_firestore(
 
     if not chunks:
         # Handle empty text for both user and AI actors
-        if actor == constants.ACTOR_GEMINI and structured_fields:
-            # Create a single chunk with placeholder text for AI responses with empty narrative
-            placeholder_text = "[Internal thoughts and analysis - see planning block]"
+        if actor == constants.ACTOR_GEMINI:
+            god_mode_empty_narrative = bool(
+                structured_fields and structured_fields.get("god_mode_response")
+            )
+            if god_mode_empty_narrative:
+                logging_util.info(
+                    f"🛡️ GOD_MODE_EMPTY_NARRATIVE: Accepting empty narrative for campaign {campaign_id} "
+                    "because god_mode_response is present."
+                )
+                chunks = [b""]
+            else:
+                # AI returned empty narrative - this is an LLM compliance error
+                # Do not mask with placeholder text - surface the error
+                logging_util.error(
+                    f"🚨 EMPTY_NARRATIVE_ERROR: LLM returned empty narrative for campaign {campaign_id}. "
+                    f"This indicates a system prompt compliance issue. structured_fields present: {bool(structured_fields)}"
+                )
+                raise FirestoreWriteError(
+                    f"LLM returned empty narrative for campaign {campaign_id}. "
+                    "The AI must always provide narrative content. Check system prompts for narrative requirements."
+                )
         else:
-            # Create a placeholder for empty user inputs
+            # Create a placeholder for empty user inputs (this is valid - user submitted empty)
             placeholder_text = "[Empty input]"
-        chunks = [placeholder_text.encode("utf-8")]
+            chunks = [placeholder_text.encode("utf-8")]
     base_entry_data: dict[str, Any] = {"actor": actor}
     if mode:
         base_entry_data["mode"] = mode

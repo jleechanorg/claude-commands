@@ -189,11 +189,11 @@ The Codex automation uses CSS selectors to find tasks and buttons. You may need 
 In `codex_github_mentions.py`:
 
 ```python
-# Find tasks with "github mention"
-tasks = await self.page.locator('text=/github.*mention/i').all()
+# Find tasks with "GitHub Mention:" text
+tasks = await self.page.locator('a:has-text("GitHub Mention:")').all()
 
-# Find "Update PR" button
-update_btn = task_element.locator('button:has-text("Update PR")').first
+# Find "Update branch" button
+update_btn = self.page.locator('button:has-text("Update branch")').first
 ```
 
 ### Model Selection (Oracle)

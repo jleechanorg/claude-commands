@@ -65,7 +65,7 @@ def test_query_recent_prs_skips_incomplete_data(monkeypatch):
             "fetch failed",
         ),
         (
-            lambda cmd, timeout: subprocess.TimeoutExpired(cmd, timeout),
+            subprocess.TimeoutExpired,
             "timed out",
         ),
     ],

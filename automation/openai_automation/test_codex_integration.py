@@ -17,19 +17,28 @@ Or with Chrome running:
 """
 
 import asyncio
+import os
+import sys
+
+import aiohttp
 import pytest
 from playwright.async_api import async_playwright
+
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_root)
+from codex_github_mentions import CodexGitHubMentionsAutomation
 
 
 # Helper to check if Chrome is running with CDP
 async def chrome_is_running(port=9222):
     """Check if Chrome is running with remote debugging."""
-    import aiohttp
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f'http://localhost:{port}/json/version', timeout=aiohttp.ClientTimeout(total=1)) as resp:
+            async with session.get(
+                f"http://localhost:{port}/json/version", timeout=aiohttp.ClientTimeout(total=1)
+            ) as resp:
                 return resp.status == 200
-    except:
+    except Exception:
         return False
 
 
@@ -119,7 +128,7 @@ class TestCodexAutomation:
     @requires_chrome
     @pytest.mark.asyncio
     async def test_can_find_github_mention_tasks(self):
-        """Test finding Github Mention tasks on Codex page."""
+        """Test finding GitHub Mention tasks on Codex page."""
         playwright = await async_playwright().start()
 
         try:
@@ -131,11 +140,11 @@ class TestCodexAutomation:
             await page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(5)  # Wait for dynamic content
 
-            # Find Github Mention tasks
-            task_links = await page.locator('a:has-text("Github Mention:")').all()
+            # Find GitHub Mention tasks
+            task_links = await page.locator('a:has-text("GitHub Mention:")').all()
 
             # We may or may not have tasks at any given time
-            print(f"✅ Found {len(task_links)} Github Mention tasks")
+            print(f"✅ Found {len(task_links)} GitHub Mention tasks")
             assert isinstance(task_links, list)
 
         finally:
@@ -157,7 +166,7 @@ class TestCodexAutomation:
             await asyncio.sleep(5)
 
             # Find tasks
-            task_links = await page.locator('a:has-text("Github Mention:")').all()
+            task_links = await page.locator('a:has-text("GitHub Mention:")').all()
 
             if len(task_links) > 0:
                 # Click first task
@@ -177,7 +186,7 @@ class TestCodexAutomation:
                 await page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
             else:
                 print("⚠️  No tasks available to test with")
-                pytest.skip("No Github Mention tasks available")
+                pytest.skip("No GitHub Mention tasks available")
 
         finally:
             await playwright.stop()
@@ -190,11 +199,6 @@ class TestCodexAutomationClass:
     @pytest.mark.asyncio
     async def test_automation_class_can_connect(self):
         """Test that automation class can connect to Chrome."""
-        # Import here to avoid import errors if playwright not installed
-        import sys
-        sys.path.insert(0, 'automation/openai_automation')
-        from codex_github_mentions import CodexGitHubMentionsAutomation
-
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
         try:
@@ -231,7 +235,7 @@ class TestCodexAutomationClass:
     @requires_chrome
     @pytest.mark.asyncio
     async def test_automation_can_find_tasks(self):
-        """Test that automation class can find Github Mention tasks."""
+        """Test that automation class can find GitHub Mention tasks."""
         import sys
         sys.path.insert(0, 'automation/openai_automation')
         from codex_github_mentions import CodexGitHubMentionsAutomation

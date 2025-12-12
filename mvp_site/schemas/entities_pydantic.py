@@ -513,28 +513,6 @@ class SceneManifest(BaseModel):
 
         return "\n".join(prompt_parts)
 
-    def to_json_schema(self) -> dict[str, Any]:
-        """Generate JSON schema for structured output"""
-        return {
-            "type": "object",
-            "properties": {
-                "narrative": {
-                    "type": "string",
-                    "description": "The narrative text for this turn",
-                },
-                "entities_mentioned": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "List of character names mentioned in the narrative",
-                },
-                "visibility_notes": {
-                    "type": "object",
-                    "description": "Notes about hidden/invisible entities",
-                },
-            },
-            "required": ["narrative", "entities_mentioned"],
-        }
-
 
 def create_from_game_state(
     game_state: dict[str, Any], session_number: int, turn_number: int

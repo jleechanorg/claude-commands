@@ -135,7 +135,7 @@ def extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None
 def check_temporal_violation(
     old_time: dict[str, Any] | None, new_time: dict[str, Any] | None
 ) -> bool:
-    """Return True if new_time is backward or equal to old_time."""
+    """Return True if new_time moves backward compared to old_time."""
 
     if not old_time or not new_time:
         return False
@@ -143,7 +143,7 @@ def check_temporal_violation(
     old_tuple = world_time_to_comparable(old_time)
     new_tuple = world_time_to_comparable(new_time)
 
-    return new_tuple <= old_tuple
+    return new_tuple < old_tuple
 
 
 def apply_timestamp_to_world_time(state_changes: dict[str, Any]) -> dict[str, Any]:
