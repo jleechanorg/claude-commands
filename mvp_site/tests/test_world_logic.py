@@ -316,6 +316,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
             "mode": "character",  # Use string directly instead of constants import
         }
 
+    @patch("world_logic.firestore_service.get_campaign_game_state")
     @patch("world_logic.firestore_service.get_campaign_by_id")
     @patch("world_logic.firestore_service.update_campaign_game_state")
     @patch("world_logic.firestore_service.add_story_entry")
@@ -330,6 +331,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         mock_add_story,
         mock_update_state,
         mock_get_campaign,
+        mock_get_campaign_state,
     ):
         """
         🔴 RED PHASE: Test that would FAIL before sequence_id fix
@@ -351,6 +353,9 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         mock_game_state.debug_mode = False
         mock_game_state.to_dict.return_value = {"test": "state"}
         mock_prepare.return_value = (mock_game_state, False, 0)
+
+        # Prevent Firestore client creation
+        mock_get_campaign_state.return_value = {}
 
         # Mock user settings
         mock_settings.return_value = {"debug_mode": False}
@@ -378,6 +383,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
             f"This indicates the sequence_id calculation bug is present!",
         )
 
+    @patch("world_logic.firestore_service.get_campaign_game_state")
     @patch("world_logic.firestore_service.get_campaign_by_id")
     @patch("world_logic.firestore_service.update_campaign_game_state")
     @patch("world_logic.firestore_service.add_story_entry")
@@ -392,6 +398,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         mock_add_story,
         mock_update_state,
         mock_get_campaign,
+        mock_get_campaign_state,
     ):
         """
         🔴 RED PHASE: Test that would FAIL before user_scene_number field addition
@@ -409,6 +416,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         mock_game_state.debug_mode = False
         mock_game_state.to_dict.return_value = {"test": "state"}
         mock_prepare.return_value = (mock_game_state, False, 0)
+        mock_get_campaign_state.return_value = {}
 
         mock_settings.return_value = {"debug_mode": False}
 
@@ -766,7 +774,58 @@ class TestCodeHealthChecks(unittest.TestCase):
 def _calculate_parallel_threshold(serial_time: float, buffer_ratio: float = 0.8) -> float:
     """Helper to keep parallel timing thresholds consistent across tests."""
     return serial_time * buffer_ratio
-class TestAsyncNonBlocking(unittest.TestCase):
+
+
+class _MockHelperMixin:
+    @staticmethod
+    def _build_mock_response():
+        """Create a mock response object with required attributes."""
+        response = MagicMock()
+        response.narrative_text = "Test response"
+        response.get_state_updates.return_value = {}
+        response.structured_response = None
+        response.get_location_confirmed.return_value = None
+        response.dice_rolls = []
+        response.resources = ""
+        return response
+
+    @staticmethod
+    def _build_mock_game_state(*args, **kwargs):
+        """Create a mock game state matching expected interface."""
+        mock_state = MagicMock()
+        mock_state.debug_mode = False
+        mock_state.to_dict.return_value = {"test": "state"}
+        mock_state.world_data = {}
+        mock_state.custom_campaign_state = {}
+        mock_state.combat_state = {"in_combat": False}
+        mock_state.validate_checkpoint_consistency.return_value = []
+        return (mock_state, False, 0)
+
+    def _configure_common_mocks(
+        self,
+        mock_llm_service,
+        mock_firestore,
+        mock_prepare,
+        mock_settings,
+        *,
+        llm_side_effect,
+        campaign_side_effect,
+    ):
+        """Apply shared mock configuration used across tests."""
+        mock_llm_service.continue_story.side_effect = llm_side_effect
+        mock_llm_service.LLMRequestError = Exception  # For exception handling
+
+        mock_firestore.get_campaign_by_id.side_effect = campaign_side_effect
+        mock_firestore.update_campaign_game_state = MagicMock()
+        mock_firestore.add_story_entry = MagicMock()
+        mock_firestore.update_story_context = MagicMock()
+        mock_firestore.get_campaign_game_state = MagicMock(return_value={})
+
+        mock_prepare.side_effect = self._build_mock_game_state
+        mock_settings.return_value = {"debug_mode": False}
+
+
+class TestAsyncNonBlocking(unittest.TestCase, _MockHelperMixin):
     """
     Verify async functions don't block the event loop.
 
@@ -804,14 +863,7 @@ class TestAsyncNonBlocking(unittest.TestCase):
             call_count += 1
             time.sleep(SIMULATED_BLOCKING_TIME)
             # Return a proper mock response object
-            response = MagicMock()
-            response.narrative_text = "Test response"
-            response.get_state_updates.return_value = {}
-            response.structured_response = None
-            response.get_location_confirmed.return_value = None
-            response.dice_rolls = []
-            response.resources = ""
-            return response
+            return self._build_mock_response()
 
         def mock_get_campaign(*args, **kwargs):
             """Mock campaign retrieval with delay."""
@@ -821,29 +873,15 @@ class TestAsyncNonBlocking(unittest.TestCase):
                 [{"actor": "user", "sequence_id": 1, "text": "test"}],
             )
 
-        def mock_prepare_game_state_func(*args, **kwargs):
-            """Mock game state preparation."""
-            mock_state = MagicMock()
-            mock_state.debug_mode = False
-            mock_state.to_dict.return_value = {"test": "state"}
-            mock_state.world_data = {}
-            mock_state.custom_campaign_state = {}
-            mock_state.combat_state = {"in_combat": False}
-            mock_state.validate_checkpoint_consistency.return_value = []
-            return (mock_state, False, 0)
-
         # Configure mocks
-        mock_llm_service.continue_story.side_effect = mock_blocking_call
-        mock_llm_service.LLMRequestError = Exception  # For exception handling
-
-        mock_firestore.get_campaign_by_id.side_effect = mock_get_campaign
-        mock_firestore.update_campaign_game_state = MagicMock()
-        mock_firestore.add_story_entry = MagicMock()
-        mock_firestore.update_story_context = MagicMock()
-        mock_firestore.get_campaign_game_state = MagicMock(return_value={})
-
-        mock_prepare.side_effect = mock_prepare_game_state_func
-        mock_settings.return_value = {"debug_mode": False}
+        self._configure_common_mocks(
+            mock_llm_service,
+            mock_firestore,
+            mock_prepare,
+            mock_settings,
+            llm_side_effect=mock_blocking_call,
+            campaign_side_effect=mock_get_campaign,
+        )
 
         async def run_concurrent_test():
             """Run multiple async operations concurrently and measure timing."""
@@ -890,7 +928,7 @@ class TestAsyncNonBlocking(unittest.TestCase):
         )
 
 
-class TestThreadPoolExecution(unittest.TestCase):
+class TestThreadPoolExecution(unittest.TestCase, _MockHelperMixin):
     """
     Verify blocking I/O runs in thread pool, not main event loop thread.
 
@@ -918,14 +956,7 @@ class TestThreadPoolExecution(unittest.TestCase):
             """Track which thread executes the blocking call."""
             blocking_call_threads.append(threading.current_thread().ident)
             # Return a proper mock response object
-            response = MagicMock()
-            response.narrative_text = "Test response"
-            response.get_state_updates.return_value = {}
-            response.structured_response = None
-            response.get_location_confirmed.return_value = None
-            response.dice_rolls = []
-            response.resources = ""
-            return response
+            return self._build_mock_response()
 
         def mock_get_campaign(*args, **kwargs):
             """Mock that tracks thread."""
@@ -935,28 +966,15 @@ class TestThreadPoolExecution(unittest.TestCase):
                 [{"actor": "user", "sequence_id": 1, "text": "test"}],
             )
 
-        def mock_prepare_game_state_func(*args, **kwargs):
-            mock_state = MagicMock()
-            mock_state.debug_mode = False
-            mock_state.to_dict.return_value = {"test": "state"}
-            mock_state.world_data = {}
-            mock_state.custom_campaign_state = {}
-            mock_state.combat_state = {"in_combat": False}
-            mock_state.validate_checkpoint_consistency.return_value = []
-            return (mock_state, False, 0)
-
         # Configure mocks
-        mock_llm_service.continue_story.side_effect = tracking_call
-        mock_llm_service.LLMRequestError = Exception  # For exception handling
-
-        mock_firestore.get_campaign_by_id.side_effect = mock_get_campaign
-        mock_firestore.update_campaign_game_state = MagicMock()
-        mock_firestore.add_story_entry = MagicMock()
-        mock_firestore.update_story_context = MagicMock()
-        mock_firestore.get_campaign_game_state = MagicMock(return_value={})
-
-        mock_prepare.side_effect = mock_prepare_game_state_func
-        mock_settings.return_value = {"debug_mode": False}
+        self._configure_common_mocks(
+            mock_llm_service,
+            mock_firestore,
+            mock_prepare,
+            mock_settings,
+            llm_side_effect=tracking_call,
+            campaign_side_effect=mock_get_campaign,
+        )
 
         async def run_test():
             await world_logic.process_action_unified(
