@@ -2543,8 +2543,9 @@ MOCK_INITIAL_STORY_NO_COMPANIONS = """{
 def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     """Select the configured LLM provider and model for a user.
 
-    In test/mock mode (MOCK_SERVICES_MODE=true, FORCE_TEST_MODEL=true, or TESTING=true),
+    In test/mock mode (MOCK_SERVICES_MODE=true or FORCE_TEST_MODEL=true),
     always returns default Gemini provider to avoid hitting real OpenRouter/Cerebras APIs.
+    NOTE: TESTING=true is for auth bypass only - it does NOT force Gemini.
     """
     # DIAGNOSTIC: Log entry with all relevant env vars
     logging_util.info(
@@ -2555,10 +2556,11 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     )
 
     # Test mode guard: avoid hitting real providers during CI/test runs
+    # NOTE: TESTING=true is for auth bypass only, not for forcing providers
+    # Use MOCK_SERVICES_MODE or FORCE_TEST_MODEL to force Gemini in CI
     force_test_model = (
         os.environ.get("MOCK_SERVICES_MODE") == "true"
         or os.environ.get("FORCE_TEST_MODEL") == "true"
-        or os.environ.get("TESTING") == "true"
     )
     if force_test_model:
         logging_util.info(
