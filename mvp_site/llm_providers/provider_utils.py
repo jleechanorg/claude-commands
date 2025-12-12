@@ -39,6 +39,7 @@ NARRATIVE_RESPONSE_SCHEMA = {
                 "choices": {
                     "type": "object",
                     "description": "Player choices with snake_case keys (e.g., explore_tavern, attack_goblin)",
+                    "minProperties": 1,  # Require at least one choice
                     "additionalProperties": {
                         "type": "object",
                         "description": "A single player choice option",
