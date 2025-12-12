@@ -23,6 +23,24 @@ STATE_UPDATES_MALFORMED_PATTERN = re.compile(
     r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]"
 )
 
+# Markdown-formatted debug patterns (LLM sometimes outputs these in narrative)
+# Matches blocks like:
+#   ---
+#   **Dice Rolls**: []
+#   ---
+#   **State Updates**:
+#   - player_character_data.inventory...
+#   ---
+MARKDOWN_DEBUG_BLOCK_PATTERN = re.compile(
+    r"---\s*\n\*\*(?:Dice Rolls|State Updates|Planning Block)\*\*:.*?(?=\n---|\Z)",
+    re.DOTALL
+)
+# Also match inline debug_info JSON objects that leak into narrative
+MARKDOWN_DEBUG_INFO_PATTERN = re.compile(
+    r'"debug_info"\s*:\s*\{[^}]*\}',
+    re.DOTALL
+)
+
 # JSON cleanup patterns - same as in narrative_response_schema.py
 NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
 JSON_STRUCTURE_PATTERN = re.compile(r"[{}\[\]]")
@@ -183,7 +201,7 @@ def clean_json_artifacts(text: str) -> str:
 
 def contains_debug_tags(text: str) -> bool:
     """
-    Check if text contains any legacy debug tags.
+    Check if text contains any legacy debug tags or markdown debug content.
 
     Args:
         text: Story text to check
@@ -194,12 +212,14 @@ def contains_debug_tags(text: str) -> bool:
     if not text:
         return False
 
-    # Check for any debug tag patterns
+    # Check for any debug tag patterns (including markdown format)
     patterns = [
         DEBUG_START_PATTERN,
         DEBUG_STATE_PATTERN,
         DEBUG_ROLL_PATTERN,
         STATE_UPDATES_PATTERN,
+        MARKDOWN_DEBUG_BLOCK_PATTERN,
+        MARKDOWN_DEBUG_INFO_PATTERN,
     ]
 
     return any(pattern.search(text) for pattern in patterns)
@@ -218,12 +238,24 @@ def strip_debug_content(text: str) -> str:
     if not text:
         return text
 
-    # Apply all debug stripping patterns
+    # Apply all debug stripping patterns (legacy tags)
     processed = DEBUG_START_PATTERN.sub("", text)
     processed = DEBUG_STATE_PATTERN.sub("", processed)
     processed = DEBUG_ROLL_PATTERN.sub("", processed)
     processed = STATE_UPDATES_PATTERN.sub("", processed)
-    return STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
+    processed = STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
+
+    # Strip markdown-formatted debug blocks
+    processed = MARKDOWN_DEBUG_BLOCK_PATTERN.sub("", processed)
+    processed = MARKDOWN_DEBUG_INFO_PATTERN.sub("", processed)
+
+    # Clean up leftover --- separators (may be left orphaned after stripping)
+    processed = re.sub(r"(?:^|\n)---\s*(?:\n---\s*)*(?:\n|$)", "\n", processed)
+
+    # Clean up excessive newlines left after stripping
+    processed = re.sub(r"\n{3,}", "\n\n", processed)
+
+    return processed.strip()
 
 
 def strip_state_updates_only(text: str) -> str:
