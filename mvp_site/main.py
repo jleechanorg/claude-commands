@@ -1220,6 +1220,7 @@ def create_app() -> Flask:
         Returns:
             JSON-RPC 2.0 response with result or error
         """
+        request_data = None  # Initialize before try block for error handling
         try:
             # Get JSON-RPC request data
             request_data = request.get_json()
