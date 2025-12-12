@@ -51,25 +51,46 @@ def validate_deployment_config() -> bool:
     return dev_mode
 
 
+def _is_local_development() -> bool:
+    """Detect if running in local development environment.
+
+    Returns True if any of these conditions are met:
+    - WORLDAI_DEV_MODE=true is set
+    - TESTING=true is set (running tests locally)
+    - ~/serviceAccountKey.json exists (local service account)
+    """
+    if os.getenv("WORLDAI_DEV_MODE", "").lower() == "true":
+        return True
+    if os.getenv("TESTING", "").lower() == "true":
+        return True
+    # Check for local service account file
+    service_account_path = os.path.expanduser("~/serviceAccountKey.json")
+    if os.path.exists(service_account_path):
+        return True
+    return False
+
+
 def get_clock_skew_seconds() -> int:
     """Get clock skew from environment variable.
 
     Returns:
         Number of seconds the local clock is ahead (positive value to subtract).
+        Defaults to 600 seconds (10 minutes) for local development.
 
     Raises:
         ValueError: If deployment configuration is invalid (see validate_deployment_config).
     """
-    # Validate configuration before returning skew
-    is_dev_mode = validate_deployment_config()
+    # Validate configuration (but don't use its return value for skew decision)
+    validate_deployment_config()
 
+    # Explicit override takes precedence
     skew_env = os.getenv("WORLDAI_CLOCK_SKEW_SECONDS")
     if skew_env:
         return int(skew_env)
 
-    # Default to 10 minutes (600 seconds) if in dev mode
-    # This indicates local development where clock skew is expected
-    if is_dev_mode:
+    # Default to 10 minutes (600 seconds) for local development
+    # This fixes JWT clock skew issues common in local environments
+    if _is_local_development():
         return 600
 
     return 0
