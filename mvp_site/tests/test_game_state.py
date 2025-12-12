@@ -1374,5 +1374,372 @@ class TestMainStateFunctions(unittest.TestCase):
         assert KEY_RESPONSE in response
 
 
+# =============================================================================
+# XP/LEVEL VALIDATION TESTS - TDD Tests for authoritative XP/level enforcement
+# =============================================================================
+# Task: Enforce authoritative XP/level and add validation
+# These tests verify the D&D 5e XP progression table and validation logic.
+# =============================================================================
+
+
+class TestXPLevelHelperFunctions(unittest.TestCase):
+    """
+    TDD tests for XP/level helper functions.
+
+    D&D 5e XP Thresholds (cumulative XP required for each level):
+    Level 1: 0, Level 2: 300, Level 3: 900, Level 4: 2700, Level 5: 6500,
+    Level 6: 14000, Level 7: 23000, Level 8: 34000, Level 9: 48000, Level 10: 64000,
+    Level 11: 85000, Level 12: 100000, Level 13: 120000, Level 14: 140000,
+    Level 15: 165000, Level 16: 195000, Level 17: 225000, Level 18: 265000,
+    Level 19: 305000, Level 20: 355000
+    """
+
+    def test_xp_thresholds_constant_exists(self):
+        """Test that XP_THRESHOLDS constant is defined in game_state module."""
+        self.assertTrue(
+            hasattr(game_state_module, "XP_THRESHOLDS"),
+            "XP_THRESHOLDS constant should be defined in game_state module"
+        )
+
+    def test_xp_thresholds_has_20_levels(self):
+        """Test that XP_THRESHOLDS has 20 entries for levels 1-20."""
+        thresholds = game_state_module.XP_THRESHOLDS
+        self.assertEqual(
+            len(thresholds), 20,
+            "XP_THRESHOLDS should have 20 entries for levels 1-20"
+        )
+
+    def test_xp_thresholds_correct_values(self):
+        """Test that XP_THRESHOLDS matches D&D 5e values."""
+        expected = [
+            0,       # Level 1
+            300,     # Level 2
+            900,     # Level 3
+            2700,    # Level 4
+            6500,    # Level 5
+            14000,   # Level 6
+            23000,   # Level 7
+            34000,   # Level 8
+            48000,   # Level 9
+            64000,   # Level 10
+            85000,   # Level 11
+            100000,  # Level 12
+            120000,  # Level 13
+            140000,  # Level 14
+            165000,  # Level 15
+            195000,  # Level 16
+            225000,  # Level 17
+            265000,  # Level 18
+            305000,  # Level 19
+            355000,  # Level 20
+        ]
+        thresholds = game_state_module.XP_THRESHOLDS
+        self.assertEqual(thresholds, expected, "XP_THRESHOLDS should match D&D 5e values")
+
+    def test_level_from_xp_function_exists(self):
+        """Test that level_from_xp function is defined."""
+        self.assertTrue(
+            hasattr(game_state_module, "level_from_xp"),
+            "level_from_xp function should be defined in game_state module"
+        )
+
+    def test_level_from_xp_zero(self):
+        """Test level_from_xp returns 1 for 0 XP."""
+        level = game_state_module.level_from_xp(0)
+        self.assertEqual(level, 1, "0 XP should be Level 1")
+
+    def test_level_from_xp_level_1_boundary(self):
+        """Test level_from_xp for XP values in Level 1 range (0-299)."""
+        self.assertEqual(game_state_module.level_from_xp(0), 1)
+        self.assertEqual(game_state_module.level_from_xp(150), 1)
+        self.assertEqual(game_state_module.level_from_xp(299), 1)
+
+    def test_level_from_xp_level_2_boundary(self):
+        """Test level_from_xp for XP values at Level 2 boundary (300-899)."""
+        self.assertEqual(game_state_module.level_from_xp(300), 2, "300 XP should be Level 2")
+        self.assertEqual(game_state_module.level_from_xp(500), 2)
+        self.assertEqual(game_state_module.level_from_xp(899), 2)
+
+    def test_level_from_xp_level_3_boundary(self):
+        """Test level_from_xp for XP values at Level 3 boundary (900-2699)."""
+        self.assertEqual(game_state_module.level_from_xp(900), 3, "900 XP should be Level 3")
+        self.assertEqual(game_state_module.level_from_xp(2699), 3)
+
+    def test_level_from_xp_level_4_boundary(self):
+        """Test level_from_xp for XP values at Level 4 boundary (2700-6499)."""
+        self.assertEqual(game_state_module.level_from_xp(2700), 4, "2700 XP should be Level 4")
+        self.assertEqual(game_state_module.level_from_xp(6499), 4)
+
+    def test_level_from_xp_level_5_boundary(self):
+        """Test level_from_xp for XP values at Level 5 boundary."""
+        self.assertEqual(game_state_module.level_from_xp(6500), 5, "6500 XP should be Level 5")
+
+    def test_level_from_xp_high_levels(self):
+        """Test level_from_xp for high level boundaries."""
+        self.assertEqual(game_state_module.level_from_xp(85000), 11)
+        self.assertEqual(game_state_module.level_from_xp(165000), 15)
+        self.assertEqual(game_state_module.level_from_xp(305000), 19)
+        self.assertEqual(game_state_module.level_from_xp(355000), 20)
+
+    def test_level_from_xp_caps_at_20(self):
+        """Test level_from_xp caps at level 20 even with massive XP."""
+        self.assertEqual(game_state_module.level_from_xp(500000), 20, "Should cap at Level 20")
+        self.assertEqual(game_state_module.level_from_xp(1000000), 20)
+
+    def test_level_from_xp_negative_returns_level_1(self):
+        """Test level_from_xp returns Level 1 for negative XP (clamped)."""
+        self.assertEqual(game_state_module.level_from_xp(-100), 1, "Negative XP should return Level 1")
+
+    def test_xp_needed_for_level_function_exists(self):
+        """Test that xp_needed_for_level function is defined."""
+        self.assertTrue(
+            hasattr(game_state_module, "xp_needed_for_level"),
+            "xp_needed_for_level function should be defined in game_state module"
+        )
+
+    def test_xp_needed_for_level_values(self):
+        """Test xp_needed_for_level returns correct thresholds."""
+        self.assertEqual(game_state_module.xp_needed_for_level(1), 0)
+        self.assertEqual(game_state_module.xp_needed_for_level(2), 300)
+        self.assertEqual(game_state_module.xp_needed_for_level(3), 900)
+        self.assertEqual(game_state_module.xp_needed_for_level(5), 6500)
+        self.assertEqual(game_state_module.xp_needed_for_level(10), 64000)
+        self.assertEqual(game_state_module.xp_needed_for_level(20), 355000)
+
+    def test_xp_needed_for_level_clamps_bounds(self):
+        """Test xp_needed_for_level clamps invalid levels."""
+        self.assertEqual(game_state_module.xp_needed_for_level(0), 0, "Level 0 should return Level 1 threshold")
+        self.assertEqual(game_state_module.xp_needed_for_level(-1), 0, "Negative level should return Level 1 threshold")
+        self.assertEqual(game_state_module.xp_needed_for_level(21), 355000, "Level 21 should return Level 20 threshold")
+        self.assertEqual(game_state_module.xp_needed_for_level(100), 355000, "Level 100 should return Level 20 threshold")
+
+    def test_xp_to_next_level_function_exists(self):
+        """Test that xp_to_next_level function is defined."""
+        self.assertTrue(
+            hasattr(game_state_module, "xp_to_next_level"),
+            "xp_to_next_level function should be defined in game_state module"
+        )
+
+    def test_xp_to_next_level_at_level_start(self):
+        """Test xp_to_next_level when XP is exactly at level boundary."""
+        # At Level 1 start (0 XP), need 300 XP to reach Level 2
+        self.assertEqual(game_state_module.xp_to_next_level(0), 300)
+        # At Level 2 start (300 XP), need 600 XP to reach Level 3
+        self.assertEqual(game_state_module.xp_to_next_level(300), 600)
+        # At Level 3 start (900 XP), need 1800 XP to reach Level 4
+        self.assertEqual(game_state_module.xp_to_next_level(900), 1800)
+
+    def test_xp_to_next_level_mid_level(self):
+        """Test xp_to_next_level when XP is in middle of a level."""
+        # At 150 XP (Level 1), need 150 XP to reach Level 2
+        self.assertEqual(game_state_module.xp_to_next_level(150), 150)
+        # At 500 XP (Level 2), need 400 XP to reach Level 3
+        self.assertEqual(game_state_module.xp_to_next_level(500), 400)
+
+    def test_xp_to_next_level_at_level_20(self):
+        """Test xp_to_next_level returns 0 at Level 20 (max level)."""
+        self.assertEqual(game_state_module.xp_to_next_level(355000), 0, "Level 20 should need 0 XP to next")
+        self.assertEqual(game_state_module.xp_to_next_level(500000), 0, "Beyond Level 20 should need 0 XP")
+
+
+class TestXPLevelValidation(unittest.TestCase):
+    """
+    TDD tests for XP/level validation in GameState.
+
+    Tests verify:
+    - Level is auto-corrected when it doesn't match XP
+    - Strict mode raises errors on mismatch
+    - Invalid XP/level values are clamped
+    """
+
+    def test_validate_xp_level_function_exists(self):
+        """Test that validate_xp_level method exists on GameState."""
+        gs = GameState()
+        self.assertTrue(
+            hasattr(gs, "validate_xp_level"),
+            "GameState should have validate_xp_level method"
+        )
+
+    def test_validate_xp_level_correct_data_passes(self):
+        """Test validation passes when XP and level match."""
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": 900},
+                "level": 3
+            }
+        )
+        # Should not raise, should return True or the corrected data
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("valid", True), "Valid XP/level should pass validation")
+
+    def test_validate_xp_level_mismatch_autocorrects(self):
+        """Test validation auto-corrects level when XP doesn't match."""
+        # Level 1 with 5000 XP should be corrected to Level 4 (2700-6499 range)
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": 5000},
+                "level": 1  # Wrong! Should be Level 4
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("corrected", False), "Should flag as corrected")
+        self.assertEqual(result.get("expected_level"), 4, "Expected level should be 4")
+        self.assertEqual(result.get("provided_level"), 1, "Provided level should be recorded as 1")
+
+    def test_validate_xp_level_strict_mode_raises(self):
+        """Test strict mode raises error on XP/level mismatch."""
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": 5000},
+                "level": 1  # Wrong!
+            }
+        )
+        with self.assertRaises(ValueError) as context:
+            gs.validate_xp_level(strict=True)
+        self.assertIn("mismatch", str(context.exception).lower())
+
+    def test_validate_xp_level_negative_xp_clamped(self):
+        """Test negative XP is clamped to 0."""
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": -100},
+                "level": 1
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertEqual(result.get("clamped_xp"), 0, "Negative XP should be clamped to 0")
+
+    def test_validate_xp_level_zero_level_clamped(self):
+        """Test level 0 is clamped to 1."""
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": 0},
+                "level": 0  # Invalid, should be 1
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertEqual(result.get("clamped_level"), 1, "Level 0 should be clamped to 1")
+
+    def test_validate_xp_level_level_over_20_clamped(self):
+        """Test level over 20 is clamped to 20."""
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": 355000},
+                "level": 25  # Invalid, should be 20
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertEqual(result.get("clamped_level"), 20, "Level over 20 should be clamped to 20")
+
+    def test_validate_xp_level_missing_xp_uses_default(self):
+        """Test validation handles missing XP gracefully."""
+        gs = GameState(
+            player_character_data={
+                "level": 1
+                # No experience field
+            }
+        )
+        result = gs.validate_xp_level()
+        # Should not crash, should assume XP=0 for Level 1
+        self.assertTrue(result.get("valid", True))
+
+    def test_validate_xp_level_missing_level_uses_xp(self):
+        """Test validation handles missing level by computing from XP."""
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": 2700}
+                # No level field
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertEqual(result.get("expected_level"), 4, "Should compute level 4 from 2700 XP")
+
+
+class TestTimeMonotonicity(unittest.TestCase):
+    """
+    TDD tests for time monotonicity validation.
+
+    Tests verify:
+    - Time cannot go backwards (warn or reject)
+    - Default behavior: warn and keep old time
+    - Strict mode: reject backwards time
+    """
+
+    def test_validate_time_monotonicity_function_exists(self):
+        """Test that validate_time_monotonicity method exists on GameState."""
+        gs = GameState()
+        self.assertTrue(
+            hasattr(gs, "validate_time_monotonicity"),
+            "GameState should have validate_time_monotonicity method"
+        )
+
+    def test_time_monotonicity_forward_time_passes(self):
+        """Test that forward time progression passes validation."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 10, "minute": 0}
+            }
+        )
+        new_time = {"hour": 12, "minute": 0}  # Later time
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "Forward time should pass")
+
+    def test_time_monotonicity_backwards_time_warns(self):
+        """Test that backwards time triggers warning in default mode."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 14, "minute": 0}
+            }
+        )
+        new_time = {"hour": 10, "minute": 0}  # Earlier time (regression!)
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("warning", False), "Backwards time should trigger warning")
+        self.assertIn("regression", result.get("message", "").lower())
+
+    def test_time_monotonicity_backwards_time_strict_raises(self):
+        """Test that backwards time raises error in strict mode."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 14, "minute": 0}
+            }
+        )
+        new_time = {"hour": 10, "minute": 0}  # Earlier time
+        with self.assertRaises(ValueError) as context:
+            gs.validate_time_monotonicity(new_time, strict=True)
+        self.assertIn("backwards", str(context.exception).lower())
+
+    def test_time_monotonicity_same_time_passes(self):
+        """Test that same time passes validation (no progression, but not regression)."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 10, "minute": 30}
+            }
+        )
+        new_time = {"hour": 10, "minute": 30}  # Same time
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "Same time should pass")
+
+    def test_time_monotonicity_day_boundary_handles_correctly(self):
+        """Test time progression across day boundary (23:00 -> 01:00 next day)."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 23, "minute": 0, "day": 1}
+            }
+        )
+        # Next day, earlier hour but later overall
+        new_time = {"hour": 1, "minute": 0, "day": 2}
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "Day boundary crossing should be valid")
+
+    def test_time_monotonicity_missing_old_time_passes(self):
+        """Test validation passes when there's no previous time."""
+        gs = GameState(
+            world_data={}  # No world_time
+        )
+        new_time = {"hour": 10, "minute": 0}
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "No previous time should pass")
+
+
 if __name__ == "__main__":
     unittest.main()

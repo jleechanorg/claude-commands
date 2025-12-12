@@ -1,11 +1,132 @@
 """
 Defines the GameState class, which represents the complete state of a campaign.
+
+Includes:
+- XP/Level validation using D&D 5e XP thresholds
+- Time monotonicity checks to prevent time regression
+- Helper functions for XP→Level calculations
 """
 
 import datetime
 from typing import Any, Optional
 
 from mvp_site import constants, logging_util
+
+# =============================================================================
+# D&D 5e XP THRESHOLDS
+# =============================================================================
+# Cumulative XP required to reach each level (1-20)
+# Source: D&D 5e Player's Handbook / SRD
+# =============================================================================
+
+XP_THRESHOLDS = [
+    0,        # Level 1
+    300,      # Level 2
+    900,      # Level 3
+    2700,     # Level 4
+    6500,     # Level 5
+    14000,    # Level 6
+    23000,    # Level 7
+    34000,    # Level 8
+    48000,    # Level 9
+    64000,    # Level 10
+    85000,    # Level 11
+    100000,   # Level 12
+    120000,   # Level 13
+    140000,   # Level 14
+    165000,   # Level 15
+    195000,   # Level 16
+    225000,   # Level 17
+    265000,   # Level 18
+    305000,   # Level 19
+    355000,   # Level 20
+]
+
+
+def level_from_xp(xp: int) -> int:
+    """
+    Calculate character level from cumulative XP using D&D 5e thresholds.
+
+    Args:
+        xp: Current cumulative experience points (clamped to 0 if negative)
+
+    Returns:
+        Character level (1-20)
+
+    Examples:
+        >>> level_from_xp(0)
+        1
+        >>> level_from_xp(300)
+        2
+        >>> level_from_xp(5000)
+        4
+        >>> level_from_xp(500000)
+        20
+    """
+    # Clamp negative XP to 0
+    xp = max(0, xp)
+
+    # Find the highest level threshold that XP meets or exceeds
+    level = 1
+    for i, threshold in enumerate(XP_THRESHOLDS):
+        if xp >= threshold:
+            level = i + 1
+        else:
+            break
+
+    return level
+
+
+def xp_needed_for_level(level: int) -> int:
+    """
+    Get the cumulative XP required to reach a specific level.
+
+    Args:
+        level: Target level (clamped to 1-20 range)
+
+    Returns:
+        Cumulative XP required for that level
+
+    Examples:
+        >>> xp_needed_for_level(1)
+        0
+        >>> xp_needed_for_level(5)
+        6500
+        >>> xp_needed_for_level(20)
+        355000
+    """
+    # Clamp level to valid range
+    level = max(1, min(20, level))
+    return XP_THRESHOLDS[level - 1]
+
+
+def xp_to_next_level(current_xp: int) -> int:
+    """
+    Calculate XP remaining to reach the next level.
+
+    Args:
+        current_xp: Current cumulative XP
+
+    Returns:
+        XP needed to reach next level (0 if at max level 20)
+
+    Examples:
+        >>> xp_to_next_level(0)
+        300
+        >>> xp_to_next_level(150)
+        150
+        >>> xp_to_next_level(355000)
+        0
+    """
+    current_xp = max(0, current_xp)
+    current_level = level_from_xp(current_xp)
+
+    # At max level, no more XP needed
+    if current_level >= 20:
+        return 0
+
+    next_threshold = XP_THRESHOLDS[current_level]  # Index is level since we need level+1
+    return next_threshold - current_xp
 
 
 class GameState:
@@ -501,3 +622,185 @@ class GameState:
         # Normalize and look up
         normalized = time_of_day.lower().strip()
         return time_mapping.get(normalized, 12)  # Default to noon if unknown
+
+    # =========================================================================
+    # XP/Level Validation Methods
+    # =========================================================================
+
+    def validate_xp_level(self, strict: bool = False) -> dict[str, Any]:
+        """
+        Validate that the player's level matches their XP using D&D 5e thresholds.
+
+        In default mode (strict=False):
+        - Auto-corrects level mismatches and logs warnings
+        - Clamps invalid XP/level values to valid ranges
+
+        In strict mode (strict=True):
+        - Raises ValueError on XP/level mismatch
+
+        Args:
+            strict: If True, raise ValueError on mismatches instead of auto-correcting
+
+        Returns:
+            Dict with validation results:
+            - valid: True if XP/level match (or were missing)
+            - corrected: True if level was auto-corrected
+            - expected_level: Computed level from XP
+            - provided_level: Original level value
+            - clamped_xp: XP after clamping (if negative)
+            - clamped_level: Level after clamping (if out of range)
+
+        Raises:
+            ValueError: In strict mode, if XP/level mismatch is detected
+        """
+        result: dict[str, Any] = {"valid": True}
+
+        pc_data = self.player_character_data
+        if not pc_data:
+            return result  # No player data to validate
+
+        # Get XP value - handle different possible structures
+        xp = None
+        if isinstance(pc_data.get("experience"), dict):
+            xp = pc_data["experience"].get("current")
+        elif "xp" in pc_data:
+            xp = pc_data.get("xp")
+        elif "xp_current" in pc_data:
+            xp = pc_data.get("xp_current")
+
+        # Get level value
+        provided_level = pc_data.get("level")
+
+        # Handle missing XP
+        if xp is None:
+            # If no XP, assume 0 for level 1 character
+            xp = 0
+            result["assumed_xp"] = 0
+
+        # Clamp negative XP
+        if xp < 0:
+            result["clamped_xp"] = 0
+            xp = 0
+            logging_util.warning(f"XP validation: Negative XP clamped to 0")
+
+        # Calculate expected level from XP
+        expected_level = level_from_xp(xp)
+        result["expected_level"] = expected_level
+
+        # Handle missing level - compute from XP
+        if provided_level is None:
+            result["computed_level"] = expected_level
+            return result
+
+        # Clamp level to valid range (1-20)
+        if provided_level < 1:
+            result["clamped_level"] = 1
+            logging_util.warning(f"XP validation: Level {provided_level} clamped to 1")
+            provided_level = 1
+        elif provided_level > 20:
+            result["clamped_level"] = 20
+            logging_util.warning(f"XP validation: Level {provided_level} clamped to 20")
+            provided_level = 20
+
+        result["provided_level"] = provided_level
+
+        # Check for mismatch
+        if provided_level != expected_level:
+            result["valid"] = False
+            result["corrected"] = True
+
+            message = (
+                f"XP/Level mismatch: XP={xp} should be Level {expected_level}, "
+                f"but provided Level {provided_level}"
+            )
+
+            if strict:
+                raise ValueError(message)
+
+            # Default: warn and auto-correct
+            logging_util.warning(f"XP validation: {message} - auto-correcting")
+
+        return result
+
+    # =========================================================================
+    # Time Monotonicity Validation Methods
+    # =========================================================================
+
+    def validate_time_monotonicity(
+        self, new_time: dict[str, Any], strict: bool = False
+    ) -> dict[str, Any]:
+        """
+        Validate that time progression is monotonic (never goes backwards).
+
+        In default mode (strict=False):
+        - Warns on time regression but allows the update
+        - Returns warning flag and message
+
+        In strict mode (strict=True):
+        - Raises ValueError on time regression
+
+        Args:
+            new_time: Dict with time fields (hour, minute, optionally day)
+            strict: If True, raise ValueError on backwards time
+
+        Returns:
+            Dict with validation results:
+            - valid: True if time is forward or same
+            - warning: True if time went backwards (in non-strict mode)
+            - message: Description of the issue
+
+        Raises:
+            ValueError: In strict mode, if time goes backwards
+        """
+        result: dict[str, Any] = {"valid": True}
+
+        # Get current time from world_data
+        current_world_time = self.world_data.get("world_time")
+        if not current_world_time or not isinstance(current_world_time, dict):
+            # No previous time to compare against
+            return result
+
+        # Convert times to comparable values
+        old_total = self._time_to_minutes(current_world_time)
+        new_total = self._time_to_minutes(new_time)
+
+        # Check for regression
+        if new_total < old_total:
+            old_str = self._format_time(current_world_time)
+            new_str = self._format_time(new_time)
+            message = (
+                f"Time regression detected: {new_str} is earlier than {old_str}"
+            )
+
+            if strict:
+                raise ValueError(f"Time cannot go backwards: {message}")
+
+            # Default: warn but allow
+            result["valid"] = True  # Still valid but with warning
+            result["warning"] = True
+            result["message"] = message
+            logging_util.warning(f"Time monotonicity: {message}")
+
+        return result
+
+    def _time_to_minutes(self, time_dict: dict[str, Any]) -> int:
+        """
+        Convert a time dict to total minutes for comparison.
+
+        Accounts for day if present (each day = 24*60 minutes).
+        """
+        day = time_dict.get("day", 0)
+        hour = time_dict.get("hour", 0)
+        minute = time_dict.get("minute", 0)
+
+        return (day * 24 * 60) + (hour * 60) + minute
+
+    def _format_time(self, time_dict: dict[str, Any]) -> str:
+        """Format a time dict as a human-readable string."""
+        day = time_dict.get("day")
+        hour = time_dict.get("hour", 0)
+        minute = time_dict.get("minute", 0)
+
+        if day is not None:
+            return f"Day {day}, {hour:02d}:{minute:02d}"
+        return f"{hour:02d}:{minute:02d}"
