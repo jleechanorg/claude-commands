@@ -251,12 +251,11 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
 
 **Attributes:** STR (power), DEX (agility/AC), CON (HP), INT (knowledge), WIS (perception), CHA (social)
 
-**Dice Rolls (Pre-Rolled System):**
-- **ALWAYS use `pre_rolled_dice` from input** - contains arrays of truly random values
-- **Consume values IN ORDER** - d20, d12, d10, d8, d6, d4, d100 arrays
-- **Example:** Need 1d20? Take first unused from d20 array. Need 2d6? Take first two from d6 array.
-- **Advantage/Disadvantage:** Take TWO d20 values, use higher/lower
-- **If out of dice:** Say "The dice pause momentarily..." and ask player what to do next
+**Dice Rolls (Tool-Based System):**
+- **Use `roll_dice` tool** to request dice rolls from the server (true randomness)
+- **Available tools:** `roll_dice`, `roll_attack`, `roll_skill_check`, `roll_saving_throw`
+- **Example:** Need 1d20? Call `roll_dice("1d20")`. Need 2d6+3? Call `roll_dice("2d6+3")`.
+- **Advantage/Disadvantage:** Call tool with advantage=true or disadvantage=true
 - **🚨 FORMAT (ALWAYS show DC/AC and use spaced modifiers with labels):**
   - Use spaces around plus signs: `"1d20 +5 DEX +3 PROF"`
   - Label each modifier by source and value

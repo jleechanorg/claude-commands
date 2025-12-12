@@ -19,6 +19,8 @@ ENTITY_STRING_PATTERN = re.compile(r'"([^"]+)"')
 STATE_UPDATES_PATTERN = re.compile(r'"state_updates"\s*:\s*(\{.*?\})', re.DOTALL)
 DEBUG_INFO_PATTERN = re.compile(r'"debug_info"\s*:\s*(\{.*?\})', re.DOTALL)
 TEXT_CONTENT_PATTERN = re.compile(r':\s*"([^"]+)')
+# Patterns for session_header and planning_block (bead 21f fix)
+PLANNING_BLOCK_PATTERN = re.compile(r'"planning_block"\s*:\s*(\{.*?\})', re.DOTALL)
 
 
 def count_unmatched_quotes(text: str) -> int:
@@ -541,6 +543,22 @@ class RobustJSONParser:
             except json.JSONDecodeError:
                 # If the object is malformed, just set empty dict
                 result["debug_info"] = {}
+
+        # Extract session_header field (bead 21f fix - Cerebras tool-loop missing headers)
+        session_header = extract_field_value(text, constants.FIELD_SESSION_HEADER)
+        if session_header is not None:
+            result[constants.FIELD_SESSION_HEADER] = session_header
+
+        # Extract planning_block object (bead 21f fix - Cerebras tool-loop missing planning block)
+        planning_block_match = PLANNING_BLOCK_PATTERN.search(text)
+        if planning_block_match:
+            try:
+                planning_block_str = planning_block_match.group(1)
+                planning_block = json.loads(planning_block_str)
+                result[constants.FIELD_PLANNING_BLOCK] = planning_block
+            except json.JSONDecodeError:
+                # If the object is malformed, just set empty dict
+                result[constants.FIELD_PLANNING_BLOCK] = {}
 
         return result if result else None
 

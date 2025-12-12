@@ -147,25 +147,11 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         with open(instruction_path) as f:
             instruction_content = f.read()
 
-        # Check for hybrid dice roll section
+        # Check for dice roll section (tool-based architecture)
         self.assertIn(
             "Dice Roll",
             instruction_content,
             "FAIL: Instruction file missing Dice Roll section"
-        )
-
-        # Check for pre-rolled dice strategy (new architecture Dec 2024)
-        self.assertIn(
-            "pre_rolled_dice",
-            instruction_content,
-            "FAIL: Instruction file should mention pre_rolled_dice system"
-        )
-
-        # Check for usage instructions
-        self.assertIn(
-            "IN ORDER",
-            instruction_content,
-            "FAIL: Instruction file should mention using dice values IN ORDER"
         )
 
     def test_dice_tool_schemas_defined(self):

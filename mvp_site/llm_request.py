@@ -77,10 +77,6 @@ class LLMRequest:
     use_default_world: bool = False
     world_data: dict[str, Any] = field(default_factory=dict)
 
-    # Pre-rolled dice for single-inference architecture
-    # 100 d20 rolls generated fresh before each LLM call
-    pre_rolled_dice: dict[str, list[int]] = field(default_factory=dict)
-
     def __post_init__(self):
         """Validate LLMRequest fields after initialization."""
         self._validate_required_fields()
@@ -212,10 +208,6 @@ class LLMRequest:
                 json_data["character_prompt"] = self.character_prompt
                 json_data["generate_companions"] = self.generate_companions
                 json_data["world_data"] = self.world_data
-
-            # Add pre-rolled dice if present
-            if self.pre_rolled_dice:
-                json_data["pre_rolled_dice"] = self.pre_rolled_dice
 
             # Validate payload size
             self._validate_payload_size(json_data)
