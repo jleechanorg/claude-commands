@@ -12,7 +12,7 @@ import sys
 import threading
 import time
 import unittest
-from contextlib import ExitStack
+# ExitStack removed - using decorator-based patching instead
 from unittest.mock import MagicMock, Mock, patch
 
 from mvp_site import world_logic
@@ -778,7 +778,13 @@ class TestAsyncNonBlocking(unittest.TestCase):
     These tests prevent regression by verifying concurrent operations execute in parallel.
     """
 
-    def test_concurrent_operations_execute_in_parallel(self):
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.firestore_service")
+    @patch("mvp_site.world_logic.llm_service")
+    def test_concurrent_operations_execute_in_parallel(
+        self, mock_llm_service, mock_firestore, mock_prepare, mock_settings
+    ):
         """
         CRITICAL: Concurrent coroutines must not serialize.
 
@@ -797,11 +803,15 @@ class TestAsyncNonBlocking(unittest.TestCase):
             nonlocal call_count
             call_count += 1
             time.sleep(SIMULATED_BLOCKING_TIME)
-            return MagicMock(
-                narrative_text="Test response",
-                get_state_updates=dict,
-                structured_response=None,
-            )
+            # Return a proper mock response object
+            response = MagicMock()
+            response.narrative_text = "Test response"
+            response.get_state_updates.return_value = {}
+            response.structured_response = None
+            response.get_location_confirmed.return_value = None
+            response.dice_rolls = []
+            response.resources = ""
+            return response
 
         def mock_get_campaign(*args, **kwargs):
             """Mock campaign retrieval with delay."""
@@ -811,56 +821,50 @@ class TestAsyncNonBlocking(unittest.TestCase):
                 [{"actor": "user", "sequence_id": 1, "text": "test"}],
             )
 
-        def mock_prepare_game_state(*args, **kwargs):
+        def mock_prepare_game_state_func(*args, **kwargs):
             """Mock game state preparation."""
             mock_state = MagicMock()
             mock_state.debug_mode = False
             mock_state.to_dict.return_value = {"test": "state"}
+            mock_state.world_data = {}
+            mock_state.custom_campaign_state = {}
+            mock_state.combat_state = {"in_combat": False}
+            mock_state.validate_checkpoint_consistency.return_value = []
             return (mock_state, False, 0)
+
+        # Configure mocks
+        mock_llm_service.continue_story.side_effect = mock_blocking_call
+        mock_llm_service.LLMRequestError = Exception  # For exception handling
+
+        mock_firestore.get_campaign_by_id.side_effect = mock_get_campaign
+        mock_firestore.update_campaign_game_state = MagicMock()
+        mock_firestore.add_story_entry = MagicMock()
+        mock_firestore.update_story_context = MagicMock()
+        mock_firestore.get_campaign_game_state = MagicMock(return_value={})
+
+        mock_prepare.side_effect = mock_prepare_game_state_func
+        mock_settings.return_value = {"debug_mode": False}
 
         async def run_concurrent_test():
             """Run multiple async operations concurrently and measure timing."""
-            with ExitStack() as stack:
-                mock_llm = stack.enter_context(
-                    patch.object(world_logic, "llm_service", MagicMock())
-                )
-                mock_llm.continue_story = mock_blocking_call
+            request_data = {
+                "user_id": "test-user",
+                "campaign_id": "test-campaign",
+                "user_input": "test action",
+                "mode": "character",
+            }
 
-                mock_firestore = stack.enter_context(
-                    patch.object(world_logic, "firestore_service", MagicMock())
-                )
-                mock_firestore.get_campaign_by_id = mock_get_campaign
-                mock_firestore.update_campaign_game_state = MagicMock()
-                mock_firestore.add_story_entry = MagicMock()
-                mock_firestore.update_story_context = MagicMock()
+            start = time.time()
 
-                stack.enter_context(
-                    patch.object(world_logic, "_prepare_game_state", mock_prepare_game_state)
-                )
-                stack.enter_context(
-                    patch.object(
-                        world_logic, "get_user_settings", lambda x: {"debug_mode": False}
-                    )
-                )
+            # Run concurrent operations
+            tasks = [
+                world_logic.process_action_unified(request_data.copy())
+                for _ in range(NUM_CONCURRENT)
+            ]
+            await asyncio.gather(*tasks, return_exceptions=True)
 
-                request_data = {
-                    "user_id": "test-user",
-                    "campaign_id": "test-campaign",
-                    "user_input": "test action",
-                    "mode": "character",
-                }
-
-                start = time.time()
-
-                # Run concurrent operations
-                tasks = [
-                    world_logic.process_action_unified(request_data.copy())
-                    for _ in range(NUM_CONCURRENT)
-                ]
-                await asyncio.gather(*tasks, return_exceptions=True)
-
-                elapsed = time.time() - start
-                return elapsed
+            elapsed = time.time() - start
+            return elapsed
 
         # Run the test
         wall_time = asyncio.run(run_concurrent_test())
@@ -894,7 +898,13 @@ class TestThreadPoolExecution(unittest.TestCase):
     This test verifies blocking calls execute in worker threads.
     """
 
-    def test_blocking_calls_execute_in_worker_threads(self):
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.firestore_service")
+    @patch("mvp_site.world_logic.llm_service")
+    def test_blocking_calls_execute_in_worker_threads(
+        self, mock_llm_service, mock_firestore, mock_prepare, mock_settings
+    ):
         """
         Blocking calls wrapped in asyncio.to_thread() should NOT run in main thread.
 
@@ -907,11 +917,15 @@ class TestThreadPoolExecution(unittest.TestCase):
         def tracking_call(*args, **kwargs):
             """Track which thread executes the blocking call."""
             blocking_call_threads.append(threading.current_thread().ident)
-            return MagicMock(
-                narrative_text="Test response",
-                get_state_updates=dict,
-                structured_response=None,
-            )
+            # Return a proper mock response object
+            response = MagicMock()
+            response.narrative_text = "Test response"
+            response.get_state_updates.return_value = {}
+            response.structured_response = None
+            response.get_location_confirmed.return_value = None
+            response.dice_rolls = []
+            response.resources = ""
+            return response
 
         def mock_get_campaign(*args, **kwargs):
             """Mock that tracks thread."""
@@ -921,44 +935,38 @@ class TestThreadPoolExecution(unittest.TestCase):
                 [{"actor": "user", "sequence_id": 1, "text": "test"}],
             )
 
-        def mock_prepare_game_state(*args, **kwargs):
+        def mock_prepare_game_state_func(*args, **kwargs):
             mock_state = MagicMock()
             mock_state.debug_mode = False
             mock_state.to_dict.return_value = {"test": "state"}
+            mock_state.world_data = {}
+            mock_state.custom_campaign_state = {}
+            mock_state.combat_state = {"in_combat": False}
+            mock_state.validate_checkpoint_consistency.return_value = []
             return (mock_state, False, 0)
 
+        # Configure mocks
+        mock_llm_service.continue_story.side_effect = tracking_call
+        mock_llm_service.LLMRequestError = Exception  # For exception handling
+
+        mock_firestore.get_campaign_by_id.side_effect = mock_get_campaign
+        mock_firestore.update_campaign_game_state = MagicMock()
+        mock_firestore.add_story_entry = MagicMock()
+        mock_firestore.update_story_context = MagicMock()
+        mock_firestore.get_campaign_game_state = MagicMock(return_value={})
+
+        mock_prepare.side_effect = mock_prepare_game_state_func
+        mock_settings.return_value = {"debug_mode": False}
+
         async def run_test():
-            with ExitStack() as stack:
-                mock_llm = stack.enter_context(
-                    patch.object(world_logic, "llm_service", MagicMock())
-                )
-                mock_llm.continue_story = tracking_call
-
-                mock_firestore = stack.enter_context(
-                    patch.object(world_logic, "firestore_service", MagicMock())
-                )
-                mock_firestore.get_campaign_by_id = mock_get_campaign
-                mock_firestore.update_campaign_game_state = MagicMock()
-                mock_firestore.add_story_entry = MagicMock()
-                mock_firestore.update_story_context = MagicMock()
-
-                stack.enter_context(
-                    patch.object(world_logic, "_prepare_game_state", mock_prepare_game_state)
-                )
-                stack.enter_context(
-                    patch.object(
-                        world_logic, "get_user_settings", lambda x: {"debug_mode": False}
-                    )
-                )
-
-                await world_logic.process_action_unified(
-                    {
-                        "user_id": "test-user",
-                        "campaign_id": "test-campaign",
-                        "user_input": "test action",
-                        "mode": "character",
-                    }
-                )
+            await world_logic.process_action_unified(
+                {
+                    "user_id": "test-user",
+                    "campaign_id": "test-campaign",
+                    "user_input": "test action",
+                    "mode": "character",
+                }
+            )
 
         asyncio.run(run_test())
 
