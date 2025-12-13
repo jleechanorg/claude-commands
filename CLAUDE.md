@@ -11,6 +11,28 @@
 ### Genesis Coder Principle
 Lead with architectural thinking, follow with tactical execution. Write code as senior architect. Combine security, performance, maintainability perspectives.
 
+## LLM Architecture Principles
+
+### Core Rule: LLM Decides, Server Executes
+For any AI-driven feature (dice rolls, game decisions, content generation):
+- **LLM gets full context** - Never strip information to "optimize"
+- **LLM makes decisions** - Don't pre-compute what the LLM should decide
+- **Server executes actions** - Tools, dice rolls, state changes happen server-side
+- **LLM incorporates results** - Final output uses real data from tool execution
+
+### Anti-Patterns (BANNED)
+- Keyword-based intent detection to bypass LLM judgment
+- Stripping tool definitions based on predicted need
+- Pre-computing results the LLM should request
+- "Optimizations" that reduce information available to the LLM
+
+### Session Context Evaluation
+When resuming from prior sessions or inheriting TODOs:
+- **Evaluate inherited work** against these principles before executing
+- "Not implemented" ≠ "should be implemented"
+- Ask: Does this make the LLM smarter or dumber?
+- Challenge assumptions from summaries - they may contain bad ideas
+
 ## Cerebras-First Coding Protocol
 
 **Default for all coding: Use Cerebras API for most tasks**
