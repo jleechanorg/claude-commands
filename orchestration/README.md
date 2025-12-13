@@ -441,7 +441,7 @@ Live mode uses the same CLI profiles as the orchestration system:
 - **Claude Profile**: Interactive `claude` CLI with model selection
 - **Codex Profile**: Interactive `codex exec` mode
 - **Gemini Profile**: Interactive `gemini` CLI with the configured Gemini model
-- **Cursor Profile**: Fresh-data analysis via `cursor-agent` CLI using a configurable model (defaults to Grok via `CURSOR_MODEL`)
+- **Cursor Profile**: Fresh-data analysis via `cursor-agent` CLI using a configurable model (defaults to composer-1 via `CURSOR_MODEL`)
 - **tmux Wrapper**: Each session runs in isolated tmux session
 - **Working Directory**: Sessions start in specified directory
 - **Persistence**: Sessions survive terminal disconnects
