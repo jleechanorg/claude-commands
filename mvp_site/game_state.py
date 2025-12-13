@@ -1090,122 +1090,13 @@ def calculate_saving_throw(
     return roll_dice(notation)
 
 
-def calculate_initiative(dex_modifier: int, bonus: int = 0) -> DiceRollResult:
-    """
-    Roll initiative.
-
-    Args:
-        dex_modifier: Dexterity modifier
-        bonus: Any additional initiative bonus (e.g., from features)
-
-    Returns:
-        DiceRollResult with initiative total
-    """
-    total_modifier = dex_modifier + bonus
-    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
-    return roll_dice(notation)
-
-
-def calculate_complication_chance(success_streak: int) -> int:
-    """
-    Calculate complication probability based on success streak.
-    Formula: 20% + (streak × 10%), capped at 75%
-
-    Args:
-        success_streak: Number of consecutive successes
-
-    Returns:
-        Complication percentage (20-75)
-    """
-    base = 20
-    streak_bonus = success_streak * 10
-    return min(75, base + streak_bonus)
-
-
-def check_complication_triggers(success_streak: int) -> bool:
-    """
-    Roll to see if a complication triggers.
-
-    Args:
-        success_streak: Number of consecutive successes
-
-    Returns:
-        True if complication triggers, False otherwise
-    """
-    chance = calculate_complication_chance(success_streak)
-    roll = random.randint(1, 100)
-    return roll <= chance
-
-
-def calculate_death_save() -> dict:
-    """
-    Perform a death saving throw.
-
-    Returns:
-        Dict with roll, success (True if 10+), and critical info
-    """
-    roll = roll_dice("1d20")
-    natural = roll.individual_rolls[0]
-
-    return {
-        "roll": natural,
-        "success": natural >= 10,
-        "critical_success": natural == 20,  # Regain 1 HP
-        "critical_failure": natural == 1,  # Counts as 2 failures
-    }
-
-
-def calculate_hp_for_class(
-    class_name: str, level: int, con_modifier: int, use_average: bool = True
-) -> int:
-    """
-    Calculate HP for a character of given class and level.
-
-    Args:
-        class_name: Character class name
-        level: Character level
-        con_modifier: Constitution modifier
-        use_average: Use average HP (True) or roll (False)
-
-    Returns:
-        Total HP
-    """
-    # Hit dice by class
-    hit_dice = {
-        "barbarian": 12,
-        "fighter": 10,
-        "paladin": 10,
-        "ranger": 10,
-        "bard": 8,
-        "cleric": 8,
-        "druid": 8,
-        "monk": 8,
-        "rogue": 8,
-        "warlock": 8,
-        "sorcerer": 6,
-        "wizard": 6,
-    }
-
-    die = hit_dice.get(class_name.lower(), 8)
-
-    # Level 1: Max hit die + CON
-    hp = die + con_modifier
-
-    # Higher levels: 5e guarantees at least 1 HP per level (after CON modifier)
-    if use_average:
-        # Average is (die/2) + 1 per level
-        average_per_level = (die // 2) + 1
-        # Clamp per-level gain to minimum 1 (including CON modifier)
-        per_level_gain = max(1, average_per_level + con_modifier)
-        hp += (level - 1) * per_level_gain
-    else:
-        # Roll for each level
-        for _ in range(level - 1):
-            roll = roll_dice(f"1d{die}")
-            # 5e: minimum 1 HP per level after CON modifier is applied
-            hp += max(1, roll.total + con_modifier)
-
-    return max(1, hp)  # HP can never be less than 1
+# NOTE: Removed unused functions per bead worktree_worker3-1sw:
+# - calculate_initiative (no callers/tests)
+# - calculate_complication_chance (no callers/tests)
+# - check_complication_triggers (no callers/tests)
+# - calculate_death_save (no callers/tests)
+# - calculate_hp_for_class (no callers/tests)
+# These can be restored from git history if needed.
 
 
 def calculate_resource_depletion(
