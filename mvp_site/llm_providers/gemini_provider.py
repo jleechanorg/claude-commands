@@ -348,3 +348,143 @@ def generate_content_with_code_execution(
         tools=tools or [],
     )
 
+
+def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
+    """Execute tool requests from JSON response and return results.
+
+    Args:
+        tool_requests: List of {"tool": "roll_dice", "args": {...}} dicts
+
+    Returns:
+        List of {"tool": str, "args": dict, "result": dict} with execution results
+    """
+    from mvp_site.game_state import execute_dice_tool
+
+    results = []
+    for request in tool_requests:
+        tool_name = request.get("tool", "")
+        args = request.get("args", {})
+
+        try:
+            result = execute_dice_tool(tool_name, args)
+        except Exception as e:
+            logging_util.error(f"Gemini tool execution error: {tool_name}: {e}")
+            result = {"error": str(e)}
+
+        results.append({
+            "tool": tool_name,
+            "args": args,
+            "result": result,
+        })
+
+    return results
+
+
+def generate_content_with_tool_requests(
+    prompt_contents: list[Any],
+    model_name: str,
+    system_instruction_text: str | None,
+    temperature: float,
+    safety_settings: list[Any],
+    json_mode_max_output_tokens: int,
+) -> Any:
+    """Generate content with JSON-first tool request flow for Gemini 2.x.
+
+    This is the preferred flow that keeps JSON mode throughout:
+    1. First call: JSON mode enabled (no tools param) - LLM includes tool_requests if needed
+    2. If tool_requests present: Execute tools, inject results, second JSON call
+    3. If no tool_requests: Return first response as-is
+
+    This avoids the Gemini API limitation where tools + JSON mode cannot be combined.
+
+    Args:
+        prompt_contents: List of prompt content parts
+        model_name: Model name to use
+        system_instruction_text: Optional system instruction
+        temperature: Sampling temperature
+        safety_settings: Safety settings list
+        json_mode_max_output_tokens: Maximum output tokens
+
+    Returns:
+        Gemini API response with complete JSON
+    """
+    import json
+
+    # Phase 1: JSON mode call (no tools) - same as main branch
+    logging_util.info("Gemini Phase 1: JSON call (checking for tool_requests)")
+    response_1 = generate_json_mode_content(
+        prompt_contents=prompt_contents,
+        model_name=model_name,
+        system_instruction_text=system_instruction_text,
+        temperature=temperature,
+        safety_settings=safety_settings,
+        json_mode_max_output_tokens=json_mode_max_output_tokens,
+        tools=None,  # No tools = JSON mode enforced
+        json_mode=True,
+    )
+
+    # Extract text from Gemini response
+    try:
+        response_text = response_1.text if hasattr(response_1, 'text') else ""
+        if response_1.candidates and response_1.candidates[0].content.parts:
+            response_text = response_1.candidates[0].content.parts[0].text
+    except (AttributeError, IndexError):
+        logging_util.warning("Could not extract text from Phase 1 response")
+        return response_1
+
+    # Parse response to check for tool_requests
+    try:
+        response_data = json.loads(response_text) if response_text else {}
+    except json.JSONDecodeError:
+        logging_util.warning("Gemini Phase 1 response not valid JSON, returning as-is")
+        return response_1
+
+    tool_requests = response_data.get("tool_requests", [])
+    if not tool_requests:
+        logging_util.debug("No tool_requests in response, returning Phase 1 result")
+        return response_1
+
+    # Execute tool requests
+    logging_util.info(f"Executing {len(tool_requests)} tool request(s)")
+    tool_results = execute_tool_requests(tool_requests)
+
+    # Build Phase 2 context with tool results
+    tool_results_text = "\n".join([
+        f"- {r['tool']}({r['args']}): {r['result']}"
+        for r in tool_results
+    ])
+
+    # For Gemini, we build the conversation history as Content objects
+    history = []
+    # User turn (original prompt)
+    history.append(types.Content(
+        role="user",
+        parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))]
+    ))
+    # Model turn (Phase 1 response)
+    history.append(types.Content(
+        role="model",
+        parts=[types.Part(text=response_text)]
+    ))
+    # User turn with tool results
+    history.append(types.Content(
+        role="user",
+        parts=[types.Part(text=(
+            f"Tool results (use these exact numbers in your narrative):\n{tool_results_text}\n\n"
+            "Now write the final response using these results. Do NOT include tool_requests in your response."
+        ))]
+    ))
+
+    # Phase 2: JSON call with tool results
+    logging_util.info("Gemini Phase 2: JSON call with tool results")
+    return generate_json_mode_content(
+        prompt_contents=history,  # Pass full conversation history
+        model_name=model_name,
+        system_instruction_text=system_instruction_text,
+        temperature=temperature,
+        safety_settings=safety_settings,
+        json_mode_max_output_tokens=json_mode_max_output_tokens,
+        tools=None,  # No tools = JSON mode enforced
+        json_mode=True,
+    )
+

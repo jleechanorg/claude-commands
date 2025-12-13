@@ -19,8 +19,61 @@ ENTITY_STRING_PATTERN = re.compile(r'"([^"]+)"')
 STATE_UPDATES_PATTERN = re.compile(r'"state_updates"\s*:\s*(\{.*?\})', re.DOTALL)
 DEBUG_INFO_PATTERN = re.compile(r'"debug_info"\s*:\s*(\{.*?\})', re.DOTALL)
 TEXT_CONTENT_PATTERN = re.compile(r':\s*"([^"]+)')
-# Patterns for session_header and planning_block (bead 21f fix)
-PLANNING_BLOCK_PATTERN = re.compile(r'"planning_block"\s*:\s*(\{.*?\})', re.DOTALL)
+# Pattern to find start of planning_block (bracket-aware extraction handles the rest)
+PLANNING_BLOCK_START_PATTERN = re.compile(r'"planning_block"\s*:\s*\{')
+
+
+def extract_nested_object(text: str, field_name: str) -> str | None:
+    """Extract a nested JSON object using bracket-aware parsing.
+
+    This handles nested braces correctly, unlike simple regex patterns that
+    truncate on the first closing brace.
+
+    Args:
+        text: The JSON text to search
+        field_name: The field name to extract (e.g., "planning_block")
+
+    Returns:
+        The extracted object as a string, or None if not found
+    """
+    # Find the start of the field
+    pattern = re.compile(rf'"{field_name}"\s*:\s*\{{')
+    match = pattern.search(text)
+    if not match:
+        return None
+
+    # Start from the opening brace
+    start_idx = match.end() - 1  # -1 to include the opening brace
+    brace_count = 0
+    in_string = False
+    escape_next = False
+
+    for i, char in enumerate(text[start_idx:], start=start_idx):
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == '\\':
+            escape_next = True
+            continue
+
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if char == '{':
+            brace_count += 1
+        elif char == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                # Found the matching closing brace
+                return text[start_idx:i + 1]
+
+    # If we get here, braces were unbalanced - return what we found
+    return None
 
 
 def count_unmatched_quotes(text: str) -> int:
@@ -549,11 +602,11 @@ class RobustJSONParser:
         if session_header is not None:
             result[constants.FIELD_SESSION_HEADER] = session_header
 
-        # Extract planning_block object (bead 21f fix - Cerebras tool-loop missing planning block)
-        planning_block_match = PLANNING_BLOCK_PATTERN.search(text)
-        if planning_block_match:
+        # Extract planning_block object using bracket-aware parsing
+        # (bead 21f fix - shallow regex truncated nested braces)
+        planning_block_str = extract_nested_object(text, constants.FIELD_PLANNING_BLOCK)
+        if planning_block_str:
             try:
-                planning_block_str = planning_block_match.group(1)
                 planning_block = json.loads(planning_block_str)
                 result[constants.FIELD_PLANNING_BLOCK] = planning_block
             except json.JSONDecodeError:

@@ -1654,18 +1654,18 @@ def _call_llm_api(
                     json_mode_max_output_tokens=safe_output_limit,
                     tools=DICE_ROLL_TOOLS,
                 )
-            # Gemini 2.x: Use two-phase tool loop
+            # Gemini 2.x: Use JSON-first tool_requests flow
+            # This keeps JSON mode throughout (vs old tool_loop which used tools-first with no JSON)
             logging_util.info(
-                "🔍 CALL_LLM_API_GEMINI: Calling gemini_provider.generate_content_with_tool_loop"
+                "🔍 CALL_LLM_API_GEMINI: Using JSON-first tool_requests flow"
             )
-            return gemini_provider.generate_content_with_tool_loop(
+            return gemini_provider.generate_content_with_tool_requests(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
                 temperature=TEMPERATURE,
                 safety_settings=SAFETY_SETTINGS,
                 json_mode_max_output_tokens=safe_output_limit,
-                tools=DICE_ROLL_TOOLS,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
             # Use JSON-first flow with tool_requests for all OpenRouter models

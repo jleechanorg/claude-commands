@@ -47,8 +47,9 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use two-phase
         tool loop. Phase 1 has tools (no JSON), Phase 2 has JSON (no tools).
         """
-        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_tool_loop') as mock_tool_loop:
-            mock_tool_loop.return_value = Mock(
+        # Gemini 2.x now uses JSON-first tool_requests flow (not old tool_loop)
+        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests') as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
@@ -60,18 +61,18 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
-            # Verify tool loop was called
+            # Verify tool_requests was called
             self.assertTrue(
-                mock_tool_loop.called,
-                "generate_content_with_tool_loop should be called for Gemini models"
+                mock_tool_requests.called,
+                "generate_content_with_tool_requests should be called for Gemini 2.x models"
             )
 
-            # Verify tools were passed
-            call_kwargs = mock_tool_loop.call_args[1] if mock_tool_loop.call_args[1] else {}
-            self.assertIn(
+            # JSON-first flow doesn't pass tools param (model requests via JSON schema)
+            call_kwargs = mock_tool_requests.call_args[1] if mock_tool_requests.call_args[1] else {}
+            self.assertNotIn(
                 "tools",
                 call_kwargs,
-                "tools should be passed to Gemini tool loop"
+                "tools should NOT be passed to JSON-first flow (model uses tool_requests in JSON)"
             )
 
     def test_model_capability_detection(self):
@@ -208,12 +209,16 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             self.assertIsNotNone(result["damage"])
             self.assertIn("total", result["damage"])
 
-    def test_api_call_passes_required_params_to_tool_loop(self):
+    def test_api_call_passes_required_params_to_tool_requests(self):
         """
-        Verify API calls pass required parameters to tool loop.
+        Verify API calls pass required parameters to JSON-first tool_requests flow.
+
+        ARCHITECTURE UPDATE (Dec 2024): Gemini 2.x now uses JSON-first tool_requests
+        flow instead of old tool_loop. Tools are NOT passed as API param - model
+        requests tools via tool_requests array in JSON schema.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_loop") as mock_tool_loop:
-            mock_tool_loop.return_value = Mock(
+        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests") as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
@@ -224,28 +229,28 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
-            # Verify tool loop was called with expected params
-            self.assertTrue(mock_tool_loop.called)
-            call_kwargs = mock_tool_loop.call_args[1]
+            # Verify tool_requests was called with expected params
+            self.assertTrue(mock_tool_requests.called)
+            call_kwargs = mock_tool_requests.call_args[1]
 
             # Verify model name is passed
             self.assertEqual(
                 call_kwargs.get("model_name"),
                 "gemini-2.0-flash",
-                "FAIL: model_name not passed to tool loop"
+                "FAIL: model_name not passed to tool_requests"
             )
 
             # Verify temperature is passed
             self.assertEqual(
                 call_kwargs.get("temperature"),
                 llm_service.TEMPERATURE,
-                "FAIL: Temperature not passed to tool loop"
+                "FAIL: Temperature not passed to tool_requests"
             )
 
-            # Verify tools are passed
-            self.assertIsNotNone(
+            # JSON-first flow does NOT pass tools param (model uses JSON schema)
+            self.assertIsNone(
                 call_kwargs.get("tools"),
-                "FAIL: Tools not passed to tool loop"
+                "tools should NOT be passed to JSON-first tool_requests flow"
             )
 
 
