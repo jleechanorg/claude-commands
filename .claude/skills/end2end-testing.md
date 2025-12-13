@@ -1,0 +1,181 @@
+---
+description: End-to-end testing architecture, philosophy, and patterns for WorldArchitect.AI
+type: usage
+scope: project
+---
+
+# End-to-End Testing Guide
+
+## Purpose
+
+Provide Claude with a comprehensive reference for writing and understanding end-to-end tests in WorldArchitect.AI. This skill covers the testing philosophy, fake implementations, file locations, and patterns for multi-phase function testing.
+
+## Activation Cues
+
+- Writing or modifying E2E tests
+- Adding test coverage for LLM provider functions
+- Testing functions with external API dependencies
+- Debugging test failures in integration tests
+
+## Core Philosophy
+
+**Key Principle**: Mock only **external APIs**, NOT internal service functions.
+
+| Mock | Do NOT Mock |
+|------|-------------|
+| `firebase_admin.firestore.client()` | `firestore_service.py` functions |
+| `google.genai.Client()` | `llm_service.py` functions |
+| `requests.post()` (API calls) | `main.py` route handlers |
+
+## Test File Locations
+
+```
+mvp_site/tests/
+├── test_end2end/                    # Primary E2E directory (13 files)
+│   ├── test_continue_story_end2end.py
+│   ├── test_create_campaign_end2end.py
+│   ├── test_llm_provider_end2end.py   # LLM provider tests
+│   ├── test_mcp_protocol_end2end.py
+│   └── ...
+├── test_code_execution_dice_rolls.py  # Dice/tool loop tests
+├── test_gemini_tool_loop_e2e.py       # Gemini-specific E2E
+├── fake_firestore.py                  # Fake implementations
+└── integration/
+    └── test_real_browser_settings_game_integration.py
+```
+
+## Claude Commands
+
+| Command | Mode | Description |
+|---------|------|-------------|
+| `/teste` | Mock | Fast E2E tests with fake services |
+| `/tester` | Real | Full E2E with real Firestore + Gemini |
+| `/testerc` | Real + Capture | Real mode with data capture |
+| `/4layer` | TDD | Four-layer testing protocol |
+
+## Fake Implementations
+
+### Why Fake Instead of Mock?
+
+Using `Mock()` or `MagicMock()` causes JSON serialization errors when mocked data flows through the application. Use fake implementations that return real Python data structures.
+
+```python
+# BAD: Returns Mock objects - will cause JSON serialization errors
+mock_doc = Mock()
+mock_doc.to_dict.return_value = {"name": "test"}
+
+# GOOD: Returns real dictionaries
+fake_doc = FakeFirestoreDocument()
+fake_doc.set({"name": "test"})
+```
+
+### Available Fakes (fake_firestore.py)
+
+- `FakeFirestoreClient` - Mimics Firestore client behavior
+- `FakeFirestoreDocument` - Returns real dictionaries
+- `FakeFirestoreCollection` - Handles nested collections
+- `FakeLLMResponse` - Simple response with text attribute
+
+## Firestore Structure
+
+The app uses nested collections - tests must replicate this:
+
+```
+users/
+  {user_id}/
+    campaigns/
+      {campaign_id}
+```
+
+## Multi-Phase Function Testing
+
+For functions like `generate_content_with_tool_requests()` that make multiple API calls:
+
+### Pattern: Use `side_effect` for Sequential Responses
+
+```python
+@patch('requests.post')
+def test_two_phase_flow(self, mock_post):
+    # Phase 1 response: JSON with tool_requests
+    phase1_response = Mock()
+    phase1_response.status_code = 200
+    phase1_response.json.return_value = {
+        "choices": [{"message": {"content": json.dumps({
+            "narrative": "...",
+            "tool_requests": [{"tool": "roll_dice", "args": {"dice_notation": "1d20"}}]
+        })}}]
+    }
+
+    # Phase 2 response: Final JSON without tool_requests
+    phase2_response = Mock()
+    phase2_response.status_code = 200
+    phase2_response.json.return_value = {
+        "choices": [{"message": {"content": json.dumps({
+            "narrative": "You rolled a 15!",
+            "planning_block": {"thinking": "..."}
+        })}}]
+    }
+
+    # Sequential responses
+    mock_post.side_effect = [phase1_response, phase2_response]
+
+    # Call the function - it will make 2 API calls
+    result = generate_content_with_tool_requests(...)
+
+    # Verify both calls were made
+    assert mock_post.call_count == 2
+
+    # Verify Phase 2 received tool results
+    phase2_call_args = mock_post.call_args_list[1]
+    messages = json.loads(phase2_call_args.kwargs['json']['messages'])
+    assert 'roll_dice result' in str(messages)
+```
+
+### Test Coverage Paths
+
+For multi-phase functions, test each path:
+
+1. **No tool_requests** - Returns Phase 1 directly
+2. **With tool_requests** - Executes tools, makes Phase 2 call
+3. **Invalid JSON** - Returns response as-is
+4. **Tool execution errors** - Errors captured in results
+5. **Helper functions** - Test `execute_tool_requests()` separately
+
+## Running Tests
+
+```bash
+# All E2E tests (mock mode)
+./claude_command_scripts/teste.sh
+
+# Specific test file
+TESTING=true python3 -m pytest mvp_site/tests/test_code_execution_dice_rolls.py -v
+
+# Specific test class
+TESTING=true python3 -m pytest mvp_site/tests/test_code_execution_dice_rolls.py::TestToolRequestsFlow -v
+
+# With coverage
+./run_tests_with_coverage.sh
+```
+
+## Best Practices
+
+### DO:
+- Mock at the external API boundary (`requests.post`, `firestore.client()`)
+- Use `side_effect` for sequential mock responses
+- Test all code paths (success, error, edge cases)
+- Verify intermediate data passed between phases
+- Check call arguments to ensure context is preserved
+
+### DON'T:
+- Mock internal service functions (`generate_content_with_tool_requests`)
+- Use `Mock()` for data that will be JSON serialized
+- Skip testing error paths
+- Assume LLM responses are deterministic
+
+## Related Documentation
+
+- `mvp_site/tests/README_END2END_TESTS.md` - Full E2E philosophy
+- `mvp_site/tests/README.md` - Test coverage overview
+- `.claude/commands/teste.md` - Mock mode command
+- `.claude/commands/tester.md` - Real mode command
+- `.claude/commands/4layer.md` - Four-layer TDD protocol
