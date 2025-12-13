@@ -32,9 +32,10 @@ class TestClockSkewDeploymentValidation:
             "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS": "/path/to/creds.json",
         }
 
-        with patch.dict(os.environ, env_vars, clear=False):
+        with patch.dict(os.environ, env_vars, clear=True):
             # Remove WORLDAI_DEV_MODE if it exists
             os.environ.pop("WORLDAI_DEV_MODE", None)
+            os.environ.pop("TESTING", None)
 
             with pytest.raises(
                 ValueError,
@@ -54,7 +55,7 @@ class TestClockSkewDeploymentValidation:
             "WORLDAI_DEV_MODE": "true",
         }
 
-        with patch.dict(os.environ, env_vars, clear=False):
+        with patch.dict(os.environ, env_vars, clear=True):
             # Should not raise - dev mode explicitly acknowledged
             result = validate_deployment_config()
             assert result is True  # Returns True for dev mode
@@ -84,8 +85,9 @@ class TestClockSkewDeploymentValidation:
             "WORLDAI_DEV_MODE": "true",
         }
 
-        with patch.dict(os.environ, env_vars, clear=False):
+        with patch.dict(os.environ, env_vars, clear=True):
             os.environ.pop("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS", None)
+            os.environ.pop("TESTING", None)
 
             # Should not raise
             result = validate_deployment_config()
@@ -102,8 +104,9 @@ class TestClockSkewDeploymentValidation:
             "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS": "/path/to/creds.json",
         }
 
-        with patch.dict(os.environ, env_vars, clear=False):
+        with patch.dict(os.environ, env_vars, clear=True):
             os.environ.pop("WORLDAI_DEV_MODE", None)
+            os.environ.pop("TESTING", None)
 
             # Should raise because validation fails
             with pytest.raises(
@@ -126,6 +129,23 @@ class TestClockSkewDeploymentValidation:
         with patch.dict(os.environ, env_vars, clear=False):
             skew = get_clock_skew_seconds()
             assert skew == 600  # Default dev skew
+
+    def test_clock_skew_returns_600_when_testing_true(self):
+        """
+        get_clock_skew_seconds() returns 600 when TESTING=true is set alone.
+        """
+        from mvp_site.clock_skew_credentials import get_clock_skew_seconds
+
+        env_vars = {
+            "TESTING": "true",
+        }
+
+        with (
+            patch.dict(os.environ, env_vars, clear=True),
+            patch("os.stat", side_effect=FileNotFoundError),
+        ):
+            skew = get_clock_skew_seconds()
+            assert skew == 600
 
     def test_clock_skew_returns_0_in_production(self):
         """

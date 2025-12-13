@@ -13,6 +13,7 @@ Usage:
 """
 
 import os
+import stat
 from datetime import datetime, timedelta
 
 # Store the original function and adjustment
@@ -59,19 +60,31 @@ def _is_local_development() -> bool:
     - TESTING=true is set (running tests locally)
     - ~/serviceAccountKey.json exists (local service account)
     """
-    if os.getenv("WORLDAI_DEV_MODE", "").lower() == "true":
-        return True
-    if os.getenv("TESTING", "").lower() == "true":
+    dev_mode = os.getenv("WORLDAI_DEV_MODE", "").lower() == "true"
+    testing_mode = os.getenv("TESTING", "").lower() == "true"
+    if dev_mode or testing_mode:
         return True
     # Check for local service account file
     service_account_path = os.path.expanduser("~/serviceAccountKey.json")
-    if os.path.exists(service_account_path):
-        return True
-    return False
+    try:
+        file_stat = os.stat(service_account_path)
+    except FileNotFoundError:
+        return False
+
+    # Ensure the file is a regular file owned by the current user and not world-writable
+    return (
+        stat.S_ISREG(file_stat.st_mode)
+        and (not hasattr(os, "getuid") or file_stat.st_uid == os.getuid())
+        and not (file_stat.st_mode & stat.S_IWOTH)
+    )
 
 
 def get_clock_skew_seconds() -> int:
     """Get clock skew from environment variable.
+
+    Environment variables:
+        WORLDAI_CLOCK_SKEW_SECONDS: Explicit override for clock skew (in seconds).
+                                    Takes precedence over auto-detection.
 
     Returns:
         Number of seconds the local clock is ahead (positive value to subtract).
@@ -80,7 +93,8 @@ def get_clock_skew_seconds() -> int:
     Raises:
         ValueError: If deployment configuration is invalid (see validate_deployment_config).
     """
-    # Validate configuration (but don't use its return value for skew decision)
+    # Validate configuration for safety (raises ValueError if misconfigured)
+    # The return value is not used because skew decision is based on _is_local_development()
     validate_deployment_config()
 
     # Explicit override takes precedence
@@ -111,7 +125,7 @@ def apply_clock_skew_patch() -> bool:
     Returns:
         True if patch was applied, False if already applied or no adjustment needed.
     """
-    global _original_utcnow, _clock_skew_seconds, _patch_applied
+    global _original_utcnow, _clock_skew_seconds, _patch_applied  # noqa: PLW0603
 
     if _patch_applied:
         return False
@@ -148,7 +162,7 @@ def remove_clock_skew_patch() -> bool:
     Returns:
         True if patch was removed, False if not applied.
     """
-    global _original_utcnow, _patch_applied
+    global _patch_applied  # noqa: PLW0603
 
     if not _patch_applied or _original_utcnow is None:
         return False
@@ -176,7 +190,6 @@ class UseActualTime:
 
     def __enter__(self):
         """Temporarily restore original utcnow function."""
-        global _patch_applied
         self._was_patched = _patch_applied
         if _patch_applied and _original_utcnow is not None:
             try:
