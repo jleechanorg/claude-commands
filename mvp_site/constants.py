@@ -84,9 +84,11 @@ ALLOWED_OPENROUTER_MODELS = [
 #   Qwen 3 235B: $0.60/$1.20 (highest context 131K)
 #   Llama 3.3 70B: $0.85/$1.20 (65K context)
 #   ZAI GLM 4.6: $2.25/$2.75 (preview, 131K context) <- DEFAULT (request: prioritize quality/tools)
+# NOTE: Defaulting to GLM 4.6 is a conscious trade-off (higher cost vs. Qwen 235B) to prioritize
+# quality/tooling; choose Qwen below for cost-sensitive workloads.
 DEFAULT_CEREBRAS_MODEL = "zai-glm-4.6"
 ALLOWED_CEREBRAS_MODELS = [
-    DEFAULT_CEREBRAS_MODEL,  # 131K context, $2.25/$2.75 per M (preview, prioritized for quality/tools)
+    DEFAULT_CEREBRAS_MODEL,  # 131K context, $2.25/$2.75 per M (default: higher quality/tools, higher cost)
     "qwen-3-235b-a22b-instruct-2507",  # 131K context, $0.60/$1.20 per M (cost-efficient alternative)
     "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
     "llama-3.1-8b",  # 131K context, $0.10/$0.10 per M (cheapest option)
