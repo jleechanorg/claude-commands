@@ -19,6 +19,7 @@ These tests verify:
 5. Prompt instructions cover all dice roll strategies
 """
 
+import json
 import os
 import sys
 import unittest
@@ -970,6 +971,214 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 mock_direct.called,
                 "generate_content should be called for models NOT in MODELS_WITH_TOOL_USE",
             )
+
+
+class TestToolRequestsE2EFlow(unittest.TestCase):
+    """E2E tests for generate_content_with_tool_requests() internal logic.
+
+    These tests mock the low-level generate_content() function to test the
+    multi-phase flow, NOT the high-level generate_content_with_tool_requests().
+
+    Test paths:
+    1. No tool_requests → returns Phase 1 directly
+    2. tool_requests present → executes tools, makes Phase 2 call
+    3. Invalid JSON → returns response as-is
+    4. Tool execution errors → captured in results
+    5. execute_tool_requests() helper function
+    """
+
+    def test_path1_no_tool_requests_returns_phase1(self):
+        """Path 1: Response without tool_requests returns Phase 1 directly."""
+        from mvp_site.llm_providers import cerebras_provider
+        from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
+
+        # Phase 1 response: No tool_requests
+        phase1_json = json.dumps({
+            "narrative": "You look around the room.",
+            "planning_block": {"thinking": "Observing surroundings"},
+        })
+
+        with patch.object(cerebras_provider, "generate_content") as mock_gen:
+            mock_gen.return_value = CerebrasResponse(text=phase1_json, raw_response=None)
+
+            result = cerebras_provider.generate_content_with_tool_requests(
+                prompt_contents=["Look around"],
+                model_name="test-model",
+                system_instruction_text="You are a GM",
+                temperature=0.7,
+                max_output_tokens=1000,
+            )
+
+            # Should only call generate_content once (Phase 1 only)
+            self.assertEqual(mock_gen.call_count, 1)
+            self.assertEqual(result.text, phase1_json)
+
+    def test_path2_tool_requests_triggers_phase2(self):
+        """Path 2: Response with tool_requests executes tools and makes Phase 2 call."""
+        from mvp_site.llm_providers import cerebras_provider
+        from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
+
+        # Phase 1 response: Has tool_requests
+        phase1_json = json.dumps({
+            "narrative": "You attack the goblin!",
+            "tool_requests": [{"tool": "roll_dice", "args": {"dice_notation": "1d20+5"}}],
+        })
+
+        # Phase 2 response: Final narrative with results
+        phase2_json = json.dumps({
+            "narrative": "You rolled a 17! The goblin is hit.",
+            "planning_block": {"thinking": "Attack successful"},
+        })
+
+        with patch.object(cerebras_provider, "generate_content") as mock_gen:
+            mock_gen.side_effect = [
+                CerebrasResponse(text=phase1_json, raw_response=None),
+                CerebrasResponse(text=phase2_json, raw_response=None),
+            ]
+
+            result = cerebras_provider.generate_content_with_tool_requests(
+                prompt_contents=["I attack the goblin"],
+                model_name="test-model",
+                system_instruction_text="You are a GM",
+                temperature=0.7,
+                max_output_tokens=1000,
+            )
+
+            # Should call generate_content twice (Phase 1 + Phase 2)
+            self.assertEqual(mock_gen.call_count, 2)
+            self.assertEqual(result.text, phase2_json)
+
+            # Verify Phase 2 call includes tool results in messages
+            phase2_call_args = mock_gen.call_args_list[1]
+            messages = phase2_call_args.kwargs.get("messages", [])
+            self.assertTrue(len(messages) >= 3, "Phase 2 should have messages with tool results")
+
+            # Check that tool results message is included
+            tool_results_msg = messages[-1]["content"]
+            self.assertIn("Tool results", tool_results_msg)
+            self.assertIn("roll_dice", tool_results_msg)
+
+    def test_path3_invalid_json_returns_as_is(self):
+        """Path 3: Non-JSON response returns as-is without Phase 2."""
+        from mvp_site.llm_providers import cerebras_provider
+        from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
+
+        invalid_response = "This is not valid JSON"
+
+        with patch.object(cerebras_provider, "generate_content") as mock_gen:
+            mock_gen.return_value = CerebrasResponse(text=invalid_response, raw_response=None)
+
+            result = cerebras_provider.generate_content_with_tool_requests(
+                prompt_contents=["Test"],
+                model_name="test-model",
+                system_instruction_text=None,
+                temperature=0.7,
+                max_output_tokens=1000,
+            )
+
+            # Should only call once and return as-is
+            self.assertEqual(mock_gen.call_count, 1)
+            self.assertEqual(result.text, invalid_response)
+
+    def test_path4_tool_execution_errors_captured(self):
+        """Path 4: Tool execution errors are captured in results."""
+        from mvp_site.llm_providers.cerebras_provider import execute_tool_requests
+
+        # Invalid tool request
+        tool_requests = [
+            {"tool": "invalid_tool", "args": {}},
+            {"tool": "roll_dice", "args": {"dice_notation": "1d20"}},
+        ]
+
+        results = execute_tool_requests(tool_requests)
+
+        # First result should have error
+        self.assertEqual(len(results), 2)
+        self.assertIn("error", results[0]["result"])
+
+        # Second result should succeed
+        self.assertIn("total", results[1]["result"])
+
+    def test_path5_execute_tool_requests_helper(self):
+        """Path 5: Test execute_tool_requests helper function directly."""
+        from mvp_site.llm_providers.cerebras_provider import execute_tool_requests
+
+        tool_requests = [
+            {"tool": "roll_dice", "args": {"dice_notation": "2d6+3", "purpose": "damage"}},
+            {"tool": "roll_attack", "args": {"modifier": 5, "target_ac": 15}},
+            {"tool": "roll_skill_check", "args": {"skill": "perception", "modifier": 2}},
+        ]
+
+        results = execute_tool_requests(tool_requests)
+
+        self.assertEqual(len(results), 3)
+
+        # Verify structure of each result
+        for i, result in enumerate(results):
+            self.assertIn("tool", result)
+            self.assertIn("args", result)
+            self.assertIn("result", result)
+            self.assertEqual(result["tool"], tool_requests[i]["tool"])
+
+        # Verify roll_dice result has expected fields
+        self.assertIn("total", results[0]["result"])
+        self.assertIn("rolls", results[0]["result"])
+
+    def test_openrouter_path1_no_tool_requests(self):
+        """Test OpenRouter provider Path 1: No tool_requests."""
+        from mvp_site.llm_providers import openrouter_provider
+        from mvp_site.llm_providers.openrouter_provider import OpenRouterResponse
+
+        phase1_json = json.dumps({
+            "narrative": "The forest is peaceful.",
+            "planning_block": {"thinking": "Peaceful scene"},
+        })
+
+        with patch.object(openrouter_provider, "generate_content") as mock_gen:
+            mock_gen.return_value = OpenRouterResponse(text=phase1_json)
+
+            result = openrouter_provider.generate_content_with_tool_requests(
+                prompt_contents=["Describe the forest"],
+                model_name="test-model",
+                system_instruction_text="You are a GM",
+                temperature=0.7,
+                max_output_tokens=1000,
+            )
+
+            self.assertEqual(mock_gen.call_count, 1)
+            self.assertEqual(result.text, phase1_json)
+
+    def test_openrouter_path2_with_tool_requests(self):
+        """Test OpenRouter provider Path 2: With tool_requests."""
+        from mvp_site.llm_providers import openrouter_provider
+        from mvp_site.llm_providers.openrouter_provider import OpenRouterResponse
+
+        phase1_json = json.dumps({
+            "narrative": "You attempt a skill check.",
+            "tool_requests": [{"tool": "roll_skill_check", "args": {"skill": "stealth", "modifier": 4}}],
+        })
+
+        phase2_json = json.dumps({
+            "narrative": "You rolled a 16! You move silently.",
+            "planning_block": {"thinking": "Stealth success"},
+        })
+
+        with patch.object(openrouter_provider, "generate_content") as mock_gen:
+            mock_gen.side_effect = [
+                OpenRouterResponse(text=phase1_json),
+                OpenRouterResponse(text=phase2_json),
+            ]
+
+            result = openrouter_provider.generate_content_with_tool_requests(
+                prompt_contents=["I try to sneak past"],
+                model_name="test-model",
+                system_instruction_text="You are a GM",
+                temperature=0.7,
+                max_output_tokens=1000,
+            )
+
+            self.assertEqual(mock_gen.call_count, 2)
+            self.assertEqual(result.text, phase2_json)
 
 
 if __name__ == "__main__":
