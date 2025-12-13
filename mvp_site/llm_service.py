@@ -3512,89 +3512,11 @@ def continue_story(
         f"has_structured_response={gemini_response.structured_response is not None}"
     )
 
-    # Enforce consistency between dice/tool results and narrative/header.
-    # If the model drifted from tool outputs, append an authoritative block
-    # so downstream UI shows the correct numbers.
-    try:
-        gemini_response = _enforce_dice_consistency(gemini_response)
-    except Exception as e:  # noqa: BLE001
-        logging_util.warning(f"Dice consistency check skipped due to error: {e}")
-
     # Return our custom LLMResponse object (not raw API response)
     # This object contains:
     # - narrative_text: Clean text for display (guaranteed to be clean narrative)
     # - structured_response: Parsed JSON structure with state updates, entities, etc.
     return gemini_response
-
-
-def _enforce_dice_consistency(response: LLMResponse) -> LLMResponse:
-    """
-    Ensure the narrative/header reflect tool results.
-
-    If structured_response contains dice_rolls (tool outputs), verify the
-    narrative mentions the totals. On mismatch, append an authoritative
-    dice summary block so the UI shows correct numbers.
-    """
-    sr = response.structured_response
-    if not sr or not hasattr(sr, "dice_rolls") or not sr.dice_rolls:
-        return response
-
-    # Normalize dice entries to dicts for formatting
-    dice_entries: list[dict[str, Any]] = []
-    for entry in sr.dice_rolls:
-        if isinstance(entry, dict):
-            dice_entries.append(entry)
-        else:
-            # Try to parse simple string formats "1d8+3 = 9"
-            dice_entries.append({"formatted": str(entry)})
-
-    narrative = response.narrative_text or ""
-    mismatches: list[dict[str, Any]] = []
-    for roll in dice_entries:
-        total = roll.get("total")
-        formatted = roll.get("formatted") or ""
-        outcome = roll.get("outcome")
-        if total is not None and str(total) not in narrative:
-            mismatches.append(roll)
-        elif formatted and formatted not in narrative:
-            mismatches.append(roll)
-        elif outcome and str(outcome).lower() not in narrative.lower():
-            mismatches.append(roll)
-
-    if not mismatches:
-        return response
-
-    # Build authoritative block
-    lines = []
-    for roll in dice_entries:
-        if roll.get("formatted"):
-            lines.append(roll["formatted"])
-            continue
-        notation = roll.get("notation", "roll")
-        rolls_list = roll.get("rolls") or roll.get("d20_values") or roll.get("individual_rolls")
-        rolls_str = f"[{', '.join(map(str, rolls_list))}]" if rolls_list else ""
-        modifier = roll.get("modifier")
-        total = roll.get("total")
-        outcome = roll.get("outcome")
-        parts = [notation]
-        if rolls_str:
-            parts.append(f"= {rolls_str}")
-        if modifier not in (None, 0):
-            sign = "+" if modifier >= 0 else ""
-            parts.append(f"{sign}{modifier}")
-        if total is not None:
-            parts.append(f"= {total}")
-        if outcome:
-            parts.append(f"({outcome})")
-        lines.append(" ".join(str(p) for p in parts if p))
-
-    authoritative_block = "\n".join(lines)
-    response.narrative_text = (
-        narrative.rstrip()
-        + "\n\n--- DICE RESULTS (authoritative) ---\n"
-        + authoritative_block
-    )
-    return response
 
 
 def _get_static_prompt_parts(
