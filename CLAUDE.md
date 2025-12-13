@@ -82,6 +82,12 @@ Status: ✅ RESOLVED | 🔄 ACKNOWLEDGED | 📝 CLARIFICATION | ❌ DECLINED
 Every comment gets implementation OR explicit "NOT DONE: [reason]"
 Labels - Type: bug, feature, improvement | Size: small <100, medium 100-500, large 500-1000, epic >1000
 
+## Slash Commands
+- `/cerebras <task>` — Primary codegen command for tasks >10 lines; runs the Cerebras workflow.
+- `/fake3` — Runs the pre-commit check pipeline.
+
+All slash commands execute from `.claude/commands/*.md`; use that directory for full parameter and behavior details.
+
 ## Quick Reference
 ```bash
 TESTING=true vpython mvp_site/test_file.py  # Single test
@@ -90,3 +96,6 @@ TESTING=true vpython mvp_site/test_file.py  # Single test
 ./integrate.sh                               # New branch
 ./deploy.sh [stable]                         # Deploy
 ```
+
+## Related Documentation
+- Extended workflows, deployment details, and troubleshooting live in the `docs/` directory; update or add focused guides there to keep this file concise.
