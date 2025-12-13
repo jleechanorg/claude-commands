@@ -31,9 +31,6 @@
 | Timeout integrity | 10min/600s across all layers |
 | PR merges | Never without explicit "MERGE APPROVED" |
 
-## No Pre-Existing Issues Policy
-**CRITICAL:** Every test failure vs `origin/main` must be fixed. Green CI is a hard requirement. The phrase "pre-existing issue" is BANNED.
-
 ## Claude Code Behavior
 1. Tests: `TESTING=true vpython` from project root
 2. Gemini SDK: `from google import genai`
@@ -42,6 +39,9 @@
 5. Cross-platform: macOS + Ubuntu compatible
 6. Use Read tool, not bash cat/head/tail
 7. Never use `exit 1` that terminates terminal
+8. **Tools:** Serena MCP → Read/Grep → Edit/MultiEdit → Bash (OS only)
+9. **TodoWrite:** Required for 3+ steps
+10. **Slash commands:** `.claude/commands/*.md` - execute immediately
 
 ## Project Overview
 WorldArchitect.AI = AI-powered tabletop RPG platform (D&D 5e GM)
@@ -61,26 +61,17 @@ MCP_SERVER_URL="https://..." MCP_TEST_MODE=real node scripts/mcp-smoke-tests.mjs
 
 ## Git Workflow
 - Main = Truth | All changes via PRs | Fresh branches from main
-- `GITHUB_TOKEN` env var for all operations
-- GitHub Actions: SHA-pinned versions only (not `@v4`, `@main`)
+- `GITHUB_TOKEN` env var | GitHub Actions: SHA-pinned versions only
 
 ## Environment
-- GCP: worldarchitecture-ai (754683067800)
 - Firebase: `~/serviceAccountKey.json` → `GOOGLE_APPLICATION_CREDENTIALS`
 - Hooks: `.claude/settings.json` | Scripts: `.claude/hooks/`
 - Python: Verify venv, run with `TESTING=true vpython`
 - Temp files: Use `mktemp`, never predictable `/tmp/` names
 
-## Operations Guide
-
-**Tool Hierarchy:** Serena MCP → Read/Grep → Edit/MultiEdit → Bash (OS only)
-**TodoWrite:** Required for 3+ steps
-**Slash commands:** `.claude/commands/*.md` - execute immediately, never ask permission
-
 ## PR Comments
 Status: ✅ RESOLVED | 🔄 ACKNOWLEDGED | 📝 CLARIFICATION | ❌ DECLINED
 Every comment gets implementation OR explicit "NOT DONE: [reason]"
-Labels - Type: bug, feature, improvement | Size: small <100, medium 100-500, large 500-1000, epic >1000
 
 ## Slash Commands
 - `/cerebras <task>` — Primary codegen command for tasks >10 lines; runs the Cerebras workflow.
