@@ -133,6 +133,81 @@ Located in testing support files:
 - `auth_boundary_testing.py` - Authentication and authorization boundary validation
 - `input_sanitization_tests.py` - Comprehensive input validation and XSS prevention
 
+## No Silent Test Skipping Policy
+
+**CRITICAL RULE:** Tests must NEVER silently skip or short-circuit based on environment variables.
+
+### The Three Valid Test States
+
+Every test must exist in exactly ONE of these states:
+
+| State | Behavior | Example |
+|-------|----------|---------|
+| **RUN** | Test executes with real or mocked dependencies | Normal test execution |
+| **FAIL LOUDLY** | Test raises clear error explaining why it cannot run | `pytest.skip("Requires GEMINI_API_KEY")` with visible output |
+| **MOCK** | Test uses mock/fake services when `TESTING=true` | `FakeFirestore`, `FakeLLMResponse` |
+
+### Forbidden Patterns
+
+These patterns create silent failures and are **BANNED**:
+
+```python
+# ❌ FORBIDDEN: Conditional early return
+def test_api_integration():
+    if not os.getenv("API_KEY"):
+        return  # Silent skip - test appears to pass!
+
+# ❌ FORBIDDEN: Module-level import that raises
+try:
+    import special_module
+except ImportError:
+    pass  # Test file may silently do nothing
+
+# ❌ FORBIDDEN: Empty test body with conditional
+def test_feature():
+    if os.getenv("CI"):
+        pass  # Does nothing in CI
+```
+
+### Required Patterns
+
+```python
+# ✅ CORRECT: Explicit skip with reason
+@pytest.mark.skipif(
+    not os.getenv("GEMINI_API_KEY"),
+    reason="Requires GEMINI_API_KEY for live API testing"
+)
+def test_gemini_live_integration():
+    # This test is visibly skipped with clear reason
+    ...
+
+# ✅ CORRECT: Mock when TESTING=true
+def test_database_operation():
+    # TESTING=true enables mock mode automatically
+    with fake_firestore_context():
+        result = db_service.query(...)
+        assert result is not None
+
+# ✅ CORRECT: Fail loudly if dependency missing
+def test_requires_special_setup():
+    if not os.path.exists("/special/path"):
+        pytest.fail("Test requires /special/path - see README for setup")
+```
+
+### Test Collection Rules
+
+1. **Test collection must NEVER fail** due to missing environment variables
+2. All imports must be guarded or use conditional imports within test functions
+3. Use `pytest.importorskip()` for optional dependencies
+4. `TESTING=true` must enable mock mode for all external services
+
+### Enforcement
+
+- CI runs ALL tests - no silent exclusions
+- Coverage reports must show tests as "skipped" (not "passed" with 0 assertions)
+- Pre-commit hooks validate test patterns
+- Code review must reject silent skip patterns
+
 ## Quality Standards and Compliance
 
 ### Test Coverage Requirements
