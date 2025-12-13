@@ -13,13 +13,17 @@ Usage:
 """
 
 import os
-import stat
 from datetime import datetime, timedelta
 
 # Store the original function and adjustment
 _original_utcnow = None
 _clock_skew_seconds = 0
 _patch_applied = False
+
+# Hardcoded clock skew: 12 minutes (720 seconds)
+# This compensates for local clock being ahead of Google's servers.
+# Safe for both local development and production - Firebase handles actual time.
+CLOCK_SKEW_SECONDS = 720
 
 
 def validate_deployment_config() -> bool:
@@ -52,62 +56,17 @@ def validate_deployment_config() -> bool:
     return dev_mode
 
 
-def _is_local_development() -> bool:
-    """Detect if running in local development environment.
-
-    Returns True if any of these conditions are met:
-    - WORLDAI_DEV_MODE=true is set
-    - TESTING=true is set (running tests locally)
-    - ~/serviceAccountKey.json exists (local service account)
-    """
-    dev_mode = os.getenv("WORLDAI_DEV_MODE", "").lower() == "true"
-    testing_mode = os.getenv("TESTING", "").lower() == "true"
-    if dev_mode or testing_mode:
-        return True
-    # Check for local service account file
-    service_account_path = os.path.expanduser("~/serviceAccountKey.json")
-    try:
-        file_stat = os.stat(service_account_path)
-    except FileNotFoundError:
-        return False
-
-    # Ensure the file is a regular file owned by the current user and not world-writable
-    return (
-        stat.S_ISREG(file_stat.st_mode)
-        and (not hasattr(os, "getuid") or file_stat.st_uid == os.getuid())
-        and not (file_stat.st_mode & stat.S_IWOTH)
-    )
-
-
 def get_clock_skew_seconds() -> int:
-    """Get clock skew from environment variable.
-
-    Environment variables:
-        WORLDAI_CLOCK_SKEW_SECONDS: Explicit override for clock skew (in seconds).
-                                    Takes precedence over auto-detection.
+    """Get clock skew adjustment.
 
     Returns:
-        Number of seconds the local clock is ahead (positive value to subtract).
-        Defaults to 600 seconds (10 minutes) for local development.
-
-    Raises:
-        ValueError: If deployment configuration is invalid (see validate_deployment_config).
+        720 seconds (12 minutes) - hardcoded value that works for all environments.
+        This compensates for local clock being ahead of Google's servers.
     """
-    # Validate configuration for safety (raises ValueError if misconfigured)
-    # The return value is not used because skew decision is based on _is_local_development()
+    # Validate configuration
     validate_deployment_config()
 
-    # Explicit override takes precedence
-    skew_env = os.getenv("WORLDAI_CLOCK_SKEW_SECONDS")
-    if skew_env:
-        return int(skew_env)
-
-    # Default to 10 minutes (600 seconds) for local development
-    # This fixes JWT clock skew issues common in local environments
-    if _is_local_development():
-        return 600
-
-    return 0
+    return CLOCK_SKEW_SECONDS
 
 
 def _adjusted_utcnow() -> datetime:
