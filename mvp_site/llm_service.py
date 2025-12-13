@@ -1668,24 +1668,12 @@ def _call_llm_api(
                 tools=DICE_ROLL_TOOLS,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
-            # Only use tool loop for models that support multi-turn tool calling
-            if model_name in constants.MODELS_WITH_TOOL_USE:
-                logging_util.info(
-                    f"🔍 CALL_LLM_API_OPENROUTER: Using tool loop for {model_name}"
-                )
-                return openrouter_provider.generate_content_with_tool_loop(
-                    prompt_contents=prompt_contents,
-                    model_name=model_name,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                    tools=DICE_ROLL_TOOLS,
-                )
-            # Fallback: Direct call without tools for unsupported models
+            # Use JSON-first flow with tool_requests for all OpenRouter models
+            # This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't)
             logging_util.info(
-                f"🔍 CALL_LLM_API_OPENROUTER: Direct call (no tools) for {model_name}"
+                f"🔍 CALL_LLM_API_OPENROUTER: Using JSON-first tool_requests for {model_name}"
             )
-            return openrouter_provider.generate_content(
+            return openrouter_provider.generate_content_with_tool_requests(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
@@ -1693,24 +1681,12 @@ def _call_llm_api(
                 max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
-            # Only use tool loop for models that support multi-turn tool calling
-            if model_name in constants.MODELS_WITH_TOOL_USE:
-                logging_util.info(
-                    f"🔍 CALL_LLM_API_CEREBRAS: Using tool loop for {model_name}"
-                )
-                return cerebras_provider.generate_content_with_tool_loop(
-                    prompt_contents=prompt_contents,
-                    model_name=model_name,
-                    system_instruction_text=system_instruction_text,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=safe_output_limit,
-                    tools=DICE_ROLL_TOOLS,
-                )
-            # Fallback: Direct call without tools for unsupported models
+            # Use JSON-first flow with tool_requests for all Cerebras models
+            # This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't)
             logging_util.info(
-                f"🔍 CALL_LLM_API_CEREBRAS: Direct call (no tools) for {model_name}"
+                f"🔍 CALL_LLM_API_CEREBRAS: Using JSON-first tool_requests for {model_name}"
             )
-            return cerebras_provider.generate_content(
+            return cerebras_provider.generate_content_with_tool_requests(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,

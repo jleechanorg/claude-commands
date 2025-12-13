@@ -455,3 +455,120 @@ def generate_content_with_tool_loop(
 
     return response
 
+
+def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
+    """Execute tool requests from JSON response and return results.
+
+    Args:
+        tool_requests: List of {"tool": "roll_dice", "args": {...}} dicts
+
+    Returns:
+        List of {"tool": str, "args": dict, "result": dict} with execution results
+    """
+    from mvp_site.game_state import execute_dice_tool
+
+    results = []
+    for request in tool_requests:
+        tool_name = request.get("tool", "")
+        args = request.get("args", {})
+
+        try:
+            result = execute_dice_tool(tool_name, args)
+        except Exception as e:
+            logging_util.error(f"Tool execution error: {tool_name}: {e}")
+            result = {"error": str(e)}
+
+        results.append({
+            "tool": tool_name,
+            "args": args,
+            "result": result,
+        })
+
+    return results
+
+
+def generate_content_with_tool_requests(
+    prompt_contents: list[Any],
+    model_name: str,
+    system_instruction_text: str | None,
+    temperature: float,
+    max_output_tokens: int,
+) -> CerebrasResponse:
+    """Generate content with JSON-first tool request flow.
+
+    This is the preferred flow that keeps JSON schema enforcement throughout:
+    1. First call: JSON mode with response_format (like origin/main)
+       - LLM can include tool_requests array if it needs dice/skills
+    2. If tool_requests present: Execute tools, inject results, second JSON call
+    3. If no tool_requests: Return first response as-is
+
+    This avoids the API limitation where tools + response_format cannot be used together.
+
+    Args:
+        prompt_contents: List of prompt content parts
+        model_name: Model name to use
+        system_instruction_text: Optional system instruction
+        temperature: Sampling temperature
+        max_output_tokens: Maximum output tokens
+
+    Returns:
+        Final CerebrasResponse with complete JSON
+    """
+    # First call: JSON mode (no tools) - same as origin/main
+    logging_util.info("Phase 1: JSON call (checking for tool_requests)")
+    response = generate_content(
+        prompt_contents=prompt_contents,
+        model_name=model_name,
+        system_instruction_text=system_instruction_text,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        tools=None,  # No tools = JSON schema enforced
+    )
+
+    # Parse response to check for tool_requests
+    try:
+        response_data = json.loads(response.text) if response.text else {}
+    except json.JSONDecodeError:
+        logging_util.warning("Phase 1 response not valid JSON, returning as-is")
+        return response
+
+    tool_requests = response_data.get("tool_requests", [])
+    if not tool_requests:
+        logging_util.debug("No tool_requests in response, returning Phase 1 result")
+        return response
+
+    # Execute tool requests
+    logging_util.info(f"Executing {len(tool_requests)} tool request(s)")
+    tool_results = execute_tool_requests(tool_requests)
+
+    # Build Phase 2 context with tool results
+    tool_results_text = "\n".join([
+        f"- {r['tool']}({r['args']}): {r['result']}"
+        for r in tool_results
+    ])
+
+    # Build messages for Phase 2
+    messages = []
+    if system_instruction_text:
+        messages.append({"role": "system", "content": system_instruction_text})
+    messages.append({"role": "user", "content": _stringify_parts(prompt_contents)})
+    messages.append({"role": "assistant", "content": response.text})
+    messages.append({
+        "role": "user",
+        "content": f"Tool results (use these exact numbers in your narrative):\n{tool_results_text}\n\nNow write the final response using these results. Do NOT include tool_requests in your response."
+    })
+
+    # Phase 2: JSON call with tool results
+    logging_util.info("Phase 2: JSON call with tool results")
+    final_response = generate_content(
+        prompt_contents=[],  # Not used when messages provided
+        model_name=model_name,
+        system_instruction_text=None,  # Already in messages
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        tools=None,  # No tools = JSON schema enforced
+        messages=messages,
+    )
+
+    return final_response
+

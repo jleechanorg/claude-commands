@@ -877,19 +877,20 @@ class TestDiceRollTools(unittest.TestCase):
 class TestLLMServiceToolIntegration(unittest.TestCase):
     """Test llm_service integration with tool use providers."""
 
-    def test_call_llm_api_routes_to_tool_loop_for_tool_use_models(self):
+    def test_call_llm_api_routes_to_tool_requests_for_cerebras(self):
         """
-        Verify _call_llm_api routes to tool loop for models with tool_use capability.
+        Verify _call_llm_api routes to JSON-first tool_requests flow for Cerebras.
 
-        ARCHITECTURE UPDATE (Dec 2024): Models in MODELS_WITH_TOOL_USE use
-        generate_content_with_tool_loop for two-phase inference.
+        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use
+        generate_content_with_tool_requests for JSON-first two-phase inference.
+        This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't).
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_loop") as mock_tool_loop:
-            mock_tool_loop.return_value = Mock(
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests") as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # This model is in MODELS_WITH_TOOL_USE, so should use tool loop
+            # All Cerebras models use tool_requests flow
             llm_service._call_llm_api(
                 ["test prompt"],
                 "qwen-3-235b-a22b-instruct-2507",
@@ -897,50 +898,51 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
 
-            # Verify tool loop was called
+            # Verify tool_requests flow was called
             self.assertTrue(
-                mock_tool_loop.called,
-                "generate_content_with_tool_loop should be called for tool_use models",
+                mock_tool_requests.called,
+                "generate_content_with_tool_requests should be called for Cerebras",
             )
-            # Verify tools were passed (DICE_ROLL_TOOLS)
-            call_kwargs = mock_tool_loop.call_args[1] if mock_tool_loop.call_args[1] else {}
-            self.assertIn(
+            # No tools parameter - JSON-first flow uses tool_requests in schema
+            call_kwargs = mock_tool_requests.call_args[1] if mock_tool_requests.call_args[1] else {}
+            self.assertNotIn(
                 "tools",
                 call_kwargs,
-                "tools should be passed to tool loop"
+                "tools should NOT be passed to tool_requests flow (uses schema instead)"
             )
 
-    def test_call_llm_api_routes_to_tool_loop_for_all_cerebras_models(self):
+    def test_call_llm_api_routes_to_tool_requests_for_openrouter(self):
         """
-        Verify _call_llm_api routes Cerebras models in MODELS_WITH_TOOL_USE to tool loop.
+        Verify _call_llm_api routes to JSON-first tool_requests flow for OpenRouter.
 
-        ARCHITECTURE UPDATE (Dec 2024): Only models in MODELS_WITH_TOOL_USE use tool loop.
-        Other models fall back to direct call without tools.
+        ARCHITECTURE UPDATE (Dec 2024): All OpenRouter models use
+        generate_content_with_tool_requests for JSON-first two-phase inference.
+        This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't).
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_loop") as mock_tool_loop:
-            mock_tool_loop.return_value = Mock(
+        with patch("mvp_site.llm_providers.openrouter_provider.generate_content_with_tool_requests") as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # qwen-3-235b IS in MODELS_WITH_TOOL_USE - should use tool loop
+            # All OpenRouter models use tool_requests flow
             llm_service._call_llm_api(
                 ["test prompt"],
-                "qwen-3-235b-a22b-instruct-2507",
+                "meta-llama/llama-3.1-70b-instruct",
                 "test logging",
-                provider_name=constants.LLM_PROVIDER_CEREBRAS
+                provider_name=constants.LLM_PROVIDER_OPENROUTER
             )
 
-            # Verify tool loop was called
+            # Verify tool_requests flow was called
             self.assertTrue(
-                mock_tool_loop.called,
-                "generate_content_with_tool_loop should be called for models in MODELS_WITH_TOOL_USE",
+                mock_tool_requests.called,
+                "generate_content_with_tool_requests should be called for OpenRouter",
             )
-            # Verify tools were passed (DICE_ROLL_TOOLS)
-            call_kwargs = mock_tool_loop.call_args[1] if mock_tool_loop.call_args[1] else {}
-            self.assertIn(
+            # No tools parameter - JSON-first flow uses tool_requests in schema
+            call_kwargs = mock_tool_requests.call_args[1] if mock_tool_requests.call_args[1] else {}
+            self.assertNotIn(
                 "tools",
                 call_kwargs,
-                "tools should be passed to tool loop"
+                "tools should NOT be passed to tool_requests flow (uses schema instead)"
             )
 
     def test_call_llm_api_falls_back_to_direct_call_for_unsupported_models(self):

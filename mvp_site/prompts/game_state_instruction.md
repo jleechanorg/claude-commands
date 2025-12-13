@@ -3,7 +3,7 @@
 <!-- ESSENTIALS (token-constrained mode)
 - JSON responses required with session_header, narrative, planning_block
 - State updates mandatory every turn, entity IDs required (format: type_name_###)
-- 🎲 DICE: You must call the `check_skills` or `attack_roll` tools. DO NOT roll manually.
+- 🎲 DICE: Use tool_requests array for dice. DO NOT roll manually or invent numbers.
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 /ESSENTIALS -->
@@ -75,11 +75,19 @@ Every response MUST be valid JSON with this exact structure:
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
 - `dice_rolls`: (array) **🎲 DICE ROLLING PROTOCOL:**
   - **NEVER roll dice manually or invent numbers.**
-  - **ALWAYS use the provided tools (`check_skills` or `attack_roll`) to generate dice results.**
-  - **Tool Usage:** call the appropriate tool with necessary modifiers. The system will handle the roll and return the result.
   - **COPY EXACTLY:** When tool results are returned, copy their numbers verbatim into `dice_rolls`, session header, and narrative. Do NOT recalc, round, or change outcomes—the tool result is the truth.
-  - **Output format:** The tools will return formatted strings like `"Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"`. Include these strings in the `dice_rolls` array.
+  - **Output format:** `"Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"`. Include these strings in the `dice_rolls` array.
   - **Empty array [] if no dice rolls this turn.**
+- `tool_requests`: (array, optional) **Request dice rolls or skill checks.**
+  - If you need dice rolled before you can write the narrative, include a `tool_requests` array.
+  - The server will execute your requests and give you the results for Phase 2.
+  - Available tools:
+    - `roll_dice`: `{"tool": "roll_dice", "args": {"dice_notation": "1d20+5", "purpose": "Attack roll"}}`
+    - `roll_attack`: `{"tool": "roll_attack", "args": {"modifier": 5, "target_ac": 15, "damage_dice": "1d8+3"}}`
+    - `roll_skill_check`: `{"tool": "roll_skill_check", "args": {"skill": "perception", "modifier": 3, "dc": 15}}`
+    - `roll_saving_throw`: `{"tool": "roll_saving_throw", "args": {"save_type": "dex", "modifier": 2, "dc": 14}}`
+  - **Phase 1:** Include `tool_requests` with placeholder narrative like "Awaiting dice results..."
+  - **Phase 2:** Server gives you results - write final narrative using those exact numbers.
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).

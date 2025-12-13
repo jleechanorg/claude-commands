@@ -105,6 +105,26 @@ NARRATIVE_RESPONSE_SCHEMA = {
             "type": "string",
             "description": "Response for god mode commands",
         },
+        "tool_requests": {
+            "type": "array",
+            "description": "Request dice rolls or skill checks. Server will execute and you'll get results for the final narrative.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tool": {
+                        "type": "string",
+                        "enum": ["roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw"],
+                        "description": "The tool to call",
+                    },
+                    "args": {
+                        "type": "object",
+                        "description": "Arguments for the tool",
+                        "additionalProperties": True,
+                    },
+                },
+                "required": ["tool", "args"],
+            },
+        },
     },
     "required": ["narrative", "planning_block", "entities_mentioned"],
     # Note: With strict:False, additionalProperties defaults to true (allows extra fields)
