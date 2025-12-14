@@ -1585,6 +1585,7 @@ class TestXPLevelValidation(unittest.TestCase):
         self.assertTrue(result.get("corrected", False), "Should flag as corrected")
         self.assertEqual(result.get("expected_level"), 4, "Expected level should be 4")
         self.assertEqual(result.get("provided_level"), 1, "Provided level should be recorded as 1")
+        self.assertEqual(gs.player_character_data.get("level"), 4, "Level should be auto-corrected in state")
 
     def test_validate_xp_level_strict_mode_raises(self):
         """Test strict mode raises error on XP/level mismatch."""
@@ -1608,6 +1609,11 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         self.assertEqual(result.get("clamped_xp"), 0, "Negative XP should be clamped to 0")
+        self.assertEqual(
+            gs.player_character_data.get("experience", {}).get("current"),
+            0,
+            "Clamped XP should persist to player data",
+        )
 
     def test_validate_xp_level_zero_level_clamped(self):
         """Test level 0 is clamped to 1."""
@@ -1619,6 +1625,7 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         self.assertEqual(result.get("clamped_level"), 1, "Level 0 should be clamped to 1")
+        self.assertEqual(gs.player_character_data.get("level"), 1, "Level clamp should persist")
 
     def test_validate_xp_level_level_over_20_clamped(self):
         """Test level over 20 is clamped to 20."""
@@ -1630,6 +1637,7 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         self.assertEqual(result.get("clamped_level"), 20, "Level over 20 should be clamped to 20")
+        self.assertEqual(gs.player_character_data.get("level"), 20, "Max level clamp should persist")
 
     def test_validate_xp_level_missing_xp_uses_default(self):
         """Test validation handles missing XP gracefully."""
@@ -1730,6 +1738,18 @@ class TestTimeMonotonicity(unittest.TestCase):
         new_time = {"hour": 1, "minute": 0, "day": 2}
         result = gs.validate_time_monotonicity(new_time)
         self.assertTrue(result.get("valid", True), "Day boundary crossing should be valid")
+
+    def test_time_monotonicity_missing_new_day_defaults_to_previous_day(self):
+        """New time without day should use previous day's context to avoid false regression."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 10, "minute": 0, "day": 5}
+            }
+        )
+        new_time = {"hour": 12, "minute": 0}  # Later on same day, day omitted
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "Should treat missing day as previous day")
+        self.assertFalse(result.get("warning", False), "No warning expected when time moves forward")
 
     def test_time_monotonicity_missing_old_time_passes(self):
         """Test validation passes when there's no previous time."""

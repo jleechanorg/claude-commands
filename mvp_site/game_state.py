@@ -681,7 +681,14 @@ class GameState:
         if xp < 0:
             result["clamped_xp"] = 0
             xp = 0
-            logging_util.warning(f"XP validation: Negative XP clamped to 0")
+            # Persist clamped XP back to the player data
+            if isinstance(pc_data.get("experience"), dict):
+                pc_data["experience"]["current"] = 0
+            elif "xp" in pc_data:
+                pc_data["xp"] = 0
+            elif "xp_current" in pc_data:
+                pc_data["xp_current"] = 0
+            logging_util.warning("XP validation: Negative XP clamped to 0")
 
         # Calculate expected level from XP
         expected_level = level_from_xp(xp)
@@ -697,10 +704,18 @@ class GameState:
             result["clamped_level"] = 1
             logging_util.warning(f"XP validation: Level {provided_level} clamped to 1")
             provided_level = 1
+            if hasattr(self, "player_character_data") and isinstance(
+                self.player_character_data, dict
+            ):
+                self.player_character_data["level"] = provided_level
         elif provided_level > 20:
             result["clamped_level"] = 20
             logging_util.warning(f"XP validation: Level {provided_level} clamped to 20")
             provided_level = 20
+            if hasattr(self, "player_character_data") and isinstance(
+                self.player_character_data, dict
+            ):
+                self.player_character_data["level"] = provided_level
 
         result["provided_level"] = provided_level
 
@@ -717,8 +732,15 @@ class GameState:
             if strict:
                 raise ValueError(message)
 
-            # Default: warn and auto-correct
-            logging_util.warning(f"XP validation: {message} - auto-correcting")
+            # Default: warn and auto-correct by persisting expected level
+            logging_util.warning(
+                f"XP validation: {message} - auto-correcting and persisting"
+            )
+            if hasattr(self, "player_character_data") and isinstance(
+                self.player_character_data, dict
+            ):
+                self.player_character_data["level"] = expected_level
+                result["corrected_level"] = expected_level
 
         return result
 
@@ -761,8 +783,12 @@ class GameState:
             return result
 
         # Convert times to comparable values
+        current_day = None
+        if isinstance(current_world_time, dict):
+            current_day = current_world_time.get("day")
+
         old_total = self._time_to_minutes(current_world_time)
-        new_total = self._time_to_minutes(new_time)
+        new_total = self._time_to_minutes(new_time, default_day=current_day)
 
         # Check for regression
         if new_total < old_total:
@@ -783,13 +809,14 @@ class GameState:
 
         return result
 
-    def _time_to_minutes(self, time_dict: dict[str, Any]) -> int:
+    def _time_to_minutes(self, time_dict: dict[str, Any], default_day: int | None = None) -> int:
         """
         Convert a time dict to total minutes for comparison.
 
         Accounts for day if present (each day = 24*60 minutes).
         """
-        day = time_dict.get("day", 0)
+        fallback_day = 0 if default_day is None else default_day
+        day = time_dict.get("day", fallback_day)
         hour = time_dict.get("hour", 0)
         minute = time_dict.get("minute", 0)
 

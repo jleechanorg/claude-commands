@@ -133,7 +133,7 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 1. **XP Awards:** Add XP to `state_updates.player_character_data.experience.current`
 2. **Level Calculation:** The system uses the D&D 5e XP table below to determine level. When updating XP, also include the `level` field with the correct value from this table.
 3. **Never "double" XP:** Only add the actual XP earned, not multiplied values
-4. **Validation:** The system validates XP/level consistency and will auto-correct mismatches
+4. **Validation:** The system validates XP/level consistency and will flag mismatches for correction
 
 **🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. When XP crosses a level threshold, update `level` to match the table below.
 
@@ -152,7 +152,7 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 | 9 | 48,000 | 14,000 | | 19 | 305,000 | 40,000 |
 | 10 | 64,000 | 16,000 | | 20 | 355,000 | 50,000 |
 
-**Level Lookup:** Given XP, find the highest level whose "Total XP" you meet or exceed. Example: 5000 XP → Level 4 (meets 2,700 threshold but not 6,500).
+**Level Lookup:** Given XP, find the highest level whose "Total XP" you meet or exceed. Example: 5000 XP → Level 4 (meets or exceeds the 2,700 XP threshold for Level 4, but doesn't meet the 6,500 XP threshold for Level 5).
 
 **Display:** Show progress as (current - level threshold) / (next threshold - current threshold)
 
