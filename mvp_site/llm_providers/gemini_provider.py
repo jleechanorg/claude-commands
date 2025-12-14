@@ -188,37 +188,6 @@ def _stringify_prompt_contents(prompt_contents: list[Any]) -> str:
     return "\n".join(parts)
 
 
-def process_tool_calls(tool_calls: list[Any]) -> list[dict]:
-    """Execute Gemini tool calls and return results.
-
-    Args:
-        tool_calls: List of FunctionCall objects from Gemini response
-
-    Returns:
-        List of tool results formatted for Gemini function_response
-    """
-    results = []
-    for call in tool_calls:
-        try:
-            # Gemini FunctionCall object
-            tool_name = call.name
-            arguments = call.args
-
-            logging_util.info(f"Executing Gemini tool: {tool_name} with args: {arguments}")
-
-            result = execute_dice_tool(tool_name, arguments)
-
-            # Gemini expects a specific response format
-            results.append({
-                "function_response": {
-                    "name": tool_name,
-                    "response": {"result": result}
-                }
-            })
-        except Exception as e:
-             logging_util.error(f"Gemini tool execution error: {e}")
-
-    return results
 
 
 def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
@@ -273,91 +242,6 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
     return results
 
 
-def generate_content_with_tool_loop(
-    prompt_contents: list[Any],
-    model_name: str,
-    system_instruction_text: str | None,
-    temperature: float,
-    safety_settings: list[Any],
-    json_mode_max_output_tokens: int,
-    tools: list[dict],
-) -> Any:
-    """Two-Phase Inference Loop for Gemini.
-    
-    Phase 1: Prompt + Tools (JSON Mode OFF) -> Get Tool Calls
-    Phase 2: Tool Results + JSON Mode ON (Tools OFF) -> Final JSON
-    """
-    # Phase 1: Call with Tools, NO JSON enforcement
-    logging_util.info("Gemini Phase 1: Tools Enabled, JSON Mode Disabled")
-    response_1 = generate_json_mode_content(
-        prompt_contents=prompt_contents,
-        model_name=model_name,
-        system_instruction_text=system_instruction_text,
-        temperature=temperature,
-        safety_settings=safety_settings,
-        json_mode_max_output_tokens=json_mode_max_output_tokens,
-        tools=tools,
-        json_mode=False 
-    )
-    
-    # Check for tool calls
-    # In Google GenAI SDK, this is in response.function_calls or parts
-    start_tool_calls = []
-    if response_1.candidates and response_1.candidates[0].content.parts:
-        for part in response_1.candidates[0].content.parts:
-            if part.function_call:
-                start_tool_calls.append(part.function_call)
-                
-    if not start_tool_calls:
-        # No tool calls? Maybe it just answered. 
-        # But we wanted JSON. If it didn't give JSON, we might be in trouble with Phase 1.
-        # But Phase 1 was JSON=False.
-        # If no tools, we should probably return response_1 OR re-call with JSON=True?
-        # User plan assumes Phase 1 -> Tools. 
-        # If no tools, we might need to just return this, or if strict JSON is needed
-        # we might have botched it. 
-        # However, for now, follow happy path: We assume tools are called for dice.
-        logging_util.warning("Gemini Phase 1: No tool calls found. Returning raw response.")
-        return response_1
-
-    # Execute Tools
-    tool_results = process_tool_calls(start_tool_calls)
-    
-    # Phase 2: Call with Tool Results, JSOM Mode ENABLED, Tools DISABLED
-    # We need to construct the history: User Prompt -> Model Tool Call -> User Tool Response
-    logging_util.info("Gemini Phase 2: Sending Tool Results, JSON Mode Enabled")
-    
-    # Construct history
-    # 1. User Prompt (from prompt_contents)
-    # 2. Model Response (Function Call)
-    # 3. User Response (Function Response)
-    
-    # For Gemini, we might need a chat session or carefully constructed contents list
-    # Reconstructing content list:
-    history = []
-    # User Part
-    history.append(types.Content(role="user", parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))])) 
-    # Model Part (Function Call)
-    history.append(response_1.candidates[0].content)
-    # Function Response Part
-    parts = []
-    for tr in tool_results:
-        parts.append(types.Part(function_response=tr["function_response"]))
-    history.append(types.Content(role="user", parts=parts))
-    
-    # Generate Final - pass history as prompt_contents for Phase 2
-    # When messages=None, generate_json_mode_content uses prompt_contents directly
-    return generate_json_mode_content(
-        prompt_contents=history,  # Pass full conversation history!
-        messages=None,
-        model_name=model_name,
-        system_instruction_text=system_instruction_text,
-        temperature=temperature,
-        safety_settings=safety_settings,
-        json_mode_max_output_tokens=json_mode_max_output_tokens,
-        tools=None,  # Tools DISABLED in Phase 2
-        json_mode=True  # JSON Mode ENABLED in Phase 2
-    )
 
 
 def generate_content_with_code_execution(
