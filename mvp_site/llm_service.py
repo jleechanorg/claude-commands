@@ -58,7 +58,7 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import DICE_ROLL_TOOLS, GameState, execute_dice_tool
+from mvp_site.game_state import GameState, execute_dice_tool
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -185,6 +185,9 @@ TARGET_WORD_COUNT: int = 300
 # Default planning block generation has been REMOVED
 # If the LLM doesn't generate a planning block, we return the response as-is
 # and let the error propagate to the UI rather than generating fake content
+# However, we DO attempt a single reprompt if required fields are missing.
+# Maximum reprompt attempts for missing required fields (planning_block, session_header)
+MAX_MISSING_FIELD_REPROMPT_ATTEMPTS: int = 1
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
 JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
@@ -1643,7 +1646,7 @@ def _call_llm_api(
             # Check if this is a Gemini 3 model (supports function calling + JSON)
             if model_name in constants.GEMINI_3_MODELS:
                 logging_util.info(
-                    f"🔍 CALL_LLM_API_GEMINI3: Using function calling + JSON mode for {model_name}"
+                    f"🔍 CALL_LLM_API_GEMINI3: Using JSON-first tool_requests for {model_name}"
                 )
                 return gemini_provider.generate_content_with_code_execution(
                     prompt_contents=prompt_contents,
@@ -1652,7 +1655,6 @@ def _call_llm_api(
                     temperature=TEMPERATURE,
                     safety_settings=SAFETY_SETTINGS,
                     json_mode_max_output_tokens=safe_output_limit,
-                    tools=DICE_ROLL_TOOLS,
                 )
             # Gemini 2.x: Use JSON-first tool_requests flow
             # This keeps JSON mode throughout (vs old tool_loop which used tools-first with no JSON)
@@ -2944,6 +2946,81 @@ def _log_api_response_safely(
         )
 
 
+def _check_missing_required_fields(
+    structured_response: NarrativeResponse | None,
+    mode: str,
+    is_god_mode: bool = False,
+    is_dm_mode: bool = False,
+) -> list[str]:
+    """Check if required fields are missing from the structured response.
+
+    Required fields for story mode (character mode, not god/dm mode):
+    - planning_block: Must be a dict with 'thinking' or 'choices' content
+    - session_header: Must be a non-empty string
+
+    Args:
+        structured_response: The parsed NarrativeResponse object
+        mode: Current game mode
+        is_god_mode: Whether this is a god mode command
+        is_dm_mode: Whether the response is in DM mode
+
+    Returns:
+        List of missing field names (empty if all required fields present)
+    """
+    # Only check for story mode (character mode, not god/dm mode)
+    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
+        return []
+
+    if not structured_response:
+        return ["planning_block", "session_header"]
+
+    missing = []
+
+    # Check planning_block
+    planning_block = getattr(structured_response, "planning_block", None)
+    if not planning_block or not isinstance(planning_block, dict):
+        missing.append("planning_block")
+    else:
+        # Check if planning_block has content
+        has_content = planning_block.get("thinking", "").strip() or (
+            planning_block.get("choices") and len(planning_block.get("choices", {})) > 0
+        )
+        if not has_content:
+            missing.append("planning_block")
+
+    # Check session_header
+    session_header = getattr(structured_response, "session_header", None)
+    if not session_header or not str(session_header).strip():
+        missing.append("session_header")
+
+    return missing
+
+
+def _build_reprompt_for_missing_fields(
+    original_response_text: str,
+    missing_fields: list[str],
+) -> str:
+    """Build a reprompt message to request missing fields.
+
+    Args:
+        original_response_text: The original response from the LLM
+        missing_fields: List of missing field names
+
+    Returns:
+        Reprompt message asking for the missing fields
+    """
+    fields_str = " and ".join(missing_fields)
+    return (
+        f"Your response is missing the required {fields_str} field(s). "
+        f"Please provide the complete JSON response including:\n"
+        f"- planning_block: An object with 'thinking' (your GM reasoning) and 'choices' "
+        f"(2-4 player options, each with 'text', 'description', 'risk_level')\n"
+        f"- session_header: A brief session context string (e.g., 'Session 3: The Quest Continues')\n\n"
+        f"Keep the narrative and other fields from your previous response. "
+        f"Here is your previous response for reference:\n{original_response_text[:2000]}"
+    )
+
+
 def _validate_and_enforce_planning_block(
     response_text: str | None,
     user_input: str,
@@ -3416,6 +3493,71 @@ def continue_story(
     narrative_text: str
     structured_response: NarrativeResponse | None
     narrative_text, structured_response = parse_structured_response(raw_response_text)
+
+    # REPROMPT FOR MISSING REQUIRED FIELDS (planning_block, session_header)
+    # Only attempt reprompt if:
+    # 1. In story mode (character mode)
+    # 2. Not a god mode command
+    # 3. Response doesn't indicate DM mode
+    is_dm_mode_initial = (
+        "[Mode: DM MODE]" in narrative_text or "[Mode: GOD MODE]" in narrative_text
+    )
+    missing_fields = _check_missing_required_fields(
+        structured_response,
+        mode,
+        is_god_mode=is_god_mode_command,
+        is_dm_mode=is_dm_mode_initial,
+    )
+
+    if missing_fields and MAX_MISSING_FIELD_REPROMPT_ATTEMPTS > 0:
+        logging_util.warning(
+            f"🔄 REPROMPT_MISSING_FIELDS: Response missing {missing_fields}. "
+            f"Attempting reprompt..."
+        )
+        # Build reprompt message
+        reprompt_message = _build_reprompt_for_missing_fields(
+            raw_response_text, missing_fields
+        )
+
+        # Create a follow-up request with the reprompt
+        # Use a simple prompt_contents list with the reprompt message
+        try:
+            reprompt_response = _call_llm_api(
+                prompt_contents=[reprompt_message],
+                model_name=chosen_model,
+                system_instruction_text=system_instruction_final,
+                provider_name=provider_selection.provider,
+            )
+            reprompt_text = _get_text_from_response(reprompt_response)
+            reprompt_narrative, reprompt_structured = parse_structured_response(reprompt_text)
+
+            # Check if reprompt was successful
+            reprompt_missing = _check_missing_required_fields(
+                reprompt_structured,
+                mode,
+                is_god_mode=is_god_mode_command,
+                is_dm_mode=is_dm_mode_initial,
+            )
+
+            if len(reprompt_missing) < len(missing_fields):
+                # Reprompt improved the response - use it
+                logging_util.info(
+                    f"✅ REPROMPT_SUCCESS: Reprompt reduced missing fields "
+                    f"from {missing_fields} to {reprompt_missing}"
+                )
+                raw_response_text = reprompt_text
+                narrative_text = reprompt_narrative
+                structured_response = reprompt_structured
+            else:
+                logging_util.warning(
+                    f"⚠️ REPROMPT_FAILED: Reprompt did not improve response. "
+                    f"Still missing: {reprompt_missing}. Using original response."
+                )
+        except Exception as e:
+            logging_util.error(
+                f"❌ REPROMPT_ERROR: Failed to reprompt for missing fields: {e}. "
+                f"Using original response."
+            )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(

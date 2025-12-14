@@ -251,15 +251,15 @@ def generate_content_with_code_execution(
     temperature: float,
     safety_settings: list[Any],
     json_mode_max_output_tokens: int,
-    tools: list[dict] | None = None,
 ) -> Any:
-    """Single-Phase Inference with function calling + JSON mode for Gemini 3.
+    """Generate content for Gemini 3 models using JSON-first tool_requests flow.
 
-    Gemini 3 models can use function calling AND JSON mode together in a single call.
-    This enables dice rolling via the standard tool interface (check_skills, attack_roll).
+    NOTE: This function delegates to generate_content_with_tool_requests.
+    The name is kept for backward compatibility with llm_service routing.
 
-    NOTE: Despite the function name mentioning "code_execution", we now use function
-    calling for consistency with other providers and the prompt contract.
+    Gemini 3 models use the same JSON-first flow as Gemini 2.x:
+    - Phase 1: JSON mode call, LLM includes tool_requests if needed
+    - Phase 2: Execute tools, inject results, second JSON call
 
     Args:
         prompt_contents: The prompt content to send
@@ -268,10 +268,9 @@ def generate_content_with_code_execution(
         temperature: Sampling temperature
         safety_settings: Safety settings list
         json_mode_max_output_tokens: Max output tokens
-        tools: Optional list of tool definitions (DICE_ROLL_TOOLS)
 
     Returns:
-        Gemini API response with tool results in JSON format
+        Gemini API response in JSON format
     """
     # Use JSON-first flow: Phase 1 with JSON mode, handle tool_requests if present
     # This is the preferred approach that keeps JSON schema enforcement throughout
