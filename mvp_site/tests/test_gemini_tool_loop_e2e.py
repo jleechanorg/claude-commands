@@ -210,7 +210,7 @@ class TestGeminiToolLoopToolExecution(unittest.TestCase):
     """Test that tool calls are properly executed between phases."""
 
     @patch('mvp_site.llm_providers.gemini_provider.get_client')
-    @patch('mvp_site.game_state.execute_dice_tool')
+    @patch('mvp_site.llm_providers.gemini_provider.execute_dice_tool')
     def test_tool_results_included_in_history(self, mock_execute_tool, mock_get_client):
         """
         Verify that tool execution results are included in the history

@@ -18,6 +18,7 @@ from typing import Any
 import requests
 
 from mvp_site import logging_util
+from mvp_site.game_state import execute_dice_tool
 from mvp_site.llm_providers.provider_utils import (
     ContextTooLargeError,
     check_context_too_large,
@@ -276,8 +277,6 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
     Returns:
         List of {"tool": str, "args": dict, "result": dict} with execution results
     """
-    from mvp_site.game_state import execute_dice_tool
-
     results = []
     for request in tool_requests:
         tool_name = request.get("tool", "")

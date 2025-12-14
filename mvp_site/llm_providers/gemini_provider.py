@@ -6,6 +6,7 @@ See: https://ai.google.dev/gemini-api/docs/structured-output
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -13,6 +14,7 @@ from google import genai
 from google.genai import types
 
 from mvp_site import logging_util
+from mvp_site.game_state import execute_dice_tool
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
 # We rely on response_mime_type="application/json" + prompt instruction instead
@@ -118,7 +120,8 @@ def generate_json_mode_content(
         config.tools = gemini_tools
 
     if system_instruction_text:
-        config.system_instruction = types.Part(text=system_instruction_text)
+        # Use plain string - Gemini 2.x SDK accepts string directly
+        config.system_instruction = system_instruction_text
     
     # If messages are provided, use them (ChatSession style) or convert to contents
     # The Google GenAI SDK generate_content accepts a list of contents.
@@ -187,26 +190,24 @@ def _stringify_prompt_contents(prompt_contents: list[Any]) -> str:
 
 def process_tool_calls(tool_calls: list[Any]) -> list[dict]:
     """Execute Gemini tool calls and return results.
-    
+
     Args:
         tool_calls: List of FunctionCall objects from Gemini response
-        
+
     Returns:
-        List of tool results
+        List of tool results formatted for Gemini function_response
     """
-    from mvp_site.game_state import execute_dice_tool
-    
     results = []
     for call in tool_calls:
         try:
             # Gemini FunctionCall object
             tool_name = call.name
             arguments = call.args
-            
+
             logging_util.info(f"Executing Gemini tool: {tool_name} with args: {arguments}")
-            
+
             result = execute_dice_tool(tool_name, arguments)
-            
+
             # Gemini expects a specific response format
             results.append({
                 "function_response": {
@@ -216,7 +217,59 @@ def process_tool_calls(tool_calls: list[Any]) -> list[dict]:
             })
         except Exception as e:
              logging_util.error(f"Gemini tool execution error: {e}")
-             
+
+    return results
+
+
+def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
+    """Execute tool requests from JSON response and return results.
+
+    This is the JSON-first flow where the LLM includes tool_requests in its
+    JSON response, and we execute them and return results.
+
+    Args:
+        tool_requests: List of {"tool": "roll_dice", "args": {...}} dicts
+
+    Returns:
+        List of {"tool": str, "args": dict, "result": dict} with execution results
+    """
+    # Input validation
+    if not isinstance(tool_requests, list):
+        logging_util.error(f"tool_requests must be a list, got {type(tool_requests)}")
+        return []
+
+    results = []
+    for request in tool_requests:
+        # Validate request structure
+        if not isinstance(request, dict):
+            logging_util.error(f"Tool request must be dict, got {type(request)}")
+            continue
+
+        tool_name = request.get("tool", "")
+        args = request.get("args", {})
+
+        # Validate tool_name
+        if not isinstance(tool_name, str) or not tool_name:
+            logging_util.error(f"Invalid tool name: {tool_name}")
+            continue
+
+        # Validate args
+        if not isinstance(args, dict):
+            logging_util.error(f"Tool args must be dict, got {type(args)}")
+            args = {}
+
+        try:
+            result = execute_dice_tool(tool_name, args)
+        except Exception as e:
+            logging_util.error(f"Tool execution error: {tool_name}: {e}")
+            result = {"error": str(e)}
+
+        results.append({
+            "tool": tool_name,
+            "args": args,
+            "result": result,
+        })
+
     return results
 
 
@@ -336,48 +389,16 @@ def generate_content_with_code_execution(
     Returns:
         Gemini API response with tool results in JSON format
     """
-    # Gemini 3 can do function calling + JSON, so use the tool loop like other providers
-    # This maintains consistency with the prompt contract (check_skills, attack_roll tools)
-    return generate_content_with_tool_loop(
+    # Use JSON-first flow: Phase 1 with JSON mode, handle tool_requests if present
+    # This is the preferred approach that keeps JSON schema enforcement throughout
+    return generate_content_with_tool_requests(
         prompt_contents=prompt_contents,
         model_name=model_name,
         system_instruction_text=system_instruction_text,
         temperature=temperature,
         safety_settings=safety_settings,
         json_mode_max_output_tokens=json_mode_max_output_tokens,
-        tools=tools or [],
     )
-
-
-def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
-    """Execute tool requests from JSON response and return results.
-
-    Args:
-        tool_requests: List of {"tool": "roll_dice", "args": {...}} dicts
-
-    Returns:
-        List of {"tool": str, "args": dict, "result": dict} with execution results
-    """
-    from mvp_site.game_state import execute_dice_tool
-
-    results = []
-    for request in tool_requests:
-        tool_name = request.get("tool", "")
-        args = request.get("args", {})
-
-        try:
-            result = execute_dice_tool(tool_name, args)
-        except Exception as e:
-            logging_util.error(f"Gemini tool execution error: {tool_name}: {e}")
-            result = {"error": str(e)}
-
-        results.append({
-            "tool": tool_name,
-            "args": args,
-            "result": result,
-        })
-
-    return results
 
 
 def generate_content_with_tool_requests(
@@ -408,8 +429,6 @@ def generate_content_with_tool_requests(
     Returns:
         Gemini API response with complete JSON
     """
-    import json
-
     # Phase 1: JSON mode call (no tools) - same as main branch
     logging_util.info("Gemini Phase 1: JSON call (checking for tool_requests)")
     response_1 = generate_json_mode_content(

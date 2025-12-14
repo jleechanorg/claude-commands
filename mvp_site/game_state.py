@@ -895,6 +895,18 @@ def roll_dice(notation: str) -> DiceRollResult:
     die_size = int(match.group(2))
     modifier = int(match.group(3)) if match.group(3) else 0
 
+    # Bounds check to prevent DoS via huge dice counts/sizes
+    MAX_DICE = 100  # Reasonable max for any D&D scenario
+    MAX_DIE_SIZE = 1000  # Covers d100 and theoretical larger dice
+
+    if num_dice > MAX_DICE:
+        logging_util.warning(f"Dice count {num_dice} exceeds max {MAX_DICE}, clamping")
+        num_dice = MAX_DICE
+
+    if die_size > MAX_DIE_SIZE:
+        logging_util.warning(f"Die size {die_size} exceeds max {MAX_DIE_SIZE}, clamping")
+        die_size = MAX_DIE_SIZE
+
     # Validate die_size to prevent crashes on invalid notations like "1d0"
     if die_size < 1:
         return DiceRollResult(
