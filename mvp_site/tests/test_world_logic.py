@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import unittest
+
 # ExitStack removed - using decorator-based patching instead
 from unittest.mock import MagicMock, Mock, patch
 
@@ -22,6 +23,14 @@ from mvp_site.prompt_utils import _convert_and_format_field
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
 os.environ["USE_MOCKS"] = "true"
+
+
+class _TestValidationError(Exception):
+    """Test-only stand-in for Pydantic validation errors."""
+
+
+class _TestLLMRequestError(Exception):
+    """Test-only stand-in for LLM request failures."""
 
 # CRITICAL FIX: Mock firebase_admin completely to avoid google.auth namespace conflicts
 # This prevents the test from trying to import firebase_admin which triggers the google.auth issue
@@ -49,9 +58,7 @@ try:
     pydantic_module.Field = MagicMock()
     pydantic_module.field_validator = MagicMock()
     pydantic_module.model_validator = MagicMock()
-    pydantic_module.ValidationError = (
-        Exception  # Use regular Exception for ValidationError
-    )
+    pydantic_module.ValidationError = _TestValidationError
     sys.modules["pydantic"] = pydantic_module
 
     # Mock cachetools dependencies
@@ -316,13 +323,13 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
             "mode": "character",  # Use string directly instead of constants import
         }
 
-    @patch("world_logic.firestore_service.get_campaign_game_state")
-    @patch("world_logic.firestore_service.get_campaign_by_id")
-    @patch("world_logic.firestore_service.update_campaign_game_state")
-    @patch("world_logic.firestore_service.add_story_entry")
-    @patch("world_logic.llm_service.continue_story")
-    @patch("world_logic._prepare_game_state")
-    @patch("world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.get_user_settings")
     def test_sequence_id_calculation_bug_red_phase(
         self,
         mock_settings,
@@ -383,13 +390,13 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
             f"This indicates the sequence_id calculation bug is present!",
         )
 
-    @patch("world_logic.firestore_service.get_campaign_game_state")
-    @patch("world_logic.firestore_service.get_campaign_by_id")
-    @patch("world_logic.firestore_service.update_campaign_game_state")
-    @patch("world_logic.firestore_service.add_story_entry")
-    @patch("world_logic.llm_service.continue_story")
-    @patch("world_logic._prepare_game_state")
-    @patch("world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.get_user_settings")
     def test_user_scene_number_field_red_phase(
         self,
         mock_settings,
@@ -813,7 +820,7 @@ class _MockHelperMixin:
     ):
         """Apply shared mock configuration used across tests."""
         mock_llm_service.continue_story.side_effect = llm_side_effect
-        mock_llm_service.LLMRequestError = Exception  # For exception handling
+        mock_llm_service.LLMRequestError = _TestLLMRequestError  # For exception handling
 
         mock_firestore.get_campaign_by_id.side_effect = campaign_side_effect
         mock_firestore.update_campaign_game_state = MagicMock()
@@ -892,20 +899,33 @@ class TestAsyncNonBlocking(unittest.TestCase, _MockHelperMixin):
                 "mode": "character",
             }
 
-            start = time.time()
+            start = time.perf_counter()
 
             # Run concurrent operations
             tasks = [
                 world_logic.process_action_unified(request_data.copy())
                 for _ in range(NUM_CONCURRENT)
             ]
-            await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            elapsed = time.time() - start
-            return elapsed
+            elapsed = time.perf_counter() - start
+            return elapsed, results
 
         # Run the test
-        wall_time = asyncio.run(run_concurrent_test())
+        wall_time, results = asyncio.run(run_concurrent_test())
+
+        exceptions = [r for r in results if isinstance(r, Exception)]
+        self.assertEqual(
+            exceptions,
+            [],
+            f"Concurrent tasks raised exceptions (test may be masking failures): {exceptions[:3]}",
+        )
+
+        self.assertEqual(
+            call_count,
+            NUM_CONCURRENT,
+            f"Expected {NUM_CONCURRENT} LLM calls, got {call_count}",
+        )
 
         # Calculate expected times
         serial_time = NUM_CONCURRENT * SIMULATED_BLOCKING_TIME * 2  # 2 blocking calls per op
@@ -1010,6 +1030,12 @@ class TestThreadPoolExecution(unittest.TestCase, _MockHelperMixin):
         self.assertFalse(
             all_in_main,
             f"All blocking calls executed in main event loop thread. {debug_info}",
+        )
+
+        self.assertGreater(
+            len(worker_thread_calls),
+            0,
+            f"Expected at least one blocking call in a worker thread. {debug_info}",
         )
 
 
