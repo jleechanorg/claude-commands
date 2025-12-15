@@ -76,19 +76,23 @@ GEMINI_3_MODELS: set[str] = {
 # │ Model               │ Code Exec     │ JSON Mode │ Both Together│ Dice Strategy │
 # ├─────────────────────┼───────────────┼───────────┼──────────────┼───────────────┤
 # │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ✅ YES       │ code_execution│
-# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
+# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ✅ YES*      │ code_execution│
 # │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
 # │ gemini-2.5-pro      │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
 # └─────────────────────┴───────────────┴───────────┴──────────────┴───────────────┘
 #
 # Gemini 3.x: CAN use code_execution + JSON together (single-phase)
-# Gemini 2.x: CANNOT use both together - use tool_use with phase separation
+# Gemini 2.0 Flash: Treat as code_execution + JSON (project requirement)
+# Gemini 2.5 variants: Use phased tool flow (JSON-first)
 #
 # ARCHITECTURE (Dec 2024): Tool loops restored for all providers.
 # - Gemini 3: Single-phase with code_execution + JSON (model runs Python for dice)
 # - Gemini 2.x: Two-phase (tools→JSON phase separation)
 # - Cerebras/OpenRouter: Function calling with tool_use
-MODELS_WITH_CODE_EXECUTION: set[str] = GEMINI_3_MODELS  # Gemini 3 models support code_execution + JSON
+MODELS_WITH_CODE_EXECUTION: set[str] = {
+    *GEMINI_3_MODELS,
+    "gemini-2.0-flash",
+}  # Models allowed to use code_execution + JSON together
 
 # Models that support tool use / function calling
 # These require two-stage inference: LLM requests tool → we execute → send result back
@@ -98,6 +102,7 @@ MODELS_WITH_TOOL_USE = {
     # Cerebras models with multi-turn tool support (100k+ context)
     "qwen-3-235b-a22b-instruct-2507",  # 131K context - Confirmed working
     "zai-glm-4.6",  # 131K context - #1 on Berkeley Function Calling Leaderboard (quota limited)
+    "z-ai/glm-4.6",  # OpenRouter naming for GLM 4.6 (tools supported)
     "gpt-oss-120b",  # 131K context - OpenAI reasoning model with native tool use
     # OpenRouter models with tool support (100k+ context)
     "openai/gpt-oss-120b",  # OpenRouter variant (use provider=openrouter)
@@ -133,9 +138,13 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
         - 'tool_use' - Cerebras/OpenRouter: function calling + JSON
         - 'precompute' - Fallback for models without tool support
     """
+    # Explicit precompute overrides
+    if model_name in MODELS_PRECOMPUTE_ONLY:
+        return "precompute"
+
     # Gemini provider has special handling
     if provider == "gemini":
-        if model_name in GEMINI_3_MODELS:
+        if model_name in MODELS_WITH_CODE_EXECUTION:
             return "code_execution"  # Single-phase: code_execution + JSON
         return "tool_use_phased"  # Two-phase: tools then JSON
 

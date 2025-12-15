@@ -13,7 +13,7 @@ from typing import Any
 from google import genai
 from google.genai import types
 
-from mvp_site import logging_util
+from mvp_site import constants, logging_util
 from mvp_site.game_state import execute_dice_tool
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
@@ -59,8 +59,13 @@ def generate_json_mode_content(
     tools: list[dict] | None = None,
     json_mode: bool = True,
     messages: list[dict] | None = None,
+    enable_code_execution: bool | None = None,
 ) -> Any:
     """Generate content from Gemini, optionally using tools or JSON mode.
+
+    Note: Code execution remains enabled for supported models even when JSON
+    mode/controlled generation is active so Gemini 2.0/3.x can execute Python
+    while returning schema-constrained responses.
 
     Args:
         prompt_contents: The prompt content to send (if messages not provided)
@@ -72,6 +77,8 @@ def generate_json_mode_content(
         tools: Optional list of tool definitions
         json_mode: Whether to enforce application/json MIME type
         messages: Optional list of previous messages (for tool loops)
+        enable_code_execution: Force-enable/disable code execution tools; defaults
+            to capability auto-detection for models in constants.MODELS_WITH_CODE_EXECUTION
 
     Returns:
         Gemini API response
@@ -88,22 +95,20 @@ def generate_json_mode_content(
         generation_config_params["response_mime_type"] = "application/json"
 
     # Add tools if provided
-    if tools:
-        # Convert standard OpenAI tool definition to Gemini format if needed
-        # Or blindly pass if using google.genai types.
-        # For simplicity, we assume we might need to adapt or pass as is.
-        # The new Google GenAI SDK handles tools differently.
-        # We'll pass them as 'tools' in the generate_content call, NOT in config.
-        pass
-
     config = types.GenerateContentConfig(**generation_config_params)
-    
-    # Handle tools conversion for Google GenAI SDK 
+
+    # Determine whether to attach code_execution
+    allow_code_execution = (
+        enable_code_execution
+        if enable_code_execution is not None
+        else model_name in constants.MODELS_WITH_CODE_EXECUTION
+    )
+
+    gemini_tools = []
+
+    # Handle tools conversion for Google GenAI SDK
     # The SDK expects tools as a separate argument or part of config
     if tools:
-        # We need to wrap OpenAI-style tools for Gemini
-        # Simple FunctionDeclaration wrapper
-        gemini_tools = []
         for tool in tools:
             fn = tool["function"]
             gemini_tools.append(
@@ -117,6 +122,16 @@ def generate_json_mode_content(
                     ]
                 )
             )
+
+    if allow_code_execution:
+        gemini_tools.append(types.Tool(code_execution={}))
+        logging_util.debug(
+            "Code execution enabled for Gemini model %s (json_mode=%s)",
+            model_name,
+            json_mode,
+        )
+
+    if gemini_tools:
         config.tools = gemini_tools
 
     if system_instruction_text:

@@ -2,11 +2,11 @@
 TDD Tests for Hybrid Dice Roll System
 
 Gemini 2.0 and 3.0 models support BOTH code_execution AND JSON mode together.
-Gemini 2.5 does NOT support this combination - it uses precompute fallback.
+Gemini 2.5 does NOT support this combination - it uses the phased tool flow.
 
 The hybrid dice roll system:
 1. Code Execution (Gemini 2.0/3.0): Native Python code execution + JSON mode
-2. Tool Use (Cerebras, OpenRouter): Function calling with local execution
+2. Tool Use (Cerebras, OpenRouter, Gemini 2.5): Function calling with local execution
 3. Pre-computed (fallback): Backend pre-rolls dice and provides values
 
 See: https://ai.google.dev/gemini-api/docs/structured-output
@@ -81,7 +81,8 @@ class TestHybridDiceRollSystem(unittest.TestCase):
 
         ARCHITECTURE UPDATE (Dec 2024): Strategy now varies by provider:
         - Gemini 3.x: code_execution (single-phase)
-        - Gemini 2.x: tool_use_phased (two-phase)
+        - Gemini 2.0: code_execution (single-phase)
+        - Gemini 2.5: tool_use_phased (two-phase)
         - Cerebras/OpenRouter with tool support: tool_use (two-phase)
         - Fallback: precompute (pre-rolled dice in prompt)
         """
@@ -91,11 +92,13 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             "code_execution"
         )
 
-        # Gemini 2.x models: tool_use_phased (two-phase)
+        # Gemini 2.0: code_execution (single-phase)
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
-            "tool_use_phased"
+            "code_execution"
         )
+
+        # Gemini 2.5 models: tool_use_phased (two-phase)
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.5-flash", "gemini"),
             "tool_use_phased"

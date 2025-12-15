@@ -50,10 +50,10 @@ const GEMINI_3_ALLOWED_USERS = ['jleechan@gmail.com', 'jleechantest@gmail.com'];
 const GEMINI_MODEL_MAPPING = {
   'gemini-3-pro-preview': 'gemini-3-pro-preview',
   'gemini-2.0-flash': 'gemini-2.0-flash',
-  'gemini-2.5-flash': 'gemini-2.0-flash',
+  'gemini-2.5-flash': 'gemini-2.5-flash',
   'gemini-2.5-pro': 'gemini-2.0-flash',
   'pro-2.5': 'gemini-2.0-flash',
-  'flash-2.5': 'gemini-2.0-flash'
+  'flash-2.5': 'gemini-2.5-flash'
 };
 let pendingAuthReload = false;
 

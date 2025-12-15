@@ -45,10 +45,10 @@
                         <label class="form-label" for="geminiModel">Select your preferred Gemini model</label>
                         <select id="geminiModel" class="form-select" name="geminiModel">
                             <!-- Gemini 3 option added dynamically for allowed users in settings.js -->
-                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (default) - true dice randomness</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash - faster, precomputed dice</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (default) - code execution dice</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash - JSON-first tool flow</option>
                         </select>
-                        <small class="text-muted">2.0 Flash uses code execution for truly random dice rolls. 2.5 Flash uses precomputed values (faster but deterministic).</small>
+                        <small class="text-muted">2.0 Flash runs code execution for true randomness. 2.5 Flash uses two-phase tool requests (structured JSON, server-executed dice).</small>
                     </div>
 
                     <div id="openrouter-model-selection" class="mt-4 d-none">
