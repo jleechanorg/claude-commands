@@ -1156,7 +1156,8 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         Dict with the tool execution result
     """
     if tool_name == "roll_dice":
-        notation = arguments.get("notation", "1d20")
+        # Accept both "dice_notation" (prompt schema) and "notation" (legacy) for backwards compatibility
+        notation = arguments.get("dice_notation") or arguments.get("notation", "1d20")
         purpose = arguments.get("purpose", "")
         result = roll_dice(notation)
         return {
