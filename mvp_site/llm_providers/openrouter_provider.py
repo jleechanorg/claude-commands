@@ -130,13 +130,16 @@ def generate_content(
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_output_tokens,
-        "response_format": response_format,
     }
 
-    # Add tools if provided (for function calling)
+    # Add tools OR response_format (NOT both - API limitation)
+    # When tools are provided, JSON output is handled by prompt instructions
     if tools:
         payload["tools"] = tools
         payload["tool_choice"] = "auto"
+        # DO NOT set response_format - many APIs reject tools + response_format
+    else:
+        payload["response_format"] = response_format
 
     logging_util.info(f"Calling OpenRouter model: {model_name}")
     response = requests.post(
@@ -170,10 +173,30 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
     Returns:
         List of {"tool": str, "args": dict, "result": dict} with execution results
     """
+    # Input validation
+    if not isinstance(tool_requests, list):
+        logging_util.error(f"tool_requests must be a list, got {type(tool_requests)}")
+        return []
+
     results = []
     for request in tool_requests:
+        # Validate request structure
+        if not isinstance(request, dict):
+            logging_util.error(f"Tool request must be dict, got {type(request)}")
+            continue
+
         tool_name = request.get("tool", "")
         args = request.get("args", {})
+
+        # Validate tool_name
+        if not isinstance(tool_name, str) or not tool_name:
+            logging_util.error(f"Invalid tool name: {tool_name}")
+            continue
+
+        # Validate args
+        if not isinstance(args, dict):
+            logging_util.error(f"Tool args must be dict, got {type(args)}")
+            args = {}
 
         try:
             result = execute_dice_tool(tool_name, args)

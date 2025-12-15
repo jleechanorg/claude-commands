@@ -31,14 +31,13 @@ Provide Claude with a comprehensive reference for writing and understanding end-
 
 ```
 mvp_site/tests/
-├── test_end2end/                    # Primary E2E directory (13 files)
+├── test_end2end/                    # Primary E2E directory (14 files)
 │   ├── test_continue_story_end2end.py
 │   ├── test_create_campaign_end2end.py
 │   ├── test_llm_provider_end2end.py   # LLM provider tests
 │   ├── test_mcp_protocol_end2end.py
 │   └── ...
 ├── test_code_execution_dice_rolls.py  # Dice/tool loop tests
-├── test_gemini_tool_loop_e2e.py       # Gemini-specific E2E
 ├── fake_firestore.py                  # Fake implementations
 └── integration/
     └── test_real_browser_settings_game_integration.py

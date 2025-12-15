@@ -148,7 +148,6 @@ async function fetchApi(path, options = {}, retryCount = 0) {
       defaultHeaders = { ...defaultHeaders, ...authHeaders };
     } catch (tokenError) {
       console.error('🔴 fetchApi: Failed to get auth token:', tokenError);
-      console.error('🔴 fetchApi: User email:', user.email);
       console.error('🔴 fetchApi: forceRefresh was:', forceRefresh);
       throw tokenError;
     }

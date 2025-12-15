@@ -461,6 +461,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let label = '';
     if (actor === 'gemini') {
       label = sequenceId ? `Scene #${sequenceId}` : 'Story';
+    } else if (actor === 'system') {
+      label = 'System';
     } else {
       // actor is 'user'
       label =
