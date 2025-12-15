@@ -134,9 +134,25 @@ Common reference: CR 1=200 | CR 2=450 | CR 3=700 | CR 4=1100 | CR 5=1800
 
 ### XP Progression (Backend-Managed)
 
-The backend maintains the complete XP progression table. Key thresholds for reference:
-- Level 2: 300 XP | Level 3: 900 XP | Level 4: 2,700 XP | Level 5: 6,500 XP
-- Level 10: 64,000 XP | Level 15: 165,000 XP | Level 20: 355,000 XP
+**🚨 CRITICAL: XP and Level are AUTHORITATIVE from the backend.**
+- The backend owns the XP→level calculation using the D&D 5e table below
+- **DO NOT** independently calculate or change level - only report XP changes
+- If you receive XP/level values in state, USE them exactly as provided
+- When awarding XP, only set `state_updates.player_character_data.experience.current` - backend handles the rest
+
+**Complete D&D 5e XP Progression Table:**
+| Level | Total XP Required | Level | Total XP Required |
+|-------|-------------------|-------|-------------------|
+| 1 | 0 | 11 | 85,000 |
+| 2 | 300 | 12 | 100,000 |
+| 3 | 900 | 13 | 120,000 |
+| 4 | 2,700 | 14 | 140,000 |
+| 5 | 6,500 | 15 | 165,000 |
+| 6 | 14,000 | 16 | 195,000 |
+| 7 | 23,000 | 17 | 225,000 |
+| 8 | 34,000 | 18 | 265,000 |
+| 9 | 48,000 | 19 | 305,000 |
+| 10 | 64,000 | 20 | 355,000 |
 
 **Display:** Backend provides `experience.progress_display` with formatted progress string.
 

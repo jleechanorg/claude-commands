@@ -13,6 +13,10 @@ from mvp_site.json_utils import parse_llm_json_response, unescape_json_string
 
 # Planning block extraction from narrative is deprecated - blocks should only come from JSON
 
+# Minimum narrative length threshold for "suspiciously short" detection
+# A valid narrative should typically be at least ~100 characters
+MIN_NARRATIVE_LENGTH = 100
+
 # Precompiled regex patterns for better performance
 JSON_MARKDOWN_PATTERN = re.compile(r"```json\s*\n?(.*?)\n?```", re.DOTALL)
 GENERIC_MARKDOWN_PATTERN = re.compile(r"```\s*\n?(.*?)\n?```", re.DOTALL)
@@ -686,6 +690,13 @@ def parse_structured_response(
         logging_util.info(
             f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)"
         )
+        # Warn if narrative is suspiciously short after recovery
+        if narrative_len < MIN_NARRATIVE_LENGTH and narrative_len > 0:
+            logging_util.warning(
+                f"⚠️ SUSPICIOUSLY_SHORT_NARRATIVE: Narrative is only {narrative_len} chars "
+                f"(min expected: {MIN_NARRATIVE_LENGTH}). This may indicate truncation due to "
+                "malformed JSON with unescaped quotes. Consider reprompting."
+            )
 
     # Create NarrativeResponse from parsed data
 

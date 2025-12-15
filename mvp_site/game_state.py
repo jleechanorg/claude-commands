@@ -253,6 +253,103 @@ class GameState:
 
         return discrepancies
 
+    def validate_time_monotonicity(
+        self, new_time: dict[str, int] | None, warn_only: bool = True
+    ) -> tuple[bool, str | None]:
+        """
+        Validate that new game time is not earlier than current time.
+
+        Detects backward time jumps which indicate state corruption or LLM errors.
+
+        Args:
+            new_time: Dict with hour, minute, second, microsecond keys
+            warn_only: If True, log warning but return True. If False, return False for violations.
+
+        Returns:
+            tuple: (is_valid, error_message or None)
+        """
+        if not new_time or not isinstance(new_time, dict):
+            return True, None
+
+        # Get current world_time
+        current_time = self.world_data.get("world_time") if self.world_data else None
+        if not current_time or not isinstance(current_time, dict):
+            return True, None  # No current time to compare
+
+        def time_to_microseconds(t: dict[str, int]) -> int:
+            """Convert time dict to total microseconds for comparison."""
+            try:
+                hours = int(t.get("hour", 0))
+                minutes = int(t.get("minute", 0))
+                seconds = int(t.get("second", 0))
+                micros = int(t.get("microsecond", 0))
+                return (hours * 3600 + minutes * 60 + seconds) * 1_000_000 + micros
+            except (ValueError, TypeError):
+                return 0
+
+        current_micros = time_to_microseconds(current_time)
+        new_micros = time_to_microseconds(new_time)
+
+        if new_micros < current_micros:
+            error_msg = (
+                f"⚠️ TIME_MONOTONICITY_VIOLATION: New time {new_time} is earlier than "
+                f"current time {current_time}. This may indicate state corruption."
+            )
+            logging_util.warning(error_msg)
+            return warn_only, error_msg
+
+        return True, None
+
+    def validate_level_consistency(
+        self, proposed_xp: int | None = None, proposed_level: int | None = None
+    ) -> tuple[bool, str | None, dict[str, Any] | None]:
+        """
+        Validate that XP and level are consistent per D&D 5e rules.
+
+        If inconsistent, returns the corrected values. Backend is authoritative.
+
+        Args:
+            proposed_xp: Optional new XP value to validate
+            proposed_level: Optional new level value to validate
+
+        Returns:
+            tuple: (is_consistent, error_message or None, corrections dict or None)
+                   corrections dict has keys: 'xp', 'level' with corrected values
+        """
+        # Get current values from state
+        pc_data = self.player_character_data if self.player_character_data else {}
+        exp_data = pc_data.get("experience", {})
+
+        current_xp = proposed_xp if proposed_xp is not None else exp_data.get("current", 0)
+        current_level = proposed_level if proposed_level is not None else pc_data.get("level", 1)
+
+        # Ensure valid types
+        try:
+            current_xp = int(current_xp)
+            current_level = int(current_level)
+        except (ValueError, TypeError):
+            return False, "Invalid XP or level type", None
+
+        # Calculate expected level from XP using the helper function
+        expected_level = level_from_xp(current_xp)
+
+        if current_level != expected_level:
+            error_msg = (
+                f"⚠️ XP_LEVEL_MISMATCH: Level {current_level} does not match XP {current_xp}. "
+                f"Expected level {expected_level} based on D&D 5e XP table. "
+                "Backend will correct this."
+            )
+            logging_util.warning(error_msg)
+
+            corrections = {
+                "level": expected_level,
+                "xp": current_xp,
+                "needed_for_next_level": xp_to_next_level(current_xp, expected_level),
+            }
+            return False, error_msg, corrections
+
+        return True, None, None
+
     # Combat Management Methods
 
     def start_combat(self, combatants_data: list[dict[str, Any]]) -> None:
