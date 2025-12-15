@@ -1004,6 +1004,16 @@ def roll_dice(notation: str) -> DiceRollResult:
         logging_util.warning(f"Die size {die_size} exceeds max {MAX_DIE_SIZE}, clamping")
         die_size = MAX_DIE_SIZE
 
+    # Validate num_dice to reject degenerate notations like "0d20+5"
+    if num_dice < 1:
+        logging_util.warning(f"Dice count {num_dice} < 1 in '{notation}', returning modifier only")
+        return DiceRollResult(
+            notation=notation,
+            individual_rolls=[],
+            modifier=modifier,
+            total=modifier,
+        )
+
     # Validate die_size to prevent crashes on invalid notations like "1d0"
     if die_size < 1:
         return DiceRollResult(
