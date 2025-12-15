@@ -27,6 +27,8 @@ A2A_AVAILABLE = True
 
 # Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-3-pro-preview by default
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+# Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
+CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 
 CLI_PROFILES = {
     "claude": {
@@ -89,6 +91,29 @@ CLI_PROFILES = {
             "google gemini",
         ],
     },
+    "cursor": {
+        "binary": "cursor-agent",
+        "display_name": "Cursor",
+        "generated_with": "🤖 Generated with [Cursor Agent](https://www.cursor.com/)",
+        "co_author": "Cursor <noreply@cursor.com>",
+        "supports_continue": False,
+        "conversation_dir": None,
+        "continue_flag": "",
+        "restart_env": "CURSOR_RESTART",
+        # Cursor Agent CLI with configurable model (defaults to composer-1) for fresh-data analysis
+        "command_template": f"{{binary}} -p @{{prompt_file}} --model {CURSOR_MODEL} --output-format text",
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        "detection_keywords": [
+            "cursor",
+            "cursor-agent",
+            "cursor agent",
+            "cursor cli",
+            "use cursor",
+            "use the cursor cli",
+            "cursor ai",
+        ],
+    },
 }
 
 
@@ -121,28 +146,24 @@ def _kill_tmux_session_if_exists(name: str) -> None:
 
         # Check all possible variants
         candidates = [
-            name, f"{name}_",  # Original name
-            base, f"{base}_",  # Without trailing dot
-            name_tmux_safe, f"{name_tmux_safe}_",  # Tmux-safe version
-            base_tmux_safe, f"{base_tmux_safe}_"   # Tmux-safe without trailing dot
+            name,
+            f"{name}_",  # Original name
+            base,
+            f"{base}_",  # Without trailing dot
+            name_tmux_safe,
+            f"{name_tmux_safe}_",  # Tmux-safe version
+            base_tmux_safe,
+            f"{base_tmux_safe}_",  # Tmux-safe without trailing dot
         ]
 
         # Try direct has-session matches
         for candidate in candidates:
             check = subprocess.run(
-                ["tmux", "has-session", "-t", candidate],
-                check=False,
-                capture_output=True,
-                timeout=30
+                ["tmux", "has-session", "-t", candidate], check=False, capture_output=True, timeout=30
             )
             if check.returncode == 0:
                 print(f"🧹 Killing existing tmux session {candidate} to allow reuse")
-                subprocess.run(
-                    ["tmux", "kill-session", "-t", candidate],
-                    check=False,
-                    capture_output=True,
-                    timeout=30
-                )
+                subprocess.run(["tmux", "kill-session", "-t", candidate], check=False, capture_output=True, timeout=30)
     except Exception as exc:
         print(f"⚠️ Warning: unable to check/kill tmux session {name}: {exc}")
 
@@ -480,7 +501,7 @@ class TaskDispatcher:
                 Takes highest precedence over all other selection methods.
 
         Returns:
-            The CLI name to use (e.g., 'claude', 'codex', 'gemini').
+            The CLI name to use (e.g., 'claude', 'codex', 'gemini', 'cursor').
 
         Raises:
             ValueError: If an invalid forced_cli value is supplied.
@@ -500,16 +521,12 @@ class TaskDispatcher:
         if forced_cli is not None:
             forced_cli = forced_cli.lower()
             if forced_cli not in CLI_PROFILES:
-                raise ValueError(
-                    f"Invalid forced_cli: {forced_cli}. Must be one of {list(CLI_PROFILES.keys())}"
-                )
+                raise ValueError(f"Invalid forced_cli: {forced_cli}. Must be one of {list(CLI_PROFILES.keys())}")
 
             if cli_flag:
                 requested_cli = cli_flag.group(1).lower()
                 if requested_cli != forced_cli:
-                    print(
-                        f"⚠️ Forced CLI '{forced_cli}' overrides --agent-cli request for '{requested_cli}'."
-                    )
+                    print(f"⚠️ Forced CLI '{forced_cli}' overrides --agent-cli request for '{requested_cli}'.")
 
             return forced_cli
 
@@ -544,7 +561,7 @@ class TaskDispatcher:
         if len(available_clis) == 0:
             raise RuntimeError(
                 "No agent CLI is available. Please install at least one supported CLI "
-                "(e.g., 'claude', 'codex', or 'gemini') and ensure it is in your PATH."
+                "(e.g., 'claude', 'codex', 'gemini', or 'cursor-agent') and ensure it is in your PATH."
             )
 
         if len(available_clis) == 1:
@@ -1079,11 +1096,11 @@ Complete the task, then use /pr to create a new pull request."""
             counter = 1
             original_candidate = f"{base_name}-{timestamp}"
             agent_name = original_candidate
-            
+
             while agent_name in existing:
                 agent_name = f"{original_candidate}-{counter}"
                 counter += 1
-            
+
             print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
 
         # 3. Update agent_spec to reflect the final unique name
@@ -1144,6 +1161,10 @@ Complete the task, then use /pr to create a new pull request."""
                         print("   Install Codex CLI and ensure the 'codex' command is available on your PATH")
                     elif agent_cli == "gemini":
                         print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
+                    elif agent_cli == "cursor":
+                        print(
+                            "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
+                        )
                     return False
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
