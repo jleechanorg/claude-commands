@@ -2604,10 +2604,10 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
                     allowed_users = [email.lower() for email in constants.GEMINI_3_ALLOWED_USERS]
                     if user_email in allowed_users:
                         model = constants.GEMINI_PREMIUM_MODEL
-                        logging_util.info(f"Premium user {user_email} using Gemini 3")
+                        logging_util.info(f"Premium user (id={user_id}) using Gemini 3")
                         return ProviderSelection(provider, model)
                     logging_util.info(
-                        f"User {user_email} not in Gemini 3 allowlist, falling back to default"
+                        f"User (id={user_id}) not in Gemini 3 allowlist, falling back to default"
                     )
                     user_preferred_model = constants.DEFAULT_GEMINI_MODEL
                 except Exception as e:

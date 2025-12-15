@@ -529,7 +529,7 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         # Phase 1 response: Has tool_requests
         phase1_json = json.dumps({
             "narrative": "You attack the goblin!",
-            "tool_requests": [{"tool": "roll_dice", "args": {"dice_notation": "1d20+5"}}],
+            "tool_requests": [{"tool": "roll_dice", "args": {"notation": "1d20+5"}}],
         })
 
         # Phase 2 response: Final narrative with results
@@ -595,7 +595,7 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         # Invalid tool request
         tool_requests = [
             {"tool": "invalid_tool", "args": {}},
-            {"tool": "roll_dice", "args": {"dice_notation": "1d20"}},
+            {"tool": "roll_dice", "args": {"notation": "1d20"}},
         ]
 
         results = execute_tool_requests(tool_requests)
@@ -612,7 +612,7 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         from mvp_site.llm_providers.cerebras_provider import execute_tool_requests
 
         tool_requests = [
-            {"tool": "roll_dice", "args": {"dice_notation": "2d6+3", "purpose": "damage"}},
+            {"tool": "roll_dice", "args": {"notation": "2d6+3", "purpose": "damage"}},
             {"tool": "roll_attack", "args": {"modifier": 5, "target_ac": 15}},
             {"tool": "roll_skill_check", "args": {"skill": "perception", "modifier": 2}},
         ]

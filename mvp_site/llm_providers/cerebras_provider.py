@@ -277,10 +277,30 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
     Returns:
         List of {"tool": str, "args": dict, "result": dict} with execution results
     """
+    # Input validation
+    if not isinstance(tool_requests, list):
+        logging_util.error(f"tool_requests must be a list, got {type(tool_requests)}")
+        return []
+
     results = []
     for request in tool_requests:
+        # Validate request structure
+        if not isinstance(request, dict):
+            logging_util.error(f"Tool request must be dict, got {type(request)}")
+            continue
+
         tool_name = request.get("tool", "")
         args = request.get("args", {})
+
+        # Validate tool_name
+        if not isinstance(tool_name, str) or not tool_name:
+            logging_util.error(f"Invalid tool name: {tool_name}")
+            continue
+
+        # Validate args
+        if not isinstance(args, dict):
+            logging_util.error(f"Tool args must be dict, got {type(args)}")
+            args = {}
 
         try:
             result = execute_dice_tool(tool_name, args)
