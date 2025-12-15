@@ -70,8 +70,11 @@ def get_clock_skew_seconds() -> int:
         720 seconds (12 minutes) - hardcoded value that works for all environments.
         This compensates for local clock being ahead of Google's servers.
     """
-    # Validate configuration
-    validate_deployment_config()
+    # In TESTING mode, skip validation to allow hermetic tests
+    # (validation may fail if env vars are set from local dev environment)
+    testing_mode = os.getenv("TESTING", "").lower() == "true"
+    if not testing_mode:
+        validate_deployment_config()
 
     return CLOCK_SKEW_SECONDS
 
