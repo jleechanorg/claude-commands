@@ -350,9 +350,13 @@ def generate_content_with_tool_requests(
     logging_util.info(f"Executing {len(tool_requests)} tool request(s)")
     tool_results = execute_tool_requests(tool_requests)
 
+    if not tool_results:
+        logging_util.warning("No valid tool results, returning Phase 1 result")
+        return response_1
+
     # Build Phase 2 context with tool results
     tool_results_text = "\n".join([
-        f"- {r['tool']}({r['args']}): {r['result']}"
+        f"- {r['tool']}({json.dumps(r['args'])}): {json.dumps(r['result'])}"
         for r in tool_results
     ])
 
@@ -389,4 +393,3 @@ def generate_content_with_tool_requests(
         tools=None,  # No tools = JSON mode enforced
         json_mode=True,
     )
-

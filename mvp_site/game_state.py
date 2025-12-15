@@ -1252,6 +1252,15 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     Returns:
         Dict with the tool execution result
     """
+    def _coerce_int(value: Any, default: int = 0) -> int:
+        """Safely coerce tool argument values to int to avoid type errors from LLM strings."""
+        if isinstance(value, bool):
+            return int(value)
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+
     if tool_name == "roll_dice":
         # Accept both "dice_notation" (prompt schema) and "notation" (legacy) for backwards compatibility
         notation = arguments.get("dice_notation") or arguments.get("notation", "1d20")
@@ -1269,9 +1278,9 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         }
 
     if tool_name == "roll_attack":
-        attack_mod = arguments.get("attack_modifier", 0)
+        attack_mod = _coerce_int(arguments.get("attack_modifier"), 0)
         damage_notation = arguments.get("damage_notation", "1d6")
-        target_ac = arguments.get("target_ac", 10)
+        target_ac = _coerce_int(arguments.get("target_ac"), 10)
         advantage = arguments.get("advantage", False)
         disadvantage = arguments.get("disadvantage", False)
 
@@ -1303,11 +1312,11 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         return result
 
     if tool_name == "roll_skill_check":
-        attr_mod = arguments.get("attribute_modifier", 0)
-        prof_bonus = arguments.get("proficiency_bonus", 2)
+        attr_mod = _coerce_int(arguments.get("attribute_modifier"), 0)
+        prof_bonus = _coerce_int(arguments.get("proficiency_bonus"), 2)
         proficient = arguments.get("proficient", False)
         expertise = arguments.get("expertise", False)
-        dc = arguments.get("dc", 10)
+        dc = _coerce_int(arguments.get("dc"), 10)
         skill_name = arguments.get("skill_name", "")
 
         result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
@@ -1326,10 +1335,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         }
 
     if tool_name == "roll_saving_throw":
-        attr_mod = arguments.get("attribute_modifier", 0)
-        prof_bonus = arguments.get("proficiency_bonus", 2)
+        attr_mod = _coerce_int(arguments.get("attribute_modifier"), 0)
+        prof_bonus = _coerce_int(arguments.get("proficiency_bonus"), 2)
         proficient = arguments.get("proficient", False)
-        dc = arguments.get("dc", 10)
+        dc = _coerce_int(arguments.get("dc"), 10)
         save_type = arguments.get("save_type", "")
 
         result = calculate_saving_throw(attr_mod, prof_bonus, proficient)
