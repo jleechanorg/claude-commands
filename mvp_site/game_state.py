@@ -43,12 +43,40 @@ XP_THRESHOLDS = [
 ]
 
 
+def _coerce_int(value: Any, default: int = 0) -> int:
+    """
+    Safely coerce value to int.
+
+    Handles string numbers from JSON/LLM responses and floats.
+
+    Args:
+        value: The value to coerce (int, str, float, or other)
+        default: Default value if coercion fails
+
+    Returns:
+        Integer value or default
+    """
+    if value is None:
+        return default
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+    if isinstance(value, float):
+        return int(value)
+    return default
+
+
 def level_from_xp(xp: int) -> int:
     """
     Calculate character level from cumulative XP using D&D 5e thresholds.
 
     Args:
-        xp: Current cumulative experience points (clamped to 0 if negative)
+        xp: Current cumulative experience points (clamped to 0 if negative).
+            Accepts int, str, or float - coerced to int.
 
     Returns:
         Character level (1-20)
@@ -62,7 +90,11 @@ def level_from_xp(xp: int) -> int:
         4
         >>> level_from_xp(500000)
         20
+        >>> level_from_xp("5000")  # String input from JSON
+        4
     """
+    # Coerce to int for type safety (handles strings from JSON/LLM)
+    xp = _coerce_int(xp, 0)
     # Clamp negative XP to 0
     xp = max(0, xp)
 
@@ -82,7 +114,8 @@ def xp_needed_for_level(level: int) -> int:
     Get the cumulative XP required to reach a specific level.
 
     Args:
-        level: Target level (clamped to 1-20 range)
+        level: Target level (clamped to 1-20 range).
+               Accepts int, str, or float - coerced to int.
 
     Returns:
         Cumulative XP required for that level
@@ -94,7 +127,11 @@ def xp_needed_for_level(level: int) -> int:
         6500
         >>> xp_needed_for_level(20)
         355000
+        >>> xp_needed_for_level("5")  # String input from JSON
+        6500
     """
+    # Coerce to int for type safety
+    level = _coerce_int(level, 1)
     # Clamp level to valid range
     level = max(1, min(20, level))
     return XP_THRESHOLDS[level - 1]
@@ -105,7 +142,8 @@ def xp_to_next_level(current_xp: int) -> int:
     Calculate XP remaining to reach the next level.
 
     Args:
-        current_xp: Current cumulative XP
+        current_xp: Current cumulative XP.
+                    Accepts int, str, or float - coerced to int.
 
     Returns:
         XP needed to reach next level (0 if at max level 20)
@@ -117,7 +155,11 @@ def xp_to_next_level(current_xp: int) -> int:
         150
         >>> xp_to_next_level(355000)
         0
+        >>> xp_to_next_level("150")  # String input from JSON
+        150
     """
+    # Coerce to int for type safety
+    current_xp = _coerce_int(current_xp, 0)
     current_xp = max(0, current_xp)
     current_level = level_from_xp(current_xp)
 
@@ -660,22 +702,29 @@ class GameState:
             return result  # No player data to validate
 
         # Get XP value - handle different possible structures
-        xp = None
+        xp_raw = None
         if isinstance(pc_data.get("experience"), dict):
-            xp = pc_data["experience"].get("current")
+            xp_raw = pc_data["experience"].get("current")
         elif "xp" in pc_data:
-            xp = pc_data.get("xp")
+            xp_raw = pc_data.get("xp")
         elif "xp_current" in pc_data:
-            xp = pc_data.get("xp_current")
+            xp_raw = pc_data.get("xp_current")
 
-        # Get level value
-        provided_level = pc_data.get("level")
+        # Get level value (raw, before coercion)
+        provided_level_raw = pc_data.get("level")
 
-        # Handle missing XP
-        if xp is None:
+        # Coerce XP to int for type safety (handles strings from JSON/LLM)
+        if xp_raw is None:
             # If no XP, assume 0 for level 1 character
             xp = 0
             result["assumed_xp"] = 0
+        else:
+            xp = _coerce_int(xp_raw, 0)
+
+        # Coerce level to int if present (handles strings from JSON/LLM)
+        provided_level = None
+        if provided_level_raw is not None:
+            provided_level = _coerce_int(provided_level_raw, None)
 
         # Clamp negative XP
         if xp < 0:
@@ -694,9 +743,14 @@ class GameState:
         expected_level = level_from_xp(xp)
         result["expected_level"] = expected_level
 
-        # Handle missing level - compute from XP
+        # Handle missing level - compute from XP and PERSIST to state
         if provided_level is None:
             result["computed_level"] = expected_level
+            # Persist computed level to state (fixes missing level persistence bug)
+            if hasattr(self, "player_character_data") and isinstance(
+                self.player_character_data, dict
+            ):
+                self.player_character_data["level"] = expected_level
             return result
 
         # Clamp level to valid range (1-20)
@@ -814,19 +868,21 @@ class GameState:
         Convert a time dict to total minutes for comparison.
 
         Accounts for day if present (each day = 24*60 minutes).
+        Values are coerced to int for type safety (handles strings from JSON/LLM).
         """
-        fallback_day = 0 if default_day is None else default_day
-        day = time_dict.get("day", fallback_day)
-        hour = time_dict.get("hour", 0)
-        minute = time_dict.get("minute", 0)
+        fallback_day = 0 if default_day is None else _coerce_int(default_day, 0)
+        day = _coerce_int(time_dict.get("day", fallback_day), fallback_day)
+        hour = _coerce_int(time_dict.get("hour", 0), 0)
+        minute = _coerce_int(time_dict.get("minute", 0), 0)
 
         return (day * 24 * 60) + (hour * 60) + minute
 
     def _format_time(self, time_dict: dict[str, Any]) -> str:
         """Format a time dict as a human-readable string."""
-        day = time_dict.get("day")
-        hour = time_dict.get("hour", 0)
-        minute = time_dict.get("minute", 0)
+        day_raw = time_dict.get("day")
+        day = _coerce_int(day_raw) if day_raw is not None else None
+        hour = _coerce_int(time_dict.get("hour", 0), 0)
+        minute = _coerce_int(time_dict.get("minute", 0), 0)
 
         if day is not None:
             return f"Day {day}, {hour:02d}:{minute:02d}"

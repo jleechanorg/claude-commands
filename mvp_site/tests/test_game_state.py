@@ -1761,5 +1761,176 @@ class TestTimeMonotonicity(unittest.TestCase):
         self.assertTrue(result.get("valid", True), "No previous time should pass")
 
 
+class TestTypeSafetyCoercion(unittest.TestCase):
+    """
+    Tests for type safety in XP/level validation and time functions.
+
+    Verifies that string values (common from JSON/LLM responses) are handled
+    correctly without crashing or causing incorrect comparisons.
+    """
+
+    # =========================================================================
+    # Helper Function Type Safety Tests
+    # =========================================================================
+
+    def test_level_from_xp_string_input(self):
+        """Test level_from_xp handles string XP values from JSON."""
+        from mvp_site.game_state import level_from_xp
+
+        # String "5000" should be coerced to int and return level 4
+        result = level_from_xp("5000")
+        self.assertEqual(result, 4, "String '5000' should coerce to level 4")
+
+    def test_level_from_xp_string_zero(self):
+        """Test level_from_xp handles string '0' correctly."""
+        from mvp_site.game_state import level_from_xp
+
+        result = level_from_xp("0")
+        self.assertEqual(result, 1, "String '0' should return level 1")
+
+    def test_level_from_xp_float_input(self):
+        """Test level_from_xp handles float XP values."""
+        from mvp_site.game_state import level_from_xp
+
+        result = level_from_xp(5000.5)
+        self.assertEqual(result, 4, "Float 5000.5 should coerce to level 4")
+
+    def test_level_from_xp_invalid_string_returns_level_1(self):
+        """Test level_from_xp handles non-numeric strings gracefully."""
+        from mvp_site.game_state import level_from_xp
+
+        result = level_from_xp("invalid")
+        self.assertEqual(result, 1, "Invalid string should default to level 1")
+
+    def test_xp_needed_for_level_string_input(self):
+        """Test xp_needed_for_level handles string level values."""
+        from mvp_site.game_state import xp_needed_for_level
+
+        result = xp_needed_for_level("5")
+        self.assertEqual(result, 6500, "String '5' should return XP for level 5")
+
+    def test_xp_to_next_level_string_input(self):
+        """Test xp_to_next_level handles string XP values."""
+        from mvp_site.game_state import xp_to_next_level
+
+        result = xp_to_next_level("150")
+        self.assertEqual(result, 150, "String '150' should return 150 XP to level 2")
+
+    # =========================================================================
+    # validate_xp_level Type Safety Tests
+    # =========================================================================
+
+    def test_validate_xp_level_string_xp(self):
+        """Test validate_xp_level handles string XP values from JSON/LLM."""
+        gs = GameState(
+            player_character_data={
+                "xp": "5000",  # String from JSON
+                "level": 4
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("valid", False), "String XP '5000' should validate for level 4")
+
+    def test_validate_xp_level_string_level(self):
+        """Test validate_xp_level handles string level values from JSON/LLM."""
+        gs = GameState(
+            player_character_data={
+                "xp": 5000,
+                "level": "4"  # String from JSON
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("valid", False), "String level '4' should validate for 5000 XP")
+
+    def test_validate_xp_level_both_strings(self):
+        """Test validate_xp_level handles both XP and level as strings."""
+        gs = GameState(
+            player_character_data={
+                "xp": "5000",  # String from JSON
+                "level": "4"  # String from JSON
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("valid", False), "Both string XP and level should validate")
+
+    def test_validate_xp_level_string_xp_in_experience_dict(self):
+        """Test validate_xp_level handles string XP in experience.current structure."""
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": "2700"},  # String from JSON
+                "level": 4
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("valid", False), "String XP in experience dict should validate")
+
+    def test_validate_xp_level_string_mismatch_detected(self):
+        """Test that string type doesn't cause false mismatch (string '5' != int 5)."""
+        gs = GameState(
+            player_character_data={
+                "xp": "300",
+                "level": "2"  # Correct for 300 XP
+            }
+        )
+        result = gs.validate_xp_level()
+        # String "2" should equal int 2 after coercion
+        self.assertTrue(result.get("valid", False), "String '2' should match expected level 2")
+        self.assertFalse(result.get("corrected", False), "No correction needed for matching values")
+
+    def test_validate_xp_level_missing_level_persists_computed(self):
+        """Test that missing level is computed and persisted to state."""
+        gs = GameState(
+            player_character_data={
+                "xp": 2700
+                # No level field
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertEqual(result.get("computed_level"), 4, "Should compute level 4")
+        # Check that level was persisted to state
+        self.assertEqual(
+            gs.player_character_data.get("level"), 4,
+            "Computed level should be persisted to player_character_data"
+        )
+
+    # =========================================================================
+    # Time Validation Type Safety Tests
+    # =========================================================================
+
+    def test_time_to_minutes_string_values(self):
+        """Test _time_to_minutes handles string time values from JSON/LLM."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 10, "minute": 0}
+            }
+        )
+        # String time values
+        new_time = {"hour": "12", "minute": "30"}
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "String time values should work")
+
+    def test_time_to_minutes_string_day(self):
+        """Test _time_to_minutes handles string day values."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": 10, "minute": 0, "day": 1}
+            }
+        )
+        new_time = {"hour": "12", "minute": "0", "day": "2"}
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "String day should work")
+
+    def test_time_to_minutes_mixed_types(self):
+        """Test _time_to_minutes handles mixed int/string types."""
+        gs = GameState(
+            world_data={
+                "world_time": {"hour": "10", "minute": 0, "day": 1}  # hour is string
+            }
+        )
+        new_time = {"hour": 12, "minute": "30", "day": "1"}  # mixed types
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(result.get("valid", True), "Mixed types should work")
+
+
 if __name__ == "__main__":
     unittest.main()
