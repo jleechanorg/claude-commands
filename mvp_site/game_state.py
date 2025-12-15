@@ -717,6 +717,60 @@ DICE_ROLL_TOOLS: list[dict] = [
 ]
 
 
+def validate_and_correct_state(state_dict: dict[str, Any]) -> dict[str, Any]:
+    """
+    Validate state dict and apply corrections before persistence.
+
+    Runs validation checks that exist as GameState methods but were previously
+    orphaned (never called). This ensures data integrity by:
+    1. Validating XP/level consistency per D&D 5e rules (auto-corrects)
+    2. Validating time monotonicity (logs warnings)
+
+    Args:
+        state_dict: The state dictionary to validate (will be modified in-place)
+
+    Returns:
+        The (potentially corrected) state dictionary
+    """
+    # Create temporary GameState to run validations
+    temp_state = GameState.from_dict(state_dict.copy())
+    if temp_state is None:
+        logging_util.warning(
+            "VALIDATION: Could not create GameState from dict, skipping validation"
+        )
+        return state_dict
+
+    # Run level consistency validation
+    is_consistent, error_msg, corrections = temp_state.validate_level_consistency()
+    if not is_consistent and corrections:
+        logging_util.info(
+            f"VALIDATION: Applying XP/level corrections: {corrections}"
+        )
+        # Apply corrections to player_character_data
+        pc_data = state_dict.get("player_character_data", {})
+        if corrections.get("level") is not None:
+            pc_data["level"] = corrections["level"]
+        if corrections.get("xp") is not None:
+            if "experience" not in pc_data:
+                pc_data["experience"] = {}
+            pc_data["experience"]["current"] = corrections["xp"]
+        if corrections.get("needed_for_next_level") is not None:
+            if "experience" not in pc_data:
+                pc_data["experience"] = {}
+            pc_data["experience"]["needed_for_next_level"] = corrections[
+                "needed_for_next_level"
+            ]
+        state_dict["player_character_data"] = pc_data
+
+    # Run time monotonicity validation (warning only, no corrections)
+    new_time = (
+        state_dict.get("world_data", {}).get("world_time")
+        if isinstance(state_dict.get("world_data"), dict)
+        else None
+    )
+    temp_state.validate_time_monotonicity(new_time, warn_only=True)
+
+    return state_dict
 
 
 @dataclass
@@ -991,6 +1045,18 @@ def roll_dice(notation: str) -> DiceRollResult:
     num_dice = int(match.group(1))
     die_size = int(match.group(2))
     modifier = int(match.group(3)) if match.group(3) else 0
+
+    # Reject non-positive dice counts to avoid degenerate "0d20+X" style rolls
+    if num_dice < 1:
+        logging_util.warning(
+            f"Dice count {num_dice} < 1 in notation '{notation}', treating as modifier-only roll"
+        )
+        return DiceRollResult(
+            notation=notation,
+            individual_rolls=[],
+            modifier=modifier,
+            total=modifier,
+        )
 
     # Bounds check to prevent DoS via huge dice counts/sizes
     MAX_DICE = 100  # Reasonable max for any D&D scenario

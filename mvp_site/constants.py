@@ -49,7 +49,7 @@ GEMINI_3_ALLOWED_USERS = [
 #   - gemini-2.5-flash: JSON mode only, NO code_execution combo (uses precompute dice)
 ALLOWED_GEMINI_MODELS = [
     DEFAULT_GEMINI_MODEL,  # ✅ gemini-2.0-flash: code_execution + JSON (cheap: $0.10/M)
-    "gemini-2.5-flash",    # ✅ JSON mode only, precompute dice (alternative option)
+    GEMINI_2_5_FLASH,      # ✅ JSON mode only, precompute dice (alternative option)
     GEMINI_PREMIUM_MODEL,  # ✅ gemini-3-pro-preview: code_execution + JSON (allowlist)
 ]
 
@@ -151,12 +151,12 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
 GEMINI_MODEL_MAPPING = {
     # Primary models (selectable in settings)
     "gemini-2.0-flash": "gemini-2.0-flash",      # Default: code_execution + JSON
-    "gemini-2.5-flash": "gemini-2.5-flash",      # Alternative: JSON only, precompute dice
-    "gemini-3-pro-preview": "gemini-3-pro-preview",  # Premium: code_execution + JSON
+    "gemini-2.5-flash": GEMINI_2_5_FLASH,        # Alternative: JSON only, precompute dice
+    "gemini-3-pro-preview": GEMINI_PREMIUM_MODEL,  # Premium: code_execution + JSON
     # Legacy aliases (redirect to 2.0 for backwards compatibility)
     "gemini-2.5-pro": "gemini-2.0-flash",  # Redirect: 2.5-pro → 2.0-flash
     "pro-2.5": "gemini-2.0-flash",         # Redirect: legacy alias
-    "flash-2.5": "gemini-2.5-flash",       # Alias: maps to actual 2.5-flash
+    "flash-2.5": GEMINI_2_5_FLASH,         # Alias: maps to actual 2.5-flash
 }
 
 # OpenRouter model selection tuned for narrative-heavy D&D play
