@@ -1278,8 +1278,13 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         }
 
     if tool_name == "roll_attack":
-        attack_mod = _coerce_int(arguments.get("attack_modifier"), 0)
-        damage_notation = arguments.get("damage_notation", "1d6")
+        # Accept both prompt schema names and internal names for backwards compatibility
+        attack_mod = _coerce_int(
+            arguments.get("attack_modifier") or arguments.get("modifier"), 0
+        )
+        damage_notation = (
+            arguments.get("damage_notation") or arguments.get("damage_dice") or "1d6"
+        )
         target_ac = _coerce_int(arguments.get("target_ac"), 10)
         advantage = arguments.get("advantage", False)
         disadvantage = arguments.get("disadvantage", False)
@@ -1312,12 +1317,15 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         return result
 
     if tool_name == "roll_skill_check":
-        attr_mod = _coerce_int(arguments.get("attribute_modifier"), 0)
+        # Accept both prompt schema names and internal names for backwards compatibility
+        attr_mod = _coerce_int(
+            arguments.get("attribute_modifier") or arguments.get("modifier"), 0
+        )
         prof_bonus = _coerce_int(arguments.get("proficiency_bonus"), 2)
         proficient = arguments.get("proficient", False)
         expertise = arguments.get("expertise", False)
         dc = _coerce_int(arguments.get("dc"), 10)
-        skill_name = arguments.get("skill_name", "")
+        skill_name = arguments.get("skill_name") or arguments.get("skill") or ""
 
         result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
         success = result.total >= dc
@@ -1335,7 +1343,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         }
 
     if tool_name == "roll_saving_throw":
-        attr_mod = _coerce_int(arguments.get("attribute_modifier"), 0)
+        # Accept both prompt schema names and internal names for backwards compatibility
+        attr_mod = _coerce_int(
+            arguments.get("attribute_modifier") or arguments.get("modifier"), 0
+        )
         prof_bonus = _coerce_int(arguments.get("proficiency_bonus"), 2)
         proficient = arguments.get("proficient", False)
         dc = _coerce_int(arguments.get("dc"), 10)
