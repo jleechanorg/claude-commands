@@ -675,7 +675,7 @@ async function testGameplayAction(userId, campaignId, contextLabel = 'campaign',
       arguments: {
         user_id: userId,
         campaign_id: campaignId,
-        user_input: 'I search for clues in the room.',
+        user_input: 'A goblin lunges at me with a rusty dagger! I swing my sword to defend myself and strike back. Roll my attack to see if I hit.',
         debug_mode: true
       }
     }
