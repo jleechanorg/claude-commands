@@ -1881,6 +1881,25 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             "Computed level should be persisted to player_character_data"
         )
 
+    def test_validate_xp_level_scalar_negative_persisted(self):
+        """Test that scalar negative experience is clamped and persisted."""
+        # Bug fix test: scalar experience (not dict) negative values
+        # must be clamped and persisted back to the state
+        gs = GameState(
+            player_character_data={
+                "experience": -100,  # Scalar negative (not dict)
+                "level": 1
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertEqual(result.get("clamped_xp"), 0, "Negative XP should be clamped to 0")
+        # Critical: scalar experience must be updated (not just dict format)
+        self.assertEqual(
+            gs.player_character_data.get("experience"),
+            0,
+            "Scalar negative experience should be persisted as 0"
+        )
+
     # =========================================================================
     # Time Validation Type Safety Tests
     # =========================================================================

@@ -894,11 +894,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         }
 
         # Capture original time before update for accurate monotonicity validation
-        original_world_time = current_game_state.world_data.get("world_time") if current_game_state.world_data else None
+        # Note: current_game_state is a DocumentSnapshot, convert to dict first
+        current_state_as_dict = current_game_state.to_dict()
+        original_world_time = current_state_as_dict.get("world_data", {}).get("world_time")
 
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
-            current_game_state.to_dict(), response.get("state_changes", {})
+            current_state_as_dict, response.get("state_changes", {})
         )
 
         # Validate and auto-correct XP/level and time consistency
@@ -1800,7 +1802,8 @@ def _handle_set_command(
     )
 
     # Capture original time before update for accurate monotonicity validation
-    original_world_time = current_game_state.world_data.get("world_time") if current_game_state.world_data else None
+    # Note: current_game_state is a DocumentSnapshot, use dict version
+    original_world_time = current_state_dict_before_update.get("world_data", {}).get("world_time")
 
     updated_state = update_state_with_changes(
         current_state_dict_before_update, proposed_changes
@@ -1865,7 +1868,8 @@ def _handle_update_state_command(
         current_state_dict = current_game_state.to_dict()
 
         # Capture original time before update for accurate monotonicity validation
-        original_world_time = current_game_state.world_data.get("world_time") if current_game_state.world_data else None
+        # Note: current_game_state is a DocumentSnapshot, use dict version
+        original_world_time = current_state_dict.get("world_data", {}).get("world_time")
 
         # Perform an update
         updated_state_dict = update_state_with_changes(

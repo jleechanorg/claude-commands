@@ -740,6 +740,9 @@ class GameState:
             # Persist clamped XP back to the player data
             if isinstance(pc_data.get("experience"), dict):
                 pc_data["experience"]["current"] = 0
+            elif "experience" in pc_data:
+                # Scalar experience value (int or str)
+                pc_data["experience"] = 0
             elif "xp" in pc_data:
                 pc_data["xp"] = 0
             elif "xp_current" in pc_data:
@@ -843,6 +846,11 @@ class GameState:
         current_world_time = self.world_data.get("world_time")
         if not current_world_time or not isinstance(current_world_time, dict):
             # No previous time to compare against
+            return result
+
+        # Validate new_time is a dict before processing
+        if not isinstance(new_time, dict):
+            # new_time must be a dict to compare
             return result
 
         # Convert times to comparable values
