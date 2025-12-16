@@ -203,6 +203,7 @@ def truncate_game_state_for_logging(
 def validate_game_state_updates(
     updated_state_dict: dict[str, Any],
     new_time: dict[str, Any] | None = None,
+    original_time: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Validate and auto-correct game state updates.
@@ -214,6 +215,9 @@ def validate_game_state_updates(
     Args:
         updated_state_dict: The game state dict after updates are applied
         new_time: Optional new world_time to validate for monotonicity
+        original_time: Optional original world_time from before the update.
+            Required for accurate time monotonicity checking since
+            updated_state_dict already has new_time merged in.
 
     Returns:
         The validated (and potentially corrected) state dict
@@ -245,7 +249,22 @@ def validate_game_state_updates(
         )
 
     # Validate time monotonicity if new_time is provided
-    if new_time:
+    # Use original_time for comparison if provided, otherwise compare against
+    # temp_state (which already has new_time merged, so it would compare to itself)
+    if new_time and original_time is not None:
+        # Temporarily set the original time for accurate comparison
+        if temp_state.world_data:
+            saved_time = temp_state.world_data.get("world_time")
+            temp_state.world_data["world_time"] = original_time
+            time_result = temp_state.validate_time_monotonicity(new_time, strict=False)
+            # Restore the new time after validation
+            temp_state.world_data["world_time"] = saved_time
+            if time_result.get("warning"):
+                logging_util.warning(
+                    f"Time validation warning: {time_result.get('message')}"
+                )
+    elif new_time:
+        # Fallback: compare against current state (may be inaccurate if already merged)
         time_result = temp_state.validate_time_monotonicity(new_time, strict=False)
         if time_result.get("warning"):
             logging_util.warning(
@@ -874,6 +893,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "state_changes": state_changes,
         }
 
+        # Capture original time before update for accurate monotonicity validation
+        original_world_time = current_game_state.world_data.get("world_time") if current_game_state.world_data else None
+
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
             current_game_state.to_dict(), response.get("state_changes", {})
@@ -882,7 +904,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Validate and auto-correct XP/level and time consistency
         new_world_time = response.get("state_changes", {}).get("world_data", {}).get("world_time")
         updated_game_state_dict = validate_game_state_updates(
-            updated_game_state_dict, new_time=new_world_time
+            updated_game_state_dict, new_time=new_world_time, original_time=original_world_time
         )
 
         # Update in Firestore (blocking I/O - run in thread)
@@ -1777,6 +1799,9 @@ def _handle_set_command(
         f"GOD_MODE_SET state BEFORE update: {current_state_dict_before_update}"
     )
 
+    # Capture original time before update for accurate monotonicity validation
+    original_world_time = current_game_state.world_data.get("world_time") if current_game_state.world_data else None
+
     updated_state = update_state_with_changes(
         current_state_dict_before_update, proposed_changes
     )
@@ -1784,7 +1809,7 @@ def _handle_set_command(
 
     # Validate XP/level and time consistency before persisting
     new_world_time = proposed_changes.get("world_data", {}).get("world_time")
-    updated_state = validate_game_state_updates(updated_state, new_time=new_world_time)
+    updated_state = validate_game_state_updates(updated_state, new_time=new_world_time, original_time=original_world_time)
 
     logging_util.info(
         f"GOD_MODE_SET state AFTER update:\n{_truncate_log_json(updated_state, json_serializer=json_default_serializer)}"
@@ -1839,6 +1864,9 @@ def _handle_update_state_command(
 
         current_state_dict = current_game_state.to_dict()
 
+        # Capture original time before update for accurate monotonicity validation
+        original_world_time = current_game_state.world_data.get("world_time") if current_game_state.world_data else None
+
         # Perform an update
         updated_state_dict = update_state_with_changes(
             current_state_dict, state_changes
@@ -1850,7 +1878,7 @@ def _handle_update_state_command(
         # Validate XP/level and time consistency before persisting
         new_world_time = state_changes.get("world_data", {}).get("world_time")
         updated_state_dict = validate_game_state_updates(
-            updated_state_dict, new_time=new_world_time
+            updated_state_dict, new_time=new_world_time, original_time=original_world_time
         )
 
         # Convert back to GameState object after the update to validate
