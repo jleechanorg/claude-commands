@@ -14,34 +14,6 @@ from typing import Any, Optional
 from mvp_site import constants, logging_util
 
 
-def _coerce_int(value: Any, default: int = 0) -> int:
-    """
-    Safely coerce value to int.
-
-    Handles string numbers from JSON/LLM responses and floats.
-    Critical for type safety since LLM often returns "5000" instead of 5000.
-
-    Args:
-        value: The value to coerce (int, str, float, or other)
-        default: Default value if coercion fails
-
-    Returns:
-        Integer value or default
-    """
-    if value is None:
-        return default
-    if isinstance(value, int) and not isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return default
-    if isinstance(value, float):
-        return int(value)
-    return default
-
-
 class GameState:
     """
     A class to hold and manage game state data, behaving like a flexible dictionary.
@@ -996,15 +968,11 @@ def level_from_xp(total_xp: int) -> int:
     Determine character level from total XP.
 
     Args:
-        total_xp: Total accumulated XP (accepts int, str, float - coerced to int)
+        total_xp: Total accumulated XP
 
     Returns:
         Character level (1-20)
     """
-    # Coerce to int for type safety (LLM often returns strings)
-    total_xp = _coerce_int(total_xp, 0)
-    total_xp = max(0, total_xp)  # Clamp negative XP to 0
-
     level = 1
     for lvl, threshold in sorted(XP_THRESHOLDS.items()):
         if total_xp >= threshold:
@@ -1019,15 +987,15 @@ def xp_needed_for_level(level: int) -> int:
     Get total XP needed to reach a specific level.
 
     Args:
-        level: Target level (1-20) (accepts int, str, float - coerced to int)
+        level: Target level (1-20)
 
     Returns:
         Total XP threshold for that level
     """
-    # Coerce to int for type safety
-    level = _coerce_int(level, 1)
-    level = max(1, min(20, level))  # Clamp to valid range
-
+    if level < 1:
+        return 0
+    if level > 20:
+        return XP_THRESHOLDS[20]
     return XP_THRESHOLDS.get(level, 0)
 
 
@@ -1036,16 +1004,12 @@ def xp_to_next_level(current_xp: int, current_level: int) -> int:
     Calculate XP remaining until next level.
 
     Args:
-        current_xp: Current total XP (accepts int, str, float - coerced to int)
-        current_level: Current level (accepts int, str, float - coerced to int)
+        current_xp: Current total XP
+        current_level: Current level
 
     Returns:
         XP needed for next level (0 if at max level)
     """
-    # Coerce to int for type safety
-    current_xp = _coerce_int(current_xp, 0)
-    current_level = _coerce_int(current_level, 1)
-
     if current_level >= 20:
         return 0
     next_level_threshold = xp_needed_for_level(current_level + 1)
