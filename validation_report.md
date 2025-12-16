@@ -3,7 +3,7 @@
 ## Executive Summary
 This report analyzes the feedback received on PR #2353. All major findings have been validated against the codebase.
 
-## detailed Analysis
+## Detailed Analysis
 
 ### 1. Security Vulnerability (PII Leak)
 - **Finding**: A review comment noted that `mvp_site/frontend_v1/api.js` logs user emails to the console in `fetchApi`.

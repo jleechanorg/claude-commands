@@ -135,7 +135,7 @@ def generate_json_mode_content(
         config.tools = gemini_tools
 
     if system_instruction_text:
-        # Use plain string - Gemini 2.x SDK accepts string directly
+        # Use plain string - all current Gemini SDK versions accept string directly
         config.system_instruction = system_instruction_text
     
     # If messages are provided, use them (ChatSession style) or convert to contents

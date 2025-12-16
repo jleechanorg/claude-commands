@@ -166,7 +166,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
 
 class TestPlanningBlockSchemaStructure(unittest.TestCase):
-    """TDD tests for planning_block schema enforcement (bead c9g - Option B).
+    """TDD tests for planning_block schema enforcement.
 
     These tests verify NARRATIVE_RESPONSE_SCHEMA defines planning_block with
     required nested structure: thinking (string), context (string), choices (object).
