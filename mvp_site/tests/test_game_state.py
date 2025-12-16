@@ -1775,45 +1775,33 @@ class TestTypeSafetyCoercion(unittest.TestCase):
 
     def test_level_from_xp_string_input(self):
         """Test level_from_xp handles string XP values from JSON."""
-        from mvp_site.game_state import level_from_xp
-
         # String "5000" should be coerced to int and return level 4
-        result = level_from_xp("5000")
+        result = game_state_module.level_from_xp("5000")
         self.assertEqual(result, 4, "String '5000' should coerce to level 4")
 
     def test_level_from_xp_string_zero(self):
         """Test level_from_xp handles string '0' correctly."""
-        from mvp_site.game_state import level_from_xp
-
-        result = level_from_xp("0")
+        result = game_state_module.level_from_xp("0")
         self.assertEqual(result, 1, "String '0' should return level 1")
 
     def test_level_from_xp_float_input(self):
         """Test level_from_xp handles float XP values."""
-        from mvp_site.game_state import level_from_xp
-
-        result = level_from_xp(5000.5)
+        result = game_state_module.level_from_xp(5000.5)
         self.assertEqual(result, 4, "Float 5000.5 should coerce to level 4")
 
     def test_level_from_xp_invalid_string_returns_level_1(self):
         """Test level_from_xp handles non-numeric strings gracefully."""
-        from mvp_site.game_state import level_from_xp
-
-        result = level_from_xp("invalid")
+        result = game_state_module.level_from_xp("invalid")
         self.assertEqual(result, 1, "Invalid string should default to level 1")
 
     def test_xp_needed_for_level_string_input(self):
         """Test xp_needed_for_level handles string level values."""
-        from mvp_site.game_state import xp_needed_for_level
-
-        result = xp_needed_for_level("5")
+        result = game_state_module.xp_needed_for_level("5")
         self.assertEqual(result, 6500, "String '5' should return XP for level 5")
 
     def test_xp_to_next_level_string_input(self):
         """Test xp_to_next_level handles string XP values."""
-        from mvp_site.game_state import xp_to_next_level
-
-        result = xp_to_next_level("150")
+        result = game_state_module.xp_to_next_level("150")
         self.assertEqual(result, 150, "String '150' should return 150 XP to level 2")
 
     # =========================================================================

@@ -43,7 +43,7 @@ XP_THRESHOLDS = [
 ]
 
 
-def _coerce_int(value: Any, default: int = 0) -> int:
+def _coerce_int(value: Any, default: int | None = 0) -> int | None:
     """
     Safely coerce value to int.
 
@@ -51,7 +51,7 @@ def _coerce_int(value: Any, default: int = 0) -> int:
 
     Args:
         value: The value to coerce (int, str, float, or other)
-        default: Default value if coercion fails
+        default: Default value if coercion fails (can be None)
 
     Returns:
         Integer value or default
@@ -684,8 +684,9 @@ class GameState:
             strict: If True, raise ValueError on mismatches instead of auto-correcting
 
         Returns:
-            Dict with validation results:
-            - valid: True if XP/level match (or were missing)
+            Dict with validation results (flags describe the original input; corrected
+            fields describe applied fixes):
+            - valid: True if XP/level matched before any corrections or were missing
             - corrected: True if level was auto-corrected
             - expected_level: Computed level from XP
             - provided_level: Original level value
@@ -698,8 +699,8 @@ class GameState:
         result: dict[str, Any] = {"valid": True}
 
         pc_data = self.player_character_data
-        if not pc_data:
-            return result  # No player data to validate
+        if not isinstance(pc_data, dict) or not pc_data:
+            return result  # No structured player data to validate
 
         # Get XP value - handle different possible structures
         xp_raw = None
@@ -820,8 +821,10 @@ class GameState:
             strict: If True, raise ValueError on backwards time
 
         Returns:
-            Dict with validation results:
-            - valid: True if time is forward or same
+            Dict with validation results (valid reflects whether the update is
+            allowed in the current mode):
+            - valid: True if time is forward or same, or if regression is allowed
+              with a warning in non-strict mode
             - warning: True if time went backwards (in non-strict mode)
             - message: Description of the issue
 
