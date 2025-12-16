@@ -1919,6 +1919,61 @@ class TestTypeSafetyCoercion(unittest.TestCase):
         result = gs.validate_time_monotonicity(new_time)
         self.assertTrue(result.get("valid", True), "Mixed types should work")
 
+    # =========================================================================
+    # Scalar Experience Value Tests
+    # =========================================================================
+
+    def test_validate_xp_level_scalar_experience_int(self):
+        """Test validate_xp_level handles scalar int experience values."""
+        gs = GameState(
+            player_character_data={
+                "experience": 2700,  # Scalar int (not dict with "current")
+                "level": 4
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("valid", False), "Scalar int experience should validate")
+        self.assertEqual(result.get("expected_level"), 4, "Should compute level 4 from 2700 XP")
+
+    def test_validate_xp_level_scalar_experience_str(self):
+        """Test validate_xp_level handles scalar string experience values."""
+        gs = GameState(
+            player_character_data={
+                "experience": "5000",  # Scalar string (not dict with "current")
+                "level": 4
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertTrue(result.get("valid", False), "Scalar string experience should validate")
+        self.assertEqual(result.get("expected_level"), 4, "Should compute level 4 from 5000 XP")
+
+    def test_validate_xp_level_scalar_experience_mismatch(self):
+        """Test that scalar experience correctly detects level mismatch."""
+        gs = GameState(
+            player_character_data={
+                "experience": 2700,  # Scalar int - should be level 4
+                "level": 1  # Incorrect level
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertFalse(result.get("valid", True), "Mismatch should be detected")
+        self.assertTrue(result.get("corrected", False), "Level should be corrected")
+        self.assertEqual(gs.player_character_data.get("level"), 4, "Level should be corrected to 4")
+
+    def test_validate_xp_level_scalar_experience_missing_level(self):
+        """Test that missing level is computed from scalar experience."""
+        gs = GameState(
+            player_character_data={
+                "experience": 6500  # Scalar int, no level field
+            }
+        )
+        result = gs.validate_xp_level()
+        self.assertEqual(result.get("computed_level"), 5, "Should compute level 5 from 6500 XP")
+        self.assertEqual(
+            gs.player_character_data.get("level"), 5,
+            "Computed level should be persisted"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

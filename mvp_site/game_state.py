@@ -703,9 +703,15 @@ class GameState:
             return result  # No structured player data to validate
 
         # Get XP value - handle different possible structures
+        # Supports: experience.current (dict), experience (scalar int/str), xp, xp_current
         xp_raw = None
-        if isinstance(pc_data.get("experience"), dict):
-            xp_raw = pc_data["experience"].get("current")
+        experience_val = pc_data.get("experience")
+        if isinstance(experience_val, dict):
+            # Experience stored as {"current": 2700, ...}
+            xp_raw = experience_val.get("current")
+        elif experience_val is not None:
+            # Experience stored as scalar (int or str like 2700 or "2700")
+            xp_raw = experience_val
         elif "xp" in pc_data:
             xp_raw = pc_data.get("xp")
         elif "xp_current" in pc_data:
