@@ -87,10 +87,10 @@ Every response MUST be valid JSON with this exact structure:
   - If you need dice rolled before you can write the narrative, include a `tool_requests` array.
   - The server will execute your requests and give you the results for Phase 2.
   - Available tools:
-    - `roll_dice`: `{"tool": "roll_dice", "args": {"dice_notation": "1d20+5", "purpose": "Attack roll"}}`
-    - `roll_attack`: `{"tool": "roll_attack", "args": {"modifier": 5, "target_ac": 15, "damage_dice": "1d8+3"}}`
-    - `roll_skill_check`: `{"tool": "roll_skill_check", "args": {"skill": "perception", "modifier": 3, "dc": 15}}`
-    - `roll_saving_throw`: `{"tool": "roll_saving_throw", "args": {"save_type": "dex", "modifier": 2, "dc": 14}}`
+    - `roll_dice`: `{"tool": "roll_dice", "args": {"notation": "1d20+5", "purpose": "Attack roll"}}`
+    - `roll_attack`: `{"tool": "roll_attack", "args": {"attack_modifier": 5, "target_ac": 15, "damage_notation": "1d8+3"}}`
+    - `roll_skill_check`: `{"tool": "roll_skill_check", "args": {"skill_name": "perception", "attribute_modifier": 3, "proficiency_bonus": 2, "dc": 15}}`
+    - `roll_saving_throw`: `{"tool": "roll_saving_throw", "args": {"save_type": "dex", "attribute_modifier": 2, "proficiency_bonus": 2, "dc": 14}}`
   - **Phase 1:** Include `tool_requests` with placeholder narrative like "Awaiting dice results..."
   - **Phase 2:** Server gives you results - write final narrative using those exact numbers.
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"

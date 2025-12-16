@@ -201,11 +201,11 @@ def test_requires_special_setup():
 3. Use `pytest.importorskip()` for optional dependencies
 4. `TESTING=true` must enable mock mode for all external services
 
-### Enforcement
+### Enforcement (policy)
 
-- CI runs ALL tests - no silent exclusions
+- CI runs ALL tests; skips must be explicit and visible
 - Coverage reports should show tests as "skipped" (not "passed" with 0 assertions)
-- Pre-commit hooks may validate test patterns when configured
+- Pre-commit hooks may validate test patterns when configured (not yet automated)
 - Code review should flag silent skip patterns for discussion
 
 ## Quality Standards and Compliance
