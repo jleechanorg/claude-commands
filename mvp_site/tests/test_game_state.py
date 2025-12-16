@@ -1661,6 +1661,11 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         self.assertEqual(result.get("expected_level"), 4, "Should compute level 4 from 2700 XP")
+        self.assertEqual(
+            gs.player_character_data.get("level"),
+            4,
+            "Computed level should be persisted to player_character_data",
+        )
 
 
 class TestTimeMonotonicity(unittest.TestCase):

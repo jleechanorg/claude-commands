@@ -737,15 +737,15 @@ class GameState:
         if xp < 0:
             result["clamped_xp"] = 0
             xp = 0
-            # Persist clamped XP back to the player data
+            # Persist clamped XP back to every known XP field to avoid divergence
             if isinstance(pc_data.get("experience"), dict):
                 pc_data["experience"]["current"] = 0
-            elif "experience" in pc_data:
+            if "experience" in pc_data and not isinstance(pc_data.get("experience"), dict):
                 # Scalar experience value (int or str)
                 pc_data["experience"] = 0
-            elif "xp" in pc_data:
+            if "xp" in pc_data:
                 pc_data["xp"] = 0
-            elif "xp_current" in pc_data:
+            if "xp_current" in pc_data:
                 pc_data["xp_current"] = 0
             logging_util.warning("XP validation: Negative XP clamped to 0")
 
