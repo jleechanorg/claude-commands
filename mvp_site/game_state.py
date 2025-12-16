@@ -1337,6 +1337,20 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         except (ValueError, TypeError):
             return default
 
+    def _coerce_bool(value: Any, default: bool = False) -> bool:
+        """Safely coerce tool argument values to bool to handle LLM string responses.
+
+        LLMs may return "false", "true", "False", "True" as strings instead of booleans.
+        Non-empty strings are truthy in Python, so "false" would incorrectly evaluate as True.
+        """
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "yes")
+        if value is None:
+            return default
+        return bool(value)
+
     if tool_name == "roll_dice":
         # Accept both "dice_notation" (prompt schema) and "notation" (legacy) for backwards compatibility
         notation = arguments.get("dice_notation") or arguments.get("notation", "1d20")
@@ -1362,8 +1376,8 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             arguments.get("damage_notation") or arguments.get("damage_dice") or "1d6"
         )
         target_ac = _coerce_int(arguments.get("target_ac"), 10)
-        advantage = arguments.get("advantage", False)
-        disadvantage = arguments.get("disadvantage", False)
+        advantage = _coerce_bool(arguments.get("advantage"), False)
+        disadvantage = _coerce_bool(arguments.get("disadvantage"), False)
 
         attack = calculate_attack_roll(attack_mod, advantage, disadvantage)
         hit = not attack["is_fumble"] and (
@@ -1398,8 +1412,8 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             arguments.get("attribute_modifier") or arguments.get("modifier"), 0
         )
         prof_bonus = _coerce_int(arguments.get("proficiency_bonus"), 2)
-        proficient = arguments.get("proficient", False)
-        expertise = arguments.get("expertise", False)
+        proficient = _coerce_bool(arguments.get("proficient"), False)
+        expertise = _coerce_bool(arguments.get("expertise"), False)
         dc = _coerce_int(arguments.get("dc"), 10)
         skill_name = arguments.get("skill_name") or arguments.get("skill") or ""
 
@@ -1424,7 +1438,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             arguments.get("attribute_modifier") or arguments.get("modifier"), 0
         )
         prof_bonus = _coerce_int(arguments.get("proficiency_bonus"), 2)
-        proficient = arguments.get("proficient", False)
+        proficient = _coerce_bool(arguments.get("proficient"), False)
         dc = _coerce_int(arguments.get("dc"), 10)
         save_type = arguments.get("save_type", "")
 
