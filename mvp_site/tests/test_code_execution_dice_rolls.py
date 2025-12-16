@@ -87,15 +87,18 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         - Fallback: precompute (pre-rolled dice in prompt)
         """
         # Gemini 3.x models: code_execution (single-phase)
+        # ONLY Gemini 3 can combine code_execution + JSON mode together
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-3-pro-preview", "gemini"),
             "code_execution"
         )
 
-        # Gemini 2.0: code_execution (single-phase)
+        # Gemini 2.0: tool_use_phased (two-phase)
+        # Gemini 2.x CANNOT combine code_execution + JSON mode (INVALID_ARGUMENT error)
+        # See: .claude/skills/gemini-code-execution-json-mode.md
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
-            "code_execution"
+            "tool_use_phased"
         )
 
         # Gemini 2.5 models: tool_use_phased (two-phase)

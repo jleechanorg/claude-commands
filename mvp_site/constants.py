@@ -82,17 +82,18 @@ GEMINI_3_MODELS: set[str] = {
 # └─────────────────────┴───────────────┴───────────┴──────────────┴───────────────┘
 #
 # Gemini 3.x: CAN use code_execution + JSON together (single-phase)
-# Gemini 2.0 Flash: Treat as code_execution + JSON (project requirement)
-# Gemini 2.5 variants: Use phased tool flow (JSON-first)
-#
 # ARCHITECTURE (Dec 2024): Tool loops restored for all providers.
 # - Gemini 3: Single-phase with code_execution + JSON (model runs Python for dice)
-# - Gemini 2.x: Two-phase (tools→JSON phase separation)
+#   ONLY Gemini 3 supports code_execution + JSON mode together
+# - Gemini 2.x: Two-phase JSON-first tool_requests flow (code_execution + JSON = INVALID_ARGUMENT)
 # - Cerebras/OpenRouter: Function calling with tool_use
+#
+# See: .claude/skills/gemini-code-execution-json-mode.md for details
 MODELS_WITH_CODE_EXECUTION: set[str] = {
     *GEMINI_3_MODELS,
-    "gemini-2.0-flash",
-}  # Models allowed to use code_execution + JSON together
+    # NOTE: gemini-2.0-flash CANNOT use code_execution + JSON mode together
+    # It must use the two-phase tool_requests flow via MODELS_WITH_TOOL_USE_PHASED
+}  # ONLY models that support code_execution + JSON together
 
 # Models that support tool use / function calling
 # These require two-stage inference: LLM requests tool → we execute → send result back
