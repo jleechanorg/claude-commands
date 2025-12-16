@@ -44,6 +44,44 @@ working_dir="$(basename "$git_root")"
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no upstream")
 
+# Extract repository (owner/repo) from git remote origin
+get_repo_from_remote() {
+    local url
+    url=$(git remote get-url origin 2>/dev/null) || return 1
+
+    # Match HTTPS format: https://github.com/owner/repo.git
+    if [[ "$url" =~ https?://github\.com/([^/]+)/([^/]+)(\.git)?$ ]]; then
+        local owner="${BASH_REMATCH[1]}"
+        local repo="${BASH_REMATCH[2]}"
+        repo="${repo%.git}"
+        echo "${owner}/${repo}"
+        return 0
+    fi
+
+    # Match SSH format: git@github.com:owner/repo.git
+    if [[ "$url" =~ git@github\.com:([^/]+)/([^/]+)(\.git)?$ ]]; then
+        local owner="${BASH_REMATCH[1]}"
+        local repo="${BASH_REMATCH[2]}"
+        repo="${repo%.git}"
+        echo "${owner}/${repo}"
+        return 0
+    fi
+
+    # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
+    if [[ "$url" =~ /git/([^/]+)/([^/]+)(\.git)?$ ]]; then
+        local owner="${BASH_REMATCH[1]}"
+        local repo="${BASH_REMATCH[2]}"
+        repo="${repo%.git}"
+        echo "${owner}/${repo}"
+        return 0
+    fi
+
+    return 1
+}
+
+# Get the repository for gh commands
+repo_name=$(get_repo_from_remote)
+
 # Get sync status and unpushed changes
 local_status=""
 
@@ -188,12 +226,20 @@ else
 
             # First try to look up by branch name (works for local branches tied to PRs)
             if [ -n "$local_branch" ]; then
-                pr_info=$(gh_with_timeout 5 pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                if [ -n "$repo_name" ]; then
+                    pr_info=$(gh_with_timeout 5 pr view --repo "$repo_name" --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                else
+                    pr_info=$(gh_with_timeout 5 pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                fi
             fi
 
             # If branch lookup failed, fall back to searching by commit SHA (covers detached HEADs, renamed branches, etc.)
             if [ -z "$pr_info" ] && [ -n "$current_commit" ]; then
-                pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                if [ -n "$repo_name" ]; then
+                    pr_info=$(gh_with_timeout 5 pr list --repo "$repo_name" --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                else
+                    pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                fi
             fi
 
             if [ -n "$pr_info" ]; then
