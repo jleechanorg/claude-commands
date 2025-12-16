@@ -738,10 +738,11 @@ class GameState:
             result["clamped_xp"] = 0
             xp = 0
             # Persist clamped XP back to every known XP field to avoid divergence
-            if isinstance(pc_data.get("experience"), dict):
+            # Use experience_val (already fetched) to avoid re-fetching and handle None properly
+            if isinstance(experience_val, dict):
                 pc_data["experience"]["current"] = 0
-            if "experience" in pc_data and not isinstance(pc_data.get("experience"), dict):
-                # Scalar experience value (int or str)
+            # Only write scalar if experience_val is not None (mirrors read logic)
+            if experience_val is not None and not isinstance(experience_val, dict):
                 pc_data["experience"] = 0
             if "xp" in pc_data:
                 pc_data["xp"] = 0
@@ -843,7 +844,8 @@ class GameState:
         result: dict[str, Any] = {"valid": True}
 
         # Get current time from world_data
-        current_world_time = self.world_data.get("world_time")
+        # Use `or {}` to handle both missing and explicitly-null world_data
+        current_world_time = (self.world_data or {}).get("world_time")
         if not current_world_time or not isinstance(current_world_time, dict):
             # No previous time to compare against
             return result

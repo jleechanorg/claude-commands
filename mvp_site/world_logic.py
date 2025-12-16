@@ -894,9 +894,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         }
 
         # Capture original time before update for accurate monotonicity validation
-        # Note: current_game_state is a DocumentSnapshot, convert to dict first
+        # Note: current_game_state is a GameState instance (has to_dict() method)
         current_state_as_dict = current_game_state.to_dict()
-        original_world_time = current_state_as_dict.get("world_data", {}).get("world_time")
+        # Use `or {}` to handle both missing and explicitly-null world_data
+        original_world_time = (current_state_as_dict.get("world_data") or {}).get("world_time")
 
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
@@ -1802,8 +1803,9 @@ def _handle_set_command(
     )
 
     # Capture original time before update for accurate monotonicity validation
-    # Note: current_game_state is a DocumentSnapshot, use dict version
-    original_world_time = current_state_dict_before_update.get("world_data", {}).get("world_time")
+    # Note: current_game_state is a GameState instance, use dict version
+    # Use `or {}` to handle both missing and explicitly-null world_data
+    original_world_time = (current_state_dict_before_update.get("world_data") or {}).get("world_time")
 
     updated_state = update_state_with_changes(
         current_state_dict_before_update, proposed_changes
@@ -1868,8 +1870,9 @@ def _handle_update_state_command(
         current_state_dict = current_game_state.to_dict()
 
         # Capture original time before update for accurate monotonicity validation
-        # Note: current_game_state is a DocumentSnapshot, use dict version
-        original_world_time = current_state_dict.get("world_data", {}).get("world_time")
+        # Note: current_game_state is a GameState instance, use dict version
+        # Use `or {}` to handle both missing and explicitly-null world_data
+        original_world_time = (current_state_dict.get("world_data") or {}).get("world_time")
 
         # Perform an update
         updated_state_dict = update_state_with_changes(
