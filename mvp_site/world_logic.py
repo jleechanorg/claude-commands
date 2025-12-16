@@ -905,7 +905,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Validate and auto-correct XP/level and time consistency
-        new_world_time = response.get("state_changes", {}).get("world_data", {}).get("world_time")
+        # Use `or {}` to handle both missing and explicitly-null world_data in state_changes
+        new_world_time = (response.get("state_changes", {}).get("world_data") or {}).get("world_time")
         updated_game_state_dict = validate_game_state_updates(
             updated_game_state_dict, new_time=new_world_time, original_time=original_world_time
         )
@@ -1813,7 +1814,8 @@ def _handle_set_command(
     updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
 
     # Validate XP/level and time consistency before persisting
-    new_world_time = proposed_changes.get("world_data", {}).get("world_time")
+    # Use `or {}` to handle both missing and explicitly-null world_data
+    new_world_time = (proposed_changes.get("world_data") or {}).get("world_time")
     updated_state = validate_game_state_updates(updated_state, new_time=new_world_time, original_time=original_world_time)
 
     logging_util.info(
@@ -1883,7 +1885,8 @@ def _handle_update_state_command(
         )
 
         # Validate XP/level and time consistency before persisting
-        new_world_time = state_changes.get("world_data", {}).get("world_time")
+        # Use `or {}` to handle both missing and explicitly-null world_data
+        new_world_time = (state_changes.get("world_data") or {}).get("world_time")
         updated_state_dict = validate_game_state_updates(
             updated_state_dict, new_time=new_world_time, original_time=original_world_time
         )

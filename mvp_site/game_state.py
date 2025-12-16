@@ -764,6 +764,9 @@ class GameState:
                 self.player_character_data["level"] = expected_level
             return result
 
+        # Store original level BEFORE clamping (per docstring: "Original level value")
+        result["provided_level"] = provided_level
+
         # Clamp level to valid range (1-20)
         if provided_level < 1:
             result["clamped_level"] = 1
@@ -781,8 +784,6 @@ class GameState:
                 self.player_character_data, dict
             ):
                 self.player_character_data["level"] = provided_level
-
-        result["provided_level"] = provided_level
 
         # Check for mismatch
         if provided_level != expected_level:
