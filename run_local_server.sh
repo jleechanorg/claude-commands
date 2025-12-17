@@ -182,16 +182,20 @@ fi
 
 # Find available ports
 echo "${EMOJI_SEARCH} Finding available ports..."
-FLASK_PORT=$(find_available_port $DEFAULT_FLASK_PORT 10)
-if [ $? -ne 0 ]; then
-    echo "${EMOJI_ERROR} Failed to find available Flask port"
-    exit 1
+DETECTED_FLASK_PORT=$(find_available_port $DEFAULT_FLASK_PORT 10)
+if [ $? -eq 0 ] && [ -n "$DETECTED_FLASK_PORT" ]; then
+    FLASK_PORT="$DETECTED_FLASK_PORT"
+else
+    echo "${EMOJI_WARNING} Could not find available Flask port, forcing default $DEFAULT_FLASK_PORT"
+    FLASK_PORT="$DEFAULT_FLASK_PORT"
 fi
 
-REACT_PORT=$(find_available_port $DEFAULT_REACT_PORT 10)
-if [ $? -ne 0 ]; then
-    echo "${EMOJI_ERROR} Failed to find available React port"
-    exit 1
+DETECTED_REACT_PORT=$(find_available_port $DEFAULT_REACT_PORT 10)
+if [ $? -eq 0 ] && [ -n "$DETECTED_REACT_PORT" ]; then
+    REACT_PORT="$DETECTED_REACT_PORT"
+else
+    echo "${EMOJI_WARNING} Could not find available React port, forcing default $DEFAULT_REACT_PORT"
+    REACT_PORT="$DEFAULT_REACT_PORT"
 fi
 
 export PORT=$FLASK_PORT
