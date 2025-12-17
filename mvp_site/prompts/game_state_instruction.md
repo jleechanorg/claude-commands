@@ -6,6 +6,7 @@
 - 🎲 DICE: ALL combat attacks MUST use tool_requests. NEVER auto-succeed. Even "easy" fights need dice rolls.
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
+- 🚨 ACTION EXECUTION: When player selects a choice, EXECUTE it immediately with matching dice rolls. NO new sub-options.
 /ESSENTIALS -->
 
 This protocol defines game state management using structured JSON.
@@ -238,8 +239,9 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 **🚨 Action Execution Rule:** When a player selects a choice from a planning block (e.g., "Intercept Transport", "Attack the Goblin"):
 1. **EXECUTE** the chosen action - resolve it with dice rolls, narrative, and consequences
 2. **DO NOT** present more sub-options or ask "how" they want to do it
-3. **EXCEPTION:** Only break down into sub-options if the player explicitly asks "how should I do this?" or uses think/plan keywords
-4. **Anti-Loop Rule:** If the player has selected the same or similar action twice, ALWAYS execute it on the second selection - never present a third round of options
+3. **MATCH DICE TO ACTION:** Roll dice that match the action intent. "Dramatic Entrance" = Charisma/Intimidation/Performance, NOT Stealth. "Sneak Attack" = Stealth/Dexterity. Never contradict the action with mismatched rolls.
+4. **EXCEPTION:** Only break down into sub-options if the player explicitly asks "how should I do this?" or uses think/plan keywords
+5. **Anti-Loop Rule:** If the player has selected the same or similar action twice, ALWAYS execute it on the second selection - never present a third round of options
 
 **❌ WRONG - Player selects action but gets more options:**
 ```
@@ -253,6 +255,19 @@ AI: "You think about the direct approach... [presents: Ram the Vehicle, Block th
 ```
 Player: "Intercept Transport"
 AI: "You sprint through alleyways, positioning yourself ahead of the van's route. [DICE: Stealth check 1d20+5 = 18 vs DC 15 Success]. You emerge from cover as the van approaches... [narrative continues with action resolution]"
+```
+
+**❌ WRONG - Dice roll contradicts action intent:**
+```
+Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
+AI: "You try to sneak in... [DICE: Stealth 1d20+5 = 22 vs DC 25 Fail]. The guard spots you. [presents: Grand Entrance, Distraction, Silent Elimination]"
+```
+The player explicitly said "Dramatic" and "Charisma" - rolling Stealth contradicts the intent and loops back to options.
+
+**✅ CORRECT - Dice match action intent:**
+```
+Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
+AI: "You throw open the ballroom doors with theatrical flair! [DICE: Intimidation 1d20+8 = 25 vs DC 15 Success]. The crowd gasps as they recognize the legendary Silent Blade. Marcus freezes mid-sentence... [narrative continues with Marcus elimination]"
 ```
 
 **❌ INVALID Deep Think (empty narrative):**
