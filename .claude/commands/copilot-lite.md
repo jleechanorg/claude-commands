@@ -32,7 +32,8 @@ Atomic single-pass PR comment processor with ground truth verification.
 ```bash
 # Get PR context
 BRANCH_NAME=$(git branch --show-current)
-SAFE_BRANCH=$(python - <<'PY'
+export BRANCH_NAME  # Export for Python subprocess
+SAFE_BRANCH=$(python3 - <<'PY'
 import os, re
 branch = os.environ.get("BRANCH_NAME", "")
 safe = re.sub(r"[^a-zA-Z0-9._-]", "_", branch)

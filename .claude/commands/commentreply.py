@@ -650,6 +650,21 @@ def main():
             already_replied += 1
             continue
 
+        # Idempotency for review body comments (type="review"): check for existing issue comment
+        # with reference pattern since review bodies are replied via issue comments without in_reply_to_id
+        comment_type = comment.get("type") or detect_comment_type(comment)
+        if comment_type == "review":
+            review_ref_pattern = f"In response to [comment #{comment_id}]"
+            already_has_review_reply = any(
+                (c.get("user", {}).get("login") == actor_login) and
+                (review_ref_pattern in (c.get("body") or ""))
+                for c in all_comments if c.get("type") in ("issue", None)
+            )
+            if already_has_review_reply:
+                print("   ↪️ Skip: review body already has issue comment reply from current actor")
+                already_replied += 1
+                continue
+
         # Skip if thread ends with [AI responder] comment indicating completion
         thread_replies = [c for c in all_comments if c.get("in_reply_to_id") == comment_id]
         if thread_replies:
