@@ -880,7 +880,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ## 📚 Version History
 
-### v1.1.0 (2025-12-16)
+### v1.2.0 (2025-12-16)
 
 **Export Statistics**:
 - **194 Commands**: Complete workflow orchestration system
@@ -889,26 +889,24 @@ The productivity gains available right now represent the largest arbitrage oppor
 - **25 Skills**: Shared knowledge references (.claude/skills/)
 
 **Major Changes**:
-- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
-- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
-- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+- **Cursor Agent CLI Support**: Added fourth CLI option alongside Claude, Codex, and Gemini
+- **Multi-Project Firebase Auth**: Enhanced authentication documentation for WorldAI and AI Universe
+- **Code Quality Improvements**: Enhanced /copilot-lite with 100% coverage gate and better comment processing
 
-**New Scripts Included**:
-- **Git Workflow**: create_worktree.sh, push.sh for branch management
-- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
-- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
-- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
-- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+**New Features**:
+- **Cursor CLI Integration**: Configurable model support via CURSOR_MODEL environment variable
+- **Enhanced Comment Processing**: Merged inline + issue comments with error handling
+- **Verification Gates**: 100% response coverage enforcement in /copilot-lite
 
 **Technical Improvements**:
-- Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude Code specific vs universally useful tools
-- Enhanced documentation for script adaptability across projects
+- Added Cursor CLI profile in orchestration system with model configuration
+- Improved CLI discovery and detection across orchestration components
+- Enhanced export utility with safer CWD preservation
 
 **Documentation**:
-- Updated scripts export description
-- Clear separation between project-specific and generally useful scripts
-- Improved adaptation guidance for cross-project usage
+- Expanded orchestration README with Gemini/Cursor profiles
+- Added worldai-auth.md skill for multi-project support
+- Updated ai-universe-auth.md with troubleshooting guidance
 
 ### v1.1.0 (2025-12-11)
 

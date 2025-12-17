@@ -1,5 +1,5 @@
 ---
-description: Authenticate with the WorldAI Firebase project for Your Project
+description: Authenticate with the WorldAI Firebase project
 type: setup
 scope: project
 ---

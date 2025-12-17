@@ -51,7 +51,7 @@ node scripts/auth-cli.mjs token
 ```
 
 #### WorldAI (`worldarchitecture-ai`)
-- Your Project application authentication
+- WorldAI application authentication
 - Firebase auth for the RPG game platform
 - Direct WorldAI API calls
 
