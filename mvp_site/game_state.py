@@ -856,7 +856,23 @@ DICE_ROLL_TOOLS: list[dict] = [
                 "properties": {
                     "attack_modifier": {
                         "type": "integer",
-                        "description": "Total attack bonus",
+                        "description": "Total attack bonus (ability + proficiency combined)",
+                    },
+                    "ability_modifier": {
+                        "type": "integer",
+                        "description": "Ability modifier component (STR or DEX)",
+                    },
+                    "ability_name": {
+                        "type": "string",
+                        "description": "Ability used for attack: STR or DEX",
+                    },
+                    "proficiency_bonus": {
+                        "type": "integer",
+                        "description": "Proficiency bonus component",
+                    },
+                    "weapon_name": {
+                        "type": "string",
+                        "description": "Name of the weapon used (e.g., 'Longsword', 'Shortbow')",
                     },
                     "damage_notation": {
                         "type": "string",
@@ -884,13 +900,14 @@ DICE_ROLL_TOOLS: list[dict] = [
                 "type": "object",
                 "properties": {
                     "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier (DEX for Stealth, INT for Investigation, etc.)"},
+                    "attribute_name": {"type": "string", "description": "Ability score abbreviation: STR, DEX, CON, INT, WIS, or CHA"},
                     "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus (typically 2-6)"},
                     "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this skill"},
                     "expertise": {"type": "boolean", "default": False, "description": "True if character has expertise (double proficiency)"},
                     "dc": {"type": "integer", "description": "Difficulty Class to beat (10=easy, 15=medium, 20=hard, 25=very hard)"},
                     "skill_name": {"type": "string", "description": "Name of the skill (e.g., 'Thieves Tools', 'Stealth', 'Perception')"},
                 },
-                "required": ["attribute_modifier", "proficiency_bonus", "dc", "skill_name"],
+                "required": ["attribute_modifier", "attribute_name", "proficiency_bonus", "dc", "skill_name"],
             },
         },
     },
@@ -1260,17 +1277,46 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
 
     if tool_name == "roll_attack":
         attack_mod = _coerce_int_inner(arguments.get("attack_modifier") or arguments.get("modifier"), 0)
+        ability_mod = _coerce_int_inner(arguments.get("ability_modifier"), None)
+        ability_name = arguments.get("ability_name", "").upper() or None
+        prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), None)
+        weapon_name = arguments.get("weapon_name", "")
         damage_notation = arguments.get("damage_notation") or arguments.get("damage_dice") or "1d6"
         target_ac = _coerce_int_inner(arguments.get("target_ac"), 10)
         advantage = _coerce_bool(arguments.get("advantage"), False)
         disadvantage = _coerce_bool(arguments.get("disadvantage"), False)
 
         attack = calculate_attack_roll(attack_mod, advantage, disadvantage)
+        rolls = attack["rolls"]  # List of raw d20 rolls (1 for normal, 2 for adv/disadv)
         hit = not attack["is_fumble"] and (attack["total"] >= target_ac or attack["is_critical"])
+
+        # Build labeled modifier breakdown: "Longsword: 1d20 +3 STR +2 PROF = 12 +3 STR +2 PROF = 17 vs AC 15 (Hit!)"
+        mod_parts = []
+        if ability_mod is not None and ability_name:
+            mod_parts.append(f"+{ability_mod} {ability_name}" if ability_mod >= 0 else f"{ability_mod} {ability_name}")
+        if prof_bonus is not None and prof_bonus > 0:
+            mod_parts.append(f"+{prof_bonus} PROF")
+        if not mod_parts:
+            # Fallback: use combined modifier if components not provided
+            mod_parts.append(f"+{attack_mod}" if attack_mod >= 0 else f"{attack_mod}")
+        mod_str = " ".join(mod_parts)
+
+        attack_label = weapon_name or "Attack"
+        hit_str = "CRITICAL!" if attack["is_critical"] else ("FUMBLE!" if attack["is_fumble"] else ("Hit!" if hit else "Miss"))
+
+        # Handle advantage/disadvantage display: show both rolls with which was used
+        if len(rolls) == 2:
+            used = attack.get("used_roll", "higher")
+            roll_display = f"({rolls[0]}, {rolls[1]} - {used})"
+        else:
+            roll_display = str(rolls[0])
+        formatted = f"{attack_label}: 1d20 {mod_str} = {roll_display} {mod_str} = {attack['total']} vs AC {target_ac} ({hit_str})"
 
         result = {
             "attack_roll": attack, "target_ac": target_ac, "hit": hit,
-            "critical": attack["is_critical"], "fumble": attack["is_fumble"]
+            "critical": attack["is_critical"], "fumble": attack["is_fumble"],
+            "weapon_name": weapon_name, "ability_name": ability_name,
+            "formatted": formatted
         }
         if hit:
             damage = calculate_damage(damage_notation, attack["is_critical"])
@@ -1279,12 +1325,15 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
                 "modifier": damage.modifier, "total": damage.total,
                 "critical": attack["is_critical"]
             }
+            # Append damage to formatted string
+            result["formatted"] += f" | Damage: {damage}"
         else:
             result["damage"] = None
         return result
 
     if tool_name == "roll_skill_check":
         attr_mod = _coerce_int_inner(arguments.get("attribute_modifier") or arguments.get("modifier"), 0)
+        attr_name = arguments.get("attribute_name", "").upper() or "MOD"
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
         proficient = _coerce_bool(arguments.get("proficient"), False)
         expertise = _coerce_bool(arguments.get("expertise"), False)
@@ -1292,12 +1341,24 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         skill_name = arguments.get("skill_name") or arguments.get("skill") or ""
 
         result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
+        roll = result.individual_rolls[0] if result.individual_rolls else 0
         success = result.total >= dc
+
+        # Build labeled modifier breakdown: "1d20 +5 INT +3 PROF = 8 +5 INT +3 PROF = 16"
+        mod_parts = [f"+{attr_mod} {attr_name}" if attr_mod >= 0 else f"{attr_mod} {attr_name}"]
+        effective_prof = prof_bonus * (2 if expertise else 1) if proficient else 0
+        if effective_prof > 0:
+            prof_label = "EXPERT" if expertise else "PROF"
+            mod_parts.append(f"+{effective_prof} {prof_label}")
+        mod_str = " ".join(mod_parts)
+        formatted = f"{skill_name}: 1d20 {mod_str} = {roll} {mod_str} = {result.total} vs DC {dc} ({'Success' if success else 'Fail'})"
+
         return {
-            "skill": skill_name, "roll": result.individual_rolls[0] if result.individual_rolls else 0,
+            "skill": skill_name, "roll": roll,
             "modifier": result.modifier, "total": result.total, "dc": dc, "success": success,
             "natural_20": result.natural_20, "natural_1": result.natural_1,
-            "formatted": f"{skill_name}: {result} vs DC {dc} ({'Success' if success else 'Fail'})"
+            "attribute_name": attr_name, "proficiency_applied": effective_prof,
+            "formatted": formatted
         }
 
     if tool_name == "roll_saving_throw":
@@ -1305,15 +1366,26 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
         proficient = _coerce_bool(arguments.get("proficient"), False)
         dc = _coerce_int_inner(arguments.get("dc"), 10)
-        save_type = arguments.get("save_type", "")
+        save_type = arguments.get("save_type", "").upper() or "SAVE"
 
         result = calculate_saving_throw(attr_mod, prof_bonus, proficient)
+        roll = result.individual_rolls[0] if result.individual_rolls else 0
         success = result.total >= dc
+
+        # Build labeled modifier breakdown: "DEX save: 1d20 +3 DEX +2 PROF = 8 +3 DEX +2 PROF = 13"
+        mod_parts = [f"+{attr_mod} {save_type}" if attr_mod >= 0 else f"{attr_mod} {save_type}"]
+        effective_prof = prof_bonus if proficient else 0
+        if effective_prof > 0:
+            mod_parts.append(f"+{effective_prof} PROF")
+        mod_str = " ".join(mod_parts)
+        formatted = f"{save_type} save: 1d20 {mod_str} = {roll} {mod_str} = {result.total} vs DC {dc} ({'Success' if success else 'Fail'})"
+
         return {
-            "save_type": save_type, "roll": result.individual_rolls[0] if result.individual_rolls else 0,
+            "save_type": save_type, "roll": roll,
             "modifier": result.modifier, "total": result.total, "dc": dc, "success": success,
             "natural_20": result.natural_20, "natural_1": result.natural_1,
-            "formatted": f"{save_type} save: {result} vs DC {dc} ({'Success' if success else 'Fail'})"
+            "proficiency_applied": effective_prof,
+            "formatted": formatted
         }
 
     if tool_name == "declare_no_roll_needed":
