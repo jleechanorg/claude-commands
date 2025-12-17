@@ -2269,7 +2269,9 @@ def _truncate_context(
         max_iterations = 50  # Increased from 10
         for iteration in range(max_iterations):
             trimmed_entries = []
-            for entry in trimmed_context:
+            # FIX: Always trim from the ORIGINAL candidate list to avoid recursive over-truncation
+            # The trim_ratio is relative to the original size.
+            for entry in candidate:
                 text = entry.get(constants.KEY_TEXT, "")
                 # FIX: Remove 50-char floor - allow trimming to any size
                 entry_max_chars = int(len(text) * trim_ratio)
@@ -2312,7 +2314,6 @@ def _truncate_context(
 
             # Still over - reduce ratio further and try again
             trim_ratio *= 0.7
-            trimmed_context = trimmed_entries
 
         # Final fallback - return minimal marker if still over budget
         logging_util.warning(

@@ -131,8 +131,8 @@ The orchestration system uses **tmux (terminal multiplexer)** as the core proces
        ├─> gemini -m {model} --yolo
        └─> -p {prompt_file}
    └─> Cursor Agent CLI:
-       ├─> cursor-agent -p @{prompt_file}
-       ├─> --model grok
+       ├─> cursor-agent -f -p @{prompt_file}
+       ├─> --model ${CURSOR_MODEL:-composer-1}
        └─> --output-format text
 
 8. AGENT WORK (Inside tmux session)
@@ -188,7 +188,7 @@ The system supports multiple LLM CLIs through a profile-based architecture:
 ```python
 {
     "binary": "cursor-agent",
-    "command_template": "{binary} -p @{prompt_file} --model grok --output-format text",
+    "command_template": "{binary} -f -p @{prompt_file} --model ${CURSOR_MODEL:-composer-1} --output-format text",
     "stdin_template": "/dev/null",
     "quote_prompt": False
 }

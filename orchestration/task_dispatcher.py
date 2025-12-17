@@ -100,8 +100,8 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "CURSOR_RESTART",
-        # Cursor Agent CLI with configurable model (defaults to composer-1) for fresh-data analysis
-        "command_template": f"{{binary}} -p @{{prompt_file}} --model {CURSOR_MODEL} --output-format text",
+        # Cursor Agent CLI with -f (force) for non-interactive execution, configurable model
+        "command_template": f"{{binary}} -f -p @{{prompt_file}} --model {CURSOR_MODEL} --output-format text",
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         "detection_keywords": [
