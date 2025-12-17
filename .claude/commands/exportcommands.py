@@ -1637,16 +1637,20 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Create and switch to export branch"""
         print(f"🌟 Creating export branch: {self.export_branch}")
 
-        os.chdir(self.repo_dir)
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.repo_dir)
 
-        # Ensure we're on main and up to date
-        subprocess.run(["git", "checkout", "main"], check=True)
-        subprocess.run(["git", "pull", "origin", "main"], check=True)
+            # Ensure we're on main and up to date
+            subprocess.run(["git", "checkout", "main"], check=True)
+            subprocess.run(["git", "pull", "origin", "main"], check=True)
 
-        # Create export branch
-        subprocess.run(["git", "checkout", "-b", self.export_branch], check=True)
+            # Create export branch
+            subprocess.run(["git", "checkout", "-b", self.export_branch], check=True)
 
-        print("✅ Export branch created")
+            print("✅ Export branch created")
+        finally:
+            os.chdir(original_cwd)
 
     def _copy_to_repository(self):
         """Copy exported content to repository with proper .claude/ structure"""
