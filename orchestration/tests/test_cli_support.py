@@ -528,9 +528,10 @@ class TestCursorCliIntegration(unittest.TestCase):
         self.assertEqual(cursor["binary"], "cursor-agent")
 
     def test_cursor_command_template(self):
-        """Cursor command template should include configured model and output format."""
+        """Cursor command template should include -f flag, configured model and output format."""
         cursor = CLI_PROFILES["cursor"]
         template = cursor["command_template"]
+        self.assertIn("-f", template, "Missing -f flag for non-interactive execution")
         self.assertIn(f"--model {CURSOR_MODEL}", template)
         self.assertIn("--output-format text", template)
         self.assertIn("-p @{prompt_file}", template)
