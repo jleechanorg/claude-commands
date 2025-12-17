@@ -66,7 +66,7 @@ set -o pipefail
 python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/null | tee "$WORK_DIR/comments.json" >/dev/null || {
     # Fallback: fetch and combine comments manually, adding .type field to match commentfetch.py output
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "inline"}]' > "$WORK_DIR/inline_comments.json"
-    gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "general"}]' > "$WORK_DIR/issue_comments.json"
+    gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "issue"}]' > "$WORK_DIR/issue_comments.json"
     # Combine into single comments.json file with {comments: [...]} structure to match commentfetch.py output
     jq -s '{comments: (.[0] + .[1])}' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
 }

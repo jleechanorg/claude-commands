@@ -182,7 +182,9 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
     try:
         inline_comments = [json.loads(line) for line in (inline_data or "").splitlines() if line.strip()]
         issue_comments = [json.loads(line) for line in (issue_data or "").splitlines() if line.strip()]
-        review_body_comments = [json.loads(line) for line in (review_body_data or "").splitlines() if line.strip()]
+        # Filter out reviews with empty bodies (e.g., approval reviews without comments)
+        raw_reviews = [json.loads(line) for line in (review_body_data or "").splitlines() if line.strip()]
+        review_body_comments = [r for r in raw_reviews if r.get("body", "").strip()]
 
         # Add type information and combine
         for comment in inline_comments:
