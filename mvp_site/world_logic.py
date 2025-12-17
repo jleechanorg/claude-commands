@@ -907,7 +907,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Apply automatic combat cleanup (sync defeated enemies between combat_state and npc_data)
-        # This ensures dead NPCs are properly marked/removed after combat state changes
+        # Named NPCs are preserved and marked dead for continuity, while generic enemies are deleted
         updated_game_state_dict = apply_automatic_combat_cleanup(
             updated_game_state_dict, response.get("state_changes", {})
         )

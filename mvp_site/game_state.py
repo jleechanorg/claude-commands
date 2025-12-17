@@ -481,6 +481,12 @@ class GameState:
             "combat_log": [],
         }
 
+    def _is_named_npc(self, npc: dict[str, Any]) -> bool:
+        """Return True if the NPC should be preserved (named/important)."""
+        role = npc.get("role")
+        has_named_role = role not in [None, "", "enemy", "minion", "generic"]
+        return bool(has_named_role or npc.get("backstory") or npc.get("is_important"))
+
     def cleanup_defeated_enemies(self) -> list[str]:
         """
         Identifies and removes defeated enemies from both combat_state and npc_data.
@@ -546,16 +552,14 @@ class GameState:
                 npc = self.npc_data[enemy_name]
                 # Check if this is a named/important NPC (has role, backstory, or is explicitly important)
                 # Named NPCs should be preserved with dead status for narrative continuity
-                is_named_npc = (
-                    npc.get("role") not in [None, "", "enemy", "minion", "generic"] or
-                    npc.get("backstory") or
-                    npc.get("is_important", False)
-                )
-                if is_named_npc:
+                if self._is_named_npc(npc):
                     # Mark as dead instead of deleting - preserve for narrative continuity
                     if "status" not in npc:
                         npc["status"] = []
-                    if isinstance(npc["status"], list) and "dead" not in npc["status"]:
+                    elif not isinstance(npc["status"], list):
+                        status_value = npc["status"]
+                        npc["status"] = [] if status_value is None else [status_value]
+                    if "dead" not in npc["status"]:
                         npc["status"].append("dead")
                     npc["hp_current"] = 0
                     logging_util.info(f"COMBAT CLEANUP: Marked {enemy_name} as dead in npc_data (named NPC preserved)")

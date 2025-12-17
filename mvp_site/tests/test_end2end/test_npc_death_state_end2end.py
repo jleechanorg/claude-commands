@@ -19,8 +19,13 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import unittest
 from unittest.mock import patch
+
+# Add project root to sys.path for proper import resolution
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient

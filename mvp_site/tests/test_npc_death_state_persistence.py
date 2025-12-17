@@ -164,6 +164,73 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         king_data = game_state.npc_data.get("King Aldric", {})
         self.assertIn("dead", king_data.get("status", []))
 
+    def test_named_npc_status_string_converted_and_marked_dead(self):
+        """
+        Test: Named NPCs with non-list status values should be normalized and marked dead.
+        """
+        game_state = GameState()
+        combatants_data = [
+            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
+            {"name": "Archivist", "initiative": 7, "type": "enemy", "hp_current": 0, "hp_max": 18},
+        ]
+
+        game_state.start_combat(combatants_data)
+        game_state.npc_data = {
+            "Archivist": {
+                "name": "The Archivist",
+                "role": "librarian",
+                "backstory": "Keeper of forbidden tomes",
+                "status": "exhausted",
+            }
+        }
+
+        game_state.cleanup_defeated_enemies()
+
+        archivist = game_state.npc_data.get("Archivist", {})
+        self.assertIsInstance(
+            archivist.get("status"),
+            list,
+            f"Status should be normalized to list. Current: {archivist.get('status')}"
+        )
+        self.assertIn(
+            "dead",
+            archivist.get("status", []),
+            f"Named NPC should be marked dead even when status was a string. Data: {archivist}"
+        )
+        self.assertIn(
+            "exhausted",
+            archivist.get("status", []),
+            f"Existing status value should be preserved. Data: {archivist}"
+        )
+
+    def test_named_npc_status_none_becomes_dead_list(self):
+        """
+        Test: Named NPCs with status=None should get ['dead'] and retain record.
+        """
+        game_state = GameState()
+        combatants_data = [
+            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
+            {"name": "Chronicler", "initiative": 9, "type": "enemy", "hp_current": 0, "hp_max": 12},
+        ]
+
+        game_state.start_combat(combatants_data)
+        game_state.npc_data = {
+            "Chronicler": {
+                "name": "Chronicler",
+                "role": "historian",
+                "status": None,
+            }
+        }
+
+        game_state.cleanup_defeated_enemies()
+
+        chronicler = game_state.npc_data.get("Chronicler", {})
+        self.assertListEqual(
+            chronicler.get("status"),
+            ["dead"],
+            f"Status None should normalize to ['dead']. Data: {chronicler}"
+        )
+
     def test_generic_enemy_still_deleted(self):
         """
         Test: Generic enemies (role=enemy, minion, or no special attributes) should be deleted.
@@ -247,6 +314,35 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
 
         self.assertIn("Random Wolf", defeated)
         self.assertNotIn("Random Wolf", game_state.npc_data)
+
+    def test_enemy_with_empty_role_treated_as_generic_and_deleted(self):
+        """
+        Test: Enemies with empty string role are treated as generic and deleted.
+        """
+        game_state = GameState()
+        combatants_data = [
+            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
+            {"name": "Silent Thug", "initiative": 11, "type": "enemy", "hp_current": 0, "hp_max": 12},
+        ]
+
+        game_state.start_combat(combatants_data)
+
+        game_state.npc_data = {
+            "Silent Thug": {
+                "name": "Silent Thug",
+                "role": "",
+                "description": "A faceless henchman",
+            }
+        }
+
+        defeated = game_state.cleanup_defeated_enemies()
+
+        self.assertIn("Silent Thug", defeated)
+        self.assertNotIn(
+            "Silent Thug",
+            game_state.npc_data,
+            f"Enemies with empty role should be treated as generic. npc_data: {game_state.npc_data}"
+        )
 
     def test_mixed_named_and_generic_enemies(self):
         """
@@ -440,7 +536,7 @@ class TestMainStoryFlowCombatCleanup(unittest.TestCase):
 
         # AI makes unrelated changes (no combat_state updates)
         ai_response_state_changes = {
-            "world_data": {"current_time": "afternoon"}
+            "world_data": {"world_time": "afternoon"}
         }
 
         updated_state = update_state_with_changes(initial_state, ai_response_state_changes)
