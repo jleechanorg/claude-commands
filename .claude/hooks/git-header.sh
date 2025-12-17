@@ -53,8 +53,8 @@ get_repo_from_remote() {
     parse_repo_from_url() {
         local parsed_url="$1"
 
-        # Match HTTP/HTTPS GitHub format: https://github.com/owner/repo.git
-        if [[ "$parsed_url" =~ https?://github\.com/([^/]+)/([^/]+)(/|/\.git|\.git)?$ ]]; then
+        # Match HTTP/HTTPS GitHub format (supports optional userinfo): https://github.com/owner/repo.git
+        if [[ "$parsed_url" =~ https?://(?:[^@/]+@)?github\.com/([^/]+)/([^/]+)(?:\.git)?/?$ ]]; then
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
@@ -63,7 +63,7 @@ get_repo_from_remote() {
         fi
 
         # Match SSH format: git@github.com:owner/repo.git
-        if [[ "$parsed_url" =~ git@github\.com:([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+        if [[ "$parsed_url" =~ git@github\.com:([^/]+)/([^/]+)(?:\.git)?/?$ ]]; then
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
@@ -72,7 +72,7 @@ get_repo_from_remote() {
         fi
 
         # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
-        if [[ "$parsed_url" =~ /git/([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+        if [[ "$parsed_url" =~ /git/([^/]+)/([^/]+)(?:\.git)?/?$ ]]; then
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
