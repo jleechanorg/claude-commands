@@ -979,53 +979,118 @@ def xp_for_cr(cr: float) -> int:
 
 @dataclass
 class DiceRollResult:
-    """Result of a dice roll with full context."""
+    """Result of a dice roll with full context.
+
+    Basic fields (always present):
+        notation: Dice notation like "1d20+5"
+        individual_rolls: List of each die result
+        modifier: Total numeric modifier
+        total: Final result
+
+    Context fields (optional, for rich formatting):
+        purpose: What the roll is for (e.g., "Perception check")
+        modifier_breakdown: Dict of label->value (e.g., {"WIS": 5, "PROF": 3})
+        target_dc: The DC/AC to beat
+        success: Whether the roll succeeded
+    """
     notation: str
     individual_rolls: list[int]
     modifier: int
     total: int
     natural_20: bool = False
     natural_1: bool = False
+    # Optional context for rich formatting
+    purpose: str = ""
+    modifier_breakdown: dict[str, int] | None = None
+    target_dc: int | None = None
+    success: bool | None = None
 
     def __str__(self) -> str:
-        """Format dice roll as human-readable string.
+        """Format dice roll as human-readable string with labeled modifiers.
 
-        Examples:
-            1d20+3 with roll 15: "1d20+3 = 15+3 = 18"
-            2d6+2 with rolls [4,3]: "2d6+2 = [4+3]+2 = 9"
-            Natural 20: "1d20+5 = 20+5 = 25 (NAT 20!)"
-            Natural 1: "1d20-1 = 1-1 = 0 (NAT 1!)"
+        Full format (with all context):
+            "Perception: 1d20 +5 WIS +3 PROF = 15 +5 WIS +3 PROF = 23 vs DC 15 (Success)"
+
+        Basic format (without context):
+            "1d20+3 = 15+3 = 18"
+            "2d6+2 = [4+3]+2 = 9"
+            "1d20 = 20 (NAT 20!)"
         """
         if not self.individual_rolls:
             return f"{self.notation} = {self.total}"
 
-        # Format the rolls part
+        # Format the dice roll portion (e.g., "15" or "[4+3]")
         if len(self.individual_rolls) == 1:
-            rolls_str = str(self.individual_rolls[0])
+            rolls_value = str(self.individual_rolls[0])
         else:
-            rolls_str = f"[{'+'.join(str(r) for r in self.individual_rolls)}]"
+            rolls_value = f"[{'+'.join(str(r) for r in self.individual_rolls)}]"
+            # Also compute the sum for display
+            rolls_sum = sum(self.individual_rolls)
+            rolls_value = f"[{'+'.join(str(r) for r in self.individual_rolls)}={rolls_sum}]"
 
-        # Format modifier part
-        if self.modifier > 0:
-            mod_str = f"+{self.modifier}"
-        elif self.modifier < 0:
-            mod_str = str(self.modifier)
+        # Build modifier string with labels if available
+        if self.modifier_breakdown:
+            # Format: "+5 WIS +3 PROF" (each modifier labeled)
+            mod_parts = []
+            for label, value in self.modifier_breakdown.items():
+                if value >= 0:
+                    mod_parts.append(f"+{value} {label}")
+                else:
+                    mod_parts.append(f"{value} {label}")
+            mod_str = " ".join(mod_parts)
+            mod_display = f" {mod_str}" if mod_str else ""
         else:
-            mod_str = ""
+            # Basic format: just the number
+            if self.modifier > 0:
+                mod_str = f"+{self.modifier}"
+                mod_display = mod_str
+            elif self.modifier < 0:
+                mod_str = str(self.modifier)
+                mod_display = mod_str
+            else:
+                mod_str = ""
+                mod_display = ""
 
         # Build the result string
-        if mod_str:
-            result = f"{self.notation} = {rolls_str}{mod_str} = {self.total}"
+        parts = []
+
+        # Add purpose prefix if available
+        if self.purpose:
+            parts.append(f"{self.purpose}:")
+
+        # Add the dice notation with labeled modifiers
+        if self.modifier_breakdown:
+            # Extract base die notation (e.g., "1d20" from "1d20+5")
+            base_notation = self.notation.split('+')[0].split('-')[0]
+            parts.append(f"{base_notation}{mod_display}")
         else:
-            result = f"{self.notation} = {rolls_str} = {self.total}"
+            parts.append(self.notation)
 
-        # Add natural 20/1 indicators
-        if self.natural_20:
-            result += " (NAT 20!)"
-        elif self.natural_1:
-            result += " (NAT 1!)"
+        # Add the calculation: "= 15 +5 WIS +3 PROF = 23"
+        if self.modifier_breakdown:
+            parts.append(f"= {rolls_value}{mod_display} = {self.total}")
+        elif mod_display:
+            parts.append(f"= {rolls_value}{mod_display} = {self.total}")
+        else:
+            parts.append(f"= {rolls_value} = {self.total}")
 
-        return result
+        # Add DC/target and success/fail
+        if self.target_dc is not None:
+            parts.append(f"vs DC {self.target_dc}")
+            if self.success is not None:
+                parts.append(f"({'Success' if self.success else 'Fail'})")
+            elif self.natural_20:
+                parts.append("(NAT 20!)")
+            elif self.natural_1:
+                parts.append("(NAT 1!)")
+        else:
+            # No DC, just show natural 20/1
+            if self.natural_20:
+                parts[-1] += " (NAT 20!)"
+            elif self.natural_1:
+                parts[-1] += " (NAT 1!)"
+
+        return " ".join(parts)
 
 
 def roll_dice(notation: str) -> DiceRollResult:
