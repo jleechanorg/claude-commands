@@ -20,6 +20,7 @@ Concurrency:
 
 import asyncio
 import collections
+import copy
 import json
 import os
 import re
@@ -198,6 +199,81 @@ def truncate_game_state_for_logging(
     return _truncate_log_json(
         game_state_dict, max_lines=max_lines, json_serializer=json_default_serializer
     )
+
+
+def validate_game_state_updates(
+    updated_state_dict: dict[str, Any],
+    new_time: dict[str, Any] | None = None,
+    original_time: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Validate and auto-correct game state updates.
+
+    Applies XP/level validation and time monotonicity checks to the state dict.
+    This should be called after update_state_with_changes() but before
+    persisting to Firestore.
+
+    Args:
+        updated_state_dict: The game state dict after updates are applied
+        new_time: Optional new world_time to validate for monotonicity
+        original_time: Optional original world_time from before the update.
+            Required for accurate time monotonicity checking since
+            updated_state_dict already has new_time merged in.
+
+    Returns:
+        The validated (and potentially corrected) state dict
+
+    Validation Applied:
+        1. XP/Level consistency: Ensures level matches XP thresholds (D&D 5e)
+        2. Missing level persistence: Computes and saves level if absent
+        3. Type coercion: Handles string values from JSON/LLM responses
+        4. Time monotonicity: Warns if time goes backward (if new_time provided)
+    """
+    # Create temporary GameState for validation
+    temp_state = GameState.from_dict(updated_state_dict)
+    if temp_state is None:
+        logging_util.warning(
+            "validate_game_state_updates: Could not create GameState, skipping validation"
+        )
+        return updated_state_dict
+
+    # Validate XP/Level consistency (auto-corrects mismatches)
+    xp_result = temp_state.validate_xp_level(strict=False)
+    if xp_result.get("corrected"):
+        logging_util.info(
+            f"XP/Level validation corrected: expected_level={xp_result.get('expected_level')}, "
+            f"provided_level={xp_result.get('provided_level')}"
+        )
+    if xp_result.get("computed_level"):
+        logging_util.info(
+            f"XP/Level validation computed missing level: {xp_result.get('computed_level')}"
+        )
+
+    # Validate time monotonicity if new_time is provided
+    # Use original_time for comparison if provided, otherwise compare against
+    # temp_state (which already has new_time merged, so it would compare to itself)
+    if new_time and original_time is not None:
+        # Temporarily set the original time for accurate comparison
+        if temp_state.world_data:
+            saved_time = temp_state.world_data.get("world_time")
+            temp_state.world_data["world_time"] = original_time
+            time_result = temp_state.validate_time_monotonicity(new_time, strict=False)
+            # Restore the new time after validation
+            temp_state.world_data["world_time"] = saved_time
+            if time_result.get("warning"):
+                logging_util.warning(
+                    f"Time validation warning: {time_result.get('message')}"
+                )
+    elif new_time:
+        # Fallback: compare against current state (may be inaccurate if already merged)
+        time_result = temp_state.validate_time_monotonicity(new_time, strict=False)
+        if time_result.get("warning"):
+            logging_util.warning(
+                f"Time validation warning: {time_result.get('message')}"
+            )
+
+    # Return the validated state dict (includes any corrections made)
+    return temp_state.to_dict()
 
 
 def _prepare_game_state(
@@ -818,9 +894,23 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "state_changes": state_changes,
         }
 
+        # Capture original time before update for accurate monotonicity validation
+        # Note: current_game_state is a GameState instance (has to_dict() method)
+        current_state_as_dict = current_game_state.to_dict()
+        # Use `or {}` to handle both missing and explicitly-null world_data
+        # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
+        original_world_time = copy.deepcopy((current_state_as_dict.get("world_data") or {}).get("world_time"))
+
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
-            current_game_state.to_dict(), response.get("state_changes", {})
+            current_state_as_dict, response.get("state_changes", {})
+        )
+
+        # Validate and auto-correct XP/level and time consistency
+        # Use `or {}` to handle both missing and explicitly-null world_data in state_changes
+        new_world_time = (response.get("state_changes", {}).get("world_data") or {}).get("world_time")
+        updated_game_state_dict = validate_game_state_updates(
+            updated_game_state_dict, new_time=new_world_time, original_time=original_world_time
         )
 
         # Validate and auto-correct state before persistence
@@ -987,6 +1077,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             final_game_state_dict = update_state_with_changes(
                 updated_game_state_dict, story_id_update
             )
+            # Validate the final state before persisting
+            final_game_state_dict = validate_game_state_updates(final_game_state_dict)
             # Blocking I/O - run in thread
             await asyncio.to_thread(
                 firestore_service.update_campaign_game_state,
@@ -1716,10 +1808,22 @@ def _handle_set_command(
         f"GOD_MODE_SET state BEFORE update: {current_state_dict_before_update}"
     )
 
+    # Capture original time before update for accurate monotonicity validation
+    # Note: current_game_state is a GameState instance, use dict version
+    # Use `or {}` to handle both missing and explicitly-null world_data
+    # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
+    original_world_time = copy.deepcopy((current_state_dict_before_update.get("world_data") or {}).get("world_time"))
+
     updated_state = update_state_with_changes(
         current_state_dict_before_update, proposed_changes
     )
     updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
+
+    # Validate XP/level and time consistency before persisting
+    # Use `or {}` to handle both missing and explicitly-null world_data
+    new_world_time = (proposed_changes.get("world_data") or {}).get("world_time")
+    updated_state = validate_game_state_updates(updated_state, new_time=new_world_time, original_time=original_world_time)
+
     logging_util.info(
         f"GOD_MODE_SET state AFTER update:\n{_truncate_log_json(updated_state, json_serializer=json_default_serializer)}"
     )
@@ -1776,12 +1880,25 @@ def _handle_update_state_command(
 
         current_state_dict = current_game_state.to_dict()
 
+        # Capture original time before update for accurate monotonicity validation
+        # Note: current_game_state is a GameState instance, use dict version
+        # Use `or {}` to handle both missing and explicitly-null world_data
+        # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
+        original_world_time = copy.deepcopy((current_state_dict.get("world_data") or {}).get("world_time"))
+
         # Perform an update
         updated_state_dict = update_state_with_changes(
             current_state_dict, state_changes
         )
         updated_state_dict = apply_automatic_combat_cleanup(
             updated_state_dict, state_changes
+        )
+
+        # Validate XP/level and time consistency before persisting
+        # Use `or {}` to handle both missing and explicitly-null world_data
+        new_world_time = (state_changes.get("world_data") or {}).get("world_time")
+        updated_state_dict = validate_game_state_updates(
+            updated_state_dict, new_time=new_world_time, original_time=original_world_time
         )
 
         # Convert back to GameState object after the update to validate
