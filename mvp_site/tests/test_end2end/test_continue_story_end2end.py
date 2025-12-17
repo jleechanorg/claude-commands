@@ -85,7 +85,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
     def test_continue_story_success(self, mock_gemini_generate, mock_get_db):
         """Test successful story continuation through full stack including context compaction."""
 
@@ -96,7 +96,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         campaign_id = "test_campaign_123"
         self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
 
-        # Mock Gemini provider (default)
+        # Mock Gemini native two-phase provider (default)
         mock_gemini_generate.return_value = FakeLLMResponse(
             json.dumps(self.mock_llm_response_data)
         )
@@ -128,7 +128,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         # Verify Gemini (default provider) was called at least once
         assert (
             mock_gemini_generate.call_count >= 1
-        ), "Gemini provider should be invoked as the default"
+        ), "Gemini native two-phase provider should be invoked as the default"
 
     @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):
