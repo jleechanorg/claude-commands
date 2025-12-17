@@ -880,7 +880,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ## 📚 Version History
 
-### v1.1.0 (2025-12-16)
+### v1.2.0 (2025-12-16)
 
 **Export Statistics**:
 - **194 Commands**: Complete workflow orchestration system
@@ -889,26 +889,22 @@ The productivity gains available right now represent the largest arbitrage oppor
 - **25 Skills**: Shared knowledge references (.claude/skills/)
 
 **Major Changes**:
-- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
-- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
-- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
-
-**New Scripts Included**:
-- **Git Workflow**: create_worktree.sh, push.sh for branch management
-- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
-- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
-- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
-- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+- **Cursor Agent CLI Support**: Added Cursor Agent CLI integration with configurable model support (defaults to `composer-1` via `CURSOR_MODEL` environment variable)
+- **Enhanced Orchestration**: Updated orchestration system to dynamically detect all available agent CLIs from profiles
+- **Copilot Workflow Improvements**: Enhanced copilot-lite workflow with verification gate for 100% comment coverage
+- **Export Utility Hardening**: Improved export utility with proper working directory management
 
 **Technical Improvements**:
-- Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude Code specific vs universally useful tools
-- Enhanced documentation for script adaptability across projects
+- Multi-CLI support: new `cursor` profile (`cursor-agent`) with configurable `CURSOR_MODEL`
+- Integrated CLI profiles into `orchestrate_unified.py`
+- Broadened dependency checks and messages
+- Extended test coverage to Cursor and Gemini CLI profiles
 
 **Documentation**:
-- Updated scripts export description
-- Clear separation between project-specific and generally useful scripts
-- Improved adaptation guidance for cross-project usage
+- Expanded AI Universe authentication docs with multi-project token support
+- Added secondary project authentication skill (worldai-auth.md)
+- Updated orchestration README with Gemini and Cursor CLI usage
+- Generic placeholders for Firebase project IDs and paths
 
 ### v1.1.0 (2025-12-11)
 

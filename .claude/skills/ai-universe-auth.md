@@ -16,13 +16,13 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 |----------|-------------|------------------|
 | `scripts/auth-cli.mjs` | Project-local (recommended) | Needs parent project |
 | `~/.claude/scripts/auth-cli.mjs` | User-global fallback | Yes (if installed) |
-| `~/projects/ai_universe/scripts/auth-cli.mjs` | Source of truth | Yes |
+| `~/projects/YOUR_PROJECT/scripts/auth-cli.mjs` | Source of truth | Yes |
 
 **To run the script**, use a directory that has `node_modules` with `express` installed:
 
 ```bash
-# From ai_universe project (always works)
-cd ~/projects/ai_universe && node scripts/auth-cli.mjs status
+# From your project (always works if deps installed)
+cd ~/projects/YOUR_PROJECT && node scripts/auth-cli.mjs status
 
 # Or from ~/.claude if deps installed
 node ~/.claude/scripts/auth-cli.mjs status
@@ -34,12 +34,12 @@ The script supports **two Firebase projects**. Use the correct one for your use 
 
 | Project | Firebase ID | Use Case | Command |
 |---------|-------------|----------|---------|
-| **AI Universe** | `<your-firebase-project-id>` | `/secondo`, multi-model synthesis | `node scripts/auth-cli.mjs token` (default) |
-| **WorldAI** | `worldarchitecture-ai` | Your Project app auth | `node scripts/auth-cli.mjs token --project worldarchitecture-ai` |
+| **AI Universe** | `YOUR_FIREBASE_PROJECT_ID` | `/secondo`, multi-model synthesis | `node scripts/auth-cli.mjs token` (default) |
+| **Your Project** | `YOUR_OTHER_FIREBASE_PROJECT_ID` | Your application auth | `node scripts/auth-cli.mjs token --project YOUR_OTHER_FIREBASE_PROJECT_ID` |
 
 ### When to Use Each Project
 
-#### AI Universe (`<your-firebase-project-id>`) - DEFAULT
+#### AI Universe (`YOUR_FIREBASE_PROJECT_ID`) - DEFAULT
 - `/secondo` command for multi-model second opinions
 - AI Universe MCP server calls
 - Multi-model synthesis API
@@ -50,15 +50,15 @@ node scripts/auth-cli.mjs login
 node scripts/auth-cli.mjs token
 ```
 
-#### WorldAI (`worldarchitecture-ai`)
-- Your Project application authentication
-- Firebase auth for the RPG game platform
-- Direct WorldAI API calls
+#### Your Project (`YOUR_OTHER_FIREBASE_PROJECT_ID`)
+- Your application authentication
+- Firebase auth for your platform
+- Direct API calls to your project
 
 ```bash
 # Explicit project flag required
-node scripts/auth-cli.mjs login --project worldarchitecture-ai
-node scripts/auth-cli.mjs token --project worldarchitecture-ai
+node scripts/auth-cli.mjs login --project YOUR_OTHER_FIREBASE_PROJECT_ID
+node scripts/auth-cli.mjs token --project YOUR_OTHER_FIREBASE_PROJECT_ID
 ```
 
 ## Prerequisites
