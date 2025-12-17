@@ -691,9 +691,15 @@ async function testGameplayAction(userId, campaignId, contextLabel = 'campaign',
   }
 
   // Check for dice rolls in the response
+  // CRITICAL: Our test action explicitly requests combat dice ("Roll my attack to see if I hit")
+  // If no dice rolls are returned, the LLM is not using tool_requests properly - this is a REGRESSION
   const diceRolls = result.dice_rolls ?? [];
   if (diceRolls.length === 0) {
-    logInfo('⚠️  No dice rolls in action result (may be expected for some actions)');
+    const errorMsg = `REGRESSION: Combat action returned 0 dice rolls. ` +
+      `The test action explicitly requested "Roll my attack" but LLM did not use tool_requests. ` +
+      `Check that system prompts include tool_requests examples and enforce dice for ALL combat.`;
+    logInfo(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
   } else {
     // Validate dice roll format - should show pre-rolled dice values used by LLM
     // Expected format: "Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"
