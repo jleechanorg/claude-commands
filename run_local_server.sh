@@ -242,10 +242,13 @@ echo ""
 echo "${EMOJI_ROCKET} Starting MCP server in production mode..."
 
 # Find available MCP port (default 8001)
-MCP_PORT=${MCP_SERVER_PORT:-8001}
-MCP_PORT=$(find_available_port $MCP_PORT 10)
-if [ $? -ne 0 ]; then
-    echo "${EMOJI_WARNING} Could not find available port for MCP server, using default $MCP_PORT"
+DEFAULT_MCP_PORT=${MCP_SERVER_PORT:-8001}
+DETECTED_PORT=$(find_available_port $DEFAULT_MCP_PORT 10)
+if [ $? -eq 0 ] && [ -n "$DETECTED_PORT" ]; then
+    MCP_PORT="$DETECTED_PORT"
+else
+    echo "${EMOJI_WARNING} Could not find available port for MCP server, forcing default $DEFAULT_MCP_PORT"
+    MCP_PORT="$DEFAULT_MCP_PORT"
 fi
 
 if command -v gnome-terminal &> /dev/null; then
