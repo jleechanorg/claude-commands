@@ -53,7 +53,17 @@ echo "🎯 Processing PR #$PR_NUMBER on $REPO (branch: $BRANCH_NAME)"
 Execute `/commentfetch` OR run directly:
 ```bash
 # Fetch all comments from all sources (human + bot)
-python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/null || {
+# Note: commentfetch.py uses underscore replacement for branch sanitization, while SAFE_BRANCH uses deletion
+# Calculate Python-style sanitized path to handle potential mismatch
+PYTHON_SAFE_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//')
+PYTHON_COMMENTS_PATH="/tmp/$PYTHON_SAFE_BRANCH/comments.json"
+
+python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/null && {
+    # If commentfetch.py succeeded, copy from its output location to WORK_DIR if paths differ
+    if [ "$PYTHON_COMMENTS_PATH" != "$WORK_DIR/comments.json" ] && [ -f "$PYTHON_COMMENTS_PATH" ]; then
+        cp "$PYTHON_COMMENTS_PATH" "$WORK_DIR/comments.json"
+    fi
+} || {
     # Fallback: fetch and combine comments manually, adding .type field to match commentfetch.py output
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "inline"}]' > "$WORK_DIR/inline_comments.json"
     gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "general"}]' > "$WORK_DIR/issue_comments.json"
