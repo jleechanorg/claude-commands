@@ -325,7 +325,7 @@ class UnifiedOrchestration:
         if failed_agents:
             print(f"  └─ Failed Agents: {[a['name'] for a in failed_agents]}")
 
-            # Agent coordination handled via file-based A2A protocol
+        # Agent coordination handled via file-based A2A protocol
 
         if created_agents:
             # GOAL VALIDATION LOGGING: Store original goal for completion verification

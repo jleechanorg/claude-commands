@@ -61,13 +61,6 @@ python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/nu
     jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
 }
 
-# Merge inline + issue comments into a single file for downstream phases
-if [ -f "$WORK_DIR/inline_comments.json" ] && [ -f "$WORK_DIR/issue_comments.json" ]; then
-    jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
-else
-    echo "❌ ERROR: Missing inline or issue comments. Ensure Phase 2 fetches both." && exit 1
-fi
-
 echo "📥 Comments fetched to $WORK_DIR/comments.json (merged inline + issue)"
 ```
 

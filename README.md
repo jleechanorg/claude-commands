@@ -910,7 +910,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-12-11)
+### v1.1.1 (2025-12-11)
 
 **Export Statistics**:
 - **194 Commands**: Complete workflow orchestration system
@@ -940,7 +940,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-11-27)
+### v1.1.2 (2025-11-27)
 
 **Export Statistics**:
 - **193 Commands**: Complete workflow orchestration system
@@ -970,7 +970,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-11-26)
+### v1.1.3 (2025-11-26)
 
 **Export Statistics**:
 - **193 Commands**: Complete workflow orchestration system
@@ -1000,7 +1000,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-11-25)
+### v1.1.4 (2025-11-25)
 
 **Export Statistics**:
 - **193 Commands**: Complete workflow orchestration system
@@ -1720,7 +1720,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Enhanced version history to preserve previous releases
 - Improved export documentation consistency
 
-### v1.1.0 (2025-08-09)
+### v1.1.5 (2025-08-09)
 
 **Export Statistics**:
 - Commands: 116 command definitions  

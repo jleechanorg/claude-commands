@@ -35,7 +35,7 @@ The script supports **two Firebase projects**. Use the correct one for your use 
 | Project | Firebase ID | Use Case | Command |
 |---------|-------------|----------|---------|
 | **AI Universe** | `<your-firebase-project-id>` | `/secondo`, multi-model synthesis | `node scripts/auth-cli.mjs token` (default) |
-| **WorldAI** | `worldarchitecture-ai` | Your Project app auth | `node scripts/auth-cli.mjs token --project worldarchitecture-ai` |
+| **PROJECT_B** | `secondary-firebase-project` | Your Project app auth | `node scripts/auth-cli.mjs token --project secondary-firebase-project` |
 
 ### When to Use Each Project
 
@@ -50,15 +50,15 @@ node scripts/auth-cli.mjs login
 node scripts/auth-cli.mjs token
 ```
 
-#### WorldAI (`worldarchitecture-ai`)
+#### PROJECT_B (`secondary-firebase-project`)
 - Your Project application authentication
-- Firebase auth for the RPG game platform
-- Direct WorldAI API calls
+- Firebase auth for your secondary app
+- Direct PROJECT_B API calls
 
 ```bash
 # Explicit project flag required
-node scripts/auth-cli.mjs login --project worldarchitecture-ai
-node scripts/auth-cli.mjs token --project worldarchitecture-ai
+node scripts/auth-cli.mjs login --project secondary-firebase-project
+node scripts/auth-cli.mjs token --project secondary-firebase-project
 ```
 
 ## Prerequisites
