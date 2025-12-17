@@ -4,9 +4,12 @@ Unified Orchestration System - LLM-Driven with File-based Coordination
 Pure file-based A2A protocol without Redis dependencies
 """
 
+# ruff: noqa: E402
+
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -19,7 +22,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 # Use absolute imports with package name for __main__ compatibility
-from orchestration.task_dispatcher import TaskDispatcher
+from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
 
@@ -75,13 +78,13 @@ class UnifiedOrchestration:
                 capture_output=True,
                 text=True,
                 check=False,
-                timeout=30
+                timeout=30,
             )
             if result.returncode != 0:
                 return
 
-            sessions = result.stdout.strip().split('\n')
-            agent_sessions = [s for s in sessions if s.startswith('task-agent-')]
+            sessions = result.stdout.strip().split("\n")
+            agent_sessions = [s for s in sessions if s.startswith("task-agent-")]
 
             cleaned_sessions = 0
             for session in agent_sessions:
@@ -92,7 +95,7 @@ class UnifiedOrchestration:
                             shell=False,
                             check=False,
                             capture_output=True,
-                            timeout=30
+                            timeout=30,
                         )
                         cleaned_sessions += 1
                     except (subprocess.SubprocessError, OSError):
@@ -113,7 +116,7 @@ class UnifiedOrchestration:
                 capture_output=True,
                 text=True,
                 check=False,
-                timeout=30
+                timeout=30,
             )
             if result.returncode != 0:
                 return True  # Session might be dead already
@@ -122,7 +125,7 @@ class UnifiedOrchestration:
             completion_indicators = [
                 "Agent completed successfully",
                 "Agent execution completed. Session remains active for monitoring",
-                "Session will auto-close in 1 hour"
+                "Session will auto-close in 1 hour",
             ]
 
             # If completion indicators found, session is done
@@ -142,29 +145,23 @@ class UnifiedOrchestration:
         for name, command in base_dependencies.items():
             try:
                 result = subprocess.run(
-                    ["which", command],
-                    shell=False,
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=30
+                    ["which", command], shell=False, check=False, capture_output=True, text=True, timeout=30
                 )
                 if result.returncode != 0:
                     missing.append(name)
             except Exception:
                 missing.append(name)
 
-        llm_cli_available = any(
-            shutil.which(cli_name) for cli_name in ("claude", "codex")
-        )
+        llm_binaries = {profile.get("binary") for profile in CLI_PROFILES.values() if profile.get("binary")}
+        llm_cli_available = any(shutil.which(cli_name) for cli_name in llm_binaries)
         if not llm_cli_available:
-            missing.append("claude/codex CLI")
+            missing.append("agent CLI")
 
         if missing:
             print(f"⚠️  Missing dependencies: {', '.join(missing)}")
-            if "claude/codex CLI" in missing:
+            if "agent CLI" in missing:
                 print(
-                    "   Install Claude Code CLI (claude) or Codex CLI (codex) and ensure at least one is on your PATH"
+                    "   Install at least one agent CLI (claude, codex, gemini, or cursor-agent) and ensure it is on your PATH"
                 )
             if "gh" in missing:
                 print("   Install GitHub CLI: https://cli.github.com/")
@@ -207,7 +204,7 @@ class UnifiedOrchestration:
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=30
+                timeout=30,
             )
             prs = json.loads(result.stdout)
 
@@ -219,19 +216,15 @@ class UnifiedOrchestration:
                 try:
                     # Use fromisoformat which handles ISO 8601 format properly
                     # Replace 'Z' with '+00:00' for proper ISO 8601 timezone handling
-                    pr_created_at = datetime.fromisoformat(pr["createdAt"].replace('Z', '+00:00'))
+                    pr_created_at = datetime.fromisoformat(pr["createdAt"].replace("Z", "+00:00"))
                     if pr_created_at < cutoff_time:
                         continue  # Skip PRs older than cutoff_time
                 except (KeyError, ValueError):
                     # Skip PRs with missing or malformed dates
                     continue
 
-                if (
-                    "task-agent-" in pr["title"]
-                    and "settings" in task_description.lower()
-                ) and (
-                    "settings" in pr["title"].lower()
-                    or "gear" in pr["title"].lower()
+                if ("task-agent-" in pr["title"] and "settings" in task_description.lower()) and (
+                    "settings" in pr["title"].lower() or "gear" in pr["title"].lower()
                 ):
                     agent_name = pr["headRefName"].replace("-work", "")
                     return {
@@ -243,18 +236,11 @@ class UnifiedOrchestration:
             print(f"⚠️  Could not check recent agent work: {e}")
         return None
 
-    def _continue_existing_agent_work(
-        self, existing_agent: dict, task_description: str
-    ):
+    def _continue_existing_agent_work(self, existing_agent: dict, task_description: str):
         """Continue work on existing agent branch."""
         try:
             # Check out the existing branch
-            subprocess.run(
-                ["git", "checkout", existing_agent["branch"]],
-                shell=False,
-                timeout=30,
-                check=True
-            )
+            subprocess.run(["git", "checkout", existing_agent["branch"]], shell=False, timeout=30, check=True)
             print(f"✅ Switched to existing branch: {existing_agent['branch']}")
 
             # Create new agent session on existing branch
@@ -267,12 +253,8 @@ class UnifiedOrchestration:
 
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 print(f"✅ Created continuation agent: {agent_spec['name']}")
-                print(
-                    f"📂 Working directory: {os.getcwd()}/agent_workspace_{agent_spec['name']}"
-                )
-                print(
-                    f"📋 Monitor logs: tail -f /tmp/orchestration_logs/{agent_spec['name']}.log"
-                )
+                print(f"📂 Working directory: {os.getcwd()}/agent_workspace_{agent_spec['name']}")
+                print(f"📋 Monitor logs: tail -f /tmp/orchestration_logs/{agent_spec['name']}.log")
                 print(f"⏳ Monitor with: tmux attach -t {agent_spec['name']}")
             else:
                 print("❌ Failed to create continuation agent")
@@ -307,9 +289,7 @@ class UnifiedOrchestration:
         if self._should_continue_existing_work(task_description):
             existing_agent = self._find_recent_agent_work(task_description)
             if existing_agent:
-                print(
-                    f"🔄 Continuing work from {existing_agent['name']} on branch {existing_agent['branch']}"
-                )
+                print(f"🔄 Continuing work from {existing_agent['name']} on branch {existing_agent['branch']}")
                 self._continue_existing_agent_work(existing_agent, task_description)
                 return
 
@@ -321,7 +301,7 @@ class UnifiedOrchestration:
         print(f"  └─ Analysis Duration: {analysis_duration:.2f}s")
         print(f"  └─ Agents Planned: {len(agents)}")
         for i, agent in enumerate(agents):
-            print(f"    {i+1}. {agent['name']} - {agent['capabilities'][:60]}...")
+            print(f"    {i + 1}. {agent['name']} - {agent['capabilities'][:60]}...")
 
         print("\n🚀 AGENT CREATION PHASE:")
         creation_start = time.time()
@@ -329,7 +309,7 @@ class UnifiedOrchestration:
         failed_agents = []
 
         for i, agent_spec in enumerate(agents):
-            print(f"  📦 Creating Agent {i+1}/{len(agents)}: {agent_spec['name']}")
+            print(f"  📦 Creating Agent {i + 1}/{len(agents)}: {agent_spec['name']}")
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 created_agents.append(agent_spec)
                 print(f"    ✅ Success: {agent_spec['name']}")
@@ -345,7 +325,7 @@ class UnifiedOrchestration:
         if failed_agents:
             print(f"  └─ Failed Agents: {[a['name'] for a in failed_agents]}")
 
-                # Agent coordination handled via file-based A2A protocol
+            # Agent coordination handled via file-based A2A protocol
 
         if created_agents:
             # GOAL VALIDATION LOGGING: Store original goal for completion verification
@@ -415,7 +395,9 @@ class UnifiedOrchestration:
         while time.time() - start_time < max_wait and len(prs_found) < len(agents):
             search_iteration += 1
             elapsed = time.time() - start_time
-            print(f"  🔄 Search Iteration {search_iteration} - Elapsed: {elapsed:.1f}s - PRs Found: {len(prs_found)}/{len(agents)}")
+            print(
+                f"  🔄 Search Iteration {search_iteration} - Elapsed: {elapsed:.1f}s - PRs Found: {len(prs_found)}/{len(agents)}"
+            )
 
             for agent in agents:
                 if agent["name"] in [pr["agent"] for pr in prs_found]:
@@ -452,7 +434,7 @@ class UnifiedOrchestration:
                                 cwd=workspace_path,
                                 capture_output=True,
                                 text=True,
-                                timeout=30
+                                timeout=30,
                             )
 
                             if result.returncode == 0 and result.stdout.strip():
@@ -503,9 +485,7 @@ def main():
     """Main entry point for unified orchestration."""
     if len(sys.argv) < 2 or sys.argv[1] in ["--help", "-h", "help"]:
         print("Usage: python3 orchestrate_unified.py [task description]")
-        print(
-            "Example: python3 orchestrate_unified.py 'Find security vulnerabilities and create coverage report'"
-        )
+        print("Example: python3 orchestrate_unified.py 'Find security vulnerabilities and create coverage report'")
         print("\nThe orchestration system will:")
         print("1. Create specialized agents for your task")
         print("2. Monitor their progress")
