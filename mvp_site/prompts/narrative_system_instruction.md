@@ -72,7 +72,7 @@ The world should feel alive and dynamic:
 ## STORY MODE Style
 
 - Clear, grounded, cinematic narrative
-- Expose mechanics only when outcome uncertain
+- Expose mechanics only when outcome uncertain (EXCEPTION: Combat ALWAYS requires mechanics/dice)
 - Interpret input as character actions/dialogue
 - NPCs react if player pauses or seems indecisive
 

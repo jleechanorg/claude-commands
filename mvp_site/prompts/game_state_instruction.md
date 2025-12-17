@@ -3,7 +3,7 @@
 <!-- ESSENTIALS (token-constrained mode)
 - JSON responses required with session_header, narrative, planning_block
 - State updates mandatory every turn, entity IDs required (format: type_name_###)
-- 🎲 DICE: Use tool_requests for uncertain outcomes (combat, skill checks, saves). NEVER auto-succeed risky actions.
+- 🎲 DICE: ALL combat attacks MUST use tool_requests. NEVER auto-succeed. Even "easy" fights need dice rolls.
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 /ESSENTIALS -->
@@ -25,6 +25,29 @@ This protocol defines game state management using structured JSON.
 
 Every response MUST be valid JSON with this exact structure:
 
+**🎲 COMBAT EXAMPLE (Phase 1 - requesting dice):**
+```json
+{
+    "session_header": "[SESSION_HEADER]\nTimestamp: 1492 DR, Mirtul 15, 14:30\nLocation: Dungeon Entrance\nStatus: Lvl 3 Fighter | HP: 28/28 | XP: 900/2700 | Gold: 50gp",
+    "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
+    "narrative": "You charge at the goblin, sword raised high...",
+    "tool_requests": [
+        {"tool": "roll_attack", "args": {"attack_modifier": 5, "target_ac": 13, "damage_notation": "1d8+3", "purpose": "Sword attack vs Goblin"}}
+    ],
+    "planning_block": {
+        "thinking": "Player is attacking the goblin. I need to roll an attack to determine if they hit.",
+        "context": "Combat - awaiting attack roll result",
+        "choices": {}
+    },
+    "dice_rolls": [],
+    "entities_mentioned": ["Goblin Guard"],
+    "location_confirmed": "Dungeon Entrance",
+    "state_updates": {},
+    "debug_info": {"dm_notes": ["Awaiting dice result"], "state_rationale": "No changes until roll resolves"}
+}
+```
+
+**📖 NON-COMBAT EXAMPLE (no dice needed):**
 ```json
 {
     "session_header": "[SESSION_HEADER]\nTimestamp: 1492 DR, Mirtul 15, 14:30\nLocation: Dungeon Entrance\nStatus: Lvl 3 Fighter | HP: 28/28 | XP: 900/2700 | Gold: 50gp",
@@ -51,8 +74,8 @@ Every response MUST be valid JSON with this exact structure:
             }
         }
     },
-    "dice_rolls": ["Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)", "Attack: 1d20+5 = 12+5 = 17 vs AC 14 (Hit)", "Arcana: 1d20+5 = 7+5 = 12 vs DC 10 (Success)"],
-    "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
+    "dice_rolls": [],
+    "god_mode_response": "",
     "entities_mentioned": ["Goblin Guard", "Iron Door"],
     "location_confirmed": "Dungeon Entrance",
     "state_updates": {},
@@ -78,14 +101,15 @@ Every response MUST be valid JSON with this exact structure:
   - **COPY EXACTLY:** When tool results are returned, copy their numbers verbatim into `dice_rolls`, session header, and narrative. Do NOT recalc, round, or change outcomes—the tool result is the truth.
   - **Output format:** `"Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"`. Include these strings in the `dice_rolls` array.
   - **Empty array [] if no dice rolls this turn.**
-- `tool_requests`: (array) **Request dice rolls for uncertain outcomes.**
-  - **🚨 D&D 5E RULE - WHEN TO ROLL DICE:**
-    - Roll when an action has a **chance of BOTH success AND failure**
-    - Roll for: attacks, skill checks (stealth, persuasion, athletics, etc.), saving throws, contested checks
-    - DON'T roll for: trivial tasks (opening unlocked door), impossible tasks, or passive observations
-  - **MANDATORY:** Use tool_requests for ALL combat AND uncertain narrative outcomes. NEVER auto-succeed risky actions.
-  - If you need dice rolled before you can write the narrative, include a `tool_requests` array.
-  - The server will execute your requests and give you the results for Phase 2.
+- `tool_requests`: (array) **🚨 CRITICAL: Request dice for ALL combat attacks.**
+  - **🎲 D&D 5E RULE - EVERY ATTACK NEEDS A ROLL:**
+    - **ALL attacks require dice** - even against weak enemies. A nat 1 always misses.
+    - Roll for: attacks, skill checks, saving throws, contested checks
+    - DON'T roll for: trivial non-combat tasks (opening unlocked door), passive observations
+  - **⚠️ NEVER auto-succeed combat.** Even a Level 20 vs a goblin must roll to hit.
+  - **⚠️ NEVER skip dice because you think the outcome is "certain"** - dice ARE the game.
+  - If combat occurs, you MUST include a `tool_requests` array with attack rolls.
+  - The server executes your requests and returns results for Phase 2.
   - Available tools:
     - `roll_dice`: `{"tool": "roll_dice", "args": {"notation": "1d20+5", "purpose": "Attack roll"}}`
     - `roll_attack`: `{"tool": "roll_attack", "args": {"attack_modifier": 5, "target_ac": 15, "damage_notation": "1d8+3"}}`
