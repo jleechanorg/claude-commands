@@ -235,6 +235,26 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 3. **NO STORY ACTIONS**: The character **MUST NOT take any story-advancing actions during a think block**. **Never interpret a think request as an action**. Focus on **internal thoughts** only. No combat, no dialogue, no movement, no decisions executed - only contemplation.
 4. **WAIT**: After presenting choices, WAIT for player selection. Never auto-resolve their choice
 
+**🚨 Action Execution Rule:** When a player selects a choice from a planning block (e.g., "Intercept Transport", "Attack the Goblin"):
+1. **EXECUTE** the chosen action - resolve it with dice rolls, narrative, and consequences
+2. **DO NOT** present more sub-options or ask "how" they want to do it
+3. **EXCEPTION:** Only break down into sub-options if the player explicitly asks "how should I do this?" or uses think/plan keywords
+4. **Anti-Loop Rule:** If the player has selected the same or similar action twice, ALWAYS execute it on the second selection - never present a third round of options
+
+**❌ WRONG - Player selects action but gets more options:**
+```
+Player: "Intercept Transport"
+AI: "You consider how to intercept... [presents: Direct Intercept, Roadside Ambush, Traffic Manipulation]"
+Player: "Direct Intercept"
+AI: "You think about the direct approach... [presents: Ram the Vehicle, Block the Road, Shoot the Tires]"
+```
+
+**✅ CORRECT - Player selects action and it executes:**
+```
+Player: "Intercept Transport"
+AI: "You sprint through alleyways, positioning yourself ahead of the van's route. [DICE: Stealth check 1d20+5 = 18 vs DC 15 Success]. You emerge from cover as the van approaches... [narrative continues with action resolution]"
+```
+
 **❌ INVALID Deep Think (empty narrative):**
 ```json
 {"narrative": "", "planning_block": {"thinking": "...", "choices": {...}}}
