@@ -182,7 +182,9 @@ def generate_content(
     # When using tools, JSON output is handled by prompt instructions
     if tools:
         payload["tools"] = tools
-        payload["tool_choice"] = "auto"
+        # Force tool use: game rules require dice for combat, skill checks, saves
+        # With "required", the LLM MUST call at least one tool
+        payload["tool_choice"] = "required"
         # DO NOT set response_format - API rejects tools + response_format
     else:
         # Only use JSON schema format when NOT using tools

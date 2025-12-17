@@ -914,6 +914,32 @@ DICE_ROLL_TOOLS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "declare_no_roll_needed",
+            "description": "Declare that no dice roll is needed for this action. "
+            "Use this for trivial actions that auto-succeed: opening unlocked doors, picking up items, "
+            "walking in safe areas, simple conversations, passive observations. "
+            "DO NOT use this for: combat attacks, skill checks, saving throws, contested actions, "
+            "or anything with meaningful risk/uncertainty. "
+            "You MUST provide a reason explaining why no roll is needed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "description": "The player action being evaluated (e.g., 'open the unlocked door')",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Why no dice roll is needed (e.g., 'Door is unlocked, no check required')",
+                    },
+                },
+                "required": ["action", "reason"],
+            },
+        },
+    },
 ]
 
 
@@ -1288,6 +1314,16 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "modifier": result.modifier, "total": result.total, "dc": dc, "success": success,
             "natural_20": result.natural_20, "natural_1": result.natural_1,
             "formatted": f"{save_type} save: {result} vs DC {dc} ({'Success' if success else 'Fail'})"
+        }
+
+    if tool_name == "declare_no_roll_needed":
+        action = arguments.get("action", "unspecified action")
+        reason = arguments.get("reason", "no reason provided")
+        return {
+            "no_roll": True,
+            "action": action,
+            "reason": reason,
+            "formatted": f"No roll needed for '{action}': {reason}"
         }
 
     return {"error": f"Unknown tool: {tool_name}"}
