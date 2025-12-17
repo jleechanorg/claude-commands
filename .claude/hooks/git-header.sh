@@ -44,37 +44,44 @@ working_dir="$(basename "$git_root")"
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no upstream")
 
-# Extract repository (owner/repo) from git remote origin
+# Extract repository (owner/repo) from git remote
+# Prefers upstream remote (for fork workflows) over origin
 get_repo_from_remote() {
     local url
-    url=$(git remote get-url origin 2>/dev/null) || return 1
+    local remote_name
 
-    # Match HTTPS format: https://github.com/owner/repo.git
-    if [[ "$url" =~ https?://github\.com/([^/]+)/([^/]+)(\.git)?$ ]]; then
-        local owner="${BASH_REMATCH[1]}"
-        local repo="${BASH_REMATCH[2]}"
-        repo="${repo%.git}"
-        echo "${owner}/${repo}"
-        return 0
-    fi
+    # In fork workflows, upstream points to the main repo where PRs exist
+    # Try upstream first, fall back to origin
+    for remote_name in upstream origin; do
+        url=$(git remote get-url "$remote_name" 2>/dev/null) || continue
 
-    # Match SSH format: git@github.com:owner/repo.git
-    if [[ "$url" =~ git@github\.com:([^/]+)/([^/]+)(\.git)?$ ]]; then
-        local owner="${BASH_REMATCH[1]}"
-        local repo="${BASH_REMATCH[2]}"
-        repo="${repo%.git}"
-        echo "${owner}/${repo}"
-        return 0
-    fi
+        # Match HTTP/HTTPS GitHub format: https://github.com/owner/repo.git
+        if [[ "$url" =~ https?://github\.com/([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+            local owner="${BASH_REMATCH[1]}"
+            local repo="${BASH_REMATCH[2]}"
+            repo="${repo%.git}"
+            echo "${owner}/${repo}"
+            return 0
+        fi
 
-    # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
-    if [[ "$url" =~ /git/([^/]+)/([^/]+)(\.git)?$ ]]; then
-        local owner="${BASH_REMATCH[1]}"
-        local repo="${BASH_REMATCH[2]}"
-        repo="${repo%.git}"
-        echo "${owner}/${repo}"
-        return 0
-    fi
+        # Match SSH format: git@github.com:owner/repo.git
+        if [[ "$url" =~ git@github\.com:([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+            local owner="${BASH_REMATCH[1]}"
+            local repo="${BASH_REMATCH[2]}"
+            repo="${repo%.git}"
+            echo "${owner}/${repo}"
+            return 0
+        fi
+
+        # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
+        if [[ "$url" =~ /git/([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+            local owner="${BASH_REMATCH[1]}"
+            local repo="${BASH_REMATCH[2]}"
+            repo="${repo%.git}"
+            echo "${owner}/${repo}"
+            return 0
+        fi
+    done
 
     return 1
 }
