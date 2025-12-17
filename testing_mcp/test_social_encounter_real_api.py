@@ -286,6 +286,126 @@ Generate a response with narrative and the appropriate skill check."""
         print(f"\n✅ SUCCESS: LLM correctly called roll_skill_check for persuasion!")
         print(f"   Function calls: {function_calls}")
 
+    @unittest.skipUnless(
+        os.environ.get("GEMINI_API_KEY"),
+        "Requires GEMINI_API_KEY for live API testing"
+    )
+    def test_llm_uses_roll_skill_check_for_intimidation(self):
+        """
+        E2E TEST: LLM must call roll_skill_check for intimidation.
+        """
+        from mvp_site.llm_providers import gemini_provider
+        from google.genai import types
+
+        social_prompt = """You are a D&D 5e Game Master. The player character Krag the Barbarian is trying to intimidate a bandit into surrendering.
+
+Player action: "I grab the bandit by the collar and growl 'Drop your weapons or I'll crush you like the others!'"
+
+Important rules:
+1. This is a contested social encounter - the bandit is scared but might resist
+2. You MUST roll an Intimidation skill check
+3. Use the roll_skill_check tool with skill_name="intimidation"
+
+Generate a response with narrative and the appropriate skill check."""
+
+        client = gemini_provider.get_client()
+        gemini_tools = [types.FunctionDeclaration(
+            name=t["function"]["name"],
+            description=t["function"]["description"],
+            parameters=t["function"].get("parameters"),
+        ) for t in DICE_ROLL_TOOLS]
+
+        config = types.GenerateContentConfig(
+            max_output_tokens=2000,
+            temperature=0.7,
+            tools=[types.Tool(function_declarations=gemini_tools)],
+            tool_config=types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(mode="ANY")
+            ),
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[social_prompt],
+            config=config,
+        )
+
+        function_calls = []
+        if response.candidates:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'function_call') and part.function_call:
+                    function_calls.append({
+                        'name': part.function_call.name,
+                        'args': dict(part.function_call.args) if part.function_call.args else {}
+                    })
+
+        roll_skill_calls = [fc for fc in function_calls if fc['name'] == 'roll_skill_check']
+        self.assertGreater(len(roll_skill_calls), 0, f"LLM did NOT call roll_skill_check! Got: {function_calls}")
+
+        skill_name = roll_skill_calls[0]['args'].get('skill_name', '').lower()
+        self.assertIn('intimidation', skill_name, f"Expected intimidation, got: {skill_name}")
+        print(f"\n✅ SUCCESS: LLM correctly called roll_skill_check for intimidation!")
+
+    @unittest.skipUnless(
+        os.environ.get("GEMINI_API_KEY"),
+        "Requires GEMINI_API_KEY for live API testing"
+    )
+    def test_llm_uses_roll_skill_check_for_deception(self):
+        """
+        E2E TEST: LLM must call roll_skill_check for deception.
+        """
+        from mvp_site.llm_providers import gemini_provider
+        from google.genai import types
+
+        social_prompt = """You are a D&D 5e Game Master. The player character Silvia the Rogue is trying to deceive a merchant about the origin of some goods.
+
+Player action: "I tell the merchant these gems came from my late grandmother's estate, hiding that I actually stole them."
+
+Important rules:
+1. This is a contested social encounter - the merchant might see through the lie
+2. You MUST roll a Deception skill check
+3. Use the roll_skill_check tool with skill_name="deception"
+
+Generate a response with narrative and the appropriate skill check."""
+
+        client = gemini_provider.get_client()
+        gemini_tools = [types.FunctionDeclaration(
+            name=t["function"]["name"],
+            description=t["function"]["description"],
+            parameters=t["function"].get("parameters"),
+        ) for t in DICE_ROLL_TOOLS]
+
+        config = types.GenerateContentConfig(
+            max_output_tokens=2000,
+            temperature=0.7,
+            tools=[types.Tool(function_declarations=gemini_tools)],
+            tool_config=types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(mode="ANY")
+            ),
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[social_prompt],
+            config=config,
+        )
+
+        function_calls = []
+        if response.candidates:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'function_call') and part.function_call:
+                    function_calls.append({
+                        'name': part.function_call.name,
+                        'args': dict(part.function_call.args) if part.function_call.args else {}
+                    })
+
+        roll_skill_calls = [fc for fc in function_calls if fc['name'] == 'roll_skill_check']
+        self.assertGreater(len(roll_skill_calls), 0, f"LLM did NOT call roll_skill_check! Got: {function_calls}")
+
+        skill_name = roll_skill_calls[0]['args'].get('skill_name', '').lower()
+        self.assertIn('deception', skill_name, f"Expected deception, got: {skill_name}")
+        print(f"\n✅ SUCCESS: LLM correctly called roll_skill_check for deception!")
+
 
 def get_tool_description(tool_name: str) -> str:
     """Helper to get tool description for logging."""
