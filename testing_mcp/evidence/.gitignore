@@ -1,0 +1,3 @@
+# Ignore evidence from real API tests - regenerated each run
+*
+!.gitignore

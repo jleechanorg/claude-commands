@@ -71,29 +71,25 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         """
         Verify the model capability detection function works correctly.
 
-        ARCHITECTURE UPDATE (Dec 2024): Strategy now varies by provider:
-        - Gemini 3.x: code_execution (single-phase)
-        - Gemini 2.0: code_execution (single-phase)
-        - Gemini 2.5: tool_use_phased (two-phase)
-        - Cerebras/OpenRouter with tool support: tool_use (two-phase)
-        - Fallback: precompute (pre-rolled dice in prompt)
+        VERIFIED Dec 2024 via real API tests:
+        - Gemini 3.x: code_execution (single-phase, verified working)
+        - Gemini 2.0: native_two_phase (code_execution + JSON disabled)
+        - Gemini 2.5: native_two_phase (tools + JSON mime unsupported)
+        - Cerebras/OpenRouter: native_two_phase
         """
-        # Gemini 3.x models: code_execution (single-phase)
-        # ARCHITECTURE UPDATE (Dec 2024): All models use native_two_phase
-        # Google has disabled code_execution + JSON mode together for all models
-        # See: https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini
-
-        # All Gemini models now use native_two_phase
+        # Gemini 3 supports code_execution + JSON together
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-3-pro-preview", "gemini"),
-            "native_two_phase"
+            "code_execution"
         )
 
+        # Gemini 2.0 does NOT support code_execution + JSON
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
             "native_two_phase"
         )
 
+        # Gemini 2.5 does NOT support tools + JSON mime
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.5-flash", "gemini"),
             "native_two_phase"

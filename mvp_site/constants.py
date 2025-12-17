@@ -93,14 +93,13 @@ GEMINI_3_MODELS: set[str] = {
 # avoiding the prompt-engineering approach that some models (GLM-4.6) ignore.
 
 # Models that support code_execution + JSON mode TOGETHER (single phase)
-# NOTE: As of Dec 2024, Google has disabled code_execution + JSON mode for all models
-# See: https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini
-# "controlled generation is not supported with Code Execution tool"
-# All models now use native_two_phase strategy
+# VERIFIED Dec 2024 via real API tests:
+#   - gemini-3-pro-preview: ✅ Works with code_execution + JSON mode
+#   - gemini-2.0-flash: ❌ "controlled generation is not supported with Code Execution tool"
+#   - gemini-2.5-flash: ❌ "Tool use with response mime type 'application/json' is unsupported"
 MODELS_WITH_CODE_EXECUTION: set[str] = {
-    # DISABLED: Google API now rejects code_execution + JSON mode together
-    # "gemini-2.0-flash",
-    # "gemini-3-pro-preview",
+    "gemini-3-pro-preview",  # Only Gemini 3 supports code_execution + JSON together
+    *GEMINI_3_MODELS,  # Future Gemini 3 models
 }
 
 
@@ -108,8 +107,11 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
     """
     Determine the dice rolling strategy for a given model.
 
-    ARCHITECTURE UPDATE (Dec 2024): All models use native_two_phase.
-    Google has disabled code_execution + JSON mode together for all models.
+    VERIFIED Dec 2024:
+    - gemini-3-pro-preview: code_execution (single phase, verified working)
+    - gemini-2.0-flash: native_two_phase (code_execution + JSON disabled)
+    - gemini-2.5-flash: native_two_phase (tools + JSON mime unsupported)
+    - All Cerebras/OpenRouter: native_two_phase
 
     Args:
         model_name: Model identifier
@@ -117,12 +119,14 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
 
     Returns:
         Strategy string:
-        - 'native_two_phase' - All models: Phase 1 native tools, Phase 2 JSON schema
+        - 'code_execution' - Gemini 3.x only: code_execution + JSON together
+        - 'native_two_phase' - All others: Phase 1 native tools, Phase 2 JSON schema
     """
-    # All models now use native two-phase tool calling
-    # Google has disabled code_execution + JSON mode together
-    # Phase 1: tools param (native API tool calling)
-    # Phase 2: response_format param (JSON schema)
+    # Only Gemini 3 supports code_execution + JSON mode together
+    if model_name in MODELS_WITH_CODE_EXECUTION:
+        return "code_execution"
+
+    # All other models use native two-phase tool calling
     return "native_two_phase"
 
 # Gemini model mapping from user preference to full model name
