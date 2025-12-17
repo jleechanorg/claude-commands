@@ -1404,3 +1404,51 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         }
 
     return {"error": f"Unknown tool: {tool_name}"}
+
+
+def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
+    '''
+    Execute a list of tool requests with strict type validation.
+
+    Args:
+        tool_requests: List of dicts, each containing "tool" (str) and "args" (dict).
+
+    Returns:
+        List of results with tool execution details.
+    '''
+    if not isinstance(tool_requests, list):
+        logging_util.error(f"tool_requests must be a list, got {type(tool_requests)}")
+        return []
+
+    results = []
+    for request in tool_requests:
+        if not isinstance(request, dict):
+            logging_util.error(f"Tool request must be dict, got {type(request)}")
+            continue
+
+        tool_name = request.get("tool")
+        args = request.get("args", {})
+
+        # Strict Type Validation
+        if not isinstance(tool_name, str) or not tool_name:
+            logging_util.error(f"Invalid tool name type or empty: {tool_name} ({type(tool_name)})")
+            continue
+
+        if not isinstance(args, dict):
+            logging_util.error(f"Tool args must be dict, got {type(args)}")
+            args = {}
+
+        try:
+            # Delegate to the specific dice tool handler
+            result = execute_dice_tool(tool_name, args)
+        except Exception as e:
+            logging_util.error(f"Tool execution error: {tool_name}: {e}")
+            result = {"error": str(e)}
+
+        results.append({
+            "tool": tool_name,
+            "args": args,
+            "result": result,
+        })
+
+    return results
