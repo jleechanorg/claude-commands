@@ -77,6 +77,14 @@ class FakeModelAdapter:
                     "active_quest": "Begin the adventure",
                     "scene_number": 1,
                 },
+                "session_header": "Session 1: {setting}",
+                "planning_block": {
+                    "thinking": "The campaign is starting. I should offer initial path choices.",
+                    "choices": {
+                        "explore_area": {"text": "Explore Area", "description": "Look around the immediate vicinity", "risk_level": "low"},
+                        "check_inventory": {"text": "Check Gear", "description": "Inspect your starting equipment", "risk_level": "none"}
+                    }
+                }
             },
             "story_continuation": {
                 "narrative": "With determination, {character} {user_input}. The path ahead revealed new challenges and opportunities...",
@@ -94,6 +102,14 @@ class FakeModelAdapter:
                     "scene_number": 2,
                     "last_action": "{user_input}",
                 },
+                "session_header": "Session 1: Forest Path",
+                "planning_block": {
+                    "thinking": "The user performed an action. I should offer relevant follow-up choices.",
+                    "choices": {
+                        "talk_npc": {"text": "Talk to Stranger", "description": "Approach the mysterious figure", "risk_level": "medium"},
+                        "examine_rune": {"text": "Examine Rune", "description": "Look closely at the ancient symbol", "risk_level": "low"}
+                    }
+                }
             },
         }
 

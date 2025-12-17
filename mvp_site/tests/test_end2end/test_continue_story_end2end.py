@@ -50,6 +50,14 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "entities_mentioned": ["Thorin"],
             "location_confirmed": "Mountain Kingdom",
             "state_updates": {"story_progression": "continued"},
+            "session_header": "Session 1: The Mountain Path",
+            "planning_block": {
+                "thinking": "The player wants to continue. I should describe the next leg of the journey.",
+                "choices": {
+                    "press_on": {"text": "Press On", "description": "Continue deeper into the mountains", "risk_level": "medium"},
+                    "set_camp": {"text": "Set Camp", "description": "Rest for the night", "risk_level": "low"}
+                }
+            }
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
