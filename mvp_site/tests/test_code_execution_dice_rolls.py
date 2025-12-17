@@ -87,58 +87,60 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         - Fallback: precompute (pre-rolled dice in prompt)
         """
         # Gemini 3.x models: code_execution (single-phase)
-        # ONLY Gemini 3 can combine code_execution + JSON mode together
+        # ARCHITECTURE UPDATE (Dec 2024): Two strategies only:
+        # 1. code_execution - Gemini 2.0/3.x only (supports code_execution + JSON together)
+        # 2. native_two_phase - All other models (Phase 1: native tools, Phase 2: JSON)
+
+        # Gemini 3 can combine code_execution + JSON mode together
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-3-pro-preview", "gemini"),
             "code_execution"
         )
 
-        # Gemini 2.0: tool_use_phased (two-phase)
-        # Gemini 2.x CANNOT combine code_execution + JSON mode (INVALID_ARGUMENT error)
-        # See: .claude/skills/gemini-code-execution-json-mode.md
+        # Gemini 2.0 can ALSO combine code_execution + JSON mode together
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
-            "tool_use_phased"
+            "code_execution"
         )
 
-        # Gemini 2.5 models: tool_use_phased (two-phase)
+        # Gemini 2.5 models: native_two_phase (cannot combine tools + JSON)
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.5-flash", "gemini"),
-            "tool_use_phased"
+            "native_two_phase"
         )
 
-        # Cerebras models with tool support: tool_use
+        # Cerebras models: native_two_phase (Phase 1: native tools, Phase 2: JSON)
         self.assertEqual(
             constants.get_dice_roll_strategy("qwen-3-235b-a22b-instruct-2507", "cerebras"),
-            "tool_use"
+            "native_two_phase"
         )
         self.assertEqual(
             constants.get_dice_roll_strategy("zai-glm-4.6", "cerebras"),
-            "tool_use"
+            "native_two_phase"
         )
 
-        # OpenRouter models with tool support: tool_use
+        # OpenRouter models: native_two_phase
         self.assertEqual(
             constants.get_dice_roll_strategy("meta-llama/llama-3.1-70b-instruct", "openrouter"),
-            "tool_use"
+            "native_two_phase"
         )
 
-        # Models without tool support: precompute
+        # All non-code_execution models use native_two_phase
         self.assertEqual(
             constants.get_dice_roll_strategy("llama-3.3-70b", "cerebras"),
-            "precompute"
+            "native_two_phase"
         )
 
-        # Unknown models: precompute
+        # Unknown models: native_two_phase (default for non-Gemini 2.0/3.x)
         self.assertEqual(
             constants.get_dice_roll_strategy("unknown-model", ""),
-            "precompute"
+            "native_two_phase"
         )
 
-        # No provider specified: precompute (backwards compatibility)
+        # No provider specified: uses model name check (gemini-2.0 is in MODELS_WITH_CODE_EXECUTION)
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash"),
-            "precompute"
+            "code_execution"
         )
 
     def test_dice_roll_instructions_exist(self):
@@ -397,15 +399,15 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
         Verify _call_llm_api routes to JSON-first tool_requests flow for Cerebras.
 
         ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use
-        generate_content_with_tool_requests for JSON-first two-phase inference.
-        This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't).
+        generate_content_with_native_tools for native two-phase inference.
+        Phase 1: native API tools, Phase 2: JSON schema.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests") as mock_tool_requests:
-            mock_tool_requests.return_value = Mock(
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_native_tools") as mock_native_tools:
+            mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # All Cerebras models use tool_requests flow
+            # All Cerebras models use native_tools flow
             llm_service._call_llm_api(
                 ["test prompt"],
                 "qwen-3-235b-a22b-instruct-2507",
@@ -413,33 +415,26 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
 
-            # Verify tool_requests flow was called
+            # Verify native_tools flow was called
             self.assertTrue(
-                mock_tool_requests.called,
-                "generate_content_with_tool_requests should be called for Cerebras",
-            )
-            # No tools parameter - JSON-first flow uses tool_requests in schema
-            call_kwargs = mock_tool_requests.call_args[1] if mock_tool_requests.call_args[1] else {}
-            self.assertNotIn(
-                "tools",
-                call_kwargs,
-                "tools should NOT be passed to tool_requests flow (uses schema instead)"
+                mock_native_tools.called,
+                "generate_content_with_native_tools should be called for Cerebras",
             )
 
-    def test_call_llm_api_routes_to_tool_requests_for_openrouter(self):
+    def test_call_llm_api_routes_to_native_tools_for_openrouter(self):
         """
-        Verify _call_llm_api routes to JSON-first tool_requests flow for OpenRouter.
+        Verify _call_llm_api routes to native two-phase flow for OpenRouter.
 
         ARCHITECTURE UPDATE (Dec 2024): All OpenRouter models use
-        generate_content_with_tool_requests for JSON-first two-phase inference.
-        This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't).
+        generate_content_with_native_tools for native two-phase inference.
+        Phase 1: native API tools, Phase 2: JSON schema.
         """
-        with patch("mvp_site.llm_providers.openrouter_provider.generate_content_with_tool_requests") as mock_tool_requests:
-            mock_tool_requests.return_value = Mock(
+        with patch("mvp_site.llm_providers.openrouter_provider.generate_content_with_native_tools") as mock_native_tools:
+            mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # All OpenRouter models use tool_requests flow
+            # All OpenRouter models use native_tools flow
             llm_service._call_llm_api(
                 ["test prompt"],
                 "meta-llama/llama-3.1-70b-instruct",
@@ -447,32 +442,26 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_OPENROUTER
             )
 
-            # Verify tool_requests flow was called
+            # Verify native_tools flow was called
             self.assertTrue(
-                mock_tool_requests.called,
-                "generate_content_with_tool_requests should be called for OpenRouter",
-            )
-            # No tools parameter - JSON-first flow uses tool_requests in schema
-            call_kwargs = mock_tool_requests.call_args[1] if mock_tool_requests.call_args[1] else {}
-            self.assertNotIn(
-                "tools",
-                call_kwargs,
-                "tools should NOT be passed to tool_requests flow (uses schema instead)"
+                mock_native_tools.called,
+                "generate_content_with_native_tools should be called for OpenRouter",
             )
 
-    def test_call_llm_api_falls_back_to_direct_call_for_unsupported_models(self):
+    def test_call_llm_api_uses_native_tools_for_all_cerebras_models(self):
         """
-        Verify _call_llm_api falls back to direct call for models NOT in MODELS_WITH_TOOL_USE.
+        Verify _call_llm_api uses native_two_phase for ALL Cerebras models.
 
-        Models like llama-3.3-70b don't reliably support multi-turn tool calling,
-        so they should use direct call without tools.
+        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use native two-phase,
+        including models like llama-3.3-70b. The old MODELS_WITH_TOOL_USE distinction
+        is removed - all models now use native API tool calling.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content") as mock_direct:
-            mock_direct.return_value = Mock(
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_native_tools") as mock_native_tools:
+            mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # llama-3.3-70b is NOT in MODELS_WITH_TOOL_USE - should use direct call
+            # ALL Cerebras models now use native_tools (including llama-3.3-70b)
             llm_service._call_llm_api(
                 ["test prompt"],
                 "llama-3.3-70b",
@@ -480,10 +469,10 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
 
-            # Verify direct call was used (not tool loop)
+            # Verify native_tools flow was called
             self.assertTrue(
-                mock_direct.called,
-                "generate_content should be called for models NOT in MODELS_WITH_TOOL_USE",
+                mock_native_tools.called,
+                "generate_content_with_native_tools should be called for all Cerebras models",
             )
 
 

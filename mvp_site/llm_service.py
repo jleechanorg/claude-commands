@@ -1643,10 +1643,13 @@ def _call_llm_api(
         )
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
-            # Check if this is a Gemini 3 model (supports function calling + JSON)
-            if model_name in constants.GEMINI_3_MODELS:
+            # Use get_dice_roll_strategy to determine the approach
+            strategy = constants.get_dice_roll_strategy(model_name, provider_name)
+
+            if strategy == "code_execution":
+                # Gemini 2.0/3.x: code_execution + JSON together (single phase)
                 logging_util.info(
-                    f"🔍 CALL_LLM_API_GEMINI3: Using JSON-first tool_requests for {model_name}"
+                    f"🔍 CALL_LLM_API_GEMINI: code_execution strategy for {model_name}"
                 )
                 return gemini_provider.generate_content_with_code_execution(
                     prompt_contents=prompt_contents,
@@ -1656,12 +1659,11 @@ def _call_llm_api(
                     safety_settings=SAFETY_SETTINGS,
                     json_mode_max_output_tokens=safe_output_limit,
                 )
-            # Gemini 2.x: Use JSON-first tool_requests flow
-            # This keeps JSON mode throughout (vs old tool_loop which used tools-first with no JSON)
+            # native_two_phase: Gemini 2.5 uses native API tool calling
             logging_util.info(
-                "🔍 CALL_LLM_API_GEMINI: Using JSON-first tool_requests flow"
+                f"🔍 CALL_LLM_API_GEMINI: native_two_phase strategy for {model_name}"
             )
-            return gemini_provider.generate_content_with_tool_requests(
+            return gemini_provider.generate_content_with_native_tools(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
@@ -1670,12 +1672,12 @@ def _call_llm_api(
                 json_mode_max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
-            # Use JSON-first flow with tool_requests for all OpenRouter models
-            # This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't)
+            # Native two-phase tool calling for all OpenRouter models
+            # Phase 1: native tools, Phase 2: JSON schema
             logging_util.info(
-                f"🔍 CALL_LLM_API_OPENROUTER: Using JSON-first tool_requests for {model_name}"
+                f"🔍 CALL_LLM_API_OPENROUTER: native_two_phase strategy for {model_name}"
             )
-            return openrouter_provider.generate_content_with_tool_requests(
+            return openrouter_provider.generate_content_with_native_tools(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
@@ -1683,12 +1685,12 @@ def _call_llm_api(
                 max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
-            # Use JSON-first flow with tool_requests for all Cerebras models
-            # This keeps JSON schema enforcement throughout (vs old tool_loop which couldn't)
+            # Native two-phase tool calling for all Cerebras models
+            # Phase 1: native tools, Phase 2: JSON schema
             logging_util.info(
-                f"🔍 CALL_LLM_API_CEREBRAS: Using JSON-first tool_requests for {model_name}"
+                f"🔍 CALL_LLM_API_CEREBRAS: native_two_phase strategy for {model_name}"
             )
-            return cerebras_provider.generate_content_with_tool_requests(
+            return cerebras_provider.generate_content_with_native_tools(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,

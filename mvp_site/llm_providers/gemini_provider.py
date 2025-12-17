@@ -14,7 +14,7 @@ from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
-from mvp_site.game_state import execute_dice_tool
+from mvp_site.game_state import DICE_ROLL_TOOLS, execute_dice_tool
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
 # We rely on response_mime_type="application/json" + prompt instruction instead
@@ -296,6 +296,224 @@ def generate_content_with_code_execution(
         temperature=temperature,
         safety_settings=safety_settings,
         json_mode_max_output_tokens=json_mode_max_output_tokens,
+    )
+
+
+def _execute_native_tool_calls(tool_calls: list) -> list[dict]:
+    """Execute native Gemini API function_calls and return results.
+
+    Args:
+        tool_calls: List of FunctionCall objects from Gemini response
+
+    Returns:
+        List of {tool_call_id, tool, args, result} dicts
+    """
+    results = []
+    for i, call in enumerate(tool_calls):
+        try:
+            # Gemini FunctionCall has name and args attributes
+            tool_name = call.name if hasattr(call, 'name') else str(call.get('name', ''))
+            args = dict(call.args) if hasattr(call, 'args') else call.get('args', {})
+            call_id = f"call_{i}"  # Gemini doesn't provide IDs like OpenAI
+
+            # Execute the tool
+            result = execute_dice_tool(tool_name, args)
+
+            results.append({
+                "tool_call_id": call_id,
+                "tool": tool_name,
+                "args": args,
+                "result": result,
+            })
+            logging_util.info(f"GEMINI_NATIVE_TOOL: {tool_name}({args}) -> {result}")
+
+        except Exception as e:
+            logging_util.error(f"Gemini native tool execution error: {e}")
+            results.append({
+                "tool_call_id": f"call_{i}",
+                "tool": str(getattr(call, 'name', 'unknown')),
+                "args": {},
+                "result": {"error": str(e)},
+            })
+
+    return results
+
+
+def generate_content_with_native_tools(
+    prompt_contents: list[Any],
+    model_name: str,
+    system_instruction_text: str | None,
+    temperature: float,
+    safety_settings: list[Any],
+    json_mode_max_output_tokens: int,
+) -> Any:
+    """Generate content with native two-phase tool calling for Gemini 2.5.
+
+    This flow uses native API tool calling:
+    1. Phase 1: `tools` parameter (no JSON mode) → model returns function_calls
+    2. Execute tools locally (roll_dice, roll_attack, etc.)
+    3. Phase 2: JSON mode (no tools) → structured JSON with results
+
+    This approach works for Gemini 2.5 which cannot combine tools + JSON mode.
+
+    Args:
+        prompt_contents: List of prompt content parts
+        model_name: Model name to use
+        system_instruction_text: Optional system instruction
+        temperature: Sampling temperature
+        safety_settings: Safety settings list
+        json_mode_max_output_tokens: Maximum output tokens
+
+    Returns:
+        Gemini API response with structured JSON
+    """
+    # Convert DICE_ROLL_TOOLS to Gemini format
+    gemini_tools = []
+    for tool in DICE_ROLL_TOOLS:
+        fn = tool["function"]
+        gemini_tools.append(
+            types.Tool(
+                function_declarations=[
+                    types.FunctionDeclaration(
+                        name=fn["name"],
+                        description=fn["description"],
+                        parameters=fn.get("parameters"),
+                    )
+                ]
+            )
+        )
+
+    # Phase 1: Native tool calling (no JSON mode)
+    logging_util.info("Gemini NATIVE Phase 1: Calling with tools parameter")
+    client = get_client()
+
+    config = types.GenerateContentConfig(
+        max_output_tokens=json_mode_max_output_tokens,
+        temperature=temperature,
+        safety_settings=safety_settings,
+        tools=gemini_tools,
+    )
+
+    if system_instruction_text:
+        config.system_instruction = system_instruction_text
+
+    response1 = client.models.generate_content(
+        model=model_name,
+        contents=prompt_contents,
+        config=config,
+    )
+
+    # Check for function calls in response
+    function_calls = []
+    if response1.candidates and response1.candidates[0].content.parts:
+        for part in response1.candidates[0].content.parts:
+            if hasattr(part, 'function_call') and part.function_call:
+                function_calls.append(part.function_call)
+
+    if not function_calls:
+        # No tools needed - make Phase 2 call for JSON schema response
+        logging_util.info("Gemini NATIVE Phase 1: No function_calls, proceeding to Phase 2")
+
+        # Build history for Phase 2
+        history = []
+        history.append(types.Content(
+            role="user",
+            parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))]
+        ))
+
+        # Add Phase 1 response if it has text
+        phase1_text = ""
+        if response1.candidates and response1.candidates[0].content.parts:
+            for part in response1.candidates[0].content.parts:
+                if hasattr(part, 'text') and part.text:
+                    phase1_text += part.text
+
+        if phase1_text:
+            history.append(types.Content(
+                role="model",
+                parts=[types.Part(text=phase1_text)]
+            ))
+            history.append(types.Content(
+                role="user",
+                parts=[types.Part(text="Now provide your response in the required JSON format.")]
+            ))
+
+        return generate_json_mode_content(
+            prompt_contents=history if phase1_text else prompt_contents,
+            model_name=model_name,
+            system_instruction_text=system_instruction_text if not phase1_text else None,
+            temperature=temperature,
+            safety_settings=safety_settings,
+            json_mode_max_output_tokens=json_mode_max_output_tokens,
+            tools=None,
+            json_mode=True,
+        )
+
+    # Execute function calls
+    logging_util.info(f"Gemini NATIVE Phase 1: Executing {len(function_calls)} function call(s)")
+    tool_results = _execute_native_tool_calls(function_calls)
+
+    if not tool_results:
+        logging_util.warning("Gemini NATIVE: No valid tool results, making JSON-only call")
+        return generate_json_mode_content(
+            prompt_contents=prompt_contents,
+            model_name=model_name,
+            system_instruction_text=system_instruction_text,
+            temperature=temperature,
+            safety_settings=safety_settings,
+            json_mode_max_output_tokens=json_mode_max_output_tokens,
+            tools=None,
+            json_mode=True,
+        )
+
+    # Build Phase 2 context with tool results
+    tool_results_text = "\n".join([
+        f"- {r['tool']}({json.dumps(r['args'])}): {json.dumps(r['result'])}"
+        for r in tool_results
+    ])
+
+    # Build conversation history for Phase 2
+    history = []
+    history.append(types.Content(
+        role="user",
+        parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))]
+    ))
+
+    # Add model's Phase 1 response (with function calls)
+    phase1_parts = []
+    if response1.candidates and response1.candidates[0].content.parts:
+        for part in response1.candidates[0].content.parts:
+            if hasattr(part, 'text') and part.text:
+                phase1_parts.append(types.Part(text=part.text))
+            elif hasattr(part, 'function_call') and part.function_call:
+                # Include function call reference
+                phase1_parts.append(types.Part(text=f"[Called {part.function_call.name}]"))
+
+    if phase1_parts:
+        history.append(types.Content(role="model", parts=phase1_parts))
+
+    # Add tool results as user turn
+    history.append(types.Content(
+        role="user",
+        parts=[types.Part(text=(
+            f"Tool results (use these exact numbers in your narrative):\n{tool_results_text}\n\n"
+            "The dice rolls have been executed. Use these EXACT results in your narrative. "
+            "Now provide the complete response in the required JSON format. "
+            "Include the dice roll results in the dice_rolls array."
+        ))]
+    ))
+
+    # Phase 2: JSON schema response with results
+    logging_util.info("Gemini NATIVE Phase 2: JSON call with tool results")
+    return generate_json_mode_content(
+        prompt_contents=history,
+        model_name=model_name,
+        system_instruction_text=system_instruction_text,
+        temperature=temperature,
+        safety_settings=safety_settings,
+        json_mode_max_output_tokens=json_mode_max_output_tokens,
+        tools=None,
+        json_mode=True,
     )
 
 

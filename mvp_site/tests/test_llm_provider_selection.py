@@ -169,10 +169,12 @@ def test_firebase_error_falls_back(monkeypatch):
 
 
 def test_legacy_gemini_models_are_mapped(monkeypatch):
+    # Use an actual legacy model that redirects (gemini-2.5-pro → gemini-2.0-flash)
+    # Note: gemini-2.5-flash is a valid current model, NOT a legacy redirect
     monkeypatch.setattr(
         llm_service,
         "get_user_settings",
-        lambda user_id: {"llm_provider": "gemini", "gemini_model": "gemini-2.5-flash"},
+        lambda user_id: {"llm_provider": "gemini", "gemini_model": "gemini-2.5-pro"},
     )
 
     selection = llm_service._select_provider_and_model("user-1")

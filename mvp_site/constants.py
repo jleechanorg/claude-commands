@@ -68,56 +68,36 @@ GEMINI_3_MODELS: set[str] = {
 # =============================================================================
 # MODEL CAPABILITIES FOR DICE ROLLING
 # =============================================================================
-# Models that support native code_execution WITH JSON response mode
-# These can run Python code (random.randint) directly during inference
+# ARCHITECTURE UPDATE (Dec 2024): Unified Native Two-Phase Tool Calling
 #
-# GEMINI MODEL BEHAVIOR (as of Dec 2024):
-# ┌─────────────────────┬───────────────┬───────────┬──────────────┬───────────────┐
-# │ Model               │ Code Exec     │ JSON Mode │ Both Together│ Dice Strategy │
-# ├─────────────────────┼───────────────┼───────────┼──────────────┼───────────────┤
-# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ✅ YES       │ code_execution│
-# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ✅ YES*      │ code_execution│
-# │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
-# │ gemini-2.5-pro      │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ tool_use_phased│
-# └─────────────────────┴───────────────┴───────────┴──────────────┴───────────────┘
+# Two strategies:
+# 1. code_execution: Gemini 2.0/3.0 only - can use code_execution + JSON together
+# 2. native_two_phase: All other models - Phase 1: native tools, Phase 2: JSON schema
 #
-# Gemini 3.x: CAN use code_execution + JSON together (single-phase)
-# ARCHITECTURE (Dec 2024): Tool loops restored for all providers.
-# - Gemini 3: Single-phase with code_execution + JSON (model runs Python for dice)
-#   ONLY Gemini 3 supports code_execution + JSON mode together
-# - Gemini 2.x: Two-phase JSON-first tool_requests flow (code_execution + JSON = INVALID_ARGUMENT)
-# - Cerebras/OpenRouter: Function calling with tool_use
+# ┌─────────────────────┬───────────────┬───────────┬──────────────┬─────────────────┐
+# │ Model               │ Code Exec     │ JSON Mode │ Both Together│ Dice Strategy   │
+# ├─────────────────────┼───────────────┼───────────┼──────────────┼─────────────────┤
+# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ✅ YES       │ code_execution  │
+# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ✅ YES       │ code_execution  │
+# │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ native_two_phase│
+# │ All Cerebras        │ ✅ Native     │ ✅ Yes    │ ❌ No        │ native_two_phase│
+# │ All OpenRouter      │ ✅ Native     │ ✅ Yes    │ ❌ No        │ native_two_phase│
+# └─────────────────────┴───────────────┴───────────┴──────────────┴─────────────────┘
 #
-# See: .claude/skills/gemini-code-execution-json-mode.md for details
+# Native Two-Phase Flow:
+# - Phase 1: `tools` parameter (no JSON schema) → model returns `tool_calls`
+# - Execute tools locally (roll_dice, roll_attack, etc.)
+# - Phase 2: `response_format` parameter (no tools) → structured JSON with results
+#
+# This approach uses native API tool calling which ALL models support,
+# avoiding the prompt-engineering approach that some models (GLM-4.6) ignore.
+
+# Models that support code_execution + JSON mode TOGETHER (single phase)
+# Only Gemini 2.0 and 3.x can do this
 MODELS_WITH_CODE_EXECUTION: set[str] = {
+    "gemini-2.0-flash",
+    "gemini-3-pro-preview",
     *GEMINI_3_MODELS,
-    # NOTE: gemini-2.0-flash CANNOT use code_execution + JSON mode together
-    # It must use the two-phase tool_requests flow via MODELS_WITH_TOOL_USE_PHASED
-}  # ONLY models that support code_execution + JSON together
-
-# Models that support tool use / function calling
-# These require two-stage inference: LLM requests tool → we execute → send result back
-# NOTE: Only add models with 100k+ token context window
-# NOTE: llama-3.3-70b does NOT support multi-turn tool calling (uses precompute fallback)
-MODELS_WITH_TOOL_USE = {
-    # Cerebras models with multi-turn tool support (100k+ context)
-    "qwen-3-235b-a22b-instruct-2507",  # 131K context - Confirmed working
-    "zai-glm-4.6",  # 131K context - #1 on Berkeley Function Calling Leaderboard (quota limited)
-    "z-ai/glm-4.6",  # OpenRouter naming for GLM 4.6 (tools supported)
-    "gpt-oss-120b",  # 131K context - OpenAI reasoning model with native tool use
-    # OpenRouter models with tool support (100k+ context)
-    "openai/gpt-oss-120b",  # OpenRouter variant (use provider=openrouter)
-    "meta-llama/llama-3.1-70b-instruct",  # 128K context
-    # Note: llama-3.1-405b removed (too expensive)
-}
-
-# Models that need pre-computed dice rolls (no code_execution or tool_use)
-# Fallback: LLM generates dice values (not truly random, but works)
-# Any model NOT in the above sets falls back to precompute automatically
-# Note: Precompute is "good enough" - LLM just picks plausible dice values
-MODELS_PRECOMPUTE_ONLY = {
-    # Explicitly list models that should never use tool_use even if capable
-    # (empty - all unlisted models auto-fallback to precompute)
 }
 
 
@@ -125,8 +105,7 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
     """
     Determine the dice rolling strategy for a given model.
 
-    ARCHITECTURE UPDATE (Dec 2024): Tool loops restored for all providers.
-    LLM decides what dice to roll, server executes with true randomness.
+    ARCHITECTURE UPDATE (Dec 2024): Simplified to two strategies.
 
     Args:
         model_name: Model identifier
@@ -134,27 +113,17 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
 
     Returns:
         Strategy string:
-        - 'code_execution' - Gemini 3.x: code_execution + JSON together
-        - 'tool_use_phased' - Gemini 2.x: tools→JSON phase separation
-        - 'tool_use' - Cerebras/OpenRouter: function calling + JSON
-        - 'precompute' - Fallback for models without tool support
+        - 'code_execution' - Gemini 2.0/3.x: code_execution + JSON together (single phase)
+        - 'native_two_phase' - All others: Phase 1 native tools, Phase 2 JSON schema
     """
-    # Explicit precompute overrides
-    if model_name in MODELS_PRECOMPUTE_ONLY:
-        return "precompute"
+    # Gemini 2.0 and 3.x can use code_execution + JSON together
+    if model_name in MODELS_WITH_CODE_EXECUTION:
+        return "code_execution"
 
-    # Gemini provider has special handling
-    if provider == "gemini":
-        if model_name in MODELS_WITH_CODE_EXECUTION:
-            return "code_execution"  # Single-phase: code_execution + JSON
-        return "tool_use_phased"  # Two-phase: tools then JSON
-
-    # Cerebras/OpenRouter models with tool support
-    if model_name in MODELS_WITH_TOOL_USE:
-        return "tool_use"
-
-    # Fallback: precompute (pre-rolled dice in prompt)
-    return "precompute"
+    # All other models: use native two-phase tool calling
+    # Phase 1: tools param (native API tool calling)
+    # Phase 2: response_format param (JSON schema)
+    return "native_two_phase"
 
 # Gemini model mapping from user preference to full model name
 # Maps user-selected values to actual API model names
