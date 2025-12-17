@@ -48,15 +48,13 @@ remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || e
 # Prefers upstream remote (for fork workflows) over origin
 get_repo_from_remote() {
     local url
-    local remote_name
 
-    # In fork workflows, upstream points to the main repo where PRs exist
-    # Try upstream first, fall back to origin
-    for remote_name in upstream origin; do
-        url=$(git remote get-url "$remote_name" 2>/dev/null) || continue
+    # Parse a remote URL into owner/repo if possible
+    parse_repo_from_url() {
+        local parsed_url="$1"
 
         # Match HTTP/HTTPS GitHub format: https://github.com/owner/repo.git
-        if [[ "$url" =~ https?://github\.com/([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+        if [[ "$parsed_url" =~ https?://github\.com/([^/]+)/([^/]+)(/|/\.git|\.git)?$ ]]; then
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
@@ -65,7 +63,7 @@ get_repo_from_remote() {
         fi
 
         # Match SSH format: git@github.com:owner/repo.git
-        if [[ "$url" =~ git@github\.com:([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+        if [[ "$parsed_url" =~ git@github\.com:([^/]+)/([^/]+)(/|\.git)?$ ]]; then
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
@@ -74,14 +72,29 @@ get_repo_from_remote() {
         fi
 
         # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
-        if [[ "$url" =~ /git/([^/]+)/([^/]+)(/|\.git)?$ ]]; then
+        if [[ "$parsed_url" =~ /git/([^/]+)/([^/]+)(/|\.git)?$ ]]; then
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
             echo "${owner}/${repo}"
             return 0
         fi
-    done
+
+        return 1
+    }
+
+    # In fork workflows, upstream points to the main repo where PRs exist
+    # Prefer upstream; only fall back to origin when it's the sole remote
+    if url=$(git remote get-url upstream 2>/dev/null); then
+        parse_repo_from_url "$url" && return 0
+    fi
+
+    # If there's only one remote, it's safe to use it as the gh repo target
+    local remote_count
+    remote_count=$(git remote 2>/dev/null | wc -l | tr -d '[:space:]')
+    if [ "$remote_count" = "1" ] && url=$(git remote get-url origin 2>/dev/null); then
+        parse_repo_from_url "$url" && return 0
+    fi
 
     return 1
 }
