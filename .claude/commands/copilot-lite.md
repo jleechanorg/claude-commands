@@ -57,16 +57,13 @@ python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/nu
     # Fallback: fetch and combine comments manually
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate > "$WORK_DIR/inline_comments.json"
     gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate > "$WORK_DIR/issue_comments.json"
-    # Combine into single comments.json file
-    jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
+    # Combine into single comments.json file with error handling
+    if [ -f "$WORK_DIR/inline_comments.json" ] && [ -f "$WORK_DIR/issue_comments.json" ]; then
+        jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
+    else
+        echo "❌ ERROR: Missing inline or issue comments. Ensure Phase 2 fetches both." && exit 1
+    fi
 }
-
-# Merge inline + issue comments into a single file for downstream phases
-if [ -f "$WORK_DIR/inline_comments.json" ] && [ -f "$WORK_DIR/issue_comments.json" ]; then
-    jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
-else
-    echo "❌ ERROR: Missing inline or issue comments. Ensure Phase 2 fetches both." && exit 1
-fi
 
 echo "📥 Comments fetched to $WORK_DIR/comments.json (merged inline + issue)"
 ```

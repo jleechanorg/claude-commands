@@ -889,26 +889,24 @@ The productivity gains available right now represent the largest arbitrage oppor
 - **25 Skills**: Shared knowledge references (.claude/skills/)
 
 **Major Changes**:
-- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
-- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
-- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
-
-**New Scripts Included**:
-- **Git Workflow**: create_worktree.sh, push.sh for branch management
-- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
-- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
-- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
-- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+- **Cursor Agent CLI Support**: Added comprehensive Cursor CLI integration to orchestration system with configurable model support (defaults to composer-1)
+- **Enhanced PR Comment Coverage**: /copilot-lite now enforces 100% top-level PR comment coverage with Phase 4.5 verification gate
+- **Auth Skills Expansion**: Updated ai-universe-auth.md with multi-project token support and added worldai-auth.md skill
+- **Orchestration v0.1.12**: Multi-CLI expansion with improved dependency checks and package-dir mapping
+- **Export Branch Fix**: Safe CWD restoration in export utility using try/finally pattern
 
 **Technical Improvements**:
-- Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude Code specific vs universally useful tools
-- Enhanced documentation for script adaptability across projects
+- Multi-CLI architecture supporting claude, codex, gemini, and cursor-agent via CLI_PROFILES
+- Cursor profile with CURSOR_MODEL environment variable (configurable, defaults to composer-1)
+- Comprehensive test suite for Cursor integration (85 new test lines)
+- Enhanced comment processing: merged inline + issue comments with jq-based verification
+- Fixed export branch CWD handling to prevent directory context issues
 
 **Documentation**:
-- Updated scripts export description
-- Clear separation between project-specific and generally useful scripts
-- Improved adaptation guidance for cross-project usage
+- Updated README with Gemini and Cursor usage examples
+- Added live-mode CLI profile documentation
+- Expanded auth skills with script locations and troubleshooting
+- Clear separation of configurable vs hardcoded CLI parameters
 
 ### v1.1.0 (2025-12-11)
 

@@ -30,19 +30,19 @@ node ~/.claude/scripts/auth-cli.mjs status
 
 ## Multi-Project Support
 
-The script supports **two Firebase projects**. Use the correct one for your use case:
+The script supports **multiple Firebase projects**. Use the correct one for your use case:
 
 | Project | Firebase ID | Use Case | Command |
 |---------|-------------|----------|---------|
-| **AI Universe** | `<your-firebase-project-id>` | `/secondo`, multi-model synthesis | `node scripts/auth-cli.mjs token` (default) |
-| **WorldAI** | `worldarchitecture-ai` | Your Project app auth | `node scripts/auth-cli.mjs token --project worldarchitecture-ai` |
+| **Primary Project** | `<your-primary-firebase-project-id>` | Multi-model synthesis, main API | `node scripts/auth-cli.mjs token` (default) |
+| **Secondary Project** | `<your-secondary-firebase-project-id>` | Application-specific auth | `node scripts/auth-cli.mjs token --project <secondary-id>` |
 
 ### When to Use Each Project
 
-#### AI Universe (`<your-firebase-project-id>`) - DEFAULT
-- `/secondo` command for multi-model second opinions
-- AI Universe MCP server calls
-- Multi-model synthesis API
+#### Primary Project (`<your-primary-firebase-project-id>`) - DEFAULT
+- Multi-model second opinion commands
+- Primary MCP server calls
+- Main API authentication
 
 ```bash
 # Default - no flag needed
@@ -50,15 +50,15 @@ node scripts/auth-cli.mjs login
 node scripts/auth-cli.mjs token
 ```
 
-#### WorldAI (`worldarchitecture-ai`)
-- Your Project application authentication
-- Firebase auth for the RPG game platform
-- Direct WorldAI API calls
+#### Secondary Project (`<your-secondary-firebase-project-id>`)
+- Application-specific authentication
+- Secondary Firebase services
+- Direct secondary API calls
 
 ```bash
 # Explicit project flag required
-node scripts/auth-cli.mjs login --project worldarchitecture-ai
-node scripts/auth-cli.mjs token --project worldarchitecture-ai
+node scripts/auth-cli.mjs login --project <your-secondary-firebase-project-id>
+node scripts/auth-cli.mjs token --project <your-secondary-firebase-project-id>
 ```
 
 ## Prerequisites
