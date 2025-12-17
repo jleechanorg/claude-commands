@@ -132,7 +132,7 @@ The orchestration system uses **tmux (terminal multiplexer)** as the core proces
        └─> -p {prompt_file}
    └─> Cursor Agent CLI:
        ├─> cursor-agent -p @{prompt_file}
-       ├─> --model grok
+       ├─> --model ${CURSOR_MODEL:-composer-1}   # CURSOR_MODEL env var (default: composer-1)
        └─> --output-format text
 
 8. AGENT WORK (Inside tmux session)
@@ -188,7 +188,7 @@ The system supports multiple LLM CLIs through a profile-based architecture:
 ```python
 {
     "binary": "cursor-agent",
-    "command_template": "{binary} -p @{prompt_file} --model grok --output-format text",
+    "command_template": "{binary} -p @{prompt_file} --model {CURSOR_MODEL} --output-format text",
     "stdin_template": "/dev/null",
     "quote_prompt": False
 }
