@@ -32,7 +32,14 @@ Atomic single-pass PR comment processor with ground truth verification.
 ```bash
 # Get PR context
 BRANCH_NAME=$(git branch --show-current)
-SAFE_BRANCH=$(echo "$BRANCH_NAME" | tr -cd '[:alnum:]._-')
+SAFE_BRANCH=$(python - <<'PY'
+import os, re
+branch = os.environ.get("BRANCH_NAME", "")
+safe = re.sub(r"[^a-zA-Z0-9._-]", "_", branch)
+safe = re.sub(r"^[.-]+", "", safe)
+print(safe or "unknown-branch")
+PY
+)
 WORK_DIR="/tmp/$SAFE_BRANCH"
 mkdir -p "$WORK_DIR"
 
@@ -53,7 +60,7 @@ echo "🎯 Processing PR #$PR_NUMBER on $REPO (branch: $BRANCH_NAME)"
 Execute `/commentfetch` OR run directly:
 ```bash
 # Fetch all comments from all sources (human + bot)
-python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/null || {
+python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/null | tee "$WORK_DIR/comments.json" >/dev/null || {
     # Fallback: fetch and combine comments manually, adding .type field to match commentfetch.py output
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "inline"}]' > "$WORK_DIR/inline_comments.json"
     gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "general"}]' > "$WORK_DIR/issue_comments.json"
@@ -207,10 +214,10 @@ fi
 
 # Count all top-level inline review comments (comments on code, not replies)
 # Note: commentfetch.py outputs {comments: [...]} with .type field ("inline", "general", "review", "copilot")
-TOTAL_INLINE=$(jq '[.comments[] | select((.type == "inline") and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
+TOTAL_INLINE=$(jq '[ (.comments // .)[] | select((.type == "inline") and ((.in_reply_to_id // null) == null)) ] | length' "$WORK_DIR/comments.json")
 
 # Count ALL top-level non-inline comments (PR conversation, reviews, copilot), excluding replies
-TOTAL_ISSUE=$(jq '[.comments[] | select((.type != "inline") and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
+TOTAL_ISSUE=$(jq '[ (.comments // .)[] | select((.type != "inline") and ((.in_reply_to_id // null) == null)) ] | length' "$WORK_DIR/comments.json")
 
 TOTAL=$((TOTAL_INLINE + TOTAL_ISSUE))
 if ! [[ "$TOTAL" =~ ^[0-9]+$ ]]; then
@@ -238,7 +245,7 @@ if [ "$ADDRESSED" -ne "$TOTAL" ]; then
     echo ""
     echo "🔍 Identifying missing comment IDs..."
     # List all comment IDs from fetched comments (top-level only)
-    jq -r '.comments[] | select(((.in_reply_to_id // null) == null)) | .id | tostring' "$WORK_DIR/comments.json" > "$WORK_DIR/all_comment_ids.txt"
+    jq -r '(.comments // .)[] | select(((.in_reply_to_id // null) == null)) | .id | tostring' "$WORK_DIR/comments.json" > "$WORK_DIR/all_comment_ids.txt"
     # List addressed comment IDs (normalize to strings)
     jq -r '.responses[].comment_id | tostring' "$WORK_DIR/responses.json" > "$WORK_DIR/addressed_ids.txt"
     # Find missing

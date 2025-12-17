@@ -62,7 +62,6 @@ ai_orch = "orchestration.live_mode:main"
 orch = "orchestration.live_mode:main"
 
 [tool.setuptools]
-package-dir = {"orchestration" = "."}
 packages = [
     "orchestration",
 ]
