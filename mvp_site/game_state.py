@@ -959,6 +959,17 @@ def xp_for_cr(cr: float) -> int:
     return XP_BY_CR.get(cr, 0)
 
 
+@dataclass
+class DiceRollResult:
+    """Result of a dice roll with full context."""
+    notation: str
+    rolls: list[int]
+    modifier: int
+    total: int
+    natural_20: bool = False
+    natural_1: bool = False
+
+
 def roll_dice(notation: str) -> DiceRollResult:
     """
     Roll dice using standard notation (e.g., "2d6+3", "1d20-1", "4d6").
