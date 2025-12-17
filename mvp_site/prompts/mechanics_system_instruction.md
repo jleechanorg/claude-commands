@@ -160,7 +160,7 @@ Common reference: CR 1=200 | CR 2=450 | CR 3=700 | CR 4=1100 | CR 5=1800
 
 | Command | Effect |
 |---------|--------|
-| `auto combat` | Resolve entire combat narratively |
+| `auto combat` | (PLAYER COMMAND ONLY) Resolve entire combat narratively (requires explicit "auto combat" input) |
 | `betrayals` | Estimate NPC betrayal likelihood (PC knowledge only) |
 | `combat log enable/disable` | Toggle detailed combat rolls |
 | `missions list` | List all ongoing missions |
