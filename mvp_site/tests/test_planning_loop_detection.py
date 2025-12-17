@@ -24,9 +24,9 @@ from unittest.mock import Mock, patch
 # Set TESTING environment variable
 os.environ["TESTING"] = "true"
 
-# Add parent directory to path for imports
+# Add project root to path for imports (parent of mvp_site)
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
 
