@@ -61,6 +61,11 @@ python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/nu
     jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
 }
 
+# Verify comments.json was created (either by commentfetch.py or fallback)
+if [ ! -f "$WORK_DIR/comments.json" ]; then
+    echo "❌ ERROR: Comments fetch failed. $WORK_DIR/comments.json not created." && exit 1
+fi
+
 echo "📥 Comments fetched to $WORK_DIR/comments.json"
 ```
 
@@ -72,9 +77,9 @@ echo "📥 Comments fetched to $WORK_DIR/comments.json"
 
 ### Phase 3: Atomic Comment Processing (CORE - LLM RESPONSIBILITY)
 
-**🚨 CRITICAL: Claude (LLM) MUST process each comment atomically:**
+**🚨 CRITICAL: Claude (LLM) MUST process each top-level comment atomically:**
 
-For EACH comment in `/tmp/{branch}/comments.json` (including bot comments):
+For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (including bot comments):
 
 1. **READ** the comment body and understand what is being requested
    - **Bot comments** requesting code changes should be treated like human comments
@@ -87,6 +92,7 @@ For EACH comment in `/tmp/{branch}/comments.json` (including bot comments):
    - **SKIP**: Bot status updates, merge conflicts, test failures, or CI issues (not in scope)
      - Examples to SKIP: "Merge conflict detected", "Tests failed", "CI check pending"
      - Examples to PROCESS: "@codex please fix this bug", "Bot: This function has a security issue"
+   - **Replies**: If a comment has `in_reply_to_id` (i.e., it is a reply), SKIP generating a response entry for it in `responses.json`; only top-level comments require responses for coverage accounting
 
 3. **ATTEMPT** the fix (if applicable):
    - Read the affected file(s)
@@ -182,6 +188,85 @@ For EACH comment in `/tmp/{branch}/comments.json` (including bot comments):
   ]
 }
 ```
+
+#### Phase 4.5: MANDATORY VERIFICATION GATE (HARD REQUIREMENT)
+
+**🚨 CRITICAL: You CANNOT proceed to Phase 5 until this gate passes.**
+
+**Action Steps:**
+```bash
+# Working directory + PR metadata (exported in Phase 1)
+# Reuse BRANCH_NAME, SAFE_BRANCH, WORK_DIR, REPO, PR_NUMBER from Phase 1 (do NOT recalculate)
+
+# Validate prerequisites
+if [ ! -f "$WORK_DIR/comments.json" ]; then
+    echo "🛑 ERROR: $WORK_DIR/comments.json not found."
+    echo "➡️  Please complete Phases 1-2 before running this step."
+    exit 1
+fi
+
+# Count all top-level inline review comments (comments on code, not replies)
+# Note: commentfetch.py outputs {comments: [...]} structure
+TOTAL_INLINE=$(jq '[.comments[] | select((.pull_request_review_id? != null) and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
+
+# Count ALL top-level issue comments (PR conversation), excluding replies if API returns them
+TOTAL_ISSUE=$(jq '[.comments[] | select((.pull_request_review_id? == null) and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
+
+TOTAL=$((TOTAL_INLINE + TOTAL_ISSUE))
+if ! [[ "$TOTAL" =~ ^[0-9]+$ ]]; then
+    echo "❌ ERROR: Unable to compute TOTAL from $WORK_DIR/comments.json" && exit 1
+fi
+echo "📊 Total top-level comments requiring response: $TOTAL"
+
+# Count comments addressed in responses.json
+if [ ! -f "$WORK_DIR/responses.json" ]; then
+    echo "🛑 ERROR: $WORK_DIR/responses.json not found."
+    echo "➡️  Please complete Phase 4 before running this step."
+    exit 1
+fi
+
+ADDRESSED=$(jq '.responses | length' "$WORK_DIR/responses.json")
+if ! [[ "$ADDRESSED" =~ ^[0-9]+$ ]]; then
+    echo "❌ ERROR: Unable to compute ADDRESSED from $WORK_DIR/responses.json" && exit 1
+fi
+echo "📋 Comments addressed in responses.json (including SKIPPED entries): $ADDRESSED"
+
+# HARD GATE: Assert 100% coverage
+if [ "$ADDRESSED" -ne "$TOTAL" ]; then
+    echo "❌ VERIFICATION FAILED: $ADDRESSED / $TOTAL comments addressed"
+    echo "⚠️ MISSING: $((TOTAL - ADDRESSED)) comments without responses"
+    echo ""
+    echo "🔍 Identifying missing comment IDs..."
+    # List all comment IDs from fetched comments (top-level only)
+    jq -r '.comments[] | select(((.in_reply_to_id // null) == null)) | .id | tostring' "$WORK_DIR/comments.json" > "$WORK_DIR/all_comment_ids.txt"
+    # List addressed comment IDs (normalize to strings)
+    jq -r '.responses[].comment_id | tostring' "$WORK_DIR/responses.json" > "$WORK_DIR/addressed_ids.txt"
+    # Find missing
+    echo "📌 Missing comment IDs (must address before proceeding):"
+    comm -23 <(sort -n "$WORK_DIR/all_comment_ids.txt") <(sort -n "$WORK_DIR/addressed_ids.txt")
+    echo ""
+    echo "🛑 STOP: Return to Phase 3 and address missing comments"
+    # DO NOT PROCEED - loop back to Phase 3
+    exit 1
+fi
+
+# SUCCESS: Gate passed
+echo "✅ VERIFICATION PASSED: $ADDRESSED / $TOTAL (100% coverage)"
+echo "➡️ Proceeding to Phase 5..."
+rm -f "$WORK_DIR/all_comment_ids.txt" "$WORK_DIR/addressed_ids.txt" 2>/dev/null || true
+```
+
+**Gate Rules:**
+1. **TOTAL** = All top-level comments (inline + issue) that are NOT replies (SKIPPED comments still count toward this total)
+2. **ADDRESSED** = Number of entries in responses.json (including SKIPPED entries)
+3. **PASS** = ADDRESSED == TOTAL
+4. **FAIL** = Any mismatch → identify missing IDs → return to Phase 3
+
+**If Gate Fails:**
+- List all missing comment IDs
+- Return to Phase 3 and process each missing comment
+- Re-run Phase 4.5 verification
+- Repeat until 100% coverage achieved
 
 ### Phase 5: Post Responses with Threading
 
