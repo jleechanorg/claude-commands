@@ -1549,8 +1549,6 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         assert remaining == 0  # Capped at 0, not negative
 
 
-if __name__ == "__main__":
-    unittest.main()
 # These tests verify the D&D 5e XP progression table and validation logic.
 # =============================================================================
 
@@ -2266,6 +2264,47 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             "Computed level should be persisted"
         )
 
+
+
+
+class TestExecuteToolRequests(unittest.TestCase):
+    """Test cases for execute_tool_requests function."""
+    
+    def test_invalid_input_type(self):
+        result = game_state_module.execute_tool_requests("not a list")
+        self.assertEqual(result, [])
+
+    def test_invalid_item_type(self):
+        result = game_state_module.execute_tool_requests(["not a dict"])
+        self.assertEqual(result, [])
+
+    def test_invalid_tool_name(self):
+        requests = [{"tool": 123, "args": {}}, {"tool": "", "args": {}}]
+        result = game_state_module.execute_tool_requests(requests)
+        self.assertEqual(result, [])
+
+    @patch("mvp_site.game_state.execute_dice_tool")
+    def test_valid_request(self, mock_execute):
+        mock_execute.return_value = {"success": True}
+        requests = [{"tool": "roll_dice", "args": {"notation": "1d20"}}]
+        
+        result = game_state_module.execute_tool_requests(requests)
+        
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["tool"], "roll_dice")
+        self.assertEqual(result[0]["result"], {"success": True})
+        mock_execute.assert_called_with("roll_dice", {"notation": "1d20"})
+
+    @patch("mvp_site.game_state.execute_dice_tool")
+    def test_exception_handling(self, mock_execute):
+        mock_execute.side_effect = Exception("Tool error")
+        requests = [{"tool": "roll_dice", "args": {}}]
+        
+        result = game_state_module.execute_tool_requests(requests)
+        
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0]["result"])
+        self.assertEqual(result[0]["result"]["error"], "Tool error")
 
 if __name__ == "__main__":
     unittest.main()
