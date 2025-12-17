@@ -59,7 +59,7 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         assert response.status_code == 200
         payload = json.loads(response.data)
         assert payload["llm_provider"] == "gemini"
-        assert payload["gemini_model"] == "gemini-2.0-flash"
+        assert payload["gemini_model"] == "gemini-3-flash-preview"
 
         # Switch to OpenRouter and persist
         update_payload = {
@@ -93,7 +93,10 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         assert cerebras_payload_read["cerebras_model"] == "llama-3.3-70b"
 
         # Switch back to Gemini and ensure round-trip
-        revert_payload = {"llm_provider": "gemini", "gemini_model": "gemini-2.0-flash"}
+        revert_payload = {
+            "llm_provider": "gemini",
+            "gemini_model": "gemini-3-flash-preview",
+        }
         revert_resp = self.client.post(
             "/api/settings", data=json.dumps(revert_payload), headers=self.headers
         )
@@ -102,7 +105,7 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         final_read = self.client.get("/api/settings", headers=self.headers)
         final_payload = json.loads(final_read.data)
         assert final_payload["llm_provider"] == "gemini"
-        assert final_payload["gemini_model"] == "gemini-2.0-flash"
+        assert final_payload["gemini_model"] == "gemini-3-flash-preview"
 
 
 if __name__ == "__main__":

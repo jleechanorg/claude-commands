@@ -26,7 +26,7 @@ class TestJSONOnlyMode(unittest.TestCase):
 
     def test_all_gemini_calls_must_use_json_mode(self):
         """Test that all Gemini API calls enforce JSON mode"""
-        with patch("mvp_site.llm_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
             mock_client = Mock()
             Mock()
             mock_get_client.return_value = mock_client
@@ -92,7 +92,7 @@ class TestJSONOnlyMode(unittest.TestCase):
 
     def test_generation_config_always_includes_json(self):
         """Test that generation config always includes JSON response format"""
-        with patch("mvp_site.llm_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
             mock_client.models.generate_content = Mock(

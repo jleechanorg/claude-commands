@@ -21,7 +21,7 @@ class TestSettingsUIHTTP(unittest.TestCase):
 
     def setUp(self):
         """Set up HTTP client with test mode headers."""
-        self.base_url = "http://localhost:6006"
+        self.base_url = "http://localhost:8081"
         self.headers = {
             "X-Test-Bypass": "true",
             "X-Test-User-ID": "test-user-123",

@@ -22,7 +22,8 @@ class TestSettingsHttpIntegration(unittest.TestCase):
     def setUp(self):
         """Set up HTTP client for real server testing"""
         self.base_url = "http://localhost:8081"
-        self.test_user_id = "http-test-user-layer2"
+        import uuid
+        self.test_user_id = f"http-test-user-layer2-{uuid.uuid4()}"
 
         self.headers = {
             "X-Test-Bypass-Auth": "true",
