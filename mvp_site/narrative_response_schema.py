@@ -643,6 +643,13 @@ def parse_structured_response(
     ) -> str:
         """Use planning block thinking text when narrative is intentionally blank."""
 
+        # Ensure narrative_value is a string
+        if narrative_value is not None and not isinstance(narrative_value, str):
+            try:
+                narrative_value = str(narrative_value)
+            except Exception:
+                narrative_value = ""
+
         narrative_value = (narrative_value or "").strip()
         if narrative_value:
             return narrative_value

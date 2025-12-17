@@ -293,7 +293,7 @@ class TestEndToEndOutputBudget(unittest.TestCase):
         with patch.object(
             gemini_provider, "count_tokens", side_effect=mock_count_tokens
         ), patch.object(
-            gemini_provider, "generate_json_mode_content", side_effect=mock_generate_json_mode_content
+            gemini_provider, "generate_content_with_native_tools", side_effect=mock_generate_json_mode_content
         ):
             # Call the full LLM service flow
             llm_service._call_llm_api(

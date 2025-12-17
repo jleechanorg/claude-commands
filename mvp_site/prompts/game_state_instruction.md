@@ -231,8 +231,8 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
    - "You pause, weighing your options carefully..."
    - "Taking a moment to assess the situation, you consider your next move..."
    - "The possibilities race through your mind as you deliberate..."
-2. **PLANNING BLOCK (REQUIRED)**: Generate deep think block with `thinking`, `choices`, and `analysis` (pros/cons/confidence)
-3. **NO STORY ACTIONS**: The character MUST NOT take any story-advancing actions. No combat, no dialogue, no movement, no decisions executed - only contemplation
+2. **PLANNING BLOCK (REQUIRED)**: Generate deep think block with `thinking`, `choices`, and `analysis` (pros/cons/confidence). **Generate planning block instead** of executing actions.
+3. **NO STORY ACTIONS**: The character **MUST NOT take any story-advancing actions during a think block**. **Never interpret a think request as an action**. Focus on **internal thoughts** only. No combat, no dialogue, no movement, no decisions executed - only contemplation.
 4. **WAIT**: After presenting choices, WAIT for player selection. Never auto-resolve their choice
 
 **❌ INVALID Deep Think (empty narrative):**

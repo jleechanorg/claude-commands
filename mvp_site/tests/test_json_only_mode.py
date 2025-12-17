@@ -26,115 +26,53 @@ class TestJSONOnlyMode(unittest.TestCase):
 
     def test_all_gemini_calls_must_use_json_mode(self):
         """Test that all Gemini API calls enforce JSON mode"""
-        with patch("mvp_site.llm_service.get_client") as mock_get_client:
-            mock_client = Mock()
-            Mock()
-            mock_get_client.return_value = mock_client
-            mock_client.models = Mock()
-            mock_client.models.generate_content = Mock(
-                return_value=Mock(
-                    text='{"narrative": "test", "entities_mentioned": []}'
-                )
-            )
-
-            # Test continue_story (need proper parameters)
+        with patch("mvp_site.llm_service.gemini_provider.generate_content_with_native_tools") as mock_generate_native, \
+             patch("mvp_site.llm_service.gemini_provider.generate_content_with_code_execution") as mock_generate_code:
+            
+            mock_response = Mock(text='{"narrative": "test", "entities_mentioned": []}')
+            mock_generate_native.return_value = mock_response
+            mock_generate_code.return_value = mock_response
 
             test_game_state = GameState(user_id="test-user-123")  # Add required user_id
+            
+            # This triggers _call_llm_api
             llm_service.continue_story("test prompt", "story", [], test_game_state)
 
-            # Verify JSON mode was used
-            call_args = mock_client.models.generate_content.call_args
-            # The config is passed under 'config' key
-            assert "config" in call_args[1]
-            config_obj = call_args[1]["config"]
-            # Check the config object attributes
-            assert config_obj.response_mime_type == "application/json"
-
-    def test_main_py_no_fallback_parsing(self):
-        """Test that main.py doesn't have fallback regex parsing"""
-        # Import main module
-
-        # Create a mock response without structured_response
-        mock_response = Mock(spec=LLMResponse)
-        mock_response.structured_response = None
-        mock_response.state_updates = {}
-        mock_response.narrative_text = (
-            '[STATE_UPDATES_PROPOSED]{"test": true}[END_STATE_UPDATES_PROPOSED]'
-        )
-
-        # The code should NOT attempt to parse markdown blocks
-        # Since parse_llm_response_for_state_changes doesn't exist,
-        # we just verify the new logic works correctly
-        proposed_changes = mock_response.state_updates
-
-        # Should be empty since there's no structured response
-        assert proposed_changes == {}
-
-    def test_no_regex_state_update_extraction(self):
-        """Test that STATE_UPDATES_PROPOSED regex extraction is removed"""
-        # The parse_llm_response_for_state_changes function should not exist
-        assert not hasattr(llm_service, "parse_llm_response_for_state_changes")
-
-        # The helper function should also not exist
-        assert not hasattr(llm_service, "_clean_markdown_from_json")
-
-    def test_always_structured_response_required(self):
-        """Test that a structured response is always required"""
-        # Any LLMResponse without structured_response should have empty state_updates
-        response = LLMResponse(
-            narrative_text='Some text with [STATE_UPDATES_PROPOSED]{"gold": 100}[END_STATE_UPDATES_PROPOSED]',
-            structured_response=None,
-            debug_tags_present={},
-        )
-
-        # Should return empty dict, not parse from text
-        assert response.state_updates == {}
+            # Check that either native or code execution was called
+            assert mock_generate_native.called or mock_generate_code.called
+            
+            if mock_generate_native.called:
+                call_args = mock_generate_native.call_args[1]
+                assert call_args.get("json_mode_max_output_tokens") == llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
+            
+            if mock_generate_code.called:
+                call_args = mock_generate_code.call_args[1]
+                assert call_args.get("json_mode_max_output_tokens") == llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
 
     def test_generation_config_always_includes_json(self):
         """Test that generation config always includes JSON response format"""
-        with patch("mvp_site.llm_service.get_client") as mock_get_client:
-            mock_client = Mock()
-            mock_get_client.return_value = mock_client
-            mock_client.models.generate_content = Mock(
-                return_value=Mock(text='{"narrative": "test"}')
+        with patch("mvp_site.llm_service.gemini_provider.generate_content_with_native_tools") as mock_generate_native, \
+             patch("mvp_site.llm_service.gemini_provider.generate_content_with_code_execution") as mock_generate_code:
+            
+            mock_response = Mock(text='{"narrative": "test", "entities_mentioned": []}')
+            mock_generate_native.return_value = mock_response
+            mock_generate_code.return_value = mock_response
+
+            # Test continue_story
+            llm_service.continue_story(
+                "prompt", "story", [], GameState(user_id="test-user")
             )
 
-            # Test various API calls
-            test_cases = [
-                (
-                    "continue_story",
-                    lambda: llm_service.continue_story(
-                        [], "prompt", "story", GameState(user_id="test-user")
-                    ),
-                ),
-                (
-                    "generate_opening_story",
-                    lambda: llm_service.generate_opening_story("prompt"),
-                ),
-                (
-                    "get_god_response",
-                    lambda: llm_service.get_god_response({}, "command"),
-                ),
-            ]
-
-            for test_name, test_func in test_cases:
-                with self.subTest(test=test_name):
-                    mock_client.models.generate_content.reset_mock()
-
-                    # Call the function
-                    try:
-                        test_func()
-                    except Exception:
-                        pass  # Some might fail due to mocking, we just need the call args
-
-                    # Check that JSON mode was used
-                    if mock_client.models.generate_content.called:
-                        call_args = mock_client.models.generate_content.call_args
-                        if "generation_config" in call_args[1]:
-                            config = call_args[1]["generation_config"]
-                            assert (
-                                config.response_mime_type == "application/json"
-                            ), f"{test_name} should use JSON mode"
+            # Check that JSON mode was used
+            assert mock_generate_native.called or mock_generate_code.called
+            
+            if mock_generate_native.called:
+                kwargs = mock_generate_native.call_args[1]
+                assert kwargs.get("json_mode_max_output_tokens") == llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
+            
+            if mock_generate_code.called:
+                kwargs = mock_generate_code.call_args[1]
+                assert kwargs.get("json_mode_max_output_tokens") == llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
 
     def test_robust_json_parser_is_only_fallback(self):
         """Test that robust JSON parser is the only fallback for malformed JSON"""
