@@ -987,6 +987,46 @@ class DiceRollResult:
     natural_20: bool = False
     natural_1: bool = False
 
+    def __str__(self) -> str:
+        """Format dice roll as human-readable string.
+
+        Examples:
+            1d20+3 with roll 15: "1d20+3 = 15+3 = 18"
+            2d6+2 with rolls [4,3]: "2d6+2 = [4+3]+2 = 9"
+            Natural 20: "1d20+5 = 20+5 = 25 (NAT 20!)"
+            Natural 1: "1d20-1 = 1-1 = 0 (NAT 1!)"
+        """
+        if not self.individual_rolls:
+            return f"{self.notation} = {self.total}"
+
+        # Format the rolls part
+        if len(self.individual_rolls) == 1:
+            rolls_str = str(self.individual_rolls[0])
+        else:
+            rolls_str = f"[{'+'.join(str(r) for r in self.individual_rolls)}]"
+
+        # Format modifier part
+        if self.modifier > 0:
+            mod_str = f"+{self.modifier}"
+        elif self.modifier < 0:
+            mod_str = str(self.modifier)
+        else:
+            mod_str = ""
+
+        # Build the result string
+        if mod_str:
+            result = f"{self.notation} = {rolls_str}{mod_str} = {self.total}"
+        else:
+            result = f"{self.notation} = {rolls_str} = {self.total}"
+
+        # Add natural 20/1 indicators
+        if self.natural_20:
+            result += " (NAT 20!)"
+        elif self.natural_1:
+            result += " (NAT 1!)"
+
+        return result
+
 
 def roll_dice(notation: str) -> DiceRollResult:
     """
