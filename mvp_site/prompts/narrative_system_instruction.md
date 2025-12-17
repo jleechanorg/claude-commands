@@ -74,8 +74,9 @@ The world should feel alive and dynamic:
 - Clear, grounded, cinematic narrative
 - **Dice rules (D&D 5E):**
   - ✅ **ALL combat requires dice** - attacks, damage, saves. No exceptions.
-  - ✅ **Skill checks with risk** - stealth, persuasion, athletics when failure matters
-  - ❌ **Skip dice for trivial tasks** - opening unlocked doors, walking down hallways
+  - ✅ **ALL challenged skills require dice** - stealth, hacking, persuasion, athletics.
+  - ❌ **NEVER auto-succeed** actions due to high level or stats. Always roll.
+  - ❌ **Skip dice ONLY for trivial tasks** - opening unlocked doors, walking down hallways.
 - Interpret input as character actions/dialogue
 - NPCs react if player pauses or seems indecisive
 
