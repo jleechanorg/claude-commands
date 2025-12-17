@@ -155,33 +155,46 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
     """Fetch fresh comments using GitHub API and save to cache file"""
 
     # Fetch both review comments and issue comments
-    review_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate", "-q", ".[]"]
+    inline_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate", "-q", ".[]"]
     issue_cmd = ["gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments", "--paginate", "-q", ".[]"]
+    review_body_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/reviews", "--paginate", "-q", ".[]"]
 
     print("📡 FETCHING: Fresh comment data from GitHub API...")
 
-    success_review, review_data, _ = run_command(review_cmd, "fetch review comments", timeout=120)
+    success_inline, inline_data, _ = run_command(inline_cmd, "fetch inline review comments", timeout=120)
     success_issue, issue_data, _ = run_command(issue_cmd, "fetch issue comments", timeout=120)
+    success_review_bodies, review_body_data, _ = run_command(review_body_cmd, "fetch review bodies", timeout=120)
 
-    if not success_review or not success_issue:
-        print("❌ ERROR: Failed to fetch fresh comments from GitHub API")
+    # Require inline and issue comments (core functionality)
+    # Review bodies are optional - gracefully degrade if endpoint fails
+    if not (success_inline and success_issue):
+        print("❌ ERROR: Failed to fetch core comments (inline/issue) from GitHub API")
         if not os.path.exists(output_file):
             sys.exit(1)
         print("⚠️  Falling back to stale cache...")
         return
 
+    if not success_review_bodies:
+        print("⚠️  WARNING: Review bodies fetch failed (permissions/rate-limit?) - continuing without review bodies")
+        review_body_data = ""  # Empty, will result in empty list
+
     # Parse and combine comments
     try:
-        review_comments = [json.loads(l) for l in (review_data or "").splitlines() if l.strip()]
-        issue_comments = [json.loads(l) for l in (issue_data or "").splitlines() if l.strip()]
+        inline_comments = [json.loads(line) for line in (inline_data or "").splitlines() if line.strip()]
+        issue_comments = [json.loads(line) for line in (issue_data or "").splitlines() if line.strip()]
+        # Filter out reviews with empty bodies (e.g., approval reviews without comments)
+        raw_reviews = [json.loads(line) for line in (review_body_data or "").splitlines() if line.strip()]
+        review_body_comments = [r for r in raw_reviews if r.get("body", "").strip()]
 
         # Add type information and combine
-        for comment in review_comments:
+        for comment in inline_comments:
             comment['type'] = 'inline'
         for comment in issue_comments:
             comment['type'] = 'issue'
+        for review in review_body_comments:
+            review['type'] = 'review'
 
-        all_comments = review_comments + issue_comments
+        all_comments = inline_comments + issue_comments + review_body_comments
 
         # Save to cache file
         cache_data = {
@@ -294,10 +307,6 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
         return ""
 
     comment_id = str(comment.get("id"))
-    # Support both user.login and author field formats
-    user = comment.get("user", {})
-    author = user.get("login") if isinstance(user, dict) else comment.get("author", "unknown")
-    body_snippet = sanitize_comment_content(comment.get("body", ""))[:100]
 
     # Look for Claude-generated response
     responses = responses_data.get("responses", [])
@@ -648,6 +657,21 @@ def main():
             print("   ↪️ Skip: already replied by current actor")
             already_replied += 1
             continue
+
+        # Idempotency for review body comments (type="review"): check for existing issue comment
+        # with reference pattern since review bodies are replied via issue comments without in_reply_to_id
+        comment_type = comment.get("type") or detect_comment_type(comment)
+        if comment_type == "review":
+            review_ref_pattern = f"In response to [comment #{comment_id}]"
+            already_has_review_reply = any(
+                (c.get("user", {}).get("login") == actor_login) and
+                (review_ref_pattern in (c.get("body") or ""))
+                for c in all_comments if c.get("type") in ("issue", None)
+            )
+            if already_has_review_reply:
+                print("   ↪️ Skip: review body already has issue comment reply from current actor")
+                already_replied += 1
+                continue
 
         # Skip if thread ends with [AI responder] comment indicating completion
         thread_replies = [c for c in all_comments if c.get("in_reply_to_id") == comment_id]
