@@ -165,12 +165,18 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
     success_issue, issue_data, _ = run_command(issue_cmd, "fetch issue comments", timeout=120)
     success_review_bodies, review_body_data, _ = run_command(review_body_cmd, "fetch review bodies", timeout=120)
 
-    if not (success_inline and success_issue and success_review_bodies):
-        print("❌ ERROR: Failed to fetch fresh comments from GitHub API")
+    # Require inline and issue comments (core functionality)
+    # Review bodies are optional - gracefully degrade if endpoint fails
+    if not (success_inline and success_issue):
+        print("❌ ERROR: Failed to fetch core comments (inline/issue) from GitHub API")
         if not os.path.exists(output_file):
             sys.exit(1)
         print("⚠️  Falling back to stale cache...")
         return
+
+    if not success_review_bodies:
+        print("⚠️  WARNING: Review bodies fetch failed (permissions/rate-limit?) - continuing without review bodies")
+        review_body_data = ""  # Empty, will result in empty list
 
     # Parse and combine comments
     try:

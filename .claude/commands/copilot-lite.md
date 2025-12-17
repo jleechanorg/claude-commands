@@ -61,6 +61,8 @@ echo "🎯 Processing PR #$PR_NUMBER on $REPO (branch: $BRANCH_NAME)"
 Execute `/commentfetch` OR run directly:
 ```bash
 # Fetch all comments from all sources (human + bot)
+# Set pipefail so pipeline fails if commentfetch.py fails (not just tee)
+set -o pipefail
 python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/null | tee "$WORK_DIR/comments.json" >/dev/null || {
     # Fallback: fetch and combine comments manually, adding .type field to match commentfetch.py output
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | . + {type: "inline"}]' > "$WORK_DIR/inline_comments.json"
