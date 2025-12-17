@@ -155,15 +155,17 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
     """Fetch fresh comments using GitHub API and save to cache file"""
 
     # Fetch both review comments and issue comments
-    review_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate", "-q", ".[]"]
+    inline_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate", "-q", ".[]"]
     issue_cmd = ["gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments", "--paginate", "-q", ".[]"]
+    review_body_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/reviews", "--paginate", "-q", ".[]"]
 
     print("📡 FETCHING: Fresh comment data from GitHub API...")
 
-    success_review, review_data, _ = run_command(review_cmd, "fetch review comments", timeout=120)
+    success_inline, inline_data, _ = run_command(inline_cmd, "fetch inline review comments", timeout=120)
     success_issue, issue_data, _ = run_command(issue_cmd, "fetch issue comments", timeout=120)
+    success_review_bodies, review_body_data, _ = run_command(review_body_cmd, "fetch review bodies", timeout=120)
 
-    if not success_review or not success_issue:
+    if not (success_inline and success_issue and success_review_bodies):
         print("❌ ERROR: Failed to fetch fresh comments from GitHub API")
         if not os.path.exists(output_file):
             sys.exit(1)
@@ -172,16 +174,19 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
 
     # Parse and combine comments
     try:
-        review_comments = [json.loads(l) for l in (review_data or "").splitlines() if l.strip()]
-        issue_comments = [json.loads(l) for l in (issue_data or "").splitlines() if l.strip()]
+        inline_comments = [json.loads(line) for line in (inline_data or "").splitlines() if line.strip()]
+        issue_comments = [json.loads(line) for line in (issue_data or "").splitlines() if line.strip()]
+        review_body_comments = [json.loads(line) for line in (review_body_data or "").splitlines() if line.strip()]
 
         # Add type information and combine
-        for comment in review_comments:
+        for comment in inline_comments:
             comment['type'] = 'inline'
         for comment in issue_comments:
             comment['type'] = 'issue'
+        for review in review_body_comments:
+            review['type'] = 'review'
 
-        all_comments = review_comments + issue_comments
+        all_comments = inline_comments + issue_comments + review_body_comments
 
         # Save to cache file
         cache_data = {
@@ -294,10 +299,6 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
         return ""
 
     comment_id = str(comment.get("id"))
-    # Support both user.login and author field formats
-    user = comment.get("user", {})
-    author = user.get("login") if isinstance(user, dict) else comment.get("author", "unknown")
-    body_snippet = sanitize_comment_content(comment.get("body", ""))[:100]
 
     # Look for Claude-generated response
     responses = responses_data.get("responses", [])
