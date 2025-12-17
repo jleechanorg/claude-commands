@@ -541,10 +541,28 @@ class GameState:
                 if entry["name"] != enemy_name
             ]
 
-            # Remove from NPC data (defeated enemies shouldn't persist)
+            # Handle NPC data - mark named NPCs as dead, delete generic enemies
             if enemy_name in self.npc_data:
-                del self.npc_data[enemy_name]
-                logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
+                npc = self.npc_data[enemy_name]
+                # Check if this is a named/important NPC (has role, backstory, or is explicitly important)
+                # Named NPCs should be preserved with dead status for narrative continuity
+                is_named_npc = (
+                    npc.get("role") not in [None, "", "enemy", "minion", "generic"] or
+                    npc.get("backstory") or
+                    npc.get("is_important", False)
+                )
+                if is_named_npc:
+                    # Mark as dead instead of deleting - preserve for narrative continuity
+                    if "status" not in npc:
+                        npc["status"] = []
+                    if isinstance(npc["status"], list) and "dead" not in npc["status"]:
+                        npc["status"].append("dead")
+                    npc["hp_current"] = 0
+                    logging_util.info(f"COMBAT CLEANUP: Marked {enemy_name} as dead in npc_data (named NPC preserved)")
+                else:
+                    # Generic enemies can be deleted
+                    del self.npc_data[enemy_name]
+                    logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data (generic enemy)")
 
         return defeated_enemies
 
