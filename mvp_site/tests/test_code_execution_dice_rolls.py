@@ -40,16 +40,16 @@ from mvp_site import constants, llm_service
 class TestHybridDiceRollSystem(unittest.TestCase):
     """Test the hybrid dice roll system across different model types."""
 
-    def test_gemini_uses_tool_loop_for_dice(self):
+    def test_gemini_uses_native_tools_for_dice(self):
         """
-        Verify Gemini models use tool loop for dice rolling.
+        Verify Gemini models use native two-phase tool calling for dice rolling.
 
-        ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use two-phase
-        tool loop. Phase 1 has tools (no JSON), Phase 2 has JSON (no tools).
+        ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use native_two_phase.
+        Google has disabled code_execution + JSON mode together.
+        Phase 1 has native tools (no JSON), Phase 2 has JSON (no tools).
         """
-        # Gemini 2.x now uses JSON-first tool_requests flow (not old tool_loop)
-        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests') as mock_tool_requests:
-            mock_tool_requests.return_value = Mock(
+        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools') as mock_native_tools:
+            mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
@@ -61,18 +61,10 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
-            # Verify tool_requests was called
+            # Verify native_tools was called (not old tool_requests)
             self.assertTrue(
-                mock_tool_requests.called,
-                "generate_content_with_tool_requests should be called for Gemini 2.x models"
-            )
-
-            # JSON-first flow doesn't pass tools param (model requests via JSON schema)
-            call_kwargs = mock_tool_requests.call_args[1] if mock_tool_requests.call_args[1] else {}
-            self.assertNotIn(
-                "tools",
-                call_kwargs,
-                "tools should NOT be passed to JSON-first flow (model uses tool_requests in JSON)"
+                mock_native_tools.called,
+                "generate_content_with_native_tools should be called for Gemini models"
             )
 
     def test_model_capability_detection(self):
@@ -87,23 +79,21 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         - Fallback: precompute (pre-rolled dice in prompt)
         """
         # Gemini 3.x models: code_execution (single-phase)
-        # ARCHITECTURE UPDATE (Dec 2024): Two strategies only:
-        # 1. code_execution - Gemini 2.0/3.x only (supports code_execution + JSON together)
-        # 2. native_two_phase - All other models (Phase 1: native tools, Phase 2: JSON)
+        # ARCHITECTURE UPDATE (Dec 2024): All models use native_two_phase
+        # Google has disabled code_execution + JSON mode together for all models
+        # See: https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini
 
-        # Gemini 3 can combine code_execution + JSON mode together
+        # All Gemini models now use native_two_phase
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-3-pro-preview", "gemini"),
-            "code_execution"
+            "native_two_phase"
         )
 
-        # Gemini 2.0 can ALSO combine code_execution + JSON mode together
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
-            "code_execution"
+            "native_two_phase"
         )
 
-        # Gemini 2.5 models: native_two_phase (cannot combine tools + JSON)
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.5-flash", "gemini"),
             "native_two_phase"
@@ -125,22 +115,22 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             "native_two_phase"
         )
 
-        # All non-code_execution models use native_two_phase
+        # All models use native_two_phase
         self.assertEqual(
             constants.get_dice_roll_strategy("llama-3.3-70b", "cerebras"),
             "native_two_phase"
         )
 
-        # Unknown models: native_two_phase (default for non-Gemini 2.0/3.x)
+        # Unknown models: native_two_phase
         self.assertEqual(
             constants.get_dice_roll_strategy("unknown-model", ""),
             "native_two_phase"
         )
 
-        # No provider specified: uses model name check (gemini-2.0 is in MODELS_WITH_CODE_EXECUTION)
+        # All models use native_two_phase now
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash"),
-            "code_execution"
+            "native_two_phase"
         )
 
     def test_dice_roll_instructions_exist(self):
@@ -217,16 +207,15 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             self.assertIsNotNone(result["damage"])
             self.assertIn("total", result["damage"])
 
-    def test_api_call_passes_required_params_to_tool_requests(self):
+    def test_api_call_passes_required_params_to_native_tools(self):
         """
-        Verify API calls pass required parameters to JSON-first tool_requests flow.
+        Verify API calls pass required parameters to native two-phase flow.
 
-        ARCHITECTURE UPDATE (Dec 2024): Gemini 2.x now uses JSON-first tool_requests
-        flow instead of old tool_loop. Tools are NOT passed as API param - model
-        requests tools via tool_requests array in JSON schema.
+        ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use native_two_phase.
+        Google has disabled code_execution + JSON mode together.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests") as mock_tool_requests:
-            mock_tool_requests.return_value = Mock(
+        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools") as mock_native_tools:
+            mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
@@ -237,28 +226,22 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
-            # Verify tool_requests was called with expected params
-            self.assertTrue(mock_tool_requests.called)
-            call_kwargs = mock_tool_requests.call_args[1]
+            # Verify native_tools was called with expected params
+            self.assertTrue(mock_native_tools.called)
+            call_kwargs = mock_native_tools.call_args[1]
 
             # Verify model name is passed
             self.assertEqual(
                 call_kwargs.get("model_name"),
                 "gemini-2.0-flash",
-                "FAIL: model_name not passed to tool_requests"
+                "FAIL: model_name not passed to native_tools"
             )
 
             # Verify temperature is passed
             self.assertEqual(
                 call_kwargs.get("temperature"),
                 llm_service.TEMPERATURE,
-                "FAIL: Temperature not passed to tool_requests"
-            )
-
-            # JSON-first flow does NOT pass tools param (model uses JSON schema)
-            self.assertIsNone(
-                call_kwargs.get("tools"),
-                "tools should NOT be passed to JSON-first tool_requests flow"
+                "FAIL: Temperature not passed to native_tools"
             )
 
 

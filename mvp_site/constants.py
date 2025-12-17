@@ -93,11 +93,14 @@ GEMINI_3_MODELS: set[str] = {
 # avoiding the prompt-engineering approach that some models (GLM-4.6) ignore.
 
 # Models that support code_execution + JSON mode TOGETHER (single phase)
-# Only Gemini 2.0 and 3.x can do this
+# NOTE: As of Dec 2024, Google has disabled code_execution + JSON mode for all models
+# See: https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini
+# "controlled generation is not supported with Code Execution tool"
+# All models now use native_two_phase strategy
 MODELS_WITH_CODE_EXECUTION: set[str] = {
-    "gemini-2.0-flash",
-    "gemini-3-pro-preview",
-    *GEMINI_3_MODELS,
+    # DISABLED: Google API now rejects code_execution + JSON mode together
+    # "gemini-2.0-flash",
+    # "gemini-3-pro-preview",
 }
 
 
@@ -105,7 +108,8 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
     """
     Determine the dice rolling strategy for a given model.
 
-    ARCHITECTURE UPDATE (Dec 2024): Simplified to two strategies.
+    ARCHITECTURE UPDATE (Dec 2024): All models use native_two_phase.
+    Google has disabled code_execution + JSON mode together for all models.
 
     Args:
         model_name: Model identifier
@@ -113,14 +117,10 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
 
     Returns:
         Strategy string:
-        - 'code_execution' - Gemini 2.0/3.x: code_execution + JSON together (single phase)
-        - 'native_two_phase' - All others: Phase 1 native tools, Phase 2 JSON schema
+        - 'native_two_phase' - All models: Phase 1 native tools, Phase 2 JSON schema
     """
-    # Gemini 2.0 and 3.x can use code_execution + JSON together
-    if model_name in MODELS_WITH_CODE_EXECUTION:
-        return "code_execution"
-
-    # All other models: use native two-phase tool calling
+    # All models now use native two-phase tool calling
+    # Google has disabled code_execution + JSON mode together
     # Phase 1: tools param (native API tool calling)
     # Phase 2: response_format param (JSON schema)
     return "native_two_phase"
