@@ -260,7 +260,11 @@ def generate_content_with_tool_requests(
 
     tool_requests = response_data.get("tool_requests", [])
     if not tool_requests:
-        logging_util.debug("No tool_requests in response, returning Phase 1 result")
+        # Log at INFO level to help diagnose dice roll issues
+        logging_util.info(
+            "OPENROUTER_TOOL_REQUESTS: No tool_requests in LLM response. "
+            f"Response keys: {list(response_data.keys())}"
+        )
         return response
 
     # Execute tool requests
