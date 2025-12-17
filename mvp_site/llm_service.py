@@ -574,9 +574,12 @@ def _calculate_prompt_and_system_tokens(
     return user_prompt_tokens, system_tokens
 
 
-# Fixed turn counts (legacy - used as maximums)
-TURNS_TO_KEEP_AT_START: int = 20
-TURNS_TO_KEEP_AT_END: int = 20
+# Turn count caps - increased from legacy 20/20 to allow percentage-based allocation
+# to fully utilize available budget. With 20/20 caps, only ~46% of budget was used.
+# Set high enough (500) to not interfere with percentage calculations while
+# maintaining a safety net for edge cases.
+TURNS_TO_KEEP_AT_START: int = 500
+TURNS_TO_KEEP_AT_END: int = 500
 
 # =============================================================================
 # CONTEXT BUDGET ALLOCATION SYSTEM
@@ -2338,6 +2341,18 @@ def _truncate_context(
                     f"Truncation: {current_start} start + {len(middle_turns)} middle (compacted) + "
                     f"{current_end} end = {truncated_tokens} tokens"
                 )
+            # Log comprehensive budget breakdown
+            utilization_pct = (truncated_tokens / max_tokens * 100) if max_tokens > 0 else 0
+            start_tokens = estimate_tokens("".join(e.get(constants.KEY_TEXT, "") for e in start_context))
+            end_tokens = estimate_tokens("".join(e.get(constants.KEY_TEXT, "") for e in end_context))
+            middle_tokens = estimate_tokens(middle_summary.get(constants.KEY_TEXT, ""))
+            logging_util.info(
+                f"📊 BUDGET UTILIZATION: {truncated_tokens:,}/{max_tokens:,} tokens ({utilization_pct:.1f}%) | "
+                f"Components: start={start_tokens:,}tk ({current_start} turns), "
+                f"middle={middle_tokens:,}tk (compacted from {len(middle_turns)} turns), "
+                f"end={end_tokens:,}tk ({current_end} turns) | "
+                f"Original: {current_tokens:,}tk ({total_turns} turns)"
+            )
             logging_util.info(f"Final context stats after truncation: {final_stats}")
             return truncated_context
 
@@ -2430,6 +2445,15 @@ def _truncate_context(
 
     final_stats = _get_context_stats(
         truncated_context, model_name, current_game_state, provider_name
+    )
+    # Log comprehensive budget breakdown for last-resort path
+    final_text = "".join(e.get(constants.KEY_TEXT, "") for e in truncated_context)
+    final_tokens = estimate_tokens(final_text)
+    utilization_pct = (final_tokens / max_tokens * 100) if max_tokens > 0 else 0
+    logging_util.info(
+        f"📊 BUDGET UTILIZATION (last-resort): {final_tokens:,}/{max_tokens:,} tokens ({utilization_pct:.1f}%) | "
+        f"Original: {current_tokens:,}tk ({total_turns} turns) | "
+        f"Final: {len(truncated_context)} entries"
     )
     logging_util.info(f"Final context stats after truncation: {final_stats}")
 
