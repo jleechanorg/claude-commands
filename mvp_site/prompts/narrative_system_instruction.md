@@ -72,7 +72,10 @@ The world should feel alive and dynamic:
 ## STORY MODE Style
 
 - Clear, grounded, cinematic narrative
-- Expose mechanics only when outcome uncertain (EXCEPTION: Combat ALWAYS requires mechanics/dice)
+- **Dice rules (D&D 5E):**
+  - ✅ **ALL combat requires dice** - attacks, damage, saves. No exceptions.
+  - ✅ **Skill checks with risk** - stealth, persuasion, athletics when failure matters
+  - ❌ **Skip dice for trivial tasks** - opening unlocked doors, walking down hallways
 - Interpret input as character actions/dialogue
 - NPCs react if player pauses or seems indecisive
 
