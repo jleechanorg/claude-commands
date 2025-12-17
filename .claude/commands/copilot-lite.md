@@ -57,8 +57,8 @@ python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER" 2>/dev/nu
     # Fallback: fetch and combine comments manually
     gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate > "$WORK_DIR/inline_comments.json"
     gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate > "$WORK_DIR/issue_comments.json"
-    # Combine into single comments.json file
-    jq -s '.[0] + .[1]' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
+    # Combine into single comments.json file with {comments: [...]} structure to match commentfetch.py output
+    jq -s '{comments: (.[0] + .[1])}' "$WORK_DIR/inline_comments.json" "$WORK_DIR/issue_comments.json" > "$WORK_DIR/comments.json"
 }
 
 # Verify comments.json was created (either by commentfetch.py or fallback)
@@ -206,11 +206,11 @@ if [ ! -f "$WORK_DIR/comments.json" ]; then
 fi
 
 # Count all top-level inline review comments (comments on code, not replies)
-# Note: commentfetch.py outputs {comments: [...]} structure
-TOTAL_INLINE=$(jq '[.comments[] | select((.pull_request_review_id? != null) and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
+# Note: commentfetch.py outputs {comments: [...]} with .type field ("inline", "general", "review", "copilot")
+TOTAL_INLINE=$(jq '[.comments[] | select((.type == "inline") and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
 
-# Count ALL top-level issue comments (PR conversation), excluding replies if API returns them
-TOTAL_ISSUE=$(jq '[.comments[] | select((.pull_request_review_id? == null) and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
+# Count ALL top-level non-inline comments (PR conversation, reviews, copilot), excluding replies
+TOTAL_ISSUE=$(jq '[.comments[] | select((.type != "inline") and ((.in_reply_to_id // null) == null))] | length' "$WORK_DIR/comments.json")
 
 TOTAL=$((TOTAL_INLINE + TOTAL_ISSUE))
 if ! [[ "$TOTAL" =~ ^[0-9]+$ ]]; then
