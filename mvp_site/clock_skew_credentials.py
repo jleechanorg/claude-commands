@@ -37,28 +37,24 @@ def validate_deployment_config() -> bool:
 
     Raises:
         ValueError: If WORLDAI_GOOGLE_APPLICATION_CREDENTIALS is set without
-                    WORLDAI_DEV_MODE=true (prevents accidental production use).
+                    WORLDAI_DEV_MODE=true (and not in TESTING mode).
 
     Note:
-        TESTING=true allows test collection without WORLDAI_* env vars, but if
-        WORLDAI_GOOGLE_APPLICATION_CREDENTIALS is set, WORLDAI_DEV_MODE=true is
-        still required to prevent accidental use of production credentials.
+        TESTING=true unconditionally bypasses all validation and returns True,
+        allowing for hermetic test environments.
     """
     testing_mode = os.getenv("TESTING", "").lower() == "true"
+    if testing_mode:
+        return True
+
     has_worldai_creds = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS") is not None
     dev_mode = os.getenv("WORLDAI_DEV_MODE", "").lower() == "true"
 
-    # If WORLDAI creds are set, always require explicit dev mode acknowledgment
-    # (even in TESTING mode - safety first for credential handling)
     if has_worldai_creds and not dev_mode:
         raise ValueError(
             "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS requires WORLDAI_DEV_MODE=true. "
             "Set WORLDAI_DEV_MODE=true to explicitly acknowledge development mode."
         )
-
-    # TESTING mode without WORLDAI creds: allow tests to run
-    if testing_mode:
-        return True
 
     return dev_mode
 

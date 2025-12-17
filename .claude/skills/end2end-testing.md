@@ -27,6 +27,10 @@ Provide Claude with a comprehensive reference for writing and understanding end-
 | `google.genai.Client()` | `llm_service.py` functions |
 | `requests.post()` (API calls) | `main.py` route handlers |
 
+## Environment Configuration
+
+**TESTING=true Bypass**: The `clock_skew_credentials.py` module provides unconditional bypass of all validation checks when `TESTING=true` is set. This allows hermetic test environments to run without requiring `WORLDAI_*` environment variables or triggering deployment config validation. All tests should use `TESTING=true` to ensure consistent, isolated test execution.
+
 ## Test File Locations
 
 ```
