@@ -1765,6 +1765,101 @@ class TestTimeMonotonicity(unittest.TestCase):
         result = gs.validate_time_monotonicity(new_time)
         self.assertTrue(result.get("valid", True), "No previous time should pass")
 
+    def test_time_monotonicity_mutation_bug_without_deepcopy(self):
+        """
+        RED TEST: Demonstrates the bug WITHOUT deepcopy.
+
+        BUG: When original_world_time is a reference (not a copy), it gets mutated
+        by update_state_with_changes(), so backward time compares equal to itself.
+
+        This test PROVES the bug exists when deepcopy is not used.
+        """
+        from mvp_site.firestore_service import update_state_with_changes
+
+        # Setup: state with time 14:00 (2pm)
+        state_dict = {
+            "world_data": {
+                "world_time": {"hour": 14, "minute": 0, "day": 1}
+            }
+        }
+
+        # BUGGY pattern: NO deepcopy - just get reference
+        original_world_time = (state_dict.get("world_data") or {}).get("world_time")
+
+        # Changes that set time backward to 10:00 (10am)
+        changes = {
+            "world_data": {
+                "world_time": {"hour": 10, "minute": 0, "day": 1}  # Backward!
+            }
+        }
+
+        # This mutates state_dict in place - AND mutates our reference!
+        update_state_with_changes(state_dict, changes)
+
+        # BUG PROOF: original_world_time WAS mutated (now shows 10, not 14)
+        self.assertEqual(
+            original_world_time["hour"], 10,
+            "BUG: Without deepcopy, original_world_time gets mutated to 10"
+        )
+
+        # BUG CONSEQUENCE: backward time is NOT detected because both are 10:00
+        gs = GameState(world_data={"world_time": original_world_time})
+        new_time = {"hour": 10, "minute": 0, "day": 1}
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertFalse(
+            result.get("warning", False),
+            "BUG: Backward time NOT detected because reference was mutated"
+        )
+
+    def test_time_monotonicity_mutation_fix_with_deepcopy(self):
+        """
+        GREEN TEST: Demonstrates the fix WITH deepcopy.
+
+        FIX: Use copy.deepcopy() to capture original_world_time before mutation.
+        This preserves the original value so backward time IS detected.
+
+        See: world_logic.py lines 902, 1812, 1881
+        """
+        import copy
+        from mvp_site.firestore_service import update_state_with_changes
+
+        # Setup: state with time 14:00 (2pm)
+        state_dict = {
+            "world_data": {
+                "world_time": {"hour": 14, "minute": 0, "day": 1}
+            }
+        }
+
+        # FIXED pattern: deep-copy before mutation
+        original_world_time = copy.deepcopy(
+            (state_dict.get("world_data") or {}).get("world_time")
+        )
+
+        # Changes that set time backward to 10:00 (10am)
+        changes = {
+            "world_data": {
+                "world_time": {"hour": 10, "minute": 0, "day": 1}  # Backward!
+            }
+        }
+
+        # This mutates state_dict in place - but NOT our deep copy
+        update_state_with_changes(state_dict, changes)
+
+        # FIX PROOF: original_world_time is preserved (still 14)
+        self.assertEqual(
+            original_world_time["hour"], 14,
+            "FIX: With deepcopy, original_world_time is preserved at 14"
+        )
+
+        # FIX CONSEQUENCE: backward time IS detected
+        gs = GameState(world_data={"world_time": original_world_time})
+        new_time = {"hour": 10, "minute": 0, "day": 1}
+        result = gs.validate_time_monotonicity(new_time)
+        self.assertTrue(
+            result.get("warning", False),
+            "FIX: Backward time (14:00 -> 10:00) IS detected with deepcopy"
+        )
+
 
 class TestTypeSafetyCoercion(unittest.TestCase):
     """

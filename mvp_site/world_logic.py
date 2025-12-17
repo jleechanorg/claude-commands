@@ -20,6 +20,7 @@ Concurrency:
 
 import asyncio
 import collections
+import copy
 import json
 import os
 import re
@@ -897,7 +898,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Note: current_game_state is a GameState instance (has to_dict() method)
         current_state_as_dict = current_game_state.to_dict()
         # Use `or {}` to handle both missing and explicitly-null world_data
-        original_world_time = (current_state_as_dict.get("world_data") or {}).get("world_time")
+        # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
+        original_world_time = copy.deepcopy((current_state_as_dict.get("world_data") or {}).get("world_time"))
 
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
@@ -1806,7 +1808,8 @@ def _handle_set_command(
     # Capture original time before update for accurate monotonicity validation
     # Note: current_game_state is a GameState instance, use dict version
     # Use `or {}` to handle both missing and explicitly-null world_data
-    original_world_time = (current_state_dict_before_update.get("world_data") or {}).get("world_time")
+    # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
+    original_world_time = copy.deepcopy((current_state_dict_before_update.get("world_data") or {}).get("world_time"))
 
     updated_state = update_state_with_changes(
         current_state_dict_before_update, proposed_changes
@@ -1874,7 +1877,8 @@ def _handle_update_state_command(
         # Capture original time before update for accurate monotonicity validation
         # Note: current_game_state is a GameState instance, use dict version
         # Use `or {}` to handle both missing and explicitly-null world_data
-        original_world_time = (current_state_dict.get("world_data") or {}).get("world_time")
+        # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
+        original_world_time = copy.deepcopy((current_state_dict.get("world_data") or {}).get("world_time"))
 
         # Perform an update
         updated_state_dict = update_state_with_changes(
