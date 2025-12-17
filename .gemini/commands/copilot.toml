@@ -1,0 +1,92 @@
+# Copilot Command - Fast PR Processing
+description = "Quality-focused PR processing with priority-based bug triage"
+
+prompt = """
+## Copilot Command - Fast PR Processing
+
+Process PR for:
+
+{{args}}
+
+## Four-Phase Workflow
+
+### Phase 0: Critical Bug Scan (MANDATORY FIRST STEP)
+
+**Execute BEFORE any comment processing:**
+
+1. **Fetch All Comments**: Get complete comment list
+2. **Critical Bug Detection**: Scan ALL comments for critical keywords:
+   - Security: "CRITICAL", "BUG", "SECURITY", "BLOCKER", "VULNERABILITY"
+   - Auth: "rate limit", "authentication", "authorization", "admin"
+   - Data: "data loss", "corruption", "undefined behavior", "crash"
+3. **Immediate Implementation**: For EACH critical bug found:
+   - Read affected files
+   - Implement the fix directly
+   - Write tests to verify
+   - Run tests to confirm
+   - Commit with clear message
+4. **Verification Gate**: Only proceed after ALL critical bugs are fixed
+
+**Critical Bug Categories:**
+- **CRITICAL**: Security vulnerabilities, data corruption, production blockers
+- **BLOCKING**: CI failures, build failures, breaking changes
+- **IMPORTANT**: Performance issues, logic errors, missing validation
+- **ROUTINE**: Code style, documentation, optional refactoring
+
+### Phase 1: Analysis & Comment Categorization
+
+1. Get PR status
+2. Categorize remaining comments by severity:
+   - **BLOCKING**: CI failures, build failures, breaking API changes
+   - **IMPORTANT**: Performance issues, logic errors, missing validation
+   - **ROUTINE**: Code style, documentation, optional refactoring
+
+### Phase 2: Implementation & Response Generation
+
+1. **Prioritize Queue**: Process in severity order (CRITICAL → BLOCKING → IMPORTANT → ROUTINE)
+2. **Direct Implementation**: Fix CRITICAL and BLOCKING issues immediately
+3. **Selective Delegation**: Large IMPORTANT issues may use agent assistance
+4. **Action-Based Responses**: Generate responses with implementation details
+
+**Response Protocol**:
+- **FIXED**: Issue implemented with working code
+- **DEFERRED**: Created issue for future implementation
+- **ACKNOWLEDGED**: Noted but not actionable
+- **NOT_DONE**: Cannot implement with specific reason
+
+### Phase 3: Verification & Completion
+
+1. **Test Execution**: Run tests for all fixes
+2. **Commit Verification**: Verify critical fix commits
+3. **File Review**: Confirm only intentional changes
+4. **Quality Gates**: Security → Runtime → Tests → Style order
+5. **Final Push**: Push changes to PR
+
+## Quality Metrics
+
+```
+📊 QUALITY METRICS:
+🚨 Critical bugs fixed: X/X
+✅ Blocking issues fixed: X/X
+⚠️ Important issues: X fixed, X deferred
+📝 Routine responses: X
+```
+
+## Success Criteria
+
+**✅ SAFE TO MERGE:**
+- Critical bugs fixed: 100%
+- Blocking issues fixed: 100%
+- All tests passing
+- 100% comment response rate
+
+**⚠️ NEEDS REVIEW:**
+- Critical bugs fixed: 100%
+- Blocking issues fixed: <100% with documented reasons
+- 100% comment response rate
+
+**❌ NOT READY:**
+- Critical bugs unfixed: ANY
+- Tests failing
+- Comment response rate: <100%
+"""

@@ -1,0 +1,68 @@
+# PR Command - Complete Development Lifecycle
+description = "Complete development lifecycle from thinking through to PR review"
+
+prompt = """
+## PR Command - Complete Development Lifecycle
+
+Execute complete PR workflow for:
+
+{{args}}
+
+## MANDATORY 5-PHASE WORKFLOW
+
+⚠️ CRITICAL: ALL 5 phases MUST execute in sequence. No partial execution allowed.
+
+### Phase 1: Think
+**Strategic thinking about the task**:
+1. Analyze the problem deeply
+2. Consider multiple approaches
+3. Identify potential challenges
+4. Plan implementation strategy
+
+### Phase 2: Execute
+**Implement the solution**:
+1. Work through implementation systematically
+2. Use realistic execution protocol
+3. Test and validate as you go
+4. Write clean, maintainable code
+
+### Phase 3: Push
+**Create PR with comprehensive details**:
+1. Commit all changes with clear messages
+2. Push to remote branch
+3. Create detailed PR description
+4. Include test results and screenshots
+
+### Phase 4: Address Feedback
+**Handle automated and human feedback**:
+1. Handle GitHub bot comments
+2. Fix failing tests
+3. Address security/performance suggestions
+4. Make PR mergeable
+5. Post replies to review comments
+
+### Phase 5: Review
+**Comprehensive code review**:
+1. Analyze code quality
+2. Check for potential issues
+3. Verify test coverage
+4. Document any concerns
+
+## Key Benefits
+
+- ✅ Complete lifecycle from concept to mergeable PR
+- ✅ Integrated workflow - all phases work together
+- ✅ Auto-fix issues during feedback phase
+- ✅ Comprehensive coverage - thinking, implementation, review
+
+## When to Use
+
+**Perfect for**:
+- Feature development requiring full lifecycle
+- Complex implementations needing thorough review
+- PR preparation for important changes
+- Complete development workflow automation
+
+**Alternatives**:
+- Use specific phase commands for partial workflows
+"""

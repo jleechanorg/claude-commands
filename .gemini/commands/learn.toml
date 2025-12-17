@@ -1,0 +1,92 @@
+# Learn Command - Capture and Document Learnings
+description = "Capture and document learnings for persistent knowledge storage"
+
+prompt = """
+## Learn Command
+
+Capture and document learnings for:
+
+{{args}}
+
+## Enhanced Workflow
+
+### Phase 1: Context Analysis
+
+If no specific learning provided, analyze recent conversation for:
+- Mistakes made and corrections applied
+- Successful patterns discovered
+- Technical solutions found
+- Configuration issues resolved
+
+### Phase 2: Classification
+
+Categorize learnings:
+- **🚨 Critical Rules**: Patterns that prevent major failures
+- **⚠️ Mandatory Processes**: Required workflow steps discovered
+- **✅ Best Practices**: Successful patterns to follow
+- **❌ Anti-Patterns**: Patterns to avoid based on failures
+
+### Phase 3: Pattern Recognition
+
+Identify repeated patterns:
+- **Commands**: Correct command usage patterns
+- **Testing**: Test execution methods
+- **Tools**: Available tools and their proper usage
+- **Misconceptions**: Things wrongly assumed
+- **Patterns**: Repeated mistakes to avoid
+
+### Phase 4: Documentation
+
+Generate documentation with:
+- Specific file paths with line numbers
+- Exact error messages or code snippets
+- Actionable implementation steps
+- References to PRs, commits, or resources
+- Measurable outcomes
+
+## Learning Entry Format
+
+```
+{
+  "name": "{system}_{issue}_{timestamp}",
+  "category": "🚨|⚠️|✅|❌",
+  "context": "Specific situation with circumstances",
+  "technical_detail": "Exact error/solution with file:line",
+  "solution": "Specific steps taken",
+  "verification": "Test results, metrics, confirmation",
+  "references": "PR URLs, commits, files",
+  "reusable_pattern": "How to apply elsewhere"
+}
+```
+
+## Auto-Learning Categories
+
+- **Commands**: Correct command usage patterns
+- **Testing**: Test execution methods
+- **Tools**: Available tools and their proper usage
+- **Misconceptions**: Things wrongly assumed
+- **Patterns**: Repeated mistakes to avoid
+
+## Quality Requirements
+
+- ✅ Specific file paths with line numbers
+- ✅ Exact error messages or code snippets
+- ✅ Actionable implementation steps
+- ✅ References to PRs, commits, or resources
+- ✅ Measurable outcomes
+- ✅ Reusable patterns for similar situations
+
+## Examples
+
+- `/learn` - Analyze recent mistakes/corrections
+- `/learn always use source venv/bin/activate` - Add specific learning
+- `/learn playwright is installed, stop saying it isn't` - Correct misconception
+
+## Output
+
+Provide:
+1. Learning summary with classification
+2. Technical details and context
+3. Actionable recommendations
+4. Documentation update suggestions
+"""

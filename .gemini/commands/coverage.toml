@@ -1,0 +1,71 @@
+# Coverage Command - Test Coverage Analysis
+description = "Run test coverage analysis and identify gaps"
+
+prompt = """
+## Coverage Analysis Command
+
+Analyze test coverage for:
+
+{{args}}
+
+## Options
+
+Parse arguments for:
+- No options: Run unit tests with HTML report
+- `--text`: Text report only (no HTML)
+- `--integration`: Include integration tests
+- `--gaps`: Focus on files with low coverage
+
+## Execution Steps
+
+1. Run coverage analysis script with appropriate flags
+2. Parse coverage report to identify:
+   - Overall coverage percentage
+   - Files with low coverage (<50%)
+   - Specific uncovered lines
+3. Generate summary with:
+   - Coverage statistics
+   - Top 10 files needing coverage
+   - Recommendations for improvement
+4. Open HTML report in browser (if generated)
+
+## Output Format
+
+```
+📊 Coverage Analysis Results
+========================
+Overall Coverage: XX%
+
+✅ Well Covered (>80%):
+- file1.py: 90%
+- file2.py: 85%
+
+⚠️ Needs Improvement (<50%):
+- file3.py: 45% (missing: lines 234-267, 301-315)
+- file4.py: 38% (missing: error handling paths)
+
+📍 Coverage Gaps:
+- file5.py: Line 89-95 (validation edge cases)
+- file6.py: Lines 120-145 (error handling)
+
+💡 Recommendations:
+1. Add tests for error handling in file4.py
+2. Test edge cases in validation functions
+3. Add integration tests for full workflow
+
+📂 HTML Report: file:///path/to/coverage/index.html
+```
+
+## Coverage Categories
+
+- **Green (>80%)**: Well-covered, maintain quality
+- **Yellow (50-80%)**: Acceptable, improve opportunistically
+- **Red (<50%)**: Needs attention, prioritize testing
+
+## Usage Examples
+
+- `/coverage` - Run unit tests with HTML report
+- `/coverage --text` - Text report only
+- `/coverage --integration` - Include integration tests
+- `/coverage --gaps` - Focus on files with low coverage
+"""

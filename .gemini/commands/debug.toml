@@ -1,0 +1,58 @@
+# Debug Command - Systematic debugging approach
+description = "Apply systematic debugging to identify and resolve issues"
+
+prompt = """
+## Debug Command - Systematic Issue Resolution
+
+Debug the following issue:
+
+{{args}}
+
+## Debug Checklist
+
+Ensure all items are checked:
+- [ ] Exact error messages captured
+- [ ] Stack traces include file:line references
+- [ ] DOM inspector output captured (for UI issues)
+- [ ] CSS computed properties extracted (for visual elements)
+- [ ] Network request logs captured (for asset loading)
+- [ ] Console errors/warnings documented
+- [ ] Reproduction steps documented
+- [ ] Hypotheses explicitly stated
+- [ ] Evidence supports conclusions
+- [ ] Fix validated with tests
+- [ ] Anti-bias check: "What should NOT be working?" tested
+
+## Debug Methodology
+
+1. **Reproduce**: Establish consistent reproduction steps
+2. **Isolate**: Narrow down the problem scope
+3. **Technical Verification**: Auto-extract DOM state, CSS properties, network requests, console logs
+4. **Hypothesize**: Form theories about root cause
+5. **Test**: Validate hypotheses with evidence
+6. **Evidence Collection**: Screenshot + technical data + verification report
+7. **Fix**: Apply targeted solution
+8. **Verify**: Confirm fix resolves issue
+9. **Learn**: Capture debugging insights and patterns
+
+## Debug Output Characteristics
+
+- **Stack traces**: Full traces with line numbers
+- **Variable states**: Key variable values at each step
+- **Execution flow**: Clear path through the code
+- **Hypothesis tracking**: Document what was tried
+- **Evidence citations**: Reference specific errors/logs
+
+## Examples
+
+- `/debug "API returns 500 error"` - Systematic debugging for error source
+- `/debug "flaky test failures"` - Tests with verbose output for intermittent issues
+- `/debug "memory leak in production"` - Deep analysis with instrumentation
+
+## Debug Categories
+
+- **🚨 Critical Patterns**: Root causes that prevent major failures
+- **⚠️ Mandatory Steps**: Required validation steps
+- **✅ Successful Techniques**: Effective hypothesis testing
+- **❌ Anti-Patterns**: Approaches that led to dead ends
+"""
