@@ -893,9 +893,12 @@ DICE_ROLL_TOOLS: list[dict] = [
         "type": "function",
         "function": {
             "name": "roll_skill_check",
-            "description": "Roll a skill check (Perception, Stealth, Thieves' Tools, etc.) vs a DC. "
+            "description": "Roll a skill check vs a DC. Covers ALL skills: "
+            "Persuasion, Intimidation, Deception (social), Perception, Stealth, Investigation, "
+            "Athletics, Acrobatics, Thieves' Tools, etc. "
             "ALWAYS use this for skill checks - it returns success/failure based on DC comparison. "
-            "Example: Thieves' Tools check to pick a lock, Stealth check to sneak past guards.",
+            "Examples: Persuasion to convince an NPC, Intimidation to threaten, "
+            "Stealth to sneak past guards, Thieves' Tools to pick a lock.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -936,10 +939,12 @@ DICE_ROLL_TOOLS: list[dict] = [
         "function": {
             "name": "declare_no_roll_needed",
             "description": "Declare that no dice roll is needed for this action. "
-            "Use this for trivial actions that auto-succeed: opening unlocked doors, picking up items, "
-            "walking in safe areas, simple conversations, passive observations. "
-            "DO NOT use this for: combat attacks, skill checks, saving throws, contested actions, "
+            "Use ONLY for trivial actions that auto-succeed: opening unlocked doors, picking up items, "
+            "walking in safe areas, asking for directions, casual greetings. "
+            "DO NOT use this for: combat, Persuasion/Intimidation/Deception checks, "
+            "convincing resistant NPCs, negotiations, skill checks, saving throws, contested actions, "
             "or anything with meaningful risk/uncertainty. "
+            "If an NPC is resisting or needs convincing, use roll_skill_check instead. "
             "You MUST provide a reason explaining why no roll is needed.",
             "parameters": {
                 "type": "object",

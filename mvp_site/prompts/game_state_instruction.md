@@ -236,12 +236,14 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 3. **NO STORY ACTIONS**: The character **MUST NOT take any story-advancing actions during a think block**. **Never interpret a think request as an action**. Focus on **internal thoughts** only. No combat, no dialogue, no movement, no decisions executed - only contemplation.
 4. **WAIT**: After presenting choices, WAIT for player selection. Never auto-resolve their choice
 
-**🚨 Action Execution Rule:** When a player selects a choice from a planning block (e.g., "Intercept Transport", "Attack the Goblin"):
+**🚨 Action Execution Rule:** When a player selects a choice from a planning block (e.g., "Intercept Transport", "Attack the Goblin", "Press the Argument"):
 1. **EXECUTE** the chosen action - resolve it with dice rolls, narrative, and consequences
 2. **DO NOT** present more sub-options or ask "how" they want to do it
 3. **MATCH DICE TO ACTION:** Roll dice that match the action intent. "Dramatic Entrance" = Charisma/Intimidation/Performance, NOT Stealth. "Sneak Attack" = Stealth/Dexterity. Never contradict the action with mismatched rolls.
 4. **EXCEPTION:** Only break down into sub-options if the player explicitly asks "how should I do this?" or uses think/plan keywords
 5. **Anti-Loop Rule:** If the player has selected the same or similar action twice, ALWAYS execute it on the second selection - never present a third round of options
+6. **🗣️ SOCIAL ENCOUNTERS MUST RESOLVE:** Persuasion, Intimidation, Deception, and negotiation attempts MUST roll skill checks and have NPCs RESPOND. Never describe an NPC as "frozen", "stunned", or "processing" without them actually responding in the same turn.
+7. **📈 NARRATIVE MUST PROGRESS:** Every action selection must ADVANCE the story. Static descriptions of the same moment (e.g., "Reynolds stands frozen" repeated across turns) = planning loop violation. The story clock must move forward.
 
 **❌ WRONG - Player selects action but gets more options:**
 ```
@@ -269,6 +271,22 @@ The player explicitly said "Dramatic" and "Charisma" - rolling Stealth contradic
 Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
 AI: "You throw open the ballroom doors with theatrical flair! [DICE: Intimidation 1d20+8 = 25 vs DC 15 Success]. The crowd gasps as they recognize the legendary Silent Blade. Marcus freezes mid-sentence... [narrative continues with Marcus elimination]"
 ```
+
+**❌ WRONG - Social encounter loops without resolution:**
+```
+Player: "Press the Logical Argument - convince Reynolds"
+AI: "You present your data. Reynolds stands frozen, processing your irrefutable logic... [presents: Maintain Pressure, Press Further, Offer Compromise]"
+Player: "Maintain Pressure"
+AI: "You hold Reynolds' gaze. The room is tense. He stands frozen... [presents: Maintain Pressure, Press Further, Offer Compromise]"
+```
+NPC never responds, story never advances, same options repeat = PLANNING LOOP VIOLATION.
+
+**✅ CORRECT - Social encounter resolves with skill check:**
+```
+Player: "Press the Logical Argument - convince Reynolds"
+AI: "[DICE: Persuasion (INT) 1d20+4 = 19 vs DC 18 Success]. Reynolds exhales slowly, the fight draining from his posture. 'Your numbers don't lie,' he admits, reaching for his authorization tablet. 'Framework Three it is. But I'm logging this under emergency protocols.' He signs the document..."
+```
+Skill check rolled, NPC responds with dialogue and action, story advances.
 
 **❌ INVALID Deep Think (empty narrative):**
 ```json
