@@ -26,8 +26,10 @@ from mvp_site.game_state import (
 )
 from mvp_site.llm_providers.provider_utils import (
     ContextTooLargeError,
+    build_tool_results_prompt,
     check_context_too_large,
     get_openai_json_schema_format,
+    stringify_chat_parts,
 )
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
@@ -125,21 +127,6 @@ class CerebrasResponse:
         return self.get_tool_calls()
 
 
-def _stringify_parts(parts: list[Any]) -> str:
-    """Render prompt parts consistently for Cerebras/OpenAI-chat style APIs."""
-
-    rendered: list[str] = []
-    for part in parts:
-        if isinstance(part, str):
-            rendered.append(part)
-        else:
-            try:
-                rendered.append(json.dumps(part))
-            except Exception:  # noqa: BLE001 - defensive stringify
-                rendered.append(str(part))
-    return "\n\n".join(rendered)
-
-
 def generate_content(
     prompt_contents: list[Any],
     model_name: str,
@@ -173,7 +160,7 @@ def generate_content(
         messages = []
         if system_instruction_text:
             messages.append({"role": "system", "content": system_instruction_text})
-        messages.append({"role": "user", "content": _stringify_parts(prompt_contents)})
+        messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
 
     payload: dict[str, Any] = {
         "model": model_name,
@@ -344,11 +331,11 @@ def generate_content_with_tool_requests(
     messages = []
     if system_instruction_text:
         messages.append({"role": "system", "content": system_instruction_text})
-    messages.append({"role": "user", "content": _stringify_parts(prompt_contents)})
+    messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
     messages.append({"role": "assistant", "content": response.text})
     messages.append({
         "role": "user",
-        "content": f"Tool results (use these exact numbers in your narrative):\n{tool_results_text}\n\nNow write the final response using these results. Do NOT include tool_requests in your response."
+        "content": build_tool_results_prompt(tool_results_text)
     })
 
     # Phase 2: JSON call with tool results
@@ -447,7 +434,7 @@ def generate_content_with_native_tools(
     messages = []
     if system_instruction_text:
         messages.append({"role": "system", "content": system_instruction_text})
-    messages.append({"role": "user", "content": _stringify_parts(prompt_contents)})
+    messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
 
     # Make Phase 1 request with tools
     response1 = generate_content(

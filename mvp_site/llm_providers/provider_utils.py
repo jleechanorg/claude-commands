@@ -12,6 +12,9 @@ Provider notes:
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 # =============================================================================
 # NARRATIVE_RESPONSE_SCHEMA - JSON schema for structured LLM outputs
 # =============================================================================
@@ -152,6 +155,63 @@ def get_openai_json_schema_format(name: str = "narrative_response") -> dict:
             "schema": NARRATIVE_RESPONSE_SCHEMA,
         },
     }
+
+
+def stringify_prompt_contents(prompt_contents: list[Any]) -> str:
+    """Best-effort stringify prompt content parts for provider message payloads."""
+    if not prompt_contents:
+        return ""
+
+    parts: list[str] = []
+    for item in prompt_contents:
+        if isinstance(item, str):
+            parts.append(item)
+        elif isinstance(item, dict):
+            # Handle dict-based content (e.g., {"text": "..."})
+            if "text" in item:
+                parts.append(str(item["text"]))
+            else:
+                parts.append(str(item))
+        else:
+            parts.append(str(item))
+
+    return "\n".join(parts)
+
+
+def stringify_chat_parts(parts: list[Any]) -> str:
+    """Stringify prompt parts for OpenAI-chat compatible providers (Cerebras/OpenRouter).
+
+    Matches the historical formatting used in those providers: JSON-dump non-strings
+    and join with a blank line between parts.
+    """
+    if not parts:
+        return ""
+
+    rendered: list[str] = []
+    for part in parts:
+        if isinstance(part, str):
+            rendered.append(part)
+        else:
+            try:
+                rendered.append(json.dumps(part))
+            except Exception:  # noqa: BLE001 - defensive stringify
+                rendered.append(str(part))
+    return "\n\n".join(rendered)
+
+
+def build_tool_results_prompt(tool_results_text: str, extra_instructions: str = "") -> str:
+    """Build the Phase 2 prompt snippet for injecting tool results."""
+    base = (
+        "Tool results (use these exact numbers in your narrative):\n"
+        f"{tool_results_text}\n\n"
+        "The dice rolls have been executed by the server. Copy these EXACT results into your response. "
+        "Do NOT recalculate, round, or modify outcomes. "
+        "Now write the final response using these results. Do NOT include tool_requests in your response."
+    )
+    extra = (extra_instructions or "").strip()
+    if not extra:
+        return base
+    return f"{base}\n\n{extra}"
 
 
 class ContextTooLargeError(ValueError):

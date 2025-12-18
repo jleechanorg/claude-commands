@@ -20,6 +20,10 @@ from mvp_site.game_state import (
     execute_tool_requests,
     format_tool_results_text,
 )
+from mvp_site.llm_providers.provider_utils import (
+    build_tool_results_prompt,
+    stringify_prompt_contents,
+)
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
 # We rely on response_mime_type="application/json" + prompt instruction instead
@@ -179,31 +183,8 @@ def generate_json_mode_content(
 
 
 def _stringify_prompt_contents(prompt_contents: list[Any]) -> str:
-    """Convert prompt contents list to a single string for history building.
-
-    Args:
-        prompt_contents: List of prompt content items (strings, dicts, etc.)
-
-    Returns:
-        Single string representation of the prompt
-    """
-    if not prompt_contents:
-        return ""
-
-    parts = []
-    for item in prompt_contents:
-        if isinstance(item, str):
-            parts.append(item)
-        elif isinstance(item, dict):
-            # Handle dict-based content (e.g., {"text": "..."})
-            if "text" in item:
-                parts.append(str(item["text"]))
-            else:
-                parts.append(str(item))
-        else:
-            parts.append(str(item))
-
-    return "\n".join(parts)
+    """Backward-compatible wrapper around provider_utils.stringify_prompt_contents."""
+    return stringify_prompt_contents(prompt_contents)
 
 
 
@@ -372,7 +353,7 @@ def generate_content_with_native_tools(
         history = []
         history.append(types.Content(
             role="user",
-            parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))]
+            parts=[types.Part(text=stringify_prompt_contents(prompt_contents))]
         ))
 
         # Add Phase 1 response if it has text
@@ -427,7 +408,7 @@ def generate_content_with_native_tools(
     history = []
     history.append(types.Content(
         role="user",
-        parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))]
+        parts=[types.Part(text=stringify_prompt_contents(prompt_contents))]
     ))
 
     # Add model's Phase 1 response (with function calls)
@@ -446,11 +427,12 @@ def generate_content_with_native_tools(
     # Add tool results as user turn
     history.append(types.Content(
         role="user",
-        parts=[types.Part(text=(
-            f"Tool results (use these exact numbers in your narrative):\n{tool_results_text}\n\n"
-            "The dice rolls have been executed. Use these EXACT results in your narrative. "
-            "Now provide the complete response in the required JSON format. "
-            "Include the dice roll results in the dice_rolls array."
+        parts=[types.Part(text=build_tool_results_prompt(
+            tool_results_text,
+            extra_instructions=(
+                "Now provide the complete response in the required JSON format. "
+                "Include the dice roll results in the dice_rolls array."
+            ),
         ))]
     ))
 
@@ -546,7 +528,7 @@ def generate_content_with_tool_requests(
     # User turn (original prompt)
     history.append(types.Content(
         role="user",
-        parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))]
+        parts=[types.Part(text=stringify_prompt_contents(prompt_contents))]
     ))
     # Model turn (Phase 1 response)
     history.append(types.Content(
@@ -556,10 +538,7 @@ def generate_content_with_tool_requests(
     # User turn with tool results
     history.append(types.Content(
         role="user",
-        parts=[types.Part(text=(
-            f"Tool results (use these exact numbers in your narrative):\n{tool_results_text}\n\n"
-            "Now write the final response using these results. Do NOT include tool_requests in your response."
-        ))]
+        parts=[types.Part(text=build_tool_results_prompt(tool_results_text))]
     ))
 
     # Phase 2: JSON call with tool results
