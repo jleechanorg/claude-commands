@@ -256,20 +256,20 @@ AI: "You think about the direct approach... [presents: Ram the Vehicle, Block th
 **✅ CORRECT - Player selects action and it executes:**
 ```
 Player: "Intercept Transport"
-AI: "You sprint through alleyways, positioning yourself ahead of the van's route. [DICE: Stealth check 1d20+5 = 18 vs DC 15 Success]. You emerge from cover as the van approaches... [narrative continues with action resolution]"
+AI: "You sprint through alleyways, positioning yourself ahead of the van's route. [DICE: Stealth check 1d20 +5 DEX = 18 vs DC 15 (Success)]. You emerge from cover as the van approaches... [narrative continues with action resolution]"
 ```
 
 **❌ WRONG - Dice roll contradicts action intent:**
 ```
 Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
-AI: "You try to sneak in... [DICE: Stealth 1d20+5 = 22 vs DC 25 Fail]. The guard spots you. [presents: Grand Entrance, Distraction, Silent Elimination]"
+AI: "You try to sneak in... [DICE: Stealth 1d20 +5 DEX = 22 vs DC 25 (Fail)]. The guard spots you. [presents: Grand Entrance, Distraction, Silent Elimination]"
 ```
 The player explicitly said "Dramatic" and "Charisma" - rolling Stealth contradicts the intent and loops back to options.
 
 **✅ CORRECT - Dice match action intent:**
 ```
 Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
-AI: "You throw open the ballroom doors with theatrical flair! [DICE: Intimidation 1d20+8 = 25 vs DC 15 Success]. The crowd gasps as they recognize the legendary Silent Blade. Marcus freezes mid-sentence... [narrative continues with Marcus elimination]"
+AI: "You throw open the ballroom doors with theatrical flair! [DICE: Intimidation 1d20 +8 CHA = 25 vs DC 15 (Success)]. The crowd gasps as they recognize the legendary Silent Blade. Marcus freezes mid-sentence... [narrative continues with Marcus elimination]"
 ```
 
 **❌ WRONG - Social encounter loops without resolution:**
@@ -284,7 +284,7 @@ NPC never responds, story never advances, same options repeat = PLANNING LOOP VI
 **✅ CORRECT - Social encounter resolves with skill check:**
 ```
 Player: "Press the Logical Argument - convince Reynolds"
-AI: "[DICE: Persuasion (INT) 1d20+4 = 19 vs DC 18 Success]. Reynolds exhales slowly, the fight draining from his posture. 'Your numbers don't lie,' he admits, reaching for his authorization tablet. 'Framework Three it is. But I'm logging this under emergency protocols.' He signs the document..."
+AI: "[DICE: Persuasion (INT) 1d20 +4 INT = 19 vs DC 18 (Success)]. Reynolds exhales slowly, the fight draining from his posture. 'Your numbers don't lie,' he admits, reaching for his authorization tablet. 'Framework Three it is. But I'm logging this under emergency protocols.' He signs the document..."
 ```
 Skill check rolled, NPC responds with dialogue and action, story advances.
 

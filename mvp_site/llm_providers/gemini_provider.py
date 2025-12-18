@@ -103,6 +103,9 @@ def generate_json_mode_content(
         if enable_code_execution is not None
         else model_name in constants.MODELS_WITH_CODE_EXECUTION
     )
+    # Constraint: Gemini 2.x cannot combine code_execution with response_mime_type JSON
+    if json_mode and model_name not in {"gemini-3-flash-preview", "gemini-3-pro-preview"}:
+        allow_code_execution = False
 
     gemini_tools = []
 
@@ -149,14 +152,9 @@ def generate_json_mode_content(
             if msg["role"] == "system":
                 continue # Handled in config
             if msg["role"] == "tool":
-                # Tool response
-                # Note: This requires managing the function call history correctly.
-                # For simplicity in this revert, we might just append text representation
-                # if we aren't using a persistent chat session object.
-                # BUT, to make tool loop work, we need proper structure.
-                # Given strict timeline, we will try to map best-effort or rely on 
-                # prompt_contents if this is the first turn.
-                pass
+                # Skip tool responses in history for JSON-mode calls; the tool results
+                # are already embedded in prompt_contents for Phase 2.
+                continue
             
             parts = []
             if msg.get("content"):

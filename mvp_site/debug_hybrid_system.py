@@ -9,7 +9,7 @@ import re
 from typing import Any
 
 from mvp_site import logging_util
-from mvp_site.json_utils import unescape_json_string
+from mvp_site.json_utils import unescape_json_string, extract_nested_object
 
 # Debug tag patterns - same as in llm_response.py
 DEBUG_START_PATTERN = re.compile(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]")
@@ -35,11 +35,9 @@ MARKDOWN_DEBUG_BLOCK_PATTERN = re.compile(
     r"---\s*\n\*\*(?:Dice Rolls|State Updates|Planning Block)\*\*:.*?(?=\n---|\Z)",
     re.DOTALL
 )
-# Also match inline debug_info JSON objects that leak into narrative
-MARKDOWN_DEBUG_INFO_PATTERN = re.compile(
-    r'"debug_info"\s*:\s*\{[^}]*\}',
-    re.DOTALL
-)
+# Inline debug_info JSON objects sometimes leak into narrative; we strip them
+# using bracket-aware extraction in strip_debug_content (regex alone breaks on nesting).
+MARKDOWN_DEBUG_INFO_PATTERN = re.compile(r'"debug_info"\s*:\s*\{')
 
 # JSON cleanup patterns - same as in narrative_response_schema.py
 NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
@@ -247,7 +245,18 @@ def strip_debug_content(text: str) -> str:
 
     # Strip markdown-formatted debug blocks
     processed = MARKDOWN_DEBUG_BLOCK_PATTERN.sub("", processed)
-    processed = MARKDOWN_DEBUG_INFO_PATTERN.sub("", processed)
+
+    # Remove any embedded "debug_info": {...} objects with bracket-aware parsing
+    while True:
+        match = MARKDOWN_DEBUG_INFO_PATTERN.search(processed)
+        if not match:
+            break
+        debug_obj = extract_nested_object(processed, "debug_info")
+        if not debug_obj:
+            # Fallback: if extraction fails, remove the marker to avoid infinite loop
+            processed = processed[: match.start()] + processed[match.end() :]
+            break
+        processed = processed.replace(f'"debug_info": {debug_obj}', "")
 
     # Clean up leftover --- separators (may be left orphaned after stripping)
     processed = re.sub(r"(?:^|\n)---\s*(?:\n---\s*)*(?:\n|$)", "\n", processed)

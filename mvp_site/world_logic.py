@@ -920,7 +920,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Validate and auto-correct state before persistence
-        updated_game_state_dict = validate_and_correct_state(updated_game_state_dict)
+        updated_game_state_dict = validate_and_correct_state(
+            updated_game_state_dict, previous_world_time=original_world_time
+        )
 
         # Update in Firestore (blocking I/O - run in thread)
         await asyncio.to_thread(
@@ -1838,7 +1840,9 @@ def _handle_set_command(
     )
 
     # Validate and auto-correct state before persistence
-    updated_state = validate_and_correct_state(updated_state)
+    updated_state = validate_and_correct_state(
+        updated_state, previous_world_time=original_world_time
+    )
 
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
 
@@ -1921,7 +1925,9 @@ def _handle_update_state_command(
             )
 
         # Validate and auto-correct state before persistence
-        validated_state_dict = validate_and_correct_state(final_game_state.to_dict())
+        validated_state_dict = validate_and_correct_state(
+            final_game_state.to_dict(), previous_world_time=original_world_time
+        )
 
         firestore_service.update_campaign_game_state(
             user_id, campaign_id, validated_state_dict

@@ -189,6 +189,9 @@ def xp_to_next_level(current_xp: int, current_level: int = None) -> int:
     
     if current_level is None:
         current_level = level_from_xp(current_xp)
+    else:
+        current_level = _coerce_int(current_level, level_from_xp(current_xp))
+        current_level = max(1, min(20, current_level))
 
     # At max level, no more XP needed
     if current_level >= 20:
@@ -899,7 +902,10 @@ class GameState:
     # =========================================================================
 
     def validate_time_monotonicity(
-        self, new_time: dict[str, Any], strict: bool = False
+        self,
+        new_time: dict[str, Any],
+        strict: bool = False,
+        previous_time: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Validate that time progression is monotonic (never goes backwards).
@@ -913,8 +919,9 @@ class GameState:
         """
         result: dict[str, Any] = {"valid": True}
 
-        # Get current time from world_data
-        current_world_time = (self.world_data or {}).get("world_time")
+        # Get reference time: prefer explicitly supplied previous_time (from caller),
+        # otherwise fall back to the GameState's current world_data value.
+        current_world_time = previous_time or (self.world_data or {}).get("world_time")
         if not current_world_time or not isinstance(current_world_time, dict):
             return result
 
@@ -1362,7 +1369,9 @@ DICE_ROLL_TOOLS: list[dict] = [
 ]
 
 
-def validate_and_correct_state(state_dict: dict[str, Any]) -> dict[str, Any]:
+def validate_and_correct_state(
+    state_dict: dict[str, Any], previous_world_time: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Validate state dict and apply corrections before persistence.
 
@@ -1387,7 +1396,9 @@ def validate_and_correct_state(state_dict: dict[str, Any]) -> dict[str, Any]:
     new_time = (state_dict.get("world_data", {}) or {}).get("world_time")
     if new_time:
         # Note: In strict mode this raises, in default mode it just warns
-        temp_state.validate_time_monotonicity(new_time, strict=False)
+        temp_state.validate_time_monotonicity(
+            new_time, strict=False, previous_time=previous_world_time
+        )
 
     return temp_state.to_dict()
 
@@ -1678,7 +1689,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         }
 
     if tool_name == "roll_attack":
-        attack_mod = _coerce_int_inner(arguments.get("attack_modifier") or arguments.get("modifier"), 0)
+        raw_attack_mod = arguments.get("attack_modifier")
+        if raw_attack_mod is None and "modifier" in arguments:
+            raw_attack_mod = arguments.get("modifier")
+        attack_mod = _coerce_int_inner(raw_attack_mod, 0)
         ability_mod = _coerce_int_inner(arguments.get("ability_modifier"), None)
         ability_name = arguments.get("ability_name", "").upper() or None
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), None)
@@ -1734,7 +1748,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         return result
 
     if tool_name == "roll_skill_check":
-        attr_mod = _coerce_int_inner(arguments.get("attribute_modifier") or arguments.get("modifier"), 0)
+        raw_attr_mod = arguments.get("attribute_modifier")
+        if raw_attr_mod is None and "modifier" in arguments:
+            raw_attr_mod = arguments.get("modifier")
+        attr_mod = _coerce_int_inner(raw_attr_mod, 0)
         attr_name = arguments.get("attribute_name", "").upper() or "MOD"
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
         proficient = _coerce_bool(arguments.get("proficient"), False)
@@ -1764,7 +1781,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         }
 
     if tool_name == "roll_saving_throw":
-        attr_mod = _coerce_int_inner(arguments.get("attribute_modifier") or arguments.get("modifier"), 0)
+        raw_attr_mod = arguments.get("attribute_modifier")
+        if raw_attr_mod is None and "modifier" in arguments:
+            raw_attr_mod = arguments.get("modifier")
+        attr_mod = _coerce_int_inner(raw_attr_mod, 0)
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
         proficient = _coerce_bool(arguments.get("proficient"), False)
         dc = _coerce_int_inner(arguments.get("dc"), 10)
