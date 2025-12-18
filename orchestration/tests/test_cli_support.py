@@ -494,6 +494,27 @@ class TestGeminiCliIntegration(unittest.TestCase):
                 f"Missing: {expected_keys - profile_keys}, Extra: {profile_keys - expected_keys}",
             )
 
+    def test_all_env_unset_values_are_valid_posix_identifiers(self):
+        """Integration: All env_unset values must be valid POSIX environment variable names."""
+        import re
+
+        for cli_name, profile in CLI_PROFILES.items():
+            env_unset = profile.get("env_unset", [])
+            self.assertIsInstance(env_unset, list, f"{cli_name} env_unset should be a list")
+            for var in env_unset:
+                self.assertIsInstance(var, str, f"{cli_name} env_unset values should be strings")
+                self.assertTrue(
+                    re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var),
+                    f"{cli_name} env_unset contains invalid variable name: {var!r}",
+                )
+
+    def test_env_unset_expected_values(self):
+        """Integration: Verify expected env_unset values for each CLI profile."""
+        self.assertEqual(CLI_PROFILES["claude"]["env_unset"], ["ANTHROPIC_API_KEY"])
+        self.assertEqual(CLI_PROFILES["codex"]["env_unset"], ["OPENAI_API_KEY"])
+        self.assertEqual(CLI_PROFILES["gemini"]["env_unset"], ["GEMINI_API_KEY"])
+        self.assertEqual(CLI_PROFILES["cursor"]["env_unset"], [])
+
 
 class TestCursorCliIntegration(unittest.TestCase):
     """Tests for Cursor Agent CLI integration."""

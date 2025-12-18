@@ -1391,7 +1391,14 @@ Agent Configuration:
             prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
 
             # Generate env unset commands for CLI-specific environment overrides
+            # Validate env var names to prevent shell injection (must be valid POSIX identifiers)
             env_unset_list = cli_profile.get("env_unset", [])
+            for var in env_unset_list:
+                if not isinstance(var, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var):
+                    raise ValueError(
+                        f"Invalid environment variable name in env_unset for CLI profile "
+                        f"'{cli_profile.get('display_name', agent_cli)}': {var!r}"
+                    )
             env_unset_commands = "\n".join(f"unset {var}" for var in env_unset_list) if env_unset_list else ""
 
             agent_name_quoted = shlex.quote(agent_name)
