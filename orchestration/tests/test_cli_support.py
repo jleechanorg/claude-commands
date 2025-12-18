@@ -1,9 +1,10 @@
 """Tests for multi-CLI support in the task dispatcher."""
 
+import shlex
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher, GEMINI_MODEL
+from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, TaskDispatcher, GEMINI_MODEL
 
 
 class TestAgentCliSelection(unittest.TestCase):
@@ -394,16 +395,17 @@ class TestGeminiCliIntegration(unittest.TestCase):
         template = CLI_PROFILES["gemini"]["command_template"]
 
         # Test that template can be formatted with expected placeholders
+        # NOTE: prompt_file is now passed via stdin_template, not command_template
         test_values = {
             "binary": "/usr/bin/gemini",
-            "prompt_file": "/tmp/test_prompt.txt",
         }
 
         try:
             formatted = template.format(**test_values)
             self.assertIn("/usr/bin/gemini", formatted)
             self.assertIn(GEMINI_MODEL, formatted)
-            self.assertIn("/tmp/test_prompt.txt", formatted)
+            # Prompt comes via stdin, not command line
+            self.assertIn("--yolo", formatted)
         except KeyError as e:
             self.fail(f"Command template has unknown placeholder: {e}")
 
@@ -470,15 +472,16 @@ class TestGeminiCliIntegration(unittest.TestCase):
         template = CLI_PROFILES["gemini"]["command_template"]
         self.assertIn(GEMINI_MODEL, template)
 
-    def test_gemini_stdin_template_not_prompt_file(self):
-        """Integration: Gemini uses /dev/null for stdin, not prompt file."""
+    def test_gemini_stdin_template_uses_prompt_file(self):
+        """Integration: Gemini receives prompt via stdin (not deprecated -p flag)."""
 
         gemini = CLI_PROFILES["gemini"]
-        self.assertEqual(gemini["stdin_template"], "/dev/null")
+        # Prompt must come via stdin since -p flag is deprecated and only appends to stdin
+        self.assertEqual(gemini["stdin_template"], "{prompt_file}")
         self.assertFalse(gemini["quote_prompt"])
 
     def test_all_cli_profiles_have_consistent_structure(self):
-        """Integration: All CLI profiles (claude, codex, gemini) have same structure."""
+        """Integration: All CLI profiles (claude, codex, gemini, cursor) have same structure."""
 
         expected_keys = set(CLI_PROFILES["claude"].keys())
 
@@ -490,6 +493,91 @@ class TestGeminiCliIntegration(unittest.TestCase):
                 f"CLI profile '{cli_name}' has inconsistent keys. "
                 f"Missing: {expected_keys - profile_keys}, Extra: {profile_keys - expected_keys}",
             )
+
+
+class TestCursorCliIntegration(unittest.TestCase):
+    """Tests for Cursor Agent CLI integration."""
+
+    def setUp(self):
+        self.dispatcher = TaskDispatcher()
+
+    def test_cursor_profile_exists(self):
+        """Cursor CLI profile should be registered in CLI_PROFILES."""
+        self.assertIn("cursor", CLI_PROFILES)
+
+    def test_cursor_profile_structure(self):
+        """Cursor profile should have all required fields."""
+        cursor = CLI_PROFILES["cursor"]
+        required_fields = [
+            "binary",
+            "display_name",
+            "generated_with",
+            "co_author",
+            "supports_continue",
+            "conversation_dir",
+            "continue_flag",
+            "restart_env",
+            "command_template",
+            "stdin_template",
+            "quote_prompt",
+            "detection_keywords",
+        ]
+        for field in required_fields:
+            self.assertIn(field, cursor, f"Missing field: {field}")
+
+    def test_cursor_binary_name(self):
+        """Cursor profile should use cursor-agent binary."""
+        cursor = CLI_PROFILES["cursor"]
+        self.assertEqual(cursor["binary"], "cursor-agent")
+
+    def test_cursor_command_template(self):
+        """Cursor command template should include -f flag, configured model and output format."""
+        cursor = CLI_PROFILES["cursor"]
+        template = cursor["command_template"]
+        tokens = shlex.split(template)
+        self.assertIn("-f", tokens, "Missing -f flag for non-interactive execution")
+        self.assertIn(f"--model {CURSOR_MODEL}", template)
+        self.assertIn("--output-format text", template)
+        self.assertIn("-p @{prompt_file}", template)
+
+    def test_cursor_detection_keywords(self):
+        """Cursor should be detected by relevant keywords (not model names)."""
+        cursor = CLI_PROFILES["cursor"]
+        # Note: "grok" removed - model names should not trigger CLI selection
+        # since the model is configurable via CURSOR_MODEL env var
+        expected_keywords = ["cursor", "cursor-agent"]
+        for keyword in expected_keywords:
+            self.assertIn(keyword, cursor["detection_keywords"])
+        # Ensure model name is NOT in detection keywords (decoupled concerns)
+        self.assertNotIn("grok", cursor["detection_keywords"])
+
+    def test_cursor_keyword_detection(self):
+        """Task with cursor keywords should select cursor CLI."""
+        with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
+            mock_which.side_effect = lambda cmd: f"/usr/bin/{cmd}" if cmd in ["claude", "cursor-agent"] else None
+
+            task = "Use cursor to analyze the latest trends"
+            agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+
+        self.assertEqual(agent_specs[0]["cli"], "cursor")
+
+    def test_cursor_forced_cli(self):
+        """Forced CLI selection should work for cursor."""
+        task = "Analyze the codebase for fresh insights"
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task, forced_cli="cursor")
+        self.assertEqual(agent_specs[0]["cli"], "cursor")
+
+    def test_cursor_stdin_template(self):
+        """Cursor uses /dev/null for stdin (prompt passed via -p flag)."""
+        cursor = CLI_PROFILES["cursor"]
+        self.assertEqual(cursor["stdin_template"], "/dev/null")
+        self.assertFalse(cursor["quote_prompt"])
+
+    def test_cursor_does_not_support_continue(self):
+        """Cursor should not support conversation continuation."""
+        cursor = CLI_PROFILES["cursor"]
+        self.assertFalse(cursor["supports_continue"])
+        self.assertIsNone(cursor["conversation_dir"])
 
 
 if __name__ == "__main__":

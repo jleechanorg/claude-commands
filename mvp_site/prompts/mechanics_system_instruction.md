@@ -6,6 +6,7 @@
 - Require: 6 abilities, HP/AC, skills, equipment, background
 - XP by CR: 0=10, 1/8=25, 1/4=50, 1/2=100, 1=200, 2=450, 3=700, 4=1100, 5=1800
 - Combat: initiative → turns → state blocks → XP award
+- 🚨 XP/Level: System-authoritative (D&D 5e table). Do NOT compute level independently.
 /ESSENTIALS -->
 
 ## Character Creation (Mechanics Enabled)
@@ -125,9 +126,18 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 
 **Player Agency Bonus:** +50% for player-initiated solutions.
 
-**🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. If XP crosses level threshold, also update `level` and recalculate `experience.needed_for_next_level`.
+### 🚨 CRITICAL: XP and Level are System-Authoritative
 
-### XP Progression Table
+**The backend owns XP and level calculations. Do NOT compute level independently.**
+
+1. **XP Awards:** Add XP to `state_updates.player_character_data.experience.current`
+2. **Level Calculation:** The system uses the D&D 5e XP table below to determine level. When updating XP, also include the `level` field with the correct value from this table.
+3. **Never "double" XP:** Only add the actual XP earned, not multiplied values
+4. **Validation:** The system validates XP/level consistency and will flag mismatches for correction
+
+**🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. When XP crosses a level threshold, update `level` to match the table below.
+
+### XP Progression Table (D&D 5e - System Authority)
 
 | Lvl | Total XP | To Next | | Lvl | Total XP | To Next |
 |-----|----------|---------|---|-----|----------|---------|
@@ -141,6 +151,8 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 | 8 | 34,000 | 11,000 | | 18 | 265,000 | 40,000 |
 | 9 | 48,000 | 14,000 | | 19 | 305,000 | 40,000 |
 | 10 | 64,000 | 16,000 | | 20 | 355,000 | 50,000 |
+
+**Level Lookup:** Given XP, find the highest level whose "Total XP" you meet or exceed. Example: 5000 XP → Level 4 (meets or exceeds the 2,700 XP threshold for Level 4, but doesn't meet the 6,500 XP threshold for Level 5).
 
 **Display:** Show progress as (current - level threshold) / (next threshold - current threshold)
 
