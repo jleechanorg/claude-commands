@@ -17,8 +17,10 @@ from mvp_site.game_state import (
     format_tool_results_text,
 )
 from mvp_site.llm_providers.openai_chat_common import (
+    build_chat_payload,
     build_messages as build_openai_messages,
     extract_tool_calls as extract_openai_tool_calls,
+    extract_first_choice_message,
     post_chat_completions,
 )
 from mvp_site.llm_providers.provider_utils import (
@@ -114,24 +116,17 @@ def generate_content(
     else:
         response_format = {"type": "json_object"}
 
-    payload: dict[str, Any] = {
-        "model": model_name,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_output_tokens,
-    }
-
     # Add tools OR response_format (NOT both - API limitation)
     # When tools are provided, JSON output is handled by prompt instructions
-    if tools:
-        payload["tools"] = tools
-        # Force tool use: game rules require dice for combat, skill checks, saves
-        # With "required", the LLM MUST call at least one tool
-        # The prompts tell the LLM WHICH tool to use; this ensures it uses one
-        payload["tool_choice"] = "required"
-        # DO NOT set response_format - many APIs reject tools + response_format
-    else:
-        payload["response_format"] = response_format
+    payload = build_chat_payload(
+        model_name=model_name,
+        messages=messages,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        tools=tools,
+        tool_choice="required" if tools else None,
+        response_format=response_format,
+    )
 
     logging_util.info(f"Calling OpenRouter model: {model_name}")
     data = post_chat_completions(
@@ -144,8 +139,8 @@ def generate_content(
     )
 
     try:
-        message = data["choices"][0]["message"]
-        text = message.get("content") or ""
+        message = extract_first_choice_message(data)
+        text = (message.get("content") or "") if isinstance(message, dict) else ""
         tool_calls = extract_openai_tool_calls(data)
         # Check for tool_calls - content may be null
         has_tool_calls = bool(tool_calls)

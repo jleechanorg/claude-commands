@@ -47,6 +47,38 @@ def build_messages(
     return messages
 
 
+def build_chat_payload(
+    *,
+    model_name: str,
+    messages: list[dict[str, Any]],
+    temperature: float,
+    max_output_tokens: int,
+    tools: list[dict] | None,
+    tool_choice: str | None,
+    response_format: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Build an OpenAI-style /chat/completions payload.
+
+    NOTE: Many OpenAI-compatible providers reject `tools` + `response_format` in the
+    same request. This helper enforces the "either tools or response_format" rule.
+    """
+    payload: dict[str, Any] = {
+        "model": model_name,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_output_tokens,
+    }
+    if tools:
+        payload["tools"] = tools
+        if tool_choice:
+            payload["tool_choice"] = tool_choice
+        return payload
+
+    if response_format:
+        payload["response_format"] = response_format
+    return payload
+
+
 def extract_tool_calls(raw_response: Any) -> list[dict] | None:
     """Extract `tool_calls` from an OpenAI-compatible chat-completions response."""
     try:
@@ -67,6 +99,35 @@ def extract_tool_calls(raw_response: Any) -> list[dict] | None:
         return tool_calls
     except (AttributeError, IndexError, KeyError, TypeError):
         return None
+
+
+def extract_first_choice_message(data: Any) -> dict[str, Any]:
+    """Return the first `choices[0].message` dict or raise ValueError."""
+    if not isinstance(data, dict):
+        raise ValueError("Invalid response JSON: expected dict")
+    choices = data.get("choices", [])
+    if not isinstance(choices, list) or not choices:
+        raise ValueError("Invalid response JSON: missing choices[0]")
+    first = choices[0]
+    if not isinstance(first, dict):
+        raise ValueError("Invalid response JSON: choices[0] is not an object")
+    message = first.get("message")
+    if not isinstance(message, dict):
+        raise ValueError("Invalid response JSON: choices[0].message is not an object")
+    return message
+
+
+def extract_first_choice(data: Any) -> dict[str, Any]:
+    """Return the first `choices[0]` dict or raise ValueError."""
+    if not isinstance(data, dict):
+        raise ValueError("Invalid response JSON: expected dict")
+    choices = data.get("choices", [])
+    if not isinstance(choices, list) or not choices:
+        raise ValueError("Invalid response JSON: missing choices[0]")
+    first = choices[0]
+    if not isinstance(first, dict):
+        raise ValueError("Invalid response JSON: choices[0] is not an object")
+    return first
 
 
 def post_chat_completions(
@@ -91,4 +152,3 @@ def post_chat_completions(
     if not isinstance(data, dict):
         raise ValueError("Invalid response JSON: expected dict")
     return data
-

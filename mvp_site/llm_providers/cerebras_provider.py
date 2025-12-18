@@ -31,8 +31,11 @@ from mvp_site.llm_providers.provider_utils import (
     stringify_chat_parts,
 )
 from mvp_site.llm_providers.openai_chat_common import (
+    build_chat_payload,
     build_messages as build_openai_messages,
     extract_tool_calls as extract_openai_tool_calls,
+    extract_first_choice,
+    extract_first_choice_message,
     post_chat_completions,
 )
 
@@ -209,25 +212,18 @@ def generate_content(
             stringify_chat_parts_fn=stringify_chat_parts,
         )
 
-    payload: dict[str, Any] = {
-        "model": model_name,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_output_tokens,
-    }
-
     # Add tools if provided (for function calling)
     # NOTE: Cerebras API does NOT support tools + response_format together
     # When using tools, JSON output is handled by prompt instructions
-    if tools:
-        payload["tools"] = tools
-        # Force tool use: game rules require dice for combat, skill checks, saves
-        # With "required", the LLM MUST call at least one tool
-        payload["tool_choice"] = "required"
-        # DO NOT set response_format - API rejects tools + response_format
-    else:
-        # Only use JSON schema format when NOT using tools
-        payload["response_format"] = get_openai_json_schema_format()
+    payload = build_chat_payload(
+        model_name=model_name,
+        messages=messages,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        tools=tools,
+        tool_choice="required" if tools else None,
+        response_format=get_openai_json_schema_format(),
+    )
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -247,8 +243,8 @@ def generate_content(
     )
 
     try:
-        choice = data["choices"][0]
-        message = choice["message"]
+        choice = extract_first_choice(data)
+        message = extract_first_choice_message(data)
         if not isinstance(message, dict):
             raise TypeError("message is not a dict")
 

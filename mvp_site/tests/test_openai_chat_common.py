@@ -5,7 +5,9 @@ from unittest.mock import Mock, patch
 
 from mvp_site.llm_providers.openai_chat_common import (
     build_messages,
+    build_chat_payload,
     extract_tool_calls,
+    extract_first_choice_message,
     post_chat_completions,
 )
 
@@ -40,6 +42,36 @@ class TestOpenAIChatCommon(unittest.TestCase):
         raw = {"choices": [{"message": {"tool_calls": [{"id": "1"}]}}]}
         self.assertEqual(extract_tool_calls(raw), [{"id": "1"}])
 
+    def test_extract_first_choice_message(self):
+        msg = extract_first_choice_message({"choices": [{"message": {"content": "x"}}]})
+        self.assertEqual(msg["content"], "x")
+
+    def test_build_chat_payload_enforces_tools_vs_response_format(self):
+        payload_tools = build_chat_payload(
+            model_name="m",
+            messages=[{"role": "user", "content": "hi"}],
+            temperature=0.0,
+            max_output_tokens=1,
+            tools=[{"type": "function", "function": {"name": "roll_dice"}}],
+            tool_choice="required",
+            response_format={"type": "json_object"},
+        )
+        self.assertIn("tools", payload_tools)
+        self.assertIn("tool_choice", payload_tools)
+        self.assertNotIn("response_format", payload_tools)
+
+        payload_json = build_chat_payload(
+            model_name="m",
+            messages=[{"role": "user", "content": "hi"}],
+            temperature=0.0,
+            max_output_tokens=1,
+            tools=None,
+            tool_choice="required",
+            response_format={"type": "json_object"},
+        )
+        self.assertNotIn("tools", payload_json)
+        self.assertIn("response_format", payload_json)
+
     def test_post_chat_completions_posts_and_returns_json(self):
         fake_response = Mock()
         fake_response.ok = True
@@ -58,4 +90,3 @@ class TestOpenAIChatCommon(unittest.TestCase):
         self.assertEqual(data, {"choices": []})
         post.assert_called_once()
         fake_response.raise_for_status.assert_called_once()
-
