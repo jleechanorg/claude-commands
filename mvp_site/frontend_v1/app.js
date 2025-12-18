@@ -461,8 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let label = '';
     if (actor === 'gemini') {
       label = sequenceId ? `Scene #${sequenceId}` : 'Story';
-    } else if (actor === 'system') {
-      label = 'System';
     } else {
       // actor is 'user'
       label =
@@ -1191,34 +1189,8 @@ document.addEventListener('DOMContentLoaded', () => {
           btn.disabled = false;
         });
       } catch (error) {
-        // Enhanced error logging for debugging
-        console.error('🔴 Interaction failed:', error);
-        console.error('🔴 Error name:', error.name);
-        console.error('🔴 Error message:', error.message);
-        console.error('🔴 Error stack:', error.stack);
-        console.error('🔴 Firebase auth state:', firebase.auth().currentUser ? 'signed in' : 'NOT signed in');
-
-        // Provide specific error messages based on error type
-        let userMessage = 'Sorry, an error occurred. Please try again.';
-
-        if (error.message?.includes('User not authenticated') || error.message?.includes('not authenticated')) {
-          userMessage = '🔐 Session expired. Please refresh the page and sign in again.';
-          console.error('🔴 AUTH ERROR: User not authenticated - Firebase currentUser is null');
-        } else if (error.name === 'AbortError') {
-          userMessage = '⏱️ Request timed out. Please try again.';
-          console.error('🔴 TIMEOUT ERROR: Request was aborted');
-        } else if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError') || error.message?.includes('network')) {
-          userMessage = '🌐 Network error. Please check your connection and try again.';
-          console.error('🔴 NETWORK ERROR: Failed to reach server');
-        } else if (error.message?.includes('HTTP Error')) {
-          userMessage = `⚠️ Server error: ${error.message}`;
-          console.error('🔴 HTTP ERROR:', error.message);
-        } else if (error.message?.includes('JSON')) {
-          userMessage = '⚠️ Invalid response from server. Please try again.';
-          console.error('🔴 JSON PARSE ERROR: Server returned invalid JSON');
-        }
-
-        appendToStory('system', userMessage);
+        console.error('Interaction failed:', error);
+        appendToStory('system', 'Sorry, an error occurred. Please try again.');
         // Re-enable choice buttons even on error
         document.querySelectorAll('.choice-button').forEach((btn) => {
           btn.disabled = false;
