@@ -47,6 +47,9 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
             constants.FIELD_DICE_ROLLS: _get_structured_attr(
                 sr, constants.FIELD_DICE_ROLLS, []
             ),
+            constants.FIELD_DICE_AUDIT_EVENTS: _get_structured_attr(
+                sr, constants.FIELD_DICE_AUDIT_EVENTS, []
+            ),
             # FIELD_RESOURCES is consumed downstream by Firestore writes which
             # expect a mapping. Returning ``{}`` keeps backwards compatibility
             # with earlier schemas that defaulted to a dict-like payload.

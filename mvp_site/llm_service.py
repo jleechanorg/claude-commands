@@ -2846,12 +2846,31 @@ def get_initial_story(
         provider_name=provider_selection.provider,
     )
     logging_util.info("Successfully used LLMRequest for initial story generation")
+
+    code_execution_evidence: dict[str, Any] | None = None
+    if (
+        provider_selection.provider == constants.LLM_PROVIDER_GEMINI
+        and constants.get_dice_roll_strategy(model_to_use, provider_selection.provider)
+        == "code_execution"
+    ):
+        code_execution_evidence = gemini_provider.extract_code_execution_evidence(
+            api_response
+        )
     # Extract text from raw API response object
     raw_response_text: str = _get_text_from_response(api_response)
 
     # Create LLMResponse from raw response, which handles all parsing internally
     # Parse the structured response to extract clean narrative and debug data
     narrative_text, structured_response = parse_structured_response(raw_response_text)
+    if structured_response and code_execution_evidence:
+        # Persist server-verified evidence (do not rely on model self-reporting).
+        structured_response.debug_info = {
+            **(structured_response.debug_info or {}),
+            "provider": provider_selection.provider,
+            "model": model_to_use,
+            "dice_strategy": "code_execution",
+            **code_execution_evidence,
+        }
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -3507,6 +3526,16 @@ def continue_story(
     logging_util.info(
         "Successfully used LLMRequest for structured JSON communication"
     )
+
+    code_execution_evidence: dict[str, Any] | None = None
+    if (
+        provider_selection.provider == constants.LLM_PROVIDER_GEMINI
+        and constants.get_dice_roll_strategy(chosen_model, provider_selection.provider)
+        == "code_execution"
+    ):
+        code_execution_evidence = gemini_provider.extract_code_execution_evidence(
+            api_response
+        )
     # Extract text from raw API response object
     raw_response_text: str = _get_text_from_response(api_response)
 
@@ -3550,6 +3579,17 @@ def continue_story(
                 system_instruction_text=system_instruction_final,
                 provider_name=provider_selection.provider,
             )
+            reprompt_code_exec: dict[str, Any] | None = None
+            if (
+                provider_selection.provider == constants.LLM_PROVIDER_GEMINI
+                and constants.get_dice_roll_strategy(
+                    chosen_model, provider_selection.provider
+                )
+                == "code_execution"
+            ):
+                reprompt_code_exec = gemini_provider.extract_code_execution_evidence(
+                    reprompt_response
+                )
             reprompt_text = _get_text_from_response(reprompt_response)
             reprompt_narrative, reprompt_structured = parse_structured_response(reprompt_text)
 
@@ -3570,6 +3610,8 @@ def continue_story(
                 raw_response_text = reprompt_text
                 narrative_text = reprompt_narrative
                 structured_response = reprompt_structured
+                if reprompt_code_exec is not None:
+                    code_execution_evidence = reprompt_code_exec
             else:
                 logging_util.warning(
                     f"⚠️ REPROMPT_FAILED: Reprompt did not improve response. "
@@ -3580,6 +3622,15 @@ def continue_story(
                 f"❌ REPROMPT_ERROR: Failed to reprompt for missing fields: {e}. "
                 f"Using original response."
             )
+
+    if structured_response and code_execution_evidence:
+        structured_response.debug_info = {
+            **(structured_response.debug_info or {}),
+            "provider": provider_selection.provider,
+            "model": chosen_model,
+            "dice_strategy": "code_execution",
+            **code_execution_evidence,
+        }
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(

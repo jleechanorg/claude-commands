@@ -57,6 +57,44 @@ def count_tokens(model_name: str, contents: list[Any]) -> int:
     return client.models.count_tokens(model=model_name, contents=contents).total_tokens
 
 
+def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
+    """Best-effort detection of Gemini code_execution usage from a raw SDK response.
+
+    We do not rely on model self-reporting. Instead, we inspect response parts for
+    code_execution artifacts (executable_code / code_execution_result) emitted by
+    the Gemini API when the built-in tool is actually used.
+    """
+    executable_code_parts = 0
+    code_execution_result_parts = 0
+
+    try:
+        candidates = getattr(response, "candidates", None) or []
+        for cand in candidates:
+            content = getattr(cand, "content", None)
+            parts = getattr(content, "parts", None) if content is not None else None
+            if not parts:
+                continue
+            for part in parts:
+                if getattr(part, "executable_code", None) is not None:
+                    executable_code_parts += 1
+                if getattr(part, "code_execution_result", None) is not None:
+                    code_execution_result_parts += 1
+    except Exception:
+        # If the SDK shape changes, keep this non-fatal.
+        return {
+            "code_execution_used": False,
+            "executable_code_parts": 0,
+            "code_execution_result_parts": 0,
+        }
+
+    used = (executable_code_parts + code_execution_result_parts) > 0
+    return {
+        "code_execution_used": used,
+        "executable_code_parts": executable_code_parts,
+        "code_execution_result_parts": code_execution_result_parts,
+    }
+
+
 
 def generate_json_mode_content(
     prompt_contents: list[Any],
@@ -216,6 +254,8 @@ def generate_content_with_code_execution(
         "- Use the built-in code execution tool to roll dice and compute outcomes.\n"
         "- Return the final, complete response JSON in this single response.\n"
         "- If `tool_requests` exists in the schema, set it to an empty list.\n"
+        "- If you roll any dice, populate `dice_audit_events` with one event per roll.\n"
+        "  Each dice_audit_events item MUST include: source=\"code_execution\", label, notation, rolls, modifier, total.\n"
     )
     effective_system_instruction = (
         f"{system_instruction_text}{code_exec_override}"

@@ -87,6 +87,18 @@ NARRATIVE_RESPONSE_SCHEMA = {
             "items": {"type": "string"},
             "description": "List of dice roll results",
         },
+        "dice_audit_events": {
+            "type": "array",
+            "description": (
+                "Structured dice audit events with raw rolls and computed totals. "
+                "Used for post-hoc RNG auditing and provenance (server_tool vs code_execution)."
+            ),
+            "items": {
+                "type": "object",
+                "description": "A single dice audit event",
+                "additionalProperties": True,
+            },
+        },
         "resources": {
             "type": "string",
             "description": "Resource tracking information",

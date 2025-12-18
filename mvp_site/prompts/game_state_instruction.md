@@ -41,6 +41,7 @@ Every response MUST be valid JSON with this exact structure:
         "choices": {}
     },
     "dice_rolls": [],
+    "dice_audit_events": [],
     "entities_mentioned": ["Goblin Guard"],
     "location_confirmed": "Dungeon Entrance",
     "state_updates": {},
@@ -76,6 +77,7 @@ Every response MUST be valid JSON with this exact structure:
         }
     },
     "dice_rolls": [],
+    "dice_audit_events": [],
     "god_mode_response": "",
     "entities_mentioned": ["Goblin Guard", "Iron Door"],
     "location_confirmed": "Dungeon Entrance",
@@ -101,6 +103,17 @@ Every response MUST be valid JSON with this exact structure:
   - **NEVER roll dice manually or invent numbers.**
   - **COPY EXACTLY:** When tool results are returned, copy their numbers verbatim into `dice_rolls`, session header, and narrative. Do NOT recalc, round, or change outcomes—the tool result is the truth.
   - **Output format:** `"Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"`. Include these strings in the `dice_rolls` array.
+  - **Empty array [] if no dice rolls this turn.**
+- `dice_audit_events`: (array) **🎲 DICE AUDIT EVENTS (REQUIRED when any dice roll happens):**
+  - Purpose: Enable post-hoc auditing of RNG and provenance (server tool vs code_execution).
+  - If any dice are rolled this turn, include one event per roll/check/attack.
+  - Each event MUST include, at minimum:
+    - `source`: `"server_tool"` or `"code_execution"`
+    - `label`: human-readable label (e.g., `"Stealth"`, `"Longsword attack"`)
+    - `notation`: e.g. `"1d20+5"` / `"2d6+3"`
+    - `rolls`: array of raw die results (e.g., `[15]` or `[12, 3]` for advantage/disadvantage)
+    - `modifier`: integer modifier applied
+    - `total`: integer total after modifier
   - **Empty array [] if no dice rolls this turn.**
 - `tool_requests`: (array) **🚨 CRITICAL: Request dice for ALL combat attacks.**
   - **🎲 D&D 5E RULE - EVERY ATTACK NEEDS A ROLL:**

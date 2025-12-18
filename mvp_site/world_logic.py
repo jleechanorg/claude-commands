@@ -1036,6 +1036,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["planning_block"] = structured_response.planning_block
             if hasattr(structured_response, "dice_rolls"):
                 unified_response["dice_rolls"] = structured_response.dice_rolls
+            if hasattr(structured_response, "dice_audit_events"):
+                unified_response["dice_audit_events"] = (
+                    structured_response.dice_audit_events
+                )
             if hasattr(structured_response, "resources"):
                 unified_response["resources"] = structured_response.resources
             # debug_info only in debug mode
