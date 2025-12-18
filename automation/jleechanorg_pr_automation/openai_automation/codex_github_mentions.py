@@ -137,12 +137,9 @@ class CodexGitHubMentionsAutomation:
                 self.context = await self.browser.new_context()
                 print("📱 Created new browser context")
 
-            if self.context.pages:
-                self.page = self.context.pages[0]
-                print(f"📄 Using existing page: {await self.page.title()}")
-            else:
-                self.page = await self.context.new_page()
-                print("📄 Created new page")
+            # Always create a new page to avoid browser UI elements (Omnibox, Extensions, etc.)
+            self.page = await self.context.new_page()
+            print("📄 Created new page for automation")
             return True
         except Exception as e:
             print(f"❌ Failed to connect via CDP: {e}")

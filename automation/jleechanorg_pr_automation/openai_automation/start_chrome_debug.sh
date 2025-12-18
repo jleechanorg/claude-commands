@@ -81,9 +81,8 @@ CHROME_FLAGS=(
     # Remote debugging
     "--remote-debugging-port=$PORT"
 
-    # Use separate profile (or use --user-data-dir="$USER_DATA_DIR" for isolated profile)
-    # Comment out to use default profile (recommended for OpenAI login)
-    # "--user-data-dir=$USER_DATA_DIR"
+    # Use separate profile - REQUIRED for remote debugging to work
+    "--user-data-dir=$USER_DATA_DIR"
 
     # Note: --disable-blink-features=AutomationControlled is unsupported and causes warnings
     # Removed - just use remote debugging without special flags
