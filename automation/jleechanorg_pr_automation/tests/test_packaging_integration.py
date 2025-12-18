@@ -10,7 +10,10 @@ This would have caught the missing __init__.py bug in openai_automation/
 
 import subprocess
 import sys
+import os
 import pytest
+import jleechanorg_pr_automation
+from jleechanorg_pr_automation.openai_automation import codex_github_mentions
 
 
 class TestPackagingIntegration:
@@ -26,15 +29,8 @@ class TestPackagingIntegration:
         # This is what happens when user runs: python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions
         # It requires proper package structure with __init__.py files
 
-        try:
-            from jleechanorg_pr_automation.openai_automation import codex_github_mentions
-            assert codex_github_mentions is not None, "Module import returned None"
-        except ModuleNotFoundError as e:
-            pytest.fail(
-                f"Failed to import openai_automation as a proper module: {e}\n"
-                f"This usually means __init__.py is missing in the openai_automation directory.\n"
-                f"The module must be importable as: from jleechanorg_pr_automation.openai_automation import codex_github_mentions"
-            )
+        # Import moved to top level to comply with standards
+        assert codex_github_mentions is not None, "Module import returned None"
 
     def test_openai_automation_module_execution(self):
         """
@@ -73,8 +69,7 @@ class TestPackagingIntegration:
 
         This is a sanity check to catch the issue at the file system level.
         """
-        import os
-        import jleechanorg_pr_automation
+        # Imports moved to top level
 
         # Get the package directory
         package_dir = os.path.dirname(jleechanorg_pr_automation.__file__)
@@ -102,8 +97,7 @@ class TestPackageStructure:
 
         This prevents future packaging bugs.
         """
-        import os
-        import jleechanorg_pr_automation
+        # Imports moved to top level
 
         package_root = os.path.dirname(jleechanorg_pr_automation.__file__)
 
