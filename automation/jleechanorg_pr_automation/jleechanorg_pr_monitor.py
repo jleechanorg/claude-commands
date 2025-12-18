@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import traceback
+import urllib.request
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -1299,6 +1300,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         self.logger.info(f"🏁 Monitoring cycle complete: {actionable_processed} actionable PRs processed, {skipped_count} skipped")
 
 
+def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
+    """
+    Validate that Chrome DevTools Protocol is accessible.
+
+    Args:
+        port: CDP port (default 9222)
+        host: CDP host (default 127.0.0.1)
+        timeout: Connection timeout in seconds
+
+    Returns:
+        tuple: (bool, str) - (success, message)
+    """
+    url = f"http://{host}:{port}/json/version"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            data = json.loads(response.read().decode())
+            browser_version = data.get("Browser", "Unknown")
+            return True, f"✅ Chrome CDP accessible (version: {browser_version})"
+    except urllib.error.URLError as e:
+        return False, f"❌ Chrome CDP not accessible at {host}:{port} - {e.reason}"
+    except Exception as e:
+        return False, f"❌ Failed to connect to Chrome CDP: {e}"
+
+
 def main():
     """CLI interface for jleechanorg PR monitor"""
 
@@ -1336,9 +1362,19 @@ def main():
 
     if args.codex_update:
         print("🤖 Running Codex automation (first 50 tasks)...")
+
+        # Validate Chrome CDP is accessible before running
+        cdp_ok, cdp_msg = check_chrome_cdp_accessible()
+        print(cdp_msg)
+        if not cdp_ok:
+            print("\n💡 TIP: Start Chrome with CDP enabled first:")
+            print("   ./automation/jleechanorg_pr_automation/openai_automation/start_chrome_debug.sh")
+            sys.exit(1)
+
         try:
             # Call the codex automation module with limit
             # Use -m to run as module (works with installed package)
+            # Requires Chrome with CDP enabled on port 9222
             result = subprocess.run(
                 ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--use-existing-browser", "--limit", "50"],
                 capture_output=True,
