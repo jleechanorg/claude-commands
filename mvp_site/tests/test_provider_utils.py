@@ -3,6 +3,7 @@ from __future__ import annotations
 from mvp_site.llm_providers.provider_utils import (
     build_tool_results_prompt,
     execute_openai_tool_calls,
+    run_json_first_tool_requests_flow,
     run_openai_json_first_tool_requests_flow,
     run_openai_native_two_phase_flow,
     stringify_chat_parts,
@@ -85,6 +86,119 @@ def test_run_openai_json_first_tool_requests_flow_runs_phase2():
     assert "Tool results" in phase2_messages[-1]["content"]
 
 
+def test_run_json_first_tool_requests_flow_runs_phase2():
+    class Resp:
+        def __init__(self, text: str):
+            self.text = text
+
+    phase2_calls: list[object] = []
+
+    def phase1():
+        return Resp(
+            "{\"tool_requests\":[{\"tool\":\"roll_dice\",\"args\":{\"notation\":\"1d20\"}}]}"
+        )
+
+    def extract_text(resp: Resp) -> str:
+        return resp.text
+
+    def exec_tool_requests(tool_requests):
+        return [
+            {
+                "tool": tool_requests[0]["tool"],
+                "args": tool_requests[0]["args"],
+                "result": {"total": 7},
+            }
+        ]
+
+    def format_results(_results):
+        return "- roll_dice({\"notation\":\"1d20\"}): {\"total\": 7}"
+
+    def build_history(*, prompt_contents, phase1_text, tool_results_prompt):
+        return {
+            "prompt_contents": prompt_contents,
+            "phase1_text": phase1_text,
+            "tool_results_prompt": tool_results_prompt,
+        }
+
+    def phase2(history):
+        phase2_calls.append(history)
+        return Resp("{\"narrative\":\"ok\"}")
+
+    class Logger:
+        def info(self, _m): ...
+
+        def warning(self, _m): ...
+
+        def error(self, _m): ...
+
+    out = run_json_first_tool_requests_flow(
+        phase1_generate_fn=phase1,
+        extract_text_fn=extract_text,
+        prompt_contents=["hi"],
+        execute_tool_requests_fn=exec_tool_requests,
+        format_tool_results_text_fn=format_results,
+        build_history_fn=build_history,
+        phase2_generate_fn=phase2,
+        logger=Logger(),
+        no_tool_requests_log_msg="no tool requests",
+    )
+
+    assert out.text == "{\"narrative\":\"ok\"}"
+    assert len(phase2_calls) == 1
+    history = phase2_calls[0]
+    assert history["prompt_contents"] == ["hi"]
+    assert "Tool results" in history["tool_results_prompt"]
+
+
+def test_run_json_first_tool_requests_flow_returns_phase1_when_no_tools():
+    class Resp:
+        def __init__(self, text: str):
+            self.text = text
+
+    phase2_calls: list[object] = []
+
+    def phase1():
+        return Resp("{\"narrative\":\"ok\"}")
+
+    def extract_text(resp: Resp) -> str:
+        return resp.text
+
+    def exec_tool_requests(_tool_requests):
+        raise AssertionError("should not execute tools")
+
+    def format_results(_results):
+        raise AssertionError("should not format results")
+
+    def build_history(*, prompt_contents, phase1_text, tool_results_prompt):
+        raise AssertionError("should not build history")
+
+    def phase2(history):
+        phase2_calls.append(history)
+        return Resp("{\"narrative\":\"phase2\"}")
+
+    class Logger:
+        def info(self, _m): ...
+
+        def warning(self, _m): ...
+
+        def error(self, _m): ...
+
+    out = run_json_first_tool_requests_flow(
+        phase1_generate_fn=phase1,
+        extract_text_fn=extract_text,
+        prompt_contents=["hi"],
+        execute_tool_requests_fn=exec_tool_requests,
+        format_tool_results_text_fn=format_results,
+        build_history_fn=build_history,
+        phase2_generate_fn=phase2,
+        logger=Logger(),
+        no_tool_requests_log_msg="no tool requests",
+    )
+
+    assert out.text == "{\"narrative\":\"ok\"}"
+    assert phase2_calls == []
+
+
 def test_run_openai_native_two_phase_flow_injects_tool_messages():
     class Resp:
         def __init__(self, text: str, tool_calls=None):
@@ -154,4 +268,3 @@ def test_build_tool_results_prompt():
 
     with_extra = build_tool_results_prompt("X", extra_instructions="EXTRA")
     assert "EXTRA" in with_extra
-
