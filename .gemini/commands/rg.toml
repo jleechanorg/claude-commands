@@ -1,0 +1,5 @@
+description = "Red-Code-Green Debug Command (Alias)"
+
+prompt = """
+Execute `/redgreen` with all provided arguments.
+"""

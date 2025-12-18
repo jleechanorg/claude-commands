@@ -1,0 +1,73 @@
+# Push Command - Full production-ready push workflow
+description = "Complete push workflow with quality assurance and deployment automation"
+
+prompt = """
+## Push Command - Production-Ready Workflow
+
+Execute comprehensive push workflow:
+
+{{input}}
+
+## Execution Phases
+
+### Phase 1: File Justification & Untracked Files Analysis
+
+**File Justification Protocol**:
+- Every file change must be justified before push
+- Required: Goal, Modification, Necessity, Integration Proof
+- Classify: Essential vs Enhancement vs Unnecessary
+
+**Untracked Files**:
+- Check for untracked files in working directory
+- Analyze file context and relevance to current PR
+- Interactive selection with justification required
+- Auto-suggest appropriate commit messages
+
+### Phase 2: Code Quality Review
+
+- Execute comprehensive code analysis
+- Identify bugs, security issues, performance problems
+- Post categorized review comments if issues found
+- **Push blocked if critical issues detected**
+
+Quality Gate:
+- 🔴 Critical Issues → Push blocked
+- 🟡 Important Issues → Push blocked
+- 🔵 Suggestions → Push allowed with warnings
+- 🟢 Nitpicks → Push allowed
+- ✅ Clean Review → Proceed
+
+### Phase 3: Git Operations
+
+- Validate commit messages and git state
+- Push to remote only if quality checks pass
+- Create PR if needed for new branches
+- Verify push success and remote synchronization
+
+### Phase 4: PR Description Auto-Update
+
+- Analyze commits since PR creation
+- Update PR description to reflect current state
+- Preserve existing test results
+- Add breaking change warnings if applicable
+
+### Phase 5: Test Server Setup (if applicable)
+
+- Start test server for current branch
+- Automatic port allocation
+- Health check endpoints validation
+- Production-like environment setup
+
+### Phase 6: Production Readiness Verification
+
+**Checklist**:
+- ✅ Code quality review passed
+- ✅ Git operations completed
+- ✅ PR documentation updated
+- ✅ Test server responsive (if started)
+- ✅ No critical errors in logs
+
+## Command Composition
+
+`/push` = file handling + review + git ops + PR updates + server setup + verification
+"""

@@ -1,0 +1,5 @@
+description = "/orchc - Alias for /orchconverge"
+
+prompt = """
+Execute `/orchconverge` with all provided arguments.
+"""

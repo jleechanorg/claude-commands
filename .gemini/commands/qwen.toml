@@ -1,0 +1,5 @@
+description = "Legacy alias for Cerebras code generation (redirects to /cerebras)"
+
+prompt = """
+Execute `/cerebras` with all provided arguments.
+"""

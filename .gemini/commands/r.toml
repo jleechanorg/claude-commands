@@ -1,0 +1,5 @@
+description = "Roadmap Command (Alias)"
+
+prompt = """
+Execute `/roadmap` with all provided arguments.
+"""
