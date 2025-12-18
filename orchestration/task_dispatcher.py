@@ -1431,7 +1431,6 @@ Agent Configuration:
             log_file_display = shlex.quote(log_file)
             monitor_hint = shlex.quote(agent_name)
             agent_name_json = json.dumps(agent_name)
-            agent_name_json_shell = agent_name_json.replace('"', '\\"')
 
             # Optional multi-CLI chain support (e.g., --agent-cli=gemini,codex)
             raw_cli_chain = agent_spec.get("cli_chain")
@@ -1450,7 +1449,7 @@ Agent Configuration:
 
             # Compute per-CLI execution blocks (command + stdin + env unsets)
             cli_chain_str = ",".join(cli_chain)
-            cli_chain_json_shell = json.dumps(cli_chain_str).replace('"', '\\"')
+            cli_chain_json = json.dumps(cli_chain_str)
             rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
 
             attempt_blocks = ""
@@ -1595,22 +1594,34 @@ RATE_LIMITED_SEEN=0
 if [ "$RESULT_STATUS" = "completed" ]; then
     if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
         if [ $RATE_LIMITED_SEEN -eq 1 ]; then
-            echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0, \"cli_used\": \"$CLI_USED\", \"cli_chain\": {cli_chain_json_shell}, \"fallback_from\": \"$FALLBACK_FROM\", \"fallback_to\": \"$CLI_USED\", \"fallback_attempted\": true, \"rate_limited\": true}}" > {result_file_quoted}
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true, "rate_limited": true}}
+EOF
         else
-            echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0, \"cli_used\": \"$CLI_USED\", \"cli_chain\": {cli_chain_json_shell}, \"fallback_from\": \"$FALLBACK_FROM\", \"fallback_to\": \"$CLI_USED\", \"fallback_attempted\": true}}" > {result_file_quoted}
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true}}
+EOF
         fi
     else
-        echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0, \"cli_used\": \"$CLI_USED\", \"cli_chain\": {cli_chain_json_shell}}}" > {result_file_quoted}
+        cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}}}
+EOF
     fi
 else
     if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
         if [ $RATE_LIMITED_SEEN -eq 1 ]; then
-            echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $FINAL_EXIT_CODE, \"cli_last\": \"$CLI_LAST\", \"cli_chain\": {cli_chain_json_shell}, \"fallback_from\": \"$FALLBACK_FROM\", \"fallback_to\": \"$FALLBACK_TO\", \"fallback_attempted\": true, \"rate_limited\": true}}" > {result_file_quoted}
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true, "rate_limited": true}}
+EOF
         else
-            echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $FINAL_EXIT_CODE, \"cli_last\": \"$CLI_LAST\", \"cli_chain\": {cli_chain_json_shell}, \"fallback_from\": \"$FALLBACK_FROM\", \"fallback_to\": \"$FALLBACK_TO\", \"fallback_attempted\": true}}" > {result_file_quoted}
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true}}
+EOF
         fi
     else
-        echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $FINAL_EXIT_CODE, \"cli_last\": \"$CLI_LAST\", \"cli_chain\": {cli_chain_json_shell}}}" > {result_file_quoted}
+        cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}}}
+EOF
     fi
 fi
 
