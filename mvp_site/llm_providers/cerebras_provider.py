@@ -509,17 +509,8 @@ def generate_content_with_native_tools(
     # Check for tool_calls in response
     tool_calls = response1.tool_calls
     if not tool_calls:
-        # No tools needed - check if Phase 1 response is already valid JSON
-        if response1.text:
-            try:
-                json.loads(response1.text)
-                logging_util.info("NATIVE Phase 1: Response is valid JSON, skipping Phase 2")
-                return response1
-            except json.JSONDecodeError:
-                logging_util.info("NATIVE Phase 1: Response not valid JSON, proceeding to Phase 2")
-
-        # No valid JSON - make Phase 2 call for JSON schema response
-        logging_util.info("NATIVE Phase 1: No tool_calls, proceeding to Phase 2 for JSON formatting")
+        # No tools needed - make Phase 2 call for JSON schema response
+        logging_util.info("NATIVE Phase 1: No tool_calls, proceeding to Phase 2 for JSON")
 
         # If Phase 1 returned content (not just empty), we need Phase 2 for JSON schema
         # because Phase 1 was called without response_format

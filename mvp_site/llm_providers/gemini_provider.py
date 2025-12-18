@@ -392,10 +392,10 @@ def generate_content_with_native_tools(
         temperature=temperature,
         safety_settings=safety_settings,
         tools=gemini_tools,
-        # Let LLM decide when tools are needed (AUTO mode)
-        # LLM will call tools when dice rolls, skill checks, or saves are required
+        # Force tool use: game rules require dice for combat, skill checks, saves
+        # With mode='ANY', the LLM MUST call at least one tool
         tool_config=types.ToolConfig(
-            function_calling_config=types.FunctionCallingConfig(mode='AUTO')
+            function_calling_config=types.FunctionCallingConfig(mode='ANY')
         ),
     )
 
@@ -416,24 +416,8 @@ def generate_content_with_native_tools(
                 function_calls.append(part.function_call)
 
     if not function_calls:
-        # No tools needed - check if Phase 1 response is already valid JSON
-        phase1_text = ""
-        if response1.candidates and response1.candidates[0].content.parts:
-            for part in response1.candidates[0].content.parts:
-                if hasattr(part, 'text') and part.text:
-                    phase1_text += part.text
-
-        # Try to parse as JSON - if valid, skip Phase 2 (performance optimization)
-        if phase1_text:
-            try:
-                json.loads(phase1_text)
-                logging_util.info("Gemini NATIVE Phase 1: Response is valid JSON, skipping Phase 2")
-                return response1
-            except json.JSONDecodeError:
-                logging_util.info("Gemini NATIVE Phase 1: Response not valid JSON, proceeding to Phase 2")
-
-        # No valid JSON - make Phase 2 call for JSON schema response
-        logging_util.info("Gemini NATIVE Phase 1: No function_calls, proceeding to Phase 2 for JSON formatting")
+        # No tools needed - make Phase 2 call for JSON schema response
+        logging_util.info("Gemini NATIVE Phase 1: No function_calls, proceeding to Phase 2")
 
         # Build history for Phase 2
         history = []
@@ -441,6 +425,13 @@ def generate_content_with_native_tools(
             role="user",
             parts=[types.Part(text=_stringify_prompt_contents(prompt_contents))]
         ))
+
+        # Add Phase 1 response if it has text
+        phase1_text = ""
+        if response1.candidates and response1.candidates[0].content.parts:
+            for part in response1.candidates[0].content.parts:
+                if hasattr(part, 'text') and part.text:
+                    phase1_text += part.text
 
         if phase1_text:
             history.append(types.Content(
