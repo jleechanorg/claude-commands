@@ -457,7 +457,7 @@ def run_openai_native_two_phase_flow(
     phase2_messages.append(
         {
             "role": "assistant",
-            "content": None,
+            "content": "",  # Empty string for broader provider compatibility (vs None)
             "tool_calls": tool_calls,
         }
     )
