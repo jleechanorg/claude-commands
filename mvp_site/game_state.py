@@ -483,8 +483,13 @@ class GameState:
 
     def _is_named_npc(self, npc: dict[str, Any]) -> bool:
         """Return True if the NPC should be preserved (named/important)."""
-        role = npc.get("role")
-        has_named_role = role not in [None, "", "enemy", "minion", "generic"]
+        role_raw = npc.get("role")
+        role_normalized = (
+            role_raw.lower().strip() if isinstance(role_raw, str) else role_raw
+        )
+
+        generic_roles = {None, "", "enemy", "minion", "generic"}
+        has_named_role = role_normalized not in generic_roles
         has_story = npc.get("backstory") or npc.get("background")
         return bool(has_named_role or has_story or npc.get("is_important"))
 

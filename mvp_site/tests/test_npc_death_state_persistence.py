@@ -386,6 +386,35 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
             f"Enemies with empty role should be treated as generic. npc_data: {game_state.npc_data}"
         )
 
+    def test_enemy_with_uppercase_role_treated_as_generic_and_deleted(self):
+        """
+        Test: Enemies with role provided in uppercase are normalized and deleted as generic.
+        """
+        game_state = GameState()
+        combatants_data = [
+            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
+            {"name": "Shouted Bandit", "initiative": 9, "type": "enemy", "hp_current": 0, "hp_max": 14},
+        ]
+
+        game_state.start_combat(combatants_data)
+
+        game_state.npc_data = {
+            "Shouted Bandit": {
+                "name": "Shouted Bandit",
+                "role": "Enemy",  # Uppercase generic role should still be treated as generic
+                "description": "A loud brigand",
+            }
+        }
+
+        defeated = game_state.cleanup_defeated_enemies()
+
+        self.assertIn("Shouted Bandit", defeated)
+        self.assertNotIn(
+            "Shouted Bandit",
+            game_state.npc_data,
+            f"Uppercase generic roles should be normalized and deleted. npc_data: {game_state.npc_data}"
+        )
+
     def test_pc_not_removed_when_initiative_entry_missing_type(self):
         """
         Edge Case: PCs/allies should not be removed if initiative data is missing type.
