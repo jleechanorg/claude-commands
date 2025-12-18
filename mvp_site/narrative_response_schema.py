@@ -639,7 +639,7 @@ def parse_structured_response(
     ) -> str:
         """Use planning block thinking text when narrative is intentionally blank."""
 
-        narrative_value = (narrative_value or "").strip()
+        narrative_value = str(narrative_value or "").strip()
         if narrative_value:
             return narrative_value
 

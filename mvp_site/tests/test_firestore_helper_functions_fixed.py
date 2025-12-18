@@ -70,6 +70,7 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         # Create object that can't be JSON serialized
         class NonSerializable:
+            __slots__ = []
             pass
 
         data = {"key": NonSerializable()}

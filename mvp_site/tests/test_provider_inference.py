@@ -28,7 +28,13 @@ class TestProviderInference(unittest.TestCase):
     """Test automatic provider inference from model names."""
 
     def test_infer_gemini_provider_from_default_model(self):
-        """Infer gemini provider from default Gemini model."""
+        """Infer gemini provider from default Gemini model (gemini-3-flash-preview)."""
+        model = "gemini-3-flash-preview"
+        provider = infer_provider_from_model(model)
+        self.assertEqual(provider, LLM_PROVIDER_GEMINI)
+
+    def test_infer_gemini_provider_from_legacy_model(self):
+        """Infer gemini provider from legacy Gemini 2.0 Flash model."""
         model = "gemini-2.0-flash"
         provider = infer_provider_from_model(model)
         self.assertEqual(provider, LLM_PROVIDER_GEMINI)
@@ -79,7 +85,7 @@ class TestProviderInference(unittest.TestCase):
 
     def test_infer_gemini_from_legacy_mapping(self):
         """Infer gemini provider from legacy model names in mapping."""
-        # Legacy models that redirect to gemini-2.0-flash
+        # Legacy models that redirect to gemini-3-flash-preview (updated Dec 2025)
         legacy_models = ["gemini-2.5-flash", "gemini-2.5-pro", "pro-2.5", "flash-2.5"]
         for model in legacy_models:
             with self.subTest(model=model):

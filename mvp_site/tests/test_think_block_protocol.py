@@ -145,10 +145,10 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
 
         # Check for key forbidden concepts
         forbidden_concepts = [
-            r"(never|don't|must not).*interpret.*think.*as.*action",  # Don't interpret think as action
-            r"(never|don't|must not).*take.*action.*think",  # Don't take action on think
-            r"generate.*planning.*instead",  # Generate planning instead
-            r"internal.*thought",  # Only internal thoughts
+            r"(never|don't|must not).*take.*story.*action",  # Don't take story action
+            r"generate.*(planning|deep think).*block",  # Generate planning block
+            r"only.*contemplation",  # Only contemplation
+            r"wait.*for.*player.*selection", # Wait for player
         ]
 
         found_concepts = sum(

@@ -45,16 +45,20 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
         # Try to start MCP server for comprehensive testing
         try:
+            # Use -m module syntax from repo root for reliable imports
+            repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            
             cls.mcp_process = subprocess.Popen(
                 [
                     sys.executable,
-                    "mcp_api.py",
+                    "-m",
+                    "mvp_site.mcp_api",
                     "--port",
                     str(cls.mcp_port),
                     "--host",
                     "0.0.0.0",
                 ],
-                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                cwd=repo_root,
             )
 
             # Wait for MCP server to be ready

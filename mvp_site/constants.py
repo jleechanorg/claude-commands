@@ -25,9 +25,10 @@ ALLOWED_LLM_PROVIDERS = [
     LLM_PROVIDER_CEREBRAS,
 ]
 
-# Gemini defaults - using 2.0-flash for cost efficiency ($0.10/M input, ~$0.40/M output)
-# Gemini 3 Pro is ~20x more expensive on input ($2.00/M) and reserved for premium users only
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+# Gemini defaults - using 3-flash-preview for best value ($0.50/M input, $3/M output)
+# Gemini 3 Flash: 3x faster than 2.5 Pro, Pro-grade reasoning, 78% SWE-bench Verified
+# Gemini 3 Pro is expensive ($2-4/M input, $12-18/M output) and reserved for premium users only
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 
 # Premium model for allowlisted users only (expensive: $2-4/M input, $12-18/M output)
 GEMINI_PREMIUM_MODEL = "gemini-3-pro-preview"
@@ -44,7 +45,8 @@ GEMINI_3_ALLOWED_USERS = [
 # Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
 # See PR #2052 for compatibility testing details
 ALLOWED_GEMINI_MODELS = [
-    DEFAULT_GEMINI_MODEL,  # ✅ WORKS with code_execution + JSON (cheap: $0.10/M)
+    DEFAULT_GEMINI_MODEL,  # ✅ Gemini 3 Flash (best value: $0.50/M input, $3/M output)
+    "gemini-2.0-flash",  # ✅ Legacy option - still works with code_execution + JSON
     GEMINI_PREMIUM_MODEL,  # ✅ Premium option (allowlist enforced downstream)
 ]
 
@@ -55,13 +57,14 @@ PREMIUM_GEMINI_MODELS = [
 
 # Gemini model mapping from user preference to full model name
 GEMINI_MODEL_MAPPING = {
+    "gemini-3-flash-preview": "gemini-3-flash-preview",  # ✅ New default (Dec 2025)
     "gemini-3-pro-preview": "gemini-3-pro-preview",
     "gemini-2.0-flash": "gemini-2.0-flash",
-    # Legacy compatibility - redirect 2.5 users to cost-efficient model
-    "gemini-2.5-flash": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
-    "gemini-2.5-pro": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
-    "pro-2.5": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
-    "flash-2.5": "gemini-2.0-flash",  # Auto-redirect to compatible (cheaper)
+    # Legacy compatibility - redirect 2.5 users to Gemini 3 Flash (better & similar price)
+    "gemini-2.5-flash": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
+    "gemini-2.5-pro": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
+    "pro-2.5": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
+    "flash-2.5": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
 }
 
 # OpenRouter model selection tuned for narrative-heavy D&D play
@@ -100,7 +103,9 @@ DEFAULT_CONTEXT_WINDOW_TOKENS = 128_000
 CONTEXT_WINDOW_SAFETY_RATIO = 0.9
 MODEL_CONTEXT_WINDOW_TOKENS = {
     # Gemini
-    DEFAULT_GEMINI_MODEL: 1_000_000,
+    DEFAULT_GEMINI_MODEL: 1_000_000,  # gemini-3-flash-preview (1M context)
+    "gemini-3-flash-preview": 1_000_000,
+    "gemini-3-pro-preview": 1_000_000,
     "gemini-2.0-flash": 1_000_000,
     # OpenRouter
     "meta-llama/llama-3.1-70b-instruct": 131_072,
@@ -122,7 +127,9 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
 # Values pulled from provider docs (OpenRouter as of 2025-12-01; Cerebras as of 2025-12-11).
 MODEL_MAX_OUTPUT_TOKENS = {
     # Gemini (we cap at JSON_MODE_MAX_OUTPUT_TOKENS in code; keep for completeness)
-    DEFAULT_GEMINI_MODEL: 50_000,
+    DEFAULT_GEMINI_MODEL: 65_536,  # gemini-3-flash-preview (65K max output)
+    "gemini-3-flash-preview": 65_536,
+    "gemini-3-pro-preview": 65_536,
     "gemini-2.0-flash": 50_000,
     # OpenRouter
     # Llama 3.1 caps are not reported in the model catalog; OpenRouter commonly limits

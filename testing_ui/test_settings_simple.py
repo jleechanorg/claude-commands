@@ -44,8 +44,9 @@ def test_settings_simple():
                     print("❌ 'Settings' text NOT found")
 
                 if page.locator("input[name='geminiModel']").count() > 0:
+                    count = page.locator("input[name='geminiModel']").count()
                     print(
-                        f"✅ Found {page.locator('input[name="geminiModel"]').count()} radio buttons"
+                        f"✅ Found {count} radio buttons"
                     )
                 else:
                     print("❌ Radio buttons NOT found")

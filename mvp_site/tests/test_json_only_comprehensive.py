@@ -52,7 +52,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
 
     def test_json_mode_always_enabled(self):
         """Test that all API calls use JSON mode"""
-        with patch("mvp_site.llm_service.get_client") as mock_get_client:
+        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
             mock_client.models.generate_content = Mock(
