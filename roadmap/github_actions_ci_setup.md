@@ -5,7 +5,7 @@ This document explains how to set up automated testing with GitHub Actions for t
 ## Overview
 
 > [!IMPORTANT]
-> The legacy directory-based test workflow at `.github/workflows/test.yml` was removed in December 2025 after repeated instability. Current CI coverage relies on targeted workflows such as `.github/workflows/presubmit.yml` (lint/type checks), `.github/workflows/hook-tests.yml`, and `.github/workflows/test-deployment.yml`. The steps below are **kept for reference only** in case we need to reintroduce a general test workflow; do not recreate `test.yml` without team approval.
+> The directory-based test workflow at `.github/workflows/test.yml` is active and still handles change detection, import validation, and matrixed test execution. The previous `test-summary` aggregation job was removed for stability; please do not reintroduce it without team approval. Additional CI coverage comes from `.github/workflows/presubmit.yml` (lint/type checks), `.github/workflows/hook-tests.yml`, and `.github/workflows/test-deployment.yml`.
 
 GitHub Actions will automatically run your test suite whenever you:
 - Push code to `main` or `dev` branches
@@ -16,7 +16,7 @@ GitHub Actions will automatically run your test suite whenever you:
 
 ### Step 1: Create Workflow Directory Structure
 
-If the team approves reintroducing a general test workflow, create this folder structure:
+The workflow already lives at `.github/workflows/test.yml`. If you need to rebuild it from scratch (e.g., in a fork or fresh clone), ensure this folder structure exists:
 
 ```
 .github/
@@ -26,7 +26,7 @@ If the team approves reintroducing a general test workflow, create this folder s
 
 ### Step 2: Create the Main Workflow File
 
-Create `.github/workflows/test.yml` with this content:
+The repository ships with a directory-based workflow that detects changed directories and runs targeted tests. The simplified example below is provided for bootstrapping if you ever need to recreate the workflow; adjust it to match the current directory-based implementation and keep the `test-summary` job omitted unless the team explicitly approves bringing it back.
 
 ```yaml
 name: WorldArchitect Tests
@@ -203,7 +203,7 @@ jobs:
 ### Step 5: Commit and Push
 
 > [!NOTE]
-> Only follow this step after the team confirms we should add back a general test workflow. Otherwise, rely on the existing presubmit/deployment workflows already in the repo.
+> Use this commit/push step when you update `.github/workflows/test.yml`. The workflow is active without the `test-summary` job; if you ever need to add that aggregation back, secure team approval first.
 
 ```bash
 # Create the directory structure
@@ -225,7 +225,7 @@ git push origin main
 
 ### Step 7: Status Badges (Optional)
 
-Add a status badge to your README.md (only if the test workflow above is reintroduced):
+Add a status badge to your README.md (the workflow currently runs without the summary job, so this badge reflects the active pipeline):
 
 ```markdown
 ![Tests](https://github.com/jleechan2015/worldarchitect.ai/workflows/WorldArchitect%20Tests/badge.svg)
