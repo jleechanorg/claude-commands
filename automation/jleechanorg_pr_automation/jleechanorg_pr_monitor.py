@@ -37,6 +37,33 @@ from .codex_config import (
     build_comment_intro,
 )
 from .utils import json_manager, setup_logging
+from orchestration.task_dispatcher import CLI_PROFILES
+
+
+def _parse_fixpr_agent_chain(value: str) -> str:
+    """Parse comma-separated CLI chain for --fixpr-agent (e.g., 'gemini,codex')."""
+    if not isinstance(value, str) or not value.strip():
+        raise argparse.ArgumentTypeError("--fixpr-agent must be a non-empty string")
+
+    parts = [part.strip().lower() for part in value.split(",")]
+    chain = [part for part in parts if part]
+    if not chain:
+        raise argparse.ArgumentTypeError("--fixpr-agent chain is empty")
+
+    invalid = [cli for cli in chain if cli not in CLI_PROFILES]
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            f"Invalid --fixpr-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
+        )
+
+    # De-duplicate while preserving order
+    seen = set()
+    ordered = []
+    for cli in chain:
+        if cli not in seen:
+            ordered.append(cli)
+            seen.add(cli)
+    return ",".join(ordered)
 
 
 class JleechanorgPRMonitor:
@@ -1343,8 +1370,12 @@ def main():
                         help="Process specific PR number")
     parser.add_argument("--target-repo",
                         help="Repository for target PR (required with --target-pr)")
-    parser.add_argument("--fixpr-agent", choices=["claude", "codex", "gemini"], default="claude",
-                        help="AI CLI to use for --fixpr mode (default: claude)")
+    parser.add_argument(
+        "--fixpr-agent",
+        type=_parse_fixpr_agent_chain,
+        default="claude",
+        help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
+    )
     parser.add_argument("--list-eligible", action="store_true",
                         help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
     parser.add_argument("--codex-update", action="store_true",
