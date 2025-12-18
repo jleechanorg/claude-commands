@@ -1409,6 +1409,44 @@ Agent Configuration:
             agent_name_json = json.dumps(agent_name)
             agent_name_json_shell = agent_name_json.replace('"', '\\"')
 
+            # Optional: Only attempt Codex fallback when Gemini hits quota/rate limits.
+            # (Avoid surprising behavior for other CLIs that may also emit "rate limit".)
+            fallback_from = agent_cli
+            fallback_from_json_shell = json.dumps(fallback_from).replace('"', '\\"')
+            codex_fallback_block = ""
+            if agent_cli == "gemini":
+                codex_fallback_block = f"""
+    # Check for Gemini rate limit / quota errors and fallback to Codex CLI
+    if grep -Eqi "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted" {log_file_quoted} 2>/dev/null; then
+        echo "[$(date)] ⚠️  Detected Gemini rate limit/quota error - attempting fallback to Codex CLI" | tee -a {log_file_quoted}
+
+        # Check if codex CLI is available
+        if command -v codex >/dev/null 2>&1; then
+            echo "[$(date)] 🔄 Retrying with Codex CLI..." | tee -a {log_file_quoted}
+
+            # Run Codex with the same prompt file (Codex profile uses stdin)
+            codex exec --yolo < {prompt_file_quoted} 2>&1 | tee -a {log_file_quoted}
+            CODEX_EXIT=${{PIPESTATUS[0]}}
+
+            echo "[$(date)] Codex CLI exit code: $CODEX_EXIT" | tee -a {log_file_quoted}
+
+            if [ $CODEX_EXIT -eq 0 ]; then
+                echo "[$(date)] ✅ Fallback to Codex successful" | tee -a {log_file_quoted}
+                echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0, \"fallback_from\": {fallback_from_json_shell}, \"fallback_to\": \"codex\", \"rate_limited\": true}}" > {result_file_quoted}
+                RESULT_WRITTEN=1
+            else
+                echo "[$(date)] ❌ Codex fallback also failed" | tee -a {log_file_quoted}
+                echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CODEX_EXIT, \"fallback_from\": {fallback_from_json_shell}, \"fallback_to\": \"codex\", \"fallback_attempted\": true, \"rate_limited\": true}}" > {result_file_quoted}
+                RESULT_WRITTEN=1
+            fi
+        else
+            echo "[$(date)] ⚠️  Codex CLI not available for fallback" | tee -a {log_file_quoted}
+            echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT, \"fallback_to\": \"codex\", \"rate_limited\": true}}" > {result_file_quoted}
+            RESULT_WRITTEN=1
+        fi
+    fi
+"""
+
             # Enhanced bash command with error handling and logging
             bash_cmd = f"""
 # Signal handler to log interruptions
@@ -1428,7 +1466,7 @@ echo "[$(date)] SAFETY: stdin redirected to {stdin_log_target_quoted}" | tee -a 
 
 # Run CLI with configured stdin handling
 {command_execution_line} 2>&1 | tee -a {log_file_quoted}
-CLI_EXIT=$?
+CLI_EXIT=${{PIPESTATUS[0]}}
 
 echo "[$(date)] {cli_display_name_quoted} exit code: $CLI_EXIT" | tee -a {log_file_quoted}
 
@@ -1437,33 +1475,9 @@ if [ $CLI_EXIT -eq 0 ]; then
     echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0}}" > {result_file_quoted}
 else
     echo "[$(date)] Agent failed with exit code $CLI_EXIT" | tee -a {log_file_quoted}
-
-    # Check for Gemini rate limit error and fallback to Codex CLI
-    if grep -q "exhausted your daily quota\|rate limit" {log_file_quoted} 2>/dev/null; then
-        echo "[$(date)] ⚠️  Detected rate limit error - attempting fallback to Codex CLI" | tee -a {log_file_quoted}
-
-        # Check if codex CLI is available
-        if command -v codex >/dev/null 2>&1; then
-            echo "[$(date)] 🔄 Retrying with Codex CLI..." | tee -a {log_file_quoted}
-
-            # Run codex with the same prompt file
-            codex {prompt_file_quoted} 2>&1 | tee -a {log_file_quoted}
-            CODEX_EXIT=$?
-
-            echo "[$(date)] Codex CLI exit code: $CODEX_EXIT" | tee -a {log_file_quoted}
-
-            if [ $CODEX_EXIT -eq 0 ]; then
-                echo "[$(date)] ✅ Fallback to Codex successful" | tee -a {log_file_quoted}
-                echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0, \"fallback_from\": \"gemini\", \"fallback_to\": \"codex\"}}" > {result_file_quoted}
-            else
-                echo "[$(date)] ❌ Codex fallback also failed" | tee -a {log_file_quoted}
-                echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CODEX_EXIT, \"fallback_attempted\": true}}" > {result_file_quoted}
-            fi
-        else
-            echo "[$(date)] ⚠️  Codex CLI not available for fallback" | tee -a {log_file_quoted}
-            echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT, \"rate_limited\": true}}" > {result_file_quoted}
-        fi
-    else
+    RESULT_WRITTEN=0
+{codex_fallback_block}
+    if [ $RESULT_WRITTEN -eq 0 ]; then
         echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT}}" > {result_file_quoted}
     fi
 fi
