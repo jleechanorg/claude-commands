@@ -488,7 +488,7 @@ class GameState:
             role_raw.lower().strip() if isinstance(role_raw, str) else role_raw
         )
 
-        generic_roles = {None, "", "enemy", "minion", "generic"}
+        generic_roles = {None, "", "enemy", "minion", "generic", "unknown"}
         has_named_role = role_normalized not in generic_roles
         has_story = npc.get("backstory") or npc.get("background")
         return bool(has_named_role or has_story or npc.get("is_important"))
@@ -548,11 +548,49 @@ class GameState:
 
                 friendly_types = {"pc", "companion", "ally", "support", "friendly", "party", "player"}
                 if enemy_type is None or enemy_type == "unknown":
+                    # Attempt to infer friendliness from player or NPC metadata before defaulting to enemy cleanup
+                    player_name = (
+                        self.player_character_data.get("name")
+                        if isinstance(self.player_character_data, dict)
+                        else None
+                    )
+                    if player_name and name == player_name:
+                        logging_util.info(
+                            f"COMBAT CLEANUP: Skipping {name} removal because combatant matches player character with missing/unknown type"
+                        )
+                        continue
+
+                    npc_record = (
+                        self.npc_data.get(name)
+                        if isinstance(self.npc_data, dict)
+                        else None
+                    )
+                    npc_role_raw = npc_record.get("role") if isinstance(npc_record, dict) else None
+                    npc_type_raw = npc_record.get("type") if isinstance(npc_record, dict) else None
+                    npc_role = (
+                        npc_role_raw.lower().strip()
+                        if isinstance(npc_role_raw, str)
+                        else npc_role_raw
+                    )
+                    npc_type = (
+                        npc_type_raw.lower().strip()
+                        if isinstance(npc_type_raw, str)
+                        else npc_type_raw
+                    )
+
+                    if npc_role in friendly_types or npc_type in friendly_types:
+                        logging_util.info(
+                            f"COMBAT CLEANUP: Skipping {name} removal because npc_data marks combatant as friendly "
+                            f"(role/type: {npc_role or npc_type}) despite missing initiative type"
+                        )
+                        continue
+
+                    # Default to treating missing/unknown types as generic enemies to avoid leaving defeated foes targetable
                     logging_util.warning(
-                        f"COMBAT CLEANUP: Skipping {name} removal because type is missing/unknown "
+                        f"COMBAT CLEANUP: Defaulting {name} to generic enemy because type is missing/unknown "
                         f"(initiative entry absent or incomplete)"
                     )
-                    continue
+                    enemy_type = "enemy"
 
                 if enemy_type in friendly_types:
                     logging_util.info(

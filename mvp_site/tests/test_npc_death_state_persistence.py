@@ -415,6 +415,41 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
             f"Uppercase generic roles should be normalized and deleted. npc_data: {game_state.npc_data}"
         )
 
+    def test_enemy_with_unknown_type_defaulted_to_generic_and_deleted(self):
+        """
+        Regression: Enemies created without an explicit type (defaulting to 'unknown') should
+        still be cleaned up when defeated, instead of lingering in combat.
+        """
+        game_state = GameState()
+        combatants_data = [
+            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
+            # No type provided -> start_combat will default to "unknown"
+            {"name": "Shadowy Figure", "initiative": 9, "hp_current": 0, "hp_max": 12},
+        ]
+
+        game_state.start_combat(combatants_data)
+        game_state.npc_data = {
+            "Shadowy Figure": {"name": "Shadowy Figure"}
+        }
+
+        defeated = game_state.cleanup_defeated_enemies()
+
+        self.assertIn(
+            "Shadowy Figure",
+            defeated,
+            f"Enemies with missing type should still be treated as defeated. defeated: {defeated}"
+        )
+        self.assertNotIn(
+            "Shadowy Figure",
+            game_state.combat_state["combatants"],
+            f"Unknown-type enemies should be removed from combatants. combatants: {game_state.combat_state['combatants']}"
+        )
+        self.assertNotIn(
+            "Shadowy Figure",
+            game_state.npc_data,
+            f"Unknown-type enemies should be removed from npc_data as generic foes. npc_data: {game_state.npc_data}"
+        )
+
     def test_pc_not_removed_when_initiative_entry_missing_type(self):
         """
         Edge Case: PCs/allies should not be removed if initiative data is missing type.
