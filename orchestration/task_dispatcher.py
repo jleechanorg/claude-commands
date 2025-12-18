@@ -1437,7 +1437,35 @@ if [ $CLI_EXIT -eq 0 ]; then
     echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0}}" > {result_file_quoted}
 else
     echo "[$(date)] Agent failed with exit code $CLI_EXIT" | tee -a {log_file_quoted}
-    echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT}}" > {result_file_quoted}
+
+    # Check for Gemini rate limit error and fallback to Codex CLI
+    if grep -q "exhausted your daily quota\|rate limit" {log_file_quoted} 2>/dev/null; then
+        echo "[$(date)] ⚠️  Detected rate limit error - attempting fallback to Codex CLI" | tee -a {log_file_quoted}
+
+        # Check if codex CLI is available
+        if command -v codex >/dev/null 2>&1; then
+            echo "[$(date)] 🔄 Retrying with Codex CLI..." | tee -a {log_file_quoted}
+
+            # Run codex with the same prompt file
+            codex {prompt_file_quoted} 2>&1 | tee -a {log_file_quoted}
+            CODEX_EXIT=$?
+
+            echo "[$(date)] Codex CLI exit code: $CODEX_EXIT" | tee -a {log_file_quoted}
+
+            if [ $CODEX_EXIT -eq 0 ]; then
+                echo "[$(date)] ✅ Fallback to Codex successful" | tee -a {log_file_quoted}
+                echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0, \"fallback_from\": \"gemini\", \"fallback_to\": \"codex\"}}" > {result_file_quoted}
+            else
+                echo "[$(date)] ❌ Codex fallback also failed" | tee -a {log_file_quoted}
+                echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CODEX_EXIT, \"fallback_attempted\": true}}" > {result_file_quoted}
+            fi
+        else
+            echo "[$(date)] ⚠️  Codex CLI not available for fallback" | tee -a {log_file_quoted}
+            echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT, \"rate_limited\": true}}" > {result_file_quoted}
+        fi
+    else
+        echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT}}" > {result_file_quoted}
+    fi
 fi
 
 # Keep session alive for 1 hour for monitoring and debugging

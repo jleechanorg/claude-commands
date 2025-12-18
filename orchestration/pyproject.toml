@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-orchestration"
-version = "0.1.14"
+version = "0.1.15"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },
