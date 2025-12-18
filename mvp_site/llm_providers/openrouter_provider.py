@@ -17,11 +17,10 @@ from mvp_site.game_state import (
     format_tool_results_text,
 )
 from mvp_site.llm_providers.openai_chat_common import (
-    build_chat_payload,
-    build_messages as build_openai_messages,
     extract_tool_calls as extract_openai_tool_calls,
-    extract_first_choice_message,
-    post_chat_completions,
+)
+from mvp_site.llm_providers.openai_compatible_provider_core import (
+    generate_openai_compatible_content,
 )
 from mvp_site.llm_providers.provider_utils import (
     get_openai_json_schema_format,
@@ -100,14 +99,6 @@ def generate_content(
     if not api_key:
         raise ValueError("CRITICAL: OPENROUTER_API_KEY environment variable not found!")
 
-    # Use provided messages or build from prompt_contents
-    if messages is None:
-        messages = build_openai_messages(
-            prompt_contents=prompt_contents,
-            system_instruction_text=system_instruction_text,
-            stringify_chat_parts_fn=stringify_chat_parts,
-        )
-
     # Use json_schema (strict:false) for models that support it
     # Other models fall back to json_object (best-effort JSON)
     if model_name in MODELS_WITH_JSON_SCHEMA_SUPPORT:
@@ -116,38 +107,24 @@ def generate_content(
     else:
         response_format = {"type": "json_object"}
 
-    # Add tools OR response_format (NOT both - API limitation)
-    # When tools are provided, JSON output is handled by prompt instructions
-    payload = build_chat_payload(
-        model_name=model_name,
-        messages=messages,
-        temperature=temperature,
-        max_output_tokens=max_output_tokens,
-        tools=tools,
-        tool_choice="required" if tools else None,
-        response_format=response_format,
-    )
-
     logging_util.info(f"Calling OpenRouter model: {model_name}")
-    data = post_chat_completions(
+    text, data = generate_openai_compatible_content(
         url=OPENROUTER_URL,
         headers=_build_headers(api_key),
-        payload=payload,
+        model_name=model_name,
+        prompt_contents=prompt_contents,
+        system_instruction_text=system_instruction_text,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        stringify_chat_parts_fn=stringify_chat_parts,
+        tools=tools,
+        messages=messages,
+        response_format=response_format,
+        tool_choice="required" if tools else None,
         timeout=300,
         logger=logging_util,
         error_log_prefix="OPENROUTER",
     )
-
-    try:
-        message = extract_first_choice_message(data)
-        text = (message.get("content") or "") if isinstance(message, dict) else ""
-        tool_calls = extract_openai_tool_calls(data)
-        # Check for tool_calls - content may be null
-        has_tool_calls = bool(tool_calls)
-        if not text and not has_tool_calls:
-            raise KeyError("No content or tool_calls in message")
-    except Exception as exc:  # noqa: BLE001 - defensive parsing
-        raise ValueError(f"Invalid OpenRouter response structure: {data}") from exc
 
     return OpenRouterResponse(text, data)
 

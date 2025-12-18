@@ -31,12 +31,10 @@ from mvp_site.llm_providers.provider_utils import (
     stringify_chat_parts,
 )
 from mvp_site.llm_providers.openai_chat_common import (
-    build_chat_payload,
-    build_messages as build_openai_messages,
     extract_tool_calls as extract_openai_tool_calls,
-    extract_first_choice,
-    extract_first_choice_message,
-    post_chat_completions,
+)
+from mvp_site.llm_providers.openai_compatible_provider_core import (
+    generate_openai_compatible_content,
 )
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
@@ -204,71 +202,56 @@ def generate_content(
     if not api_key:
         raise ValueError("CRITICAL: CEREBRAS_API_KEY environment variable not found!")
 
-    # Use provided messages or build from prompt_contents
-    if messages is None:
-        messages = build_openai_messages(
-            prompt_contents=prompt_contents,
-            system_instruction_text=system_instruction_text,
-            stringify_chat_parts_fn=stringify_chat_parts,
-        )
-
-    # Add tools if provided (for function calling)
-    # NOTE: Cerebras API does NOT support tools + response_format together
-    # When using tools, JSON output is handled by prompt instructions
-    payload = build_chat_payload(
-        model_name=model_name,
-        messages=messages,
-        temperature=temperature,
-        max_output_tokens=max_output_tokens,
-        tools=tools,
-        tool_choice="required" if tools else None,
-        response_format=get_openai_json_schema_format(),
-    )
-
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
+    def _validate_response(
+        data: dict[str, Any],
+        _message: dict[str, Any],
+        raw_text: Any,
+        tool_calls: list[dict] | None,
+    ) -> None:
+        try:
+            choice = data.get("choices", [{}])[0] if isinstance(data.get("choices"), list) else {}
+            finish_reason = choice.get("finish_reason")
+            usage = data.get("usage", {}) or {}
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            _validate_has_content_or_tool_calls(
+                text=raw_text,
+                has_tool_calls=bool(tool_calls),
+                finish_reason=finish_reason,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
+        except ContextTooLargeError:
+            raise
+
     logging_util.info(
         f"CEREBRAS REQUEST model={model_name} max_tokens={max_output_tokens}"
     )
-    data = post_chat_completions(
+    text, data = generate_openai_compatible_content(
         url=CEREBRAS_URL,
         headers=headers,
-        payload=payload,
+        model_name=model_name,
+        prompt_contents=prompt_contents,
+        system_instruction_text=system_instruction_text,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        stringify_chat_parts_fn=stringify_chat_parts,
+        tools=tools,
+        messages=messages,
+        response_format=get_openai_json_schema_format(),
+        tool_choice="required" if tools else None,
         timeout=300,
         logger=logging_util,
         error_log_prefix="CEREBRAS",
+        extract_text_from_message_fn=_extract_text_from_message,
+        postprocess_text_fn=_postprocess_response_text,
+        validate_response_fn=_validate_response,
     )
-
-    try:
-        choice = extract_first_choice(data)
-        message = extract_first_choice_message(data)
-        if not isinstance(message, dict):
-            raise TypeError("message is not a dict")
-
-        finish_reason = choice.get("finish_reason")
-        usage = data.get("usage", {}) or {}
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-
-        text = _extract_text_from_message(message)
-        has_tool_calls = bool(extract_openai_tool_calls(data))
-        _validate_has_content_or_tool_calls(
-            text=text,
-            has_tool_calls=has_tool_calls,
-            finish_reason=finish_reason,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-        )
-        text = _postprocess_response_text(text)
-    except ContextTooLargeError:
-        raise  # Re-raise without wrapping for proper handling upstream
-    except CerebrasSchemaEchoError:
-        raise  # Re-raise schema echo for retry handling
-    except Exception as exc:  # noqa: BLE001 - defensive parsing
-        raise ValueError(f"Invalid Cerebras response structure: {data}") from exc
 
     return CerebrasResponse(text, data)
 
