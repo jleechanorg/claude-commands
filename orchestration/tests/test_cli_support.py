@@ -395,16 +395,17 @@ class TestGeminiCliIntegration(unittest.TestCase):
         template = CLI_PROFILES["gemini"]["command_template"]
 
         # Test that template can be formatted with expected placeholders
+        # NOTE: prompt_file is now passed via stdin_template, not command_template
         test_values = {
             "binary": "/usr/bin/gemini",
-            "prompt_file": "/tmp/test_prompt.txt",
         }
 
         try:
             formatted = template.format(**test_values)
             self.assertIn("/usr/bin/gemini", formatted)
             self.assertIn(GEMINI_MODEL, formatted)
-            self.assertIn("/tmp/test_prompt.txt", formatted)
+            # Prompt comes via stdin, not command line
+            self.assertIn("--yolo", formatted)
         except KeyError as e:
             self.fail(f"Command template has unknown placeholder: {e}")
 
@@ -471,11 +472,12 @@ class TestGeminiCliIntegration(unittest.TestCase):
         template = CLI_PROFILES["gemini"]["command_template"]
         self.assertIn(GEMINI_MODEL, template)
 
-    def test_gemini_stdin_template_not_prompt_file(self):
-        """Integration: Gemini uses /dev/null for stdin, not prompt file."""
+    def test_gemini_stdin_template_uses_prompt_file(self):
+        """Integration: Gemini receives prompt via stdin (not deprecated -p flag)."""
 
         gemini = CLI_PROFILES["gemini"]
-        self.assertEqual(gemini["stdin_template"], "/dev/null")
+        # Prompt must come via stdin since -p flag is deprecated and only appends to stdin
+        self.assertEqual(gemini["stdin_template"], "{prompt_file}")
         self.assertFalse(gemini["quote_prompt"])
 
     def test_all_cli_profiles_have_consistent_structure(self):
