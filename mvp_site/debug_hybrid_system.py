@@ -259,7 +259,8 @@ def strip_debug_content(text: str) -> str:
             processed = processed[: match.start()] + processed[match.end() :]
             continue
 
-        obj_pos = processed.find(debug_obj, match.end())
+        # Bug fix: Search from match.start() not match.end() - object starts at quote before "debug_info"
+        obj_pos = processed.find(debug_obj, match.start())
         if obj_pos == -1:
             # Unexpected mismatch; remove marker to ensure forward progress.
             processed = processed[: match.start()] + processed[match.end() :]
@@ -272,7 +273,11 @@ def strip_debug_content(text: str) -> str:
         # to avoid leaving ", ," style artifacts in partially-JSON text.
         prefix = processed[:removal_start].rstrip()
         if prefix.endswith(","):
-            removal_start = prefix.rfind(",")
+            # Bug fix: Limit comma search to last 50 chars to avoid matching commas in nested structures
+            search_start = max(0, len(prefix) - 50)
+            local_comma_pos = prefix.rfind(",", search_start)
+            if local_comma_pos != -1:
+                removal_start = local_comma_pos
 
         suffix = processed[removal_end:]
         suffix_l = suffix.lstrip()

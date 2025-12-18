@@ -3042,10 +3042,14 @@ def _check_missing_required_fields(
     if not planning_block or not isinstance(planning_block, dict):
         missing.append("planning_block")
     else:
-        # Check if planning_block has content
-        has_content = planning_block.get("thinking", "").strip() or (
-            planning_block.get("choices") and len(planning_block.get("choices", {})) > 0
-        )
+        # Check if planning_block has content (with type guards to prevent runtime errors)
+        thinking_value = planning_block.get("thinking", "")
+        has_thinking = isinstance(thinking_value, str) and thinking_value.strip()
+
+        choices_value = planning_block.get("choices")
+        has_choices = isinstance(choices_value, dict) and len(choices_value) > 0
+
+        has_content = has_thinking or has_choices
         if not has_content:
             missing.append("planning_block")
 
