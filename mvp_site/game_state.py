@@ -485,7 +485,8 @@ class GameState:
         """Return True if the NPC should be preserved (named/important)."""
         role = npc.get("role")
         has_named_role = role not in [None, "", "enemy", "minion", "generic"]
-        return bool(has_named_role or npc.get("backstory") or npc.get("is_important"))
+        has_story = npc.get("backstory") or npc.get("background")
+        return bool(has_named_role or has_story or npc.get("is_important"))
 
     def cleanup_defeated_enemies(self) -> list[str]:
         """

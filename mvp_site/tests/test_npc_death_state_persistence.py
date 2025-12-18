@@ -132,6 +132,48 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
             f"Lady Vex should have 'dead' status. Data: {lady_vex_data}"
         )
 
+    def test_named_npc_with_background_marked_dead_not_deleted(self):
+        """
+        Test: NPCs with narrative background should be preserved even if role looks generic.
+        """
+        game_state = GameState()
+        combatants_data = [
+            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
+            {"name": "Archivist", "initiative": 9, "type": "enemy", "hp_current": 0, "hp_max": 18},
+        ]
+
+        game_state.start_combat(combatants_data)
+
+        # Background should flag this as a named NPC even with a generic role
+        game_state.npc_data = {
+            "Archivist": {
+                "name": "Archivist",
+                "role": "enemy",
+                "background": "Caretaker of the ancient library",
+                "description": "Quiet scholar with hidden motives",
+            }
+        }
+
+        game_state.cleanup_defeated_enemies()
+
+        self.assertIn(
+            "Archivist",
+            game_state.npc_data,
+            f"NPCs with narrative background should be preserved. npc_data: {game_state.npc_data}"
+        )
+
+        archivist = game_state.npc_data.get("Archivist", {})
+        self.assertIn(
+            "dead",
+            archivist.get("status", []),
+            f"NPC with background should be marked dead. Data: {archivist}"
+        )
+        self.assertEqual(
+            archivist.get("hp_current"),
+            0,
+            f"HP should be zeroed for preserved NPCs. Data: {archivist}"
+        )
+
     def test_named_npc_with_is_important_flag_marked_dead(self):
         """
         Test: NPCs with is_important=True should be marked dead, not deleted.
