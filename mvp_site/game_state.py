@@ -520,17 +520,45 @@ class GameState:
         for name, combat_data in combatants.items():
             if combat_data.get("hp_current", 0) <= 0:
                 # Check if this is an enemy (not PC, companion, or ally)
-                enemy_type = None
+                enemy_type_raw: Any = None
                 for init_entry in self.combat_state.get("initiative_order", []):
                     if init_entry["name"] == name:
-                        enemy_type = init_entry.get("type", "unknown")
+                        enemy_type_raw = init_entry.get("type")
                         break
 
-                if enemy_type not in ["pc", "companion", "ally"]:
-                    defeated_enemies.append(name)
-                    logging_util.info(
-                        f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated"
+                if enemy_type_raw is None:
+                    # Fallback to combatant metadata when initiative entry is missing
+                    enemy_type_raw = combat_data.get("type") or combat_data.get("role")
+
+                if enemy_type_raw is None and name in self.npc_data:
+                    # Final fallback to npc_data for classification
+                    npc_record = self.npc_data[name]
+                    enemy_type_raw = npc_record.get("role") or npc_record.get("type")
+
+                enemy_type = (
+                    enemy_type_raw.lower().strip()
+                    if isinstance(enemy_type_raw, str)
+                    else enemy_type_raw
+                )
+
+                friendly_types = {"pc", "companion", "ally", "support", "friendly", "party", "player"}
+                if enemy_type is None or enemy_type == "unknown":
+                    logging_util.warning(
+                        f"COMBAT CLEANUP: Skipping {name} removal because type is missing/unknown "
+                        f"(initiative entry absent or incomplete)"
                     )
+                    continue
+
+                if enemy_type in friendly_types:
+                    logging_util.info(
+                        f"COMBAT CLEANUP: Skipping {name} because combatant is friendly ({enemy_type})"
+                    )
+                    continue
+
+                defeated_enemies.append(name)
+                logging_util.info(
+                    f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated"
+                )
 
         # Remove defeated enemies from combat tracking
         for enemy_name in defeated_enemies:

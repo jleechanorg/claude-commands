@@ -386,6 +386,50 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
             f"Enemies with empty role should be treated as generic. npc_data: {game_state.npc_data}"
         )
 
+    def test_pc_not_removed_when_initiative_entry_missing_type(self):
+        """
+        Edge Case: PCs/allies should not be removed if initiative data is missing type.
+        """
+        game_state = GameState()
+        combatants_data = [
+            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 0, "hp_max": 50},
+            {"name": "Goblin Raider", "initiative": 12, "type": "enemy", "hp_current": 0, "hp_max": 20},
+        ]
+
+        game_state.start_combat(combatants_data)
+        # Simulate missing initiative entry/type for the PC (e.g., LLM omitted it)
+        game_state.combat_state["initiative_order"] = [
+            entry for entry in game_state.combat_state["initiative_order"] if entry["name"] != "Hero"
+        ]
+        game_state.npc_data = {
+            "Hero": {"name": "Hero", "role": "pc", "status": ["unconscious"]},
+            "Goblin Raider": {"name": "Goblin Raider", "role": "enemy"},
+        }
+
+        final_state = apply_automatic_combat_cleanup(game_state.to_dict(), {})
+
+        self.assertIn(
+            "Hero",
+            final_state["combat_state"]["combatants"],
+            f"Friendly combatant should remain even when initiative type is missing. "
+            f"Combatants: {final_state['combat_state']['combatants']}"
+        )
+        self.assertIn(
+            "Hero",
+            final_state["npc_data"],
+            f"Friendly combatant should not be removed from npc_data. npc_data: {final_state.get('npc_data', {})}"
+        )
+        self.assertNotIn(
+            "Goblin Raider",
+            final_state["combat_state"]["combatants"],
+            f"Enemy should still be cleaned up. Combatants: {final_state['combat_state']['combatants']}"
+        )
+        self.assertNotIn(
+            "Goblin Raider",
+            final_state["npc_data"],
+            f"Enemy should be removed from npc_data. npc_data: {final_state.get('npc_data', {})}"
+        )
+
     def test_mixed_named_and_generic_enemies(self):
         """
         Test: In a multi-enemy scenario, named NPCs are preserved, generic deleted.
