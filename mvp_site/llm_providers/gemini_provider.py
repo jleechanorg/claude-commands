@@ -14,7 +14,7 @@ from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
-from mvp_site.game_state import DICE_ROLL_TOOLS, execute_dice_tool
+from mvp_site.game_state import DICE_ROLL_TOOLS, execute_dice_tool, execute_tool_requests
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
 # We rely on response_mime_type="application/json" + prompt instruction instead
@@ -199,60 +199,6 @@ def _stringify_prompt_contents(prompt_contents: list[Any]) -> str:
             parts.append(str(item))
 
     return "\n".join(parts)
-
-
-
-
-def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
-    """Execute tool requests from JSON response and return results.
-
-    This is the JSON-first flow where the LLM includes tool_requests in its
-    JSON response, and we execute them and return results.
-
-    Args:
-        tool_requests: List of {"tool": "roll_dice", "args": {...}} dicts
-
-    Returns:
-        List of {"tool": str, "args": dict, "result": dict} with execution results
-    """
-    # Input validation
-    if not isinstance(tool_requests, list):
-        logging_util.error(f"tool_requests must be a list, got {type(tool_requests)}")
-        return []
-
-    results = []
-    for request in tool_requests:
-        # Validate request structure
-        if not isinstance(request, dict):
-            logging_util.error(f"Tool request must be dict, got {type(request)}")
-            continue
-
-        tool_name = request.get("tool", "")
-        args = request.get("args", {})
-
-        # Validate tool_name
-        if not isinstance(tool_name, str) or not tool_name:
-            logging_util.error(f"Invalid tool name: {tool_name}")
-            continue
-
-        # Validate args
-        if not isinstance(args, dict):
-            logging_util.error(f"Tool args must be dict, got {type(args)}")
-            args = {}
-
-        try:
-            result = execute_dice_tool(tool_name, args)
-        except Exception as e:
-            logging_util.error(f"Tool execution error: {tool_name}: {e}")
-            result = {"error": str(e)}
-
-        results.append({
-            "tool": tool_name,
-            "args": args,
-            "result": result,
-        })
-
-    return results
 
 
 
