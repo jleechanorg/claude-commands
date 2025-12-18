@@ -481,6 +481,18 @@ class GameState:
             "combat_log": [],
         }
 
+    def _is_named_npc(self, npc: dict[str, Any]) -> bool:
+        """Return True if the NPC should be preserved (named/important)."""
+        role_raw = npc.get("role")
+        role_normalized = (
+            role_raw.lower().strip() if isinstance(role_raw, str) else role_raw
+        )
+
+        generic_roles = {None, "", "enemy", "minion", "generic", "unknown"}
+        has_named_role = role_normalized not in generic_roles
+        has_story = npc.get("backstory") or npc.get("background")
+        return bool(has_named_role or has_story or npc.get("is_important"))
+
     def cleanup_defeated_enemies(self) -> list[str]:
         """
         Identifies and removes defeated enemies from both combat_state and npc_data.
@@ -513,17 +525,83 @@ class GameState:
         for name, combat_data in combatants.items():
             if combat_data.get("hp_current", 0) <= 0:
                 # Check if this is an enemy (not PC, companion, or ally)
-                enemy_type = None
+                enemy_type_raw: Any = None
                 for init_entry in self.combat_state.get("initiative_order", []):
                     if init_entry["name"] == name:
-                        enemy_type = init_entry.get("type", "unknown")
+                        enemy_type_raw = init_entry.get("type")
                         break
 
-                if enemy_type not in ["pc", "companion", "ally"]:
-                    defeated_enemies.append(name)
-                    logging_util.info(
-                        f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated"
+                if enemy_type_raw is None:
+                    # Fallback to combatant metadata when initiative entry is missing
+                    enemy_type_raw = combat_data.get("type") or combat_data.get("role")
+
+                if enemy_type_raw is None and name in self.npc_data:
+                    # Final fallback to npc_data for classification
+                    npc_record = self.npc_data[name]
+                    enemy_type_raw = npc_record.get("role") or npc_record.get("type")
+
+                enemy_type = (
+                    enemy_type_raw.lower().strip()
+                    if isinstance(enemy_type_raw, str)
+                    else enemy_type_raw
+                )
+
+                friendly_types = {"pc", "companion", "ally", "support", "friendly", "party", "player"}
+                if enemy_type is None or enemy_type == "unknown":
+                    # Attempt to infer friendliness from player or NPC metadata before defaulting to enemy cleanup
+                    player_name = (
+                        self.player_character_data.get("name")
+                        if isinstance(self.player_character_data, dict)
+                        else None
                     )
+                    if player_name and name == player_name:
+                        logging_util.info(
+                            f"COMBAT CLEANUP: Skipping {name} removal because combatant matches player character with missing/unknown type"
+                        )
+                        continue
+
+                    npc_record = (
+                        self.npc_data.get(name)
+                        if isinstance(self.npc_data, dict)
+                        else None
+                    )
+                    npc_role_raw = npc_record.get("role") if isinstance(npc_record, dict) else None
+                    npc_type_raw = npc_record.get("type") if isinstance(npc_record, dict) else None
+                    npc_role = (
+                        npc_role_raw.lower().strip()
+                        if isinstance(npc_role_raw, str)
+                        else npc_role_raw
+                    )
+                    npc_type = (
+                        npc_type_raw.lower().strip()
+                        if isinstance(npc_type_raw, str)
+                        else npc_type_raw
+                    )
+
+                    if npc_role in friendly_types or npc_type in friendly_types:
+                        logging_util.info(
+                            f"COMBAT CLEANUP: Skipping {name} removal because npc_data marks combatant as friendly "
+                            f"(role/type: {npc_role or npc_type}) despite missing initiative type"
+                        )
+                        continue
+
+                    # Default to treating missing/unknown types as generic enemies to avoid leaving defeated foes targetable
+                    logging_util.warning(
+                        f"COMBAT CLEANUP: Defaulting {name} to generic enemy because type is missing/unknown "
+                        f"(initiative entry absent or incomplete)"
+                    )
+                    enemy_type = "enemy"
+
+                if enemy_type in friendly_types:
+                    logging_util.info(
+                        f"COMBAT CLEANUP: Skipping {name} because combatant is friendly ({enemy_type})"
+                    )
+                    continue
+
+                defeated_enemies.append(name)
+                logging_util.info(
+                    f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated"
+                )
 
         # Remove defeated enemies from combat tracking
         for enemy_name in defeated_enemies:
@@ -541,10 +619,26 @@ class GameState:
                 if entry["name"] != enemy_name
             ]
 
-            # Remove from NPC data (defeated enemies shouldn't persist)
+            # Handle NPC data - mark named NPCs as dead, delete generic enemies
             if enemy_name in self.npc_data:
-                del self.npc_data[enemy_name]
-                logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
+                npc = self.npc_data[enemy_name]
+                # Check if this is a named/important NPC (has role, backstory, or is explicitly important)
+                # Named NPCs should be preserved with dead status for narrative continuity
+                if self._is_named_npc(npc):
+                    # Mark as dead instead of deleting - preserve for narrative continuity
+                    if "status" not in npc:
+                        npc["status"] = []
+                    elif not isinstance(npc["status"], list):
+                        status_value = npc["status"]
+                        npc["status"] = [] if status_value is None else [status_value]
+                    if "dead" not in npc["status"]:
+                        npc["status"].append("dead")
+                    npc["hp_current"] = 0
+                    logging_util.info(f"COMBAT CLEANUP: Marked {enemy_name} as dead in npc_data (named NPC preserved)")
+                else:
+                    # Generic enemies can be deleted
+                    del self.npc_data[enemy_name]
+                    logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data (generic enemy)")
 
         return defeated_enemies
 

@@ -906,6 +906,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             current_state_as_dict, response.get("state_changes", {})
         )
 
+        # Apply automatic combat cleanup (sync defeated enemies between combat_state and npc_data)
+        # Named NPCs are preserved and marked dead for continuity, while generic enemies are deleted
+        updated_game_state_dict = apply_automatic_combat_cleanup(
+            updated_game_state_dict, response.get("state_changes", {})
+        )
+
         # Validate and auto-correct XP/level and time consistency
         # Use `or {}` to handle both missing and explicitly-null world_data in state_changes
         new_world_time = (response.get("state_changes", {}).get("world_data") or {}).get("world_time")
