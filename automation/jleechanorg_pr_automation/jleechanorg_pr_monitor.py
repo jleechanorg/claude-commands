@@ -1321,6 +1321,8 @@ def main():
                         help="AI CLI to use for --fixpr mode (default: claude)")
     parser.add_argument("--list-eligible", action="store_true",
                         help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
+    parser.add_argument("--codex-update", action="store_true",
+                        help="Run Codex automation to update first 50 tasks via browser automation")
 
     args = parser.parse_args()
 
@@ -1331,6 +1333,28 @@ def main():
         parser.error("--target-pr is required when using --target-repo")
 
     monitor = JleechanorgPRMonitor()
+
+    if args.codex_update:
+        print("🤖 Running Codex automation (first 50 tasks)...")
+        try:
+            # Call the codex automation module with limit
+            # Use -m to run as module (works with installed package)
+            result = subprocess.run(
+                ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--limit", "50"],
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minute timeout
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            sys.exit(result.returncode)
+        except subprocess.TimeoutExpired:
+            print("❌ Codex automation timed out after 10 minutes")
+            sys.exit(1)
+        except Exception as e:
+            print(f"❌ Failed to run Codex automation: {e}")
+            sys.exit(1)
 
     if args.fixpr:
         run_fixpr_batch(args.cutoff_hours, args.max_prs, agent_cli=args.fixpr_agent)
