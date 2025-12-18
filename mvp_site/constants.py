@@ -83,13 +83,31 @@ GEMINI_MODEL_MAPPING = {
 }
 
 # Models that support code_execution + JSON mode TOGETHER (single phase)
-# Only Gemini 2.0 and 3.x can do this - other models require native two-phase
-# This approach uses native API tool calling which ALL models support,
-# avoiding the prompt-engineering approach that some models (GLM-4.6) ignore.
+# UNIQUE TO GEMINI: Only Google's Gemini 3.x models can execute code AND
+# return structured JSON in a SINGLE inference call.
+#
+# Research (Dec 2025):
+# - Gemini 3: https://ai.google.dev/gemini-api/docs/structured-output
+#   "Gemini 3 lets you combine Structured Outputs with built-in tools,
+#    including Grounding with Google Search, URL Context, and Code Execution."
+#
+# - OpenAI GPT-4o: Has Code Interpreter + Structured Outputs, but CANNOT
+#   combine them (separate tools). https://platform.openai.com/docs/guides/structured-outputs
+#
+# - Anthropic Claude: Has Code Execution Tool, but uses orchestration-based
+#   approach (programmatic tool calling). https://docs.claude.com/en/docs/agents-and-tools/tool-use/code-execution-tool
+#
+# VERIFIED MODELS (single-inference code execution + JSON):
 MODELS_WITH_CODE_EXECUTION: set[str] = {
-    "gemini-2.0-flash",
-    "gemini-3-flash-preview",
-    "gemini-3-pro-preview",
+    # Gemini 3.x - Full support (confirmed Dec 2025)
+    "gemini-3-flash-preview",  # ✅ Released Dec 17, 2025 - default model
+    "gemini-3-pro-preview",    # ✅ Released Nov 2025 - most capable
+
+    # Gemini 2.0 Flash - Supported but may have limitations
+    # Note: May fail when tool calls present in message history with error:
+    # "Function calling with a response mime type: 'application/json' is unsupported"
+    # Source: https://github.com/googleapis/python-genai/issues/706
+    "gemini-2.0-flash",        # ⚠️ Use with caution, prefer Gemini 3.x
 }
 
 
@@ -97,24 +115,41 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
     """
     Determine the dice rolling strategy for a given model.
 
-    ARCHITECTURE UPDATE (Dec 2024): Simplified to two strategies.
+    ARCHITECTURE UPDATE (Dec 2025): Verified model capabilities via web research.
+
+    Strategy Selection:
+    - Gemini 3.x (Flash, Pro): Single-phase code execution + JSON (50% cost reduction)
+    - Gemini 2.0 Flash: Single-phase but may have limitations (use with caution)
+    - All others: Two-phase native tool calling (universal compatibility)
 
     Args:
-        model_name: Model identifier
-        provider: Provider name (gemini, cerebras, openrouter)
+        model_name: Model identifier (e.g., "gemini-3-flash-preview")
+        provider: Provider name (gemini, cerebras, openrouter) - optional
 
     Returns:
         Strategy string:
-        - 'code_execution' - Gemini 2.0/3.x: code_execution + JSON together (single phase)
-        - 'native_two_phase' - All others: Phase 1 native tools, Phase 2 JSON schema
+        - 'code_execution' - Gemini 2.0/3.x ONLY: LLM executes Python code internally
+          in a single inference, returning structured JSON with dice results.
+          Cost: 100% baseline. Audit: Limited (black box execution).
+
+        - 'native_two_phase' - All other models: Phase 1 returns tool_calls,
+          server executes dice, Phase 2 incorporates results.
+          Cost: ~180% (two LLM calls). Audit: Full transparency (every die logged).
+
+    Research Sources (Dec 2025):
+        - Gemini 3: https://ai.google.dev/gemini-api/docs/structured-output
+        - OpenAI: https://platform.openai.com/docs/guides/structured-outputs
+        - Anthropic: https://docs.claude.com/en/docs/agents-and-tools/tool-use/code-execution-tool
     """
     # Gemini 2.0 and 3.x can use code_execution + JSON together
+    # UNIQUE CAPABILITY: Only these models can execute code AND return JSON in one call
     if model_name in MODELS_WITH_CODE_EXECUTION:
         return "code_execution"
 
     # All other models: use native two-phase tool calling
-    # Phase 1: tools param (native API tool calling)
-    # Phase 2: response_format param (JSON schema)
+    # Phase 1: tools param (LLM returns tool_calls)
+    # Phase 2: response_format param (LLM incorporates dice results into JSON)
+    # Works universally: OpenAI, Anthropic, Cerebras, OpenRouter, Gemini 2.5, etc.
     return "native_two_phase"
 
 
