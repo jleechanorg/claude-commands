@@ -168,32 +168,29 @@ def maybe_log_code_execution_parts(
     model_name: str,
     context: str,
 ) -> None:
-    """Log Gemini code_execution evidence when explicitly enabled.
+    """Log Gemini code_execution evidence.
 
-    Enable via env var to avoid noisy production logs:
-    - LOG_GEMINI_CODE_EXECUTION_PARTS=true
+    This always logs a compact summary (counts only) so we can verify whether
+    code execution actually ran. Detailed samples are logged at DEBUG.
     """
-    if os.getenv("LOG_GEMINI_CODE_EXECUTION_PARTS", "false").lower() != "true":
-        return
 
     evidence = extract_code_execution_evidence(response)
-    if not evidence.get("code_execution_used"):
-        logging_util.info(
-            "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s used=false (%s)",
-            context,
-            model_name,
-            evidence,
-        )
-        return
-
-    detail = extract_code_execution_parts_summary(response)
     logging_util.info(
-        "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s used=true evidence=%s detail=%s",
+        "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s evidence=%s",
         context,
         model_name,
         evidence,
-        detail,
     )
+
+    if logging_util.isEnabledFor(10) and evidence.get("code_execution_used"):
+        # DEBUG: include truncated samples to validate part shapes without flooding logs.
+        detail = extract_code_execution_parts_summary(response)
+        logging_util.debug(
+            "GEMINI_CODE_EXECUTION_PARTS_DETAIL[%s]: model=%s detail=%s",
+            context,
+            model_name,
+            detail,
+        )
 
 
 

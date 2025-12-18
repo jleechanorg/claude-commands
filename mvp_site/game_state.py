@@ -1895,20 +1895,21 @@ def format_tool_results_text(tool_results: Any) -> str:
         if not isinstance(item, dict):
             continue
         tool_name = item.get("tool")
-        args = item.get("args", {})
         result = item.get("result", {})
         if not isinstance(tool_name, str) or not tool_name:
             continue
-        if not isinstance(args, dict):
-            args = {}
-        try:
-            args_str = json.dumps(args, sort_keys=True)
-        except TypeError:
-            args_str = json.dumps({}, sort_keys=True)
+        if isinstance(result, dict) and isinstance(result.get("formatted"), str) and result["formatted"]:
+            # Keep Phase 2 context tight: formatted strings already embed the exact numbers.
+            lines.append(f"- {result['formatted']}")
+            continue
+        if isinstance(result, dict) and isinstance(result.get("error"), str) and result["error"]:
+            lines.append(f"- {tool_name}: ERROR {result['error']}")
+            continue
+        # Fallback: last-resort JSON (should be rare)
         try:
             result_str = json.dumps(result, sort_keys=True)
         except TypeError:
             result_str = json.dumps({"error": "unserializable tool result"}, sort_keys=True)
-        lines.append(f"- {tool_name}({args_str}): {result_str}")
+        lines.append(f"- {tool_name}: {result_str}")
 
     return "\n".join(lines)

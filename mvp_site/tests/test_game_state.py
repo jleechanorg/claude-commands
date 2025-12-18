@@ -2381,9 +2381,19 @@ class TestFormatToolResultsText(unittest.TestCase):
             {"tool": "roll_dice", "args": {"notation": "1d20"}, "result": {"total": 12}},
         ]
         text = game_state_module.format_tool_results_text(tool_results)
-        self.assertIn("- roll_dice(", text)
-        self.assertIn('"notation": "1d20"', text)
+        self.assertIn("- roll_dice:", text)
         self.assertIn('"total": 12', text)
+
+    def test_prefers_formatted_string(self):
+        tool_results = [
+            {
+                "tool": "roll_attack",
+                "args": {"attack_modifier": 5},
+                "result": {"formatted": "Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)"},
+            }
+        ]
+        text = game_state_module.format_tool_results_text(tool_results)
+        self.assertEqual(text, "- Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)")
 
     def test_ignores_invalid_items(self):
         tool_results = [

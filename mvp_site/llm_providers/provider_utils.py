@@ -283,6 +283,41 @@ def execute_openai_tool_calls(
     return results
 
 
+def _compact_tool_result_for_prompt(result: Any) -> dict[str, Any]:
+    """Reduce tool results to the minimal data the model needs to narrate correctly."""
+    if not isinstance(result, dict):
+        return {"result": result}
+
+    if isinstance(result.get("error"), str) and result["error"]:
+        return {"error": result["error"]}
+
+    compact: dict[str, Any] = {}
+    if isinstance(result.get("formatted"), str) and result["formatted"]:
+        compact["formatted"] = result["formatted"]
+
+    # Common dice payload fields
+    for key in ("notation", "rolls", "modifier", "total", "natural_20", "natural_1"):
+        if key in result:
+            compact[key] = result[key]
+
+    # roll_attack
+    for key in ("hit", "critical", "fumble", "target_ac", "weapon_name", "ability_name"):
+        if key in result:
+            compact[key] = result[key]
+    if isinstance(result.get("damage"), dict):
+        dmg = result["damage"]
+        compact["damage"] = {
+            k: dmg.get(k) for k in ("notation", "rolls", "modifier", "total", "critical")
+        }
+
+    # roll_skill_check / roll_saving_throw
+    for key in ("skill", "dc", "success", "save_type", "proficiency_applied", "attribute_name", "roll"):
+        if key in result:
+            compact[key] = result[key]
+
+    return compact
+
+
 def run_openai_json_first_tool_requests_flow(
     *,
     generate_content_fn: Callable[..., Any],
@@ -431,7 +466,7 @@ def run_openai_native_two_phase_flow(
             {
                 "role": "tool",
                 "tool_call_id": result["tool_call_id"],
-                "content": json.dumps(result["result"]),
+                "content": json.dumps(_compact_tool_result_for_prompt(result["result"])),
             }
         )
     phase2_messages.append(
