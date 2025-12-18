@@ -247,16 +247,40 @@ def strip_debug_content(text: str) -> str:
     processed = MARKDOWN_DEBUG_BLOCK_PATTERN.sub("", processed)
 
     # Remove any embedded "debug_info": {...} objects with bracket-aware parsing
-    while True:
+    # Bounded loop: avoid infinite loops even if the input is malformed.
+    for _ in range(50):
         match = MARKDOWN_DEBUG_INFO_PATTERN.search(processed)
         if not match:
             break
+
         debug_obj = extract_nested_object(processed, "debug_info")
         if not debug_obj:
-            # Fallback: if extraction fails, remove the marker to avoid infinite loop
+            # If extraction fails, remove the marker to ensure forward progress.
             processed = processed[: match.start()] + processed[match.end() :]
-            break
-        processed = processed.replace(f'"debug_info": {debug_obj}', "")
+            continue
+
+        obj_pos = processed.find(debug_obj, match.end())
+        if obj_pos == -1:
+            # Unexpected mismatch; remove marker to ensure forward progress.
+            processed = processed[: match.start()] + processed[match.end() :]
+            continue
+
+        removal_start = match.start()
+        removal_end = obj_pos + len(debug_obj)
+
+        # If the debug_info appears as a JSON field, prefer removing an adjacent comma
+        # to avoid leaving ", ," style artifacts in partially-JSON text.
+        prefix = processed[:removal_start].rstrip()
+        if prefix.endswith(","):
+            removal_start = prefix.rfind(",")
+
+        suffix = processed[removal_end:]
+        suffix_l = suffix.lstrip()
+        if suffix_l.startswith(","):
+            # Remove the comma that followed the object.
+            removal_end += (len(suffix) - len(suffix_l)) + 1
+
+        processed = processed[:removal_start] + processed[removal_end:]
 
     # Clean up leftover --- separators (may be left orphaned after stripping)
     processed = re.sub(r"(?:^|\n)---\s*(?:\n---\s*)*(?:\n|$)", "\n", processed)

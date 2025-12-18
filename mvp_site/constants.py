@@ -40,13 +40,14 @@ GEMINI_3_ALLOWED_USERS = [
     "jleechantest@gmail.com",
 ]
 
-# Allowed Gemini model selections for user preferences (default - all users)
-# NOTE: Only models that support BOTH code_execution AND JSON response mode are allowed
-# Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
-# See PR #2052 for compatibility testing details
+# Allowed Gemini model selections for user preferences (default - all users).
+# NOTE:
+# - Gemini 3.x supports code_execution + JSON together (single inference).
+# - Gemini 2.0-flash is allowed for backwards compatibility but uses native two-phase
+#   tool calling for dice because Gemini 2.x cannot combine code_execution with JSON mode.
 ALLOWED_GEMINI_MODELS = [
     DEFAULT_GEMINI_MODEL,  # ✅ Gemini 3 Flash (best value: $0.50/M input, $3/M output)
-    "gemini-2.0-flash",  # ✅ Legacy option - still works with code_execution + JSON
+    "gemini-2.0-flash",  # ✅ Legacy option (native_two_phase dice strategy)
     GEMINI_PREMIUM_MODEL,  # ✅ Premium option (allowlist enforced downstream)
 ]
 
@@ -103,47 +104,6 @@ MODELS_WITH_CODE_EXECUTION: set[str] = {
     "gemini-3-flash-preview",  # ✅ Released Dec 17, 2025 - default model
     "gemini-3-pro-preview",    # ✅ Released Nov 2025 - most capable
 }
-
-
-def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
-    """
-    Determine the dice rolling strategy for a given model.
-
-    ARCHITECTURE UPDATE (Dec 2025): Verified model capabilities via web research.
-
-    Strategy Selection:
-    - Gemini 3.x (Flash, Pro): Single-phase code execution + JSON
-    - All others: Two-phase native tool calling (universal compatibility)
-
-    Args:
-        model_name: Model identifier (e.g., "gemini-3-flash-preview")
-        provider: Provider name (gemini, cerebras, openrouter) - optional
-
-    Returns:
-        Strategy string:
-        - 'code_execution' - Gemini 3.x ONLY: LLM executes Python code internally
-          in a single inference, returning structured JSON with dice results.
-          Cost: 100% baseline. Audit: Limited (black box execution).
-
-        - 'native_two_phase' - All other models: Phase 1 returns tool_calls,
-          server executes dice, Phase 2 incorporates results.
-          Cost: ~180% (two LLM calls). Audit: Full transparency (every die logged).
-
-    Research Sources (Dec 2025):
-        - Gemini 3: https://ai.google.dev/gemini-api/docs/structured-output
-        - OpenAI: https://platform.openai.com/docs/guides/structured-outputs
-        - Anthropic: https://docs.claude.com/en/docs/agents-and-tools/tool-use/code-execution-tool
-    """
-    # Gemini 3.x can use code_execution + JSON together
-    # UNIQUE CAPABILITY: Only these models can execute code AND return JSON in one call.
-    if model_name in MODELS_WITH_CODE_EXECUTION:
-        return "code_execution"
-
-    # All other models: use native two-phase tool calling
-    # Phase 1: tools param (LLM returns tool_calls)
-    # Phase 2: response_format param (LLM incorporates dice results into JSON)
-    # Works universally: OpenAI, Anthropic, Cerebras, OpenRouter, Gemini 2.5, etc.
-    return "native_two_phase"
 
 
 # OpenRouter model selection tuned for narrative-heavy D&D play
@@ -231,7 +191,6 @@ ALLOWED_CEREBRAS_MODELS = [
     # structured outputs. TauBench tested for tool calling. Runs at 3K tokens/sec
     # on Cerebras infrastructure. Budget reasoning model at $0.35/$0.75 per M.
     # Source: https://www.cerebras.ai/blog/openai-gpt-oss-120b-runs-fastest-on-cerebras
-    "gpt-oss-120b",
 ]
 
 # Context window budgeting (tokens)
@@ -252,11 +211,12 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
     "x-ai/grok-4.1-fast:free": 2_000_000,  # Free tier shares same window
     # Cerebras
-    "qwen-3-235b-a22b-instruct-2507": 256_000,  # 256K context (extendable to 1M)
-    "zai-glm-4.6": 200_000,  # 200K context (expanded from GLM-4.5's 128K)
+    # IMPORTANT: Cerebras provider context limits are ~128K/131K even when the upstream
+    # model family may advertise larger windows elsewhere (e.g., via other providers).
+    "qwen-3-235b-a22b-instruct-2507": 131_072,
+    "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
     "llama-3.1-8b": 131_072,  # 128K context window per official Llama 3.1 specs
-    "gpt-oss-120b": 131_072,  # 131K context window
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
@@ -285,7 +245,6 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
     "llama-3.1-8b": 32_000,  # Cerebras allows longer completions than OpenRouter
-    "gpt-oss-120b": 40_000,  # 40K max output per Cerebras docs
 }
 
 # Debug mode settings

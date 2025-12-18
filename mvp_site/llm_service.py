@@ -47,7 +47,7 @@ from typing import Any
 from firebase_admin import auth as firebase_auth
 from google.genai import types
 
-from mvp_site import constants, logging_util
+from mvp_site import constants, dice_strategy, logging_util
 from mvp_site.custom_types import UserId
 from mvp_site.decorators import log_exceptions
 from mvp_site.entity_instructions import EntityInstructionGenerator
@@ -1642,9 +1642,9 @@ def _call_llm_api(
 
         if provider_name == constants.LLM_PROVIDER_GEMINI:
             # Use get_dice_roll_strategy to determine the approach
-            strategy = constants.get_dice_roll_strategy(model_name, provider_name)
+            strategy = dice_strategy.get_dice_roll_strategy(model_name, provider_name)
 
-            if strategy == "code_execution":
+            if strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
                 # Gemini 3.x: code_execution + JSON together (single inference)
                 logging_util.info(
                     f"🔍 CALL_LLM_API_GEMINI: code_execution strategy for {model_name}"
@@ -1952,7 +1952,10 @@ def _maybe_get_gemini_code_execution_evidence(
     """Return server-verified Gemini code_execution evidence when applicable."""
     if provider_name != constants.LLM_PROVIDER_GEMINI:
         return None
-    if constants.get_dice_roll_strategy(model_name, provider_name) != "code_execution":
+    if (
+        dice_strategy.get_dice_roll_strategy(model_name, provider_name)
+        != dice_strategy.DICE_STRATEGY_CODE_EXECUTION
+    ):
         return None
     gemini_provider.maybe_log_code_execution_parts(
         api_response,
@@ -2885,7 +2888,7 @@ def get_initial_story(
             **(structured_response.debug_info or {}),
             "provider": provider_selection.provider,
             "model": model_to_use,
-            "dice_strategy": "code_execution",
+            "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
             **code_execution_evidence,
         }
 
@@ -3637,7 +3640,7 @@ def continue_story(
             **(structured_response.debug_info or {}),
             "provider": provider_selection.provider,
             "model": chosen_model,
-            "dice_strategy": "code_execution",
+            "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
             **code_execution_evidence,
         }
 

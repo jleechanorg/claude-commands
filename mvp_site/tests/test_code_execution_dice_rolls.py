@@ -34,7 +34,7 @@ sys.path.insert(
 )
 
 
-from mvp_site import constants, llm_service
+from mvp_site import constants, dice_strategy, llm_service
 
 
 class TestHybridDiceRollSystem(unittest.TestCase):
@@ -103,54 +103,58 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         """
         # Gemini 3 supports code_execution + JSON together
         self.assertEqual(
-            constants.get_dice_roll_strategy("gemini-3-pro-preview", "gemini"),
-            "code_execution"
+            dice_strategy.get_dice_roll_strategy("gemini-3-pro-preview", "gemini"),
+            dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
         )
 
         # Gemini 2.0 uses native_two_phase (code_execution + JSON unsupported)
         self.assertEqual(
-            constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
 
         # Gemini 2.5 does NOT support tools + JSON mime
         self.assertEqual(
-            constants.get_dice_roll_strategy("gemini-2.5-flash", "gemini"),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy("gemini-2.5-flash", "gemini"),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
 
         # Cerebras models: native_two_phase (Phase 1: native tools, Phase 2: JSON)
         self.assertEqual(
-            constants.get_dice_roll_strategy("qwen-3-235b-a22b-instruct-2507", "cerebras"),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy(
+                "qwen-3-235b-a22b-instruct-2507", "cerebras"
+            ),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
         self.assertEqual(
-            constants.get_dice_roll_strategy("zai-glm-4.6", "cerebras"),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy("zai-glm-4.6", "cerebras"),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
 
         # OpenRouter models: native_two_phase
         self.assertEqual(
-            constants.get_dice_roll_strategy("meta-llama/llama-3.1-70b-instruct", "openrouter"),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy(
+                "meta-llama/llama-3.1-70b-instruct", "openrouter"
+            ),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
 
         # All models use native_two_phase
         self.assertEqual(
-            constants.get_dice_roll_strategy("llama-3.3-70b", "cerebras"),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy("llama-3.3-70b", "cerebras"),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
 
         # Unknown models: native_two_phase
         self.assertEqual(
-            constants.get_dice_roll_strategy("unknown-model", ""),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy("unknown-model", ""),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
 
         # Default provider path follows same routing
         self.assertEqual(
-            constants.get_dice_roll_strategy("gemini-2.0-flash"),
-            "native_two_phase"
+            dice_strategy.get_dice_roll_strategy("gemini-2.0-flash"),
+            dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE,
         )
 
     def test_dice_roll_instructions_exist(self):
