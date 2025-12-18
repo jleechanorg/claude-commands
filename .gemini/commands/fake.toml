@@ -6,7 +6,7 @@ prompt = """
 
 Analyze for fake code patterns in:
 
-{{args}}
+{{input}}
 
 ## Detection Targets
 

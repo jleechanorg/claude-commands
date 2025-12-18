@@ -6,7 +6,7 @@ prompt = """
 
 Execute intelligent test selection and running for:
 
-{{args}}
+{{input}}
 
 ## Execution Workflow
 

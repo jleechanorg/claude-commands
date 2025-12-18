@@ -6,7 +6,7 @@ prompt = """
 
 Conduct comprehensive research on:
 
-{{args}}
+{{input}}
 
 ## Research Protocol
 

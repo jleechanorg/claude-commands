@@ -6,7 +6,7 @@ prompt = """
 
 Execute comprehensive push workflow:
 
-{{args}}
+{{input}}
 
 ## Execution Phases
 

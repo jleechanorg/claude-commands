@@ -6,7 +6,7 @@ prompt = """
 
 Debug the following issue:
 
-{{args}}
+{{input}}
 
 ## Debug Checklist
 

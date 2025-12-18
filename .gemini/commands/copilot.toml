@@ -6,7 +6,7 @@ prompt = """
 
 Process PR for:
 
-{{args}}
+{{input}}
 
 ## Four-Phase Workflow
 

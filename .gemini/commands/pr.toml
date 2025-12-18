@@ -6,7 +6,7 @@ prompt = """
 
 Execute complete PR workflow for:
 
-{{args}}
+{{input}}
 
 ## MANDATORY 5-PHASE WORKFLOW
 

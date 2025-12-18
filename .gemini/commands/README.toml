@@ -40,7 +40,7 @@ All commands use TOML format with:
 
 ## Argument Handling
 
-Commands support `{{args}}` placeholder for user input:
+Commands support `{{input}}` placeholder for user input:
 ```
 /think What's wrong with this code?
 /test --full

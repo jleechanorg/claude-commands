@@ -6,7 +6,7 @@ prompt = """
 
 Perform comprehensive code review for:
 
-{{args}}
+{{input}}
 
 ## Multi-Pass Analysis
 

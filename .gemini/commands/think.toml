@@ -6,7 +6,7 @@ prompt = """
 
 Execute systematic problem-solving for the following request:
 
-{{args}}
+{{input}}
 
 ## Thinking Levels
 

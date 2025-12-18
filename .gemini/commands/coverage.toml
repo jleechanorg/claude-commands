@@ -6,7 +6,7 @@ prompt = """
 
 Analyze test coverage for:
 
-{{args}}
+{{input}}
 
 ## Options
 

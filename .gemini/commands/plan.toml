@@ -6,7 +6,7 @@ prompt = """
 
 Create execution plan for:
 
-{{args}}
+{{input}}
 
 ## Execution Workflow
 

@@ -6,7 +6,7 @@ prompt = """
 
 Capture and document learnings for:
 
-{{args}}
+{{input}}
 
 ## Enhanced Workflow
 
