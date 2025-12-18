@@ -1253,6 +1253,7 @@ Complete the task, then use /pr to create a new pull request."""
                     cli_profile = CLI_PROFILES[agent_cli]
                     cli_path = fallback_path
                     agent_spec["cli"] = agent_cli
+                    agent_spec["cli_chain"] = [agent_cli]
                 else:
                     print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
                     if agent_cli == "claude":
@@ -1437,7 +1438,9 @@ Agent Configuration:
             raw_cli_chain = agent_spec.get("cli_chain")
             cli_chain = []
             if isinstance(raw_cli_chain, str):
-                cli_chain = self._parse_cli_chain(raw_cli_chain) if "," in raw_cli_chain else [raw_cli_chain.strip().lower()]
+                cli_chain = (
+                    self._parse_cli_chain(raw_cli_chain) if "," in raw_cli_chain else [raw_cli_chain.strip().lower()]
+                )
             elif isinstance(raw_cli_chain, list):
                 cli_chain = [str(item).strip().lower() for item in raw_cli_chain if str(item).strip()]
             if not cli_chain:
@@ -1620,9 +1623,15 @@ EOF
 EOF
         fi
     else
-        cat > {result_file_quoted} <<EOF
+        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "rate_limited": true}}
+EOF
+        else
+            cat > {result_file_quoted} <<EOF
 {{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}}}
 EOF
+        fi
     fi
 fi
 
