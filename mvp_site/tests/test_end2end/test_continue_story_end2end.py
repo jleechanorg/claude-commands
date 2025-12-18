@@ -85,7 +85,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_continue_story_success(self, mock_gemini_generate, mock_get_db):
         """Test successful story continuation through full stack including context compaction."""
 

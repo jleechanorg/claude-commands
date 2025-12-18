@@ -166,7 +166,7 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.cerebras_provider.generate_content")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_large_story_context_does_not_overflow_due_to_timeline_log(
         self, mock_gemini_generate, mock_cerebras_generate, mock_get_db
     ):

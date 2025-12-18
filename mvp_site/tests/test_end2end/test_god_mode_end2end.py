@@ -135,7 +135,7 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_god_mode_returns_god_mode_response_field(self, mock_gemini_generate, mock_get_db):
         """Test that GOD MODE commands return god_mode_response field."""
 
@@ -171,7 +171,7 @@ class TestGodModeEnd2End(unittest.TestCase):
         assert data["god_mode_response"] == "HP has been set to 50. Character is now at full health."
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_god_mode_uses_separate_prompts(self, mock_gemini_generate, mock_get_db):
         """Test that GOD MODE uses separate system prompts (not narrative prompts)."""
 
@@ -233,7 +233,7 @@ class TestGodModeEnd2End(unittest.TestCase):
                 self.fail("GOD MODE should use god_mode prompts, not narrative prompts")
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_god_mode_with_lowercase_prefix(self, mock_gemini_generate, mock_get_db):
         """Test that god mode works with lowercase 'god mode:' prefix."""
 
@@ -268,7 +268,7 @@ class TestGodModeEnd2End(unittest.TestCase):
         assert "god_mode_response" in data, "god_mode_response should be present for lowercase prefix"
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_regular_input_does_not_trigger_god_mode(self, mock_gemini_generate, mock_get_db):
         """Test that regular input without GOD MODE prefix uses normal prompts."""
 
@@ -307,7 +307,7 @@ class TestGodModeEnd2End(unittest.TestCase):
         assert not god_mode_resp or god_mode_resp == "", "god_mode_response should be empty for regular input"
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_god_mode_state_updates_applied(self, mock_gemini_generate, mock_get_db):
         """Test that GOD MODE state_updates are properly applied."""
 

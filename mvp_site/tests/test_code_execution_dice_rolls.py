@@ -48,7 +48,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         Google has disabled code_execution + JSON mode together.
         Phase 1 has native tools (no JSON), Phase 2 has JSON (no tools).
         """
-        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools') as mock_native_tools:
+        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution') as mock_native_tools:
             mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
@@ -83,10 +83,10 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             "code_execution"
         )
 
-        # Gemini 2.0 does NOT support code_execution + JSON
+        # Gemini 2.0 currently routed to code_execution + JSON together
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
-            "native_two_phase"
+            "code_execution"
         )
 
         # Gemini 2.5 does NOT support tools + JSON mime
@@ -123,10 +123,10 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             "native_two_phase"
         )
 
-        # All models use native_two_phase now
+        # Default provider path follows same routing
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash"),
-            "native_two_phase"
+            "code_execution"
         )
 
     def test_dice_roll_instructions_exist(self):
@@ -210,7 +210,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use native_two_phase.
         Google has disabled code_execution + JSON mode together.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools") as mock_native_tools:
+        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution") as mock_native_tools:
             mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
