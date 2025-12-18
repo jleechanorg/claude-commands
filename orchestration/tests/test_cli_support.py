@@ -70,6 +70,11 @@ class TestAgentCliSelection(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.dispatcher.analyze_task_and_create_agents("Please help", forced_cli="invalid")
 
+    def test_invalid_agent_cli_flag_raises_value_error(self):
+        """Invalid --agent-cli values should raise (do not silently fall back)."""
+        with self.assertRaises(ValueError):
+            self.dispatcher.analyze_task_and_create_agents("Please help --agent-cli=invalid")
+
     def test_create_dynamic_agent_uses_codex_command(self):
         """Ensure codex agents execute via `codex exec --yolo`."""
         agent_spec = {

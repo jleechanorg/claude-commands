@@ -635,6 +635,7 @@ class TaskDispatcher:
                 return self._parse_cli_chain(requested)
             if requested in CLI_PROFILES:
                 return [requested]
+            raise ValueError(f"Invalid --agent-cli: {requested}. Must be one of {list(CLI_PROFILES.keys())}")
 
         return [self._detect_agent_cli(task_description, forced_cli=None)]
 
