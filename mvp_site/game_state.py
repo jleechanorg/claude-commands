@@ -1030,53 +1030,101 @@ class GameState:
 
     def cleanup_defeated_enemies(self) -> list[str]:
         """
-        Identifies and removes defeated enemies from both combat_state and npc_data.
+        Identifies defeated enemies and synchronizes combat_state with npc_data.
+
+        Rules:
+        - Remove defeated enemies from combat_state/initiative_order.
+        - If the enemy is a named/important NPC (role/backstory/is_important), keep it
+          in npc_data and mark status=['dead'] with hp_current=0.
+        - Generic enemies (enemy/minion/etc.) are deleted from npc_data.
         """
-        defeated_enemies = []
+        defeated_enemies: list[str] = []
 
         combatants = self.combat_state.get("combatants", {})
         if not combatants:
             return defeated_enemies
 
+        # Normalize list format to dict if needed
         if isinstance(combatants, list):
             combatants_dict = {}
             for combatant in combatants:
                 if isinstance(combatant, dict) and "name" in combatant:
-                    name = combatant["name"]
-                    combatants_dict[name] = combatant
+                    combatants_dict[combatant["name"]] = combatant
             combatants = combatants_dict
             self.combat_state["combatants"] = combatants_dict
 
+        friendly_types = {"pc", "companion", "ally", "support", "friendly", "party", "player"}
+
         for name, combat_data in combatants.items():
             if combat_data.get("hp_current", 0) <= 0:
-                enemy_type = None
+                enemy_type_raw: Any = None
                 for init_entry in self.combat_state.get("initiative_order", []):
                     if init_entry["name"] == name:
-                        enemy_type = init_entry.get("type", "unknown")
+                        enemy_type_raw = init_entry.get("type")
                         break
 
-                if enemy_type not in ["pc", "companion", "ally"]:
-                    defeated_enemies.append(name)
-                    logging_util.info(
-                        f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated"
-                    )
+                if enemy_type_raw is None:
+                    enemy_type_raw = combat_data.get("type") or combat_data.get("role")
+                if enemy_type_raw is None and name in self.npc_data:
+                    npc_record = self.npc_data[name]
+                    enemy_type_raw = npc_record.get("role") or npc_record.get("type")
 
-        for enemy_name in defeated_enemies:
-            if enemy_name in self.combat_state.get("combatants", {}):
-                del self.combat_state["combatants"][enemy_name]
-                logging_util.info(
-                    f"COMBAT CLEANUP: Removed {enemy_name} from combat_state.combatants"
+                enemy_type = (
+                    enemy_type_raw.lower().strip()
+                    if isinstance(enemy_type_raw, str)
+                    else enemy_type_raw
                 )
 
+                if enemy_type in friendly_types:
+                    logging_util.info(
+                        f"COMBAT CLEANUP: Skipping {name} because combatant is friendly ({enemy_type})"
+                    )
+                    continue
+
+                if enemy_type is None or enemy_type == "unknown":
+                    npc_record = self.npc_data.get(name, {}) if isinstance(self.npc_data, dict) else {}
+                    npc_role = npc_record.get("role")
+                    npc_type = npc_record.get("type")
+                    npc_role_norm = npc_role.lower().strip() if isinstance(npc_role, str) else npc_role
+                    npc_type_norm = npc_type.lower().strip() if isinstance(npc_type, str) else npc_type
+                    if npc_role_norm in friendly_types or npc_type_norm in friendly_types:
+                        logging_util.info(
+                            f"COMBAT CLEANUP: Skipping {name} removal because npc_data marks combatant as friendly"
+                        )
+                        continue
+                    logging_util.warning(
+                        f"COMBAT CLEANUP: Defaulting {name} to generic enemy because type is missing/unknown"
+                    )
+                    enemy_type = "enemy"
+
+                defeated_enemies.append(name)
+                logging_util.info(f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated")
+
+        for enemy_name in defeated_enemies:
+            # Remove from combat tracking
+            if enemy_name in self.combat_state.get("combatants", {}):
+                del self.combat_state["combatants"][enemy_name]
+                logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from combat_state.combatants")
+
             self.combat_state["initiative_order"] = [
-                entry
-                for entry in self.combat_state.get("initiative_order", [])
-                if entry["name"] != enemy_name
+                entry for entry in self.combat_state.get("initiative_order", []) if entry["name"] != enemy_name
             ]
 
+            # Sync npc_data
             if enemy_name in self.npc_data:
-                del self.npc_data[enemy_name]
-                logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
+                npc = self.npc_data[enemy_name]
+                if self._is_named_npc(npc):
+                    if "status" not in npc or npc["status"] is None:
+                        npc["status"] = []
+                    if not isinstance(npc["status"], list):
+                        npc["status"] = [npc["status"]]
+                    if "dead" not in npc["status"]:
+                        npc["status"].append("dead")
+                    npc["hp_current"] = 0
+                    logging_util.info(f"COMBAT CLEANUP: Marked {enemy_name} as dead in npc_data (named NPC preserved)")
+                else:
+                    del self.npc_data[enemy_name]
+                    logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data (generic enemy)")
 
         return defeated_enemies
 
