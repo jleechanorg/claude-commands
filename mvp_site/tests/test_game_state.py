@@ -1571,6 +1571,28 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
             )
         assert "formatted" in result
 
+    def test_cleanup_defeated_enemies_coerces_hp_current_string(self):
+        """cleanup_defeated_enemies should not crash when hp_current is a string."""
+        from mvp_site.game_state import GameState
+
+        gs = GameState.from_dict(
+            {
+                "game_state_version": 1,
+                "player_character_data": {},
+                "world_data": {},
+                "npc_data": {"watch_patrol_6": {"role": "enemy"}},
+                "custom_campaign_state": {},
+                "combat_state": {
+                    "in_combat": True,
+                    "combatants": {"watch_patrol_6": {"hp_current": "0"}},
+                    "initiative_order": [{"name": "watch_patrol_6", "type": "enemy"}],
+                },
+            }
+        )
+        assert gs is not None
+        defeated = gs.cleanup_defeated_enemies()
+        assert "watch_patrol_6" in defeated
+
     def test_calculate_resource_depletion(self):
         """Test resource depletion calculation."""
         from mvp_site.game_state import calculate_resource_depletion

@@ -518,7 +518,8 @@ class GameState:
 
         # Find defeated enemies (HP <= 0)
         for name, combat_data in combatants.items():
-            if combat_data.get("hp_current", 0) <= 0:
+            hp_current = _coerce_int(combat_data.get("hp_current", 0), 0)
+            if hp_current <= 0:
                 # Check if this is an enemy (not PC, companion, or ally)
                 enemy_type_raw: Any = None
                 for init_entry in self.combat_state.get("initiative_order", []):
@@ -1063,7 +1064,8 @@ class GameState:
         friendly_types = {"pc", "companion", "ally", "support", "friendly", "party", "player"}
 
         for name, combat_data in combatants.items():
-            if combat_data.get("hp_current", 0) <= 0:
+            hp_current = _coerce_int(combat_data.get("hp_current", 0), 0)
+            if hp_current <= 0:
                 enemy_type_raw: Any = None
                 for init_entry in self.combat_state.get("initiative_order", []):
                     if init_entry["name"] == name:
