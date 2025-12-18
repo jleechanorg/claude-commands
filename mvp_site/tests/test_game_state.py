@@ -1487,6 +1487,8 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
 
         assert xp_to_next_level(current_xp=0, current_level=1) == 300
         assert xp_to_next_level(current_xp=150, current_level=1) == 150
+        assert xp_to_next_level(current_xp=150, current_level=0) == 150
+        assert xp_to_next_level(current_xp=150, current_level=-1) == 150
         assert xp_to_next_level(current_xp=300, current_level=2) == 600
         assert xp_to_next_level(current_xp=355000, current_level=20) == 0  # Max level
 
@@ -1527,6 +1529,47 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         assert result.total == 0
         assert result.individual_rolls == []
         assert result.modifier == 0
+
+    def test_calculate_attack_roll_advantage_handles_empty_rolls(self):
+        """Advantage should not crash if underlying roll objects have empty rolls."""
+        from mvp_site.game_state import DiceRollResult, calculate_attack_roll
+        from unittest.mock import patch
+
+        def _fake_roll_with_advantage(_notation: str):
+            r1 = DiceRollResult(notation="1d20+5", individual_rolls=[], modifier=5, total=5)
+            r2 = DiceRollResult(notation="1d20+5", individual_rolls=[], modifier=5, total=5)
+            return r1, r2, 5
+
+        with patch("mvp_site.game_state.roll_with_advantage", new=_fake_roll_with_advantage):
+            result = calculate_attack_roll(5, advantage=True, disadvantage=False)
+        assert result["rolls"] == [0, 0]
+
+    def test_execute_dice_tool_roll_attack_handles_empty_rolls(self):
+        """roll_attack formatting should not crash if attack['rolls'] is empty."""
+        import mvp_site.game_state as game_state
+        from unittest.mock import patch
+
+        def _fake_calculate_attack_roll(_mod: int, _adv: bool, _dis: bool):
+            return {
+                "rolls": [],
+                "modifier": 5,
+                "total": 5,
+                "used_roll": "single",
+                "is_critical": False,
+                "is_fumble": False,
+                "notation": "1d20+5",
+            }
+
+        with patch("mvp_site.game_state.calculate_attack_roll", new=_fake_calculate_attack_roll):
+            result = game_state.execute_dice_tool(
+                "roll_attack",
+                {
+                    "attack_modifier": 5,
+                    "target_ac": 10,
+                    "weapon_name": "Test Weapon",
+                },
+            )
+        assert "formatted" in result
 
     def test_calculate_resource_depletion(self):
         """Test resource depletion calculation."""

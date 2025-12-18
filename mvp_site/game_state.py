@@ -1597,9 +1597,15 @@ def calculate_attack_roll(attack_modifier: int, advantage: bool = False, disadva
     """Perform a complete attack roll."""
     notation = f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
 
+    def _safe_natural_roll(roll: DiceRollResult) -> int:
+        if roll.individual_rolls:
+            return int(roll.individual_rolls[0])
+        # roll_dice can return empty rolls for invalid/degenerate notations; derive best-effort.
+        return max(0, int(roll.total) - int(roll.modifier))
+
     if advantage and not disadvantage:
         roll1, roll2, total = roll_with_advantage(notation)
-        natural_rolls = [roll1.individual_rolls[0], roll2.individual_rolls[0]]
+        natural_rolls = [_safe_natural_roll(roll1), _safe_natural_roll(roll2)]
         natural = max(natural_rolls)
         return {
             "rolls": natural_rolls, "modifier": attack_modifier, "total": total,
@@ -1608,7 +1614,7 @@ def calculate_attack_roll(attack_modifier: int, advantage: bool = False, disadva
         }
     if disadvantage and not advantage:
         roll1, roll2, total = roll_with_disadvantage(notation)
-        natural_rolls = [roll1.individual_rolls[0], roll2.individual_rolls[0]]
+        natural_rolls = [_safe_natural_roll(roll1), _safe_natural_roll(roll2)]
         natural = min(natural_rolls)
         return {
             "rolls": natural_rolls, "modifier": attack_modifier, "total": total,
@@ -1724,6 +1730,8 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         if len(rolls) == 2:
             used = attack.get("used_roll", "higher")
             roll_display = f"({rolls[0]}, {rolls[1]} - {used})"
+        elif not rolls:
+            roll_display = "0"
         else:
             roll_display = str(rolls[0])
         formatted = f"{attack_label}: 1d20 {mod_str} = {roll_display} {mod_str} = {attack['total']} vs AC {target_ac} ({hit_str})"
