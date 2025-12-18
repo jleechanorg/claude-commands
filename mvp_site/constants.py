@@ -82,6 +82,42 @@ GEMINI_MODEL_MAPPING = {
     "flash-2.5": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
 }
 
+# Models that support code_execution + JSON mode TOGETHER (single phase)
+# Only Gemini 2.0 and 3.x can do this - other models require native two-phase
+# This approach uses native API tool calling which ALL models support,
+# avoiding the prompt-engineering approach that some models (GLM-4.6) ignore.
+MODELS_WITH_CODE_EXECUTION: set[str] = {
+    "gemini-2.0-flash",
+    "gemini-3-flash-preview",
+    "gemini-3-pro-preview",
+}
+
+
+def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
+    """
+    Determine the dice rolling strategy for a given model.
+
+    ARCHITECTURE UPDATE (Dec 2024): Simplified to two strategies.
+
+    Args:
+        model_name: Model identifier
+        provider: Provider name (gemini, cerebras, openrouter)
+
+    Returns:
+        Strategy string:
+        - 'code_execution' - Gemini 2.0/3.x: code_execution + JSON together (single phase)
+        - 'native_two_phase' - All others: Phase 1 native tools, Phase 2 JSON schema
+    """
+    # Gemini 2.0 and 3.x can use code_execution + JSON together
+    if model_name in MODELS_WITH_CODE_EXECUTION:
+        return "code_execution"
+
+    # All other models: use native two-phase tool calling
+    # Phase 1: tools param (native API tool calling)
+    # Phase 2: response_format param (JSON schema)
+    return "native_two_phase"
+
+
 # OpenRouter model selection tuned for narrative-heavy D&D play
 # Official docs: https://openrouter.ai/docs
 DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
