@@ -6,6 +6,12 @@ prompt = """
 
 This directory contains custom slash commands for Gemini CLI.
 
+All Claude commands have TOML counterparts in this directory (matching
+their original filenames) so the complete Claude command catalog is
+available for Gemini. Previously curated Gemini prompts remain unchanged;
+newly added entries were auto-converted from the Claude markdown prompts to
+preserve their detailed workflows.
+
 ## Available Commands
 
 ### Development Workflow

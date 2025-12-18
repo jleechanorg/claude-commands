@@ -1,0 +1,5 @@
+description = "Context Estimation Command (Alias)"
+
+prompt = """
+Execute `/contexte` with all provided arguments.
+"""

@@ -1,0 +1,5 @@
+description = "/suba Alias - Dual Consultant Validation Sweep"
+
+prompt = """
+Execute `/subagentvalidate` with all provided arguments.
+"""
