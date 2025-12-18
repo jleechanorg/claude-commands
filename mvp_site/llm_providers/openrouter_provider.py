@@ -9,14 +9,17 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import requests
-
 from mvp_site import logging_util
 from mvp_site.game_state import (
     DICE_ROLL_TOOLS,
     execute_dice_tool,
     execute_tool_requests,
     format_tool_results_text,
+)
+from mvp_site.llm_providers.openai_chat_common import (
+    build_messages as build_openai_messages,
+    extract_tool_calls as extract_openai_tool_calls,
+    post_chat_completions,
 )
 from mvp_site.llm_providers.provider_utils import (
     get_openai_json_schema_format,
@@ -49,15 +52,7 @@ class OpenRouterResponse:
 
     def get_tool_calls(self) -> list[dict] | None:
         """Extract tool_calls from the raw response if present."""
-        try:
-            choices = self.raw_response.get("choices", [])
-            if choices:
-                message = choices[0].get("message", {})
-                tool_calls = message.get("tool_calls")
-                return tool_calls if tool_calls else None
-        except (AttributeError, IndexError, KeyError):
-            return None
-        return None
+        return extract_openai_tool_calls(self.raw_response)
 
     @property
     def tool_calls(self) -> list[dict] | None:
@@ -105,11 +100,11 @@ def generate_content(
 
     # Use provided messages or build from prompt_contents
     if messages is None:
-        user_message = stringify_chat_parts(prompt_contents)
-        messages = []
-        if system_instruction_text:
-            messages.append({"role": "system", "content": system_instruction_text})
-        messages.append({"role": "user", "content": user_message})
+        messages = build_openai_messages(
+            prompt_contents=prompt_contents,
+            system_instruction_text=system_instruction_text,
+            stringify_chat_parts_fn=stringify_chat_parts,
+        )
 
     # Use json_schema (strict:false) for models that support it
     # Other models fall back to json_object (best-effort JSON)
@@ -139,20 +134,21 @@ def generate_content(
         payload["response_format"] = response_format
 
     logging_util.info(f"Calling OpenRouter model: {model_name}")
-    response = requests.post(
-        OPENROUTER_URL,
-        json=payload,
+    data = post_chat_completions(
+        url=OPENROUTER_URL,
         headers=_build_headers(api_key),
+        payload=payload,
         timeout=300,
+        logger=logging_util,
+        error_log_prefix="OPENROUTER",
     )
-    response.raise_for_status()
-    data = response.json()
 
     try:
         message = data["choices"][0]["message"]
         text = message.get("content") or ""
+        tool_calls = extract_openai_tool_calls(data)
         # Check for tool_calls - content may be null
-        has_tool_calls = "tool_calls" in message and message["tool_calls"]
+        has_tool_calls = bool(tool_calls)
         if not text and not has_tool_calls:
             raise KeyError("No content or tool_calls in message")
     except Exception as exc:  # noqa: BLE001 - defensive parsing

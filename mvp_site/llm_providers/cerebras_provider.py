@@ -15,8 +15,6 @@ import json
 import os
 from typing import Any
 
-import requests
-
 from mvp_site import logging_util
 from mvp_site.game_state import (
     DICE_ROLL_TOOLS,
@@ -31,6 +29,11 @@ from mvp_site.llm_providers.provider_utils import (
     run_openai_json_first_tool_requests_flow,
     run_openai_native_two_phase_flow,
     stringify_chat_parts,
+)
+from mvp_site.llm_providers.openai_chat_common import (
+    build_messages as build_openai_messages,
+    extract_tool_calls as extract_openai_tool_calls,
+    post_chat_completions,
 )
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
@@ -54,11 +57,6 @@ def _extract_text_from_message(message: dict[str, Any]) -> Any:
         if actual is not None:
             return message.get(actual)
     return None
-
-
-def _message_has_tool_calls(message: dict[str, Any]) -> bool:
-    tool_calls = message.get("tool_calls")
-    return bool(tool_calls)
 
 
 def _validate_has_content_or_tool_calls(
@@ -167,15 +165,7 @@ class CerebrasResponse:
 
     def get_tool_calls(self) -> list[dict] | None:
         """Extract tool_calls from the raw response if present."""
-        try:
-            choices = self.raw_response.get("choices", [])
-            if choices:
-                message = choices[0].get("message", {})
-                tool_calls = message.get("tool_calls")
-                return tool_calls if tool_calls else None
-        except (AttributeError, IndexError, KeyError):
-            return None
-        return None
+        return extract_openai_tool_calls(self.raw_response)
 
     @property
     def tool_calls(self) -> list[dict] | None:
@@ -213,10 +203,11 @@ def generate_content(
 
     # Use provided messages or build from prompt_contents
     if messages is None:
-        messages = []
-        if system_instruction_text:
-            messages.append({"role": "system", "content": system_instruction_text})
-        messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
+        messages = build_openai_messages(
+            prompt_contents=prompt_contents,
+            system_instruction_text=system_instruction_text,
+            stringify_chat_parts_fn=stringify_chat_parts,
+        )
 
     payload: dict[str, Any] = {
         "model": model_name,
@@ -246,14 +237,14 @@ def generate_content(
     logging_util.info(
         f"CEREBRAS REQUEST model={model_name} max_tokens={max_output_tokens}"
     )
-    response = requests.post(CEREBRAS_URL, headers=headers, json=payload, timeout=300)
-
-    if not response.ok:
-        logging_util.error(
-            f"CEREBRAS ERROR {response.status_code}: {response.text[:500]}"
-        )
-    response.raise_for_status()
-    data = response.json()
+    data = post_chat_completions(
+        url=CEREBRAS_URL,
+        headers=headers,
+        payload=payload,
+        timeout=300,
+        logger=logging_util,
+        error_log_prefix="CEREBRAS",
+    )
 
     try:
         choice = data["choices"][0]
@@ -267,7 +258,7 @@ def generate_content(
         completion_tokens = usage.get("completion_tokens", 0)
 
         text = _extract_text_from_message(message)
-        has_tool_calls = _message_has_tool_calls(message)
+        has_tool_calls = bool(extract_openai_tool_calls(data))
         _validate_has_content_or_tool_calls(
             text=text,
             has_tool_calls=has_tool_calls,

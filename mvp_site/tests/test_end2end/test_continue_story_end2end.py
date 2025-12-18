@@ -11,6 +11,11 @@ import os
 import unittest
 from unittest.mock import patch
 
+# Ensure TESTING is set before importing app modules (world_logic applies clock-skew patch at import time).
+os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
+os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
+
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
 from mvp_site.tests.fake_llm import FakeLLMResponse
