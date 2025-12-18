@@ -1,0 +1,5 @@
+description = "/conv - Convergence Alias Command"
+
+prompt = """
+Execute `/converge` with all provided arguments.
+"""

@@ -1,0 +1,5 @@
+description = "debugp - Alias for Debug Protocol"
+
+prompt = """
+Execute `/debug-protocol` with all provided arguments.
+"""

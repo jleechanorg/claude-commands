@@ -1,0 +1,5 @@
+description = "Comment Reply Command (Alias)"
+
+prompt = """
+Execute `/commentreply` with all provided arguments.
+"""

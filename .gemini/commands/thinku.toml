@@ -1,0 +1,5 @@
+description = "Think Ultra Command (Alias)"
+
+prompt = """
+Execute `/think ultra` with the provided problem/question.
+"""
