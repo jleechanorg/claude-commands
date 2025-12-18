@@ -584,6 +584,61 @@ class TaskDispatcher:
             return "claude"
         return available_clis[0]
 
+    def _parse_cli_chain(self, cli_value: str) -> list[str]:
+        """Parse a comma-separated CLI chain string (e.g., 'gemini,codex') into validated CLI keys."""
+        if not isinstance(cli_value, str):
+            raise ValueError("CLI chain value must be a string")
+
+        parts = [part.strip().lower() for part in cli_value.split(",")]
+        chain = [part for part in parts if part]
+        if not chain:
+            raise ValueError("CLI chain is empty")
+
+        invalid = [cli for cli in chain if cli not in CLI_PROFILES]
+        if invalid:
+            raise ValueError(f"Invalid CLI(s) in chain: {invalid}. Must be subset of {list(CLI_PROFILES.keys())}")
+
+        # De-duplicate while preserving order
+        seen = set()
+        ordered = []
+        for cli in chain:
+            if cli not in seen:
+                ordered.append(cli)
+                seen.add(cli)
+        return ordered
+
+    def _detect_agent_cli_chain(self, task_description: str, forced_cli: str | None = None) -> list[str]:
+        """
+        Determine which CLI (or CLI chain) should be used for the agent.
+
+        Supports comma-separated chains via:
+        - forced_cli (e.g., "gemini,codex")
+        - --agent-cli flag in task_description (e.g., --agent-cli=gemini,codex)
+        """
+
+        cli_flag = re.search(r"--agent-cli(?:=|\s+)([A-Za-z0-9_,]+)", task_description, re.IGNORECASE)
+
+        if forced_cli is not None:
+            forced_cli = forced_cli.strip().lower()
+            chain = self._parse_cli_chain(forced_cli) if "," in forced_cli else [forced_cli]
+            if len(chain) == 1 and chain[0] not in CLI_PROFILES:
+                raise ValueError(f"Invalid forced_cli: {forced_cli}. Must be one of {list(CLI_PROFILES.keys())}")
+            if cli_flag:
+                requested = cli_flag.group(1).strip().lower()
+                if requested != forced_cli:
+                    print(f"⚠️ Forced CLI '{forced_cli}' overrides --agent-cli request for '{requested}'.")
+            return chain
+
+        if cli_flag:
+            requested = cli_flag.group(1).strip().lower()
+            if "," in requested:
+                return self._parse_cli_chain(requested)
+            if requested in CLI_PROFILES:
+                return [requested]
+            raise ValueError(f"Invalid --agent-cli: {requested}. Must be one of {list(CLI_PROFILES.keys())}")
+
+        return [self._detect_agent_cli(task_description, forced_cli=None)]
+
     def _detect_pr_context(self, task_description: str) -> tuple[str | None, str]:
         """Detect if task is about updating an existing PR.
         Returns: (pr_number, mode) where mode is 'update' or 'create'
@@ -768,8 +823,11 @@ class TaskDispatcher:
         if workspace_config:
             print(f"🏗️ Extracted workspace config: {workspace_config}")
 
-        agent_cli = self._detect_agent_cli(task_description, forced_cli=forced_cli)
-        if agent_cli != "claude":
+        cli_chain = self._detect_agent_cli_chain(task_description, forced_cli=forced_cli)
+        agent_cli = cli_chain[0]
+        if len(cli_chain) > 1:
+            print(f"🤖 Selected CLI chain based on task request: {', '.join(cli_chain)}")
+        elif agent_cli != "claude":
             print(f"🤖 Selected {agent_cli.capitalize()} CLI based on task request")
 
         # Detect PR context
@@ -921,6 +979,8 @@ Complete the task, then use /pr to create a new pull request."""
             "prompt": prompt,
             "cli": agent_cli,
         }
+        if len(cli_chain) > 1:
+            agent_spec["cli_chain"] = cli_chain
 
         # Add PR context if updating existing PR
         if mode == "update":
@@ -1135,13 +1195,43 @@ Complete the task, then use /pr to create a new pull request."""
         print(f"📁 File-based A2A protocol available for {agent_name}")
 
         try:
-            agent_cli = (agent_spec.get("cli") or "claude").lower()
-            if agent_cli not in CLI_PROFILES:
-                print(f"❌ Unsupported agent CLI requested: {agent_cli}")
+            # Support optional comma-separated CLI chains (preferred order)
+            raw_cli_chain = agent_spec.get("cli_chain")
+            if raw_cli_chain is None:
+                raw_cli_chain = agent_spec.get("cli")
+
+            cli_chain = []
+            if isinstance(raw_cli_chain, str):
+                value = raw_cli_chain.strip().lower()
+                cli_chain = self._parse_cli_chain(value) if "," in value else [value or "claude"]
+            elif isinstance(raw_cli_chain, list):
+                cli_chain = [str(item).strip().lower() for item in raw_cli_chain if str(item).strip()]
+                if not cli_chain:
+                    cli_chain = ["claude"]
+            else:
+                cli_chain = ["claude"]
+
+            invalid_chain = [cli for cli in cli_chain if cli not in CLI_PROFILES]
+            if invalid_chain:
+                print(f"❌ Unsupported agent CLI requested: {invalid_chain}")
                 return False
 
+            # Resolve the first available CLI in the chain (keeps behavior predictable)
+            agent_cli = cli_chain[0]
             cli_profile = CLI_PROFILES[agent_cli]
-            cli_path = self._resolve_cli_binary(agent_cli)
+            cli_path = None
+            for candidate in cli_chain:
+                candidate_path = self._resolve_cli_binary(candidate)
+                if candidate_path:
+                    agent_cli = candidate
+                    cli_profile = CLI_PROFILES[agent_cli]
+                    cli_path = candidate_path
+                    break
+
+            # Persist chain for downstream script-generation
+            agent_spec["cli"] = agent_cli
+            if len(cli_chain) > 1:
+                agent_spec["cli_chain"] = cli_chain
 
             if not cli_path:
                 print(f"⚠️ Requested CLI '{cli_profile['binary']}' not available for {agent_name}")
@@ -1163,6 +1253,7 @@ Complete the task, then use /pr to create a new pull request."""
                     cli_profile = CLI_PROFILES[agent_cli]
                     cli_path = fallback_path
                     agent_spec["cli"] = agent_cli
+                    agent_spec["cli_chain"] = [agent_cli]
                 else:
                     print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
                     if agent_cli == "claude":
@@ -1335,79 +1426,151 @@ Agent Configuration:
             result_file_quoted = shlex.quote(result_file)
             prompt_file_quoted = shlex.quote(prompt_file)
 
-            # Determine if this is a restart or first run for the selected CLI
-            continue_flag = ""
-            if cli_profile.get("supports_continue"):
-                conversation_file = None
-                conversation_dir = cli_profile.get("conversation_dir")
-                if conversation_dir:
-                    conversation_path = os.path.join(os.path.expanduser(conversation_dir), f"{agent_name}.json")
-                    conversation_file = conversation_path
-                restart_env = cli_profile.get("restart_env")
-                restart_requested = bool(restart_env and os.environ.get(restart_env, "false").strip().lower() == "true")
-                if (conversation_file and os.path.exists(conversation_file)) or restart_requested:
-                    continue_flag = cli_profile.get("continue_flag", "")
-                    print(f"🔄 {agent_name}: Continuing existing {cli_profile['display_name']} session")
-                else:
-                    print(f"🆕 {agent_name}: Starting new {cli_profile['display_name']} session")
-            else:
-                print(f"🆕 {agent_name}: Starting {cli_profile['display_name']} session")
-
-            continue_segment = f" {continue_flag}" if continue_flag else ""
-            prompt_value_raw = prompt_file
-            prompt_value_quoted = shlex.quote(prompt_file)
-            prompt_value = prompt_value_quoted if cli_profile.get("quote_prompt") else prompt_value_raw
-            binary_value = shlex.quote(cli_path)
-            try:
-                cli_command = (
-                    cli_profile["command_template"]
-                    .format(
-                        binary=binary_value,
-                        binary_path=cli_path,
-                        prompt_file=prompt_value,
-                        prompt_file_path=prompt_value_raw,
-                        prompt_file_quoted=prompt_value_quoted,
-                        continue_flag=continue_segment,
-                    )
-                    .strip()
-                )
-            except KeyError as exc:
-                missing = exc.args[0]
-                raise ValueError(f"CLI command template for {agent_cli} missing placeholder '{missing}'") from exc
-
-            stdin_template = cli_profile.get("stdin_template", "/dev/null")
-            if stdin_template == "{prompt_file}":
-                stdin_target = prompt_file
-            else:
-                stdin_target = stdin_template
-
-            stdin_redirect = ""
-            if stdin_target:
-                stdin_redirect = f" < {shlex.quote(stdin_target)}"
-
-            stdin_log_target = stdin_target or "/dev/null"
-            stdin_log_target_quoted = shlex.quote(stdin_log_target)
-            command_execution_line = cli_command + stdin_redirect
             prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
 
-            # Generate env unset commands for CLI-specific environment overrides
-            # Validate env var names to prevent shell injection (must be valid POSIX identifiers)
-            env_unset_list = cli_profile.get("env_unset", [])
-            for var in env_unset_list:
-                if not isinstance(var, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var):
-                    raise ValueError(
-                        f"Invalid environment variable name in env_unset for CLI profile "
-                        f"'{cli_profile.get('display_name', agent_cli)}': {var!r}"
-                    )
-            env_unset_commands = "\n".join(f"unset {var}" for var in env_unset_list) if env_unset_list else ""
-
             agent_name_quoted = shlex.quote(agent_name)
-            cli_display_name_quoted = shlex.quote(cli_profile["display_name"])
             agent_dir_quoted = shlex.quote(agent_dir)
             log_file_display = shlex.quote(log_file)
             monitor_hint = shlex.quote(agent_name)
             agent_name_json = json.dumps(agent_name)
-            agent_name_json_shell = agent_name_json.replace('"', '\\"')
+
+            # Optional multi-CLI chain support (e.g., --agent-cli=gemini,codex)
+            raw_cli_chain = agent_spec.get("cli_chain")
+            cli_chain = []
+            if isinstance(raw_cli_chain, str):
+                cli_chain = (
+                    self._parse_cli_chain(raw_cli_chain) if "," in raw_cli_chain else [raw_cli_chain.strip().lower()]
+                )
+            elif isinstance(raw_cli_chain, list):
+                cli_chain = [str(item).strip().lower() for item in raw_cli_chain if str(item).strip()]
+            if not cli_chain:
+                cli_chain = [agent_cli]
+
+            # Validate chain entries
+            invalid_chain = [cli for cli in cli_chain if cli not in CLI_PROFILES]
+            if invalid_chain:
+                raise ValueError(f"Invalid CLI(s) in cli_chain for {agent_name}: {invalid_chain}")
+
+            # Compute per-CLI execution blocks (command + stdin + env unsets)
+            cli_chain_str = ",".join(cli_chain)
+            cli_chain_json = json.dumps(cli_chain_str)
+            rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
+
+            attempt_blocks = ""
+            for idx, attempt_cli in enumerate(cli_chain, start=1):
+                attempt_profile = CLI_PROFILES[attempt_cli]
+                attempt_path = self._resolve_cli_binary(attempt_cli) or attempt_profile.get("binary") or attempt_cli
+                attempt_binary_value = shlex.quote(attempt_path)
+
+                # Continue logic per CLI (only meaningful for CLIs that support it)
+                attempt_continue_flag = ""
+                if attempt_profile.get("supports_continue"):
+                    conversation_file = None
+                    conversation_dir = attempt_profile.get("conversation_dir")
+                    if conversation_dir:
+                        conversation_path = os.path.join(os.path.expanduser(conversation_dir), f"{agent_name}.json")
+                        conversation_file = conversation_path
+                    restart_env = attempt_profile.get("restart_env")
+                    restart_requested = bool(
+                        restart_env and os.environ.get(restart_env, "false").strip().lower() == "true"
+                    )
+                    if (conversation_file and os.path.exists(conversation_file)) or restart_requested:
+                        attempt_continue_flag = attempt_profile.get("continue_flag", "")
+
+                attempt_continue_segment = f" {attempt_continue_flag}" if attempt_continue_flag else ""
+
+                attempt_prompt_value_raw = prompt_file
+                attempt_prompt_value_quoted = shlex.quote(prompt_file)
+                attempt_prompt_value = (
+                    attempt_prompt_value_quoted if attempt_profile.get("quote_prompt") else attempt_prompt_value_raw
+                )
+
+                attempt_cli_command = (
+                    attempt_profile["command_template"]
+                    .format(
+                        binary=attempt_binary_value,
+                        binary_path=attempt_path,
+                        prompt_file=attempt_prompt_value,
+                        prompt_file_path=attempt_prompt_value_raw,
+                        prompt_file_quoted=attempt_prompt_value_quoted,
+                        continue_flag=attempt_continue_segment,
+                    )
+                    .strip()
+                )
+
+                attempt_stdin_template = attempt_profile.get("stdin_template", "/dev/null")
+                if attempt_stdin_template == "{prompt_file}":
+                    attempt_stdin_target = prompt_file
+                else:
+                    attempt_stdin_target = attempt_stdin_template
+
+                attempt_stdin_redirect = ""
+                if attempt_stdin_target:
+                    attempt_stdin_redirect = f" < {shlex.quote(attempt_stdin_target)}"
+
+                attempt_execution_line = attempt_cli_command + attempt_stdin_redirect
+
+                attempt_env_unset_list = attempt_profile.get("env_unset", [])
+                for var in attempt_env_unset_list:
+                    if not isinstance(var, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var):
+                        raise ValueError(
+                            f"Invalid environment variable name in env_unset for CLI profile "
+                            f"'{attempt_profile.get('display_name', attempt_cli)}': {var!r}"
+                        )
+                attempt_env_unset_commands = (
+                    "\n".join(f"unset {var}" for var in attempt_env_unset_list) if attempt_env_unset_list else ""
+                )
+
+                attempt_display_name = attempt_profile.get("display_name", attempt_cli)
+
+                attempt_blocks += f"""
+if [ $RESULT_WRITTEN -eq 0 ]; then
+    ATTEMPT_NUM={idx}
+    ATTEMPT_CLI={shlex.quote(attempt_cli)}
+    if [ -z "$FIRST_ATTEMPT_CLI" ]; then FIRST_ATTEMPT_CLI="$ATTEMPT_CLI"; fi
+    if [ "$ATTEMPT_CLI" != "$FIRST_ATTEMPT_CLI" ]; then
+        FALLBACK_ATTEMPTED=1
+        FALLBACK_FROM="$FIRST_ATTEMPT_CLI"
+        FALLBACK_TO="$ATTEMPT_CLI"
+    fi
+
+    echo "[$(date)] 🔁 Attempt $ATTEMPT_NUM: {attempt_display_name}" | tee -a {log_file_quoted}
+    echo "[$(date)] Executing: {attempt_execution_line}" | tee -a {log_file_quoted}
+
+    LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
+
+    {prompt_env_export}
+    {attempt_env_unset_commands}
+
+    {attempt_execution_line} 2>&1 | tee -a {log_file_quoted}
+    ATTEMPT_EXIT=${{PIPESTATUS[0]}}
+
+    LOG_END_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo "$LOG_START_LINE")
+
+    echo "[$(date)] {attempt_display_name} exit code: $ATTEMPT_EXIT" | tee -a {log_file_quoted}
+
+    RATE_LIMITED=0
+    if [ "$LOG_END_LINE" -ge "$LOG_START_LINE" ]; then
+        if sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eqi "{rate_limit_pattern}"; then
+            RATE_LIMITED=1
+            RATE_LIMITED_SEEN=1
+            echo "[$(date)] ⚠️  Detected rate limit/quota output (treating as failure)" | tee -a {log_file_quoted}
+        fi
+    fi
+
+    if [ $ATTEMPT_EXIT -eq 0 ] && [ $RATE_LIMITED -eq 0 ]; then
+        RESULT_STATUS="completed"
+        FINAL_EXIT_CODE=0
+        CLI_USED="$ATTEMPT_CLI"
+        RESULT_WRITTEN=1
+        echo "[$(date)] ✅ Agent completed successfully via {attempt_display_name}" | tee -a {log_file_quoted}
+    else
+        CLI_LAST="$ATTEMPT_CLI"
+        FINAL_EXIT_CODE=$ATTEMPT_EXIT
+        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=$ATTEMPT_EXIT rate_limited=$RATE_LIMITED)" | tee -a {log_file_quoted}
+    fi
+fi
+"""
 
             # Enhanced bash command with error handling and logging
             bash_cmd = f"""
@@ -1417,27 +1580,59 @@ trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_q
 
 echo "[$(date)] Starting agent {agent_name_quoted}" | tee -a {log_file_quoted}
 echo "[$(date)] Working directory: {agent_dir_quoted}" | tee -a {log_file_quoted}
-echo "[$(date)] Executing CLI command:" | tee -a {log_file_quoted}
-cat <<'__ORCH_CLI_COMMAND__' | tee -a {log_file_quoted}
-{cli_command}
-__ORCH_CLI_COMMAND__
-echo "[$(date)] SAFETY: stdin redirected to {stdin_log_target_quoted}" | tee -a {log_file_quoted}
+echo "[$(date)] CLI chain: {cli_chain_str}" | tee -a {log_file_quoted}
 
-{prompt_env_export}
-{env_unset_commands}
+RESULT_WRITTEN=0
+RESULT_STATUS="failed"
+FINAL_EXIT_CODE=1
+CLI_USED=""
+CLI_LAST=""
+FALLBACK_ATTEMPTED=0
+FALLBACK_FROM=""
+FALLBACK_TO=""
+FIRST_ATTEMPT_CLI=""
+RATE_LIMITED_SEEN=0
 
-# Run CLI with configured stdin handling
-{command_execution_line} 2>&1 | tee -a {log_file_quoted}
-CLI_EXIT=$?
+{attempt_blocks}
 
-echo "[$(date)] {cli_display_name_quoted} exit code: $CLI_EXIT" | tee -a {log_file_quoted}
-
-if [ $CLI_EXIT -eq 0 ]; then
-    echo "[$(date)] Agent completed successfully" | tee -a {log_file_quoted}
-    echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0}}" > {result_file_quoted}
+if [ "$RESULT_STATUS" = "completed" ]; then
+    if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
+        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true, "rate_limited": true}}
+EOF
+        else
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true}}
+EOF
+        fi
+    else
+        cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}}}
+EOF
+    fi
 else
-    echo "[$(date)] Agent failed with exit code $CLI_EXIT" | tee -a {log_file_quoted}
-    echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT}}" > {result_file_quoted}
+    if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
+        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true, "rate_limited": true}}
+EOF
+        else
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true}}
+EOF
+        fi
+    else
+        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "rate_limited": true}}
+EOF
+        else
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}}}
+EOF
+        fi
+    fi
 fi
 
 # Keep session alive for 1 hour for monitoring and debugging
