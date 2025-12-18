@@ -95,6 +95,107 @@ def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
     }
 
 
+def extract_code_execution_parts_summary(
+    response: Any,
+    *,
+    max_parts: int = 5,
+    max_chars: int = 500,
+) -> dict[str, Any]:
+    """Extract a compact, log-friendly summary of code_execution parts.
+
+    This is intended for diagnostics only. It avoids logging full prompts or
+    full response text; it only captures code_execution-specific artifacts.
+    """
+    summary: dict[str, Any] = {
+        "candidates": 0,
+        "parts": 0,
+        "executable_code_samples": [],
+        "code_execution_result_samples": [],
+    }
+
+    def _truncate(value: Any) -> str:
+        try:
+            text = str(value)
+        except Exception:
+            return "[unstringifiable]"
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars] + "...(truncated)"
+
+    try:
+        candidates = getattr(response, "candidates", None) or []
+        summary["candidates"] = len(candidates)
+        for cand in candidates:
+            content = getattr(cand, "content", None)
+            parts = getattr(content, "parts", None) if content is not None else None
+            if not parts:
+                continue
+            for part in parts:
+                summary["parts"] += 1
+                if len(summary["executable_code_samples"]) < max_parts:
+                    executable = getattr(part, "executable_code", None)
+                    if executable is not None:
+                        # SDK shape varies; capture common fields if present.
+                        lang = getattr(executable, "language", None)
+                        code = getattr(executable, "code", None)
+                        summary["executable_code_samples"].append(
+                            {
+                                "language": _truncate(lang) if lang is not None else "",
+                                "code": _truncate(code) if code is not None else _truncate(executable),
+                            }
+                        )
+
+                if len(summary["code_execution_result_samples"]) < max_parts:
+                    result = getattr(part, "code_execution_result", None)
+                    if result is not None:
+                        outcome = getattr(result, "outcome", None)
+                        output = getattr(result, "output", None)
+                        summary["code_execution_result_samples"].append(
+                            {
+                                "outcome": _truncate(outcome) if outcome is not None else "",
+                                "output": _truncate(output) if output is not None else _truncate(result),
+                            }
+                        )
+    except Exception:
+        return summary
+
+    return summary
+
+
+def maybe_log_code_execution_parts(
+    response: Any,
+    *,
+    model_name: str,
+    context: str,
+) -> None:
+    """Log Gemini code_execution evidence when explicitly enabled.
+
+    Enable via env var to avoid noisy production logs:
+    - LOG_GEMINI_CODE_EXECUTION_PARTS=true
+    """
+    if os.getenv("LOG_GEMINI_CODE_EXECUTION_PARTS", "false").lower() != "true":
+        return
+
+    evidence = extract_code_execution_evidence(response)
+    if not evidence.get("code_execution_used"):
+        logging_util.info(
+            "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s used=false (%s)",
+            context,
+            model_name,
+            evidence,
+        )
+        return
+
+    detail = extract_code_execution_parts_summary(response)
+    logging_util.info(
+        "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s used=true evidence=%s detail=%s",
+        context,
+        model_name,
+        evidence,
+        detail,
+    )
+
+
 
 def generate_json_mode_content(
     prompt_contents: list[Any],

@@ -2853,6 +2853,11 @@ def get_initial_story(
         and constants.get_dice_roll_strategy(model_to_use, provider_selection.provider)
         == "code_execution"
     ):
+        gemini_provider.maybe_log_code_execution_parts(
+            api_response,
+            model_name=model_to_use,
+            context="initial_story",
+        )
         code_execution_evidence = gemini_provider.extract_code_execution_evidence(
             api_response
         )
@@ -3533,6 +3538,11 @@ def continue_story(
         and constants.get_dice_roll_strategy(chosen_model, provider_selection.provider)
         == "code_execution"
     ):
+        gemini_provider.maybe_log_code_execution_parts(
+            api_response,
+            model_name=chosen_model,
+            context="continue_story",
+        )
         code_execution_evidence = gemini_provider.extract_code_execution_evidence(
             api_response
         )
@@ -3587,6 +3597,11 @@ def continue_story(
                 )
                 == "code_execution"
             ):
+                gemini_provider.maybe_log_code_execution_parts(
+                    reprompt_response,
+                    model_name=chosen_model,
+                    context="continue_story_reprompt",
+                )
                 reprompt_code_exec = gemini_provider.extract_code_execution_evidence(
                     reprompt_response
                 )
