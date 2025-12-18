@@ -1645,7 +1645,7 @@ def _call_llm_api(
             strategy = constants.get_dice_roll_strategy(model_name, provider_name)
 
             if strategy == "code_execution":
-                # Gemini 2.0/3.x: code_execution + JSON together (single phase)
+                # Gemini 3.x: code_execution + JSON together (single inference)
                 logging_util.info(
                     f"🔍 CALL_LLM_API_GEMINI: code_execution strategy for {model_name}"
                 )

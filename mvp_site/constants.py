@@ -102,12 +102,6 @@ MODELS_WITH_CODE_EXECUTION: set[str] = {
     # Gemini 3.x - Full support (confirmed Dec 2025)
     "gemini-3-flash-preview",  # ✅ Released Dec 17, 2025 - default model
     "gemini-3-pro-preview",    # ✅ Released Nov 2025 - most capable
-
-    # Gemini 2.0 Flash - Supported but may have limitations
-    # Note: May fail when tool calls present in message history with error:
-    # "Function calling with a response mime type: 'application/json' is unsupported"
-    # Source: https://github.com/googleapis/python-genai/issues/706
-    "gemini-2.0-flash",        # ⚠️ Use with caution, prefer Gemini 3.x
 }
 
 
@@ -118,8 +112,7 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
     ARCHITECTURE UPDATE (Dec 2025): Verified model capabilities via web research.
 
     Strategy Selection:
-    - Gemini 3.x (Flash, Pro): Single-phase code execution + JSON (50% cost reduction)
-    - Gemini 2.0 Flash: Single-phase but may have limitations (use with caution)
+    - Gemini 3.x (Flash, Pro): Single-phase code execution + JSON
     - All others: Two-phase native tool calling (universal compatibility)
 
     Args:
@@ -128,7 +121,7 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
 
     Returns:
         Strategy string:
-        - 'code_execution' - Gemini 2.0/3.x ONLY: LLM executes Python code internally
+        - 'code_execution' - Gemini 3.x ONLY: LLM executes Python code internally
           in a single inference, returning structured JSON with dice results.
           Cost: 100% baseline. Audit: Limited (black box execution).
 
@@ -141,8 +134,8 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
         - OpenAI: https://platform.openai.com/docs/guides/structured-outputs
         - Anthropic: https://docs.claude.com/en/docs/agents-and-tools/tool-use/code-execution-tool
     """
-    # Gemini 2.0 and 3.x can use code_execution + JSON together
-    # UNIQUE CAPABILITY: Only these models can execute code AND return JSON in one call
+    # Gemini 3.x can use code_execution + JSON together
+    # UNIQUE CAPABILITY: Only these models can execute code AND return JSON in one call.
     if model_name in MODELS_WITH_CODE_EXECUTION:
         return "code_execution"
 

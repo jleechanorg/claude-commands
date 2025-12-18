@@ -1,20 +1,20 @@
 """
 TDD Tests for Hybrid Dice Roll System
 
-Gemini 2.0 and 3.0 models support BOTH code_execution AND JSON mode together.
-Gemini 2.5 does NOT support this combination - it uses the phased tool flow.
+Gemini 3.x models support BOTH code_execution AND JSON mode together.
+Gemini 2.x models do NOT support this combination - they use the native two-phase tool flow.
 
 The hybrid dice roll system:
-1. Code Execution (Gemini 2.0/3.0): Native Python code execution + JSON mode
-2. Tool Use (Cerebras, OpenRouter, Gemini 2.5): Function calling with local execution
+1. Code Execution (Gemini 3.x): Native Python code execution + JSON mode (single inference)
+2. Tool Use (Gemini 2.x, Cerebras, OpenRouter): Function calling with local execution (two-phase)
 3. Pre-computed (fallback): Backend pre-rolls dice and provides values
 
 See: https://ai.google.dev/gemini-api/docs/structured-output
 
 These tests verify:
 1. JSON mode is enabled (required for structured output)
-2. Code execution IS enabled for Gemini 2.0/3.0 models (they support both)
-3. Code execution is NOT enabled for Gemini 2.5 models
+2. Code execution IS enabled for Gemini 3.x models (they support both)
+3. Code execution is NOT enabled for Gemini 2.x models
 4. Tool schemas are defined for non-code-execution models
 5. Prompt instructions cover all dice roll strategies
 """
@@ -40,20 +40,16 @@ from mvp_site import constants, llm_service
 class TestHybridDiceRollSystem(unittest.TestCase):
     """Test the hybrid dice roll system across different model types."""
 
-    def test_gemini_uses_native_tools_for_dice(self):
+    def test_gemini_2x_uses_native_two_phase_for_dice(self):
         """
-        Verify Gemini models use native two-phase tool calling for dice rolling.
-
-        ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use native_two_phase.
-        Google has disabled code_execution + JSON mode together.
-        Phase 1 has native tools (no JSON), Phase 2 has JSON (no tools).
+        Verify Gemini 2.x models use native two-phase tool calling for dice rolling.
         """
-        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution') as mock_native_tools:
+        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools') as mock_native_tools:
             mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # Call the API function with Gemini 2.0 model
+            # Call the API function with a Gemini 2.x model (not remapped to Gemini 3)
             llm_service._call_llm_api(
                 ['test prompt'],
                 'gemini-2.0-flash',
@@ -61,11 +57,39 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_GEMINI
             )
 
-            # Verify native_tools was called (not old tool_requests)
             self.assertTrue(
                 mock_native_tools.called,
-                "generate_content_with_native_tools should be called for Gemini models"
+                "generate_content_with_native_tools should be called for Gemini 2.x models"
             )
+
+    def test_gemini_3_code_execution_is_single_call(self):
+        """Verify Gemini 3 code_execution path does not do Phase 2 calls."""
+        from mvp_site.llm_providers import gemini_provider
+
+        with patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content") as mock_json_mode:
+            mock_json_mode.return_value = Mock(
+                text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
+            )
+
+            with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests") as mock_tool_flow:
+                gemini_provider.generate_content_with_code_execution(
+                    prompt_contents=["test prompt"],
+                    model_name="gemini-3-flash-preview",
+                    system_instruction_text="test system",
+                    temperature=0.7,
+                    safety_settings=[],
+                    json_mode_max_output_tokens=256,
+                )
+
+                self.assertEqual(
+                    mock_json_mode.call_count,
+                    1,
+                    "Gemini 3 code_execution should make exactly one JSON-mode call",
+                )
+                self.assertFalse(
+                    mock_tool_flow.called,
+                    "Gemini 3 code_execution should not use tool_requests two-phase flow",
+                )
 
     def test_model_capability_detection(self):
         """
@@ -83,10 +107,10 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             "code_execution"
         )
 
-        # Gemini 2.0 currently routed to code_execution + JSON together
+        # Gemini 2.0 uses native_two_phase (code_execution + JSON unsupported)
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash", "gemini"),
-            "code_execution"
+            "native_two_phase"
         )
 
         # Gemini 2.5 does NOT support tools + JSON mime
@@ -126,7 +150,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         # Default provider path follows same routing
         self.assertEqual(
             constants.get_dice_roll_strategy("gemini-2.0-flash"),
-            "code_execution"
+            "native_two_phase"
         )
 
     def test_dice_roll_instructions_exist(self):
@@ -206,11 +230,8 @@ class TestHybridDiceRollSystem(unittest.TestCase):
     def test_api_call_passes_required_params_to_native_tools(self):
         """
         Verify API calls pass required parameters to native two-phase flow.
-
-        ARCHITECTURE UPDATE (Dec 2024): All Gemini models now use native_two_phase.
-        Google has disabled code_execution + JSON mode together.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution") as mock_native_tools:
+        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools") as mock_native_tools:
             mock_native_tools.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )

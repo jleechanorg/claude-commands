@@ -72,9 +72,9 @@ def generate_json_mode_content(
 ) -> Any:
     """Generate content from Gemini, optionally using tools or JSON mode.
 
-    Note: Code execution remains enabled for supported models even when JSON
-    mode/controlled generation is active so Gemini 2.0/3.x can execute Python
-    while returning schema-constrained responses.
+    Note: Code execution is only compatible with JSON mode on Gemini 3.x.
+    For other Gemini models, use native two-phase tool calling (Phase 1 tools,
+    Phase 2 JSON) to preserve structured output.
 
     Args:
         prompt_contents: The prompt content to send (if messages not provided)
@@ -112,8 +112,8 @@ def generate_json_mode_content(
         if enable_code_execution is not None
         else model_name in constants.MODELS_WITH_CODE_EXECUTION
     )
-    # Constraint: Gemini 2.x cannot combine code_execution with response_mime_type JSON
-    if json_mode and model_name not in {"gemini-3-flash-preview", "gemini-3-pro-preview"}:
+    # Constraint: Only Gemini 3.x supports code_execution + JSON mode together.
+    if json_mode and model_name not in constants.MODELS_WITH_CODE_EXECUTION:
         allow_code_execution = False
 
     gemini_tools = []
@@ -197,35 +197,42 @@ def generate_content_with_code_execution(
     safety_settings: list[Any],
     json_mode_max_output_tokens: int,
 ) -> Any:
-    """Generate content for Gemini 3 models using JSON-first tool_requests flow.
+    """Generate a SINGLE JSON response using Gemini's code_execution tool.
 
-    NOTE: This function delegates to generate_content_with_tool_requests.
-    The name is kept for backward compatibility with llm_service routing.
+    Gemini 3.x is the only Gemini family that supports combining:
+    - response_mime_type="application/json"
+    - built-in tools (code_execution)
 
-    Gemini 3 models use the same JSON-first flow as Gemini 2.x:
-    - Phase 1: JSON mode call, LLM includes tool_requests if needed
-    - Phase 2: Execute tools, inject results, second JSON call
-
-    Args:
-        prompt_contents: The prompt content to send
-        model_name: Gemini model name (must be Gemini 3.x)
-        system_instruction_text: Optional system instruction
-        temperature: Sampling temperature
-        safety_settings: Safety settings list
-        json_mode_max_output_tokens: Max output tokens
-
-    Returns:
-        Gemini API response in JSON format
+    This should be a single inference (one generateContent call). Dice rolls are
+    computed inside the model via code_execution, not via server-side tools.
     """
-    # Use JSON-first flow: Phase 1 with JSON mode, handle tool_requests if present
-    # This is the preferred approach that keeps JSON schema enforcement throughout
-    return generate_content_with_tool_requests(
+    logging_util.info(
+        "Gemini code_execution: Single JSON call (no tool_requests Phase 2)"
+    )
+
+    code_exec_override = (
+        "\n\nIMPORTANT (Gemini 3 code_execution mode):\n"
+        "- Do NOT output `tool_requests`.\n"
+        "- Use the built-in code execution tool to roll dice and compute outcomes.\n"
+        "- Return the final, complete response JSON in this single response.\n"
+        "- If `tool_requests` exists in the schema, set it to an empty list.\n"
+    )
+    effective_system_instruction = (
+        f"{system_instruction_text}{code_exec_override}"
+        if system_instruction_text
+        else code_exec_override
+    )
+
+    return generate_json_mode_content(
         prompt_contents=prompt_contents,
         model_name=model_name,
-        system_instruction_text=system_instruction_text,
+        system_instruction_text=effective_system_instruction,
         temperature=temperature,
         safety_settings=safety_settings,
         json_mode_max_output_tokens=json_mode_max_output_tokens,
+        tools=None,
+        json_mode=True,
+        enable_code_execution=True,
     )
 
 
