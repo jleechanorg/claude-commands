@@ -130,17 +130,27 @@ async function fetchApi(path, options = {}, retryCount = 0) {
     const user = tokenManager?.getCurrentUser
       ? tokenManager.getCurrentUser()
       : firebase.auth().currentUser;
-    if (!user) throw new Error('User not authenticated');
+    if (!user) {
+      console.error('🔴 fetchApi: User not authenticated - firebase.auth().currentUser is null');
+      console.error('🔴 fetchApi: Path was:', path);
+      throw new Error('User not authenticated');
+    }
 
     // Apply clock skew compensation before token generation
     await applyClockSkewCompensation();
 
     // Get fresh token, forcing refresh on retries to handle clock skew
-    const authHeaders = tokenManager?.getAuthHeaders
-      ? await tokenManager.getAuthHeaders(forceRefresh)
-      : { Authorization: `Bearer ${await user.getIdToken(forceRefresh)}` };
+    try {
+      const authHeaders = tokenManager?.getAuthHeaders
+        ? await tokenManager.getAuthHeaders(forceRefresh)
+        : { Authorization: `Bearer ${await user.getIdToken(forceRefresh)}` };
 
-    defaultHeaders = { ...defaultHeaders, ...authHeaders };
+      defaultHeaders = { ...defaultHeaders, ...authHeaders };
+    } catch (tokenError) {
+      console.error('🔴 fetchApi: Failed to get auth token:', tokenError);
+      console.error('🔴 fetchApi: forceRefresh was:', forceRefresh);
+      throw tokenError;
+    }
   }
 
   const config = {
@@ -149,16 +159,28 @@ async function fetchApi(path, options = {}, retryCount = 0) {
     headers: { ...defaultHeaders, ...options.headers },
   };
 
+  console.log(`📤 fetchApi: Starting request to ${path} (timeout: ${timeoutMs}ms)`);
+
   let response;
   try {
     response = await fetch(path, config);
+    console.log(`📥 fetchApi: Response received from ${path} - status: ${response.status}`);
+  } catch (fetchError) {
+    console.error('🔴 fetchApi: Fetch failed:', fetchError);
+    console.error('🔴 fetchApi: Error name:', fetchError.name);
+    console.error('🔴 fetchApi: Error message:', fetchError.message);
+    console.error('🔴 fetchApi: Path was:', path);
+    clearTimeout(timeoutId);
+    throw fetchError;
   } finally {
     clearTimeout(timeoutId);
   }
 
   const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+  console.log(`⏱️ fetchApi: Request to ${path} completed in ${duration}s`);
 
   if (!response.ok) {
+    console.error(`🔴 fetchApi: HTTP error ${response.status} ${response.statusText} for ${path}`);
     let errorPayload = {
       message: `HTTP Error: ${response.status} ${response.statusText}`,
       traceback: `Status code ${response.status} indicates a server-side problem. Check the Cloud Run logs for details.`,
@@ -223,7 +245,16 @@ async function fetchApi(path, options = {}, retryCount = 0) {
     throw error;
   }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+    console.log(`✅ fetchApi: Successfully parsed JSON response from ${path}`);
+  } catch (jsonError) {
+    console.error('🔴 fetchApi: Failed to parse response as JSON:', jsonError);
+    console.error('🔴 fetchApi: Response status was:', response.status);
+    console.error('🔴 fetchApi: Response headers:', Object.fromEntries(response.headers.entries()));
+    throw new Error('Failed to parse server response as JSON');
+  }
   return { data, duration };
 }
 

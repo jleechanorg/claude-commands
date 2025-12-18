@@ -14,6 +14,48 @@ setup_mcp_production_env
 
 echo "Starting MCP server in production mode (dual transport: stdio + HTTP)..." >&2
 
+# If the requested HTTP port is already serving our MCP health endpoint, treat it as
+# "already running" and exit successfully (common during dev when a prior server is
+# still active).
+HOST="127.0.0.1"
+PORT="8001"
+ARGS=("$@")
+for ((i=0; i<${#ARGS[@]}; i++)); do
+    case "${ARGS[$i]}" in
+        --host)
+            HOST="${ARGS[$((i+1))]:-$HOST}"
+            i=$((i+1))
+            ;;
+        --port)
+            PORT="${ARGS[$((i+1))]:-$PORT}"
+            i=$((i+1))
+            ;;
+    esac
+done
+
+CHECK_HOST="$HOST"
+if [[ "$CHECK_HOST" == "0.0.0.0" ]]; then
+    CHECK_HOST="127.0.0.1"
+fi
+
+if command -v curl >/dev/null 2>&1; then
+    if HEALTH_JSON="$(curl -fsS --max-time 1 "http://${CHECK_HOST}:${PORT}/health" 2>/dev/null)"; then
+        if echo "$HEALTH_JSON" | grep -Eq '"server"[[:space:]]*:[[:space:]]*"world-logic"'; then
+            echo "MCP server already running on http://${CHECK_HOST}:${PORT} (health OK); skipping new start." >&2
+            exit 0
+        fi
+    fi
+fi
+
+# If the port is bound but it's not our MCP server, fail with a clear message.
+if command -v lsof >/dev/null 2>&1; then
+    if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+        echo "ERROR: Port ${PORT} is already in use and does not appear to be our MCP server." >&2
+        lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >&2 || true
+        exit 1
+    fi
+fi
+
 # Create a named pipe for persistent stdin
 branch="${GITHUB_REF_NAME:-local}"
 PIPE_FILE="$(mktemp -u "/tmp/mcp_stdin_${branch}_XXXX")"
