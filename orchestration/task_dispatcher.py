@@ -46,6 +46,8 @@ CLI_PROFILES = {
         ),
         "stdin_template": "/dev/null",
         "quote_prompt": False,
+        # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
+        "env_unset": ["ANTHROPIC_API_KEY"],
         "detection_keywords": ["claude", "anthropic"],
     },
     "codex": {
@@ -60,6 +62,8 @@ CLI_PROFILES = {
         "command_template": "{binary} exec --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": True,
+        # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
+        "env_unset": ["OPENAI_API_KEY"],
         "detection_keywords": [
             "codex",
             "codex exec",
@@ -83,6 +87,9 @@ CLI_PROFILES = {
         "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,
+        # Unset GEMINI_API_KEY to force OAuth authentication (higher quotas than API key)
+        # See: https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/authentication.md
+        "env_unset": ["GEMINI_API_KEY"],
         "detection_keywords": [
             "gemini",
             "gemini cli",
@@ -105,6 +112,8 @@ CLI_PROFILES = {
         "command_template": f"{{binary}} -f -p @{{prompt_file}} --model {CURSOR_MODEL} --output-format text",
         "stdin_template": "/dev/null",
         "quote_prompt": False,
+        # No known API key to unset for Cursor (uses its own auth)
+        "env_unset": [],
         "detection_keywords": [
             "cursor",
             "cursor-agent",
@@ -1381,6 +1390,17 @@ Agent Configuration:
             command_execution_line = cli_command + stdin_redirect
             prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
 
+            # Generate env unset commands for CLI-specific environment overrides
+            # Validate env var names to prevent shell injection (must be valid POSIX identifiers)
+            env_unset_list = cli_profile.get("env_unset", [])
+            for var in env_unset_list:
+                if not isinstance(var, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var):
+                    raise ValueError(
+                        f"Invalid environment variable name in env_unset for CLI profile "
+                        f"'{cli_profile.get('display_name', agent_cli)}': {var!r}"
+                    )
+            env_unset_commands = "\n".join(f"unset {var}" for var in env_unset_list) if env_unset_list else ""
+
             agent_name_quoted = shlex.quote(agent_name)
             cli_display_name_quoted = shlex.quote(cli_profile["display_name"])
             agent_dir_quoted = shlex.quote(agent_dir)
@@ -1404,6 +1424,7 @@ __ORCH_CLI_COMMAND__
 echo "[$(date)] SAFETY: stdin redirected to {stdin_log_target_quoted}" | tee -a {log_file_quoted}
 
 {prompt_env_export}
+{env_unset_commands}
 
 # Run CLI with configured stdin handling
 {command_execution_line} 2>&1 | tee -a {log_file_quoted}
