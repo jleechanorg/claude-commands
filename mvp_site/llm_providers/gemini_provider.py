@@ -361,10 +361,10 @@ def generate_content_with_native_tools(
         temperature=temperature,
         safety_settings=safety_settings,
         tools=gemini_tools,
-        # Force tool use: game rules require dice for combat, skill checks, saves
-        # With mode='ANY', the LLM MUST call at least one tool
+        # Tool calling should be OPTIONAL: narrative-only turns should not be forced to
+        # call a dice tool. Prompts still mandate dice rolls when rules require them.
         tool_config=types.ToolConfig(
-            function_calling_config=types.FunctionCallingConfig(mode='ANY')
+            function_calling_config=types.FunctionCallingConfig(mode="AUTO")
         ),
     )
 
