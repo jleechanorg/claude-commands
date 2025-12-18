@@ -30,7 +30,7 @@ os.environ["TESTING"] = "true"
 
 # Add parent directory to path for imports
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 )
 
 
@@ -559,7 +559,9 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
             # Check that tool results message is included
             tool_results_msg = messages[-1]["content"]
             self.assertIn("Tool results", tool_results_msg)
-            self.assertIn("roll_dice", tool_results_msg)
+            # The formatted output contains the calculation (e.g. "1d20+5 = 3+5 = 8")
+            # but NOT necessarily the tool name "roll_dice"
+            self.assertIn("1d20+5", tool_results_msg)
 
     def test_path3_invalid_json_returns_as_is(self):
         """Path 3: Non-JSON response returns as-is without Phase 2."""
