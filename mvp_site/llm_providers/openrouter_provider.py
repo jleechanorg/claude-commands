@@ -6,7 +6,6 @@ Other models fall back to json_object mode.
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
 
@@ -20,8 +19,9 @@ from mvp_site.game_state import (
     format_tool_results_text,
 )
 from mvp_site.llm_providers.provider_utils import (
-    build_tool_results_prompt,
     get_openai_json_schema_format,
+    run_openai_json_first_tool_requests_flow,
+    run_openai_native_two_phase_flow,
     stringify_chat_parts,
 )
 
@@ -188,115 +188,18 @@ def generate_content_with_tool_requests(
     Returns:
         Final OpenRouterResponse with complete JSON
     """
-    # First call: JSON mode (no tools) - same as origin/main
-    logging_util.info("Phase 1: JSON call (checking for tool_requests)")
-    response = generate_content(
+    return run_openai_json_first_tool_requests_flow(
+        generate_content_fn=generate_content,
         prompt_contents=prompt_contents,
         model_name=model_name,
         system_instruction_text=system_instruction_text,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
-        tools=None,  # No tools = JSON schema enforced
+        provider_no_tool_requests_log_prefix="OPENROUTER_TOOL_REQUESTS",
+        execute_tool_requests_fn=execute_tool_requests,
+        format_tool_results_text_fn=format_tool_results_text,
+        logger=logging_util,
     )
-
-    # Parse response to check for tool_requests
-    try:
-        response_data = json.loads(response.text) if response.text else {}
-    except json.JSONDecodeError:
-        logging_util.warning("Phase 1 response not valid JSON, returning as-is")
-        return response
-
-    tool_requests = response_data.get("tool_requests", [])
-    if not tool_requests:
-        # Log at INFO level to help diagnose dice roll issues
-        logging_util.info(
-            "OPENROUTER_TOOL_REQUESTS: No tool_requests in LLM response. "
-            f"Response keys: {list(response_data.keys())}"
-        )
-        return response
-
-    # Execute tool requests
-    logging_util.info(f"Executing {len(tool_requests)} tool request(s)")
-    tool_results = execute_tool_requests(tool_requests)
-
-    if not tool_results:
-        logging_util.warning("No valid tool results, returning Phase 1 result")
-        return response
-
-    # Build Phase 2 context with tool results
-    tool_results_text = format_tool_results_text(tool_results)
-
-    # Build messages for Phase 2
-    messages = []
-    if system_instruction_text:
-        messages.append({"role": "system", "content": system_instruction_text})
-    messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
-    messages.append({"role": "assistant", "content": response.text})
-    messages.append({
-        "role": "user",
-        "content": build_tool_results_prompt(tool_results_text)
-    })
-
-    # Phase 2: JSON call with tool results
-    logging_util.info("Phase 2: JSON call with tool results")
-    final_response = generate_content(
-        prompt_contents=[],  # Not used when messages provided
-        model_name=model_name,
-        system_instruction_text=None,  # Already in messages
-        temperature=temperature,
-        max_output_tokens=max_output_tokens,
-        tools=None,  # No tools = JSON schema enforced
-        messages=messages,
-    )
-
-    return final_response
-
-
-def _execute_native_tool_calls(tool_calls: list[dict]) -> list[dict]:
-    """Execute native API tool_calls and return results.
-
-    Args:
-        tool_calls: List of tool call objects from API response
-                    Format: [{"id": str, "type": "function", "function": {"name": str, "arguments": str}}]
-
-    Returns:
-        List of {"tool_call_id": str, "tool": str, "args": dict, "result": dict}
-    """
-    results = []
-    for call in tool_calls:
-        try:
-            call_id = call.get("id", "")
-            func = call.get("function", {})
-            tool_name = func.get("name", "")
-            args_str = func.get("arguments", "{}")
-
-            # Parse arguments JSON
-            try:
-                args = json.loads(args_str) if args_str else {}
-            except json.JSONDecodeError:
-                args = {}
-
-            # Execute the tool
-            result = execute_dice_tool(tool_name, args)
-
-            results.append({
-                "tool_call_id": call_id,
-                "tool": tool_name,
-                "args": args,
-                "result": result,
-            })
-            logging_util.info(f"NATIVE_TOOL_CALL: {tool_name}({args}) -> {result}")
-
-        except Exception as e:
-            logging_util.error(f"Native tool execution error: {e}")
-            results.append({
-                "tool_call_id": call.get("id", ""),
-                "tool": call.get("function", {}).get("name", "unknown"),
-                "args": {},
-                "result": {"error": str(e)},
-            })
-
-    return results
 
 
 def generate_content_with_native_tools(
@@ -326,105 +229,14 @@ def generate_content_with_native_tools(
     Returns:
         Final OpenRouterResponse with structured JSON
     """
-    # Phase 1: Native tool calling (no JSON schema)
-    logging_util.info("NATIVE Phase 1: Calling with tools parameter")
-
-    # Build initial messages
-    messages = []
-    if system_instruction_text:
-        messages.append({"role": "system", "content": system_instruction_text})
-    messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
-
-    # Make Phase 1 request with tools
-    response1 = generate_content(
+    return run_openai_native_two_phase_flow(
+        generate_content_fn=generate_content,
         prompt_contents=prompt_contents,
         model_name=model_name,
         system_instruction_text=system_instruction_text,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
-        tools=DICE_ROLL_TOOLS,  # Native tools, no JSON schema
+        dice_roll_tools=DICE_ROLL_TOOLS,
+        execute_tool_fn=execute_dice_tool,
+        logger=logging_util,
     )
-
-    # Check for tool_calls in response
-    tool_calls = response1.tool_calls
-    if not tool_calls:
-        # No tools needed - make Phase 2 call for JSON schema response
-        logging_util.info("NATIVE Phase 1: No tool_calls, proceeding to Phase 2 for JSON")
-
-        # If Phase 1 returned content, we need Phase 2 for JSON schema
-        phase2_messages = messages.copy()
-        if response1.text:
-            phase2_messages.append({"role": "assistant", "content": response1.text})
-            phase2_messages.append({
-                "role": "user",
-                "content": "Now provide your response in the required JSON format."
-            })
-
-        response2 = generate_content(
-            prompt_contents=[],
-            model_name=model_name,
-            system_instruction_text=None,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
-            tools=None,  # No tools = JSON schema enforced
-            messages=phase2_messages if response1.text else messages,
-        )
-        return response2
-
-    # Execute tool calls
-    logging_util.info(f"NATIVE Phase 1: Executing {len(tool_calls)} tool call(s)")
-    tool_results = _execute_native_tool_calls(tool_calls)
-
-    if not tool_results:
-        logging_util.warning("NATIVE: No valid tool results, making JSON-only call")
-        return generate_content(
-            prompt_contents=prompt_contents,
-            model_name=model_name,
-            system_instruction_text=system_instruction_text,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
-            tools=None,
-        )
-
-    # Build Phase 2 messages with tool results
-    phase2_messages = messages.copy()
-
-    # Add assistant message indicating it called tools
-    assistant_tool_msg = {
-        "role": "assistant",
-        "content": None,
-        "tool_calls": tool_calls,
-    }
-    phase2_messages.append(assistant_tool_msg)
-
-    # Add tool results as tool role messages (OpenAI format)
-    for result in tool_results:
-        phase2_messages.append({
-            "role": "tool",
-            "tool_call_id": result["tool_call_id"],
-            "content": json.dumps(result["result"]),
-        })
-
-    # Add instruction for final JSON response
-    phase2_messages.append({
-        "role": "user",
-        "content": (
-            "The dice rolls have been executed. Use these EXACT results in your narrative. "
-            "Now provide the complete response in the required JSON format. "
-            "Include the dice roll results in the dice_rolls array."
-        ),
-    })
-
-    # Phase 2: JSON schema response with results
-    logging_util.info("NATIVE Phase 2: JSON call with tool results")
-    final_response = generate_content(
-        prompt_contents=[],
-        model_name=model_name,
-        system_instruction_text=None,
-        temperature=temperature,
-        max_output_tokens=max_output_tokens,
-        tools=None,  # No tools = JSON schema enforced
-        messages=phase2_messages,
-    )
-
-    return final_response
