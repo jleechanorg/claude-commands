@@ -332,55 +332,117 @@ def run_openai_json_first_tool_requests_flow(
     logger: _Logger,
 ) -> Any:
     """Run the JSON-first tool_requests orchestration shared by OpenAI-chat providers."""
-    logger.info("Phase 1: JSON call (checking for tool_requests)")
-    response = generate_content_fn(
+
+    def phase1() -> Any:
+        logger.info("Phase 1: JSON call (checking for tool_requests)")
+        return generate_content_fn(
+            prompt_contents=prompt_contents,
+            model_name=model_name,
+            system_instruction_text=system_instruction_text,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            tools=None,
+        )
+
+    def extract_text(resp: Any) -> str:
+        return getattr(resp, "text", "") or ""
+
+    def build_history(*, prompt_contents: list[Any], phase1_text: str, tool_results_prompt: str) -> list[dict[str, Any]]:
+        messages: list[dict[str, Any]] = []
+        if system_instruction_text:
+            messages.append({"role": "system", "content": system_instruction_text})
+        messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
+        messages.append({"role": "assistant", "content": phase1_text})
+        messages.append({"role": "user", "content": tool_results_prompt})
+        return messages
+
+    def phase2(messages: list[dict[str, Any]]) -> Any:
+        logger.info("Phase 2: JSON call with tool results")
+        return generate_content_fn(
+            prompt_contents=[],
+            model_name=model_name,
+            system_instruction_text=None,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            tools=None,
+            messages=messages,
+        )
+
+    return run_json_first_tool_requests_flow(
+        phase1_generate_fn=phase1,
+        extract_text_fn=extract_text,
         prompt_contents=prompt_contents,
-        model_name=model_name,
-        system_instruction_text=system_instruction_text,
-        temperature=temperature,
-        max_output_tokens=max_output_tokens,
-        tools=None,
-    )
-
-    try:
-        response_data = json.loads(response.text) if response.text else {}
-    except json.JSONDecodeError:
-        logger.warning("Phase 1 response not valid JSON, returning as-is")
-        return response
-
-    tool_requests = response_data.get("tool_requests", [])
-    if not tool_requests:
-        logger.info(
+        execute_tool_requests_fn=execute_tool_requests_fn,
+        format_tool_results_text_fn=format_tool_results_text_fn,
+        build_history_fn=build_history,
+        phase2_generate_fn=phase2,
+        logger=logger,
+        no_tool_requests_log_msg=lambda response_data: (
             f"{provider_no_tool_requests_log_prefix}: No tool_requests in LLM response. "
             f"Response keys: {list(response_data.keys())}"
+        ),
+    )
+
+
+def run_json_first_tool_requests_flow(
+    *,
+    phase1_generate_fn: Callable[[], Any],
+    extract_text_fn: Callable[[Any], str],
+    prompt_contents: list[Any],
+    execute_tool_requests_fn: Callable[[list[dict]], list[dict]],
+    format_tool_results_text_fn: Callable[[list[dict]], str],
+    build_history_fn: Callable[..., Any],
+    phase2_generate_fn: Callable[[Any], Any],
+    logger: _Logger,
+    no_tool_requests_log_msg: str | Callable[[dict[str, Any]], str],
+    tool_requests_key: str = "tool_requests",
+) -> Any:
+    """Provider-agnostic JSON-first tool_requests orchestration.
+
+    This is useful for providers that cannot combine tools + JSON mode and
+    therefore need to:
+    1) Ask for JSON with (optional) tool_requests
+    2) Execute tool_requests server-side
+    3) Re-ask for JSON with injected tool results
+    """
+    response_1 = phase1_generate_fn()
+    response_text = (extract_text_fn(response_1) or "").strip()
+
+    try:
+        response_data: dict[str, Any] = json.loads(response_text) if response_text else {}
+    except json.JSONDecodeError:
+        logger.warning("Phase 1 response not valid JSON, returning as-is")
+        return response_1
+
+    tool_requests = response_data.get(tool_requests_key, [])
+    if not tool_requests:
+        msg = (
+            no_tool_requests_log_msg(response_data)
+            if callable(no_tool_requests_log_msg)
+            else no_tool_requests_log_msg
         )
-        return response
+        logger.info(msg)
+        return response_1
+
+    if not isinstance(tool_requests, list):
+        logger.warning("tool_requests is not a list, returning Phase 1 result")
+        return response_1
 
     logger.info(f"Executing {len(tool_requests)} tool request(s)")
     tool_results = execute_tool_requests_fn(tool_requests)
     if not tool_results:
         logger.warning("No valid tool results, returning Phase 1 result")
-        return response
+        return response_1
 
     tool_results_text = format_tool_results_text_fn(tool_results)
-
-    messages: list[dict[str, Any]] = []
-    if system_instruction_text:
-        messages.append({"role": "system", "content": system_instruction_text})
-    messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
-    messages.append({"role": "assistant", "content": response.text})
-    messages.append({"role": "user", "content": build_tool_results_prompt(tool_results_text)})
-
-    logger.info("Phase 2: JSON call with tool results")
-    return generate_content_fn(
-        prompt_contents=[],
-        model_name=model_name,
-        system_instruction_text=None,
-        temperature=temperature,
-        max_output_tokens=max_output_tokens,
-        tools=None,
-        messages=messages,
+    tool_results_prompt = build_tool_results_prompt(tool_results_text)
+    history = build_history_fn(
+        prompt_contents=prompt_contents,
+        phase1_text=response_text,
+        tool_results_prompt=tool_results_prompt,
     )
+
+    return phase2_generate_fn(history)
 
 
 def run_openai_native_two_phase_flow(

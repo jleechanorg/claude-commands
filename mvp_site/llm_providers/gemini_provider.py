@@ -22,6 +22,7 @@ from mvp_site.game_state import (
 )
 from mvp_site.llm_providers.provider_utils import (
     build_tool_results_prompt,
+    run_json_first_tool_requests_flow,
     stringify_prompt_contents,
 )
 from mvp_site.llm_providers import gemini_code_execution
@@ -517,78 +518,71 @@ def generate_content_with_tool_requests(
     Returns:
         Gemini API response with complete JSON
     """
-    # Phase 1: JSON mode call (no tools) - same as main branch
-    logging_util.info("Gemini Phase 1: JSON call (checking for tool_requests)")
-    response_1 = generate_json_mode_content(
+    def phase1() -> Any:
+        logging_util.info("Gemini Phase 1: JSON call (checking for tool_requests)")
+        return generate_json_mode_content(
+            prompt_contents=prompt_contents,
+            model_name=model_name,
+            system_instruction_text=system_instruction_text,
+            temperature=temperature,
+            safety_settings=safety_settings,
+            json_mode_max_output_tokens=json_mode_max_output_tokens,
+            tools=None,  # No tools = JSON mode enforced
+            json_mode=True,
+        )
+
+    def extract_text(resp: Any) -> str:
+        try:
+            if getattr(resp, "text", None):
+                return str(resp.text)
+            if resp.candidates and resp.candidates[0].content.parts:
+                return str(resp.candidates[0].content.parts[0].text)
+        except Exception:  # noqa: BLE001 - defensive extraction
+            return ""
+        return ""
+
+    def build_history(
+        *,
+        prompt_contents: list[Any],
+        phase1_text: str,
+        tool_results_prompt: str,
+    ) -> list[Any]:
+        return [
+            types.Content(
+                role="user",
+                parts=[types.Part(text=stringify_prompt_contents(prompt_contents))],
+            ),
+            types.Content(
+                role="model",
+                parts=[types.Part(text=phase1_text)],
+            ),
+            types.Content(
+                role="user",
+                parts=[types.Part(text=tool_results_prompt)],
+            ),
+        ]
+
+    def phase2(history: list[Any]) -> Any:
+        logging_util.info("Gemini Phase 2: JSON call with tool results")
+        return generate_json_mode_content(
+            prompt_contents=history,  # Pass full conversation history
+            model_name=model_name,
+            system_instruction_text=system_instruction_text,
+            temperature=temperature,
+            safety_settings=safety_settings,
+            json_mode_max_output_tokens=json_mode_max_output_tokens,
+            tools=None,  # No tools = JSON mode enforced
+            json_mode=True,
+        )
+
+    return run_json_first_tool_requests_flow(
+        phase1_generate_fn=phase1,
+        extract_text_fn=extract_text,
         prompt_contents=prompt_contents,
-        model_name=model_name,
-        system_instruction_text=system_instruction_text,
-        temperature=temperature,
-        safety_settings=safety_settings,
-        json_mode_max_output_tokens=json_mode_max_output_tokens,
-        tools=None,  # No tools = JSON mode enforced
-        json_mode=True,
-    )
-
-    # Extract text from Gemini response
-    try:
-        response_text = response_1.text if hasattr(response_1, 'text') else ""
-        if response_1.candidates and response_1.candidates[0].content.parts:
-            response_text = response_1.candidates[0].content.parts[0].text
-    except (AttributeError, IndexError):
-        logging_util.warning("Could not extract text from Phase 1 response")
-        return response_1
-
-    # Parse response to check for tool_requests
-    try:
-        response_data = json.loads(response_text) if response_text else {}
-    except json.JSONDecodeError:
-        logging_util.warning("Gemini Phase 1 response not valid JSON, returning as-is")
-        return response_1
-
-    tool_requests = response_data.get("tool_requests", [])
-    if not tool_requests:
-        logging_util.debug("No tool_requests in response, returning Phase 1 result")
-        return response_1
-
-    # Execute tool requests
-    logging_util.info(f"Executing {len(tool_requests)} tool request(s)")
-    tool_results = execute_tool_requests(tool_requests)
-
-    if not tool_results:
-        logging_util.warning("No valid tool results, returning Phase 1 result")
-        return response_1
-
-    # Build Phase 2 context with tool results
-    tool_results_text = format_tool_results_text(tool_results)
-
-    # For Gemini, we build the conversation history as Content objects
-    history = []
-    # User turn (original prompt)
-    history.append(types.Content(
-        role="user",
-        parts=[types.Part(text=stringify_prompt_contents(prompt_contents))]
-    ))
-    # Model turn (Phase 1 response)
-    history.append(types.Content(
-        role="model",
-        parts=[types.Part(text=response_text)]
-    ))
-    # User turn with tool results
-    history.append(types.Content(
-        role="user",
-        parts=[types.Part(text=build_tool_results_prompt(tool_results_text))]
-    ))
-
-    # Phase 2: JSON call with tool results
-    logging_util.info("Gemini Phase 2: JSON call with tool results")
-    return generate_json_mode_content(
-        prompt_contents=history,  # Pass full conversation history
-        model_name=model_name,
-        system_instruction_text=system_instruction_text,
-        temperature=temperature,
-        safety_settings=safety_settings,
-        json_mode_max_output_tokens=json_mode_max_output_tokens,
-        tools=None,  # No tools = JSON mode enforced
-        json_mode=True,
+        execute_tool_requests_fn=execute_tool_requests,
+        format_tool_results_text_fn=format_tool_results_text,
+        build_history_fn=build_history,
+        phase2_generate_fn=phase2,
+        logger=logging_util,
+        no_tool_requests_log_msg="Gemini: No tool_requests in response, returning Phase 1 result",
     )
