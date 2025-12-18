@@ -33,16 +33,19 @@ def validate_deployment_config() -> bool:
     explicit dev mode acknowledgment.
 
     Returns:
-        True if in dev mode (WORLDAI_DEV_MODE=true), False if in production mode.
+        True if in dev mode (WORLDAI_DEV_MODE=true or TESTING=true), False if in production mode.
 
     Raises:
         ValueError: If WORLDAI_GOOGLE_APPLICATION_CREDENTIALS is set without
-                    WORLDAI_DEV_MODE=true (prevents accidental production use).
+                    WORLDAI_DEV_MODE=true (and not in TESTING mode).
+
+    Note:
+        TESTING=true unconditionally bypasses all validation and returns True,
+        allowing for hermetic test environments.
     """
-    # Skip validation in test mode to prevent import-time crashes during pytest collection
     testing_mode = os.getenv("TESTING", "").lower() == "true"
     if testing_mode:
-        return False  # Not in dev mode, but skip validation
+        return True
 
     has_worldai_creds = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS") is not None
     dev_mode = os.getenv("WORLDAI_DEV_MODE", "").lower() == "true"
@@ -63,8 +66,11 @@ def get_clock_skew_seconds() -> int:
         720 seconds (12 minutes) - hardcoded value that works for all environments.
         This compensates for local clock being ahead of Google's servers.
     """
-    # Validate configuration
-    validate_deployment_config()
+    # In TESTING mode, skip validation to allow hermetic tests
+    # (validation may fail if env vars are set from local dev environment)
+    testing_mode = os.getenv("TESTING", "").lower() == "true"
+    if not testing_mode:
+        validate_deployment_config()
 
     return CLOCK_SKEW_SECONDS
 
