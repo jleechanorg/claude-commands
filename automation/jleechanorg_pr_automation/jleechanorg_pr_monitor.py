@@ -1340,7 +1340,7 @@ def main():
             # Call the codex automation module with limit
             # Use -m to run as module (works with installed package)
             result = subprocess.run(
-                ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--limit", "50"],
+                ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--use-existing-browser", "--limit", "50"],
                 capture_output=True,
                 text=True,
                 timeout=600  # 10 minute timeout
