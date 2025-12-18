@@ -385,21 +385,20 @@ curl -s http://localhost:9222/json/version | python3 -m json.tool
 
 ```bash
 # Run automation (connects to existing Chrome on port 9222)
-cd automation
-python3 openai_automation/codex_github_mentions.py \
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --limit 50
 
 # Debug mode with verbose logging
-python3 openai_automation/codex_github_mentions.py \
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --limit 50 \
   --debug
 
 # Process only first 10 tasks
-python3 openai_automation/codex_github_mentions.py \
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --limit 10
@@ -417,14 +416,14 @@ The automation runs automatically via cron every hour at :15 past the hour (offs
 
 **Note:** The `--codex-update` flag internally calls:
 ```bash
-python3 automation/openai_automation/codex_github_mentions.py --limit 50
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions --limit 50
 ```
 
 #### Slash Command Integration
 
 ```bash
 # From Claude Code (manual run)
-cd automation && python3 openai_automation/codex_github_mentions.py \
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser --cdp-port 9222 --limit 50
 ```
 
@@ -481,7 +480,7 @@ ls -lh ~/.chatgpt_codex_auth_state.json
 **Issue**: "Update branch" button not found
 ```bash
 # Run with debug logging
-python3 openai_automation/codex_github_mentions.py \
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --debug

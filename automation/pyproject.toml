@@ -36,6 +36,9 @@ requires-python = ">=3.9"
 dependencies = [
     "requests>=2.25.0",
     "jleechanorg-orchestration>=0.1.13",
+    "playwright>=1.40.0",
+    "playwright-stealth>=1.0.0",
+    "aiohttp>=3.8.0",
 ]
 
 [project.optional-dependencies]
@@ -47,9 +50,6 @@ dev = [
     "pytest-cov>=4.0.0",
     "black>=22.0.0",
     "ruff>=0.1.0",
-    "aiohttp>=3.8.0",
-    "playwright>=1.40.0",
-    "playwright-stealth>=1.0.0",
 ]
 
 [project.urls]

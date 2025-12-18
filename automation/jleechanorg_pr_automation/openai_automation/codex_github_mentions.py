@@ -223,6 +223,15 @@ class CodexGitHubMentionsAutomation:
                     timeout=3000,
                 )
                 print("⚠️  Not logged in to OpenAI")
+
+                # Check if running in non-interactive mode (cron/CI)
+                import sys
+                if not sys.stdin.isatty():
+                    print("❌ ERROR: Authentication required but running in non-interactive mode")
+                    print("   Solution: Log in manually via Chrome with CDP enabled, then run again")
+                    print(f"   The script will save auth state to {AUTH_STATE_PATH}")
+                    return False
+
                 print("\n🚨 MANUAL ACTION REQUIRED:")
                 print("   1. Log in to OpenAI in the browser window")
                 print("   2. Wait for login to complete")

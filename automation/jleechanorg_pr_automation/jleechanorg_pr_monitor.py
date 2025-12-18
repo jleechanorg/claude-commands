@@ -1337,10 +1337,10 @@ def main():
     if args.codex_update:
         print("🤖 Running Codex automation (first 50 tasks)...")
         try:
-            # Call the codex automation script with limit
-            codex_script = ROOT_DIR / "automation" / "openai_automation" / "codex_github_mentions.py"
+            # Call the codex automation module with limit
+            # Use -m to run as module (works with installed package)
             result = subprocess.run(
-                ["python3", str(codex_script), "--limit", "50"],
+                ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--limit", "50"],
                 capture_output=True,
                 text=True,
                 timeout=600  # 10 minute timeout
