@@ -136,7 +136,10 @@ def log_code_execution_parts(
         model_name,
         evidence,
     )
-    if logging_util.isEnabledFor(10) and evidence.get("code_execution_used"):
+    if (
+        logging_util.getLogger().isEnabledFor(logging_util.DEBUG)
+        and evidence.get("code_execution_used")
+    ):
         detail = extract_code_execution_parts_summary(response)
         logging_util.debug(
             "GEMINI_CODE_EXECUTION_PARTS_DETAIL[%s]: model=%s detail=%s",
@@ -145,4 +148,3 @@ def log_code_execution_parts(
             detail,
         )
     return evidence
-
