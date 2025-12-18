@@ -35,17 +35,44 @@ Provide Claude with a comprehensive reference for writing and understanding end-
 
 ```
 mvp_site/tests/
-├── test_end2end/                    # Primary E2E directory (14 files)
-│   ├── test_continue_story_end2end.py
-│   ├── test_create_campaign_end2end.py
-│   ├── test_llm_provider_end2end.py   # LLM provider tests
-│   ├── test_mcp_protocol_end2end.py
-│   └── ...
-├── test_code_execution_dice_rolls.py  # Dice/tool loop tests
-├── fake_firestore.py                  # Fake implementations
+├── test_end2end/                           # Primary E2E directory (13 test files + runner)
+│   ├── run_end2end_tests.py                # Test runner script
+│   ├── test_continue_story_end2end.py      # Story continuation flow
+│   ├── test_create_campaign_end2end.py     # Campaign creation flow
+│   ├── test_debug_mode_end2end.py          # Debug mode functionality
+│   ├── test_embedded_json_narrative_end2end.py  # JSON embedded in narratives
+│   ├── test_entity_tracking_budget_end2end.py   # Entity tracking with budget limits
+│   ├── test_god_mode_end2end.py            # God mode (DM powers) testing
+│   ├── test_llm_provider_end2end.py        # LLM provider switching tests
+│   ├── test_mcp_error_handling_end2end.py  # MCP error scenarios
+│   ├── test_mcp_integration_comprehensive.py # Comprehensive MCP integration
+│   ├── test_mcp_protocol_end2end.py        # MCP protocol compliance
+│   ├── test_npc_death_state_end2end.py     # NPC death state persistence
+│   ├── test_timeline_log_budget_end2end.py # Timeline logging with budgets
+│   └── test_visit_campaign_end2end.py      # Campaign visit/load flow
+├── test_code_execution_dice_rolls.py       # Dice/tool loop tests
+├── fake_firestore.py                       # Fake implementations
 └── integration/
     └── test_real_browser_settings_game_integration.py
 ```
+
+### Test Descriptions
+
+| Test File | Purpose |
+|-----------|---------|
+| `test_continue_story_end2end.py` | Validates story continuation with LLM responses, state updates |
+| `test_create_campaign_end2end.py` | Tests full campaign creation flow from API to Firestore |
+| `test_debug_mode_end2end.py` | Debug mode UI and logging functionality |
+| `test_embedded_json_narrative_end2end.py` | JSON data embedded within narrative text parsing |
+| `test_entity_tracking_budget_end2end.py` | Entity tracking system with token budget constraints |
+| `test_god_mode_end2end.py` | DM/God mode features - override dice, spawn entities |
+| `test_llm_provider_end2end.py` | Switching between LLM providers (Gemini, OpenAI) |
+| `test_mcp_error_handling_end2end.py` | Error handling in MCP tool execution |
+| `test_mcp_integration_comprehensive.py` | Full MCP server integration testing |
+| `test_mcp_protocol_end2end.py` | MCP JSON-RPC protocol compliance |
+| `test_npc_death_state_end2end.py` | NPC death persistence across sessions |
+| `test_timeline_log_budget_end2end.py` | Timeline/event logging with budget limits |
+| `test_visit_campaign_end2end.py` | Loading existing campaigns from Firestore |
 
 ## Claude Commands
 
