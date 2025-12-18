@@ -2372,5 +2372,27 @@ class TestExecuteToolRequests(unittest.TestCase):
         self.assertEqual(result[0]["result"]["error"], "Tool error")
 
 
+class TestFormatToolResultsText(unittest.TestCase):
+    def test_non_list_returns_empty(self):
+        self.assertEqual(game_state_module.format_tool_results_text("nope"), "")
+
+    def test_formats_valid_results(self):
+        tool_results = [
+            {"tool": "roll_dice", "args": {"notation": "1d20"}, "result": {"total": 12}},
+        ]
+        text = game_state_module.format_tool_results_text(tool_results)
+        self.assertIn("- roll_dice(", text)
+        self.assertIn('"notation": "1d20"', text)
+        self.assertIn('"total": 12', text)
+
+    def test_ignores_invalid_items(self):
+        tool_results = [
+            "not a dict",
+            {"tool": "", "args": {}, "result": {}},
+            {"tool": 123, "args": {}, "result": {}},
+        ]
+        self.assertEqual(game_state_module.format_tool_results_text(tool_results), "")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,7 @@ The LLM should focus on narrative while code handles all mathematical operations
 """
 
 import datetime
+import json
 import random
 import re
 from dataclasses import dataclass
@@ -1879,3 +1880,35 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
         })
 
     return results
+
+
+def format_tool_results_text(tool_results: Any) -> str:
+    """Format tool execution results into a stable, human-readable prompt snippet.
+
+    Providers use this to inject server-executed dice results back into Phase 2.
+    """
+    if not isinstance(tool_results, list):
+        return ""
+
+    lines: list[str] = []
+    for item in tool_results:
+        if not isinstance(item, dict):
+            continue
+        tool_name = item.get("tool")
+        args = item.get("args", {})
+        result = item.get("result", {})
+        if not isinstance(tool_name, str) or not tool_name:
+            continue
+        if not isinstance(args, dict):
+            args = {}
+        try:
+            args_str = json.dumps(args, sort_keys=True)
+        except TypeError:
+            args_str = json.dumps({}, sort_keys=True)
+        try:
+            result_str = json.dumps(result, sort_keys=True)
+        except TypeError:
+            result_str = json.dumps({"error": "unserializable tool result"}, sort_keys=True)
+        lines.append(f"- {tool_name}({args_str}): {result_str}")
+
+    return "\n".join(lines)

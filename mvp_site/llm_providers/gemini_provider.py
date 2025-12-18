@@ -14,7 +14,12 @@ from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
-from mvp_site.game_state import DICE_ROLL_TOOLS, execute_dice_tool, execute_tool_requests
+from mvp_site.game_state import (
+    DICE_ROLL_TOOLS,
+    execute_dice_tool,
+    execute_tool_requests,
+    format_tool_results_text,
+)
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
 # We rely on response_mime_type="application/json" + prompt instruction instead
@@ -416,10 +421,7 @@ def generate_content_with_native_tools(
         )
 
     # Build Phase 2 context with tool results
-    tool_results_text = "\n".join([
-        f"- {r['tool']}({json.dumps(r['args'])}): {json.dumps(r['result'])}"
-        for r in tool_results
-    ])
+    tool_results_text = format_tool_results_text(tool_results)
 
     # Build conversation history for Phase 2
     history = []
@@ -537,10 +539,7 @@ def generate_content_with_tool_requests(
         return response_1
 
     # Build Phase 2 context with tool results
-    tool_results_text = "\n".join([
-        f"- {r['tool']}({json.dumps(r['args'])}): {json.dumps(r['result'])}"
-        for r in tool_results
-    ])
+    tool_results_text = format_tool_results_text(tool_results)
 
     # For Gemini, we build the conversation history as Content objects
     history = []

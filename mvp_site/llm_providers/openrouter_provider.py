@@ -13,7 +13,12 @@ from typing import Any
 import requests
 
 from mvp_site import logging_util
-from mvp_site.game_state import DICE_ROLL_TOOLS, execute_dice_tool, execute_tool_requests
+from mvp_site.game_state import (
+    DICE_ROLL_TOOLS,
+    execute_dice_tool,
+    execute_tool_requests,
+    format_tool_results_text,
+)
 from mvp_site.llm_providers.provider_utils import get_openai_json_schema_format
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -230,10 +235,7 @@ def generate_content_with_tool_requests(
         return response
 
     # Build Phase 2 context with tool results
-    tool_results_text = "\n".join([
-        f"- {r['tool']}({json.dumps(r['args'])}): {json.dumps(r['result'])}"
-        for r in tool_results
-    ])
+    tool_results_text = format_tool_results_text(tool_results)
 
     # Build messages for Phase 2
     messages = []
