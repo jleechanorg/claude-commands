@@ -402,6 +402,355 @@ class GameState:
 
         return discrepancies
 
+    # Combat Management Methods
+
+    def start_combat(self, combatants_data: list[dict[str, Any]]) -> None:
+        """
+        Initialize combat state with given combatants.
+
+        Args:
+            combatants_data: List of dicts with keys: name, initiative, type, hp_current, hp_max
+        """
+        logging_util.info(
+            f"COMBAT STARTED - Participants: {[c['name'] for c in combatants_data]}"
+        )
+
+        # Sort by initiative (highest first)
+        sorted_combatants = sorted(
+            combatants_data, key=lambda x: x["initiative"], reverse=True
+        )
+
+        self.combat_state = {
+            "in_combat": True,
+            "current_round": 1,
+            "current_turn_index": 0,
+            "initiative_order": [
+                {
+                    "name": c["name"],
+                    "initiative": c["initiative"],
+                    "type": c.get("type", "unknown"),
+                }
+                for c in sorted_combatants
+            ],
+            "combatants": {
+                c["name"]: {
+                    "hp_current": c.get("hp_current", 1),
+                    "hp_max": c.get("hp_max", 1),
+                    "status": c.get("status", []),
+                }
+                for c in sorted_combatants
+            },
+            "combat_log": [],
+        }
+
+        initiative_list = [f"{c['name']}({c['initiative']})" for c in sorted_combatants]
+        logging_util.info(f"COMBAT INITIALIZED - Initiative order: {initiative_list}")
+
+    def end_combat(self) -> None:
+        """End combat and reset combat state."""
+        if self.combat_state.get("in_combat", False):
+            final_round = self.combat_state.get("current_round", 0)
+            participants = list(self.combat_state.get("combatants", {}).keys())
+
+            # Clean up defeated enemies before ending combat
+            defeated_enemies = self.cleanup_defeated_enemies()
+            if defeated_enemies:
+                logging_util.info(
+                    f"COMBAT CLEANUP: Defeated enemies removed during combat end: {defeated_enemies}"
+                )
+
+            logging_util.info(
+                f"COMBAT ENDED - Duration: {final_round} rounds, Participants: {participants}"
+            )
+
+        # Reset combat state
+        self.combat_state = {
+            "in_combat": False,
+            "current_round": 0,
+            "current_turn_index": 0,
+            "initiative_order": [],
+            "combatants": {},
+            "combat_log": [],
+        }
+
+    def _is_named_npc(self, npc: dict[str, Any]) -> bool:
+        """Return True if the NPC should be preserved (named/important)."""
+        role_raw = npc.get("role")
+        role_normalized = (
+            role_raw.lower().strip() if isinstance(role_raw, str) else role_raw
+        )
+
+        generic_roles = {None, "", "enemy", "minion", "generic", "unknown"}
+        has_named_role = role_normalized not in generic_roles
+        has_story = npc.get("backstory") or npc.get("background")
+        return bool(has_named_role or has_story or npc.get("is_important"))
+
+    def cleanup_defeated_enemies(self) -> list[str]:
+        """
+        Identifies and removes defeated enemies from both combat_state and npc_data.
+        Returns a list of defeated enemy names for logging.
+
+        CRITICAL: This function works regardless of in_combat status to handle
+        cleanup during combat end transitions.
+        """
+        defeated_enemies = []
+
+        # Check if we have any combatants to clean up
+        combatants = self.combat_state.get("combatants", {})
+        if not combatants:
+            return defeated_enemies
+
+        # Handle both dict and list formats for combatants
+        # AI sometimes generates combatants as a list instead of dict
+        if isinstance(combatants, list):
+            # Convert list format to dict format for processing
+            combatants_dict = {}
+            for combatant in combatants:
+                if isinstance(combatant, dict) and "name" in combatant:
+                    name = combatant["name"]
+                    combatants_dict[name] = combatant
+            combatants = combatants_dict
+            # Update the combat_state with the normalized dict format
+            self.combat_state["combatants"] = combatants_dict
+
+        # Find defeated enemies (HP <= 0)
+        for name, combat_data in combatants.items():
+            if combat_data.get("hp_current", 0) <= 0:
+                # Check if this is an enemy (not PC, companion, or ally)
+                enemy_type_raw: Any = None
+                for init_entry in self.combat_state.get("initiative_order", []):
+                    if init_entry["name"] == name:
+                        enemy_type_raw = init_entry.get("type")
+                        break
+
+                if enemy_type_raw is None:
+                    # Fallback to combatant metadata when initiative entry is missing
+                    enemy_type_raw = combat_data.get("type") or combat_data.get("role")
+
+                if enemy_type_raw is None and name in self.npc_data:
+                    # Final fallback to npc_data for classification
+                    npc_record = self.npc_data[name]
+                    enemy_type_raw = npc_record.get("role") or npc_record.get("type")
+
+                enemy_type = (
+                    enemy_type_raw.lower().strip()
+                    if isinstance(enemy_type_raw, str)
+                    else enemy_type_raw
+                )
+
+                friendly_types = {"pc", "companion", "ally", "support", "friendly", "party", "player"}
+                if enemy_type is None or enemy_type == "unknown":
+                    # Attempt to infer friendliness from player or NPC metadata before defaulting to enemy cleanup
+                    player_name = (
+                        self.player_character_data.get("name")
+                        if isinstance(self.player_character_data, dict)
+                        else None
+                    )
+                    if player_name and name == player_name:
+                        logging_util.info(
+                            f"COMBAT CLEANUP: Skipping {name} removal because combatant matches player character with missing/unknown type"
+                        )
+                        continue
+
+                    npc_record = (
+                        self.npc_data.get(name)
+                        if isinstance(self.npc_data, dict)
+                        else None
+                    )
+                    npc_role_raw = npc_record.get("role") if isinstance(npc_record, dict) else None
+                    npc_type_raw = npc_record.get("type") if isinstance(npc_record, dict) else None
+                    npc_role = (
+                        npc_role_raw.lower().strip()
+                        if isinstance(npc_role_raw, str)
+                        else npc_role_raw
+                    )
+                    npc_type = (
+                        npc_type_raw.lower().strip()
+                        if isinstance(npc_type_raw, str)
+                        else npc_type_raw
+                    )
+
+                    if npc_role in friendly_types or npc_type in friendly_types:
+                        logging_util.info(
+                            f"COMBAT CLEANUP: Skipping {name} removal because npc_data marks combatant as friendly "
+                            f"(role/type: {npc_role or npc_type}) despite missing initiative type"
+                        )
+                        continue
+
+                    # Default to treating missing/unknown types as generic enemies to avoid leaving defeated foes targetable
+                    logging_util.warning(
+                        f"COMBAT CLEANUP: Defaulting {name} to generic enemy because type is missing/unknown "
+                        f"(initiative entry absent or incomplete)"
+                    )
+                    enemy_type = "enemy"
+
+                if enemy_type in friendly_types:
+                    logging_util.info(
+                        f"COMBAT CLEANUP: Skipping {name} because combatant is friendly ({enemy_type})"
+                    )
+                    continue
+
+                defeated_enemies.append(name)
+                logging_util.info(
+                    f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated"
+                )
+
+        # Remove defeated enemies from combat tracking
+        for enemy_name in defeated_enemies:
+            # Remove from combat_state combatants
+            if enemy_name in self.combat_state.get("combatants", {}):
+                del self.combat_state["combatants"][enemy_name]
+                logging_util.info(
+                    f"COMBAT CLEANUP: Removed {enemy_name} from combat_state.combatants"
+                )
+
+            # Remove from initiative order
+            self.combat_state["initiative_order"] = [
+                entry
+                for entry in self.combat_state.get("initiative_order", [])
+                if entry["name"] != enemy_name
+            ]
+
+            # Handle NPC data - mark named NPCs as dead, delete generic enemies
+            if enemy_name in self.npc_data:
+                npc = self.npc_data[enemy_name]
+                # Check if this is a named/important NPC (has role, backstory, or is explicitly important)
+                # Named NPCs should be preserved with dead status for narrative continuity
+                if self._is_named_npc(npc):
+                    # Mark as dead instead of deleting - preserve for narrative continuity
+                    if "status" not in npc:
+                        npc["status"] = []
+                    elif not isinstance(npc["status"], list):
+                        status_value = npc["status"]
+                        npc["status"] = [] if status_value is None else [status_value]
+                    if "dead" not in npc["status"]:
+                        npc["status"].append("dead")
+                    npc["hp_current"] = 0
+                    logging_util.info(f"COMBAT CLEANUP: Marked {enemy_name} as dead in npc_data (named NPC preserved)")
+                else:
+                    # Generic enemies can be deleted
+                    del self.npc_data[enemy_name]
+                    logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data (generic enemy)")
+
+        return defeated_enemies
+
+    def _consolidate_time_tracking(self) -> None:
+        """
+        Consolidate time tracking from separate fields into a single object.
+        Migrates old time_of_day field into world_time object if needed.
+        """
+        if not hasattr(self, "world_data") or not self.world_data:
+            return
+
+        world_data = self.world_data
+
+        # Check if we have the old separate time_of_day field
+        if "time_of_day" in world_data:
+            # Migrate time_of_day into world_time object
+            old_time_of_day = world_data["time_of_day"]
+
+            # Ensure world_time exists and is a dict
+            if "world_time" not in world_data:
+                # Create world_time with reasonable defaults based on time_of_day
+                hour = self._estimate_hour_from_time_of_day(old_time_of_day)
+                world_data["world_time"] = {
+                    "hour": hour,
+                    "minute": 0,
+                    "second": 0,
+                    "microsecond": 0,
+                    "time_of_day": old_time_of_day,
+                }
+            elif not isinstance(world_data["world_time"], dict):
+                world_data["world_time"] = {
+                    "hour": 12,
+                    "minute": 0,
+                    "second": 0,
+                    "microsecond": 0,
+                }
+                world_data["world_time"]["time_of_day"] = old_time_of_day
+            else:
+                # world_time exists and is dict, just add time_of_day
+                world_data["world_time"]["time_of_day"] = old_time_of_day
+
+            # Remove the old field
+            del world_data["time_of_day"]
+            logging_util.info(
+                f"Migrated time_of_day '{old_time_of_day}' into world_time object"
+            )
+
+        # Only process world_time if it already exists
+        if "world_time" in world_data and isinstance(world_data["world_time"], dict):
+            # Ensure microsecond field exists (default to 0 for existing campaigns)
+            if "microsecond" not in world_data["world_time"]:
+                world_data["world_time"]["microsecond"] = 0
+                logging_util.info(
+                    "Added microsecond field to world_time (default: 0)"
+                )
+
+            # Calculate time_of_day from hour if not present
+            if "time_of_day" not in world_data["world_time"]:
+                try:
+                    hour = int(world_data["world_time"].get("hour", 12))
+                except (ValueError, TypeError):
+                    hour = 12  # Default to midday if conversion fails
+                world_data["world_time"]["time_of_day"] = self._calculate_time_of_day(
+                    hour
+                )
+                logging_util.info(
+                    f"Calculated time_of_day as '{world_data['world_time']['time_of_day']}' from hour {hour}"
+                )
+
+    def _calculate_time_of_day(self, hour: int) -> str:
+        """
+        Calculate descriptive time of day from hour value.
+
+        Args:
+            hour: Hour value (0-23)
+
+        Returns:
+            String description of time of day
+        """
+        if 0 <= hour <= 4:
+            return "Deep Night"
+        if 5 <= hour <= 6:
+            return "Dawn"
+        if 7 <= hour <= 11:
+            return "Morning"
+        if 12 <= hour <= 13:
+            return "Midday"
+        if 14 <= hour <= 17:
+            return "Afternoon"
+        if 18 <= hour <= 19:
+            return "Evening"
+        if 20 <= hour <= 23:
+            return "Night"
+        return "Unknown"
+
+    def _estimate_hour_from_time_of_day(self, time_of_day: str) -> int:
+        """
+        Estimate a reasonable hour value from a time of day description.
+        Used for migration when we have time_of_day but no hour.
+
+        Args:
+            time_of_day: String description like "Morning", "Evening", etc.
+
+        Returns:
+            Integer hour value (0-23)
+        """
+        time_mapping = {
+            "deep night": 2,  # Middle of deep night
+            "dawn": 6,  # Dawn hour
+            "morning": 9,  # Mid-morning
+            "midday": 12,  # Noon
+            "afternoon": 15,  # Mid-afternoon
+            "evening": 18,  # Early evening
+            "night": 21,  # Mid-night
+        }
+
+        # Normalize and look up
+        normalized = time_of_day.lower().strip()
+        return time_mapping.get(normalized, 12)  # Default to noon if unknown
+
     # =========================================================================
     # XP/Level Validation Methods
     # =========================================================================
