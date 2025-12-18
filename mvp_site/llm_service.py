@@ -1942,6 +1942,26 @@ def _get_text_from_response(response: Any) -> str:
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
 
+def _maybe_get_gemini_code_execution_evidence(
+    *,
+    provider_name: str,
+    model_name: str,
+    api_response: Any,
+    context: str,
+) -> dict[str, Any] | None:
+    """Return server-verified Gemini code_execution evidence when applicable."""
+    if provider_name != constants.LLM_PROVIDER_GEMINI:
+        return None
+    if constants.get_dice_roll_strategy(model_name, provider_name) != "code_execution":
+        return None
+    gemini_provider.maybe_log_code_execution_parts(
+        api_response,
+        model_name=model_name,
+        context=context,
+    )
+    return gemini_provider.extract_code_execution_evidence(api_response)
+
+
 def _get_context_stats(
     context: list[dict[str, Any]],
     model_name: str,
@@ -2847,20 +2867,12 @@ def get_initial_story(
     )
     logging_util.info("Successfully used LLMRequest for initial story generation")
 
-    code_execution_evidence: dict[str, Any] | None = None
-    if (
-        provider_selection.provider == constants.LLM_PROVIDER_GEMINI
-        and constants.get_dice_roll_strategy(model_to_use, provider_selection.provider)
-        == "code_execution"
-    ):
-        gemini_provider.maybe_log_code_execution_parts(
-            api_response,
-            model_name=model_to_use,
-            context="initial_story",
-        )
-        code_execution_evidence = gemini_provider.extract_code_execution_evidence(
-            api_response
-        )
+    code_execution_evidence = _maybe_get_gemini_code_execution_evidence(
+        provider_name=provider_selection.provider,
+        model_name=model_to_use,
+        api_response=api_response,
+        context="initial_story",
+    )
     # Extract text from raw API response object
     raw_response_text: str = _get_text_from_response(api_response)
 
@@ -3532,20 +3544,12 @@ def continue_story(
         "Successfully used LLMRequest for structured JSON communication"
     )
 
-    code_execution_evidence: dict[str, Any] | None = None
-    if (
-        provider_selection.provider == constants.LLM_PROVIDER_GEMINI
-        and constants.get_dice_roll_strategy(chosen_model, provider_selection.provider)
-        == "code_execution"
-    ):
-        gemini_provider.maybe_log_code_execution_parts(
-            api_response,
-            model_name=chosen_model,
-            context="continue_story",
-        )
-        code_execution_evidence = gemini_provider.extract_code_execution_evidence(
-            api_response
-        )
+    code_execution_evidence = _maybe_get_gemini_code_execution_evidence(
+        provider_name=provider_selection.provider,
+        model_name=chosen_model,
+        api_response=api_response,
+        context="continue_story",
+    )
     # Extract text from raw API response object
     raw_response_text: str = _get_text_from_response(api_response)
 
@@ -3589,22 +3593,12 @@ def continue_story(
                 system_instruction_text=system_instruction_final,
                 provider_name=provider_selection.provider,
             )
-            reprompt_code_exec: dict[str, Any] | None = None
-            if (
-                provider_selection.provider == constants.LLM_PROVIDER_GEMINI
-                and constants.get_dice_roll_strategy(
-                    chosen_model, provider_selection.provider
-                )
-                == "code_execution"
-            ):
-                gemini_provider.maybe_log_code_execution_parts(
-                    reprompt_response,
-                    model_name=chosen_model,
-                    context="continue_story_reprompt",
-                )
-                reprompt_code_exec = gemini_provider.extract_code_execution_evidence(
-                    reprompt_response
-                )
+            reprompt_code_exec = _maybe_get_gemini_code_execution_evidence(
+                provider_name=provider_selection.provider,
+                model_name=chosen_model,
+                api_response=reprompt_response,
+                context="continue_story_reprompt",
+            )
             reprompt_text = _get_text_from_response(reprompt_response)
             reprompt_narrative, reprompt_structured = parse_structured_response(reprompt_text)
 

@@ -1,6 +1,6 @@
 import types
 
-from mvp_site.llm_providers.gemini_provider import (
+from mvp_site.llm_providers.gemini_code_execution import (
     extract_code_execution_evidence,
     extract_code_execution_parts_summary,
 )
@@ -76,4 +76,3 @@ def test_extract_code_execution_parts_summary_truncates():
     assert len(summary["code_execution_result_samples"]) == 1
     assert summary["executable_code_samples"][0]["code"].endswith("...(truncated)")
     assert summary["code_execution_result_samples"][0]["output"].endswith("...(truncated)")
-
