@@ -1,0 +1,5 @@
+description = "Deep Review Alias"
+
+prompt = """
+Execute `/reviewdeep` with all provided arguments.
+"""

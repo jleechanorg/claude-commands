@@ -52,11 +52,13 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
 
     def test_json_mode_always_enabled(self):
         """Test that all API calls use JSON mode"""
-        with patch("mvp_site.llm_service.gemini_provider.generate_content_with_code_execution") as mock_generate, \
-             patch("mvp_site.constants.get_dice_roll_strategy", return_value="code_execution"):
-            
-            mock_generate.return_value = Mock(
-                text='{"narrative": "test", "entities_mentioned": []}'
+        with patch("mvp_site.llm_providers.gemini_provider.get_client") as mock_get_client:
+            mock_client = Mock()
+            mock_get_client.return_value = mock_client
+            mock_client.models.generate_content = Mock(
+                return_value=Mock(
+                    text='{"narrative": "test", "entities_mentioned": []}'
+                )
             )
 
             # Call _call_llm_api directly
@@ -64,12 +66,16 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
                 ["test prompt"], "gemini-3-pro-preview", "test logging"
             )
 
-            # Verify arguments
-            mock_generate.assert_called_once()
-            call_kwargs = mock_generate.call_args[1]
-            
-            # Check json_mode_max_output_tokens is set
-            assert call_kwargs["json_mode_max_output_tokens"] == llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
+            # Verify JSON mode configuration
+            call_args = mock_client.models.generate_content.call_args
+            config_obj = call_args[1]["config"]
+
+            # Check the generation config object attributes
+            assert config_obj.response_mime_type == "application/json"
+            assert (
+                config_obj.max_output_tokens
+                == llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
+            )
 
     def test_parse_function_removed(self):
         """Test that parse_llm_response_for_state_changes is removed"""

@@ -1534,6 +1534,9 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
                     constants.ALLOWED_GEMINI_MODELS + constants.PREMIUM_GEMINI_MODELS
                 )
             }
+            # Also allow legacy models that have a mapping
+            allowed_models.update(k.lower() for k in constants.GEMINI_MODEL_MAPPING.keys())
+            
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model

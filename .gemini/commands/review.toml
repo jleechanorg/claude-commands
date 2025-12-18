@@ -1,0 +1,71 @@
+# Review Command - Enhanced Code Review
+description = "Comprehensive code analysis with multi-pass security review"
+
+prompt = """
+## Enhanced Code Review Analysis
+
+Perform comprehensive code review for:
+
+{{input}}
+
+## Multi-Pass Analysis
+
+### Pass 1: Security Vulnerabilities
+- Authentication flaws
+- Input validation issues
+- Injection vulnerabilities (SQL, command, XSS)
+- Secrets exposure
+- `shell=True` usage (must use `shell=False, timeout=30`)
+
+### Pass 2: Runtime Errors
+- Null pointers and undefined references
+- Resource leaks
+- Edge cases
+- Error handling gaps
+
+### Pass 3: Performance Issues
+- Inefficient algorithms
+- N+1 queries
+- Memory leaks
+- Optimization opportunities
+
+### Pass 4: Code Quality
+- Maintainability
+- Documentation
+- Best practices
+- DRY violations
+
+## Issue Categorization
+
+- **🔴 Critical**: Security vulnerabilities, runtime errors, data corruption risks
+- **🟡 Important**: Performance issues, maintainability problems, architectural concerns
+- **🔵 Suggestion**: Style improvements, refactoring opportunities
+- **🟢 Nitpick**: Minor style issues, documentation improvements
+
+## Critical Patterns to Flag
+
+**Security Issues**:
+- `shell=True` → Must use list args with `shell=False, timeout=30`
+- Missing input validation → Whitelist patterns required
+- SQL injection risks → Parameterized queries only
+- Command injection → Never construct commands from user input
+
+**Test Issues**:
+- `@unittest.skipIf` or `pytest.skip()` → Use mocks instead
+- Environment-dependent tests → Must behave identically everywhere
+- Missing cleanup → Use context managers and `finally` blocks
+
+## Output Format
+
+```
+🔍 ENHANCED CODE REVIEW ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Summary: [Brief assessment]
+🔴 Critical Issues: [Count and key items]
+🟡 Important Issues: [Count and key items]
+🔵 Suggestions: [Count and key items]
+
+[Detailed analysis with specific recommendations]
+```
+"""

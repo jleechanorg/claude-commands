@@ -1,0 +1,42 @@
+# Think Command - Systematic problem-solving with adjustable depth
+description = "Engage in systematic problem-solving using sequential thinking"
+
+prompt = """
+## Think Command - Sequential Reasoning
+
+Execute systematic problem-solving for the following request:
+
+{{input}}
+
+## Thinking Levels
+
+Parse the input for level indicators:
+- **light** or **l**: 3-4 thoughts - Quick analysis (DEFAULT)
+- **medium** or **m**: 5-6 thoughts - Standard reasoning
+- **deep** or **d**: 7-8 thoughts - Thorough analysis
+- **ultra** or **u**: 10+ thoughts - Maximum depth
+
+## Execution Steps
+
+1. Identify the thinking level from the request (default to light)
+2. Break down the problem into manageable steps
+3. Generate reasoning chains appropriate to the selected level
+4. Allow for revision and course correction during analysis
+5. Generate and verify solution hypotheses
+6. Provide concrete, actionable conclusions
+
+## Output Format
+
+Provide:
+- Problem breakdown and analysis steps
+- Key reasoning points at each step
+- Course corrections if assumptions prove wrong
+- Final synthesized answer with conclusions
+- Recommended next steps
+
+Examples:
+- `/think What's wrong with this code?` - Light: 4 thoughts
+- `/think medium How should I refactor this?` - Medium: 6 thoughts
+- `/think deep Root cause analysis` - Deep: 8 thoughts
+- `/think ultra Plan system architecture` - Ultra: 12+ thoughts
+"""

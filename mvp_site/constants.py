@@ -25,15 +25,13 @@ ALLOWED_LLM_PROVIDERS = [
     LLM_PROVIDER_CEREBRAS,
 ]
 
-# Gemini defaults - using 2.0-flash for cost efficiency ($0.10/M input, ~$0.40/M output)
-# Gemini 3 Pro is ~20x more expensive on input ($2.00/M) and reserved for premium users only
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+# Gemini defaults - using 3-flash-preview for best value ($0.50/M input, $3/M output)
+# Gemini 3 Flash: 3x faster than 2.5 Pro, Pro-grade reasoning, 78% SWE-bench Verified
+# Gemini 3 Pro is expensive ($2-4/M input, $12-18/M output) and reserved for premium users only
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 
 # Premium model for allowlisted users only (expensive: $2-4/M input, $12-18/M output)
 GEMINI_PREMIUM_MODEL = "gemini-3-pro-preview"
-
-# Gemini 2.5 Flash model constant
-GEMINI_2_5_FLASH = "gemini-2.5-flash"
 
 # Users allowed to access Gemini 3 Pro (expensive model)
 # These users can select gemini-3-pro-preview in settings
@@ -43,14 +41,13 @@ GEMINI_3_ALLOWED_USERS = [
 ]
 
 # Allowed Gemini model selections for user preferences (default - all users)
-# Model capabilities:
-#   - gemini-2.0-flash: code_execution + JSON mode together ✅ (true dice randomness)
-#   - gemini-3-pro-preview: code_execution + JSON mode together ✅ (premium)
-#   - gemini-2.5-flash: JSON mode only, NO code_execution combo (uses precompute dice)
+# NOTE: Only models that support BOTH code_execution AND JSON response mode are allowed
+# Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
+# See PR #2052 for compatibility testing details
 ALLOWED_GEMINI_MODELS = [
-    DEFAULT_GEMINI_MODEL,  # ✅ gemini-2.0-flash: code_execution + JSON (cheap: $0.10/M)
-    GEMINI_2_5_FLASH,      # ✅ JSON mode only, precompute dice (alternative option)
-    GEMINI_PREMIUM_MODEL,  # ✅ gemini-3-pro-preview: code_execution + JSON (allowlist)
+    DEFAULT_GEMINI_MODEL,  # ✅ Gemini 3 Flash (best value: $0.50/M input, $3/M output)
+    "gemini-2.0-flash",  # ✅ Legacy option - still works with code_execution + JSON
+    GEMINI_PREMIUM_MODEL,  # ✅ Premium option (allowlist enforced downstream)
 ]
 
 # Premium Gemini models (only for GEMINI_3_ALLOWED_USERS)
@@ -58,88 +55,16 @@ PREMIUM_GEMINI_MODELS = [
     GEMINI_PREMIUM_MODEL,  # ✅ WORKS with code_execution + JSON (expensive: $2-4/M)
 ]
 
-# Gemini 3.x models - can use code_execution + JSON mode together (single phase)
-# All other Gemini models (2.x) require two-phase separation
-GEMINI_3_MODELS: set[str] = {
-    "gemini-3-pro-preview",
-    # Add future Gemini 3 models here as they become available
-}
-
-# =============================================================================
-# MODEL CAPABILITIES FOR DICE ROLLING
-# =============================================================================
-# ARCHITECTURE UPDATE (Dec 2024): Unified Native Two-Phase Tool Calling
-#
-# Two strategies:
-# 1. code_execution: Gemini 2.0/3.0 only - can use code_execution + JSON together
-# 2. native_two_phase: All other models - Phase 1: native tools, Phase 2: JSON schema
-#
-# ┌─────────────────────┬───────────────┬───────────┬──────────────┬─────────────────┐
-# │ Model               │ Code Exec     │ JSON Mode │ Both Together│ Dice Strategy   │
-# ├─────────────────────┼───────────────┼───────────┼──────────────┼─────────────────┤
-# │ gemini-3-pro-preview│ ✅ Yes        │ ✅ Yes    │ ✅ YES       │ code_execution  │
-# │ gemini-2.0-flash    │ ✅ Yes        │ ✅ Yes    │ ✅ YES       │ code_execution  │
-# │ gemini-2.5-flash    │ ✅ Yes        │ ✅ Yes    │ ❌ No        │ native_two_phase│
-# │ All Cerebras        │ ✅ Native     │ ✅ Yes    │ ❌ No        │ native_two_phase│
-# │ All OpenRouter      │ ✅ Native     │ ✅ Yes    │ ❌ No        │ native_two_phase│
-# └─────────────────────┴───────────────┴───────────┴──────────────┴─────────────────┘
-#
-# Native Two-Phase Flow:
-# - Phase 1: `tools` parameter (no JSON schema) → model returns `tool_calls`
-# - Execute tools locally (roll_dice, roll_attack, etc.)
-# - Phase 2: `response_format` parameter (no tools) → structured JSON with results
-#
-# This approach uses native API tool calling which ALL models support,
-# avoiding the prompt-engineering approach that some models (GLM-4.6) ignore.
-
-# Models that support code_execution + JSON mode TOGETHER (single phase)
-# VERIFIED Dec 2024 via real API tests:
-#   - gemini-3-pro-preview: ✅ Works with code_execution + JSON mode
-#   - gemini-2.0-flash: ❌ "controlled generation is not supported with Code Execution tool"
-#   - gemini-2.5-flash: ❌ "Tool use with response mime type 'application/json' is unsupported"
-MODELS_WITH_CODE_EXECUTION: set[str] = {
-    "gemini-3-pro-preview",  # Only Gemini 3 supports code_execution + JSON together
-    *GEMINI_3_MODELS,  # Future Gemini 3 models
-}
-
-
-def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
-    """
-    Determine the dice rolling strategy for a given model.
-
-    VERIFIED Dec 2024:
-    - gemini-3-pro-preview: code_execution (single phase, verified working)
-    - gemini-2.0-flash: native_two_phase (code_execution + JSON disabled)
-    - gemini-2.5-flash: native_two_phase (tools + JSON mime unsupported)
-    - All Cerebras/OpenRouter: native_two_phase
-
-    Args:
-        model_name: Model identifier
-        provider: Provider name (gemini, cerebras, openrouter)
-
-    Returns:
-        Strategy string:
-        - 'code_execution' - Gemini 3.x only: code_execution + JSON together
-        - 'native_two_phase' - All others: Phase 1 native tools, Phase 2 JSON schema
-    """
-    # Only Gemini 3 supports code_execution + JSON mode together
-    if model_name in MODELS_WITH_CODE_EXECUTION:
-        return "code_execution"
-
-    # All other models use native two-phase tool calling
-    return "native_two_phase"
-
 # Gemini model mapping from user preference to full model name
-# Maps user-selected values to actual API model names
 GEMINI_MODEL_MAPPING = {
-    # Primary models (selectable in settings)
-    "gemini-2.0-flash": "gemini-2.0-flash",      # Default: code_execution + JSON
-    "gemini-2.5-flash": GEMINI_2_5_FLASH,        # Alternative: JSON only, precompute dice
-    "gemini-3-pro-preview": GEMINI_PREMIUM_MODEL,  # Premium: code_execution + JSON
-    # Legacy aliases (redirect to 2.0 for backwards compatibility)
-    "gemini-2.5-pro": "gemini-2.0-flash",  # Redirect: 2.5-pro → 2.0-flash
-    "pro-2.5": "gemini-2.0-flash",         # Redirect: legacy alias
-    "flash-2.5": GEMINI_2_5_FLASH,         # Alias: maps to actual 2.5-flash
+    "gemini-3-flash-preview": "gemini-3-flash-preview",  # ✅ New default (Dec 2025)
+    "gemini-3-pro-preview": "gemini-3-pro-preview",
+    "gemini-2.0-flash": "gemini-2.0-flash",
+    # Legacy compatibility - redirect 2.5 users to Gemini 3 Flash (better & similar price)
+    "gemini-2.5-flash": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
+    "gemini-2.5-pro": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
+    "pro-2.5": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
+    "flash-2.5": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
 }
 
 # OpenRouter model selection tuned for narrative-heavy D&D play
@@ -178,7 +103,9 @@ DEFAULT_CONTEXT_WINDOW_TOKENS = 128_000
 CONTEXT_WINDOW_SAFETY_RATIO = 0.9
 MODEL_CONTEXT_WINDOW_TOKENS = {
     # Gemini
-    DEFAULT_GEMINI_MODEL: 1_000_000,
+    DEFAULT_GEMINI_MODEL: 1_000_000,  # gemini-3-flash-preview (1M context)
+    "gemini-3-flash-preview": 1_000_000,
+    "gemini-3-pro-preview": 1_000_000,
     "gemini-2.0-flash": 1_000_000,
     # OpenRouter
     "meta-llama/llama-3.1-70b-instruct": 131_072,
@@ -191,8 +118,7 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     # Cerebras
     "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
     "zai-glm-4.6": 131_072,
-    # Paid tier supports 128k context; use 128k for budgeting
-    "llama-3.3-70b": 128_000,
+    "llama-3.3-70b": 65_536,
     "llama-3.1-8b": 131_072,  # 131K context window (Cerebras advertises 128K)
     "gpt-oss-120b": 131_072,  # 131K context window
 }
@@ -201,7 +127,9 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
 # Values pulled from provider docs (OpenRouter as of 2025-12-01; Cerebras as of 2025-12-11).
 MODEL_MAX_OUTPUT_TOKENS = {
     # Gemini (we cap at JSON_MODE_MAX_OUTPUT_TOKENS in code; keep for completeness)
-    DEFAULT_GEMINI_MODEL: 50_000,
+    DEFAULT_GEMINI_MODEL: 65_536,  # gemini-3-flash-preview (65K max output)
+    "gemini-3-flash-preview": 65_536,
+    "gemini-3-pro-preview": 65_536,
     "gemini-2.0-flash": 50_000,
     # OpenRouter
     # Llama 3.1 caps are not reported in the model catalog; OpenRouter commonly limits
@@ -216,11 +144,10 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "z-ai/glm-4.6": 202_752,
     "x-ai/grok-4.1-fast": 30_000,
     "x-ai/grok-4.1-fast:free": 30_000,  # Legacy alias shares the same cap
-    # Cerebras (paid tier limits)
+    # Cerebras (actual limit ~64K, using conservative 32K for safety)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
-    # Llama 3.3: Paid tier supports up to 65k completion tokens
-    "llama-3.3-70b": 65_000,
+    "llama-3.3-70b": 32_000,
     "llama-3.1-8b": 32_000,  # Cerebras allows longer completions than OpenRouter
     "gpt-oss-120b": 40_000,  # 40K max output per Cerebras docs
 }

@@ -1,0 +1,141 @@
+description = "Save evidence to /tmp structure"
+
+prompt = """
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately.**
+**This is NOT documentation – run every step below.**
+
+## 🚨 EXECUTION WORKFLOW
+
+1. Gather the testing methodology, evidence summary, and notes for the current work item.
+2. Identify any artifacts (logs, screenshots, DOM dumps, JSON, etc.) that should be preserved.
+3. Execute the `/savetmp` command exactly as documented to store everything under `/tmp/<repo>/<branch>/<work>/`.
+4. Confirm the command output and record the generated path in the conversation.
+
+## 📋 REFERENCE DOCUMENTATION
+
+# /savetmp – Structured Evidence Archiver
+
+**Purpose**: Capture testing methodology, evidence summaries, and supporting artifacts in a predictable `/tmp` evidence package scoped by repo → branch → work item.
+
+**Usage**: `/savetmp <work_name> [options]`
+
+**Primary Script**: `.claude/commands/savetmp.py`
+
+---
+
+## 🗂️ Directory Layout
+
+Running `/savetmp` creates a directory using this structure:
+
+```
+/tmp/<repo_name>/<branch>/<work_name>/<timestamp>/
+  ├── methodology.md   # Testing methodology details (if provided)
+  ├── evidence.md      # Evidence summary
+  ├── notes.md         # Extra context / TODOs
+  ├── artifacts/       # Copied files/directories passed via --artifact
+  ├── metadata.json    # Machine-readable summary of the run
+  └── README.md        # Quick overview + artifact list
+```
+
+- `<repo_name>` is derived from the git root (fallback: current directory name).
+- `<branch>` comes from `git rev-parse --abbrev-ref HEAD` (fallback: `detached`).
+- `<work_name>` is provided when invoking the command (e.g., `sidebar-regression-2025-01-15`).
+- `<timestamp>` is in UTC (`YYYYMMDDTHHMMSSZ`) to keep multiple runs without collision.
+
+---
+
+## 🛠️ Command Syntax
+
+```
+python .claude/commands/savetmp.py "<work_name>" \
+  --methodology "<short description>" \
+  --methodology-file <path/to/detailed-methodology.md> \
+  --evidence "<evidence summary>" \
+  --evidence-file <path/to/evidence-details.md> \
+  --notes "<follow-up notes>" \
+  --notes-file <path/to/extra-notes.txt> \
+  --artifact <path/to/file-or-directory> \
+  --artifact <path/to/another-artifact>
+```
+
+### Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--methodology` | Inline description of the testing methodology used. |
+| `--methodology-file` | Append contents of a file (e.g., generated test plan). |
+| `--evidence` | Summary of results or notable findings. |
+| `--evidence-file` | Append detailed evidence from a file. |
+| `--notes` | Additional notes, TODOs, or observations. |
+| `--notes-file` | Append extra context from a file. |
+| `--artifact` | Copy a file or directory into `artifacts/`. Use multiple times for multiple artifacts. |
+
+- All `--*-file` flags are optional; missing files are skipped with a warning.
+- Artifact paths can be absolute or relative; directories are copied recursively.
+
+---
+
+## ✅ Step-by-Step Execution Template
+
+1. **Compose methodology text** (optional but recommended):
+   ```bash
+   cat <<'EOF' > /tmp/methodology.txt
+   - Ran npm test -- --run
+   - Executed browser MCP scenario: conversation-management-flow-test.md
+   - Verified sidebar toggle in both modes manually
+   EOF
+   ```
+2. **Prepare evidence summary**:
+   ```bash
+   cat <<'EOF' > /tmp/evidence.txt
+   - Vitest suite: 101/101 passing
+   - Browser MCP artifacts saved under ./testing_llm/evidence/convo/
+   - No console errors observed
+   EOF
+   ```
+3. **Collect artifacts** (copy or point to existing directories):
+   - Example: `/tmp/run_logs/convo/`, `testing_llm/evidence/convo/sidebar/`
+4. **Invoke the command**:
+   ```bash
+   python .claude/commands/savetmp.py "conversation-regression-jan15" \
+     --methodology-file /tmp/methodology.txt \
+     --evidence-file /tmp/evidence.txt \
+     --notes "Ready for PR evidence upload" \
+     --artifact /tmp/run_logs/convo \
+     --artifact testing_llm/evidence/convo/sidebar
+   ```
+5. **Record the output**: The script prints both the base directory and the precise run folder. Paste this path back into the conversation or task log.
+
+---
+
+## 🧪 Verification Checklist
+
+- [ ] Command exits with status `0` and prints `✅ Evidence archived`.
+- [ ] `metadata.json` contains the repo, branch, work name, and artifact list.
+- [ ] `README.md` enumerates any saved sections (methodology/evidence/notes).
+- [ ] Artifacts appear under `artifacts/` with expected filenames.
+- [ ] Timestamped subdirectory created under `/tmp/<repo>/<branch>/<work_name>/`.
+
+If any step fails, capture stderr/stdout and re-run after fixing inputs.
+
+---
+
+## 🔁 Re-running / Updating Evidence
+
+- Re-invoke `/savetmp` with the same `work_name`; a new timestamped subdirectory is created.
+- To update only notes/evidence, you can omit `--artifact` (artifacts are only copied when provided).
+- The most recent run path is printed at the end—share it when handing off the work item or writing the PR summary.
+
+---
+
+## 🧹 Cleanup (Optional)
+
+Evidence stays under `/tmp`; remove stale runs if needed:
+
+```bash
+rm -rf /tmp/<repo>/<branch>/<work_name>/<timestamp>
+```
+
+(Only delete directories you created; never touch shared evidence owned by other engineers without confirmation.)
+"""

@@ -1551,12 +1551,7 @@ def _call_llm_api_with_llm_request(
 
     logging_util.debug(f"JSON validation passed with {len(json_data)} fields")
 
-    # =========================================================================
-    # PRE-ROLLED DICE INJECTION (Single-Inference Architecture)
-
-
-    # Re-validate payload size after dice injection (~1.8KB overhead, negligible vs 10MB limit)
-    # This is a safety check - dice add <0.02% to payload size
+    # Re-validate payload size (~1.8KB overhead, negligible vs 10MB limit)
     gemini_request._validate_payload_size(json_data)
 
     # Convert JSON dict to formatted string for Gemini API

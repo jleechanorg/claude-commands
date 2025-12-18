@@ -1,0 +1,5 @@
+description = "/cons Command (Alias)"
+
+prompt = """
+Execute `/consensus` with all provided arguments.
+"""

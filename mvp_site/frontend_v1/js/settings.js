@@ -43,17 +43,19 @@ document.addEventListener('DOMContentLoaded', function () {
 let saveTimeout = null;
 const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-70b-instruct';
 const DEFAULT_CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // 131K context - best for RPG
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview'; // Gemini 3 Flash (Dec 2025)
 
 // Users allowed to see Gemini 3 Pro option (expensive model)
 const GEMINI_3_ALLOWED_USERS = ['jleechan@gmail.com', 'jleechantest@gmail.com'];
 const GEMINI_MODEL_MAPPING = {
+  'gemini-3-flash-preview': 'gemini-3-flash-preview', // New default (Dec 2025)
   'gemini-3-pro-preview': 'gemini-3-pro-preview',
   'gemini-2.0-flash': 'gemini-2.0-flash',
-  'gemini-2.5-flash': 'gemini-2.5-flash',
-  'gemini-2.5-pro': 'gemini-2.0-flash',
-  'pro-2.5': 'gemini-2.0-flash',
-  'flash-2.5': 'gemini-2.5-flash'
+  // Legacy compatibility - redirect 2.5 users to Gemini 3 Flash
+  'gemini-2.5-flash': 'gemini-3-flash-preview',
+  'gemini-2.5-pro': 'gemini-3-flash-preview',
+  'pro-2.5': 'gemini-3-flash-preview',
+  'flash-2.5': 'gemini-3-flash-preview'
 };
 let pendingAuthReload = false;
 

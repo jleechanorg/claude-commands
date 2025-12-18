@@ -1,0 +1,5 @@
+description = "/gen Command (Alias)"
+
+prompt = """
+Execute `/gene` with all provided arguments.
+"""

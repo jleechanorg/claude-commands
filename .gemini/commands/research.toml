@@ -1,0 +1,90 @@
+# Research Command - Academic and Technical Research
+description = "Systematic research using multiple sources with academic rigor"
+
+prompt = """
+## Research Command
+
+Conduct comprehensive research on:
+
+{{input}}
+
+## Research Protocol
+
+### Phase 1: Research Planning
+
+**Deep Analysis**:
+1. Analyze the research topic systematically
+2. Define specific research questions and objectives
+3. Identify potential information sources
+4. Plan search strategies
+5. Anticipate knowledge gaps and validation needs
+
+### Phase 2: Multi-source Information Gathering
+
+**Comprehensive Search Execution**:
+1. Web search for current information and recent developments
+2. Deep research with citations and recency controls
+3. Alternative perspectives and sources
+4. Technical documentation and official sources
+5. Cross-validate information across sources
+6. Extract and organize findings by source and credibility
+
+### Phase 3: Deep Analysis Integration
+
+**Sequential Thinking Applied to Results**:
+1. Synthesize findings from all sources
+2. Identify patterns, trends, and contradictions
+3. Evaluate source credibility and recency
+4. Generate insights beyond individual source limitations
+5. Develop evidence-based conclusions
+
+### Phase 4: Structured Documentation
+
+**Research Summary with Methodology Transparency**:
+1. Research Planning: Show analysis process
+2. Information Sources: Document search results by source
+3. Analysis Integration: Present synthesis of findings
+4. Conclusions: Evidence-based recommendations with attribution
+
+## Execution Standards
+
+- ✅ **Verified Sources**: Confirm content before citing
+- ✅ **Access Tracking**: Document which sources were successfully read
+- ❌ **Unverified Citations**: Never present URLs as evidence without reading
+- ❌ **Assumption Claims**: Never claim content based on search descriptions
+
+## Research Integrity Protocol
+
+1. **Search ≠ Sources**: Search results are leads, not verified evidence
+2. **Fetch Before Cite**: Only cite URLs after successfully reading content
+3. **Transparent Failures**: Report when sources couldn't be accessed
+4. **Evidence-Based Claims**: All assertions must trace to read content
+
+## Output Format
+
+```
+📋 Research Report: [Topic]
+
+🧠 Research Planning:
+[Systematic breakdown of approach]
+
+📊 Multi-source Findings:
+[Organized by topic with source attribution]
+
+🧠 Strategic Analysis:
+[Synthesis with pattern recognition]
+
+🎯 Evidence-based Recommendations:
+[Actionable next steps]
+```
+
+## When to Use
+
+**Perfect for**:
+- Technical architecture decisions
+- Library and framework evaluation
+- Best practice research
+- Academic and scientific topics
+- Market research and trend analysis
+- Troubleshooting complex issues
+"""

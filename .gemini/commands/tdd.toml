@@ -1,0 +1,86 @@
+# TDD Command - Test-Driven Development with Matrix Testing
+description = "Test-driven development workflow with matrix testing (Red-Green-Refactor)"
+
+prompt = """
+## Matrix-Enhanced Test-Driven Development
+
+Execute TDD workflow for:
+
+{{input}}
+
+## TDD Phases
+
+### Phase 0: Matrix Planning (MANDATORY FIRST STEP)
+
+BEFORE writing any tests, create comprehensive test matrix:
+
+**Matrix 1: Core Field Interactions**
+- Map all input variables and their combinations
+- Generate test cases for each matrix cell
+- Prioritize high-risk and edge case combinations
+
+**Matrix 2: State Transition Testing**
+- Document all valid state transitions
+- Test boundary conditions
+- Verify error handling paths
+
+### Phase 1: RED - Matrix-Driven Failing Tests
+
+1. Write failing tests for ENTIRE matrix
+2. Each matrix cell becomes a test case
+3. Path coverage verification
+4. Edge case integration
+5. Confirm ALL tests fail before implementation
+
+```javascript
+// Example Matrix-Driven Test Structure
+describe('Feature - Full Field Matrix', () => {
+  test.each([
+    ['input1', 'expected1'],
+    ['input2', 'expected2'],
+    ['edgeCase', 'expectedEdge'],
+  ])('Matrix [%s] → expects %s', (input, expected) => {
+    // RED: Test fails initially
+    expect(feature(input)).toBe(expected);
+  });
+});
+```
+
+### Phase 2: GREEN - Minimal Implementation
+
+1. Matrix-guided development
+2. Implement one matrix path at a time
+3. Write only enough code to pass current tests
+4. Verify each matrix cell passes before moving on
+5. Systematic coverage of all paths
+
+### Phase 3: REFACTOR - Matrix-Validated Improvements
+
+1. Ensure all matrix tests remain passing
+2. Use matrix results to identify patterns
+3. Refactor based on edge case findings
+4. Optimize code paths
+5. Confirm matrix coverage maintained
+
+## TDD Enforcement Rules
+
+- **RULE 1**: Cannot proceed to GREEN without complete matrix in RED
+- **RULE 2**: Each matrix cell must have corresponding test case
+- **RULE 3**: All matrix tests must FAIL before implementation begins
+- **RULE 4**: REFACTOR must maintain 100% matrix coverage
+- **RULE 5**: Coverage report required before completion
+
+## Coverage Tracking
+
+```
+✅ Core Field Matrix: X/X tests
+✅ State Transition Matrix: X/X tests
+✅ Edge Cases: X/X tests
+Total Matrix Coverage: X/X tests
+```
+
+## Usage
+
+- `/tdd` - Start TDD workflow with matrix planning
+- `/tdd [feature]` - TDD for specific feature
+"""

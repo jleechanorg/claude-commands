@@ -20,6 +20,7 @@ for path in (PROJECT_ROOT, MVP_SITE_ROOT):
         sys.path.insert(0, path_str)
 
 
+import constants  # noqa: E402
 from main import create_app  # noqa: E402
 from tests.fake_firestore import FakeFirestoreClient  # noqa: E402
 
@@ -59,7 +60,7 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         assert response.status_code == 200
         payload = json.loads(response.data)
         assert payload["llm_provider"] == "gemini"
-        assert payload["gemini_model"] == "gemini-2.0-flash"
+        assert payload["gemini_model"] == constants.DEFAULT_GEMINI_MODEL
 
         # Switch to OpenRouter and persist
         update_payload = {
@@ -93,7 +94,10 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         assert cerebras_payload_read["cerebras_model"] == "llama-3.3-70b"
 
         # Switch back to Gemini and ensure round-trip
-        revert_payload = {"llm_provider": "gemini", "gemini_model": "gemini-2.0-flash"}
+        revert_payload = {
+            "llm_provider": "gemini",
+            "gemini_model": constants.DEFAULT_GEMINI_MODEL,
+        }
         revert_resp = self.client.post(
             "/api/settings", data=json.dumps(revert_payload), headers=self.headers
         )
@@ -102,7 +106,7 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         final_read = self.client.get("/api/settings", headers=self.headers)
         final_payload = json.loads(final_read.data)
         assert final_payload["llm_provider"] == "gemini"
-        assert final_payload["gemini_model"] == "gemini-2.0-flash"
+        assert final_payload["gemini_model"] == constants.DEFAULT_GEMINI_MODEL
 
 
 class TestTESTINGEnvForcesMockMode(unittest.TestCase):

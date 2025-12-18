@@ -1,0 +1,5 @@
+description = "Enhanced Code Review Alias"
+
+prompt = """
+Execute `/review-enhanced` with all provided arguments.
+"""

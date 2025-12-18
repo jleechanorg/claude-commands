@@ -198,18 +198,18 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
 
         mcp_client = data["mcp_client"]
         self.assertIn(
-            "configured",
+            "initialized",
             mcp_client,
-            "MCP client should have 'configured' field"
+            "MCP client should have 'initialized' field"
         )
         self.assertIsInstance(
-            mcp_client["configured"],
+            mcp_client["initialized"],
             bool,
-            "MCP client 'configured' should be boolean"
+            "MCP client 'initialized' should be boolean"
         )
 
-        # If configured, should have additional info
-        if mcp_client["configured"]:
+        # If initialized, should have additional info
+        if mcp_client["initialized"]:
             self.assertIn(
                 "base_url",
                 mcp_client,
@@ -234,11 +234,11 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         # Should always return 200 OK regardless of MCP client status
         self.assertEqual(response.status_code, 200)
 
-        # Response should include mcp_client field (configured true or false)
+        # Response should include mcp_client field (initialized true or false)
         data = json.loads(response.data)
         self.assertIn("mcp_client", data)
-        self.assertIn("configured", data["mcp_client"])
-        self.assertIsInstance(data["mcp_client"]["configured"], bool)
+        self.assertIn("initialized", data["mcp_client"])
+        self.assertIsInstance(data["mcp_client"]["initialized"], bool)
 
     def test_health_endpoint_is_rate_limit_exempt(self):
         """RED→GREEN: Health endpoint should not be rate limited"""
@@ -318,7 +318,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
                 "max_concurrent_requests": int,
             },
             "mcp_client": {
-                "configured": bool,
+                "initialized": bool,
             },
         }
 
@@ -331,8 +331,8 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
                     self.assertIsInstance(data[field][sub_field], sub_type)
             elif field == "mcp_client":
                 self.assertIn(field, data)
-                self.assertIn("configured", data[field])
-                self.assertIsInstance(data[field]["configured"], bool)
+                self.assertIn("initialized", data[field])
+                self.assertIsInstance(data[field]["initialized"], bool)
             else:
                 self.assertIn(field, data)
                 self.assertIsInstance(data[field], expected_type)
