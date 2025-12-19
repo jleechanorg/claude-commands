@@ -58,6 +58,12 @@ from typing import Any
 from firebase_admin import auth as firebase_auth
 from google.genai import types
 
+from mvp_site.agents import (
+    BaseAgent,
+    GodModeAgent,
+    StoryModeAgent,
+    get_agent_for_input,
+)
 from mvp_site import constants, dice_strategy, logging_util
 from mvp_site.custom_types import UserId
 from mvp_site.decorators import log_exceptions
@@ -1192,13 +1198,6 @@ class PromptBuilder:
 #
 # See mvp_site/agents.py for full implementation and documentation.
 # =============================================================================
-
-from mvp_site.agents import (
-    BaseAgent,
-    StoryModeAgent,
-    GodModeAgent,
-    get_agent_for_input,
-)
 
 # Re-export for backward compatibility
 __all_agents__ = ["BaseAgent", "StoryModeAgent", "GodModeAgent", "get_agent_for_input"]
@@ -2770,13 +2769,10 @@ def get_initial_story(
     builder = agent.prompt_builder
 
     # Start from agent’s standard story-mode stack (without continuation reminders)
-    system_instruction_parts: list[str] = [
-        agent.build_system_instructions(
-            selected_prompts=selected_prompts,
-            use_default_world=use_default_world,
-            include_continuation_reminder=False,
-        )
-    ]
+    system_instruction_parts = agent.build_system_instruction_parts(
+        selected_prompts=selected_prompts,
+        include_continuation_reminder=False,
+    )
 
     # Initial story specific: Add companion generation instruction if requested
     if generate_companions:
@@ -2785,8 +2781,10 @@ def get_initial_story(
     # Initial story specific: Add background summary instruction
     system_instruction_parts.append(builder.build_background_summary_instruction())
 
-    # Combine all initial story instructions
-    system_instruction_final = "\n\n".join(system_instruction_parts)
+    # Finalize with world content LAST to match the prompt hierarchy
+    system_instruction_final = builder.finalize_instructions(
+        system_instruction_parts, use_default_world
+    )
 
     # Add clear indication when using default world setting
     if use_default_world:
@@ -3708,16 +3706,11 @@ def continue_story(
         # Include continuation reminders only in character mode
         include_continuation = mode == constants.MODE_CHARACTER
 
-        if isinstance(agent, StoryModeAgent):
-            system_instruction_final = agent.build_system_instructions(
-                selected_prompts=selected_prompts,
-                use_default_world=use_default_world,
-                include_continuation_reminder=include_continuation,
-            )
-        else:
-            raise TypeError(
-                f"Unexpected agent type for story mode flow: {type(agent).__name__}"
-            )
+        system_instruction_final = agent.build_system_instructions(
+            selected_prompts=selected_prompts,
+            use_default_world=use_default_world,
+            include_continuation_reminder=include_continuation,
+        )
 
     # --- NEW: Budget-based Truncation ---
     # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
@@ -4153,9 +4146,6 @@ def continue_story(
 
     # Check if user sent a "GOD MODE:" prefixed command (administrative mode)
     # God mode = DM mode behavior: no narrative advancement, no planning blocks
-    # Reuse the original god mode detection (based on raw input before validation mutations)
-    # to ensure validation prepends don't break the prefix check.
-    
     # Also check if the AI response indicates DM MODE
     is_dm_mode_response: bool = (
         "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
