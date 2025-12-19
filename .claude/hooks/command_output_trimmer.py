@@ -232,7 +232,6 @@ class OptimizedCommandOutputTrimmer:
             return lines
 
         # Keep first N and last M lines based on config
-        keep_total = Config.FAST_TRIM_KEEP_FIRST + Config.FAST_TRIM_KEEP_LAST
         trimmed = lines[:Config.FAST_TRIM_KEEP_FIRST]
 
         # Summarize the middle section instead of just excluding it
@@ -243,180 +242,191 @@ class OptimizedCommandOutputTrimmer:
         trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST:])
         return trimmed
 
-    def _summarize_middle_content(self, middle_lines: list[str], max_summary_lines: int = 25) -> list[str]:
-        """
-        Create an intelligent summary of middle content with bounded memory usage.
-        Extracts key patterns, errors, URLs, and important information.
 
-        Args:
-            middle_lines: Lines to summarize
-            max_summary_lines: Maximum lines in summary to prevent unbounded growth
-        """
-        if not middle_lines:
-            return []
-
-        summary_lines = []
-        summary_lines.append(f"\n... [SUMMARY of {len(middle_lines)} middle lines] ...")
-
-        # Extract important patterns from middle content with collection limits
-        MAX_COLLECTED_ITEMS = 10  # Prevent memory exhaustion
-        errors = []
-        urls = []
-        important_info = []
-        status_updates = []
+    def _collect_middle_summary_items(
+        self,
+        middle_lines: list[str],
+        *,
+        max_collected_items: int,
+        max_line_chars: int,
+    ) -> tuple[list[str], list[str], list[str], list[str]]:
+        """Collect key items (errors/urls/status/refs) from middle content."""
+        errors: list[str] = []
+        urls: list[str] = []
+        status_updates: list[str] = []
+        important_info: list[str] = []
 
         for line in middle_lines:
             line_stripped = line.strip()
             if not line_stripped:
                 continue
 
-            # Limit line length to prevent individual long lines from causing issues
-            if len(line_stripped) > 200:
-                line_stripped = line_stripped[:200] + "..."
+            if len(line_stripped) > max_line_chars:
+                line_stripped = line_stripped[:max_line_chars] + "..."
 
-            # Collect errors and warnings (with limit)
-            if len(errors) < MAX_COLLECTED_ITEMS and any(pattern in line.upper() for pattern in ['ERROR', 'FAILED', 'EXCEPTION', 'WARNING']):
+            upper = line_stripped.upper()
+            if (
+                len(errors) < max_collected_items
+                and any(p in upper for p in ("ERROR", "FAILED", "EXCEPTION", "WARNING"))
+            ):
                 errors.append(line_stripped)
 
-            # Collect URLs (with limit)
-            if len(urls) < MAX_COLLECTED_ITEMS and 'http' in line and ('://' in line):
+            if (
+                len(urls) < max_collected_items
+                and "http" in line_stripped
+                and "://" in line_stripped
+            ):
                 urls.append(line_stripped)
 
-            # Collect status indicators (with limit)
-            if len(status_updates) < MAX_COLLECTED_ITEMS and any(pattern in line for pattern in ['✅', '❌', '🔄', 'PASSED', 'SUCCESS', 'COMPLETED']):
+            if len(status_updates) < max_collected_items and any(
+                p in line_stripped for p in ("✅", "❌", "🔄", "PASSED", "SUCCESS", "COMPLETED")
+            ):
                 status_updates.append(line_stripped)
 
-            # Collect PR/commit references (with limit)
-            if len(important_info) < MAX_COLLECTED_ITEMS and any(pattern in line for pattern in ['PR #', 'commit', 'merge', 'branch']):
+            if len(important_info) < max_collected_items and any(
+                p in line_stripped for p in ("PR #", "commit", "merge", "branch")
+            ):
                 important_info.append(line_stripped)
 
-        # Add collected information to summary (limit each category)
+        return errors, urls, status_updates, important_info
+
+    @staticmethod
+    def _append_bulleted_section(
+        summary_lines: list[str],
+        *,
+        header: str,
+        items: list[str],
+        max_items: int,
+        indent: str = "    • ",
+    ) -> None:
+        summary_lines.append(header)
+        for item in items[:max_items]:
+            summary_lines.append(f"{indent}{item}")
+        if len(items) > max_items:
+            summary_lines.append(f"    ... and {len(items) - max_items} more")
+
+    @staticmethod
+    def _append_basic_middle_stats(summary_lines: list[str], middle_lines: list[str]) -> None:
+        unique_patterns: set[str] = set()
+        for line in middle_lines[:20]:
+            words = line.strip().split()[:3]
+            if not words:
+                continue
+            unique_patterns.add(" ".join(words))
+
+        summary_lines.append(f"  Content types found: {len(unique_patterns)} different patterns")
+        if unique_patterns:
+            summary_lines.append("  Sample patterns:")
+            for pattern in list(unique_patterns)[:3]:
+                summary_lines.append(f"    • {pattern}...")
+
+    def _summarize_middle_content(self, middle_lines: list[str], max_summary_lines: int = 25) -> list[str]:
+        """Create an intelligent summary of middle content with bounded memory usage."""
+        if not middle_lines:
+            return []
+
+        summary_lines: list[str] = [f"\n... [SUMMARY of {len(middle_lines)} middle lines] ..."]
+
+        errors, urls, status_updates, important_info = self._collect_middle_summary_items(
+            middle_lines,
+            max_collected_items=10,
+            max_line_chars=200,
+        )
+
         if errors:
-            summary_lines.append("  Errors/Warnings found:")
-            for error in errors[:3]:  # Limit to first 3 errors
-                summary_lines.append(f"    • {error}")
-            if len(errors) > 3:
-                summary_lines.append(f"    ... and {len(errors) - 3} more errors")
-
+            self._append_bulleted_section(
+                summary_lines,
+                header="  Errors/Warnings found:",
+                items=errors,
+                max_items=3,
+            )
         if urls:
-            summary_lines.append("  URLs found:")
-            for url in urls[:2]:  # Limit to first 2 URLs
-                summary_lines.append(f"    • {url}")
-            if len(urls) > 2:
-                summary_lines.append(f"    ... and {len(urls) - 2} more URLs")
-
+            self._append_bulleted_section(
+                summary_lines,
+                header="  URLs found:",
+                items=urls,
+                max_items=2,
+            )
         if status_updates:
-            summary_lines.append("  Status updates:")
-            for status in status_updates[:5]:  # Limit to first 5 status updates
-                summary_lines.append(f"    • {status}")
-            if len(status_updates) > 5:
-                summary_lines.append(f"    ... and {len(status_updates) - 5} more status updates")
-
+            self._append_bulleted_section(
+                summary_lines,
+                header="  Status updates:",
+                items=status_updates,
+                max_items=5,
+            )
         if important_info:
-            summary_lines.append("  Important references:")
-            for info in important_info[:3]:  # Limit to first 3 references
-                summary_lines.append(f"    • {info}")
-            if len(important_info) > 3:
-                summary_lines.append(f"    ... and {len(important_info) - 3} more references")
+            self._append_bulleted_section(
+                summary_lines,
+                header="  Important references:",
+                items=important_info,
+                max_items=3,
+            )
 
-        # If no important patterns found, show basic stats
         if not (errors or urls or status_updates or important_info):
-            # Count unique line patterns
-            unique_patterns = set()
-            for line in middle_lines[:20]:  # Sample first 20 lines
-                # Extract first few words as pattern
-                words = line.strip().split()[:3]
-                if words:
-                    pattern = ' '.join(words)
-                    unique_patterns.add(pattern)
-
-            summary_lines.append(f"  Content types found: {len(unique_patterns)} different patterns")
-            if unique_patterns:
-                summary_lines.append("  Sample patterns:")
-                for pattern in list(unique_patterns)[:3]:
-                    summary_lines.append(f"    • {pattern}...")
+            self._append_basic_middle_stats(summary_lines, middle_lines)
 
         summary_lines.append("... [END SUMMARY] ...\n")
 
-        # Cap summary length to prevent unbounded growth
         if max_summary_lines > 0 and len(summary_lines) > max_summary_lines:
-            summary_lines = summary_lines[:max_summary_lines - 1]
+            summary_lines = summary_lines[: max_summary_lines - 1]
             summary_lines.append("... [SUMMARY TRUNCATED] ...\n")
 
         return summary_lines
 
-    def _should_bypass(self, output: str) -> bool:
-        """Determine if trimming should be skipped entirely."""
-        # Respect global enable flag first
-        if not self.config.get('enabled', True):
+    def _is_passthrough_disabled(self) -> bool:
+        if not self.config.get("enabled", True):
             return True
 
-        # Allow interactive overrides via environment variables
-        env_toggle = os.environ.get('CLAUDE_TRIMMER_DISABLE', '')
-        if env_toggle.lower() in {'1', 'true', 'yes', 'on'}:
+        env_toggle = os.environ.get("CLAUDE_TRIMMER_DISABLE", "")
+        if env_toggle.lower() in {"1", "true", "yes", "on"}:
             return True
 
-        env_mode = os.environ.get('CLAUDE_TRIMMER_MODE', '').strip().lower()
-        if env_mode in {'off', 'disable', 'disabled', 'passthrough', 'raw', 'full'}:
-            return True
+        env_mode = os.environ.get("CLAUDE_TRIMMER_MODE", "").strip().lower()
+        return env_mode in {"off", "disable", "disabled", "passthrough", "raw", "full"}
 
-        # Normalize different output views lazily so we only compute them once
-        lowered_output: str | None = None
-        collapsed_output: str | None = None
-        collapsed_lowered_output: str | None = None
+    def _contains_passthrough_markers(self, output: str) -> bool:
+        markers = self.config.get("passthrough_markers", [])
+        if not markers:
+            return False
 
-        def get_lowered_output() -> str:
-            nonlocal lowered_output
-            if lowered_output is None:
-                lowered_output = output.lower()
-            return lowered_output
+        lowered = output.lower()
+        return any(marker and marker.lower() in lowered for marker in markers)
 
-        def get_collapsed_output() -> str:
-            nonlocal collapsed_output
-            if collapsed_output is None:
-                # Collapse all whitespace to single spaces to make natural-language
-                # matching resilient to formatting differences.
-                collapsed_output = re.sub(r'\s+', ' ', output)
-            return collapsed_output
+    def _contains_passthrough_requests(self, output: str) -> bool:
+        requests = self.config.get("passthrough_requests", [])
+        if not requests:
+            return False
 
-        def get_collapsed_lowered_output() -> str:
-            nonlocal collapsed_lowered_output
-            if collapsed_lowered_output is None:
-                collapsed_lowered_output = get_collapsed_output().lower()
-            return collapsed_lowered_output
-
-        # Allow configurable magic markers inside the output
-        markers = self.config.get('passthrough_markers', [])
-        if markers:
-            lowered_markers_view = get_lowered_output()
-            for marker in markers:
-                if marker and marker.lower() in lowered_markers_view:
+        collapsed = re.sub(r"\s+", " ", output)
+        collapsed_lowered = collapsed.lower()
+        for request in requests:
+            if not request:
+                continue
+            if isinstance(request, str):
+                if request.lower() in collapsed_lowered:
                     return True
-
-        # Detect natural language requests for full output
-        requests = self.config.get('passthrough_requests', [])
-        if requests:
-            for request in requests:
-                if not request:
-                    continue
-                if isinstance(request, dict) and 'regex' in request:
-                    pattern = request.get('regex')
-                    if not isinstance(pattern, str):
-                        continue
-                    try:
-                        compiled = re.compile(pattern, re.IGNORECASE)
-                    except re.error:
-                        continue
-
-                    # Check both the original output and the collapsed view while
-                    # reusing the cached normalization to avoid redundant work.
-                    if compiled.search(output) or compiled.search(get_collapsed_output()):
-                        return True
-                elif isinstance(request, str):
-                    if request.lower() in get_collapsed_lowered_output():
-                        return True
+                continue
+            if not (isinstance(request, dict) and "regex" in request):
+                continue
+            pattern = request.get("regex")
+            if not isinstance(pattern, str):
+                continue
+            try:
+                compiled = re.compile(pattern, re.IGNORECASE)
+            except re.error:
+                continue
+            if compiled.search(output) or compiled.search(collapsed):
+                return True
 
         return False
+
+    def _should_bypass(self, output: str) -> bool:
+        """Determine if trimming should be skipped entirely."""
+        if self._is_passthrough_disabled():
+            return True
+        if self._contains_passthrough_markers(output):
+            return True
+        return self._contains_passthrough_requests(output)
 
     def process_output(self, output: str) -> str:
         """Main processing with performance tracking"""
@@ -584,80 +594,71 @@ class OptimizedCommandOutputTrimmer:
 
         return compressed_output, stats
 
+
+    def _trim_args_list(self, args_list: list[Any]) -> list[Any]:
+        trimmed_list: list[Any] = []
+        for arg in args_list:
+            if isinstance(arg, (list, dict)):
+                trimmed_list.append(self.trim_args(arg))
+                continue
+
+            arg_str = str(arg)
+            if len(arg_str) > Config.ARG_LENGTH_LIMIT:
+                trimmed_list.append(arg_str[: Config.ARG_LENGTH_LIMIT])
+            else:
+                trimmed_list.append(arg)
+
+        return trimmed_list
+
+    def _trim_args_dict(self, args_dict: dict[Any, Any]) -> dict[Any, Any]:
+        trimmed_dict: dict[Any, Any] = {}
+        collision_counter: dict[str, int] = {}
+
+        for key, value in args_dict.items():
+            if isinstance(value, (list, dict)):
+                final_value = self.trim_args(value)
+            else:
+                value_str = str(value)
+                final_value = (
+                    value_str[: Config.ARG_LENGTH_LIMIT]
+                    if len(value_str) > Config.ARG_LENGTH_LIMIT
+                    else value
+                )
+
+            key_str = str(key)
+            base_key = key_str[: Config.ARG_LENGTH_LIMIT] if len(key_str) > Config.ARG_LENGTH_LIMIT else key_str
+
+            if base_key in trimmed_dict:
+                collision_counter[base_key] = collision_counter.get(base_key, 0) + 1
+                suffix = f"__dup{collision_counter[base_key]}"
+                max_base_length = max(1, Config.ARG_LENGTH_LIMIT - len(suffix))
+                final_key = base_key[:max_base_length] + suffix
+            else:
+                collision_counter.setdefault(base_key, 0)
+                final_key = base_key
+
+            trimmed_dict[final_key] = final_value
+
+        return trimmed_dict
+
     def trim_args(self, args: Any) -> Any:
-        """
-        Trim argument length to prevent DoS attacks with proper type preservation and recursion.
-        Implements simple length-only trimming without security filtering.
-
-        Args:
-            args: Arguments to sanitize (can be list, string, or other types)
-
-        Returns:
-            Sanitized arguments with length limits applied and types preserved
-        """
-        # Defensive programming: validate input types and handle edge cases
+        """Trim argument length to prevent DoS attacks."""
         if args is None:
             return None
 
         if isinstance(args, list):
-            trimmed_list = []
-            for arg in args:
-                # Recurse into nested structures
-                if isinstance(arg, (list, dict)):
-                    trimmed_list.append(self.trim_args(arg))
-                else:
-                    arg_str = str(arg)
-                    if len(arg_str) > Config.ARG_LENGTH_LIMIT:
-                        # Only convert to string if it exceeds the limit
-                        trimmed_list.append(arg_str[:Config.ARG_LENGTH_LIMIT])
-                    else:
-                        # Preserve original type and value if under limit
-                        trimmed_list.append(arg)
-            return trimmed_list
-        if isinstance(args, str):
-            if len(args) > Config.ARG_LENGTH_LIMIT:
-                return args[:Config.ARG_LENGTH_LIMIT]
-            return args
+            return self._trim_args_list(args)
+
         if isinstance(args, dict):
-            trimmed_dict = {}
-            collision_counter = {}
+            return self._trim_args_dict(args)
 
-            for key, value in args.items():
-                # Handle nested structures in values
-                if isinstance(value, (list, dict)):
-                    final_value = self.trim_args(value)
-                else:
-                    value_str = str(value)
-                    final_value = value_str[:Config.ARG_LENGTH_LIMIT] if len(value_str) > Config.ARG_LENGTH_LIMIT else value
+        if isinstance(args, str):
+            return args[: Config.ARG_LENGTH_LIMIT] if len(args) > Config.ARG_LENGTH_LIMIT else args
 
-                # Handle keys with collision protection and length validation
-                key_str = str(key)
-                if len(key_str) > Config.ARG_LENGTH_LIMIT:
-                    base_key = key_str[:Config.ARG_LENGTH_LIMIT]
-
-                    # Check for key collisions and handle them with length validation
-                    if base_key in trimmed_dict or base_key in collision_counter:
-                        collision_counter[base_key] = collision_counter.get(base_key, 0) + 1
-                        # Create collision suffix and ensure total length doesn't exceed limit
-                        suffix = f"__dup{collision_counter[base_key]}"
-                        if len(base_key) + len(suffix) > Config.ARG_LENGTH_LIMIT:
-                            # Truncate base_key to fit suffix within limit
-                            max_base_length = Config.ARG_LENGTH_LIMIT - len(suffix)
-                            final_key = base_key[:max_base_length] + suffix
-                        else:
-                            final_key = base_key + suffix
-                    else:
-                        final_key = base_key
-                        collision_counter[base_key] = 0
-                else:
-                    final_key = key
-
-                trimmed_dict[final_key] = final_value
-            return trimmed_dict
-        # For other types (int, float, bool, etc.), preserve type unless string representation is too long
         arg_str = str(args)
         if len(arg_str) > Config.ARG_LENGTH_LIMIT:
-            return arg_str[:Config.ARG_LENGTH_LIMIT]
+            return arg_str[: Config.ARG_LENGTH_LIMIT]
+
         return args
 
     def process_command_output(self, output: str) -> str:
@@ -835,11 +836,9 @@ def main():
         sys.stderr.write(f"Trimmer error: {e}\n")
         sys.stderr.write(f"Stack trace: {traceback.format_exc()}\n")
         # Attempt to write original data if available
-        try:
+        import contextlib
+        with contextlib.suppress(NameError):
             sys.stdout.write(input_data)
-        except NameError:
-            # input_data wasn't defined yet, nothing to pass through
-            pass
 
 if __name__ == '__main__':
     main()

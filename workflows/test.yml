@@ -152,8 +152,8 @@ jobs:
             done
             # Install automation package if testing automation
             if [ "${{ matrix.test-group }}" = "automation" ] && [ -f "automation/pyproject.toml" ]; then
-              echo "Installing automation package in editable mode"
-              timeout 300 pip install -e automation/
+              echo "Installing automation package in editable mode with dev dependencies"
+              timeout 300 pip install -e "automation/[dev]"
             fi
             ;;
         esac
@@ -214,28 +214,3 @@ jobs:
           mvp_site/*.log
         retention-days: 30
         if-no-files-found: warn
-
-  # Summary job to report overall results
-  test-summary:
-    needs: [detect-changes, test, import-validation]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Report test summary
-        run: |
-          echo "🎯 Directory-based CI Results"
-          echo "Tested directories: ${{ needs.detect-changes.outputs.test-dirs }}"
-          echo "Test groups: ${{ needs.detect-changes.outputs.selected-groups }}"
-
-          # Check test results
-          test_success="${{ needs.test.result }}"
-          import_success="${{ needs.import-validation.result }}"
-
-          if [ "$test_success" = "success" ] && [ "$import_success" = "success" ]; then
-            echo "✅ All directory-based tests and validation passed!"
-          else
-            echo "❌ Some tests failed:"
-            echo "  Directory tests: $test_success"
-            echo "  Import validation: $import_success"
-            exit 1
-          fi
