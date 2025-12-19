@@ -35,7 +35,7 @@ Provide Claude with a comprehensive reference for writing and understanding end-
 
 ```
 mvp_site/tests/
-├── test_end2end/                           # Primary E2E directory (13 test files + runner)
+├── test_end2end/                           # Primary E2E directory (14 test files + runner)
 │   ├── run_end2end_tests.py                # Test runner script
 │   ├── test_continue_story_end2end.py      # Story continuation flow
 │   ├── test_create_campaign_end2end.py     # Campaign creation flow
@@ -49,7 +49,8 @@ mvp_site/tests/
 │   ├── test_mcp_protocol_end2end.py        # MCP protocol compliance
 │   ├── test_npc_death_state_end2end.py     # NPC death state persistence
 │   ├── test_timeline_log_budget_end2end.py # Timeline logging with budgets
-│   └── test_visit_campaign_end2end.py      # Campaign visit/load flow
+│   ├── test_visit_campaign_end2end.py      # Campaign visit/load flow
+│   └── test_world_loader_e2e.py            # World loader with file caching
 ├── test_code_execution_dice_rolls.py       # Dice/tool loop tests
 ├── fake_firestore.py                       # Fake implementations
 └── integration/
@@ -73,6 +74,7 @@ mvp_site/tests/
 | `test_npc_death_state_end2end.py` | NPC death persistence across sessions |
 | `test_timeline_log_budget_end2end.py` | Timeline/event logging with budget limits |
 | `test_visit_campaign_end2end.py` | Loading existing campaigns from Firestore |
+| `test_world_loader_e2e.py` | World loader integration with file cache system |
 
 ## Claude Commands
 

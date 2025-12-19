@@ -57,6 +57,7 @@ fake_doc.set({"name": "test"})
 | `test_npc_death_state_end2end.py` | NPC death state persistence |
 | `test_timeline_log_budget_end2end.py` | Timeline logging with budgets |
 | `test_visit_campaign_end2end.py` | Loading existing campaigns |
+| `test_world_loader_e2e.py` | World loader with file caching |
 
 ## Running the Tests
 
