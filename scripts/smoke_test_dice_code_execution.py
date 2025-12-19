@@ -15,19 +15,20 @@ import argparse
 import json
 import os
 import sys
-import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import requests
 
 # Test configuration
 DEFAULT_SERVER_URL = "http://localhost:8081"
 TEST_USER_EMAIL = os.getenv("TEST_USER_EMAIL", "test-user@example.com")
-EVIDENCE_DIR = Path("/tmp/worldarchitect.ai/dice_code_execution_tests")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+EVIDENCE_DIR = PROJECT_ROOT / "tmp" / "worldarchitect.ai" / "dice_code_execution_tests"
 
 
-def get_auth_headers(server_url: str) -> dict:
+def get_auth_headers() -> dict[str, str]:
     """Get auth headers for test user.
 
     Uses X-Test-Bypass-Auth header for TESTING mode.
@@ -39,36 +40,44 @@ def get_auth_headers(server_url: str) -> dict:
     }
 
 
-def create_test_campaign(server_url: str) -> dict:
+def create_test_campaign(server_url: str) -> dict[str, Any]:
     """Create a test campaign that will trigger dice rolls."""
-    headers = get_auth_headers(server_url)
+    headers = get_auth_headers()
 
     # Campaign setup that encourages dice rolls - character must be a string
     payload = {
-        "title": f"Dice Code Execution Test - {datetime.now().isoformat()}",
+        "title": f"Dice Code Execution Test - {datetime.now(UTC).isoformat()}",
         "character": "TestFighter, a level 5 Human Fighter with 16 STR, 14 DEX, 15 CON",
         "setting": "generic_fantasy",
         "description": "A combat-focused test to verify dice code execution. Start in a dungeon facing a goblin.",
     }
 
-    response = requests.post(
-        f"{server_url}/api/campaigns",
-        json=payload,
-        headers=headers,
-        timeout=120,
-    )
+    try:
+        response = requests.post(
+            f"{server_url}/api/campaigns",
+            json=payload,
+            headers=headers,
+            timeout=120,
+        )
+    except requests.exceptions.RequestException as exc:
+        print(f"❌ Network error creating campaign: {exc}")
+        return {}
 
     if response.status_code not in (200, 201):
         print(f"❌ Failed to create campaign: {response.status_code}")
         print(f"Response: {response.text[:500]}")
         return {}
 
-    return response.json()
+    try:
+        return response.json()
+    except json.JSONDecodeError as exc:
+        print(f"❌ Failed to parse campaign response JSON: {exc}")
+        return {}
 
 
-def trigger_dice_roll_action(server_url: str, campaign_id: str) -> dict:
+def trigger_dice_roll_action(server_url: str, campaign_id: str) -> dict[str, Any]:
     """Send a player action that should trigger dice rolls."""
-    headers = get_auth_headers(server_url)
+    headers = get_auth_headers()
 
     # Action that MUST trigger dice rolls (combat/skill check)
     # Note: main.py API expects "input" field, not "user_input"
@@ -78,25 +87,56 @@ def trigger_dice_roll_action(server_url: str, campaign_id: str) -> dict:
 
     print(f"📤 Sending action: {payload['input']}")
 
-    response = requests.post(
-        f"{server_url}/api/campaigns/{campaign_id}/interaction",
-        json=payload,
-        headers=headers,
-        timeout=180,  # LLM calls can be slow
-    )
+    try:
+        response = requests.post(
+            f"{server_url}/api/campaigns/{campaign_id}/interaction",
+            json=payload,
+            headers=headers,
+            timeout=180,  # LLM calls can be slow
+        )
+    except requests.exceptions.RequestException as exc:
+        print(f"❌ Network error during action: {exc}")
+        return {}
 
     if response.status_code != 200:
         print(f"❌ Failed to continue game: {response.status_code}")
         print(f"Response: {response.text[:500]}")
         return {}
 
-    return response.json()
+    try:
+        return response.json()
+    except json.JSONDecodeError as exc:
+        print(f"❌ Failed to parse action response JSON: {exc}")
+        return {}
 
 
-def validate_code_execution(response_data: dict) -> dict:
+def _extract_debug_info(response_data: dict[str, Any]) -> dict[str, Any]:
+    """Extract debug_info from response, game_state, or story entries."""
+    debug_info = response_data.get("debug_info")
+    if isinstance(debug_info, dict) and debug_info:
+        return debug_info
+
+    game_state = response_data.get("game_state", {})
+    if isinstance(game_state, dict):
+        debug_info = game_state.get("debug_info")
+        if isinstance(debug_info, dict) and debug_info:
+            return debug_info
+
+    story = response_data.get("story", [])
+    if isinstance(story, list):
+        for entry in story:
+            if entry.get("actor") == "gemini":
+                entry_debug = entry.get("debug_info", {})
+                if isinstance(entry_debug, dict) and entry_debug:
+                    return entry_debug
+
+    return {}
+
+
+def validate_code_execution(response_data: dict[str, Any]) -> dict[str, Any]:
     """Validate that code_execution was actually used for dice rolls."""
     result = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "has_dice_rolls": False,
         "code_execution_used": False,
         "executable_code_parts": 0,
@@ -110,7 +150,6 @@ def validate_code_execution(response_data: dict) -> dict:
     # Check for dice_rolls in response
     dice_rolls = response_data.get("dice_rolls", [])
     if dice_rolls:
-        result["has_dice_rolls"] = True
         result["dice_rolls"] = dice_rolls
         print(f"🎲 Found dice_rolls: {dice_rolls}")
 
@@ -120,24 +159,9 @@ def validate_code_execution(response_data: dict) -> dict:
         result["dice_audit_events"] = audit_events
         print(f"📋 Found dice_audit_events: {len(audit_events)} events")
 
-    # Check debug_info for code_execution evidence
-    # The evidence might be in the game_state or nested response
-    debug_info = response_data.get("debug_info", {})
+    result["has_dice_rolls"] = bool(dice_rolls or audit_events)
 
-    # Also check nested structures
-    if not debug_info:
-        game_state = response_data.get("game_state", {})
-        debug_info = game_state.get("debug_info", {})
-
-    # Check story entries for debug info
-    story = response_data.get("story", [])
-    for entry in story:
-        if entry.get("actor") == "gemini":
-            entry_debug = entry.get("debug_info", {})
-            if entry_debug:
-                debug_info = entry_debug
-                break
-
+    debug_info = _extract_debug_info(response_data)
     if debug_info:
         result["code_execution_used"] = debug_info.get("code_execution_used", False)
         result["executable_code_parts"] = debug_info.get("executable_code_parts", 0)
@@ -145,10 +169,12 @@ def validate_code_execution(response_data: dict) -> dict:
             "code_execution_result_parts", 0
         )
 
-        print(f"🔍 Debug info found:")
+        print("🔍 Debug info found:")
         print(f"   code_execution_used: {result['code_execution_used']}")
         print(f"   executable_code_parts: {result['executable_code_parts']}")
-        print(f"   code_execution_result_parts: {result['code_execution_result_parts']}")
+        print(
+            f"   code_execution_result_parts: {result['code_execution_result_parts']}"
+        )
 
     # Validation logic
     if result["has_dice_rolls"]:
@@ -165,9 +191,11 @@ def validate_code_execution(response_data: dict) -> dict:
             result["errors"].append(
                 "Dice rolls present but code_execution_used=False - FABRICATED DICE!"
             )
-            print("🚨 VALIDATION FAILED: Dice rolls were FABRICATED (no code execution)")
+            print(
+                "🚨 VALIDATION FAILED: Dice rolls were FABRICATED (no code execution)"
+            )
     else:
-        result["errors"].append("No dice_rolls found in response")
+        result["errors"].append("No dice rolls or dice_audit_events found in response")
         print("⚠️ WARNING: No dice rolls found - test inconclusive")
 
     return result
@@ -175,14 +203,14 @@ def validate_code_execution(response_data: dict) -> dict:
 
 def save_evidence(
     evidence_dir: Path,
-    campaign_response: dict,
-    action_response: dict,
-    validation_result: dict,
+    campaign_response: dict[str, Any],
+    action_response: dict[str, Any],
+    validation_result: dict[str, Any],
 ) -> Path:
     """Save all evidence to the specified directory."""
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     test_dir = evidence_dir / f"test_{timestamp}"
     test_dir.mkdir(exist_ok=True)
 
@@ -216,11 +244,11 @@ def save_evidence(
 
 def run_smoke_test(server_url: str) -> bool:
     """Run the complete smoke test."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("🧪 DICE CODE EXECUTION SMOKE TEST")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Server: {server_url}")
-    print(f"Time: {datetime.now().isoformat()}")
+    print(f"Time: {datetime.now(UTC).isoformat()}")
     print()
 
     # Step 1: Create test campaign (uses X-Test-Bypass-Auth headers)
@@ -244,29 +272,28 @@ def run_smoke_test(server_url: str) -> bool:
         print("❌ TEST FAILED: No response from game action")
         return False
 
-    # Step 4: Validate code execution
+    # Step 3: Validate code execution
     print("\n🔍 Validating code execution...")
     validation_result = validate_code_execution(action_response)
 
-    # Step 5: Save evidence
+    # Step 4: Save evidence
     evidence_path = save_evidence(
         EVIDENCE_DIR, campaign_response, action_response, validation_result
     )
 
     # Final result
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     if validation_result["validation_passed"]:
         print("✅ SMOKE TEST PASSED: Code execution verified for dice rolls")
         print(f"   Evidence: {evidence_path}")
         return True
-    else:
-        print("❌ SMOKE TEST FAILED: Code execution NOT verified")
-        print(f"   Errors: {validation_result['errors']}")
-        print(f"   Evidence: {evidence_path}")
-        return False
+    print("❌ SMOKE TEST FAILED: Code execution NOT verified")
+    print(f"   Errors: {validation_result['errors']}")
+    print(f"   Evidence: {evidence_path}")
+    return False
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Dice code execution smoke test")
     parser.add_argument(
         "--server-url",
