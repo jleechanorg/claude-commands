@@ -3410,12 +3410,16 @@ def _validate_combat_dice_integrity(
 def _build_reprompt_for_missing_fields(
     original_response_text: str,
     missing_fields: list[str],
+    tool_results: list[dict] | None = None,
 ) -> str:
     """Build a reprompt message to request missing fields.
 
     Args:
         original_response_text: The original response from the LLM
         missing_fields: List of missing field names
+        tool_results: Optional list of tool execution results to include
+            in the reprompt. This preserves dice roll provenance when
+            reprompting after malformed JSON in Phase 2.
 
     Returns:
         Reprompt message asking for the missing fields
@@ -3444,10 +3448,32 @@ def _build_reprompt_for_missing_fields(
         )
 
     requested_block = '\n'.join(requested_lines)
+
+    # Build tool results context if available (preserves dice provenance)
+    tool_results_context = ""
+    if tool_results:
+        tool_lines = []
+        for tr in tool_results:
+            tool_name = tr.get("tool", "unknown")
+            result = tr.get("result", {})
+            if isinstance(result, dict):
+                total = result.get("total", result.get("result"))
+                purpose = tr.get("args", {}).get("purpose", "")
+                tool_lines.append(f"  - {tool_name}: {total}" + (f" ({purpose})" if purpose else ""))
+            else:
+                tool_lines.append(f"  - {tool_name}: {result}")
+        if tool_lines:
+            tool_results_context = (
+                "\n\nIMPORTANT - Tool results from prior execution (use these EXACT values, do NOT fabricate):\n"
+                + "\n".join(tool_lines)
+                + "\n"
+            )
+
     return (
         f"Your response is missing the required {fields_str} field(s). "
         f"Please provide the complete JSON response including:\n{requested_block}\n\n"
         f"Keep the narrative and other fields from your previous response. "
+        f"{tool_results_context}"
         f"Here is your previous response for reference:\n{original_response_text[:2000]}"
     )
 
@@ -3976,9 +4002,12 @@ def continue_story(
             f"🔄 REPROMPT_MISSING_FIELDS: Response missing {missing_fields}. "
             f"Attempting reprompt..."
         )
-        # Build reprompt message
+        # Build reprompt message with tool_results from original response
+        # This preserves dice provenance so the model can reference real results
         reprompt_message = _build_reprompt_for_missing_fields(
-            raw_response_text, missing_fields
+            raw_response_text,
+            missing_fields,
+            tool_results=getattr(api_response, "_tool_results", None),
         )
 
         # Create a follow-up request with the reprompt

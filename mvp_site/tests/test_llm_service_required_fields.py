@@ -364,3 +364,40 @@ def test_check_missing_required_fields_no_dice_integrity_violation():
         dice_integrity_violation=False,
     )
     assert "dice_integrity" not in missing
+
+
+# =============================================================================
+# Tests for reprompt tool_results preservation
+# =============================================================================
+
+
+def test_build_reprompt_includes_tool_results_when_available():
+    """RED TEST: _build_reprompt_for_missing_fields should include tool_results context.
+
+    When reprompting after Phase 2 returned malformed JSON, the reprompt message
+    MUST include the original tool_results so the model can reference them.
+
+    Without this, the model might fabricate new dice results during reprompt.
+    """
+    from mvp_site.llm_service import _build_reprompt_for_missing_fields
+
+    original_response = '{"narrative": "The goblin attacks!", "dice_rolls": []}'
+    missing_fields = ["dice_rolls"]
+
+    # Tool results that should be included in reprompt
+    tool_results = [
+        {"tool": "roll_dice", "args": {"notation": "1d20+5"}, "result": {"total": 17, "rolls": [12]}},
+    ]
+
+    # RED: Current implementation doesn't accept tool_results parameter
+    # This test documents that it SHOULD accept and include tool_results
+    reprompt = _build_reprompt_for_missing_fields(
+        original_response,
+        missing_fields,
+        tool_results=tool_results,  # This parameter doesn't exist yet
+    )
+
+    # The reprompt should mention the tool results
+    assert "17" in reprompt or "tool" in reprompt.lower(), (
+        "Reprompt MUST include tool_results context to prevent dice fabrication"
+    )

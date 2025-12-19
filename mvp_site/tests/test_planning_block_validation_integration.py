@@ -248,6 +248,29 @@ class TestPlanningBlockSchemaStructure(unittest.TestCase):
         self.assertIn("text", choice_props, "Choice must have 'text' property")
         self.assertIn("description", choice_props, "Choice must have 'description' property")
 
+    def test_planning_block_choices_allows_empty_during_phase1_combat(self):
+        """choices must NOT have minProperties constraint - allows empty {} during Phase 1 combat.
+
+        RED TEST: This test documents that the schema SHOULD allow empty choices.
+        During Phase 1 of tool_requests flow (awaiting dice results), the LLM returns
+        "choices": {} as shown in game_state_instruction.md:41.
+
+        If minProperties: 1 is set, this will fail schema validation on strict providers.
+        """
+        from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+
+        planning_block_schema = NARRATIVE_RESPONSE_SCHEMA["properties"]["planning_block"]
+        choices_schema = planning_block_schema.get("properties", {}).get("choices", {})
+
+        # RED: This test FAILS if minProperties is set
+        # The schema should NOT enforce minimum choices because Phase 1 combat
+        # legitimately returns "choices": {} while awaiting dice results
+        self.assertNotIn(
+            "minProperties",
+            choices_schema,
+            "choices MUST NOT have minProperties - Phase 1 combat uses empty choices {}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

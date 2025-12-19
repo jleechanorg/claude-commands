@@ -521,6 +521,7 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         phase2_json = json.dumps({
             "narrative": "You rolled a 17! The goblin is hit.",
             "planning_block": {"thinking": "Attack successful"},
+            "dice_rolls": ["17"],
         })
 
         with patch.object(cerebras_provider, "generate_content") as mock_gen:
@@ -656,6 +657,7 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         phase2_json = json.dumps({
             "narrative": "You rolled a 16! You move silently.",
             "planning_block": {"thinking": "Stealth success"},
+            "dice_rolls": ["16"],
         })
 
         with patch.object(openrouter_provider, "generate_content") as mock_gen:

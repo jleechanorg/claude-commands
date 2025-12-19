@@ -69,7 +69,8 @@ NARRATIVE_RESPONSE_SCHEMA = {
                 "choices": {
                     "type": "object",
                     "description": "Player choices with snake_case keys (e.g., explore_tavern, attack_goblin)",
-                    "minProperties": 1,  # Require at least one choice
+                    # NOTE: No minProperties constraint - Phase 1 combat returns empty choices {}
+                    # while awaiting dice results (see game_state_instruction.md:41)
                     "additionalProperties": {
                         "type": "object",
                         "description": "A single player choice option",
