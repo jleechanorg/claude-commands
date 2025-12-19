@@ -222,7 +222,6 @@ class CodexGitHubMentionsAutomation:
                 print("⚠️  Not logged in to OpenAI")
 
                 # Check if running in non-interactive mode (cron/CI)
-                import sys
                 if not sys.stdin.isatty():
                     print("❌ ERROR: Authentication required but running in non-interactive mode")
                     print("   Solution: Log in manually via Chrome with CDP enabled, then run again")
@@ -243,7 +242,7 @@ class CodexGitHubMentionsAutomation:
                     logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
                 return result
 
-            except Exception:
+            except PlaywrightTimeoutError:
                 print("⚠️  Could not determine login status")
                 print("   Assuming you're logged in and continuing...")
                 return True
@@ -299,7 +298,9 @@ class CodexGitHubMentionsAutomation:
             await asyncio.sleep(5)
 
             locator_selector = (
-                'a[href*="/codex/"]' if self.all_tasks else 'a:has-text("GitHub Mention:")'
+                'a[href*="/codex/tasks/"]'
+                if self.all_tasks
+                else 'a[href*="/codex/tasks/"]:has-text("GitHub Mention:")'
             )
             print(f"\n🔍 Searching for tasks using selector: {locator_selector}")
 
