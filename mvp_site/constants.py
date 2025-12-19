@@ -396,6 +396,14 @@ FRIENDLY_COMBATANT_TYPES: frozenset[str] = frozenset({
     "support",    # Support character (healer, etc.)
 })
 
+# Neutral combatant types that are non-hostile but not allied
+NEUTRAL_COMBATANT_TYPES: frozenset[str] = frozenset({
+    "neutral",      # Explicitly neutral
+    "bystander",    # Passive observer
+    "civilian",     # Non-combatant civilian
+    "noncombatant", # Explicit non-combatant
+})
+
 # Generic/enemy roles that indicate a combatant can be removed after defeat
 # NPCs with these roles (or None/empty) are considered generic enemies
 GENERIC_ENEMY_ROLES: frozenset[str | None] = frozenset({

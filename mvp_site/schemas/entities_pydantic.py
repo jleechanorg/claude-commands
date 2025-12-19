@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from mvp_site.constants import FRIENDLY_COMBATANT_TYPES, NEUTRAL_COMBATANT_TYPES
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
 
@@ -96,13 +97,10 @@ class CombatDisposition(Enum):
 
         normalized = type_str.lower().strip()
 
-        # Import here to avoid circular import
-        from mvp_site.constants import FRIENDLY_COMBATANT_TYPES
-
         if normalized in FRIENDLY_COMBATANT_TYPES:
             return cls.FRIENDLY
 
-        if normalized in {"neutral", "bystander", "civilian", "noncombatant"}:
+        if normalized in NEUTRAL_COMBATANT_TYPES:
             return cls.NEUTRAL
 
         return cls.HOSTILE
