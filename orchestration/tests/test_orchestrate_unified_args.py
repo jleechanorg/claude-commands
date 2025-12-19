@@ -25,6 +25,8 @@ sys.path.insert(0, project_root)
 orchestration_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, orchestration_dir)
 
+from orchestration import orchestrate_unified
+
 
 class TestOrchestrateUnifiedArguments(unittest.TestCase):
     """Test orchestrate_unified.py argument parsing."""
@@ -349,12 +351,8 @@ class TestMainFunctionImport(unittest.TestCase):
 
     def test_module_imports(self):
         """Test that orchestrate_unified module imports successfully."""
-        try:
-            from orchestration import orchestrate_unified
-            self.assertTrue(hasattr(orchestrate_unified, 'main'))
-            self.assertTrue(hasattr(orchestrate_unified, 'UnifiedOrchestration'))
-        except ImportError as e:
-            self.fail(f"Failed to import orchestrate_unified: {e}")
+        self.assertTrue(hasattr(orchestrate_unified, 'main'))
+        self.assertTrue(hasattr(orchestrate_unified, 'UnifiedOrchestration'))
 
     def test_unified_orchestration_class_exists(self):
         """Test that UnifiedOrchestration class exists and has orchestrate method."""
