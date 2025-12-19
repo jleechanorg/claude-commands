@@ -560,14 +560,13 @@ class GameState:
         }
 
     def _is_named_npc(self, npc: dict[str, Any]) -> bool:
-        """Return True if the NPC should be preserved (named/important)."""
-        role_raw = npc.get("role")
-        role_normalized = (
-            role_raw.lower().strip() if isinstance(role_raw, str) else role_raw
-        )
+        """Return True if the NPC should be preserved (named/important).
 
-        generic_roles = {None, "", "enemy", "minion", "generic", "unknown"}
-        has_named_role = role_normalized not in generic_roles
+        Uses centralized constants from mvp_site.constants for maintainability.
+        """
+        role_raw = npc.get("role")
+        # Use centralized helper for role classification
+        has_named_role = not constants.is_generic_enemy_role(role_raw)
         has_story = npc.get("backstory") or npc.get("background")
         return bool(has_named_role or has_story or npc.get("is_important"))
 
@@ -625,7 +624,7 @@ class GameState:
                     else enemy_type_raw
                 )
 
-                friendly_types = {"pc", "companion", "ally", "support", "friendly", "party", "player"}
+                # Use centralized constants for friendly type detection
                 if enemy_type is None or enemy_type == "unknown":
                     # Attempt to infer friendliness from player or NPC metadata before defaulting to enemy cleanup
                     player_name = (
@@ -657,7 +656,7 @@ class GameState:
                         else npc_type_raw
                     )
 
-                    if npc_role in friendly_types or npc_type in friendly_types:
+                    if constants.is_friendly_combatant(npc_role) or constants.is_friendly_combatant(npc_type):
                         logging_util.info(
                             f"COMBAT CLEANUP: Skipping {name} removal because npc_data marks combatant as friendly "
                             f"(role/type: {npc_role or npc_type}) despite missing initiative type"
@@ -671,7 +670,7 @@ class GameState:
                     )
                     enemy_type = "enemy"
 
-                if enemy_type in friendly_types:
+                if constants.is_friendly_combatant(enemy_type):
                     logging_util.info(
                         f"COMBAT CLEANUP: Skipping {name} because combatant is friendly ({enemy_type})"
                     )
