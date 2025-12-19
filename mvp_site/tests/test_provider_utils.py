@@ -280,6 +280,72 @@ def test_run_json_first_tool_requests_flow_retries_phase2_when_dice_rolls_missin
     assert "IMPORTANT:" in phase2_calls[1]["tool_results_prompt"]
 
 
+def test_run_json_first_tool_requests_flow_retries_phase2_when_phase2_invalid_json():
+    class Resp:
+        def __init__(self, text: str):
+            self.text = text
+
+    phase2_calls: list[object] = []
+    tool_exec_calls: list[list[dict]] = []
+
+    def phase1():
+        return Resp('{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}')
+
+    def extract_text(resp: Resp) -> str:
+        return resp.text
+
+    def exec_tool_requests(tool_requests):
+        tool_exec_calls.append(tool_requests)
+        return [
+            {
+                "tool": tool_requests[0]["tool"],
+                "args": tool_requests[0]["args"],
+                "result": {"notation": "1d20", "rolls": [7], "modifier": 0, "total": 7},
+            }
+        ]
+
+    def format_results(_results):
+        return "- roll_dice: total=7"
+
+    def build_history(*, prompt_contents, phase1_text, tool_results_prompt):
+        return {
+            "prompt_contents": prompt_contents,
+            "phase1_text": phase1_text,
+            "tool_results_prompt": tool_results_prompt,
+        }
+
+    def phase2(history):
+        phase2_calls.append(history)
+        if len(phase2_calls) == 1:
+            # Malformed JSON (truncated)
+            return Resp('{"narrative":"ok"')
+        return Resp('{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}')
+
+    class Logger:
+        def info(self, _m): ...
+
+        def warning(self, _m): ...
+
+        def error(self, _m): ...
+
+    out = run_json_first_tool_requests_flow(
+        phase1_generate_fn=phase1,
+        extract_text_fn=extract_text,
+        prompt_contents=["hi"],
+        execute_tool_requests_fn=exec_tool_requests,
+        format_tool_results_text_fn=format_results,
+        build_history_fn=build_history,
+        phase2_generate_fn=phase2,
+        logger=Logger(),
+        no_tool_requests_log_msg="no tool requests",
+    )
+
+    assert out.text == '{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}'
+    assert len(tool_exec_calls) == 1, "Tools must only execute once (no rerolls)"
+    assert len(phase2_calls) == 2
+    assert "malformed JSON" in phase2_calls[1]["tool_results_prompt"]
+
+
 def test_run_json_first_tool_requests_flow_returns_phase1_when_no_tools():
     class Resp:
         def __init__(self, text: str):
