@@ -35,13 +35,11 @@ class TestOrchestrateModule(unittest.TestCase):
 
         # Test with no arguments (should show usage)
         with patch('sys.argv', ['orchestrate.py']):
-            result = orchestrate.main()
-            self.assertEqual(result, 1)  # Returns 1 for usage error
+            self.assertEqual(orchestrate.main(), 1)  # Returns 1 for usage error
 
         # Test with task arguments
         with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
-            result = orchestrate.main()
-            self.assertEqual(result, 0)  # Returns 0 for success
+            self.assertEqual(orchestrate.main(), 0)
 
         # Verify subprocess was called for the task
         self.assertTrue(mock_run.called)
@@ -65,8 +63,7 @@ class TestOrchestrateModule(unittest.TestCase):
 
         with patch('orchestrate.subprocess.run') as mock_run:
             with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
-                result = orchestrate.main()
-                self.assertEqual(result, 1)  # Returns 1 for missing script error
+                self.assertEqual(orchestrate.main(), 1)
             mock_run.assert_not_called()
 
     def test_module_imports_successfully(self):
@@ -79,8 +76,7 @@ class TestOrchestrateModule(unittest.TestCase):
         """Test that usage message is properly formatted."""
         with patch('sys.argv', ['orchestrate.py']):
             with patch('builtins.print') as mock_print:
-                result = orchestrate.main()
-                self.assertEqual(result, 1)
+                self.assertEqual(orchestrate.main(), 1)
                 # Verify both usage and example messages were printed
                 mock_print.assert_any_call("Usage: /orchestrate [task description]")
                 mock_print.assert_any_call("Example: /orchestrate Find security vulnerabilities and create coverage report")
@@ -93,8 +89,7 @@ class TestOrchestrateModule(unittest.TestCase):
 
         with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
             with patch('os.path.exists', return_value=True):
-                result = orchestrate.main()
-                self.assertEqual(result, 1)  # Returns 1 for execution error
+                self.assertEqual(orchestrate.main(), 1)
 
     def test_argument_forwarding(self):
         """Test that command line arguments are properly forwarded."""
@@ -104,7 +99,7 @@ class TestOrchestrateModule(unittest.TestCase):
             with patch('subprocess.run') as mock_run:
                 with patch('os.path.exists', return_value=True):
                     mock_run.return_value.returncode = 0
-                    result = orchestrate.main()
+                    self.assertEqual(orchestrate.main(), 0)
 
                     # Verify subprocess was called with forwarded arguments
                     self.assertTrue(mock_run.called)
@@ -132,8 +127,7 @@ class TestOrchestrateModule(unittest.TestCase):
             with patch('os.path.exists', return_value=True):
                 with patch('subprocess.run') as mock_run:
                     mock_run.return_value.returncode = 0
-                    result = orchestrate.main()
-                    self.assertEqual(result, 0)
+                    self.assertEqual(orchestrate.main(), 0)
                     self.assertTrue(mock_run.called)
 
 
