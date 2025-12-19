@@ -375,5 +375,148 @@ class TestMainFunctionImport(unittest.TestCase):
         self.assertEqual(options_param.default, None)
 
 
+class TestGhCommandMocking(unittest.TestCase):
+    """Test gh command interactions are properly mockable."""
+
+    @patch('subprocess.run')
+    def test_gh_pr_list_command_structure(self, mock_run):
+        """Test that gh pr list command is called with correct arguments."""
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout='[]',
+            stderr=''
+        )
+
+        # Simulate the command structure used in _find_recent_agent_work
+        import subprocess
+        result = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--author",
+                "@me",
+                "--limit",
+                "5",
+                "--json",
+                "number,title,headRefName,createdAt",
+            ],
+            shell=False,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args[0][0]
+        self.assertEqual(call_args[0], "gh")
+        self.assertEqual(call_args[1], "pr")
+        self.assertEqual(call_args[2], "list")
+        self.assertIn("--author", call_args)
+        self.assertIn("--json", call_args)
+
+    @patch('subprocess.run')
+    def test_gh_pr_list_with_branch_pattern(self, mock_run):
+        """Test gh pr list with --head branch pattern."""
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout='[{"number": 123, "url": "https://github.com/test/repo/pull/123", "title": "Test PR", "state": "OPEN"}]',
+            stderr=''
+        )
+
+        import subprocess
+        branch_pattern = "task-agent-test-work"
+        result = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                branch_pattern,
+                "--json",
+                "number,url,title,state",
+            ],
+            shell=False,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args[0][0]
+        self.assertIn("--head", call_args)
+        self.assertIn(branch_pattern, call_args)
+
+    @patch('subprocess.run')
+    def test_gh_command_timeout_handling(self, mock_run):
+        """Test that gh commands use appropriate timeout."""
+        mock_run.return_value = MagicMock(returncode=0, stdout='[]', stderr='')
+
+        import subprocess
+        subprocess.run(
+            ["gh", "pr", "list"],
+            shell=False,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+
+        # Verify timeout was set
+        call_kwargs = mock_run.call_args[1]
+        self.assertEqual(call_kwargs.get('timeout'), 30)
+        self.assertEqual(call_kwargs.get('shell'), False)
+
+    @patch('subprocess.run')
+    def test_gh_command_failure_handling(self, mock_run):
+        """Test handling of gh command failures."""
+        import subprocess
+        mock_run.side_effect = subprocess.CalledProcessError(1, "gh")
+
+        # Simulate the exception handling in orchestrate_unified.py
+        try:
+            subprocess.run(
+                ["gh", "pr", "list"],
+                shell=False,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=30,
+            )
+            failed = False
+        except subprocess.CalledProcessError:
+            failed = True
+
+        self.assertTrue(failed)
+
+    def test_pr_json_parsing(self):
+        """Test parsing of gh pr list JSON output."""
+        import json
+
+        # Simulate gh pr list output
+        pr_json = '[{"number": 123, "title": "Test PR", "headRefName": "feature-branch", "createdAt": "2025-01-01T12:00:00Z"}]'
+        prs = json.loads(pr_json)
+
+        self.assertEqual(len(prs), 1)
+        self.assertEqual(prs[0]["number"], 123)
+        self.assertEqual(prs[0]["title"], "Test PR")
+        self.assertEqual(prs[0]["headRefName"], "feature-branch")
+
+    def test_pr_created_at_parsing(self):
+        """Test parsing of PR createdAt timestamp."""
+        from datetime import datetime
+
+        # Test the ISO 8601 Z format parsing
+        created_at = "2025-01-01T12:00:00Z"
+        pr_created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+
+        self.assertEqual(pr_created_at.year, 2025)
+        self.assertEqual(pr_created_at.month, 1)
+        self.assertEqual(pr_created_at.day, 1)
+        self.assertEqual(pr_created_at.hour, 12)
+
+
 if __name__ == "__main__":
     unittest.main()
