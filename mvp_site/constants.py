@@ -378,3 +378,64 @@ This summary helps players see their choices before the story begins.
 
 # Legacy alias for backwards compatibility with tests
 CHARACTER_CREATION_REMINDER = CHARACTER_DESIGN_REMINDER
+
+
+# --- COMBAT DISPOSITION CONSTANTS ---
+# Used for determining how to handle combatants during combat cleanup
+# These centralize the keyword sets from game_state.py for maintainability
+
+# Combatant types that should NOT be removed during cleanup
+# These represent friendly/allied combatants that persist after combat
+FRIENDLY_COMBATANT_TYPES: frozenset[str] = frozenset({
+    "pc",         # Player character
+    "player",     # Alternative player designation
+    "party",      # Party member
+    "companion",  # Animal companion, familiar, etc.
+    "ally",       # Friendly NPC fighting alongside party
+    "friendly",   # Explicitly friendly combatant
+    "support",    # Support character (healer, etc.)
+})
+
+# Generic/enemy roles that indicate a combatant can be removed after defeat
+# NPCs with these roles (or None/empty) are considered generic enemies
+GENERIC_ENEMY_ROLES: frozenset[str | None] = frozenset({
+    None,         # No role assigned
+    "",           # Empty role
+    "enemy",      # Standard enemy
+    "minion",     # Expendable enemy
+    "generic",    # Generic combatant
+    "unknown",    # Unknown type (default to enemy)
+    "hostile",    # Hostile NPC
+    "foe",        # Alternative enemy designation
+    "monster",    # Monster/creature enemy
+})
+
+
+def is_friendly_combatant(combatant_type: str | None) -> bool:
+    """Check if a combatant type indicates a friendly entity.
+
+    Args:
+        combatant_type: The type/role of the combatant (will be normalized)
+
+    Returns:
+        True if the combatant should be preserved (not removed) after combat
+    """
+    if combatant_type is None:
+        return False
+    normalized = combatant_type.lower().strip() if isinstance(combatant_type, str) else combatant_type
+    return normalized in FRIENDLY_COMBATANT_TYPES
+
+
+def is_generic_enemy_role(role: str | None) -> bool:
+    """Check if a role indicates a generic/removable enemy.
+
+    Args:
+        role: The role of the NPC (will be normalized)
+
+    Returns:
+        True if the NPC is a generic enemy that can be deleted after defeat
+    """
+    if role is None or role == "":
+        return True
+    normalized = role.lower().strip() if isinstance(role, str) else role
+    return normalized in GENERIC_ENEMY_ROLES
