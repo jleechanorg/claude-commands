@@ -21,14 +21,13 @@ Usage:
 
 import argparse
 import asyncio
-import logging
 import sys
-import time
 import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import logging_util
 from playwright.async_api import (
     Browser,
     BrowserContext,
@@ -39,35 +38,9 @@ from playwright.async_api import (
 )
 
 
-# Set up logging to /tmp
 def setup_logging():
-    """Set up logging to /tmp directory."""
-    log_dir = Path("/tmp/automate_codex_update")
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    log_file = log_dir / "codex_automation.log"
-
-    # Create logger
-    logger = logging.getLogger("codex_automation")
-    logger.setLevel(logging.INFO)
-
-    # File handler
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(logging.INFO)
-
-    # Console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    # Formatter
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    return logger
+    """Set up logging for the automation workflow."""
+    return logging_util.getLogger("codex_automation")
 
 
 logger = setup_logging()
@@ -222,7 +195,6 @@ class CodexGitHubMentionsAutomation:
                 print("⚠️  Not logged in to OpenAI")
 
                 # Check if running in non-interactive mode (cron/CI)
-                import sys
                 if not sys.stdin.isatty():
                     print("❌ ERROR: Authentication required but running in non-interactive mode")
                     print("   Solution: Log in manually via Chrome with CDP enabled, then run again")
@@ -243,7 +215,7 @@ class CodexGitHubMentionsAutomation:
                     logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
                 return result
 
-            except Exception:
+            except PlaywrightTimeoutError:
                 print("⚠️  Could not determine login status")
                 print("   Assuming you're logged in and continuing...")
                 return True
@@ -299,7 +271,9 @@ class CodexGitHubMentionsAutomation:
             await asyncio.sleep(5)
 
             locator_selector = (
-                'a[href*="/codex/"]' if self.all_tasks else 'a:has-text("GitHub Mention:")'
+                'a[href*="/codex/tasks/"]'
+                if self.all_tasks
+                else 'a[href*="/codex/tasks/"]:has-text("GitHub Mention:")'
             )
             print(f"\n🔍 Searching for tasks using selector: {locator_selector}")
 
@@ -322,7 +296,7 @@ class CodexGitHubMentionsAutomation:
 
             # Find all task links - use more specific selector to exclude navigation
             # Use /codex/tasks/ to exclude navigation links like Settings, Docs
-            locator = self.page.locator('a[href*="/codex/tasks/"]')
+            locator = self.page.locator(locator_selector)
             task_count = await locator.count()
 
             if task_count == 0:
