@@ -24,7 +24,6 @@ Usage:
 
 import argparse
 import asyncio
-import sys
 import traceback
 from typing import Optional
 
