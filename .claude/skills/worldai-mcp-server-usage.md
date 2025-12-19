@@ -6,7 +6,7 @@ The Your Project MCP server uses **JSON-RPC 2.0** protocol over HTTP POST.
 
 ## Endpoint
 
-```
+```http
 POST http://localhost:8081/mcp
 Content-Type: application/json
 ```
@@ -20,8 +20,13 @@ Use the `X-Test-User-ID` header for local testing without Firebase auth:
 
 **Finding the user ID:** Check server logs for `user=<uid>` entries:
 ```bash
-grep "user=" /tmp/your-project.com/*/flask-server.log | tail -10
+export PROJECT_LOG_DIR="${PROJECT_LOG_DIR:-/tmp/your-project.com}"
+grep "user=" "$PROJECT_LOG_DIR"/*/flask-server.log | tail -10
 ```
+
+> **Log location note:** The examples assume local-dev logs under `/tmp/<project>/*/flask-server.log`.
+> In containers or systemd services, use `docker logs <container>` or `journalctl -u <service>` and set
+> `PROJECT_LOG_DIR` to the path where your deployment writes logs.
 
 ## Available Tools
 
@@ -103,13 +108,13 @@ curl -s -X POST http://localhost:8081/mcp \
 
 ```bash
 # Real-time log monitoring
-tail -f /tmp/your-project.com/*/flask-server.log
+tail -f "$PROJECT_LOG_DIR"/*/flask-server.log
 
 # Check for dice roll processing
-grep -E "NATIVE|Phase|tool_call|dice" /tmp/your-project.com/*/flask-server.log | tail -20
+grep -E "NATIVE|Phase|tool_call|dice" "$PROJECT_LOG_DIR"/*/flask-server.log | tail -20
 
 # Find user IDs for campaigns
-grep "user=" /tmp/your-project.com/*/flask-server.log | tail -10
+grep "user=" "$PROJECT_LOG_DIR"/*/flask-server.log | tail -10
 ```
 
 ### Common Issues

@@ -23,7 +23,6 @@ import argparse
 import asyncio
 import logging
 import sys
-import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -221,8 +220,6 @@ class CodexGitHubMentionsAutomation:
                 )
                 print("⚠️  Not logged in to OpenAI")
 
-                # Check if running in non-interactive mode (cron/CI)
-                import sys
                 if not sys.stdin.isatty():
                     print("❌ ERROR: Authentication required but running in non-interactive mode")
                     print("   Solution: Log in manually via Chrome with CDP enabled, then run again")
@@ -243,13 +240,10 @@ class CodexGitHubMentionsAutomation:
                     logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
                 return result
 
-            except Exception:
-                print("⚠️  Could not determine login status")
-                print("   Assuming you're logged in and continuing...")
-                return True
             except Exception as login_error:
-                print(f"⚠️  Unexpected login detection error: {login_error}")
-                return False
+                print("⚠️  Could not determine login status")
+                print(f"   Assuming you're logged in and continuing... ({login_error})")
+                return True
         except Exception as user_menu_error:
             print(f"⚠️  Unexpected login check error: {user_menu_error}")
             return False

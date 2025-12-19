@@ -12,7 +12,7 @@ From [Gemini 3 Developer Guide](https://ai.google.dev/gemini-api/docs/gemini-3):
 **CANNOT combine code_execution with JSON mode/controlled generation.**
 
 Error returned:
-```
+```text
 INVALID_ARGUMENT: Unable to submit request because controlled generation
 is not supported with Code Execution tool.
 ```

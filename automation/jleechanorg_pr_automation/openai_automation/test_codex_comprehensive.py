@@ -17,11 +17,10 @@ Run with:
 import asyncio
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import aiohttp
 import pytest
-from playwright.async_api import async_playwright
 
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
@@ -101,14 +100,17 @@ class TestLimitParameter:
         automation = CodexGitHubMentionsAutomation()
         assert automation.task_limit == 50
 
-        await automation.connect_to_existing_browser()
-        await automation.navigate_to_codex()
+        try:
+            await automation.connect_to_existing_browser()
+            await automation.navigate_to_codex()
 
-        tasks = await automation.find_github_mention_tasks()
-        # Should use ALL tasks selector when limit is set
-        assert isinstance(tasks, list)
-        assert len(tasks) <= 50
-        print(f"✅ Default limit 50 found {len(tasks)} tasks")
+            tasks = await automation.find_github_mention_tasks()
+            # Should use ALL tasks selector when limit is set
+            assert isinstance(tasks, list)
+            assert len(tasks) <= 50
+            print(f"✅ Default limit 50 found {len(tasks)} tasks")
+        finally:
+            await automation.cleanup()
 
 
 class TestCDPConnectionStates:
@@ -333,19 +335,19 @@ class TestNavigationInteraction:
         """Test complete workflow with real Chrome instance."""
         automation = CodexGitHubMentionsAutomation(task_limit=5)
 
-        # Connect
-        connected = await automation.connect_to_existing_browser()
-        assert connected is True
+        try:
+            connected = await automation.connect_to_existing_browser()
+            assert connected is True
 
-        # Navigate
-        await automation.navigate_to_codex()
+            await automation.navigate_to_codex()
 
-        # Find tasks
-        tasks = await automation.find_github_mention_tasks()
-        assert isinstance(tasks, list)
-        assert len(tasks) <= 5
+            tasks = await automation.find_github_mention_tasks()
+            assert isinstance(tasks, list)
+            assert len(tasks) <= 5
 
-        print(f"✅ Complete workflow successful with {len(tasks)} tasks found")
+            print(f"✅ Complete workflow successful with {len(tasks)} tasks found")
+        finally:
+            await automation.cleanup()
 
 
 if __name__ == "__main__":

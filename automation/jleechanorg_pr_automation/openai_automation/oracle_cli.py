@@ -24,17 +24,21 @@ Usage:
 
 import argparse
 import asyncio
-import sys
 import traceback
+from pathlib import Path
 from typing import Optional
 
 from playwright.async_api import (
     Browser,
+    BrowserContext,
     Page,
     Playwright,
+    Error as PlaywrightError,
     TimeoutError as PlaywrightTimeoutError,
     async_playwright,
 )
+
+AUTH_STATE_PATH = Path.home() / ".oracle_cli_auth_state.json"
 
 
 class OracleCLI:
@@ -59,7 +63,14 @@ class OracleCLI:
         self.timeout = timeout
         self.playwright: Optional[Playwright] = None
         self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
+
+    async def _save_auth_state(self) -> None:
+        if self.context is None:
+            return
+        await self.context.storage_state(path=str(AUTH_STATE_PATH))
+        print(f"💾 Authentication state saved to {AUTH_STATE_PATH}")
 
     async def setup(self):
         """Set up browser connection."""
@@ -68,23 +79,35 @@ class OracleCLI:
 
         if self.cdp_url:
             # Connect to existing browser
-            print(f"🔌 Connecting to existing browser at {self.cdp_url}...")
-            self.browser = await self.playwright.chromium.connect_over_cdp(self.cdp_url)
-            contexts = self.browser.contexts
-            if contexts:
-                context = contexts[0]
-                if context.pages:
-                    self.page = context.pages[0]
+            try:
+                print(f"🔌 Connecting to existing browser at {self.cdp_url}...")
+                self.browser = await self.playwright.chromium.connect_over_cdp(self.cdp_url)
+                contexts = self.browser.contexts
+                if contexts:
+                    self.context = contexts[0]
+                    if self.context.pages:
+                        self.page = self.context.pages[0]
+                    else:
+                        self.page = await self.context.new_page()
                 else:
-                    self.page = await context.new_page()
-            else:
-                context = await self.browser.new_context()
-                self.page = await context.new_page()
+                    self.context = await self.browser.new_context()
+                    self.page = await self.context.new_page()
+                print("✅ Connected to existing browser")
+                print("✅ Browser ready")
+                return
+            except (PlaywrightError, OSError) as err:
+                print(f"⚠️  Could not connect to existing browser: {err}")
+                print("   Falling back to launching a new browser...")
+
+        # Launch new browser (visible)
+        storage_state = str(AUTH_STATE_PATH) if AUTH_STATE_PATH.exists() else None
+        self.browser = await self.playwright.chromium.launch(headless=False)
+        if storage_state:
+            self.context = await self.browser.new_context(storage_state=storage_state)
+            print(f"✅ Restored authentication state from {AUTH_STATE_PATH}")
         else:
-            # Launch new browser (visible)
-            self.browser = await self.playwright.chromium.launch(headless=False)
-            context = await self.browser.new_context()
-            self.page = await context.new_page()
+            self.context = await self.browser.new_context()
+        self.page = await self.context.new_page()
 
         print("✅ Browser ready")
 
@@ -102,10 +125,12 @@ class OracleCLI:
                 timeout=5000
             )
             print("✅ Logged in to ChatGPT")
+            await self._save_auth_state()
         except PlaywrightTimeoutError:
             print("⚠️  Not logged in - please log in manually")
             print("   Waiting 30 seconds for you to log in...")
             await asyncio.sleep(30)
+            await self._save_auth_state()
         except Exception as login_error:
             print(f"⚠️  Unexpected login check error: {login_error}")
             await asyncio.sleep(5)

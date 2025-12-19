@@ -27,7 +27,7 @@ doc = db.collection('users').document(uid).collection('campaigns').document('CAM
 
 ## Database Structure
 
-```
+```text
 Firestore Database: worldarchitecture-ai
 ├── campaigns/                    # ← WRONG: Only test data here (5 campaigns)
 │   └── {test_campaign_id}/
