@@ -61,6 +61,7 @@ mvp_site/tests/
 
 | Test File | Purpose |
 |-----------|---------|
+| `run_end2end_tests.py` | Test runner script for executing all E2E tests |
 | `test_continue_story_end2end.py` | Validates story continuation with LLM responses, state updates |
 | `test_create_campaign_end2end.py` | Tests full campaign creation flow from API to Firestore |
 | `test_debug_mode_end2end.py` | Debug mode UI and logging functionality |
