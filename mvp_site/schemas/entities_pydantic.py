@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from mvp_site.constants import FRIENDLY_COMBATANT_TYPES, NEUTRAL_COMBATANT_TYPES
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
 
@@ -60,6 +61,49 @@ class EntityType(Enum):
     ITEM = "item"
     FACTION = "faction"
     OBJECT = "obj"
+
+
+class CombatDisposition(Enum):
+    """Combat disposition for classifying combatant allegiance.
+
+    This enum provides a formal type-safe way to classify whether a combatant
+    is friendly (should be preserved) or hostile (can be removed after defeat).
+
+    Usage:
+        - FRIENDLY: PC, companions, allies - never removed during combat cleanup
+        - HOSTILE: Enemies, monsters - removed when defeated
+        - NEUTRAL: Bystanders, non-combatants - typically not involved in combat
+
+    This complements the string-based classification in constants.py by providing
+    schema-level type safety for new code paths.
+    """
+
+    FRIENDLY = "friendly"   # PC, companions, allies - preserved after combat
+    HOSTILE = "hostile"     # Enemies, monsters - removed when defeated
+    NEUTRAL = "neutral"     # Bystanders, non-combatants
+
+    @classmethod
+    def from_type_string(cls, type_str: str | None) -> "CombatDisposition":
+        """Convert a legacy type string to CombatDisposition.
+
+        Args:
+            type_str: Legacy type string (e.g., "pc", "enemy", "companion")
+
+        Returns:
+            Appropriate CombatDisposition enum value
+        """
+        if type_str is None:
+            return cls.HOSTILE  # Default unknown types to hostile for safety
+
+        normalized = type_str.lower().strip()
+
+        if normalized in FRIENDLY_COMBATANT_TYPES:
+            return cls.FRIENDLY
+
+        if normalized in NEUTRAL_COMBATANT_TYPES:
+            return cls.NEUTRAL
+
+        return cls.HOSTILE
 
 
 class EntityStatus(Enum):
