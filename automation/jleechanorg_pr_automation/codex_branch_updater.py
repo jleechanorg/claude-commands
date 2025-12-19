@@ -80,14 +80,16 @@ def get_credentials() -> Dict[str, str]:
     return credentials
 
 
-async def ensure_logged_in(page: Page, credentials: Dict[str, str] | None = None) -> None:
-    """Log into ChatGPT Codex if required."""
+async def ensure_logged_in(page: Page, context: BrowserContext, credentials: Dict[str, str] | None = None) -> None:
+    """Log into ChatGPT Codex if required and save auth state immediately."""
 
     await page.goto(CHATGPT_CODEX_URL, wait_until="domcontentloaded")
 
     if await is_task_list_visible(page):
+        print("✅ Session still valid (task list visible).")
         return
 
+    print("⚠️  Session expired. Re-authenticating...")
     if credentials is None:
         credentials = get_credentials()
 
@@ -98,6 +100,9 @@ async def ensure_logged_in(page: Page, credentials: Dict[str, str] | None = None
         await login_trigger.first().click()
 
     await _complete_login_flow(page, credentials)
+
+    await context.storage_state(path=str(AUTH_STATE_PATH))
+    print(f"💾 New authentication state saved immediately to {AUTH_STATE_PATH}.")
 
 
 async def _complete_login_flow(page: Page, credentials: Dict[str, str]) -> None:
@@ -248,16 +253,19 @@ async def run() -> None:
         browser = await playwright.chromium.launch(headless=False)
         context_kwargs = {}
         if AUTH_STATE_PATH.exists():
+            print(f"🔄 Loading saved authentication state from {AUTH_STATE_PATH}")
             context_kwargs["storage_state"] = str(AUTH_STATE_PATH)
+        else:
+            print("ℹ️  No saved authentication state found. Fresh login required.")
         context = await browser.new_context(**context_kwargs)
         page = await context.new_page()
 
-        await ensure_logged_in(page)
+        await ensure_logged_in(page, context)
         await wait_for_task_list(page)
         await process_tasks(page)
 
         await context.storage_state(path=str(AUTH_STATE_PATH))
-        print(f"💾 Authentication state saved to {AUTH_STATE_PATH}.")
+        print(f"💾 Final authentication state saved to {AUTH_STATE_PATH}.")
     finally:
         if context is not None:
             await context.close()

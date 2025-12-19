@@ -304,10 +304,13 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str =
     workspace_root = WORKSPACE_ROOT_BASE / repo
     prepare_workspace_dir(repo, workspace_name)
 
+    cli_chain_parts = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+    commit_marker_cli = cli_chain_parts[0] if cli_chain_parts else str(agent_cli).strip().lower() or "claude"
+
     task_description = (
         f"FIXPR TASK (SELF-CONTAINED): Update PR #{pr_number} in {repo_full} (branch {branch}). "
         "Goal: resolve merge conflicts and failing checks. "
-        f"CLI: {agent_cli}. DO NOT wait for additional input—start immediately.\n\n"
+        f"CLI chain: {agent_cli}. DO NOT wait for additional input—start immediately.\n\n"
         "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
         f"1) gh pr checkout {pr_number}\n"
         "2) git status && git branch --show-current\n"
@@ -315,20 +318,18 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str =
         f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"
         "4) Identify failing checks (gh pr view --json statusCheckRollup) and reproduce locally (tests/linters as needed)\n"
         "5) Apply fixes\n"
-        f'6) git add -A && git commit -m "[{agent_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
+        f'6) git add -A && git commit -m "[{commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
         f"7) gh pr view {pr_number} --json mergeable,mergeStateStatus,statusCheckRollup\n"
         "8) Write completion report to /tmp/orchestration_results/pr-{pr_number}._results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
-        "Do not create new PRs or branches. Skip /copilot. Use only the requested CLI."
+        "Do not create new PRs or branches. Skip /copilot. Use only the requested CLI chain (in order)."
     )
 
     agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=agent_cli)
     success = False
     for spec in agent_specs:
-        agent_spec = {
-            **spec,
-            "cli": agent_cli,
-        }
+        # Preserve the CLI chain emitted by orchestration. Do not overwrite with a single CLI string.
+        agent_spec = {**spec}
         # Ensure tmux session name is available for reuse
         session_name = agent_spec.get("name") or workspace_name
         kill_tmux_session_if_exists(session_name)

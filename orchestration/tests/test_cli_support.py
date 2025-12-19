@@ -58,10 +58,22 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertEqual(agent_specs[0]["cli"], "codex")
 
+    def test_agent_cli_chain_parses_from_flag(self):
+        """Comma-separated --agent-cli should produce a deterministic CLI chain."""
+        task = "Please help with integration tests --agent-cli=gemini,codex"
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        self.assertEqual(agent_specs[0]["cli"], "gemini")
+        self.assertEqual(agent_specs[0]["cli_chain"], ["gemini", "codex"])
+
     def test_invalid_forced_cli_raises_value_error(self):
         """Invalid forced_cli values should raise a clear error."""
         with self.assertRaises(ValueError):
             self.dispatcher.analyze_task_and_create_agents("Please help", forced_cli="invalid")
+
+    def test_invalid_agent_cli_flag_raises_value_error(self):
+        """Invalid --agent-cli values should raise (do not silently fall back)."""
+        with self.assertRaises(ValueError):
+            self.dispatcher.analyze_task_and_create_agents("Please help --agent-cli=invalid")
 
     def test_create_dynamic_agent_uses_codex_command(self):
         """Ensure codex agents execute via `codex exec --yolo`."""
@@ -111,6 +123,54 @@ class TestAgentCliSelection(unittest.TestCase):
             "< /tmp/agent_prompt_task-agent-codex-test.txt",
             script_contents,
         )
+        self.assertIn("Codex exit code", script_contents)
+
+    def test_create_dynamic_agent_embeds_cli_chain(self):
+        """When cli_chain is provided, the generated runner should include both attempts in order."""
+        agent_spec = {
+            "name": "task-agent-cli-chain-test",
+            "focus": "Validate CLI chain",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "gemini",
+            "cli_chain": ["gemini", "codex"],
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/task-agent-cli-chain-test", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "gemini": "/usr/bin/gemini",
+                    "codex": "/usr/bin/codex",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        script_contents = mock_write_text.call_args_list[0][0][0]  # First positional arg is the content
+        self.assertIn("CLI chain: gemini,codex", script_contents)
+        self.assertIn("Gemini exit code", script_contents)
         self.assertIn("Codex exit code", script_contents)
 
     def test_create_dynamic_agent_falls_back_when_requested_cli_missing(self):
@@ -395,16 +455,17 @@ class TestGeminiCliIntegration(unittest.TestCase):
         template = CLI_PROFILES["gemini"]["command_template"]
 
         # Test that template can be formatted with expected placeholders
+        # NOTE: prompt_file is now passed via stdin_template, not command_template
         test_values = {
             "binary": "/usr/bin/gemini",
-            "prompt_file": "/tmp/test_prompt.txt",
         }
 
         try:
             formatted = template.format(**test_values)
             self.assertIn("/usr/bin/gemini", formatted)
             self.assertIn(GEMINI_MODEL, formatted)
-            self.assertIn("/tmp/test_prompt.txt", formatted)
+            # Prompt comes via stdin, not command line
+            self.assertIn("--yolo", formatted)
         except KeyError as e:
             self.fail(f"Command template has unknown placeholder: {e}")
 
@@ -471,11 +532,12 @@ class TestGeminiCliIntegration(unittest.TestCase):
         template = CLI_PROFILES["gemini"]["command_template"]
         self.assertIn(GEMINI_MODEL, template)
 
-    def test_gemini_stdin_template_not_prompt_file(self):
-        """Integration: Gemini uses /dev/null for stdin, not prompt file."""
+    def test_gemini_stdin_template_uses_prompt_file(self):
+        """Integration: Gemini receives prompt via stdin (not deprecated -p flag)."""
 
         gemini = CLI_PROFILES["gemini"]
-        self.assertEqual(gemini["stdin_template"], "/dev/null")
+        # Prompt must come via stdin since -p flag is deprecated and only appends to stdin
+        self.assertEqual(gemini["stdin_template"], "{prompt_file}")
         self.assertFalse(gemini["quote_prompt"])
 
     def test_all_cli_profiles_have_consistent_structure(self):
@@ -491,6 +553,27 @@ class TestGeminiCliIntegration(unittest.TestCase):
                 f"CLI profile '{cli_name}' has inconsistent keys. "
                 f"Missing: {expected_keys - profile_keys}, Extra: {profile_keys - expected_keys}",
             )
+
+    def test_all_env_unset_values_are_valid_posix_identifiers(self):
+        """Integration: All env_unset values must be valid POSIX environment variable names."""
+        import re
+
+        for cli_name, profile in CLI_PROFILES.items():
+            env_unset = profile.get("env_unset", [])
+            self.assertIsInstance(env_unset, list, f"{cli_name} env_unset should be a list")
+            for var in env_unset:
+                self.assertIsInstance(var, str, f"{cli_name} env_unset values should be strings")
+                self.assertTrue(
+                    re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var),
+                    f"{cli_name} env_unset contains invalid variable name: {var!r}",
+                )
+
+    def test_env_unset_expected_values(self):
+        """Integration: Verify expected env_unset values for each CLI profile."""
+        self.assertEqual(CLI_PROFILES["claude"]["env_unset"], ["ANTHROPIC_API_KEY"])
+        self.assertEqual(CLI_PROFILES["codex"]["env_unset"], ["OPENAI_API_KEY"])
+        self.assertEqual(CLI_PROFILES["gemini"]["env_unset"], ["GEMINI_API_KEY"])
+        self.assertEqual(CLI_PROFILES["cursor"]["env_unset"], [])
 
 
 class TestCursorCliIntegration(unittest.TestCase):

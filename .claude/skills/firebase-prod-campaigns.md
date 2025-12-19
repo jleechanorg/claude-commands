@@ -3,16 +3,40 @@
 ## Overview
 This skill documents how to query the **production Firestore database** for Your Project campaigns and user data.
 
-## Critical Information
+## CRITICAL: Campaign Lookup
 
-### Database Structure
+**Campaigns are NESTED under users, NOT at root level!**
+
+```python
+# WRONG - This queries the wrong collection (test data only):
+db.collection('campaigns').document('VqqJLpABua9bvAG4ArTg')
+
+# CORRECT - Campaigns are nested under user UID:
+db.collection('users').document(uid).collection('campaigns').document('VqqJLpABua9bvAG4ArTg')
 ```
-Firestore Database: worldarchitecture-ai
-└── users/
-    └── {Firebase_Auth_UID}/
+
+### Quick Lookup for Known Campaign ID
+```python
+# 1. Get user UID from email
+user_record = auth.get_user_by_email('$USER@gmail.com')
+uid = user_record.uid  # e.g., 'vnLp2G3m21PJL6kxcuAqmWSOtm73'
+
+# 2. Query nested path
+doc = db.collection('users').document(uid).collection('campaigns').document('CAMPAIGN_ID').get()
+```
+
+## Database Structure
+
+```
+Firestore Database: your-project-db
+├── campaigns/                    # ← WRONG: Only test data here (5 campaigns)
+│   └── {test_campaign_id}/
+│
+└── users/                        # ← CORRECT: Real user data here (146+ campaigns)
+    └── {Firebase_Auth_UID}/      # e.g., vnLp2G3m21PJL6kxcuAqmWSOtm73
         └── campaigns/
-            └── {campaign_id}/
-                ├── title
+            └── {campaign_id}/    # e.g., VqqJLpABua9bvAG4ArTg
+                ├── title         # "Nocturne post bg3 zhent"
                 ├── created_at
                 ├── last_played
                 ├── world_name
@@ -23,9 +47,10 @@ Firestore Database: worldarchitecture-ai
                         └── timestamp
 ```
 
-### User Identification
+## User Identification
 - Users are identified by **Firebase Auth UID**, NOT email
-- Example UID: `vnLp2G3m21PJL6kxcuAqmWSOtm73`
+- Primary user: `$USER@gmail.com` → UID: `vnLp2G3m21PJL6kxcuAqmWSOtm73`
+- Test user: `$TEST_USER@gmail.com`
 - Use `auth.get_user_by_email()` to convert email → UID
 
 ## Prerequisites
@@ -38,7 +63,7 @@ export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json
 
 ### Service Account Key
 Location: `~/serviceAccountKey.json`
-Project: `worldarchitecture-ai`
+Project: `your-project-db`
 
 ## Using campaign_manager.py
 
@@ -77,10 +102,10 @@ For custom queries, use this pattern:
 
 ```python
 import sys
-sys.path.insert(0, 'mvp_site')
+sys.path.insert(0, '$PROJECT_ROOT')
 
 # CRITICAL: Apply clock skew patch BEFORE importing Firebase
-from mvp_site.clock_skew_credentials import apply_clock_skew_patch
+from your_project.clock_skew_credentials import apply_clock_skew_patch
 apply_clock_skew_patch()
 
 import firebase_admin

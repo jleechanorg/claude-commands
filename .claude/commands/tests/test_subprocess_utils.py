@@ -18,7 +18,7 @@ from unittest.mock import patch, MagicMock
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
-import subprocess_utils
+import subprocess_utils  # noqa: E402
 
 
 class TestSanitizeLogContent(unittest.TestCase):

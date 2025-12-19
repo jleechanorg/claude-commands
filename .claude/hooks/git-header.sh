@@ -44,6 +44,68 @@ working_dir="$(basename "$git_root")"
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no upstream")
 
+# Extract repository (owner/repo) from git remote
+# Prefers upstream remote (for fork workflows) over origin
+get_repo_from_remote() {
+    local url
+
+    # Parse a remote URL into owner/repo if possible
+    parse_repo_from_url() {
+        local parsed_url="$1"
+
+        # Match HTTP/HTTPS GitHub format (supports optional userinfo): https://github.com/owner/repo.git
+        if [[ "$parsed_url" =~ https?://([^@/]+@)?github\.com/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+            local owner="${BASH_REMATCH[2]}"
+            local repo="${BASH_REMATCH[3]}"
+            repo="${repo%.git}"
+            echo "${owner}/${repo}"
+            return 0
+        fi
+
+        # Match SSH format: git@github.com:owner/repo.git
+        if [[ "$parsed_url" =~ git@github\.com:([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+            local owner="${BASH_REMATCH[1]}"
+            local repo="${BASH_REMATCH[2]}"
+            repo="${repo%.git}"
+            echo "${owner}/${repo}"
+            return 0
+        fi
+
+        # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
+        if [[ "$parsed_url" =~ /git/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+            local owner="${BASH_REMATCH[1]}"
+            local repo="${BASH_REMATCH[2]}"
+            repo="${repo%.git}"
+            echo "${owner}/${repo}"
+            return 0
+        fi
+
+        return 1
+    }
+
+    # In fork workflows, upstream points to the main repo where PRs exist
+    # Prefer upstream; only fall back to origin when it's the sole remote
+    if url=$(git remote get-url upstream 2>/dev/null); then
+        parse_repo_from_url "$url" && return 0
+    fi
+
+    # If there's only one remote, it's safe to use it as the gh repo target
+    local remote_count
+    remote_count=$(git remote 2>/dev/null | wc -l | tr -d '[:space:]')
+    if [ "$remote_count" = "1" ]; then
+        local remote_name
+        remote_name=$(git remote 2>/dev/null | head -n 1)
+        if [ -n "$remote_name" ] && url=$(git remote get-url "$remote_name" 2>/dev/null); then
+            parse_repo_from_url "$url" && return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Get the repository for gh commands
+repo_name=$(get_repo_from_remote)
+
 # Get sync status and unpushed changes
 local_status=""
 
@@ -188,12 +250,20 @@ else
 
             # First try to look up by branch name (works for local branches tied to PRs)
             if [ -n "$local_branch" ]; then
-                pr_info=$(gh_with_timeout 5 pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                if [ -n "$repo_name" ]; then
+                    pr_info=$(gh_with_timeout 5 pr view --repo "$repo_name" --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                else
+                    pr_info=$(gh_with_timeout 5 pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                fi
             fi
 
             # If branch lookup failed, fall back to searching by commit SHA (covers detached HEADs, renamed branches, etc.)
             if [ -z "$pr_info" ] && [ -n "$current_commit" ]; then
-                pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                if [ -n "$repo_name" ]; then
+                    pr_info=$(gh_with_timeout 5 pr list --repo "$repo_name" --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                else
+                    pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                fi
             fi
 
             if [ -n "$pr_info" ]; then
