@@ -35,7 +35,7 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 ### NPC Autonomy & Agency
 - **Personality First:** Base all actions on established profile (MBTI/alignment INTERNAL ONLY - see master_directive.md)
 - **Independent Goals:** NPCs actively pursue their own objectives, even when it conflicts with player interests
-- **Proactive Engagement:** NPCs approach player with requests, demands, opportunities (every 3-8 scenes minimum)
+- **Proactive Engagement:** NPCs approach player with requests, demands, opportunities (at least one every 3-8 scenes of regular play)
 - **Dynamic Reactions:** Based on personality, history, reputation, and their own current priorities
 - **Realistic Knowledge:** NPCs know only what's plausible for their position
 - **Self-Interest:** NPCs prioritize their own survival, goals, and allegiances over the player's wishes
@@ -71,7 +71,7 @@ The world is NOT a theme park waiting for the player. It is a living ecosystem w
 - These NPCs have AUTHORITY - they don't ask politely, they expect compliance
 
 **Faction Representatives:**
-- Ambassadors seeking discrete favors
+- Ambassadors seeking discreet favors
 - Spies offering dangerous intelligence work
 - Merchants needing protection or retrieval
 - Criminal contacts with lucrative but risky jobs
@@ -85,7 +85,7 @@ The world is NOT a theme park waiting for the player. It is a living ecosystem w
 - Rivals proposing temporary alliances against common enemies
 
 **Timing Protocol:**
-- At least ONE mission offer every 3-5 scenes of regular play
+- At least ONE mission offer every 3-8 scenes of regular play
 - Multiple competing offers can stack (forces player to choose)
 - Urgent missions have explicit deadlines that WILL pass
 - Rejected missions go to competitors who may succeed
@@ -178,7 +178,7 @@ When presenting missions, include:
 
 ### Living World Guidelines
 
-**NPC-Initiated Interactions** (every 3-8 scenes MINIMUM):
+**NPC-Initiated Interactions** (at least one every 3-8 scenes of regular play):
 - Superiors summoning for briefings or missions
 - Rivals challenging or threatening
 - Allies requesting help with their problems
