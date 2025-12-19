@@ -12,8 +12,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 
+from mvp_site.constants import (
+    FRIENDLY_COMBATANT_TYPES,
+    GENERIC_ENEMY_ROLES,
+    NEUTRAL_COMBATANT_TYPES,
+    is_friendly_combatant,
+    is_generic_enemy_role,
+)
 from mvp_site.schemas.entities_pydantic import (
     Character,
+    CombatDisposition,
     EntityStatus,
     EntityType,
     HealthStatus,
@@ -186,7 +194,7 @@ class TestLocation(unittest.TestCase):
 
     def test_location_invalid_id(self):
         """Test Location with invalid entity ID"""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match=r"String should match pattern"):
             Location(entity_id="invalid_id", display_name="Test Location")
 
 
@@ -271,7 +279,7 @@ class TestCharacter(unittest.TestCase):
 
     def test_character_invalid_entity_id(self):
         """Test Character with invalid entity ID"""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match=r"String should match pattern"):
             Character(
                 entity_id="invalid_id",
                 entity_type=EntityType.PLAYER_CHARACTER,
@@ -282,7 +290,7 @@ class TestCharacter(unittest.TestCase):
 
     def test_character_invalid_location_id(self):
         """Test Character with invalid location ID"""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match=r"String should match pattern"):
             Character(
                 entity_id="pc_test_001",
                 entity_type=EntityType.PLAYER_CHARACTER,
@@ -314,6 +322,40 @@ class TestCharacter(unittest.TestCase):
         )
         assert isinstance(character.stats, Stats)
         assert character.stats.strength == 10  # Default stat value
+
+
+class TestCombatDisposition(unittest.TestCase):
+    """Test combat disposition classification and helpers"""
+
+    def test_combat_disposition_from_type_string(self):
+        """Test disposition classification with normalization."""
+        assert CombatDisposition.from_type_string("PC") is CombatDisposition.FRIENDLY
+        assert (
+            CombatDisposition.from_type_string("  ally ") is CombatDisposition.FRIENDLY
+        )
+        assert (
+            CombatDisposition.from_type_string("Civilian") is CombatDisposition.NEUTRAL
+        )
+        assert (
+            CombatDisposition.from_type_string("noncombatant")
+            is CombatDisposition.NEUTRAL
+        )
+        assert CombatDisposition.from_type_string("enemy") is CombatDisposition.HOSTILE
+        assert (
+            CombatDisposition.from_type_string("unknown") is CombatDisposition.HOSTILE
+        )
+        assert CombatDisposition.from_type_string(None) is CombatDisposition.HOSTILE
+
+    def test_combatant_helper_sets(self):
+        """Test helper functions and centralized combatant sets."""
+        assert "ally" in FRIENDLY_COMBATANT_TYPES
+        assert "civilian" in NEUTRAL_COMBATANT_TYPES
+        assert "monster" in GENERIC_ENEMY_ROLES
+        assert is_friendly_combatant(" companion ")
+        assert not is_friendly_combatant("enemy")
+        assert is_generic_enemy_role(None)
+        assert is_generic_enemy_role("")
+        assert not is_generic_enemy_role("ally")
 
 
 if __name__ == "__main__":
