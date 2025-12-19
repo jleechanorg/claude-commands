@@ -2652,10 +2652,10 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
                     allowed_users = [email.lower() for email in constants.GEMINI_3_ALLOWED_USERS]
                     if user_email in allowed_users:
                         model = constants.GEMINI_PREMIUM_MODEL
-                        logging_util.info(f"Premium user (id={user_id}) using Gemini 3")
+                        logging_util.info("Premium user using Gemini 3")
                         return ProviderSelection(provider, model)
                     logging_util.info(
-                        f"User (id={user_id}) not in Gemini 3 allowlist, falling back to default"
+                        "User not in Gemini 3 allowlist, falling back to default"
                     )
                     user_preferred_model = constants.DEFAULT_GEMINI_MODEL
                 except Exception as e:
@@ -2669,13 +2669,13 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
                 model = constants.DEFAULT_GEMINI_MODEL
 
         logging_util.info(
-            f"🔍 PROVIDER_SELECTION_FINAL: user_id={user_id}, "
+            "🔍 PROVIDER_SELECTION_FINAL: "
             f"provider={provider}, model={model}"
         )
         return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:
         logging_util.warning(
-            f"🔍 PROVIDER_SELECTION_EXCEPTION: Failed to get user settings for {user_id}: {e}, "
+            f"🔍 PROVIDER_SELECTION_EXCEPTION: Failed to get user settings: {e}, "
             f"falling back to provider={provider}, model={model}"
         )
         return ProviderSelection(provider, model)

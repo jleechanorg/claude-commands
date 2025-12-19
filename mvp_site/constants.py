@@ -185,6 +185,7 @@ ALLOWED_CEREBRAS_MODELS = [
     # structured outputs. TauBench tested for tool calling. Runs at 3K tokens/sec
     # on Cerebras infrastructure. Budget reasoning model at $0.35/$0.75 per M.
     # Source: https://www.cerebras.ai/blog/openai-gpt-oss-120b-runs-fastest-on-cerebras
+    "gpt-oss-120b",
 ]
 
 # Context window budgeting (tokens)
@@ -210,6 +211,7 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 131_072,
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
+    "gpt-oss-120b": 131_072,  # 131K context window
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
@@ -237,6 +239,7 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
+    "gpt-oss-120b": 40_000,  # 40K max output per Cerebras docs
 }
 
 # Debug mode settings

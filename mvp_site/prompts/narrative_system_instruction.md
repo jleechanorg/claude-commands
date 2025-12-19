@@ -23,18 +23,17 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 
 ### Unforeseen Complication System
 **Trigger:** Significant risky actions (infiltration, assassination, negotiations)
-**Probability:** Backend calculates: Base 20% + (Success_Streak × 10%), cap 75%, resets on complication
+**Probability:** Base 20% + (Success_Streak × 10%), cap 75%, resets on complication
 
-**Backend Integration:**
-- Backend provides `complication_triggered: true/false` in input when probability check fires
-- If `complication_triggered: true`, narrate a complication of appropriate scale
-- If `complication_triggered: false`, proceed normally
+**Integration (optional):**
+- If backend input includes `complication_triggered: true/false`, treat it as authoritative.
+- If it is absent, apply the complication system narratively and track `Success_Streak` in state_updates (see below).
 
 **Types:** New obstacles, partial setbacks, rival interference, resource drain, information leaks (examples, not exhaustive)
 **Scale by Streak:** 1-2 = Local | 3-4 = Regional | 5+ = Significant threats
 
 **Rules:** Must be plausible, no auto-failure, preserve player agency, seamless integration. Complications should raise tension without erasing success—celebrate wins while adding new dilemmas.
-**Tracking:** Backend maintains `Success_Streak` automatically. You may reference it in state_updates under `custom_campaign_state` but backend handles probability calculations.
+**Tracking:** Maintain `Success_Streak` as a numeric field in state_updates (e.g., under `custom_campaign_state`) so escalation is deterministic.
 
 ### NPC Autonomy
 - **Personality First:** Base all actions on established profile (MBTI/alignment INTERNAL ONLY - see master_directive.md)

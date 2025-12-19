@@ -184,41 +184,6 @@ def reset_mock_firestore() -> None:
         logging_util.info("Mock Firestore singleton reset")
 
 
-# Module-level singleton for MOCK_SERVICES_MODE.
-# This must persist across calls so create_campaign() and process_action()
-# see the same in-memory data within a single process.
-_IN_MEMORY_DB = _InMemoryFirestoreClient()
-
-
-def _mock_firestore_client() -> _InMemoryFirestoreClient:
-    """Return an in-memory Firestore replacement for tests."""
-
-    return _InMemoryFirestoreClient()
-
-
-def _mock_firestore_client():
-    """Return a MagicMock Firestore client when mocks are explicitly requested."""
-
-    from unittest.mock import MagicMock
-
-    mock_doc_snapshot = MagicMock()
-    mock_doc_snapshot.exists = False
-    mock_doc_snapshot.to_dict.return_value = None
-    mock_doc_snapshot.get.return_value = mock_doc_snapshot
-
-    mock_doc_ref = MagicMock()
-    mock_doc_ref.get.return_value = mock_doc_snapshot
-    mock_doc_ref.collection.return_value.document.return_value = mock_doc_ref
-
-    mock_collection = MagicMock()
-    mock_collection.document.return_value = mock_doc_ref
-    mock_collection.stream.return_value = []
-
-    mock_client = MagicMock()
-    mock_client.collection.return_value = mock_collection
-    return mock_client
-
-
 def _truncate_log_json(
     data: Any,
     max_lines: int = MAX_LOG_LINES,

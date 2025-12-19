@@ -156,7 +156,7 @@ NARRATIVE_RESPONSE_SCHEMA = {
                 "properties": {
                     "tool": {
                         "type": "string",
-                        "enum": ["roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw"],
+                        "enum": ["roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw", "declare_no_roll_needed"],
                         "description": "The tool to call",
                     },
                     "args": {
