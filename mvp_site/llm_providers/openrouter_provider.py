@@ -120,7 +120,7 @@ def generate_content(
         tools=tools,
         messages=messages,
         response_format=response_format,
-        tool_choice="required" if tools else None,
+        tool_choice=None,
         timeout=300,
         logger=logging_util,
         error_log_prefix="OPENROUTER",

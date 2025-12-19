@@ -1657,11 +1657,12 @@ def _call_llm_api(
                     safety_settings=SAFETY_SETTINGS,
                     json_mode_max_output_tokens=safe_output_limit,
                 )
-            # native_two_phase: Gemini 2.5 uses native API tool calling
+            # native_two_phase: Gemini 2.x cannot combine tools + JSON mode.
+            # Use JSON-first tool_requests flow to match prompt documentation.
             logging_util.info(
-                f"🔍 CALL_LLM_API_GEMINI: native_two_phase strategy for {model_name}"
+                f"🔍 CALL_LLM_API_GEMINI: json_first_tool_requests strategy for {model_name}"
             )
-            return gemini_provider.generate_content_with_native_tools(
+            return gemini_provider.generate_content_with_tool_requests(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,

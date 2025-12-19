@@ -184,6 +184,12 @@ def reset_mock_firestore() -> None:
         logging_util.info("Mock Firestore singleton reset")
 
 
+# Module-level singleton for MOCK_SERVICES_MODE.
+# This must persist across calls so create_campaign() and process_action()
+# see the same in-memory data within a single process.
+_IN_MEMORY_DB = _InMemoryFirestoreClient()
+
+
 def _mock_firestore_client() -> _InMemoryFirestoreClient:
     """Return an in-memory Firestore replacement for tests."""
 

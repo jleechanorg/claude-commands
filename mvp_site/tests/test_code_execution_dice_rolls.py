@@ -40,12 +40,12 @@ from mvp_site import constants, dice_strategy, llm_service
 class TestHybridDiceRollSystem(unittest.TestCase):
     """Test the hybrid dice roll system across different model types."""
 
-    def test_gemini_2x_uses_native_two_phase_for_dice(self):
+    def test_gemini_2x_uses_tool_requests_flow_for_dice(self):
         """
-        Verify Gemini 2.x models use native two-phase tool calling for dice rolling.
+        Verify Gemini 2.x models use JSON-first tool_requests flow for dice rolling.
         """
-        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools') as mock_native_tools:
-            mock_native_tools.return_value = Mock(
+        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests') as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
@@ -58,8 +58,8 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             )
 
             self.assertTrue(
-                mock_native_tools.called,
-                "generate_content_with_native_tools should be called for Gemini 2.x models"
+                mock_tool_requests.called,
+                "generate_content_with_tool_requests should be called for Gemini 2.x models"
             )
 
     def test_gemini_3_code_execution_is_single_call(self):
@@ -231,12 +231,12 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             self.assertIsNotNone(result["damage"])
             self.assertIn("total", result["damage"])
 
-    def test_api_call_passes_required_params_to_native_tools(self):
+    def test_api_call_passes_required_params_to_tool_requests_flow(self):
         """
-        Verify API calls pass required parameters to native two-phase flow.
+        Verify API calls pass required parameters to JSON-first tool_requests flow.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools") as mock_native_tools:
-            mock_native_tools.return_value = Mock(
+        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests") as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
@@ -244,27 +244,13 @@ class TestHybridDiceRollSystem(unittest.TestCase):
                 ["test prompt"],
                 "gemini-2.0-flash",
                 "test logging",
-                provider_name=constants.LLM_PROVIDER_GEMINI
+                provider_name=constants.LLM_PROVIDER_GEMINI,
             )
 
-            # Verify native_tools was called with expected params
-            self.assertTrue(mock_native_tools.called)
-            call_kwargs = mock_native_tools.call_args[1]
-
-            # Verify model name is passed
-            self.assertEqual(
-                call_kwargs.get("model_name"),
-                "gemini-2.0-flash",
-                "FAIL: model_name not passed to native_tools"
-            )
-
-            # Verify temperature is passed
-            self.assertEqual(
-                call_kwargs.get("temperature"),
-                llm_service.TEMPERATURE,
-                "FAIL: Temperature not passed to native_tools"
-            )
-
+            self.assertTrue(mock_tool_requests.called)
+            call_kwargs = mock_tool_requests.call_args[1]
+            self.assertEqual(call_kwargs.get("model_name"), "gemini-2.0-flash")
+            self.assertEqual(call_kwargs.get("temperature"), llm_service.TEMPERATURE)
 
 class TestCerebrasToolUseIntegration(unittest.TestCase):
     """Test Cerebras provider tool use for dice rolling (two-stage inference)."""

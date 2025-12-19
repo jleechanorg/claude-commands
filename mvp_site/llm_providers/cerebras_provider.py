@@ -244,7 +244,7 @@ def generate_content(
         tools=tools,
         messages=messages,
         response_format=get_openai_json_schema_format(),
-        tool_choice="required" if tools else None,
+        tool_choice=None,
         timeout=300,
         logger=logging_util,
         error_log_prefix="CEREBRAS",
