@@ -76,12 +76,6 @@ from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
 from mvp_site.game_state import GameState, execute_dice_tool
-from mvp_site.agents import (
-    BaseAgent,
-    StoryModeAgent,
-    GodModeAgent,
-    get_agent_for_input,
-)
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -1205,9 +1199,6 @@ class PromptBuilder:
 #
 # See mvp_site/agents.py for full implementation and documentation.
 # =============================================================================
-
-# Re-export for backward compatibility
-__all_agents__ = ["BaseAgent", "StoryModeAgent", "GodModeAgent", "get_agent_for_input"]
 
 
 def _build_debug_instructions() -> str:
@@ -3620,22 +3611,6 @@ def _validate_and_enforce_planning_block(
 
     # Return response text unchanged - no fallback content is added
     return response_text
-
-
-def _is_god_mode_command(user_input: str) -> bool:
-    """Check if the user input is a GOD MODE command.
-
-    A GOD MODE command starts with the "GOD MODE:" prefix (case-insensitive)
-    and should trigger administrative handling with no narrative advancement.
-
-    Args:
-        user_input: Raw user input text before any validation mutations.
-
-    Returns:
-        bool: True if the input requests GOD MODE.
-    """
-
-    return user_input.strip().upper().startswith("GOD MODE:")
 
 
 @log_exceptions

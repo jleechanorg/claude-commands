@@ -332,8 +332,8 @@ class GodModeAgent(BaseAgent):
         Returns:
             Complete system instruction string for administrative commands
         """
-        # Parameters are unused for god mode but kept for interface consistency
-        _ = (selected_prompts, use_default_world, include_continuation_reminder)
+        # Parameters intentionally unused - god mode uses fixed prompt set
+        del selected_prompts, use_default_world, include_continuation_reminder
 
         builder = self._prompt_builder
 
