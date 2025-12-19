@@ -23,7 +23,7 @@ import requests
 
 # Test configuration
 DEFAULT_SERVER_URL = "http://localhost:8081"
-TEST_USER_EMAIL = "jleechan@gmail.com"  # Use existing test user
+TEST_USER_EMAIL = os.getenv("TEST_USER_EMAIL", "test-user@example.com")
 EVIDENCE_DIR = Path("/tmp/worldarchitect.ai/dice_code_execution_tests")
 
 
