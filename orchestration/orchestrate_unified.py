@@ -17,6 +17,8 @@ if parent_dir not in sys.path:
 import argparse
 import glob
 import json
+import logging
+import re
 import shutil
 import subprocess
 import time
@@ -35,6 +37,7 @@ class UnifiedOrchestration:
     INITIAL_DELAY = 5  # Initial delay before checking for PRs
     POLLING_INTERVAL = 2  # Interval between PR checks
     STALE_PROMPT_FILE_AGE_SECONDS = 300  # 5 minutes
+    MAX_CONTEXT_BYTES = 100 * 1024  # 100KB
 
     def __init__(self):
         self.task_dispatcher = TaskDispatcher()
@@ -138,6 +141,24 @@ class UnifiedOrchestration:
         except (subprocess.SubprocessError, OSError):
             return True  # If we can't check, assume it's safe to clean
 
+    @staticmethod
+    def _is_safe_branch_name(branch_name: str) -> bool:
+        """Validate branch name against safe pattern to avoid injection risks."""
+        return bool(re.match(r"^[A-Za-z0-9._/-]+$", branch_name))
+
+    @staticmethod
+    def _resolve_context_path(context_path: str) -> str | None:
+        """Resolve context path and ensure it stays within the project root."""
+        abs_context_path = os.path.abspath(context_path)
+        repo_root = os.path.abspath(parent_dir)
+        try:
+            common_path = os.path.commonpath([repo_root, abs_context_path])
+        except ValueError:
+            return None
+        if common_path != repo_root:
+            return None
+        return abs_context_path
+
     def _check_dependencies(self):
         """Check system dependencies and report status."""
         base_dependencies = {"tmux": "tmux", "git": "git", "gh": "gh"}
@@ -237,13 +258,9 @@ class UnifiedOrchestration:
             print(f"⚠️  Could not check recent agent work: {e}")
         return None
 
-    def _continue_existing_agent_work(self, existing_agent: dict, task_description: str):
+    def _continue_existing_agent_work(self, existing_agent: dict, task_description: str, options: dict | None = None):
         """Continue work on existing agent branch."""
         try:
-            # Check out the existing branch
-            subprocess.run(["git", "checkout", existing_agent["branch"]], shell=False, timeout=30, check=True)
-            print(f"✅ Switched to existing branch: {existing_agent['branch']}")
-
             # Create new agent session on existing branch
             agent_spec = {
                 "name": f"{existing_agent['name']}-continue",
@@ -251,6 +268,20 @@ class UnifiedOrchestration:
                 "existing_branch": existing_agent["branch"],
                 "existing_pr": existing_agent.get("pr_number"),
             }
+
+            if options:
+                if options.get("pr") is not None:
+                    agent_spec["existing_pr"] = options["pr"]
+                if options.get("mcp_agent"):
+                    agent_spec["mcp_agent_name"] = options["mcp_agent"]
+                if options.get("bead"):
+                    agent_spec["bead_id"] = options["bead"]
+                if options.get("validate"):
+                    agent_spec["validation_command"] = options["validate"]
+                if options.get("no_new_pr"):
+                    agent_spec["no_new_pr"] = True
+                if options.get("no_new_branch"):
+                    agent_spec["no_new_branch"] = True
 
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 print(f"✅ Created continuation agent: {agent_spec['name']}")
@@ -279,7 +310,8 @@ class UnifiedOrchestration:
                 - no_new_pr: Hard block on PR creation
                 - no_new_branch: Hard block on branch creation
         """
-        options = options or {}
+        if options is None:
+            options = {}
 
         print("🤖 Unified LLM-Driven Orchestration with File-based A2A")
         print("=" * 60)
@@ -287,11 +319,27 @@ class UnifiedOrchestration:
         # ENHANCED LOGGING: Track orchestration session
         start_time = time.time()
         session_id = int(start_time)
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "orchestration_session_start",
+            extra={
+                "session_id": session_id,
+                "task_length": len(task_description),
+                "cwd": os.getcwd(),
+            },
+        )
         print("🔍 SESSION TRACKING:")
         print(f"  └─ Session ID: {session_id}")
         print(f"  └─ Start Time: {datetime.fromtimestamp(start_time).isoformat()}")
         print(f"  └─ Task Length: {len(task_description)} characters")
         print(f"  └─ Current Directory: {os.getcwd()}")
+
+        if options.get("branch") is not None and not self._is_safe_branch_name(options["branch"]):
+            print(f"  ⚠️ Invalid branch name provided: {options['branch']}")
+            options["branch"] = None
+
+        if options.get("no_new_branch") and not options.get("branch"):
+            print("  ⚠️ --no-new-branch was set without --branch; agents cannot create new branches.")
 
         # Display optional arguments if provided
         if any(options.values()):
@@ -312,20 +360,44 @@ class UnifiedOrchestration:
                 print("  └─ 🚫 New PR Creation: BLOCKED")
             if options.get("no_new_branch"):
                 print("  └─ 🚫 New Branch Creation: BLOCKED")
+            logger.info(
+                "orchestration_options",
+                extra={
+                    "session_id": session_id,
+                    "context": options.get("context"),
+                    "branch": options.get("branch"),
+                    "pr": options.get("pr"),
+                    "mcp_agent": options.get("mcp_agent"),
+                    "bead": options.get("bead"),
+                    "validate": options.get("validate"),
+                    "no_new_pr": bool(options.get("no_new_pr")),
+                    "no_new_branch": bool(options.get("no_new_branch")),
+                },
+            )
 
         # Load context file if provided
         context_content = None
         if options.get("context"):
             context_path = options["context"]
-            if os.path.exists(context_path):
+            resolved_context_path = self._resolve_context_path(context_path)
+            if not resolved_context_path:
+                print(f"  ⚠️ Context path is outside the project root: {context_path}")
+            elif not os.path.exists(resolved_context_path):
+                print(f"  ⚠️ Context file not found: {context_path}")
+            else:
                 try:
-                    with open(context_path, "r") as f:
-                        context_content = f.read()
-                    print(f"  └─ Context Loaded: {len(context_content)} characters")
+                    context_size = os.path.getsize(resolved_context_path)
+                    if context_size > self.MAX_CONTEXT_BYTES:
+                        print(
+                            f"  ⚠️ Context file too large ({context_size} bytes). "
+                            f"Max allowed is {self.MAX_CONTEXT_BYTES} bytes."
+                        )
+                    else:
+                        with open(resolved_context_path, "r", encoding="utf-8") as f:
+                            context_content = f.read()
+                        print(f"  └─ Context Loaded: {len(context_content)} characters")
                 except Exception as e:
                     print(f"  ⚠️ Failed to load context file: {e}")
-            else:
-                print(f"  ⚠️ Context file not found: {context_path}")
 
         print("=" * 60)
 
@@ -341,22 +413,8 @@ class UnifiedOrchestration:
             existing_agent = self._find_recent_agent_work(task_description)
             if existing_agent:
                 print(f"🔄 Continuing work from {existing_agent['name']} on branch {existing_agent['branch']}")
-                self._continue_existing_agent_work(existing_agent, task_description)
+                self._continue_existing_agent_work(existing_agent, task_description, options=options)
                 return
-
-        # Handle branch checkout if specified
-        if options.get("branch"):
-            try:
-                subprocess.run(
-                    ["git", "checkout", options["branch"]],
-                    shell=False,
-                    timeout=30,
-                    check=True
-                )
-                print(f"✅ Checked out branch: {options['branch']}")
-            except subprocess.CalledProcessError as e:
-                print(f"⚠️ Failed to checkout branch {options['branch']}: {e}")
-                print("   Continuing with current branch...")
 
         # LLM-driven task analysis and agent creation with constraints
         print("🧠 TASK ANALYSIS PHASE:")
@@ -364,8 +422,10 @@ class UnifiedOrchestration:
 
         # Build enhanced task with context if provided
         enhanced_task = task_description
-        if context_content:
-            enhanced_task = f"{task_description}\n\n---\n## Pre-computed Context\n{context_content}"
+        if context_content is not None:
+            normalized_context = context_content.strip()
+            if normalized_context:
+                enhanced_task = f"{task_description.rstrip()}\n\n---\n## Pre-computed Context\n{normalized_context}"
 
         agents = self.task_dispatcher.analyze_task_and_create_agents(enhanced_task)
         analysis_duration = time.time() - analysis_start
@@ -587,7 +647,7 @@ The orchestration system will:
 
     parser.add_argument(
         "task",
-        nargs="*",
+        nargs="+",
         help="Task description for the orchestration system"
     )
 
@@ -650,17 +710,18 @@ The orchestration system will:
     args = parser.parse_args()
 
     # Validate task description
-    if not args.task:
+    task = " ".join(args.task).strip()
+    if not task:
         parser.print_help()
         return 1
-
-    task = " ".join(args.task)
 
     # Build options dict for orchestration
     options = {
         "context": args.context,
         "branch": args.branch,
         "pr": args.pr,
+        # Note: CLI flag is --mcp-agent; argparse exposes it as args.mcp_agent.
+        # We keep the underscore form in the options key for internal consistency.
         "mcp_agent": args.mcp_agent,
         "bead": args.bead,
         "validate": args.validate,

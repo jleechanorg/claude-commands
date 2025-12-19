@@ -11,10 +11,14 @@ Tests:
 """
 
 import argparse
+import inspect
+import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 # Add project root to path for imports
@@ -47,7 +51,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         ]
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('task', nargs='*')
+        parser.add_argument('task', nargs='+')
         parser.add_argument('--context', type=str, default=None)
         parser.add_argument('--branch', type=str, default=None)
         parser.add_argument('--pr', type=int, default=None)
@@ -74,7 +78,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         test_args = ['orchestrate_unified.py', 'Simple', 'task', 'here']
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('task', nargs='*')
+        parser.add_argument('task', nargs='+')
         parser.add_argument('--context', type=str, default=None)
         parser.add_argument('--branch', type=str, default=None)
         parser.add_argument('--pr', type=int, default=None)
@@ -106,7 +110,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         ]
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('task', nargs='*')
+        parser.add_argument('task', nargs='+')
         parser.add_argument('--context', type=str, default=None)
         parser.add_argument('--branch', type=str, default=None)
         parser.add_argument('--pr', type=int, default=None)
@@ -170,7 +174,7 @@ class TestContextFileLoading(unittest.TestCase):
 
     def test_context_file_loads_successfully(self):
         """Test that context file content is loaded correctly."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', dir=project_root, delete=False) as f:
             f.write("# Test Context\n\nThis is test context content.")
             context_path = f.name
 
@@ -283,9 +287,10 @@ class TestEnhancedTaskWithContext(unittest.TestCase):
     def test_task_enhanced_with_context(self):
         """Test that task description is enhanced with context content."""
         task_description = "Fix the authentication bug"
-        context_content = "## Auth Module\n\nThe auth module is in src/auth.py"
+        context_content = "  ## Auth Module\n\nThe auth module is in src/auth.py\n"
 
-        enhanced_task = f"{task_description}\n\n---\n## Pre-computed Context\n{context_content}"
+        normalized_context = context_content.strip()
+        enhanced_task = f"{task_description}\n\n---\n## Pre-computed Context\n{normalized_context}"
 
         self.assertIn("Fix the authentication bug", enhanced_task)
         self.assertIn("## Pre-computed Context", enhanced_task)
@@ -304,46 +309,16 @@ class TestEnhancedTaskWithContext(unittest.TestCase):
         self.assertEqual(enhanced_task, "Simple task")
 
 
-class TestBranchCheckout(unittest.TestCase):
-    """Test branch checkout functionality."""
+class TestBranchValidation(unittest.TestCase):
+    """Test branch name validation."""
 
-    @patch('subprocess.run')
-    def test_branch_checkout_called(self, mock_run):
-        """Test that git checkout is called when branch option is provided."""
-        mock_run.return_value = MagicMock(returncode=0)
+    def test_safe_branch_names(self):
+        self.assertTrue(orchestrate_unified.UnifiedOrchestration._is_safe_branch_name("feature/branch-1"))
+        self.assertTrue(orchestrate_unified.UnifiedOrchestration._is_safe_branch_name("release_2024.01"))
 
-        options = {'branch': 'feature-branch'}
-
-        # Simulate checkout logic
-        if options.get("branch"):
-            import subprocess
-            subprocess.run(
-                ["git", "checkout", options["branch"]],
-                shell=False,
-                timeout=30,
-                check=True
-            )
-
-        mock_run.assert_called_once()
-        call_args = mock_run.call_args[0][0]
-        self.assertEqual(call_args, ["git", "checkout", "feature-branch"])
-
-    @patch('subprocess.run')
-    def test_branch_checkout_not_called_without_option(self, mock_run):
-        """Test that git checkout is not called when branch option is None."""
-        options = {'branch': None}
-
-        # Simulate checkout logic
-        if options.get("branch"):
-            import subprocess
-            subprocess.run(
-                ["git", "checkout", options["branch"]],
-                shell=False,
-                timeout=30,
-                check=True
-            )
-
-        mock_run.assert_not_called()
+    def test_unsafe_branch_names(self):
+        self.assertFalse(orchestrate_unified.UnifiedOrchestration._is_safe_branch_name("feature branch"))
+        self.assertFalse(orchestrate_unified.UnifiedOrchestration._is_safe_branch_name("branch;rm -rf /"))
 
 
 class TestMainFunctionImport(unittest.TestCase):
@@ -361,9 +336,6 @@ class TestMainFunctionImport(unittest.TestCase):
 
     def test_orchestrate_method_accepts_options(self):
         """Test that orchestrate method accepts options parameter."""
-        from orchestration import orchestrate_unified
-        import inspect
-
         sig = inspect.signature(orchestrate_unified.UnifiedOrchestration.orchestrate)
         params = list(sig.parameters.keys())
 
@@ -388,7 +360,6 @@ class TestGhCommandMocking(unittest.TestCase):
         )
 
         # Simulate the command structure used in _find_recent_agent_work
-        import subprocess
         result = subprocess.run(
             [
                 "gh",
@@ -425,7 +396,6 @@ class TestGhCommandMocking(unittest.TestCase):
             stderr=''
         )
 
-        import subprocess
         branch_pattern = "task-agent-test-work"
         result = subprocess.run(
             [
@@ -454,7 +424,6 @@ class TestGhCommandMocking(unittest.TestCase):
         """Test that gh commands use appropriate timeout."""
         mock_run.return_value = MagicMock(returncode=0, stdout='[]', stderr='')
 
-        import subprocess
         subprocess.run(
             ["gh", "pr", "list"],
             shell=False,
@@ -472,7 +441,6 @@ class TestGhCommandMocking(unittest.TestCase):
     @patch('subprocess.run')
     def test_gh_command_failure_handling(self, mock_run):
         """Test handling of gh command failures."""
-        import subprocess
         mock_run.side_effect = subprocess.CalledProcessError(1, "gh")
 
         # Simulate the exception handling in orchestrate_unified.py
@@ -493,8 +461,6 @@ class TestGhCommandMocking(unittest.TestCase):
 
     def test_pr_json_parsing(self):
         """Test parsing of gh pr list JSON output."""
-        import json
-
         # Simulate gh pr list output
         pr_json = '[{"number": 123, "title": "Test PR", "headRefName": "feature-branch", "createdAt": "2025-01-01T12:00:00Z"}]'
         prs = json.loads(pr_json)
@@ -506,8 +472,6 @@ class TestGhCommandMocking(unittest.TestCase):
 
     def test_pr_created_at_parsing(self):
         """Test parsing of PR createdAt timestamp."""
-        from datetime import datetime
-
         # Test the ISO 8601 Z format parsing
         created_at = "2025-01-01T12:00:00Z"
         pr_created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
