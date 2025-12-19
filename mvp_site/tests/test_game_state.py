@@ -582,6 +582,139 @@ class TestGameState(unittest.TestCase):
         assert state_dict["world_data"]["current_location"] == "Test Town"
 
 
+class TestCombatStateNormalization(unittest.TestCase):
+    """Test cases for _normalize_combat_state() which handles LLM-generated malformed data."""
+
+    def test_normalize_string_initiative_order_entries(self):
+        """String entries in initiative_order are converted to proper dicts."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "initiative_order": ["Goblin 1", "Goblin 2"],
+            }
+        )
+
+        # Should be normalized to dicts
+        init_order = gs.combat_state["initiative_order"]
+        assert len(init_order) == 2
+        assert init_order[0] == {"name": "Goblin 1", "initiative": 0, "type": "unknown"}
+        assert init_order[1] == {"name": "Goblin 2", "initiative": 0, "type": "unknown"}
+
+    def test_normalize_dict_initiative_order_coerces_initiative(self):
+        """Dict entries have initiative coerced to int."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "initiative_order": [
+                    {"name": "Goblin", "initiative": "15", "type": "enemy"},
+                ],
+            }
+        )
+
+        init_order = gs.combat_state["initiative_order"]
+        assert init_order[0]["initiative"] == 15  # String "15" -> int 15
+
+    def test_normalize_string_combatant_values(self):
+        """String combatant values are converted to proper dicts."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": {
+                    "Goblin 1": "enemy",
+                    "Goblin 2": "hostile",
+                },
+            }
+        )
+
+        combatants = gs.combat_state["combatants"]
+        assert combatants["Goblin 1"] == {"hp_current": 1, "hp_max": 1, "status": []}
+        assert combatants["Goblin 2"] == {"hp_current": 1, "hp_max": 1, "status": []}
+
+    def test_normalize_combatant_hp_coerced_to_int(self):
+        """Combatant HP values are coerced from strings to ints."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": {
+                    "Goblin": {"hp_current": "15", "hp_max": "20", "status": []},
+                },
+            }
+        )
+
+        combatants = gs.combat_state["combatants"]
+        assert combatants["Goblin"]["hp_current"] == 15
+        assert combatants["Goblin"]["hp_max"] == 20
+
+    def test_normalize_combatants_list_to_dict(self):
+        """Combatants as list is converted to dict format."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": [
+                    {"name": "Goblin 1", "hp_current": 10, "hp_max": 15},
+                    {"name": "Goblin 2", "hp_current": 8, "hp_max": 12},
+                ],
+            }
+        )
+
+        combatants = gs.combat_state["combatants"]
+        assert isinstance(combatants, dict)
+        assert "Goblin 1" in combatants
+        assert combatants["Goblin 1"]["hp_current"] == 10
+        assert "Goblin 2" in combatants
+        assert combatants["Goblin 2"]["hp_current"] == 8
+
+    def test_normalize_preserves_type_and_role(self):
+        """Type and role fields are preserved during normalization."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": {
+                    "Goblin": {
+                        "hp_current": 10,
+                        "hp_max": 15,
+                        "type": "enemy",
+                        "role": "melee",
+                    },
+                },
+            }
+        )
+
+        combatant = gs.combat_state["combatants"]["Goblin"]
+        assert combatant["type"] == "enemy"
+        assert combatant["role"] == "melee"
+
+    def test_normalize_does_not_add_missing_fields(self):
+        """Normalization does not add combatants/initiative_order if not present."""
+        gs = GameState(combat_state={"in_combat": False})
+
+        # Should NOT have combatants or initiative_order added
+        assert "combatants" not in gs.combat_state
+        assert "initiative_order" not in gs.combat_state
+
+    def test_normalize_handles_non_dict_combat_state(self):
+        """Non-dict combat_state is reset to default."""
+        gs = GameState(combat_state="invalid")
+
+        assert gs.combat_state == {"in_combat": False}
+
+    def test_normalize_mixed_initiative_order(self):
+        """Mixed string and dict entries in initiative_order are handled."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "initiative_order": [
+                    "Goblin 1",  # String
+                    {"name": "Hero", "initiative": 18, "type": "pc"},  # Dict
+                ],
+            }
+        )
+
+        init_order = gs.combat_state["initiative_order"]
+        assert init_order[0] == {"name": "Goblin 1", "initiative": 0, "type": "unknown"}
+        assert init_order[1] == {"name": "Hero", "initiative": 18, "type": "pc"}
+
+
 class TestUpdateStateWithChanges(unittest.TestCase):
     """Test cases for the update_state_with_changes function."""
 
