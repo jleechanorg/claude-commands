@@ -1968,6 +1968,30 @@ def _maybe_get_gemini_code_execution_evidence(
     return gemini_provider.extract_code_execution_evidence(api_response)
 
 
+def _log_fabricated_dice_if_detected(
+    structured_response: Any, code_execution_evidence: dict[str, Any]
+) -> None:
+    """Log if dice results appear without code_execution evidence."""
+    if not structured_response or not code_execution_evidence:
+        return
+
+    has_dice_rolls = bool(
+        getattr(structured_response, "dice_rolls", None)
+        or getattr(structured_response, "dice_audit_events", None)
+    )
+    if not has_dice_rolls:
+        return
+
+    code_was_executed = code_execution_evidence.get("code_execution_used", False)
+    if not code_was_executed:
+        logging_util.error(
+            "🚨 FABRICATED_DICE_DETECTED: Gemini returned dice_rolls but did NOT use "
+            "code_execution (executable_code_parts=0). Dice values may be hallucinated! "
+            f"dice_rolls={getattr(structured_response, 'dice_rolls', [])}, "
+            f"evidence={code_execution_evidence}"
+        )
+
+
 def _get_context_stats(
     context: list[dict[str, Any]],
     model_name: str,
@@ -2894,19 +2918,7 @@ def get_initial_story(
             "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
             **code_execution_evidence,
         }
-        # CRITICAL: Detect fabricated dice rolls (code_execution not used but dice_rolls present)
-        has_dice_rolls = bool(
-            getattr(structured_response, "dice_rolls", None)
-            or getattr(structured_response, "dice_audit_events", None)
-        )
-        code_was_executed = code_execution_evidence.get("code_execution_used", False)
-        if has_dice_rolls and not code_was_executed:
-            logging_util.error(
-                "🚨 FABRICATED_DICE_DETECTED: Gemini returned dice_rolls but did NOT use "
-                "code_execution (executable_code_parts=0). Dice values may be hallucinated! "
-                f"dice_rolls={getattr(structured_response, 'dice_rolls', [])}, "
-                f"evidence={code_execution_evidence}"
-            )
+        _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -4094,19 +4106,7 @@ def continue_story(
             "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
             **code_execution_evidence,
         }
-        # CRITICAL: Detect fabricated dice rolls (code_execution not used but dice_rolls present)
-        has_dice_rolls = bool(
-            getattr(structured_response, "dice_rolls", None)
-            or getattr(structured_response, "dice_audit_events", None)
-        )
-        code_was_executed = code_execution_evidence.get("code_execution_used", False)
-        if has_dice_rolls and not code_was_executed:
-            logging_util.error(
-                "🚨 FABRICATED_DICE_DETECTED: Gemini returned dice_rolls but did NOT use "
-                "code_execution (executable_code_parts=0). Dice values may be hallucinated! "
-                f"dice_rolls={getattr(structured_response, 'dice_rolls', [])}, "
-                f"evidence={code_execution_evidence}"
-            )
+        _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(

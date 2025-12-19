@@ -566,7 +566,17 @@ class GameState:
             role_raw.lower().strip() if isinstance(role_raw, str) else role_raw
         )
 
-        generic_roles = {None, "", "enemy", "minion", "generic", "unknown"}
+        generic_roles = {
+            None,
+            "",
+            "enemy",
+            "minion",
+            "generic",
+            "unknown",
+            "monster",
+            "hostile",
+            "foe",
+        }
         has_named_role = role_normalized not in generic_roles
         has_story = npc.get("backstory") or npc.get("background")
         return bool(has_named_role or has_story or npc.get("is_important"))
