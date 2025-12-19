@@ -1968,22 +1968,33 @@ def _maybe_get_gemini_code_execution_evidence(
     return gemini_provider.extract_code_execution_evidence(api_response)
 
 
-def _log_fabricated_dice_if_detected(
-    structured_response: Any, code_execution_evidence: dict[str, Any]
-) -> None:
-    """Log if dice results appear without code_execution evidence."""
+def _is_code_execution_fabrication(
+    structured_response: Any, code_execution_evidence: dict[str, Any] | None
+) -> bool:
+    """Check if dice results appear without code_execution evidence.
+
+    Returns True if fabrication is detected (dice present but no code execution).
+    This is used to trigger the reprompt loop for Gemini 3 Flash code_execution mode.
+    """
     if not structured_response or not code_execution_evidence:
-        return
+        return False
 
     has_dice_rolls = bool(
         getattr(structured_response, "dice_rolls", None)
         or getattr(structured_response, "dice_audit_events", None)
     )
     if not has_dice_rolls:
-        return
+        return False
 
     code_was_executed = code_execution_evidence.get("code_execution_used", False)
-    if not code_was_executed:
+    return not code_was_executed
+
+
+def _log_fabricated_dice_if_detected(
+    structured_response: Any, code_execution_evidence: dict[str, Any]
+) -> None:
+    """Log if dice results appear without code_execution evidence."""
+    if _is_code_execution_fabrication(structured_response, code_execution_evidence):
         logging_util.error(
             "🚨 FABRICATED_DICE_DETECTED: Gemini returned dice_rolls but did NOT use "
             "code_execution (executable_code_parts=0). Dice values may be hallucinated! "
@@ -3466,10 +3477,12 @@ def _build_reprompt_for_missing_fields(
         )
     if "dice_integrity" in missing_fields:
         requested_lines.append(
-            "- DICE INTEGRITY: Your response includes dice_rolls but you did not use "
-            "tool_requests to roll them. In combat, you MUST use tool_requests "
-            "(roll_dice, roll_attack, roll_skill_check, roll_saving_throw) to generate dice rolls. "
-            "Do NOT fabricate dice results. Regenerate using tool_requests for all dice."
+            "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
+            "execute code or call tools to generate them. Dice values are UNKNOWABLE without "
+            "execution - you cannot predict random.randint() results. You MUST either:\n"
+            "  * Use code_execution: Execute Python code with random.randint() to generate dice\n"
+            "  * Use tool_requests: Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
+            "Do NOT write dice values directly in narrative. Regenerate with ACTUAL execution."
         )
 
     requested_block = '\n'.join(requested_lines)
@@ -4011,7 +4024,19 @@ def continue_story(
         is_god_mode=is_god_mode_command,
         is_dm_mode=is_dm_mode_initial,
     )
-    dice_integrity_violation = not dice_integrity_valid
+
+    # CODE_EXECUTION FABRICATION CHECK (Gemini 3 Flash code_execution mode)
+    # If model claims dice_rolls but didn't use code_execution, trigger reprompt
+    code_exec_fabrication = _is_code_execution_fabrication(
+        structured_response, code_execution_evidence
+    )
+    if code_exec_fabrication:
+        logging_util.warning(
+            "🎲 CODE_EXEC_FABRICATION: Dice in response but no code_execution detected. "
+            "Will trigger reprompt to enforce real code execution."
+        )
+
+    dice_integrity_violation = not dice_integrity_valid or code_exec_fabrication
 
     missing_fields = _check_missing_required_fields(
         structured_response,
