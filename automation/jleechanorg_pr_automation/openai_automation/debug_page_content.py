@@ -4,12 +4,12 @@ Debug script to check what's actually on the Codex page when connected via CDP.
 """
 import asyncio
 import os
-import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from codex_github_mentions import CodexGitHubMentionsAutomation
+from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
+    CodexGitHubMentionsAutomation,
+)
 
 
 async def debug_page():
@@ -77,8 +77,7 @@ async def debug_page():
     try:
         os.close(fd)
     except OSError:
-        # The file descriptor may already be closed or invalid at this point;
-        # this is a debug script and we don't reuse the descriptor.
+        # Debug script: safe to ignore close errors on temp fd
         pass
     print(f"\n📸 Screenshot saved to: {screenshot_path}")
 

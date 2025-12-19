@@ -15,16 +15,14 @@ Run with:
 """
 
 import asyncio
-import os
-import sys
 from unittest.mock import AsyncMock, Mock
 
 import aiohttp
 import pytest
 
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
-from codex_github_mentions import CodexGitHubMentionsAutomation
+from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
+    CodexGitHubMentionsAutomation,
+)
 
 
 # Helper to check if Chrome is running with CDP
@@ -36,7 +34,7 @@ async def chrome_is_running(port=9222):
                 f"http://localhost:{port}/json/version", timeout=aiohttp.ClientTimeout(total=1)
             ) as resp:
                 return resp.status == 200
-    except Exception:
+    except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
         return False
 
 
