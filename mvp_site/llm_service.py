@@ -2894,6 +2894,19 @@ def get_initial_story(
             "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
             **code_execution_evidence,
         }
+        # CRITICAL: Detect fabricated dice rolls (code_execution not used but dice_rolls present)
+        has_dice_rolls = bool(
+            getattr(structured_response, "dice_rolls", None)
+            or getattr(structured_response, "dice_audit_events", None)
+        )
+        code_was_executed = code_execution_evidence.get("code_execution_used", False)
+        if has_dice_rolls and not code_was_executed:
+            logging_util.error(
+                "🚨 FABRICATED_DICE_DETECTED: Gemini returned dice_rolls but did NOT use "
+                "code_execution (executable_code_parts=0). Dice values may be hallucinated! "
+                f"dice_rolls={getattr(structured_response, 'dice_rolls', [])}, "
+                f"evidence={code_execution_evidence}"
+            )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -4081,6 +4094,19 @@ def continue_story(
             "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
             **code_execution_evidence,
         }
+        # CRITICAL: Detect fabricated dice rolls (code_execution not used but dice_rolls present)
+        has_dice_rolls = bool(
+            getattr(structured_response, "dice_rolls", None)
+            or getattr(structured_response, "dice_audit_events", None)
+        )
+        code_was_executed = code_execution_evidence.get("code_execution_used", False)
+        if has_dice_rolls and not code_was_executed:
+            logging_util.error(
+                "🚨 FABRICATED_DICE_DETECTED: Gemini returned dice_rolls but did NOT use "
+                "code_execution (executable_code_parts=0). Dice values may be hallucinated! "
+                f"dice_rolls={getattr(structured_response, 'dice_rolls', [])}, "
+                f"evidence={code_execution_evidence}"
+            )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
