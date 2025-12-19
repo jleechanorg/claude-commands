@@ -101,19 +101,19 @@ class TestCentralizedModelSelection(unittest.TestCase):
         """
         test_model = TEST_MODEL
 
-        # TEST_MODEL should be gemini-2.0-flash (default Gemini model)
+        # TEST_MODEL should be gemini-3-flash-preview (default Gemini model as of Dec 2025)
         self.assertEqual(
             test_model,
-            "gemini-2.0-flash",
-            f"FAIL: TEST_MODEL should be gemini-2.0-flash (default Gemini model), "
+            "gemini-3-flash-preview",
+            f"FAIL: TEST_MODEL should be gemini-3-flash-preview (default Gemini model), "
             f"but is {test_model}",
         )
 
-        # DEFAULT_MODEL should also be gemini-2.0-flash
+        # DEFAULT_MODEL should also be gemini-3-flash-preview
         self.assertEqual(
             DEFAULT_MODEL,
-            "gemini-2.0-flash",
-            f"FAIL: DEFAULT_MODEL should be gemini-2.0-flash, "
+            "gemini-3-flash-preview",
+            f"FAIL: DEFAULT_MODEL should be gemini-3-flash-preview, "
             f"but is {DEFAULT_MODEL}",
         )
 

@@ -1,0 +1,65 @@
+# Enhanced Test Command - Intelligent test execution
+description = "Run tests intelligently based on PR changes or with custom modifiers"
+
+prompt = """
+## Enhanced Test Command
+
+Execute intelligent test selection and running for:
+
+{{input}}
+
+## Execution Workflow
+
+### Phase 1: Intelligent Test Selection (Default)
+
+1. **PR Change Analysis**:
+   - Get current branch: `git branch --show-current`
+   - Find changed files: `git diff --name-only origin/main...HEAD`
+   - Map changed files to relevant test files
+   - Select subset of tests based on changes
+
+2. **Test Mapping Logic**:
+   - Python file changes → corresponding test files
+   - Frontend changes → frontend/UI test files
+   - Config changes → integration test files
+   - If >20 files changed → fall back to full suite
+
+### Phase 2: Test Execution with Modifiers
+
+Parse command modifiers:
+- Pattern specified → Run tests matching pattern
+- `--full` → Run complete test suite
+- `--integration` → Include integration tests
+- `--coverage` → Run with coverage reporting
+
+Execute: `./run_tests.sh` with appropriate flags
+
+### Phase 3: Pattern Matching (When Pattern Specified)
+
+1. Find test files matching pattern
+2. Validate test files exist
+3. Run specific test subset
+4. Provide feedback on which tests are running
+
+### Phase 4: Results Analysis
+
+1. Parse test output for pass/fail counts
+2. Identify failing tests and root causes
+3. Check GitHub CI status if applicable
+4. Fix any failing tests immediately
+
+### Phase 5: Completion Criteria
+
+- All selected tests pass (local)
+- All GitHub CI checks pass (if applicable)
+- Never dismiss failing tests as "minor"
+- Debug root causes of failures
+- Provide summary of test execution results
+
+## Usage Examples
+
+- `/test` - Run tests for files changed in current PR
+- `/test testsABC` - Run tests matching pattern "testsABC"
+- `/test --full` - Run complete test suite
+- `/test --integration` - Include integration tests
+"""

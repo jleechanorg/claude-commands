@@ -13,6 +13,10 @@ from mvp_site.json_utils import parse_llm_json_response, unescape_json_string
 
 # Planning block extraction from narrative is deprecated - blocks should only come from JSON
 
+# Minimum narrative length threshold for "suspiciously short" detection
+# A valid narrative should typically be at least ~100 characters
+MIN_NARRATIVE_LENGTH = 100
+
 # Precompiled regex patterns for better performance
 JSON_MARKDOWN_PATTERN = re.compile(r"```json\s*\n?(.*?)\n?```", re.DOTALL)
 GENERIC_MARKDOWN_PATTERN = re.compile(r"```\s*\n?(.*?)\n?```", re.DOTALL)
@@ -26,6 +30,11 @@ WHITESPACE_PATTERN = re.compile(
     r"[^\S\r\n]+"
 )  # Normalize spaces while preserving line breaks
 
+# Planning block detection is handled via brace matching in
+# `_remove_planning_json_blocks`; regex explorations are intentionally omitted
+# to keep the implementation single-sourced.
+# Quick check just verifies both required keys exist (order-independent).
+
 # Mixed language detection - CJK (Chinese/Japanese/Korean) characters
 # These can appear due to LLM training data leakage
 CJK_PATTERN = re.compile(
@@ -37,6 +46,151 @@ CJK_PATTERN = re.compile(
     r"\U00020000-\U0002a6df"  # CJK Unified Ideographs Extension B
     r"]+"
 )
+
+
+MAX_PLANNING_JSON_BLOCK_CHARS = 50000
+
+
+def _strip_embedded_planning_json(text: str) -> str:
+    """
+    Strip embedded planning block JSON from narrative text.
+
+    The LLM sometimes outputs planning block JSON directly in the narrative field.
+    This JSON should be stripped because the planning_block is a separate structured field.
+
+    Detects and removes JSON blocks that contain:
+    - "thinking" key (GM reasoning)
+    - "choices" key (player options)
+
+    Args:
+        text: The narrative text that may contain embedded JSON
+
+    Returns:
+        The narrative text with embedded planning JSON removed
+    """
+    if not text or not isinstance(text, str):
+        return text
+
+    # Quick check - if no planning block indicators, return as-is
+    # Both keys must be present (order-independent check)
+    if '"thinking"' not in text or '"choices"' not in text:
+        return text
+
+    cleaned = text
+
+    # Try to find and remove embedded planning JSON using recursive brace matching
+    # This is more robust than regex for deeply nested JSON
+    cleaned, removed = _remove_planning_json_blocks(cleaned)
+
+    # Clean up multiple consecutive newlines that might result from removal
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+
+    if removed and cleaned != text:
+        logging_util.info("Stripped embedded planning block JSON from narrative text")
+
+    return cleaned
+
+
+def _remove_planning_json_blocks(text: str) -> tuple[str, bool]:
+    """
+    Remove JSON blocks that look like planning blocks (have thinking and choices keys).
+
+    Uses brace matching to handle arbitrarily nested JSON.
+    """
+    result = []
+    i = 0
+    text_len = len(text)
+
+    removed = False
+
+    while i < text_len:
+        # Look for potential JSON object start
+        if text[i] == '{':
+            # Try to extract the full JSON object
+            json_end = _find_matching_brace(text, i)
+            if json_end != -1:
+                json_block = text[i:json_end + 1]
+                # Check if this looks like a planning block
+                if _is_planning_block_json(json_block):
+                    # Skip this JSON block (don't add to result)
+                    removed = True
+                    i = json_end + 1
+                    continue
+
+        result.append(text[i])
+        i += 1
+
+    return ''.join(result), removed
+
+
+def _find_matching_brace(text: str, start: int) -> int:
+    """
+    Find the index of the closing brace that matches the opening brace at start.
+
+    Returns -1 if no matching brace is found.
+    """
+    if start >= len(text) or text[start] != '{':
+        return -1
+
+    depth = 0
+    in_string = False
+    escape_next = False
+    i = start
+
+    while i < len(text):
+        char = text[i]
+
+        if escape_next:
+            escape_next = False
+        elif char == '\\':
+            escape_next = True
+        elif char == '"':
+            in_string = not in_string
+        elif not in_string:
+            if char == '{':
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0:
+                    return i
+
+        i += 1
+
+    return -1  # No matching brace found
+
+
+def _is_planning_block_json(json_text: str) -> bool:
+    """
+    Check if a JSON block looks like a planning block structure.
+
+    Planning blocks have "thinking" and "choices" keys.
+    """
+    if len(json_text) > MAX_PLANNING_JSON_BLOCK_CHARS:
+        return False
+
+    # Quick string check first (faster than parsing)
+    if '"thinking"' not in json_text or '"choices"' not in json_text:
+        return False
+
+    # Verify it's actually valid JSON with these keys
+    try:
+        parsed = json.loads(json_text)
+        if isinstance(parsed, dict):
+            has_thinking = "thinking" in parsed
+            has_choices = "choices" in parsed
+            return has_thinking and has_choices
+    except json.JSONDecodeError:
+        # If it looks like planning JSON but doesn't parse,
+        # still remove it (it's likely malformed planning block)
+        # Use a looser check
+        return (
+            '"thinking"' in json_text and
+            '"choices"' in json_text and
+            json_text.strip().startswith('{') and
+            json_text.strip().endswith('}')
+        )
+
+    return False
 
 
 def strip_mixed_language_characters(text: str) -> str:
@@ -86,6 +240,7 @@ class NarrativeResponse:
         session_header: str = None,
         planning_block: dict[str, Any] | None = None,
         dice_rolls: list[str] = None,
+        dice_audit_events: list[dict[str, Any]] | None = None,
         resources: str = None,
         **kwargs,
     ):
@@ -104,18 +259,22 @@ class NarrativeResponse:
         )
         self.planning_block = self._validate_planning_block(planning_block)
         self.dice_rolls = self._validate_list_field(dice_rolls, "dice_rolls")
+        self.dice_audit_events = self._validate_dice_audit_events(dice_audit_events)
         self.resources = self._validate_string_field(resources, "resources")
 
         # Store any extra fields that Gemini might include (shouldn't be any now)
         self.extra_fields = kwargs
 
     def _validate_narrative(self, narrative: str) -> str:
-        """Validate narrative content and strip mixed language characters"""
+        """Validate narrative content, strip embedded JSON and mixed language characters"""
         if not isinstance(narrative, str):
             raise ValueError("Narrative must be a string")
 
+        # Strip embedded planning block JSON from narrative
+        cleaned = _strip_embedded_planning_json(narrative)
+
         # Strip any mixed language characters (CJK) that may have leaked from LLM training
-        cleaned = strip_mixed_language_characters(narrative)
+        cleaned = strip_mixed_language_characters(cleaned)
 
         return cleaned.strip()
 
@@ -192,6 +351,32 @@ class NarrativeResponse:
                     )
 
         return validated_list
+
+    def _validate_dice_audit_events(self, value: Any) -> list[dict[str, Any]]:
+        """Validate dice_audit_events as a list of dicts.
+
+        Keep permissive: events may include provider-specific evidence fields,
+        and strict validation should not block gameplay.
+        """
+        if value is None:
+            return []
+
+        if not isinstance(value, list):
+            logging_util.warning(
+                f"Invalid dice_audit_events type: {type(value).__name__}, expected list. Using empty list."
+            )
+            return []
+
+        events: list[dict[str, Any]] = []
+        for item in value:
+            if isinstance(item, dict):
+                events.append(item)
+                continue
+            logging_util.warning(
+                f"Invalid dice_audit_events item type: {type(item).__name__}, expected dict. Skipping."
+            )
+
+        return events
 
     def _validate_planning_block(self, planning_block: Any) -> dict[str, Any]:
         """Validate planning block content - JSON ONLY format"""
@@ -374,6 +559,7 @@ class NarrativeResponse:
             "session_header": self.session_header,
             "planning_block": self.planning_block,
             "dice_rolls": self.dice_rolls,
+            "dice_audit_events": self.dice_audit_events,
             "resources": self.resources,
         }
 
@@ -486,6 +672,13 @@ def parse_structured_response(
     ) -> str:
         """Use planning block thinking text when narrative is intentionally blank."""
 
+        # Ensure narrative_value is a string
+        if narrative_value is not None and not isinstance(narrative_value, str):
+            try:
+                narrative_value = str(narrative_value)
+            except Exception:
+                narrative_value = ""
+
         narrative_value = (narrative_value or "").strip()
         if narrative_value:
             return narrative_value
@@ -533,6 +726,13 @@ def parse_structured_response(
         logging_util.info(
             f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)"
         )
+        # Warn if narrative is suspiciously short after recovery
+        if narrative_len < MIN_NARRATIVE_LENGTH and narrative_len > 0:
+            logging_util.warning(
+                f"⚠️ SUSPICIOUSLY_SHORT_NARRATIVE: Narrative is only {narrative_len} chars "
+                f"(min expected: {MIN_NARRATIVE_LENGTH}). This may indicate truncation due to "
+                "malformed JSON with unescaped quotes. Consider reprompting."
+            )
 
     # Create NarrativeResponse from parsed data
 

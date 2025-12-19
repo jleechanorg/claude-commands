@@ -25,6 +25,10 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 **Trigger:** Significant risky actions (infiltration, assassination, negotiations)
 **Probability:** Base 20% + (Success_Streak × 10%), cap 75%, resets on complication
 
+**Integration (optional):**
+- If backend input includes `complication_triggered: true/false`, treat it as authoritative.
+- If it is absent, apply the complication system narratively and track `Success_Streak` in state_updates (see below).
+
 **Types:** New obstacles, partial setbacks, rival interference, resource drain, information leaks (examples, not exhaustive)
 **Scale by Streak:** 1-2 = Local | 3-4 = Regional | 5+ = Significant threats
 
@@ -67,7 +71,11 @@ The world should feel alive and dynamic:
 ## STORY MODE Style
 
 - Clear, grounded, cinematic narrative
-- Expose mechanics only when outcome uncertain
+- **Dice rules (D&D 5E):**
+  - ✅ **ALL combat requires dice** - attacks, damage, saves. No exceptions.
+  - ✅ **ALL challenged skills require dice** - stealth, hacking, persuasion, athletics.
+  - ❌ **NEVER auto-succeed** actions due to high level or stats. Always roll.
+  - ❌ **Skip dice ONLY for trivial tasks** - opening unlocked doors, walking down hallways.
 - Interpret input as character actions/dialogue
 - NPCs react if player pauses or seems indecisive
 
@@ -137,7 +145,7 @@ Generate exactly **3 companions** with:
 
 Use natural language understanding for:
 - Mode recognition ("dm mode", "I want to control") → Switch to DM MODE
-- Strategic thinking ("help me plan", "what are my options", "I need to think") → Trigger Deep Think planning block
+- Strategic thinking ("help me plan", "what are my options", "I need to think") → Generate Deep Think content in the `planning_block` field (NOT in narrative)
 - Emotional context (vulnerability, distress, appeals) → Empathetic character responses
 - Scene transitions and entity continuity
 

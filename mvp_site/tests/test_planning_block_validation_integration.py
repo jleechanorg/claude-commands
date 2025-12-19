@@ -165,5 +165,112 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             self.fail(f"Function crashed with malformed game state: {e}")
 
 
+class TestPlanningBlockSchemaStructure(unittest.TestCase):
+    """TDD tests for planning_block schema enforcement.
+
+    These tests verify NARRATIVE_RESPONSE_SCHEMA defines planning_block with
+    required nested structure: thinking (string), context (string), choices (object).
+    """
+
+    def test_planning_block_schema_has_properties_defined(self):
+        """NARRATIVE_RESPONSE_SCHEMA.planning_block must define nested properties."""
+        from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+
+        planning_block_schema = NARRATIVE_RESPONSE_SCHEMA["properties"]["planning_block"]
+
+        # Must have properties, not just additionalProperties
+        self.assertIn(
+            "properties",
+            planning_block_schema,
+            "planning_block schema must define 'properties' for nested structure",
+        )
+
+    def test_planning_block_schema_requires_thinking_field(self):
+        """planning_block.properties must include 'thinking' as string."""
+        from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+
+        planning_block_schema = NARRATIVE_RESPONSE_SCHEMA["properties"]["planning_block"]
+        properties = planning_block_schema.get("properties", {})
+
+        self.assertIn("thinking", properties, "planning_block must define 'thinking' property")
+        self.assertEqual(
+            properties["thinking"]["type"],
+            "string",
+            "thinking must be type string",
+        )
+
+    def test_planning_block_schema_requires_choices_field(self):
+        """planning_block.properties must include 'choices' as object."""
+        from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+
+        planning_block_schema = NARRATIVE_RESPONSE_SCHEMA["properties"]["planning_block"]
+        properties = planning_block_schema.get("properties", {})
+
+        self.assertIn("choices", properties, "planning_block must define 'choices' property")
+        self.assertEqual(
+            properties["choices"]["type"],
+            "object",
+            "choices must be type object",
+        )
+
+    def test_planning_block_schema_has_required_fields(self):
+        """planning_block schema must list thinking and choices as required."""
+        from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+
+        planning_block_schema = NARRATIVE_RESPONSE_SCHEMA["properties"]["planning_block"]
+
+        self.assertIn(
+            "required",
+            planning_block_schema,
+            "planning_block must have 'required' field",
+        )
+        required = planning_block_schema["required"]
+        self.assertIn("thinking", required, "'thinking' must be required")
+        self.assertIn("choices", required, "'choices' must be required")
+
+    def test_planning_block_choices_has_additionalProperties_for_dynamic_keys(self):
+        """choices.additionalProperties must define structure for dynamic choice keys."""
+        from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+
+        planning_block_schema = NARRATIVE_RESPONSE_SCHEMA["properties"]["planning_block"]
+        choices_schema = planning_block_schema.get("properties", {}).get("choices", {})
+
+        self.assertIn(
+            "additionalProperties",
+            choices_schema,
+            "choices must have additionalProperties for dynamic keys",
+        )
+        # Each choice should have text, description, risk_level
+        choice_schema = choices_schema["additionalProperties"]
+        self.assertEqual(choice_schema["type"], "object", "Each choice must be an object")
+        self.assertIn("properties", choice_schema, "Choice schema must define properties")
+        choice_props = choice_schema["properties"]
+        self.assertIn("text", choice_props, "Choice must have 'text' property")
+        self.assertIn("description", choice_props, "Choice must have 'description' property")
+
+    def test_planning_block_choices_allows_empty_during_phase1_combat(self):
+        """choices must NOT have minProperties constraint - allows empty {} during Phase 1 combat.
+
+        RED TEST: This test documents that the schema SHOULD allow empty choices.
+        During Phase 1 of tool_requests flow (awaiting dice results), the LLM returns
+        "choices": {} as shown in game_state_instruction.md:41.
+
+        If minProperties: 1 is set, this will fail schema validation on strict providers.
+        """
+        from mvp_site.llm_providers.provider_utils import NARRATIVE_RESPONSE_SCHEMA
+
+        planning_block_schema = NARRATIVE_RESPONSE_SCHEMA["properties"]["planning_block"]
+        choices_schema = planning_block_schema.get("properties", {}).get("choices", {})
+
+        # RED: This test FAILS if minProperties is set
+        # The schema should NOT enforce minimum choices because Phase 1 combat
+        # legitimately returns "choices": {} while awaiting dice results
+        self.assertNotIn(
+            "minProperties",
+            choices_schema,
+            "choices MUST NOT have minProperties - Phase 1 combat uses empty choices {}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

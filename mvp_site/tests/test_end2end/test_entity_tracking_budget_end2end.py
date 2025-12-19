@@ -129,7 +129,7 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.cerebras_provider.generate_content")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_large_context_with_many_npcs_does_not_overflow(
         self, mock_gemini_generate, mock_cerebras_generate, mock_get_db
     ):
@@ -179,7 +179,7 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.cerebras_provider.generate_content")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_maximum_npc_count_still_succeeds(
         self, mock_gemini_generate, mock_cerebras_generate, mock_get_db
     ):

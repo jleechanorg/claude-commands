@@ -1,0 +1,99 @@
+# Architecture Review Command
+description = "Conduct focused architecture and design reviews"
+
+prompt = """
+## Architecture Review
+
+Perform architectural analysis for:
+
+{{input}}
+
+## Scope Options
+
+Parse scope from arguments:
+- Default: Review current branch/PR changes
+- `codebase`: Full codebase architecture review
+- `[file/folder]`: Focused review of specific component
+- `api`: API design and integration review
+- `data`: Data model and storage architecture review
+- `security`: Security architecture assessment
+
+## Review Process
+
+### Phase 1: Context Gathering
+
+1. **Codebase Analysis**: Examine current state
+2. **Documentation Review**: Check existing architecture docs
+3. **Dependencies Analysis**: Review external dependencies
+4. **Change Detection**: Identify what's being modified
+
+### Phase 2: Architectural Analysis
+
+**Structural Analysis**:
+- Simple organization, clear module boundaries
+- Design patterns in use
+- Code clarity and maintainability
+- Technical debt assessment
+
+**Performance Review**:
+- Critical bottlenecks (not micro-optimizations)
+- Scalability concerns
+- Resource efficiency
+
+**Security Assessment**:
+- Authentication and authorization
+- Input validation
+- Data protection
+- Common vulnerabilities (OWASP Top 10)
+
+### Phase 3: Recommendations
+
+**Prioritization Framework**:
+1. **Ship Blockers**: Must fix before deployment
+2. **Quick Wins**: Easy improvements while building
+3. **Future Improvements**: Save for after initial release
+
+**MVP-Focused Questions**:
+- Can one person build and maintain this?
+- Does this help users or just satisfy engineering perfectionism?
+- Can we ship without this refinement?
+- Will this block or enable next features?
+
+## Output Format
+
+```
+# Architecture Review Report
+
+## Executive Summary
+[Key findings and shipping readiness]
+
+## Current System Analysis
+[System understanding and patterns]
+
+## Structural Analysis
+[Organization, patterns, maintainability]
+
+## Performance Assessment
+[Bottlenecks and optimization opportunities]
+
+## Security Findings
+[Vulnerabilities and recommendations]
+
+## Recommendations
+### Ship Blockers
+[Must fix before deployment]
+
+### Quick Wins
+[Easy improvements]
+
+### Future Improvements
+[Post-MVP enhancements]
+```
+
+## Usage Examples
+
+- `/arch` - Review current changes
+- `/arch codebase` - Full architecture review
+- `/arch src/api` - Review API component
+- `/arch security` - Security-focused review
+"""

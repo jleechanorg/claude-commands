@@ -1,0 +1,83 @@
+# README - Gemini CLI Commands
+description = "Documentation for available Gemini CLI custom commands"
+
+prompt = """
+## Gemini CLI Commands for WorldArchitect.AI
+
+This directory contains custom slash commands for Gemini CLI.
+
+All Claude commands have TOML counterparts in this directory (matching
+their original filenames) so the complete Claude command catalog is
+available for Gemini. Previously curated Gemini prompts remain unchanged;
+newly added entries were auto-converted from the Claude markdown prompts to
+preserve their detailed workflows.
+
+## Available Commands
+
+### Development Workflow
+- `/test` - Intelligent test execution based on PR changes
+- `/push` - Full production-ready push workflow
+- `/pr` - Complete development lifecycle (Think → Execute → Push → Review)
+- `/tdd` - Test-driven development with matrix testing
+- `/coverage` - Test coverage analysis and gap identification
+
+### Code Quality
+- `/review` - Comprehensive code review with multi-pass security analysis
+- `/debug` - Systematic debugging with evidence collection
+- `/fake` - Detect fake, demo, or simulated code
+- `/arch` - Architecture review and design assessment
+
+### Planning & Research
+- `/plan` - Context-aware planning with approval workflow
+- `/research` - Multi-source research with academic rigor
+- `/think` - Sequential problem-solving with adjustable depth
+
+### PR Processing
+- `/copilot` - Fast PR processing with priority-based bug triage
+
+### Learning
+- `/learn` - Capture and document learnings
+
+## Command Format
+
+All commands use TOML format with:
+- `description` - Brief description shown in /help
+- `prompt` - The prompt template sent to Gemini
+
+## Argument Handling
+
+Commands support `{{input}}` placeholder for user input:
+```
+/think What's wrong with this code?
+/test --full
+/research microservices authentication
+```
+
+## Command Naming
+
+- File: `commands/test.toml` → Command: `/test`
+- Nested: `commands/git/commit.toml` → Command: `/git:commit`
+
+## Usage Examples
+
+```bash
+# Run tests for changed files
+/test
+
+# Deep thinking analysis
+/think deep What's the root cause?
+
+# Architecture review
+/arch codebase
+
+# Research a topic
+/research best practices for API design
+```
+
+## Adapted From Claude Commands
+
+These commands are adapted from `.claude/commands/` for Gemini CLI compatibility:
+- Converted from Markdown to TOML format
+- Replaced Claude-specific references with generic AI assistant language
+- Preserved core workflow logic and best practices
+"""

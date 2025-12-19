@@ -88,13 +88,14 @@ class TestHPUnknownValues(unittest.TestCase):
         assert health.hp_max == 10
 
     def test_hp_exceeds_max_after_conversion(self):
-        """Test validation still works after conversion"""
+        """Test validation clamps HP to MAX after conversion"""
 
-        # HP=5 exceeds converted hp_max=1, should raise ValidationError
-        with pytest.raises(ValidationError) as context:
-            HealthStatus(hp=5, hp_max="unknown")
-
-        assert "cannot exceed max HP" in str(context.value)
+        # HP=5 exceeds converted hp_max=1, should clamp to 1
+        health = HealthStatus(hp=5, hp_max="unknown")
+        
+        # Verify clamping behavior
+        assert health.hp_max == 1  # "unknown" -> 1
+        assert health.hp == 1      # 5 -> clamped to 1
 
     def test_negative_hp_values(self):
         """Test negative HP and HP_MAX values get converted by DefensiveNumericConverter"""

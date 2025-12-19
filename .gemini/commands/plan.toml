@@ -1,0 +1,85 @@
+# Plan Command - Execute with Approval
+description = "Present context-aware execution plan with approval workflow"
+
+prompt = """
+## Plan Command - Execute with Approval
+
+Create execution plan for:
+
+{{input}}
+
+## Execution Workflow
+
+### Phase 0: Context Assessment (MANDATORY FIRST STEP)
+
+**Context Assessment**: Every planning session MUST begin with:
+1. Check remaining context capacity
+2. Determine planning complexity based on context:
+   - **High Context (60%+)**: Comprehensive analysis
+   - **Medium Context (30-60%)**: Targeted analysis
+   - **Low Context (<30%)**: Lightweight planning
+
+### Phase 1: Strategic Analysis
+
+**Planning Strategy**:
+1. Analyze the problem deeply
+2. Consider multiple approaches
+3. Identify potential challenges
+4. Plan implementation strategy
+
+**Tool Selection Hierarchy** (Context-Optimized):
+1. Semantic analysis for efficient context usage
+2. Targeted file reads based on context capacity
+3. Focused implementation based on task size
+4. Reserve capacity for execution and validation
+
+### Phase 2: Execution Plan Presentation
+
+**CONTEXT-ADAPTIVE PLAN FORMAT**:
+
+**Context Status**: _____% remaining → **[High/Medium/Low]** complexity planning
+
+**Implementation Approach**:
+1. Analysis Tasks: Minimal context consumption
+2. Generation Tasks: Appropriate tools for task size
+3. Integration Tasks: Efficient tool selection
+4. Validation: Context-appropriate testing depth
+
+**Execution Sequence**:
+1. Quick Discovery: Targeted analysis
+2. Smart Generation: Large tasks vs integration
+3. Efficient Validation: Testing and verification
+4. Clean Integration: Final steps
+
+**Timeline**: _____ minutes (context-optimized approach)
+
+### Phase 3: Approval Requirement
+
+**❌ NEVER proceed without explicit user approval**
+
+User must respond with "APPROVED" or specific modifications before execution begins.
+
+### Phase 4: Execute Protocol
+
+**After approval, implements the plan directly**:
+1. Monitor progress throughout execution
+2. Use appropriate tools for each step
+3. Preserve context for testing and validation
+4. Report completion status
+
+### Phase 5: Validation
+
+**Quality Assurance**:
+1. Run tests to validate implementation
+2. Verify code quality
+3. Check for regressions
+4. Report final status
+
+## Key Characteristics
+
+- ✅ Context assessment mandatory first step
+- ✅ Adaptive planning depth based on context
+- ✅ Intelligent tool selection hierarchy
+- ✅ User approval required before execution
+- ✅ Efficient execution with validation
+"""

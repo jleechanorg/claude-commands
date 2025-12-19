@@ -1,0 +1,104 @@
+# Fake Code Detection Command
+description = "Detect fake, demo, or simulated code that isn't truly working"
+
+prompt = """
+## Fake Code Detection Command
+
+Analyze for fake code patterns in:
+
+{{input}}
+
+## Detection Targets
+
+### Speculation Patterns (9 patterns)
+- **Temporal Speculation**: "I'll wait for", "let me wait", "waiting for completion"
+- **State Assumptions**: "command is running", "system processing", "while executing"
+- **Outcome Predictions**: "should see", "will result", "expect to"
+- **Process Speculation**: "during process", "as it runs", "once complete"
+
+### Fake Code Patterns (12 patterns)
+- **Placeholder Code**: "TODO: implement", "FIXME", "dummy value", "placeholder"
+- **Non-functional Logic**: "return null # stub", "throw NotImplemented", debug code
+- **Template/Demo Code**: "Example implementation", "Sample code", "Basic template"
+- **Duplicate Logic**: "copy from", "similar to", "based on existing"
+- **Parallel Systems**: "create new instead", "replace existing with", "simpler version of"
+
+### Code Quality Indicators
+- **TODO/FIXME**: Unfinished implementation markers
+- **Hardcoded Values**: Non-configurable demo data
+- **Missing Error Handling**: Code that works only in perfect conditions
+- **Incomplete Integration**: Functions that don't connect to real systems
+- **Test-Only Logic**: Code that only works in test environments
+
+## Analysis Phases
+
+### Phase 1: Architecture Analysis
+1. Map current system architecture
+2. Identify integration boundaries
+3. Understand data flow and dependencies
+4. Analyze how changes fit into existing system
+
+### Phase 2: Deep Code Analysis
+1. Trace execution paths through code
+2. Verify each function performs its stated purpose
+3. Check error handling and edge cases
+4. Analyze resource usage and performance
+
+### Phase 3: Challenge Assumptions
+1. Question whether code actually works as claimed
+2. Look for scenarios where code would fail
+3. Challenge integration assumptions
+4. Verify all dependencies are available
+
+### Phase 4: Methodical Examination
+1. Line-by-line code review for fake patterns
+2. Verify all imports resolve to real modules
+3. Check configuration values point to real resources
+4. Validate test assertions match actual behavior
+
+## Detection Checklist
+
+**Code Functionality**:
+- [ ] All functions perform actual work (not mock data)
+- [ ] Error handling exists and works with real failures
+- [ ] External dependencies are real and accessible
+- [ ] Configuration values connect to actual services
+
+**Implementation Quality**:
+- [ ] No placeholder comments or TODOs in production
+- [ ] No hardcoded demo data as real functionality
+- [ ] No duplicate implementations of existing systems
+- [ ] No fake response generation using templates
+
+**System Integration**:
+- [ ] New code integrates with existing architecture
+- [ ] Database connections use real schemas
+- [ ] API calls reach actual endpoints
+- [ ] File operations work with real file systems
+
+## Output Format
+
+```
+🚨 FAKE CODE AUDIT RESULTS
+
+📊 Files Analyzed: X
+⚠️ Fake Patterns Found: Y
+✅ Verified Working Code: Z
+
+🔴 CRITICAL ISSUES:
+- [Fake implementations requiring immediate attention]
+
+🟡 SUSPICIOUS PATTERNS:
+- [Code showing speculation indicators]
+
+✅ VERIFIED FUNCTIONAL:
+- [Code confirmed to work correctly]
+```
+
+## Immediate Actions
+
+1. **Remove Fake Files**: Delete files with no functional purpose
+2. **Fix Placeholder Code**: Replace comments with implementations
+3. **Consolidate Duplicates**: Use existing systems
+4. **Verify Integration**: Test code works with real systems
+"""

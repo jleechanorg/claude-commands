@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import traceback
+import urllib.request
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -36,6 +37,33 @@ from .codex_config import (
     build_comment_intro,
 )
 from .utils import json_manager, setup_logging
+from orchestration.task_dispatcher import CLI_PROFILES
+
+
+def _parse_fixpr_agent_chain(value: str) -> str:
+    """Parse comma-separated CLI chain for --fixpr-agent (e.g., 'gemini,codex')."""
+    if not isinstance(value, str) or not value.strip():
+        raise argparse.ArgumentTypeError("--fixpr-agent must be a non-empty string")
+
+    parts = [part.strip().lower() for part in value.split(",")]
+    chain = [part for part in parts if part]
+    if not chain:
+        raise argparse.ArgumentTypeError("--fixpr-agent chain is empty")
+
+    invalid = [cli for cli in chain if cli not in CLI_PROFILES]
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            f"Invalid --fixpr-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
+        )
+
+    # De-duplicate while preserving order
+    seen = set()
+    ordered = []
+    for cli in chain:
+        if cli not in seen:
+            ordered.append(cli)
+            seen.add(cli)
+    return ",".join(ordered)
 
 
 class JleechanorgPRMonitor:
@@ -823,7 +851,6 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         owner, name = repo_full_name.split("/", 1)
 
         # Validate GitHub naming constraints (alphanumeric, hyphens, periods, underscores, max 100 chars)
-        import re
         github_name_pattern = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9\-\._]{0,98}[a-zA-Z0-9])?$")
         if not github_name_pattern.match(owner) or not github_name_pattern.match(name):
             self.logger.warning(
@@ -1300,6 +1327,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         self.logger.info(f"🏁 Monitoring cycle complete: {actionable_processed} actionable PRs processed, {skipped_count} skipped")
 
 
+def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
+    """
+    Validate that Chrome DevTools Protocol is accessible.
+
+    Args:
+        port: CDP port (default 9222)
+        host: CDP host (default 127.0.0.1)
+        timeout: Connection timeout in seconds
+
+    Returns:
+        tuple: (bool, str) - (success, message)
+    """
+    url = f"http://{host}:{port}/json/version"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            data = json.loads(response.read().decode())
+            browser_version = data.get("Browser", "Unknown")
+            return True, f"✅ Chrome CDP accessible (version: {browser_version})"
+    except urllib.error.URLError as e:
+        return False, f"❌ Chrome CDP not accessible at {host}:{port} - {e.reason}"
+    except Exception as e:
+        return False, f"❌ Failed to connect to Chrome CDP: {e}"
+
+
 def main():
     """CLI interface for jleechanorg PR monitor"""
 
@@ -1318,10 +1370,16 @@ def main():
                         help="Process specific PR number")
     parser.add_argument("--target-repo",
                         help="Repository for target PR (required with --target-pr)")
-    parser.add_argument("--fixpr-agent", choices=["claude", "codex", "gemini"], default="claude",
-                        help="AI CLI to use for --fixpr mode (default: claude)")
+    parser.add_argument(
+        "--fixpr-agent",
+        type=_parse_fixpr_agent_chain,
+        default="claude",
+        help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
+    )
     parser.add_argument("--list-eligible", action="store_true",
                         help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
+    parser.add_argument("--codex-update", action="store_true",
+                        help="Run Codex automation to update first 50 tasks via browser automation")
 
     args = parser.parse_args()
 
@@ -1332,6 +1390,38 @@ def main():
         parser.error("--target-pr is required when using --target-repo")
 
     monitor = JleechanorgPRMonitor()
+
+    if args.codex_update:
+        print("🤖 Running Codex automation (first 50 tasks)...")
+
+        # Validate Chrome CDP is accessible before running
+        cdp_ok, cdp_msg = check_chrome_cdp_accessible()
+        print(cdp_msg)
+        if not cdp_ok:
+            print("\n💡 TIP: Start Chrome with CDP enabled first:")
+            print("   ./automation/jleechanorg_pr_automation/openai_automation/start_chrome_debug.sh")
+            sys.exit(1)
+
+        try:
+            # Call the codex automation module with limit
+            # Use -m to run as module (works with installed package)
+            # Requires Chrome with CDP enabled on port 9222
+            result = subprocess.run(
+                ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--use-existing-browser", "--limit", "50"],
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minute timeout
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            sys.exit(result.returncode)
+        except subprocess.TimeoutExpired:
+            print("❌ Codex automation timed out after 10 minutes")
+            sys.exit(1)
+        except Exception as e:
+            print(f"❌ Failed to run Codex automation: {e}")
+            sys.exit(1)
 
     if args.fixpr:
         run_fixpr_batch(args.cutoff_hours, args.max_prs, agent_cli=args.fixpr_agent)

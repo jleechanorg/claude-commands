@@ -9,7 +9,7 @@ import re
 from typing import Any
 
 from mvp_site import logging_util
-from mvp_site.json_utils import unescape_json_string
+from mvp_site.json_utils import unescape_json_string, extract_nested_object
 
 # Debug tag patterns - same as in llm_response.py
 DEBUG_START_PATTERN = re.compile(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]")
@@ -22,6 +22,22 @@ STATE_UPDATES_PATTERN = re.compile(
 STATE_UPDATES_MALFORMED_PATTERN = re.compile(
     r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]"
 )
+
+# Markdown-formatted debug patterns (LLM sometimes outputs these in narrative)
+# Matches blocks like:
+#   ---
+#   **Dice Rolls**: []
+#   ---
+#   **State Updates**:
+#   - player_character_data.inventory...
+#   ---
+MARKDOWN_DEBUG_BLOCK_PATTERN = re.compile(
+    r"---\s*\n\*\*(?:Dice Rolls|State Updates|Planning Block)\*\*:.*?(?=\n---|\Z)",
+    re.DOTALL
+)
+# Inline debug_info JSON objects sometimes leak into narrative; we strip them
+# using bracket-aware extraction in strip_debug_content (regex alone breaks on nesting).
+MARKDOWN_DEBUG_INFO_PATTERN = re.compile(r'"debug_info"\s*:\s*\{')
 
 # JSON cleanup patterns - same as in narrative_response_schema.py
 NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
@@ -183,7 +199,7 @@ def clean_json_artifacts(text: str) -> str:
 
 def contains_debug_tags(text: str) -> bool:
     """
-    Check if text contains any legacy debug tags.
+    Check if text contains any legacy debug tags or markdown debug content.
 
     Args:
         text: Story text to check
@@ -194,12 +210,14 @@ def contains_debug_tags(text: str) -> bool:
     if not text:
         return False
 
-    # Check for any debug tag patterns
+    # Check for any debug tag patterns (including markdown format)
     patterns = [
         DEBUG_START_PATTERN,
         DEBUG_STATE_PATTERN,
         DEBUG_ROLL_PATTERN,
         STATE_UPDATES_PATTERN,
+        MARKDOWN_DEBUG_BLOCK_PATTERN,
+        MARKDOWN_DEBUG_INFO_PATTERN,
     ]
 
     return any(pattern.search(text) for pattern in patterns)
@@ -218,12 +236,64 @@ def strip_debug_content(text: str) -> str:
     if not text:
         return text
 
-    # Apply all debug stripping patterns
+    # Apply all debug stripping patterns (legacy tags)
     processed = DEBUG_START_PATTERN.sub("", text)
     processed = DEBUG_STATE_PATTERN.sub("", processed)
     processed = DEBUG_ROLL_PATTERN.sub("", processed)
     processed = STATE_UPDATES_PATTERN.sub("", processed)
-    return STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
+    processed = STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
+
+    # Strip markdown-formatted debug blocks
+    processed = MARKDOWN_DEBUG_BLOCK_PATTERN.sub("", processed)
+
+    # Remove any embedded "debug_info": {...} objects with bracket-aware parsing
+    # Bounded loop: avoid infinite loops even if the input is malformed.
+    for _ in range(50):
+        match = MARKDOWN_DEBUG_INFO_PATTERN.search(processed)
+        if not match:
+            break
+
+        debug_obj = extract_nested_object(processed, "debug_info")
+        if not debug_obj:
+            # If extraction fails, remove the marker to ensure forward progress.
+            processed = processed[: match.start()] + processed[match.end() :]
+            continue
+
+        # Bug fix: Search from match.start() not match.end() - object starts at quote before "debug_info"
+        obj_pos = processed.find(debug_obj, match.start())
+        if obj_pos == -1:
+            # Unexpected mismatch; remove marker to ensure forward progress.
+            processed = processed[: match.start()] + processed[match.end() :]
+            continue
+
+        removal_start = match.start()
+        removal_end = obj_pos + len(debug_obj)
+
+        # If the debug_info appears as a JSON field, prefer removing an adjacent comma
+        # to avoid leaving ", ," style artifacts in partially-JSON text.
+        prefix = processed[:removal_start].rstrip()
+        if prefix.endswith(","):
+            # Bug fix: Limit comma search to last 50 chars to avoid matching commas in nested structures
+            search_start = max(0, len(prefix) - 50)
+            local_comma_pos = prefix.rfind(",", search_start)
+            if local_comma_pos != -1:
+                removal_start = local_comma_pos
+
+        suffix = processed[removal_end:]
+        suffix_l = suffix.lstrip()
+        if suffix_l.startswith(","):
+            # Remove the comma that followed the object.
+            removal_end += (len(suffix) - len(suffix_l)) + 1
+
+        processed = processed[:removal_start] + processed[removal_end:]
+
+    # Clean up leftover --- separators (may be left orphaned after stripping)
+    processed = re.sub(r"(?:^|\n)---\s*(?:\n---\s*)*(?:\n|$)", "\n", processed)
+
+    # Clean up excessive newlines left after stripping
+    processed = re.sub(r"\n{3,}", "\n\n", processed)
+
+    return processed.strip()
 
 
 def strip_state_updates_only(text: str) -> str:

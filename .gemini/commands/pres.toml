@@ -1,0 +1,5 @@
+description = "/pres"
+
+prompt = """
+Execute `/presentation` with all provided arguments.
+"""
