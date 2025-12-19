@@ -16,6 +16,8 @@ import json
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from mvp_site.json_utils import extract_json_boundaries
+
 # =============================================================================
 # NARRATIVE_RESPONSE_SCHEMA - JSON schema for structured LLM outputs
 # =============================================================================
@@ -410,9 +412,22 @@ def run_json_first_tool_requests_flow(
 
     try:
         response_data: dict[str, Any] = json.loads(response_text) if response_text else {}
+        phase1_text_for_history = response_text
     except json.JSONDecodeError:
-        logger.warning("Phase 1 response not valid JSON, returning as-is")
-        return response_1
+        extracted = extract_json_boundaries(response_text) if response_text else None
+        if extracted and extracted != response_text:
+            try:
+                response_data = json.loads(extracted)
+                phase1_text_for_history = extracted
+                logger.info(
+                    "Phase 1 response was not pure JSON; extracted JSON boundaries successfully"
+                )
+            except json.JSONDecodeError:
+                logger.warning("Phase 1 response not valid JSON (even after extraction), returning as-is")
+                return response_1
+        else:
+            logger.warning("Phase 1 response not valid JSON, returning as-is")
+            return response_1
 
     tool_requests = response_data.get(tool_requests_key, [])
     if not tool_requests:
@@ -438,7 +453,7 @@ def run_json_first_tool_requests_flow(
     tool_results_prompt = build_tool_results_prompt(tool_results_text)
     history = build_history_fn(
         prompt_contents=prompt_contents,
-        phase1_text=response_text,
+        phase1_text=phase1_text_for_history,
         tool_results_prompt=tool_results_prompt,
     )
 

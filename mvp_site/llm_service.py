@@ -3015,18 +3015,21 @@ def _check_missing_required_fields(
     mode: str,
     is_god_mode: bool = False,
     is_dm_mode: bool = False,
+    require_dice_rolls: bool = False,
 ) -> list[str]:
     """Check if required fields are missing from the structured response.
 
     Required fields for story mode (character mode, not god/dm mode):
     - planning_block: Must be a dict with 'thinking' or 'choices' content
     - session_header: Must be a non-empty string
+    - dice_rolls: Must be non-empty when required
 
     Args:
         structured_response: The parsed NarrativeResponse object
         mode: Current game mode
         is_god_mode: Whether this is a god mode command
         is_dm_mode: Whether the response is in DM mode
+        require_dice_rolls: Whether dice_rolls is required for this turn
 
     Returns:
         List of missing field names (empty if all required fields present)
@@ -3061,7 +3064,59 @@ def _check_missing_required_fields(
     if not session_header or not str(session_header).strip():
         missing.append("session_header")
 
+    if require_dice_rolls:
+        dice_rolls = getattr(structured_response, 'dice_rolls', None)
+        has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+        if not has_dice_rolls:
+            missing.append('dice_rolls')
+
     return missing
+
+def _should_require_dice_rolls_for_turn(
+    *,
+    current_game_state: GameState | None,
+    user_input: str,
+    mode: str,
+    is_god_mode: bool,
+    is_dm_mode: bool,
+) -> bool:
+    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
+        return False
+
+    if not current_game_state or not current_game_state.combat_state.get("in_combat", False):
+        return False
+
+    text = (user_input or "").strip().lower()
+    if not text or text.startswith("/"):
+        return False
+
+    combat_action_keywords = (
+        "attack",
+        "shoot",
+        "strike",
+        "stab",
+        "slash",
+        "swing",
+        "hit",
+        "cast",
+        "spell",
+        "fireball",
+        "roll",
+        "save",
+        "saving throw",
+        "skill",
+        "check",
+        "initiative",
+        "grapple",
+        "shove",
+        "dodge",
+        "dash",
+        "disengage",
+        "help",
+    )
+
+    return any(k in text for k in combat_action_keywords)
+
 
 
 def _build_reprompt_for_missing_fields(
@@ -3078,12 +3133,25 @@ def _build_reprompt_for_missing_fields(
         Reprompt message asking for the missing fields
     """
     fields_str = " and ".join(missing_fields)
+
+    requested_lines: list[str] = []
+    if "planning_block" in missing_fields:
+        requested_lines.append(
+            "- planning_block: An object with 'thinking' (your GM reasoning) and 'choices' (2-4 player options, each with 'text', 'description', 'risk_level')"
+        )
+    if "session_header" in missing_fields:
+        requested_lines.append(
+            "- session_header: A brief session context string (e.g., 'Session 3: The Quest Continues')"
+        )
+    if "dice_rolls" in missing_fields:
+        requested_lines.append(
+            "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
+        )
+
+    requested_block = '\n'.join(requested_lines)
     return (
         f"Your response is missing the required {fields_str} field(s). "
-        f"Please provide the complete JSON response including:\n"
-        f"- planning_block: An object with 'thinking' (your GM reasoning) and 'choices' "
-        f"(2-4 player options, each with 'text', 'description', 'risk_level')\n"
-        f"- session_header: A brief session context string (e.g., 'Session 3: The Quest Continues')\n\n"
+        f"Please provide the complete JSON response including:\n{requested_block}\n\n"
         f"Keep the narrative and other fields from your previous response. "
         f"Here is your previous response for reference:\n{original_response_text[:2000]}"
     )
@@ -3577,11 +3645,19 @@ def continue_story(
     is_dm_mode_initial = (
         "[Mode: DM MODE]" in narrative_text or "[Mode: GOD MODE]" in narrative_text
     )
+    require_dice_rolls = _should_require_dice_rolls_for_turn(
+        current_game_state=current_game_state,
+        user_input=user_input,
+        mode=mode,
+        is_god_mode=is_god_mode_command,
+        is_dm_mode=is_dm_mode_initial,
+    )
     missing_fields = _check_missing_required_fields(
         structured_response,
         mode,
         is_god_mode=is_god_mode_command,
         is_dm_mode=is_dm_mode_initial,
+        require_dice_rolls=require_dice_rolls,
     )
 
     if missing_fields and MAX_MISSING_FIELD_REPROMPT_ATTEMPTS > 0:
@@ -3618,6 +3694,7 @@ def continue_story(
                 mode,
                 is_god_mode=is_god_mode_command,
                 is_dm_mode=is_dm_mode_initial,
+                require_dice_rolls=require_dice_rolls,
             )
 
             if len(reprompt_missing) < len(missing_fields):
