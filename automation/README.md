@@ -4,12 +4,13 @@
 
 ## Overview
 
-This automation system provides two core workflows:
+This automation system provides three core workflows:
 
 1. **@codex Comment Agent** - Monitors PRs and posts intelligent automation comments
 2. **FixPR Workflow** - Autonomously fixes merge conflicts and failing CI checks
+3. **Codex GitHub Mentions** - Processes OpenAI Codex tasks via browser automation
 
-Both workflows use safety limits, commit tracking, and orchestrated AI agents to process PRs reliably.
+All workflows use safety limits, commit tracking, and orchestrated AI agents to process PRs reliably.
 
 ---
 
@@ -21,7 +22,7 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 
 ### How It Works
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  1. DISCOVERY PHASE                                         │
 │  ───────────────────────────────────────────────────────────│
@@ -301,6 +302,220 @@ python3 -m orchestrated_pr_runner
 
 ---
 
+## 🤝 Workflow 3: Codex GitHub Mentions Automation
+
+### What It Does
+
+The Codex GitHub Mentions automation processes "GitHub Mention:" tasks from OpenAI's Codex interface via browser automation. When GitHub issues or PRs are mentioned in Codex conversations, they appear as actionable tasks that require manual approval to update the branch. This workflow automates clicking the "Update branch" button for each task.
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. AUTHENTICATION                                          │
+│  ───────────────────────────────────────────────────────────│
+│  • Connect to existing Chrome via CDP (port 9222)           │
+│  • Load saved auth state from Storage State API             │
+│  • Skip login if cookies/localStorage already exist         │
+│  • Auth persisted to ~/.chatgpt_codex_auth_state.json       │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  2. TASK DISCOVERY                                          │
+│  ───────────────────────────────────────────────────────────│
+│  • Navigate to https://chatgpt.com/codex/tasks              │
+│  • Find all task links matching "GitHub Mention:"           │
+│  • Collect task URLs and metadata                           │
+│  • Filter to first N tasks (default: 50)                    │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  3. TASK PROCESSING                                         │
+│  ───────────────────────────────────────────────────────────│
+│  • Navigate to each task page                               │
+│  • Wait for page to fully load                              │
+│  • Search for "Update branch" button                        │
+│  • Click button if present                                  │
+│  • Log success/failure for each task                        │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  4. STATE PERSISTENCE                                       │
+│  ───────────────────────────────────────────────────────────│
+│  • Save cookies and localStorage to auth state file         │
+│  • Auth persists across runs (no manual login required)     │
+│  • Browser context reusable for future runs                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Tech Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Browser Automation** | Playwright (Python) | Controls Chrome via CDP |
+| **CDP Connection** | Chrome DevTools Protocol | Connects to existing browser on port 9222 |
+| **Auth Persistence** | Storage State API | Saves/restores cookies and localStorage |
+| **Cloudflare Bypass** | Existing browser session | Avoids rate limiting by appearing as normal user |
+| **Task Selection** | CSS selector `a:has-text("GitHub Mention:")` | Finds GitHub PR tasks |
+| **Scheduling** | cron | Runs every hour at :15 past the hour |
+
+### Usage
+
+#### Prerequisites
+
+**Start Chrome with remote debugging:**
+```bash
+# Kill existing Chrome instances
+killall "Google Chrome" 2>/dev/null
+
+# Start Chrome with CDP enabled (custom profile to avoid conflicts)
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/.chrome-cdp-debug" \
+  > /dev/null 2>&1 &
+
+# Verify CDP is accessible
+curl -s http://localhost:9222/json/version | python3 -m json.tool
+
+# IMPORTANT: Log in to chatgpt.com manually in the Chrome window
+# The automation will save your auth state for future runs
+```
+
+#### CLI Commands
+
+```bash
+# Run automation (connects to existing Chrome on port 9222)
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+  --use-existing-browser \
+  --cdp-port 9222 \
+  --limit 50
+
+# Debug mode with verbose logging
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+  --use-existing-browser \
+  --cdp-port 9222 \
+  --limit 50 \
+  --debug
+
+# Process only first 10 tasks
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+  --use-existing-browser \
+  --cdp-port 9222 \
+  --limit 10
+```
+
+#### Cron Job Integration
+
+The automation runs automatically via cron every hour at :15 past the hour (offset from PR monitor):
+
+```bash
+# Cron entry (installed via install_jleechanorg_automation.sh)
+15 * * * * jleechanorg-pr-monitor --codex-update >> \
+  $HOME/Library/Logs/worldarchitect-automation/codex_automation.log 2>&1
+```
+
+**Note:** The `--codex-update` flag internally calls:
+```bash
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions --limit 50
+```
+
+#### Slash Command Integration
+
+```bash
+# From Claude Code (manual run)
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+  --use-existing-browser --cdp-port 9222 --limit 50
+```
+
+### Configuration
+
+```bash
+# Required: Chrome with remote debugging on port 9222
+# (See "Prerequisites" section above)
+
+# Optional: Customize task limit
+export CODEX_TASK_LIMIT=50  # Default: 50
+
+# Optional: Auth state file location
+# Default: ~/.chatgpt_codex_auth_state.json
+```
+
+### Key Features
+
+- ✅ **CDP-based automation** - Connects to existing Chrome to bypass Cloudflare
+- ✅ **Persistent authentication** - Storage State API saves cookies/localStorage
+- ✅ **No manual login** - Auth state persists across runs
+- ✅ **Cloudflare bypass** - Appears as normal user browsing, not a bot
+- ✅ **Configurable limits** - Process 1-N tasks per run
+- ✅ **Robust task detection** - Handles dynamic page loading
+
+### Troubleshooting
+
+**Issue**: Cloudflare rate limiting (0 tasks found)
+```bash
+# Solution: Use existing browser via CDP instead of launching new instances
+# The CDP approach connects to your logged-in Chrome session, avoiding detection
+
+# Verify Chrome is running with CDP enabled
+curl -s http://localhost:9222/json/version
+
+# Expected output:
+# {
+#   "Browser": "Chrome/131.0.6778.265",
+#   "Protocol-Version": "1.3",
+#   "webSocketDebuggerUrl": "ws://localhost:9222/..."
+# }
+```
+
+**Issue**: Auth state not persisting
+```bash
+# Check auth state file exists
+ls -lh ~/.chatgpt_codex_auth_state.json
+
+# Expected: ~5-6KB JSON file
+# If missing: Log in manually to chatgpt.com in the CDP Chrome window
+# The script will save auth state on first successful run
+```
+
+**Issue**: "Update branch" button not found
+```bash
+# Run with debug logging
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+  --use-existing-browser \
+  --cdp-port 9222 \
+  --debug
+
+# Check if tasks are actually "GitHub Mention:" type
+# Only GitHub PR tasks have "Update branch" buttons
+```
+
+**Issue**: Chrome CDP connection fails
+```bash
+# Verify Chrome is running with correct flags
+ps aux | grep "remote-debugging-port=9222"
+
+# If not running, start Chrome with CDP:
+killall "Google Chrome" 2>/dev/null
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/.chrome-cdp-debug" &
+```
+
+**Issue**: Cron job failing with "unrecognized arguments: --codex-update"
+```bash
+# This happens when installed PyPI package is older than source code
+# Temporary solution: Run manually from source until PR merges and package updates
+
+# Reinstall from source
+cd automation
+pip install -e .
+
+# Verify flag exists
+jleechanorg-pr-monitor --help | grep codex-update
+```
+
+---
+
 ## Installation
 
 ### From PyPI
@@ -314,6 +529,12 @@ pip install jleechanorg-pr-automation[email]
 
 # For development
 pip install jleechanorg-pr-automation[dev]
+```
+
+**Playwright browser install (required):**
+
+```bash
+python -m playwright install
 ```
 
 ### From Source (Development)
@@ -339,6 +560,37 @@ launchctl list | grep jleechanorg
 # View logs
 tail -f ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
 ```
+
+### Crontab Management
+
+Use the `restore_crontab.sh` script to manage cron jobs for all three automation workflows:
+
+```bash
+# Dry run (preview what will be restored)
+cd automation
+./restore_crontab.sh --dry-run
+
+# Interactive restore (prompts for confirmation)
+./restore_crontab.sh
+
+# Force restore (no prompts)
+./restore_crontab.sh --force
+
+# View current crontab
+crontab -l
+
+# Restore from backup (if needed)
+crontab ~/.crontab_backup_YYYYMMDD_HHMMSS
+```
+
+**Standard Cron Jobs:**
+
+| Schedule | Command | Purpose |
+|----------|---------|---------|
+| Every hour (`:00`) | `jleechanorg-pr-monitor` | Workflow 1: Post @codex comments |
+| Every hour (`:15`) | `jleechanorg-pr-monitor --codex-update` | Workflow 3: Process Codex tasks |
+| Every 30 minutes | `jleechanorg-pr-monitor --fixpr` | Workflow 2: Fix PRs autonomously |
+| Every 4 hours | `claude_backup_cron.sh` | Backup Claude conversations |
 
 ---
 
@@ -388,14 +640,15 @@ automation-safety-cli check-pr 123 --repo worldarchitect.ai
 
 ## Architecture Comparison
 
-| Feature | @codex Comment Agent | FixPR Workflow |
-|---------|---------------------|----------------|
-| **Trigger** | New commits on open PRs | Merge conflicts or failing checks |
-| **Action** | Posts instruction comment | Autonomously fixes code |
-| **Execution** | Quick (API calls only) | Long-running (agent in tmux) |
-| **Workspace** | None (comment-only) | Isolated git worktree |
-| **AI CLI** | N/A (GitHub API) | Claude/Codex/Gemini |
-| **Output** | GitHub PR comment | Code commits + JSON report |
+| Feature | @codex Comment Agent | FixPR Workflow | Codex GitHub Mentions |
+|---------|---------------------|----------------|----------------------|
+| **Trigger** | New commits on open PRs | Merge conflicts or failing checks | Codex tasks queue |
+| **Action** | Posts instruction comment | Autonomously fixes code | Clicks "Update branch" buttons |
+| **Execution** | Quick (API calls only) | Long-running (agent in tmux) | Medium (browser automation) |
+| **Workspace** | None (comment-only) | Isolated git worktree | Chrome CDP session |
+| **AI CLI** | N/A (GitHub API) | Claude/Codex/Gemini | N/A (Playwright) |
+| **Output** | GitHub PR comment | Code commits + JSON report | Browser button clicks |
+| **Schedule** | Every hour | Every 30 minutes | Every hour at :15 |
 
 ---
 

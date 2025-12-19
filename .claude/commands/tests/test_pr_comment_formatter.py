@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'sc
 commands_dir = os.path.join(os.path.dirname(__file__), '..')
 sys.path.insert(0, commands_dir)
 
-from pr_comment_formatter import (
+from pr_comment_formatter import (  # noqa: E402
     CommentStatus,
     CopilotComment,
     PRCommentFormatter,
