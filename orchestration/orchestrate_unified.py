@@ -270,6 +270,8 @@ class UnifiedOrchestration:
             }
 
             if options:
+                if options.get("agent_cli"):
+                    agent_spec["cli"] = options["agent_cli"]
                 if options.get("branch"):
                     agent_spec["existing_branch"] = options["branch"]
                 if options.get("pr") is not None:
@@ -346,6 +348,8 @@ class UnifiedOrchestration:
         # Display optional arguments if provided
         if any(options.values()):
             print("📋 OPTIONS:")
+            if options.get("agent_cli"):
+                print(f"  └─ Agent CLI: {options['agent_cli']}")
             if options.get("context"):
                 print(f"  └─ Context File: {options['context']}")
             if options.get("branch"):
@@ -366,6 +370,7 @@ class UnifiedOrchestration:
                 "orchestration_options",
                 extra={
                     "session_id": session_id,
+                    "agent_cli": options.get("agent_cli"),
                     "context": options.get("context"),
                     "branch": options.get("branch"),
                     "pr": options.get("pr"),
@@ -443,6 +448,8 @@ class UnifiedOrchestration:
 
         for i, agent_spec in enumerate(agents):
             # Inject orchestration options into agent spec
+            if options.get("agent_cli"):
+                agent_spec["cli"] = options["agent_cli"]
             if options.get("branch"):
                 agent_spec["existing_branch"] = options["branch"]
             if options.get("pr"):
@@ -680,6 +687,14 @@ The orchestration system will:
         "--no-new-branch", action="store_true", help="Hard block on branch creation (agents must use existing branch)"
     )
 
+    # CLI selection
+    parser.add_argument(
+        "--agent-cli",
+        type=str,
+        default="gemini",
+        help="Agent CLI to use: claude, codex, gemini, cursor. Supports comma-separated chain for fallback (e.g., 'gemini,claude'). Default: gemini",
+    )
+
     args = parser.parse_args()
 
     # Validate task description
@@ -700,6 +715,8 @@ The orchestration system will:
         "validate": args.validate,
         "no_new_pr": args.no_new_pr,
         "no_new_branch": args.no_new_branch,
+        # Note: CLI flag is --agent-cli; argparse exposes it as args.agent_cli.
+        "agent_cli": args.agent_cli,
     }
 
     orchestration = UnifiedOrchestration()
