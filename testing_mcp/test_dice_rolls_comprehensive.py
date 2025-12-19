@@ -1,390 +1,293 @@
 #!/usr/bin/env python3
-"""Comprehensive dice roll tests for all LLM providers.
+"""Comprehensive dice roll tests against an MCP server (local or preview).
 
-Tests native two-phase tool calling across:
-- Cerebras (GLM-4.6, Qwen-3)
-- OpenRouter (Llama 3.1)
-- Gemini (2.0-flash native, 3-pro code_execution)
+These tests exercise the system THROUGH MCP (`/mcp`) and do not import provider
+SDKs or call provider endpoints directly.
 
-Run with:
-    cd testing_mcp && python test_dice_rolls_comprehensive.py
+- No API keys are required in the *test runner*.
+- The target server (preview or your local MCP server) must have its own provider
+  API keys configured if it will perform real inferences.
 
-Or test specific provider:
-    python test_dice_rolls_comprehensive.py --provider cerebras
-    python test_dice_rolls_comprehensive.py --provider gemini
-    python test_dice_rolls_comprehensive.py --provider openrouter
+Run (local MCP already running):
+    cd testing_mcp
+    python test_dice_rolls_comprehensive.py --server-url http://127.0.0.1:8001
+
+Run (start local MCP automatically; requires `gcloud` access to Secret Manager):
+    cd testing_mcp
+    python test_dice_rolls_comprehensive.py --start-local
 """
+
+from __future__ import annotations
 
 import argparse
 import json
 import os
+import socket
+import subprocess
 import sys
+import time
+from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
-# Add project to path
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+
+from mcp_client import MCPClient
+
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+EVIDENCE_DIR = Path(__file__).parent / "evidence" / "mcp_dice_rolls"
 
-# CRITICAL: Set TESTING=false to use real APIs
-os.environ["TESTING"] = "false"
 
-from mvp_site import constants
-from mvp_site.llm_providers import cerebras_provider, gemini_provider, openrouter_provider
-
-EVIDENCE_DIR = Path(__file__).parent / "evidence" / "dice_rolls"
-
-# Test scenarios for comprehensive dice roll validation
-TEST_SCENARIOS = {
-    "combat_attack": {
+TEST_SCENARIOS: list[dict[str, Any]] = [
+    {
         "name": "Combat Attack Roll",
-        "prompt": """You are a D&D 5e Game Master. The player character Aric the Fighter (STR 16, +5 attack bonus) attacks a goblin (AC 15) with his longsword.
-
-Player action: "I attack the goblin with my longsword!"
-
-You MUST use the roll_attack tool to roll the attack and damage. The longsword does 1d8+3 damage.
-Respond in JSON with: narrative, dice_rolls (array of roll results), entities_mentioned.""",
-        "expected_tool": "roll_attack",
-        "system": "You are a D&D 5e Game Master. ALWAYS use dice rolling tools for combat.",
+        "user_input": "I attack the goblin with my longsword. Resolve the attack and damage.",
+        "expect_substrings": ["d20"],
+        "min_dice_rolls": 2,
     },
-    "skill_check": {
-        "name": "Skill Check Roll",
-        "prompt": """You are a D&D 5e Game Master. The player character Lyra the Rogue (DEX 18, +7 Stealth) is trying to sneak past sleeping guards.
-
-Player action: "I try to sneak past the guards without waking them."
-
-You MUST use the roll_skill_check tool to make a Stealth check. The DC is 15.
-Respond in JSON with: narrative, dice_rolls (array of roll results), entities_mentioned.""",
-        "expected_tool": "roll_skill_check",
-        "system": "You are a D&D 5e Game Master. ALWAYS use dice rolling tools for skill checks.",
+    {
+        "name": "Skill Check (Stealth)",
+        "user_input": "I try to sneak past the guards. Make a Stealth check.",
+        "expect_substrings": ["d20"],
+        "min_dice_rolls": 1,
     },
-    "saving_throw": {
-        "name": "Saving Throw Roll",
-        "prompt": """You are a D&D 5e Game Master. A dragon breathes fire on the player character Theron the Paladin (CON 14, +2 save bonus). Theron must make a DC 18 Constitution saving throw to take half damage.
-
-Player action: "I brace myself against the dragon fire!"
-
-You MUST use the roll_saving_throw tool to make the Constitution save. The DC is 18.
-Respond in JSON with: narrative, dice_rolls (array of roll results), entities_mentioned.""",
-        "expected_tool": "roll_saving_throw",
-        "system": "You are a D&D 5e Game Master. ALWAYS use dice rolling tools for saving throws.",
+    {
+        "name": "Saving Throw (CON)",
+        "user_input": "I brace myself against dragon fire. Make a Constitution saving throw.",
+        "expect_substrings": ["d20"],
+        "min_dice_rolls": 1,
     },
-    "generic_dice": {
-        "name": "Generic Dice Roll",
-        "prompt": """You are a D&D 5e Game Master. The party is determining initiative order for combat.
-
-Player action: "I roll for initiative!"
-
-You MUST use the roll_dice tool to roll 1d20+2 for initiative.
-Respond in JSON with: narrative, dice_rolls (array of roll results), entities_mentioned.""",
-        "expected_tool": "roll_dice",
-        "system": "You are a D&D 5e Game Master. ALWAYS use dice rolling tools.",
-    },
-}
-
-# Provider configurations
-PROVIDERS = {
-    "cerebras": {
-        "models": ["zai-glm-4.6", "qwen-3-235b-a22b-instruct-2507"],
-        "strategy": "native_two_phase",
-        "test_fn": "test_cerebras",
-    },
-    "openrouter": {
-        "models": ["meta-llama/llama-3.1-70b-instruct"],
-        "strategy": "native_two_phase",
-        "test_fn": "test_openrouter",
-    },
-    "gemini": {
-        "models": ["gemini-2.0-flash", "gemini-3-pro-preview"],
-        "strategy": "mixed",  # 2.0 uses native_two_phase, 3.0 uses code_execution
-        "test_fn": "test_gemini",
-    },
-}
+]
 
 
-def ensure_evidence_dirs():
-    """Create evidence directories."""
-    for provider in PROVIDERS:
-        (EVIDENCE_DIR / provider).mkdir(parents=True, exist_ok=True)
+@dataclass
+class LocalServer:
+    proc: subprocess.Popen[bytes]
+    base_url: str
+    log_path: Path
+
+    def stop(self) -> None:
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
 
 
-def validate_dice_rolls(response_text: str, expected_tool: str) -> dict:
-    """Validate that response contains proper dice roll results."""
-    result = {
-        "has_dice_rolls": False,
-        "dice_count": 0,
-        "dice_rolls": [],
-        "validation_errors": [],
-    }
+def _which(name: str) -> str | None:
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = Path(d) / name
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
 
-    # Try to parse as JSON
+
+def _pick_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+def _load_secret(env: dict[str, str], *, secret_name: str, env_var: str) -> None:
+    if env.get(env_var):
+        return
+    if not _which("gcloud"):
+        return
+
+    project = env.get("GCP_PROJECT") or env.get("GOOGLE_CLOUD_PROJECT") or "worldarchitecture-ai"
     try:
-        data = json.loads(response_text)
-        dice_rolls = data.get("dice_rolls", [])
-        if dice_rolls:
-            result["has_dice_rolls"] = True
-            result["dice_count"] = len(dice_rolls)
-            result["dice_rolls"] = dice_rolls
-    except json.JSONDecodeError:
-        # Check for dice notation in raw text
-        import re
-
-        dice_pattern = r"\d+d\d+(\+\d+)?\s*=\s*\d+"
-        matches = re.findall(dice_pattern, response_text, re.IGNORECASE)
-        if matches:
-            result["has_dice_rolls"] = True
-            result["dice_count"] = len(matches)
-
-    # Validation checks
-    if not result["has_dice_rolls"]:
-        result["validation_errors"].append("No dice rolls found in response")
-
-    if result["dice_count"] == 0:
-        result["validation_errors"].append("dice_rolls array is empty")
-
-    return result
+        value = subprocess.check_output(
+            [
+                "gcloud",
+                "secrets",
+                "versions",
+                "access",
+                "latest",
+                "--secret",
+                secret_name,
+                "--project",
+                project,
+            ],
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8").strip()
+        if value:
+            env[env_var] = value
+    except Exception:
+        return
 
 
-def test_cerebras(model_name: str, scenario: dict) -> dict:
-    """Test Cerebras model with native_two_phase strategy."""
-    print(f"\n  Testing {model_name} - {scenario['name']}...")
+def start_local_mcp_server(port: int) -> LocalServer:
+    """Start an HTTP-only MCP server with mock Firestore (no Firebase creds)."""
+    python_bin = PROJECT_ROOT / "venv" / "bin" / "python"
+    if not python_bin.exists():
+        python_bin = Path(sys.executable)
 
-    try:
-        response = cerebras_provider.generate_content_with_native_tools(
-            prompt_contents=[scenario["prompt"]],
-            model_name=model_name,
-            system_instruction_text=scenario["system"],
-            temperature=0.7,
-            max_output_tokens=4000,
-        )
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(PROJECT_ROOT)
 
-        text = response.text if hasattr(response, "text") else str(response)
-        validation = validate_dice_rolls(text, scenario["expected_tool"])
+    # Use in-memory Firestore for local tests so we don't need Firebase creds.
+    env["MOCK_SERVICES_MODE"] = "true"
+    env["TESTING"] = "false"
+    env.pop("PRODUCTION_MODE", None)
 
-        return {
-            "success": validation["has_dice_rolls"],
-            "model": model_name,
-            "scenario": scenario["name"],
-            "strategy": "native_two_phase",
-            "response_text": text,
-            "validation": validation,
-            "timestamp": datetime.now().isoformat(),
-        }
+    # Some environments set WORLDAI_GOOGLE_APPLICATION_CREDENTIALS globally.
+    # When present, the app requires an explicit dev-mode acknowledgement.
+    if env.get("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS") and not env.get("WORLDAI_DEV_MODE"):
+        env["WORLDAI_DEV_MODE"] = "true"
 
-    except Exception as e:
-        return {
-            "success": False,
-            "model": model_name,
-            "scenario": scenario["name"],
-            "strategy": "native_two_phase",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat(),
-        }
+    # Load provider keys from Secret Manager if possible.
+    _load_secret(env, secret_name="gemini-api-key", env_var="GEMINI_API_KEY")
+    _load_secret(env, secret_name="cerebras-api-key", env_var="CEREBRAS_API_KEY")
+    _load_secret(env, secret_name="openrouter-api-key", env_var="OPENROUTER_API_KEY")
 
+    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = EVIDENCE_DIR / f"local_mcp_{port}.log"
+    log_f = open(log_path, "wb")  # noqa: SIM115
 
-def test_openrouter(model_name: str, scenario: dict) -> dict:
-    """Test OpenRouter model with native_two_phase strategy."""
-    print(f"\n  Testing {model_name} - {scenario['name']}...")
-
-    try:
-        response = openrouter_provider.generate_content_with_native_tools(
-            prompt_contents=[scenario["prompt"]],
-            model_name=model_name,
-            system_instruction_text=scenario["system"],
-            temperature=0.7,
-            max_output_tokens=4000,
-        )
-
-        text = response.text if hasattr(response, "text") else str(response)
-        validation = validate_dice_rolls(text, scenario["expected_tool"])
-
-        return {
-            "success": validation["has_dice_rolls"],
-            "model": model_name,
-            "scenario": scenario["name"],
-            "strategy": "native_two_phase",
-            "response_text": text,
-            "validation": validation,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "model": model_name,
-            "scenario": scenario["name"],
-            "strategy": "native_two_phase",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat(),
-        }
-
-
-def test_gemini(model_name: str, scenario: dict) -> dict:
-    """Test Gemini model with appropriate strategy."""
-    print(f"\n  Testing {model_name} - {scenario['name']}...")
-
-    # Gemini 3 uses code_execution, Gemini 2 uses native_two_phase
-    use_code_execution = model_name in constants.MODELS_WITH_CODE_EXECUTION
-
-    try:
-        if use_code_execution:
-            response = gemini_provider.generate_content_with_code_execution(
-                prompt_contents=[scenario["prompt"]],
-                model_name=model_name,
-                system_instruction_text=scenario["system"],
-                temperature=0.7,
-                safety_settings=[],
-                json_mode_max_output_tokens=4000,
-            )
-            strategy = "code_execution"
-        else:
-            response = gemini_provider.generate_content_with_native_tools(
-                prompt_contents=[scenario["prompt"]],
-                model_name=model_name,
-                system_instruction_text=scenario["system"],
-                temperature=0.7,
-                safety_settings=[],
-                json_mode_max_output_tokens=4000,
-            )
-            strategy = "native_two_phase"
-
-        # Extract text from Gemini response
-        text = ""
-        if hasattr(response, "text"):
-            text = response.text
-        elif hasattr(response, "candidates") and response.candidates:
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, "text"):
-                    text += part.text
-
-        validation = validate_dice_rolls(text, scenario["expected_tool"])
-
-        return {
-            "success": validation["has_dice_rolls"],
-            "model": model_name,
-            "scenario": scenario["name"],
-            "strategy": strategy,
-            "response_text": text,
-            "validation": validation,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "model": model_name,
-            "scenario": scenario["name"],
-            "strategy": "code_execution" if use_code_execution else "native_two_phase",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat(),
-        }
-
-
-def run_provider_tests(provider_name: str, scenarios: list[str] | None = None) -> dict:
-    """Run all tests for a specific provider."""
-    provider = PROVIDERS[provider_name]
-    test_fn = globals()[provider["test_fn"]]
-
-    results = {"provider": provider_name, "models": {}, "summary": {"passed": 0, "failed": 0}}
-
-    scenarios_to_run = scenarios or list(TEST_SCENARIOS.keys())
-
-    for model_name in provider["models"]:
-        print(f"\n{'=' * 60}")
-        print(f"Testing {provider_name.upper()} - {model_name}")
-        print("=" * 60)
-
-        model_results = []
-        for scenario_key in scenarios_to_run:
-            scenario = TEST_SCENARIOS[scenario_key]
-            result = test_fn(model_name, scenario)
-            model_results.append(result)
-
-            # Save individual evidence
-            safe_model = model_name.replace("/", "_").replace(":", "_")
-            evidence_file = EVIDENCE_DIR / provider_name / f"{safe_model}_{scenario_key}.json"
-            with open(evidence_file, "w") as f:
-                json.dump(result, f, indent=2)
-
-            if result["success"]:
-                results["summary"]["passed"] += 1
-                print(f"    ✅ PASS: {scenario['name']}")
-            else:
-                results["summary"]["failed"] += 1
-                error = result.get("error", result.get("validation", {}).get("validation_errors", []))
-                print(f"    ❌ FAIL: {scenario['name']} - {error}")
-
-        results["models"][model_name] = model_results
-
-    return results
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Comprehensive dice roll tests")
-    parser.add_argument(
-        "--provider",
-        choices=list(PROVIDERS.keys()) + ["all"],
-        default="all",
-        help="Provider to test (default: all)",
+    proc = subprocess.Popen(
+        [
+            str(python_bin),
+            "-m",
+            "mvp_site.mcp_api",
+            "--http-only",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        ],
+        cwd=str(PROJECT_ROOT),
+        env=env,
+        stdout=log_f,
+        stderr=subprocess.STDOUT,
     )
-    parser.add_argument(
-        "--scenario",
-        choices=list(TEST_SCENARIOS.keys()),
-        action="append",
-        help="Specific scenario to test (can be repeated)",
+
+    return LocalServer(proc=proc, base_url=f"http://127.0.0.1:{port}", log_path=log_path)
+
+
+def create_campaign(client: MCPClient, user_id: str) -> str:
+    payload = client.tools_call(
+        "create_campaign",
+        {
+            "user_id": user_id,
+            "title": "MCP Dice Test Campaign",
+            "character": "Aric the Fighter (STR 16)",
+            "setting": "A roadside ambush outside Phandalin",
+            "description": "Test campaign for dice roll validation",
+        },
     )
+    campaign_id = payload.get("campaign_id") or payload.get("campaignId")
+    if not isinstance(campaign_id, str) or not campaign_id:
+        raise RuntimeError(f"create_campaign returned unexpected payload: {payload}")
+    return campaign_id
+
+
+def process_action(client: MCPClient, *, user_id: str, campaign_id: str, user_input: str) -> dict[str, Any]:
+    return client.tools_call(
+        "process_action",
+        {"user_id": user_id, "campaign_id": campaign_id, "user_input": user_input, "mode": "character"},
+    )
+
+
+def validate_result(result: dict[str, Any], scenario: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+
+    if result.get("error"):
+        errors.append(f"server returned error: {result['error']}")
+        return errors
+
+    dice_rolls = result.get("dice_rolls") or []
+    if not isinstance(dice_rolls, list):
+        return [f"dice_rolls not a list: {type(dice_rolls)}"]
+
+    min_dice = int(scenario.get("min_dice_rolls", 1))
+    if len(dice_rolls) < min_dice:
+        errors.append(f"expected >= {min_dice} dice_rolls, got {len(dice_rolls)}")
+
+    joined = "\n".join(str(x) for x in dice_rolls)
+    for s in scenario.get("expect_substrings", []):
+        if s not in joined:
+            errors.append(f"expected dice_rolls to contain '{s}'")
+
+    return errors
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="MCP dice roll tests (no direct provider calls)")
+    parser.add_argument(
+        "--server-url",
+        default=os.environ.get("MCP_SERVER_URL") or "http://127.0.0.1:8001",
+        help="Base server URL (with or without /mcp)",
+    )
+    parser.add_argument("--start-local", action="store_true", help="Start local MCP server automatically")
+    parser.add_argument("--port", type=int, default=0, help="Port for --start-local (0 = random free port)")
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("Comprehensive Dice Roll Tests - Real API")
-    print("=" * 60)
-    print(f"Started: {datetime.now().isoformat()}")
-    print(f"Evidence directory: {EVIDENCE_DIR}")
+    local: LocalServer | None = None
+    base_url = str(args.server_url)
 
-    ensure_evidence_dirs()
+    try:
+        if args.start_local:
+            port = int(args.port) if int(args.port) > 0 else _pick_free_port()
+            local = start_local_mcp_server(port)
+            base_url = local.base_url
 
-    all_results = {}
-    total_passed = 0
-    total_failed = 0
+        client = MCPClient(base_url, timeout_s=180.0)
+        client.wait_healthy(timeout_s=45.0)
 
-    providers_to_test = list(PROVIDERS.keys()) if args.provider == "all" else [args.provider]
+        tools = client.tools_list()
+        tool_names = {t.get("name") for t in tools if isinstance(t, dict)}
+        for required in ("create_campaign", "process_action"):
+            if required not in tool_names:
+                raise RuntimeError(f"tools/list missing required tool {required}: {sorted(tool_names)}")
 
-    for provider_name in providers_to_test:
-        results = run_provider_tests(provider_name, args.scenario)
-        all_results[provider_name] = results
-        total_passed += results["summary"]["passed"]
-        total_failed += results["summary"]["failed"]
+        user_id = f"mcp-dice-tests-{int(time.time())}"
+        campaign_id = create_campaign(client, user_id)
 
-    # Summary
-    print("\n" + "=" * 60)
-    print("FINAL SUMMARY")
-    print("=" * 60)
+        EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+        session_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        session_file = EVIDENCE_DIR / f"run_{session_stamp}.json"
 
-    for provider_name, results in all_results.items():
-        passed = results["summary"]["passed"]
-        failed = results["summary"]["failed"]
-        total = passed + failed
-        icon = "✅" if failed == 0 else "❌"
-        print(f"  {icon} {provider_name.upper()}: {passed}/{total} passed")
+        run_summary: dict[str, Any] = {"server": base_url, "campaign_id": campaign_id, "scenarios": []}
 
-    print(f"\nTotal: {total_passed}/{total_passed + total_failed} passed")
+        ok = True
+        for scenario in TEST_SCENARIOS:
+            result = process_action(
+                client,
+                user_id=user_id,
+                campaign_id=campaign_id,
+                user_input=str(scenario["user_input"]),
+            )
+            errors = validate_result(result, scenario)
+            run_summary["scenarios"].append(
+                {
+                    "name": scenario["name"],
+                    "user_input": scenario["user_input"],
+                    "dice_rolls": result.get("dice_rolls"),
+                    "errors": errors,
+                }
+            )
 
-    # Save overall summary
-    summary = {
-        "timestamp": datetime.now().isoformat(),
-        "results": all_results,
-        "total_passed": total_passed,
-        "total_failed": total_failed,
-    }
-    summary_file = EVIDENCE_DIR / "comprehensive_summary.json"
-    with open(summary_file, "w") as f:
-        json.dump(summary, f, indent=2)
+            if errors:
+                ok = False
+                print(f"❌ {scenario['name']}: {errors}")
+            else:
+                dice_count = len(result.get("dice_rolls") or [])
+                print(f"✅ {scenario['name']}: {dice_count} dice roll(s)")
 
-    print(f"\nEvidence saved to: {EVIDENCE_DIR}/")
-    return total_failed == 0
+        session_file.write_text(json.dumps(run_summary, indent=2))
+        print(f"Evidence: {session_file}")
+
+        if local is not None:
+            print(f"Local MCP log: {local.log_path}")
+
+        return 0 if ok else 2
+    finally:
+        if local is not None:
+            local.stop()
 
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    raise SystemExit(main())

@@ -1,59 +1,45 @@
-# Testing MCP - Real API Tests
+# Testing MCP - Server-Level Tests
 
-This directory contains real API tests that run against actual LLM providers.
+This directory contains **server-level** tests that hit a running WorldArchitect MCP server over HTTP (`/mcp`).
 
-**These tests are NOT run in CI** - they require API keys and make real API calls.
+These tests **do not** call Gemini/Cerebras/OpenRouter APIs directly.
 
-## Running Tests
+## What this means
+
+- The **test runner** does **not** require provider API keys.
+- The **target MCP server** (deploy preview or your local MCP server) is responsible for having provider keys configured if it needs to run real inferences.
+
+## Quick start
+
+### Run against a deploy preview
 
 ```bash
-# Set required API keys
-export GEMINI_API_KEY="..."
-export CEREBRAS_API_KEY="..."
-export OPENROUTER_API_KEY="..."
-
-# Run native tools smoke test
+export MCP_SERVER_URL=https://mvp-site-app-<pool>-<hash>-uc.a.run.app
 cd testing_mcp
 python test_native_tools_real_api.py
+python test_dice_rolls_comprehensive.py
+```
+
+### Run locally
+
+If you already have a local MCP server running:
+
+```bash
+cd testing_mcp
+python test_native_tools_real_api.py --server-url http://127.0.0.1:8001
+python test_dice_rolls_comprehensive.py --server-url http://127.0.0.1:8001
+```
+
+Or start a local MCP server automatically (loads LLM keys via `gcloud` Secret Manager if available):
+
+```bash
+cd testing_mcp
+python test_dice_rolls_comprehensive.py --start-local
 ```
 
 ## Evidence
 
-Test results and evidence are saved to the `evidence/` directory:
-- `evidence/gemini/` - Gemini model results
-- `evidence/cerebras/` - Cerebras model results
-- `evidence/openrouter/` - OpenRouter model results
-- `evidence/summary.json` - Overall test summary
+Results are saved under:
 
-## Test Coverage
+- `testing_mcp/evidence/mcp_dice_rolls/`
 
-### Native Two-Phase Tool Calling
-Tests that dice rolling tools work correctly with each provider:
-
-| Model | Strategy | Status | Last Verified |
-|-------|----------|--------|---------------|
-| gemini-3-pro-preview | code_execution | ✅ PASS | 2025-12-16 |
-| gemini-2.0-flash | native_two_phase | ✅ PASS | 2025-12-16 |
-| zai-glm-4.6 | native_two_phase | ✅ PASS | 2025-12-16 |
-| qwen-3-235b-a22b-instruct-2507 | native_two_phase | ✅ PASS | 2025-12-16 |
-| meta-llama/llama-3.1-70b-instruct | native_two_phase | ✅ PASS | 2025-12-16 |
-
-### Test Scripts
-
-1. **test_native_tools_real_api.py** - Basic smoke test for all providers
-2. **test_dice_rolls_comprehensive.py** - Comprehensive dice roll tests with multiple scenarios:
-   - Combat attack rolls (roll_attack)
-   - Skill check rolls (roll_skill_check)
-   - Saving throw rolls (roll_saving_throw)
-   - Generic dice rolls (roll_dice)
-
-## API Limitations Discovered
-
-### Gemini 2.x
-- `code_execution + JSON mode` = **BROKEN**
-- Error: "controlled generation is not supported with Code Execution tool"
-- Solution: Use `native_two_phase` strategy
-
-### Gemini 3
-- `code_execution + JSON mode` = **WORKS**
-- Can use single-phase approach with code_execution for dice rolls
