@@ -181,12 +181,6 @@ ALLOWED_CEREBRAS_MODELS = [
     # Source: https://inference-docs.cerebras.ai/capabilities/tool-use
     "llama-3.3-70b",
 
-    # llama-3.1-8b: 128K context, native function calling, built-in tools
-    # (brave_search, wolfram_alpha, code_interpreter). Cheapest option at
-    # $0.10/$0.10 per M tokens. Same capabilities as larger Llama 3.1 models.
-    # Source: https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct
-    "llama-3.1-8b",
-
     # gpt-oss-120b: 131K context, full function calling support, tool use,
     # structured outputs. TauBench tested for tool calling. Runs at 3K tokens/sec
     # on Cerebras infrastructure. Budget reasoning model at $0.35/$0.75 per M.
@@ -216,7 +210,6 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 131_072,
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
-    "llama-3.1-8b": 131_072,  # 128K context window per official Llama 3.1 specs
 }
 
 # Provider/model-specific max output tokens (conservative to avoid API 400s)
@@ -244,7 +237,6 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
-    "llama-3.1-8b": 32_000,  # Cerebras allows longer completions than OpenRouter
 }
 
 # Debug mode settings
