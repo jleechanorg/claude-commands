@@ -163,6 +163,26 @@ class _InMemoryFirestoreClient:
         doc_id = parts[-1] if parts else "unknown"
         return _InMemoryFirestoreDocument(doc_id)
 
+    def reset(self) -> None:
+        """Reset all collections (useful for testing)."""
+        self._collections.clear()
+
+
+# Singleton instance for MOCK_SERVICES_MODE to persist state across tool calls
+_mock_client_singleton: _InMemoryFirestoreClient | None = None
+
+
+def reset_mock_firestore() -> None:
+    """Reset the mock Firestore singleton (useful for testing).
+
+    This clears all data from the in-memory Firestore client and resets
+    the singleton instance. Should only be called in test environments.
+    """
+    global _mock_client_singleton
+    if _mock_client_singleton is not None:
+        _mock_client_singleton.reset()
+        logging_util.info("Mock Firestore singleton reset")
+
 
 def _mock_firestore_client() -> _InMemoryFirestoreClient:
     """Return an in-memory Firestore replacement for tests."""
@@ -558,13 +578,23 @@ def get_db() -> firestore.Client:
 
     Tests should patch this helper rather than relying on in-module mocks so that
     production code paths always exercise the real Firestore SDK.
+
+    In MOCK_SERVICES_MODE, returns a singleton in-memory client to persist state
+    across tool calls within the same MCP server session.
     """
+    global _mock_client_singleton
 
     if os.getenv("MOCK_SERVICES_MODE", "").lower() == "true":
-        logging_util.info(
-            "MOCK_SERVICES_MODE enabled - using in-memory Firestore client"
-        )
-        return _InMemoryFirestoreClient()
+        if _mock_client_singleton is None:
+            logging_util.info(
+                "MOCK_SERVICES_MODE enabled - creating singleton in-memory Firestore client"
+            )
+            _mock_client_singleton = _InMemoryFirestoreClient()
+        else:
+            logging_util.info(
+                "MOCK_SERVICES_MODE enabled - reusing singleton in-memory Firestore client"
+            )
+        return _mock_client_singleton
 
     try:
         firebase_admin.get_app()
