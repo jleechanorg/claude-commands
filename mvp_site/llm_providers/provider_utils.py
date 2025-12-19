@@ -18,6 +18,30 @@ from typing import Any, Protocol
 
 from mvp_site.json_utils import extract_json_boundaries
 
+
+def _attach_tool_execution_metadata(
+    response: Any,
+    executed: bool,
+    tool_results: list[dict] | None = None,
+) -> Any:
+    """Attach tool execution metadata to a response object.
+
+    This metadata is used by downstream validation to verify dice integrity.
+
+    Args:
+        response: The response object to attach metadata to
+        executed: Whether tool_requests were executed
+        tool_results: The results from tool execution (if any)
+
+    Returns:
+        The same response object with metadata attached
+    """
+    if hasattr(response, "__dict__"):
+        response._tool_requests_executed = executed
+        response._tool_results = tool_results or []
+    return response
+
+
 # =============================================================================
 # NARRATIVE_RESPONSE_SCHEMA - JSON schema for structured LLM outputs
 # =============================================================================
@@ -426,10 +450,10 @@ def run_json_first_tool_requests_flow(
                 )
             except json.JSONDecodeError:
                 logger.warning("Phase 1 response not valid JSON (even after extraction), returning as-is")
-                return response_1
+                return _attach_tool_execution_metadata(response_1, executed=False)
         else:
             logger.warning("Phase 1 response not valid JSON, returning as-is")
-            return response_1
+            return _attach_tool_execution_metadata(response_1, executed=False)
 
     tool_requests = response_data.get(tool_requests_key, [])
     if not tool_requests:
@@ -439,17 +463,17 @@ def run_json_first_tool_requests_flow(
             else no_tool_requests_log_msg
         )
         logger.info(msg)
-        return response_1
+        return _attach_tool_execution_metadata(response_1, executed=False)
 
     if not isinstance(tool_requests, list):
         logger.warning("tool_requests is not a list, returning Phase 1 result")
-        return response_1
+        return _attach_tool_execution_metadata(response_1, executed=False)
 
     logger.info(f"Executing {len(tool_requests)} tool request(s)")
     tool_results = execute_tool_requests_fn(tool_requests)
     if not tool_results:
         logger.warning("No valid tool results, returning Phase 1 result")
-        return response_1
+        return _attach_tool_execution_metadata(response_1, executed=False)
 
     tool_results_text = format_tool_results_text_fn(tool_results)
     tool_results_prompt = build_tool_results_prompt(tool_results_text)
@@ -476,7 +500,7 @@ def run_json_first_tool_requests_flow(
         try:
             response2_data = json.loads(candidate2) if candidate2 else {}
         except json.JSONDecodeError:
-            return response_2
+            return _attach_tool_execution_metadata(response_2, executed=True, tool_results=tool_results)
 
         dice_rolls = response2_data.get("dice_rolls")
         has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
@@ -494,9 +518,10 @@ def run_json_first_tool_requests_flow(
                 phase1_text=phase1_text_for_history,
                 tool_results_prompt=tool_results_prompt_retry,
             )
-            return phase2_generate_fn(history_retry)
+            retry_response = phase2_generate_fn(history_retry)
+            return _attach_tool_execution_metadata(retry_response, executed=True, tool_results=tool_results)
 
-    return response_2
+    return _attach_tool_execution_metadata(response_2, executed=True, tool_results=tool_results)
 
 
 def run_openai_native_two_phase_flow(
@@ -542,7 +567,7 @@ def run_openai_native_two_phase_flow(
                 }
             )
 
-        return generate_content_fn(
+        phase2_response = generate_content_fn(
             prompt_contents=[],
             model_name=model_name,
             system_instruction_text=None,
@@ -551,6 +576,7 @@ def run_openai_native_two_phase_flow(
             tools=None,
             messages=phase2_messages if getattr(response1, "text", "") else base_messages,
         )
+        return _attach_tool_execution_metadata(phase2_response, executed=False)
 
     logger.info(f"NATIVE Phase 1: Executing {len(tool_calls)} tool call(s)")
     tool_results = execute_openai_tool_calls(
@@ -560,7 +586,7 @@ def run_openai_native_two_phase_flow(
     )
     if not tool_results:
         logger.warning("NATIVE: No valid tool results, making JSON-only call")
-        return generate_content_fn(
+        no_tools_response = generate_content_fn(
             prompt_contents=prompt_contents,
             model_name=model_name,
             system_instruction_text=system_instruction_text,
@@ -568,6 +594,7 @@ def run_openai_native_two_phase_flow(
             max_output_tokens=max_output_tokens,
             tools=None,
         )
+        return _attach_tool_execution_metadata(no_tools_response, executed=False)
 
     phase2_messages: list[dict[str, Any]] = list(base_messages)
     phase2_messages.append(
@@ -597,7 +624,7 @@ def run_openai_native_two_phase_flow(
     )
 
     logger.info("NATIVE Phase 2: JSON call with tool results")
-    return generate_content_fn(
+    final_response = generate_content_fn(
         prompt_contents=[],
         model_name=model_name,
         system_instruction_text=None,
@@ -606,6 +633,7 @@ def run_openai_native_two_phase_flow(
         tools=None,
         messages=phase2_messages,
     )
+    return _attach_tool_execution_metadata(final_response, executed=True, tool_results=tool_results)
 
 
 class ContextTooLargeError(ValueError):

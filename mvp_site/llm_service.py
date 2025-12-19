@@ -3016,6 +3016,7 @@ def _check_missing_required_fields(
     is_god_mode: bool = False,
     is_dm_mode: bool = False,
     require_dice_rolls: bool = False,
+    dice_integrity_violation: bool = False,
 ) -> list[str]:
     """Check if required fields are missing from the structured response.
 
@@ -3023,6 +3024,7 @@ def _check_missing_required_fields(
     - planning_block: Must be a dict with 'thinking' or 'choices' content
     - session_header: Must be a non-empty string
     - dice_rolls: Must be non-empty when required
+    - dice_integrity: Not a field, but a validation flag for fabricated dice
 
     Args:
         structured_response: The parsed NarrativeResponse object
@@ -3030,6 +3032,7 @@ def _check_missing_required_fields(
         is_god_mode: Whether this is a god mode command
         is_dm_mode: Whether the response is in DM mode
         require_dice_rolls: Whether dice_rolls is required for this turn
+        dice_integrity_violation: Whether dice integrity check failed (fabricated dice)
 
     Returns:
         List of missing field names (empty if all required fields present)
@@ -3069,6 +3072,10 @@ def _check_missing_required_fields(
         has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
         if not has_dice_rolls:
             missing.append('dice_rolls')
+
+    # Check for dice integrity violation (fabricated dice rolls)
+    if dice_integrity_violation:
+        missing.append('dice_integrity')
 
     return missing
 
@@ -3118,6 +3125,287 @@ def _should_require_dice_rolls_for_turn(
     return any(k in text for k in combat_action_keywords)
 
 
+# Combat keywords shared between user input and narrative detection
+COMBAT_ACTION_KEYWORDS = (
+    "attack",
+    "shoot",
+    "strike",
+    "stab",
+    "slash",
+    "swing",
+    "hit",
+    "cast",
+    "spell",
+    "fireball",
+    "roll",
+    "save",
+    "saving throw",
+    "skill",
+    "check",
+    "initiative",
+    "grapple",
+    "shove",
+    "dodge",
+    "dash",
+    "disengage",
+    "help",
+)
+
+# Past tense markers that indicate historical combat (not active)
+_PAST_TENSE_MARKERS = (
+    "died",
+    "killed",
+    "defeated",
+    "was attacked",
+    "were attacked",
+    "had attacked",
+    "was hit",
+    "were hit",
+    "had hit",
+    "was struck",
+    "were struck",
+    "had struck",
+    "previously",
+    "last session",
+    "earlier",
+    "before",
+    "remembered",
+    "recalled",
+)
+
+# Hypothetical markers that indicate potential (not actual) combat
+_HYPOTHETICAL_MARKERS = (
+    "could attack",
+    "could strike",
+    "could hit",
+    "might attack",
+    "might strike",
+    "might hit",
+    "would attack",
+    "would strike",
+    "would hit",
+    "if you attack",
+    "if you strike",
+    "if you hit",
+    "you could",
+    "you might",
+    "you would",
+    "want to attack",
+    "plan to attack",
+    "decide to attack",
+)
+
+# Active combat indicators (present tense, immediate action)
+_ACTIVE_COMBAT_PATTERNS = (
+    "attacks you",
+    "strikes at",
+    "swings at",
+    "shoots at",
+    "casts at",
+    "hits you",
+    "damage to",
+    "takes damage",
+    "deals damage",
+    "dealing damage",
+    "roll to hit",
+    "rolls to hit",
+    "attack roll",
+    "makes an attack",
+    "roll for initiative",
+    "rolls initiative",
+    "d20",
+    "1d20",
+    "2d6",
+    "1d8",
+    "1d6",
+)
+
+
+def _detect_combat_in_narrative(narrative_text: str) -> bool:
+    """Detect ACTIVE combat in LLM-generated narrative text.
+
+    This function distinguishes:
+    - ACTIVE combat: "The goblin attacks you" -> True
+    - PAST combat: "The goblin died last session" -> False
+    - HYPOTHETICAL: "You could attack the goblin" -> False
+
+    Args:
+        narrative_text: The LLM-generated narrative response
+
+    Returns:
+        True if active combat is detected in the narrative
+    """
+    if not narrative_text:
+        return False
+
+    text = narrative_text.lower()
+
+    # Check for past tense markers - if found, check if combat keywords are
+    # only in past tense context (harder to determine, so be conservative)
+    has_past_marker = any(marker in text for marker in _PAST_TENSE_MARKERS)
+
+    # Check for hypothetical markers
+    has_hypothetical_marker = any(marker in text for marker in _HYPOTHETICAL_MARKERS)
+
+    # Check for active combat patterns (strong indicators)
+    has_active_pattern = any(pattern in text for pattern in _ACTIVE_COMBAT_PATTERNS)
+
+    # If we have strong active patterns AND no hypothetical context, it's combat
+    if has_active_pattern and not has_hypothetical_marker:
+        return True
+
+    # Check for combat keywords
+    has_combat_keyword = any(keyword in text for keyword in COMBAT_ACTION_KEYWORDS)
+
+    # If combat keyword but ONLY in past/hypothetical context, not active combat
+    if has_combat_keyword:
+        # If we have hypothetical markers, assume it's not real combat
+        if has_hypothetical_marker:
+            return False
+        # If we have past markers but no active patterns, assume it's historical
+        if has_past_marker and not has_active_pattern:
+            return False
+        # Otherwise, treat as active combat
+        return True
+
+    return False
+
+
+def _check_dice_integrity(
+    *,
+    structured_response: NarrativeResponse | None,
+    api_response: Any,
+) -> tuple[bool, str]:
+    """Check if dice_rolls in response came from legitimate tool execution.
+
+    Args:
+        structured_response: Parsed response with dice_rolls field
+        api_response: Raw API response object with tool execution metadata
+
+    Returns:
+        Tuple of (is_valid, reason_if_invalid)
+
+    Validation Rules:
+        1. If dice_rolls is empty/None -> (True, "") - no dice claimed
+        2. If dice_rolls non-empty AND tool execution evidence -> (True, "")
+        3. If dice_rolls non-empty AND no tool execution evidence -> (False, reason)
+    """
+    # No structured response means nothing to validate
+    if not structured_response:
+        return True, ""
+
+    # Get dice_rolls from the response
+    dice_rolls = getattr(structured_response, "dice_rolls", None) or []
+    if not dice_rolls:
+        return True, ""
+
+    # Check if dice_rolls has actual content (not just empty strings)
+    has_real_dice = any(str(roll).strip() for roll in dice_rolls)
+    if not has_real_dice:
+        return True, ""
+
+    # Check tool execution metadata from the API response
+    tool_requests_executed = getattr(api_response, "_tool_requests_executed", None)
+
+    # If metadata is missing, we can't verify - be permissive for backward compatibility
+    if tool_requests_executed is None:
+        logging_util.debug(
+            "DICE_INTEGRITY: No _tool_requests_executed metadata on response, "
+            "skipping integrity check for backward compatibility"
+        )
+        return True, ""
+
+    # If tools were executed, dice_rolls are legitimate
+    if tool_requests_executed:
+        return True, ""
+
+    # dice_rolls present but no tools executed - fabrication detected
+    return False, (
+        f"Response contains dice_rolls ({len(dice_rolls)} entries) but no tool_requests were executed. "
+        "Dice rolls must come from tool execution, not fabrication."
+    )
+
+
+def _validate_combat_dice_integrity(
+    *,
+    user_input: str,
+    narrative_text: str,
+    structured_response: NarrativeResponse | None,
+    current_game_state: GameState | None,
+    api_response: Any,
+    mode: str,
+    is_god_mode: bool,
+    is_dm_mode: bool,
+) -> tuple[bool, str | None]:
+    """Validate dice integrity when combat is detected.
+
+    This is the "strictest mode" enforcement that checks for combat in BOTH:
+    - User input (e.g., "I attack the goblin")
+    - Response narrative (e.g., "The goblin attacks you")
+
+    If combat is detected but dice_rolls are present without tool execution,
+    this indicates the model fabricated dice results.
+
+    Args:
+        user_input: Original user input
+        narrative_text: LLM-generated narrative
+        structured_response: Parsed response
+        current_game_state: Current game state
+        api_response: Raw API response with tool metadata
+        mode: Game mode (character, story, etc.)
+        is_god_mode: Whether god mode is active
+        is_dm_mode: Whether DM mode is active
+
+    Returns:
+        Tuple of (is_valid, reprompt_reason_if_invalid)
+    """
+    # Skip validation for god mode and DM mode
+    if is_god_mode or is_dm_mode:
+        return True, None
+
+    # Skip validation for non-character modes
+    if mode != constants.MODE_CHARACTER:
+        return True, None
+
+    # Detect combat in user input (using existing logic)
+    user_text = (user_input or "").strip().lower()
+    user_has_combat = any(k in user_text for k in COMBAT_ACTION_KEYWORDS) if user_text else False
+
+    # Detect combat in narrative (new logic)
+    narrative_has_combat = _detect_combat_in_narrative(narrative_text)
+
+    # If no combat detected anywhere, no validation needed
+    if not user_has_combat and not narrative_has_combat:
+        return True, None
+
+    # Combat detected - check dice integrity
+    is_valid, reason = _check_dice_integrity(
+        structured_response=structured_response,
+        api_response=api_response,
+    )
+
+    if is_valid:
+        return True, None
+
+    # Log the violation
+    combat_source = []
+    if user_has_combat:
+        combat_source.append("user_input")
+    if narrative_has_combat:
+        combat_source.append("narrative")
+
+    logging_util.warning(
+        f"DICE_INTEGRITY_VIOLATION: Combat detected in {', '.join(combat_source)} "
+        f"but dice_rolls were not from tool execution. Reason: {reason}"
+    )
+
+    return False, (
+        "DICE INTEGRITY VIOLATION: Your response includes dice results but you did not use "
+        "tool_requests to roll them. In combat, you MUST use tool_requests (roll_dice, roll_attack, etc.) "
+        "to generate dice rolls. Do NOT fabricate dice results. "
+        "Regenerate your response using tool_requests for all dice rolls."
+    )
+
 
 def _build_reprompt_for_missing_fields(
     original_response_text: str,
@@ -3146,6 +3434,13 @@ def _build_reprompt_for_missing_fields(
     if "dice_rolls" in missing_fields:
         requested_lines.append(
             "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
+        )
+    if "dice_integrity" in missing_fields:
+        requested_lines.append(
+            "- DICE INTEGRITY: Your response includes dice_rolls but you did not use "
+            "tool_requests to roll them. In combat, you MUST use tool_requests "
+            "(roll_dice, roll_attack, roll_skill_check, roll_saving_throw) to generate dice rolls. "
+            "Do NOT fabricate dice results. Regenerate using tool_requests for all dice."
         )
 
     requested_block = '\n'.join(requested_lines)
@@ -3652,12 +3947,28 @@ def continue_story(
         is_god_mode=is_god_mode_command,
         is_dm_mode=is_dm_mode_initial,
     )
+
+    # COMBAT DICE INTEGRITY VALIDATION (strictest mode)
+    # Detect combat in BOTH user input AND narrative, validate tool execution
+    dice_integrity_valid, dice_integrity_reason = _validate_combat_dice_integrity(
+        user_input=user_input,
+        narrative_text=narrative_text,
+        structured_response=structured_response,
+        current_game_state=current_game_state,
+        api_response=api_response,
+        mode=mode,
+        is_god_mode=is_god_mode_command,
+        is_dm_mode=is_dm_mode_initial,
+    )
+    dice_integrity_violation = not dice_integrity_valid
+
     missing_fields = _check_missing_required_fields(
         structured_response,
         mode,
         is_god_mode=is_god_mode_command,
         is_dm_mode=is_dm_mode_initial,
         require_dice_rolls=require_dice_rolls,
+        dice_integrity_violation=dice_integrity_violation,
     )
 
     if missing_fields and MAX_MISSING_FIELD_REPROMPT_ATTEMPTS > 0:
@@ -3688,6 +3999,19 @@ def continue_story(
             reprompt_text = _get_text_from_response(reprompt_response)
             reprompt_narrative, reprompt_structured = parse_structured_response(reprompt_text)
 
+            # Validate dice integrity for reprompt response
+            reprompt_dice_valid, _ = _validate_combat_dice_integrity(
+                user_input=user_input,
+                narrative_text=reprompt_narrative,
+                structured_response=reprompt_structured,
+                current_game_state=current_game_state,
+                api_response=reprompt_response,
+                mode=mode,
+                is_god_mode=is_god_mode_command,
+                is_dm_mode=is_dm_mode_initial,
+            )
+            reprompt_dice_violation = not reprompt_dice_valid
+
             # Check if reprompt was successful
             reprompt_missing = _check_missing_required_fields(
                 reprompt_structured,
@@ -3695,6 +4019,7 @@ def continue_story(
                 is_god_mode=is_god_mode_command,
                 is_dm_mode=is_dm_mode_initial,
                 require_dice_rolls=require_dice_rolls,
+                dice_integrity_violation=reprompt_dice_violation,
             )
 
             if len(reprompt_missing) < len(missing_fields):
