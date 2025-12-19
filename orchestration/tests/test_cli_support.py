@@ -469,8 +469,8 @@ class TestGeminiCliIntegration(unittest.TestCase):
         except KeyError as e:
             self.fail(f"Command template has unknown placeholder: {e}")
 
-    def test_gemini_cli_priority_over_claude_when_explicit(self):
-        """Integration: Explicit --agent-cli gemini overrides default Claude."""
+    def test_claude_cli_priority_over_gemini_when_explicit(self):
+        """Integration: Explicit --agent-cli claude overrides default Gemini."""
         # Mock both CLIs as available
         with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
 
@@ -479,15 +479,15 @@ class TestGeminiCliIntegration(unittest.TestCase):
 
             mock_which.side_effect = which_side_effect
 
-            # Without explicit flag, would default to claude
+            # Without explicit flag, now defaults to gemini
             task_without_flag = "Fix the authentication bug"
             specs_without = self.dispatcher.analyze_task_and_create_agents(task_without_flag)
-            self.assertEqual(specs_without[0]["cli"], "claude")
+            self.assertEqual(specs_without[0]["cli"], "gemini")
 
-            # With explicit flag, should use gemini
-            task_with_flag = "Fix the authentication bug --agent-cli gemini"
+            # With explicit flag, should use claude
+            task_with_flag = "Fix the authentication bug --agent-cli claude"
             specs_with = self.dispatcher.analyze_task_and_create_agents(task_with_flag)
-            self.assertEqual(specs_with[0]["cli"], "gemini")
+            self.assertEqual(specs_with[0]["cli"], "claude")
 
     def test_gemini_detection_case_insensitive(self):
         """Integration: Gemini detection works regardless of case."""
