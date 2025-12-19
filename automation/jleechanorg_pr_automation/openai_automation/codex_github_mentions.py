@@ -22,8 +22,6 @@ Usage:
 import argparse
 import asyncio
 import logging
-import sys
-import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -243,13 +241,10 @@ class CodexGitHubMentionsAutomation:
                     logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
                 return result
 
-            except Exception:
-                print("⚠️  Could not determine login status")
+            except Exception as login_error:
+                print(f"⚠️  Could not determine login status: {login_error}")
                 print("   Assuming you're logged in and continuing...")
                 return True
-            except Exception as login_error:
-                print(f"⚠️  Unexpected login detection error: {login_error}")
-                return False
         except Exception as user_menu_error:
             print(f"⚠️  Unexpected login check error: {user_menu_error}")
             return False

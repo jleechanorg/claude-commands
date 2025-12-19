@@ -1348,6 +1348,8 @@ def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
             return True, f"✅ Chrome CDP accessible (version: {browser_version})"
     except urllib.error.URLError as e:
         return False, f"❌ Chrome CDP not accessible at {host}:{port} - {e.reason}"
+    except (TimeoutError, ConnectionError, OSError) as e:
+        return False, f"❌ Network error connecting to Chrome CDP: {e}"
     except Exception as e:
         return False, f"❌ Failed to connect to Chrome CDP: {e}"
 
