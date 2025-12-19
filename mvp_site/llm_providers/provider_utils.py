@@ -221,6 +221,8 @@ def build_tool_results_prompt(tool_results_text: str, extra_instructions: str = 
         f"{tool_results_text}\n\n"
         "The dice rolls have been executed by the server. Copy these EXACT results into your response. "
         "Do NOT recalculate, round, or modify outcomes. "
+        "If any dice were rolled, you MUST include a non-empty dice_rolls array that reflects these results. "
+        "Do NOT invent rolls. "
         "Now write the final response using these results. Do NOT include tool_requests in your response."
     )
     extra = (extra_instructions or "").strip()
@@ -457,7 +459,44 @@ def run_json_first_tool_requests_flow(
         tool_results_prompt=tool_results_prompt,
     )
 
-    return phase2_generate_fn(history)
+    response_2 = phase2_generate_fn(history)
+
+    # Defensive: Some providers/models occasionally omit dice_rolls even though tool results were injected.
+    # If we executed any dice tools, retry Phase 2 once with an explicit dice_rolls requirement to avoid
+    # llm_service reprompting later without tool context.
+    dice_tool_names = {"roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw"}
+    executed_dice_tools = any(
+        str((tr or {}).get("tool", "")) in dice_tool_names for tr in (tool_results or [])
+    )
+
+    if executed_dice_tools:
+        response2_text = (extract_text_fn(response_2) or "").strip()
+        extracted2 = extract_json_boundaries(response2_text) if response2_text else None
+        candidate2 = extracted2 if extracted2 else response2_text
+        try:
+            response2_data = json.loads(candidate2) if candidate2 else {}
+        except json.JSONDecodeError:
+            return response_2
+
+        dice_rolls = response2_data.get("dice_rolls")
+        has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+        if not has_dice_rolls:
+            retry_instructions = (
+                "IMPORTANT: Your response MUST include a non-empty dice_rolls list summarizing each dice roll above. "
+                "Do NOT invent rolls; use only the Tool results above."
+            )
+            tool_results_prompt_retry = build_tool_results_prompt(
+                tool_results_text,
+                extra_instructions=retry_instructions,
+            )
+            history_retry = build_history_fn(
+                prompt_contents=prompt_contents,
+                phase1_text=phase1_text_for_history,
+                tool_results_prompt=tool_results_prompt_retry,
+            )
+            return phase2_generate_fn(history_retry)
+
+    return response_2
 
 
 def run_openai_native_two_phase_flow(
