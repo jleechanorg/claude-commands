@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from mvp_site import main, constants
 from mvp_site.agents import (
@@ -259,7 +259,11 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
 
         # Verify story mode response characteristics
         self.assertIn("narrative", data)
-        self.assertTrue(len(data.get("narrative", "")) > 0)
+        self.assertGreater(
+            len(data.get("narrative", "")),
+            0,
+            "Expected non-empty narrative in story mode response",
+        )
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
@@ -381,7 +385,11 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         )
 
         self.assertIsInstance(instructions, str)
-        self.assertTrue(len(instructions) > 0)
+        self.assertGreater(
+            len(instructions),
+            0,
+            "StoryModeAgent should build non-empty instructions",
+        )
 
     @patch("mvp_site.llm_service._load_instruction_file")
     def test_god_mode_agent_builds_instructions(self, mock_load):
@@ -392,7 +400,11 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         instructions = agent.build_system_instructions()
 
         self.assertIsInstance(instructions, str)
-        self.assertTrue(len(instructions) > 0)
+        self.assertGreater(
+            len(instructions),
+            0,
+            "GodModeAgent should build non-empty instructions",
+        )
 
     @patch("mvp_site.llm_service._load_instruction_file")
     def test_god_mode_ignores_selected_prompts(self, mock_load):

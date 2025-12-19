@@ -1193,14 +1193,12 @@ class PromptBuilder:
 # AGENT CLASSES (imported from mvp_site.agents)
 # =============================================================================
 #
-# Agent classes are now in a separate module for better organization.
-# They are re-exported here for backward compatibility.
+# Agent classes live in mvp_site.agents; they remain importable from this module
+# so existing code using `from mvp_site.llm_service import StoryModeAgent`
+# continues to work.
 #
 # See mvp_site/agents.py for full implementation and documentation.
 # =============================================================================
-
-# Re-export for backward compatibility
-__all_agents__ = ["BaseAgent", "StoryModeAgent", "GodModeAgent", "get_agent_for_input"]
 
 
 def _build_debug_instructions() -> str:
