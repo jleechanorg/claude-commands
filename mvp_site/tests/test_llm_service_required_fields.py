@@ -87,6 +87,8 @@ def test_should_require_dice_rolls_only_for_combat_actions():
         is False
     )
 
+    # Combat keywords in user input should require dice even if not explicitly in_combat
+    # This catches new combat initiation (e.g., first action in a campaign)
     assert (
         _should_require_dice_rolls_for_turn(
             current_game_state=GameState(combat_state={"in_combat": False}),
@@ -95,7 +97,7 @@ def test_should_require_dice_rolls_only_for_combat_actions():
             is_god_mode=False,
             is_dm_mode=False,
         )
-        is False
+        is True  # Changed from False - combat keywords should trigger dice requirement
     )
 
 

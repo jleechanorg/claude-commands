@@ -3123,10 +3123,17 @@ def _should_require_dice_rolls_for_turn(
     is_god_mode: bool,
     is_dm_mode: bool,
 ) -> bool:
-    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
-        return False
+    """Check if dice rolls should be required for this turn.
 
-    if not current_game_state or not current_game_state.combat_state.get("in_combat", False):
+    Returns True if:
+    - In character mode (not god/dm mode)
+    - User input contains combat keywords OR already in combat state
+
+    This catches BOTH:
+    - Ongoing combat (in_combat flag is True)
+    - New combat initiation (combat keywords present in first action)
+    """
+    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
         return False
 
     text = (user_input or "").strip().lower()
@@ -3158,7 +3165,14 @@ def _should_require_dice_rolls_for_turn(
         "help",
     )
 
-    return any(k in text for k in combat_action_keywords)
+    # Check for combat keywords in user input (catches new combat)
+    has_combat_keywords = any(k in text for k in combat_action_keywords)
+
+    # Check if already in combat state (catches ongoing combat)
+    in_combat = current_game_state and current_game_state.combat_state.get("in_combat", False)
+
+    # Require dice if EITHER condition is met
+    return has_combat_keywords or in_combat
 
 
 # Combat keywords shared between user input and narrative detection
