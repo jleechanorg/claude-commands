@@ -1391,6 +1391,7 @@ def roll_dice(notation: str) -> DiceRollResult:
     match = re.match(pattern, notation.lower().replace(" ", ""))
 
     if not match:
+        logging_util.warning(f"DICE_AUDIT: Invalid notation '{notation}' - could not parse")
         return DiceRollResult(notation, [], 0, 0)
 
     num_dice = int(match.group(1))
@@ -1398,14 +1399,21 @@ def roll_dice(notation: str) -> DiceRollResult:
     modifier = int(match.group(3)) if match.group(3) else 0
 
     if num_dice < 1 or die_size < 1:
+        logging_util.warning(f"DICE_AUDIT: Invalid dice params num_dice={num_dice}, die_size={die_size}")
         return DiceRollResult(notation, [], modifier, modifier)
 
-    # Roll each die
+    # Roll each die - use Python's random.randint for fair RNG
     rolls = [random.randint(1, die_size) for _ in range(num_dice)]
     total = sum(rolls) + modifier
 
     natural_20 = die_size == 20 and num_dice == 1 and rolls[0] == 20
     natural_1 = die_size == 20 and num_dice == 1 and rolls[0] == 1
+
+    # GCP Cloud Logging: Audit every dice roll for post-hoc analysis
+    logging_util.info(
+        f"DICE_AUDIT: notation={notation} | rolls={rolls} | modifier={modifier} | "
+        f"total={total} | nat20={natural_20} | nat1={natural_1}"
+    )
 
     return DiceRollResult(notation, rolls, modifier, total, natural_20, natural_1)
 
@@ -1504,7 +1512,13 @@ def calculate_resource_depletion(current_amount: float, depletion_rate: float, t
 
 
 def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
-    """Execute a dice roll tool call and return the result."""
+    """Execute a dice roll tool call and return the result.
+
+    All dice rolls via this function are server-side executed with fair RNG.
+    Results are logged to GCP Cloud Logging for audit purposes.
+    """
+    logging_util.info(f"DICE_TOOL_EXEC: tool={tool_name} | args={arguments}")
+
     def _coerce_int_inner(value: Any, default: int | None = 0) -> int | None:
         """Best-effort int coercion.
 
@@ -1528,12 +1542,17 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         notation = arguments.get("dice_notation") or arguments.get("notation", "1d20")
         purpose = arguments.get("purpose", "")
         result = roll_dice(notation)
-        return {
+        tool_result = {
             "notation": result.notation, "rolls": result.individual_rolls,
             "modifier": result.modifier, "total": result.total,
             "natural_20": result.natural_20, "natural_1": result.natural_1,
             "purpose": purpose, "formatted": str(result)
         }
+        logging_util.info(
+            f"DICE_TOOL_RESULT: tool=roll_dice | notation={notation} | "
+            f"rolls={result.individual_rolls} | total={result.total} | purpose={purpose}"
+        )
+        return tool_result
 
     if tool_name == "roll_attack":
         raw_attack_mod = arguments.get("attack_modifier")
@@ -1594,6 +1613,12 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             result["formatted"] += f" | Damage: {damage}"
         else:
             result["damage"] = None
+        damage_total = result.get('damage', {}).get('total', 'N/A') if result.get('damage') else 'N/A'
+        logging_util.info(
+            f"DICE_TOOL_RESULT: tool=roll_attack | weapon={weapon_name} | "
+            f"rolls={attack.get('rolls', [])} | total={attack['total']} | hit={hit} | "
+            f"critical={attack['is_critical']} | damage={damage_total}"
+        )
         return result
 
     if tool_name == "roll_skill_check":
@@ -1621,6 +1646,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         mod_str = " ".join(mod_parts)
         formatted = f"{skill_name}: 1d20 {mod_str} = {roll} {mod_str} = {result.total} vs DC {dc} ({'Success' if success else 'Fail'})"
 
+        logging_util.info(
+            f"DICE_TOOL_RESULT: tool=roll_skill_check | skill={skill_name} | "
+            f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+        )
         return {
             "skill": skill_name, "roll": roll,
             "modifier": result.modifier, "total": result.total, "dc": dc, "success": success,
@@ -1651,6 +1680,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         mod_str = " ".join(mod_parts)
         formatted = f"{save_type} save: 1d20 {mod_str} = {roll} {mod_str} = {result.total} vs DC {dc} ({'Success' if success else 'Fail'})"
 
+        logging_util.info(
+            f"DICE_TOOL_RESULT: tool=roll_saving_throw | save_type={save_type} | "
+            f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+        )
         return {
             "save_type": save_type, "roll": roll,
             "modifier": result.modifier, "total": result.total, "dc": dc, "success": success,
@@ -1662,6 +1695,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     if tool_name == "declare_no_roll_needed":
         action = arguments.get("action", "unspecified action")
         reason = arguments.get("reason", "no reason provided")
+        logging_util.info(f"DICE_TOOL_RESULT: tool={tool_name} | no_roll=True | action={action}")
         return {
             "no_roll": True,
             "action": action,
@@ -1669,6 +1703,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "formatted": f"No roll needed for '{action}': {reason}"
         }
 
+    logging_util.warning(f"DICE_TOOL_RESULT: Unknown tool={tool_name}")
     return {"error": f"Unknown tool: {tool_name}"}
 
 
