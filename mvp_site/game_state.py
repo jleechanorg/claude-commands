@@ -1424,10 +1424,18 @@ def calculate_resource_depletion(current_amount: float, depletion_rate: float, t
 
 def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     """Execute a dice roll tool call and return the result."""
-    def _coerce_int_inner(value: Any, default: int = 0) -> int:
-        if isinstance(value, bool): return int(value)
-        try: return int(value)
-        except (ValueError, TypeError): return default
+    def _coerce_int_inner(value: Any, default: int | None = 0) -> int | None:
+        """Best-effort int coercion.
+
+        Accepts numeric strings ("5"), ints, and bools. If coercion fails,
+        returns the provided default, which may be None for optional fields.
+        """
+        if isinstance(value, bool):
+            return int(value)
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
 
     def _coerce_bool(value: Any, default: bool = False) -> bool:
         if isinstance(value, bool): return value
