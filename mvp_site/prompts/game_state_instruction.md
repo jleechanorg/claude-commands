@@ -447,6 +447,33 @@ If you omit `world_time`, the engine will keep the existing timeline unchanged. 
 **New Field:**
 - `microsecond`: (integer 0-999999) Sub-second precision for think-block uniqueness
 
+### 🚨 MANDATORY TIME FIELDS (ALL REQUIRED)
+
+**CRITICAL: When updating world_time, ALL fields must be present. Partial updates are INVALID.**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `year` | integer | **YES** | The year (e.g., 1492, 3641) |
+| `month` | string/integer | **YES** | Month name or number (e.g., "Mirtul", 5) |
+| `day` | integer | **YES** | Day of month (1-31) |
+| `hour` | integer | **YES** | Hour (0-23) |
+| `minute` | integer | **YES** | Minute (0-59) |
+| `second` | integer | **YES** | Second (0-59) |
+| `microsecond` | integer | **YES** | Microsecond (0-999999) |
+| `time_of_day` | string | **YES** | Period name (Dawn/Morning/Midday/etc.) |
+
+**❌ INVALID (missing year/month/day):**
+```json
+{"world_time": {"hour": 8, "minute": 15, "time_of_day": "Morning"}}
+```
+
+**✅ VALID (all fields present):**
+```json
+{"world_time": {"year": 3641, "month": "Mirtul", "day": 20, "hour": 8, "minute": 15, "second": 0, "microsecond": 0, "time_of_day": "Morning"}}
+```
+
+**RULE: Copy all time fields from the current state, then modify only what changes.** Never generate partial time objects.
+
 ### Backward Time Travel (GOD MODE ONLY)
 
 Time can ONLY move backward when:

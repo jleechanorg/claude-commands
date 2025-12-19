@@ -835,9 +835,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Normalize any world_time values without inventing new timestamps; the
         # LLM remains responsible for choosing timeline values.
+        # Pass existing time to complete partial world_time objects from LLM.
         state_changes = world_time.ensure_progressive_world_time(
             state_changes,
             is_god_mode=is_god_mode,
+            existing_time=old_world_time,
         )
         new_world_time = state_changes.get("world_data", {}).get("world_time")
 
