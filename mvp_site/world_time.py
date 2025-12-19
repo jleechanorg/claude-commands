@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -35,16 +36,18 @@ MONTH_MAP = {
 
 # Required fields for a valid world_time object
 # These MUST all be present for temporal comparison to work correctly
-REQUIRED_WORLD_TIME_FIELDS = frozenset({
-    "year",
-    "month",
-    "day",
-    "hour",
-    "minute",
-    "second",
-    "microsecond",
-    "time_of_day",
-})
+REQUIRED_WORLD_TIME_FIELDS = frozenset(
+    {
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "microsecond",
+        "time_of_day",
+    }
+)
 
 
 def _safe_int(value: Any) -> int:
@@ -63,7 +66,9 @@ def _normalize_month(month_raw: Any) -> int:
     return _safe_int(month_raw)
 
 
-def validate_world_time_completeness(world_time: dict[str, Any] | None) -> tuple[bool, set[str]]:
+def validate_world_time_completeness(
+    world_time: dict[str, Any] | None,
+) -> tuple[bool, set[str]]:
     """Check if world_time has all required fields.
 
     Args:
@@ -101,7 +106,7 @@ def complete_partial_world_time(
     Returns:
         Complete world_time dict with all required fields filled
     """
-    if not partial_time or not isinstance(partial_time, dict):
+    if partial_time is None or not isinstance(partial_time, dict):
         return partial_time
 
     completed = deepcopy(partial_time)
@@ -109,9 +114,12 @@ def complete_partial_world_time(
     # If we have existing time, use it to fill missing fields
     if existing_time and isinstance(existing_time, dict):
         for field in REQUIRED_WORLD_TIME_FIELDS:
-            if field not in completed or completed[field] is None:
-                if field in existing_time and existing_time[field] is not None:
-                    completed[field] = existing_time[field]
+            if (
+                (field not in completed or completed[field] is None)
+                and field in existing_time
+                and existing_time[field] is not None
+            ):
+                completed[field] = existing_time[field]
 
     # Set defaults for any still-missing fields (fallback)
     defaults = {
@@ -297,8 +305,6 @@ def ensure_progressive_world_time(
     Returns:
         Updated state_changes with normalized world_time
     """
-    import logging
-
     logger = logging.getLogger(__name__)
 
     if is_god_mode:
