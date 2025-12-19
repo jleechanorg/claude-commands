@@ -99,17 +99,17 @@ class BaseAgent(ABC):
         Returns:
             Complete system instruction string for the LLM call
         """
-        pass
+        ...  # Abstract method - implemented by subclasses
 
     @classmethod
-    def matches_input(cls, user_input: str) -> bool:
+    def matches_input(cls, _user_input: str) -> bool:
         """
         Check if this agent should handle the given input.
 
         Override in subclasses to implement mode-specific detection logic.
 
         Args:
-            user_input: Raw user input text
+            _user_input: Raw user input text (unused in base class)
 
         Returns:
             True if this agent should handle the input

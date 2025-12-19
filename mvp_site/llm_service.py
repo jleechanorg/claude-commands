@@ -51,20 +51,19 @@ import logging
 import os
 import re
 import sys
-import traceback
 from dataclasses import dataclass
 from typing import Any
 
 from firebase_admin import auth as firebase_auth
 from google.genai import types
 
+from mvp_site import constants, dice_strategy, logging_util
 from mvp_site.agents import (
     BaseAgent,
     GodModeAgent,
     StoryModeAgent,
     get_agent_for_input,
 )
-from mvp_site import constants, dice_strategy, logging_util
 from mvp_site.custom_types import UserId
 from mvp_site.decorators import log_exceptions
 from mvp_site.entity_instructions import EntityInstructionGenerator
@@ -75,7 +74,7 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import GameState, execute_dice_tool
+from mvp_site.game_state import GameState
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -317,7 +316,7 @@ def _tier_entities(
 
     # Everything not ACTIVE or PRESENT is considered DORMANT (for logging only)
     dormant = [
-        name for name in npc_data.keys() if name not in active and name not in present
+        name for name in npc_data if name not in active and name not in present
     ]
 
     return active, present, dormant
@@ -367,7 +366,7 @@ def _trim_entity_fields(npc_data: dict[str, Any], tier: str) -> dict[str, Any]:
             "location": npc_data.get("current_location", npc_data.get("location", "unknown")),
         }
 
-    elif tier == "PRESENT":
+    if tier == "PRESENT":
         return {
             "name": npc_data.get("display_name", npc_data.get("name", "Unknown")),
             "role": npc_data.get("role", "NPC"),
@@ -3590,17 +3589,15 @@ def _validate_and_enforce_planning_block(
             if has_content:
                 logging_util.info("✅ Planning block found in JSON structured response")
                 return response_text
-            else:
-                logging_util.warning(
-                    "⚠️ PLANNING_BLOCK_EMPTY: Planning block exists but has no content"
-                )
-                return response_text
-        else:
-            # String format no longer supported
-            logging_util.error(
-                f"❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: Found {type(planning_block).__name__} planning block, only JSON format is allowed"
+            logging_util.warning(
+                "⚠️ PLANNING_BLOCK_EMPTY: Planning block exists but has no content"
             )
             return response_text
+        # String format no longer supported
+        logging_util.error(
+            f"❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: Found {type(planning_block).__name__} planning block, only JSON format is allowed"
+        )
+        return response_text
 
     # Planning block is missing - log warning but DO NOT generate defaults
     # The LLM is responsible for generating planning blocks, not this function
