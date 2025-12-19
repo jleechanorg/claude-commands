@@ -49,6 +49,8 @@ REQUIRED_WORLD_TIME_FIELDS = frozenset(
     }
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _safe_int(value: Any) -> int:
     try:
@@ -305,8 +307,6 @@ def ensure_progressive_world_time(
     Returns:
         Updated state_changes with normalized world_time
     """
-    logger = logging.getLogger(__name__)
-
     if is_god_mode:
         return state_changes
 
@@ -316,10 +316,10 @@ def ensure_progressive_world_time(
     if isinstance(candidate_time, str):
         parsed_str = parse_timestamp_to_world_time(candidate_time)
         if parsed_str:
-            world_data["world_time"] = parsed_str
+            candidate_time = parsed_str
         else:
             world_data.pop("world_time", None)
-        return state_changes
+            return state_changes
 
     if isinstance(candidate_time, dict):
         # Check for incomplete time data and complete from existing state

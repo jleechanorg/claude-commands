@@ -44,6 +44,7 @@ def test_parses_string_world_time_from_llm():
         "minute": 45,
         "second": 30,
         "microsecond": 123456,
+        "time_of_day": "Midday",
     }
 
 
@@ -139,3 +140,28 @@ def test_complete_partial_world_time_with_defaults():
     assert completed["second"] == 0
     assert completed["microsecond"] == 0
     assert completed["time_of_day"] == "Midday"
+
+
+def test_completes_empty_world_time_dict_from_existing_state():
+    """Empty dict should be completed using existing state values."""
+    state_changes = {"world_data": {"world_time": {}}}
+    existing_time = {
+        "year": 1495,
+        "month": "Mirtul",
+        "day": 18,
+        "hour": 9,
+        "minute": 5,
+        "second": 12,
+        "microsecond": 0,
+        "time_of_day": "Morning",
+    }
+
+    updated = world_time.ensure_progressive_world_time(
+        copy.deepcopy(state_changes),
+        is_god_mode=False,
+        existing_time=existing_time,
+    )
+
+    result_time = updated["world_data"]["world_time"]
+    for field, value in existing_time.items():
+        assert result_time[field] == value
