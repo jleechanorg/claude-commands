@@ -125,6 +125,8 @@ def _extract_debug_info(response_data: dict[str, Any]) -> dict[str, Any]:
     story = response_data.get("story", [])
     if isinstance(story, list):
         for entry in story:
+            if not isinstance(entry, dict):
+                continue
             if entry.get("actor") == "gemini":
                 entry_debug = entry.get("debug_info", {})
                 if isinstance(entry_debug, dict) and entry_debug:
