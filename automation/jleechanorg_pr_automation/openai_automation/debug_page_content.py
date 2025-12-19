@@ -77,8 +77,9 @@ async def debug_page():
         import os
 
         os.close(fd)
-    except OSError:
-        pass
+    except OSError as err:
+        # Non-fatal: the screenshot is already written; just report the cleanup failure.
+        print(f"Failed to close temporary file descriptor {fd}: {err}", file=sys.stderr)
     print(f"\n📸 Screenshot saved to: {screenshot_path}")
 
     await automation.cleanup()

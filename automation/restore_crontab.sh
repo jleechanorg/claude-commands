@@ -41,7 +41,7 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
 fi
 
 # Create logs directory if it doesn't exist
-LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+LOG_DIR="${AUTOMATION_LOG_DIR:-$HOME/Library/Logs/automation-system}"
 if [[ ! -d "$LOG_DIR" ]] && [[ "$DRY_RUN" == "false" ]]; then
     echo -e "${BLUE}📁 Creating log directory: $LOG_DIR${NC}"
     mkdir -p "$LOG_DIR"
