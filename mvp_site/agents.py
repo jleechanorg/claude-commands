@@ -224,6 +224,13 @@ class StoryModeAgent(BaseAgent):
         This helper returns the base instruction list so callers (like initial
         story generation) can insert additional blocks before world lore is
         appended via finalize_instructions.
+
+        Args:
+            selected_prompts: User-selected prompt types
+            include_continuation_reminder: Whether to add planning block reminders
+
+        Returns:
+            List of ordered system instruction parts (without world content).
         """
         if selected_prompts is None:
             selected_prompts = []

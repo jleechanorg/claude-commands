@@ -76,6 +76,12 @@ from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
 from mvp_site.game_state import GameState, execute_dice_tool
+from mvp_site.agents import (
+    BaseAgent,
+    StoryModeAgent,
+    GodModeAgent,
+    get_agent_for_input,
+)
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -1199,6 +1205,9 @@ class PromptBuilder:
 #
 # See mvp_site/agents.py for full implementation and documentation.
 # =============================================================================
+
+# Re-export for backward compatibility
+__all_agents__ = ["BaseAgent", "StoryModeAgent", "GodModeAgent", "get_agent_for_input"]
 
 
 def _build_debug_instructions() -> str:
@@ -2803,7 +2812,7 @@ def get_initial_story(
     # Initial story specific: Add background summary instruction
     system_instruction_parts.append(builder.build_background_summary_instruction())
 
-    # Finalize with world content LAST to match the prompt hierarchy
+    # Finalize with world content (world lore must remain last in the hierarchy)
     system_instruction_final = builder.finalize_instructions(
         system_instruction_parts, use_default_world
     )
@@ -3728,7 +3737,6 @@ def continue_story(
         # STORY MODE: Use StoryModeAgent with full gameplay prompts
         # Include continuation reminders only in character mode
         include_continuation = mode == constants.MODE_CHARACTER
-
         system_instruction_final = agent.build_system_instructions(
             selected_prompts=selected_prompts,
             use_default_world=use_default_world,
