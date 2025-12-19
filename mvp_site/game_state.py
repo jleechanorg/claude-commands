@@ -223,6 +223,8 @@ class GameState:
             )
 
         self.combat_state = kwargs.get("combat_state", {"in_combat": False})
+        # Normalize combat_state to handle LLM-generated malformed data
+        self._normalize_combat_state()
         self.last_state_update_timestamp = kwargs.get(
             "last_state_update_timestamp", datetime.datetime.now(datetime.UTC)
         )
@@ -243,6 +245,82 @@ class GameState:
 
         # Apply time consolidation migration
         self._consolidate_time_tracking()
+
+    def _normalize_combat_state(self) -> None:
+        """
+        Normalize combat_state to handle LLM-generated malformed data.
+
+        Fixes common issues:
+        1. initiative_order entries that are strings instead of dicts
+        2. combatants that are strings instead of dicts
+        3. Coerces HP values to integers
+
+        Only normalizes fields that already exist - does not add new fields.
+        """
+        if not isinstance(self.combat_state, dict):
+            self.combat_state = {"in_combat": False}
+            return
+
+        # Normalize initiative_order entries (only if field exists)
+        if "initiative_order" in self.combat_state:
+            init_order = self.combat_state["initiative_order"]
+            if isinstance(init_order, list):
+                normalized_order = []
+                for entry in init_order:
+                    if isinstance(entry, str):
+                        # Convert string to dict with name
+                        normalized_order.append({
+                            "name": entry,
+                            "initiative": 0,
+                            "type": "unknown",
+                        })
+                    elif isinstance(entry, dict):
+                        # Ensure required fields exist
+                        normalized_order.append({
+                            "name": entry.get("name", "Unknown"),
+                            "initiative": _coerce_int(entry.get("initiative", 0), 0),
+                            "type": entry.get("type", "unknown"),
+                        })
+                    # Skip non-string, non-dict entries
+                self.combat_state["initiative_order"] = normalized_order
+
+        # Normalize combatants entries (only if field exists)
+        if "combatants" in self.combat_state:
+            combatants = self.combat_state["combatants"]
+            if isinstance(combatants, list):
+                # Convert list to dict format
+                combatants_dict = {}
+                for c in combatants:
+                    if isinstance(c, str):
+                        combatants_dict[c] = {"hp_current": 1, "hp_max": 1, "status": []}
+                    elif isinstance(c, dict) and "name" in c:
+                        name = c["name"]
+                        combatants_dict[name] = {
+                            "hp_current": _coerce_int(c.get("hp_current", 1), 1),
+                            "hp_max": _coerce_int(c.get("hp_max", 1), 1),
+                            "status": c.get("status", []),
+                        }
+                self.combat_state["combatants"] = combatants_dict
+            elif isinstance(combatants, dict):
+                # Ensure all combatant values are dicts with coerced ints
+                normalized_combatants = {}
+                for name, data in combatants.items():
+                    if isinstance(data, str):
+                        # String value - convert to minimal dict
+                        normalized_combatants[name] = {"hp_current": 1, "hp_max": 1, "status": []}
+                    elif isinstance(data, dict):
+                        normalized_combatants[name] = {
+                            "hp_current": _coerce_int(data.get("hp_current", 1), 1),
+                            "hp_max": _coerce_int(data.get("hp_max", 1), 1),
+                            "status": data.get("status", []),
+                            # Preserve type/role if present
+                            **({"type": data["type"]} if "type" in data else {}),
+                            **({"role": data["role"]} if "role" in data else {}),
+                        }
+                    else:
+                        # Unknown type - skip
+                        continue
+                self.combat_state["combatants"] = normalized_combatants
 
     def to_dict(self) -> dict:
         """Serializes the GameState object to a dictionary for Firestore."""
