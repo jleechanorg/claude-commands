@@ -6,7 +6,6 @@
 - Require: 6 abilities, HP/AC, skills, equipment, background
 - XP by CR: 0=10, 1/8=25, 1/4=50, 1/2=100, 1=200, 2=450, 3=700, 4=1100, 5=1800
 - Combat: initiative → turns → state blocks → XP award
-- 🚨 XP/Level: System-authoritative (D&D 5e table). Do NOT compute level independently.
 /ESSENTIALS -->
 
 ## Character Creation (Mechanics Enabled)
@@ -114,7 +113,8 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 **TOTAL COMBAT XP: [Sum] XP**
 ```
 
-**XP by CR:** 0=10 | 1/8=25 | 1/4=50 | 1/2=100 | 1=200 | 2=450 | 3=700 | 4=1100 | 5=1800 | 6=2300 | 7=2900 | 8=3900 | 9=5000 | 10=5900 | 11=7200 | 12=8400 | 13=10000 | 14=11500 | 15=13000 | 16=15000 | 17=18000 | 18=20000 | 19=22000 | 20=25000 | 21=33000 | 22=41000
+**XP by CR:** Backend provides XP values. Report enemy CR in state_updates; backend calculates XP automatically.
+Common reference: CR 1=200 | CR 2=450 | CR 3=700 | CR 4=1100 | CR 5=1800
 
 ## Narrative XP (Award with State Changes)
 
@@ -126,41 +126,41 @@ Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
 
 **Player Agency Bonus:** +50% for player-initiated solutions.
 
-### 🚨 CRITICAL: XP and Level are System-Authoritative
+**🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. The backend automatically:
+1. Calculates if XP crosses a level threshold
+2. Updates `level` if level-up occurs
+3. Recalculates `experience.needed_for_next_level`
+4. Validates XP-to-level consistency
 
-**The backend owns XP and level calculations. Do NOT compute level independently.**
+### XP Progression (Backend-Managed)
 
-1. **XP Awards:** Add XP to `state_updates.player_character_data.experience.current`
-2. **Level Calculation:** The system uses the D&D 5e XP table below to determine level. When updating XP, also include the `level` field with the correct value from this table.
-3. **Never "double" XP:** Only add the actual XP earned, not multiplied values
-4. **Validation:** The system validates XP/level consistency and will flag mismatches for correction
+**🚨 CRITICAL: XP and Level are AUTHORITATIVE from the backend.**
+- The backend owns the XP→level calculation using the D&D 5e table below
+- **DO NOT** independently calculate or change level - only report XP changes
+- If you receive XP/level values in state, USE them exactly as provided
+- When awarding XP, only set `state_updates.player_character_data.experience.current` - backend handles the rest
 
-**🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. When XP crosses a level threshold, update `level` to match the table below.
+**Complete D&D 5e XP Progression Table:**
+| Level | Total XP Required | Level | Total XP Required |
+|-------|-------------------|-------|-------------------|
+| 1 | 0 | 11 | 85,000 |
+| 2 | 300 | 12 | 100,000 |
+| 3 | 900 | 13 | 120,000 |
+| 4 | 2,700 | 14 | 140,000 |
+| 5 | 6,500 | 15 | 165,000 |
+| 6 | 14,000 | 16 | 195,000 |
+| 7 | 23,000 | 17 | 225,000 |
+| 8 | 34,000 | 18 | 265,000 |
+| 9 | 48,000 | 19 | 305,000 |
+| 10 | 64,000 | 20 | 355,000 |
 
-### XP Progression Table (D&D 5e - System Authority)
-
-| Lvl | Total XP | To Next | | Lvl | Total XP | To Next |
-|-----|----------|---------|---|-----|----------|---------|
-| 1 | 0 | - | | 11 | 85,000 | 21,000 |
-| 2 | 300 | 300 | | 12 | 100,000 | 15,000 |
-| 3 | 900 | 600 | | 13 | 120,000 | 20,000 |
-| 4 | 2,700 | 1,800 | | 14 | 140,000 | 20,000 |
-| 5 | 6,500 | 3,800 | | 15 | 165,000 | 25,000 |
-| 6 | 14,000 | 7,500 | | 16 | 195,000 | 30,000 |
-| 7 | 23,000 | 9,000 | | 17 | 225,000 | 30,000 |
-| 8 | 34,000 | 11,000 | | 18 | 265,000 | 40,000 |
-| 9 | 48,000 | 14,000 | | 19 | 305,000 | 40,000 |
-| 10 | 64,000 | 16,000 | | 20 | 355,000 | 50,000 |
-
-**Level Lookup:** Given XP, find the highest level whose "Total XP" you meet or exceed. Example: 5000 XP → Level 4 (meets or exceeds the 2,700 XP threshold for Level 4, but doesn't meet the 6,500 XP threshold for Level 5).
-
-**Display:** Show progress as (current - level threshold) / (next threshold - current threshold)
+**Display:** Backend provides `experience.progress_display` with formatted progress string.
 
 ## Custom Commands
 
 | Command | Effect |
 |---------|--------|
-| `auto combat` | Resolve entire combat narratively |
+| `auto combat` | (PLAYER COMMAND ONLY) Resolve entire combat narratively (requires explicit "auto combat" input) |
 | `betrayals` | Estimate NPC betrayal likelihood (PC knowledge only) |
 | `combat log enable/disable` | Toggle detailed combat rolls |
 | `missions list` | List all ongoing missions |

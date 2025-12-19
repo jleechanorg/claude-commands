@@ -11,6 +11,11 @@ import os
 import unittest
 from unittest.mock import patch
 
+# Ensure TESTING is set before importing app modules (world_logic applies clock-skew patch at import time).
+os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
+os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
+
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
 from mvp_site.tests.fake_llm import FakeLLMResponse
@@ -50,6 +55,14 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "entities_mentioned": ["Thorin"],
             "location_confirmed": "Mountain Kingdom",
             "state_updates": {"story_progression": "continued"},
+            "session_header": "Session 1: The Mountain Path",
+            "planning_block": {
+                "thinking": "The player wants to continue. I should describe the next leg of the journey.",
+                "choices": {
+                    "press_on": {"text": "Press On", "description": "Continue deeper into the mountains", "risk_level": "medium"},
+                    "set_camp": {"text": "Set Camp", "description": "Rest for the night", "risk_level": "low"}
+                }
+            }
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
@@ -77,7 +90,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_continue_story_success(self, mock_gemini_generate, mock_get_db):
         """Test successful story continuation through full stack including context compaction."""
 
@@ -88,7 +101,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         campaign_id = "test_campaign_123"
         self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
 
-        # Mock Gemini provider (default)
+        # Mock Gemini native two-phase provider (default)
         mock_gemini_generate.return_value = FakeLLMResponse(
             json.dumps(self.mock_llm_response_data)
         )
@@ -120,7 +133,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         # Verify Gemini (default provider) was called at least once
         assert (
             mock_gemini_generate.call_count >= 1
-        ), "Gemini provider should be invoked as the default"
+        ), "Gemini native two-phase provider should be invoked as the default"
 
     @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):

@@ -2,12 +2,19 @@
 Defines the GameState class, which represents the complete state of a campaign.
 
 Includes:
+- D&D 5E mechanics calculation functions for deterministic game logic (dice rolls)
 - XP/Level validation using D&D 5e XP thresholds
 - Time monotonicity checks to prevent time regression
 - Helper functions for XP→Level calculations
+
+The LLM should focus on narrative while code handles all mathematical operations.
 """
 
 import datetime
+import json
+import random
+import re
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from mvp_site import constants, logging_util
@@ -41,6 +48,24 @@ XP_THRESHOLDS = [
     305000,   # Level 19
     355000,   # Level 20
 ]
+
+XP_BY_CR = {
+    0: 10, 0.125: 25, 0.25: 50, 0.5: 100,
+    1: 200, 2: 450, 3: 700, 4: 1100, 5: 1800,
+    6: 2300, 7: 2900, 8: 3900, 9: 5000, 10: 5900,
+    11: 7200, 12: 8400, 13: 10000, 14: 11500, 15: 13000,
+    16: 15000, 17: 18000, 18: 20000, 19: 22000, 20: 25000,
+    21: 33000, 22: 41000, 23: 50000, 24: 62000, 25: 75000,
+    26: 90000, 27: 105000, 28: 120000, 29: 135000, 30: 155000
+}
+
+PROFICIENCY_BY_LEVEL = {
+    1: 2, 2: 2, 3: 2, 4: 2,
+    5: 3, 6: 3, 7: 3, 8: 3,
+    9: 4, 10: 4, 11: 4, 12: 4,
+    13: 5, 14: 5, 15: 5, 16: 5,
+    17: 6, 18: 6, 19: 6, 20: 6
+}
 
 
 def _coerce_int(value: Any, default: int | None = 0) -> int | None:
@@ -137,13 +162,14 @@ def xp_needed_for_level(level: int) -> int:
     return XP_THRESHOLDS[level - 1]
 
 
-def xp_to_next_level(current_xp: int) -> int:
+def xp_to_next_level(current_xp: int, current_level: int = None) -> int:
     """
     Calculate XP remaining to reach the next level.
 
     Args:
         current_xp: Current cumulative XP.
                     Accepts int, str, or float - coerced to int.
+        current_level: Optional current level to optimize calculation.
 
     Returns:
         XP needed to reach next level (0 if at max level 20)
@@ -161,7 +187,12 @@ def xp_to_next_level(current_xp: int) -> int:
     # Coerce to int for type safety
     current_xp = _coerce_int(current_xp, 0)
     current_xp = max(0, current_xp)
-    current_level = level_from_xp(current_xp)
+    
+    if current_level is None:
+        current_level = level_from_xp(current_xp)
+    else:
+        current_level = _coerce_int(current_level, level_from_xp(current_xp))
+        current_level = max(1, min(20, current_level))
 
     # At max level, no more XP needed
     if current_level >= 20:
@@ -192,6 +223,8 @@ class GameState:
             )
 
         self.combat_state = kwargs.get("combat_state", {"in_combat": False})
+        # Normalize combat_state to handle LLM-generated malformed data
+        self._normalize_combat_state()
         self.last_state_update_timestamp = kwargs.get(
             "last_state_update_timestamp", datetime.datetime.now(datetime.UTC)
         )
@@ -213,6 +246,82 @@ class GameState:
         # Apply time consolidation migration
         self._consolidate_time_tracking()
 
+    def _normalize_combat_state(self) -> None:
+        """
+        Normalize combat_state to handle LLM-generated malformed data.
+
+        Fixes common issues:
+        1. initiative_order entries that are strings instead of dicts
+        2. combatants that are strings instead of dicts
+        3. Coerces HP values to integers
+
+        Only normalizes fields that already exist - does not add new fields.
+        """
+        if not isinstance(self.combat_state, dict):
+            self.combat_state = {"in_combat": False}
+            return
+
+        # Normalize initiative_order entries (only if field exists)
+        if "initiative_order" in self.combat_state:
+            init_order = self.combat_state["initiative_order"]
+            if isinstance(init_order, list):
+                normalized_order = []
+                for entry in init_order:
+                    if isinstance(entry, str):
+                        # Convert string to dict with name
+                        normalized_order.append({
+                            "name": entry,
+                            "initiative": 0,
+                            "type": "unknown",
+                        })
+                    elif isinstance(entry, dict):
+                        # Ensure required fields exist
+                        normalized_order.append({
+                            "name": entry.get("name", "Unknown"),
+                            "initiative": _coerce_int(entry.get("initiative", 0), 0),
+                            "type": entry.get("type", "unknown"),
+                        })
+                    # Skip non-string, non-dict entries
+                self.combat_state["initiative_order"] = normalized_order
+
+        # Normalize combatants entries (only if field exists)
+        if "combatants" in self.combat_state:
+            combatants = self.combat_state["combatants"]
+            if isinstance(combatants, list):
+                # Convert list to dict format
+                combatants_dict = {}
+                for c in combatants:
+                    if isinstance(c, str):
+                        combatants_dict[c] = {"hp_current": 1, "hp_max": 1, "status": []}
+                    elif isinstance(c, dict) and "name" in c:
+                        name = c["name"]
+                        combatants_dict[name] = {
+                            "hp_current": _coerce_int(c.get("hp_current", 1), 1),
+                            "hp_max": _coerce_int(c.get("hp_max", 1), 1),
+                            "status": c.get("status", []),
+                        }
+                self.combat_state["combatants"] = combatants_dict
+            elif isinstance(combatants, dict):
+                # Ensure all combatant values are dicts with coerced ints
+                normalized_combatants = {}
+                for name, data in combatants.items():
+                    if isinstance(data, str):
+                        # String value - convert to minimal dict
+                        normalized_combatants[name] = {"hp_current": 1, "hp_max": 1, "status": []}
+                    elif isinstance(data, dict):
+                        normalized_combatants[name] = {
+                            "hp_current": _coerce_int(data.get("hp_current", 1), 1),
+                            "hp_max": _coerce_int(data.get("hp_max", 1), 1),
+                            "status": data.get("status", []),
+                            # Preserve type/role if present
+                            **({"type": data["type"]} if "type" in data else {}),
+                            **({"role": data["role"]} if "role" in data else {}),
+                        }
+                    else:
+                        # Unknown type - skip
+                        continue
+                self.combat_state["combatants"] = normalized_combatants
+
     def to_dict(self) -> dict:
         """Serializes the GameState object to a dictionary for Firestore."""
         # Copy all attributes from the instance's __dict__
@@ -225,8 +334,6 @@ class GameState:
         ]
         for key in keys_to_remove:
             del data[key]
-
-        # Convert Enum members to their string values for serialization
 
         return data
 
@@ -243,12 +350,6 @@ class GameState:
         """
         Validates that critical checkpoint data in the state matches references in the narrative.
         Returns a list of discrepancies found.
-
-        Args:
-            narrative_text: The latest narrative content from the AI
-
-        Returns:
-            List of discrepancy descriptions, empty if no issues found
         """
         discrepancies = []
         narrative_lower = narrative_text.lower()
@@ -258,6 +359,10 @@ class GameState:
             pc_data = self.player_character_data
             hp_current = pc_data.get("hp_current")
             hp_max = pc_data.get("hp_max")
+
+            # Defensive: persisted game state may contain numeric strings
+            hp_current = _coerce_int(hp_current, None)
+            hp_max = _coerce_int(hp_max, None)
 
             if hp_current is not None and hp_max is not None and hp_max > 0:
                 # Check for unconscious/death vs HP mismatch
@@ -351,19 +456,6 @@ class GameState:
                     f"State location '{current_location}' conflicts with narrative mentioning tavern"
                 )
 
-            # General location mismatch detection
-            if any(
-                phrase in narrative_lower
-                for phrase in ["standing in", "in the middle of", "surrounded by"]
-            ):
-                location_words = location_lower.split()
-                if len(location_words) > 0 and not any(
-                    word in narrative_lower for word in location_words
-                ):
-                    discrepancies.append(
-                        f"State location '{current_location}' may not match narrative location references"
-                    )
-
         # Check active missions consistency
         active_missions = self.custom_campaign_state.get("active_missions", [])
         if active_missions:
@@ -393,20 +485,6 @@ class GameState:
                     discrepancies.append(
                         f"Mission '{mission_name}' appears completed in narrative but still active in state"
                     )
-
-                # General completion detection
-                if any(
-                    phrase in narrative_lower
-                    for phrase in [
-                        "quest was complete",
-                        "quest complete",
-                        "mission complete",
-                    ]
-                ):
-                    if any(word in mission_lower for word in narrative_lower.split()):
-                        discrepancies.append(
-                            f"Mission '{mission_name}' may be completed in narrative but still active in state"
-                        )
 
         return discrepancies
 
@@ -523,7 +601,8 @@ class GameState:
 
         # Find defeated enemies (HP <= 0)
         for name, combat_data in combatants.items():
-            if combat_data.get("hp_current", 0) <= 0:
+            hp_current = _coerce_int(combat_data.get("hp_current", 0), 0)
+            if hp_current <= 0:
                 # Check if this is an enemy (not PC, companion, or ally)
                 enemy_type_raw: Any = None
                 for init_entry in self.combat_state.get("initiative_order", []):
@@ -832,10 +911,8 @@ class GameState:
             result["clamped_xp"] = 0
             xp = 0
             # Persist clamped XP back to every known XP field to avoid divergence
-            # Use experience_val (already fetched) to avoid re-fetching and handle None properly
             if isinstance(experience_val, dict):
                 pc_data["experience"]["current"] = 0
-            # Only write scalar if experience_val is not None (mirrors read logic)
             if experience_val is not None and not isinstance(experience_val, dict):
                 pc_data["experience"] = 0
             if "xp" in pc_data:
@@ -851,7 +928,7 @@ class GameState:
         # Handle missing level - compute from XP and PERSIST to state
         if provided_level is None:
             result["computed_level"] = expected_level
-            # Persist computed level to state (fixes missing level persistence bug)
+            # Persist computed level to state
             if hasattr(self, "player_character_data") and isinstance(
                 self.player_character_data, dict
             ):
@@ -909,48 +986,32 @@ class GameState:
     # =========================================================================
 
     def validate_time_monotonicity(
-        self, new_time: dict[str, Any], strict: bool = False
+        self,
+        new_time: dict[str, Any],
+        strict: bool = False,
+        previous_time: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Validate that time progression is monotonic (never goes backwards).
-
-        In default mode (strict=False):
-        - Warns on time regression but allows the update
-        - Returns warning flag and message
-
-        In strict mode (strict=True):
-        - Raises ValueError on time regression
 
         Args:
             new_time: Dict with time fields (hour, minute, optionally day)
             strict: If True, raise ValueError on backwards time
 
         Returns:
-            Dict with validation results (valid reflects whether the update is
-            allowed in the current mode):
-            - valid: True if time is forward or same, or if regression is allowed
-              with a warning in non-strict mode
-            - warning: True if time went backwards (in non-strict mode)
-            - message: Description of the issue
-
-        Raises:
-            ValueError: In strict mode, if time goes backwards
+            Dict with validation results.
         """
         result: dict[str, Any] = {"valid": True}
 
-        # Get current time from world_data
-        # Use `or {}` to handle both missing and explicitly-null world_data
-        current_world_time = (self.world_data or {}).get("world_time")
+        # Get reference time: prefer explicitly supplied previous_time (from caller),
+        # otherwise fall back to the GameState's current world_data value.
+        current_world_time = previous_time or (self.world_data or {}).get("world_time")
         if not current_world_time or not isinstance(current_world_time, dict):
-            # No previous time to compare against
             return result
 
-        # Validate new_time is a dict before processing
         if not isinstance(new_time, dict):
-            # new_time must be a dict to compare
             return result
 
-        # Convert times to comparable values
         current_day = None
         if isinstance(current_world_time, dict):
             current_day = current_world_time.get("day")
@@ -958,7 +1019,6 @@ class GameState:
         old_total = self._time_to_minutes(current_world_time)
         new_total = self._time_to_minutes(new_time, default_day=current_day)
 
-        # Check for regression
         if new_total < old_total:
             old_str = self._format_time(current_world_time)
             new_str = self._format_time(new_time)
@@ -969,7 +1029,6 @@ class GameState:
             if strict:
                 raise ValueError(f"Time cannot go backwards: {message}")
 
-            # Default: warn but allow
             result["valid"] = True  # Still valid but with warning
             result["warning"] = True
             result["message"] = message
@@ -978,12 +1037,7 @@ class GameState:
         return result
 
     def _time_to_minutes(self, time_dict: dict[str, Any], default_day: int | None = None) -> int:
-        """
-        Convert a time dict to total minutes for comparison.
-
-        Accounts for day if present (each day = 24*60 minutes).
-        Values are coerced to int for type safety (handles strings from JSON/LLM).
-        """
+        """Convert a time dict to total minutes for comparison."""
         fallback_day = 0 if default_day is None else _coerce_int(default_day, 0)
         day = _coerce_int(time_dict.get("day", fallback_day), fallback_day)
         hour = _coerce_int(time_dict.get("hour", 0), 0)
@@ -1001,3 +1055,700 @@ class GameState:
         if day is not None:
             return f"Day {day}, {hour:02d}:{minute:02d}"
         return f"{hour:02d}:{minute:02d}"
+
+# =============================================================================
+# DICE ROLL TOOL DEFINITIONS (for tool use / function calling)
+# =============================================================================
+
+DICE_ROLL_TOOLS: list[dict] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_dice",
+            "description": "Roll dice for damage, healing, or random effects ONLY. "
+            "DO NOT use for skill checks, attacks, or saving throws - use the specific tools instead. "
+            "This tool just returns numbers, it does NOT determine success/failure.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "notation": {
+                        "type": "string",
+                        "description": "Dice notation (e.g., '2d6+3' for damage, '1d8' for healing)",
+                    },
+                    "purpose": {
+                        "type": "string",
+                        "description": "What this roll is for (e.g., 'damage', 'healing', 'random table')",
+                    },
+                },
+                "required": ["notation"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_attack",
+            "description": "Roll a COMPLETE attack with hit check vs AC and damage if hit. Returns success/failure.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attack_modifier": {
+                        "type": "integer",
+                        "description": "Total attack bonus (ability + proficiency combined)",
+                    },
+                    "ability_modifier": {
+                        "type": "integer",
+                        "description": "Ability modifier component (STR or DEX)",
+                    },
+                    "ability_name": {
+                        "type": "string",
+                        "description": "Ability used for attack: STR or DEX",
+                    },
+                    "proficiency_bonus": {
+                        "type": "integer",
+                        "description": "Proficiency bonus component",
+                    },
+                    "weapon_name": {
+                        "type": "string",
+                        "description": "Name of the weapon used (e.g., 'Longsword', 'Shortbow')",
+                    },
+                    "damage_notation": {
+                        "type": "string",
+                        "description": "Damage dice (e.g., '1d8+3')",
+                    },
+                    "target_ac": {
+                        "type": "integer",
+                        "description": "Target's Armor Class",
+                    },
+                    "advantage": {"type": "boolean", "default": False},
+                    "disadvantage": {"type": "boolean", "default": False},
+                },
+                "required": ["attack_modifier", "damage_notation", "target_ac"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_skill_check",
+            "description": "Roll a skill check vs a DC. Covers ALL skills: "
+            "Persuasion, Intimidation, Deception (social), Perception, Stealth, Investigation, "
+            "Athletics, Acrobatics, Thieves' Tools, etc. "
+            "ALWAYS use this for skill checks - it returns success/failure based on DC comparison. "
+            "Examples: Persuasion to convince an NPC, Intimidation to threaten, "
+            "Stealth to sneak past guards, Thieves' Tools to pick a lock.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier (DEX for Stealth, INT for Investigation, etc.)"},
+                    "attribute_name": {"type": "string", "description": "Ability score abbreviation: STR, DEX, CON, INT, WIS, or CHA"},
+                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus (typically 2-6)"},
+                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this skill"},
+                    "expertise": {"type": "boolean", "default": False, "description": "True if character has expertise (double proficiency)"},
+                    "dc": {"type": "integer", "description": "Difficulty Class to beat (10=easy, 15=medium, 20=hard, 25=very hard)"},
+                    "skill_name": {"type": "string", "description": "Name of the skill (e.g., 'Thieves Tools', 'Stealth', 'Perception')"},
+                },
+                "required": ["attribute_modifier", "attribute_name", "proficiency_bonus", "dc", "skill_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "roll_saving_throw",
+            "description": "Roll a saving throw vs a DC (e.g., DEX save vs fireball, WIS save vs charm). "
+            "ALWAYS use this for saving throws - it returns success/failure based on DC comparison. "
+            "Example: Thieves' Tools check to pick a lock, Stealth check to sneak past guards.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier for the save"},
+                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus"},
+                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this saving throw"},
+                    "dc": {"type": "integer", "description": "Difficulty Class to beat"},
+                    "save_type": {"type": "string", "description": "Type of save: STR, DEX, CON, INT, WIS, or CHA"},
+                },
+                "required": ["attribute_modifier", "proficiency_bonus", "dc", "save_type"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "declare_no_roll_needed",
+            "description": "Declare that no dice roll is needed for this action. "
+            "Use ONLY for trivial actions that auto-succeed: opening unlocked doors, picking up items, "
+            "walking in safe areas, asking for directions, casual greetings. "
+            "DO NOT use this for: combat, Persuasion/Intimidation/Deception checks, "
+            "convincing resistant NPCs, negotiations, skill checks, saving throws, contested actions, "
+            "or anything with meaningful risk/uncertainty. "
+            "If an NPC is resisting or needs convincing, use roll_skill_check instead. "
+            "You MUST provide a reason explaining why no roll is needed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "description": "The player action being evaluated (e.g., 'open the unlocked door')",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Why no dice roll is needed (e.g., 'Door is unlocked, no check required')",
+                    },
+                },
+                "required": ["action", "reason"],
+            },
+        },
+    },
+]
+
+
+def validate_and_correct_state(
+    state_dict: dict[str, Any], previous_world_time: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    Validate state dict and apply corrections before persistence.
+
+    Uses GameState's internal validation logic.
+    """
+    # Create temporary GameState to run validations
+    temp_state = GameState.from_dict(state_dict.copy())
+    if temp_state is None:
+        logging_util.warning(
+            "VALIDATION: Could not create GameState from dict, skipping validation"
+        )
+        return state_dict
+
+    # 1. XP/Level Validation (using Main's logic)
+    # This modifies temp_state in-place (auto-corrects)
+    xp_result = temp_state.validate_xp_level(strict=False)
+    if xp_result.get("corrected") or xp_result.get("computed_level"):
+        logging_util.info(f"XP Validation applied corrections: {xp_result}")
+
+    # 2. Time Monotonicity (using Main's logic)
+    # Get current time from world_data in state_dict (not temp_state, as we want to check input)
+    new_time = (state_dict.get("world_data", {}) or {}).get("world_time")
+    if new_time:
+        # Note: In strict mode this raises, in default mode it just warns
+        temp_state.validate_time_monotonicity(
+            new_time, strict=False, previous_time=previous_world_time
+        )
+
+    return temp_state.to_dict()
+
+
+def calculate_modifier(attribute: int) -> int:
+    """Calculate ability modifier from attribute score."""
+    return (attribute - 10) // 2
+
+
+def calculate_proficiency_bonus(level: int) -> int:
+    """Get proficiency bonus for a given character level."""
+    if level < 1: return 2
+    if level > 20: return 6
+    return PROFICIENCY_BY_LEVEL.get(level, 2)
+
+
+def calculate_armor_class(dex_modifier: int, armor_bonus: int = 0, shield_bonus: int = 0) -> int:
+    """Calculate Armor Class."""
+    return 10 + dex_modifier + armor_bonus + shield_bonus
+
+
+def calculate_passive_perception(wis_modifier: int, proficient: bool, proficiency_bonus: int) -> int:
+    """Calculate passive Perception score."""
+    base = 10 + wis_modifier
+    if proficient:
+        base += proficiency_bonus
+    return base
+
+
+def xp_for_cr(cr: float) -> int:
+    """Get XP award for defeating a creature of given Challenge Rating."""
+    return XP_BY_CR.get(cr, 0)
+
+
+@dataclass
+class DiceRollResult:
+    """Result of a dice roll with full context.
+
+    Basic fields (always present):
+        notation: Dice notation like "1d20+5"
+        individual_rolls: List of each die result
+        modifier: Total numeric modifier
+        total: Final result
+
+    Context fields (optional, for rich formatting):
+        purpose: What the roll is for (e.g., "Perception check")
+        modifier_breakdown: Dict of label->value (e.g., {"WIS": 5, "PROF": 3})
+        target_dc: The DC/AC to beat
+        success: Whether the roll succeeded
+    """
+    notation: str
+    individual_rolls: list[int]
+    modifier: int
+    total: int
+    natural_20: bool = False
+    natural_1: bool = False
+    # Optional context for rich formatting
+    purpose: str = ""
+    modifier_breakdown: dict[str, int] | None = None
+    target_dc: int | None = None
+    success: bool | None = None
+
+    def __str__(self) -> str:
+        """Format dice roll as human-readable string with labeled modifiers.
+
+        Full format (with all context):
+            "Perception: 1d20 +5 WIS +3 PROF = 15 +5 WIS +3 PROF = 23 vs DC 15 (Success)"
+
+        Basic format (without context):
+            "1d20+3 = 15+3 = 18"
+            "2d6+2 = [4+3]+2 = 9"
+            "1d20 = 20 (NAT 20!)"
+        """
+        if not self.individual_rolls:
+            return f"{self.notation} = {self.total}"
+
+        # Format the dice roll portion (e.g., "15" or "[4+3]")
+        if len(self.individual_rolls) == 1:
+            rolls_value = str(self.individual_rolls[0])
+        else:
+            rolls_value = f"[{'+'.join(str(r) for r in self.individual_rolls)}]"
+            # Also compute the sum for display
+            rolls_sum = sum(self.individual_rolls)
+            rolls_value = f"[{'+'.join(str(r) for r in self.individual_rolls)}={rolls_sum}]"
+
+        # Build modifier string with labels if available
+        if self.modifier_breakdown:
+            # Format: "+5 WIS +3 PROF" (each modifier labeled)
+            mod_parts = []
+            for label, value in self.modifier_breakdown.items():
+                if value >= 0:
+                    mod_parts.append(f"+{value} {label}")
+                else:
+                    mod_parts.append(f"{value} {label}")
+            mod_str = " ".join(mod_parts)
+            mod_display = f" {mod_str}" if mod_str else ""
+        else:
+            # Basic format: just the number
+            if self.modifier > 0:
+                mod_str = f"+{self.modifier}"
+                mod_display = mod_str
+            elif self.modifier < 0:
+                mod_str = str(self.modifier)
+                mod_display = mod_str
+            else:
+                mod_str = ""
+                mod_display = ""
+
+        # Build the result string
+        parts = []
+
+        # Add purpose prefix if available
+        if self.purpose:
+            parts.append(f"{self.purpose}:")
+
+        # Add the dice notation with labeled modifiers
+        if self.modifier_breakdown:
+            # Extract base die notation (e.g., "1d20" from "1d20+5")
+            base_notation = self.notation.split('+')[0].split('-')[0]
+            parts.append(f"{base_notation}{mod_display}")
+        else:
+            parts.append(self.notation)
+
+        # Add the calculation: "= 15 +5 WIS +3 PROF = 23"
+        if self.modifier_breakdown:
+            parts.append(f"= {rolls_value}{mod_display} = {self.total}")
+        elif mod_display:
+            parts.append(f"= {rolls_value}{mod_display} = {self.total}")
+        else:
+            parts.append(f"= {rolls_value} = {self.total}")
+
+        # Add DC/target and success/fail
+        if self.target_dc is not None:
+            parts.append(f"vs DC {self.target_dc}")
+            if self.success is not None:
+                parts.append(f"({'Success' if self.success else 'Fail'})")
+            elif self.natural_20:
+                parts.append("(NAT 20!)")
+            elif self.natural_1:
+                parts.append("(NAT 1!)")
+        else:
+            # No DC, just show natural 20/1
+            if self.natural_20:
+                parts[-1] += " (NAT 20!)"
+            elif self.natural_1:
+                parts[-1] += " (NAT 1!)"
+
+        return " ".join(parts)
+
+
+def roll_dice(notation: str) -> DiceRollResult:
+    """
+    Roll dice using standard notation (e.g., "2d6+3", "1d20-1", "4d6").
+    """
+    # Parse notation: XdY+Z or XdY-Z or XdY
+    pattern = r"(\d+)d(\d+)([+-]\d+)?"
+    match = re.match(pattern, notation.lower().replace(" ", ""))
+
+    if not match:
+        return DiceRollResult(notation, [], 0, 0)
+
+    num_dice = int(match.group(1))
+    die_size = int(match.group(2))
+    modifier = int(match.group(3)) if match.group(3) else 0
+
+    if num_dice < 1 or die_size < 1:
+        return DiceRollResult(notation, [], modifier, modifier)
+
+    # Roll each die
+    rolls = [random.randint(1, die_size) for _ in range(num_dice)]
+    total = sum(rolls) + modifier
+
+    natural_20 = die_size == 20 and num_dice == 1 and rolls[0] == 20
+    natural_1 = die_size == 20 and num_dice == 1 and rolls[0] == 1
+
+    return DiceRollResult(notation, rolls, modifier, total, natural_20, natural_1)
+
+
+def roll_with_advantage(notation: str) -> tuple[DiceRollResult, DiceRollResult, int]:
+    """Roll with advantage (roll twice, take higher)."""
+    roll1 = roll_dice(notation)
+    roll2 = roll_dice(notation)
+    final = max(roll1.total, roll2.total)
+    return roll1, roll2, final
+
+
+def roll_with_disadvantage(notation: str) -> tuple[DiceRollResult, DiceRollResult, int]:
+    """Roll with disadvantage (roll twice, take lower)."""
+    roll1 = roll_dice(notation)
+    roll2 = roll_dice(notation)
+    final = min(roll1.total, roll2.total)
+    return roll1, roll2, final
+
+
+def calculate_attack_roll(attack_modifier: int, advantage: bool = False, disadvantage: bool = False) -> dict:
+    """Perform a complete attack roll."""
+    notation = f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
+
+    def _safe_natural_roll(roll: DiceRollResult) -> int:
+        if roll.individual_rolls:
+            return int(roll.individual_rolls[0])
+        # roll_dice can return empty rolls for invalid/degenerate notations; derive best-effort.
+        return max(0, int(roll.total) - int(roll.modifier))
+
+    if advantage and not disadvantage:
+        roll1, roll2, total = roll_with_advantage(notation)
+        natural_rolls = [_safe_natural_roll(roll1), _safe_natural_roll(roll2)]
+        natural = max(natural_rolls)
+        return {
+            "rolls": natural_rolls, "modifier": attack_modifier, "total": total,
+            "used_roll": "higher", "is_critical": natural == 20,
+            "is_fumble": natural_rolls[0] == 1 and natural_rolls[1] == 1, "notation": notation
+        }
+    if disadvantage and not advantage:
+        roll1, roll2, total = roll_with_disadvantage(notation)
+        natural_rolls = [_safe_natural_roll(roll1), _safe_natural_roll(roll2)]
+        natural = min(natural_rolls)
+        return {
+            "rolls": natural_rolls, "modifier": attack_modifier, "total": total,
+            "used_roll": "lower", "is_critical": natural_rolls[0] == 20 and natural_rolls[1] == 20,
+            "is_fumble": natural == 1, "notation": notation
+        }
+    roll = roll_dice(notation)
+    return {
+        "rolls": roll.individual_rolls, "modifier": attack_modifier, "total": roll.total,
+        "used_roll": "single", "is_critical": roll.natural_20,
+        "is_fumble": roll.natural_1, "notation": notation
+    }
+
+
+def calculate_damage(damage_notation: str, is_critical: bool = False) -> DiceRollResult:
+    """Calculate damage, doubling dice on critical hit."""
+    if is_critical:
+        pattern = r"(\d+)d(\d+)([+-]\d+)?"
+        match = re.match(pattern, damage_notation.lower().replace(" ", ""))
+        if match:
+            num_dice = int(match.group(1)) * 2
+            die_size = match.group(2)
+            modifier = match.group(3) or ""
+            crit_notation = f"{num_dice}d{die_size}{modifier}"
+            return roll_dice(crit_notation)
+    return roll_dice(damage_notation)
+
+
+def calculate_skill_check(attribute_modifier: int, proficiency_bonus: int, proficient: bool = False, expertise: bool = False) -> DiceRollResult:
+    """Perform a skill check."""
+    total_modifier = attribute_modifier
+    if proficient or expertise:
+        total_modifier += proficiency_bonus
+    if expertise:
+        total_modifier += proficiency_bonus
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_saving_throw(attribute_modifier: int, proficiency_bonus: int, proficient: bool = False) -> DiceRollResult:
+    """Perform a saving throw."""
+    total_modifier = attribute_modifier
+    if proficient:
+        total_modifier += proficiency_bonus
+    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    return roll_dice(notation)
+
+
+def calculate_resource_depletion(current_amount: float, depletion_rate: float, time_elapsed: float, depletion_unit: str = "per_day") -> float:
+    """Calculate resource depletion over time."""
+    depleted = depletion_rate * time_elapsed
+    remaining = current_amount - depleted
+    return max(0, remaining)
+
+
+def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
+    """Execute a dice roll tool call and return the result."""
+    def _coerce_int_inner(value: Any, default: int | None = 0) -> int | None:
+        """Best-effort int coercion.
+
+        Accepts numeric strings ("5"), ints, and bools. If coercion fails,
+        returns the provided default, which may be None for optional fields.
+        """
+        if isinstance(value, bool):
+            return int(value)
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+
+    def _coerce_bool(value: Any, default: bool = False) -> bool:
+        if isinstance(value, bool): return value
+        if isinstance(value, str): return value.lower() in ("true", "1", "yes")
+        if value is None: return default
+        return bool(value)
+
+    if tool_name == "roll_dice":
+        notation = arguments.get("dice_notation") or arguments.get("notation", "1d20")
+        purpose = arguments.get("purpose", "")
+        result = roll_dice(notation)
+        return {
+            "notation": result.notation, "rolls": result.individual_rolls,
+            "modifier": result.modifier, "total": result.total,
+            "natural_20": result.natural_20, "natural_1": result.natural_1,
+            "purpose": purpose, "formatted": str(result)
+        }
+
+    if tool_name == "roll_attack":
+        raw_attack_mod = arguments.get("attack_modifier")
+        if raw_attack_mod is None and "modifier" in arguments:
+            raw_attack_mod = arguments.get("modifier")
+        attack_mod = _coerce_int_inner(raw_attack_mod, 0)
+        ability_mod = _coerce_int_inner(arguments.get("ability_modifier"), None)
+        ability_name = arguments.get("ability_name", "").upper() or None
+        prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), None)
+        weapon_name = arguments.get("weapon_name", "")
+        damage_notation = arguments.get("damage_notation") or arguments.get("damage_dice") or "1d6"
+        target_ac = _coerce_int_inner(arguments.get("target_ac"), 10)
+        advantage = _coerce_bool(arguments.get("advantage"), False)
+        disadvantage = _coerce_bool(arguments.get("disadvantage"), False)
+
+        attack = calculate_attack_roll(attack_mod, advantage, disadvantage)
+        rolls = attack["rolls"]  # List of raw d20 rolls (1 for normal, 2 for adv/disadv)
+        hit = not attack["is_fumble"] and (attack["total"] >= target_ac or attack["is_critical"])
+
+        # Build labeled modifier breakdown: "Longsword: 1d20 +3 STR +2 PROF = 12 +3 STR +2 PROF = 17 vs AC 15 (Hit!)"
+        mod_parts = []
+        if ability_mod is not None and ability_name:
+            mod_parts.append(f"+{ability_mod} {ability_name}" if ability_mod >= 0 else f"{ability_mod} {ability_name}")
+        if prof_bonus is not None and prof_bonus > 0:
+            mod_parts.append(f"+{prof_bonus} PROF")
+        if not mod_parts:
+            # Fallback: use combined modifier if components not provided
+            mod_parts.append(f"+{attack_mod}" if attack_mod >= 0 else f"{attack_mod}")
+        mod_str = " ".join(mod_parts)
+
+        attack_label = weapon_name or "Attack"
+        hit_str = "CRITICAL!" if attack["is_critical"] else ("FUMBLE!" if attack["is_fumble"] else ("Hit!" if hit else "Miss"))
+
+        # Handle advantage/disadvantage display: show both rolls with which was used
+        if len(rolls) == 2:
+            used = attack.get("used_roll", "higher")
+            roll_display = f"({rolls[0]}, {rolls[1]} - {used})"
+        elif not rolls:
+            roll_display = "0"
+        else:
+            roll_display = str(rolls[0])
+        formatted = f"{attack_label}: 1d20 {mod_str} = {roll_display} {mod_str} = {attack['total']} vs AC {target_ac} ({hit_str})"
+
+        result = {
+            "attack_roll": attack, "target_ac": target_ac, "hit": hit,
+            "critical": attack["is_critical"], "fumble": attack["is_fumble"],
+            "weapon_name": weapon_name, "ability_name": ability_name,
+            "formatted": formatted
+        }
+        if hit:
+            damage = calculate_damage(damage_notation, attack["is_critical"])
+            result["damage"] = {
+                "notation": damage.notation, "rolls": damage.individual_rolls,
+                "modifier": damage.modifier, "total": damage.total,
+                "critical": attack["is_critical"]
+            }
+            # Append damage to formatted string
+            result["formatted"] += f" | Damage: {damage}"
+        else:
+            result["damage"] = None
+        return result
+
+    if tool_name == "roll_skill_check":
+        raw_attr_mod = arguments.get("attribute_modifier")
+        if raw_attr_mod is None and "modifier" in arguments:
+            raw_attr_mod = arguments.get("modifier")
+        attr_mod = _coerce_int_inner(raw_attr_mod, 0)
+        attr_name = arguments.get("attribute_name", "").upper() or "MOD"
+        prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
+        proficient = _coerce_bool(arguments.get("proficient"), False)
+        expertise = _coerce_bool(arguments.get("expertise"), False)
+        dc = _coerce_int_inner(arguments.get("dc"), 10)
+        skill_name = arguments.get("skill_name") or arguments.get("skill") or ""
+
+        result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
+        roll = result.individual_rolls[0] if result.individual_rolls else 0
+        success = result.total >= dc
+
+        # Build labeled modifier breakdown: "1d20 +5 INT +3 PROF = 8 +5 INT +3 PROF = 16"
+        mod_parts = [f"+{attr_mod} {attr_name}" if attr_mod >= 0 else f"{attr_mod} {attr_name}"]
+        effective_prof = prof_bonus * (2 if expertise else 1) if proficient else 0
+        if effective_prof > 0:
+            prof_label = "EXPERT" if expertise else "PROF"
+            mod_parts.append(f"+{effective_prof} {prof_label}")
+        mod_str = " ".join(mod_parts)
+        formatted = f"{skill_name}: 1d20 {mod_str} = {roll} {mod_str} = {result.total} vs DC {dc} ({'Success' if success else 'Fail'})"
+
+        return {
+            "skill": skill_name, "roll": roll,
+            "modifier": result.modifier, "total": result.total, "dc": dc, "success": success,
+            "natural_20": result.natural_20, "natural_1": result.natural_1,
+            "attribute_name": attr_name, "proficiency_applied": effective_prof,
+            "formatted": formatted
+        }
+
+    if tool_name == "roll_saving_throw":
+        raw_attr_mod = arguments.get("attribute_modifier")
+        if raw_attr_mod is None and "modifier" in arguments:
+            raw_attr_mod = arguments.get("modifier")
+        attr_mod = _coerce_int_inner(raw_attr_mod, 0)
+        prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
+        proficient = _coerce_bool(arguments.get("proficient"), False)
+        dc = _coerce_int_inner(arguments.get("dc"), 10)
+        save_type = arguments.get("save_type", "").upper() or "SAVE"
+
+        result = calculate_saving_throw(attr_mod, prof_bonus, proficient)
+        roll = result.individual_rolls[0] if result.individual_rolls else 0
+        success = result.total >= dc
+
+        # Build labeled modifier breakdown: "DEX save: 1d20 +3 DEX +2 PROF = 8 +3 DEX +2 PROF = 13"
+        mod_parts = [f"+{attr_mod} {save_type}" if attr_mod >= 0 else f"{attr_mod} {save_type}"]
+        effective_prof = prof_bonus if proficient else 0
+        if effective_prof > 0:
+            mod_parts.append(f"+{effective_prof} PROF")
+        mod_str = " ".join(mod_parts)
+        formatted = f"{save_type} save: 1d20 {mod_str} = {roll} {mod_str} = {result.total} vs DC {dc} ({'Success' if success else 'Fail'})"
+
+        return {
+            "save_type": save_type, "roll": roll,
+            "modifier": result.modifier, "total": result.total, "dc": dc, "success": success,
+            "natural_20": result.natural_20, "natural_1": result.natural_1,
+            "proficiency_applied": effective_prof,
+            "formatted": formatted
+        }
+
+    if tool_name == "declare_no_roll_needed":
+        action = arguments.get("action", "unspecified action")
+        reason = arguments.get("reason", "no reason provided")
+        return {
+            "no_roll": True,
+            "action": action,
+            "reason": reason,
+            "formatted": f"No roll needed for '{action}': {reason}"
+        }
+
+    return {"error": f"Unknown tool: {tool_name}"}
+
+
+def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
+    '''
+    Execute a list of tool requests with strict type validation.
+
+    Args:
+        tool_requests: List of dicts, each containing "tool" (str) and "args" (dict).
+
+    Returns:
+        List of results with tool execution details.
+    '''
+    if not isinstance(tool_requests, list):
+        logging_util.error(f"tool_requests must be a list, got {type(tool_requests)}")
+        return []
+
+    results = []
+    for request in tool_requests:
+        if not isinstance(request, dict):
+            logging_util.error(f"Tool request must be dict, got {type(request)}")
+            continue
+
+        tool_name = request.get("tool")
+        args = request.get("args", {})
+
+        # Strict Type Validation
+        if not isinstance(tool_name, str) or not tool_name:
+            logging_util.error(f"Invalid tool name type or empty: {tool_name} ({type(tool_name)})")
+            continue
+
+        if not isinstance(args, dict):
+            logging_util.error(f"Tool args must be dict, got {type(args)}")
+            args = {}
+
+        try:
+            # Delegate to the specific dice tool handler
+            result = execute_dice_tool(tool_name, args)
+        except Exception as e:
+            logging_util.error(f"Tool execution error: {tool_name}: {e}")
+            result = {"error": str(e)}
+
+        results.append({
+            "tool": tool_name,
+            "args": args,
+            "result": result,
+        })
+
+    return results
+
+
+def format_tool_results_text(tool_results: Any) -> str:
+    """Format tool execution results into a stable, human-readable prompt snippet.
+
+    Providers use this to inject server-executed dice results back into Phase 2.
+    """
+    if not isinstance(tool_results, list):
+        return ""
+
+    lines: list[str] = []
+    for item in tool_results:
+        if not isinstance(item, dict):
+            continue
+        tool_name = item.get("tool")
+        result = item.get("result", {})
+        if not isinstance(tool_name, str) or not tool_name:
+            continue
+        if isinstance(result, dict) and isinstance(result.get("formatted"), str) and result["formatted"]:
+            # Keep Phase 2 context tight: formatted strings already embed the exact numbers.
+            lines.append(f"- {result['formatted']}")
+            continue
+        if isinstance(result, dict) and isinstance(result.get("error"), str) and result["error"]:
+            lines.append(f"- {tool_name}: ERROR {result['error']}")
+            continue
+        # Fallback: last-resort JSON (should be rare)
+        try:
+            result_str = json.dumps(result, sort_keys=True)
+        except TypeError:
+            result_str = json.dumps({"error": "unserializable tool result"}, sort_keys=True)
+        lines.append(f"- {tool_name}: {result_str}")
+
+    return "\n".join(lines)

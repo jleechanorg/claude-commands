@@ -40,13 +40,14 @@ GEMINI_3_ALLOWED_USERS = [
     "jleechantest@gmail.com",
 ]
 
-# Allowed Gemini model selections for user preferences (default - all users)
-# NOTE: Only models that support BOTH code_execution AND JSON response mode are allowed
-# Gemini 2.5 models are EXCLUDED - they don't support code_execution + JSON mode together
-# See PR #2052 for compatibility testing details
+# Allowed Gemini model selections for user preferences (default - all users).
+# NOTE:
+# - Gemini 3.x supports code_execution + JSON together (single inference).
+# - Gemini 2.0-flash is allowed for backwards compatibility but uses native two-phase
+#   tool calling for dice because Gemini 2.x cannot combine code_execution with JSON mode.
 ALLOWED_GEMINI_MODELS = [
     DEFAULT_GEMINI_MODEL,  # ✅ Gemini 3 Flash (best value: $0.50/M input, $3/M output)
-    "gemini-2.0-flash",  # ✅ Legacy option - still works with code_execution + JSON
+    "gemini-2.0-flash",  # ✅ Legacy option (native_two_phase dice strategy)
     GEMINI_PREMIUM_MODEL,  # ✅ Premium option (allowlist enforced downstream)
 ]
 
@@ -56,10 +57,25 @@ PREMIUM_GEMINI_MODELS = [
 ]
 
 # Gemini model mapping from user preference to full model name
+# Official docs: https://ai.google.dev/gemini-api/docs/gemini-3
 GEMINI_MODEL_MAPPING = {
+    # gemini-3-flash-preview: 1M context, 64K output, streaming function calling,
+    # Google Search, File Search, Code Execution, URL Context support.
+    # Knowledge cutoff: Jan 2025. Can handle 100+ tools simultaneously.
+    # Source: https://blog.google/products/gemini/gemini-3-flash/
     "gemini-3-flash-preview": "gemini-3-flash-preview",  # ✅ New default (Dec 2025)
+
+    # gemini-3-pro-preview: 1M context, 64K output, thought signatures for multi-step
+    # reasoning, function calling, Google Search, Code Execution. Requires passing
+    # thought signatures in conversation history for reliable agent behavior.
+    # Source: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-pro
     "gemini-3-pro-preview": "gemini-3-pro-preview",
+
+    # gemini-2.0-flash: 1M context, 50K output, compositional function calling,
+    # code execution, native tool calling (search, code_execution, user functions).
+    # Source: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash
     "gemini-2.0-flash": "gemini-2.0-flash",
+
     # Legacy compatibility - redirect 2.5 users to Gemini 3 Flash (better & similar price)
     "gemini-2.5-flash": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
     "gemini-2.5-pro": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
@@ -67,35 +83,109 @@ GEMINI_MODEL_MAPPING = {
     "flash-2.5": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
 }
 
+# Models that support code_execution + JSON mode TOGETHER (single phase)
+# UNIQUE TO GEMINI: Only Google's Gemini 3.x models can execute code AND
+# return structured JSON in a SINGLE inference call.
+#
+# Research (Dec 2025):
+# - Gemini 3: https://ai.google.dev/gemini-api/docs/structured-output
+#   "Gemini 3 lets you combine Structured Outputs with built-in tools,
+#    including Grounding with Google Search, URL Context, and Code Execution."
+#
+# - OpenAI GPT-4o: Has Code Interpreter + Structured Outputs, but CANNOT
+#   combine them (separate tools). https://platform.openai.com/docs/guides/structured-outputs
+#
+# - Anthropic Claude: Has Code Execution Tool, but uses orchestration-based
+#   approach (programmatic tool calling). https://docs.claude.com/en/docs/agents-and-tools/tool-use/code-execution-tool
+#
+# VERIFIED MODELS (single-inference code execution + JSON):
+MODELS_WITH_CODE_EXECUTION: set[str] = {
+    # Gemini 3.x - Full support (confirmed Dec 2025)
+    "gemini-3-flash-preview",  # ✅ Released Dec 17, 2025 - default model
+    "gemini-3-pro-preview",    # ✅ Released Nov 2025 - most capable
+}
+
+
 # OpenRouter model selection tuned for narrative-heavy D&D play
+# Official docs: https://openrouter.ai/docs
 DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
 ALLOWED_OPENROUTER_MODELS = [
+    # meta-llama/llama-3.1-70b-instruct: 128K context, native function calling,
+    # parallel tool calls, zero-shot/few-shot tool use, multilingual (8 languages).
+    # Source: https://ai.meta.com/blog/meta-llama-3-1/
     DEFAULT_OPENROUTER_MODEL,
-    "meta-llama/llama-3.1-405b-instruct",  # 131K context, long campaigns
-    "meta-llama/llama-3.1-8b-instruct",  # 131K context, $0.10/$0.10 per M (Cerebras provider)
-    "openai/gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (reasoning model)
-    "z-ai/glm-4.6",  # 200K context, fast tools (OpenRouter spelling differs from Cerebras "zai-glm-4.6")
-    "x-ai/grok-4.1-fast",  # 2M context, $0.20/$0.50 per M tokens (supports json_schema)
-    "x-ai/grok-4.1-fast:free",  # Legacy alias to preserve existing user selections
+
+    # meta-llama/llama-3.1-405b-instruct: 128K context, native function calling,
+    # built-in tools (brave_search, wolfram_alpha), multilingual, state-of-the-art
+    # tool use. Rivals frontier models on general knowledge and math.
+    # Source: https://huggingface.co/blog/llama31
+    "meta-llama/llama-3.1-405b-instruct",
+
+    # meta-llama/llama-3.1-8b-instruct: 128K context, native function calling,
+    # built-in tools (brave_search, wolfram_alpha, code_interpreter), JSON mode.
+    # Cheapest Llama 3.1 option at $0.10/$0.10 per M tokens.
+    # Source: https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct
+    "meta-llama/llama-3.1-8b-instruct",
+
+    # openai/gpt-oss-120b: 131K context, native function calling, tool use,
+    # structured outputs, browsing. Matches o4-mini on tool calling (TauBench).
+    # Runs at 3K tokens/sec on Cerebras. $0.35/$0.75 per M tokens.
+    # Source: https://openai.com/index/introducing-gpt-oss/
+    "openai/gpt-oss-120b",
+
+    # z-ai/glm-4.6: 200K context, OpenAI-style function calling, native tool use.
+    # Note: OpenRouter spelling differs from Cerebras "zai-glm-4.6" (same model).
+    # Source: https://docs.z.ai/guides/llm/glm-4.6
+    "z-ai/glm-4.6",
+
+    # x-ai/grok-4.1-fast: 2M context, frontier tool-calling performance, real-time
+    # X data, web search, code execution in secure Python sandbox, Files/Collections
+    # Search, MCP tools. Multi-turn RL training across full context window.
+    # Reasoning mode toggleable. $0.20/$0.05 per M input, $0.50/M output.
+    # Source: https://x.ai/news/grok-4-1-fast
+    "x-ai/grok-4.1-fast",
+
+    # Legacy alias to preserve existing user selections
+    "x-ai/grok-4.1-fast:free",
 ]
 
-# Cerebras direct provider defaults (per Cerebras docs as of 2025-12-11)
+# Cerebras direct provider defaults
+# Official docs: https://inference-docs.cerebras.ai/
 # Pricing comparison (input/output per M tokens):
-#   Llama 3.1 8B: $0.10/$0.10 (CHEAPEST - now included)
-#   GPT OSS 120B: $0.35/$0.75 (budget option - now included)
+#   Llama 3.1 8B: $0.10/$0.10 (CHEAPEST)
+#   GPT OSS 120B: $0.35/$0.75 (budget option)
 #   Qwen 3 32B: $0.40/$0.80 (not in list - lower context)
-#   Qwen 3 235B: $0.60/$1.20 (highest context 131K)
+#   Qwen 3 235B: $0.60/$1.20 (highest context 256K)
 #   Llama 3.3 70B: $0.85/$1.20 (65K context)
-#   ZAI GLM 4.6: $2.25/$2.75 (preview, 131K context) <- DEFAULT (request: prioritize quality/tools)
+#   ZAI GLM 4.6: $2.25/$2.75 (preview, 200K context) <- DEFAULT (prioritize quality/tools)
 # NOTE: Defaulting to GLM 4.6 is a conscious trade-off (higher cost vs. Qwen 235B) to prioritize
 # quality/tooling; choose Qwen below for cost-sensitive workloads.
 DEFAULT_CEREBRAS_MODEL = "zai-glm-4.6"
 ALLOWED_CEREBRAS_MODELS = [
-    DEFAULT_CEREBRAS_MODEL,  # 131K context, $2.25/$2.75 per M (default: higher quality/tools, higher cost)
-    "qwen-3-235b-a22b-instruct-2507",  # 131K context, $0.60/$1.20 per M (cost-efficient alternative)
-    "llama-3.3-70b",  # 65K context, $0.85/$1.20 per M
-    "llama-3.1-8b",  # 131K context, $0.10/$0.10 per M (cheapest option)
-    "gpt-oss-120b",  # 131K context, $0.35/$0.75 per M (budget reasoning model)
+    # zai-glm-4.6: 200K context, OpenAI-style function calling, native multimodal
+    # function calling (images as tool params), supports both thinking and non-thinking
+    # modes. Stronger tool use and search-based agents. $2.25/$2.75 per M tokens.
+    # Source: https://docs.z.ai/guides/llm/glm-4.6
+    DEFAULT_CEREBRAS_MODEL,
+
+    # qwen-3-235b-a22b-instruct-2507: 256K context (extendable to 1M), excellent
+    # tool calling, Qwen-Agent framework support. MoE model (235B total, 22B active).
+    # Enhanced long-context understanding, multilingual, strong code/math/reasoning.
+    # Most cost-efficient option at $0.60/$1.20 per M tokens.
+    # Source: https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507
+    "qwen-3-235b-a22b-instruct-2507",
+
+    # llama-3.3-70b: 65K context, function calling supported BUT multi-turn tool
+    # calling NOT supported on Cerebras. Will error if tool_calls array included
+    # in assistant turn. Use single-turn pattern only. $0.85/$1.20 per M tokens.
+    # Source: https://inference-docs.cerebras.ai/capabilities/tool-use
+    "llama-3.3-70b",
+
+    # gpt-oss-120b: 131K context, full function calling support, tool use,
+    # structured outputs. TauBench tested for tool calling. Runs at 3K tokens/sec
+    # on Cerebras infrastructure. Budget reasoning model at $0.35/$0.75 per M.
+    # Source: https://www.cerebras.ai/blog/openai-gpt-oss-120b-runs-fastest-on-cerebras
+    "gpt-oss-120b",
 ]
 
 # Context window budgeting (tokens)
@@ -116,10 +206,11 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
     "x-ai/grok-4.1-fast:free": 2_000_000,  # Free tier shares same window
     # Cerebras
-    "qwen-3-235b-a22b-instruct-2507": 131_072,  # Highest context on Cerebras
+    # IMPORTANT: Cerebras provider context limits are ~128K/131K even when the upstream
+    # model family may advertise larger windows elsewhere (e.g., via other providers).
+    "qwen-3-235b-a22b-instruct-2507": 131_072,
     "zai-glm-4.6": 131_072,
     "llama-3.3-70b": 65_536,
-    "llama-3.1-8b": 131_072,  # 131K context window (Cerebras advertises 128K)
     "gpt-oss-120b": 131_072,  # 131K context window
 }
 
@@ -148,7 +239,6 @@ MODEL_MAX_OUTPUT_TOKENS = {
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
     "llama-3.3-70b": 32_000,
-    "llama-3.1-8b": 32_000,  # Cerebras allows longer completions than OpenRouter
     "gpt-oss-120b": 40_000,  # 40K max output per Cerebras docs
 }
 
@@ -193,6 +283,7 @@ KEY_FORMAT = "format"
 FIELD_SESSION_HEADER = "session_header"
 FIELD_PLANNING_BLOCK = "planning_block"
 FIELD_DICE_ROLLS = "dice_rolls"
+FIELD_DICE_AUDIT_EVENTS = "dice_audit_events"
 FIELD_RESOURCES = "resources"
 FIELD_DEBUG_INFO = "debug_info"
 FIELD_GOD_MODE_RESPONSE = "god_mode_response"

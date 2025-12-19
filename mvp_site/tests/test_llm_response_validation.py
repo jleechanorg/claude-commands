@@ -99,6 +99,41 @@ class TestLLMResponseValidation(unittest.TestCase):
         if structured.entities_mentioned:
             assert "adventurer" in structured.entities_mentioned
 
+    def test_dice_audit_events_parsing(self):
+        """dice_audit_events should parse as list[dict] and ignore invalid items."""
+        response = {
+            "narrative": "You lunge forward.",
+            "entities_mentioned": ["hero"],
+            "planning_block": {"thinking": "Attack!", "choices": {"attack": {"text": "Attack", "description": "Strike"}}},
+            "dice_rolls": ["Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)"],
+            "dice_audit_events": [
+                {
+                    "source": "code_execution",
+                    "label": "Attack",
+                    "notation": "1d20+5",
+                    "rolls": [12],
+                    "modifier": 5,
+                    "total": 17,
+                },
+                "not-a-dict",
+            ],
+        }
+
+        parsed_text, structured = parse_structured_response(json.dumps(response))
+        assert parsed_text == "You lunge forward."
+        assert isinstance(structured, NarrativeResponse)
+        assert structured.dice_rolls == ["Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)"]
+        assert structured.dice_audit_events == [
+            {
+                "source": "code_execution",
+                "label": "Attack",
+                "notation": "1d20+5",
+                "rolls": [12],
+                "modifier": 5,
+                "total": 17,
+            }
+        ]
+
     # Group 2 - Required Fields Tests
 
     def test_missing_content_field(self):

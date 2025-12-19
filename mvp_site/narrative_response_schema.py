@@ -13,6 +13,10 @@ from mvp_site.json_utils import parse_llm_json_response, unescape_json_string
 
 # Planning block extraction from narrative is deprecated - blocks should only come from JSON
 
+# Minimum narrative length threshold for "suspiciously short" detection
+# A valid narrative should typically be at least ~100 characters
+MIN_NARRATIVE_LENGTH = 100
+
 # Precompiled regex patterns for better performance
 JSON_MARKDOWN_PATTERN = re.compile(r"```json\s*\n?(.*?)\n?```", re.DOTALL)
 GENERIC_MARKDOWN_PATTERN = re.compile(r"```\s*\n?(.*?)\n?```", re.DOTALL)
@@ -236,6 +240,7 @@ class NarrativeResponse:
         session_header: str = None,
         planning_block: dict[str, Any] | None = None,
         dice_rolls: list[str] = None,
+        dice_audit_events: list[dict[str, Any]] | None = None,
         resources: str = None,
         **kwargs,
     ):
@@ -254,6 +259,7 @@ class NarrativeResponse:
         )
         self.planning_block = self._validate_planning_block(planning_block)
         self.dice_rolls = self._validate_list_field(dice_rolls, "dice_rolls")
+        self.dice_audit_events = self._validate_dice_audit_events(dice_audit_events)
         self.resources = self._validate_string_field(resources, "resources")
 
         # Store any extra fields that Gemini might include (shouldn't be any now)
@@ -345,6 +351,32 @@ class NarrativeResponse:
                     )
 
         return validated_list
+
+    def _validate_dice_audit_events(self, value: Any) -> list[dict[str, Any]]:
+        """Validate dice_audit_events as a list of dicts.
+
+        Keep permissive: events may include provider-specific evidence fields,
+        and strict validation should not block gameplay.
+        """
+        if value is None:
+            return []
+
+        if not isinstance(value, list):
+            logging_util.warning(
+                f"Invalid dice_audit_events type: {type(value).__name__}, expected list. Using empty list."
+            )
+            return []
+
+        events: list[dict[str, Any]] = []
+        for item in value:
+            if isinstance(item, dict):
+                events.append(item)
+                continue
+            logging_util.warning(
+                f"Invalid dice_audit_events item type: {type(item).__name__}, expected dict. Skipping."
+            )
+
+        return events
 
     def _validate_planning_block(self, planning_block: Any) -> dict[str, Any]:
         """Validate planning block content - JSON ONLY format"""
@@ -527,6 +559,7 @@ class NarrativeResponse:
             "session_header": self.session_header,
             "planning_block": self.planning_block,
             "dice_rolls": self.dice_rolls,
+            "dice_audit_events": self.dice_audit_events,
             "resources": self.resources,
         }
 
@@ -639,7 +672,14 @@ def parse_structured_response(
     ) -> str:
         """Use planning block thinking text when narrative is intentionally blank."""
 
-        narrative_value = str(narrative_value or "").strip()
+        # Ensure narrative_value is a string
+        if narrative_value is not None and not isinstance(narrative_value, str):
+            try:
+                narrative_value = str(narrative_value)
+            except Exception:
+                narrative_value = ""
+
+        narrative_value = (narrative_value or "").strip()
         if narrative_value:
             return narrative_value
 
@@ -686,6 +726,13 @@ def parse_structured_response(
         logging_util.info(
             f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)"
         )
+        # Warn if narrative is suspiciously short after recovery
+        if narrative_len < MIN_NARRATIVE_LENGTH and narrative_len > 0:
+            logging_util.warning(
+                f"⚠️ SUSPICIOUSLY_SHORT_NARRATIVE: Narrative is only {narrative_len} chars "
+                f"(min expected: {MIN_NARRATIVE_LENGTH}). This may indicate truncation due to "
+                "malformed JSON with unescaped quotes. Consider reprompting."
+            )
 
     # Create NarrativeResponse from parsed data
 

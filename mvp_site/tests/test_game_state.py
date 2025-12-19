@@ -582,6 +582,139 @@ class TestGameState(unittest.TestCase):
         assert state_dict["world_data"]["current_location"] == "Test Town"
 
 
+class TestCombatStateNormalization(unittest.TestCase):
+    """Test cases for _normalize_combat_state() which handles LLM-generated malformed data."""
+
+    def test_normalize_string_initiative_order_entries(self):
+        """String entries in initiative_order are converted to proper dicts."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "initiative_order": ["Goblin 1", "Goblin 2"],
+            }
+        )
+
+        # Should be normalized to dicts
+        init_order = gs.combat_state["initiative_order"]
+        assert len(init_order) == 2
+        assert init_order[0] == {"name": "Goblin 1", "initiative": 0, "type": "unknown"}
+        assert init_order[1] == {"name": "Goblin 2", "initiative": 0, "type": "unknown"}
+
+    def test_normalize_dict_initiative_order_coerces_initiative(self):
+        """Dict entries have initiative coerced to int."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "initiative_order": [
+                    {"name": "Goblin", "initiative": "15", "type": "enemy"},
+                ],
+            }
+        )
+
+        init_order = gs.combat_state["initiative_order"]
+        assert init_order[0]["initiative"] == 15  # String "15" -> int 15
+
+    def test_normalize_string_combatant_values(self):
+        """String combatant values are converted to proper dicts."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": {
+                    "Goblin 1": "enemy",
+                    "Goblin 2": "hostile",
+                },
+            }
+        )
+
+        combatants = gs.combat_state["combatants"]
+        assert combatants["Goblin 1"] == {"hp_current": 1, "hp_max": 1, "status": []}
+        assert combatants["Goblin 2"] == {"hp_current": 1, "hp_max": 1, "status": []}
+
+    def test_normalize_combatant_hp_coerced_to_int(self):
+        """Combatant HP values are coerced from strings to ints."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": {
+                    "Goblin": {"hp_current": "15", "hp_max": "20", "status": []},
+                },
+            }
+        )
+
+        combatants = gs.combat_state["combatants"]
+        assert combatants["Goblin"]["hp_current"] == 15
+        assert combatants["Goblin"]["hp_max"] == 20
+
+    def test_normalize_combatants_list_to_dict(self):
+        """Combatants as list is converted to dict format."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": [
+                    {"name": "Goblin 1", "hp_current": 10, "hp_max": 15},
+                    {"name": "Goblin 2", "hp_current": 8, "hp_max": 12},
+                ],
+            }
+        )
+
+        combatants = gs.combat_state["combatants"]
+        assert isinstance(combatants, dict)
+        assert "Goblin 1" in combatants
+        assert combatants["Goblin 1"]["hp_current"] == 10
+        assert "Goblin 2" in combatants
+        assert combatants["Goblin 2"]["hp_current"] == 8
+
+    def test_normalize_preserves_type_and_role(self):
+        """Type and role fields are preserved during normalization."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "combatants": {
+                    "Goblin": {
+                        "hp_current": 10,
+                        "hp_max": 15,
+                        "type": "enemy",
+                        "role": "melee",
+                    },
+                },
+            }
+        )
+
+        combatant = gs.combat_state["combatants"]["Goblin"]
+        assert combatant["type"] == "enemy"
+        assert combatant["role"] == "melee"
+
+    def test_normalize_does_not_add_missing_fields(self):
+        """Normalization does not add combatants/initiative_order if not present."""
+        gs = GameState(combat_state={"in_combat": False})
+
+        # Should NOT have combatants or initiative_order added
+        assert "combatants" not in gs.combat_state
+        assert "initiative_order" not in gs.combat_state
+
+    def test_normalize_handles_non_dict_combat_state(self):
+        """Non-dict combat_state is reset to default."""
+        gs = GameState(combat_state="invalid")
+
+        assert gs.combat_state == {"in_combat": False}
+
+    def test_normalize_mixed_initiative_order(self):
+        """Mixed string and dict entries in initiative_order are handled."""
+        gs = GameState(
+            combat_state={
+                "in_combat": True,
+                "initiative_order": [
+                    "Goblin 1",  # String
+                    {"name": "Hero", "initiative": 18, "type": "pc"},  # Dict
+                ],
+            }
+        )
+
+        init_order = gs.combat_state["initiative_order"]
+        assert init_order[0] == {"name": "Goblin 1", "initiative": 0, "type": "unknown"}
+        assert init_order[1] == {"name": "Hero", "initiative": 18, "type": "pc"}
+
+
 class TestUpdateStateWithChanges(unittest.TestCase):
     """Test cases for the update_state_with_changes function."""
 
@@ -1374,10 +1507,248 @@ class TestMainStateFunctions(unittest.TestCase):
         assert KEY_RESPONSE in response
 
 
-# =============================================================================
-# XP/LEVEL VALIDATION TESTS - TDD Tests for authoritative XP/level enforcement
-# =============================================================================
-# Task: Enforce authoritative XP/level and add validation
+class TestD5EMechanicsCalculations(unittest.TestCase):
+    """Test cases for D&D 5E mechanics calculation functions."""
+
+    def test_calculate_modifier_standard_scores(self):
+        """Test modifier calculation for standard ability scores."""
+        from mvp_site.game_state import calculate_modifier
+
+        # Test standard D&D ability scores
+        assert calculate_modifier(10) == 0, "Score 10 should give +0"
+        assert calculate_modifier(11) == 0, "Score 11 should give +0"
+        assert calculate_modifier(8) == -1, "Score 8 should give -1"
+        assert calculate_modifier(9) == -1, "Score 9 should give -1"
+        assert calculate_modifier(14) == 2, "Score 14 should give +2"
+        assert calculate_modifier(15) == 2, "Score 15 should give +2"
+        assert calculate_modifier(18) == 4, "Score 18 should give +4"
+        assert calculate_modifier(20) == 5, "Score 20 should give +5"
+        assert calculate_modifier(1) == -5, "Score 1 should give -5"
+        assert calculate_modifier(30) == 10, "Score 30 should give +10"
+
+    def test_calculate_proficiency_bonus(self):
+        """Test proficiency bonus calculation by level."""
+        from mvp_site.game_state import calculate_proficiency_bonus
+
+        # Test proficiency progression
+        assert calculate_proficiency_bonus(1) == 2
+        assert calculate_proficiency_bonus(4) == 2
+        assert calculate_proficiency_bonus(5) == 3
+        assert calculate_proficiency_bonus(8) == 3
+        assert calculate_proficiency_bonus(9) == 4
+        assert calculate_proficiency_bonus(12) == 4
+        assert calculate_proficiency_bonus(13) == 5
+        assert calculate_proficiency_bonus(16) == 5
+        assert calculate_proficiency_bonus(17) == 6
+        assert calculate_proficiency_bonus(20) == 6
+
+        # Edge cases
+        assert calculate_proficiency_bonus(0) == 2, "Level 0 should default to +2"
+        assert calculate_proficiency_bonus(21) == 6, "Level 21+ should cap at +6"
+
+    def test_calculate_armor_class(self):
+        """Test armor class calculation."""
+        from mvp_site.game_state import calculate_armor_class
+
+        # Base AC (no armor, no shield)
+        assert calculate_armor_class(dex_modifier=0) == 10
+        assert calculate_armor_class(dex_modifier=2) == 12
+        assert calculate_armor_class(dex_modifier=-1) == 9
+
+        # With armor bonus
+        assert calculate_armor_class(dex_modifier=2, armor_bonus=3) == 15
+        assert calculate_armor_class(dex_modifier=0, armor_bonus=5) == 15
+
+        # With shield
+        assert calculate_armor_class(dex_modifier=2, shield_bonus=2) == 14
+        assert calculate_armor_class(dex_modifier=2, armor_bonus=3, shield_bonus=2) == 17
+
+    def test_calculate_passive_perception(self):
+        """Test passive perception calculation."""
+        from mvp_site.game_state import calculate_passive_perception
+
+        # Not proficient
+        assert calculate_passive_perception(wis_modifier=0, proficient=False, proficiency_bonus=2) == 10
+        assert calculate_passive_perception(wis_modifier=3, proficient=False, proficiency_bonus=2) == 13
+
+        # Proficient
+        assert calculate_passive_perception(wis_modifier=0, proficient=True, proficiency_bonus=2) == 12
+        assert calculate_passive_perception(wis_modifier=3, proficient=True, proficiency_bonus=3) == 16
+
+    def test_xp_for_cr(self):
+        """Test XP lookup by Challenge Rating."""
+        from mvp_site.game_state import xp_for_cr
+
+        assert xp_for_cr(0) == 10
+        assert xp_for_cr(0.125) == 25  # CR 1/8
+        assert xp_for_cr(0.25) == 50   # CR 1/4
+        assert xp_for_cr(0.5) == 100   # CR 1/2
+        assert xp_for_cr(1) == 200
+        assert xp_for_cr(3) == 700
+        assert xp_for_cr(5) == 1800
+        assert xp_for_cr(10) == 5900
+        assert xp_for_cr(20) == 25000
+        assert xp_for_cr(999) == 0  # Unknown CR returns 0
+
+    def test_level_from_xp(self):
+        """Test level calculation from total XP."""
+        from mvp_site.game_state import level_from_xp
+
+        assert level_from_xp(0) == 1
+        assert level_from_xp(299) == 1
+        assert level_from_xp(300) == 2
+        assert level_from_xp(899) == 2
+        assert level_from_xp(900) == 3
+        assert level_from_xp(2699) == 3
+        assert level_from_xp(2700) == 4
+        assert level_from_xp(355000) == 20
+        assert level_from_xp(999999) == 20  # Cap at 20
+
+    def test_xp_needed_for_level(self):
+        """Test XP threshold lookup."""
+        from mvp_site.game_state import xp_needed_for_level
+
+        assert xp_needed_for_level(1) == 0
+        assert xp_needed_for_level(2) == 300
+        assert xp_needed_for_level(5) == 6500
+        assert xp_needed_for_level(10) == 64000
+        assert xp_needed_for_level(20) == 355000
+
+    def test_xp_to_next_level(self):
+        """Test XP remaining to next level."""
+        from mvp_site.game_state import xp_to_next_level
+
+        assert xp_to_next_level(current_xp=0, current_level=1) == 300
+        assert xp_to_next_level(current_xp=150, current_level=1) == 150
+        assert xp_to_next_level(current_xp=150, current_level=0) == 150
+        assert xp_to_next_level(current_xp=150, current_level=-1) == 150
+        assert xp_to_next_level(current_xp=300, current_level=2) == 600
+        assert xp_to_next_level(current_xp=355000, current_level=20) == 0  # Max level
+
+    def test_roll_dice_basic(self):
+        """Test basic dice rolling."""
+        from mvp_site.game_state import roll_dice
+
+        # Test 1d20
+        for _ in range(10):
+            result = roll_dice("1d20")
+            assert 1 <= result.total <= 20
+            assert len(result.individual_rolls) == 1
+
+        # Test 2d6+3
+        for _ in range(10):
+            result = roll_dice("2d6+3")
+            assert 5 <= result.total <= 15  # 2+3 to 12+3
+            assert len(result.individual_rolls) == 2
+            assert result.modifier == 3
+
+        # Test negative modifier
+        result = roll_dice("1d20-2")
+        assert result.modifier == -2
+
+    def test_roll_dice_invalid_notation(self):
+        """Test dice rolling with invalid notation."""
+        from mvp_site.game_state import roll_dice
+
+        result = roll_dice("invalid")
+        assert result.total == 0
+        assert len(result.individual_rolls) == 0
+
+    def test_roll_dice_zero_sided_die_returns_modifier(self):
+        """Invalid die sizes should not crash and should return the modifier only."""
+        from mvp_site.game_state import roll_dice
+
+        result = roll_dice("1d0")
+        assert result.total == 0
+        assert result.individual_rolls == []
+        assert result.modifier == 0
+
+    def test_calculate_attack_roll_advantage_handles_empty_rolls(self):
+        """Advantage should not crash if underlying roll objects have empty rolls."""
+        from mvp_site.game_state import DiceRollResult, calculate_attack_roll
+        from unittest.mock import patch
+
+        def _fake_roll_with_advantage(_notation: str):
+            r1 = DiceRollResult(notation="1d20+5", individual_rolls=[], modifier=5, total=5)
+            r2 = DiceRollResult(notation="1d20+5", individual_rolls=[], modifier=5, total=5)
+            return r1, r2, 5
+
+        with patch("mvp_site.game_state.roll_with_advantage", new=_fake_roll_with_advantage):
+            result = calculate_attack_roll(5, advantage=True, disadvantage=False)
+        assert result["rolls"] == [0, 0]
+
+    def test_execute_dice_tool_roll_attack_handles_empty_rolls(self):
+        """roll_attack formatting should not crash if attack['rolls'] is empty."""
+        import mvp_site.game_state as game_state
+        from unittest.mock import patch
+
+        def _fake_calculate_attack_roll(_mod: int, _adv: bool, _dis: bool):
+            return {
+                "rolls": [],
+                "modifier": 5,
+                "total": 5,
+                "used_roll": "single",
+                "is_critical": False,
+                "is_fumble": False,
+                "notation": "1d20+5",
+            }
+
+        with patch("mvp_site.game_state.calculate_attack_roll", new=_fake_calculate_attack_roll):
+            result = game_state.execute_dice_tool(
+                "roll_attack",
+                {
+                    "attack_modifier": 5,
+                    "target_ac": 10,
+                    "weapon_name": "Test Weapon",
+                },
+            )
+        assert "formatted" in result
+
+    def test_cleanup_defeated_enemies_coerces_hp_current_string(self):
+        """cleanup_defeated_enemies should not crash when hp_current is a string."""
+        from mvp_site.game_state import GameState
+
+        gs = GameState.from_dict(
+            {
+                "game_state_version": 1,
+                "player_character_data": {},
+                "world_data": {},
+                "npc_data": {"watch_patrol_6": {"role": "enemy"}},
+                "custom_campaign_state": {},
+                "combat_state": {
+                    "in_combat": True,
+                    "combatants": {"watch_patrol_6": {"hp_current": "0"}},
+                    "initiative_order": [{"name": "watch_patrol_6", "type": "enemy"}],
+                },
+            }
+        )
+        assert gs is not None
+        defeated = gs.cleanup_defeated_enemies()
+        assert "watch_patrol_6" in defeated
+
+    def test_calculate_resource_depletion(self):
+        """Test resource depletion calculation."""
+        from mvp_site.game_state import calculate_resource_depletion
+
+        # 100 units at 10/day for 5 days
+        remaining = calculate_resource_depletion(
+            current_amount=100,
+            depletion_rate=10,
+            time_elapsed=5
+        )
+        assert remaining == 50
+
+        # Depleted to 0
+        remaining = calculate_resource_depletion(
+            current_amount=100,
+            depletion_rate=10,
+            time_elapsed=15
+        )
+        assert remaining == 0  # Capped at 0, not negative
+
+
+if __name__ == "__main__":
+    unittest.main()
 # These tests verify the D&D 5e XP progression table and validation logic.
 # =============================================================================
 
@@ -2092,6 +2463,78 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             gs.player_character_data.get("level"), 5,
             "Computed level should be persisted"
         )
+
+
+class TestExecuteToolRequests(unittest.TestCase):
+    """Test cases for execute_tool_requests function."""
+
+    def test_invalid_input_type(self):
+        result = game_state_module.execute_tool_requests("not a list")
+        self.assertEqual(result, [])
+
+    def test_invalid_item_type(self):
+        result = game_state_module.execute_tool_requests(["not a dict"])
+        self.assertEqual(result, [])
+
+    def test_invalid_tool_name(self):
+        requests = [{"tool": 123, "args": {}}, {"tool": "", "args": {}}]
+        result = game_state_module.execute_tool_requests(requests)
+        self.assertEqual(result, [])
+
+    @patch("mvp_site.game_state.execute_dice_tool")
+    def test_valid_request(self, mock_execute):
+        mock_execute.return_value = {"success": True}
+        requests = [{"tool": "roll_dice", "args": {"notation": "1d20"}}]
+
+        result = game_state_module.execute_tool_requests(requests)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["tool"], "roll_dice")
+        self.assertEqual(result[0]["result"], {"success": True})
+        mock_execute.assert_called_with("roll_dice", {"notation": "1d20"})
+
+    @patch("mvp_site.game_state.execute_dice_tool")
+    def test_exception_handling(self, mock_execute):
+        mock_execute.side_effect = Exception("Tool error")
+        requests = [{"tool": "roll_dice", "args": {}}]
+
+        result = game_state_module.execute_tool_requests(requests)
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0]["result"])
+        self.assertEqual(result[0]["result"]["error"], "Tool error")
+
+
+class TestFormatToolResultsText(unittest.TestCase):
+    def test_non_list_returns_empty(self):
+        self.assertEqual(game_state_module.format_tool_results_text("nope"), "")
+
+    def test_formats_valid_results(self):
+        tool_results = [
+            {"tool": "roll_dice", "args": {"notation": "1d20"}, "result": {"total": 12}},
+        ]
+        text = game_state_module.format_tool_results_text(tool_results)
+        self.assertIn("- roll_dice:", text)
+        self.assertIn('"total": 12', text)
+
+    def test_prefers_formatted_string(self):
+        tool_results = [
+            {
+                "tool": "roll_attack",
+                "args": {"attack_modifier": 5},
+                "result": {"formatted": "Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)"},
+            }
+        ]
+        text = game_state_module.format_tool_results_text(tool_results)
+        self.assertEqual(text, "- Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)")
+
+    def test_ignores_invalid_items(self):
+        tool_results = [
+            "not a dict",
+            {"tool": "", "args": {}, "result": {}},
+            {"tool": 123, "args": {}, "result": {}},
+        ]
+        self.assertEqual(game_state_module.format_tool_results_text(tool_results), "")
 
 
 if __name__ == "__main__":

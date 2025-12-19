@@ -4,6 +4,7 @@ Regression tests for output token budget calculation.
 These tests ensure that the output token budget is calculated correctly
 based on the actual model context window, not the compaction limit.
 """
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -290,19 +291,22 @@ class TestEndToEndOutputBudget(unittest.TestCase):
             # Return large token count to simulate the bug scenario
             return 300_000  # 300K tokens for prompt
 
-        with patch.object(
-            gemini_provider, "count_tokens", side_effect=mock_count_tokens
-        ), patch.object(
-            gemini_provider, "generate_json_mode_content", side_effect=mock_generate_json_mode_content
-        ):
-            # Call the full LLM service flow
-            llm_service._call_llm_api(
-                prompt_contents=["Large prompt content..."],
-                model_name=constants.DEFAULT_GEMINI_MODEL,
-                current_prompt_text_for_logging="Test large context",
-                system_instruction_text="System instruction (5K tokens simulated)",
-                provider_name=constants.LLM_PROVIDER_GEMINI,
-            )
+        # Ensure we have an API key to avoid fallback logic
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "dummy_key"}):
+            with patch.object(
+                gemini_provider, "count_tokens", side_effect=mock_count_tokens
+            ), patch.object(
+                # Updated to patch code_execution method as newer models (gemini-3) use this strategy
+                gemini_provider, "generate_content_with_code_execution", side_effect=mock_generate_json_mode_content
+            ):
+                # Call the full LLM service flow
+                llm_service._call_llm_api(
+                    prompt_contents=["Large prompt content..."],
+                    model_name=constants.DEFAULT_GEMINI_MODEL,
+                    current_prompt_text_for_logging="Test large context",
+                    system_instruction_text="System instruction (5K tokens simulated)",
+                    provider_name=constants.LLM_PROVIDER_GEMINI,
+                )
 
         # Verify output tokens were NOT starved
         self.assertIsNotNone(

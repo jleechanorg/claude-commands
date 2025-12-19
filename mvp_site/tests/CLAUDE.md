@@ -133,6 +133,81 @@ Located in testing support files:
 - `auth_boundary_testing.py` - Authentication and authorization boundary validation
 - `input_sanitization_tests.py` - Comprehensive input validation and XSS prevention
 
+## No Silent Test Skipping Policy
+
+**CRITICAL RULE:** Tests must NEVER silently skip or short-circuit based on environment variables.
+
+### The Three Valid Test States
+
+Every test must exist in exactly ONE of these states:
+
+| State | Behavior | Example |
+|-------|----------|---------|
+| **RUN** | Test executes with real or mocked dependencies | Normal test execution |
+| **FAIL LOUDLY** | Test raises clear error explaining why it cannot run | `pytest.fail("Requires /special/path - see README")` |
+| **MOCK** | Test uses mock/fake services when `TESTING=true` | `FakeFirestore`, `FakeLLMResponse` |
+
+### Forbidden Patterns
+
+These patterns create silent failures and are **BANNED**:
+
+```python
+# ❌ FORBIDDEN: Conditional early return
+def test_api_integration():
+    if not os.getenv("API_KEY"):
+        return  # Silent skip - test appears to pass!
+
+# ❌ FORBIDDEN: Module-level import that raises
+try:
+    import special_module
+except ImportError:
+    pass  # Test file may silently do nothing
+
+# ❌ FORBIDDEN: Empty test body with conditional
+def test_feature():
+    if os.getenv("CI"):
+        pass  # Does nothing in CI
+```
+
+### Required Patterns
+
+```python
+# ✅ CORRECT: Explicit skip with reason
+@pytest.mark.skipif(
+    not os.getenv("GEMINI_API_KEY"),
+    reason="Requires GEMINI_API_KEY for live API testing"
+)
+def test_gemini_live_integration():
+    # This test is visibly skipped with clear reason
+    ...
+
+# ✅ CORRECT: Mock when TESTING=true
+def test_database_operation():
+    # TESTING=true enables mock mode automatically
+    with fake_firestore_context():
+        result = db_service.query(...)
+        assert result is not None
+
+# ✅ CORRECT: Fail loudly if dependency missing
+def test_requires_special_setup():
+    if not os.path.exists("/special/path"):
+        pytest.fail("Test requires /special/path - see README for setup")
+```
+
+### Test Collection Rules
+
+1. **Test collection must NEVER fail** due to missing environment variables
+2. All imports must be guarded or use conditional imports within test functions
+3. Use `pytest.importorskip()` for optional dependencies
+4. `TESTING=true` must enable mock mode for all external services
+
+### Enforcement (policy)
+
+- CI runs ALL tests; skips must be explicit and visible
+- Coverage reports should show tests as "skipped" (not "passed" with 0 assertions)
+- Pre-commit hooks may validate test patterns when configured (not yet automated)
+- Code review should flag silent skip patterns for discussion
+
 ## Quality Standards and Compliance
 
 ### Test Coverage Requirements
@@ -177,5 +252,67 @@ def test_campaign_creation():
         assert result['success'] is True
         assert 'campaign_id' in result
 ```
+
+## End-to-End Testing Philosophy
+
+### Key Principle: Mock External APIs, Not Internal Logic
+
+**CRITICAL:** When testing internal function logic (like `generate_content_with_tool_requests`), mock the **lowest-level API calls**, NOT the function you're testing. This ensures internal logic is exercised.
+
+```python
+# ❌ BAD: Mocking the entire function - internal logic NOT tested
+with patch('provider.generate_content_with_tool_requests') as mock:
+    mock.return_value = Mock(text='{"result": "test"}')
+    # Bug in generate_content_with_tool_requests would NOT be caught!
+
+# ✅ GOOD: Mock the low-level API call - internal logic IS tested
+with patch('provider.generate_json_mode_content') as mock_api:
+    # Phase 1: Return JSON response (may include tool_requests)
+    mock_api.side_effect = [phase1_response, phase2_response]
+    result = generate_content_with_tool_requests(...)
+    # Now internal logic (parsing tool_requests, executing, Phase 2) is tested!
+```
+
+### Fake Implementations Over Mock Objects
+
+From `README_END2END_TESTS.md`:
+- Mock only **external APIs** (Firebase, Gemini API client)
+- DON'T mock internal service functions
+- Use `FakeLLMResponse` classes that return real Python data structures
+- Avoids JSON serialization errors from `Mock()` objects
+
+### Testing Multi-Phase Functions (JSON-First Architecture)
+
+For functions with multiple phases (like JSON-first tool_requests):
+
+1. **Mock the lowest-level API call** (e.g., `generate_json_mode_content`)
+2. **Use `side_effect` for sequential responses** (Phase 1 JSON, Phase 2 with results)
+3. **Verify intermediate data is passed correctly** between phases
+4. **Check call arguments** to ensure history/context is preserved
+
+```python
+def test_tool_requests_passes_history_to_phase2():
+    """Verify Phase 2 receives conversation history from Phase 1."""
+    with patch('provider.generate_json_mode_content') as mock_api:
+        # Phase 1: Return JSON with tool_requests
+        phase1_response = create_json_response({
+            "narrative": "Rolling...",
+            "tool_requests": [{"tool": "roll_dice", "args": {"notation": "1d20"}}]
+        })
+        # Phase 2: Return final JSON (no tool_requests)
+        phase2_response = create_json_response({"narrative": "You rolled 15!"})
+        mock_api.side_effect = [phase1_response, phase2_response]
+
+        result = generate_content_with_tool_requests(prompt, model, ...)
+
+        # Verify Phase 2 was called with history including tool results
+        phase2_call = mock_api.call_args_list[1]
+        assert phase2_call.kwargs.get('prompt_contents') is not None  # History passed!
+```
+
+### Reference Files
+- `fake_llm.py` - `FakeLLMResponse`, `FakePart` with `function_call` attribute
+- `fake_firestore.py` - `FakeFirestoreClient`, `FakeFirestoreDocument`
+- `README_END2END_TESTS.md` - Full philosophy documentation
 
 See also: [../../CLAUDE.md](../../CLAUDE.md) for complete project protocols and development guidelines.

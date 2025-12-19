@@ -56,7 +56,7 @@ from mvp_site.firestore_service import (
     get_user_settings,
     update_state_with_changes,
 )
-from mvp_site.game_state import GameState
+from mvp_site.game_state import GameState, validate_and_correct_state
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
 
@@ -919,6 +919,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             updated_game_state_dict, new_time=new_world_time, original_time=original_world_time
         )
 
+        # Validate and auto-correct state before persistence
+        updated_game_state_dict = validate_and_correct_state(
+            updated_game_state_dict, previous_world_time=original_world_time
+        )
+
         # Update in Firestore (blocking I/O - run in thread)
         await asyncio.to_thread(
             firestore_service.update_campaign_game_state,
@@ -1031,6 +1036,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["planning_block"] = structured_response.planning_block
             if hasattr(structured_response, "dice_rolls"):
                 unified_response["dice_rolls"] = structured_response.dice_rolls
+            if hasattr(structured_response, "dice_audit_events"):
+                unified_response["dice_audit_events"] = (
+                    structured_response.dice_audit_events
+                )
             if hasattr(structured_response, "resources"):
                 unified_response["resources"] = structured_response.resources
             # debug_info only in debug mode
@@ -1834,6 +1843,11 @@ def _handle_set_command(
         f"GOD_MODE_SET state AFTER update:\n{_truncate_log_json(updated_state, json_serializer=json_default_serializer)}"
     )
 
+    # Validate and auto-correct state before persistence
+    updated_state = validate_and_correct_state(
+        updated_state, previous_world_time=original_world_time
+    )
+
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
 
     # Log the formatted changes for both server and chat
@@ -1914,8 +1928,13 @@ def _handle_update_state_command(
                 "Unable to reconstruct game state after applying changes.", 500
             )
 
+        # Validate and auto-correct state before persistence
+        validated_state_dict = validate_and_correct_state(
+            final_game_state.to_dict(), previous_world_time=original_world_time
+        )
+
         firestore_service.update_campaign_game_state(
-            user_id, campaign_id, final_game_state.to_dict()
+            user_id, campaign_id, validated_state_dict
         )
 
         log_message = format_game_state_updates(state_changes, for_html=False)

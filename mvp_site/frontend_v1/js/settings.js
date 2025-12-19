@@ -42,7 +42,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 let saveTimeout = null;
 const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-70b-instruct';
-const DEFAULT_CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // 131K context - best for RPG
+// Keep this aligned with backend `mvp_site/constants.py` DEFAULT_CEREBRAS_MODEL.
+const DEFAULT_CEREBRAS_MODEL = 'zai-glm-4.6';
 const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview'; // Gemini 3 Flash (Dec 2025)
 
 // Users allowed to see Gemini 3 Pro option (expensive model)

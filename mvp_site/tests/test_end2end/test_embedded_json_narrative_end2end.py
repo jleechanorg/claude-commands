@@ -116,7 +116,7 @@ The family has been completely broken. Choose your approach.""",
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_embedded_json_stripped_from_narrative_end2end(
         self, mock_gemini_generate, mock_get_db
     ):
@@ -173,7 +173,7 @@ The family has been completely broken. Choose your approach.""",
             "Expected non-JSON context to be preserved in narrative"
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_narrative_only_json_gets_cleaned_end2end(
         self, mock_gemini_generate, mock_get_db
     ):
@@ -233,7 +233,7 @@ The family has been completely broken. Choose your approach.""",
             f"Non-JSON content should be preserved. Got: {all_narrative_text[:200]}"
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_clean_narrative_unchanged_end2end(
         self, mock_gemini_generate, mock_get_db
     ):
@@ -338,7 +338,7 @@ class TestEmbeddedJsonRealWorldScenario(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
     def test_real_world_bug_exact_reproduction_end2end(
         self, mock_gemini_generate, mock_get_db
     ):

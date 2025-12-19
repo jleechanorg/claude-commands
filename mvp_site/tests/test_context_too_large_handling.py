@@ -42,21 +42,26 @@ class TestContextTooLargeHandling(unittest.TestCase):
         from mvp_site.llm_service import _call_llm_api
 
         # Provider raises ContextTooLargeError
-        mock_gemini.generate_json_mode_content.side_effect = ContextTooLargeError(
+        ctx_err = ContextTooLargeError(
             "Context too large: prompt used 100,000 tokens",
             prompt_tokens=100000,
             completion_tokens=0,
             finish_reason="length",
         )
+        # Routing can use either native tools or JSON-first tool_requests depending on model/provider
+        mock_gemini.generate_content_with_native_tools.side_effect = ctx_err
+        mock_gemini.generate_content_with_tool_requests.side_effect = ctx_err
 
         # Act & Assert: Should raise LLMRequestError with 422 status
-        with self.assertRaises(LLMRequestError) as ctx:
-            _call_llm_api(
-                prompt_contents=["Test prompt"],
-                model_name="gemini-2.0-flash",
-                system_instruction_text="System instruction",
-                provider_name=constants.LLM_PROVIDER_GEMINI,
-            )
+        # Ensure we don't fall back to other providers due to missing key
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "dummy_key"}):
+            with self.assertRaises(LLMRequestError) as ctx:
+                _call_llm_api(
+                    prompt_contents=["Test prompt"],
+                    model_name="gemini-2.0-flash",
+                    system_instruction_text="System instruction",
+                    provider_name=constants.LLM_PROVIDER_GEMINI,
+                )
 
         # Verify 422 status code (Unprocessable Entity - context too large)
         self.assertEqual(ctx.exception.status_code, 422)
@@ -71,20 +76,25 @@ class TestContextTooLargeHandling(unittest.TestCase):
         from mvp_site.llm_service import _call_llm_api
 
         # Provider raises ContextTooLargeError with token info
-        mock_gemini.generate_json_mode_content.side_effect = ContextTooLargeError(
+        ctx_err = ContextTooLargeError(
             "Context too large: prompt used 100,000 tokens",
             prompt_tokens=100000,
             completion_tokens=0,
             finish_reason="length",
         )
+        # Routing can use either native tools or JSON-first tool_requests depending on model/provider
+        mock_gemini.generate_content_with_native_tools.side_effect = ctx_err
+        mock_gemini.generate_content_with_tool_requests.side_effect = ctx_err
 
-        with self.assertRaises(LLMRequestError) as ctx:
-            _call_llm_api(
-                prompt_contents=["Test prompt"],
-                model_name="gemini-2.0-flash",
-                system_instruction_text="System instruction",
-                provider_name=constants.LLM_PROVIDER_GEMINI,
-            )
+        # Ensure we don't fall back to other providers due to missing key
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "dummy_key"}):
+            with self.assertRaises(LLMRequestError) as ctx:
+                _call_llm_api(
+                    prompt_contents=["Test prompt"],
+                    model_name="gemini-2.0-flash",
+                    system_instruction_text="System instruction",
+                    provider_name=constants.LLM_PROVIDER_GEMINI,
+                )
 
         # Error message should contain useful debugging info
         self.assertIn("100,000", str(ctx.exception))

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/* eslint-env node */
+/* eslint-disable no-console */
 /**
  * MCP Server for Second Opinion Tool
  *
@@ -295,7 +297,7 @@ app.get('/', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',
