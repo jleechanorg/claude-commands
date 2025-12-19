@@ -1670,12 +1670,13 @@ def _call_llm_api(
                 json_mode_max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_OPENROUTER:
-            # Native two-phase tool calling for all OpenRouter models
-            # Phase 1: native tools, Phase 2: JSON schema
+            # JSON-first tool_requests flow (matches prompt documentation)
+            # Phase 1: JSON with optional tool_requests, Phase 2: JSON with results
+            # Avoids forced tool calls - LLM decides when dice are needed
             logging_util.info(
-                f"🔍 CALL_LLM_API_OPENROUTER: native_two_phase strategy for {model_name}"
+                f"🔍 CALL_LLM_API_OPENROUTER: json_first_tool_requests strategy for {model_name}"
             )
-            return openrouter_provider.generate_content_with_native_tools(
+            return openrouter_provider.generate_content_with_tool_requests(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
@@ -1683,12 +1684,13 @@ def _call_llm_api(
                 max_output_tokens=safe_output_limit,
             )
         if provider_name == constants.LLM_PROVIDER_CEREBRAS:
-            # Native two-phase tool calling for all Cerebras models
-            # Phase 1: native tools, Phase 2: JSON schema
+            # JSON-first tool_requests flow (matches prompt documentation)
+            # Phase 1: JSON with optional tool_requests, Phase 2: JSON with results
+            # Avoids forced tool calls - LLM decides when dice are needed
             logging_util.info(
-                f"🔍 CALL_LLM_API_CEREBRAS: native_two_phase strategy for {model_name}"
+                f"🔍 CALL_LLM_API_CEREBRAS: json_first_tool_requests strategy for {model_name}"
             )
-            return cerebras_provider.generate_content_with_native_tools(
+            return cerebras_provider.generate_content_with_tool_requests(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,

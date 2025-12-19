@@ -402,16 +402,16 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
         """
         Verify _call_llm_api routes to JSON-first tool_requests flow for Cerebras.
 
-        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use
-        generate_content_with_native_tools for native two-phase inference.
-        Phase 1: native API tools, Phase 2: JSON schema.
+        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use JSON-first flow
+        to avoid forced tool calls and match prompt documentation.
+        Phase 1: JSON with optional tool_requests, Phase 2: JSON with results.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_native_tools") as mock_native_tools:
-            mock_native_tools.return_value = Mock(
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests") as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # All Cerebras models use native_tools flow
+            # All Cerebras models use JSON-first tool_requests flow
             llm_service._call_llm_api(
                 ["test prompt"],
                 "qwen-3-235b-a22b-instruct-2507",
@@ -419,26 +419,26 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
 
-            # Verify native_tools flow was called
+            # Verify JSON-first tool_requests flow was called
             self.assertTrue(
-                mock_native_tools.called,
-                "generate_content_with_native_tools should be called for Cerebras",
+                mock_tool_requests.called,
+                "generate_content_with_tool_requests should be called for Cerebras",
             )
 
-    def test_call_llm_api_routes_to_native_tools_for_openrouter(self):
+    def test_call_llm_api_routes_to_tool_requests_for_openrouter(self):
         """
-        Verify _call_llm_api routes to native two-phase flow for OpenRouter.
+        Verify _call_llm_api routes to JSON-first tool_requests flow for OpenRouter.
 
-        ARCHITECTURE UPDATE (Dec 2024): All OpenRouter models use
-        generate_content_with_native_tools for native two-phase inference.
-        Phase 1: native API tools, Phase 2: JSON schema.
+        ARCHITECTURE UPDATE (Dec 2024): All OpenRouter models use JSON-first flow
+        to avoid forced tool calls and match prompt documentation.
+        Phase 1: JSON with optional tool_requests, Phase 2: JSON with results.
         """
-        with patch("mvp_site.llm_providers.openrouter_provider.generate_content_with_native_tools") as mock_native_tools:
-            mock_native_tools.return_value = Mock(
+        with patch("mvp_site.llm_providers.openrouter_provider.generate_content_with_tool_requests") as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # All OpenRouter models use native_tools flow
+            # All OpenRouter models use JSON-first tool_requests flow
             llm_service._call_llm_api(
                 ["test prompt"],
                 "meta-llama/llama-3.1-70b-instruct",
@@ -446,26 +446,26 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_OPENROUTER
             )
 
-            # Verify native_tools flow was called
+            # Verify JSON-first tool_requests flow was called
             self.assertTrue(
-                mock_native_tools.called,
-                "generate_content_with_native_tools should be called for OpenRouter",
+                mock_tool_requests.called,
+                "generate_content_with_tool_requests should be called for OpenRouter",
             )
 
-    def test_call_llm_api_uses_native_tools_for_all_cerebras_models(self):
+    def test_call_llm_api_uses_tool_requests_for_all_cerebras_models(self):
         """
-        Verify _call_llm_api uses native_two_phase for ALL Cerebras models.
+        Verify _call_llm_api uses JSON-first tool_requests for ALL Cerebras models.
 
-        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use native two-phase,
-        including models like llama-3.3-70b. The old MODELS_WITH_TOOL_USE distinction
-        is removed - all models now use native API tool calling.
+        ARCHITECTURE UPDATE (Dec 2024): All Cerebras models use JSON-first flow
+        to avoid forced tool calls. The old MODELS_WITH_TOOL_USE distinction
+        is removed - all models now use optional tool_requests in JSON.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_native_tools") as mock_native_tools:
-            mock_native_tools.return_value = Mock(
+        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests") as mock_tool_requests:
+            mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            # ALL Cerebras models now use native_tools (including llama-3.3-70b)
+            # ALL Cerebras models now use JSON-first tool_requests (including llama-3.3-70b)
             llm_service._call_llm_api(
                 ["test prompt"],
                 "llama-3.3-70b",
@@ -473,10 +473,10 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 provider_name=constants.LLM_PROVIDER_CEREBRAS
             )
 
-            # Verify native_tools flow was called
+            # Verify JSON-first tool_requests flow was called
             self.assertTrue(
-                mock_native_tools.called,
-                "generate_content_with_native_tools should be called for all Cerebras models",
+                mock_tool_requests.called,
+                "generate_content_with_tool_requests should be called for all Cerebras models",
             )
 
 
