@@ -282,6 +282,10 @@ class GameState:
             hp_current = pc_data.get("hp_current")
             hp_max = pc_data.get("hp_max")
 
+            # Defensive: persisted game state may contain numeric strings
+            hp_current = _coerce_int(hp_current, None)
+            hp_max = _coerce_int(hp_max, None)
+
             if hp_current is not None and hp_max is not None and hp_max > 0:
                 # Check for unconscious/death vs HP mismatch
                 if (
