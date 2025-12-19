@@ -14,6 +14,7 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
+import argparse
 import glob
 import json
 import shutil
@@ -263,8 +264,23 @@ class UnifiedOrchestration:
             print(f"❌ Failed to continue existing work: {e}")
             print("🔄 Falling back to new agent creation")
 
-    def orchestrate(self, task_description: str):
-        """Main orchestration method with LLM-driven agent creation."""
+    def orchestrate(self, task_description: str, options: dict = None):
+        """Main orchestration method with LLM-driven agent creation.
+
+        Args:
+            task_description: The task to orchestrate
+            options: Optional dict with keys:
+                - context: Path to markdown file to inject into agent prompt
+                - branch: Force checkout of specific branch
+                - pr: Existing PR number to update
+                - mcp_agent: Pre-fill agent name for MCP Mail registration
+                - bead: Pre-fill bead ID for tracking
+                - validate: Semantic validation command to run after completion
+                - no_new_pr: Hard block on PR creation
+                - no_new_branch: Hard block on branch creation
+        """
+        options = options or {}
+
         print("🤖 Unified LLM-Driven Orchestration with File-based A2A")
         print("=" * 60)
 
@@ -276,6 +292,41 @@ class UnifiedOrchestration:
         print(f"  └─ Start Time: {datetime.fromtimestamp(start_time).isoformat()}")
         print(f"  └─ Task Length: {len(task_description)} characters")
         print(f"  └─ Current Directory: {os.getcwd()}")
+
+        # Display optional arguments if provided
+        if any(options.values()):
+            print("📋 OPTIONS:")
+            if options.get("context"):
+                print(f"  └─ Context File: {options['context']}")
+            if options.get("branch"):
+                print(f"  └─ Target Branch: {options['branch']}")
+            if options.get("pr"):
+                print(f"  └─ Target PR: #{options['pr']}")
+            if options.get("mcp_agent"):
+                print(f"  └─ MCP Agent: {options['mcp_agent']}")
+            if options.get("bead"):
+                print(f"  └─ Bead ID: {options['bead']}")
+            if options.get("validate"):
+                print(f"  └─ Validation: {options['validate']}")
+            if options.get("no_new_pr"):
+                print("  └─ 🚫 New PR Creation: BLOCKED")
+            if options.get("no_new_branch"):
+                print("  └─ 🚫 New Branch Creation: BLOCKED")
+
+        # Load context file if provided
+        context_content = None
+        if options.get("context"):
+            context_path = options["context"]
+            if os.path.exists(context_path):
+                try:
+                    with open(context_path, "r") as f:
+                        context_content = f.read()
+                    print(f"  └─ Context Loaded: {len(context_content)} characters")
+                except Exception as e:
+                    print(f"  ⚠️ Failed to load context file: {e}")
+            else:
+                print(f"  ⚠️ Context file not found: {context_path}")
+
         print("=" * 60)
 
         # Pre-flight checks
@@ -293,10 +344,30 @@ class UnifiedOrchestration:
                 self._continue_existing_agent_work(existing_agent, task_description)
                 return
 
+        # Handle branch checkout if specified
+        if options.get("branch"):
+            try:
+                subprocess.run(
+                    ["git", "checkout", options["branch"]],
+                    shell=False,
+                    timeout=30,
+                    check=True
+                )
+                print(f"✅ Checked out branch: {options['branch']}")
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Failed to checkout branch {options['branch']}: {e}")
+                print("   Continuing with current branch...")
+
         # LLM-driven task analysis and agent creation with constraints
         print("🧠 TASK ANALYSIS PHASE:")
         analysis_start = time.time()
-        agents = self.task_dispatcher.analyze_task_and_create_agents(task_description)
+
+        # Build enhanced task with context if provided
+        enhanced_task = task_description
+        if context_content:
+            enhanced_task = f"{task_description}\n\n---\n## Pre-computed Context\n{context_content}"
+
+        agents = self.task_dispatcher.analyze_task_and_create_agents(enhanced_task)
         analysis_duration = time.time() - analysis_start
         print(f"  └─ Analysis Duration: {analysis_duration:.2f}s")
         print(f"  └─ Agents Planned: {len(agents)}")
@@ -309,6 +380,22 @@ class UnifiedOrchestration:
         failed_agents = []
 
         for i, agent_spec in enumerate(agents):
+            # Inject orchestration options into agent spec
+            if options.get("branch"):
+                agent_spec["existing_branch"] = options["branch"]
+            if options.get("pr"):
+                agent_spec["existing_pr"] = options["pr"]
+            if options.get("mcp_agent"):
+                agent_spec["mcp_agent_name"] = options["mcp_agent"]
+            if options.get("bead"):
+                agent_spec["bead_id"] = options["bead"]
+            if options.get("validate"):
+                agent_spec["validation_command"] = options["validate"]
+            if options.get("no_new_pr"):
+                agent_spec["no_new_pr"] = True
+            if options.get("no_new_branch"):
+                agent_spec["no_new_branch"] = True
+
             print(f"  📦 Creating Agent {i + 1}/{len(agents)}: {agent_spec['name']}")
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 created_agents.append(agent_spec)
@@ -483,18 +570,106 @@ class UnifiedOrchestration:
 
 def main():
     """Main entry point for unified orchestration."""
-    if len(sys.argv) < 2 or sys.argv[1] in ["--help", "-h", "help"]:
-        print("Usage: python3 orchestrate_unified.py [task description]")
-        print("Example: python3 orchestrate_unified.py 'Find security vulnerabilities and create coverage report'")
-        print("\nThe orchestration system will:")
-        print("1. Create specialized agents for your task")
-        print("2. Monitor their progress")
-        print("3. Display any PRs created at the end")
-        return 1 if len(sys.argv) < 2 else 0
+    parser = argparse.ArgumentParser(
+        description="Unified LLM-Driven Orchestration System",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Example:
+  python3 orchestrate_unified.py 'Find security vulnerabilities and create coverage report'
+  python3 orchestrate_unified.py --context /tmp/context.md --branch my-branch --pr 123 'Implement fix'
 
-    task = " ".join(sys.argv[1:])
+The orchestration system will:
+1. Create specialized agents for your task
+2. Monitor their progress
+3. Display any PRs created at the end
+        """
+    )
+
+    parser.add_argument(
+        "task",
+        nargs="*",
+        help="Task description for the orchestration system"
+    )
+
+    # Context injection options
+    parser.add_argument(
+        "--context",
+        type=str,
+        default=None,
+        help="Path to markdown file to inject into agent prompt as pre-computed context"
+    )
+
+    # Branch/PR control options
+    parser.add_argument(
+        "--branch",
+        type=str,
+        default=None,
+        help="Force checkout of specific branch (prevents new branch creation)"
+    )
+    parser.add_argument(
+        "--pr",
+        type=int,
+        default=None,
+        help="Existing PR number to update (prevents new PR creation)"
+    )
+
+    # MCP/Bead tracking options
+    parser.add_argument(
+        "--mcp-agent",
+        type=str,
+        default=None,
+        help="Pre-fill agent name for MCP Mail registration"
+    )
+    parser.add_argument(
+        "--bead",
+        type=str,
+        default=None,
+        help="Pre-fill bead ID for tracking"
+    )
+
+    # Validation options
+    parser.add_argument(
+        "--validate",
+        type=str,
+        default=None,
+        help="Semantic validation command to run after agent completes"
+    )
+
+    # Hard blocks
+    parser.add_argument(
+        "--no-new-pr",
+        action="store_true",
+        help="Hard block on PR creation (agents must use existing PR)"
+    )
+    parser.add_argument(
+        "--no-new-branch",
+        action="store_true",
+        help="Hard block on branch creation (agents must use existing branch)"
+    )
+
+    args = parser.parse_args()
+
+    # Validate task description
+    if not args.task:
+        parser.print_help()
+        return 1
+
+    task = " ".join(args.task)
+
+    # Build options dict for orchestration
+    options = {
+        "context": args.context,
+        "branch": args.branch,
+        "pr": args.pr,
+        "mcp_agent": args.mcp_agent,
+        "bead": args.bead,
+        "validate": args.validate,
+        "no_new_pr": args.no_new_pr,
+        "no_new_branch": args.no_new_branch,
+    }
+
     orchestration = UnifiedOrchestration()
-    orchestration.orchestrate(task)
+    orchestration.orchestrate(task, options=options)
 
     return 0
 
