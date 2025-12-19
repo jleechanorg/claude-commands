@@ -498,18 +498,36 @@ def run_json_first_tool_requests_flow(
         response2_text = (extract_text_fn(response_2) or "").strip()
         extracted2 = extract_json_boundaries(response2_text) if response2_text else None
         candidate2 = extracted2 if extracted2 else response2_text
+
+        # Check if Phase 2 response is valid JSON
+        needs_retry = False
+        retry_reason = ""
         try:
             response2_data = json.loads(candidate2) if candidate2 else {}
+            # Check for missing dice_rolls
+            dice_rolls = response2_data.get("dice_rolls")
+            has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+            if not has_dice_rolls:
+                needs_retry = True
+                retry_reason = "missing_dice_rolls"
         except json.JSONDecodeError:
-            return _attach_tool_execution_metadata(response_2, executed=True, tool_results=tool_results)
+            needs_retry = True
+            retry_reason = "invalid_json"
 
-        dice_rolls = response2_data.get("dice_rolls")
-        has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
-        if not has_dice_rolls:
-            retry_instructions = (
-                "IMPORTANT: Your response MUST include a non-empty dice_rolls list summarizing each dice roll above. "
-                "Do NOT invent rolls; use only the Tool results above."
-            )
+        if needs_retry:
+            # Build retry instructions based on reason
+            if retry_reason == "invalid_json":
+                retry_instructions = (
+                    "CRITICAL: Your previous response was malformed JSON. "
+                    "Return ONLY valid JSON with the complete NarrativeResponse schema. "
+                    "Include a dice_rolls list summarizing each roll above. Do NOT invent rolls."
+                )
+            else:
+                retry_instructions = (
+                    "IMPORTANT: Your response MUST include a non-empty dice_rolls list summarizing each dice roll above. "
+                    "Do NOT invent rolls; use only the Tool results above."
+                )
+
             tool_results_prompt_retry = build_tool_results_prompt(
                 tool_results_text,
                 extra_instructions=retry_instructions,

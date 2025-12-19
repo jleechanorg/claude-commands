@@ -398,3 +398,64 @@ def test_build_tool_results_prompt():
 
     with_extra = build_tool_results_prompt("X", extra_instructions="EXTRA")
     assert "EXTRA" in with_extra
+
+
+def test_run_json_first_tool_requests_flow_retries_phase2_on_invalid_json():
+    """Phase 2 invalid JSON triggers retry with same tool_results (bead worktree_worker3-242)."""
+
+    class FakeResponse:
+        def __init__(self, text: str):
+            self.text = text
+
+    call_count = {"phase2": 0}
+
+    def phase1_gen_fn(**kwargs):
+        # Phase 1: return tool_requests
+        return FakeResponse(
+            '{"tool_requests": [{"tool": "roll_dice", "args": {"notation": "1d20"}}]}'
+        )
+
+    def phase2_gen_fn(history):
+        call_count["phase2"] += 1
+        if call_count["phase2"] == 1:
+            # First Phase 2: return invalid JSON
+            return FakeResponse('{"narrative": "Attack!", "dice_rolls": [')  # Truncated
+        # Retry: return valid JSON
+        return FakeResponse('{"narrative": "Attack!", "dice_rolls": ["1d20 = 15"]}')
+
+    def extract_text_fn(resp):
+        return resp.text
+
+    def execute_tool_requests_fn(requests):
+        return [{"tool": "roll_dice", "args": {"notation": "1d20"}, "result": {"total": 15}}]
+
+    def format_tool_results_fn(results):
+        return "- roll_dice: total=15"
+
+    def build_history_fn(prompt_contents, phase1_text, tool_results_prompt):
+        return [prompt_contents, phase1_text, tool_results_prompt]
+
+    class Logger:
+        def info(self, _): pass
+        def warning(self, _): pass
+        def error(self, _): pass
+
+    result = run_json_first_tool_requests_flow(
+        phase1_generate_fn=phase1_gen_fn,
+        phase2_generate_fn=phase2_gen_fn,
+        extract_text_fn=extract_text_fn,
+        prompt_contents=["Attack the goblin"],
+        execute_tool_requests_fn=execute_tool_requests_fn,
+        format_tool_results_text_fn=format_tool_results_fn,
+        build_history_fn=build_history_fn,
+        logger=Logger(),
+        no_tool_requests_log_msg="No tool_requests in Phase 1",
+    )
+
+    # Phase 2 should have been called twice (initial + retry)
+    assert call_count["phase2"] == 2, "Phase 2 should retry on invalid JSON"
+
+    # Result should have tool execution metadata
+    assert hasattr(result, "_tool_requests_executed")
+    assert result._tool_requests_executed is True
+    assert result._tool_results == [{"tool": "roll_dice", "args": {"notation": "1d20"}, "result": {"total": 15}}]
