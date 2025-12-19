@@ -205,6 +205,29 @@ class StoryModeAgent(BaseAgent):
         Returns:
             Complete system instruction string
         """
+        parts = self.build_system_instruction_parts(
+            selected_prompts=selected_prompts,
+            include_continuation_reminder=include_continuation_reminder,
+        )
+
+        # Finalize with world content if requested
+        return self._prompt_builder.finalize_instructions(parts, use_default_world)
+
+    def build_system_instruction_parts(
+        self,
+        selected_prompts: list[str] | None = None,
+        include_continuation_reminder: bool = True,
+    ) -> list[str]:
+        """
+        Build system instruction parts for story mode before world content is appended.
+
+        Args:
+            selected_prompts: User-selected prompt types
+            include_continuation_reminder: Whether to add planning block reminders
+
+        Returns:
+            List of ordered system instruction parts (without world content).
+        """
         if selected_prompts is None:
             selected_prompts = []
 
@@ -226,8 +249,7 @@ class StoryModeAgent(BaseAgent):
         if include_continuation_reminder:
             parts.append(builder.build_continuation_reminder())
 
-        # Finalize with world content if requested
-        return builder.finalize_instructions(parts, use_default_world)
+        return parts
 
     @classmethod
     def matches_input(cls, user_input: str) -> bool:

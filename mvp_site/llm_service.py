@@ -70,6 +70,12 @@ from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
 from mvp_site.game_state import GameState, execute_dice_tool
+from mvp_site.agents import (
+    BaseAgent,
+    StoryModeAgent,
+    GodModeAgent,
+    get_agent_for_input,
+)
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -1192,13 +1198,6 @@ class PromptBuilder:
 #
 # See mvp_site/agents.py for full implementation and documentation.
 # =============================================================================
-
-from mvp_site.agents import (
-    BaseAgent,
-    StoryModeAgent,
-    GodModeAgent,
-    get_agent_for_input,
-)
 
 # Re-export for backward compatibility
 __all_agents__ = ["BaseAgent", "StoryModeAgent", "GodModeAgent", "get_agent_for_input"]
@@ -2770,13 +2769,10 @@ def get_initial_story(
     builder = agent.prompt_builder
 
     # Start from agent’s standard story-mode stack (without continuation reminders)
-    system_instruction_parts: list[str] = [
-        agent.build_system_instructions(
-            selected_prompts=selected_prompts,
-            use_default_world=use_default_world,
-            include_continuation_reminder=False,
-        )
-    ]
+    system_instruction_parts = agent.build_system_instruction_parts(
+        selected_prompts=selected_prompts,
+        include_continuation_reminder=False,
+    )
 
     # Initial story specific: Add companion generation instruction if requested
     if generate_companions:
@@ -2785,8 +2781,10 @@ def get_initial_story(
     # Initial story specific: Add background summary instruction
     system_instruction_parts.append(builder.build_background_summary_instruction())
 
-    # Combine all initial story instructions
-    system_instruction_final = "\n\n".join(system_instruction_parts)
+    # Finalize with world content (world lore must remain last in the hierarchy)
+    system_instruction_final = builder.finalize_instructions(
+        system_instruction_parts, use_default_world
+    )
 
     # Add clear indication when using default world setting
     if use_default_world:
@@ -3707,17 +3705,11 @@ def continue_story(
         # STORY MODE: Use StoryModeAgent with full gameplay prompts
         # Include continuation reminders only in character mode
         include_continuation = mode == constants.MODE_CHARACTER
-
-        if isinstance(agent, StoryModeAgent):
-            system_instruction_final = agent.build_system_instructions(
-                selected_prompts=selected_prompts,
-                use_default_world=use_default_world,
-                include_continuation_reminder=include_continuation,
-            )
-        else:
-            raise TypeError(
-                f"Unexpected agent type for story mode flow: {type(agent).__name__}"
-            )
+        system_instruction_final = agent.build_system_instructions(
+            selected_prompts=selected_prompts,
+            use_default_world=use_default_world,
+            include_continuation_reminder=include_continuation,
+        )
 
     # --- NEW: Budget-based Truncation ---
     # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)

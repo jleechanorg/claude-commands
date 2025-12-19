@@ -15,10 +15,11 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-# Add the parent directory to the Python path so we can import modules
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the project root to the Python path so we can import modules
+project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
+sys.path.insert(0, project_root)
 
 from mvp_site import constants
 
