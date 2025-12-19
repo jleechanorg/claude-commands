@@ -92,8 +92,12 @@ get_repo_from_remote() {
     # If there's only one remote, it's safe to use it as the gh repo target
     local remote_count
     remote_count=$(git remote 2>/dev/null | wc -l | tr -d '[:space:]')
-    if [ "$remote_count" = "1" ] && url=$(git remote get-url origin 2>/dev/null); then
-        parse_repo_from_url "$url" && return 0
+    if [ "$remote_count" = "1" ]; then
+        local remote_name
+        remote_name=$(git remote 2>/dev/null | head -n 1)
+        if [ -n "$remote_name" ] && url=$(git remote get-url "$remote_name" 2>/dev/null); then
+            parse_repo_from_url "$url" && return 0
+        fi
     fi
 
     return 1

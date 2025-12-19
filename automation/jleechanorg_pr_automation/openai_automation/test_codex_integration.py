@@ -215,10 +215,6 @@ class TestCodexAutomationClass:
     @pytest.mark.asyncio
     async def test_automation_can_navigate_to_codex(self):
         """Test that automation class can navigate to Codex."""
-        import sys
-        sys.path.insert(0, 'automation/openai_automation')
-        from codex_github_mentions import CodexGitHubMentionsAutomation
-
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
         try:
@@ -236,10 +232,6 @@ class TestCodexAutomationClass:
     @pytest.mark.asyncio
     async def test_automation_can_find_tasks(self):
         """Test that automation class can find GitHub Mention tasks."""
-        import sys
-        sys.path.insert(0, 'automation/openai_automation')
-        from codex_github_mentions import CodexGitHubMentionsAutomation
-
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
         try:

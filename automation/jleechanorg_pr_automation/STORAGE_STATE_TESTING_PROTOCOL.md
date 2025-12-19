@@ -17,7 +17,7 @@
 4. **Dual save strategy**: Immediate save after re-auth + final save after tasks
 
 ### Self-Healing Flow
-```
+```text
 1. Load storage_state.json (if exists)
 2. Navigate to chatgpt.com/codex
 3. Check if task list visible (implicit session check)
@@ -43,7 +43,7 @@ python automation/jleechanorg_pr_automation/codex_branch_updater.py
 ```
 
 **Expected Output:**
-```
+```text
 ℹ️  No saved authentication state found. Fresh login required.
 🔐 ChatGPT Codex credentials not found...
 ✅ Credentials saved locally (chmod 600).
@@ -80,7 +80,7 @@ python automation/jleechanorg_pr_automation/codex_branch_updater.py
 ```
 
 **Expected:**
-```
+```text
 🔄 Loading saved authentication state from ~/.chatgpt_codex_auth_state.json
 ⚠️  Session expired. Re-authenticating...
 [Login flow executes]
@@ -121,7 +121,7 @@ mkdir -p "$LOG_DIR"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 LOG_FILE="$LOG_DIR/codex_run_${TIMESTAMP}.log"
 
-cd /Users/jleechan/projects/worktree_auto3
+cd "$PROJECT_ROOT"
 python automation/jleechanorg_pr_automation/codex_branch_updater.py > "$LOG_FILE" 2>&1
 EXIT_CODE=$?
 
@@ -237,7 +237,7 @@ bash monitor_auth_state.sh
 crontab -e
 
 # Add (runs at :00 of every 4th hour: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00)
-0 */4 * * * cd ~/projects/worktree_auto3 && python automation/jleechanorg_pr_automation/codex_branch_updater.py >> ~/tmp/worldarchitect.ai/main/codex_automation.log 2>&1
+0 */4 * * * cd "$PROJECT_ROOT" && python automation/jleechanorg_pr_automation/codex_branch_updater.py >> ~/tmp/worldarchitect.ai/main/codex_automation.log 2>&1
 ```
 
 ### Post-Deployment Monitoring (First 7 Days)

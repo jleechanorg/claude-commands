@@ -45,8 +45,22 @@ def setup_logging():
 
 logger = setup_logging()
 
-# Storage state path for persisting authentication
+# Storage state path for persisting authentication.
+# This file contains sensitive session data; enforce restrictive permissions.
 AUTH_STATE_PATH = Path.home() / ".chatgpt_codex_auth_state.json"
+
+
+def _ensure_auth_state_permissions(path: Path) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            path.chmod(0o600)
+    except OSError as exc:
+        logger.warning(
+            "Could not ensure secure permissions on auth state file %s: %s",
+            path,
+            exc,
+        )
 
 
 class CodexGitHubMentionsAutomation:
@@ -131,6 +145,7 @@ class CodexGitHubMentionsAutomation:
             # Check if we have saved authentication state
             storage_state = None
             if AUTH_STATE_PATH.exists():
+                _ensure_auth_state_permissions(AUTH_STATE_PATH)
                 print(f"📂 Found saved authentication state at {AUTH_STATE_PATH}")
                 logger.info(f"Loading authentication state from {AUTH_STATE_PATH}")
                 storage_state = str(AUTH_STATE_PATH)
@@ -182,6 +197,7 @@ class CodexGitHubMentionsAutomation:
             # Save authentication state if not already saved
             if not AUTH_STATE_PATH.exists():
                 await self.context.storage_state(path=str(AUTH_STATE_PATH))
+                _ensure_auth_state_permissions(AUTH_STATE_PATH)
                 print(f"💾 Authentication state saved to {AUTH_STATE_PATH}")
                 logger.info(f"Saved authentication state to {AUTH_STATE_PATH}")
 
@@ -207,13 +223,20 @@ class CodexGitHubMentionsAutomation:
                 print("   3. Press Enter here to continue...")
                 input()
 
-                # After manual login, save the authentication state immediately
-                result = await self.ensure_openai_login()
-                if result:
+                print("🔄 Re-checking OpenAI login status after manual login...")
+                try:
+                    await self.page.wait_for_selector(
+                        'button[aria-label*="User"], [data-testid="profile-button"]',
+                        timeout=5000,
+                    )
                     await self.context.storage_state(path=str(AUTH_STATE_PATH))
+                    _ensure_auth_state_permissions(AUTH_STATE_PATH)
                     print(f"💾 New authentication state saved to {AUTH_STATE_PATH}")
                     logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
-                return result
+                    return True
+                except PlaywrightTimeoutError:
+                    print("❌ Still not logged in to OpenAI after manual login step")
+                    return False
 
             except PlaywrightTimeoutError:
                 print("⚠️  Could not determine login status")
@@ -270,11 +293,25 @@ class CodexGitHubMentionsAutomation:
             print("   Waiting for content to load...")
             await asyncio.sleep(5)
 
-            locator_selector = (
-                'a[href*="/codex/tasks/"]'
-                if self.all_tasks
-                else 'a[href*="/codex/tasks/"]:has-text("GitHub Mention:")'
-            )
+            primary_selector = 'a[href*="/codex/tasks/"]'
+            filtered_selector = f'{primary_selector}:has-text("GitHub Mention:")'
+            selector_candidates = [primary_selector] if self.all_tasks else [
+                filtered_selector,
+                'a:has-text("GitHub Mention:")',
+                primary_selector,
+            ]
+
+            locator_selector = selector_candidates[0]
+            locator = self.page.locator(locator_selector)
+            task_count = await locator.count()
+            if task_count == 0 and len(selector_candidates) > 1:
+                for candidate in selector_candidates[1:]:
+                    locator = self.page.locator(candidate)
+                    task_count = await locator.count()
+                    if task_count > 0:
+                        locator_selector = candidate
+                        break
+
             print(f"\n🔍 Searching for tasks using selector: {locator_selector}")
 
             if self.debug:
@@ -296,9 +333,6 @@ class CodexGitHubMentionsAutomation:
 
             # Find all task links - use more specific selector to exclude navigation
             # Use /codex/tasks/ to exclude navigation links like Settings, Docs
-            locator = self.page.locator(locator_selector)
-            task_count = await locator.count()
-
             if task_count == 0:
                 print("⚠️  No tasks found, retrying after short wait...")
                 await asyncio.sleep(5)

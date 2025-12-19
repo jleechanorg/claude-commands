@@ -3,6 +3,7 @@
 Debug script to check what's actually on the Codex page when connected via CDP.
 """
 import asyncio
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -74,10 +75,10 @@ async def debug_page():
     fd, screenshot_path = tempfile.mkstemp(prefix="debug_screenshot_", suffix=".png", dir=str(base_dir))
     await automation.page.screenshot(path=screenshot_path)
     try:
-        import os
-
         os.close(fd)
     except OSError:
+        # The file descriptor may already be closed or invalid at this point;
+        # this is a debug script and we don't reuse the descriptor.
         pass
     print(f"\n📸 Screenshot saved to: {screenshot_path}")
 

@@ -17,11 +17,10 @@ Run with:
 import asyncio
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import aiohttp
 import pytest
-from playwright.async_api import async_playwright
 
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)

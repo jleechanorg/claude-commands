@@ -83,7 +83,7 @@ CLI_PROFILES = {
         "restart_env": "GEMINI_RESTART",
         # Stick to configured GEMINI_MODEL (default gemini-3-pro-preview) unless overridden
         # YOLO mode enabled to allow file access outside workspace (user directive)
-        # NOTE: Prompt must come via stdin (not -p flag which is deprecated and only appends to stdin)
+        # NOTE: Prompt must come via stdin only; the deprecated -p flag must not be used
         "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,

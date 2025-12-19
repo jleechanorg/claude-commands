@@ -22,7 +22,7 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 
 ### How It Works
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  1. DISCOVERY PHASE                                         │
 │  ───────────────────────────────────────────────────────────│
@@ -529,6 +529,12 @@ pip install jleechanorg-pr-automation[email]
 
 # For development
 pip install jleechanorg-pr-automation[dev]
+```
+
+**Playwright browser install (required):**
+
+```bash
+python -m playwright install
 ```
 
 ### From Source (Development)
