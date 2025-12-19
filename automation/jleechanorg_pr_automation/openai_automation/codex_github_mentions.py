@@ -45,8 +45,23 @@ def setup_logging():
 
 logger = setup_logging()
 
-# Storage state path for persisting authentication
+# Storage state path for persisting authentication.
+# This file contains sensitive session/authentication data and must be readable/writable
+# only by the current user. We ensure it has mode 0o600 when created.
 AUTH_STATE_PATH = Path.home() / ".chatgpt_codex_auth_state.json"
+
+# Ensure secure file permissions on the auth state file
+try:
+    AUTH_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not AUTH_STATE_PATH.exists():
+        # Create the file with restrictive permissions if it does not exist
+        AUTH_STATE_PATH.touch(mode=0o600, exist_ok=True)
+    else:
+        # Enforce restrictive permissions on an existing file
+        AUTH_STATE_PATH.chmod(0o600)
+except Exception as e:
+    # Log a warning but do not abort the script if we cannot enforce permissions
+    logger.warning(f"Could not ensure secure permissions on auth state file '{AUTH_STATE_PATH}': {e}")
 
 
 class CodexGitHubMentionsAutomation:
@@ -207,23 +222,32 @@ class CodexGitHubMentionsAutomation:
                 print("   3. Press Enter here to continue...")
                 input()
 
-                # After manual login, save the authentication state immediately
-                result = await self.ensure_openai_login()
-                if result:
+                # After manual login, re-check the authentication status and save state if logged in
+                print("🔄 Re-checking OpenAI login status after manual login...")
+                try:
+                    await self.page.wait_for_selector(
+                        'button[aria-label*="User"], [data-testid="profile-button"]',
+                        timeout=5000,
+                    )
                     await self.context.storage_state(path=str(AUTH_STATE_PATH))
                     print(f"💾 New authentication state saved to {AUTH_STATE_PATH}")
                     logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
-                return result
+                    return True
+                except PlaywrightTimeoutError:
+                    print("❌ Still not logged in to OpenAI after manual login step")
+                    return False
 
             except PlaywrightTimeoutError:
-                print("⚠️  Could not determine login status")
+                print("⚠️  Could not determine login status (timeout waiting for login button)")
                 print("   Assuming you're logged in and continuing...")
                 return True
             except Exception as login_error:
-                print(f"⚠️  Unexpected login detection error: {login_error}")
+                print(f"⚠️  Unexpected error during login detection: {login_error}")
+                logger.error(f"Login detection error: {login_error}", exc_info=True)
                 return False
         except Exception as user_menu_error:
-            print(f"⚠️  Unexpected login check error: {user_menu_error}")
+            print(f"⚠️  Unexpected error checking for user menu: {user_menu_error}")
+            logger.error(f"User menu check error: {user_menu_error}", exc_info=True)
             return False
 
     async def navigate_to_codex(self):
@@ -261,6 +285,11 @@ class CodexGitHubMentionsAutomation:
 
         By default, filters for "GitHub Mention" tasks and applies task_limit.
         If all_tasks is True, collects the first N Codex tasks regardless of title.
+        
+        Note: The selector 'a[href*="/codex/tasks/"]' is specific to OpenAI's current
+        URL structure. If OpenAI changes their URL scheme, this automation may break
+        and will need to be updated. Consider making this configurable via environment
+        variable if needed: CODEX_TASK_SELECTOR='a[href*="/codex/tasks/"]'
         """
         if self.task_limit == 0:
             print("⚠️  Task limit set to 0 - skipping")

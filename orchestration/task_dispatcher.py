@@ -83,7 +83,7 @@ CLI_PROFILES = {
         "restart_env": "GEMINI_RESTART",
         # Stick to configured GEMINI_MODEL (default gemini-3-pro-preview) unless overridden
         # YOLO mode enabled to allow file access outside workspace (user directive)
-        # NOTE: Prompt must come via stdin (not -p flag which is deprecated and only appends to stdin)
+        # NOTE: Prompt must come via stdin only; the deprecated -p flag must not be used
         "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,
@@ -585,23 +585,35 @@ class TaskDispatcher:
         return available_clis[0]
 
     def _parse_cli_chain(self, cli_value: str) -> list[str]:
-        """Parse a comma-separated CLI chain string (e.g., 'gemini,codex') into validated CLI keys."""
+        """
+        Parse a comma-separated CLI chain string (e.g., 'gemini,codex') into validated CLI keys.
+        
+        Args:
+            cli_value: Comma-separated string of CLI names (e.g., "gemini,codex")
+            
+        Returns:
+            List of validated, deduplicated CLI keys in order
+            
+        Raises:
+            ValueError: If cli_value is not a string, is empty after filtering, or contains invalid CLIs
+        """
         if not isinstance(cli_value, str):
             raise ValueError("CLI chain value must be a string")
 
-        parts = [part.strip().lower() for part in cli_value.split(",")]
-        chain = [part for part in parts if part]
-        if not chain:
-            raise ValueError("CLI chain is empty")
+        # Split by comma, strip whitespace, lowercase, and filter out empty/None values
+        parts = [part.strip().lower() for part in cli_value.split(",") if part and part.strip()]
+        
+        if not parts:
+            raise ValueError("CLI chain is empty after filtering whitespace and empty values")
 
-        invalid = [cli for cli in chain if cli not in CLI_PROFILES]
+        invalid = [cli for cli in parts if cli not in CLI_PROFILES]
         if invalid:
             raise ValueError(f"Invalid CLI(s) in chain: {invalid}. Must be subset of {list(CLI_PROFILES.keys())}")
 
         # De-duplicate while preserving order
         seen = set()
         ordered = []
-        for cli in chain:
+        for cli in parts:
             if cli not in seen:
                 ordered.append(cli)
                 seen.add(cli)
@@ -1454,6 +1466,9 @@ Agent Configuration:
             # Compute per-CLI execution blocks (command + stdin + env unsets)
             cli_chain_str = ",".join(cli_chain)
             cli_chain_json = json.dumps(cli_chain_str)
+            # Rate limit detection pattern for grep -Eqi (extended regex, case-insensitive)
+            # This pattern is safe for bash embedding as it contains no special shell metacharacters
+            # Note: Do not quote this pattern - it must be interpreted as regex by grep
             rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
 
             attempt_blocks = ""
@@ -1523,6 +1538,10 @@ Agent Configuration:
 
                 attempt_display_name = attempt_profile.get("display_name", attempt_cli)
 
+                # NOTE: This bash script template intentionally mixes Python f-string formatting
+                # with bash variable references. Variables in {braces} are Python format placeholders
+                # that are filled during script generation, while $VARIABLES are bash variables
+                # evaluated at runtime when the generated script executes.
                 attempt_blocks += f"""
 if [ $RESULT_WRITTEN -eq 0 ]; then
     ATTEMPT_NUM={idx}

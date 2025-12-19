@@ -78,6 +78,9 @@ async def debug_page():
 
         os.close(fd)
     except OSError:
+        # The file descriptor may already be closed or invalid at this point;
+        # since this is a debug script and we don't reuse the descriptor, it is
+        # safe to ignore close errors.
         pass
     print(f"\n📸 Screenshot saved to: {screenshot_path}")
 
