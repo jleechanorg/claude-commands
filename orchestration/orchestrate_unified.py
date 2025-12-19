@@ -270,6 +270,8 @@ class UnifiedOrchestration:
             }
 
             if options:
+                if options.get("branch"):
+                    agent_spec["existing_branch"] = options["branch"]
                 if options.get("pr") is not None:
                     agent_spec["existing_pr"] = options["pr"]
                 if options.get("mcp_agent"):
@@ -642,69 +644,40 @@ The orchestration system will:
 1. Create specialized agents for your task
 2. Monitor their progress
 3. Display any PRs created at the end
-        """
+        """,
     )
 
-    parser.add_argument(
-        "task",
-        nargs="+",
-        help="Task description for the orchestration system"
-    )
+    parser.add_argument("task", nargs="+", help="Task description for the orchestration system")
 
     # Context injection options
     parser.add_argument(
         "--context",
         type=str,
         default=None,
-        help="Path to markdown file to inject into agent prompt as pre-computed context"
+        help="Path to markdown file to inject into agent prompt as pre-computed context",
     )
 
     # Branch/PR control options
     parser.add_argument(
-        "--branch",
-        type=str,
-        default=None,
-        help="Force checkout of specific branch (prevents new branch creation)"
+        "--branch", type=str, default=None, help="Force checkout of specific branch (prevents new branch creation)"
     )
-    parser.add_argument(
-        "--pr",
-        type=int,
-        default=None,
-        help="Existing PR number to update (prevents new PR creation)"
-    )
+    parser.add_argument("--pr", type=int, default=None, help="Existing PR number to update (prevents new PR creation)")
 
     # MCP/Bead tracking options
-    parser.add_argument(
-        "--mcp-agent",
-        type=str,
-        default=None,
-        help="Pre-fill agent name for MCP Mail registration"
-    )
-    parser.add_argument(
-        "--bead",
-        type=str,
-        default=None,
-        help="Pre-fill bead ID for tracking"
-    )
+    parser.add_argument("--mcp-agent", type=str, default=None, help="Pre-fill agent name for MCP Mail registration")
+    parser.add_argument("--bead", type=str, default=None, help="Pre-fill bead ID for tracking")
 
     # Validation options
     parser.add_argument(
-        "--validate",
-        type=str,
-        default=None,
-        help="Semantic validation command to run after agent completes"
+        "--validate", type=str, default=None, help="Semantic validation command to run after agent completes"
     )
 
     # Hard blocks
     parser.add_argument(
-        "--no-new-pr",
-        action="store_true",
-        help="Hard block on PR creation (agents must use existing PR)"
+        "--no-new-pr", action="store_true", help="Hard block on PR creation (agents must use existing PR)"
     )
     parser.add_argument(
-        "--no-new-branch",
-        action="store_true",
-        help="Hard block on branch creation (agents must use existing branch)"
+        "--no-new-branch", action="store_true", help="Hard block on branch creation (agents must use existing branch)"
     )
 
     args = parser.parse_args()
