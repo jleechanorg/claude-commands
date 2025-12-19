@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
 
@@ -32,7 +31,6 @@ MONTH_MAP = {
     "nov": 11,
     "dec": 12,
 }
-
 
 def _safe_int(value: Any) -> int:
     try:
@@ -188,25 +186,24 @@ def format_world_time_for_prompt(world_time: dict[str, Any] | None) -> str:
     return f"{year} DR, {month} {day}, {time_str}"
 
 
-def _with_default_microsecond(world_time: dict[str, Any]) -> dict[str, Any]:
-    updated = deepcopy(world_time)
-    updated["microsecond"] = _safe_int(updated.get("microsecond", 0))
-    return updated
-
-
 def ensure_progressive_world_time(
     state_changes: dict[str, Any],
     *,
     is_god_mode: bool,
 ) -> dict[str, Any]:
-    """Normalize world_time without inferring or advancing time.
+    """Normalize world_time without altering LLM-provided values.
 
     The LLM is authoritative for timeline control. When the model supplies a
-    timestamp string, we parse it; when it supplies a structured world_time, we
-    normalize the microsecond field. If world_time is missing or empty, we leave
-    it untouched.
-    """
+    timestamp string, we parse it. When it supplies a structured world_time, we
+    keep the values as-is. If world_time is missing or empty, we leave it untouched.
 
+    Args:
+        state_changes: The state updates from LLM response
+        is_god_mode: True if in god mode (bypasses validation)
+
+    Returns:
+        Updated state_changes with normalized world_time
+    """
     if is_god_mode:
         return state_changes
 
@@ -216,13 +213,13 @@ def ensure_progressive_world_time(
     if isinstance(candidate_time, str):
         parsed_str = parse_timestamp_to_world_time(candidate_time)
         if parsed_str:
-            world_data["world_time"] = parsed_str
+            candidate_time = parsed_str
         else:
             world_data.pop("world_time", None)
-        return state_changes
+            return state_changes
 
     if isinstance(candidate_time, dict):
-        world_data["world_time"] = _with_default_microsecond(candidate_time)
+        world_data["world_time"] = candidate_time
         return state_changes
 
     # If the model omitted world_time entirely, leave it unchanged.
