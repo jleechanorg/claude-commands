@@ -101,6 +101,65 @@ def test_should_require_dice_rolls_only_for_combat_actions():
     )
 
 
+def test_should_require_dice_rolls_ignores_non_combat_verbs():
+    """Non-combat phrasing should not force dice requirement."""
+    from mvp_site.game_state import GameState
+    from mvp_site.llm_service import _should_require_dice_rolls_for_turn
+
+    gs = GameState(combat_state={"in_combat": False})
+
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="help me get to the village",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
+        is False
+    )
+
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="check the door for traps",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
+        is False
+    )
+
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="The troll blocks the bridge.",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
+        is False
+    )
+
+
+def test_should_require_dice_rolls_detects_initiative():
+    """Explicit initiative should still require dice."""
+    from mvp_site.game_state import GameState
+    from mvp_site.llm_service import _should_require_dice_rolls_for_turn
+
+    gs = GameState(combat_state={"in_combat": False})
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="I roll initiative!",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
+        is True
+    )
+
+
 # =============================================================================
 # Tests for _detect_combat_in_narrative
 # =============================================================================
@@ -403,3 +462,18 @@ def test_build_reprompt_includes_tool_results_when_available():
     assert "17" in reprompt or "tool" in reprompt.lower(), (
         "Reprompt MUST include tool_results context to prevent dice fabrication"
     )
+
+
+def test_build_reprompt_dice_integrity_code_execution_only():
+    """Reprompt for code_execution strategy should not mention tool_requests."""
+    from mvp_site import dice_strategy
+    from mvp_site.llm_service import _build_reprompt_for_missing_fields
+
+    reprompt = _build_reprompt_for_missing_fields(
+        '{"narrative": "test"}',
+        ["dice_integrity"],
+        dice_roll_strategy=dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
+    )
+
+    assert "code_execution" in reprompt.lower()
+    assert "tool_requests" not in reprompt.lower()

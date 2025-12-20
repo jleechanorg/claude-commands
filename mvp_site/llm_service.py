@@ -2762,26 +2762,18 @@ def _should_require_dice_rolls_for_turn(
         "cast",
         "spell",
         "fireball",
-        "roll",
-        "save",
         "saving throw",
-        "skill",
-        "check",
         "initiative",
         "grapple",
         "shove",
         "dodge",
         "dash",
         "disengage",
-        "help",
     )
 
     # Check for combat keywords in user input (catches new combat)
-    # Use word-boundary matching to avoid false positives:
-    # - "troll" should NOT match "roll"
-    # - "help me" should NOT match combat "help" action
-    # - "white" should NOT match "hit"
-    import re
+    # Use word-boundary matching to avoid substring false positives
+    # (e.g., "troll" should not match "roll").
     has_combat_keywords = any(
         re.search(r'\b' + re.escape(k) + r'\b', text)
         for k in combat_action_keywords
@@ -3090,7 +3082,7 @@ def _build_reprompt_for_missing_fields(
     original_response_text: str,
     missing_fields: list[str],
     tool_results: list[dict] | None = None,
-    model_name: str | None = None,
+    dice_roll_strategy: str | None = None,
 ) -> str:
     """Build a reprompt message to request missing fields.
 
@@ -3100,8 +3092,8 @@ def _build_reprompt_for_missing_fields(
         tool_results: Optional list of tool execution results to include
             in the reprompt. This preserves dice roll provenance when
             reprompting after malformed JSON in Phase 2.
-        model_name: Model name to determine available dice strategies
-            (code_execution only for Gemini 3.x vs both strategies for others)
+        dice_roll_strategy: Strategy to determine available dice remediation
+            (code_execution only vs tool_requests only)
 
     Returns:
         Reprompt message asking for the missing fields
@@ -3123,11 +3115,7 @@ def _build_reprompt_for_missing_fields(
         )
     if "dice_integrity" in missing_fields:
         # Model-strategy aware reprompt (Finding #2 fix)
-        # Gemini 3.x models only support code_execution, not tool_requests
-        uses_code_execution_only = model_name in constants.MODELS_WITH_CODE_EXECUTION if model_name else False
-
-        if uses_code_execution_only:
-            # Gemini 3.x: code_execution only
+        if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
             requested_lines.append(
                 "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
                 "execute code to generate them. Dice values are UNKNOWABLE without execution - "
@@ -3135,8 +3123,15 @@ def _build_reprompt_for_missing_fields(
                 "  * Execute Python code with random.randint() to generate dice rolls\n"
                 "Do NOT write dice values directly in narrative. Regenerate with ACTUAL code execution."
             )
+        elif dice_roll_strategy == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE:
+            requested_lines.append(
+                "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
+                "call tools to generate them. You MUST use tool_requests:\n"
+                "  * Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
+                "Do NOT write dice values directly in narrative. Regenerate using tool_requests."
+            )
         else:
-            # Other models: both strategies available
+            # Fallback when strategy is unknown: allow both remediation paths
             requested_lines.append(
                 "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
                 "execute code or call tools to generate them. Dice values are UNKNOWABLE without "
@@ -3675,13 +3670,16 @@ def continue_story(
             f"🔄 REPROMPT_MISSING_FIELDS: Response missing {missing_fields}. "
             f"Attempting reprompt..."
         )
+        dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+            chosen_model, provider_selection.provider
+        )
         # Build reprompt message with tool_results from original response
         # This preserves dice provenance so the model can reference real results
         reprompt_message = _build_reprompt_for_missing_fields(
             raw_response_text,
             missing_fields,
             tool_results=getattr(api_response, "_tool_results", None),
-            model_name=chosen_model,
+            dice_roll_strategy=dice_roll_strategy,
         )
 
         # Create a follow-up request with the reprompt
