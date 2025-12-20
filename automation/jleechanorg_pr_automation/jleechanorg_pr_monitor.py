@@ -1351,6 +1351,8 @@ def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
         return False, f"❌ Chrome CDP not accessible at {host}:{port} - {e.reason}"
     except (json.JSONDecodeError, socket.timeout, OSError) as e:
         return False, f"❌ Failed to connect to Chrome CDP: {e}"
+    except Exception as e:
+        return False, f"❌ Unexpected error connecting to Chrome CDP: {e}"
 
 
 def main():

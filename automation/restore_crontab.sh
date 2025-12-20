@@ -43,9 +43,9 @@ fi
 
 # Create logs directory if it doesn't exist (cross-platform)
 if [[ "$(uname)" == "Darwin" ]]; then
-    LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+    LOG_DIR="${AUTOMATION_LOG_DIR:-$HOME/Library/Logs/automation-system}"
 else
-    LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/worldarchitect-automation/logs"
+    LOG_DIR="${AUTOMATION_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/automation-system/logs}"
 fi
 if [[ ! -d "$LOG_DIR" ]] && [[ "$DRY_RUN" == "false" ]]; then
     echo -e "${BLUE}📁 Creating log directory: $LOG_DIR${NC}"
