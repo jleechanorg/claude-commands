@@ -17,16 +17,14 @@ Or with Chrome running:
 """
 
 import asyncio
-import os
-import sys
 
 import aiohttp
 import pytest
 from playwright.async_api import async_playwright
 
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
-from codex_github_mentions import CodexGitHubMentionsAutomation
+from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
+    CodexGitHubMentionsAutomation,
+)
 
 
 # Helper to check if Chrome is running with CDP
@@ -38,7 +36,7 @@ async def chrome_is_running(port=9222):
                 f"http://localhost:{port}/json/version", timeout=aiohttp.ClientTimeout(total=1)
             ) as resp:
                 return resp.status == 200
-    except Exception:
+    except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
         return False
 
 
@@ -215,10 +213,6 @@ class TestCodexAutomationClass:
     @pytest.mark.asyncio
     async def test_automation_can_navigate_to_codex(self):
         """Test that automation class can navigate to Codex."""
-        import sys
-        sys.path.insert(0, 'automation/openai_automation')
-        from codex_github_mentions import CodexGitHubMentionsAutomation
-
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
         try:
@@ -236,10 +230,6 @@ class TestCodexAutomationClass:
     @pytest.mark.asyncio
     async def test_automation_can_find_tasks(self):
         """Test that automation class can find GitHub Mention tasks."""
-        import sys
-        sys.path.insert(0, 'automation/openai_automation')
-        from codex_github_mentions import CodexGitHubMentionsAutomation
-
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
         try:
