@@ -2777,7 +2777,15 @@ def _should_require_dice_rolls_for_turn(
     )
 
     # Check for combat keywords in user input (catches new combat)
-    has_combat_keywords = any(k in text for k in combat_action_keywords)
+    # Use word-boundary matching to avoid false positives:
+    # - "troll" should NOT match "roll"
+    # - "help me" should NOT match combat "help" action
+    # - "white" should NOT match "hit"
+    import re
+    has_combat_keywords = any(
+        re.search(r'\b' + re.escape(k) + r'\b', text)
+        for k in combat_action_keywords
+    )
 
     # Check if already in combat state (catches ongoing combat)
     in_combat = current_game_state and current_game_state.combat_state.get("in_combat", False)
@@ -2915,8 +2923,12 @@ def _detect_combat_in_narrative(narrative_text: str) -> bool:
     if has_active_pattern and not has_hypothetical_marker:
         return True
 
-    # Check for combat keywords
-    has_combat_keyword = any(keyword in text for keyword in COMBAT_ACTION_KEYWORDS)
+    # Check for combat keywords (word-boundary matching to avoid false positives)
+    import re
+    has_combat_keyword = any(
+        re.search(r'\b' + re.escape(keyword) + r'\b', text)
+        for keyword in COMBAT_ACTION_KEYWORDS
+    )
 
     # If combat keyword but ONLY in past/hypothetical context, not active combat
     if has_combat_keyword:
@@ -3028,9 +3040,13 @@ def _validate_combat_dice_integrity(
     if mode != constants.MODE_CHARACTER:
         return True, None
 
-    # Detect combat in user input (using existing logic)
+    # Detect combat in user input (word-boundary matching to avoid false positives)
+    import re
     user_text = (user_input or "").strip().lower()
-    user_has_combat = any(k in user_text for k in COMBAT_ACTION_KEYWORDS) if user_text else False
+    user_has_combat = any(
+        re.search(r'\b' + re.escape(k) + r'\b', user_text)
+        for k in COMBAT_ACTION_KEYWORDS
+    ) if user_text else False
 
     # Detect combat in narrative (new logic)
     narrative_has_combat = _detect_combat_in_narrative(narrative_text)
