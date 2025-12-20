@@ -262,13 +262,16 @@ class CodexGitHubMentionsAutomation:
                 except PlaywrightTimeoutError:
                     print("❌ Still not logged in to OpenAI after manual login step")
                     return False
+                except Exception as login_error:
+                    print(f"⚠️  Unexpected login detection error: {login_error}")
+                    return False
 
             except PlaywrightTimeoutError:
                 print("⚠️  Could not determine login status")
                 print("   Assuming you're logged in and continuing...")
                 return True
-            except Exception as login_error:
-                print(f"⚠️  Unexpected login detection error: {login_error}")
+            except Exception as login_check_error:
+                print(f"⚠️  Unexpected login check error: {login_check_error}")
                 return False
         except Exception as user_menu_error:
             print(f"⚠️  Unexpected login check error: {user_menu_error}")
