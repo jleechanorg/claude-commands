@@ -21,56 +21,25 @@ Usage:
 
 import argparse
 import asyncio
-import logging
 import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
-
+from typing import Optional
 
 from playwright.async_api import (
     Browser,
     BrowserContext,
+    Error as PlaywrightError,
     Page,
     Playwright,
     TimeoutError as PlaywrightTimeoutError,
     async_playwright,
 )
 
+import logging_util
 
-# Set up logging to /tmp
-def setup_logging():
-    """Set up logging to /tmp directory."""
-    log_dir = Path("/tmp/automate_codex_update")
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    log_file = log_dir / "codex_automation.log"
-
-    # Create logger
-    logger = logging.getLogger("codex_automation")
-    logger.setLevel(logging.INFO)
-
-    # File handler
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(logging.INFO)
-
-    # Console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    # Formatter
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    return logger
-
-
-logger = setup_logging()
+logger = logging_util.getLogger(__name__)
 
 # Storage state path for persisting authentication.
 # This file contains sensitive session data; enforce restrictive permissions.
@@ -88,6 +57,8 @@ def _ensure_auth_state_permissions(path: Path) -> None:
             path,
             exc,
         )
+
+
 class CodexGitHubMentionsAutomation:
     """Automates finding and updating GitHub mention tasks in OpenAI Codex."""
 
@@ -133,29 +104,26 @@ class CodexGitHubMentionsAutomation:
         if not self.cdp_url:
             self.cdp_url = "http://127.0.0.1:9222"
 
-        print(f"🔌 Connecting to existing Chrome at {self.cdp_url}...")
-        logger.info(f"Connecting to Chrome at {self.cdp_url}")
+        logger.info("🔌 Connecting to existing Chrome at %s...", self.cdp_url)
 
         try:
             self.browser = await self.playwright.chromium.connect_over_cdp(self.cdp_url)
-            print(f"✅ Connected to Chrome (version: {self.browser.version})")
-            logger.info(f"Successfully connected to Chrome (version: {self.browser.version})")
+            logger.info("✅ Connected to Chrome (version: %s)", self.browser.version)
 
             contexts = self.browser.contexts
             if contexts:
                 self.context = contexts[0]
-                print(f"📱 Using existing context with {len(self.context.pages)} page(s)")
+                logger.info("📱 Using existing context with %s page(s)", len(self.context.pages))
             else:
                 self.context = await self.browser.new_context()
-                print("📱 Created new browser context")
+                logger.info("📱 Created new browser context")
 
             # Always create a new page to avoid browser UI elements (Omnibox, Extensions, etc.)
             self.page = await self.context.new_page()
-            print("📄 Created new page for automation")
+            logger.info("📄 Created new page for automation")
             return True
-        except Exception as e:
-            print(f"❌ Failed to connect via CDP: {e}")
-            logger.warning(f"CDP connection failed: {e}")
+        except (PlaywrightTimeoutError, PlaywrightError, OSError) as err:
+            logger.warning("❌ Failed to connect via CDP: %s", err)
             return False
 
     async def setup(self) -> bool:
@@ -171,13 +139,11 @@ class CodexGitHubMentionsAutomation:
             storage_state = None
             if AUTH_STATE_PATH.exists():
                 _ensure_auth_state_permissions(AUTH_STATE_PATH)
-                print(f"📂 Found saved authentication state at {AUTH_STATE_PATH}")
-                logger.info(f"Loading authentication state from {AUTH_STATE_PATH}")
+                logger.info("📂 Found saved authentication state at %s", AUTH_STATE_PATH)
                 storage_state = str(AUTH_STATE_PATH)
 
             # Launch browser (not persistent context - use storage state instead)
-            print(f"🚀 Launching Chrome...")
-            logger.info(f"Launching Chrome")
+            logger.info("🚀 Launching Chrome...")
 
             self.browser = await self.playwright.chromium.launch(
                 headless=self.headless,
@@ -186,12 +152,10 @@ class CodexGitHubMentionsAutomation:
             # Create context with storage state if available
             if storage_state:
                 self.context = await self.browser.new_context(storage_state=storage_state)
-                print("✅ Restored previous authentication state")
-                logger.info("Restored authentication state from storage")
+                logger.info("✅ Restored previous authentication state")
             else:
                 self.context = await self.browser.new_context()
-                print("🆕 Creating new authentication state (will save after login)")
-                logger.info("Creating new browser context")
+                logger.info("🆕 Creating new authentication state (will save after login)")
 
             # Create page
             self.page = await self.context.new_page()
@@ -200,7 +164,7 @@ class CodexGitHubMentionsAutomation:
 
     async def ensure_openai_login(self):
         """Navigate to OpenAI and ensure user is logged in."""
-        print("\n🔐 Checking OpenAI login status...")
+        logger.info("🔐 Checking OpenAI login status...")
 
         # Create or use existing page
         if self.context.pages:
@@ -217,14 +181,13 @@ class CodexGitHubMentionsAutomation:
                 'button[aria-label*="User"], [data-testid="profile-button"]',
                 timeout=5000,
             )
-            print("✅ Already logged in to OpenAI")
+            logger.info("✅ Already logged in to OpenAI")
 
             # Save authentication state if not already saved
             if not AUTH_STATE_PATH.exists():
                 await self.context.storage_state(path=str(AUTH_STATE_PATH))
                 _ensure_auth_state_permissions(AUTH_STATE_PATH)
-                print(f"💾 Authentication state saved to {AUTH_STATE_PATH}")
-                logger.info(f"Saved authentication state to {AUTH_STATE_PATH}")
+                logger.info("💾 Authentication state saved to %s", AUTH_STATE_PATH)
 
             return True
         except PlaywrightTimeoutError:
@@ -233,22 +196,26 @@ class CodexGitHubMentionsAutomation:
                     'text="Log in", button:has-text("Log in")',
                     timeout=3000,
                 )
-                print("⚠️  Not logged in to OpenAI")
+                logger.warning("⚠️  Not logged in to OpenAI")
 
                 # Check if running in non-interactive mode (cron/CI)
                 if not sys.stdin.isatty():
-                    print("❌ ERROR: Authentication required but running in non-interactive mode")
-                    print("   Solution: Log in manually via Chrome with CDP enabled, then run again")
-                    print(f"   The script will save auth state to {AUTH_STATE_PATH}")
+                    logger.error(
+                        "❌ ERROR: Authentication required but running in non-interactive mode"
+                    )
+                    logger.error(
+                        "Solution: Log in manually via Chrome with CDP enabled, then run again"
+                    )
+                    logger.error("The script will save auth state to %s", AUTH_STATE_PATH)
                     return False
 
-                print("\n🚨 MANUAL ACTION REQUIRED:")
-                print("   1. Log in to OpenAI in the browser window")
-                print("   2. Wait for login to complete")
-                print("   3. Press Enter here to continue...")
+                logger.warning("🚨 MANUAL ACTION REQUIRED:")
+                logger.warning("1. Log in to OpenAI in the browser window")
+                logger.warning("2. Wait for login to complete")
+                logger.warning("3. Press Enter here to continue...")
                 input()
 
-                print("🔄 Re-checking OpenAI login status after manual login...")
+                logger.info("🔄 Re-checking OpenAI login status after manual login...")
                 try:
                     await self.page.wait_for_selector(
                         'button[aria-label*="User"], [data-testid="profile-button"]',
@@ -256,35 +223,44 @@ class CodexGitHubMentionsAutomation:
                     )
                     await self.context.storage_state(path=str(AUTH_STATE_PATH))
                     _ensure_auth_state_permissions(AUTH_STATE_PATH)
-                    print(f"💾 New authentication state saved to {AUTH_STATE_PATH}")
-                    logger.info(f"Saved new authentication state after manual login to {AUTH_STATE_PATH}")
+                    logger.info(
+                        "💾 New authentication state saved to %s",
+                        AUTH_STATE_PATH,
+                    )
                     return True
                 except PlaywrightTimeoutError:
-                    print("❌ Still not logged in to OpenAI after manual login step")
+                    logger.error(
+                        "❌ Still not logged in to OpenAI after manual login step"
+                    )
                     return False
 
             except PlaywrightTimeoutError:
-                print("⚠️  Could not determine login status")
-                print("   Assuming you're logged in and continuing...")
+                logger.warning("⚠️  Could not determine login status")
+                logger.warning("Assuming you're logged in and continuing...")
                 return True
-            except Exception as login_error:
-                print(f"⚠️  Unexpected login detection error: {login_error}")
+            except (PlaywrightError, OSError) as login_error:
+                logger.warning(
+                    "⚠️  Unexpected login detection error: %s",
+                    login_error,
+                )
                 return False
-        except Exception as user_menu_error:
-            print(f"⚠️  Unexpected login check error: {user_menu_error}")
+        except (PlaywrightError, OSError) as user_menu_error:
+            logger.warning(
+                "⚠️  Unexpected login check error: %s",
+                user_menu_error,
+            )
             return False
 
     async def navigate_to_codex(self):
         """Navigate to OpenAI Codex tasks page."""
-        print("\n📍 Navigating to Codex...")
-        logger.info("Navigating to Codex...")
+        logger.info("📍 Navigating to Codex...")
 
         codex_url = "https://chatgpt.com/codex"
 
         await self.page.goto(codex_url, wait_until="domcontentloaded", timeout=30000)
 
         # Wait for Cloudflare challenge to complete
-        print("   Waiting for Cloudflare challenge (if any)...")
+        logger.info("Waiting for Cloudflare challenge (if any)...")
         max_wait = 30  # 30 seconds max wait
         waited = 0
         while waited < max_wait:
@@ -294,16 +270,19 @@ class CodexGitHubMentionsAutomation:
             await asyncio.sleep(2)
             waited += 2
             if waited % 10 == 0:
-                print(f"   Still waiting... ({waited}s)")
+                logger.info("Still waiting... (%ss)", waited)
 
         # Extra wait for dynamic content to load after Cloudflare
         await asyncio.sleep(5)
 
         final_title = await self.page.title()
-        print(f"✅ Navigated to {codex_url} (title: {final_title})")
-        logger.info(f"Successfully navigated to {codex_url} (title: {final_title})")
+        logger.info(
+            "✅ Navigated to %s (title: %s)",
+            codex_url,
+            final_title,
+        )
 
-    async def find_github_mention_tasks(self) -> List[Dict[str, str]]:
+    async def find_github_mention_tasks(self) -> list[dict[str, str]]:
         """
         Find task links in Codex.
 
@@ -311,11 +290,11 @@ class CodexGitHubMentionsAutomation:
         If all_tasks is True, collects the first N Codex tasks regardless of title.
         """
         if self.task_limit == 0:
-            print("⚠️  Task limit set to 0 - skipping")
+            logger.warning("⚠️  Task limit set to 0 - skipping")
             return []
 
         try:
-            print("   Waiting for content to load...")
+            logger.info("Waiting for content to load...")
             await asyncio.sleep(5)
 
             primary_selector = 'a[href*="/codex/tasks/"]'
@@ -336,10 +315,10 @@ class CodexGitHubMentionsAutomation:
                     if task_count > 0:
                         locator_selector = candidate
                         break
-            print(f"\n🔍 Searching for tasks using selector: {locator_selector}")
+            logger.info("🔍 Searching for tasks using selector: %s", locator_selector)
 
             if self.debug:
-                debug_dir = Path("/tmp/automate_codex_update")
+                debug_dir = Path.home() / ".codex_automation_debug"
                 debug_dir.mkdir(parents=True, exist_ok=True)
 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -350,40 +329,39 @@ class CodexGitHubMentionsAutomation:
                 html_content = await self.page.content()
                 html_path.write_text(html_content)
 
-                print(f"🐛 Debug: Screenshot saved to {screenshot_path}")
-                print(f"🐛 Debug: HTML saved to {html_path}")
-                print(f"🐛 Debug: Current URL: {self.page.url}")
-                print(f"🐛 Debug: Page title: {await self.page.title()}")
+                logger.debug("🐛 Debug: Screenshot saved to %s", screenshot_path)
+                logger.debug("🐛 Debug: HTML saved to %s", html_path)
+                logger.debug("🐛 Debug: Current URL: %s", self.page.url)
+                logger.debug("🐛 Debug: Page title: %s", await self.page.title())
 
             # Find all task links - use more specific selector to exclude navigation
             # Use /codex/tasks/ to exclude navigation links like Settings, Docs
 
             if task_count == 0:
-                print("⚠️  No tasks found, retrying after short wait...")
+                logger.warning("⚠️  No tasks found, retrying after short wait...")
                 await asyncio.sleep(5)
                 task_count = await locator.count()
                 if task_count == 0:
-                    print("⚠️  Still no tasks found")
+                    logger.warning("⚠️  Still no tasks found")
                     return []
 
             limit = task_count if self.task_limit is None else min(task_count, self.task_limit)
-            tasks: List[Dict[str, str]] = []
+            tasks: list[dict[str, str]] = []
             for idx in range(limit):
                 item = locator.nth(idx)
                 href = await item.get_attribute("href") or ""
                 text = (await item.text_content()) or ""
                 tasks.append({"href": href, "text": text})
 
-            print(f"✅ Prepared {len(tasks)} task link(s) for processing")
-            logger.info(f"Prepared {len(tasks)} task link(s) using selector {locator_selector}")
+            logger.info("✅ Prepared %s task link(s) for processing", len(tasks))
+            logger.info("Prepared %s task link(s) using selector %s", len(tasks), locator_selector)
             return tasks
 
-        except Exception as e:
-            print(f"❌ Error finding tasks: {e}")
-            logger.error(f"Error finding tasks: {e}")
+        except (PlaywrightError, PlaywrightTimeoutError, OSError) as err:
+            logger.error("❌ Error finding tasks: %s", err)
             return []
 
-    async def update_pr_for_task(self, task_link: Dict[str, str]):
+    async def update_pr_for_task(self, task_link: dict[str, str]):
         """
         Open task and click 'Update branch' button to update the PR.
 
@@ -396,7 +374,7 @@ class CodexGitHubMentionsAutomation:
 
         try:
             target_url = href if href.startswith("http") else f"https://chatgpt.com{href}"
-            print(f"   Navigating to task: {task_text}")
+            logger.info("Navigating to task: %s", task_text)
             await self.page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(3)
 
@@ -404,23 +382,23 @@ class CodexGitHubMentionsAutomation:
 
             if await update_branch_btn.count() > 0:
                 await update_branch_btn.click()
-                print("  ✅ Clicked 'Update branch' button")
+                logger.info("✅ Clicked 'Update branch' button")
                 await asyncio.sleep(2)
             else:
-                print("  ⚠️  'Update branch' button not found")
+                logger.warning("⚠️  'Update branch' button not found")
                 return False
 
             await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(3)
             return True
 
-        except Exception as e:
-            print(f"  ❌ Failed to update PR: {e}")
+        except (PlaywrightError, PlaywrightTimeoutError, OSError) as err:
+            logger.error("❌ Failed to update PR: %s", err)
             try:
                 await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
                 await asyncio.sleep(3)
-            except Exception as nav_err:
-                print(f"  ⚠️ Failed to navigate back to Codex after error: {nav_err}")
+            except (PlaywrightError, PlaywrightTimeoutError, OSError) as nav_err:
+                logger.warning("⚠️ Failed to navigate back to Codex after error: %s", nav_err)
             return False
 
     async def process_all_github_mentions(self):
@@ -428,37 +406,35 @@ class CodexGitHubMentionsAutomation:
         tasks = await self.find_github_mention_tasks()
 
         if not tasks:
-            print("\n🎯 No GitHub mention tasks to process")
-            logger.info("No tasks found to process")
+            logger.info("🎯 No GitHub mention tasks to process")
             return 0
 
-        print(f"\n🎯 Processing {len(tasks)} task(s)...")
+        logger.info("🎯 Processing %s task(s)...", len(tasks))
         success_count = 0
 
         for i, task in enumerate(tasks, 1):
-            print(f"\n📝 Task {i}/{len(tasks)}:")
+            logger.info("📝 Task %s/%s:", i, len(tasks))
 
             try:
                 raw_text = task.get("text", "") if isinstance(task, dict) else ""
                 task_text = (raw_text or "").strip()
                 preview = task_text[:100] + "..." if len(task_text) > 100 else (task_text or "(no text)")
-                print(f"   {preview}")
-            except Exception as text_error:
-                print(f"   (Could not extract task text: {text_error})")
+                logger.info("%s", preview)
+            except (AttributeError, TypeError) as text_error:
+                logger.info("(Could not extract task text: %s)", text_error)
 
             if await self.update_pr_for_task(task):
                 success_count += 1
 
             await asyncio.sleep(1)
 
-        print(f"\n✅ Successfully updated {success_count}/{len(tasks)} task(s)")
-        logger.info(f"Successfully updated {success_count}/{len(tasks)} tasks")
+        logger.info("✅ Successfully updated %s/%s task(s)", success_count, len(tasks))
         return success_count
 
     async def run(self):
         """Main automation workflow."""
-        print("🤖 OpenAI Codex GitHub Mentions Automation")
-        print("=" * 60)
+        logger.info("🤖 OpenAI Codex GitHub Mentions Automation")
+        logger.info("%s", "=" * 60)
         logger.info("Starting Codex automation workflow")
 
         try:
@@ -471,8 +447,7 @@ class CodexGitHubMentionsAutomation:
             # Step 3: Navigate to Codex if not already there
             current_url = self.page.url
             if "chatgpt.com/codex" in current_url:
-                print(f"\n✅ Already on Codex page: {current_url}")
-                logger.info(f"Already on Codex page: {current_url}")
+                logger.info("✅ Already on Codex page: %s", current_url)
                 await asyncio.sleep(3)
             else:
                 await self.navigate_to_codex()
@@ -480,41 +455,38 @@ class CodexGitHubMentionsAutomation:
             # Step 4: Process all GitHub mention tasks
             count = await self.process_all_github_mentions()
 
-            print("\n" + "=" * 60)
-            print(f"✅ Automation complete! Processed {count} task(s)")
-            logger.info(f"Automation completed successfully - processed {count} task(s)")
+            logger.info("%s", "=" * 60)
+            logger.info("✅ Automation complete! Processed %s task(s)", count)
             return True
 
         except KeyboardInterrupt:
-            print("\n⚠️  Automation interrupted by user")
-            logger.warning("Automation interrupted by user")
+            logger.warning("⚠️  Automation interrupted by user")
             return False
 
-        except Exception as e:
-            print(f"\n❌ Automation failed: {e}")
-            logger.error(f"Automation failed: {e}")
+        except (PlaywrightError, PlaywrightTimeoutError, OSError) as err:
+            logger.error("❌ Automation failed: %s", err)
             traceback.print_exc()
             return False
 
         finally:
             # Close context or browser depending on how it was created
             if self.debug:
-                print("\n🐛 Debug mode: Keeping browser open for inspection")
-                print("   Press Ctrl+C to exit when done inspecting")
+                logger.info("🐛 Debug mode: Keeping browser open for inspection")
+                logger.info("Press Ctrl+C to exit when done inspecting")
                 try:
                     await asyncio.sleep(3600)  # Wait 1 hour for inspection
                 except KeyboardInterrupt:
-                    print("\n🐛 Debug inspection complete")
+                    logger.info("🐛 Debug inspection complete")
 
             if not self.cdp_url and not self.debug:
                 # Close both context and browser (we launched them both)
-                print("\n🔒 Closing browser (launched by automation)")
+                logger.info("🔒 Closing browser (launched by automation)")
                 if self.context:
                     await self.context.close()
                 if self.browser:
                     await self.browser.close()
             else:
-                print("\n💡 Browser left open (CDP mode or debug mode)")
+                logger.info("💡 Browser left open (CDP mode or debug mode)")
 
             await self.cleanup()
 

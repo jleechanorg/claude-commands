@@ -140,11 +140,14 @@ class TestCDPConnectionStates:
         """Test successful connection on default port 9222."""
         automation = CodexGitHubMentionsAutomation()
 
-        result = await automation.connect_to_existing_browser()
-        assert result is True
-        assert automation.browser is not None
-        assert automation.page is not None
-        print("✅ Successfully connected to Chrome on port 9222")
+        try:
+            result = await automation.connect_to_existing_browser()
+            assert result is True
+            assert automation.browser is not None
+            assert automation.page is not None
+            print("✅ Successfully connected to Chrome on port 9222")
+        finally:
+            await automation.cleanup()
 
     @pytest.mark.asyncio
     async def test_no_contexts_creates_new(self):
