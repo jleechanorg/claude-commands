@@ -3665,10 +3665,14 @@ def continue_story(
         dice_integrity_violation=dice_integrity_violation,
     )
 
+    dice_retry_llm_call = False
     if missing_fields and MAX_MISSING_FIELD_REPROMPT_ATTEMPTS > 0:
         logging_util.warning(
             f"🔄 REPROMPT_MISSING_FIELDS: Response missing {missing_fields}. "
             f"Attempting reprompt..."
+        )
+        dice_retry_llm_call = any(
+            field in missing_fields for field in ("dice_rolls", "dice_integrity")
         )
         dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
             chosen_model, provider_selection.provider
@@ -3803,6 +3807,9 @@ def continue_story(
     else:
         # Fallback to legacy mode for non-JSON responses
         gemini_response = LLMResponse.create_legacy(narrative_text, chosen_model)
+
+    if dice_retry_llm_call:
+        gemini_response.processing_metadata["dice_retry_llm_call"] = True
 
     response_text: str = gemini_response.narrative_text
 

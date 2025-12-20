@@ -850,9 +850,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         if temporal_violation_detected and not is_god_mode:
             old_time_str = _format_world_time_for_prompt(old_world_time)
             new_time_str = _format_world_time_for_prompt(new_world_time)
+            dice_retry_llm_call = bool(
+                getattr(llm_response_obj, "processing_metadata", {}).get(
+                    "dice_retry_llm_call"
+                )
+            )
 
             # User-facing error message as god_mode_response
-            prevention_extras["god_mode_response"] = (
+            god_mode_response = (
                 f"⚠️ **TEMPORAL ANOMALY DETECTED**\n\n"
                 f"The AI generated a response where time moved backward:\n"
                 f"- **Previous time:** {old_time_str}\n"
@@ -860,6 +865,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"This may indicate the AI lost track of the story timeline. "
                 f"The response was accepted but timeline consistency may be affected."
             )
+            if dice_retry_llm_call:
+                god_mode_response += (
+                    "\n\n**Dice Retry Notice**\n"
+                    "A dice integrity retry triggered an additional model call before this response. "
+                    "If anything seems inconsistent, you can retry the action."
+                )
+
+            prevention_extras["god_mode_response"] = god_mode_response
 
             logging_util.warning(
                 f"⚠️ TEMPORAL_VIOLATION surfaced to user: {new_time_str} < {old_time_str}"
