@@ -370,7 +370,7 @@ class TestGodModePromptSelection(unittest.TestCase):
 
     def test_prompt_builder_has_god_mode_method(self):
         """Test that PromptBuilder has build_god_mode_instructions method."""
-        from mvp_site.llm_service import PromptBuilder
+        from mvp_site.agent_prompts import PromptBuilder
 
         builder = PromptBuilder(None)
         assert hasattr(builder, 'build_god_mode_instructions'), \
@@ -383,7 +383,7 @@ class TestGodModePromptSelection(unittest.TestCase):
 
     def test_god_mode_instructions_contain_required_prompts(self):
         """Test that god mode instructions include required prompt types."""
-        from mvp_site.llm_service import PromptBuilder
+        from mvp_site.agent_prompts import PromptBuilder
         from mvp_site import constants
 
         builder = PromptBuilder(None)
