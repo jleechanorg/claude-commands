@@ -270,7 +270,7 @@ class UnifiedOrchestration:
             }
 
             if options:
-                if options.get("agent_cli"):
+                if options.get("agent_cli") is not None:
                     agent_spec["cli"] = options["agent_cli"]
                 if options.get("branch"):
                     agent_spec["existing_branch"] = options["branch"]
@@ -305,6 +305,7 @@ class UnifiedOrchestration:
         Args:
             task_description: The task to orchestrate
             options: Optional dict with keys:
+                - agent_cli: Agent CLI to use (claude, codex, gemini, cursor) or chain (e.g., 'gemini,claude')
                 - context: Path to markdown file to inject into agent prompt
                 - branch: Force checkout of specific branch
                 - pr: Existing PR number to update
@@ -346,25 +347,29 @@ class UnifiedOrchestration:
             print("  ⚠️ --no-new-branch was set without --branch; agents cannot create new branches.")
 
         # Display optional arguments if provided
-        if any(options.values()):
+        display_options = dict(options)
+        if options.get("agent_cli") is not None and not options.get("agent_cli_provided"):
+            display_options["agent_cli"] = None
+
+        if any(display_options.values()):
             print("📋 OPTIONS:")
-            if options.get("agent_cli"):
+            if display_options.get("agent_cli") is not None:
                 print(f"  └─ Agent CLI: {options['agent_cli']}")
-            if options.get("context"):
+            if display_options.get("context"):
                 print(f"  └─ Context File: {options['context']}")
-            if options.get("branch"):
+            if display_options.get("branch"):
                 print(f"  └─ Target Branch: {options['branch']}")
-            if options.get("pr"):
+            if display_options.get("pr"):
                 print(f"  └─ Target PR: #{options['pr']}")
-            if options.get("mcp_agent"):
+            if display_options.get("mcp_agent"):
                 print(f"  └─ MCP Agent: {options['mcp_agent']}")
-            if options.get("bead"):
+            if display_options.get("bead"):
                 print(f"  └─ Bead ID: {options['bead']}")
-            if options.get("validate"):
+            if display_options.get("validate"):
                 print(f"  └─ Validation: {options['validate']}")
-            if options.get("no_new_pr"):
+            if display_options.get("no_new_pr"):
                 print("  └─ 🚫 New PR Creation: BLOCKED")
-            if options.get("no_new_branch"):
+            if display_options.get("no_new_branch"):
                 print("  └─ 🚫 New Branch Creation: BLOCKED")
             logger.info(
                 "orchestration_options",
@@ -448,7 +453,7 @@ class UnifiedOrchestration:
 
         for i, agent_spec in enumerate(agents):
             # Inject orchestration options into agent spec
-            if options.get("agent_cli"):
+            if options.get("agent_cli") is not None:
                 agent_spec["cli"] = options["agent_cli"]
             if options.get("branch"):
                 agent_spec["existing_branch"] = options["branch"]
@@ -691,11 +696,24 @@ The orchestration system will:
     parser.add_argument(
         "--agent-cli",
         type=str,
-        default="gemini",
+        default=None,
         help="Agent CLI to use: claude, codex, gemini, cursor. Supports comma-separated chain for fallback (e.g., 'gemini,claude'). Default: gemini",
     )
 
     args = parser.parse_args()
+
+    if args.agent_cli is not None:
+        cli_chain = [cli.strip() for cli in args.agent_cli.split(",")]
+        invalid = [cli for cli in cli_chain if cli not in CLI_PROFILES]
+        if invalid:
+            parser.error(
+                f"Invalid agent CLI(s): {', '.join(invalid)}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}"
+            )
+
+    agent_cli = args.agent_cli
+    agent_cli_provided = args.agent_cli is not None
+    if agent_cli is None:
+        agent_cli = "gemini"
 
     # Validate task description
     task = " ".join(args.task).strip()
@@ -716,7 +734,8 @@ The orchestration system will:
         "no_new_pr": args.no_new_pr,
         "no_new_branch": args.no_new_branch,
         # Note: CLI flag is --agent-cli; argparse exposes it as args.agent_cli.
-        "agent_cli": args.agent_cli,
+        "agent_cli": agent_cli,
+        "agent_cli_provided": agent_cli_provided,
     }
 
     orchestration = UnifiedOrchestration()
