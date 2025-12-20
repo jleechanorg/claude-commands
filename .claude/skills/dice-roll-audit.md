@@ -134,8 +134,8 @@ DICE_TOOL_RESULT: tool=roll_attack | weapon=Longsword | rolls=[12] | total=17 | 
 # Find all dice rolls in last hour
 gcloud logging read "textPayload:DICE_AUDIT" --limit=100 --freshness=1h
 
-# Find fabrication warnings
-gcloud logging read "textPayload:DICE_INTEGRITY_VIOLATION" --limit=50
+# Find all dice tool executions
+gcloud logging read "textPayload:DICE_TOOL_EXEC" --limit=50
 ```
 
 ## Script Location

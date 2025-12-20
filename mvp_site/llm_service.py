@@ -4103,7 +4103,15 @@ def continue_story(
                 is_god_mode=is_god_mode_command,
                 is_dm_mode=is_dm_mode_initial,
             )
-            reprompt_dice_violation = not reprompt_dice_valid
+            reprompt_code_exec_fabrication = _is_code_execution_fabrication(
+                reprompt_structured, reprompt_code_exec
+            )
+            if reprompt_code_exec_fabrication:
+                logging_util.warning(
+                    "🎲 REPROMPT_CODE_EXEC_FABRICATION: Dice in reprompt response "
+                    "but no code_execution detected. Treating as integrity violation."
+                )
+            reprompt_dice_violation = not reprompt_dice_valid or reprompt_code_exec_fabrication
 
             # Check if reprompt was successful
             reprompt_missing = _check_missing_required_fields(
