@@ -4,12 +4,12 @@ Debug script to check what's actually on the Codex page when connected via CDP.
 """
 import asyncio
 import os
-import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from codex_github_mentions import CodexGitHubMentionsAutomation
+from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
+    CodexGitHubMentionsAutomation,
+)
 
 
 async def debug_page():
@@ -78,7 +78,7 @@ async def debug_page():
         os.close(fd)
     except OSError as err:
         # Non-fatal: screenshot already written; just report cleanup failure.
-        print(f"Failed to close temporary file descriptor {fd}: {err}", file=sys.stderr)
+        print(f"Failed to close temporary file descriptor {fd}: {err}")
     print(f"\n📸 Screenshot saved to: {screenshot_path}")
 
     await automation.cleanup()

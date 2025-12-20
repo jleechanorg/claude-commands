@@ -40,7 +40,6 @@ from playwright.async_api import (
 
 AUTH_STATE_PATH = Path.home() / ".oracle_cli_auth_state.json"
 
-
 class OracleCLI:
     """CLI tool to ask GPT-5 Pro questions via browser automation."""
 
@@ -71,7 +70,6 @@ class OracleCLI:
             return
         await self.context.storage_state(path=str(AUTH_STATE_PATH))
         print(f"💾 Authentication state saved to {AUTH_STATE_PATH}")
-
     async def setup(self):
         """Set up browser connection."""
         if self.playwright is None:

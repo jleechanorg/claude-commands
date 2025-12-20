@@ -153,7 +153,7 @@ jobs:
             # Install automation package if testing automation
             if [ "${{ matrix.test-group }}" = "automation" ] && [ -f "automation/pyproject.toml" ]; then
               echo "Installing automation package in editable mode with dev dependencies"
-              timeout 300 pip install -e "automation[dev]"
+              timeout 300 pip install -e "./automation[dev]"
             fi
             ;;
         esac

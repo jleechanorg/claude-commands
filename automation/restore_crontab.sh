@@ -32,21 +32,21 @@ elif [[ "${1:-}" == "--force" ]]; then
     echo -e "${YELLOW}⚡ FORCE MODE - Skipping confirmation prompts${NC}\n"
 fi
 
-exit_or_return() {
-    local status="${1:-1}"
-    (return 0 2>/dev/null) && return "$status" || exit "$status"
-}
 
 # Verify GITHUB_TOKEN is set
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     echo -e "${RED}❌ ERROR: GITHUB_TOKEN environment variable is not set${NC}"
     echo -e "   Export your GitHub token before running this script:"
     echo -e "   ${BLUE}export GITHUB_TOKEN='ghp_xxxxxxxxxxxx'${NC}"
-    exit_or_return 1
+    exit 1
 fi
 
-# Create logs directory if it doesn't exist
-LOG_DIR="${AUTOMATION_LOG_DIR:-$HOME/Library/Logs/automation-system}"
+# Create logs directory if it doesn't exist (cross-platform)
+if [[ "$(uname)" == "Darwin" ]]; then
+    LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+else
+    LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/worldarchitect-automation/logs"
+fi
 if [[ ! -d "$LOG_DIR" ]] && [[ "$DRY_RUN" == "false" ]]; then
     echo -e "${BLUE}📁 Creating log directory: $LOG_DIR${NC}"
     mkdir -p "$LOG_DIR"
@@ -73,20 +73,19 @@ read -r -d '' CRONTAB_TEMPLATE << 'EOF' || true
 
 # Set PATH to include local binaries
 PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin
-LOG_DIR=${AUTOMATION_LOG_DIR:-$HOME/Library/Logs/automation-system}
 
 # Workflow 1: PR monitoring (comment-only mode) - Every hour
 # Posts @codex automation comments on PRs with new commits
-0 * * * * jleechanorg-pr-monitor >> $LOG_DIR/jleechanorg_pr_monitor.log 2>&1
+0 * * * * jleechanorg-pr-monitor >> $HOME/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1
 
 # Workflow 3: Codex GitHub Mentions automation - Every hour at :15
 # Processes Codex tasks queue via browser automation (clicks "Update branch" buttons)
 # NOTE: Requires Chrome with CDP on port 9222 (see README.md for setup)
-15 * * * * jleechanorg-pr-monitor --codex-update >> $LOG_DIR/codex_automation.log 2>&1
+15 * * * * jleechanorg-pr-monitor --codex-update >> $HOME/Library/Logs/worldarchitect-automation/codex_automation.log 2>&1
 
 # Workflow 2: Orchestrated PR fixes - Every 30 minutes
 # Autonomously fixes merge conflicts and failing CI checks using Gemini agents
-*/30 * * * * jleechanorg-pr-monitor --fixpr --max-prs 5 --fixpr-agent gemini >> $LOG_DIR/jleechanorg_pr_monitor.log 2>&1
+*/30 * * * * jleechanorg-pr-monitor --fixpr --max-prs 5 --fixpr-agent gemini >> $HOME/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1
 
 # Claude conversations backup - Every 4 hours
 # Backs up Claude Code conversations to Dropbox
@@ -109,14 +108,18 @@ if [[ "$DRY_RUN" == "false" ]] && [[ "$FORCE" == "false" ]]; then
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${RED}❌ Aborted by user${NC}"
-        exit_or_return 1
+        exit 1
     fi
 fi
 
 # Apply the new crontab
 if [[ "$DRY_RUN" == "false" ]]; then
     echo -e "${BLUE}🔧 Installing crontab entries...${NC}"
-    echo "$CRONTAB_TEMPLATE" | sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g" | crontab -
+    # Expand $HOME since crontab doesn't support shell variable expansion
+    echo "$CRONTAB_TEMPLATE" | \
+        sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g" | \
+        sed "s|\$HOME|$HOME|g" | \
+        crontab -
     echo -e "${GREEN}✅ Crontab restored successfully!${NC}\n"
 else
     echo -e "${BLUE}🔧 DRY RUN: Would install crontab entries${NC}\n"

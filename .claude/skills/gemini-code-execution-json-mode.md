@@ -11,7 +11,7 @@ From [Gemini 3 Developer Guide](https://ai.google.dev/gemini-api/docs/gemini-3):
 ### Gemini 2.x (gemini-2.0-flash, gemini-2.5-flash)
 **CANNOT combine code_execution with JSON mode/controlled generation.**
 
-Error returned:
+When JSON mode is enabled with tools, requests can fail with an `INVALID_ARGUMENT` error:
 ```text
 INVALID_ARGUMENT: Unable to submit request because controlled generation
 is not supported with Code Execution tool.
@@ -23,7 +23,7 @@ is not supported with Code Execution tool.
 |-------|---------------|-----------|---------------|
 | gemini-3-pro-preview | YES | YES | **YES** |
 | gemini-2.0-flash | YES | YES | **NO** |
-| gemini-2.5-flash | NO | YES | N/A |
+| gemini-2.5-flash | YES | YES | **NO** |
 
 ## Architecture Implications
 

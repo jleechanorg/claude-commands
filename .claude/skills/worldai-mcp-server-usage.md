@@ -27,7 +27,6 @@ grep "user=" "$PROJECT_LOG_DIR"/*/flask-server.log | tail -10
 > **Log location note:** The examples assume local-dev logs under `/tmp/<project>/*/flask-server.log`.
 > In containers or systemd services, use `docker logs <container>` or `journalctl -u <service>` and set
 > `PROJECT_LOG_DIR` to the path where your deployment writes logs.
-
 ## Available Tools
 
 ```bash

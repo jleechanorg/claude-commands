@@ -10,8 +10,6 @@ from getpass import getpass
 from pathlib import Path
 from typing import Dict, Tuple
 
-import logging_util
-
 from playwright.async_api import (
     Browser,
     BrowserContext,
@@ -88,10 +86,10 @@ async def ensure_logged_in(page: Page, context: BrowserContext, credentials: Dic
     await page.goto(CHATGPT_CODEX_URL, wait_until="domcontentloaded")
 
     if await is_task_list_visible(page):
-        logging_util.info("✅ Session still valid (task list visible).")
+        print("✅ Session still valid (task list visible).")
         return
 
-    logging_util.warning("⚠️  Session expired. Re-authenticating...")
+    print("⚠️  Session expired. Re-authenticating...")
     if credentials is None:
         credentials = get_credentials()
 
@@ -104,7 +102,7 @@ async def ensure_logged_in(page: Page, context: BrowserContext, credentials: Dic
     await _complete_login_flow(page, credentials)
 
     await context.storage_state(path=str(AUTH_STATE_PATH))
-    logging_util.info("💾 New authentication state saved immediately to %s.", AUTH_STATE_PATH)
+    print(f"💾 New authentication state saved immediately to {AUTH_STATE_PATH}.")
 
 
 async def _complete_login_flow(page: Page, credentials: Dict[str, str]) -> None:
@@ -255,10 +253,10 @@ async def run() -> None:
         browser = await playwright.chromium.launch(headless=False)
         context_kwargs = {}
         if AUTH_STATE_PATH.exists():
-            logging_util.info("🔄 Loading saved authentication state from %s.", AUTH_STATE_PATH)
+            print(f"🔄 Loading saved authentication state from {AUTH_STATE_PATH}")
             context_kwargs["storage_state"] = str(AUTH_STATE_PATH)
         else:
-            logging_util.info("No saved authentication state found. Fresh login required.")
+            print("ℹ️  No saved authentication state found. Fresh login required.")
         context = await browser.new_context(**context_kwargs)
         page = await context.new_page()
 
@@ -267,7 +265,7 @@ async def run() -> None:
         await process_tasks(page)
 
         await context.storage_state(path=str(AUTH_STATE_PATH))
-        logging_util.info("💾 Final authentication state saved to %s.", AUTH_STATE_PATH)
+        print(f"💾 Final authentication state saved to {AUTH_STATE_PATH}.")
     finally:
         if context is not None:
             await context.close()
