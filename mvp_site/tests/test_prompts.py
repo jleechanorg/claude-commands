@@ -8,41 +8,27 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-try:
-    import pytest
+import pytest
 
-    from mvp_site import constants, logging_util
-    import mvp_site.agent_prompts as agent_prompts
-    from mvp_site.agent_prompts import (
-        _load_instruction_file,
-        _loaded_instructions_cache,
-    )
-
-    MODULES_AVAILABLE = True
-except ImportError:
-    constants = None
-    agent_prompts = None
-    logging_util = None
-    pytest = None
-    _load_instruction_file = None
-    _loaded_instructions_cache = None
-    MODULES_AVAILABLE = False
+from mvp_site import constants, logging_util
+import mvp_site.agent_prompts as agent_prompts
+from mvp_site.agent_prompts import (
+    _load_instruction_file,
+    _loaded_instructions_cache,
+)
 
 # The list of all known prompt types to test, using shared constants.
-PROMPT_TYPES_TO_TEST = []
-if constants:
-    PROMPT_TYPES_TO_TEST = [
-        constants.PROMPT_TYPE_NARRATIVE,
-        constants.PROMPT_TYPE_MECHANICS,
-        constants.PROMPT_TYPE_GAME_STATE,
-    ]
+PROMPT_TYPES_TO_TEST = [
+    constants.PROMPT_TYPE_NARRATIVE,
+    constants.PROMPT_TYPE_MECHANICS,
+    constants.PROMPT_TYPE_GAME_STATE,
+]
 
 
 class TestPromptLoading(unittest.TestCase):
     def setUp(self):
         """Clear the instruction cache before each test to ensure isolation."""
-        if _loaded_instructions_cache:
-            _loaded_instructions_cache.clear()
+        _loaded_instructions_cache.clear()
 
     def test_all_prompts_are_loadable_via_service(self):
         """
