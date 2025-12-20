@@ -15,6 +15,7 @@ Run with:
 """
 
 import asyncio
+
 from unittest.mock import AsyncMock, Mock
 
 import aiohttp
@@ -98,14 +99,17 @@ class TestLimitParameter:
         automation = CodexGitHubMentionsAutomation()
         assert automation.task_limit == 50
 
-        await automation.connect_to_existing_browser()
-        await automation.navigate_to_codex()
+        try:
+            await automation.connect_to_existing_browser()
+            await automation.navigate_to_codex()
 
-        tasks = await automation.find_github_mention_tasks()
-        # Should use ALL tasks selector when limit is set
-        assert isinstance(tasks, list)
-        assert len(tasks) <= 50
-        print(f"✅ Default limit 50 found {len(tasks)} tasks")
+            tasks = await automation.find_github_mention_tasks()
+            # Should use ALL tasks selector when limit is set
+            assert isinstance(tasks, list)
+            assert len(tasks) <= 50
+            print(f"✅ Default limit 50 found {len(tasks)} tasks")
+        finally:
+            await automation.cleanup()
 
 
 class TestCDPConnectionStates:
@@ -136,11 +140,14 @@ class TestCDPConnectionStates:
         """Test successful connection on default port 9222."""
         automation = CodexGitHubMentionsAutomation()
 
-        result = await automation.connect_to_existing_browser()
-        assert result is True
-        assert automation.browser is not None
-        assert automation.page is not None
-        print("✅ Successfully connected to Chrome on port 9222")
+        try:
+            result = await automation.connect_to_existing_browser()
+            assert result is True
+            assert automation.browser is not None
+            assert automation.page is not None
+            print("✅ Successfully connected to Chrome on port 9222")
+        finally:
+            await automation.cleanup()
 
     @pytest.mark.asyncio
     async def test_no_contexts_creates_new(self):
@@ -330,19 +337,19 @@ class TestNavigationInteraction:
         """Test complete workflow with real Chrome instance."""
         automation = CodexGitHubMentionsAutomation(task_limit=5)
 
-        # Connect
-        connected = await automation.connect_to_existing_browser()
-        assert connected is True
+        try:
+            connected = await automation.connect_to_existing_browser()
+            assert connected is True
 
-        # Navigate
-        await automation.navigate_to_codex()
+            await automation.navigate_to_codex()
 
-        # Find tasks
-        tasks = await automation.find_github_mention_tasks()
-        assert isinstance(tasks, list)
-        assert len(tasks) <= 5
+            tasks = await automation.find_github_mention_tasks()
+            assert isinstance(tasks, list)
+            assert len(tasks) <= 5
 
-        print(f"✅ Complete workflow successful with {len(tasks)} tasks found")
+            print(f"✅ Complete workflow successful with {len(tasks)} tasks found")
+        finally:
+            await automation.cleanup()
 
 
 if __name__ == "__main__":

@@ -17,9 +17,9 @@ Or with Chrome running:
 """
 
 import asyncio
-
 import aiohttp
 import pytest
+from playwright.async_api import async_playwright
 
 from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
     CodexGitHubMentionsAutomation,
@@ -205,16 +205,11 @@ class TestCodexAutomationClass:
             assert automation.page is not None
             print(f"✅ Automation class connected successfully")
         finally:
-            # Cleanup
-            pass
+            await automation.cleanup()
 
     @requires_chrome
     @pytest.mark.asyncio
     async def test_automation_can_navigate_to_codex(self):
-        """Test that automation class can navigate to Codex."""
-        import sys
-        sys.path.insert(0, 'automation/openai_automation')
-        from codex_github_mentions import CodexGitHubMentionsAutomation
 
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
@@ -227,15 +222,12 @@ class TestCodexAutomationClass:
             assert title is not None and len(title) > 0
             print(f"✅ Automation navigated to Codex (title: {title})")
         finally:
-            pass
+            await automation.cleanup()
 
     @requires_chrome
     @pytest.mark.asyncio
     async def test_automation_can_find_tasks(self):
         """Test that automation class can find GitHub Mention tasks."""
-        import sys
-        sys.path.insert(0, 'automation/openai_automation')
-        from codex_github_mentions import CodexGitHubMentionsAutomation
 
         automation = CodexGitHubMentionsAutomation(cdp_url="http://localhost:9222")
 
@@ -247,7 +239,7 @@ class TestCodexAutomationClass:
             assert isinstance(tasks, list)
             print(f"✅ Automation found {len(tasks)} tasks")
         finally:
-            pass
+            await automation.cleanup()
 
 
 def test_chrome_not_required_placeholder():

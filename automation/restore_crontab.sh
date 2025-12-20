@@ -32,6 +32,7 @@ elif [[ "${1:-}" == "--force" ]]; then
     echo -e "${YELLOW}⚡ FORCE MODE - Skipping confirmation prompts${NC}\n"
 fi
 
+
 # Verify GITHUB_TOKEN is set
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     echo -e "${RED}❌ ERROR: GITHUB_TOKEN environment variable is not set${NC}"

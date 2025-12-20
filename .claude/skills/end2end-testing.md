@@ -33,7 +33,7 @@ Provide Claude with a comprehensive reference for writing and understanding end-
 
 ## Test File Locations
 
-```
+```text
 $PROJECT_ROOT/tests/
 ├── test_end2end/                           # Primary E2E directory (14 test files + runner)
 │   ├── run_end2end_tests.py                # Test runner script

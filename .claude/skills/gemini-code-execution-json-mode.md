@@ -9,11 +9,13 @@ From [Gemini 3 Developer Guide](https://ai.google.dev/gemini-api/docs/gemini-3):
 > "Gemini 3 allows you to combine Structured Outputs with built-in tools, including Grounding with Google Search, URL Context, and Code Execution."
 
 ### Gemini 2.x (gemini-2.0-flash, gemini-2.5-flash)
-**Supports code_execution, but CANNOT combine it with JSON mode/controlled generation.**
+**CANNOT combine code_execution with JSON mode/controlled generation.**
 
-When JSON mode is enabled with tools, requests can fail with an
-`INVALID_ARGUMENT` error indicating controlled generation isn't supported
-alongside tools (including code execution).
+When JSON mode is enabled with tools, requests can fail with an `INVALID_ARGUMENT` error:
+```text
+INVALID_ARGUMENT: Unable to submit request because controlled generation
+is not supported with Code Execution tool.
+```
 
 ## Summary Table
 

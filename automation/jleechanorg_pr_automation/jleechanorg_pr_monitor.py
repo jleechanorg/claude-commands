@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import traceback
@@ -1348,7 +1349,7 @@ def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
             return True, f"✅ Chrome CDP accessible (version: {browser_version})"
     except urllib.error.URLError as e:
         return False, f"❌ Chrome CDP not accessible at {host}:{port} - {e.reason}"
-    except Exception as e:
+    except (json.JSONDecodeError, socket.timeout, OSError) as e:
         return False, f"❌ Failed to connect to Chrome CDP: {e}"
 
 
@@ -1407,10 +1408,18 @@ def main():
             # Use -m to run as module (works with installed package)
             # Requires Chrome with CDP enabled on port 9222
             result = subprocess.run(
-                ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--use-existing-browser", "--limit", "50"],
+                [
+                    sys.executable,
+                    "-m",
+                    "jleechanorg_pr_automation.openai_automation.codex_github_mentions",
+                    "--use-existing-browser",
+                    "--limit",
+                    "50",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=600  # 10 minute timeout
+                check=False,
+                timeout=600,  # 10 minute timeout
             )
             print(result.stdout)
             if result.stderr:
@@ -1419,7 +1428,7 @@ def main():
         except subprocess.TimeoutExpired:
             print("❌ Codex automation timed out after 10 minutes")
             sys.exit(1)
-        except Exception as e:
+        except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"❌ Failed to run Codex automation: {e}")
             sys.exit(1)
 

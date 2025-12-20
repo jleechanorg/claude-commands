@@ -54,10 +54,11 @@ get_repo_from_remote() {
         local parsed_url="$1"
 
         # Match HTTP/HTTPS GitHub format (supports optional userinfo): https://github.com/owner/repo.git
-        if [[ "$parsed_url" =~ https?://([^@/]+@)?github\.com/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        if [[ "$parsed_url" =~ https?://([^@/]*@)?github\.com/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
             local owner="${BASH_REMATCH[2]}"
             local repo="${BASH_REMATCH[3]}"
             repo="${repo%.git}"
+            repo="${repo%/}"
             echo "${owner}/${repo}"
             return 0
         fi
@@ -67,6 +68,7 @@ get_repo_from_remote() {
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
+            repo="${repo%/}"
             echo "${owner}/${repo}"
             return 0
         fi
@@ -76,6 +78,7 @@ get_repo_from_remote() {
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
+            repo="${repo%/}"
             echo "${owner}/${repo}"
             return 0
         fi

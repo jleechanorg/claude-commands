@@ -76,9 +76,9 @@ async def debug_page():
     await automation.page.screenshot(path=screenshot_path)
     try:
         os.close(fd)
-    except OSError:
-        # Debug script: safe to ignore close errors on temp fd
-        pass
+    except OSError as err:
+        # Non-fatal: screenshot already written; just report cleanup failure.
+        print(f"Failed to close temporary file descriptor {fd}: {err}")
     print(f"\n📸 Screenshot saved to: {screenshot_path}")
 
     await automation.cleanup()

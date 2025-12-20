@@ -17,7 +17,7 @@
   "scripts": {
     "auth": "node scripts/auth-cli.mjs",
     "secondo": "bash scripts/secondo-cli.sh",
-    "lint": "eslint . --ext .js,.mjs",
+    "lint": "eslint . --ext .js,.mjs --no-error-on-unmatched-pattern",
     "prepare": "husky"
   },
   "keywords": [
