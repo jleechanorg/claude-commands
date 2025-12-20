@@ -225,7 +225,7 @@ class TestLLMResponse(unittest.TestCase):
     @patch("mvp_site.llm_service._prepare_entity_tracking", return_value=("", [], ""))
     @patch("mvp_site.llm_service._truncate_context", return_value=[])
     @patch("mvp_site.llm_service._get_static_prompt_parts")
-    @patch("mvp_site.llm_service.PromptBuilder")
+    @patch("mvp_site.agents.PromptBuilder")
     @patch("mvp_site.llm_service.get_client")
     @patch("mvp_site.llm_service._get_text_from_response")
     def test_god_mode_prefix_survives_validation_and_skips_planning_block(

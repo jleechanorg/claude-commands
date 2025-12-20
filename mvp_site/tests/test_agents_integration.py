@@ -95,7 +95,7 @@ class TestAgentModeDetectionIntegration(unittest.TestCase):
 class TestAgentInstructionBuildingIntegration(unittest.TestCase):
     """Integration tests for agent instruction building."""
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_story_mode_instruction_building_flow(self, mock_load):
         """Test complete story mode instruction building flow."""
         # Mock instruction file loading
@@ -115,7 +115,7 @@ class TestAgentInstructionBuildingIntegration(unittest.TestCase):
         # Verify that instruction files were loaded
         self.assertTrue(mock_load.called)
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_god_mode_instruction_building_flow(self, mock_load):
         """Test complete god mode instruction building flow."""
         # Mock instruction file loading
@@ -131,7 +131,7 @@ class TestAgentInstructionBuildingIntegration(unittest.TestCase):
         # Verify that instruction files were loaded
         self.assertTrue(mock_load.called)
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_story_mode_without_continuation_reminder(self, mock_load):
         """Test story mode instruction building for initial story (no continuation reminder)."""
         mock_load.return_value = "Mock instruction content"

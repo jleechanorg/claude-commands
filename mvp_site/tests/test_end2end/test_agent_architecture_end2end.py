@@ -372,7 +372,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
     # Agent Instruction Building Tests
     # =========================================================================
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_story_mode_agent_builds_instructions(self, mock_load):
         """Test that StoryModeAgent builds correct system instructions."""
         mock_load.return_value = "Test instruction content"
@@ -391,7 +391,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
             "StoryModeAgent should build non-empty instructions",
         )
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_god_mode_agent_builds_instructions(self, mock_load):
         """Test that GodModeAgent builds correct system instructions."""
         mock_load.return_value = "Test instruction content"
@@ -406,7 +406,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
             "GodModeAgent should build non-empty instructions",
         )
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_god_mode_ignores_selected_prompts(self, mock_load):
         """Test that GodModeAgent ignores selected_prompts parameter."""
         mock_load.return_value = "Test instruction content"

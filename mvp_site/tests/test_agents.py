@@ -31,8 +31,8 @@ from mvp_site.agents import (
     get_agent_for_input,
 )
 
-# PromptBuilder remains in llm_service
-from mvp_site.llm_service import PromptBuilder
+# PromptBuilder lives with agent prompt utilities
+from mvp_site.agent_prompts import PromptBuilder
 
 
 class TestBaseAgent(unittest.TestCase):
@@ -272,7 +272,7 @@ class TestGetAgentForInput(unittest.TestCase):
 class TestAgentInstructionBuilding(unittest.TestCase):
     """Test cases for agent system instruction building."""
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_story_mode_agent_builds_instructions(self, mock_load):
         """StoryModeAgent.build_system_instructions returns instruction string."""
         mock_load.return_value = "Test instruction content"
@@ -287,7 +287,7 @@ class TestAgentInstructionBuilding(unittest.TestCase):
         self.assertIsInstance(instructions, str)
         self.assertGreater(len(instructions), 0)
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_god_mode_agent_builds_instructions(self, mock_load):
         """GodModeAgent.build_system_instructions returns instruction string."""
         mock_load.return_value = "Test instruction content"
@@ -298,7 +298,7 @@ class TestAgentInstructionBuilding(unittest.TestCase):
         self.assertIsInstance(instructions, str)
         self.assertGreater(len(instructions), 0)
 
-    @patch("mvp_site.llm_service._load_instruction_file")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
     def test_god_mode_ignores_selected_prompts(self, mock_load):
         """GodModeAgent ignores selected_prompts parameter."""
         mock_load.return_value = "Test instruction content"

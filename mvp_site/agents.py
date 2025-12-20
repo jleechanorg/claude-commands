@@ -32,10 +32,10 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from mvp_site import constants, logging_util
+from mvp_site.agent_prompts import PromptBuilder
 
 if TYPE_CHECKING:
     from mvp_site.game_state import GameState
-    from mvp_site.llm_service import PromptBuilder
 
 
 class BaseAgent(ABC):
@@ -70,9 +70,6 @@ class BaseAgent(ABC):
             game_state: GameState object for dynamic instruction generation.
                         If None, static fallback instructions will be used.
         """
-        # Import here to avoid circular dependency
-        from mvp_site.llm_service import PromptBuilder
-
         self.game_state = game_state
         self._prompt_builder = PromptBuilder(game_state)
 
