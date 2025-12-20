@@ -7,7 +7,7 @@ Using :02d format specifier without int() conversion causes ValueError.
 Related cursor[bot] comment: PR #2235
 """
 import unittest
-from mvp_site.llm_service import PromptBuilder
+from mvp_site.agent_prompts import PromptBuilder
 from mvp_site.game_state import GameState
 
 
