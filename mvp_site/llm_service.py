@@ -3088,6 +3088,7 @@ def _build_reprompt_for_missing_fields(
     original_response_text: str,
     missing_fields: list[str],
     tool_results: list[dict] | None = None,
+    model_name: str | None = None,
 ) -> str:
     """Build a reprompt message to request missing fields.
 
@@ -3097,6 +3098,8 @@ def _build_reprompt_for_missing_fields(
         tool_results: Optional list of tool execution results to include
             in the reprompt. This preserves dice roll provenance when
             reprompting after malformed JSON in Phase 2.
+        model_name: Model name to determine available dice strategies
+            (code_execution only for Gemini 3.x vs both strategies for others)
 
     Returns:
         Reprompt message asking for the missing fields
@@ -3117,14 +3120,29 @@ def _build_reprompt_for_missing_fields(
             "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
         )
     if "dice_integrity" in missing_fields:
-        requested_lines.append(
-            "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
-            "execute code or call tools to generate them. Dice values are UNKNOWABLE without "
-            "execution - you cannot predict random.randint() results. You MUST either:\n"
-            "  * Use code_execution: Execute Python code with random.randint() to generate dice\n"
-            "  * Use tool_requests: Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
-            "Do NOT write dice values directly in narrative. Regenerate with ACTUAL execution."
-        )
+        # Model-strategy aware reprompt (Finding #2 fix)
+        # Gemini 3.x models only support code_execution, not tool_requests
+        uses_code_execution_only = model_name in constants.MODELS_WITH_CODE_EXECUTION if model_name else False
+
+        if uses_code_execution_only:
+            # Gemini 3.x: code_execution only
+            requested_lines.append(
+                "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
+                "execute code to generate them. Dice values are UNKNOWABLE without execution - "
+                "you cannot predict random.randint() results. You MUST use code_execution:\n"
+                "  * Execute Python code with random.randint() to generate dice rolls\n"
+                "Do NOT write dice values directly in narrative. Regenerate with ACTUAL code execution."
+            )
+        else:
+            # Other models: both strategies available
+            requested_lines.append(
+                "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
+                "execute code or call tools to generate them. Dice values are UNKNOWABLE without "
+                "execution - you cannot predict random.randint() results. You MUST either:\n"
+                "  * Use code_execution: Execute Python code with random.randint() to generate dice\n"
+                "  * Use tool_requests: Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
+                "Do NOT write dice values directly in narrative. Regenerate with ACTUAL execution."
+            )
 
     requested_block = '\n'.join(requested_lines)
 
@@ -3661,6 +3679,7 @@ def continue_story(
             raw_response_text,
             missing_fields,
             tool_results=getattr(api_response, "_tool_results", None),
+            model_name=chosen_model,
         )
 
         # Create a follow-up request with the reprompt
