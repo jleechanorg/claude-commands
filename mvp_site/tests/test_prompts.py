@@ -17,14 +17,6 @@ from mvp_site.agent_prompts import (
     _loaded_instructions_cache,
 )
 
-# The list of all known prompt types to test, using shared constants.
-PROMPT_TYPES_TO_TEST = [
-    constants.PROMPT_TYPE_NARRATIVE,
-    constants.PROMPT_TYPE_MECHANICS,
-    constants.PROMPT_TYPE_GAME_STATE,
-]
-
-
 class TestPromptLoading(unittest.TestCase):
     def setUp(self):
         """Clear the instruction cache before each test to ensure isolation."""
