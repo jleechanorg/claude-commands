@@ -59,7 +59,7 @@ def count_tokens(model_name: str, contents: list[Any]) -> int:
     return client.models.count_tokens(model=model_name, contents=contents).total_tokens
 
 
-def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
+def extract_code_execution_evidence(response: Any) -> dict[str, int | bool | str]:
     """Backward-compatible re-export (see llm_providers/gemini_code_execution.py)."""
     return gemini_code_execution.extract_code_execution_evidence(response)
 

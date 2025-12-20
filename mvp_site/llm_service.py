@@ -2788,7 +2788,9 @@ def _should_require_dice_rolls_for_turn(
     )
 
     # Check if already in combat state (catches ongoing combat)
-    in_combat = current_game_state and current_game_state.combat_state.get("in_combat", False)
+    in_combat = bool(
+        current_game_state and current_game_state.combat_state.get("in_combat", False)
+    )
 
     # Require dice if EITHER condition is met
     return has_combat_keywords or in_combat
