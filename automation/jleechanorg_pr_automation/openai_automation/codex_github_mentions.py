@@ -360,9 +360,6 @@ class CodexGitHubMentionsAutomation:
 
             # Find all task links - use more specific selector to exclude navigation
             # Use /codex/tasks/ to exclude navigation links like Settings, Docs
-            locator = self.page.locator(locator_selector)
-            task_count = await locator.count()
-
             if task_count == 0:
                 print("⚠️  No tasks found, retrying after short wait...")
                 await asyncio.sleep(5)
