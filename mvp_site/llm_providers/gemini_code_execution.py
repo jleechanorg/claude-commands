@@ -13,15 +13,21 @@ from typing import Any
 from mvp_site import logging_util
 
 
-def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
+def extract_code_execution_evidence(response: Any) -> dict[str, int | bool | str]:
     """Best-effort detection of Gemini code_execution usage from a raw SDK response.
 
     We inspect response parts for code_execution artifacts (executable_code /
     code_execution_result) emitted by the Gemini API when the built-in tool is
     actually used.
+
+    Per Consensus ML synthesis: Also validates stdout as JSON when present.
     """
+    import json
+
     executable_code_parts = 0
     code_execution_result_parts = 0
+    stdout_value = ""
+    stdout_is_valid_json = False
 
     try:
         candidates = getattr(response, "candidates", None) or []
@@ -35,12 +41,26 @@ def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
                     executable_code_parts += 1
                 if getattr(part, "code_execution_result", None) is not None:
                     code_execution_result_parts += 1
+
+                    # Extract and validate stdout as JSON (Consensus ML recommendation #3)
+                    result = part.code_execution_result
+                    output = getattr(result, "output", "")
+                    if output:
+                        stdout_value = output
+                        try:
+                            json.loads(output)
+                            stdout_is_valid_json = True
+                        except (json.JSONDecodeError, TypeError):
+                            stdout_is_valid_json = False
+
     except Exception:
         # If the SDK shape changes, keep this non-fatal.
         return {
             "code_execution_used": False,
             "executable_code_parts": 0,
             "code_execution_result_parts": 0,
+            "stdout": "",
+            "stdout_is_valid_json": False,
         }
 
     used = (executable_code_parts + code_execution_result_parts) > 0
@@ -48,6 +68,8 @@ def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
         "code_execution_used": used,
         "executable_code_parts": executable_code_parts,
         "code_execution_result_parts": code_execution_result_parts,
+        "stdout": stdout_value,
+        "stdout_is_valid_json": stdout_is_valid_json,
     }
 
 

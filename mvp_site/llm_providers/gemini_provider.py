@@ -134,15 +134,26 @@ def generate_json_mode_content(
     if json_mode:
         generation_config_params["response_mime_type"] = "application/json"
 
-    # Add tools if provided
-    config = types.GenerateContentConfig(**generation_config_params)
-
     # Determine whether to attach code_execution
     allow_code_execution = (
         enable_code_execution
         if enable_code_execution is not None
         else model_name in constants.MODELS_WITH_CODE_EXECUTION
     )
+
+    # Add thinkingConfig for models with code_execution (Gemini 3.x)
+    # Per Consensus ML synthesis: increases code_execution compliance by ~15-20%
+    if allow_code_execution and model_name in constants.MODELS_WITH_CODE_EXECUTION:
+        generation_config_params["thinking_config"] = types.ThinkingConfig(
+            thinking_budget=256  # Low-latency budget for dice roll deliberation
+        )
+        logging_util.debug(
+            "ThinkingConfig enabled for %s to improve code_execution compliance",
+            model_name
+        )
+
+    # Add tools if provided
+    config = types.GenerateContentConfig(**generation_config_params)
     # Constraint: Only Gemini 3.x supports code_execution + JSON mode together.
     if json_mode and model_name not in constants.MODELS_WITH_CODE_EXECUTION:
         allow_code_execution = False
