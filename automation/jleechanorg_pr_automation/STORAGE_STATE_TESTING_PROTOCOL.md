@@ -116,12 +116,14 @@ python automation/jleechanorg_pr_automation/codex_branch_updater.py
 # Create test cron script
 cat > /tmp/test_codex_automation.sh << 'EOF'
 #!/bin/bash
-LOG_DIR="$HOME/tmp/worldarchitect.ai/automation_tests"
+# Define PROJECT_ROOT - adjust to your project location
+PROJECT_ROOT="${PROJECT_ROOT:-$HOME/projects/your-project}"
+LOG_DIR="$HOME/tmp/automation_tests"
 mkdir -p "$LOG_DIR"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 LOG_FILE="$LOG_DIR/codex_run_${TIMESTAMP}.log"
 
-cd /Users/jleechan/projects/worktree_auto3
+cd "$PROJECT_ROOT"
 python automation/jleechanorg_pr_automation/codex_branch_updater.py > "$LOG_FILE" 2>&1
 EXIT_CODE=$?
 
@@ -142,7 +144,7 @@ crontab /tmp/current_cron
 #!/bin/bash
 # monitor_auth_state.sh - Track session persistence
 
-LOG_DIR="$HOME/tmp/worldarchitect.ai/automation_tests"
+LOG_DIR="$HOME/tmp/automation_tests"
 REPORT_FILE="$LOG_DIR/session_health_report.txt"
 
 echo "=== Session Health Report - $(date) ===" > "$REPORT_FILE"
@@ -237,13 +239,14 @@ bash monitor_auth_state.sh
 crontab -e
 
 # Add (runs at :00 of every 4th hour: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00)
-0 */4 * * * cd ~/projects/worktree_auto3 && python automation/jleechanorg_pr_automation/codex_branch_updater.py >> ~/tmp/worldarchitect.ai/main/codex_automation.log 2>&1
+# NOTE: Replace $PROJECT_ROOT with your actual project path
+0 */4 * * * cd $PROJECT_ROOT && python automation/jleechanorg_pr_automation/codex_branch_updater.py >> ~/tmp/automation/codex_automation.log 2>&1
 ```
 
 ### Post-Deployment Monitoring (First 7 Days)
 ```bash
 # Daily health check
-tail -n 100 ~/tmp/worldarchitect.ai/main/codex_automation.log
+tail -n 100 ~/tmp/automation/codex_automation.log
 
 # Look for:
 # ✅ "Session still valid" (good - using saved state)

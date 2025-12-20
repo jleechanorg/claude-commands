@@ -4,12 +4,14 @@ Command Output Trimmer Hook - OPTIMIZED VERSION
 Reduces slash command token consumption by 50-70% with <5ms overhead.
 """
 
+import contextlib
 import json
 import os
 import re
 import sys
 import threading
 import time
+import traceback
 from collections import deque
 from dataclasses import dataclass
 from typing import Any
@@ -832,13 +834,12 @@ def main():
 
     except Exception as e:
         # On any error, pass through original output with full stack trace for debugging
-        import traceback
         sys.stderr.write(f"Trimmer error: {e}\n")
         sys.stderr.write(f"Stack trace: {traceback.format_exc()}\n")
         # Attempt to write original data if available
-        import contextlib
         with contextlib.suppress(NameError):
             sys.stdout.write(input_data)
+        return 1
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

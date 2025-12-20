@@ -40,8 +40,12 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     exit 1
 fi
 
-# Create logs directory if it doesn't exist
-LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+# Create logs directory if it doesn't exist (cross-platform)
+if [[ "$(uname)" == "Darwin" ]]; then
+    LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+else
+    LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/worldarchitect-automation/logs"
+fi
 if [[ ! -d "$LOG_DIR" ]] && [[ "$DRY_RUN" == "false" ]]; then
     echo -e "${BLUE}📁 Creating log directory: $LOG_DIR${NC}"
     mkdir -p "$LOG_DIR"
@@ -91,7 +95,10 @@ EOF
 # Show what will be restored
 echo -e "${BLUE}📝 Crontab entries to be restored:${NC}"
 echo -e "${YELLOW}──────────────────────────────────────────────────────────────${NC}"
-echo "$CRONTAB_TEMPLATE" | sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g"
+# Show with $HOME expanded so preview matches what will be installed
+echo "$CRONTAB_TEMPLATE" | \
+    sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g" | \
+    sed "s|\$HOME|$HOME|g"
 echo -e "${YELLOW}──────────────────────────────────────────────────────────────${NC}\n"
 
 # Confirm before proceeding (unless --force or --dry-run)
@@ -110,7 +117,11 @@ fi
 # Apply the new crontab
 if [[ "$DRY_RUN" == "false" ]]; then
     echo -e "${BLUE}🔧 Installing crontab entries...${NC}"
-    echo "$CRONTAB_TEMPLATE" | sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g" | crontab -
+    # Expand $HOME since crontab doesn't support shell variable expansion
+    echo "$CRONTAB_TEMPLATE" | \
+        sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g" | \
+        sed "s|\$HOME|$HOME|g" | \
+        crontab -
     echo -e "${GREEN}✅ Crontab restored successfully!${NC}\n"
 else
     echo -e "${BLUE}🔧 DRY RUN: Would install crontab entries${NC}\n"

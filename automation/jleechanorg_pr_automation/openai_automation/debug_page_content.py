@@ -3,12 +3,13 @@
 Debug script to check what's actually on the Codex page when connected via CDP.
 """
 import asyncio
-import sys
+import os
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from codex_github_mentions import CodexGitHubMentionsAutomation
+from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
+    CodexGitHubMentionsAutomation,
+)
 
 
 async def debug_page():
@@ -74,10 +75,9 @@ async def debug_page():
     fd, screenshot_path = tempfile.mkstemp(prefix="debug_screenshot_", suffix=".png", dir=str(base_dir))
     await automation.page.screenshot(path=screenshot_path)
     try:
-        import os
-
         os.close(fd)
     except OSError:
+        # Debug script: safe to ignore close errors on temp fd
         pass
     print(f"\n📸 Screenshot saved to: {screenshot_path}")
 
