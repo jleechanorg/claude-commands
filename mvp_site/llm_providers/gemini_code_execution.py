@@ -8,6 +8,7 @@ Purpose:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from mvp_site import logging_util
@@ -22,8 +23,6 @@ def extract_code_execution_evidence(response: Any) -> dict[str, int | bool | str
 
     Per Consensus ML synthesis: Also validates stdout as JSON when present.
     """
-    import json
-
     executable_code_parts = 0
     code_execution_result_parts = 0
     stdout_value = ""
@@ -149,7 +148,7 @@ def log_code_execution_parts(
     *,
     model_name: str,
     context: str,
-) -> dict[str, int | bool]:
+) -> dict[str, int | bool | str]:
     """Log Gemini code_execution evidence (always INFO, optional DEBUG detail)."""
     evidence = extract_code_execution_evidence(response)
     logging_util.info(
