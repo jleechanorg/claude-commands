@@ -48,6 +48,10 @@ This will:
 
 **Important:** Log in to OpenAI/ChatGPT in this browser window!
 
+Tip: If you run `jleechanorg-pr-monitor --codex-update`, the monitor can auto-start
+Chrome when CDP is unavailable. Configure with `CODEX_CDP_AUTO_START`,
+`CODEX_CDP_PORT`, and `CODEX_CDP_USER_DATA_DIR`.
+
 ---
 
 ## Usage
