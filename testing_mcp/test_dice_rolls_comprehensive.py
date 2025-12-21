@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -45,6 +46,7 @@ TEST_SCENARIOS: list[dict[str, Any]] = [
         "user_input": "I attack the goblin with my longsword. Resolve the attack and damage.",
         "expect_substrings": ["d20"],
         "min_dice_rolls": 2,
+        "allow_single_on_miss": True,
     },
     {
         "name": "Skill Check (Stealth)",
@@ -197,6 +199,88 @@ def create_campaign(client: MCPClient, user_id: str) -> str:
     return campaign_id
 
 
+def get_campaign_state(client: MCPClient, *, user_id: str, campaign_id: str) -> dict[str, Any]:
+    payload = client.tools_call(
+        "get_campaign_state",
+        {"user_id": user_id, "campaign_id": campaign_id},
+    )
+    if payload.get("error"):
+        raise RuntimeError(f"get_campaign_state error: {payload['error']}")
+    return payload
+
+
+def update_campaign(client: MCPClient, *, user_id: str, campaign_id: str, updates: dict[str, Any]) -> None:
+    payload = client.tools_call(
+        "update_campaign",
+        {"user_id": user_id, "campaign_id": campaign_id, "updates": updates},
+    )
+    if payload.get("error"):
+        raise RuntimeError(f"update_campaign error: {payload['error']}")
+
+
+def ensure_game_state_seed(
+    client: MCPClient, *, user_id: str, campaign_id: str
+) -> bool:
+    state_payload = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    game_state = state_payload.get("game_state") or {}
+    pc = game_state.get("player_character_data") or {}
+    npc_data = game_state.get("npc_data") or {}
+
+    missing_pc = not (pc.get("name") and pc.get("attributes"))
+    missing_goblin = not any(
+        isinstance(value, dict) and value.get("name", "").lower() == "goblin"
+        for value in npc_data.values()
+    )
+
+    if not missing_pc and not missing_goblin:
+        return False
+
+    seeded_pc = {
+        "string_id": "pc_aric_001",
+        "name": "Aric",
+        "level": 1,
+        "class": "Fighter",
+        "hp_current": 12,
+        "hp_max": 12,
+        "attributes": {
+            "strength": 16,
+            "dexterity": 12,
+            "constitution": 14,
+            "intelligence": 10,
+            "wisdom": 10,
+            "charisma": 12,
+        },
+        "proficiency_bonus": 2,
+    }
+    seeded_goblin = {
+        "string_id": "npc_goblin_001",
+        "name": "Goblin",
+        "hp_current": 7,
+        "hp_max": 7,
+        "armor_class": 13,
+        "status": "healthy",
+        "present": True,
+    }
+
+    state_changes: dict[str, Any] = {}
+    if missing_pc:
+        state_changes["player_character_data"] = seeded_pc
+    if missing_goblin:
+        state_changes["npc_data"] = dict(npc_data)
+        state_changes["npc_data"]["npc_goblin_001"] = seeded_goblin
+
+    god_mode_payload = f"GOD_MODE_UPDATE_STATE:{json.dumps(state_changes)}"
+    result = process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input=god_mode_payload,
+    )
+    if result.get("error"):
+        raise RuntimeError(f"GOD_MODE_UPDATE_STATE failed: {result['error']}")
+    return True
+
+
 def update_user_settings(client: MCPClient, *, user_id: str, settings: dict[str, Any]) -> None:
     payload = client.tools_call(
         "update_user_settings",
@@ -237,6 +321,10 @@ def validate_result(result: dict[str, Any], scenario: dict[str, Any]) -> list[st
         return [f"dice_rolls not a list: {type(dice_rolls)}"]
 
     min_dice = int(scenario.get("min_dice_rolls", 1))
+    if scenario.get("allow_single_on_miss") and len(dice_rolls) == 1:
+        roll_text = " ".join(str(x) for x in dice_rolls)
+        if "miss" in roll_text.lower():
+            min_dice = 1
     if len(dice_rolls) < min_dice:
         errors.append(f"expected >= {min_dice} dice_rolls, got {len(dice_rolls)}")
 
@@ -290,6 +378,17 @@ def _distribution_stats(rolls: list[int]) -> dict[str, Any]:
         "max": max(rolls),
         "mean": mean,
     }
+
+
+def _extract_totals_from_dice_rolls(dice_rolls: list[str]) -> list[int]:
+    totals: list[int] = []
+    for roll in dice_rolls:
+        if not isinstance(roll, str):
+            continue
+        match = re.findall(r"=\s*(-?\d+)\s*(?:vs|\(|$)", roll)
+        if match:
+            totals.append(int(match[-1]))
+    return totals
 
 
 def main() -> int:
@@ -428,9 +527,17 @@ def main() -> int:
             user_id = f"mcp-dice-tests-{model_id.replace('/', '-')}-{int(time.time())}"
             update_user_settings(client, user_id=user_id, settings=model_settings)
             campaign_id = create_campaign(client, user_id)
+            seeded_character = ensure_game_state_seed(
+                client, user_id=user_id, campaign_id=campaign_id
+            )
 
             run_summary["models"].append(
-                {"model": model_id, "settings": model_settings, "campaign_id": campaign_id}
+                {
+                    "model": model_id,
+                    "settings": model_settings,
+                    "campaign_id": campaign_id,
+                    "seeded_character": seeded_character,
+                }
             )
 
             for scenario in TEST_SCENARIOS:
@@ -469,6 +576,55 @@ def main() -> int:
                 ):
                     if not (debug_info.get("code_execution_used") or debug_info.get("stdout")):
                         errors.append("missing code_execution evidence for dice roll")
+                if tool_results:
+                    expected_totals: list[int] = []
+                    for tool_result in tool_results:
+                        result_payload = (
+                            tool_result.get("result")
+                            if isinstance(tool_result, dict)
+                            else None
+                        )
+                        if not isinstance(result_payload, dict):
+                            continue
+
+                        def _coerce_total(value: Any) -> int | None:
+                            try:
+                                return int(value)
+                            except (TypeError, ValueError):
+                                return None
+
+                        attack_roll = result_payload.get("attack_roll")
+                        if isinstance(attack_roll, dict):
+                            total = _coerce_total(attack_roll.get("total"))
+                            if total is not None:
+                                expected_totals.append(total)
+
+                        damage = result_payload.get("damage")
+                        if isinstance(damage, dict):
+                            total = _coerce_total(damage.get("total"))
+                            if total is not None:
+                                expected_totals.append(total)
+
+                        total = _coerce_total(result_payload.get("total"))
+                        if total is not None:
+                            expected_totals.append(total)
+
+                    parsed_totals = _extract_totals_from_dice_rolls(
+                        [str(x) for x in (result.get("dice_rolls") or [])]
+                    )
+                    if expected_totals:
+                        if not parsed_totals:
+                            errors.append(
+                                f"dice_rolls missing totals for tool_results: expected {expected_totals}"
+                            )
+                        else:
+                            missing = [
+                                total for total in expected_totals if total not in parsed_totals
+                            ]
+                            if missing:
+                                errors.append(
+                                    f"dice_rolls/tool_results mismatch: missing totals {missing}, parsed {parsed_totals}"
+                                )
 
                 run_summary["scenarios"].append(
                     {

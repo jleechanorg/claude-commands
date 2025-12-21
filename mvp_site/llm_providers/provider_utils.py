@@ -456,7 +456,10 @@ def run_json_first_tool_requests_flow(
             logger.warning("Phase 1 response not valid JSON, returning as-is")
             return _attach_tool_execution_metadata(response_1, executed=False)
 
-    tool_requests = response_data.get(tool_requests_key, [])
+    if isinstance(response_data, list):
+        tool_requests = response_data
+    else:
+        tool_requests = response_data.get(tool_requests_key, [])
     if not tool_requests:
         msg = (
             no_tool_requests_log_msg(response_data)

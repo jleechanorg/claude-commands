@@ -202,7 +202,7 @@ TARGET_WORD_COUNT: int = 300
 # and let the error propagate to the UI rather than generating fake content
 # However, we DO attempt a single reprompt if required fields are missing.
 # Maximum reprompt attempts for missing required fields (planning_block, session_header)
-MAX_MISSING_FIELD_REPROMPT_ATTEMPTS: int = 1
+MAX_MISSING_FIELD_REPROMPT_ATTEMPTS: int = 3
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
 JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
@@ -794,34 +794,52 @@ def _detect_narrative_dice_fabrication(
     api_response: Any,
     code_execution_evidence: dict[str, Any] | None,
 ) -> bool:
-    """Detect dice patterns in narrative that lack tool/code_execution evidence."""
-    if not narrative_text:
-        return False
-    if not _narrative_contains_dice(narrative_text):
+    """Detect dice patterns in narrative OR structured response that lack tool/code_execution evidence."""
+    # CRITICAL FIX: Check for dice in BOTH narrative AND structured response
+    # Cerebras may put dice only in structured dice_rolls field, not narrative text
+    has_dice_in_narrative = narrative_text and _narrative_contains_dice(narrative_text)
+
+    has_dice_in_structured = False
+    if structured_response:
+        dice_rolls = getattr(structured_response, 'dice_rolls', None)
+        has_dice_in_structured = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+
+    # DEBUG LOGGING
+    logging_util.debug(
+        f"🔍 DICE_FABRICATION_CHECK: "
+        f"has_dice_in_narrative={has_dice_in_narrative}, "
+        f"has_dice_in_structured={has_dice_in_structured}, "
+        f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
+        f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
+    )
+
+    # If no dice anywhere, no fabrication possible
+    if not has_dice_in_narrative and not has_dice_in_structured:
         return False
 
+    # If we have code_execution evidence, dice are real
     if code_execution_evidence and code_execution_evidence.get("code_execution_used"):
         return False
 
+    # If we have tool execution metadata, dice are real
     tool_requests_executed = getattr(api_response, "_tool_requests_executed", None)
     if tool_requests_executed:
         return False
 
-    # CRITICAL FIX: If dice exist in structured response but no tool evidence, that's fabrication
-    # Don't be permissive just because metadata is missing - check for actual dice_rolls
-    if structured_response:
-        dice_rolls = getattr(structured_response, 'dice_rolls', None)
-        has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
-        if has_dice_rolls:
-            # Dice in structured response but no tool evidence = FABRICATION
-            return True
+    # If we found dice but no tool/code_execution evidence, that's FABRICATION
+    if has_dice_in_narrative or has_dice_in_structured:
+        logging_util.warning(
+            f"🚨 DICE_FABRICATION_DETECTED: Found dice in response but no tool/code execution evidence! "
+            f"has_dice_in_narrative={has_dice_in_narrative}, has_dice_in_structured={has_dice_in_structured}"
+        )
+        return True
 
-    # If metadata is missing AND no structured dice, be permissive (backward compatibility)
+    # Backward compatibility: if metadata is missing and no dice detected, be permissive
     if tool_requests_executed is None and code_execution_evidence is None:
         return False
 
-    # If we got here, narrative has dice but no evidence of tool execution.
-    return True
+    # If we got here, something unexpected happened
+    return False
 
 
 def _is_important_sentence(sentence: str) -> bool:
@@ -4017,6 +4035,16 @@ def continue_story(
                     dice_integrity_violation=reprompt_dice_violation,
                 )
 
+                # CRITICAL: Never accept responses with dice_integrity violations
+                # If reprompt still has fabricated dice, reject and continue loop
+                if 'dice_integrity' in reprompt_missing:
+                    logging_util.warning(
+                        f"🚨 REPROMPT_DICE_FABRICATION: Reprompt attempt {attempt} still has "
+                        f"dice fabrication. Rejecting and continuing loop."
+                    )
+                    # Don't accept this response, continue to next attempt
+                    continue
+
                 if len(reprompt_missing) < last_missing_count:
                     # Reprompt improved the response - use it
                     logging_util.info(
@@ -4046,6 +4074,18 @@ def continue_story(
                     f"Using best available response."
                 )
                 break
+
+        # CRITICAL: Final validation - reject entire response if dice_integrity still violated
+        # After all reprompt attempts, if we still have fabricated dice, throw error
+        if 'dice_integrity' in missing_fields:
+            logging_util.error(
+                f"🚨 DICE_INTEGRITY_FAILURE: All {MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} "
+                f"reprompt attempts failed to produce real dice. Rejecting response."
+            )
+            raise ValueError(
+                f"DICE_INTEGRITY_VIOLATION: LLM fabricated dice in all "
+                f"{MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} attempts. Cannot proceed with fabricated dice."
+            )
 
     dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
         chosen_model, provider_selection.provider
