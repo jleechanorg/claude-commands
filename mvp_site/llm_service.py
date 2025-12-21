@@ -830,10 +830,38 @@ def _detect_narrative_dice_fabrication(
     if code_execution_evidence and code_execution_evidence.get("code_execution_used"):
         return False
 
-    # If we have tool execution metadata, dice are real
+    # CRITICAL FIX: Don't blindly trust tool_requests_executed flag
+    # Verify that tool_results actually contain dice data (non-empty, valid results)
     tool_requests_executed = getattr(api_response, "_tool_requests_executed", None)
-    if tool_requests_executed:
-        return False
+    tool_results = getattr(api_response, "_tool_results", None)
+
+    # DEBUG: Log tool_results structure to understand what we're checking
+    if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
+        logging_util.warning(
+            f"🔍 TOOL_RESULTS_INSPECTION: "
+            f"tool_results_type={type(tool_results).__name__}, "
+            f"tool_results_count={len(tool_results) if isinstance(tool_results, list) else 0}, "
+            f"tool_results_sample={tool_results[:1] if isinstance(tool_results, list) and tool_results else 'None'}"
+        )
+
+    if tool_requests_executed and tool_results:
+        # Verify tool_results are non-empty and contain actual data
+        # For native_two_phase strategy, tool_results should have real dice from MCP tools
+        if isinstance(tool_results, list) and len(tool_results) > 0:
+            # Check if tool_results contain non-null, non-empty data
+            has_valid_results = any(
+                result and isinstance(result, dict) and any(result.values())
+                for result in tool_results
+            )
+            if has_valid_results:
+                # Tool results exist and are valid - dice are likely real
+                # But ONLY if they're from dice-related tools
+                # TODO: Future enhancement - verify tool name is "roll_dice" or similar
+                return False
+
+        # If we get here, tool_requests_executed=True but tool_results are empty/invalid
+        # This is suspicious - LLM may have called a non-dice tool or gotten empty results
+        # Fall through to fabrication check
 
     # If we found dice but no tool/code_execution evidence, that's FABRICATION
     if has_dice_in_narrative or has_dice_in_structured:
