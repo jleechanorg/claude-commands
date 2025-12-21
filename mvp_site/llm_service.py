@@ -844,23 +844,15 @@ def _detect_narrative_dice_fabrication(
             f"tool_results_sample={tool_results[:1] if isinstance(tool_results, list) and tool_results else 'None'}"
         )
 
+    # ENHANCED: Only accept dice-specific tool results (prevents non-dice tool loophole)
     if tool_requests_executed and tool_results:
-        # Verify tool_results are non-empty and contain actual data
-        # For native_two_phase strategy, tool_results should have real dice from MCP tools
-        if isinstance(tool_results, list) and len(tool_results) > 0:
-            # Check if tool_results contain non-null, non-empty data
-            has_valid_results = any(
-                result and isinstance(result, dict) and any(result.values())
-                for result in tool_results
-            )
-            if has_valid_results:
-                # Tool results exist and are valid - dice are likely real
-                # But ONLY if they're from dice-related tools
-                # TODO: Future enhancement - verify tool name is "roll_dice" or similar
-                return False
+        # Verify tool_results contain dice tools specifically
+        # This prevents accepting non-dice tools (e.g., search_location) as proof
+        if _has_dice_tool_results(tool_results):
+            return False  # Dice tool results valid, dice are real
 
-        # If we get here, tool_requests_executed=True but tool_results are empty/invalid
-        # This is suspicious - LLM may have called a non-dice tool or gotten empty results
+        # If we get here, tool_requests_executed=True but tool_results lack dice tools
+        # This is suspicious - LLM may have called a non-dice tool and fabricated dice
         # Fall through to fabrication check
 
     # If we found dice but no tool/code_execution evidence, that's FABRICATION
@@ -2831,6 +2823,37 @@ def _log_api_response_safely(
 
 
 _DICE_TOOL_NAMES = {"roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw"}
+
+
+def _has_dice_tool_results(tool_results: Any) -> bool:
+    """Check if tool_results contain any dice-related tools.
+
+    Returns True only if tool_results include outputs from dice tools
+    (roll_dice, roll_attack, roll_skill_check, roll_saving_throw).
+    This prevents accepting non-dice tools as proof of legitimate dice.
+
+    Args:
+        tool_results: List of tool execution results from LLM API
+
+    Returns:
+        True if any dice tool is present with valid result data
+    """
+    if not isinstance(tool_results, list):
+        return False
+
+    for result in tool_results:
+        if not isinstance(result, dict):
+            continue
+
+        # Check both 'tool' and 'name' fields for tool name
+        tool_name = result.get('tool') or result.get('name', '')
+        if isinstance(tool_name, str) and tool_name in _DICE_TOOL_NAMES:
+            # Found a dice tool - verify it has actual result data
+            result_data = result.get('result')
+            if result_data and isinstance(result_data, dict):
+                return True
+
+    return False
 
 
 def _extract_dice_rolls_from_tool_results(tool_results: Any) -> list[str]:
