@@ -436,33 +436,14 @@ async def handle_read_resource(uri: str) -> str:
 
 
 def setup_mcp_logging() -> None:
-    """Configure centralized logging for MCP server."""
-    log_file = logging_util.LoggingUtil.get_log_file("mcp-server")
+    """
+    Configure unified logging for MCP server.
 
-    # Clear any existing handlers
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Set up formatting
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    root_logger.addHandler(console_handler)
-
-    # File handler
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(formatter)
-    root_logger.addHandler(file_handler)
-
-    # Set level
-    root_logger.setLevel(logging.INFO)
-
-    logging_util.info(f"MCP server logging configured: {log_file}")
+    Uses centralized logging_util.setup_unified_logging() to ensure
+    consistent logging across all entry points (Flask, MCP, tests).
+    Logs go to both Cloud Logging (stdout/stderr) and local file.
+    """
+    logging_util.setup_unified_logging("mcp-server")
 
 
 def handle_jsonrpc(request_data: dict) -> dict:
