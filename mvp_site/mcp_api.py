@@ -41,7 +41,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
 
 # WorldArchitect imports using absolute package imports
-from mvp_site import logging_util, world_logic
+from mvp_site import game_state, logging_util, world_logic
 from mvp_site.firestore_service import json_default_serializer
 
 # Initialize MCP server
@@ -57,7 +57,7 @@ KEY_USER_INPUT = "user_input"
 @server.list_tools()
 async def handle_list_tools() -> list[Tool]:
     """List available MCP tools for D&D game mechanics."""
-    return [
+    tools: list[Tool] = [
         Tool(
             name="create_campaign",
             description="Create a new D&D campaign with character, setting, and story generation",
@@ -208,6 +208,29 @@ async def handle_list_tools() -> list[Tool]:
         ),
     ]
 
+    if os.getenv("ENABLE_DICE_TEST_TOOL", "").lower() == "true":
+        tools.append(
+            Tool(
+                name="roll_dice",
+                description="Test-only server-side dice roll (requires ENABLE_DICE_TEST_TOOL=true).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "notation": {
+                            "type": "string",
+                            "description": "Dice notation (e.g., 1d20+5). Defaults to 1d20.",
+                        },
+                        "purpose": {
+                            "type": "string",
+                            "description": "Optional description of the roll purpose.",
+                        },
+                    },
+                },
+            )
+        )
+
+    return tools
+
 
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:  # noqa: PLR0911
@@ -219,6 +242,8 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextCon
             return await _get_campaign_state_tool(arguments)
         if name == "process_action":
             return await _process_action_tool(arguments)
+        if name == "roll_dice":
+            return await _roll_dice_tool(arguments)
         if name == "update_campaign":
             return await _update_campaign_tool(arguments)
         if name == "export_campaign":
@@ -300,6 +325,39 @@ async def _process_action_tool(args: dict[str, Any]) -> list[TextContent]:
             f"Failed to process action: {str(e)}"
         )
         return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _roll_dice_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Test-only server-side dice roll (requires ENABLE_DICE_TEST_TOOL=true)."""
+    if os.getenv("ENABLE_DICE_TEST_TOOL", "").lower() != "true":
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {"error": "roll_dice tool disabled (set ENABLE_DICE_TEST_TOOL=true)"}
+                ),
+            )
+        ]
+    try:
+        notation = args.get("notation") or "1d20"
+        purpose = args.get("purpose", "")
+        result = game_state.execute_dice_tool(
+            "roll_dice", {"notation": notation, "purpose": purpose}
+        )
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps({"tool": "roll_dice", "result": result}),
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"roll_dice tool failed: {e}")
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps({"error": f"Failed to roll dice: {str(e)}"}),
+            )
+        ]
 
 
 async def _update_campaign_tool(args: dict[str, Any]) -> list[TextContent]:

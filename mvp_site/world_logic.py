@@ -1067,6 +1067,30 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     structured_response.god_mode_response
                 )
 
+        capture_evidence = os.getenv("CAPTURE_EVIDENCE", "").lower() == "true"
+        if capture_evidence:
+            metadata = getattr(llm_response_obj, "processing_metadata", {}) or {}
+            llm_provider = metadata.get("llm_provider") or getattr(
+                llm_response_obj, "provider", None
+            )
+            llm_model = metadata.get("llm_model") or getattr(
+                llm_response_obj, "model", None
+            )
+            if llm_provider:
+                unified_response["llm_provider"] = llm_provider
+            if llm_model:
+                unified_response["llm_model"] = llm_model
+            if "dice_strategy" in metadata:
+                unified_response["dice_strategy"] = metadata["dice_strategy"]
+            if "raw_response_text" in metadata:
+                unified_response["raw_llm_response"] = metadata["raw_response_text"]
+            if "tool_results" in metadata:
+                unified_response["tool_results"] = metadata["tool_results"]
+            if "tool_requests_executed" in metadata:
+                unified_response["tool_requests_executed"] = metadata[
+                    "tool_requests_executed"
+                ]
+
         if prevention_extras.get("god_mode_response"):
             # Prefer synthesized god mode responses from preventive guards when present
             # because they fill gaps left by the model.

@@ -3653,6 +3653,7 @@ def continue_story(
     logging_util.info(
         "Successfully used LLMRequest for structured JSON communication"
     )
+    final_api_response = api_response
 
     code_execution_evidence = _maybe_get_gemini_code_execution_evidence(
         provider_name=provider_selection.provider,
@@ -3812,6 +3813,7 @@ def continue_story(
                     structured_response = reprompt_structured
                     if reprompt_code_exec is not None:
                         code_execution_evidence = reprompt_code_exec
+                    final_api_response = reprompt_response
                     missing_fields = reprompt_missing
                     last_missing_count = len(reprompt_missing)
 
@@ -3830,15 +3832,43 @@ def continue_story(
                 )
                 break
 
-    if structured_response and code_execution_evidence:
-        structured_response.debug_info = {
-            **(structured_response.debug_info or {}),
-            "provider": provider_selection.provider,
-            "model": chosen_model,
-            "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
-            **code_execution_evidence,
-        }
-        _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+    dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+        chosen_model, provider_selection.provider
+    )
+    capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
+    capture_tools = os.getenv("CAPTURE_TOOL_RESULTS", "").lower() == "true"
+    processing_metadata: dict[str, Any] = {
+        "llm_provider": provider_selection.provider,
+        "llm_model": chosen_model,
+        "dice_strategy": dice_roll_strategy,
+    }
+    if capture_raw:
+        raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
+        processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
+    if capture_tools:
+        tool_results = getattr(final_api_response, "_tool_results", None)
+        if tool_results is not None:
+            processing_metadata["tool_results"] = tool_results
+            processing_metadata["tool_requests_executed"] = bool(
+                getattr(final_api_response, "_tool_requests_executed", False)
+            )
+
+    if structured_response:
+        debug_info = structured_response.debug_info or {}
+        debug_info.setdefault("llm_provider", provider_selection.provider)
+        debug_info.setdefault("llm_model", chosen_model)
+        debug_info.setdefault("dice_strategy", dice_roll_strategy)
+        if capture_raw and "raw_response_text" in processing_metadata:
+            debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+        if capture_tools and "tool_results" in processing_metadata:
+            debug_info["tool_results"] = processing_metadata["tool_results"]
+            debug_info["tool_requests_executed"] = processing_metadata.get(
+                "tool_requests_executed", False
+            )
+        if code_execution_evidence:
+            debug_info.update(code_execution_evidence)
+            _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+        structured_response.debug_info = debug_info
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -3875,11 +3905,19 @@ def continue_story(
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
         gemini_response = LLMResponse.create_from_structured_response(
-            structured_response, chosen_model
+            structured_response,
+            chosen_model,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
         )
     else:
         # Fallback to legacy mode for non-JSON responses
-        gemini_response = LLMResponse.create_legacy(narrative_text, chosen_model)
+        gemini_response = LLMResponse.create_legacy(
+            narrative_text,
+            chosen_model,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
+        )
 
     if dice_retry_llm_call:
         gemini_response.processing_metadata["dice_retry_llm_call"] = True
