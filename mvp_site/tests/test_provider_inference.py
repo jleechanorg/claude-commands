@@ -53,7 +53,7 @@ class TestProviderInference(unittest.TestCase):
 
     def test_infer_openrouter_provider_from_grok_model(self):
         """Infer openrouter provider from Grok model."""
-        model = "x-ai/grok-4.1-fast:free"
+        model = "x-ai/grok-4.1-fast"
         provider = infer_provider_from_model(model)
         self.assertEqual(provider, LLM_PROVIDER_OPENROUTER)
 

@@ -121,12 +121,6 @@ ALLOWED_OPENROUTER_MODELS = [
     # Source: https://huggingface.co/blog/llama31
     "meta-llama/llama-3.1-405b-instruct",
 
-    # meta-llama/llama-3.1-8b-instruct: 128K context, native function calling,
-    # built-in tools (brave_search, wolfram_alpha, code_interpreter), JSON mode.
-    # Cheapest Llama 3.1 option at $0.10/$0.10 per M tokens.
-    # Source: https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct
-    "meta-llama/llama-3.1-8b-instruct",
-
     # openai/gpt-oss-120b: 131K context, native function calling, tool use,
     # structured outputs, browsing. Matches o4-mini on tool calling (TauBench).
     # Runs at 3K tokens/sec on Cerebras. $0.35/$0.75 per M tokens.
@@ -144,9 +138,6 @@ ALLOWED_OPENROUTER_MODELS = [
     # Reasoning mode toggleable. $0.20/$0.05 per M input, $0.50/M output.
     # Source: https://x.ai/news/grok-4-1-fast
     "x-ai/grok-4.1-fast",
-
-    # Legacy alias to preserve existing user selections
-    "x-ai/grok-4.1-fast:free",
 ]
 
 # Cerebras direct provider defaults
@@ -200,11 +191,9 @@ MODEL_CONTEXT_WINDOW_TOKENS = {
     # OpenRouter
     "meta-llama/llama-3.1-70b-instruct": 131_072,
     "meta-llama/llama-3.1-405b-instruct": 131_072,
-    "meta-llama/llama-3.1-8b-instruct": 131_072,  # 131K context
     "openai/gpt-oss-120b": 131_072,  # 131K context
     "z-ai/glm-4.6": 200_000,  # OpenRouter spelling differs from Cerebras "zai-glm-4.6"
     "x-ai/grok-4.1-fast": 2_000_000,  # Grok 4.1 Fast - 2M context
-    "x-ai/grok-4.1-fast:free": 2_000_000,  # Free tier shares same window
     # Cerebras
     # IMPORTANT: Cerebras provider context limits are ~128K/131K even when the upstream
     # model family may advertise larger windows elsewhere (e.g., via other providers).
@@ -229,12 +218,10 @@ MODEL_MAX_OUTPUT_TOKENS = {
     # can safely emit longer replies (see provider-specific entries below).
     "meta-llama/llama-3.1-70b-instruct": 8_192,
     "meta-llama/llama-3.1-405b-instruct": 8_192,
-    "meta-llama/llama-3.1-8b-instruct": 8_192,  # Same cap as other Llama 3.1 models
     "openai/gpt-oss-120b": 40_000,  # 40K max output on Cerebras provider
     # Pulled from OpenRouter model metadata (2025-12-01 curl https://openrouter.ai/api/v1/models)
     "z-ai/glm-4.6": 202_752,
     "x-ai/grok-4.1-fast": 30_000,
-    "x-ai/grok-4.1-fast:free": 30_000,  # Legacy alias shares the same cap
     # Cerebras (actual limit ~64K, using conservative 32K for safety)
     "qwen-3-235b-a22b-instruct-2507": 32_000,
     "zai-glm-4.6": 32_000,
