@@ -2,9 +2,10 @@
 
 ## Summary
 
-**Total test files analyzed**: 196 (177 unit tests + 13 end2end tests + 6 integration/misc)
-**Total lines of test code**: ~50,522 lines
-**Recommended reduction**: ~5,000-6,500 lines (10-13%)
+**Original test files**: 196 (177 unit tests + 13 end2end tests + 6 integration/misc)
+**Current test files**: 186 (after Phase 1 deletions)
+**Lines removed so far**: 1,804 lines (Phase 1 complete)
+**Remaining recommended reduction**: ~3,200-4,700 lines
 
 ## End2End Tests Coverage (KEEP ALL)
 
@@ -29,24 +30,24 @@ The end2end tests in `mvp_site/tests/test_end2end/` provide comprehensive integr
 
 ---
 
-## Category 1: DELETE - Red-Green Bug Fix Tests (1,804 lines)
+## Category 1: DELETE - Red-Green Bug Fix Tests (1,804 lines) ✅ COMPLETED
 
 These TDD tests were created to verify bug fixes. Now that features are stable, they are redundant with end2end tests:
 
-| Test File | Lines | Reason |
-|-----------|-------|--------|
-| test_red_green_json_fix.py | 276 | Bug fixed, covered by e2e |
-| test_god_mode_json_display_red_green.py | 267 | Bug fixed, covered by god_mode_end2end |
-| test_v2_frontend_red_green.py | 315 | Legacy frontend, covered by e2e |
-| test_firestore_empty_narrative_bug_redgreen.py | 200 | Bug fixed, covered by e2e |
-| test_combat_bug_green.py | 148 | Bug fixed, covered by game_state tests |
-| test_npc_gender_consistency_red_green.py | 141 | Bug fixed, covered by e2e |
-| test_null_narrative_bug_fix.py | 134 | Bug fixed, covered by e2e |
-| test_real_json_bug_reproduction.py | 113 | Bug fixed, covered by e2e |
-| test_ci_firebase_init_redgreen.py | 112 | CI setup test, redundant |
-| test_auth_mock_separation_redgreen.py | 98 | Auth mocking, redundant |
+| Test File | Lines | Reason | Status |
+|-----------|-------|--------|--------|
+| test_red_green_json_fix.py | 276 | Bug fixed, covered by e2e | ✅ DELETED |
+| test_god_mode_json_display_red_green.py | 267 | Bug fixed, covered by god_mode_end2end | ✅ DELETED |
+| test_v2_frontend_red_green.py | 315 | Legacy frontend, covered by e2e | ✅ DELETED |
+| test_firestore_empty_narrative_bug_redgreen.py | 200 | Bug fixed, covered by e2e | ✅ DELETED |
+| test_combat_bug_green.py | 148 | Bug fixed, covered by game_state tests | ✅ DELETED |
+| test_npc_gender_consistency_red_green.py | 141 | Bug fixed, covered by e2e | ✅ DELETED |
+| test_null_narrative_bug_fix.py | 134 | Bug fixed, covered by e2e | ✅ DELETED |
+| test_real_json_bug_reproduction.py | 113 | Bug fixed, covered by e2e | ✅ DELETED |
+| test_ci_firebase_init_redgreen.py | 112 | CI setup test, redundant | ✅ DELETED |
+| test_auth_mock_separation_redgreen.py | 98 | Auth mocking, redundant | ✅ DELETED |
 
-**Total to delete**: 1,804 lines
+**Total deleted**: 1,804 lines (10 files)
 
 ---
 
