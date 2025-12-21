@@ -621,6 +621,21 @@ def main() -> int:
                     parsed_totals = _extract_totals_from_dice_rolls(
                         [str(x) for x in (result.get("dice_rolls") or [])]
                     )
+                    if (
+                        dice_strategy == "native_two_phase"
+                        and expected_totals
+                        and parsed_totals
+                        and any(total not in parsed_totals for total in expected_totals)
+                    ):
+                        run_summary.setdefault("warnings", []).append(
+                            {
+                                "model": model_id,
+                                "scenario": scenario["name"],
+                                "warning": "dice_rolls/tool_results mismatch overridden by server",
+                                "expected_totals": expected_totals,
+                                "parsed_totals": parsed_totals,
+                            }
+                        )
                     if expected_totals:
                         if not parsed_totals:
                             errors.append(

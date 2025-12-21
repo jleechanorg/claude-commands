@@ -3020,6 +3020,7 @@ def _apply_tool_results_to_structured_response(
     if existing_rolls and existing_rolls != derived_rolls:
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("dice_rolls_model", existing_rolls)
+        debug_info["dice_rolls_overridden"] = True
         structured_response.debug_info = debug_info
         logging_util.warning(
             "DICE_ROLLS_MISMATCH: Replacing model dice_rolls with tool_results "
@@ -3039,6 +3040,7 @@ def _apply_tool_results_to_structured_response(
         if existing_audit and existing_audit != audit_events:
             debug_info = structured_response.debug_info or {}
             debug_info.setdefault("dice_audit_events_model", existing_audit)
+            debug_info["dice_audit_events_overridden"] = True
             structured_response.debug_info = debug_info
             logging_util.warning(
                 "DICE_AUDIT_MISMATCH: Replacing model dice_audit_events with tool_results "
