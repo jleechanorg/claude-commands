@@ -61,6 +61,11 @@ TEST_SCENARIOS: list[dict[str, Any]] = [
     },
 ]
 
+DEFAULT_MODEL_MATRIX = [
+    "gemini-3-flash-preview",
+    "qwen-3-235b-a22b-instruct-2507",
+]
+
 
 @dataclass
 class LocalServer:
@@ -184,6 +189,27 @@ def create_campaign(client: MCPClient, user_id: str) -> str:
     return campaign_id
 
 
+def update_user_settings(client: MCPClient, *, user_id: str, settings: dict[str, Any]) -> None:
+    payload = client.tools_call(
+        "update_user_settings",
+        {"user_id": user_id, "settings": settings},
+    )
+    if payload.get("error"):
+        raise RuntimeError(f"update_user_settings error: {payload['error']}")
+
+
+def settings_for_model(model_id: str) -> dict[str, Any]:
+    model = model_id.strip()
+    model_lower = model.lower()
+    if model_lower.startswith("gemini-"):
+        return {"llm_provider": "gemini", "gemini_model": model}
+    if model_lower.startswith("qwen-") or model_lower in {"zai-glm-4.6", "llama-3.3-70b", "gpt-oss-120b"}:
+        return {"llm_provider": "cerebras", "cerebras_model": model}
+    if "/" in model_lower:
+        return {"llm_provider": "openrouter", "openrouter_model": model}
+    raise ValueError(f"Unknown model/provider mapping for: {model}")
+
+
 def process_action(client: MCPClient, *, user_id: str, campaign_id: str, user_input: str) -> dict[str, Any]:
     return client.tools_call(
         "process_action",
@@ -223,6 +249,15 @@ def main() -> int:
     )
     parser.add_argument("--start-local", action="store_true", help="Start local MCP server automatically")
     parser.add_argument("--port", type=int, default=0, help="Port for --start-local (0 = random free port)")
+    parser.add_argument(
+        "--models",
+        default=os.environ.get("MCP_TEST_MODELS", ""),
+        help=(
+            "Comma-separated model IDs to test (e.g. "
+            "gemini-3-flash-preview,qwen-3-235b-a22b-instruct-2507). "
+            "Defaults to a Gemini+Qwen matrix."
+        ),
+    )
     args = parser.parse_args()
 
     local: LocalServer | None = None
@@ -243,39 +278,51 @@ def main() -> int:
             if required not in tool_names:
                 raise RuntimeError(f"tools/list missing required tool {required}: {sorted(tool_names)}")
 
-        user_id = f"mcp-dice-tests-{int(time.time())}"
-        campaign_id = create_campaign(client, user_id)
+        models = [m.strip() for m in (args.models or "").split(",") if m.strip()]
+        if not models:
+            models = list(DEFAULT_MODEL_MATRIX)
 
         EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
         session_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         session_file = EVIDENCE_DIR / f"run_{session_stamp}.json"
 
-        run_summary: dict[str, Any] = {"server": base_url, "campaign_id": campaign_id, "scenarios": []}
+        run_summary: dict[str, Any] = {"server": base_url, "models": [], "scenarios": []}
 
         ok = True
-        for scenario in TEST_SCENARIOS:
-            result = process_action(
-                client,
-                user_id=user_id,
-                campaign_id=campaign_id,
-                user_input=str(scenario["user_input"]),
-            )
-            errors = validate_result(result, scenario)
-            run_summary["scenarios"].append(
-                {
-                    "name": scenario["name"],
-                    "user_input": scenario["user_input"],
-                    "dice_rolls": result.get("dice_rolls"),
-                    "errors": errors,
-                }
+        for model_id in models:
+            model_settings = settings_for_model(model_id)
+            user_id = f"mcp-dice-tests-{model_id.replace('/', '-')}-{int(time.time())}"
+            update_user_settings(client, user_id=user_id, settings=model_settings)
+            campaign_id = create_campaign(client, user_id)
+
+            run_summary["models"].append(
+                {"model": model_id, "settings": model_settings, "campaign_id": campaign_id}
             )
 
-            if errors:
-                ok = False
-                print(f"❌ {scenario['name']}: {errors}")
-            else:
-                dice_count = len(result.get("dice_rolls") or [])
-                print(f"✅ {scenario['name']}: {dice_count} dice roll(s)")
+            for scenario in TEST_SCENARIOS:
+                result = process_action(
+                    client,
+                    user_id=user_id,
+                    campaign_id=campaign_id,
+                    user_input=str(scenario["user_input"]),
+                )
+                errors = validate_result(result, scenario)
+                run_summary["scenarios"].append(
+                    {
+                        "model": model_id,
+                        "name": scenario["name"],
+                        "user_input": scenario["user_input"],
+                        "dice_rolls": result.get("dice_rolls"),
+                        "errors": errors,
+                    }
+                )
+
+                if errors:
+                    ok = False
+                    print(f"❌ {model_id} :: {scenario['name']}: {errors}")
+                else:
+                    dice_count = len(result.get("dice_rolls") or [])
+                    print(f"✅ {model_id} :: {scenario['name']}: {dice_count} dice roll(s)")
 
         session_file.write_text(json.dumps(run_summary, indent=2))
         print(f"Evidence: {session_file}")
