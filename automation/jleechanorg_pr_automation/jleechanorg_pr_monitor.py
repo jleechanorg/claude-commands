@@ -1342,7 +1342,8 @@ def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
     Returns:
         tuple: (bool, str) - (success, message)
     """
-    url = f"http://{host}:{port}/json/version"
+    url_host = _format_cdp_host_for_url(host)
+    url = f"http://{url_host}:{port}/json/version"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -1377,6 +1378,12 @@ def _validate_cdp_host(raw_host: str) -> str:
         file=sys.stderr,
     )
     return "127.0.0.1"
+
+
+def _format_cdp_host_for_url(host: str) -> str:
+    if ":" in host and not (host.startswith("[") and host.endswith("]")):
+        return f"[{host}]"
+    return host
 
 
 def _resolve_cdp_host_port() -> Tuple[str, int]:

@@ -520,11 +520,17 @@ class CodexGitHubMentionsAutomation:
 
             await self.cleanup()
 
-    async def cleanup(self):
+async def cleanup(self):
         """Clean up Playwright client resources."""
         if self.playwright:
             await self.playwright.stop()
             self.playwright = None
+
+
+def _format_cdp_host_for_url(host: str) -> str:
+    if ":" in host and not (host.startswith("[") and host.endswith("]")):
+        return f"[{host}]"
+    return host
 
 
 async def main():
@@ -602,7 +608,8 @@ Examples:
             handler.setLevel(logging.DEBUG)
 
     # Build CDP URL only if using existing browser
-    cdp_url = f"http://{args.cdp_host}:{args.cdp_port}" if args.use_existing_browser else None
+    cdp_host = _format_cdp_host_for_url(args.cdp_host)
+    cdp_url = f"http://{cdp_host}:{args.cdp_port}" if args.use_existing_browser else None
 
     # Run automation
     automation = CodexGitHubMentionsAutomation(
