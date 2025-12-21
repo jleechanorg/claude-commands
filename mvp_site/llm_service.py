@@ -1591,7 +1591,9 @@ def _is_code_execution_fabrication(
     Returns True if fabrication is detected (dice present but no code execution).
     This is used to trigger the reprompt loop for Gemini 3 Flash code_execution mode.
     """
-    if not structured_response or not code_execution_evidence:
+    if not structured_response:
+        return False
+    if code_execution_evidence is None:
         return False
 
     has_dice_rolls = bool(
@@ -2518,6 +2520,7 @@ def get_initial_story(
         provider_name=provider_selection.provider,
     )
     logging_util.info("Successfully used LLMRequest for initial story generation")
+    final_api_response = api_response
 
     code_execution_evidence = _maybe_get_gemini_code_execution_evidence(
         provider_name=provider_selection.provider,
@@ -2531,16 +2534,44 @@ def get_initial_story(
     # Create LLMResponse from raw response, which handles all parsing internally
     # Parse the structured response to extract clean narrative and debug data
     narrative_text, structured_response = parse_structured_response(raw_response_text)
-    if structured_response and code_execution_evidence:
-        # Persist server-verified evidence (do not rely on model self-reporting).
-        structured_response.debug_info = {
-            **(structured_response.debug_info or {}),
-            "provider": provider_selection.provider,
-            "model": model_to_use,
-            "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
-            **code_execution_evidence,
-        }
-        _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+    dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+        model_to_use, provider_selection.provider
+    )
+    capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
+    capture_tools = os.getenv("CAPTURE_TOOL_RESULTS", "").lower() == "true"
+    processing_metadata: dict[str, Any] = {
+        "llm_provider": provider_selection.provider,
+        "llm_model": model_to_use,
+        "dice_strategy": dice_roll_strategy,
+    }
+    if capture_raw:
+        raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
+        processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
+    if capture_tools:
+        tool_results = getattr(final_api_response, "_tool_results", None)
+        if tool_results is not None:
+            processing_metadata["tool_results"] = tool_results
+            processing_metadata["tool_requests_executed"] = bool(
+                getattr(final_api_response, "_tool_requests_executed", False)
+            )
+
+    if structured_response:
+        debug_info = structured_response.debug_info or {}
+        debug_info.setdefault("llm_provider", provider_selection.provider)
+        debug_info.setdefault("llm_model", model_to_use)
+        debug_info.setdefault("dice_strategy", dice_roll_strategy)
+        if capture_raw and "raw_response_text" in processing_metadata:
+            debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+        if capture_tools and "tool_results" in processing_metadata:
+            debug_info["tool_results"] = processing_metadata["tool_results"]
+            debug_info["tool_requests_executed"] = processing_metadata.get(
+                "tool_requests_executed", False
+            )
+        if code_execution_evidence:
+            # Persist server-verified evidence (do not rely on model self-reporting).
+            debug_info.update(code_execution_evidence)
+            _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+        structured_response.debug_info = debug_info
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -2577,11 +2608,19 @@ def get_initial_story(
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
         gemini_response = LLMResponse.create_from_structured_response(
-            structured_response, model_to_use
+            structured_response,
+            model_to_use,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
         )
     else:
         # Fallback to legacy mode for non-JSON responses
-        gemini_response = LLMResponse.create_legacy(narrative_text, model_to_use)
+        gemini_response = LLMResponse.create_legacy(
+            narrative_text,
+            model_to_use,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
+        )
 
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
     if expected_entities:

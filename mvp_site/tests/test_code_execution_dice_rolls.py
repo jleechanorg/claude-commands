@@ -728,6 +728,23 @@ class TestThinkingConfigEnforcement(unittest.TestCase):
         )
 
 
+class TestCodeExecutionFabricationDetection(unittest.TestCase):
+    """TDD tests for code_execution fabrication detection edge cases."""
+
+    def test_empty_evidence_dict_flags_fabrication_when_dice_present(self):
+        """Empty evidence dict should still evaluate fabrication when dice are present."""
+        from types import SimpleNamespace
+        from mvp_site.llm_service import _is_code_execution_fabrication
+
+        structured = SimpleNamespace(dice_rolls=["1d20 = 12"])
+        evidence = {}
+
+        self.assertTrue(
+            _is_code_execution_fabrication(structured, evidence),
+            "Empty evidence dict should not bypass fabrication detection",
+        )
+
+
 class TestJSONStdoutValidation(unittest.TestCase):
     """TDD tests for JSON stdout validation from code_execution results."""
 
