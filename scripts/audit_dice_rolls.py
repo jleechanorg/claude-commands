@@ -63,13 +63,22 @@ def find_campaign_by_id(
 
     campaigns_group = db.collection_group("campaigns")
 
-    for campaign_doc in campaigns_group.stream():
-        if campaign_doc.id == campaign_id:
-            # Extract user ID from path: users/{user_id}/campaigns/{campaign_id}
-            path_parts = campaign_doc.reference.path.split("/")
-            if len(path_parts) >= 4 and path_parts[0] == "users":
-                user_id = path_parts[1]
-                return user_id, campaign_doc.to_dict()
+    try:
+        for campaign_doc in campaigns_group.stream():
+            if campaign_doc.id == campaign_id:
+                # Extract user ID from path: users/{user_id}/campaigns/{campaign_id}
+                path_parts = campaign_doc.reference.path.split("/")
+                if len(path_parts) >= 4 and path_parts[0] == "users":
+                    user_id = path_parts[1]
+                    campaign_data = campaign_doc.to_dict() or {}
+                    if not campaign_data:
+                        print(
+                            f"Warning: campaign {campaign_id} found but data is empty."
+                        )
+                    return user_id, campaign_data
+    except Exception as e:
+        print(f"Error querying campaigns collection group: {e}")
+        return None, None
 
     return None, None
 
