@@ -2819,6 +2819,15 @@ def _apply_tool_results_to_structured_response(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("dice_rolls_model", existing_rolls)
         structured_response.debug_info = debug_info
+        logging_util.warning(
+            "DICE_ROLLS_MISMATCH: Replacing model dice_rolls with tool_results "
+            "(native_two_phase authoritative)."
+        )
+    elif not existing_rolls:
+        logging_util.info(
+            "DICE_ROLLS_FROM_TOOL_RESULTS: Populated dice_rolls from tool_results "
+            "(native_two_phase authoritative)."
+        )
 
     structured_response.dice_rolls = derived_rolls
 
@@ -3936,6 +3945,13 @@ def continue_story(
                     _apply_tool_results_to_structured_response(
                         reprompt_structured, tool_results_for_dice, dice_roll_strategy
                     )
+                if (
+                    tool_results_for_dice
+                    and dice_roll_strategy == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE
+                ):
+                    # Preserve authoritative tool execution evidence for reprompt validation.
+                    reprompt_response._tool_results = tool_results_for_dice  # type: ignore[attr-defined]
+                    reprompt_response._tool_requests_executed = True  # type: ignore[attr-defined]
 
                 # Validate dice integrity for reprompt response
                 reprompt_dice_valid, _ = _validate_combat_dice_integrity(
@@ -4028,10 +4044,13 @@ def continue_story(
         processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
     if capture_tools:
         tool_results = getattr(final_api_response, "_tool_results", None)
+        if not tool_results and tool_results_for_dice is not None:
+            tool_results = tool_results_for_dice
         if tool_results is not None:
             processing_metadata["tool_results"] = tool_results
             processing_metadata["tool_requests_executed"] = bool(
                 getattr(final_api_response, "_tool_requests_executed", False)
+                or tool_results
             )
 
     if structured_response:
