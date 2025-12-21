@@ -7,6 +7,7 @@ from mvp_site.llm_service import (
     _check_dice_integrity,
     _check_missing_required_fields,
     _detect_combat_in_narrative,
+    _detect_narrative_dice_fabrication,
     _validate_combat_dice_integrity,
 )
 from mvp_site.narrative_response_schema import NarrativeResponse
@@ -271,6 +272,71 @@ def test_check_dice_integrity_no_metadata():
         api_response=api_response,
     )
     assert is_valid is True  # Permissive for backward compatibility
+
+
+# =============================================================================
+# Tests for _detect_narrative_dice_fabrication
+# =============================================================================
+
+
+def test_detect_narrative_dice_fabrication_flags_without_tool_evidence():
+    """Dice patterns in narrative without tool evidence should be flagged."""
+    narrative = "You glare. [DICE: Intimidation 1d20+9 = 25]"
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = False
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is True
+
+
+def test_detect_narrative_dice_fabrication_ignored_with_tool_evidence():
+    """Tool execution should suppress narrative dice fabrication detection."""
+    narrative = "You roll 1d20+5 and get 17 vs DC 12."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = True
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is False
+
+
+def test_detect_narrative_dice_fabrication_ignored_without_dice():
+    """Narrative without dice patterns should not be flagged."""
+    narrative = "You negotiate calmly with the guard."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = False
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is False
+
+
+def test_detect_narrative_dice_fabrication_requires_context_for_rolls():
+    """'Rolls a 15' without context should not trigger fabrication."""
+    narrative = "She rolls a 15-year-old barrel down the hill."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = False
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is False
 
 
 # =============================================================================

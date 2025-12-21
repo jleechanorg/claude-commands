@@ -74,7 +74,7 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import GameState
+from mvp_site.game_state import GameState, format_tool_results_text
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -685,6 +685,16 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
 # Pattern for dice rolls (e.g., "d20", "2d6", "1d8+3", "rolls a 15")
 DICE_ROLL_PATTERN = re.compile(r'\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b|\brolls?\s+(?:a\s+)?\d+\b', re.IGNORECASE)
 
+# Narrative dice fabrication detection (tighter context than compaction)
+_NARRATIVE_DICE_NOTATION_PATTERN = re.compile(r'\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b', re.IGNORECASE)
+_NARRATIVE_DICE_TAG_PATTERN = re.compile(r'\[dice:[^\]]+\]', re.IGNORECASE)
+_NARRATIVE_DICE_ROLL_RESULT_PATTERN = re.compile(r'\brolls?\s+(?:a\s+)?\d+\b', re.IGNORECASE)
+_NARRATIVE_DICE_CONTEXT_PATTERN = re.compile(
+    r'\b(check|save|saving throw|attack|initiative|skill|dc|vs|to hit|hit|damage)\b',
+    re.IGNORECASE,
+)
+_NARRATIVE_DICE_SCAN_MAX_CHARS = 5000
+
 # Pattern for numeric results (damage, HP, gold amounts - "15 damage", "50 gold", "-10 HP")
 NUMERIC_RESULT_PATTERN = re.compile(r'\b[+\-]?\d+\s*(?:damage|hp|gold|coins|xp|exp|points?|gp|sp|cp)\b', re.IGNORECASE)
 
@@ -753,6 +763,56 @@ def _split_into_sentences(text: str) -> list[str]:
             sentences.append(sentence)
 
     return sentences
+
+
+def _narrative_contains_dice(text: str) -> bool:
+    if not text:
+        return False
+    if len(text) > _NARRATIVE_DICE_SCAN_MAX_CHARS:
+        text = text[:_NARRATIVE_DICE_SCAN_MAX_CHARS]
+
+    if _NARRATIVE_DICE_TAG_PATTERN.search(text):
+        return True
+    if _NARRATIVE_DICE_NOTATION_PATTERN.search(text):
+        return True
+
+    # "rolls a 15" is only treated as dice if nearby context suggests a check/attack
+    for match in _NARRATIVE_DICE_ROLL_RESULT_PATTERN.finditer(text):
+        start = max(0, match.start() - 80)
+        end = min(len(text), match.end() + 80)
+        window = text[start:end]
+        if _NARRATIVE_DICE_CONTEXT_PATTERN.search(window):
+            return True
+
+    return False
+
+
+def _detect_narrative_dice_fabrication(
+    *,
+    narrative_text: str,
+    structured_response: NarrativeResponse | None,
+    api_response: Any,
+    code_execution_evidence: dict[str, Any] | None,
+) -> bool:
+    """Detect dice patterns in narrative that lack tool/code_execution evidence."""
+    if not narrative_text:
+        return False
+    if not _narrative_contains_dice(narrative_text):
+        return False
+
+    if code_execution_evidence and code_execution_evidence.get("code_execution_used"):
+        return False
+
+    tool_requests_executed = getattr(api_response, "_tool_requests_executed", None)
+    # If metadata is missing, be permissive (backward compatibility)
+    if tool_requests_executed is None and code_execution_evidence is None:
+        return False
+
+    if tool_requests_executed:
+        return False
+
+    # If we got here, narrative has dice but no evidence of tool execution.
+    return True
 
 
 def _is_important_sentence(sentence: str) -> bool:
@@ -2537,6 +2597,11 @@ def get_initial_story(
     dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
         model_to_use, provider_selection.provider
     )
+    tool_results_for_dice = getattr(final_api_response, "_tool_results", None)
+    if structured_response:
+        _apply_tool_results_to_structured_response(
+            structured_response, tool_results_for_dice, dice_roll_strategy
+        )
     capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
     capture_tools = os.getenv("CAPTURE_TOOL_RESULTS", "").lower() == "true"
     processing_metadata: dict[str, Any] = {
@@ -2694,6 +2759,83 @@ def _log_api_response_safely(
         logging_util.info(
             f"🔍 API_RESPONSE_DEBUG ({context}): Content: {start_content}...[{len(response_str) - max_length} chars omitted]...{end_content}"
         )
+
+
+_DICE_TOOL_NAMES = {"roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw"}
+
+
+def _extract_dice_rolls_from_tool_results(tool_results: Any) -> list[str]:
+    """Convert server tool_results into dice_rolls strings (authoritative)."""
+    if not isinstance(tool_results, list):
+        return []
+
+    dice_tool_results: list[dict[str, Any]] = []
+    for item in tool_results:
+        if not isinstance(item, dict):
+            continue
+        tool_name = item.get("tool")
+        if isinstance(tool_name, str) and tool_name in _DICE_TOOL_NAMES:
+            dice_tool_results.append(item)
+
+    if not dice_tool_results:
+        return []
+
+    text = format_tool_results_text(dice_tool_results)
+    if not text:
+        return []
+
+    rolls: list[str] = []
+    for line in text.splitlines():
+        cleaned = line.strip()
+        if not cleaned:
+            continue
+        if cleaned.startswith("- "):
+            cleaned = cleaned[2:].strip()
+        elif cleaned.startswith("-"):
+            cleaned = cleaned[1:].strip()
+        if cleaned:
+            rolls.append(cleaned)
+
+    return rolls
+
+
+def _apply_tool_results_to_structured_response(
+    structured_response: NarrativeResponse | None,
+    tool_results: Any,
+    dice_roll_strategy: str,
+) -> bool:
+    """Override dice_rolls using tool_results for native two-phase strategies."""
+    if not structured_response:
+        return False
+    if dice_roll_strategy != dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE:
+        return False
+
+    derived_rolls = _extract_dice_rolls_from_tool_results(tool_results)
+    if not derived_rolls:
+        return False
+
+    existing_rolls = getattr(structured_response, "dice_rolls", None) or []
+    if existing_rolls and existing_rolls != derived_rolls:
+        debug_info = structured_response.debug_info or {}
+        debug_info.setdefault("dice_rolls_model", existing_rolls)
+        structured_response.debug_info = debug_info
+
+    structured_response.dice_rolls = derived_rolls
+
+    if not getattr(structured_response, "dice_audit_events", None):
+        audit_events: list[dict[str, Any]] = []
+        if isinstance(tool_results, list):
+            for item in tool_results:
+                if not isinstance(item, dict):
+                    continue
+                tool_name = item.get("tool")
+                if isinstance(tool_name, str) and tool_name in _DICE_TOOL_NAMES:
+                    audit_events.append(
+                        {"tool": tool_name, "result": item.get("result")}
+                    )
+        structured_response.dice_audit_events = audit_events
+
+    return True
 
 
 def _check_missing_required_fields(
@@ -3669,6 +3811,14 @@ def continue_story(
     narrative_text: str
     structured_response: NarrativeResponse | None
     narrative_text, structured_response = parse_structured_response(raw_response_text)
+    dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+        chosen_model, provider_selection.provider
+    )
+    tool_results_for_dice = getattr(api_response, "_tool_results", None)
+    if structured_response:
+        _apply_tool_results_to_structured_response(
+            structured_response, tool_results_for_dice, dice_roll_strategy
+        )
 
     # REPROMPT FOR MISSING REQUIRED FIELDS (planning_block, session_header)
     # Only attempt reprompt if:
@@ -3710,7 +3860,21 @@ def continue_story(
             "Will trigger reprompt to enforce real code execution."
         )
 
-    dice_integrity_violation = not dice_integrity_valid or code_exec_fabrication
+    narrative_dice_fabrication = _detect_narrative_dice_fabrication(
+        narrative_text=narrative_text,
+        structured_response=structured_response,
+        api_response=api_response,
+        code_execution_evidence=code_execution_evidence,
+    )
+    if narrative_dice_fabrication:
+        logging_util.warning(
+            "🎲 NARRATIVE_DICE_FABRICATION: Dice patterns found in narrative without tool evidence. "
+            "Will trigger reprompt to enforce real dice."
+        )
+
+    dice_integrity_violation = (
+        not dice_integrity_valid or code_exec_fabrication or narrative_dice_fabrication
+    )
 
     missing_fields = _check_missing_required_fields(
         structured_response,
@@ -3768,6 +3932,10 @@ def continue_story(
                 reprompt_narrative, reprompt_structured = parse_structured_response(
                     reprompt_text
                 )
+                if reprompt_structured:
+                    _apply_tool_results_to_structured_response(
+                        reprompt_structured, tool_results_for_dice, dice_roll_strategy
+                    )
 
                 # Validate dice integrity for reprompt response
                 reprompt_dice_valid, _ = _validate_combat_dice_integrity(
@@ -3783,13 +3951,26 @@ def continue_story(
                 reprompt_code_exec_fabrication = _is_code_execution_fabrication(
                     reprompt_structured, reprompt_code_exec
                 )
+                reprompt_narrative_fabrication = _detect_narrative_dice_fabrication(
+                    narrative_text=reprompt_narrative,
+                    structured_response=reprompt_structured,
+                    api_response=reprompt_response,
+                    code_execution_evidence=reprompt_code_exec,
+                )
+                if reprompt_narrative_fabrication:
+                    logging_util.warning(
+                        "🎲 REPROMPT_NARRATIVE_DICE_FABRICATION: Dice patterns found in reprompt narrative "
+                        "without tool evidence."
+                    )
                 if reprompt_code_exec_fabrication:
                     logging_util.warning(
                         "🎲 REPROMPT_CODE_EXEC_FABRICATION: Dice in reprompt response "
                         "but no code_execution detected. Treating as integrity violation."
                     )
                 reprompt_dice_violation = (
-                    not reprompt_dice_valid or reprompt_code_exec_fabrication
+                    not reprompt_dice_valid
+                    or reprompt_code_exec_fabrication
+                    or reprompt_narrative_fabrication
                 )
 
                 # Check if reprompt was successful
