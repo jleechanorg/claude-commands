@@ -2,14 +2,15 @@
 
 ## Summary
 
-**Original test files**: 196 (177 unit tests + 13 end2end tests + 6 integration/misc)
+**Original test files**: 196 (177 unit tests + 13 end-to-end tests + 6 integration/misc)
 **Current test files**: 186 (after Phase 1 deletions)
 **Lines removed so far**: 1,804 lines (Phase 1 complete)
-**Remaining recommended reduction**: ~3,200-4,700 lines
+**Total recommended reduction**: ~4,054 lines (~8%)
+**Remaining recommended reduction**: ~2,250 lines
 
-## End2End Tests Coverage (KEEP ALL)
+## End-to-End Tests Coverage (KEEP ALL)
 
-The end2end tests in `mvp_site/tests/test_end2end/` provide comprehensive integration coverage:
+The end-to-end tests in `mvp_site/tests/test_end2end/` provide comprehensive integration coverage:
 
 | Test File | Lines | Coverage Area |
 |-----------|-------|---------------|
@@ -26,13 +27,13 @@ The end2end tests in `mvp_site/tests/test_end2end/` provide comprehensive integr
 | test_timeline_log_budget_end2end.py | 285 | Timeline with token budget |
 | test_llm_provider_end2end.py | 113 | LLM provider settings |
 
-**Total end2end lines**: 4,603 lines - These cover core functionality and should be preserved.
+**Total end-to-end lines**: 4,544 lines - These cover core functionality and should be preserved.
 
 ---
 
 ## Category 1: DELETE - Red-Green Bug Fix Tests (1,804 lines) ✅ COMPLETED
 
-These TDD tests were created to verify bug fixes. Now that features are stable, they are redundant with end2end tests:
+These TDD tests were created to verify bug fixes. Now that features are stable, they are redundant with end-to-end tests:
 
 | Test File | Lines | Reason | Status |
 |-----------|-------|--------|--------|
@@ -51,9 +52,9 @@ These TDD tests were created to verify bug fixes. Now that features are stable, 
 
 ---
 
-## Category 2: TRIM - Tests with E2E Overlap (estimated ~1,500 lines savings)
+## Category 2: TRIM - Tests with e2e Overlap (estimated ~650 lines savings)
 
-These unit tests partially overlap with end2end tests and should be trimmed:
+These unit tests partially overlap with end-to-end tests and should be trimmed:
 
 ### God Mode Tests
 | Test File | Current | Target | Savings |
@@ -118,7 +119,7 @@ These tests exceed 350 lines and should be split for maintainability:
 
 ## Category 5: KEEP - Valid Unit Tests
 
-These tests provide unique value not covered by end2end:
+These tests provide unique value not covered by end-to-end:
 
 - **Core module tests**: test_game_state.py, test_firestore_service.py, test_llm_service.py
 - **Schema validation**: test_entity_validator.py, test_field_format_validation.py
@@ -159,7 +160,7 @@ rm mvp_site/tests/test_auth_mock_separation_redgreen.py
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
 | Total test files | 196 | ~175 | -21 files |
-| Total lines | ~50,522 | ~46,000 | ~4,500 lines |
+| Total lines | ~50,522 | ~46,500 | ~4,000 lines |
 | CI execution time | ~10 min | ~8 min | ~20% faster |
 | Maintenance burden | High | Medium | Reduced overlap |
 
@@ -167,9 +168,9 @@ rm mvp_site/tests/test_auth_mock_separation_redgreen.py
 
 ## Notes
 
-1. **All end2end tests should be preserved** - they provide the most comprehensive integration coverage
+1. **All end-to-end tests should be preserved** - they provide the most comprehensive integration coverage
 2. **Run full test suite after each deletion** to verify no regressions
-3. **Core functionality is tested by end2end** - unit tests should focus on edge cases and module-specific behavior
+3. **Core functionality is tested by end-to-end** - unit tests should focus on edge cases and module-specific behavior
 4. **Consider test fixtures consolidation** - move common setup to conftest.py
 
 Generated: 2024-12-18
