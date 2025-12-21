@@ -8,6 +8,7 @@ from mvp_site.llm_service import (
     _check_missing_required_fields,
     _detect_combat_in_narrative,
     _detect_narrative_dice_fabrication,
+    _is_code_execution_fabrication,
     _validate_combat_dice_integrity,
 )
 from mvp_site.narrative_response_schema import NarrativeResponse
@@ -272,6 +273,18 @@ def test_check_dice_integrity_no_metadata():
         api_response=api_response,
     )
     assert is_valid is True  # Permissive for backward compatibility
+
+
+# =============================================================================
+# Tests for _is_code_execution_fabrication
+# =============================================================================
+
+
+def test_code_execution_fabrication_flags_missing_evidence_with_dice():
+    """Dice results without code_execution evidence should be flagged (Gemini 3)."""
+    resp = NarrativeResponse(narrative="test", dice_rolls=["1d20+5 = 17"])
+
+    assert _is_code_execution_fabrication(resp, None) is True
 
 
 # =============================================================================

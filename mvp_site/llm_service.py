@@ -804,11 +804,20 @@ def _detect_narrative_dice_fabrication(
         return False
 
     tool_requests_executed = getattr(api_response, "_tool_requests_executed", None)
-    # If metadata is missing, be permissive (backward compatibility)
-    if tool_requests_executed is None and code_execution_evidence is None:
+    if tool_requests_executed:
         return False
 
-    if tool_requests_executed:
+    # CRITICAL FIX: If dice exist in structured response but no tool evidence, that's fabrication
+    # Don't be permissive just because metadata is missing - check for actual dice_rolls
+    if structured_response:
+        dice_rolls = getattr(structured_response, 'dice_rolls', None)
+        has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+        if has_dice_rolls:
+            # Dice in structured response but no tool evidence = FABRICATION
+            return True
+
+    # If metadata is missing AND no structured dice, be permissive (backward compatibility)
+    if tool_requests_executed is None and code_execution_evidence is None:
         return False
 
     # If we got here, narrative has dice but no evidence of tool execution.
@@ -1653,8 +1662,6 @@ def _is_code_execution_fabrication(
     """
     if not structured_response:
         return False
-    if code_execution_evidence is None:
-        return False
 
     has_dice_rolls = bool(
         getattr(structured_response, "dice_rolls", None)
@@ -1662,6 +1669,13 @@ def _is_code_execution_fabrication(
     )
     if not has_dice_rolls:
         return False
+
+    if code_execution_evidence is None:
+        logging_util.warning(
+            "⚠️ MISSING_CODE_EXEC_EVIDENCE: Dice present but no code_execution evidence. "
+            "Treating as potential fabrication."
+        )
+        return True
 
     code_was_executed = code_execution_evidence.get("code_execution_used", False)
     return not code_was_executed
@@ -3860,9 +3874,11 @@ def continue_story(
 
     # CODE_EXECUTION FABRICATION CHECK (Gemini 3 Flash code_execution mode)
     # If model claims dice_rolls but didn't use code_execution, trigger reprompt
-    code_exec_fabrication = _is_code_execution_fabrication(
-        structured_response, code_execution_evidence
-    )
+    code_exec_fabrication = False
+    if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
+        code_exec_fabrication = _is_code_execution_fabrication(
+            structured_response, code_execution_evidence
+        )
     if code_exec_fabrication:
         logging_util.warning(
             "🎲 CODE_EXEC_FABRICATION: Dice in response but no code_execution detected. "
@@ -3964,9 +3980,11 @@ def continue_story(
                     is_god_mode=is_god_mode_command,
                     is_dm_mode=is_dm_mode_initial,
                 )
-                reprompt_code_exec_fabrication = _is_code_execution_fabrication(
-                    reprompt_structured, reprompt_code_exec
-                )
+                reprompt_code_exec_fabrication = False
+                if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
+                    reprompt_code_exec_fabrication = _is_code_execution_fabrication(
+                        reprompt_structured, reprompt_code_exec
+                    )
                 reprompt_narrative_fabrication = _detect_narrative_dice_fabrication(
                     narrative_text=reprompt_narrative,
                     structured_response=reprompt_structured,
