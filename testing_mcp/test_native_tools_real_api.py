@@ -23,8 +23,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 import argparse
+import json
 import os
 import time
+from datetime import UTC, datetime
 
 from mcp_client import MCPClient
 
@@ -35,6 +37,11 @@ def main() -> int:
         "--server-url",
         default=os.environ.get("MCP_SERVER_URL") or "http://127.0.0.1:8001",
         help="Base server URL (with or without /mcp)",
+    )
+    parser.add_argument(
+        "--evidence-dir",
+        default=os.environ.get("MCP_EVIDENCE_DIR", ""),
+        help="Directory to write evidence artifacts (defaults to /tmp).",
     )
     args = parser.parse_args()
 
@@ -63,6 +70,11 @@ def main() -> int:
     print(f"✅ tools/list returned {len(tools)} tool(s)")
 
     user_id = f"mcp-smoke-{int(time.time())}"
+    # Enable debug_mode for evidence when supported.
+    client.tools_call(
+        "update_user_settings",
+        {"user_id": user_id, "settings": {"debug_mode": True}},
+    )
     payload = client.tools_call(
         "create_campaign",
         {"user_id": user_id, "title": "MCP Smoke Campaign"},
@@ -87,8 +99,61 @@ def main() -> int:
     if not isinstance(dice_rolls, list):
         print(f"❌ process_action dice_rolls not list: {type(dice_rolls)}")
         return 2
+    if not dice_rolls:
+        print("❌ process_action returned no dice_rolls (expected at least one)")
+        return 2
+
+    dice_audit_events = payload2.get("dice_audit_events") or []
+    debug_info = payload2.get("debug_info") or {}
+    if not isinstance(dice_audit_events, list):
+        dice_audit_events = []
+    if not isinstance(debug_info, dict):
+        debug_info = {}
+
+    dice_tool_names = {"roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw"}
+    tool_event = any(
+        isinstance(event, dict)
+        and isinstance(event.get("tool"), str)
+        and event.get("tool") in dice_tool_names
+        for event in dice_audit_events
+    )
+    code_exec_event = any(
+        isinstance(event, dict)
+        and event.get("source") == "code_execution"
+        for event in dice_audit_events
+    )
+    code_exec_used = bool(debug_info.get("code_execution_used"))
+
+    if dice_rolls and not (tool_event or code_exec_event or code_exec_used):
+        print("❌ dice_rolls present but no tool/code_execution evidence in response")
+        return 2
 
     print(f"✅ process_action ok (dice_rolls={len(dice_rolls)})")
+
+    # Evidence capture
+    evidence_root = args.evidence_dir.strip()
+    if not evidence_root:
+        evidence_root = "/tmp/dev1766178798/mcp_real_mode_preview_" + datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    evidence_dir = Path(evidence_root)
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / "campaign_create.json").write_text(json.dumps(payload, indent=2))
+    (evidence_dir / "process_action.json").write_text(json.dumps(payload2, indent=2))
+    (evidence_dir / "evidence_summary.json").write_text(
+        json.dumps(
+            {
+                "server_url": str(args.server_url),
+                "user_id": user_id,
+                "campaign_id": campaign_id,
+                "dice_rolls": dice_rolls,
+                "dice_audit_events_count": len(dice_audit_events),
+                "tool_event_present": tool_event,
+                "code_execution_event_present": code_exec_event,
+                "code_execution_used": code_exec_used,
+            },
+            indent=2,
+        )
+    )
+    print(f"📁 Evidence saved to: {evidence_dir}")
     return 0
 
 
