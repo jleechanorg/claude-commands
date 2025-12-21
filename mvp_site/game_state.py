@@ -12,12 +12,25 @@ The LLM should focus on narrative while code handles all mathematical operations
 
 import datetime
 import json
+import os
 import random
 import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
 from mvp_site import constants, logging_util
+
+# Optional deterministic dice RNG for reproducible test evidence.
+_DICE_SEED = os.getenv("DICE_SEED")
+if _DICE_SEED:
+    try:
+        _DICE_SEED_VALUE: int | str = int(_DICE_SEED)
+    except ValueError:
+        _DICE_SEED_VALUE = _DICE_SEED
+    _DICE_RNG = random.Random(_DICE_SEED_VALUE)
+    logging_util.info(f"DICE_SEED enabled for deterministic rolls: {_DICE_SEED}")
+else:
+    _DICE_RNG = random
 
 # =============================================================================
 # D&D 5e XP THRESHOLDS
@@ -1402,8 +1415,8 @@ def roll_dice(notation: str) -> DiceRollResult:
         logging_util.warning(f"DICE_AUDIT: Invalid dice params num_dice={num_dice}, die_size={die_size}")
         return DiceRollResult(notation, [], modifier, modifier)
 
-    # Roll each die - use Python's random.randint for fair RNG
-    rolls = [random.randint(1, die_size) for _ in range(num_dice)]
+    # Roll each die - use deterministic RNG when DICE_SEED is set
+    rolls = [_DICE_RNG.randint(1, die_size) for _ in range(num_dice)]
     total = sum(rolls) + modifier
 
     natural_20 = die_size == 20 and num_dice == 1 and rolls[0] == 20
@@ -1504,6 +1517,12 @@ def calculate_saving_throw(attribute_modifier: int, proficiency_bonus: int, prof
     return roll_dice(notation)
 
 
+def _get_damage_total_for_log(damage: Any) -> Any:
+    if isinstance(damage, dict):
+        return damage.get("total", "N/A")
+    return "N/A"
+
+
 def calculate_resource_depletion(current_amount: float, depletion_rate: float, time_elapsed: float, depletion_unit: str = "per_day") -> float:
     """Calculate resource depletion over time."""
     depleted = depletion_rate * time_elapsed
@@ -1548,6 +1567,8 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "natural_20": result.natural_20, "natural_1": result.natural_1,
             "purpose": purpose, "formatted": str(result)
         }
+        if _DICE_SEED:
+            tool_result["seed"] = _DICE_SEED
         logging_util.info(
             f"DICE_TOOL_RESULT: tool=roll_dice | notation={notation} | "
             f"rolls={result.individual_rolls} | total={result.total} | purpose={purpose}"
@@ -1613,7 +1634,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             result["formatted"] += f" | Damage: {damage}"
         else:
             result["damage"] = None
-        damage_total = result.get('damage', {}).get('total', 'N/A') if result.get('damage') else 'N/A'
+        damage_total = _get_damage_total_for_log(result.get("damage"))
         logging_util.info(
             f"DICE_TOOL_RESULT: tool=roll_attack | weapon={weapon_name} | "
             f"rolls={attack.get('rolls', [])} | total={attack['total']} | hit={hit} | "
