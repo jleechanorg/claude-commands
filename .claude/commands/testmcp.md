@@ -60,7 +60,7 @@ Execute the resolved test specification using `/testllm` with appropriate mode:
 1. **Delegate to `/testllm`** with resolved test specification
 2. **Apply systematic validation protocol** from `/testllm` framework
 3. **Execute with TodoWrite tracking** for comprehensive requirement validation
-4. **Capture evidence** (screenshots, logs, API responses) in `docs/` directory
+4. **Capture evidence** (screenshots, logs, API responses) in `/tmp/` directory
 
 ### Phase 4: Results Analysis
 
@@ -256,7 +256,7 @@ This command leverages the complete `/testllm` infrastructure:
 
 ### Evidence Requirements
 
-- **Screenshots**: Saved to `docs/` with descriptive names for each test phase
+- **Screenshots**: Saved to `/tmp/` with descriptive names for each test phase
 - **Test Logs**: Detailed execution logs with timestamps and status codes
 - **API Responses**: Captured request/response data for integration validation
 - **Error Documentation**: Specific error messages and stack traces when failures occur
