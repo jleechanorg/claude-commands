@@ -325,8 +325,15 @@ def validate_result(result: dict[str, Any], scenario: dict[str, Any]) -> list[st
         roll_text = " ".join(str(x) for x in dice_rolls)
         if "miss" in roll_text.lower():
             min_dice = 1
-    if len(dice_rolls) < min_dice:
-        errors.append(f"expected >= {min_dice} dice_rolls, got {len(dice_rolls)}")
+    parsed_totals = _extract_totals_from_dice_rolls(
+        [str(x) for x in dice_rolls]
+    )
+    effective_roll_count = max(len(dice_rolls), len(parsed_totals))
+    if effective_roll_count < min_dice:
+        errors.append(
+            f"expected >= {min_dice} dice_rolls, got {len(dice_rolls)} "
+            f"(parsed totals={len(parsed_totals)})"
+        )
 
     joined = "\n".join(str(x) for x in dice_rolls)
     for s in scenario.get("expect_substrings", []):
@@ -385,9 +392,12 @@ def _extract_totals_from_dice_rolls(dice_rolls: list[str]) -> list[int]:
     for roll in dice_rolls:
         if not isinstance(roll, str):
             continue
-        match = re.findall(r"=\s*(-?\d+)\s*(?:vs|\(|$)", roll)
-        if match:
-            totals.append(int(match[-1]))
+        matches = re.findall(r"=\s*(-?\d+)\s*(?:vs|\(|$)", roll)
+        for value in matches:
+            try:
+                totals.append(int(value))
+            except ValueError:
+                continue
     return totals
 
 

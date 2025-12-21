@@ -2698,6 +2698,12 @@ def get_initial_story(
             debug_info.update(code_execution_evidence)
             _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
         structured_response.debug_info = debug_info
+        if "tool_results" in processing_metadata:
+            _apply_tool_results_to_structured_response(
+                structured_response,
+                processing_metadata.get("tool_results"),
+                dice_roll_strategy,
+            )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -2891,6 +2897,110 @@ def _extract_dice_rolls_from_tool_results(tool_results: Any) -> list[str]:
     return rolls
 
 
+def _extract_dice_audit_events_from_tool_results(
+    tool_results: Any,
+) -> list[dict[str, Any]]:
+    """Build dice_audit_events from tool_results (native_two_phase source of truth)."""
+    if not isinstance(tool_results, list):
+        return []
+
+    def _coerce_int(value: Any) -> int | None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _notation_from_modifier(modifier: Any) -> str | None:
+        mod = _coerce_int(modifier)
+        if mod is None:
+            return None
+        sign = "+" if mod >= 0 else ""
+        return f"1d20{sign}{mod}"
+
+    events: list[dict[str, Any]] = []
+    for item in tool_results:
+        if not isinstance(item, dict):
+            continue
+        tool_name = item.get("tool")
+        if not isinstance(tool_name, str) or tool_name not in _DICE_TOOL_NAMES:
+            continue
+        result = item.get("result")
+        if not isinstance(result, dict):
+            continue
+
+        if tool_name == "roll_attack":
+            attack = result.get("attack_roll")
+            if isinstance(attack, dict):
+                events.append(
+                    {
+                        "source": "server_tool",
+                        "label": item.get("args", {}).get("purpose") or "Attack Roll",
+                        "notation": attack.get("notation")
+                        or _notation_from_modifier(attack.get("modifier")),
+                        "rolls": attack.get("rolls") or [],
+                        "modifier": attack.get("modifier") or 0,
+                        "total": attack.get("total"),
+                    }
+                )
+            damage = result.get("damage")
+            if isinstance(damage, dict):
+                events.append(
+                    {
+                        "source": "server_tool",
+                        "label": "Damage",
+                        "notation": damage.get("notation"),
+                        "rolls": damage.get("rolls") or [],
+                        "modifier": damage.get("modifier") or 0,
+                        "total": damage.get("total"),
+                    }
+                )
+            continue
+
+        if tool_name == "roll_skill_check":
+            skill = result.get("skill") or "Skill Check"
+            events.append(
+                {
+                    "source": "server_tool",
+                    "label": str(skill).title(),
+                    "notation": result.get("notation")
+                    or _notation_from_modifier(result.get("modifier")),
+                    "rolls": result.get("rolls") or ([result.get("roll")] if result.get("roll") is not None else []),
+                    "modifier": result.get("modifier") or 0,
+                    "total": result.get("total"),
+                }
+            )
+            continue
+
+        if tool_name == "roll_saving_throw":
+            save_type = result.get("save_type") or "Save"
+            events.append(
+                {
+                    "source": "server_tool",
+                    "label": f"{str(save_type).upper()} Save",
+                    "notation": result.get("notation")
+                    or _notation_from_modifier(result.get("modifier")),
+                    "rolls": result.get("rolls") or ([result.get("roll")] if result.get("roll") is not None else []),
+                    "modifier": result.get("modifier") or 0,
+                    "total": result.get("total"),
+                }
+            )
+            continue
+
+        if tool_name == "roll_dice":
+            events.append(
+                {
+                    "source": "server_tool",
+                    "label": result.get("purpose") or "Dice Roll",
+                    "notation": result.get("notation"),
+                    "rolls": result.get("rolls") or [],
+                    "modifier": result.get("modifier") or 0,
+                    "total": result.get("total"),
+                }
+            )
+
+    return events
+
+
 def _apply_tool_results_to_structured_response(
     structured_response: NarrativeResponse | None,
     tool_results: Any,
@@ -2923,17 +3033,17 @@ def _apply_tool_results_to_structured_response(
 
     structured_response.dice_rolls = derived_rolls
 
-    if not getattr(structured_response, "dice_audit_events", None):
-        audit_events: list[dict[str, Any]] = []
-        if isinstance(tool_results, list):
-            for item in tool_results:
-                if not isinstance(item, dict):
-                    continue
-                tool_name = item.get("tool")
-                if isinstance(tool_name, str) and tool_name in _DICE_TOOL_NAMES:
-                    audit_events.append(
-                        {"tool": tool_name, "result": item.get("result")}
-                    )
+    audit_events = _extract_dice_audit_events_from_tool_results(tool_results)
+    if audit_events:
+        existing_audit = getattr(structured_response, "dice_audit_events", None)
+        if existing_audit and existing_audit != audit_events:
+            debug_info = structured_response.debug_info or {}
+            debug_info.setdefault("dice_audit_events_model", existing_audit)
+            structured_response.debug_info = debug_info
+            logging_util.warning(
+                "DICE_AUDIT_MISMATCH: Replacing model dice_audit_events with tool_results "
+                "(native_two_phase authoritative)."
+            )
         structured_response.dice_audit_events = audit_events
 
     return True
@@ -4201,6 +4311,12 @@ def continue_story(
             debug_info.update(code_execution_evidence)
             _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
         structured_response.debug_info = debug_info
+        if "tool_results" in processing_metadata:
+            _apply_tool_results_to_structured_response(
+                structured_response,
+                processing_metadata.get("tool_results"),
+                dice_roll_strategy,
+            )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
