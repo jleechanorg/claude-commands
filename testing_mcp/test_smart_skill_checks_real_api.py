@@ -322,7 +322,6 @@ def main() -> int:
             env_overrides["FORCE_TEST_MODEL"] = "false"
             env_overrides["FAST_TESTS"] = "false"
             env_overrides["CAPTURE_EVIDENCE"] = "true"
-            env_overrides["CAPTURE_TOOL_RESULTS"] = "true"
             if args.enable_dice_tool:
                 env_overrides["ENABLE_DICE_TEST_TOOL"] = "true"
             local = start_local_mcp_server(port, env_overrides=env_overrides)

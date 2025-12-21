@@ -476,7 +476,6 @@ def main() -> int:
             if args.evidence:
                 env_overrides["CAPTURE_EVIDENCE"] = "true"
                 env_overrides["CAPTURE_RAW_LLM"] = "true"
-                env_overrides["CAPTURE_TOOL_RESULTS"] = "true"
                 env_overrides["CAPTURE_RAW_LLM_MAX_CHARS"] = str(args.raw_max_chars)
             if args.enable_dice_tool or args.distribution_rolls > 0 or args.evidence:
                 env_overrides["ENABLE_DICE_TEST_TOOL"] = "true"

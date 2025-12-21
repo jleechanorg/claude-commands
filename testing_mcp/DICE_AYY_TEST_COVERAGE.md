@@ -214,7 +214,7 @@ python test_smart_skill_checks_real_api.py --start-local --real-services
 ```
 
 Note: Native two-phase validation requires tool_results in the response. The local
-server launched by the test enables CAPTURE_EVIDENCE and CAPTURE_TOOL_RESULTS automatically.
+server launched by the test enables CAPTURE_EVIDENCE automatically (tool results are always captured).
 
 ### With Evidence Collection
 

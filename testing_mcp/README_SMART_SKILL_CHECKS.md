@@ -70,7 +70,7 @@ python test_smart_skill_checks_real_api.py --start-local
 ```
 
 Note: The local server launched by this script enables CAPTURE_EVIDENCE and
-CAPTURE_TOOL_RESULTS automatically so native two-phase models can be validated
+Tool results are always captured so native two-phase models can be validated
 via tool_results.
 
 ### Real API Testing

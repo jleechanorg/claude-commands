@@ -2664,7 +2664,7 @@ def get_initial_story(
             structured_response, tool_results_for_dice, dice_roll_strategy
         )
     capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
-    capture_tools = os.getenv("CAPTURE_TOOL_RESULTS", "").lower() == "true"
+    capture_tools = True
     processing_metadata: dict[str, Any] = {
         "llm_provider": provider_selection.provider,
         "llm_model": model_to_use,
@@ -4165,7 +4165,7 @@ def continue_story(
         chosen_model, provider_selection.provider
     )
     capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
-    capture_tools = os.getenv("CAPTURE_TOOL_RESULTS", "").lower() == "true"
+    capture_tools = True
     processing_metadata: dict[str, Any] = {
         "llm_provider": provider_selection.provider,
         "llm_model": chosen_model,
