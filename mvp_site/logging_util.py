@@ -20,6 +20,8 @@ from typing import Any
 # Initialization guard to prevent duplicate handler setup
 _logging_initialized = False
 _logging_lock = threading.Lock()
+_configured_service_name: str | None = None
+_configured_log_file: str | None = None
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL
@@ -47,6 +49,28 @@ class LoggingUtil:
     WARNING_EMOJI = "⚠️"
 
     @staticmethod
+    def _find_git_root(start_dir: str) -> str | None:
+        """Walk up from a start directory to locate a .git directory or file."""
+        current_dir = os.path.abspath(start_dir)
+        while True:
+            git_path = os.path.join(current_dir, ".git")
+            if os.path.isdir(git_path) or os.path.isfile(git_path):
+                return current_dir
+            parent_dir = os.path.dirname(current_dir)
+            if parent_dir == current_dir:
+                return None
+            current_dir = parent_dir
+
+    @staticmethod
+    def _get_git_cwd() -> str:
+        """Resolve a safe working directory for git commands."""
+        for candidate in (os.getcwd(), os.path.dirname(__file__)):
+            git_root = LoggingUtil._find_git_root(candidate)
+            if git_root is not None:
+                return git_root
+        return os.getcwd()
+
+    @staticmethod
     def get_repo_name() -> str:
         """
         Get the repository name from git remote or directory name.
@@ -58,9 +82,10 @@ class LoggingUtil:
             # Try to get repo name from git remote URL
             remote_url = subprocess.check_output(
                 ["git", "remote", "get-url", "origin"],
-                cwd=os.path.dirname(__file__),
+                cwd=LoggingUtil._get_git_cwd(),
                 text=True,
                 stderr=subprocess.DEVNULL,
+                timeout=30,
             ).strip()
             # Extract repo name from URL (handles both https and ssh)
             # e.g., "https://github.com/user/repo.git" -> "repo"
@@ -77,18 +102,21 @@ class LoggingUtil:
             if repo_name:
                 return repo_name
         except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+            # Git command failed; fall back to repo root detection.
             pass
 
         # Fallback: use directory name of the git root
         try:
             git_root = subprocess.check_output(
                 ["git", "rev-parse", "--show-toplevel"],
-                cwd=os.path.dirname(__file__),
+                cwd=LoggingUtil._get_git_cwd(),
                 text=True,
                 stderr=subprocess.DEVNULL,
+                timeout=30,
             ).strip()
             return os.path.basename(git_root)
         except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+            # Git command failed; fall back to a safe default.
             pass
 
         return "unknown_repo"
@@ -104,9 +132,10 @@ class LoggingUtil:
         try:
             branch = subprocess.check_output(
                 ["git", "branch", "--show-current"],
-                cwd=os.path.dirname(__file__),
+                cwd=LoggingUtil._get_git_cwd(),
                 text=True,
                 stderr=subprocess.DEVNULL,
+                timeout=30,
             ).strip()
             if branch:
                 return branch
@@ -335,8 +364,9 @@ def setup_unified_logging(service_name: str = "app") -> str:
     Sets up both console handler (for Cloud Logging via stdout/stderr)
     and file handler (for local persistence under /tmp/<repo>/<branch>/).
 
-    This function is idempotent - calling it multiple times is safe and
-    will not add duplicate handlers.
+    This function is idempotent - the first call configures logging and
+    subsequent calls reuse the originally configured service name and
+    log file path without adding duplicate handlers.
 
     Args:
         service_name: Name of the service (e.g., 'flask-server', 'mcp-server')
@@ -345,21 +375,28 @@ def setup_unified_logging(service_name: str = "app") -> str:
     Returns:
         str: Path to the log file being written to
     """
-    global _logging_initialized
+    global _logging_initialized, _configured_service_name, _configured_log_file
 
     with _logging_lock:
         if _logging_initialized:
-            # Already initialized - just return the log file path
-            return LoggingUtil.get_log_file(service_name)
+            # Already initialized - reuse the configured log file path
+            if (
+                _configured_service_name is not None
+                and service_name != _configured_service_name
+            ):
+                logging.getLogger().info(
+                    "Logging already configured for '%s'; ignoring '%s'",
+                    _configured_service_name,
+                    service_name,
+                )
+            if _configured_log_file is not None:
+                return _configured_log_file
+            return LoggingUtil.get_log_file(_configured_service_name or service_name)
 
         # Get log file path
         log_file = LoggingUtil.get_log_file(service_name)
 
-        # Clear any existing handlers (close them first to prevent ResourceWarning)
         root_logger = logging.getLogger()
-        for handler in root_logger.handlers[:]:
-            handler.close()
-            root_logger.removeHandler(handler)
 
         # Set up consistent formatting
         formatter = logging.Formatter(
@@ -367,24 +404,55 @@ def setup_unified_logging(service_name: str = "app") -> str:
         )
 
         # Console handler (goes to stdout/stderr -> Cloud Logging in GCP)
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        root_logger.addHandler(console_handler)
+        has_console_handler = any(
+            isinstance(handler, logging.StreamHandler)
+            and not isinstance(handler, logging.FileHandler)
+            for handler in root_logger.handlers
+        )
+        if not has_console_handler:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            root_logger.addHandler(console_handler)
 
         # File handler (persists locally under /tmp/<repo>/<branch>/)
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        root_logger.addHandler(file_handler)
+        resolved_log_file = os.path.abspath(log_file)
+        has_file_handler = any(
+            isinstance(handler, logging.FileHandler)
+            and getattr(handler, "baseFilename", None) == resolved_log_file
+            for handler in root_logger.handlers
+        )
+        if not has_file_handler:
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setFormatter(formatter)
+            root_logger.addHandler(file_handler)
 
         # Set level
         root_logger.setLevel(logging.INFO)
 
         _logging_initialized = True
-        info(f"Unified logging configured: {log_file}")
+        _configured_service_name = service_name
+        _configured_log_file = log_file
+        root_logger.info("Unified logging configured: %s", log_file)
 
         return log_file
 
 
 def is_logging_initialized() -> bool:
-    """Check if unified logging has been initialized."""
+    """
+    Check if unified logging has been initialized.
+
+    This function is part of the public API and can be used by external
+    callers to avoid redundant calls to ``setup_unified_logging``. It is
+    safe to call multiple times.
+
+    Example:
+        from mvp_site import logging_util
+
+        if not logging_util.is_logging_initialized():
+            logging_util.setup_unified_logging(service_name="worker")
+        logger = logging_util.getLogger(__name__)
+
+    Returns:
+        bool: True if unified logging has already been configured, False otherwise.
+    """
     return _logging_initialized

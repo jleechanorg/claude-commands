@@ -656,6 +656,7 @@ def create_mcp_handler(
 
 def run_server():
     """Run the World Logic MCP server."""
+    setup_mcp_logging()
 
     # Auto-detect if we're being run by Claude Code with more specific criteria
     # Only trigger stdio mode when both stdin/stdout are non-TTY AND in specific environments
@@ -757,9 +758,6 @@ def run_server():
     logging_util.info(
         f"Starting World Logic MCP server on {args.host}:{args.port} (HTTP-only mode)"
     )
-
-    # Configure centralized logging
-    setup_mcp_logging()
 
     # Create handler configured for HTTP-only mode
     # /rpc returns 410 deprecation in HTTP-only mode
