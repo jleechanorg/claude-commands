@@ -522,7 +522,7 @@ class TaskDispatcher:
             2. --agent-cli flag in task_description
             3. Keyword detection (CLI profile detection_keywords / binary names)
             4. Auto-select if only one CLI is installed
-            5. Default to 'claude' if multiple CLIs available
+            5. Default to 'gemini' if multiple CLIs available
         """
 
         cli_flag = re.search(r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE)
@@ -577,9 +577,11 @@ class TaskDispatcher:
         if len(available_clis) == 1:
             return available_clis[0]
 
-        # Default to Claude when multiple CLIs are available
-        # Fallback logic: Prioritize Claude CLI as the most tested and supported option.
-        # If Claude is not available, use the first available CLI from the list.
+        # Default to Gemini when multiple CLIs are available
+        # Fallback logic: Prioritize Gemini CLI as the default orchestration agent.
+        # If Gemini is not available, fall back to Claude, then the first available CLI.
+        if "gemini" in available_clis:
+            return "gemini"
         if "claude" in available_clis:
             return "claude"
         return available_clis[0]
