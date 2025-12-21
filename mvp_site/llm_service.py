@@ -3677,85 +3677,103 @@ def continue_story(
         dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
             chosen_model, provider_selection.provider
         )
-        # Build reprompt message with tool_results from original response
-        # This preserves dice provenance so the model can reference real results
-        reprompt_message = _build_reprompt_for_missing_fields(
-            raw_response_text,
-            missing_fields,
-            tool_results=getattr(api_response, "_tool_results", None),
-            dice_roll_strategy=dice_roll_strategy,
-        )
+        last_missing_count = len(missing_fields)
 
-        # Create a follow-up request with the reprompt
-        # Use a simple prompt_contents list with the reprompt message
-        try:
-            reprompt_response = _call_llm_api(
-                prompt_contents=[reprompt_message],
-                model_name=chosen_model,
-                system_instruction_text=system_instruction_final,
-                provider_name=provider_selection.provider,
-            )
-            reprompt_code_exec = _maybe_get_gemini_code_execution_evidence(
-                provider_name=provider_selection.provider,
-                model_name=chosen_model,
-                api_response=reprompt_response,
-                context="continue_story_reprompt",
-            )
-            reprompt_text = _get_text_from_response(reprompt_response)
-            reprompt_narrative, reprompt_structured = parse_structured_response(reprompt_text)
-
-            # Validate dice integrity for reprompt response
-            reprompt_dice_valid, _ = _validate_combat_dice_integrity(
-                user_input=user_input,
-                narrative_text=reprompt_narrative,
-                structured_response=reprompt_structured,
-                current_game_state=current_game_state,
-                api_response=reprompt_response,
-                mode=mode,
-                is_god_mode=is_god_mode_command,
-                is_dm_mode=is_dm_mode_initial,
-            )
-            reprompt_code_exec_fabrication = _is_code_execution_fabrication(
-                reprompt_structured, reprompt_code_exec
-            )
-            if reprompt_code_exec_fabrication:
-                logging_util.warning(
-                    "🎲 REPROMPT_CODE_EXEC_FABRICATION: Dice in reprompt response "
-                    "but no code_execution detected. Treating as integrity violation."
-                )
-            reprompt_dice_violation = not reprompt_dice_valid or reprompt_code_exec_fabrication
-
-            # Check if reprompt was successful
-            reprompt_missing = _check_missing_required_fields(
-                reprompt_structured,
-                mode,
-                is_god_mode=is_god_mode_command,
-                is_dm_mode=is_dm_mode_initial,
-                require_dice_rolls=require_dice_rolls,
-                dice_integrity_violation=reprompt_dice_violation,
+        for attempt in range(1, MAX_MISSING_FIELD_REPROMPT_ATTEMPTS + 1):
+            # Build reprompt message with tool_results from original response
+            # This preserves dice provenance so the model can reference real results
+            reprompt_message = _build_reprompt_for_missing_fields(
+                raw_response_text,
+                missing_fields,
+                tool_results=getattr(api_response, "_tool_results", None),
+                dice_roll_strategy=dice_roll_strategy,
             )
 
-            if len(reprompt_missing) < len(missing_fields):
-                # Reprompt improved the response - use it
+            # Create a follow-up request with the reprompt
+            # Use a simple prompt_contents list with the reprompt message
+            try:
                 logging_util.info(
-                    f"✅ REPROMPT_SUCCESS: Reprompt reduced missing fields "
-                    f"from {missing_fields} to {reprompt_missing}"
+                    f"🔁 REPROMPT_ATTEMPT {attempt}/{MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} "
+                    f"for missing fields: {missing_fields}"
                 )
-                raw_response_text = reprompt_text
-                narrative_text = reprompt_narrative
-                structured_response = reprompt_structured
-                if reprompt_code_exec is not None:
-                    code_execution_evidence = reprompt_code_exec
-            else:
-                logging_util.warning(
-                    f"⚠️ REPROMPT_FAILED: Reprompt did not improve response. "
-                    f"Still missing: {reprompt_missing}. Using original response."
+                reprompt_response = _call_llm_api(
+                    prompt_contents=[reprompt_message],
+                    model_name=chosen_model,
+                    system_instruction_text=system_instruction_final,
+                    provider_name=provider_selection.provider,
                 )
-        except Exception as e:
-            logging_util.error(
-                f"❌ REPROMPT_ERROR: Failed to reprompt for missing fields: {e}. "
-                f"Using original response."
-            )
+                reprompt_code_exec = _maybe_get_gemini_code_execution_evidence(
+                    provider_name=provider_selection.provider,
+                    model_name=chosen_model,
+                    api_response=reprompt_response,
+                    context="continue_story_reprompt",
+                )
+                reprompt_text = _get_text_from_response(reprompt_response)
+                reprompt_narrative, reprompt_structured = parse_structured_response(
+                    reprompt_text
+                )
+
+                # Validate dice integrity for reprompt response
+                reprompt_dice_valid, _ = _validate_combat_dice_integrity(
+                    user_input=user_input,
+                    narrative_text=reprompt_narrative,
+                    structured_response=reprompt_structured,
+                    current_game_state=current_game_state,
+                    api_response=reprompt_response,
+                    mode=mode,
+                    is_god_mode=is_god_mode_command,
+                    is_dm_mode=is_dm_mode_initial,
+                )
+                reprompt_code_exec_fabrication = _is_code_execution_fabrication(
+                    reprompt_structured, reprompt_code_exec
+                )
+                if reprompt_code_exec_fabrication:
+                    logging_util.warning(
+                        "🎲 REPROMPT_CODE_EXEC_FABRICATION: Dice in reprompt response "
+                        "but no code_execution detected. Treating as integrity violation."
+                    )
+                reprompt_dice_violation = (
+                    not reprompt_dice_valid or reprompt_code_exec_fabrication
+                )
+
+                # Check if reprompt was successful
+                reprompt_missing = _check_missing_required_fields(
+                    reprompt_structured,
+                    mode,
+                    is_god_mode=is_god_mode_command,
+                    is_dm_mode=is_dm_mode_initial,
+                    require_dice_rolls=require_dice_rolls,
+                    dice_integrity_violation=reprompt_dice_violation,
+                )
+
+                if len(reprompt_missing) < last_missing_count:
+                    # Reprompt improved the response - use it
+                    logging_util.info(
+                        f"✅ REPROMPT_SUCCESS: Reprompt reduced missing fields "
+                        f"from {missing_fields} to {reprompt_missing}"
+                    )
+                    raw_response_text = reprompt_text
+                    narrative_text = reprompt_narrative
+                    structured_response = reprompt_structured
+                    if reprompt_code_exec is not None:
+                        code_execution_evidence = reprompt_code_exec
+                    missing_fields = reprompt_missing
+                    last_missing_count = len(reprompt_missing)
+
+                    if not missing_fields:
+                        break
+                else:
+                    logging_util.warning(
+                        f"⚠️ REPROMPT_STALL: Reprompt did not improve response. "
+                        f"Still missing: {reprompt_missing}. Using best available response."
+                    )
+                    break
+            except Exception as e:
+                logging_util.error(
+                    f"❌ REPROMPT_ERROR: Failed to reprompt for missing fields: {e}. "
+                    f"Using best available response."
+                )
+                break
 
     if structured_response and code_execution_evidence:
         structured_response.debug_info = {
