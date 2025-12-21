@@ -41,12 +41,16 @@ For each scenario, the test validates:
 
 1. **Test Integrity**: User input has NO combat keywords or explicit check requests
 2. **LLM Decision**: Dice rolls present (LLM decided check was needed)
-3. **Code Execution Used**: `debug_info.code_execution_used = True`
-4. **Executable Code Parts**: `debug_info.executable_code_parts > 0`
+3. **Dice Provenance**:
+   - **Gemini (code_execution)**: `debug_info.code_execution_used = True` (or stdout evidence)
+   - **Native two-phase**: `tool_results` present (requires CAPTURE_EVIDENCE)
+4. **Executable Code Parts** (Gemini only): `debug_info.executable_code_parts > 0` when present
 5. **No Integrity Violation**: `debug_info.dice_integrity_violation = False`
 6. **Check Type Match**: Dice rolls contain expected check type (Intimidation, Persuasion, etc.)
 
-**CRITICAL FAILURE**: If dice exist but `code_execution_used = False`, this is a **DICE-ayy REGRESSION**.
+**CRITICAL FAILURE**:
+- Gemini code_execution dice without code_execution evidence
+- Native two-phase dice without tool_results
 
 ## Usage
 
@@ -64,6 +68,9 @@ python test_smart_skill_checks_real_api.py --server-url http://127.0.0.1:8001
 cd testing_mcp
 python test_smart_skill_checks_real_api.py --start-local
 ```
+
+Note: The local server launched by this script enables CAPTURE_EVIDENCE automatically
+so native two-phase models can be validated via tool_results.
 
 ### Real API Testing
 
@@ -90,6 +97,13 @@ python test_smart_skill_checks_real_api.py --start-local --real-services \
   --models "gemini-3-flash-preview,qwen-3-235b-a22b-instruct-2507"
 ```
 
+### Relaxed Mode (Allow No Dice)
+
+```bash
+cd testing_mcp
+python test_smart_skill_checks_real_api.py --start-local --allow-no-dice
+```
+
 ## Expected Output
 
 ### Success (All Tests Pass)
@@ -111,11 +125,11 @@ python test_smart_skill_checks_real_api.py --start-local --real-services \
 
 📦 Testing model: qwen-3-235b-a22b-instruct-2507
 ----------------------------------------------------------------------
-✅ Intimidation (implicit): 1 rolls, code_execution=True
-✅ Persuasion (implicit): 1 rolls, code_execution=True
-✅ Deception (implicit): 1 rolls, code_execution=True
-✅ Perception (implicit): 1 rolls, code_execution=True
-✅ Insight (implicit): 1 rolls, code_execution=True
+✅ Intimidation (implicit): 1 rolls, tool_results=True
+✅ Persuasion (implicit): 1 rolls, tool_results=True
+✅ Deception (implicit): 1 rolls, tool_results=True
+✅ Perception (implicit): 1 rolls, tool_results=True
+✅ Insight (implicit): 1 rolls, tool_results=True
 
 ======================================================================
 📊 Test Summary: 10/10 passed
@@ -129,7 +143,7 @@ python test_smart_skill_checks_real_api.py --start-local --real-services \
 ----------------------------------------------------------------------
 ❌ Intimidation (implicit)
    Input: I demand the guard stand down immediately and let us pass.
-   Error: DICE-ayy REGRESSION: Dice fabricated without code_execution! User: 'I demand the guard stand down immediately and let us pass.' → Rolls: ['Intimidation: 1d20+5 = 18']
+   Error: Expected tool_results for native_two_phase dice rolls; enable CAPTURE_EVIDENCE on the server
 ```
 
 ## Integration with CI/CD
@@ -178,12 +192,13 @@ If the LLM doesn't make a skill check decision:
 - Check that the campaign setting includes context for social interactions
 - Verify the character has relevant social stats (CHA, WIS)
 - Ensure the LLM provider is configured correctly
+- Use `--allow-no-dice` if you want to ignore missing dice rolls
 
 ### "DICE-ayy REGRESSION" Error
 
 This is a **CRITICAL FAILURE** indicating:
 - The narrative dice pattern detection is broken
-- Dice are being fabricated without code_execution
+- Dice are being fabricated without the correct evidence
 - The DICE-ayy gap has returned
 
 **Action Required**:

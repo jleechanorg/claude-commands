@@ -167,17 +167,15 @@ def validate_smart_skill_check(result, scenario, user_input):
     if has_explicit_check_request(user_input):
         errors.append("Test contaminated - explicit check request")
 
-    # 3. LLM made decision: Dice rolls exist
+    # 3. LLM made decision: Dice rolls exist (unless --allow-no-dice)
     if not result.get("dice_rolls"):
         errors.append("No dice rolls - LLM didn't make skill check decision")
 
-    # 4. CRITICAL: Code execution was used (not fabricated)
-    if not result.get("debug_info", {}).get("code_execution_used"):
-        errors.append("DICE-ayy REGRESSION: Dice fabricated without code_execution!")
+    # 4. CRITICAL: Dice provenance depends on strategy
+    # - Gemini (code_execution): code_execution evidence present
+    # - Native two-phase: tool_results present (requires CAPTURE_EVIDENCE)
 
-    # 5. Executable code parts exist
-    if result.get("debug_info", {}).get("executable_code_parts", 0) < 1:
-        errors.append("code_execution_used=True but no executable_code_parts")
+    # 5. Executable code parts exist (Gemini only)
 
     # 6. No dice integrity violation flag
     if result.get("debug_info", {}).get("dice_integrity_violation"):
@@ -186,7 +184,9 @@ def validate_smart_skill_check(result, scenario, user_input):
     return errors
 ```
 
-**CRITICAL FAILURE**: If `code_execution_used = False` but dice exist, this is a **DICE-ayy REGRESSION**.
+**CRITICAL FAILURE**: Dice exist without the correct evidence
+- Gemini: missing code_execution evidence
+- Native two-phase: missing tool_results
 
 ---
 
@@ -212,6 +212,9 @@ python test_smart_skill_checks_real_api.py --start-local
 cd testing_mcp
 python test_smart_skill_checks_real_api.py --start-local --real-services
 ```
+
+Note: Native two-phase validation requires tool_results in the response. The local
+server launched by the test enables CAPTURE_EVIDENCE automatically.
 
 ### With Evidence Collection
 

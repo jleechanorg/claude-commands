@@ -104,10 +104,36 @@ def has_explicit_check_request(text: str) -> bool:
     return any(pattern in text_lower for pattern in check_patterns)
 
 
+def _get_debug_info(result: dict[str, Any]) -> dict[str, Any]:
+    debug_info = result.get("debug_info") or {}
+    return debug_info if isinstance(debug_info, dict) else {}
+
+
+def _infer_dice_strategy(
+    result: dict[str, Any],
+) -> tuple[str, dict[str, Any], list[Any] | None]:
+    debug_info = _get_debug_info(result)
+    tool_results = result.get("tool_results") or debug_info.get("tool_results")
+    dice_strategy = (
+        result.get("dice_strategy")
+        or debug_info.get("dice_strategy")
+        or ("native_two_phase" if tool_results else None)
+        or (
+            "code_execution"
+            if debug_info.get("code_execution_used") or debug_info.get("stdout")
+            else None
+        )
+        or "unknown"
+    )
+    return dice_strategy, debug_info, tool_results
+
+
 def validate_smart_skill_check(
     result: dict[str, Any],
     scenario: dict[str, Any],
     user_input: str,
+    *,
+    allow_no_dice: bool,
 ) -> list[str]:
     """Validate that LLM made smart skill check decision with proper dice rolling."""
     errors: list[str] = []
@@ -137,39 +163,49 @@ def validate_smart_skill_check(
         errors.append(f"dice_rolls not a list: {type(dice_rolls)}")
         return errors
 
-    # RELAXED: Allow scenarios where LLM doesn't make a skill check decision
-    # This is unpredictable behavior - we only care about fabrication when dice DO exist
     if len(dice_rolls) < 1:
-        # No dice rolls = no fabrication possible = PASS (not an error)
-        return []  # Return empty errors - this scenario passes
+        if allow_no_dice:
+            # No dice rolls = no fabrication possible = PASS (not an error)
+            return []
+        errors.append(
+            "No dice rolls produced; cannot validate smart skill check decision"
+        )
+        return errors
 
     # 5. RELAXED: Accept ANY skill check type (LLM may choose different but valid checks)
     # We're testing FABRICATION DETECTION, not check type prediction
     joined_rolls = "\n".join(str(roll) for roll in dice_rolls)
     # Note: We don't enforce expected_check_type anymore - any check is valid
 
-    # 6. CRITICAL: Verify code_execution was used (not fabricated)
-    debug_info = result.get("debug_info") or {}
-    code_execution_used = debug_info.get("code_execution_used", False)
+    # 6. CRITICAL: Verify proper dice provenance (code_execution vs tool_results)
+    dice_strategy, debug_info, tool_results = _infer_dice_strategy(result)
 
-    if not code_execution_used:
+    if dice_strategy == "code_execution":
+        code_execution_used = debug_info.get("code_execution_used", False)
+        stdout_present = bool(debug_info.get("stdout"))
+        if not (code_execution_used or stdout_present):
+            errors.append(
+                "Expected code_execution evidence for dice rolls (Gemini strategy)"
+            )
+        executable_code_parts = debug_info.get("executable_code_parts")
+        if code_execution_used and isinstance(executable_code_parts, int) and executable_code_parts < 1:
+            errors.append("code_execution_used=True but no executable_code_parts found")
+    elif dice_strategy == "native_two_phase":
+        if not tool_results:
+            errors.append(
+                "Expected tool_results for native_two_phase dice rolls; "
+                "enable CAPTURE_EVIDENCE on the server"
+            )
+    else:
         errors.append(
-            f"DICE-ayy REGRESSION: Dice fabricated without code_execution! "
-            f"User: '{user_input}' → Rolls: {dice_rolls}"
+            "Unable to determine dice strategy for validation (missing evidence)"
         )
 
-    # 7. Verify executable_code_parts exist
-    executable_code_parts = debug_info.get("executable_code_parts", 0)
-    if code_execution_used and executable_code_parts < 1:
-        errors.append(
-            f"code_execution_used=True but no executable_code_parts found"
-        )
-
-    # 8. Verify dice_integrity_violation flag (should be False)
+    # 7. Verify dice_integrity_violation flag (should be False when present)
     dice_integrity_violation = debug_info.get("dice_integrity_violation", False)
     if dice_integrity_violation:
         errors.append(
-            f"Narrative detection triggered violation flag - dice may be fabricated"
+            "Narrative detection triggered violation flag - dice may be fabricated"
         )
 
     return errors
@@ -264,7 +300,12 @@ def main() -> int:
     parser.add_argument(
         "--enable-dice-tool",
         action="store_true",
-        help="Expose test-only roll_dice MCP tool (REQUIRED for Cerebras dice validation)",
+        help="Expose test-only roll_dice MCP tool (ENABLE_DICE_TEST_TOOL=true)",
+    )
+    parser.add_argument(
+        "--allow-no-dice",
+        action="store_true",
+        help="Allow scenarios where the model produces no dice rolls (less strict).",
     )
     args = parser.parse_args()
 
@@ -275,11 +316,14 @@ def main() -> int:
         # Start local MCP server if requested
         if args.start_local:
             port = int(args.port) if int(args.port) > 0 else _pick_free_port()
-            env_overrides = {}
-            if not args.real_services:
-                env_overrides["MOCK_LLM_PROVIDER"] = "true"
+            env_overrides: dict[str, str] = {}
+            env_overrides["MOCK_SERVICES_MODE"] = "false" if args.real_services else "true"
+            env_overrides["TESTING"] = "false"
+            env_overrides["FORCE_TEST_MODEL"] = "false"
+            env_overrides["FAST_TESTS"] = "false"
+            env_overrides["CAPTURE_EVIDENCE"] = "true"
             if args.enable_dice_tool:
-                env_overrides["ENABLE_DICE_TOOL"] = "true"
+                env_overrides["ENABLE_DICE_TEST_TOOL"] = "true"
             local = start_local_mcp_server(port, env_overrides=env_overrides)
             base_url = local.base_url
             print(f"🚀 Local MCP server started on {base_url}")
@@ -317,6 +361,7 @@ def main() -> int:
             print("-" * 70)
 
             model_settings = settings_for_model(model_id)
+            model_settings["debug_mode"] = True
             user_id = f"smart-skill-{model_id.replace('/', '-')}-{int(time.time())}"
 
             # Update user settings for this model
@@ -362,7 +407,7 @@ def main() -> int:
 
                 # Validate result
                 validation_errors = validate_smart_skill_check(
-                    result, scenario, user_input
+                    result, scenario, user_input, allow_no_dice=args.allow_no_dice
                 )
 
                 # Save evidence if requested
@@ -386,13 +431,20 @@ def main() -> int:
                 else:
                     passed_tests += 1
                     dice_count = len(result.get("dice_rolls", []))
-                    code_execution = result.get("debug_info", {}).get(
-                        "code_execution_used", False
+                    dice_strategy, debug_info, tool_results = _infer_dice_strategy(
+                        result
                     )
-                    print(
-                        f"✅ {scenario_name}: {dice_count} rolls, "
-                        f"code_execution={code_execution}"
-                    )
+                    if dice_strategy == "native_two_phase":
+                        print(
+                            f"✅ {scenario_name}: {dice_count} rolls, "
+                            f"tool_results={bool(tool_results)}"
+                        )
+                    else:
+                        code_execution = debug_info.get("code_execution_used", False)
+                        print(
+                            f"✅ {scenario_name}: {dice_count} rolls, "
+                            f"code_execution={code_execution}"
+                        )
 
         # Summary
         print("\n" + "=" * 70)
