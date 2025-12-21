@@ -36,9 +36,9 @@ execution_mode: immediate
    ls mvp_site/tests/test_end2end/
    ```
 
-2. **Check for related existing tests** - Search for tests covering similar functionality:
+2. **Check for related existing tests** - Search for tests covering similar functionality (replace `<FEATURE_KEYWORD>` with the real feature name):
    ```bash
-   grep -r "feature_keyword" mvp_site/tests/test_end2end/
+   grep -r "<FEATURE_KEYWORD>" mvp_site/tests/test_end2end/
    ```
 
 3. **Read the end2end testing skill**:
@@ -90,7 +90,8 @@ execution_mode: immediate
    os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
    from mvp_site import main
-   from mvp_site.tests.fake_firestore import FakeFirestoreClient, FakeLLMResponse
+   from mvp_site.tests.fake_firestore import FakeFirestoreClient
+   from mvp_site.tests.fake_llm import FakeLLMResponse  # Legacy tests may import from fake_firestore.
 
 
    class Test{FeatureName}End2End(unittest.TestCase):
@@ -98,9 +99,6 @@ execution_mode: immediate
 
        def setUp(self):
            """Set up test client."""
-           os.environ["TESTING"] = "true"
-           os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
-
            self.app = main.create_app()
            self.app.config["TESTING"] = True
            self.client = self.app.test_client()
@@ -136,9 +134,18 @@ execution_mode: immediate
            mock_llm_request.return_value = fake_response
 
            # Make API request
+           request_payload = {
+               # Example request structure - update fields for {feature}
+               "user_id": self.test_user_id,
+               "input": {
+                   "title": "Test {feature} title",
+                   "description": "Test {feature} description",
+                   # Add any additional fields required by /api/{endpoint}
+               },
+           }
            response = self.client.post(
                "/api/{endpoint}",
-               data=json.dumps({...}),
+               data=json.dumps(request_payload),
                content_type="application/json",
                headers=self.test_headers,
            )
@@ -155,7 +162,8 @@ execution_mode: immediate
 
 2. **Follow mock patterns from skill**:
    - Use `@patch("mvp_site.firestore_service.get_db")` for Firestore
-   - Use `@patch("mvp_site.llm_service._call_llm_api_with_llm_request")` for LLM
+   - Prefer `@patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")` for new LLM mocks
+   - Use `@patch("mvp_site.llm_service._call_llm_api_with_llm_request")` only when updating legacy tests
    - Use `side_effect` for multi-phase function testing
 
 3. **Add error test cases**:
@@ -190,10 +198,13 @@ execution_mode: immediate
 | `test_create_campaign_end2end.py` | Campaign creation flow |
 | `test_continue_story_end2end.py` | Story continuation |
 | `test_visit_campaign_end2end.py` | Loading existing campaigns |
+| `test_world_loader_e2e.py` | World loader flow |
 | `test_debug_mode_end2end.py` | Debug mode features |
 | `test_god_mode_end2end.py` | God mode (DM powers) |
 | `test_llm_provider_end2end.py` | LLM provider switching |
 | `test_mcp_*_end2end.py` | MCP integration tests |
+| `test_timeline_log_budget_end2end.py` | Timeline log budget |
+| `test_embedded_json_narrative_end2end.py` | Embedded JSON narrative |
 | `test_entity_tracking_budget_end2end.py` | Entity tracking |
 | `test_npc_death_state_end2end.py` | NPC death persistence |
 
@@ -206,14 +217,20 @@ def test_example(self, mock_get_db):
     fake_firestore = FakeFirestoreClient()
     mock_get_db.return_value = fake_firestore
 
-# LLM mock
+# LLM mock (LEGACY - keep for older tests)
 @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
-def test_example(self, mock_llm_request):
+def test_example_legacy_llm(self, mock_llm_request):
     fake_response = FakeLLMResponse(json.dumps({"narrative": "..."}))
     mock_llm_request.return_value = fake_response
 
-# Multi-phase testing with side_effect
-mock_llm_request.side_effect = [phase1_response, phase2_response]
+# LLM mock (PREFERRED for new tests)
+@patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+def test_example_llm(self, mock_generate_content):
+    fake_response = FakeLLMResponse(json.dumps({"narrative": "..."}))
+    mock_generate_content.return_value = fake_response
+
+# Multi-phase testing with side_effect (works with either pattern)
+mock_generate_content.side_effect = [phase1_response, phase2_response]
 ```
 
 ### Running Tests
