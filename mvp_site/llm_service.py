@@ -2751,32 +2751,13 @@ def _should_require_dice_rolls_for_turn(
     if not text or text.startswith("/"):
         return False
 
-    combat_action_keywords = (
-        "attack",
-        "shoot",
-        "strike",
-        "stab",
-        "slash",
-        "swing",
-        "hit",
-        "cast",
-        "spell",
-        "fireball",
-        "saving throw",
-        "initiative",
-        "grapple",
-        "shove",
-        "dodge",
-        "dash",
-        "disengage",
-    )
+    text = _truncate_for_combat_scan(text)
 
     # Check for combat keywords in user input (catches new combat)
     # Use word-boundary matching to avoid substring false positives
     # (e.g., "troll" should not match "roll").
     has_combat_keywords = any(
-        re.search(r'\b' + re.escape(k) + r'\b', text)
-        for k in combat_action_keywords
+        pattern.search(text) for pattern in _COMBAT_KEYWORD_PATTERNS_USER_INPUT
     )
 
     # Check if already in combat state (catches ongoing combat)
@@ -2813,6 +2794,43 @@ COMBAT_ACTION_KEYWORDS = (
     "disengage",
     "help",
 )
+
+# Combat keywords used for initial user input detection (keep narrower to avoid false positives)
+_COMBAT_ACTION_KEYWORDS_USER_INPUT = (
+    "attack",
+    "shoot",
+    "strike",
+    "stab",
+    "slash",
+    "swing",
+    "hit",
+    "cast",
+    "spell",
+    "fireball",
+    "saving throw",
+    "initiative",
+    "grapple",
+    "shove",
+    "dodge",
+    "dash",
+    "disengage",
+)
+
+_COMBAT_KEYWORD_MAX_CHARS = 5000
+_COMBAT_KEYWORD_PATTERNS = tuple(
+    re.compile(r"\b" + re.escape(keyword) + r"\b")
+    for keyword in COMBAT_ACTION_KEYWORDS
+)
+_COMBAT_KEYWORD_PATTERNS_USER_INPUT = tuple(
+    re.compile(r"\b" + re.escape(keyword) + r"\b")
+    for keyword in _COMBAT_ACTION_KEYWORDS_USER_INPUT
+)
+
+
+def _truncate_for_combat_scan(text: str) -> str:
+    if len(text) > _COMBAT_KEYWORD_MAX_CHARS:
+        return text[:_COMBAT_KEYWORD_MAX_CHARS]
+    return text
 
 # Past tense markers that indicate historical combat (not active)
 _PAST_TENSE_MARKERS = (
@@ -2901,7 +2919,7 @@ def _detect_combat_in_narrative(narrative_text: str) -> bool:
     if not narrative_text:
         return False
 
-    text = narrative_text.lower()
+    text = _truncate_for_combat_scan(narrative_text.lower())
 
     # Check for past tense markers - if found, check if combat keywords are
     # only in past tense context (harder to determine, so be conservative)
@@ -2918,10 +2936,8 @@ def _detect_combat_in_narrative(narrative_text: str) -> bool:
         return True
 
     # Check for combat keywords (word-boundary matching to avoid false positives)
-    import re
     has_combat_keyword = any(
-        re.search(r'\b' + re.escape(keyword) + r'\b', text)
-        for keyword in COMBAT_ACTION_KEYWORDS
+        pattern.search(text) for pattern in _COMBAT_KEYWORD_PATTERNS
     )
 
     # If combat keyword but ONLY in past/hypothetical context, not active combat
@@ -3035,11 +3051,11 @@ def _validate_combat_dice_integrity(
         return True, None
 
     # Detect combat in user input (word-boundary matching to avoid false positives)
-    import re
     user_text = (user_input or "").strip().lower()
+    if user_text:
+        user_text = _truncate_for_combat_scan(user_text)
     user_has_combat = any(
-        re.search(r'\b' + re.escape(k) + r'\b', user_text)
-        for k in COMBAT_ACTION_KEYWORDS
+        pattern.search(user_text) for pattern in _COMBAT_KEYWORD_PATTERNS
     ) if user_text else False
 
     # Detect combat in narrative (new logic)
