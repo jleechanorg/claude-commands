@@ -804,14 +804,23 @@ def _detect_narrative_dice_fabrication(
         dice_rolls = getattr(structured_response, 'dice_rolls', None)
         has_dice_in_structured = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
 
-    # DEBUG LOGGING
-    logging_util.debug(
-        f"🔍 DICE_FABRICATION_CHECK: "
-        f"has_dice_in_narrative={has_dice_in_narrative}, "
-        f"has_dice_in_structured={has_dice_in_structured}, "
-        f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
-        f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
-    )
+    # DEBUG LOGGING (env-gated to avoid noise in production)
+    if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
+        logging_util.warning(
+            f"🔍 DICE_FABRICATION_CHECK: "
+            f"has_dice_in_narrative={has_dice_in_narrative}, "
+            f"has_dice_in_structured={has_dice_in_structured}, "
+            f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
+            f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
+        )
+    else:
+        logging_util.debug(
+            f"🔍 DICE_FABRICATION_CHECK: "
+            f"has_dice_in_narrative={has_dice_in_narrative}, "
+            f"has_dice_in_structured={has_dice_in_structured}, "
+            f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
+            f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
+        )
 
     # If no dice anywhere, no fabrication possible
     if not has_dice_in_narrative and not has_dice_in_structured:
@@ -3909,6 +3918,20 @@ def continue_story(
         api_response=api_response,
         code_execution_evidence=code_execution_evidence,
     )
+    if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
+        logging_util.warning(
+            "🔍 PRE/POST DETECTION CONTEXT: "
+            f"dice_strategy={dice_roll_strategy}, "
+            f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}, "
+            f"tool_results_count={len(getattr(api_response, '_tool_results', []) or [])}, "
+            f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}"
+        )
+    if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
+        logging_util.warning(
+            "🔍 POST-DETECTION: _detect_narrative_dice_fabrication returned "
+            f"{narrative_dice_fabrication} | "
+            f"dice_rolls={getattr(structured_response, 'dice_rolls', None)}"
+        )
     if narrative_dice_fabrication:
         logging_util.warning(
             "🎲 NARRATIVE_DICE_FABRICATION: Dice patterns found in narrative without tool evidence. "
