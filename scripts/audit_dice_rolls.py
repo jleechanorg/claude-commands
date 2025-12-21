@@ -191,25 +191,70 @@ def extract_dice_rolls_from_text(text: str) -> list[dict]:
     return rolls
 
 
+def has_code_execution_evidence(entry: dict) -> bool:
+    """Check if entry has code_execution evidence (proves dice are real)."""
+    debug_info = entry.get("debug_info", {})
+    if not isinstance(debug_info, dict):
+        return False
+
+    # Check for code_execution flag
+    code_execution_used = debug_info.get("code_execution_used", False)
+    if not code_execution_used:
+        return False
+
+    # Verify stdout exists (actual execution proof)
+    stdout = debug_info.get("stdout", "")
+    if not stdout or not isinstance(stdout, str):
+        return False
+
+    return True
+
+
 def extract_dice_from_structured_fields(entry: dict) -> list[dict]:  # noqa: PLR0912
     """Extract dice roll data from structured fields in story entries."""
     rolls = []
 
-    # Check for structured_fields containing dice data
+    # Check for code_execution evidence FIRST
+    has_code_exec = has_code_execution_evidence(entry)
+    default_source = "code_execution" if has_code_exec else "structured_fields"
+
+    # Check for TOP-LEVEL dice_rolls field (modern format)
+    dice_rolls = entry.get("dice_rolls", [])
+    if isinstance(dice_rolls, list):
+        for roll in dice_rolls:
+            if isinstance(roll, str):
+                # Parse formatted string like "Perception: 1d20+1 = 16+1 = 17"
+                rolls.append({
+                    "notation": "unknown",
+                    "result": None,
+                    "purpose": roll,
+                    "source": default_source,
+                })
+            elif isinstance(roll, dict):
+                rolls.append(
+                    {
+                        "notation": roll.get("notation", "unknown"),
+                        "result": _coerce_int(roll.get("result")),
+                        "purpose": _normalize_purpose(roll.get("purpose")),
+                        "source": default_source,
+                    }
+                )
+
+    # Check for structured_fields containing dice data (legacy format)
     structured = entry.get("structured_fields", {})
     if not structured:
         structured = {}
 
-    # Check for dice_rolls field
-    dice_rolls = structured.get("dice_rolls", [])
-    if isinstance(dice_rolls, list):
-        for roll in dice_rolls:
+    # Check for dice_rolls field in structured_fields
+    structured_dice_rolls = structured.get("dice_rolls", [])
+    if isinstance(structured_dice_rolls, list):
+        for roll in structured_dice_rolls:
             rolls.append(
                 {
                     "notation": roll.get("notation", "unknown"),
                     "result": _coerce_int(roll.get("result")),
                     "purpose": _normalize_purpose(roll.get("purpose")),
-                    "source": "structured_fields",
+                    "source": default_source,
                 }
             )
 
@@ -259,7 +304,7 @@ def extract_dice_from_structured_fields(entry: dict) -> list[dict]:  # noqa: PLR
                                 "result": _coerce_int(resolved_total),
                                 "individual_rolls": result.get("rolls", []),
                                 "purpose": _normalize_purpose(tool.get("purpose")),
-                                "source": "tool_call",
+                                "source": default_source if default_source == "code_execution" else "tool_call",
                             }
                         )
 
@@ -355,12 +400,13 @@ def audit_campaign_dice(campaign_id: str) -> None:  # noqa: PLR0912, PLR0915
     for entry in entries:
         entry_rolls = []
 
-        # Extract from structured fields
+        # Extract from structured fields and dice_rolls (checks code_execution)
         structured_rolls = extract_dice_from_structured_fields(entry)
         entry_rolls.extend(structured_rolls)
 
-        # Extract from text (if AI response)
-        if entry.get("actor") == "gemini":
+        # Extract from text ONLY if no code_execution evidence (avoid double-counting)
+        # When code_execution is used, dice appear in both dice_rolls field AND narrative
+        if entry.get("actor") == "gemini" and not has_code_execution_evidence(entry):
             text = entry.get("text", "")
             text_rolls = extract_dice_rolls_from_text(text)
             entry_rolls.extend(text_rolls)
@@ -451,8 +497,10 @@ def audit_campaign_dice(campaign_id: str) -> None:  # noqa: PLR0912, PLR0915
     )[:20]
     for roll in recent:
         purpose = _normalize_purpose(roll.get("purpose") or "N/A")
+        result = roll.get('result')
+        result_str = str(result) if result is not None else '?'
         print(
-            f"  {roll.get('notation', '?'):>8} = {roll.get('result', '?'):>3} | "
+            f"  {roll.get('notation', '?'):>8} = {result_str:>3} | "
             f"{purpose[:40]} | {roll.get('source', 'N/A')}"
         )
 
