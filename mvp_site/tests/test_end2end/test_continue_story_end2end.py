@@ -195,9 +195,16 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "state_updates": {"world_data": {"world_time": backward_world_time}},
         }
 
+        second_fake_response = FakeLLMResponse(json.dumps(second_response))
+        # Provide code_execution evidence to satisfy Gemini code-exec dice integrity checks.
+        second_fake_response.parts[0].executable_code = {
+            "language": "python",
+            "code": "print('roll')",
+        }
+
         mock_gemini_generate.side_effect = [
             FakeLLMResponse(json.dumps(first_response)),
-            FakeLLMResponse(json.dumps(second_response)),
+            second_fake_response,
         ]
 
         response = self.client.post(
