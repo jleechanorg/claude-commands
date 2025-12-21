@@ -313,6 +313,16 @@ def test_detect_narrative_dice_fabrication_ignored_with_tool_evidence():
     resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
     api_response = Mock()
     api_response._tool_requests_executed = True
+    api_response._tool_results = [
+        {
+            "tool": "roll_skill_check",
+            "result": {
+                "roll": 17,
+                "modifier": 5,
+                "total": 22,
+            },
+        }
+    ]
 
     assert _detect_narrative_dice_fabrication(
         narrative_text=narrative,
@@ -320,6 +330,27 @@ def test_detect_narrative_dice_fabrication_ignored_with_tool_evidence():
         api_response=api_response,
         code_execution_evidence=None,
     ) is False
+
+
+def test_detect_narrative_dice_fabrication_rejects_non_dice_tool_results():
+    """Non-dice tool results should not suppress narrative dice fabrication detection."""
+    narrative = "You roll 1d20+5 and get 17 vs DC 12."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = True
+    api_response._tool_results = [
+        {
+            "tool": "search_location",
+            "result": {"location": "Neverwinter"},
+        }
+    ]
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is True
 
 
 def test_detect_narrative_dice_fabrication_ignored_without_dice():

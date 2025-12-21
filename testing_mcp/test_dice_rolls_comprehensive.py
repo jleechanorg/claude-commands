@@ -355,6 +355,11 @@ def _extract_actual_provider_model(result: dict[str, Any]) -> tuple[str | None, 
     return (str(provider) if provider else None, str(model) if model else None)
 
 
+def _is_local_url(url: str) -> bool:
+    lowered = url.lower()
+    return "127.0.0.1" in lowered or "localhost" in lowered
+
+
 def _write_raw_response(
     evidence_dir: Path, *, model_id: str, scenario_name: str, raw_text: str
 ) -> str:
@@ -575,6 +580,16 @@ def main() -> int:
                     errors.append(
                         f"actual model mismatch: expected {model_id}, got {actual_model}"
                     )
+                require_real = bool(args.real_services) or (
+                    not args.start_local and not _is_local_url(base_url)
+                )
+                if require_real:
+                    if not actual_provider or not actual_model:
+                        errors.append("missing provider/model evidence (real mode expected)")
+                    if (actual_model or "").lower() == "mock-model":
+                        errors.append("mock model detected in real-mode test")
+                    if (actual_provider or "").lower() == "mock":
+                        errors.append("mock provider detected in real-mode test")
                 if dice_strategy == "native_two_phase" and (
                     scenario.get("min_dice_rolls", 0) > 0
                 ):
