@@ -101,8 +101,13 @@ class LoggingUtil:
                 repo_name = repo_name[:-4]
             if repo_name:
                 return repo_name
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
-            # Git command failed; fall back to repo root detection.
+        except (
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+            FileNotFoundError,
+            OSError,
+        ):
+            # Git command failed or timed out; fall back to repo root detection.
             pass
 
         # Fallback: use directory name of the git root
@@ -115,8 +120,13 @@ class LoggingUtil:
                 timeout=30,
             ).strip()
             return os.path.basename(git_root)
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
-            # Git command failed; fall back to a safe default.
+        except (
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+            FileNotFoundError,
+            OSError,
+        ):
+            # Git command failed or timed out; fall back to a safe default.
             pass
 
         return "unknown_repo"
@@ -139,7 +149,13 @@ class LoggingUtil:
             ).strip()
             if branch:
                 return branch
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        except (
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+            FileNotFoundError,
+            OSError,
+        ):
+            # Git command failed or timed out; fall back to a safe default.
             pass
         return "unknown"
 
