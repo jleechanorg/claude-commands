@@ -5,14 +5,11 @@ Supports both module-level convenience functions and logger-aware functions
 that preserve logger context.
 
 UNIFIED LOGGING ARCHITECTURE:
-- After setup_unified_logging() is called, logs go to BOTH Cloud Logging (stdout/stderr)
-  and the local file
+- Logging is initialized automatically on module import
+- All logs go to BOTH Cloud Logging (stdout/stderr) and local file
 - Log files stored under /tmp/<repo>/<branch>/<service>.log
-- Lazy auto-initialization: logging functions automatically set up handlers
-  if setup_unified_logging() hasn't been called yet
+- Uses LOGGING_SERVICE_NAME env var or defaults to "app"
 - Prevents duplicate handlers via initialization guard
-- Convenience logging functions lazily initialize unified logging if not configured,
-  using LOGGING_SERVICE_NAME or the default "app" service.
 """
 
 import logging
@@ -212,7 +209,6 @@ class LoggingUtil:
             logger: Optional logger instance to preserve context. If None, uses root logger.
             **kwargs: Additional keyword arguments for logging
         """
-        _ensure_logging_initialized()
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
         if logger is not None:
             logger.error(enhanced_message, *args, **kwargs)
@@ -232,7 +228,6 @@ class LoggingUtil:
             logger: Optional logger instance to preserve context. If None, uses root logger.
             **kwargs: Additional keyword arguments for logging
         """
-        _ensure_logging_initialized()
         enhanced_message = f"{LoggingUtil.WARNING_EMOJI} {message}"
         if logger is not None:
             logger.warning(enhanced_message, *args, **kwargs)
@@ -259,7 +254,6 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
-        _ensure_logging_initialized()
         logging.info(message, *args, **kwargs)
 
     @staticmethod
@@ -272,7 +266,6 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
-        _ensure_logging_initialized()
         logging.debug(message, *args, **kwargs)
 
     @staticmethod
@@ -285,7 +278,6 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
-        _ensure_logging_initialized()
         enhanced_message = f"🔥🔥 {message}"
         logging.critical(enhanced_message, *args, **kwargs)
 
@@ -299,7 +291,6 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
-        _ensure_logging_initialized()
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
         logging.exception(enhanced_message, *args, **kwargs)
 
@@ -324,7 +315,6 @@ class LoggingUtil:
         Returns:
             Logger instance
         """
-        _ensure_logging_initialized()
         return logging.getLogger(name)
 
 
@@ -339,7 +329,6 @@ def error(message: str, *args: Any, **kwargs: Any) -> None:
         **kwargs: Additional keyword arguments for logging.
                  Use logger=my_logger to preserve logger context.
     """
-    _ensure_logging_initialized()
     LoggingUtil.error(message, *args, **kwargs)
 
 
@@ -353,31 +342,26 @@ def warning(message: str, *args: Any, **kwargs: Any) -> None:
         **kwargs: Additional keyword arguments for logging.
                  Use logger=my_logger to preserve logger context.
     """
-    _ensure_logging_initialized()
     LoggingUtil.warning(message, *args, **kwargs)
 
 
 def info(message: str, *args: Any, **kwargs: Any) -> None:
     """Log an info message (no emoji modification)."""
-    _ensure_logging_initialized()
     LoggingUtil.info(message, *args, **kwargs)
 
 
 def debug(message: str, *args: Any, **kwargs: Any) -> None:
     """Log a debug message (no emoji modification)."""
-    _ensure_logging_initialized()
     LoggingUtil.debug(message, *args, **kwargs)
 
 
 def critical(message: str, *args: Any, **kwargs: Any) -> None:
     """Log a critical message with double fire emoji."""
-    _ensure_logging_initialized()
     LoggingUtil.critical(message, *args, **kwargs)
 
 
 def exception(message: str, *args: Any, **kwargs: Any) -> None:
     """Log an exception message with traceback."""
-    _ensure_logging_initialized()
     LoggingUtil.exception(message, *args, **kwargs)
 
 
