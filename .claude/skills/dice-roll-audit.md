@@ -34,6 +34,15 @@ The script extracts dice from:
 1. **structured_fields**: Dice logged in tool calls and combat data
 2. **text_pattern**: Dice mentioned in narrative text (e.g., "rolled a 15")
 
+### Evidence Precedence & Parsing Rules
+- **Primary sources**: `dice_audit_events` and `debug_info.tool_results` (authoritative).
+- **Fallback**: `debug_info.stdout` JSON from Gemini code_execution (used only when no primary sources exist).
+- **Legacy**: `dice_rolls` strings and narrative text patterns (only when structured sources are missing).
+- **Distribution math**:
+  - Uses **individual_rolls** when available (e.g., `[3, 5]` for `2d6`).
+  - Falls back to parsed totals only when raw rolls are unavailable.
+  - Totals with modifiers can distort fairness checks, so prefer roll arrays when present.
+
 ## Output Example
 
 ```
