@@ -493,8 +493,9 @@ def is_logging_initialized() -> bool:
     return _logging_initialized
 
 
-# Module-level initialization: configure logging on import
+# Module-level initialization: configure logging on import.
 # This ensures logs always go to both console and file from the start.
-# Entry points can still call setup_unified_logging() with a specific service
-# name BEFORE importing this module to use their preferred name.
+# To customize the service name, entry points should:
+#   1. Set LOGGING_SERVICE_NAME env var before importing this module, OR
+#   2. Accept auto-initialization with "app" (subsequent setup calls are no-ops)
 _ensure_logging_initialized()
