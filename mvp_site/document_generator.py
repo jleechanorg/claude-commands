@@ -37,13 +37,12 @@ Dependencies:
 - DejaVu Sans font: Custom font for better Unicode support
 """
 
-import logging
 import os
 
 from docx import Document
 from fpdf import FPDF, XPos, YPos
 
-from mvp_site import constants
+from mvp_site import constants, logging_util
 
 
 def get_story_text_from_context(story_log):
@@ -120,11 +119,11 @@ def generate_pdf(story_text, output_filepath, campaign_title=""):
             # The 'uni=True' parameter is crucial for UTF-8 support with FPDF.
             pdf.add_font(CUSTOM_FONT_NAME, "", font_path)
             font_family = CUSTOM_FONT_NAME
-            logging.info("DejaVuSans.ttf found and loaded.")
+            logging_util.info("DejaVuSans.ttf found and loaded.")
         else:
             raise RuntimeError("Font file not found in any expected location")
     except (RuntimeError, FileNotFoundError):
-        logging.warning(
+        logging_util.warning(
             "DejaVuSans.ttf not found. Falling back to core font. Non-ASCII characters may not render correctly."
         )
         # If the custom font fails, we stick with the default Helvetica.

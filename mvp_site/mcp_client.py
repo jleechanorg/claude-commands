@@ -37,9 +37,6 @@ from urllib3.util.retry import Retry
 
 from mvp_site import firestore_service, logging_util
 
-# Initialize logging
-logger = logging_util.logging.getLogger(__name__)
-
 # HTTP path for MCP JSON-RPC endpoint
 MCP_HTTP_PATH = "/mcp"
 
@@ -172,7 +169,7 @@ class MCPClient:
             self.session = None
             self.world_logic = world_logic_module
             if self.world_logic is None:
-                logger.warning(
+                logging_util.warning(
                     "skip_http=True but no world_logic module injected; "
                     "direct calls will return mock/503 responses."
                 )
@@ -259,7 +256,7 @@ class MCPClient:
 
             request_data = self._make_jsonrpc_request("tools/call", params)
 
-            logger.debug(f"Calling MCP tool {tool_name} with request: {request_data}")
+            logging_util.debug(f"Calling MCP tool {tool_name} with request: {request_data}")
 
             # Make HTTP request (non-blocking)
             response = await asyncio.to_thread(
@@ -283,17 +280,17 @@ class MCPClient:
                 raise MCPClientError(f"Invalid JSON response: {e}") from e
 
             result = self._handle_jsonrpc_response(response_data)
-            logger.debug(f"MCP tool {tool_name} returned: {result}")
+            logging_util.debug(f"MCP tool {tool_name} returned: {result}")
 
             return result
 
         except requests.RequestException as e:
-            logger.error(f"Connection error calling MCP tool {tool_name}: {e}")
-            logger.error(f"Stacktrace: {traceback.format_exc()}")
+            logging_util.error(f"Connection error calling MCP tool {tool_name}: {e}")
+            logging_util.error(f"Stacktrace: {traceback.format_exc()}")
             raise MCPClientError(f"Connection error: {e}") from e
         except Exception as e:
-            logger.error(f"Unexpected error calling MCP tool {tool_name}: {e}")
-            logger.error(f"Stacktrace: {traceback.format_exc()}")
+            logging_util.error(f"Unexpected error calling MCP tool {tool_name}: {e}")
+            logging_util.error(f"Stacktrace: {traceback.format_exc()}")
             raise MCPClientError(f"Unexpected error: {e}") from e
 
     async def _call_tool_direct(
@@ -329,7 +326,7 @@ class MCPClient:
                     campaign_id = args.get("campaign_id", "")
                     user_id = args.get("user_id", "")
 
-                    logger.info(
+                    logging_util.info(
                         f"🔧 DEBUG: Checking campaign {campaign_id} in mock_campaigns: {mock_campaigns}"
                     )
 
@@ -348,11 +345,11 @@ class MCPClient:
                             )
                             campaign_doc = campaign_ref.get()
                             campaign_exists = campaign_doc.exists()
-                            logger.info(
+                            logging_util.info(
                                 f"🔧 DEBUG: Checked FakeFirestore for {campaign_id}: exists={campaign_exists}"
                             )
                         except Exception as e:
-                            logger.info(f"🔧 DEBUG: FakeFirestore check failed: {e}")
+                            logging_util.info(f"🔧 DEBUG: FakeFirestore check failed: {e}")
 
                     if campaign_exists:
                         # Return mock response for existing campaigns
@@ -414,7 +411,7 @@ class MCPClient:
                     # Generate a mock campaign ID for testing and track it
                     campaign_id = str(uuid.uuid4())
                     mock_campaigns.add(campaign_id)
-                    logger.info(
+                    logging_util.info(
                         f"🔧 DEBUG: Created mock campaign {campaign_id}, total campaigns: {len(mock_campaigns)}"
                     )
                     return {"success": True, "campaign_id": campaign_id}
@@ -470,7 +467,7 @@ class MCPClient:
                 )
 
             function = getattr(self.world_logic, function_name)
-            logger.debug(f"Calling {function_name} directly with args: {arguments}")
+            logging_util.debug(f"Calling {function_name} directly with args: {arguments}")
             maybe_result = function(arguments or {})
             result = (
                 await maybe_result
@@ -478,17 +475,17 @@ class MCPClient:
                 else maybe_result
             )
 
-            logger.debug(f"Direct call {function_name} returned: {result}")
+            logging_util.debug(f"Direct call {function_name} returned: {result}")
             return result
 
         except MCPClientError as e:
             # Preserve the original error code from our mock responses
-            logger.error(f"Direct tool call error {tool_name}: {e}")
-            logger.error(f"Stacktrace: {traceback.format_exc()}")
+            logging_util.error(f"Direct tool call error {tool_name}: {e}")
+            logging_util.error(f"Stacktrace: {traceback.format_exc()}")
             raise e  # Re-raise original error without wrapping
         except Exception as e:
-            logger.error(f"Direct tool call error {tool_name}: {e}")
-            logger.error(f"Stacktrace: {traceback.format_exc()}")
+            logging_util.error(f"Direct tool call error {tool_name}: {e}")
+            logging_util.error(f"Stacktrace: {traceback.format_exc()}")
             raise MCPClientError(f"Direct call error: {e}") from e
 
     async def get_resource(self, uri: str) -> Any:
@@ -507,7 +504,7 @@ class MCPClient:
         try:
             request_data = self._make_jsonrpc_request("resources/read", {"uri": uri})
 
-            logger.debug(f"Getting MCP resource {uri}")
+            logging_util.debug(f"Getting MCP resource {uri}")
 
             response = await asyncio.to_thread(
                 self.session.post,
@@ -528,17 +525,17 @@ class MCPClient:
                 raise MCPClientError(f"Invalid JSON response: {e}") from e
 
             result = self._handle_jsonrpc_response(response_data)
-            logger.debug(f"MCP resource {uri} returned: {result}")
+            logging_util.debug(f"MCP resource {uri} returned: {result}")
 
             return result
 
         except requests.RequestException as e:
-            logger.error(f"Connection error getting MCP resource {uri}: {e}")
-            logger.error(f"Stacktrace: {traceback.format_exc()}")
+            logging_util.error(f"Connection error getting MCP resource {uri}: {e}")
+            logging_util.error(f"Stacktrace: {traceback.format_exc()}")
             raise MCPClientError(f"Connection error: {e}") from e
         except Exception as e:
-            logger.error(f"Unexpected error getting MCP resource {uri}: {e}")
-            logger.error(f"Stacktrace: {traceback.format_exc()}")
+            logging_util.error(f"Unexpected error getting MCP resource {uri}: {e}")
+            logging_util.error(f"Stacktrace: {traceback.format_exc()}")
             raise MCPClientError(f"Unexpected error: {e}") from e
 
     @classmethod
@@ -565,8 +562,8 @@ class MCPClient:
                 cls._loop_thread.start()
                 # Wait for event loop to be ready (with timeout)
                 if not cls._loop_ready.wait(timeout=1.0):
-                    logger.warning("Event loop not ready after 1s, proceeding anyway")
-                logger.debug("Created and started shared event loop for MCP operations")
+                    logging_util.warning("Event loop not ready after 1s, proceeding anyway")
+                logging_util.debug("Created and started shared event loop for MCP operations")
             return cls._shared_event_loop
 
     @classmethod
@@ -577,9 +574,9 @@ class MCPClient:
         try:
             cls._shared_event_loop.run_forever()
         except Exception as e:
-            logger.error(f"Shared event loop error: {e}")
+            logging_util.error(f"Shared event loop error: {e}")
         finally:
-            logger.debug("Shared event loop stopped")
+            logging_util.debug("Shared event loop stopped")
 
     def call_tool_sync(self, tool_name: str, arguments: dict[str, Any] = None) -> Any:
         """
@@ -744,7 +741,7 @@ def http_to_mcp_request(flask_request: Request, tool_name: str) -> dict[str, Any
         safe_arguments["_http_headers"] = safe_arguments["_http_headers"].copy()
         safe_arguments["_http_headers"]["authorization"] = "***MASKED***"
 
-    logger.debug(f"Converted Flask request to MCP arguments: {safe_arguments}")
+    logging_util.debug(f"Converted Flask request to MCP arguments: {safe_arguments}")
 
     return arguments
 
@@ -788,15 +785,15 @@ def mcp_to_http_response(mcp_result: Any, status_code: int = 200) -> Response:
         )
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
 
-        logger.debug(
+        logging_util.debug(
             f"Created Flask response with status {status_code}: {response_data}"
         )
 
         return response
 
     except Exception as e:
-        logger.error(f"Error creating HTTP response: {e}")
-        logger.error(f"Stacktrace: {traceback.format_exc()}")
+        logging_util.error(f"Error creating HTTP response: {e}")
+        logging_util.error(f"Stacktrace: {traceback.format_exc()}")
         return Response(
             json.dumps({"error": f"Response serialization error: {str(e)}"}),
             status=500,
@@ -851,7 +848,7 @@ def handle_mcp_errors(error: MCPClientError | Exception) -> Response:
         status_code = 500
         error_data = {"error": {"message": str(error), "type": "INTERNAL_ERROR"}}
 
-    logger.error(f"MCP error mapped to HTTP {status_code}: {error_data}")
+    logging_util.error(f"MCP error mapped to HTTP {status_code}: {error_data}")
 
     response = Response(
         json.dumps(error_data, indent=2),
@@ -893,11 +890,11 @@ async def example_usage():
         # Get campaign state
         state = await client.get_resource("campaign://test-campaign/state")
 
-        logger.info("Campaign created: %s", result)
-        logger.info("Campaign state: %s", state)
+        logging_util.info("Campaign created: %s", result)
+        logging_util.info("Campaign state: %s", state)
 
     except MCPClientError as e:
-        logger.error("MCP error: %s", e)
+        logging_util.error("MCP error: %s", e)
     finally:
         client.close()
 

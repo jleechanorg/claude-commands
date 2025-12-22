@@ -193,6 +193,31 @@ with patch('shutil.which', return_value='/usr/bin/command'):
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
 
+### Unified Logging (MANDATORY)
+All Python files in `mvp_site/` MUST use the unified logging module. Never use `import logging` directly.
+
+```python
+# ❌ FORBIDDEN - Direct logging module
+import logging
+logger = logging.getLogger(__name__)
+logger.info("message")
+
+# ✅ MANDATORY - Unified logging_util
+from mvp_site import logging_util
+logging_util.info("message")
+logging_util.warning("something concerning")
+logging_util.error("something failed")
+logging_util.debug("debug info")
+```
+
+**Benefits of logging_util:**
+- Unified output to both GCP Cloud Logging (stdout) and local file
+- Automatic log file path: `/tmp/<repo>/<branch>/<service>.log`
+- Consistent emoji formatting for errors (🔥🔴) and warnings (⚠️)
+- Single initialization point - no duplicate handlers
+
+**Exceptions:** Test files (`mvp_site/tests/*`) may use direct logging.
+
 ## Debug Protocol
 
 - **Embed debug info in assertions, not print statements.**

@@ -14,8 +14,6 @@ from typing import Any
 
 from mvp_site import logging_util
 
-logger = logging_util.getLogger(__name__)
-
 
 class MemoryMCPInterface:
     """
@@ -27,7 +25,7 @@ class MemoryMCPInterface:
     """
 
     def __init__(self):
-        logger.info(
+        logging_util.info(
             "Memory MCP Interface initialized - see module docstring for limitations"
         )
 
@@ -43,7 +41,7 @@ class MemoryMCPInterface:
         Returns:
             Empty list - Python cannot access MCP tools
         """
-        logger.warning(
+        logging_util.warning(
             f"Attempted to search Memory MCP for '{query}' - "
             "This is not possible from Python runtime. "
             "See CLAUDE_MD_MEMORY_ENHANCEMENT.md for the correct approach."
@@ -59,7 +57,7 @@ class MemoryMCPInterface:
         Returns:
             False - Python cannot access MCP tools
         """
-        logger.warning(
+        logging_util.warning(
             f"Attempted to create {len(entities)} entities in Memory MCP - "
             "This is not possible from Python runtime."
         )

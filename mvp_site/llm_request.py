@@ -19,8 +19,6 @@ from typing import Any
 from mvp_site import logging_util
 from mvp_site.serialization import json_default_serializer
 
-logger = logging_util.getLogger(__name__)
-
 # Configuration constants
 # Increased payload size limit for Gemini 2.5 Flash to handle larger game states
 # Gemini 2.5 Flash supports up to 500MB input, using 10MB for very complex campaigns
@@ -215,7 +213,7 @@ class LLMRequest:
             return json_data
 
         except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization failed for LLMRequest: {e}")
+            logging_util.error(f"JSON serialization failed for LLMRequest: {e}")
             raise LLMRequestError(f"Failed to serialize LLMRequest to JSON: {e}") from e
 
     def _validate_payload_size(self, json_data: dict[str, Any]):
@@ -230,10 +228,10 @@ class LLMRequest:
                     f"JSON payload too large: {payload_size} bytes exceeds limit of {MAX_PAYLOAD_SIZE} bytes"
                 )
 
-            logger.debug(f"LLMRequest payload size: {payload_size} bytes")
+            logging_util.debug(f"LLMRequest payload size: {payload_size} bytes")
 
         except (TypeError, ValueError) as e:
-            logger.error(f"Failed to validate payload size: {e}")
+            logging_util.error(f"Failed to validate payload size: {e}")
             raise LLMRequestError(f"Payload size validation failed: {e}") from e
 
     @classmethod

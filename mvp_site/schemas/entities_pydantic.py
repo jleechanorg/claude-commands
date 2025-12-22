@@ -3,7 +3,6 @@ Pydantic schema models for entity tracking in Milestone 0.4
 Uses sequence ID format: {type}_{name}_{sequence}
 """
 
-import logging
 import re
 from datetime import datetime
 from enum import Enum
@@ -14,8 +13,6 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from mvp_site.constants import FRIENDLY_COMBATANT_TYPES, NEUTRAL_COMBATANT_TYPES
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
-
-logger = logging.getLogger(__name__)
 
 
 def sanitize_entity_name_for_id(name: str) -> str:

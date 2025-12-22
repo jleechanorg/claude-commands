@@ -10,8 +10,6 @@ from typing import Any
 from mvp_site import logging_util
 from mvp_site.entity_tracking import SceneManifest, create_from_game_state
 
-logger = logging_util.getLogger(__name__)
-
 
 @dataclass
 class EntityInstruction:
@@ -428,7 +426,7 @@ class EntityPreloader:
         if cache_key not in self.manifest_cache:
             manifest = create_from_game_state(game_state, session_number, turn_number)
             self.manifest_cache[cache_key] = manifest
-            logger.info(
+            logging_util.info(
                 f"Generated entity manifest for session {session_number}, turn {turn_number}"
             )
 
@@ -591,7 +589,7 @@ class EntityPreloader:
     def clear_cache(self):
         """Clear the manifest cache (useful for testing)"""
         self.manifest_cache.clear()
-        logger.info("Entity preloader cache cleared")
+        logging_util.info("Entity preloader cache cleared")
 
 
 class LocationEntityEnforcer:
