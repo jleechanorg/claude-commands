@@ -809,22 +809,33 @@ def _detect_narrative_dice_fabrication(
             isinstance(dice_audit_events, list) and any(dice_audit_events)
         )
 
+    if has_dice_in_narrative:
+        logging_util.info(
+            logging_util.with_campaign(
+                "DICE_NARRATIVE_DETECTED: Dice patterns found in narrative text."
+            )
+        )
+
     # DEBUG LOGGING (env-gated to avoid noise in production)
     if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
         logging_util.warning(
-            f"🔍 DICE_FABRICATION_CHECK: "
-            f"has_dice_in_narrative={has_dice_in_narrative}, "
-            f"has_dice_in_structured={has_dice_in_structured}, "
-            f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
-            f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
+            logging_util.with_campaign(
+                f"🔍 DICE_FABRICATION_CHECK: "
+                f"has_dice_in_narrative={has_dice_in_narrative}, "
+                f"has_dice_in_structured={has_dice_in_structured}, "
+                f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
+                f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
+            )
         )
     else:
         logging_util.debug(
-            f"🔍 DICE_FABRICATION_CHECK: "
-            f"has_dice_in_narrative={has_dice_in_narrative}, "
-            f"has_dice_in_structured={has_dice_in_structured}, "
-            f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
-            f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
+            logging_util.with_campaign(
+                f"🔍 DICE_FABRICATION_CHECK: "
+                f"has_dice_in_narrative={has_dice_in_narrative}, "
+                f"has_dice_in_structured={has_dice_in_structured}, "
+                f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}, "
+                f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}"
+            )
         )
 
     # If no dice anywhere, no fabrication possible
@@ -843,10 +854,12 @@ def _detect_narrative_dice_fabrication(
     # DEBUG: Log tool_results structure to understand what we're checking
     if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
         logging_util.warning(
-            f"🔍 TOOL_RESULTS_INSPECTION: "
-            f"tool_results_type={type(tool_results).__name__}, "
-            f"tool_results_count={len(tool_results) if isinstance(tool_results, list) else 0}, "
-            f"tool_results_sample={tool_results[:1] if isinstance(tool_results, list) and tool_results else 'None'}"
+            logging_util.with_campaign(
+                f"🔍 TOOL_RESULTS_INSPECTION: "
+                f"tool_results_type={type(tool_results).__name__}, "
+                f"tool_results_count={len(tool_results) if isinstance(tool_results, list) else 0}, "
+                f"tool_results_sample={tool_results[:1] if isinstance(tool_results, list) and tool_results else 'None'}"
+            )
         )
 
     # ENHANCED: Only accept dice-specific tool results (prevents non-dice tool loophole)
@@ -863,8 +876,10 @@ def _detect_narrative_dice_fabrication(
     # If we found dice but no tool/code_execution evidence, that's FABRICATION
     if has_dice_in_narrative or has_dice_in_structured:
         logging_util.warning(
-            f"🚨 DICE_FABRICATION_DETECTED: Found dice in response but no tool/code execution evidence! "
-            f"has_dice_in_narrative={has_dice_in_narrative}, has_dice_in_structured={has_dice_in_structured}"
+            logging_util.with_campaign(
+                f"🚨 DICE_FABRICATION_DETECTED: Found dice in response but no tool/code execution evidence! "
+                f"has_dice_in_narrative={has_dice_in_narrative}, has_dice_in_structured={has_dice_in_structured}"
+            )
         )
         return True
 
@@ -4076,8 +4091,10 @@ def continue_story(
         )
     if code_exec_fabrication:
         logging_util.warning(
-            "🎲 CODE_EXEC_FABRICATION: Dice in response but no code_execution detected. "
-            "Will trigger reprompt to enforce real code execution."
+            logging_util.with_campaign(
+                "🎲 CODE_EXEC_FABRICATION: Dice in response but no code_execution detected. "
+                "Will trigger reprompt to enforce real code execution."
+            )
         )
 
     narrative_dice_fabrication = _detect_narrative_dice_fabrication(
@@ -4088,22 +4105,28 @@ def continue_story(
     )
     if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
         logging_util.warning(
-            "🔍 PRE/POST DETECTION CONTEXT: "
-            f"dice_strategy={dice_roll_strategy}, "
-            f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}, "
-            f"tool_results_count={len(getattr(api_response, '_tool_results', []) or [])}, "
-            f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}"
+            logging_util.with_campaign(
+                "🔍 PRE/POST DETECTION CONTEXT: "
+                f"dice_strategy={dice_roll_strategy}, "
+                f"tool_requests_executed={getattr(api_response, '_tool_requests_executed', 'N/A')}, "
+                f"tool_results_count={len(getattr(api_response, '_tool_results', []) or [])}, "
+                f"code_execution_used={code_execution_evidence.get('code_execution_used') if code_execution_evidence else 'N/A'}"
+            )
         )
     if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":
         logging_util.warning(
-            "🔍 POST-DETECTION: _detect_narrative_dice_fabrication returned "
-            f"{narrative_dice_fabrication} | "
-            f"dice_rolls={getattr(structured_response, 'dice_rolls', None)}"
+            logging_util.with_campaign(
+                "🔍 POST-DETECTION: _detect_narrative_dice_fabrication returned "
+                f"{narrative_dice_fabrication} | "
+                f"dice_rolls={getattr(structured_response, 'dice_rolls', None)}"
+            )
         )
     if narrative_dice_fabrication:
         logging_util.warning(
-            "🎲 NARRATIVE_DICE_FABRICATION: Dice patterns found in narrative without tool evidence. "
-            "Will trigger reprompt to enforce real dice."
+            logging_util.with_campaign(
+                "🎲 NARRATIVE_DICE_FABRICATION: Dice patterns found in narrative without tool evidence. "
+                "Will trigger reprompt to enforce real dice."
+            )
         )
 
     dice_integrity_violation = (
