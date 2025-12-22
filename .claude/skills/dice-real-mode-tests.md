@@ -16,13 +16,14 @@ Follow `.claude/skills/evidence-standards.md` (Three‑Evidence Rule).
 python testing_mcp/test_dice_rolls_comprehensive.py \
   --server-url https://<preview-app>.run.app/mcp \
   --evidence \
-  --evidence-dir /tmp/<your-evidence-dir> \
+  --evidence-dir /tmp/<run-id> \
   --models gemini-3-flash-preview,qwen-3-235b-a22b-instruct-2507
 ```
 
 Notes:
 - Distribution tests will skip if `roll_dice` tool is unavailable on preview.
 - Qwen/native_two_phase uses **server tool_results** as authoritative; mismatches are overridden.
+- Use a unique `/tmp/<run-id>/` (timestamp or UUID) per run to avoid collisions.
 
 ## Local MCP (real services)
 
@@ -30,7 +31,7 @@ Notes:
 python testing_mcp/test_dice_rolls_comprehensive.py \
   --start-local --real-services --evidence --enable-dice-tool \
   --models gemini-3-flash-preview,qwen-3-235b-a22b-instruct-2507 \
-  --evidence-dir /tmp/<your-evidence-dir>
+  --evidence-dir /tmp/<run-id>
 ```
 
 Outputs:

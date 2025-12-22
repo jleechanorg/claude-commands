@@ -41,7 +41,7 @@ def main() -> int:
     parser.add_argument(
         "--evidence-dir",
         default=os.environ.get("MCP_EVIDENCE_DIR", ""),
-        help="Directory to write evidence artifacts (defaults to /tmp).",
+        help="Directory to write evidence artifacts (defaults to /tmp/worldarchitect/<timestamp>).",
     )
     args = parser.parse_args()
 
@@ -133,7 +133,7 @@ def main() -> int:
     # Evidence capture
     evidence_root = args.evidence_dir.strip()
     if not evidence_root:
-        evidence_root = "/tmp/dev1766178798/mcp_real_mode_preview_" + datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        evidence_root = "/tmp/worldarchitect/mcp_real_mode_preview_" + datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     evidence_dir = Path(evidence_root)
     evidence_dir.mkdir(parents=True, exist_ok=True)
     (evidence_dir / "campaign_create.json").write_text(json.dumps(payload, indent=2))

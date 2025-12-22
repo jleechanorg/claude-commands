@@ -14,12 +14,8 @@ from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
-from mvp_site.game_state import (
-    DICE_ROLL_TOOLS,
-    execute_dice_tool,
-    execute_tool_requests,
-    format_tool_results_text,
-)
+from mvp_site.dice import DICE_ROLL_TOOLS, execute_dice_tool
+from mvp_site.game_state import execute_tool_requests, format_tool_results_text
 from mvp_site.llm_providers.provider_utils import (
     build_tool_results_prompt,
     run_json_first_tool_requests_flow,
@@ -141,15 +137,15 @@ def generate_json_mode_content(
         else model_name in constants.MODELS_WITH_CODE_EXECUTION
     )
 
-    # Add thinkingConfig for models with code_execution (Gemini 3.x)
-    # Per Consensus ML synthesis: increases code_execution compliance by ~15-20%
-    if allow_code_execution and model_name in constants.MODELS_WITH_CODE_EXECUTION:
+    # Add thinkingConfig for Gemini 3 models with code_execution.
+    # Use thinking_budget per google-genai SDK (ThinkingConfig fields).
+    if allow_code_execution and model_name.startswith("gemini-3"):
         generation_config_params["thinking_config"] = types.ThinkingConfig(
-            thinking_budget=256  # Low-latency budget for dice roll deliberation
+            thinking_budget=1024
         )
         logging_util.debug(
             "ThinkingConfig enabled for %s to improve code_execution compliance",
-            model_name
+            model_name,
         )
 
     # Add tools if provided

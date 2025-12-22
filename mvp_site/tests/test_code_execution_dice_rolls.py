@@ -182,7 +182,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         """
         Verify dice roll tool schemas are defined for tool use models.
         """
-        from mvp_site.game_state import DICE_ROLL_TOOLS
+        from mvp_site.dice import DICE_ROLL_TOOLS
 
         # Verify tool schemas exist
         self.assertIsInstance(DICE_ROLL_TOOLS, list)
@@ -319,7 +319,7 @@ class TestDiceRollTools(unittest.TestCase):
         """
         Verify DICE_ROLL_TOOLS array contains all required tools.
         """
-        from mvp_site.game_state import DICE_ROLL_TOOLS
+        from mvp_site.dice import DICE_ROLL_TOOLS
 
         # Get tool names
         tool_names = [t["function"]["name"] for t in DICE_ROLL_TOOLS]
@@ -686,7 +686,7 @@ class TestThinkingConfigEnforcement(unittest.TestCase):
         GREEN: Verify that Gemini 3 code_execution includes thinkingConfig.
 
         Per Consensus ML synthesis:
-        - thinkingConfig with budget=256 increases code_execution compliance by 15-20%
+        - thinkingConfig with thinking_budget increases code_execution compliance
         - Forces model to deliberate before skipping tool use
         """
         from mvp_site.llm_providers import gemini_provider

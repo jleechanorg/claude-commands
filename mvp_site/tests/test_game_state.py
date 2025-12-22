@@ -1706,7 +1706,7 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
 
     def test_get_damage_total_for_log_handles_non_dict(self):
         """Damage total logging should tolerate non-dict damage values."""
-        from mvp_site.game_state import _get_damage_total_for_log
+        from mvp_site.dice import _get_damage_total_for_log
 
         assert _get_damage_total_for_log({"total": 7}) == 7
         assert _get_damage_total_for_log({"notation": "1d6"}) == "N/A"
