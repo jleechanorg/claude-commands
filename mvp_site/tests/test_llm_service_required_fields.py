@@ -585,3 +585,36 @@ def test_build_reprompt_dice_integrity_code_execution_only():
 
     assert "code_execution" in reprompt.lower()
     assert "tool_requests" not in reprompt.lower()
+
+
+def test_build_reprompt_request_preserves_context():
+    """Reprompt request should preserve context while replacing user_action."""
+    from mvp_site.llm_request import LLMRequest
+    from mvp_site.llm_service import _build_reprompt_request
+
+    base_request = LLMRequest.build_story_continuation(
+        user_action="Attack the goblin",
+        user_id="user-1",
+        game_mode="character",
+        game_state={"hp": 10},
+        story_history=[{"text": "A goblin appears", "actor": "gemini"}],
+        checkpoint_block="Checkpoint",
+        core_memories=["memory-1"],
+        sequence_ids=["seq-1"],
+        entity_tracking={"npc": "goblin"},
+        selected_prompts=["game_state"],
+        use_default_world=True,
+    )
+
+    reprompt = _build_reprompt_request(base_request, "Reprompt message")
+    assert reprompt.user_action == "Reprompt message"
+    assert reprompt.user_id == base_request.user_id
+    assert reprompt.game_mode == base_request.game_mode
+    assert reprompt.game_state == base_request.game_state
+    assert reprompt.story_history == base_request.story_history
+    assert reprompt.checkpoint_block == base_request.checkpoint_block
+    assert reprompt.core_memories == base_request.core_memories
+    assert reprompt.sequence_ids == base_request.sequence_ids
+    assert reprompt.entity_tracking == base_request.entity_tracking
+    assert reprompt.selected_prompts == base_request.selected_prompts
+    assert reprompt.use_default_world == base_request.use_default_world

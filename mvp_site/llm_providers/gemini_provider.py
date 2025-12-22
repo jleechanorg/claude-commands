@@ -444,7 +444,7 @@ def generate_content_with_native_tools(
         return generate_json_mode_content(
             prompt_contents=history if phase1_text else prompt_contents,
             model_name=model_name,
-            system_instruction_text=system_instruction_text if not phase1_text else None,
+            system_instruction_text=system_instruction_text,
             temperature=temperature,
             safety_settings=safety_settings,
             json_mode_max_output_tokens=json_mode_max_output_tokens,

@@ -2798,6 +2798,26 @@ def _build_reprompt_for_missing_fields(
     )
 
 
+def _build_reprompt_request(
+    base_request: LLMRequest,
+    reprompt_message: str,
+) -> LLMRequest:
+    """Create a follow-up LLMRequest that preserves context but replaces user_action."""
+    return LLMRequest.build_story_continuation(
+        user_action=reprompt_message,
+        user_id=base_request.user_id,
+        game_mode=base_request.game_mode,
+        game_state=base_request.game_state,
+        story_history=base_request.story_history,
+        checkpoint_block=base_request.checkpoint_block,
+        core_memories=list(base_request.core_memories),
+        sequence_ids=list(base_request.sequence_ids),
+        entity_tracking=base_request.entity_tracking,
+        selected_prompts=list(base_request.selected_prompts),
+        use_default_world=base_request.use_default_world,
+    )
+
+
 def _validate_and_enforce_planning_block(
     response_text: str | None,
     user_input: str,
@@ -3366,8 +3386,12 @@ def continue_story(
                     f"🔁 REPROMPT_ATTEMPT {attempt}/{MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} "
                     f"for missing fields: {missing_fields}"
                 )
-                reprompt_response = _call_llm_api(
-                    prompt_contents=[reprompt_message],
+                reprompt_request = _build_reprompt_request(
+                    gemini_request,
+                    reprompt_message,
+                )
+                reprompt_response = _call_llm_api_with_llm_request(
+                    gemini_request=reprompt_request,
                     model_name=chosen_model,
                     system_instruction_text=system_instruction_final,
                     provider_name=provider_selection.provider,

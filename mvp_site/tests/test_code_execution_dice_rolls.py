@@ -728,6 +728,34 @@ class TestThinkingConfigEnforcement(unittest.TestCase):
         )
 
 
+class TestNativeToolsSystemInstruction(unittest.TestCase):
+    """TDD tests for native two-phase system instruction retention."""
+
+    def test_native_phase2_keeps_system_instruction_when_phase1_text_exists(self):
+        from mvp_site.llm_providers import gemini_provider
+
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_part = Mock()
+        mock_part.text = "Phase 1 narrative response."
+        mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
+        mock_client.models.generate_content.return_value = mock_response
+
+        with patch.object(gemini_provider, "get_client", return_value=mock_client):
+            with patch.object(gemini_provider, "generate_json_mode_content") as mock_json:
+                gemini_provider.generate_content_with_native_tools(
+                    prompt_contents=["prompt"],
+                    model_name="gemini-2.5-flash",
+                    system_instruction_text="SYSTEM_INSTRUCTION",
+                    temperature=0.7,
+                    safety_settings=[],
+                    json_mode_max_output_tokens=256,
+                )
+
+                _, kwargs = mock_json.call_args
+                assert kwargs.get("system_instruction_text") == "SYSTEM_INSTRUCTION"
+
+
 class TestCodeExecutionFabricationDetection(unittest.TestCase):
     """TDD tests for code_execution fabrication detection edge cases."""
 
