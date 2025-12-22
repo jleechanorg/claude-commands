@@ -329,20 +329,6 @@ class LoggingUtil:
 
 
 # Convenience module-level functions
-def _ensure_logging_initialized() -> None:
-    """
-    Ensure unified logging is initialized before emitting logs.
-
-    This lazy initialization guarantees that logs always go to both
-    stdout/stderr (Cloud Logging) and local file, even if the caller
-    didn't explicitly call setup_unified_logging() first.
-
-    Uses 'app' as the default service name for auto-initialization.
-    """
-    if not _logging_initialized:
-        setup_unified_logging("app")
-
-
 def error(message: str, *args: Any, **kwargs: Any) -> None:
     """
     Log an error message with fire and red dot emojis.
@@ -406,6 +392,15 @@ def getLogger(name: str | None = None) -> logging.Logger:
 
 
 def _ensure_logging_initialized() -> None:
+    """
+    Ensure unified logging is initialized before emitting logs.
+
+    This lazy initialization guarantees that logs always go to both
+    stdout/stderr (Cloud Logging) and local file, even if the caller
+    didn't explicitly call setup_unified_logging() first.
+
+    Uses LOGGING_SERVICE_NAME env var or default service name for auto-initialization.
+    """
     if not _logging_initialized:
         service_name = os.environ.get("LOGGING_SERVICE_NAME")
         if service_name is None:
@@ -512,3 +507,10 @@ def is_logging_initialized() -> bool:
         bool: True if unified logging has already been configured, False otherwise.
     """
     return _logging_initialized
+
+
+# Module-level initialization: configure logging on import
+# This ensures logs always go to both console and file from the start.
+# Entry points can still call setup_unified_logging() with a specific service
+# name BEFORE importing this module to use their preferred name.
+_ensure_logging_initialized()
