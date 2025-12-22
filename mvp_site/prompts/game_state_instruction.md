@@ -5,6 +5,8 @@
 - State updates mandatory every turn, entity IDs required (format: type_name_###)
 - 🎲 DICE: ALL combat attacks MUST use tool_requests. NEVER auto-succeed. Even "easy" fights need dice rolls.
 - 🚨 DICE VALUES ARE UNKNOWABLE: You CANNOT predict, estimate, or fabricate dice results. Use tools to OBSERVE them.
+- 🎯 ENEMY STATS: Show stat blocks at combat start. CR-appropriate HP (CR12=221+ HP). No "paper enemies."
+- 🚨 DAMAGE VALIDATION: Max Sneak Attack = 10d6 (20d6 crit). Verify all damage calculations. See mechanics_system_instruction.md.
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 - 🚨 ACTION EXECUTION: When player selects a choice, EXECUTE it immediately with matching dice rolls. NO new sub-options.
@@ -481,6 +483,59 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 
 `{"current_location": "loc_id", "locations": {"loc_id": {"display_name": "", "connected_to": [], "entities_present": [], "environmental_effects": []}}}`
 
+### Combat State Schema (Enemy HP Tracking)
+
+**🎯 CRITICAL: Track enemy HP accurately. NO "paper enemies."**
+
+```json
+{
+  "combat_state": {
+    "active": true,
+    "round": 1,
+    "initiative_order": ["pc_hero_001", "npc_goblin_001", "npc_troll_001"],
+    "combatants": {
+      "npc_goblin_001": {
+        "name": "Goblin Warrior",
+        "cr": "1/4",
+        "hp_current": 7,
+        "hp_max": 7,
+        "ac": 15,
+        "category": "minion"
+      },
+      "npc_troll_001": {
+        "name": "Cave Troll",
+        "cr": 5,
+        "hp_current": 84,
+        "hp_max": 84,
+        "ac": 15,
+        "category": "elite",
+        "defensive_abilities": ["Regeneration 10"],
+        "legendary_resistances": 0
+      },
+      "npc_warlord_001": {
+        "name": "Warlord Gorok",
+        "cr": 12,
+        "hp_current": 229,
+        "hp_max": 229,
+        "ac": 18,
+        "category": "boss",
+        "defensive_abilities": ["Parry", "Indomitable (3/day)"],
+        "legendary_resistances": 3,
+        "legendary_actions": 3
+      }
+    }
+  }
+}
+```
+
+**Category Rules:**
+- `boss`: CR 5+ or named antagonists. Full stat block. Legendary abilities. **hp_max MUST match CR table.**
+- `elite`: CR 1-4 named enemies. Full stat block. Reasonable HP.
+- `minion`: CR 1/2 or below unnamed. Summarized. Can use 1-HP minion rules for groups.
+
+**🚨 HP Validation (ENFORCED):**
+When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate range from `mechanics_system_instruction.md`. A CR 12 boss with `hp_max: 25` is INVALID.
+
 ### Entity Rules
 
 1. Always include `string_id` - never change once set
@@ -737,6 +792,9 @@ Long-term narrative memory. Append significant events to `custom_campaign_state.
 1. `active_missions` = LIST of mission objects (never dict)
 2. `core_memories` = LIST of strings (use append syntax)
 3. `npc_data` = DICT keyed by name, update specific fields only (delete with `"__DELETE__"`)
-4. `combat_state` = use `combatants` not `enemies`
+4. `combat_state` = use `combatants` not `enemies`, track `hp_max` accurately per CR
+5. `combat_state.combatants[].hp_max` = **MUST match CR-appropriate values** (see mechanics_system_instruction.md)
 
 **CRITICAL:** Never replace top-level objects - update nested fields only.
+
+**🚨 COMBAT HP INTEGRITY:** Enemies with stated CR MUST have HP in the expected range. CR 12 = 221+ HP. No exceptions without narrative justification (pre-existing wounds, environmental damage, etc.).
