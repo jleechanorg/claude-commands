@@ -64,6 +64,32 @@ class TestEntityTracking(unittest.TestCase):
         assert manifest.player_characters[0].entity_id == "pc_custom_hero_999"
         assert manifest.npcs[0].entity_id == "npc_special_villain_042"
 
+    def test_invalid_string_ids_regenerated(self):
+        """Test that invalid string_ids (wrong prefix) are regenerated with proper format"""
+        test_game_state = {
+            "player_character_data": {
+                "name": "Hero",
+            },
+            "npc_data": {
+                # This has an invalid prefix (faction_ instead of npc_)
+                "Silent Guard": {
+                    "name": "Silent Guard",
+                    "string_id": "faction_silent_guard_001",
+                }
+            },
+        }
+
+        # Should NOT raise ValidationError - invalid IDs should be regenerated
+        manifest = create_from_game_state(
+            test_game_state, session_number=1, turn_number=1
+        )
+
+        # Verify the NPC ID was regenerated with proper npc_ prefix
+        assert len(manifest.npcs) == 1
+        npc = manifest.npcs[0]
+        assert npc.entity_id.startswith("npc_"), f"Expected npc_ prefix, got: {npc.entity_id}"
+        assert re.match(r"^npc_[\w]+_\d{3}$", npc.entity_id), f"Invalid format: {npc.entity_id}"
+
     def setUp(self):
         """Set up test data"""
         self.test_game_state = {
