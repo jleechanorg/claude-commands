@@ -214,7 +214,6 @@ logging_util.debug("debug info")
 - Unified output to both GCP Cloud Logging (stdout) and local file
 - Automatic log file path: `/tmp/<repo>/<branch>/<service>.log`
 - Consistent emoji formatting for errors (🔥🔴) and warnings (⚠️)
-- Campaign context via `logging_util.with_campaign(msg)`
 - Single initialization point - no duplicate handlers
 
 **Exceptions:** Test files (`mvp_site/tests/*`) may use direct logging.
