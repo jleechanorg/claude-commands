@@ -14,6 +14,7 @@ Example:
 
 import json
 import os
+import sys
 import re
 import argparse
 from collections import defaultdict
@@ -134,6 +135,95 @@ def _ranges_overlap(range_a: tuple[int, int], range_b: tuple[int, int]) -> bool:
     return range_a[0] < range_b[1] and range_b[0] < range_a[1]
 
 
+def _extract_total_from_roll_text(text: str) -> int | None:
+    if not text:
+        return None
+    segment = text
+    if ":" in segment:
+        segment = segment.split(":", 1)[1]
+    # Ignore DC values or trailing context after "vs"
+    segment = re.split(r"\bvs\b", segment, maxsplit=1, flags=re.IGNORECASE)[0]
+    numbers = re.findall(r"-?\d+", segment)
+    if not numbers:
+        return None
+    return _coerce_int(numbers[-1])
+
+
+def _extract_notation_from_roll_text(text: str) -> str:
+    if not text:
+        return "unknown"
+    match = re.search(r"\b\d+d\d+(?:k[hl]\d+)?", text, re.IGNORECASE)
+    if match:
+        return match.group(0).lower()
+    match = re.search(r"\bd\d+\b", text, re.IGNORECASE)
+    if match:
+        return match.group(0).lower()
+    return "unknown"
+
+
+def _extract_dice_from_audit_events(
+    events: list[dict], *, source: str
+) -> list[dict]:
+    rolls: list[dict] = []
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        notation = str(event.get("notation") or "unknown")
+        total = _coerce_int(event.get("total"))
+        rolls.append(
+            {
+                "notation": notation,
+                "result": total,
+                "purpose": _normalize_purpose(event.get("label") or event.get("purpose")),
+                "individual_rolls": event.get("rolls") or [],
+                "source": source,
+            }
+        )
+    return rolls
+
+
+def _extract_dice_from_tool_results(
+    tool_results: list[dict], *, source: str
+) -> list[dict]:
+    rolls: list[dict] = []
+    for result in tool_results:
+        if not isinstance(result, dict):
+            continue
+        tool_name = result.get("tool") or result.get("name")
+        payload = result.get("result") if "result" in result else result
+        if not isinstance(payload, dict):
+            continue
+        notation = payload.get("notation") or payload.get("dice_notation") or "unknown"
+        total = payload.get("total")
+        resolved_total = total if total is not None else payload.get("result")
+        rolls.append(
+            {
+                "notation": str(notation),
+                "result": _coerce_int(resolved_total),
+                "purpose": _normalize_purpose(payload.get("purpose") or tool_name),
+                "individual_rolls": payload.get("rolls") or [],
+                "source": source,
+            }
+        )
+    return rolls
+
+
+def _extract_dice_from_stdout(stdout: str) -> list[dict]:
+    if not stdout or not isinstance(stdout, str):
+        return []
+    try:
+        parsed = json.loads(stdout)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    events: list[dict] = []
+    if isinstance(parsed, dict):
+        events = [parsed]
+    elif isinstance(parsed, list):
+        events = [item for item in parsed if isinstance(item, dict)]
+    return _extract_dice_from_audit_events(events, source="code_execution_stdout")
+
+
 def extract_dice_rolls_from_text(text: str) -> list[dict]:
     """Extract dice roll patterns from narrative text."""
     rolls = []
@@ -218,18 +308,48 @@ def extract_dice_from_structured_fields(entry: dict) -> list[dict]:  # noqa: PLR
     has_code_exec = has_code_execution_evidence(entry)
     default_source = "code_execution" if has_code_exec else "structured_fields"
 
+    structured = entry.get("structured_fields", {}) or {}
+    debug_info = entry.get("debug_info") or structured.get("debug_info") or {}
+    if not isinstance(debug_info, dict):
+        debug_info = {}
+
+    dice_audit_events = entry.get("dice_audit_events") or structured.get(
+        "dice_audit_events"
+    )
+    if isinstance(dice_audit_events, list):
+        rolls.extend(
+            _extract_dice_from_audit_events(
+                dice_audit_events, source="dice_audit_events"
+            )
+        )
+
+    tool_results = debug_info.get("tool_results")
+    if isinstance(tool_results, list) and tool_results:
+        rolls.extend(
+            _extract_dice_from_tool_results(tool_results, source="tool_results")
+        )
+
+    structured_sources_present = bool(rolls)
+
+    if not structured_sources_present:
+        stdout = debug_info.get("stdout")
+        rolls.extend(_extract_dice_from_stdout(stdout))
+
     # Check for TOP-LEVEL dice_rolls field (modern format)
     dice_rolls = entry.get("dice_rolls", [])
-    if isinstance(dice_rolls, list):
+    if isinstance(dice_rolls, list) and not structured_sources_present:
         for roll in dice_rolls:
             if isinstance(roll, str):
-                # Parse formatted string like "Perception: 1d20+1 = 16+1 = 17"
-                rolls.append({
-                    "notation": "unknown",
-                    "result": None,
-                    "purpose": roll,
-                    "source": default_source,
-                })
+                parsed_total = _extract_total_from_roll_text(roll)
+                notation = _extract_notation_from_roll_text(roll)
+                rolls.append(
+                    {
+                        "notation": notation,
+                        "result": parsed_total,
+                        "purpose": roll,
+                        "source": default_source,
+                    }
+                )
             elif isinstance(roll, dict):
                 rolls.append(
                     {
@@ -241,13 +361,12 @@ def extract_dice_from_structured_fields(entry: dict) -> list[dict]:  # noqa: PLR
                 )
 
     # Check for structured_fields containing dice data (legacy format)
-    structured = entry.get("structured_fields", {})
     if not structured:
         structured = {}
 
     # Check for dice_rolls field in structured_fields
     structured_dice_rolls = structured.get("dice_rolls", [])
-    if isinstance(structured_dice_rolls, list):
+    if isinstance(structured_dice_rolls, list) and not structured_sources_present:
         for roll in structured_dice_rolls:
             rolls.append(
                 {
@@ -313,8 +432,18 @@ def extract_dice_from_structured_fields(entry: dict) -> list[dict]:  # noqa: PLR
 
 def analyze_dice_distribution(rolls: list[dict], die_type: int) -> dict | None:
     """Analyze the distribution of dice rolls for a specific die type."""
-    results = [_coerce_int(r.get("result")) for r in rolls]
-    results = [result for result in results if result is not None]
+    results: list[int] = []
+    for roll in rolls:
+        individual = roll.get("individual_rolls")
+        if isinstance(individual, list) and individual:
+            for value in individual:
+                coerced = _coerce_int(value)
+                if coerced is not None:
+                    results.append(coerced)
+            continue
+        coerced = _coerce_int(roll.get("result"))
+        if coerced is not None:
+            results.append(coerced)
 
     if not results:
         return None
