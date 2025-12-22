@@ -21,6 +21,130 @@ else:
     _DICE_RNG = random
 
 
+def log_narrative_dice_detected(has_dice_in_narrative: bool) -> None:
+    """Log when dice patterns are detected in narrative text."""
+    if not has_dice_in_narrative:
+        return
+    logging_util.info(
+        logging_util.with_campaign(
+            "DICE_NARRATIVE_DETECTED: Dice patterns found in narrative text."
+        )
+    )
+
+
+def log_dice_fabrication_check(
+    *,
+    has_dice_in_narrative: bool,
+    has_dice_in_structured: bool,
+    code_execution_used: bool | str,
+    tool_requests_executed: bool | str,
+    debug_enabled: bool,
+) -> None:
+    """Log dice fabrication check context."""
+    message = logging_util.with_campaign(
+        "🔍 DICE_FABRICATION_CHECK: "
+        f"has_dice_in_narrative={has_dice_in_narrative}, "
+        f"has_dice_in_structured={has_dice_in_structured}, "
+        f"code_execution_used={code_execution_used}, "
+        f"tool_requests_executed={tool_requests_executed}"
+    )
+    if debug_enabled:
+        logging_util.warning(message)
+    else:
+        logging_util.debug(message)
+
+
+def log_dice_fabrication_detected(
+    *,
+    has_dice_in_narrative: bool,
+    has_dice_in_structured: bool,
+) -> None:
+    """Log when fabricated dice are detected without tool/code evidence."""
+    logging_util.warning(
+        logging_util.with_campaign(
+            "🚨 DICE_FABRICATION_DETECTED: Found dice in response but no tool/code execution evidence! "
+            f"has_dice_in_narrative={has_dice_in_narrative}, has_dice_in_structured={has_dice_in_structured}"
+        )
+    )
+
+
+def log_code_exec_fabrication_violation() -> None:
+    """Log code execution fabrication violations."""
+    logging_util.warning(
+        logging_util.with_campaign(
+            "🎲 CODE_EXEC_FABRICATION: Dice in response but no code_execution detected. "
+            "Will trigger reprompt to enforce real code execution."
+        )
+    )
+
+
+def log_narrative_dice_fabrication_violation() -> None:
+    """Log narrative dice fabrication violations."""
+    logging_util.warning(
+        logging_util.with_campaign(
+            "🎲 NARRATIVE_DICE_FABRICATION: Dice patterns found in narrative without tool evidence. "
+            "Will trigger reprompt to enforce real dice."
+        )
+    )
+
+
+def log_pre_post_detection_context(
+    *,
+    dice_strategy: str,
+    tool_requests_executed: bool | str,
+    tool_results_count: int,
+    code_execution_used: bool | str,
+    debug_enabled: bool,
+) -> None:
+    """Log dice integrity context before/after detection (debug only)."""
+    if not debug_enabled:
+        return
+    logging_util.warning(
+        logging_util.with_campaign(
+            "🔍 PRE/POST DETECTION CONTEXT: "
+            f"dice_strategy={dice_strategy}, "
+            f"tool_requests_executed={tool_requests_executed}, "
+            f"tool_results_count={tool_results_count}, "
+            f"code_execution_used={code_execution_used}"
+        )
+    )
+
+
+def log_tool_results_inspection(
+    *,
+    tool_results: Any,
+    debug_enabled: bool,
+) -> None:
+    """Log tool results inspection detail (debug only)."""
+    if not debug_enabled:
+        return
+    logging_util.warning(
+        logging_util.with_campaign(
+            "🔍 TOOL_RESULTS_INSPECTION: "
+            f"tool_results_type={type(tool_results).__name__}, "
+            f"tool_results_count={len(tool_results) if isinstance(tool_results, list) else 0}, "
+            f"tool_results_sample={tool_results[:1] if isinstance(tool_results, list) and tool_results else 'None'}"
+        )
+    )
+
+
+def log_post_detection_result(
+    *,
+    narrative_dice_fabrication: bool,
+    dice_rolls: list[Any] | None,
+    debug_enabled: bool,
+) -> None:
+    """Log narrative fabrication detection result (debug only)."""
+    if not debug_enabled:
+        return
+    logging_util.warning(
+        logging_util.with_campaign(
+            "🔍 POST-DETECTION: _detect_narrative_dice_fabrication returned "
+            f"{narrative_dice_fabrication} | dice_rolls={dice_rolls}"
+        )
+    )
+
+
 @dataclass
 class DiceRollResult:
     """Result of a dice roll with full context."""
