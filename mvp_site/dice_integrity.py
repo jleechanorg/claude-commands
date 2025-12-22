@@ -129,6 +129,103 @@ def _detect_narrative_dice_fabrication(
     return False
 
 
+def add_missing_dice_fields(
+    missing: list[str],
+    *,
+    structured_response: NarrativeResponse | None,
+    require_dice_rolls: bool,
+    dice_integrity_violation: bool,
+) -> None:
+    """Append missing dice fields based on current enforcement policy."""
+    if require_dice_rolls:
+        dice_rolls = getattr(structured_response, "dice_rolls", None)
+        has_dice_rolls = isinstance(dice_rolls, list) and any(
+            str(r).strip() for r in dice_rolls
+        )
+        if not has_dice_rolls:
+            missing.append("dice_rolls")
+
+    if dice_integrity_violation:
+        missing.append("dice_integrity")
+
+
+def build_dice_integrity_reprompt_lines(
+    dice_roll_strategy: str | None,
+) -> list[str]:
+    """Return dice integrity reprompt guidance based on strategy."""
+    if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
+        return [
+            "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
+            "execute code to generate them. Dice values are UNKNOWABLE without execution - "
+            "you cannot predict random.randint() results. You MUST use code_execution:\n"
+            "  * Execute Python code with random.randint() to generate dice rolls\n"
+            "Do NOT write dice values directly in narrative. Regenerate with ACTUAL code execution."
+        ]
+    if dice_roll_strategy == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE:
+        return [
+            "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
+            "call tools to generate them. You MUST use tool_requests:\n"
+            "  * Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
+            "Do NOT write dice values directly in narrative. Regenerate using tool_requests."
+        ]
+    return [
+        "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
+        "execute code or call tools to generate them. Dice values are UNKNOWABLE without "
+        "execution - you cannot predict random.randint() results. You MUST either:\n"
+        "  * Use code_execution: Execute Python code with random.randint() to generate dice\n"
+        "  * Use tool_requests: Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
+        "Do NOT write dice values directly in narrative. Regenerate with ACTUAL execution."
+    ]
+
+
+def build_dice_processing_metadata(
+    *,
+    api_response: Any,
+    dice_roll_strategy: str,
+    capture_tools: bool = True,
+) -> dict[str, Any]:
+    """Build dice-specific processing metadata for downstream auditing."""
+    metadata: dict[str, Any] = {"dice_strategy": dice_roll_strategy}
+    if not capture_tools:
+        return metadata
+
+    tool_results = getattr(api_response, "_tool_results", None)
+    if tool_results is not None:
+        metadata["tool_results"] = tool_results
+        metadata["tool_requests_executed"] = bool(
+            getattr(api_response, "_tool_requests_executed", False)
+        )
+    return metadata
+
+
+def apply_dice_metadata_to_structured_response(
+    *,
+    structured_response: NarrativeResponse | None,
+    dice_metadata: dict[str, Any],
+    dice_roll_strategy: str,
+) -> None:
+    """Attach dice metadata to structured response and align dice rolls."""
+    if not structured_response:
+        return
+
+    debug_info = structured_response.debug_info or {}
+    if "dice_strategy" in dice_metadata:
+        debug_info.setdefault("dice_strategy", dice_metadata["dice_strategy"])
+    if "tool_results" in dice_metadata:
+        debug_info["tool_results"] = dice_metadata["tool_results"]
+        debug_info["tool_requests_executed"] = dice_metadata.get(
+            "tool_requests_executed", False
+        )
+    structured_response.debug_info = debug_info
+
+    if "tool_results" in dice_metadata:
+        _apply_tool_results_to_structured_response(
+            structured_response,
+            dice_metadata.get("tool_results"),
+            dice_roll_strategy,
+        )
+
+
 def _is_code_execution_fabrication(
     structured_response: Any, code_execution_evidence: dict[str, Any] | None
 ) -> bool:

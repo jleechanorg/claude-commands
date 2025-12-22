@@ -73,7 +73,7 @@ from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
-from mvp_site.game_state import GameState, format_tool_results_text
+from mvp_site.game_state import GameState
 from mvp_site.llm_providers import (
     ContextTooLargeError,
     cerebras_provider,
@@ -101,17 +101,10 @@ logging_util.basicConfig(
 
 # Dice integrity helpers centralized in mvp_site/dice_integrity.py
 DICE_ROLL_PATTERN = dice_integrity.DICE_ROLL_PATTERN
-_narrative_contains_dice = dice_integrity._narrative_contains_dice
 _detect_narrative_dice_fabrication = dice_integrity._detect_narrative_dice_fabrication
 _is_code_execution_fabrication = dice_integrity._is_code_execution_fabrication
 _log_fabricated_dice_if_detected = dice_integrity._log_fabricated_dice_if_detected
-_has_dice_tool_results = dice_integrity._has_dice_tool_results
-_extract_dice_rolls_from_tool_results = dice_integrity._extract_dice_rolls_from_tool_results
-_extract_dice_audit_events_from_tool_results = dice_integrity._extract_dice_audit_events_from_tool_results
-_apply_tool_results_to_structured_response = dice_integrity._apply_tool_results_to_structured_response
 _should_require_dice_rolls_for_turn = dice_integrity._should_require_dice_rolls_for_turn
-_detect_combat_in_narrative = dice_integrity._detect_combat_in_narrative
-_check_dice_integrity = dice_integrity._check_dice_integrity
 _validate_combat_dice_integrity = dice_integrity._validate_combat_dice_integrity
 
 # Initialize entity tracking mitigation modules
@@ -2510,52 +2503,39 @@ def get_initial_story(
     dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
         model_to_use, provider_selection.provider
     )
-    tool_results_for_dice = getattr(final_api_response, "_tool_results", None)
-    if structured_response:
-        _apply_tool_results_to_structured_response(
-            structured_response, tool_results_for_dice, dice_roll_strategy
-        )
     capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
     capture_tools = True
     processing_metadata: dict[str, Any] = {
         "llm_provider": provider_selection.provider,
         "llm_model": model_to_use,
-        "dice_strategy": dice_roll_strategy,
     }
     if capture_raw:
         raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
         processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
-    if capture_tools:
-        tool_results = getattr(final_api_response, "_tool_results", None)
-        if tool_results is not None:
-            processing_metadata["tool_results"] = tool_results
-            processing_metadata["tool_requests_executed"] = bool(
-                getattr(final_api_response, "_tool_requests_executed", False)
-            )
+    processing_metadata.update(
+        dice_integrity.build_dice_processing_metadata(
+            api_response=final_api_response,
+            dice_roll_strategy=dice_roll_strategy,
+            capture_tools=capture_tools,
+        )
+    )
 
     if structured_response:
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", model_to_use)
-        debug_info.setdefault("dice_strategy", dice_roll_strategy)
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
-        if capture_tools and "tool_results" in processing_metadata:
-            debug_info["tool_results"] = processing_metadata["tool_results"]
-            debug_info["tool_requests_executed"] = processing_metadata.get(
-                "tool_requests_executed", False
-            )
         if code_execution_evidence:
             # Persist server-verified evidence (do not rely on model self-reporting).
             debug_info.update(code_execution_evidence)
             _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
         structured_response.debug_info = debug_info
-        if "tool_results" in processing_metadata:
-            _apply_tool_results_to_structured_response(
-                structured_response,
-                processing_metadata.get("tool_results"),
-                dice_roll_strategy,
-            )
+        dice_integrity.apply_dice_metadata_to_structured_response(
+            structured_response=structured_response,
+            dice_metadata=processing_metadata,
+            dice_roll_strategy=dice_roll_strategy,
+        )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -2737,15 +2717,13 @@ def _check_missing_required_fields(
     if not session_header or not str(session_header).strip():
         missing.append("session_header")
 
-    if require_dice_rolls:
-        dice_rolls = getattr(structured_response, 'dice_rolls', None)
-        has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
-        if not has_dice_rolls:
-            missing.append('dice_rolls')
-
-    # Check for dice integrity violation (fabricated dice rolls)
-    if dice_integrity_violation:
-        missing.append('dice_integrity')
+    # Append dice-specific missing fields via helper
+    dice_integrity.add_missing_dice_fields(
+        missing,
+        structured_response=structured_response,
+        require_dice_rolls=require_dice_rolls,
+        dice_integrity_violation=dice_integrity_violation,
+    )
 
     return missing
 
@@ -2785,32 +2763,9 @@ def _build_reprompt_for_missing_fields(
             "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
         )
     if "dice_integrity" in missing_fields:
-        # Model-strategy aware reprompt (Finding #2 fix)
-        if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
-            requested_lines.append(
-                "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
-                "execute code to generate them. Dice values are UNKNOWABLE without execution - "
-                "you cannot predict random.randint() results. You MUST use code_execution:\n"
-                "  * Execute Python code with random.randint() to generate dice rolls\n"
-                "Do NOT write dice values directly in narrative. Regenerate with ACTUAL code execution."
-            )
-        elif dice_roll_strategy == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE:
-            requested_lines.append(
-                "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
-                "call tools to generate them. You MUST use tool_requests:\n"
-                "  * Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
-                "Do NOT write dice values directly in narrative. Regenerate using tool_requests."
-            )
-        else:
-            # Fallback when strategy is unknown: allow both remediation paths
-            requested_lines.append(
-                "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
-                "execute code or call tools to generate them. Dice values are UNKNOWABLE without "
-                "execution - you cannot predict random.randint() results. You MUST either:\n"
-                "  * Use code_execution: Execute Python code with random.randint() to generate dice\n"
-                "  * Use tool_requests: Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
-                "Do NOT write dice values directly in narrative. Regenerate with ACTUAL execution."
-            )
+        requested_lines.extend(
+            dice_integrity.build_dice_integrity_reprompt_lines(dice_roll_strategy)
+        )
 
     requested_block = '\n'.join(requested_lines)
 
@@ -3290,8 +3245,16 @@ def continue_story(
     )
     tool_results_for_dice = getattr(api_response, "_tool_results", None)
     if structured_response:
-        _apply_tool_results_to_structured_response(
-            structured_response, tool_results_for_dice, dice_roll_strategy
+        dice_integrity.apply_dice_metadata_to_structured_response(
+            structured_response=structured_response,
+            dice_metadata={
+                "tool_results": tool_results_for_dice,
+                "tool_requests_executed": bool(
+                    getattr(api_response, "_tool_requests_executed", False)
+                ),
+                "dice_strategy": dice_roll_strategy,
+            },
+            dice_roll_strategy=dice_roll_strategy,
         )
 
     # REPROMPT FOR MISSING REQUIRED FIELDS (planning_block, session_header)
@@ -3420,8 +3383,14 @@ def continue_story(
                     reprompt_text
                 )
                 if reprompt_structured:
-                    _apply_tool_results_to_structured_response(
-                        reprompt_structured, tool_results_for_dice, dice_roll_strategy
+                    dice_integrity.apply_dice_metadata_to_structured_response(
+                        structured_response=reprompt_structured,
+                        dice_metadata={
+                            "tool_results": tool_results_for_dice,
+                            "tool_requests_executed": True,
+                            "dice_strategy": dice_roll_strategy,
+                        },
+                        dice_roll_strategy=dice_roll_strategy,
                     )
                 if (
                     tool_results_for_dice
@@ -3539,44 +3508,33 @@ def continue_story(
     processing_metadata: dict[str, Any] = {
         "llm_provider": provider_selection.provider,
         "llm_model": chosen_model,
-        "dice_strategy": dice_roll_strategy,
     }
     if capture_raw:
         raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
         processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
-    if capture_tools:
-        tool_results = getattr(final_api_response, "_tool_results", None)
-        if not tool_results and tool_results_for_dice is not None:
-            tool_results = tool_results_for_dice
-        if tool_results is not None:
-            processing_metadata["tool_results"] = tool_results
-            processing_metadata["tool_requests_executed"] = bool(
-                getattr(final_api_response, "_tool_requests_executed", False)
-                or tool_results
-            )
+    processing_metadata.update(
+        dice_integrity.build_dice_processing_metadata(
+            api_response=final_api_response,
+            dice_roll_strategy=dice_roll_strategy,
+            capture_tools=capture_tools,
+        )
+    )
 
     if structured_response:
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", chosen_model)
-        debug_info.setdefault("dice_strategy", dice_roll_strategy)
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
-        if capture_tools and "tool_results" in processing_metadata:
-            debug_info["tool_results"] = processing_metadata["tool_results"]
-            debug_info["tool_requests_executed"] = processing_metadata.get(
-                "tool_requests_executed", False
-            )
         if code_execution_evidence:
             debug_info.update(code_execution_evidence)
             _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
         structured_response.debug_info = debug_info
-        if "tool_results" in processing_metadata:
-            _apply_tool_results_to_structured_response(
-                structured_response,
-                processing_metadata.get("tool_results"),
-                dice_roll_strategy,
-            )
+        dice_integrity.apply_dice_metadata_to_structured_response(
+            structured_response=structured_response,
+            dice_metadata=processing_metadata,
+            dice_roll_strategy=dice_roll_strategy,
+        )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
