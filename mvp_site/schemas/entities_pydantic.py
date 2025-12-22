@@ -588,14 +588,19 @@ def create_from_game_state(
     )
 
     # Create NPCs
+    # Pattern for valid NPC entity IDs (must start with npc_ or pc_)
+    npc_entity_id_pattern = re.compile(r"^(pc|npc)_[\w]+_\d{3}$")
+
     npcs = []
     npc_data = game_state.get("npc_data", {})
     for idx, (npc_key, npc_info) in enumerate(npc_data.items()):
         if npc_info.get("present", True):
-            # Use existing string_id if present, otherwise generate one using the key
-            if "string_id" in npc_info:
-                npc_entity_id = npc_info["string_id"]
+            # Use existing string_id if present AND valid, otherwise generate one
+            stored_id = npc_info.get("string_id")
+            if stored_id and npc_entity_id_pattern.match(stored_id):
+                npc_entity_id = stored_id
             else:
+                # Generate valid ID - handles missing or invalid string_id
                 npc_entity_id = (
                     f"npc_{sanitize_entity_name_for_id(npc_key)}_{idx + 1:03d}"
                 )
