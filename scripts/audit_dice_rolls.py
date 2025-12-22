@@ -161,6 +161,20 @@ def _extract_notation_from_roll_text(text: str) -> str:
     return "unknown"
 
 
+def _should_use_text_total(notation: str) -> bool:
+    if not notation or notation == "unknown":
+        return False
+    if re.match(r"\bd\d+\b", notation, re.IGNORECASE):
+        return True
+    match = re.search(r"\b(\d+)d(\d+)\b", notation, re.IGNORECASE)
+    if not match:
+        return False
+    num_dice = _coerce_int(match.group(1))
+    if num_dice is None:
+        return False
+    return num_dice == 1
+
+
 def _extract_dice_from_audit_events(
     events: list[dict], *, source: str
 ) -> list[dict]:
@@ -242,6 +256,8 @@ def extract_dice_rolls_from_text(text: str) -> list[dict]:
         num_dice = _coerce_int(match.group(1))
         die_type = _coerce_int(match.group(2))
         result = _coerce_int(match.group(3)) if match.group(3) else None
+        if num_dice and num_dice > 1:
+            result = None
         if num_dice is None or die_type is None:
             continue
         rolls.append(
@@ -340,7 +356,11 @@ def extract_dice_from_structured_fields(entry: dict) -> list[dict]:  # noqa: PLR
     if isinstance(dice_rolls, list) and not structured_sources_present:
         for roll in dice_rolls:
             if isinstance(roll, str):
-                parsed_total = _extract_total_from_roll_text(roll)
+                parsed_total = (
+                    _extract_total_from_roll_text(roll)
+                    if _should_use_text_total(notation)
+                    else None
+                )
                 notation = _extract_notation_from_roll_text(roll)
                 rolls.append(
                     {
