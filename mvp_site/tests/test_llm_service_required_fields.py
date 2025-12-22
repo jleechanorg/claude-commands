@@ -3,11 +3,14 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from mvp_site import constants
-from mvp_site.llm_service import (
+from mvp_site.llm_service import _check_missing_required_fields
+from mvp_site.dice_integrity import (
     _check_dice_integrity,
-    _check_missing_required_fields,
     _detect_combat_in_narrative,
+    _detect_narrative_dice_fabrication,
+    _is_code_execution_fabrication,
     _validate_combat_dice_integrity,
+    _should_require_dice_rolls_for_turn,
 )
 from mvp_site.narrative_response_schema import NarrativeResponse
 
@@ -61,8 +64,7 @@ def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_require
 
 def test_should_require_dice_rolls_only_for_combat_actions():
     from mvp_site.game_state import GameState
-    from mvp_site.llm_service import _should_require_dice_rolls_for_turn
-
+    
     gs = GameState(combat_state={"in_combat": True})
 
     assert (
@@ -87,6 +89,8 @@ def test_should_require_dice_rolls_only_for_combat_actions():
         is False
     )
 
+    # Combat keywords in user input should require dice even if not explicitly in_combat
+    # This catches new combat initiation (e.g., first action in a campaign)
     assert (
         _should_require_dice_rolls_for_turn(
             current_game_state=GameState(combat_state={"in_combat": False}),
@@ -95,7 +99,64 @@ def test_should_require_dice_rolls_only_for_combat_actions():
             is_god_mode=False,
             is_dm_mode=False,
         )
+        is True  # Changed from False - combat keywords should trigger dice requirement
+    )
+
+
+def test_should_require_dice_rolls_ignores_non_combat_verbs():
+    """Non-combat phrasing should not force dice requirement."""
+    from mvp_site.game_state import GameState
+    
+    gs = GameState(combat_state={"in_combat": False})
+
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="help me get to the village",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
         is False
+    )
+
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="check the door for traps",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
+        is False
+    )
+
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="The troll blocks the bridge.",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
+        is False
+    )
+
+
+def test_should_require_dice_rolls_detects_initiative():
+    """Explicit initiative should still require dice."""
+    from mvp_site.game_state import GameState
+    
+    gs = GameState(combat_state={"in_combat": False})
+    assert (
+        _should_require_dice_rolls_for_turn(
+            current_game_state=gs,
+            user_input="I roll initiative!",
+            mode=constants.MODE_CHARACTER,
+            is_god_mode=False,
+            is_dm_mode=False,
+        )
+        is True
     )
 
 
@@ -210,6 +271,114 @@ def test_check_dice_integrity_no_metadata():
         api_response=api_response,
     )
     assert is_valid is True  # Permissive for backward compatibility
+
+
+# =============================================================================
+# Tests for _is_code_execution_fabrication
+# =============================================================================
+
+
+def test_code_execution_fabrication_flags_missing_evidence_with_dice():
+    """Dice results without code_execution evidence should be flagged (Gemini 3)."""
+    resp = NarrativeResponse(narrative="test", dice_rolls=["1d20+5 = 17"])
+
+    assert _is_code_execution_fabrication(resp, None) is True
+
+
+# =============================================================================
+# Tests for _detect_narrative_dice_fabrication
+# =============================================================================
+
+
+def test_detect_narrative_dice_fabrication_flags_without_tool_evidence():
+    """Dice patterns in narrative without tool evidence should be flagged."""
+    narrative = "You glare. [DICE: Intimidation 1d20+9 = 25]"
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = False
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is True
+
+
+def test_detect_narrative_dice_fabrication_ignored_with_tool_evidence():
+    """Tool execution should suppress narrative dice fabrication detection."""
+    narrative = "You roll 1d20+5 and get 17 vs DC 12."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = True
+    api_response._tool_results = [
+        {
+            "tool": "roll_skill_check",
+            "result": {
+                "roll": 17,
+                "modifier": 5,
+                "total": 22,
+            },
+        }
+    ]
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is False
+
+
+def test_detect_narrative_dice_fabrication_rejects_non_dice_tool_results():
+    """Non-dice tool results should not suppress narrative dice fabrication detection."""
+    narrative = "You roll 1d20+5 and get 17 vs DC 12."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = True
+    api_response._tool_results = [
+        {
+            "tool": "search_location",
+            "result": {"location": "Neverwinter"},
+        }
+    ]
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is True
+
+
+def test_detect_narrative_dice_fabrication_ignored_without_dice():
+    """Narrative without dice patterns should not be flagged."""
+    narrative = "You negotiate calmly with the guard."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = False
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is False
+
+
+def test_detect_narrative_dice_fabrication_requires_context_for_rolls():
+    """'Rolls a 15' without context should not trigger fabrication."""
+    narrative = "She rolls a 15-year-old barrel down the hill."
+    resp = NarrativeResponse(narrative=narrative, dice_rolls=[])
+    api_response = Mock()
+    api_response._tool_requests_executed = False
+
+    assert _detect_narrative_dice_fabrication(
+        narrative_text=narrative,
+        structured_response=resp,
+        api_response=api_response,
+        code_execution_evidence=None,
+    ) is False
 
 
 # =============================================================================
@@ -401,3 +570,51 @@ def test_build_reprompt_includes_tool_results_when_available():
     assert "17" in reprompt or "tool" in reprompt.lower(), (
         "Reprompt MUST include tool_results context to prevent dice fabrication"
     )
+
+
+def test_build_reprompt_dice_integrity_code_execution_only():
+    """Reprompt for code_execution strategy should not mention tool_requests."""
+    from mvp_site import dice_strategy
+    from mvp_site.llm_service import _build_reprompt_for_missing_fields
+
+    reprompt = _build_reprompt_for_missing_fields(
+        '{"narrative": "test"}',
+        ["dice_integrity"],
+        dice_roll_strategy=dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
+    )
+
+    assert "code_execution" in reprompt.lower()
+    assert "tool_requests" not in reprompt.lower()
+
+
+def test_build_reprompt_request_preserves_context():
+    """Reprompt request should preserve context while replacing user_action."""
+    from mvp_site.llm_request import LLMRequest
+    from mvp_site.llm_service import _build_reprompt_request
+
+    base_request = LLMRequest.build_story_continuation(
+        user_action="Attack the goblin",
+        user_id="user-1",
+        game_mode="character",
+        game_state={"hp": 10},
+        story_history=[{"text": "A goblin appears", "actor": "gemini"}],
+        checkpoint_block="Checkpoint",
+        core_memories=["memory-1"],
+        sequence_ids=["seq-1"],
+        entity_tracking={"npc": "goblin"},
+        selected_prompts=["game_state"],
+        use_default_world=True,
+    )
+
+    reprompt = _build_reprompt_request(base_request, "Reprompt message")
+    assert reprompt.user_action == "Reprompt message"
+    assert reprompt.user_id == base_request.user_id
+    assert reprompt.game_mode == base_request.game_mode
+    assert reprompt.game_state == base_request.game_state
+    assert reprompt.story_history == base_request.story_history
+    assert reprompt.checkpoint_block == base_request.checkpoint_block
+    assert reprompt.core_memories == base_request.core_memories
+    assert reprompt.sequence_ids == base_request.sequence_ids
+    assert reprompt.entity_tracking == base_request.entity_tracking
+    assert reprompt.selected_prompts == base_request.selected_prompts
+    assert reprompt.use_default_world == base_request.use_default_world

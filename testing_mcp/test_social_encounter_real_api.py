@@ -21,6 +21,17 @@ import time
 from typing import Any
 
 from mcp_client import MCPClient
+from test_dice_rolls_comprehensive import (
+    LocalServer,
+    _pick_free_port,
+    start_local_mcp_server,
+)
+
+
+DEFAULT_MODEL_MATRIX = [
+    "gemini-3-flash-preview",
+    "qwen-3-235b-a22b-instruct-2507",
+]
 
 
 def _expect_dice(payload: dict[str, Any], *, label: str) -> list[str]:
@@ -43,6 +54,27 @@ def _expect_dice(payload: dict[str, Any], *, label: str) -> list[str]:
     return errors
 
 
+def update_user_settings(client: MCPClient, *, user_id: str, settings: dict[str, Any]) -> None:
+    payload = client.tools_call(
+        "update_user_settings",
+        {"user_id": user_id, "settings": settings},
+    )
+    if payload.get("error"):
+        raise RuntimeError(f"update_user_settings error: {payload['error']}")
+
+
+def settings_for_model(model_id: str) -> dict[str, Any]:
+    model = model_id.strip()
+    model_lower = model.lower()
+    if model_lower.startswith("gemini-"):
+        return {"llm_provider": "gemini", "gemini_model": model}
+    if model_lower.startswith("qwen-") or model_lower in {"zai-glm-4.6", "llama-3.3-70b", "gpt-oss-120b"}:
+        return {"llm_provider": "cerebras", "cerebras_model": model}
+    if "/" in model_lower:
+        return {"llm_provider": "openrouter", "openrouter_model": model}
+    raise ValueError(f"Unknown model/provider mapping for: {model}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="MCP social encounter dice coverage")
     parser.add_argument(
@@ -50,52 +82,88 @@ def main() -> int:
         default=os.environ.get("MCP_SERVER_URL") or "http://127.0.0.1:8001",
         help="Base server URL (with or without /mcp)",
     )
+    parser.add_argument("--start-local", action="store_true", help="Start local MCP server automatically")
+    parser.add_argument("--port", type=int, default=0, help="Port for --start-local (0 = random free port)")
+    parser.add_argument(
+        "--models",
+        default=os.environ.get("MCP_TEST_MODELS", ""),
+        help=(
+            "Comma-separated model IDs to test (e.g. "
+            "gemini-3-flash-preview,qwen-3-235b-a22b-instruct-2507). "
+            "Defaults to a Gemini+Qwen matrix."
+        ),
+    )
     args = parser.parse_args()
 
-    client = MCPClient(str(args.server_url), timeout_s=180.0)
-    client.wait_healthy(timeout_s=45.0)
+    local: LocalServer | None = None
+    base_url = str(args.server_url)
 
-    user_id = f"mcp-social-{int(time.time())}"
-    created = client.tools_call(
-        "create_campaign",
-        {
-            "user_id": user_id,
-            "title": "MCP Social Dice Campaign",
-            "character": "Lyra the Rogue (CHA 14)",
-            "setting": "A tense parley in a candlelit tavern",
-        },
-    )
-    campaign_id = created.get("campaign_id") or created.get("campaignId")
-    if not isinstance(campaign_id, str) or not campaign_id:
-        print(f"❌ create_campaign returned unexpected payload: {created}")
-        return 2
+    try:
+        if args.start_local:
+            port = int(args.port) if int(args.port) > 0 else _pick_free_port()
+            local = start_local_mcp_server(port)
+            base_url = local.base_url
 
-    scenarios = [
-        (
-            "Intimidation",
-            "I stare down the guard and demand entry. Make an Intimidation check.",
-        ),
-        (
-            "Deception",
-            "I lie smoothly about our business here. Make a Deception check.",
-        ),
-    ]
+        client = MCPClient(base_url, timeout_s=180.0)
+        client.wait_healthy(timeout_s=45.0)
 
-    ok = True
-    for label, user_input in scenarios:
-        payload = client.tools_call(
-            "process_action",
-            {"user_id": user_id, "campaign_id": campaign_id, "user_input": user_input, "mode": "character"},
-        )
-        errors = _expect_dice(payload, label=label)
-        if errors:
-            ok = False
-            print(f"❌ {label}: {errors}")
-        else:
-            dice_count = len(payload.get("dice_rolls") or [])
-            print(f"✅ {label}: dice_rolls={dice_count}")
+        models = [m.strip() for m in (args.models or "").split(",") if m.strip()]
+        if not models:
+            models = list(DEFAULT_MODEL_MATRIX)
 
-    return 0 if ok else 2
+        scenarios = [
+            (
+                "Intimidation",
+                "I stare down the guard and demand entry. Make an Intimidation check.",
+            ),
+            (
+                "Deception",
+                "I lie smoothly about our business here. Make a Deception check.",
+            ),
+        ]
+
+        ok = True
+        for model_id in models:
+            model_settings = settings_for_model(model_id)
+            user_id = f"mcp-social-{model_id.replace('/', '-')}-{int(time.time())}"
+            update_user_settings(client, user_id=user_id, settings=model_settings)
+            created = client.tools_call(
+                "create_campaign",
+                {
+                    "user_id": user_id,
+                    "title": "MCP Social Dice Campaign",
+                    "character": "Lyra the Rogue (CHA 14)",
+                    "setting": "A tense parley in a candlelit tavern",
+                },
+            )
+            campaign_id = created.get("campaign_id") or created.get("campaignId")
+            if not isinstance(campaign_id, str) or not campaign_id:
+                print(f"❌ {model_id} :: create_campaign returned unexpected payload: {created}")
+                ok = False
+                continue
+
+            for label, user_input in scenarios:
+                payload = client.tools_call(
+                    "process_action",
+                    {
+                        "user_id": user_id,
+                        "campaign_id": campaign_id,
+                        "user_input": user_input,
+                        "mode": "character",
+                    },
+                )
+                errors = _expect_dice(payload, label=label)
+                if errors:
+                    ok = False
+                    print(f"❌ {model_id} :: {label}: {errors}")
+                else:
+                    dice_count = len(payload.get("dice_rolls") or [])
+                    print(f"✅ {model_id} :: {label}: dice_rolls={dice_count}")
+
+        return 0 if ok else 2
+    finally:
+        if local is not None:
+            local.stop()
 
 
 if __name__ == "__main__":

@@ -182,7 +182,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         """
         Verify dice roll tool schemas are defined for tool use models.
         """
-        from mvp_site.game_state import DICE_ROLL_TOOLS
+        from mvp_site.dice import DICE_ROLL_TOOLS
 
         # Verify tool schemas exist
         self.assertIsInstance(DICE_ROLL_TOOLS, list)
@@ -319,7 +319,7 @@ class TestDiceRollTools(unittest.TestCase):
         """
         Verify DICE_ROLL_TOOLS array contains all required tools.
         """
-        from mvp_site.game_state import DICE_ROLL_TOOLS
+        from mvp_site.dice import DICE_ROLL_TOOLS
 
         # Get tool names
         tool_names = [t["function"]["name"] for t in DICE_ROLL_TOOLS]
@@ -676,6 +676,152 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
 
             self.assertEqual(mock_gen.call_count, 2)
             self.assertEqual(result.text, phase2_json)
+
+
+class TestThinkingConfigEnforcement(unittest.TestCase):
+    """TDD tests for thinkingConfig parameter to improve code_execution compliance."""
+
+    def test_gemini_3_enables_thinking_config_for_code_execution(self):
+        """
+        GREEN: Verify that Gemini 3 code_execution includes thinkingConfig.
+
+        Per Consensus ML synthesis:
+        - thinkingConfig with thinking_budget increases code_execution compliance
+        - Forces model to deliberate before skipping tool use
+        """
+        from mvp_site.llm_providers import gemini_provider
+        from google.genai import types
+
+        # Mock get_client to return a fake client that captures config
+        mock_client = Mock()
+        mock_response = Mock(text='{"narrative": "test", "dice_rolls": []}')
+        mock_client.models.generate_content.return_value = mock_response
+
+        with patch.object(gemini_provider, 'get_client', return_value=mock_client):
+            gemini_provider.generate_content_with_code_execution(
+                prompt_contents=["test prompt"],
+                model_name="gemini-3-flash-preview",
+                system_instruction_text="test system",
+                temperature=0.7,
+                safety_settings=[],
+                json_mode_max_output_tokens=256,
+            )
+
+        # Verify generate_content was called
+        self.assertTrue(
+            mock_client.models.generate_content.called,
+            "Should call Client.models.generate_content"
+        )
+
+        # Get the config from the call
+        call_args = mock_client.models.generate_content.call_args
+        if call_args is None:
+            self.fail("generate_content was not called")
+
+        config = call_args.kwargs.get('config')
+        self.assertIsNotNone(config, "Should pass config")
+
+        # Verify thinking_config is present
+        self.assertIsNotNone(
+            getattr(config, 'thinking_config', None),
+            "Config should have thinking_config attribute"
+        )
+
+
+class TestNativeToolsSystemInstruction(unittest.TestCase):
+    """TDD tests for native two-phase system instruction retention."""
+
+    def test_native_phase2_keeps_system_instruction_when_phase1_text_exists(self):
+        from mvp_site.llm_providers import gemini_provider
+
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_part = Mock()
+        mock_part.text = "Phase 1 narrative response."
+        mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
+        mock_client.models.generate_content.return_value = mock_response
+
+        with patch.object(gemini_provider, "get_client", return_value=mock_client):
+            with patch.object(gemini_provider, "generate_json_mode_content") as mock_json:
+                gemini_provider.generate_content_with_native_tools(
+                    prompt_contents=["prompt"],
+                    model_name="gemini-2.5-flash",
+                    system_instruction_text="SYSTEM_INSTRUCTION",
+                    temperature=0.7,
+                    safety_settings=[],
+                    json_mode_max_output_tokens=256,
+                )
+
+                _, kwargs = mock_json.call_args
+                assert kwargs.get("system_instruction_text") == "SYSTEM_INSTRUCTION"
+
+
+class TestCodeExecutionFabricationDetection(unittest.TestCase):
+    """TDD tests for code_execution fabrication detection edge cases."""
+
+    def test_empty_evidence_dict_flags_fabrication_when_dice_present(self):
+        """Empty evidence dict should still evaluate fabrication when dice are present."""
+        from types import SimpleNamespace
+        from mvp_site.dice_integrity import _is_code_execution_fabrication
+
+        structured = SimpleNamespace(dice_rolls=["1d20 = 12"])
+        evidence = {}
+
+        self.assertTrue(
+            _is_code_execution_fabrication(structured, evidence),
+            "Empty evidence dict should not bypass fabrication detection",
+        )
+
+
+class TestJSONStdoutValidation(unittest.TestCase):
+    """TDD tests for JSON stdout validation from code_execution results."""
+
+    def test_code_execution_result_validates_json_format(self):
+        """
+        RED: Verify that code_execution stdout is validated as JSON.
+
+        Per Consensus ML synthesis:
+        - Code should print JSON to stdout: {"notation":"1d20","rolls":[15],"total":15}
+        - Eliminates post-processing errors from model reformatting
+        - This test will FAIL until we implement JSON validation
+        """
+        from mvp_site.llm_providers import gemini_provider
+
+        # Mock response with executable_code_parts that has JSON stdout
+        mock_response = Mock()
+        mock_part = Mock()
+        mock_part.executable_code = Mock(
+            language='python',
+            code='import random; print(\'{"notation":"1d20","rolls":[15],"total":15}\')'
+        )
+        mock_part.code_execution_result = Mock(
+            outcome='OUTCOME_OK',
+            output='{"notation":"1d20","rolls":[15],"total":15}'
+        )
+        mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
+        mock_response.text = '{"narrative": "You rolled 15!", "dice_rolls": ["1d20 = 15"]}'
+
+        # Extract and validate code execution evidence
+        evidence = gemini_provider.extract_code_execution_evidence(mock_response)
+
+        # Should validate that stdout is valid JSON
+        self.assertTrue(
+            evidence.get('code_execution_used', False),
+            "Should detect code execution was used"
+        )
+
+        # Should parse stdout as JSON
+        stdout = evidence.get('stdout', '')
+        self.assertIsNotNone(stdout, "Should extract stdout")
+
+        # This will FAIL until we add JSON validation
+        try:
+            json_output = json.loads(stdout)
+            self.assertIn('notation', json_output, "Should have notation field")
+            self.assertIn('rolls', json_output, "Should have rolls field")
+            self.assertIn('total', json_output, "Should have total field")
+        except json.JSONDecodeError:
+            self.fail("Code execution stdout should be valid JSON")
 
 
 if __name__ == "__main__":

@@ -679,10 +679,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     Returns:
         Dictionary with success/error status and story response
     """
+    campaign_id = request_data.get("campaign_id")
+    logging_util.set_campaign_id(campaign_id)
     try:
         # Extract parameters
         user_id = request_data.get("user_id")
-        campaign_id = request_data.get("campaign_id")
         user_input = request_data.get("user_input")
         mode = request_data.get("mode", constants.MODE_CHARACTER)
 
@@ -850,9 +851,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         if temporal_violation_detected and not is_god_mode:
             old_time_str = _format_world_time_for_prompt(old_world_time)
             new_time_str = _format_world_time_for_prompt(new_world_time)
+            dice_retry_llm_call = bool(
+                getattr(llm_response_obj, "processing_metadata", {}).get(
+                    "dice_retry_llm_call"
+                )
+            )
 
             # User-facing error message as god_mode_response
-            prevention_extras["god_mode_response"] = (
+            god_mode_response = (
                 f"⚠️ **TEMPORAL ANOMALY DETECTED**\n\n"
                 f"The AI generated a response where time moved backward:\n"
                 f"- **Previous time:** {old_time_str}\n"
@@ -860,6 +866,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"This may indicate the AI lost track of the story timeline. "
                 f"The response was accepted but timeline consistency may be affected."
             )
+            if dice_retry_llm_call:
+                god_mode_response += (
+                    "\n\n**Dice Retry Notice**\n"
+                    "A dice integrity retry triggered an additional model call before this response. "
+                    "If anything seems inconsistent, you can retry the action."
+                )
+
+            prevention_extras["god_mode_response"] = god_mode_response
 
             logging_util.warning(
                 f"⚠️ TEMPORAL_VIOLATION surfaced to user: {new_time_str} < {old_time_str}"
@@ -1054,6 +1068,30 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     structured_response.god_mode_response
                 )
 
+        capture_evidence = os.getenv("CAPTURE_EVIDENCE", "").lower() == "true"
+        if capture_evidence:
+            metadata = getattr(llm_response_obj, "processing_metadata", {}) or {}
+            llm_provider = metadata.get("llm_provider") or getattr(
+                llm_response_obj, "provider", None
+            )
+            llm_model = metadata.get("llm_model") or getattr(
+                llm_response_obj, "model", None
+            )
+            if llm_provider:
+                unified_response["llm_provider"] = llm_provider
+            if llm_model:
+                unified_response["llm_model"] = llm_model
+            if "dice_strategy" in metadata:
+                unified_response["dice_strategy"] = metadata["dice_strategy"]
+            if "raw_response_text" in metadata:
+                unified_response["raw_llm_response"] = metadata["raw_response_text"]
+            if "tool_results" in metadata:
+                unified_response["tool_results"] = metadata["tool_results"]
+            if "tool_requests_executed" in metadata:
+                unified_response["tool_requests_executed"] = metadata[
+                    "tool_requests_executed"
+                ]
+
         if prevention_extras.get("god_mode_response"):
             # Prefer synthesized god mode responses from preventive guards when present
             # because they fill gaps left by the model.
@@ -1108,6 +1146,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     except Exception as e:
         logging_util.error(f"Process action failed: {e}")
         return {KEY_ERROR: f"Failed to process action: {str(e)}"}
+    finally:
+        logging_util.set_campaign_id(None)
 
 
 async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, Any]:

@@ -372,7 +372,11 @@ class LLMResponse:
 
     @classmethod
     def create(
-        cls, raw_response_text: str, model: str = "gemini-3-pro-preview"
+        cls,
+        raw_response_text: str,
+        model: str = "gemini-3-pro-preview",
+        provider: str = "gemini",
+        processing_metadata: dict[str, Any] | None = None,
     ) -> "LLMResponse":
         """
         Create a LLMResponse from raw Gemini API response.
@@ -394,18 +398,30 @@ class LLMResponse:
         # If we have a structured response, use the new method
         if structured_response:
             return cls.create_from_structured_response(
-                structured_response, model, narrative_text
+                structured_response,
+                model,
+                narrative_text,
+                provider=provider,
+                processing_metadata=processing_metadata,
             )
 
         # Otherwise fall back to legacy mode
-        return cls.create_legacy(narrative_text, model)
+        return cls.create_legacy(
+            narrative_text,
+            model,
+            provider=provider,
+            processing_metadata=processing_metadata,
+        )
 
     @classmethod
     def create_from_structured_response(
         cls,
         structured_response: NarrativeResponse,
         model: str = "gemini-3-pro-preview",
-        combined_narrative_text: str = None,
+        combined_narrative_text: str | None = None,
+        *,
+        provider: str = "gemini",
+        processing_metadata: dict[str, Any] | None = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from structured JSON response.
@@ -445,9 +461,10 @@ class LLMResponse:
         return cls(
             narrative_text=clean_narrative,
             model=model,
-            provider="gemini",
+            provider=provider,
             structured_response=structured_response,
             debug_tags_present=debug_tags,
+            processing_metadata=processing_metadata,
         )
 
     @classmethod
@@ -456,6 +473,9 @@ class LLMResponse:
         narrative_text: str,
         model: str = "gemini-3-pro-preview",
         structured_response: NarrativeResponse | None = None,
+        *,
+        provider: str = "gemini",
+        processing_metadata: dict[str, Any] | None = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from plain text (legacy support).
@@ -475,7 +495,8 @@ class LLMResponse:
         return cls(
             narrative_text=clean_narrative,
             model=model,
-            provider="gemini",
+            provider=provider,
             structured_response=structured_response,
             debug_tags_present=cls._detect_debug_tags_static(narrative_text),
+            processing_metadata=processing_metadata,
         )

@@ -8,20 +8,25 @@ Purpose:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from mvp_site import logging_util
 
 
-def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
+def extract_code_execution_evidence(response: Any) -> dict[str, int | bool | str]:
     """Best-effort detection of Gemini code_execution usage from a raw SDK response.
 
     We inspect response parts for code_execution artifacts (executable_code /
     code_execution_result) emitted by the Gemini API when the built-in tool is
     actually used.
+
+    Per Consensus ML synthesis: Also validates stdout as JSON when present.
     """
     executable_code_parts = 0
     code_execution_result_parts = 0
+    stdout_value = ""
+    stdout_is_valid_json = False
 
     try:
         candidates = getattr(response, "candidates", None) or []
@@ -35,12 +40,26 @@ def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
                     executable_code_parts += 1
                 if getattr(part, "code_execution_result", None) is not None:
                     code_execution_result_parts += 1
+
+                    # Extract and validate stdout as JSON (Consensus ML recommendation #3)
+                    result = part.code_execution_result
+                    output = getattr(result, "output", "")
+                    if output:
+                        stdout_value = output
+                        try:
+                            json.loads(output)
+                            stdout_is_valid_json = True
+                        except (json.JSONDecodeError, TypeError):
+                            stdout_is_valid_json = False
+
     except Exception:
         # If the SDK shape changes, keep this non-fatal.
         return {
             "code_execution_used": False,
             "executable_code_parts": 0,
             "code_execution_result_parts": 0,
+            "stdout": "",
+            "stdout_is_valid_json": False,
         }
 
     used = (executable_code_parts + code_execution_result_parts) > 0
@@ -48,6 +67,8 @@ def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
         "code_execution_used": used,
         "executable_code_parts": executable_code_parts,
         "code_execution_result_parts": code_execution_result_parts,
+        "stdout": stdout_value,
+        "stdout_is_valid_json": stdout_is_valid_json,
     }
 
 
@@ -127,11 +148,13 @@ def log_code_execution_parts(
     *,
     model_name: str,
     context: str,
-) -> dict[str, int | bool]:
+) -> dict[str, int | bool | str]:
     """Log Gemini code_execution evidence (always INFO, optional DEBUG detail)."""
     evidence = extract_code_execution_evidence(response)
     logging_util.info(
-        "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s evidence=%s",
+        logging_util.with_campaign(
+            "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s evidence=%s"
+        ),
         context,
         model_name,
         evidence,
@@ -142,9 +165,49 @@ def log_code_execution_parts(
     ):
         detail = extract_code_execution_parts_summary(response)
         logging_util.debug(
-            "GEMINI_CODE_EXECUTION_PARTS_DETAIL[%s]: model=%s detail=%s",
+            logging_util.with_campaign(
+                "GEMINI_CODE_EXECUTION_PARTS_DETAIL[%s]: model=%s detail=%s"
+            ),
             context,
             model_name,
             detail,
         )
+    _log_code_execution_dice_results(evidence)
     return evidence
+
+
+def _log_code_execution_dice_results(evidence: dict[str, int | bool | str]) -> None:
+    """Log dice results from Gemini code_execution stdout when JSON is valid."""
+    stdout_value = evidence.get("stdout", "")
+    if not stdout_value or not evidence.get("stdout_is_valid_json"):
+        return
+
+    try:
+        parsed = json.loads(str(stdout_value))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return
+
+    entries: list[dict[str, Any]] = []
+    if isinstance(parsed, dict):
+        entries = [parsed]
+    elif isinstance(parsed, list):
+        entries = [entry for entry in parsed if isinstance(entry, dict)]
+
+    for entry in entries:
+        notation = entry.get("notation")
+        rolls = entry.get("rolls")
+        modifier = entry.get("modifier")
+        total = entry.get("total")
+        label = entry.get("label")
+        if notation is None or not isinstance(rolls, list) or not rolls or total is None:
+            continue
+        logging_util.info(
+            logging_util.with_campaign(
+                "DICE_CODE_EXEC_RESULT: notation=%s | rolls=%s | modifier=%s | total=%s | label=%s"
+            ),
+            notation,
+            rolls,
+            modifier,
+            total,
+            label,
+        )

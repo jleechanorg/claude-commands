@@ -16,12 +16,8 @@ import os
 from typing import Any
 
 from mvp_site import logging_util
-from mvp_site.game_state import (
-    DICE_ROLL_TOOLS,
-    execute_dice_tool,
-    execute_tool_requests,
-    format_tool_results_text,
-)
+from mvp_site.dice import DICE_ROLL_TOOLS, execute_dice_tool
+from mvp_site.game_state import execute_tool_requests, format_tool_results_text
 from mvp_site.llm_providers.provider_utils import (
     ContextTooLargeError,
     check_context_too_large,

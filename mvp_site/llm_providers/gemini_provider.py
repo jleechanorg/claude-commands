@@ -14,12 +14,8 @@ from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
-from mvp_site.game_state import (
-    DICE_ROLL_TOOLS,
-    execute_dice_tool,
-    execute_tool_requests,
-    format_tool_results_text,
-)
+from mvp_site.dice import DICE_ROLL_TOOLS, execute_dice_tool
+from mvp_site.game_state import execute_tool_requests, format_tool_results_text
 from mvp_site.llm_providers.provider_utils import (
     build_tool_results_prompt,
     run_json_first_tool_requests_flow,
@@ -59,7 +55,7 @@ def count_tokens(model_name: str, contents: list[Any]) -> int:
     return client.models.count_tokens(model=model_name, contents=contents).total_tokens
 
 
-def extract_code_execution_evidence(response: Any) -> dict[str, int | bool]:
+def extract_code_execution_evidence(response: Any) -> dict[str, int | bool | str]:
     """Backward-compatible re-export (see llm_providers/gemini_code_execution.py)."""
     return gemini_code_execution.extract_code_execution_evidence(response)
 
@@ -134,15 +130,26 @@ def generate_json_mode_content(
     if json_mode:
         generation_config_params["response_mime_type"] = "application/json"
 
-    # Add tools if provided
-    config = types.GenerateContentConfig(**generation_config_params)
-
     # Determine whether to attach code_execution
     allow_code_execution = (
         enable_code_execution
         if enable_code_execution is not None
         else model_name in constants.MODELS_WITH_CODE_EXECUTION
     )
+
+    # Add thinkingConfig for Gemini 3 models with code_execution.
+    # Use thinking_budget per google-genai SDK (ThinkingConfig fields).
+    if allow_code_execution and model_name.startswith("gemini-3"):
+        generation_config_params["thinking_config"] = types.ThinkingConfig(
+            thinking_budget=1024
+        )
+        logging_util.debug(
+            "ThinkingConfig enabled for %s to improve code_execution compliance",
+            model_name,
+        )
+
+    # Add tools if provided
+    config = types.GenerateContentConfig(**generation_config_params)
     # Constraint: Only Gemini 3.x supports code_execution + JSON mode together.
     if json_mode and model_name not in constants.MODELS_WITH_CODE_EXECUTION:
         allow_code_execution = False
@@ -242,24 +249,34 @@ def generate_content_with_code_execution(
     )
 
     code_exec_override = (
-        "\n\nIMPORTANT (Gemini 3 code_execution mode):\n"
-        "- Do NOT output `tool_requests`.\n"
-        "- For ALL dice rolls, you MUST execute Python code using the code_execution tool.\n"
-        "- EXECUTE this Python code pattern for each dice roll:\n"
+        "\n\n## 🎲 CRITICAL: DICE VALUES ARE UNKNOWABLE (Gemini 3 code_execution mode)\n\n"
+        "**ABSOLUTE RULE: You CANNOT know dice values without executing code.**\n\n"
+        "Dice results are quantum-random. Like checking real-world temperature, you MUST query\n"
+        "the random number generator to OBSERVE the value. You cannot predict, estimate, or\n"
+        "fabricate dice results - they do not exist until you execute code to generate them.\n\n"
+        "### Required Protocol:\n"
+        "1. Do NOT output `tool_requests` - use code_execution instead.\n"
+        "2. For EVERY dice roll, EXECUTE this Python code:\n"
         "```python\n"
+        "import json\n"
         "import random\n"
         "# For 1d20+5:\n"
-        "roll = random.randint(1, 20)\n"
+        "roll = random.randint(1, 20)  # This generates the REAL value\n"
         "modifier = 5\n"
         "total = roll + modifier\n"
-        "print(f'roll={roll}, modifier={modifier}, total={total}')\n"
+        "print(json.dumps({\"notation\": \"1d20+5\", \"rolls\": [roll], \"modifier\": modifier, \"total\": total}))\n"
         "```\n"
-        "- The code MUST actually run - do NOT fabricate numbers. Use random.randint() for real randomness.\n"
-        "- Copy the EXACT numbers from your code execution output into dice_rolls and dice_audit_events.\n"
-        "- Return the final, complete response JSON in this single response.\n"
-        "- If `tool_requests` exists in the schema, set it to an empty list.\n"
-        "- If you roll any dice, populate `dice_audit_events` with one event per roll.\n"
-        "  Each dice_audit_events item MUST include: source=\"code_execution\", label, notation, rolls (array of raw die values), modifier, total.\n"
+        "3. Stdout MUST be valid JSON ONLY (no extra text). The JSON output contains the ONLY valid dice value.\n"
+        "4. Populate `dice_rolls` and `dice_audit_events` from the JSON stdout. Each item MUST include:\n"
+        "   label, notation, rolls (array of raw die values), modifier, total. For dice_audit_events also set source=\"code_execution\".\n\n"
+        "### ❌ FORBIDDEN (Fabrication):\n"
+        "- Writing dice values in narrative without code execution: \"[DICE: 1d20 = 15]\" ← INVALID\n"
+        "- Inventing numbers: \"You roll a 17\" without running random.randint() ← INVALID\n"
+        "- Printing non-JSON stdout or extra text around JSON ← INVALID\n"
+        "- Populating dice_rolls/dice_audit_events without corresponding JSON stdout ← INVALID\n\n"
+        "### Why This Matters:\n"
+        "Fabricated dice destroy game integrity. Players notice patterns. Real randomness is required.\n"
+        "You are the narrator, not the dice. The dice exist in the code execution sandbox, not your imagination.\n"
     )
     effective_system_instruction = (
         f"{system_instruction_text}{code_exec_override}"
@@ -427,7 +444,7 @@ def generate_content_with_native_tools(
         return generate_json_mode_content(
             prompt_contents=history if phase1_text else prompt_contents,
             model_name=model_name,
-            system_instruction_text=system_instruction_text if not phase1_text else None,
+            system_instruction_text=system_instruction_text,
             temperature=temperature,
             safety_settings=safety_settings,
             json_mode_max_output_tokens=json_mode_max_output_tokens,

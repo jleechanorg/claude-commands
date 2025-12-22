@@ -160,7 +160,7 @@ class TestToolDefinitionsForSocialSkills(unittest.TestCase):
         GREEN TEST: Verify roll_skill_check tool description includes
         Persuasion, Intimidation, Deception.
         """
-        from mvp_site.game_state import DICE_ROLL_TOOLS
+        from mvp_site.dice import DICE_ROLL_TOOLS
 
         # Find roll_skill_check tool
         roll_skill_check = None
@@ -183,7 +183,7 @@ class TestToolDefinitionsForSocialSkills(unittest.TestCase):
         GREEN TEST: Verify declare_no_roll_needed tool explicitly excludes
         contested social encounters.
         """
-        from mvp_site.game_state import DICE_ROLL_TOOLS
+        from mvp_site.dice import DICE_ROLL_TOOLS
 
         # Find declare_no_roll_needed tool
         no_roll_tool = None

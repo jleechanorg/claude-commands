@@ -66,9 +66,14 @@ console.error = (...args) => {
   if (logStream) logStream.write(args.join(' ') + '\n');
 };
 
-// Test mode: 'mock' (default) or 'real'
-const testMode = (process.env.MCP_TEST_MODE || 'mock').toLowerCase();
-const useQuickValidation = testMode === 'mock';
+// Test mode: MUST be 'real' - mock mode removed to ensure proper testing
+const testMode = (process.env.MCP_TEST_MODE || 'real').toLowerCase();
+if (testMode === 'mock') {
+  console.error('❌ Mock mode is no longer supported - tests must run in real mode');
+  console.error('💡 Set MCP_TEST_MODE=real or omit it (defaults to real)');
+  process.exit(1);
+}
+const useQuickValidation = false; // Always run full validation
 
 const rawBaseUrl = process.env.MCP_SERVER_URL ? String(process.env.MCP_SERVER_URL).trim() : '';
 
@@ -76,9 +81,8 @@ const rawBaseUrl = process.env.MCP_SERVER_URL ? String(process.env.MCP_SERVER_UR
 if (!rawBaseUrl) {
   console.error('❌ MCP_SERVER_URL environment variable is required');
   console.error('💡 Example: export MCP_SERVER_URL=https://mvp-site-app-pr-123.run.app');
-  console.error('💡 Test modes:');
-  console.error('   - mock: Quick validation (health + tools/list only)');
-  console.error('   - real: Full validation (complete campaign workflows)');
+  console.error('💡 Test mode: real (full validation with campaign workflows)');
+  console.error('💡 Tests always run in REAL mode to validate dice integrity');
   process.exit(1);
 }
 

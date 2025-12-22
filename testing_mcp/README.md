@@ -18,6 +18,7 @@ export MCP_SERVER_URL=https://mvp-site-app-<pool>-<hash>-uc.a.run.app
 cd testing_mcp
 python test_native_tools_real_api.py
 python test_dice_rolls_comprehensive.py
+python test_social_encounter_real_api.py
 ```
 
 ### Run locally
@@ -28,6 +29,7 @@ If you already have a local MCP server running:
 cd testing_mcp
 python test_native_tools_real_api.py --server-url http://127.0.0.1:8001
 python test_dice_rolls_comprehensive.py --server-url http://127.0.0.1:8001
+python test_social_encounter_real_api.py --server-url http://127.0.0.1:8001
 ```
 
 Or start a local MCP server automatically (loads LLM keys via `gcloud` Secret Manager if available):
@@ -37,9 +39,17 @@ cd testing_mcp
 python test_dice_rolls_comprehensive.py --start-local
 ```
 
+### Model selection
+
+By default, the dice tests run a Gemini 3 Flash + Qwen 3 (Cerebras) matrix. You can override with:
+
+```bash
+python test_dice_rolls_comprehensive.py --models gemini-3-flash-preview,qwen-3-235b-a22b-instruct-2507
+python test_social_encounter_real_api.py --models gemini-3-flash-preview
+```
+
 ## Evidence
 
 Results are saved under:
 
 - `testing_mcp/evidence/mcp_dice_rolls/`
-

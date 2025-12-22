@@ -56,7 +56,7 @@ from typing import Any
 from firebase_admin import auth as firebase_auth
 from google.genai import types
 
-from mvp_site import constants, dice_strategy, logging_util
+from mvp_site import constants, dice, dice_integrity, dice_strategy, logging_util
 from mvp_site.agents import (
     BaseAgent,
     GodModeAgent,
@@ -98,6 +98,14 @@ from mvp_site.token_utils import estimate_tokens, log_with_tokens
 logging_util.basicConfig(
     level=logging_util.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+# Dice integrity helpers centralized in mvp_site/dice_integrity.py
+DICE_ROLL_PATTERN = dice_integrity.DICE_ROLL_PATTERN
+_detect_narrative_dice_fabrication = dice_integrity._detect_narrative_dice_fabrication
+_is_code_execution_fabrication = dice_integrity._is_code_execution_fabrication
+_log_fabricated_dice_if_detected = dice_integrity._log_fabricated_dice_if_detected
+_should_require_dice_rolls_for_turn = dice_integrity._should_require_dice_rolls_for_turn
+_validate_combat_dice_integrity = dice_integrity._validate_combat_dice_integrity
 
 # Initialize entity tracking mitigation modules
 entity_preloader = EntityPreloader()
@@ -198,7 +206,7 @@ TARGET_WORD_COUNT: int = 300
 # and let the error propagate to the UI rather than generating fake content
 # However, we DO attempt a single reprompt if required fields are missing.
 # Maximum reprompt attempts for missing required fields (planning_block, session_header)
-MAX_MISSING_FIELD_REPROMPT_ATTEMPTS: int = 1
+MAX_MISSING_FIELD_REPROMPT_ATTEMPTS: int = 3
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
 JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
@@ -678,8 +686,7 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
 }
 
 # Regex patterns for importance detection (language-agnostic)
-# Pattern for dice rolls (e.g., "d20", "2d6", "1d8+3", "rolls a 15")
-DICE_ROLL_PATTERN = re.compile(r'\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b|\brolls?\s+(?:a\s+)?\d+\b', re.IGNORECASE)
+# DICE_ROLL_PATTERN is provided by mvp_site.dice_integrity
 
 # Pattern for numeric results (damage, HP, gold amounts - "15 damage", "50 gold", "-10 HP")
 NUMERIC_RESULT_PATTERN = re.compile(r'\b[+\-]?\d+\s*(?:damage|hp|gold|coins|xp|exp|points?|gp|sp|cp)\b', re.IGNORECASE)
@@ -1577,30 +1584,6 @@ def _maybe_get_gemini_code_execution_evidence(
         context=context,
     )
     return gemini_provider.extract_code_execution_evidence(api_response)
-
-
-def _log_fabricated_dice_if_detected(
-    structured_response: Any, code_execution_evidence: dict[str, Any]
-) -> None:
-    """Log if dice results appear without code_execution evidence."""
-    if not structured_response or not code_execution_evidence:
-        return
-
-    has_dice_rolls = bool(
-        getattr(structured_response, "dice_rolls", None)
-        or getattr(structured_response, "dice_audit_events", None)
-    )
-    if not has_dice_rolls:
-        return
-
-    code_was_executed = code_execution_evidence.get("code_execution_used", False)
-    if not code_was_executed:
-        logging_util.error(
-            "🚨 FABRICATED_DICE_DETECTED: Gemini returned dice_rolls but did NOT use "
-            "code_execution (executable_code_parts=0). Dice values may be hallucinated! "
-            f"dice_rolls={getattr(structured_response, 'dice_rolls', [])}, "
-            f"evidence={code_execution_evidence}"
-        )
 
 
 def _get_context_stats(
@@ -2503,6 +2486,7 @@ def get_initial_story(
         provider_name=provider_selection.provider,
     )
     logging_util.info("Successfully used LLMRequest for initial story generation")
+    final_api_response = api_response
 
     code_execution_evidence = _maybe_get_gemini_code_execution_evidence(
         provider_name=provider_selection.provider,
@@ -2516,16 +2500,42 @@ def get_initial_story(
     # Create LLMResponse from raw response, which handles all parsing internally
     # Parse the structured response to extract clean narrative and debug data
     narrative_text, structured_response = parse_structured_response(raw_response_text)
-    if structured_response and code_execution_evidence:
-        # Persist server-verified evidence (do not rely on model self-reporting).
-        structured_response.debug_info = {
-            **(structured_response.debug_info or {}),
-            "provider": provider_selection.provider,
-            "model": model_to_use,
-            "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
-            **code_execution_evidence,
-        }
-        _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+    dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+        model_to_use, provider_selection.provider
+    )
+    capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
+    capture_tools = True
+    processing_metadata: dict[str, Any] = {
+        "llm_provider": provider_selection.provider,
+        "llm_model": model_to_use,
+    }
+    if capture_raw:
+        raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
+        processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
+    processing_metadata.update(
+        dice_integrity.build_dice_processing_metadata(
+            api_response=final_api_response,
+            dice_roll_strategy=dice_roll_strategy,
+            capture_tools=capture_tools,
+        )
+    )
+
+    if structured_response:
+        debug_info = structured_response.debug_info or {}
+        debug_info.setdefault("llm_provider", provider_selection.provider)
+        debug_info.setdefault("llm_model", model_to_use)
+        if capture_raw and "raw_response_text" in processing_metadata:
+            debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+        if code_execution_evidence:
+            # Persist server-verified evidence (do not rely on model self-reporting).
+            debug_info.update(code_execution_evidence)
+            _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+        structured_response.debug_info = debug_info
+        dice_integrity.apply_dice_metadata_to_structured_response(
+            structured_response=structured_response,
+            dice_metadata=processing_metadata,
+            dice_roll_strategy=dice_roll_strategy,
+        )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -2562,11 +2572,19 @@ def get_initial_story(
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
         gemini_response = LLMResponse.create_from_structured_response(
-            structured_response, model_to_use
+            structured_response,
+            model_to_use,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
         )
     else:
         # Fallback to legacy mode for non-JSON responses
-        gemini_response = LLMResponse.create_legacy(narrative_text, model_to_use)
+        gemini_response = LLMResponse.create_legacy(
+            narrative_text,
+            model_to_use,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
+        )
 
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
     if expected_entities:
@@ -2699,350 +2717,21 @@ def _check_missing_required_fields(
     if not session_header or not str(session_header).strip():
         missing.append("session_header")
 
-    if require_dice_rolls:
-        dice_rolls = getattr(structured_response, 'dice_rolls', None)
-        has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
-        if not has_dice_rolls:
-            missing.append('dice_rolls')
-
-    # Check for dice integrity violation (fabricated dice rolls)
-    if dice_integrity_violation:
-        missing.append('dice_integrity')
+    # Append dice-specific missing fields via helper
+    dice_integrity.add_missing_dice_fields(
+        missing,
+        structured_response=structured_response,
+        require_dice_rolls=require_dice_rolls,
+        dice_integrity_violation=dice_integrity_violation,
+    )
 
     return missing
-
-def _should_require_dice_rolls_for_turn(
-    *,
-    current_game_state: GameState | None,
-    user_input: str,
-    mode: str,
-    is_god_mode: bool,
-    is_dm_mode: bool,
-) -> bool:
-    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
-        return False
-
-    if not current_game_state or not current_game_state.combat_state.get("in_combat", False):
-        return False
-
-    text = (user_input or "").strip().lower()
-    if not text or text.startswith("/"):
-        return False
-
-    combat_action_keywords = (
-        "attack",
-        "shoot",
-        "strike",
-        "stab",
-        "slash",
-        "swing",
-        "hit",
-        "cast",
-        "spell",
-        "fireball",
-        "roll",
-        "save",
-        "saving throw",
-        "skill",
-        "check",
-        "initiative",
-        "grapple",
-        "shove",
-        "dodge",
-        "dash",
-        "disengage",
-        "help",
-    )
-
-    return any(k in text for k in combat_action_keywords)
-
-
-# Combat keywords shared between user input and narrative detection
-COMBAT_ACTION_KEYWORDS = (
-    "attack",
-    "shoot",
-    "strike",
-    "stab",
-    "slash",
-    "swing",
-    "hit",
-    "cast",
-    "spell",
-    "fireball",
-    "roll",
-    "save",
-    "saving throw",
-    "skill",
-    "check",
-    "initiative",
-    "grapple",
-    "shove",
-    "dodge",
-    "dash",
-    "disengage",
-    "help",
-)
-
-# Past tense markers that indicate historical combat (not active)
-_PAST_TENSE_MARKERS = (
-    "died",
-    "killed",
-    "defeated",
-    "was attacked",
-    "were attacked",
-    "had attacked",
-    "was hit",
-    "were hit",
-    "had hit",
-    "was struck",
-    "were struck",
-    "had struck",
-    "previously",
-    "last session",
-    "earlier",
-    "before",
-    "remembered",
-    "recalled",
-)
-
-# Hypothetical markers that indicate potential (not actual) combat
-_HYPOTHETICAL_MARKERS = (
-    "could attack",
-    "could strike",
-    "could hit",
-    "might attack",
-    "might strike",
-    "might hit",
-    "would attack",
-    "would strike",
-    "would hit",
-    "if you attack",
-    "if you strike",
-    "if you hit",
-    "you could",
-    "you might",
-    "you would",
-    "want to attack",
-    "plan to attack",
-    "decide to attack",
-)
-
-# Active combat indicators (present tense, immediate action)
-_ACTIVE_COMBAT_PATTERNS = (
-    "attacks you",
-    "strikes at",
-    "swings at",
-    "shoots at",
-    "casts at",
-    "hits you",
-    "damage to",
-    "takes damage",
-    "deals damage",
-    "dealing damage",
-    "roll to hit",
-    "rolls to hit",
-    "attack roll",
-    "makes an attack",
-    "roll for initiative",
-    "rolls initiative",
-    "d20",
-    "1d20",
-    "2d6",
-    "1d8",
-    "1d6",
-)
-
-
-def _detect_combat_in_narrative(narrative_text: str) -> bool:
-    """Detect ACTIVE combat in LLM-generated narrative text.
-
-    This function distinguishes:
-    - ACTIVE combat: "The goblin attacks you" -> True
-    - PAST combat: "The goblin died last session" -> False
-    - HYPOTHETICAL: "You could attack the goblin" -> False
-
-    Args:
-        narrative_text: The LLM-generated narrative response
-
-    Returns:
-        True if active combat is detected in the narrative
-    """
-    if not narrative_text:
-        return False
-
-    text = narrative_text.lower()
-
-    # Check for past tense markers - if found, check if combat keywords are
-    # only in past tense context (harder to determine, so be conservative)
-    has_past_marker = any(marker in text for marker in _PAST_TENSE_MARKERS)
-
-    # Check for hypothetical markers
-    has_hypothetical_marker = any(marker in text for marker in _HYPOTHETICAL_MARKERS)
-
-    # Check for active combat patterns (strong indicators)
-    has_active_pattern = any(pattern in text for pattern in _ACTIVE_COMBAT_PATTERNS)
-
-    # If we have strong active patterns AND no hypothetical context, it's combat
-    if has_active_pattern and not has_hypothetical_marker:
-        return True
-
-    # Check for combat keywords
-    has_combat_keyword = any(keyword in text for keyword in COMBAT_ACTION_KEYWORDS)
-
-    # If combat keyword but ONLY in past/hypothetical context, not active combat
-    if has_combat_keyword:
-        # If we have hypothetical markers, assume it's not real combat
-        if has_hypothetical_marker:
-            return False
-        # If we have past markers but no active patterns, assume it's historical
-        if has_past_marker and not has_active_pattern:
-            return False
-        # Otherwise, treat as active combat
-        return True
-
-    return False
-
-
-def _check_dice_integrity(
-    *,
-    structured_response: NarrativeResponse | None,
-    api_response: Any,
-) -> tuple[bool, str]:
-    """Check if dice_rolls in response came from legitimate tool execution.
-
-    Args:
-        structured_response: Parsed response with dice_rolls field
-        api_response: Raw API response object with tool execution metadata
-
-    Returns:
-        Tuple of (is_valid, reason_if_invalid)
-
-    Validation Rules:
-        1. If dice_rolls is empty/None -> (True, "") - no dice claimed
-        2. If dice_rolls non-empty AND tool execution evidence -> (True, "")
-        3. If dice_rolls non-empty AND no tool execution evidence -> (False, reason)
-    """
-    # No structured response means nothing to validate
-    if not structured_response:
-        return True, ""
-
-    # Get dice_rolls from the response
-    dice_rolls = getattr(structured_response, "dice_rolls", None) or []
-    if not dice_rolls:
-        return True, ""
-
-    # Check if dice_rolls has actual content (not just empty strings)
-    has_real_dice = any(str(roll).strip() for roll in dice_rolls)
-    if not has_real_dice:
-        return True, ""
-
-    # Check tool execution metadata from the API response
-    tool_requests_executed = getattr(api_response, "_tool_requests_executed", None)
-
-    # If metadata is missing, we can't verify - be permissive for backward compatibility
-    if tool_requests_executed is None:
-        logging_util.debug(
-            "DICE_INTEGRITY: No _tool_requests_executed metadata on response, "
-            "skipping integrity check for backward compatibility"
-        )
-        return True, ""
-
-    # If tools were executed, dice_rolls are legitimate
-    if tool_requests_executed:
-        return True, ""
-
-    # dice_rolls present but no tools executed - fabrication detected
-    return False, (
-        f"Response contains dice_rolls ({len(dice_rolls)} entries) but no tool_requests were executed. "
-        "Dice rolls must come from tool execution, not fabrication."
-    )
-
-
-def _validate_combat_dice_integrity(
-    *,
-    user_input: str,
-    narrative_text: str,
-    structured_response: NarrativeResponse | None,
-    current_game_state: GameState | None,
-    api_response: Any,
-    mode: str,
-    is_god_mode: bool,
-    is_dm_mode: bool,
-) -> tuple[bool, str | None]:
-    """Validate dice integrity when combat is detected.
-
-    This is the "strictest mode" enforcement that checks for combat in BOTH:
-    - User input (e.g., "I attack the goblin")
-    - Response narrative (e.g., "The goblin attacks you")
-
-    If combat is detected but dice_rolls are present without tool execution,
-    this indicates the model fabricated dice results.
-
-    Args:
-        user_input: Original user input
-        narrative_text: LLM-generated narrative
-        structured_response: Parsed response
-        current_game_state: Current game state
-        api_response: Raw API response with tool metadata
-        mode: Game mode (character, story, etc.)
-        is_god_mode: Whether god mode is active
-        is_dm_mode: Whether DM mode is active
-
-    Returns:
-        Tuple of (is_valid, reprompt_reason_if_invalid)
-    """
-    # Skip validation for god mode and DM mode
-    if is_god_mode or is_dm_mode:
-        return True, None
-
-    # Skip validation for non-character modes
-    if mode != constants.MODE_CHARACTER:
-        return True, None
-
-    # Detect combat in user input (using existing logic)
-    user_text = (user_input or "").strip().lower()
-    user_has_combat = any(k in user_text for k in COMBAT_ACTION_KEYWORDS) if user_text else False
-
-    # Detect combat in narrative (new logic)
-    narrative_has_combat = _detect_combat_in_narrative(narrative_text)
-
-    # If no combat detected anywhere, no validation needed
-    if not user_has_combat and not narrative_has_combat:
-        return True, None
-
-    # Combat detected - check dice integrity
-    is_valid, reason = _check_dice_integrity(
-        structured_response=structured_response,
-        api_response=api_response,
-    )
-
-    if is_valid:
-        return True, None
-
-    # Log the violation
-    combat_source = []
-    if user_has_combat:
-        combat_source.append("user_input")
-    if narrative_has_combat:
-        combat_source.append("narrative")
-
-    logging_util.warning(
-        f"DICE_INTEGRITY_VIOLATION: Combat detected in {', '.join(combat_source)} "
-        f"but dice_rolls were not from tool execution. Reason: {reason}"
-    )
-
-    return False, (
-        "DICE INTEGRITY VIOLATION: Your response includes dice results but you did not use "
-        "tool_requests to roll them. In combat, you MUST use tool_requests (roll_dice, roll_attack, etc.) "
-        "to generate dice rolls. Do NOT fabricate dice results. "
-        "Regenerate your response using tool_requests for all dice rolls."
-    )
-
 
 def _build_reprompt_for_missing_fields(
     original_response_text: str,
     missing_fields: list[str],
     tool_results: list[dict] | None = None,
+    dice_roll_strategy: str | None = None,
 ) -> str:
     """Build a reprompt message to request missing fields.
 
@@ -3052,6 +2741,8 @@ def _build_reprompt_for_missing_fields(
         tool_results: Optional list of tool execution results to include
             in the reprompt. This preserves dice roll provenance when
             reprompting after malformed JSON in Phase 2.
+        dice_roll_strategy: Strategy to determine available dice remediation
+            (code_execution only vs tool_requests only)
 
     Returns:
         Reprompt message asking for the missing fields
@@ -3072,11 +2763,8 @@ def _build_reprompt_for_missing_fields(
             "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
         )
     if "dice_integrity" in missing_fields:
-        requested_lines.append(
-            "- DICE INTEGRITY: Your response includes dice_rolls but you did not use "
-            "tool_requests to roll them. In combat, you MUST use tool_requests "
-            "(roll_dice, roll_attack, roll_skill_check, roll_saving_throw) to generate dice rolls. "
-            "Do NOT fabricate dice results. Regenerate using tool_requests for all dice."
+        requested_lines.extend(
+            dice_integrity.build_dice_integrity_reprompt_lines(dice_roll_strategy)
         )
 
     requested_block = '\n'.join(requested_lines)
@@ -3107,6 +2795,26 @@ def _build_reprompt_for_missing_fields(
         f"Keep the narrative and other fields from your previous response. "
         f"{tool_results_context}"
         f"Here is your previous response for reference:\n{original_response_text[:2000]}"
+    )
+
+
+def _build_reprompt_request(
+    base_request: LLMRequest,
+    reprompt_message: str,
+) -> LLMRequest:
+    """Create a follow-up LLMRequest that preserves context but replaces user_action."""
+    return LLMRequest.build_story_continuation(
+        user_action=reprompt_message,
+        user_id=base_request.user_id,
+        game_mode=base_request.game_mode,
+        game_state=base_request.game_state,
+        story_history=base_request.story_history,
+        checkpoint_block=base_request.checkpoint_block,
+        core_memories=list(base_request.core_memories),
+        sequence_ids=list(base_request.sequence_ids),
+        entity_tracking=base_request.entity_tracking,
+        selected_prompts=list(base_request.selected_prompts),
+        use_default_world=base_request.use_default_world,
     )
 
 
@@ -3536,6 +3244,7 @@ def continue_story(
     logging_util.info(
         "Successfully used LLMRequest for structured JSON communication"
     )
+    final_api_response = api_response
 
     code_execution_evidence = _maybe_get_gemini_code_execution_evidence(
         provider_name=provider_selection.provider,
@@ -3551,6 +3260,22 @@ def continue_story(
     narrative_text: str
     structured_response: NarrativeResponse | None
     narrative_text, structured_response = parse_structured_response(raw_response_text)
+    dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+        chosen_model, provider_selection.provider
+    )
+    tool_results_for_dice = getattr(api_response, "_tool_results", None)
+    if structured_response:
+        dice_integrity.apply_dice_metadata_to_structured_response(
+            structured_response=structured_response,
+            dice_metadata={
+                "tool_results": tool_results_for_dice,
+                "tool_requests_executed": bool(
+                    getattr(api_response, "_tool_requests_executed", False)
+                ),
+                "dice_strategy": dice_roll_strategy,
+            },
+            dice_roll_strategy=dice_roll_strategy,
+        )
 
     # REPROMPT FOR MISSING REQUIRED FIELDS (planning_block, session_header)
     # Only attempt reprompt if:
@@ -3580,7 +3305,46 @@ def continue_story(
         is_god_mode=is_god_mode_command,
         is_dm_mode=is_dm_mode_initial,
     )
-    dice_integrity_violation = not dice_integrity_valid
+
+    # CODE_EXECUTION FABRICATION CHECK (Gemini 3 Flash code_execution mode)
+    # If model claims dice_rolls but didn't use code_execution, trigger reprompt
+    code_exec_fabrication = False
+    if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
+        code_exec_fabrication = _is_code_execution_fabrication(
+            structured_response, code_execution_evidence
+        )
+    if code_exec_fabrication:
+        dice.log_code_exec_fabrication_violation()
+
+    narrative_dice_fabrication = _detect_narrative_dice_fabrication(
+        narrative_text=narrative_text,
+        structured_response=structured_response,
+        api_response=api_response,
+        code_execution_evidence=code_execution_evidence,
+    )
+    debug_enabled = os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true"
+    dice.log_pre_post_detection_context(
+        dice_strategy=dice_roll_strategy,
+        tool_requests_executed=getattr(api_response, "_tool_requests_executed", "N/A"),
+        tool_results_count=len(getattr(api_response, "_tool_results", []) or []),
+        code_execution_used=(
+            code_execution_evidence.get("code_execution_used")
+            if code_execution_evidence
+            else "N/A"
+        ),
+        debug_enabled=debug_enabled,
+    )
+    dice.log_post_detection_result(
+        narrative_dice_fabrication=narrative_dice_fabrication,
+        dice_rolls=getattr(structured_response, "dice_rolls", None),
+        debug_enabled=debug_enabled,
+    )
+    if narrative_dice_fabrication:
+        dice.log_narrative_dice_fabrication_violation()
+
+    dice_integrity_violation = (
+        not dice_integrity_valid or code_exec_fabrication or narrative_dice_fabrication
+    )
 
     missing_fields = _check_missing_required_fields(
         structured_response,
@@ -3591,91 +3355,210 @@ def continue_story(
         dice_integrity_violation=dice_integrity_violation,
     )
 
+    dice_retry_llm_call = False
     if missing_fields and MAX_MISSING_FIELD_REPROMPT_ATTEMPTS > 0:
         logging_util.warning(
             f"🔄 REPROMPT_MISSING_FIELDS: Response missing {missing_fields}. "
             f"Attempting reprompt..."
         )
-        # Build reprompt message with tool_results from original response
-        # This preserves dice provenance so the model can reference real results
-        reprompt_message = _build_reprompt_for_missing_fields(
-            raw_response_text,
-            missing_fields,
-            tool_results=getattr(api_response, "_tool_results", None),
+        dice_retry_llm_call = any(
+            field in missing_fields for field in ("dice_rolls", "dice_integrity")
         )
+        dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+            chosen_model, provider_selection.provider
+        )
+        last_missing_count = len(missing_fields)
 
-        # Create a follow-up request with the reprompt
-        # Use a simple prompt_contents list with the reprompt message
-        try:
-            reprompt_response = _call_llm_api(
-                prompt_contents=[reprompt_message],
-                model_name=chosen_model,
-                system_instruction_text=system_instruction_final,
-                provider_name=provider_selection.provider,
-            )
-            reprompt_code_exec = _maybe_get_gemini_code_execution_evidence(
-                provider_name=provider_selection.provider,
-                model_name=chosen_model,
-                api_response=reprompt_response,
-                context="continue_story_reprompt",
-            )
-            reprompt_text = _get_text_from_response(reprompt_response)
-            reprompt_narrative, reprompt_structured = parse_structured_response(reprompt_text)
-
-            # Validate dice integrity for reprompt response
-            reprompt_dice_valid, _ = _validate_combat_dice_integrity(
-                user_input=user_input,
-                narrative_text=reprompt_narrative,
-                structured_response=reprompt_structured,
-                current_game_state=current_game_state,
-                api_response=reprompt_response,
-                mode=mode,
-                is_god_mode=is_god_mode_command,
-                is_dm_mode=is_dm_mode_initial,
-            )
-            reprompt_dice_violation = not reprompt_dice_valid
-
-            # Check if reprompt was successful
-            reprompt_missing = _check_missing_required_fields(
-                reprompt_structured,
-                mode,
-                is_god_mode=is_god_mode_command,
-                is_dm_mode=is_dm_mode_initial,
-                require_dice_rolls=require_dice_rolls,
-                dice_integrity_violation=reprompt_dice_violation,
+        for attempt in range(1, MAX_MISSING_FIELD_REPROMPT_ATTEMPTS + 1):
+            # Build reprompt message with tool_results from original response
+            # This preserves dice provenance so the model can reference real results
+            reprompt_message = _build_reprompt_for_missing_fields(
+                raw_response_text,
+                missing_fields,
+                tool_results=getattr(api_response, "_tool_results", None),
+                dice_roll_strategy=dice_roll_strategy,
             )
 
-            if len(reprompt_missing) < len(missing_fields):
-                # Reprompt improved the response - use it
+            # Create a follow-up request with the reprompt
+            # Use a simple prompt_contents list with the reprompt message
+            try:
                 logging_util.info(
-                    f"✅ REPROMPT_SUCCESS: Reprompt reduced missing fields "
-                    f"from {missing_fields} to {reprompt_missing}"
+                    f"🔁 REPROMPT_ATTEMPT {attempt}/{MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} "
+                    f"for missing fields: {missing_fields}"
                 )
-                raw_response_text = reprompt_text
-                narrative_text = reprompt_narrative
-                structured_response = reprompt_structured
-                if reprompt_code_exec is not None:
-                    code_execution_evidence = reprompt_code_exec
-            else:
-                logging_util.warning(
-                    f"⚠️ REPROMPT_FAILED: Reprompt did not improve response. "
-                    f"Still missing: {reprompt_missing}. Using original response."
+                reprompt_request = _build_reprompt_request(
+                    gemini_request,
+                    reprompt_message,
                 )
-        except Exception as e:
+                reprompt_response = _call_llm_api_with_llm_request(
+                    gemini_request=reprompt_request,
+                    model_name=chosen_model,
+                    system_instruction_text=system_instruction_final,
+                    provider_name=provider_selection.provider,
+                )
+                reprompt_code_exec = _maybe_get_gemini_code_execution_evidence(
+                    provider_name=provider_selection.provider,
+                    model_name=chosen_model,
+                    api_response=reprompt_response,
+                    context="continue_story_reprompt",
+                )
+                reprompt_text = _get_text_from_response(reprompt_response)
+                reprompt_narrative, reprompt_structured = parse_structured_response(
+                    reprompt_text
+                )
+                if reprompt_structured:
+                    dice_integrity.apply_dice_metadata_to_structured_response(
+                        structured_response=reprompt_structured,
+                        dice_metadata={
+                            "tool_results": tool_results_for_dice,
+                            "tool_requests_executed": True,
+                            "dice_strategy": dice_roll_strategy,
+                        },
+                        dice_roll_strategy=dice_roll_strategy,
+                    )
+                if (
+                    tool_results_for_dice
+                    and dice_roll_strategy == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE
+                ):
+                    # Preserve authoritative tool execution evidence for reprompt validation.
+                    reprompt_response._tool_results = tool_results_for_dice  # type: ignore[attr-defined]
+                    reprompt_response._tool_requests_executed = True  # type: ignore[attr-defined]
+
+                # Validate dice integrity for reprompt response
+                reprompt_dice_valid, _ = _validate_combat_dice_integrity(
+                    user_input=user_input,
+                    narrative_text=reprompt_narrative,
+                    structured_response=reprompt_structured,
+                    current_game_state=current_game_state,
+                    api_response=reprompt_response,
+                    mode=mode,
+                    is_god_mode=is_god_mode_command,
+                    is_dm_mode=is_dm_mode_initial,
+                )
+                reprompt_code_exec_fabrication = False
+                if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
+                    reprompt_code_exec_fabrication = _is_code_execution_fabrication(
+                        reprompt_structured, reprompt_code_exec
+                    )
+                reprompt_narrative_fabrication = _detect_narrative_dice_fabrication(
+                    narrative_text=reprompt_narrative,
+                    structured_response=reprompt_structured,
+                    api_response=reprompt_response,
+                    code_execution_evidence=reprompt_code_exec,
+                )
+                if reprompt_narrative_fabrication:
+                    logging_util.warning(
+                        "🎲 REPROMPT_NARRATIVE_DICE_FABRICATION: Dice patterns found in reprompt narrative "
+                        "without tool evidence."
+                    )
+                if reprompt_code_exec_fabrication:
+                    logging_util.warning(
+                        "🎲 REPROMPT_CODE_EXEC_FABRICATION: Dice in reprompt response "
+                        "but no code_execution detected. Treating as integrity violation."
+                    )
+                reprompt_dice_violation = (
+                    not reprompt_dice_valid
+                    or reprompt_code_exec_fabrication
+                    or reprompt_narrative_fabrication
+                )
+
+                # Check if reprompt was successful
+                reprompt_missing = _check_missing_required_fields(
+                    reprompt_structured,
+                    mode,
+                    is_god_mode=is_god_mode_command,
+                    is_dm_mode=is_dm_mode_initial,
+                    require_dice_rolls=require_dice_rolls,
+                    dice_integrity_violation=reprompt_dice_violation,
+                )
+
+                # CRITICAL: Never accept responses with dice_integrity violations
+                # If reprompt still has fabricated dice, reject and continue loop
+                if 'dice_integrity' in reprompt_missing:
+                    logging_util.warning(
+                        f"🚨 REPROMPT_DICE_FABRICATION: Reprompt attempt {attempt} still has "
+                        f"dice fabrication. Rejecting and continuing loop."
+                    )
+                    # Don't accept this response, continue to next attempt
+                    continue
+
+                if len(reprompt_missing) < last_missing_count:
+                    # Reprompt improved the response - use it
+                    logging_util.info(
+                        f"✅ REPROMPT_SUCCESS: Reprompt reduced missing fields "
+                        f"from {missing_fields} to {reprompt_missing}"
+                    )
+                    raw_response_text = reprompt_text
+                    narrative_text = reprompt_narrative
+                    structured_response = reprompt_structured
+                    if reprompt_code_exec is not None:
+                        code_execution_evidence = reprompt_code_exec
+                    final_api_response = reprompt_response
+                    missing_fields = reprompt_missing
+                    last_missing_count = len(reprompt_missing)
+
+                    if not missing_fields:
+                        break
+                else:
+                    logging_util.warning(
+                        f"⚠️ REPROMPT_STALL: Reprompt did not improve response. "
+                        f"Still missing: {reprompt_missing}. Using best available response."
+                    )
+                    break
+            except Exception as e:
+                logging_util.error(
+                    f"❌ REPROMPT_ERROR: Failed to reprompt for missing fields: {e}. "
+                    f"Using best available response."
+                )
+                break
+
+        # CRITICAL: Final validation - reject entire response if dice_integrity still violated
+        # After all reprompt attempts, if we still have fabricated dice, throw error
+        if 'dice_integrity' in missing_fields:
             logging_util.error(
-                f"❌ REPROMPT_ERROR: Failed to reprompt for missing fields: {e}. "
-                f"Using original response."
+                f"🚨 DICE_INTEGRITY_FAILURE: All {MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} "
+                f"reprompt attempts failed to produce real dice. Rejecting response."
+            )
+            raise ValueError(
+                f"DICE_INTEGRITY_VIOLATION: LLM fabricated dice in all "
+                f"{MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} attempts. Cannot proceed with fabricated dice."
             )
 
-    if structured_response and code_execution_evidence:
-        structured_response.debug_info = {
-            **(structured_response.debug_info or {}),
-            "provider": provider_selection.provider,
-            "model": chosen_model,
-            "dice_strategy": dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
-            **code_execution_evidence,
-        }
-        _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+    dice_roll_strategy = dice_strategy.get_dice_roll_strategy(
+        chosen_model, provider_selection.provider
+    )
+    capture_raw = os.getenv("CAPTURE_RAW_LLM", "").lower() == "true"
+    capture_tools = True
+    processing_metadata: dict[str, Any] = {
+        "llm_provider": provider_selection.provider,
+        "llm_model": chosen_model,
+    }
+    if capture_raw:
+        raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
+        processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
+    processing_metadata.update(
+        dice_integrity.build_dice_processing_metadata(
+            api_response=final_api_response,
+            dice_roll_strategy=dice_roll_strategy,
+            capture_tools=capture_tools,
+        )
+    )
+
+    if structured_response:
+        debug_info = structured_response.debug_info or {}
+        debug_info.setdefault("llm_provider", provider_selection.provider)
+        debug_info.setdefault("llm_model", chosen_model)
+        if capture_raw and "raw_response_text" in processing_metadata:
+            debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+        if code_execution_evidence:
+            debug_info.update(code_execution_evidence)
+            _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+        structured_response.debug_info = debug_info
+        dice_integrity.apply_dice_metadata_to_structured_response(
+            structured_response=structured_response,
+            dice_metadata=processing_metadata,
+            dice_roll_strategy=dice_roll_strategy,
+        )
 
     # DIAGNOSTIC LOGGING: Log parsed response details for debugging empty narrative issues
     logging_util.info(
@@ -3712,11 +3595,22 @@ def continue_story(
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
         gemini_response = LLMResponse.create_from_structured_response(
-            structured_response, chosen_model
+            structured_response,
+            chosen_model,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
         )
     else:
         # Fallback to legacy mode for non-JSON responses
-        gemini_response = LLMResponse.create_legacy(narrative_text, chosen_model)
+        gemini_response = LLMResponse.create_legacy(
+            narrative_text,
+            chosen_model,
+            provider=provider_selection.provider,
+            processing_metadata=processing_metadata,
+        )
+
+    if dice_retry_llm_call:
+        gemini_response.processing_metadata["dice_retry_llm_call"] = True
 
     response_text: str = gemini_response.narrative_text
 
