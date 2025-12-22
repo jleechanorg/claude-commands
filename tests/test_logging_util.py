@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 from unittest.mock import patch
 
@@ -121,7 +122,9 @@ def test_setup_unified_logging_is_thread_safe_and_idempotent():
             handler
             for handler in logging.getLogger().handlers
             if isinstance(handler, logging.FileHandler)
-            and handler.baseFilename.endswith("/tmp/repo/branch/worker.log")
+            and handler.baseFilename.endswith(
+                os.path.join("/tmp", "repo", "branch", "worker.log")
+            )
         ]
         assert len(file_handlers) == 1
     finally:

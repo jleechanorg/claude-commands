@@ -5,7 +5,8 @@ Supports both module-level convenience functions and logger-aware functions
 that preserve logger context.
 
 UNIFIED LOGGING ARCHITECTURE:
-- All logs go to BOTH Cloud Logging (stdout/stderr) and local file
+- After setup_unified_logging() is called, logs go to BOTH Cloud Logging (stdout/stderr)
+  and the local file
 - Log files stored under /tmp/<repo>/<branch>/<service>.log
 - Single setup function called by all entry points (Flask, MCP, tests)
 - Prevents duplicate handlers via initialization guard
