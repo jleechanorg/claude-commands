@@ -175,39 +175,13 @@ DEFAULT_TEST_USER = "test-user"
 
 def setup_file_logging() -> None:
     """
-    Configure file logging for current git branch using centralized logging_util.
+    Configure unified logging for Flask server.
 
-    Creates branch-specific log files in /tmp/worldarchitect.ai/{branch}/flask-server.log
-    and configures logging_util to write to both console and file.
+    Uses centralized logging_util.setup_unified_logging() to ensure
+    consistent logging across all entry points (Flask, MCP, tests).
+    Logs go to both Cloud Logging (stdout/stderr) and local file.
     """
-    # Use centralized logging utility for consistent directory structure
-    log_file = logging_util.LoggingUtil.get_log_file("flask-server")
-
-    # Clear any existing handlers (close them first to prevent ResourceWarning)
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        handler.close()
-        root_logger.removeHandler(handler)
-
-    # Set up formatting
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    root_logger.addHandler(console_handler)
-
-    # File handler
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(formatter)
-    root_logger.addHandler(file_handler)
-
-    # Set level
-    root_logger.setLevel(logging.INFO)
-
-    logging_util.info(f"File logging configured: {log_file}")
+    logging_util.setup_unified_logging("flask-server")
 
 
 def safe_jsonify(data: Any) -> Response:
