@@ -10,6 +10,8 @@ UNIFIED LOGGING ARCHITECTURE:
 - Log files stored under /tmp/<repo>/<branch>/<service>.log
 - Single setup function called by all entry points (Flask, MCP, tests)
 - Prevents duplicate handlers via initialization guard
+- Convenience logging functions lazily initialize unified logging if not configured,
+  using LOGGING_SERVICE_NAME or the default "app" service.
 """
 
 import logging
@@ -23,6 +25,7 @@ _logging_initialized = False
 _logging_lock = threading.Lock()
 _configured_service_name: str | None = None
 _configured_log_file: str | None = None
+_default_service_name = "app"
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL
@@ -208,6 +211,7 @@ class LoggingUtil:
             logger: Optional logger instance to preserve context. If None, uses root logger.
             **kwargs: Additional keyword arguments for logging
         """
+        _ensure_logging_initialized()
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
         if logger is not None:
             logger.error(enhanced_message, *args, **kwargs)
@@ -227,6 +231,7 @@ class LoggingUtil:
             logger: Optional logger instance to preserve context. If None, uses root logger.
             **kwargs: Additional keyword arguments for logging
         """
+        _ensure_logging_initialized()
         enhanced_message = f"{LoggingUtil.WARNING_EMOJI} {message}"
         if logger is not None:
             logger.warning(enhanced_message, *args, **kwargs)
@@ -253,6 +258,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        _ensure_logging_initialized()
         logging.info(message, *args, **kwargs)
 
     @staticmethod
@@ -265,6 +271,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        _ensure_logging_initialized()
         logging.debug(message, *args, **kwargs)
 
     @staticmethod
@@ -277,6 +284,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        _ensure_logging_initialized()
         enhanced_message = f"🔥🔥 {message}"
         logging.critical(enhanced_message, *args, **kwargs)
 
@@ -290,6 +298,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        _ensure_logging_initialized()
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
         logging.exception(enhanced_message, *args, **kwargs)
 
@@ -314,6 +323,7 @@ class LoggingUtil:
         Returns:
             Logger instance
         """
+        _ensure_logging_initialized()
         return logging.getLogger(name)
 
 
@@ -372,6 +382,14 @@ def basicConfig(**kwargs: Any) -> None:
 def getLogger(name: str | None = None) -> logging.Logger:
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)
+
+
+def _ensure_logging_initialized() -> None:
+    if not _logging_initialized:
+        service_name = os.environ.get("LOGGING_SERVICE_NAME")
+        if service_name is None:
+            service_name = _default_service_name
+        setup_unified_logging(service_name)
 
 
 def setup_unified_logging(service_name: str = "app") -> str:
