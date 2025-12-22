@@ -35,6 +35,8 @@ import requests
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
+from mvp_site import logging_util
+
 # Test Configuration
 # Use environment variable or default to 8081 (matching main.py)
 V1_PORT = os.environ.get("PORT", "8081")
@@ -45,32 +47,9 @@ V2_BASE_URL = "http://localhost:3002"  # V2 runs on port 3002
 # Evidence directory: Use branch-specific temp directory to avoid polluting docs/
 def get_branch_name():
     """Get current git branch name for temp directory isolation"""
-    try:
-        git_path = os.path.join(os.getcwd(), ".git")
-
-        # Handle Git worktrees where .git is a file, not a directory
-        if os.path.isfile(git_path):
-            # Read the gitdir path from .git file
-            with open(git_path) as f:
-                git_content = f.read().strip()
-                if git_content.startswith("gitdir: "):
-                    actual_git_dir = git_content[8:]  # Remove "gitdir: "
-                    git_head_file = os.path.join(actual_git_dir, "HEAD")
-                else:
-                    return "unknown_branch"
-        else:
-            # Normal git repository
-            git_head_file = os.path.join(git_path, "HEAD")
-
-        # Read HEAD file to get current branch
-        if os.path.exists(git_head_file):
-            with open(git_head_file) as f:
-                head_content = f.read().strip()
-                if head_content.startswith("ref: refs/heads/"):
-                    branch_name = head_content[16:]  # Remove "ref: refs/heads/"
-                    return branch_name.replace("/", "_").replace("-", "_")
-    except OSError:
-        pass
+    branch_name = logging_util.LoggingUtil.get_branch_name()
+    if branch_name != "unknown":
+        return branch_name.replace("/", "_").replace("-", "_")
 
     # Fallback to environment variable or default
     return (

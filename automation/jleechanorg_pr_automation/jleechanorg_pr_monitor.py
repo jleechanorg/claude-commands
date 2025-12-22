@@ -12,6 +12,9 @@ import os
 import re
 import subprocess
 import sys
+import shutil
+import time
+import shlex
 import traceback
 import urllib.request
 from collections import Counter
@@ -1339,7 +1342,8 @@ def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
     Returns:
         tuple: (bool, str) - (success, message)
     """
-    url = f"http://{host}:{port}/json/version"
+    url_host = _format_cdp_host_for_url(host)
+    url = f"http://{url_host}:{port}/json/version"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -1350,6 +1354,194 @@ def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
         return False, f"❌ Chrome CDP not accessible at {host}:{port} - {e.reason}"
     except Exception as e:
         return False, f"❌ Failed to connect to Chrome CDP: {e}"
+
+
+def _parse_bool_env(name: str, default: bool = True) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    raw = raw.strip()
+    if not raw:
+        return default
+    return raw.lower() not in {"0", "false", "no", "off"}
+
+
+def _validate_cdp_host(raw_host: str) -> str:
+    allowed_hosts = {"127.0.0.1", "localhost", "::1"}
+    host = (raw_host or "").strip()
+    if host in allowed_hosts:
+        return host
+
+    print(
+        f"WARNING: Ignoring unsafe CODEX_CDP_HOST value {host!r}; "
+        "only localhost/127.0.0.1/::1 are allowed. Falling back to 127.0.0.1.",
+        file=sys.stderr,
+    )
+    return "127.0.0.1"
+
+
+def _format_cdp_host_for_url(host: str) -> str:
+    if ":" in host and not (host.startswith("[") and host.endswith("]")):
+        return f"[{host}]"
+    return host
+
+
+def _resolve_cdp_host_port() -> Tuple[str, int]:
+    raw_host = os.environ.get("CODEX_CDP_HOST", "127.0.0.1")
+    host = _validate_cdp_host(raw_host)
+    port_raw = os.environ.get("CODEX_CDP_PORT", "9222")
+    try:
+        port = int(port_raw)
+        if not (1 <= port <= 65535):
+            raise ValueError(f"Port {port} out of range")
+    except ValueError:
+        port = 9222
+    return host, port
+
+
+def _detect_chrome_binary() -> Optional[str]:
+    if sys.platform == "win32":
+        win_candidates = [
+            Path(os.environ.get("PROGRAMFILES", "C:\\Program Files"))
+            / "Google/Chrome/Application/chrome.exe",
+            Path(os.environ.get("PROGRAMFILES(X86)", "C:\\Program Files (x86)"))
+            / "Google/Chrome/Application/chrome.exe",
+        ]
+        for candidate in win_candidates:
+            if candidate.exists():
+                return str(candidate)
+
+    if sys.platform == "darwin":
+        mac_candidates = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        ]
+        for candidate in mac_candidates:
+            if Path(candidate).exists():
+                return candidate
+
+    for command in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
+        found = shutil.which(command)
+        if found:
+            return found
+    return None
+
+
+def _start_chrome_debug(port: int, user_data_dir: str) -> Tuple[bool, str]:
+    start_script = os.environ.get("CODEX_CDP_START_SCRIPT")
+    if start_script:
+        try:
+            cmd = shlex.split(start_script)
+        except ValueError as exc:
+            return False, f"❌ Invalid CODEX_CDP_START_SCRIPT value ({start_script}): {exc}"
+        if not cmd:
+            return False, "❌ CODEX_CDP_START_SCRIPT is set but empty after parsing"
+
+        script_path = Path(cmd[0]).expanduser()
+        if not script_path.is_file():
+            return False, f"❌ CODEX_CDP_START_SCRIPT target does not exist or is not a file: {script_path}"
+        try:
+            script_path_resolved = script_path.resolve()
+        except OSError as exc:
+            return False, f"❌ Failed to resolve CODEX_CDP_START_SCRIPT path ({script_path}): {exc}"
+
+        cmd[0] = str(script_path_resolved)
+        cmd.append(str(port))
+        try:
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            return True, f"🚀 Started Chrome via script {script_path_resolved} on port {port}"
+        except Exception as exc:
+            return False, f"❌ Failed to run CODEX_CDP_START_SCRIPT ({script_path_resolved}): {exc}"
+
+    chrome_path = _detect_chrome_binary()
+    if not chrome_path:
+        return False, "❌ Could not find Chrome or Chromium binary"
+
+    resolved_user_data_dir = Path(user_data_dir).expanduser()
+    if not resolved_user_data_dir.is_absolute():
+        resolved_user_data_dir = (Path.home() / resolved_user_data_dir).resolve()
+    else:
+        resolved_user_data_dir = resolved_user_data_dir.resolve()
+    home_dir = Path.home().resolve()
+    try:
+        resolved_user_data_dir.relative_to(home_dir)
+    except ValueError:
+        return False, (
+            "❌ CODEX_CDP_USER_DATA_DIR must reside under your home directory; "
+            f"got {resolved_user_data_dir}"
+        )
+    resolved_user_data_dir.mkdir(parents=True, exist_ok=True)
+    command = [
+        chrome_path,
+        f"--remote-debugging-port={port}",
+        f"--user-data-dir={resolved_user_data_dir}",
+        "--window-size=1920,1080",
+        "https://chatgpt.com/",
+    ]
+    try:
+        subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return True, f"🚀 Started Chrome with CDP on port {port}"
+    except Exception as exc:
+        return False, f"❌ Failed to start Chrome with CDP: {exc}"
+
+
+def ensure_chrome_cdp_accessible(timeout: Optional[int] = None) -> Tuple[bool, str]:
+    host, port = _resolve_cdp_host_port()
+    if timeout is None:
+        timeout_raw = os.environ.get("CODEX_CDP_START_TIMEOUT", "20")
+        try:
+            timeout = int(timeout_raw)
+        except ValueError:
+            timeout = 20
+    try:
+        timeout = int(timeout)
+    except (TypeError, ValueError):
+        timeout = 20
+    if timeout <= 0:
+        timeout = 20
+    ok, message = check_chrome_cdp_accessible(port=port, host=host)
+    if ok:
+        return True, message
+
+    auto_start = _parse_bool_env("CODEX_CDP_AUTO_START", default=True)
+    if not auto_start:
+        return False, message
+
+    user_data_dir = os.environ.get("CODEX_CDP_USER_DATA_DIR", str(Path.home() / ".chrome-automation-profile"))
+    started, start_message = _start_chrome_debug(port, user_data_dir)
+    if not started:
+        return False, start_message
+
+    deadline = time.time() + timeout
+    last_message = message
+    while True:
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            break
+        per_check_timeout = min(1.0, remaining)
+        ok, last_message = check_chrome_cdp_accessible(
+            port=port,
+            host=host,
+            timeout=per_check_timeout,
+        )
+        if ok:
+            return True, f"{start_message}\n{last_message}"
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            break
+        time.sleep(min(1.0, remaining))
+
+    return False, f"{start_message}\n❌ Chrome CDP still not reachable after {timeout}s ({last_message})"
 
 
 def main():
@@ -1394,20 +1586,33 @@ def main():
     if args.codex_update:
         print("🤖 Running Codex automation (first 50 tasks)...")
 
-        # Validate Chrome CDP is accessible before running
-        cdp_ok, cdp_msg = check_chrome_cdp_accessible()
+        # Validate Chrome CDP is accessible before running (auto-starts if needed)
+        cdp_ok, cdp_msg = ensure_chrome_cdp_accessible()
         print(cdp_msg)
         if not cdp_ok:
             print("\n💡 TIP: Start Chrome with CDP enabled first:")
             print("   ./automation/jleechanorg_pr_automation/openai_automation/start_chrome_debug.sh")
+            print("   Or set CODEX_CDP_START_SCRIPT to a custom launcher path.")
             sys.exit(1)
 
         try:
+            host, port = _resolve_cdp_host_port()
             # Call the codex automation module with limit
             # Use -m to run as module (works with installed package)
             # Requires Chrome with CDP enabled on port 9222
             result = subprocess.run(
-                ["python3", "-m", "jleechanorg_pr_automation.openai_automation.codex_github_mentions", "--use-existing-browser", "--limit", "50"],
+                [
+                    "python3",
+                    "-m",
+                    "jleechanorg_pr_automation.openai_automation.codex_github_mentions",
+                    "--use-existing-browser",
+                    "--cdp-host",
+                    host,
+                    "--cdp-port",
+                    str(port),
+                    "--limit",
+                    "50",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=600  # 10 minute timeout

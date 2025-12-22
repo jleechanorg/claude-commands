@@ -42,6 +42,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
             '--context', '/tmp/context.md',
             '--branch', 'my-branch',
             '--pr', '123',
+            '--agent-cli', 'codex',
             '--mcp-agent', 'TestAgent',
             '--bead', 'bead-123',
             '--validate', 'make test',
@@ -55,6 +56,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         parser.add_argument('--context', type=str, default=None)
         parser.add_argument('--branch', type=str, default=None)
         parser.add_argument('--pr', type=int, default=None)
+        parser.add_argument('--agent-cli', type=str, default=None)
         parser.add_argument('--mcp-agent', type=str, default=None)
         parser.add_argument('--bead', type=str, default=None)
         parser.add_argument('--validate', type=str, default=None)
@@ -67,6 +69,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         self.assertEqual(args.context, '/tmp/context.md')
         self.assertEqual(args.branch, 'my-branch')
         self.assertEqual(args.pr, 123)
+        self.assertEqual(args.agent_cli, 'codex')
         self.assertEqual(args.mcp_agent, 'TestAgent')
         self.assertEqual(args.bead, 'bead-123')
         self.assertEqual(args.validate, 'make test')
@@ -82,6 +85,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         parser.add_argument('--context', type=str, default=None)
         parser.add_argument('--branch', type=str, default=None)
         parser.add_argument('--pr', type=int, default=None)
+        parser.add_argument('--agent-cli', type=str, default=None)
         parser.add_argument('--mcp-agent', type=str, default=None)
         parser.add_argument('--bead', type=str, default=None)
         parser.add_argument('--validate', type=str, default=None)
@@ -94,6 +98,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         self.assertIsNone(args.context)
         self.assertIsNone(args.branch)
         self.assertIsNone(args.pr)
+        self.assertIsNone(args.agent_cli)
         self.assertIsNone(args.mcp_agent)
         self.assertIsNone(args.bead)
         self.assertIsNone(args.validate)
@@ -114,6 +119,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         parser.add_argument('--context', type=str, default=None)
         parser.add_argument('--branch', type=str, default=None)
         parser.add_argument('--pr', type=int, default=None)
+        parser.add_argument('--agent-cli', type=str, default=None)
         parser.add_argument('--mcp-agent', type=str, default=None)
         parser.add_argument('--bead', type=str, default=None)
         parser.add_argument('--validate', type=str, default=None)
@@ -126,6 +132,7 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         self.assertIsNone(args.context)
         self.assertEqual(args.branch, 'feature-branch')
         self.assertEqual(args.pr, 456)
+        self.assertIsNone(args.agent_cli)
         self.assertIsNone(args.mcp_agent)
         self.assertIsNone(args.bead)
         self.assertIsNone(args.validate)
@@ -139,6 +146,8 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
             context = '/tmp/ctx.md'
             branch = 'test-branch'
             pr = 789
+            agent_cli = 'gemini'
+            agent_cli_provided = False
             mcp_agent = 'Agent1'
             bead = 'bead-xyz'
             validate = './run_tests.sh'
@@ -152,6 +161,8 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
             "context": args.context,
             "branch": args.branch,
             "pr": args.pr,
+            "agent_cli": args.agent_cli,
+            "agent_cli_provided": args.agent_cli_provided,
             "mcp_agent": args.mcp_agent,
             "bead": args.bead,
             "validate": args.validate,
@@ -162,6 +173,8 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
         self.assertEqual(options['context'], '/tmp/ctx.md')
         self.assertEqual(options['branch'], 'test-branch')
         self.assertEqual(options['pr'], 789)
+        self.assertEqual(options['agent_cli'], 'gemini')
+        self.assertFalse(options['agent_cli_provided'])
         self.assertEqual(options['mcp_agent'], 'Agent1')
         self.assertEqual(options['bead'], 'bead-xyz')
         self.assertEqual(options['validate'], './run_tests.sh')
@@ -204,6 +217,7 @@ class TestAgentSpecInjection(unittest.TestCase):
         }
 
         options = {
+            'agent_cli': 'codex',
             'branch': 'feature-branch',
             'pr': 123,
             'mcp_agent': 'TestAgent',
@@ -214,6 +228,8 @@ class TestAgentSpecInjection(unittest.TestCase):
         }
 
         # Simulate injection logic from orchestrate method
+        if options.get("agent_cli") is not None:
+            agent_spec["cli"] = options["agent_cli"]
         if options.get("branch"):
             agent_spec["existing_branch"] = options["branch"]
         if options.get("pr"):
@@ -230,6 +246,7 @@ class TestAgentSpecInjection(unittest.TestCase):
             agent_spec["no_new_branch"] = True
 
         # Verify injected values
+        self.assertEqual(agent_spec['cli'], 'codex')
         self.assertEqual(agent_spec['existing_branch'], 'feature-branch')
         self.assertEqual(agent_spec['existing_pr'], 123)
         self.assertEqual(agent_spec['mcp_agent_name'], 'TestAgent')

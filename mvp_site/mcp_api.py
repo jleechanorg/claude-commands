@@ -494,33 +494,14 @@ async def handle_read_resource(uri: str) -> str:
 
 
 def setup_mcp_logging() -> None:
-    """Configure centralized logging for MCP server."""
-    log_file = logging_util.LoggingUtil.get_log_file("mcp-server")
+    """
+    Configure unified logging for MCP server.
 
-    # Clear any existing handlers
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Set up formatting
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    root_logger.addHandler(console_handler)
-
-    # File handler
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(formatter)
-    root_logger.addHandler(file_handler)
-
-    # Set level
-    root_logger.setLevel(logging.INFO)
-
-    logging_util.info(f"MCP server logging configured: {log_file}")
+    Uses centralized logging_util.setup_unified_logging() to ensure
+    consistent logging across all entry points (Flask, MCP, tests).
+    Logs go to both Cloud Logging (stdout/stderr) and local file.
+    """
+    logging_util.setup_unified_logging("mcp-server")
 
 
 def handle_jsonrpc(request_data: dict) -> dict:
@@ -733,6 +714,7 @@ def create_mcp_handler(
 
 def run_server():
     """Run the World Logic MCP server."""
+    setup_mcp_logging()
 
     # Auto-detect if we're being run by Claude Code with more specific criteria
     # Only trigger stdio mode when both stdin/stdout are non-TTY AND in specific environments
@@ -834,9 +816,6 @@ def run_server():
     logging_util.info(
         f"Starting World Logic MCP server on {args.host}:{args.port} (HTTP-only mode)"
     )
-
-    # Configure centralized logging
-    setup_mcp_logging()
 
     # Create handler configured for HTTP-only mode
     # /rpc returns 410 deprecation in HTTP-only mode
