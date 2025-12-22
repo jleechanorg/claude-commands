@@ -403,7 +403,7 @@ def _ensure_logging_initialized() -> None:
     """
     if not _logging_initialized:
         service_name = os.environ.get("LOGGING_SERVICE_NAME")
-        if service_name is None:
+        if not service_name:  # Handles both None and empty string
             service_name = _default_service_name
         setup_unified_logging(service_name)
 
