@@ -11,8 +11,6 @@ from typing import Any
 
 from mvp_site import logging_util
 
-logger = logging_util.getLogger(__name__)
-
 
 # =============================================================================
 # Utility Functions (consolidated from entity_utils.py)
@@ -326,7 +324,7 @@ class EntityValidator:
             retry_suggestions=retry_suggestions,
         )
 
-        logger.info(
+        logging_util.info(
             f"Entity validation: {len(found_entities)}/{len(expected_entities)} found, "
             f"confidence: {overall_confidence:.2f}"
         )
@@ -565,7 +563,7 @@ class EntityValidator:
             },
         )
 
-        logger.info(
+        logging_util.info(
             f"Comprehensive validation: {len(result.found_entities)}/{len(expected_entities)} found, "
             f"confidence: {confidence:.2f}, warnings: {len(warnings)}"
         )
@@ -617,7 +615,7 @@ class EntityRetryManager:
             and retry_callback is not None
         ):
             retry_attempts += 1
-            logger.info(
+            logging_util.info(
                 f"Entity validation failed, attempting retry {retry_attempts}/{self.max_retries}"
             )
 
@@ -639,19 +637,19 @@ class EntityRetryManager:
                     current_narrative, expected_entities, location
                 )
 
-                logger.info(
+                logging_util.info(
                     f"Retry {retry_attempts} result: {len(validation_result.found_entities)}/{len(expected_entities)} entities found"
                 )
 
             except Exception as e:
-                logger.error(f"Retry {retry_attempts} failed with error: {e}")
+                logging_util.error(f"Retry {retry_attempts} failed with error: {e}")
                 break
 
         # Log final result
         if validation_result.passed:
-            logger.info(f"Entity validation passed after {retry_attempts} retries")
+            logging_util.info(f"Entity validation passed after {retry_attempts} retries")
         else:
-            logger.warning(
+            logging_util.warning(
                 f"Entity validation failed after {retry_attempts} retries. Missing: {validation_result.missing_entities}"
             )
 

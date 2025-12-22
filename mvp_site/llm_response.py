@@ -3,10 +3,10 @@ Gemini Response objects for clean architecture between AI service and main appli
 """
 
 import json
-import logging
 import re
 from typing import Any
 
+from mvp_site import logging_util
 from mvp_site.narrative_response_schema import (
     NarrativeResponse,
     parse_structured_response,
@@ -145,7 +145,7 @@ class LLMResponse:
                     matches = re.findall(pattern, self.narrative_text)
                     if matches:
                         old_tags_found[tag_type].extend(matches)
-                        logging.warning(
+                        logging_util.warning(
                             f"Deprecated tag found in narrative: {pattern} "
                             f"(found {len(matches)} times). These should not appear in narrative field."
                         )
@@ -168,17 +168,17 @@ class LLMResponse:
                         matches = re.findall(pattern, response_str)
                         if matches:
                             old_tags_found[tag_type].extend(matches)
-                            logging.warning(
+                            logging_util.warning(
                                 f"Deprecated tag found in structured response: {pattern} "
                                 f"(found {len(matches)} times). Use proper JSON fields instead."
                             )
             except Exception as e:
-                logging.debug(f"Could not check structured response for old tags: {e}")
+                logging_util.debug(f"Could not check structured response for old tags: {e}")
 
         # Log summary if any old tags found
         total_found = sum(len(tags) for tags in old_tags_found.values())
         if total_found > 0:
-            logging.error(
+            logging_util.error(
                 f"DEPRECATED TAGS DETECTED: Found {total_found} deprecated tags in response. "
                 "Update prompts to use proper JSON format. Details: "
                 f"{ {k: len(v) for k, v in old_tags_found.items() if v} }"
@@ -223,7 +223,7 @@ class LLMResponse:
 
         # JSON mode is required - log error if no structured response
         if not self.structured_response:
-            logging.error(
+            logging_util.error(
                 "ERROR: No structured response available for state updates. JSON mode is required."
             )
         return {}

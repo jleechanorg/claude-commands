@@ -72,7 +72,6 @@ class NarrativeSyncValidator:
 
     def __init__(self):
         self.name = "NarrativeSyncValidator"
-        self.logger = logging_util.getLogger(self.name)
 
         # Delegate all entity validation logic to EntityValidator
         self.entity_validator = EntityValidator()
@@ -141,7 +140,7 @@ class NarrativeSyncValidator:
                 )  # Override to show delegation
                 result.metadata["method"] = "narrative_sync_delegation"
 
-        self.logger.info(
+        logging_util.info(
             f"NarrativeSyncValidator delegated to EntityValidator: "
             f"{len(result.found_entities)}/{len(expected_entities)} found"
         )

@@ -10,8 +10,6 @@ from typing import Any
 
 from mvp_site import logging_util, memory_mcp_real
 
-logger = logging_util.getLogger(__name__)
-
 # Common English stop words to exclude from search terms
 STOP_WORDS = {
     "the",
@@ -152,10 +150,10 @@ class MemoryIntegration:
                         score += recency_bonus
                 except Exception as e:
                     # Skip recency bonus if timestamp parsing fails
-                    logger.debug(f"Failed to parse timestamp for recency bonus: {e}")
+                    logging_util.debug(f"Failed to parse timestamp for recency bonus: {e}")
         except Exception as e:
             # Skip recency calculation if no timestamp data available
-            logger.debug(f"No timestamp data available for recency calculation: {e}")
+            logging_util.debug(f"No timestamp data available for recency calculation: {e}")
 
         return min(1.0, score)
 
@@ -166,7 +164,7 @@ class MemoryIntegration:
 
             # Call the real MCP search function
             results = memory_mcp_real.search_nodes(query)
-            logger.debug(
+            logging_util.debug(
                 f"Memory MCP search for '{query}' returned {len(results)} results"
             )
             # Type cast to satisfy mypy
@@ -174,10 +172,10 @@ class MemoryIntegration:
 
         except ImportError:
             # No fallback - MCP tools are not accessible from Python
-            logger.debug("Memory MCP cannot be accessed from Python runtime")
+            logging_util.debug("Memory MCP cannot be accessed from Python runtime")
             return []
         except Exception as e:
-            logger.error(f"Memory MCP search error: {e}")
+            logging_util.error(f"Memory MCP search error: {e}")
             return []
 
     def search_relevant_memory(self, terms: list[str]) -> list[dict[str, Any]]:
@@ -228,7 +226,7 @@ class MemoryIntegration:
                     if results:
                         all_results.extend(results)
                 except Exception as e:
-                    logger.debug(f"MCP search failed for term '{term}': {e}")
+                    logging_util.debug(f"MCP search failed for term '{term}': {e}")
                     continue
 
             # Deduplicate by entity name
@@ -259,7 +257,7 @@ class MemoryIntegration:
             return relevant
 
         except Exception as e:
-            logger.error(f"Memory search failed: {e}")
+            logging_util.error(f"Memory search failed: {e}")
             self.metrics.record_query(False, time.time() - start_time)
             return []
 
