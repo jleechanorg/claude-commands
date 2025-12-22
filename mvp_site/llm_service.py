@@ -47,7 +47,6 @@ Dependencies:
 """
 
 import json
-import logging
 import os
 import re
 import sys
@@ -99,9 +98,6 @@ from mvp_site.token_utils import estimate_tokens, log_with_tokens
 logging_util.basicConfig(
     level=logging_util.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-# Create module logger
-logger = logging.getLogger(__name__)
 
 # Initialize entity tracking mitigation modules
 entity_preloader = EntityPreloader()
