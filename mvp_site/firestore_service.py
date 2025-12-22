@@ -1268,10 +1268,24 @@ def update_campaign_title(
     return True
 
 
+@log_exceptions
 def update_campaign(
     user_id: UserId, campaign_id: CampaignId, updates: dict[str, Any]
 ) -> bool:
-    """Updates a campaign with arbitrary updates."""
+    """Updates a campaign with arbitrary updates.
+
+    Supports dot-notation paths for nested field updates.
+    Example: {"game_state.arc_milestones.quest1": {"status": "completed"}}
+    will correctly update the nested structure.
+
+    Args:
+        user_id: User ID
+        campaign_id: Campaign ID
+        updates: Dictionary of updates, supports dot-notation keys for nested paths
+
+    Returns:
+        bool: True if update succeeded
+    """
     db = get_db()
     campaign_ref = (
         db.collection("users")
@@ -1279,7 +1293,22 @@ def update_campaign(
         .collection("campaigns")
         .document(campaign_id)
     )
-    campaign_ref.update(updates)
+
+    # Check if any keys use dot-notation
+    has_dot_notation = any("." in key for key in updates.keys())
+
+    if has_dot_notation:
+        # Expand dot-notation to nested dicts and use set(merge=True)
+        # This is more reliable for nested updates than update() with dot-paths
+        expanded_updates = _expand_dot_notation(updates)
+        logging_util.info(
+            f"update_campaign: Expanded dot-notation updates for campaign {campaign_id}"
+        )
+        campaign_ref.set(expanded_updates, merge=True)
+    else:
+        # No dot-notation, use standard update
+        campaign_ref.update(updates)
+
     return True
 
 
