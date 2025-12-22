@@ -3,13 +3,14 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from mvp_site import constants
-from mvp_site.llm_service import (
+from mvp_site.llm_service import _check_missing_required_fields
+from mvp_site.dice_integrity import (
     _check_dice_integrity,
-    _check_missing_required_fields,
     _detect_combat_in_narrative,
     _detect_narrative_dice_fabrication,
     _is_code_execution_fabrication,
     _validate_combat_dice_integrity,
+    _should_require_dice_rolls_for_turn,
 )
 from mvp_site.narrative_response_schema import NarrativeResponse
 
@@ -63,8 +64,7 @@ def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_require
 
 def test_should_require_dice_rolls_only_for_combat_actions():
     from mvp_site.game_state import GameState
-    from mvp_site.llm_service import _should_require_dice_rolls_for_turn
-
+    
     gs = GameState(combat_state={"in_combat": True})
 
     assert (
@@ -106,8 +106,7 @@ def test_should_require_dice_rolls_only_for_combat_actions():
 def test_should_require_dice_rolls_ignores_non_combat_verbs():
     """Non-combat phrasing should not force dice requirement."""
     from mvp_site.game_state import GameState
-    from mvp_site.llm_service import _should_require_dice_rolls_for_turn
-
+    
     gs = GameState(combat_state={"in_combat": False})
 
     assert (
@@ -147,8 +146,7 @@ def test_should_require_dice_rolls_ignores_non_combat_verbs():
 def test_should_require_dice_rolls_detects_initiative():
     """Explicit initiative should still require dice."""
     from mvp_site.game_state import GameState
-    from mvp_site.llm_service import _should_require_dice_rolls_for_turn
-
+    
     gs = GameState(combat_state={"in_combat": False})
     assert (
         _should_require_dice_rolls_for_turn(

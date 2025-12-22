@@ -734,7 +734,7 @@ class TestCodeExecutionFabricationDetection(unittest.TestCase):
     def test_empty_evidence_dict_flags_fabrication_when_dice_present(self):
         """Empty evidence dict should still evaluate fabrication when dice are present."""
         from types import SimpleNamespace
-        from mvp_site.llm_service import _is_code_execution_fabrication
+        from mvp_site.dice_integrity import _is_code_execution_fabrication
 
         structured = SimpleNamespace(dice_rolls=["1d20 = 12"])
         evidence = {}
