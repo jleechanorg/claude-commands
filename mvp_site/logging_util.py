@@ -424,9 +424,9 @@ def setup_unified_logging(service_name: str = "app") -> str:
                     _configured_service_name,
                     service_name,
                 )
-            if _configured_log_file is not None:
-                return _configured_log_file
-            return LoggingUtil.get_log_file(_configured_service_name or service_name)
+            # _configured_log_file is always set when _logging_initialized is True.
+            assert _configured_log_file is not None
+            return _configured_log_file
 
         # Get log file path
         log_file = LoggingUtil.get_log_file(service_name)
