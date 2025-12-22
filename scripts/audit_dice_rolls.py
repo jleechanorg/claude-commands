@@ -356,12 +356,12 @@ def extract_dice_from_structured_fields(entry: dict) -> list[dict]:  # noqa: PLR
     if isinstance(dice_rolls, list) and not structured_sources_present:
         for roll in dice_rolls:
             if isinstance(roll, str):
+                notation = _extract_notation_from_roll_text(roll)
                 parsed_total = (
                     _extract_total_from_roll_text(roll)
                     if _should_use_text_total(notation)
                     else None
                 )
-                notation = _extract_notation_from_roll_text(roll)
                 rolls.append(
                     {
                         "notation": notation,
