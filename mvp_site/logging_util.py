@@ -5,6 +5,7 @@ Supports both module-level convenience functions and logger-aware functions
 that preserve logger context.
 """
 
+import contextvars
 import logging
 import os
 import subprocess
@@ -196,6 +197,29 @@ class LoggingUtil:
             Logger instance
         """
         return logging.getLogger(name)
+
+
+_campaign_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "campaign_id", default=None
+)
+
+
+def set_campaign_id(campaign_id: str | None) -> None:
+    """Set campaign_id for log context (applies to the current context only)."""
+    _campaign_id_ctx.set(campaign_id)
+
+
+def get_campaign_id() -> str | None:
+    """Get current campaign_id from log context."""
+    return _campaign_id_ctx.get()
+
+
+def with_campaign(message: str) -> str:
+    """Prefix messages with campaign_id when available."""
+    campaign_id = get_campaign_id()
+    if campaign_id:
+        return f"campaign_id={campaign_id} | {message}"
+    return message
 
 
 # Convenience module-level functions

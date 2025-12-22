@@ -16,7 +16,7 @@ if _DICE_SEED:
     except ValueError:
         _DICE_SEED_VALUE = _DICE_SEED
     _DICE_RNG = random.Random(_DICE_SEED_VALUE)
-    logging_util.info(f"DICE_SEED enabled for deterministic rolls: {_DICE_SEED}")
+    logging_util.info(logging_util.with_campaign(f"DICE_SEED enabled for deterministic rolls: {_DICE_SEED}"))
 else:
     _DICE_RNG = random
 
@@ -243,7 +243,11 @@ def roll_dice(notation: str) -> DiceRollResult:
     match = re.match(pattern, notation.lower().replace(" ", ""))
 
     if not match:
-        logging_util.warning(f"DICE_AUDIT: Invalid notation '{notation}' - could not parse")
+        logging_util.warning(
+            logging_util.with_campaign(
+                f"DICE_AUDIT: Invalid notation '{notation}' - could not parse"
+            )
+        )
         return DiceRollResult(notation, [], 0, 0)
 
     num_dice = int(match.group(1))
@@ -252,7 +256,9 @@ def roll_dice(notation: str) -> DiceRollResult:
 
     if num_dice < 1 or die_size < 1:
         logging_util.warning(
-            f"DICE_AUDIT: Invalid dice params num_dice={num_dice}, die_size={die_size}"
+            logging_util.with_campaign(
+                f"DICE_AUDIT: Invalid dice params num_dice={num_dice}, die_size={die_size}"
+            )
         )
         return DiceRollResult(notation, [], modifier, modifier)
 
@@ -263,8 +269,10 @@ def roll_dice(notation: str) -> DiceRollResult:
     natural_1 = die_size == 20 and num_dice == 1 and rolls[0] == 1
 
     logging_util.info(
-        f"DICE_AUDIT: notation={notation} | rolls={rolls} | modifier={modifier} | "
-        f"total={total} | nat20={natural_20} | nat1={natural_1}"
+        logging_util.with_campaign(
+            f"DICE_AUDIT: notation={notation} | rolls={rolls} | modifier={modifier} | "
+            f"total={total} | nat20={natural_20} | nat1={natural_1}"
+        )
     )
 
     return DiceRollResult(notation, rolls, modifier, total, natural_20, natural_1)
@@ -368,7 +376,7 @@ def _get_damage_total_for_log(damage: Any) -> Any:
 
 def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     """Execute a dice roll tool call and return the result."""
-    logging_util.info(f"DICE_TOOL_EXEC: tool={tool_name} | args={arguments}")
+    logging_util.info(logging_util.with_campaign(f"DICE_TOOL_EXEC: tool={tool_name} | args={arguments}"))
 
     def _coerce_int_inner(value: Any, default: int | None = 0) -> int | None:
         if isinstance(value, bool):
@@ -404,8 +412,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         if _DICE_SEED:
             tool_result["seed"] = _DICE_SEED
         logging_util.info(
-            f"DICE_TOOL_RESULT: tool=roll_dice | notation={notation} | "
-            f"rolls={result.individual_rolls} | total={result.total} | purpose={purpose}"
+            logging_util.with_campaign(
+                f"DICE_TOOL_RESULT: tool=roll_dice | notation={notation} | "
+                f"rolls={result.individual_rolls} | total={result.total} | purpose={purpose}"
+            )
         )
         return tool_result
 
@@ -481,9 +491,11 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             result["damage"] = None
         damage_total = _get_damage_total_for_log(result.get("damage"))
         logging_util.info(
-            f"DICE_TOOL_RESULT: tool=roll_attack | weapon={weapon_name} | "
-            f"rolls={attack.get('rolls', [])} | total={attack['total']} | hit={hit} | "
-            f"critical={attack['is_critical']} | damage={damage_total}"
+            logging_util.with_campaign(
+                f"DICE_TOOL_RESULT: tool=roll_attack | weapon={weapon_name} | "
+                f"rolls={attack.get('rolls', [])} | total={attack['total']} | hit={hit} | "
+                f"critical={attack['is_critical']} | damage={damage_total}"
+            )
         )
         return result
 
@@ -524,8 +536,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         )
 
         logging_util.info(
-            f"DICE_TOOL_RESULT: tool=roll_skill_check | skill={skill_name} | "
-            f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+            logging_util.with_campaign(
+                f"DICE_TOOL_RESULT: tool=roll_skill_check | skill={skill_name} | "
+                f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+            )
         )
         return {
             "skill": skill_name,
@@ -567,8 +581,10 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         )
 
         logging_util.info(
-            f"DICE_TOOL_RESULT: tool=roll_saving_throw | save_type={save_type} | "
-            f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+            logging_util.with_campaign(
+                f"DICE_TOOL_RESULT: tool=roll_saving_throw | save_type={save_type} | "
+                f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+            )
         )
         return {
             "save_type": save_type,
@@ -586,7 +602,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     if tool_name == "declare_no_roll_needed":
         action = arguments.get("action", "unspecified action")
         reason = arguments.get("reason", "no reason provided")
-        logging_util.info(f"DICE_TOOL_RESULT: tool={tool_name} | no_roll=True | action={action}")
+        logging_util.info(logging_util.with_campaign(f"DICE_TOOL_RESULT: tool={tool_name} | no_roll=True | action={action}"))
         return {
             "no_roll": True,
             "action": action,
@@ -594,5 +610,5 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "formatted": f"No roll needed for '{action}': {reason}",
         }
 
-    logging_util.warning(f"DICE_TOOL_RESULT: Unknown tool={tool_name}")
+    logging_util.warning(logging_util.with_campaign(f"DICE_TOOL_RESULT: Unknown tool={tool_name}"))
     return {"error": f"Unknown tool: {tool_name}"}

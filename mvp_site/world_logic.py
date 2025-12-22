@@ -679,10 +679,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     Returns:
         Dictionary with success/error status and story response
     """
+    campaign_id = request_data.get("campaign_id")
+    logging_util.set_campaign_id(campaign_id)
     try:
         # Extract parameters
         user_id = request_data.get("user_id")
-        campaign_id = request_data.get("campaign_id")
         user_input = request_data.get("user_input")
         mode = request_data.get("mode", constants.MODE_CHARACTER)
 
@@ -1145,6 +1146,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     except Exception as e:
         logging_util.error(f"Process action failed: {e}")
         return {KEY_ERROR: f"Failed to process action: {str(e)}"}
+    finally:
+        logging_util.set_campaign_id(None)
 
 
 async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, Any]:
