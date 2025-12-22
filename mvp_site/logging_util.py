@@ -8,7 +8,8 @@ UNIFIED LOGGING ARCHITECTURE:
 - After setup_unified_logging() is called, logs go to BOTH Cloud Logging (stdout/stderr)
   and the local file
 - Log files stored under /tmp/<repo>/<branch>/<service>.log
-- Single setup function called by all entry points (Flask, MCP, tests)
+- Lazy auto-initialization: logging functions automatically set up handlers
+  if setup_unified_logging() hasn't been called yet
 - Prevents duplicate handlers via initialization guard
 - Convenience logging functions lazily initialize unified logging if not configured,
   using LOGGING_SERVICE_NAME or the default "app" service.
@@ -328,6 +329,20 @@ class LoggingUtil:
 
 
 # Convenience module-level functions
+def _ensure_logging_initialized() -> None:
+    """
+    Ensure unified logging is initialized before emitting logs.
+
+    This lazy initialization guarantees that logs always go to both
+    stdout/stderr (Cloud Logging) and local file, even if the caller
+    didn't explicitly call setup_unified_logging() first.
+
+    Uses 'app' as the default service name for auto-initialization.
+    """
+    if not _logging_initialized:
+        setup_unified_logging("app")
+
+
 def error(message: str, *args: Any, **kwargs: Any) -> None:
     """
     Log an error message with fire and red dot emojis.
@@ -338,6 +353,7 @@ def error(message: str, *args: Any, **kwargs: Any) -> None:
         **kwargs: Additional keyword arguments for logging.
                  Use logger=my_logger to preserve logger context.
     """
+    _ensure_logging_initialized()
     LoggingUtil.error(message, *args, **kwargs)
 
 
@@ -351,26 +367,31 @@ def warning(message: str, *args: Any, **kwargs: Any) -> None:
         **kwargs: Additional keyword arguments for logging.
                  Use logger=my_logger to preserve logger context.
     """
+    _ensure_logging_initialized()
     LoggingUtil.warning(message, *args, **kwargs)
 
 
 def info(message: str, *args: Any, **kwargs: Any) -> None:
     """Log an info message (no emoji modification)."""
+    _ensure_logging_initialized()
     LoggingUtil.info(message, *args, **kwargs)
 
 
 def debug(message: str, *args: Any, **kwargs: Any) -> None:
     """Log a debug message (no emoji modification)."""
+    _ensure_logging_initialized()
     LoggingUtil.debug(message, *args, **kwargs)
 
 
 def critical(message: str, *args: Any, **kwargs: Any) -> None:
     """Log a critical message with double fire emoji."""
+    _ensure_logging_initialized()
     LoggingUtil.critical(message, *args, **kwargs)
 
 
 def exception(message: str, *args: Any, **kwargs: Any) -> None:
     """Log an exception message with traceback."""
+    _ensure_logging_initialized()
     LoggingUtil.exception(message, *args, **kwargs)
 
 
@@ -424,7 +445,7 @@ def setup_unified_logging(service_name: str = "app") -> str:
                     _configured_service_name,
                     service_name,
                 )
-            # _configured_log_file is always set when _logging_initialized is True.
+            # Invariant: _configured_log_file is always set when _logging_initialized is True.
             assert _configured_log_file is not None
             return _configured_log_file
 
