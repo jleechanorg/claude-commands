@@ -316,6 +316,50 @@ def complete_truncated_json(text: str) -> str:
     return completed
 
 
+MAX_QUOTE_TERMINATOR_LOOKAHEAD = 256
+
+
+def _scan_non_whitespace(text: str, start: int, max_distance: int) -> int | None:
+    if start >= len(text):
+        return len(text)
+
+    limit = min(len(text), start + max_distance)
+    index = start
+    while index < limit and text[index].isspace():
+        index += 1
+
+    if index >= len(text):
+        return len(text)
+    if index >= limit:
+        return None
+
+    return index
+
+
+def _is_quote_terminator(text: str, quote_pos: int) -> bool:
+    # Lookahead validation: only treat as closing quote if followed by JSON structure.
+    if quote_pos + 1 >= len(text):
+        return True
+
+    lookahead = _scan_non_whitespace(text, quote_pos + 1, MAX_QUOTE_TERMINATOR_LOOKAHEAD)
+    if lookahead is None:
+        return False
+    if lookahead >= len(text):
+        return True
+    if text[lookahead] in ["}", "]"]:
+        return True
+    if text[lookahead] == ",":
+        next_token = _scan_non_whitespace(text, lookahead + 1, MAX_QUOTE_TERMINATOR_LOOKAHEAD)
+        if next_token is None:
+            return False
+        if next_token >= len(text):
+            return True
+        if text[next_token] in ['"', "}", "]"]:
+            return True
+
+    return False
+
+
 def extract_field_value(text: str, field_name: str) -> str | None:
     """
     Extract a specific field value from potentially malformed JSON.
@@ -346,24 +390,7 @@ def extract_field_value(text: str, field_name: str) -> str | None:
                 elif char == "\\":
                     escaped = True
                 elif char == '"':
-                    # Treat as closing quote only if JSON structure follows
-                    lookahead = pos + 1
-                    while lookahead < len(text) and text[lookahead].isspace():
-                        lookahead += 1
-
-                    is_terminator = False
-                    if lookahead >= len(text):
-                        is_terminator = True
-                    elif text[lookahead] in ["}", "]"]:
-                        is_terminator = True
-                    elif text[lookahead] == ",":
-                        lookahead += 1
-                        while lookahead < len(text) and text[lookahead].isspace():
-                            lookahead += 1
-                        if lookahead >= len(text) or text[lookahead] in ['"', "}", "]"]:
-                            is_terminator = True
-
-                    if is_terminator:
+                    if _is_quote_terminator(text, pos):
                         value = text[start_pos:pos]
                         return unescape_json_string(value)
 
