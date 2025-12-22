@@ -802,7 +802,12 @@ def _detect_narrative_dice_fabrication(
     has_dice_in_structured = False
     if structured_response:
         dice_rolls = getattr(structured_response, 'dice_rolls', None)
-        has_dice_in_structured = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+        dice_audit_events = getattr(structured_response, "dice_audit_events", None)
+        has_dice_in_structured = (
+            isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+        ) or (
+            isinstance(dice_audit_events, list) and any(dice_audit_events)
+        )
 
     # DEBUG LOGGING (env-gated to avoid noise in production)
     if os.getenv("DICE_INTEGRITY_DEBUG", "").lower() == "true":

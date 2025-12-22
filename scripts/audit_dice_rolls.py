@@ -15,7 +15,7 @@ Example:
 import json
 import os
 import re
-import sys
+import argparse
 from collections import defaultdict
 from datetime import UTC, datetime
 from statistics import mean, stdev
@@ -518,11 +518,18 @@ def audit_campaign_dice(campaign_id: str) -> None:  # noqa: PLR0912, PLR0915
     print(f"By source: {dict(by_source)}")
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python audit_dice_rolls.py <campaign_id>")
-        print("Example: python audit_dice_rolls.py tAE30bFvyfO0rUd9cgyv")
-        sys.exit(1)
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Audit dice rolls for a campaign ID (Firestore)."
+    )
+    parser.add_argument(
+        "campaign_id",
+        help="Campaign ID to audit (e.g., tAE30bFvyfO0rUd9cgyv)",
+    )
+    args = parser.parse_args()
+    audit_campaign_dice(args.campaign_id)
+    return 0
 
-    campaign_id = sys.argv[1]
-    audit_campaign_dice(campaign_id)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
