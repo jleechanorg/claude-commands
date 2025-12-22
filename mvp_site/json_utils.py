@@ -346,9 +346,26 @@ def extract_field_value(text: str, field_name: str) -> str | None:
                 elif char == "\\":
                     escaped = True
                 elif char == '"':
-                    # Found the closing quote
-                    value = text[start_pos:pos]
-                    return unescape_json_string(value)
+                    # Treat as closing quote only if JSON structure follows
+                    lookahead = pos + 1
+                    while lookahead < len(text) and text[lookahead].isspace():
+                        lookahead += 1
+
+                    is_terminator = False
+                    if lookahead >= len(text):
+                        is_terminator = True
+                    elif text[lookahead] in ["}", "]"]:
+                        is_terminator = True
+                    elif text[lookahead] == ",":
+                        lookahead += 1
+                        while lookahead < len(text) and text[lookahead].isspace():
+                            lookahead += 1
+                        if lookahead >= len(text) or text[lookahead] in ['"', "}", "]"]:
+                            is_terminator = True
+
+                    if is_terminator:
+                        value = text[start_pos:pos]
+                        return unescape_json_string(value)
 
                 pos += 1
 
