@@ -49,7 +49,6 @@ import concurrent.futures
 import datetime
 import functools
 import json
-import logging
 import os
 
 # Additional imports for conditional logic (moved from inline to meet import validation)
@@ -1377,9 +1376,9 @@ def create_app() -> Flask:
     def cleanup_resources():
         """Cleanup resources on app shutdown"""
         # Close file handlers to prevent ResourceWarning
-        root_logger = logging.getLogger()
+        root_logger = logging_util.getLogger()
         for handler in root_logger.handlers[:]:
-            if isinstance(handler, logging.FileHandler):
+            if isinstance(handler, logging_util.FileHandler):
                 try:
                     handler.close()
                     root_logger.removeHandler(handler)
