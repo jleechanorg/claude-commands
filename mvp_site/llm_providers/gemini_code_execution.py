@@ -152,7 +152,9 @@ def log_code_execution_parts(
     """Log Gemini code_execution evidence (always INFO, optional DEBUG detail)."""
     evidence = extract_code_execution_evidence(response)
     logging_util.info(
-        "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s evidence=%s",
+        logging_util.with_campaign(
+            "GEMINI_CODE_EXECUTION_PARTS[%s]: model=%s evidence=%s"
+        ),
         context,
         model_name,
         evidence,
@@ -163,9 +165,47 @@ def log_code_execution_parts(
     ):
         detail = extract_code_execution_parts_summary(response)
         logging_util.debug(
-            "GEMINI_CODE_EXECUTION_PARTS_DETAIL[%s]: model=%s detail=%s",
+            logging_util.with_campaign(
+                "GEMINI_CODE_EXECUTION_PARTS_DETAIL[%s]: model=%s detail=%s"
+            ),
             context,
             model_name,
             detail,
         )
+    _log_code_execution_dice_results(evidence)
     return evidence
+
+
+def _log_code_execution_dice_results(evidence: dict[str, int | bool | str]) -> None:
+    """Log dice results from Gemini code_execution stdout when JSON is valid."""
+    stdout_value = evidence.get("stdout", "")
+    if not stdout_value or not evidence.get("stdout_is_valid_json"):
+        return
+
+    try:
+        parsed = json.loads(str(stdout_value))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return
+
+    entries: list[dict[str, Any]] = []
+    if isinstance(parsed, dict):
+        entries = [parsed]
+    elif isinstance(parsed, list):
+        entries = [entry for entry in parsed if isinstance(entry, dict)]
+
+    for entry in entries:
+        notation = entry.get("notation")
+        rolls = entry.get("rolls")
+        modifier = entry.get("modifier")
+        total = entry.get("total")
+        label = entry.get("label")
+        logging_util.info(
+            logging_util.with_campaign(
+                "DICE_CODE_EXEC_RESULT: notation=%s | rolls=%s | modifier=%s | total=%s | label=%s"
+            ),
+            notation,
+            rolls,
+            modifier,
+            total,
+            label,
+        )
