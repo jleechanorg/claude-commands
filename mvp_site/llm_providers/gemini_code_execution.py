@@ -199,6 +199,8 @@ def _log_code_execution_dice_results(evidence: dict[str, int | bool | str]) -> N
         modifier = entry.get("modifier")
         total = entry.get("total")
         label = entry.get("label")
+        if notation is None or not isinstance(rolls, list) or not rolls or total is None:
+            continue
         logging_util.info(
             logging_util.with_campaign(
                 "DICE_CODE_EXEC_RESULT: notation=%s | rolls=%s | modifier=%s | total=%s | label=%s"
