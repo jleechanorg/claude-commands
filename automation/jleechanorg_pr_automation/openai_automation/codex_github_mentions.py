@@ -520,7 +520,7 @@ class CodexGitHubMentionsAutomation:
 
             await self.cleanup()
 
-async def cleanup(self):
+    async def cleanup(self):
         """Clean up Playwright client resources."""
         if self.playwright:
             await self.playwright.stop()

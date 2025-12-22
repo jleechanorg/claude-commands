@@ -791,7 +791,11 @@ MIT License - see LICENSE file for details.
 
 ## Changelog
 
-### 0.2.5 (Latest)
+### 0.2.19 (Latest)
+- Fixed `cleanup()` indentation so `CodexGitHubMentionsAutomation` can release resources.
+- Note: version 0.2.18 was intentionally skipped (no public release).
+
+### 0.2.5
 - Enhanced @codex comment detection with actor pattern matching
 - Improved commit marker parsing for multiple AI assistants
 - Added Gemini CLI support for FixPR workflow
