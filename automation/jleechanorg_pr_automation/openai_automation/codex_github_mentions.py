@@ -27,7 +27,7 @@ import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from playwright.async_api import (
     Browser,
@@ -164,6 +164,7 @@ class CodexGitHubMentionsAutomation:
             return False
 
     async def _select_existing_page(self) -> Optional[Page]:
+        """Reuse a ready ChatGPT/Codex tab, preferring Codex over generic chat."""
         if not self.context or not self.context.pages:
             return None
 
@@ -195,11 +196,15 @@ class CodexGitHubMentionsAutomation:
         return None
 
     async def _ensure_page(self) -> bool:
+        """Ensure there is an active page, creating one if needed."""
         try:
             if self.page and not self.page.is_closed():
                 return True
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug(
+                "Error while checking existing page state; attempting to create a new page: %s",
+                exc,
+            )
 
         if not self.context:
             return False
@@ -420,7 +425,7 @@ class CodexGitHubMentionsAutomation:
                 return []
 
             deduped: List[Dict[str, str]] = []
-            seen: set[str] = set()
+            seen: Set[str] = set()
             for task in tasks:
                 href = task.get("href", "")
                 if not href or href in seen:
@@ -488,8 +493,10 @@ class CodexGitHubMentionsAutomation:
                     await locator.first().click()
                     await asyncio.sleep(2)
                     return True
-            except Exception:
+            except Exception as exc:
+                logger.debug("Failed to switch to tab %s with %s: %s", label, selector, exc)
                 continue
+        logger.debug("Unable to switch to tab %s using selectors %s", label, selectors)
         return False
 
     async def update_pr_for_task(self, task_link: Dict[str, str]):
@@ -508,6 +515,8 @@ class CodexGitHubMentionsAutomation:
         for attempt in range(2):
             if not await self._ensure_page():
                 print("  ❌ No active browser page available to update task")
+                if attempt == 0:
+                    continue
                 return False
 
             try:
@@ -525,22 +534,20 @@ class CodexGitHubMentionsAutomation:
                     print("  ⚠️  'Update branch' button not found")
                     return False
 
-                await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
-                await asyncio.sleep(3)
-                return True
-
             except Exception as e:
                 error_text = str(e)
                 print(f"  ❌ Failed to update PR: {e}")
                 if "Target page, context or browser has been closed" in error_text and attempt == 0:
                     print("  🔄 Page was closed; reopening a new tab and retrying...")
                     continue
-                try:
-                    await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
-                    await asyncio.sleep(3)
-                except Exception as nav_err:
-                    print(f"  ⚠️ Failed to navigate back to Codex after error: {nav_err}")
                 return False
+
+            try:
+                await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
+                await asyncio.sleep(3)
+            except Exception as nav_err:
+                print(f"  ⚠️ Failed to navigate back to Codex after update: {nav_err}")
+            return True
 
     async def process_all_github_mentions(self):
         """Find all GitHub mention tasks and update their PRs."""
@@ -585,7 +592,11 @@ class CodexGitHubMentionsAutomation:
             await self.setup()
 
             # Step 2: Ensure logged in to OpenAI (will save auth state on first login)
-            await self.ensure_openai_login()
+            logged_in = await self.ensure_openai_login()
+            if not logged_in:
+                print("\n❌ Failed to verify OpenAI login; aborting automation.")
+                logger.error("Failed to verify OpenAI login; aborting automation.")
+                return False
 
             # Step 3: Navigate to Codex if not already on tasks list
             current_url = self.page.url

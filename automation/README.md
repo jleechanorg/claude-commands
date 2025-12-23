@@ -791,7 +791,11 @@ MIT License - see LICENSE file for details.
 
 ## Changelog
 
-### 0.2.19 (Latest)
+### 0.2.20 (Latest)
+- Stabilized Codex updater tab reuse and recovery when pages close mid-run.
+- Added login verification guard and extra diagnostics for tab switching.
+
+### 0.2.19
 - Fixed `cleanup()` indentation so `CodexGitHubMentionsAutomation` can release resources.
 - Note: version 0.2.18 was intentionally skipped (no public release).
 
