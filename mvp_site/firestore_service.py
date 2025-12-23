@@ -547,6 +547,7 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
     not supported by this helper and should be avoided in update payloads.
     """
     expanded_dict: dict[str, Any] = {}
+    terminal_paths: set[tuple[str, ...]] = set()
     for k, v in d.items():
         if "." in k:
             keys = k.split(".")
@@ -556,7 +557,15 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
                     f"are not supported: '{k}'"
                 )
             d_ref = expanded_dict
+            prefix: list[str] = []
             for part in keys[:-1]:
+                prefix.append(part)
+                if tuple(prefix) in terminal_paths:
+                    raise ValueError(
+                        "Conflicting keys in dot-notation expansion: "
+                        f"cannot set '{k}' because '{'.'.join(prefix)}' "
+                        "already exists as a terminal value"
+                    )
                 existing = d_ref.get(part)
                 if existing is not None and not isinstance(existing, dict):
                     raise ValueError(
@@ -568,6 +577,11 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
                     d_ref[part] = {}
                 d_ref = d_ref[part]
             final_key = keys[-1]
+            if tuple(keys) in terminal_paths:
+                raise ValueError(
+                    "Conflicting keys in dot-notation expansion: "
+                    f"'{k}' already exists as a terminal value"
+                )
             existing_final = d_ref.get(final_key)
             if existing_final is not None and isinstance(existing_final, dict):
                 raise ValueError(
@@ -575,6 +589,7 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
                     f"'{k}' would overwrite an existing nested structure"
                 )
             d_ref[final_key] = v
+            terminal_paths.add(tuple(keys))
         else:
             if k in expanded_dict:
                 raise ValueError(
@@ -582,6 +597,7 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
                     f"'{k}' overlaps with an existing nested update"
                 )
             expanded_dict[k] = v
+            terminal_paths.add((k,))
     return expanded_dict
 
 
@@ -1339,6 +1355,16 @@ def update_campaign(
         .collection("campaigns")
         .document(campaign_id)
     )
+    campaign_doc = campaign_ref.get()
+    if not campaign_doc.exists:
+        logging_util.error(
+            "update_campaign: campaign document not found "
+            f"(user_id={user_id}, campaign_id={campaign_id})"
+        )
+        raise ValueError(
+            f"Campaign {campaign_id} not found for user {user_id}; "
+            "cannot apply updates."
+        )
 
     # Check if any keys use dot-notation
     has_dot_notation = any("." in key for key in updates.keys())
