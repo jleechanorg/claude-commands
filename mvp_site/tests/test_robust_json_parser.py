@@ -296,6 +296,20 @@ class TestRegressionListResult(unittest.TestCase):
 class TestRealWorldScenarios(unittest.TestCase):
     """Test with real-world LLM response scenarios"""
 
+    def test_parse_unescaped_quotes_in_narrative(self):
+        """Handles unescaped dialogue quotes inside narrative without truncation."""
+        dialogue = '"We\'ll get your gear back,"'
+        response = (
+            '{"narrative": "She says '
+            + dialogue
+            + ' and smiles.", "entities_mentioned": []}'
+        )
+
+        result, was_incomplete = parse_llm_json_response(response)
+
+        assert was_incomplete
+        assert result["narrative"] == 'She says "We\'ll get your gear back," and smiles.'
+
     def test_parse_truncated_narrative(self):
         """Test the example from the module"""
         incomplete_json = """{"narrative": "[SESSION_HEADER]\\nTimestamp: Year 1620, Kythorn, Day 10, 02:05 PM\\nLocation: The Eastern March, on the road to the Dragon's Tooth mountains.\\nStatus: Lvl 1 Fighter/Paladin | HP: 12/12 | Gold: 25gp\\nResources:\\n- Hero Points: 1/1\\n\\nSir Andrew ignored Gareth's probing question, his focus narrowing back to the mission. He folded the map with crisp, efficient movements and tucked it away. His duty was clear; the feelings of his companions were secondary variables. He turned to the other two members of his small company, his expression a mask of command.\\n\\n\\"Report,\\" he said, his voice flat and devoid of warmth. He looked first to Kiera Varrus, the scout, whose cynical eyes were already scanning the treacherous path ahead.\\n\\nKiera spat on the ground, pulling her leather hood tighter against the wind. \\"It's a goat track at best, Sir Knight. Not a proper road. The ground is loose shale, easy to turn an ankle or alert anything hiding in the rocks.\\" She squinted at the mountains."""

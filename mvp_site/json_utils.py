@@ -14,7 +14,9 @@ from mvp_site import constants, logging_util
 CONTENT_LENGTH_THRESHOLD = 1000  # Max characters to log for debug content
 
 # Precompiled regex patterns for field extraction from malformed JSON
-ENTITIES_MENTIONED_PATTERN = re.compile(r'"entities_mentioned"\s*:\s*\[(.*?)\]', re.DOTALL)
+ENTITIES_MENTIONED_PATTERN = re.compile(
+    r'"entities_mentioned"\s*:\s*\[(.*?)\]', re.DOTALL
+)
 ENTITY_STRING_PATTERN = re.compile(r'"([^"]+)"')
 STATE_UPDATES_PATTERN = re.compile(r'"state_updates"\s*:\s*(\{.*?\})', re.DOTALL)
 DEBUG_INFO_PATTERN = re.compile(r'"debug_info"\s*:\s*(\{.*?\})', re.DOTALL)
@@ -53,7 +55,7 @@ def extract_nested_object(text: str, field_name: str) -> str | None:
             escape_next = False
             continue
 
-        if char == '\\':
+        if char == "\\":
             escape_next = True
             continue
 
@@ -64,13 +66,13 @@ def extract_nested_object(text: str, field_name: str) -> str | None:
         if in_string:
             continue
 
-        if char == '{':
+        if char == "{":
             brace_count += 1
-        elif char == '}':
+        elif char == "}":
             brace_count -= 1
             if brace_count == 0:
                 # Found the matching closing brace
-                return text[start_idx:i + 1]
+                return text[start_idx : i + 1]
 
     # If we get here, braces were unbalanced - return what we found
     return None
@@ -192,7 +194,7 @@ def try_parse_json(text: str) -> tuple[dict[str, Any] | None, bool]:
         return None, False
 
 
-def extract_json_boundaries(text: str) -> str | None:
+def extract_json_boundaries(text: str) -> str | None:  # noqa: PLR0912
     """
     Extract JSON content between first { and its matching } or [ and its matching ].
 
@@ -254,7 +256,7 @@ def extract_json_boundaries(text: str) -> str | None:
     return text
 
 
-def complete_truncated_json(text: str) -> str:
+def complete_truncated_json(text: str) -> str:  # noqa: PLR0912
     """
     Attempt to complete truncated JSON by adding missing quotes and braces.
     """
@@ -303,9 +305,12 @@ def complete_truncated_json(text: str) -> str:
                 nesting_stack.append("}")
             elif completed[i] == "[":
                 nesting_stack.append("]")
-            elif completed[i] in "}]" and nesting_stack:
-                if nesting_stack[-1] == completed[i]:
-                    nesting_stack.pop()
+            elif (
+                completed[i] in "}]"
+                and nesting_stack
+                and nesting_stack[-1] == completed[i]
+            ):
+                nesting_stack.pop()
 
         i += 1
 
@@ -314,6 +319,55 @@ def complete_truncated_json(text: str) -> str:
         completed += nesting_stack.pop()
 
     return completed
+
+
+MAX_QUOTE_TERMINATOR_LOOKAHEAD = 256
+
+
+def _scan_non_whitespace(text: str, start: int, max_distance: int) -> int | None:
+    # Cap lookahead to avoid repeated scans across very long narrative strings.
+    if start >= len(text):
+        return len(text)
+
+    limit = min(len(text), start + max_distance)
+    index = start
+    while index < limit and text[index].isspace():
+        index += 1
+
+    if index >= len(text):
+        return len(text)
+    if index >= limit:
+        return None
+
+    return index
+
+
+def _is_quote_terminator(text: str, quote_pos: int) -> bool:  # noqa: PLR0911
+    # Lookahead validation: only treat as closing quote if followed by JSON structure.
+    if quote_pos + 1 >= len(text):
+        return True
+
+    lookahead = _scan_non_whitespace(
+        text, quote_pos + 1, MAX_QUOTE_TERMINATOR_LOOKAHEAD
+    )
+    if lookahead is None:
+        return False
+    if lookahead >= len(text):
+        return True
+    if text[lookahead] in ["}", "]"]:
+        return True
+    if text[lookahead] == ",":
+        next_token = _scan_non_whitespace(
+            text, lookahead + 1, MAX_QUOTE_TERMINATOR_LOOKAHEAD
+        )
+        if next_token is None:
+            return False
+        if next_token >= len(text):
+            return True
+        if text[next_token] in ['"', "}", "]"]:
+            return True
+
+    return False
 
 
 def extract_field_value(text: str, field_name: str) -> str | None:
@@ -345,8 +399,7 @@ def extract_field_value(text: str, field_name: str) -> str | None:
                     escaped = False
                 elif char == "\\":
                     escaped = True
-                elif char == '"':
-                    # Found the closing quote
+                elif char == '"' and _is_quote_terminator(text, pos):
                     value = text[start_pos:pos]
                     return unescape_json_string(value)
 
@@ -399,7 +452,7 @@ class RobustJSONParser:
     """
 
     @staticmethod
-    def _normalize_to_dict(result: Any, original_text: str) -> dict[str, Any] | None:
+    def _normalize_to_dict(result: Any, _original_text: str) -> dict[str, Any] | None:
         """
         Normalize parser result to always return a dict or None.
 
@@ -422,18 +475,24 @@ class RobustJSONParser:
         if isinstance(result, list):
             # If list contains a dict, extract first element
             if result and isinstance(result[0], dict):
-                logging_util.debug("Normalized list to dict by extracting first element")
+                logging_util.debug(
+                    "Normalized list to dict by extracting first element"
+                )
                 return result[0]
             # Otherwise, return None to trigger fallback strategies
-            logging_util.debug("List result cannot be normalized to dict, returning None")
+            logging_util.debug(
+                "List result cannot be normalized to dict, returning None"
+            )
             return None
 
         # For primitives (str, int, bool, etc.), return None
-        logging_util.debug(f"Primitive result type {type(result).__name__} cannot be normalized, returning None")
+        logging_util.debug(
+            f"Primitive result type {type(result).__name__} cannot be normalized, returning None"
+        )
         return None
 
     @staticmethod
-    def parse(text: str) -> tuple[dict[str, Any] | None, bool]:
+    def parse(text: str) -> tuple[dict[str, Any] | None, bool]:  # noqa: PLR0911, PLR0912, PLR0915
         """
         Attempts to parse JSON text with multiple fallback strategies.
 
