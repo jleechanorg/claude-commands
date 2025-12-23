@@ -21,7 +21,7 @@ def _get_firestore():
     global _firestore
     if _firestore is None:
         try:
-            from google.cloud import firestore
+            from google.cloud import firestore  # type: ignore
 
             _firestore = firestore
         except ImportError:

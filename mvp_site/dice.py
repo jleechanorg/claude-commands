@@ -548,12 +548,16 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         if raw_attack_mod is None and "modifier" in arguments:
             raw_attack_mod = arguments.get("modifier")
         attack_mod = _coerce_int_inner(raw_attack_mod, 0)
+        if attack_mod is None:
+            attack_mod = 0
         ability_mod = _coerce_int_inner(arguments.get("ability_modifier"), None)
         ability_name = arguments.get("ability_name", "").upper() or None
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), None)
         weapon_name = arguments.get("weapon_name", "")
         damage_notation = arguments.get("damage_notation") or arguments.get("damage_dice") or "1d6"
         target_ac = _coerce_int_inner(arguments.get("target_ac"), 10)
+        if target_ac is None:
+            target_ac = 10
         advantage = _coerce_bool(arguments.get("advantage"), False)
         disadvantage = _coerce_bool(arguments.get("disadvantage"), False)
 
