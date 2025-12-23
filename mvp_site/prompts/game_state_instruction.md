@@ -497,24 +497,24 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
       "npc_goblin_001": {
         "name": "Goblin Warrior",
         "cr": "1/4",
-        "hp_current": 7,
-        "hp_max": 7,
+        "hp_current": 11,
+        "hp_max": 11,
         "ac": 15,
         "category": "minion"
       },
       "npc_troll_001": {
         "name": "Cave Troll",
-        "cr": 5,
-        "hp_current": 84,
-        "hp_max": 84,
+        "cr": "5",
+        "hp_current": 120,
+        "hp_max": 120,
         "ac": 15,
-        "category": "elite",
+        "category": "boss",
         "defensive_abilities": ["Regeneration 10"],
         "legendary_resistances": 0
       },
       "npc_warlord_001": {
         "name": "Warlord Gorok",
-        "cr": 12,
+        "cr": "12",
         "hp_current": 229,
         "hp_max": 229,
         "ac": 18,
@@ -529,9 +529,11 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 ```
 
 **Category Rules:**
-- `boss`: CR 5+ or named antagonists. Full stat block. Legendary abilities. **hp_max MUST match CR table.**
+- `boss`: CR 5+ (named or unnamed). Full stat block. Legendary abilities. **hp_max MUST match CR table.**
 - `elite`: CR 1-4 named enemies. Full stat block. Reasonable HP.
-- `minion`: CR 1/2 or below unnamed. Summarized. Can use 1-HP minion rules for groups.
+- `minion`: CR 1/2 or below unnamed. Summarized. Use normal HP for its CR.
+
+**CR Format:** Always store `cr` as a string (e.g., `"1/4"`, `"5"`, `"12"`).
 
 **🚨 HP Validation (ENFORCED):**
 When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate range from `mechanics_system_instruction.md`. A CR 12 boss with `hp_max: 25` is INVALID.

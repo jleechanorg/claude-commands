@@ -136,7 +136,7 @@ At combat initiation, display a stat block visible to the player:
 **For Minions/Generic enemies (unnamed soldiers, basic monsters):**
 Summarize as a group with average stats:
 ```
-[MINIONS: 4x Goblin Warriors | CR 1/4 | HP: 7 each | AC: 15]
+[MINIONS: 4x Goblin Warriors | CR 1/4 | HP: 11 each | AC: 15]
 ```
 
 ### CR-to-HP Reference Table (AUTHORITATIVE)
@@ -173,7 +173,7 @@ Summarize as a group with average stats:
 
 **🚨 VIOLATION EXAMPLES (NEVER DO THIS):**
 - ❌ "Void-Blighted Paladin (CR 12)" dying to 21 damage → CR 12 = 221+ HP minimum
-- ❌ "Level 22 General" dying to 124 damage → Epic tier = 350+ HP minimum
+- ❌ "Epic-tier General (CR 21+, NPCs can exceed the level 20 player cap)" dying to 124 damage → Epic tier = 400+ HP minimum
 - ❌ "Elite Infiltrators" dying to 8 damage → "Elite" implies CR 2+ = 71+ HP minimum
 
 ### Boss vs Minion Classification
@@ -194,7 +194,7 @@ Summarize as a group with average stats:
 - Unnamed generic troops
 - CR 1/2 or below
 - Cannon fodder explicitly described as such
-- Groups of 5+ identical enemies (use minion rules: 1 HP each, but apply damage thresholds)
+- Groups of 5+ identical enemies (summarize as a group, but each uses normal HP for its CR)
 
 ### Damage Calculation Validation (MANDATORY)
 
@@ -208,13 +208,13 @@ Summarize as a group with average stats:
    - **🚨 40d6 Sneak Attack is IMPOSSIBLE** - maximum is 20d6 on a crit
 
 2. **Weapon Damage:**
-   - Dagger: 1d4 | Short Sword: 1d6 | Longsword: 1d8 | Greatsword: 2d6
+   - Dagger: 1d4 | Shortsword: 1d6 | Longsword: 1d8 | Greatsword: 2d6
    - Light Crossbow: 1d8 | Heavy Crossbow: 1d10 | Longbow: 1d8
 
 3. **Modifier Caps:**
-   - Strength/Dexterity modifier: Max +5 (20 attribute)
+   - Strength/Dexterity modifier: Normally max +5 (20 attribute, without magical/exceptional effects). Absolute hard cap in 5E is 30 (+10), but values above +5 must be explicitly justified (e.g., specific magic item or feature).
    - Magic weapon bonus: +1 to +3 typically
-   - Total reasonable attack modifier at L20: +11 to +14
+   - Total reasonable attack modifier at L20: +11 to +14 (higher only with clearly documented magical/epic bonuses)
 
 4. **Critical Hit Rules:**
    - Double the dice, NOT the modifiers
