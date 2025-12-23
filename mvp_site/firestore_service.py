@@ -74,8 +74,23 @@ class _InMemoryFirestoreDocument:
         self._parent_path = parent_path
         self._collections: dict[str, _InMemoryFirestoreCollection] = {}
 
-    def set(self, data: dict[str, Any]) -> None:
-        self._data = data
+    def set(self, data: dict[str, Any], merge: bool = False) -> None:
+        if not merge:
+            self._data = data
+            return
+
+        def deep_merge(target: dict[str, Any], source: dict[str, Any]) -> None:
+            for key, value in source.items():
+                if (
+                    key in target
+                    and isinstance(target[key], dict)
+                    and isinstance(value, dict)
+                ):
+                    deep_merge(target[key], value)
+                else:
+                    target[key] = value
+
+        deep_merge(self._data, data)
 
     def update(self, updates: dict[str, Any]) -> None:
         for key, value in updates.items():
@@ -527,17 +542,62 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
     """
     Expands a dictionary with dot-notation keys into a nested dictionary.
     Example: {'a.b': 1, 'c': 2} -> {'a': {'b': 1}, 'c': 2}
+
+    Dot characters are reserved for path notation. Keys with literal dots are
+    not supported by this helper and should be avoided in update payloads.
     """
     expanded_dict: dict[str, Any] = {}
+    terminal_paths: set[tuple[str, ...]] = set()
     for k, v in d.items():
         if "." in k:
             keys = k.split(".")
+            if any(part == "" for part in keys):
+                raise ValueError(
+                    "Invalid dot-notation key; leading, trailing, or repeated dots "
+                    f"are not supported: '{k}'"
+                )
             d_ref = expanded_dict
+            prefix: list[str] = []
             for part in keys[:-1]:
-                d_ref = d_ref.setdefault(part, {})
-            d_ref[keys[-1]] = v
+                prefix.append(part)
+                if tuple(prefix) in terminal_paths:
+                    raise ValueError(
+                        "Conflicting keys in dot-notation expansion: "
+                        f"cannot set '{k}' because '{'.'.join(prefix)}' "
+                        "already exists as a terminal value"
+                    )
+                existing = d_ref.get(part)
+                if existing is not None and not isinstance(existing, dict):
+                    raise ValueError(
+                        "Conflicting keys in dot-notation expansion: "
+                        f"cannot set '{k}' because '{part}' already exists as "
+                        "a non-dict value"
+                    )
+                if part not in d_ref:
+                    d_ref[part] = {}
+                d_ref = d_ref[part]
+            final_key = keys[-1]
+            if tuple(keys) in terminal_paths:
+                raise ValueError(
+                    "Conflicting keys in dot-notation expansion: "
+                    f"'{k}' already exists as a terminal value"
+                )
+            existing_final = d_ref.get(final_key)
+            if existing_final is not None and isinstance(existing_final, dict):
+                raise ValueError(
+                    "Conflicting keys in dot-notation expansion: "
+                    f"'{k}' would overwrite an existing nested structure"
+                )
+            d_ref[final_key] = v
+            terminal_paths.add(tuple(keys))
         else:
+            if k in expanded_dict:
+                raise ValueError(
+                    "Conflicting keys in dot-notation expansion: "
+                    f"'{k}' overlaps with an existing nested update"
+                )
             expanded_dict[k] = v
+            terminal_paths.add((k,))
     return expanded_dict
 
 
@@ -1268,10 +1328,26 @@ def update_campaign_title(
     return True
 
 
+@log_exceptions
 def update_campaign(
     user_id: UserId, campaign_id: CampaignId, updates: dict[str, Any]
 ) -> bool:
-    """Updates a campaign with arbitrary updates."""
+    """Updates a campaign with arbitrary updates.
+
+    Supports dot-notation paths for nested field updates.
+    Example: {"game_state.arc_milestones.quest1": {"status": "completed"}}
+    will correctly update the nested structure.
+    Dot characters are reserved for nested paths; literal dots in field names are
+    not supported by this helper.
+
+    Args:
+        user_id: User ID
+        campaign_id: Campaign ID
+        updates: Dictionary of updates, supports dot-notation keys for nested paths
+
+    Returns:
+        bool: True if update succeeded
+    """
     db = get_db()
     campaign_ref = (
         db.collection("users")
@@ -1279,7 +1355,51 @@ def update_campaign(
         .collection("campaigns")
         .document(campaign_id)
     )
-    campaign_ref.update(updates)
+    campaign_doc = campaign_ref.get()
+    if not campaign_doc.exists:
+        logging_util.error(
+            "update_campaign: campaign document not found "
+            f"(user_id={user_id}, campaign_id={campaign_id})"
+        )
+        raise ValueError(
+            f"Campaign {campaign_id} not found for user {user_id}; "
+            "cannot apply updates."
+        )
+
+    # Check if any keys use dot-notation
+    has_dot_notation = any("." in key for key in updates.keys())
+
+    if has_dot_notation:
+        # Expand dot-notation to nested dicts and use set(merge=True).
+        # We intentionally avoid Firestore's update() with dot-paths here because:
+        #   - update() operates on exact field paths and can overwrite or recreate
+        #     intermediate maps if the existing document shape does not match what
+        #     the path assumes (e.g., when a parent field is missing or is not a map).
+        #   - Small changes to the stored structure (or legacy/migrated documents)
+        #     can cause update() with a dot-path to behave differently across
+        #     campaigns, sometimes creating flat fields instead of the nested
+        #     structure our code expects.
+        # By first expanding dot-notation into a nested dict and then calling
+        # set(..., merge=True), we ask Firestore to merge at the map level:
+        #   - Only the specified nested fields are updated.
+        #   - Unspecified sibling fields under the same parent map are preserved.
+        #   - The behavior is consistent even when some intermediate maps are
+        #     missing (Firestore will create them as needed during the merge).
+        # This makes nested updates more predictable and resilient than relying
+        # directly on update() with dot-paths against documents that may evolve
+        # over time.
+        expanded_updates = _expand_dot_notation(updates)
+        logging_util.info(
+            f"update_campaign: Expanded dot-notation updates for campaign {campaign_id}"
+        )
+        campaign_ref.set(expanded_updates, merge=True)
+    else:
+        # No dot-notation, use standard update
+        logging_util.info(
+            f"update_campaign: Using standard update for campaign {campaign_id}"
+        )
+        campaign_ref.update(updates)
+
     return True
 
 

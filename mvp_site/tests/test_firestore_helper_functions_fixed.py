@@ -22,7 +22,11 @@ sys.path.insert(
 
 # Mock Firebase before importing firestore_service
 with patch("firestore_service.get_db"):
-    from mvp_site.firestore_service import _perform_append, _truncate_log_json
+    from mvp_site.firestore_service import (
+        _expand_dot_notation,
+        _perform_append,
+        _truncate_log_json,
+    )
 
 
 class TestFirestoreHelperFunctions(unittest.TestCase):
@@ -226,6 +230,124 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         mock_log.assert_called_once()
         assert "No new items were added" in mock_log.call_args[0][0]
         assert "duplicates may have been found" in mock_log.call_args[0][0]
+
+    # Tests for _expand_dot_notation
+    def test_expand_dot_notation_simple(self):
+        """Test _expand_dot_notation with simple dot-notation key"""
+        input_dict = {"a.b": 1, "c": 2}
+        result = _expand_dot_notation(input_dict)
+
+        expected = {"a": {"b": 1}, "c": 2}
+        assert result == expected
+
+    def test_expand_dot_notation_deep_nesting(self):
+        """Test _expand_dot_notation with deeply nested dot-notation"""
+        input_dict = {
+            "game_state.custom_campaign_state.arc_milestones.wedding_tour": {
+                "status": "completed",
+                "phase": "ceremony_complete",
+            }
+        }
+        result = _expand_dot_notation(input_dict)
+
+        expected = {
+            "game_state": {
+                "custom_campaign_state": {
+                    "arc_milestones": {
+                        "wedding_tour": {
+                            "status": "completed",
+                            "phase": "ceremony_complete",
+                        }
+                    }
+                }
+            }
+        }
+        assert result == expected
+
+    def test_expand_dot_notation_mixed_keys(self):
+        """Test _expand_dot_notation with mix of dot-notation and regular keys"""
+        input_dict = {
+            "title": "Campaign Title",
+            "metadata.author": "Test Author",
+            "game_state.level": 5,
+        }
+        result = _expand_dot_notation(input_dict)
+
+        expected = {
+            "title": "Campaign Title",
+            "metadata": {"author": "Test Author"},
+            "game_state": {"level": 5},
+        }
+        assert result == expected
+
+    def test_expand_dot_notation_no_dots(self):
+        """Test _expand_dot_notation with no dot-notation keys"""
+        input_dict = {"key1": "value1", "key2": {"nested": "value"}}
+        result = _expand_dot_notation(input_dict)
+
+        # Should be unchanged
+        assert result == input_dict
+
+    def test_expand_dot_notation_empty_dict(self):
+        """Test _expand_dot_notation with empty dict"""
+        result = _expand_dot_notation({})
+        assert result == {}
+
+    def test_expand_dot_notation_multiple_paths_same_prefix(self):
+        """Test _expand_dot_notation with multiple paths sharing prefix"""
+        input_dict = {
+            "game_state.health": 100,
+            "game_state.mana": 50,
+            "game_state.inventory.slots": 10,
+        }
+        result = _expand_dot_notation(input_dict)
+
+        # The setdefault() call correctly merges paths with same prefix
+        expected = {
+            "game_state": {
+                "health": 100,
+                "mana": 50,
+                "inventory": {"slots": 10},
+            },
+        }
+        assert result == expected
+
+    def test_expand_dot_notation_value_is_list(self):
+        """Test _expand_dot_notation with list value"""
+        input_dict = {"items.weapons": ["sword", "bow", "staff"]}
+        result = _expand_dot_notation(input_dict)
+
+        expected = {"items": {"weapons": ["sword", "bow", "staff"]}}
+        assert result == expected
+
+    def test_expand_dot_notation_value_is_none(self):
+        """Test _expand_dot_notation with None value"""
+        input_dict = {"field.subfield": None}
+        result = _expand_dot_notation(input_dict)
+
+        expected = {"field": {"subfield": None}}
+        assert result == expected
+
+    def test_expand_dot_notation_conflicting_parent_key(self):
+        """Test _expand_dot_notation raises for parent/child conflicts."""
+        input_dict = {"game_state": {"health": 100}, "game_state.mana": 50}
+
+        with self.assertRaises(ValueError):
+            _expand_dot_notation(input_dict)
+
+    def test_expand_dot_notation_overlapping_paths(self):
+        """Test _expand_dot_notation raises for overlapping dot paths."""
+        input_dict = {"game_state.arc.milestone": 1, "game_state.arc": {"phase": 2}}
+
+        with self.assertRaises(ValueError):
+            _expand_dot_notation(input_dict)
+
+    def test_expand_dot_notation_invalid_segments(self):
+        """Test _expand_dot_notation rejects empty path segments."""
+        input_dict = {"game_state..arc": 1}
+
+        with self.assertRaises(ValueError):
+            _expand_dot_notation(input_dict)
 
 
 if __name__ == "__main__":
