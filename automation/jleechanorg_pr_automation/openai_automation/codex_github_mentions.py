@@ -151,13 +151,63 @@ class CodexGitHubMentionsAutomation:
                 self.context = await self.browser.new_context()
                 print("📱 Created new browser context")
 
-            # Always create a new page to avoid browser UI elements (Omnibox, Extensions, etc.)
-            self.page = await self.context.new_page()
-            print("📄 Created new page for automation")
+            self.page = await self._select_existing_page()
+            if self.page:
+                print("📄 Reusing existing tab for automation")
+            else:
+                self.page = await self.context.new_page()
+                print("📄 Created new page for automation")
             return True
         except Exception as e:
             print(f"❌ Failed to connect via CDP: {e}")
             logger.warning(f"CDP connection failed: {e}")
+            return False
+
+    async def _select_existing_page(self) -> Optional[Page]:
+        if not self.context or not self.context.pages:
+            return None
+
+        async def is_ready(page: Page) -> bool:
+            try:
+                if page.is_closed():
+                    return False
+                title = await page.title()
+                return title.strip().lower() != "just a moment..."
+            except Exception:
+                return False
+
+        candidates = [page for page in self.context.pages if not page.is_closed()]
+
+        for page in candidates:
+            try:
+                if "chatgpt.com/codex" in (page.url or "") and await is_ready(page):
+                    return page
+            except Exception:
+                continue
+
+        for page in candidates:
+            try:
+                if "chatgpt.com" in (page.url or "") and await is_ready(page):
+                    return page
+            except Exception:
+                continue
+
+        return None
+
+    async def _ensure_page(self) -> bool:
+        try:
+            if self.page and not self.page.is_closed():
+                return True
+        except Exception:
+            pass
+
+        if not self.context:
+            return False
+
+        try:
+            self.page = await self.context.new_page()
+            return True
+        except Exception:
             return False
 
     async def setup(self) -> bool:
@@ -204,14 +254,20 @@ class CodexGitHubMentionsAutomation:
         """Navigate to OpenAI and ensure user is logged in."""
         print("\n🔐 Checking OpenAI login status...")
 
-        # Create or use existing page
-        if self.context.pages:
-            self.page = self.context.pages[0]
-        else:
-            self.page = await self.context.new_page()
+        if not await self._ensure_page():
+            print("❌ Unable to create browser page for login check")
+            return False
 
-        # Navigate to OpenAI
-        await self.page.goto("https://chatgpt.com/", wait_until="networkidle")
+        try:
+            current_url = self.page.url or ""
+        except Exception:
+            current_url = ""
+
+        if "chatgpt.com" not in current_url:
+            try:
+                await self.page.goto("https://chatgpt.com/", wait_until="networkidle")
+            except PlaywrightTimeoutError:
+                await self.page.goto("https://chatgpt.com/", wait_until="domcontentloaded")
         await asyncio.sleep(2)
 
         try:
@@ -283,11 +339,14 @@ class CodexGitHubMentionsAutomation:
 
         codex_url = "https://chatgpt.com/codex"
 
+        if not await self._ensure_page():
+            raise RuntimeError("No active browser page available for Codex navigation")
+
         await self.page.goto(codex_url, wait_until="domcontentloaded", timeout=30000)
 
         # Wait for Cloudflare challenge to complete
         print("   Waiting for Cloudflare challenge (if any)...")
-        max_wait = 30  # 30 seconds max wait
+        max_wait = 90  # 90 seconds max wait
         waited = 0
         while waited < max_wait:
             title = await self.page.title()
@@ -328,19 +387,6 @@ class CodexGitHubMentionsAutomation:
                 primary_selector,
             ]
 
-            locator_selector = selector_candidates[0]
-            locator = self.page.locator(locator_selector)
-            task_count = await locator.count()
-            if task_count == 0 and len(selector_candidates) > 1:
-                for candidate in selector_candidates[1:]:
-                    locator = self.page.locator(candidate)
-                    task_count = await locator.count()
-                    if task_count > 0:
-                        locator_selector = candidate
-                        break
-
-            print(f"\n🔍 Searching for tasks using selector: {locator_selector}")
-
             if self.debug:
                 debug_dir = Path("/tmp/automate_codex_update")
                 debug_dir.mkdir(parents=True, exist_ok=True)
@@ -358,32 +404,93 @@ class CodexGitHubMentionsAutomation:
                 print(f"🐛 Debug: Current URL: {self.page.url}")
                 print(f"🐛 Debug: Page title: {await self.page.title()}")
 
-            # Find all task links - use more specific selector to exclude navigation
-            # Use /codex/tasks/ to exclude navigation links like Settings, Docs
-            if task_count == 0:
-                print("⚠️  No tasks found, retrying after short wait...")
-                await asyncio.sleep(5)
-                task_count = await locator.count()
-                if task_count == 0:
-                    print("⚠️  Still no tasks found")
-                    return []
+            per_tab_limit = None if self.task_limit is None else self.task_limit
+            tasks = await self._collect_task_links(selector_candidates, per_tab_limit, tab_label="Tasks")
 
-            limit = task_count if self.task_limit is None else min(task_count, self.task_limit)
-            tasks: List[Dict[str, str]] = []
-            for idx in range(limit):
-                item = locator.nth(idx)
-                href = await item.get_attribute("href") or ""
-                text = (await item.text_content()) or ""
-                tasks.append({"href": href, "text": text})
+            if await self._switch_to_tab("Code reviews"):
+                code_review_tasks = await self._collect_task_links(
+                    selector_candidates,
+                    per_tab_limit,
+                    tab_label="Code reviews",
+                )
+                tasks.extend(code_review_tasks)
 
-            print(f"✅ Prepared {len(tasks)} task link(s) for processing")
-            logger.info(f"Prepared {len(tasks)} task link(s) using selector {locator_selector}")
-            return tasks
+            if not tasks:
+                print("⚠️  Still no tasks found")
+                return []
+
+            deduped: List[Dict[str, str]] = []
+            seen: set[str] = set()
+            for task in tasks:
+                href = task.get("href", "")
+                if not href or href in seen:
+                    continue
+                seen.add(href)
+                deduped.append(task)
+
+            if self.task_limit is not None:
+                deduped = deduped[: self.task_limit]
+
+            print(f"✅ Prepared {len(deduped)} task link(s) for processing")
+            logger.info(f"Prepared {len(deduped)} task link(s) across tabs")
+            return deduped
 
         except Exception as e:
             print(f"❌ Error finding tasks: {e}")
             logger.error(f"Error finding tasks: {e}")
             return []
+
+    async def _collect_task_links(
+        self,
+        selector_candidates: List[str],
+        limit: Optional[int],
+        tab_label: str,
+    ) -> List[Dict[str, str]]:
+        locator_selector = selector_candidates[0]
+        locator = self.page.locator(locator_selector)
+        task_count = await locator.count()
+        if task_count == 0 and len(selector_candidates) > 1:
+            for candidate in selector_candidates[1:]:
+                locator = self.page.locator(candidate)
+                task_count = await locator.count()
+                if task_count > 0:
+                    locator_selector = candidate
+                    break
+
+        print(f"\n🔍 Searching for tasks in {tab_label} using selector: {locator_selector}")
+
+        if task_count == 0:
+            print("⚠️  No tasks found, retrying after short wait...")
+            await asyncio.sleep(5)
+            task_count = await locator.count()
+            if task_count == 0:
+                return []
+
+        local_limit = task_count if limit is None else min(task_count, limit)
+        tasks: List[Dict[str, str]] = []
+        for idx in range(local_limit):
+            item = locator.nth(idx)
+            href = await item.get_attribute("href") or ""
+            text = (await item.text_content()) or ""
+            tasks.append({"href": href, "text": text})
+        return tasks
+
+    async def _switch_to_tab(self, label: str) -> bool:
+        selectors = [
+            f'button:has-text("{label}")',
+            f'a:has-text("{label}")',
+            f'[role="tab"]:has-text("{label}")',
+        ]
+        for selector in selectors:
+            locator = self.page.locator(selector)
+            try:
+                if await locator.count() > 0:
+                    await locator.first().click()
+                    await asyncio.sleep(2)
+                    return True
+            except Exception:
+                continue
+        return False
 
     async def update_pr_for_task(self, task_link: Dict[str, str]):
         """
@@ -396,34 +503,44 @@ class CodexGitHubMentionsAutomation:
         task_text_raw = task_link.get("text", "")
         task_text = (task_text_raw or "").strip()[:80] or "(no text)"
 
-        try:
-            target_url = href if href.startswith("http") else f"https://chatgpt.com{href}"
-            print(f"   Navigating to task: {task_text}")
-            await self.page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
-            await asyncio.sleep(3)
+        target_url = href if href.startswith("http") else f"https://chatgpt.com{href}"
 
-            update_branch_btn = self.page.locator('button:has-text("Update branch")').first
-
-            if await update_branch_btn.count() > 0:
-                await update_branch_btn.click()
-                print("  ✅ Clicked 'Update branch' button")
-                await asyncio.sleep(2)
-            else:
-                print("  ⚠️  'Update branch' button not found")
+        for attempt in range(2):
+            if not await self._ensure_page():
+                print("  ❌ No active browser page available to update task")
                 return False
 
-            await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
-            await asyncio.sleep(3)
-            return True
-
-        except Exception as e:
-            print(f"  ❌ Failed to update PR: {e}")
             try:
+                print(f"   Navigating to task: {task_text}")
+                await self.page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+                await asyncio.sleep(3)
+
+                update_branch_btn = self.page.locator('button:has-text("Update branch")').first
+
+                if await update_branch_btn.count() > 0:
+                    await update_branch_btn.click()
+                    print("  ✅ Clicked 'Update branch' button")
+                    await asyncio.sleep(2)
+                else:
+                    print("  ⚠️  'Update branch' button not found")
+                    return False
+
                 await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
                 await asyncio.sleep(3)
-            except Exception as nav_err:
-                print(f"  ⚠️ Failed to navigate back to Codex after error: {nav_err}")
-            return False
+                return True
+
+            except Exception as e:
+                error_text = str(e)
+                print(f"  ❌ Failed to update PR: {e}")
+                if "Target page, context or browser has been closed" in error_text and attempt == 0:
+                    print("  🔄 Page was closed; reopening a new tab and retrying...")
+                    continue
+                try:
+                    await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
+                    await asyncio.sleep(3)
+                except Exception as nav_err:
+                    print(f"  ⚠️ Failed to navigate back to Codex after error: {nav_err}")
+                return False
 
     async def process_all_github_mentions(self):
         """Find all GitHub mention tasks and update their PRs."""
@@ -470,9 +587,9 @@ class CodexGitHubMentionsAutomation:
             # Step 2: Ensure logged in to OpenAI (will save auth state on first login)
             await self.ensure_openai_login()
 
-            # Step 3: Navigate to Codex if not already there
+            # Step 3: Navigate to Codex if not already on tasks list
             current_url = self.page.url
-            if "chatgpt.com/codex" in current_url:
+            if "chatgpt.com/codex" in current_url and not self._is_task_detail_url(current_url):
                 print(f"\n✅ Already on Codex page: {current_url}")
                 logger.info(f"Already on Codex page: {current_url}")
                 await asyncio.sleep(3)
@@ -525,6 +642,9 @@ class CodexGitHubMentionsAutomation:
         if self.playwright:
             await self.playwright.stop()
             self.playwright = None
+
+    def _is_task_detail_url(self, url: str) -> bool:
+        return "/codex/tasks/" in url and "task_" in url
 
 
 def _format_cdp_host_for_url(host: str) -> str:
