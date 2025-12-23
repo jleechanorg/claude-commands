@@ -96,6 +96,7 @@ def test_update_campaign_dot_notation(monkeypatch):
     wedding_tour = data["game_state"]["custom_campaign_state"]["arc_milestones"]["wedding_tour"]
     assert wedding_tour["status"] == "completed"
     assert wedding_tour["phase"] == "ceremony_complete"
+    assert data["title"] == "Test Campaign"
 
 
 def test_update_campaign_without_dot_notation(monkeypatch):
@@ -132,3 +133,50 @@ def test_update_campaign_without_dot_notation(monkeypatch):
 
     assert data["title"] == "Updated Title"
     assert data["status"] == "completed"
+
+
+def test_update_campaign_dot_notation_existing_nested(monkeypatch):
+    """Test that dot-notation updates merge into existing nested fields."""
+    monkeypatch.setenv("MOCK_SERVICES_MODE", "true")
+    firestore_service.reset_mock_firestore()
+
+    db = firestore_service.get_db()
+    user_id = "test_user3"
+    campaign_id = "test_campaign3"
+
+    doc = (
+        db.collection("users")
+        .document(user_id)
+        .collection("campaigns")
+        .document(campaign_id)
+    )
+    doc.set({
+        "title": "Existing Campaign",
+        "game_state": {
+            "custom_campaign_state": {
+                "arc_milestones": {
+                    "wedding_tour": {"status": "in_progress"}
+                }
+            }
+        },
+    })
+
+    updates = {
+        "game_state.custom_campaign_state.arc_milestones.wedding_tour": {
+            "status": "completed",
+            "phase": "ceremony_complete",
+        }
+    }
+
+    result = firestore_service.update_campaign(user_id, campaign_id, updates)
+    assert result is True
+
+    updated_doc = doc.get()
+    data = updated_doc.to_dict()
+    wedding_tour = data["game_state"]["custom_campaign_state"]["arc_milestones"]["wedding_tour"]
+
+    assert data["title"] == "Existing Campaign"
+    assert wedding_tour == {
+        "status": "completed",
+        "phase": "ceremony_complete",
+    }

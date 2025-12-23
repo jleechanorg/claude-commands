@@ -328,6 +328,27 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         expected = {"field": {"subfield": None}}
         assert result == expected
 
+    def test_expand_dot_notation_conflicting_parent_key(self):
+        """Test _expand_dot_notation raises for parent/child conflicts."""
+        input_dict = {"game_state": {"health": 100}, "game_state.mana": 50}
+
+        with self.assertRaises(ValueError):
+            _expand_dot_notation(input_dict)
+
+    def test_expand_dot_notation_overlapping_paths(self):
+        """Test _expand_dot_notation raises for overlapping dot paths."""
+        input_dict = {"game_state.arc.milestone": 1, "game_state.arc": {"phase": 2}}
+
+        with self.assertRaises(ValueError):
+            _expand_dot_notation(input_dict)
+
+    def test_expand_dot_notation_invalid_segments(self):
+        """Test _expand_dot_notation rejects empty path segments."""
+        input_dict = {"game_state..arc": 1}
+
+        with self.assertRaises(ValueError):
+            _expand_dot_notation(input_dict)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
