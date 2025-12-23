@@ -490,7 +490,7 @@ class CodexGitHubMentionsAutomation:
             locator = self.page.locator(selector)
             try:
                 if await locator.count() > 0:
-                    await locator.first().click()
+                    await locator.first.click()
                     await asyncio.sleep(2)
                     return True
             except Exception as exc:
