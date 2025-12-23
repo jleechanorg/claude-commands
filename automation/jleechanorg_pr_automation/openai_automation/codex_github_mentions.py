@@ -212,7 +212,8 @@ class CodexGitHubMentionsAutomation:
         try:
             self.page = await self.context.new_page()
             return True
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to create new page: %s", exc)
             return False
 
     async def setup(self) -> bool:
@@ -524,10 +525,10 @@ class CodexGitHubMentionsAutomation:
                 await self.page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
                 await asyncio.sleep(3)
 
-                update_branch_btn = self.page.locator('button:has-text("Update branch")').first
+                update_branch_locator = self.page.locator('button:has-text("Update branch")')
 
-                if await update_branch_btn.count() > 0:
-                    await update_branch_btn.click()
+                if await update_branch_locator.count() > 0:
+                    await update_branch_locator.first.click()
                     print("  ✅ Clicked 'Update branch' button")
                     await asyncio.sleep(2)
                 else:
