@@ -214,6 +214,16 @@ class GameState:
         self.world_data = kwargs.get("world_data", {})
         self.npc_data = kwargs.get("npc_data", {})
         self.custom_campaign_state = kwargs.get("custom_campaign_state", {})
+        if not isinstance(self.custom_campaign_state, dict):
+            self.custom_campaign_state = {}
+
+        # Ensure arc_milestones is initialized for tracking narrative arc completion
+        # Handle both missing key AND null value from Firestore
+        if (
+            "arc_milestones" not in self.custom_campaign_state
+            or not isinstance(self.custom_campaign_state.get("arc_milestones"), dict)
+        ):
+            self.custom_campaign_state["arc_milestones"] = {}
 
         # Ensure attribute_system is set (defaults to Destiny system)
         if "attribute_system" not in self.custom_campaign_state:
@@ -344,6 +354,159 @@ class GameState:
 
         # The constructor now directly accepts the dictionary.
         return cls(**source)
+
+    # =========================================================================
+    # Arc Milestone Tracking Methods
+    # =========================================================================
+    # These methods provide structured tracking for narrative arcs to prevent
+    # the LLM from losing track of completed events during context compression.
+    # =========================================================================
+
+    def mark_arc_completed(
+        self,
+        arc_name: str,
+        phase: str | None = None,
+        metadata: dict | None = None
+    ) -> None:
+        """
+        Mark a narrative arc as completed with timestamp.
+
+        Once an arc is marked completed, it cannot be reverted to in_progress.
+        This prevents timeline confusion where the LLM forgets major events.
+        Calling this again for the same arc overwrites the previous completion
+        record (including completed_at) to allow phase/metadata updates.
+
+        Args:
+            arc_name: Unique identifier for the arc (e.g., "wedding_tour")
+            phase: Optional phase name when completion occurred
+            metadata: Optional additional data to store with the milestone
+        """
+        milestones = self.custom_campaign_state.get("arc_milestones", {})
+
+        milestone_data = {
+            "status": "completed",
+            "completed_at": datetime.datetime.now(datetime.UTC).isoformat(),
+        }
+
+        if phase is not None:
+            milestone_data["phase"] = phase
+
+        if metadata is not None:
+            milestone_data["metadata"] = metadata
+
+        milestones[arc_name] = milestone_data
+        self.custom_campaign_state["arc_milestones"] = milestones
+
+    def update_arc_progress(
+        self,
+        arc_name: str,
+        phase: str,
+        progress: int = 0
+    ) -> None:
+        """
+        Update the progress of an in-progress arc.
+
+        If the arc is already completed, this method does nothing to prevent
+        timeline regression.
+
+        Args:
+            arc_name: Unique identifier for the arc
+            phase: Current phase of the arc
+            progress: Progress percentage (0-100)
+        """
+        milestones = self.custom_campaign_state.get("arc_milestones", {})
+        arc_data = milestones.get(arc_name)
+
+        # Prevent regression of completed arcs
+        if isinstance(arc_data, dict) and arc_data.get("status") == "completed":
+            logging_util.warning(
+                "Attempted to update progress for completed arc '%s' "
+                "(phase=%s, progress=%s). Update ignored to prevent timeline regression.",
+                arc_name,
+                phase,
+                progress,
+            )
+            return  # Arc already completed, don't regress
+
+        progress_value = _coerce_int(progress, 0)
+        if progress_value is None:
+            progress_value = 0
+        if progress_value < 0 or progress_value > 100:
+            logging_util.warning(
+                "Arc progress out of range for '%s': %s. Clamping to 0-100.",
+                arc_name,
+                progress_value,
+            )
+            progress_value = max(0, min(100, progress_value))
+
+        milestones[arc_name] = {
+            "status": "in_progress",
+            "phase": phase,
+            "progress": progress_value,
+            "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+        }
+        self.custom_campaign_state["arc_milestones"] = milestones
+
+    def is_arc_completed(self, arc_name: str) -> bool:
+        """
+        Check if a narrative arc has been marked as completed.
+
+        Args:
+            arc_name: Unique identifier for the arc
+
+        Returns:
+            True if the arc is completed, False otherwise
+        """
+        milestones = self.custom_campaign_state.get("arc_milestones", {})
+        arc_data = milestones.get(arc_name)
+        if not isinstance(arc_data, dict):
+            return False
+        return arc_data.get("status") == "completed"
+
+    def get_arc_phase(self, arc_name: str) -> str | None:
+        """
+        Get the current phase of a narrative arc.
+
+        Args:
+            arc_name: Unique identifier for the arc
+
+        Returns:
+            The phase name if set, None otherwise
+        """
+        milestones = self.custom_campaign_state.get("arc_milestones", {})
+        arc_data = milestones.get(arc_name)
+        if not isinstance(arc_data, dict):
+            return None
+        return arc_data.get("phase")
+
+    def get_completed_arcs_summary(self) -> str:
+        """
+        Generate a summary of completed arcs for inclusion in LLM context.
+
+        This provides deterministic state information to prevent the LLM from
+        forgetting that major narrative arcs have concluded.
+
+        Returns:
+            Formatted string summarizing completed arcs, empty if none
+        """
+        milestones = self.custom_campaign_state.get("arc_milestones", {})
+
+        completed = [
+            (name, data)
+            for name, data in milestones.items()
+            if isinstance(data, dict) and data.get("status") == "completed"
+        ]
+
+        if not completed:
+            return ""
+
+        lines = ["[COMPLETED ARCS - DO NOT REVISIT AS IN-PROGRESS]"]
+        for arc_name, data in completed:
+            phase = data.get("phase", "final")
+            completed_at = data.get("completed_at", "unknown")
+            lines.append(f"- {arc_name}: COMPLETED (phase: {phase}, at: {completed_at})")
+
+        return "\n".join(lines)
 
     def validate_checkpoint_consistency(self, narrative_text: str) -> list[str]:
         """

@@ -378,8 +378,12 @@ class PromptBuilder:
             f"- EXCEPTION: Only GOD MODE commands can move time backward\n\n"
         )
 
+        # Build arc completion reminder to prevent LLM from revisiting completed arcs
+        arc_reminder = self.build_arc_completion_reminder()
+
         return (
             temporal_enforcement
+            + arc_reminder
             + "**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
             "1. **MANDATORY PLANNING BLOCK FIELD**: Every STORY MODE response MUST have a `planning_block` field (JSON object) as a SEPARATE top-level field.\n"
             "2. **MANDATORY NARRATIVE FIELD**: Every response MUST have a `narrative` field with story prose. NEVER embed JSON in narrative.\n"
@@ -390,6 +394,31 @@ class PromptBuilder:
             "   - **NO ACTIONS**: The character MUST NOT take any story-advancing actions - no combat, dialogue, movement, or decisions\n"
             "5. **Standard Responses**: Include narrative continuation in `narrative` field, planning block in `planning_block` field with 3-4 action options.\n"
             "6. **Never Skip**: Both `narrative` AND `planning_block` fields are MANDATORY - never leave either empty.\n\n"
+        )
+
+    def build_arc_completion_reminder(self) -> str:
+        """
+        Build arc completion reminder to prevent LLM from revisiting completed arcs.
+
+        This prevents timeline confusion where the LLM "forgets" that major
+        narrative arcs have concluded and tries to revisit them as in-progress.
+
+        Returns:
+            Formatted string with completed arcs summary, or empty string if none.
+        """
+        if self.game_state is None:
+            return ""
+
+        summary = self.game_state.get_completed_arcs_summary()
+        if not summary:
+            return ""
+
+        return (
+            f"\n**🚨 ARC COMPLETION ENFORCEMENT**\n"
+            f"{summary}\n"
+            f"⚠️ DO NOT revisit these arcs as if they are still in progress.\n"
+            f"⚠️ DO NOT reset or regress the status of completed arcs.\n"
+            f"⚠️ References to these arcs should acknowledge they are COMPLETE.\n\n"
         )
 
     def finalize_instructions(

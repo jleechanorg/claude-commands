@@ -163,7 +163,7 @@ class TestGameState(unittest.TestCase):
         assert gs.player_character_data == {}
         assert gs.world_data == {}
         assert gs.npc_data == {}
-        assert gs.custom_campaign_state == {"attribute_system": "D&D"}
+        assert gs.custom_campaign_state == {"attribute_system": "D&D", "arc_milestones": {}}
 
         # Test that timestamp is recent
         now = datetime.datetime.now(datetime.UTC)
@@ -195,6 +195,7 @@ class TestGameState(unittest.TestCase):
         assert gs.custom_campaign_state == {
             "quest_active": True,
             "attribute_system": "D&D",
+            "arc_milestones": {},
         }
         assert gs.last_state_update_timestamp == custom_time
         assert gs.extra_field == "extra_value"
@@ -216,7 +217,7 @@ class TestGameState(unittest.TestCase):
             "player_character_data": {"name": "Test"},
             "world_data": {},
             "npc_data": {},
-            "custom_campaign_state": {"attribute_system": "D&D"},
+            "custom_campaign_state": {"attribute_system": "D&D", "arc_milestones": {}},
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
             "extra_field": "test_value",

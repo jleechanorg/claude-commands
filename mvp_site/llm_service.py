@@ -2524,6 +2524,12 @@ def get_initial_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", model_to_use)
+        capture_system_instruction = (
+            os.getenv("CAPTURE_SYSTEM_INSTRUCTION", "").lower() == "true"
+        )
+        if capture_system_instruction:
+            max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
+            debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:
@@ -3548,6 +3554,12 @@ def continue_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", chosen_model)
+        capture_system_instruction = (
+            os.getenv("CAPTURE_SYSTEM_INSTRUCTION", "").lower() == "true"
+        )
+        if capture_system_instruction:
+            max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
+            debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:

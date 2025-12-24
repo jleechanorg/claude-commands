@@ -48,6 +48,73 @@ Before running ANY test, answer:
 
 ## Evidence Collection Requirements
 
+### Evidence Integrity (Checksums)
+
+**ALL evidence files MUST have separate checksum files:**
+
+```bash
+# Generate checksums AFTER finalizing content
+sha256sum evidence.json > evidence.json.sha256
+
+# Verify checksums
+sha256sum -c evidence.json.sha256
+```
+
+**Anti-pattern:** Embedding checksums inside JSON files (self-invalidating).
+
+### Git Provenance Requirements
+
+Every evidence bundle MUST capture:
+
+```bash
+git fetch origin main  # Ensure origin/main is current
+git rev-parse HEAD     # Exact commit being tested
+git rev-parse origin/main  # Base comparison point
+git branch --show-current  # Branch name
+git diff --name-only origin/main...HEAD  # Files changed
+```
+
+**Why:** Proves exactly what code was running during evidence capture.
+
+### Server Environment Capture
+
+For server-based evidence, capture:
+
+```bash
+# Process info
+ps -eo pid,user,etime,args | grep "mvp_site\|python.*main"
+
+# Listening ports
+lsof -i :PORT -P -n | grep LISTEN
+
+# Environment variables (sanitized)
+# PID from above
+lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
+```
+
+**Required env vars to capture:**
+- `WORLDAI_DEV_MODE`
+- `PORT`
+- `FIREBASE_PROJECT_ID`
+- `CAPTURE_SYSTEM_INSTRUCTION` (if applicable)
+
+### Evidence Directory Structure
+
+Standard layout for evidence bundles:
+
+```
+/tmp/{feature}_api_tests_v{N}/
+├── full_evidence_transcript.txt   # Human-readable log
+├── api_completion_test.json       # Structured test results
+├── api_completion_test.json.sha256
+├── post_process_analysis.json     # Validation/regression checks
+├── post_process_analysis.json.sha256
+├── pip_freeze.txt                 # Python environment
+├── pip_freeze.txt.sha256
+├── evidence_capture.sh            # Reproducible script
+└── run_api_completion_test.py     # Test runner
+```
+
 ### For Production Claims
 
 Evidence MUST include:
@@ -55,6 +122,26 @@ Evidence MUST include:
 - Actual API responses with timestamps
 - Real data from database/logs
 - Specific values that prove execution (e.g., dice roll results)
+
+### For Prompt Enforcement Claims
+
+If you claim a specific system instruction or enforcement block was included in a live LLM call:
+- Capture runtime system instruction text from the actual request (debug output or logs)
+- Tie it to the same execution that produced the response (timestamp + request/response evidence)
+- Static code references alone are insufficient
+
+**Runtime Capture Mechanism (WorldArchitect.AI):**
+
+```bash
+# Start server with system instruction capture enabled
+CAPTURE_SYSTEM_INSTRUCTION=true \
+CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS=120000 \
+WORLDAI_DEV_MODE=true \
+PORT=8005 \
+python -m mvp_site.main serve
+```
+
+The captured system instruction will appear in `debug_info.system_instruction_excerpt` in API responses.
 
 ### For Integration Claims
 
