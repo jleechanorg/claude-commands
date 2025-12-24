@@ -683,7 +683,7 @@ class TestThinkingConfigEnforcement(unittest.TestCase):
 
     def test_gemini_3_enables_thinking_config_for_code_execution(self):
         """
-        GREEN: Verify that Gemini 3 code_execution includes thinkingConfig.
+        Verify that Gemini 3 code_execution includes thinkingConfig.
 
         Per Consensus ML synthesis:
         - thinkingConfig with thinking_budget increases code_execution compliance
@@ -778,12 +778,11 @@ class TestJSONStdoutValidation(unittest.TestCase):
 
     def test_code_execution_result_validates_json_format(self):
         """
-        RED: Verify that code_execution stdout is validated as JSON.
+        Verify that code_execution stdout is validated as JSON.
 
         Per Consensus ML synthesis:
         - Code should print JSON to stdout: {"notation":"1d20","rolls":[15],"total":15}
         - Eliminates post-processing errors from model reformatting
-        - This test will FAIL until we implement JSON validation
         """
         from mvp_site.llm_providers import gemini_provider
 
@@ -822,6 +821,291 @@ class TestJSONStdoutValidation(unittest.TestCase):
             self.assertIn('total', json_output, "Should have total field")
         except json.JSONDecodeError:
             self.fail("Code execution stdout should be valid JSON")
+
+
+class TestRNGVerification(unittest.TestCase):
+    """Tests for RNG verification in code execution dice rolls.
+
+    ISSUE: Chi-square 411.81 (vs expected 19-30) shows dice distribution is
+    "statistically impossible" from true RNG. LLM fabricates via:
+        print('{"rolls": [16], "total": 21}')  # No random.randint()!
+
+    These tests verify that:
+    1. Code execution WITHOUT random.randint() is detected as fabrication
+    2. Code execution WITH random.randint() passes verification
+    3. The rng_verified field is present in evidence
+    """
+
+    @staticmethod
+    def _make_mock_response(code: str, output: str = '{"rolls": [15], "total": 15}'):
+        mock_response = Mock()
+        mock_part = Mock()
+        mock_part.executable_code = Mock(
+            language='python',
+            code=code,
+        )
+        mock_part.code_execution_result = Mock(
+            outcome='OUTCOME_OK',
+            output=output,
+        )
+        mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
+        return mock_response
+
+    def test_fabrication_detected_when_code_lacks_rng(self):
+        """
+        Code that prints JSON without random.randint() should be FABRICATION.
+
+        When rng_verified=False (code executed but no RNG detected),
+        _is_code_execution_fabrication should return True.
+        """
+        from types import SimpleNamespace
+        from mvp_site.dice_integrity import _is_code_execution_fabrication
+
+        structured = SimpleNamespace(dice_rolls=["1d20 = 16"], dice_audit_events=None)
+
+        # Code executed but NO random.randint() - this is fabrication!
+        evidence_no_rng = {
+            "code_execution_used": True,
+            "executable_code_parts": 1,
+            "code_execution_result_parts": 1,
+            "stdout": '{"rolls": [16], "total": 21}',
+            "stdout_is_valid_json": True,
+            "code_contains_rng": False,
+            "rng_verified": False,
+        }
+
+        # This SHOULD be True (fabrication detected) but currently returns False
+        # because existing code only checks code_execution_used
+        self.assertTrue(
+            _is_code_execution_fabrication(structured, evidence_no_rng),
+            "Code execution WITHOUT random.randint() should be detected as FABRICATION"
+        )
+
+    def test_extract_evidence_includes_rng_verified_field(self):
+        """
+        extract_code_execution_evidence should return rng_verified field.
+        """
+        from mvp_site.llm_providers import gemini_provider
+
+        mock_response = Mock()
+        mock_part = Mock()
+        # Code that fabricates values without RNG
+        mock_part.executable_code = Mock(
+            language='python',
+            code='import json; print(json.dumps({"rolls": [16], "total": 21}))'
+        )
+        mock_part.code_execution_result = Mock(
+            outcome='OUTCOME_OK',
+            output='{"rolls": [16], "total": 21}'
+        )
+        mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
+
+        evidence = gemini_provider.extract_code_execution_evidence(mock_response)
+
+        self.assertIn(
+            'rng_verified', evidence,
+            "Evidence should include 'rng_verified' field"
+        )
+        self.assertFalse(
+            evidence.get('rng_verified', True),
+            "rng_verified should be False when code lacks random.randint()"
+        )
+
+    def test_valid_rng_passes_verification(self):
+        """
+        This tests the positive case - legitimate dice rolls with actual RNG.
+        """
+        from types import SimpleNamespace
+        from mvp_site.dice_integrity import _is_code_execution_fabrication
+
+        structured = SimpleNamespace(dice_rolls=["1d20 = 15"], dice_audit_events=None)
+
+        # Code executed WITH random.randint() - this is LEGITIMATE
+        evidence_with_rng = {
+            "code_execution_used": True,
+            "executable_code_parts": 1,
+            "code_execution_result_parts": 1,
+            "stdout": '{"rolls": [15], "total": 20}',
+            "stdout_is_valid_json": True,
+            "code_contains_rng": True,
+            "rng_verified": True,
+        }
+
+        # This should be False (NOT fabrication) - dice came from real RNG
+        self.assertFalse(
+            _is_code_execution_fabrication(structured, evidence_with_rng),
+            "Code with random.randint() should NOT be flagged as fabrication"
+        )
+
+    def test_extract_evidence_detects_rng_in_code(self):
+        """
+        extract_code_execution_evidence should detect RNG in code.
+        """
+        from mvp_site.llm_providers import gemini_provider
+
+        # Code that actually uses random.randint
+        mock_response = self._make_mock_response(
+            'import random, json; roll = random.randint(1, 20); '
+            'print(json.dumps({"rolls": [roll], "total": roll}))'
+        )
+
+        evidence = gemini_provider.extract_code_execution_evidence(mock_response)
+
+        self.assertTrue(evidence.get('code_execution_used'), "Should detect code execution")
+        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG in code")
+        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage")
+
+    def test_extract_evidence_detects_rng_from_imported_randint(self):
+        from mvp_site.llm_providers import gemini_provider
+
+        mock_response = self._make_mock_response(
+            'from random import randint; import json; roll = randint(1, 20); '
+            'print(json.dumps({"rolls": [roll], "total": roll}))'
+        )
+        evidence = gemini_provider.extract_code_execution_evidence(mock_response)
+        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for from-import randint")
+        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for from-import randint")
+
+    def test_extract_evidence_detects_rng_for_numpy_alias(self):
+        from mvp_site.llm_providers import gemini_provider
+
+        mock_response = self._make_mock_response(
+            'import numpy as np, json; roll = np.random.randint(1, 21); '
+            'print(json.dumps({"rolls": [int(roll)], "total": int(roll)}))'
+        )
+        evidence = gemini_provider.extract_code_execution_evidence(mock_response)
+        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for numpy alias")
+        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for numpy alias")
+
+    def test_extract_evidence_detects_rng_for_default_rng_generator(self):
+        from mvp_site.llm_providers import gemini_provider
+
+        mock_response = self._make_mock_response(
+            'import numpy as np, json; rng = np.random.default_rng(); '
+            'roll = rng.integers(1, 21); '
+            'print(json.dumps({"rolls": [int(roll)], "total": int(roll)}))'
+        )
+        evidence = gemini_provider.extract_code_execution_evidence(mock_response)
+        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for default_rng generator")
+        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for default_rng generator")
+
+    def test_extract_evidence_detects_rng_for_system_random_chain(self):
+        from mvp_site.llm_providers import gemini_provider
+
+        mock_response = self._make_mock_response(
+            'import random, json; roll = random.SystemRandom().randint(1, 20); '
+            'print(json.dumps({"rolls": [roll], "total": roll}))'
+        )
+        evidence = gemini_provider.extract_code_execution_evidence(mock_response)
+        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for SystemRandom chain")
+        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for SystemRandom chain")
+
+
+class TestSystemPromptEnforcementWarning(unittest.TestCase):
+    """TDD tests for system prompt enforcement warning in code_execution mode.
+
+    RED test: Verify that the enforcement warning text is actually passed to
+    generate_json_mode_content when using code_execution mode.
+
+    This test would FAIL if the warning text was removed from gemini_provider.py.
+    """
+
+    def test_RED_enforcement_warning_is_passed_to_llm(self):
+        """
+        RED: Verify system prompt includes enforcement warning text.
+
+        The PR added these critical phrases to prevent fabrication:
+        - "ENFORCEMENT WARNING"
+        - "IS INSPECTED"
+        - "WILL BE REJECTED"
+
+        This test captures the system_instruction_text passed to generate_json_mode_content
+        and verifies these phrases are present.
+        """
+        from mvp_site.llm_providers import gemini_provider
+
+        captured_system_instruction = None
+
+        def capture_system_instruction(**kwargs):
+            nonlocal captured_system_instruction
+            captured_system_instruction = kwargs.get("system_instruction_text", "")
+            # Return a mock response
+            return Mock(text='{"narrative": "test", "dice_rolls": []}')
+
+        with patch.object(
+            gemini_provider, "generate_json_mode_content", side_effect=capture_system_instruction
+        ):
+            gemini_provider.generate_content_with_code_execution(
+                prompt_contents=["Test prompt"],
+                model_name="gemini-3-flash-preview",
+                system_instruction_text="Base system instruction",
+                temperature=0.7,
+                safety_settings=[],
+                json_mode_max_output_tokens=256,
+            )
+
+        # Assert enforcement warning phrases are present
+        self.assertIsNotNone(
+            captured_system_instruction,
+            "RED: system_instruction_text should be captured"
+        )
+        self.assertIn(
+            "ENFORCEMENT WARNING",
+            captured_system_instruction,
+            "RED: System prompt must include 'ENFORCEMENT WARNING' section"
+        )
+        self.assertIn(
+            "IS INSPECTED",
+            captured_system_instruction,
+            "RED: System prompt must warn that code 'IS INSPECTED'"
+        )
+        self.assertIn(
+            "WILL BE REJECTED",
+            captured_system_instruction,
+            "RED: System prompt must warn that fabrication 'WILL BE REJECTED'"
+        )
+
+    def test_RED_fabrication_example_is_documented(self):
+        """
+        RED: Verify system prompt documents the specific fabrication pattern.
+
+        The PR added an explicit example of the fabrication pattern that was caught:
+        - "print('{\"rolls\": [16]}') without RNG"
+
+        This ensures LLMs know exactly what pattern is detected and rejected.
+        """
+        from mvp_site.llm_providers import gemini_provider
+
+        captured_system_instruction = None
+
+        def capture_system_instruction(**kwargs):
+            nonlocal captured_system_instruction
+            captured_system_instruction = kwargs.get("system_instruction_text", "")
+            return Mock(text='{"narrative": "test", "dice_rolls": []}')
+
+        with patch.object(
+            gemini_provider, "generate_json_mode_content", side_effect=capture_system_instruction
+        ):
+            gemini_provider.generate_content_with_code_execution(
+                prompt_contents=["Test prompt"],
+                model_name="gemini-3-flash-preview",
+                system_instruction_text=None,
+                temperature=0.7,
+                safety_settings=[],
+                json_mode_max_output_tokens=256,
+            )
+
+        # Assert fabrication example is documented
+        self.assertIn(
+            "hardcoded",
+            captured_system_instruction.lower(),
+            "RED: System prompt must warn about 'hardcoded' values"
+        )
+        self.assertIn(
+            "without RNG",
+            captured_system_instruction,
+            "RED: System prompt must mention 'without RNG' pattern"
+        )
 
 
 if __name__ == "__main__":

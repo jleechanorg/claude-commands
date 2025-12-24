@@ -68,6 +68,9 @@ DEFAULT_MODEL_MATRIX = [
 ]
 
 DEFAULT_DISTRIBUTION_ROLLS = 200
+DEFAULT_CHI_SQUARE_ROLLS = 20
+# Empirical 99.9% cutoff from 200k sims of 20 d20 rolls (chi-square with expected=1 each).
+DEFAULT_CHI_SQUARE_THRESHOLD = 46.0
 EDGE_CASES = [
     {"notation": "invalid", "expected_total": 0, "expected_rolls": 0},
     {"notation": "1d0+5", "expected_total": 5, "expected_rolls": 0},
@@ -392,6 +395,60 @@ def _distribution_stats(rolls: list[int]) -> dict[str, Any]:
     }
 
 
+def _extract_rolls_from_stdout(stdout: Any) -> list[int]:
+    if stdout is None:
+        return []
+    text = str(stdout).strip()
+    if not text:
+        return []
+    payload: Any | None = None
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        for idx, ch in enumerate(text):
+            if ch in "{[":
+                try:
+                    payload = json.loads(text[idx:])
+                    break
+                except json.JSONDecodeError:
+                    continue
+    if payload is None:
+        return []
+
+    rolls: list[int] = []
+
+    def _harvest(obj: Any) -> None:
+        if isinstance(obj, dict):
+            if isinstance(obj.get("rolls"), list):
+                for value in obj["rolls"]:
+                    try:
+                        rolls.append(int(value))
+                    except (TypeError, ValueError):
+                        continue
+            for value in obj.values():
+                _harvest(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                _harvest(item)
+
+    _harvest(payload)
+    return rolls
+
+
+def _chi_square_stat(rolls: list[int], *, faces: int) -> tuple[float, dict[int, int]]:
+    if not rolls:
+        return 0.0, {}
+    expected = len(rolls) / float(faces)
+    counts = {i: 0 for i in range(1, faces + 1)}
+    for value in rolls:
+        if value in counts:
+            counts[value] += 1
+        else:
+            counts[value] = counts.get(value, 0) + 1
+    chi_square = sum(((counts[i] - expected) ** 2) / expected for i in range(1, faces + 1))
+    return chi_square, counts
+
+
 def _extract_totals_from_dice_rolls(dice_rolls: list[str]) -> list[int]:
     totals: list[int] = []
     for roll in dice_rolls:
@@ -453,6 +510,27 @@ def main() -> int:
         help="Run server-side dice distribution tests with this many rolls.",
     )
     parser.add_argument(
+        "--chi-square-rolls",
+        type=int,
+        default=0,
+        help="Run Gemini code_execution chi-square test with this many 1d20 rolls.",
+    )
+    parser.add_argument(
+        "--chi-square-threshold",
+        type=float,
+        default=DEFAULT_CHI_SQUARE_THRESHOLD,
+        help=(
+            "Fail chi-square test if statistic exceeds this threshold. "
+            f"Default={DEFAULT_CHI_SQUARE_THRESHOLD:.1f} (empirical 99.9% cutoff for 20 rolls)."
+        ),
+    )
+    parser.add_argument(
+        "--chi-square-faces",
+        type=int,
+        default=20,
+        help="Die faces for chi-square test (default 20 for 1d20).",
+    )
+    parser.add_argument(
         "--evidence-dir",
         default=str(EVIDENCE_DIR),
         help="Directory to store evidence artifacts.",
@@ -474,6 +552,8 @@ def main() -> int:
 
     if args.evidence and args.distribution_rolls == 0:
         args.distribution_rolls = DEFAULT_DISTRIBUTION_ROLLS
+    if args.evidence and args.chi_square_rolls == 0:
+        args.chi_square_rolls = DEFAULT_CHI_SQUARE_ROLLS
 
     try:
         if args.start_local:
@@ -492,7 +572,12 @@ def main() -> int:
                 env_overrides["CAPTURE_EVIDENCE"] = "true"
                 env_overrides["CAPTURE_RAW_LLM"] = "true"
                 env_overrides["CAPTURE_RAW_LLM_MAX_CHARS"] = str(args.raw_max_chars)
-            if args.enable_dice_tool or args.distribution_rolls > 0 or args.evidence:
+            if (
+                args.enable_dice_tool
+                or args.distribution_rolls > 0
+                or args.chi_square_rolls > 0
+                or args.evidence
+            ):
                 env_overrides["ENABLE_DICE_TEST_TOOL"] = "true"
             if args.dice_seed:
                 env_overrides["DICE_SEED"] = str(args.dice_seed)
@@ -528,15 +613,18 @@ def main() -> int:
                 "production_mode": args.production_mode,
                 "dice_seed": args.dice_seed or None,
                 "distribution_rolls": args.distribution_rolls,
+                "chi_square_rolls": args.chi_square_rolls,
+                "chi_square_threshold": args.chi_square_threshold,
             },
             "distribution_tests": [],
+            "chi_square_tests": [],
             "edge_case_tests": [],
         }
 
         ok = True
         for model_id in models:
             model_settings = settings_for_model(model_id)
-            if args.evidence:
+            if args.evidence or args.chi_square_rolls > 0:
                 model_settings["debug_mode"] = True
             user_id = f"mcp-dice-tests-{model_id.replace('/', '-')}-{int(time.time())}"
             update_user_settings(client, user_id=user_id, settings=model_settings)
@@ -740,6 +828,65 @@ def main() -> int:
                         print(f"❌ distribution {notation}: {errors}")
                     else:
                         print(f"✅ distribution {notation}: mean={stats.get('mean'):.2f}")
+
+        if args.chi_square_rolls > 0:
+            chi_prompt = (
+                "Roll exactly one d20 and return the result in dice_rolls. "
+                "Do not add extra rolls or damage."
+            )
+            if dice_strategy != "code_execution":
+                run_summary["chi_square_tests"].append(
+                    {
+                        "model": model_id,
+                        "skipped": True,
+                        "reason": f"dice_strategy={dice_strategy} (requires code_execution)",
+                    }
+                )
+                print(f"⚠️ chi-square skipped for {model_id} (strategy {dice_strategy})")
+            else:
+                rolls: list[int] = []
+                errors: list[str] = []
+                for _ in range(args.chi_square_rolls):
+                    result = process_action(
+                        client,
+                        user_id=user_id,
+                        campaign_id=campaign_id,
+                        user_input=chi_prompt,
+                    )
+                    debug_info = result.get("debug_info") if isinstance(result, dict) else None
+                    stdout = debug_info.get("stdout") if isinstance(debug_info, dict) else None
+                    parsed = _extract_rolls_from_stdout(stdout)
+                    if parsed:
+                        rolls.append(parsed[0])
+                    else:
+                        errors.append("missing or unparsable stdout rolls (enable debug_mode)")
+                        break
+                chi_square, counts = _chi_square_stat(rolls, faces=args.chi_square_faces)
+                if rolls:
+                    if any(value < 1 or value > args.chi_square_faces for value in rolls):
+                        errors.append(f"rolls out of bounds: {rolls}")
+                else:
+                    errors.append("no rolls collected")
+                if rolls and chi_square > args.chi_square_threshold:
+                    errors.append(
+                        f"chi-square {chi_square:.2f} exceeds threshold {args.chi_square_threshold:.2f}"
+                    )
+
+                run_summary["chi_square_tests"].append(
+                    {
+                        "model": model_id,
+                        "rolls": rolls,
+                        "counts": counts,
+                        "chi_square": chi_square,
+                        "threshold": args.chi_square_threshold,
+                        "errors": errors,
+                    }
+                )
+                if errors:
+                    ok = False
+                    print(f"❌ chi-square {model_id}: {errors}")
+                else:
+                    print(f"✅ chi-square {model_id}: {chi_square:.2f}")
 
         if roll_dice_available:
             for case in EDGE_CASES:

@@ -91,8 +91,10 @@ class TestContinueStoryEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
-    def test_continue_story_success(self, mock_gemini_generate, mock_get_db):
-        """Test successful story continuation through full stack including context compaction."""
+    def test_continue_story_success_without_dice_rolls(
+        self, mock_gemini_generate, mock_get_db
+    ):
+        """Test successful story continuation without dice rolls through full stack."""
 
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
@@ -197,10 +199,15 @@ class TestContinueStoryEnd2End(unittest.TestCase):
 
         second_fake_response = FakeLLMResponse(json.dumps(second_response))
         # Provide code_execution evidence to satisfy Gemini code-exec dice integrity checks.
-        second_fake_response.parts[0].executable_code = {
-            "language": "python",
-            "code": "print('roll')",
-        }
+        # Must include actual random.randint() call to pass RNG verification.
+        second_fake_response.parts[0].executable_code = type(
+            "ExecutableCode",
+            (),
+            {
+                "language": "python",
+                "code": "import random; roll = random.randint(1, 20); print(roll)",
+            },
+        )()
 
         mock_gemini_generate.side_effect = [
             FakeLLMResponse(json.dumps(first_response)),

@@ -27,6 +27,39 @@ from mvp_site.llm_providers import gemini_code_execution
 # We rely on response_mime_type="application/json" + prompt instruction instead
 # Post-response validation in narrative_response_schema.py handles structure enforcement
 
+import re
+
+# Marker pattern for stripping tool_requests dice instructions when using code_execution
+_TOOL_REQUESTS_DICE_PATTERN = re.compile(
+    r"<!-- BEGIN_TOOL_REQUESTS_DICE[^>]*-->.*?<!-- END_TOOL_REQUESTS_DICE -->",
+    re.DOTALL,
+)
+
+
+def strip_tool_requests_dice_instructions(text: str) -> str:
+    """Remove tool_requests-specific dice instructions from system prompt.
+
+    When using Gemini code_execution for dice, we need to strip the conflicting
+    tool_requests-based dice instructions from game_state_instruction.md.
+    This prevents the model from receiving contradictory guidance about how
+    to generate dice rolls.
+
+    The markers in game_state_instruction.md look like:
+    <!-- BEGIN_TOOL_REQUESTS_DICE: description -->
+    ... tool_requests dice content ...
+    <!-- END_TOOL_REQUESTS_DICE -->
+
+    Args:
+        text: System instruction text that may contain tool_requests dice sections
+
+    Returns:
+        Text with tool_requests dice sections removed
+    """
+    if not text:
+        return text
+    return _TOOL_REQUESTS_DICE_PATTERN.sub("", text)
+
+
 _client: genai.Client | None = None
 
 
@@ -254,14 +287,21 @@ def generate_content_with_code_execution(
         "Dice results are quantum-random. Like checking real-world temperature, you MUST query\n"
         "the random number generator to OBSERVE the value. You cannot predict, estimate, or\n"
         "fabricate dice results - they do not exist until you execute code to generate them.\n\n"
+        "### 🚨 ENFORCEMENT WARNING:\n"
+        "Your code IS INSPECTED. If `random.randint()` is not found in your executed code,\n"
+        "your response WILL BE REJECTED and you will be asked to regenerate. Do not waste\n"
+        "inference by fabricating - it will be caught and rejected every time.\n\n"
         "### Required Protocol:\n"
         "1. Do NOT output `tool_requests` - use code_execution instead.\n"
         "2. For EVERY dice roll, EXECUTE this Python code:\n"
         "```python\n"
         "import json\n"
         "import random\n"
+        "import time\n"
+        "# Seed RNG with current time (prevents deterministic outputs across executions)\n"
+        "random.seed(time.time_ns())\n"
         "# For 1d20+5:\n"
-        "roll = random.randint(1, 20)  # This generates the REAL value\n"
+        "roll = random.randint(1, 20)  # This generates the REAL value - REQUIRED!\n"
         "modifier = 5\n"
         "total = roll + modifier\n"
         "print(json.dumps({\"notation\": \"1d20+5\", \"rolls\": [roll], \"modifier\": modifier, \"total\": total}))\n"
@@ -269,18 +309,23 @@ def generate_content_with_code_execution(
         "3. Stdout MUST be valid JSON ONLY (no extra text). The JSON output contains the ONLY valid dice value.\n"
         "4. Populate `dice_rolls` and `dice_audit_events` from the JSON stdout. Each item MUST include:\n"
         "   label, notation, rolls (array of raw die values), modifier, total. For dice_audit_events also set source=\"code_execution\".\n\n"
-        "### ❌ FORBIDDEN (Fabrication):\n"
-        "- Writing dice values in narrative without code execution: \"[DICE: 1d20 = 15]\" ← INVALID\n"
-        "- Inventing numbers: \"You roll a 17\" without running random.randint() ← INVALID\n"
-        "- Printing non-JSON stdout or extra text around JSON ← INVALID\n"
-        "- Populating dice_rolls/dice_audit_events without corresponding JSON stdout ← INVALID\n\n"
+        "### ❌ FORBIDDEN (Fabrication - WILL BE DETECTED AND REJECTED):\n"
+        "- Writing dice values in narrative without code execution: \"[DICE: 1d20 = 15]\" ← REJECTED\n"
+        "- Inventing numbers: \"You roll a 17\" without running random.randint() ← REJECTED\n"
+        "- Printing hardcoded values: `print('{\"rolls\": [16]}')` without RNG ← REJECTED\n"
+        "- Populating dice_rolls/dice_audit_events without corresponding JSON stdout ← REJECTED\n\n"
         "### Why This Matters:\n"
         "Fabricated dice destroy game integrity. Players notice patterns. Real randomness is required.\n"
         "You are the narrator, not the dice. The dice exist in the code execution sandbox, not your imagination.\n"
     )
+    # Strip conflicting tool_requests dice instructions before adding code_execution override
+    # This prevents the model from receiving contradictory guidance
+    cleaned_system_instruction = strip_tool_requests_dice_instructions(
+        system_instruction_text or ""
+    )
     effective_system_instruction = (
-        f"{system_instruction_text}{code_exec_override}"
-        if system_instruction_text
+        f"{cleaned_system_instruction}{code_exec_override}"
+        if cleaned_system_instruction
         else code_exec_override
     )
 

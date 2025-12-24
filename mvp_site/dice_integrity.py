@@ -88,9 +88,18 @@ def _detect_narrative_dice_fabrication(
     if not has_dice_in_narrative and not has_dice_in_structured:
         return False
 
-    # If we have code_execution evidence, dice are real
-    if code_execution_evidence and code_execution_evidence.get("code_execution_used"):
-        return False
+    # GREEN FIX (Dec 2024): Use rng_verified instead of code_execution_used
+    # This detects fabrication via print('{"rolls": [16]}') without random.randint()
+    if code_execution_evidence:
+        rng_verified = code_execution_evidence.get("rng_verified", False)
+        if rng_verified:
+            return False  # Dice came from actual RNG, not fabrication
+        # At this point rng_verified=False, check if code was executed without RNG
+        code_execution_used = code_execution_evidence.get("code_execution_used", False)
+        if code_execution_used:
+            dice.log_code_exec_fabrication_violation()
+            # This is fabrication - code ran but didn't use RNG
+            return True
 
     # CRITICAL FIX: Don't blindly trust tool_requests_executed flag
     # Verify that tool_results actually contain dice data (non-empty, valid results)
@@ -229,7 +238,11 @@ def apply_dice_metadata_to_structured_response(
 def _is_code_execution_fabrication(
     structured_response: Any, code_execution_evidence: dict[str, Any] | None
 ) -> bool:
-    """Check if dice results appear without code_execution evidence."""
+    """Check if dice results appear without verified RNG code_execution evidence.
+
+    GREEN FIX (Dec 2024): Now uses rng_verified instead of code_execution_used.
+    This detects fabrication via print('{"rolls": [16]}') without random.randint().
+    """
     if not structured_response:
         return False
 
@@ -249,8 +262,24 @@ def _is_code_execution_fabrication(
         )
         return True
 
+    # GREEN FIX: Use rng_verified instead of code_execution_used
+    # rng_verified = True only if code contained actual random.randint() calls
+    rng_verified = code_execution_evidence.get("rng_verified", False)
+    if rng_verified:
+        return False  # Verified RNG usage - not fabrication
+
+    # If code was executed but no RNG detected, it's fabrication
     code_was_executed = code_execution_evidence.get("code_execution_used", False)
-    return not code_was_executed
+    if code_was_executed:
+        logging_util.warning(
+            logging_util.with_campaign(
+                "🚨 CODE_EXEC_FABRICATION: code_execution_used=True but rng_verified=False. "
+                "LLM ran code but did NOT use random.randint() - dice values are fabricated!"
+            )
+        )
+        return True
+
+    return True  # No code execution at all - also fabrication
 
 
 def _log_fabricated_dice_if_detected(

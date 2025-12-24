@@ -108,6 +108,21 @@ Project: `worldarchitecture-ai`
 - **High deviation (>2)**: May indicate unfair RNG or data extraction issues
 - **All text_pattern source**: No structured dice logging - may need improvement
 
+### Chi-Squared Authenticity Check
+
+The audit now includes chi-squared testing for dice authenticity:
+
+| Chi-Squared | Verdict |
+|-------------|---------|
+| < 30 | PASS - Normal random variation |
+| 30-50 | WARNING - Minor anomaly |
+| 50-100 | FAIL - Significant deviation |
+| > 100 | FAIL - Likely fabrication |
+
+**Reference case**: PR #2551 detected fabrication with chi-squared = 411.81
+
+See `dice-authenticity-standards.md` for full chi-squared methodology and RNG verification standards.
+
 ## Troubleshooting
 
 ### Clock Skew Error
@@ -151,5 +166,7 @@ gcloud logging read "textPayload:DICE_TOOL_EXEC" --limit=50
 `scripts/audit_dice_rolls.py`
 
 ## Related Skills
+- `dice-authenticity-standards.md` - Chi-squared testing and RNG verification
+- `dice-real-mode-tests.md` - MCP real-mode testing
 - `firebase-prod-campaigns.md` - Querying campaign data
 - `worldai-mcp-server-usage.md` - MCP server interaction

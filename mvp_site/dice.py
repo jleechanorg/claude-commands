@@ -69,11 +69,11 @@ def log_dice_fabrication_detected(
 
 
 def log_code_exec_fabrication_violation() -> None:
-    """Log code execution fabrication violations."""
+    """Log code execution fabrication violations (code ran but no RNG detected)."""
     logging_util.warning(
         logging_util.with_campaign(
-            "🎲 CODE_EXEC_FABRICATION: Dice in response but no code_execution detected. "
-            "Will trigger reprompt to enforce real code execution."
+            "🎲 CODE_EXEC_FABRICATION: Code was executed but random.randint() not found - "
+            "dice values are fabricated. Will trigger reprompt to enforce real RNG execution."
         )
     )
 

@@ -761,7 +761,7 @@ def run_server():
         args.dual = False
 
     # Auto-enable stdio-only mode when detected or explicitly requested
-    if args.stdio or is_claude_code:
+    if (args.stdio or is_claude_code) and not args.http_only:
         logging_util.info("Starting MCP server in stdio mode for Claude Code")
 
         async def main():
