@@ -13,7 +13,12 @@ Usage:
 """
 
 import os
+from collections.abc import Callable
 from datetime import datetime, timedelta
+
+from google.auth import _helpers
+
+from mvp_site import logging_util
 
 # Store the original function and adjustment
 _original_utcnow = None
@@ -99,26 +104,17 @@ def apply_clock_skew_patch() -> bool:
     if skew <= 0:
         return False
 
-    try:
-        from google.auth import _helpers
+    _original_utcnow = _helpers.utcnow
+    _clock_skew_seconds = skew
 
-        _original_utcnow = _helpers.utcnow
-        _clock_skew_seconds = skew
+    # Apply the patch
+    _helpers.utcnow = _adjusted_utcnow
+    _patch_applied = True
 
-        # Apply the patch
-        _helpers.utcnow = _adjusted_utcnow
-        _patch_applied = True
-
-        # Log the patch
-        from mvp_site import logging_util
-
-        logging_util.info(
-            f"Applied clock skew patch: adjusting time by -{skew} seconds"
-        )
-        return True
-
-    except ImportError:
-        return False
+    logging_util.info(
+        f"Applied clock skew patch: adjusting time by -{skew} seconds"
+    )
+    return True
 
 
 def remove_clock_skew_patch() -> bool:
@@ -132,15 +128,9 @@ def remove_clock_skew_patch() -> bool:
     if not _patch_applied or _original_utcnow is None:
         return False
 
-    try:
-        from google.auth import _helpers
-
-        _helpers.utcnow = _original_utcnow
-        _patch_applied = False
-        return True
-
-    except ImportError:
-        return False
+    _helpers.utcnow = _original_utcnow
+    _patch_applied = False
+    return True
 
 
 class UseActualTime:
@@ -157,21 +147,11 @@ class UseActualTime:
         """Temporarily restore original utcnow function."""
         self._was_patched = _patch_applied
         if _patch_applied and _original_utcnow is not None:
-            try:
-                from google.auth import _helpers
-
-                _helpers.utcnow = _original_utcnow
-            except ImportError:
-                pass
+            _helpers.utcnow = _original_utcnow
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Re-apply the clock skew patch if it was active."""
         if self._was_patched and _original_utcnow is not None:
-            try:
-                from google.auth import _helpers
-
-                _helpers.utcnow = _adjusted_utcnow
-            except ImportError:
-                pass
+            _helpers.utcnow = _adjusted_utcnow
         return False  # Don't suppress exceptions

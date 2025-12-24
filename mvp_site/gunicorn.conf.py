@@ -21,11 +21,9 @@ sys.path.insert(0, project_root)
 from infrastructure import worker_config
 
 # Centralized timeout (mirrors scripts/timeout_config.sh)
+# Fail fast if env var is set to invalid value - config errors should crash
 _request_timeout_env = os.environ.get("WORLDARCH_TIMEOUT_SECONDS", "600")
-try:
-    REQUEST_TIMEOUT_SECONDS = int(_request_timeout_env)
-except ValueError:
-    REQUEST_TIMEOUT_SECONDS = 600
+REQUEST_TIMEOUT_SECONDS = int(_request_timeout_env)  # Raises ValueError if invalid
 
 # Server socket
 # Cloud Run provides the PORT environment variable - must use it

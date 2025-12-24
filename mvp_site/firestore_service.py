@@ -1455,12 +1455,8 @@ def update_user_settings(user_id: UserId, settings: dict[str, Any]) -> bool:
         # Check if user document exists first
         user_doc = user_ref.get()
 
-        # Get timestamp - use datetime for CI compatibility
-        try:
-            timestamp = firestore.SERVER_TIMESTAMP
-        except Exception:
-            # Fallback for CI environments where SERVER_TIMESTAMP might fail
-            timestamp = datetime.datetime.now(UTC)
+        # Use Firestore SERVER_TIMESTAMP - SDK import is guaranteed at module level
+        timestamp = firestore.SERVER_TIMESTAMP
 
         if user_doc.exists:
             # Use nested field update to avoid clobbering sibling settings

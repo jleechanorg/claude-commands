@@ -3,6 +3,7 @@ gunicorn==23.0.0
 firebase-admin==6.5.0
 google-cloud-firestore==2.16.0
 google-api-core>=2.19.0
+google-auth>=2.35.0
 google-genai
 protobuf>=4.25.3,<5.0.0
 grpcio>=1.62.0,<2.0.0

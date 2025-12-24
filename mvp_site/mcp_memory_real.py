@@ -33,8 +33,9 @@ class MCPMemoryClient:
         self._initialized = False
 
     def _get_mcp_function(self, func_name: str) -> Callable | None:
-        """Get MCP function from globals - returns None if not found."""
-        return globals().get(func_name)
+        """Get MCP function from globals - returns None if not found or not callable."""
+        fn = globals().get(func_name)
+        return fn if callable(fn) else None
 
     def initialize(self):
         """Initialize MCP function references (called once at startup).
@@ -49,9 +50,9 @@ class MCPMemoryClient:
         self._open_fn = self._get_mcp_function("mcp__memory_server__open_nodes")
         self._read_fn = self._get_mcp_function("mcp__memory_server__read_graph")
 
-        if self._search_fn is None or self._open_fn is None or self._read_fn is None:
+        if self._search_fn is None and self._open_fn is None and self._read_fn is None:
             raise MCPMemoryError(
-                "Missing required MCP memory functions. Ensure MCP server is running "
+                "No MCP memory functions available. Ensure MCP server is running "
                 "and functions are registered in globals."
             )
 
@@ -59,24 +60,28 @@ class MCPMemoryClient:
 
     def set_functions(
         self,
-        search_fn: Callable[[str], list[dict[str, Any]]],
-        open_fn: Callable[[list[str]], list[dict[str, Any]]],
-        read_fn: Callable[[], dict[str, Any]],
+        search_fn: Callable[[str], list[dict[str, Any]]] | None = None,
+        open_fn: Callable[[list[str]], list[dict[str, Any]]] | None = None,
+        read_fn: Callable[[], dict[str, Any]] | None = None,
     ):
-        """Dependency injection for testing (requires all functions).
+        """Dependency injection for testing (allows partial overrides).
 
-        All three MCP functions must be provided together; partial injection is
-        rejected to avoid inconsistent initialization states. After injection,
-        `_initialized` is marked True to bypass globals-based initialization.
+        At least one MCP function must be provided. Any provided functions
+        replace the existing references; omitted functions keep their current
+        values. After injection, `_initialized` is marked True to bypass
+        globals-based initialization.
         """
-        if search_fn is None or open_fn is None or read_fn is None:
+        if search_fn is None and open_fn is None and read_fn is None:
             raise MCPMemoryError(
-                "All MCP functions must be provided when injecting dependencies."
+                "At least one MCP function must be provided when injecting dependencies."
             )
 
-        self._search_fn = search_fn
-        self._open_fn = open_fn
-        self._read_fn = read_fn
+        if search_fn is not None:
+            self._search_fn = search_fn
+        if open_fn is not None:
+            self._open_fn = open_fn
+        if read_fn is not None:
+            self._read_fn = read_fn
         self._initialized = True
 
     def search_nodes(self, query: str) -> list[dict[str, Any]]:
@@ -140,30 +145,50 @@ _mcp_client = MCPMemoryClient()
 
 # Backward compatible module-level functions
 def search_nodes(query: str) -> list[dict[str, Any]]:
-    """Call real Memory MCP search_nodes function"""
+    """Call real Memory MCP search_nodes function.
+
+    Raises:
+        MCPMemoryError: If MCP not available or operation fails.
+    """
     return _mcp_client.search_nodes(query)
 
 
 def open_nodes(names: list[str]) -> list[dict[str, Any]]:
-    """Call real Memory MCP open_nodes function"""
+    """Call real Memory MCP open_nodes function.
+
+    Raises:
+        MCPMemoryError: If MCP not available or operation fails.
+    """
     return _mcp_client.open_nodes(names)
 
 
 def read_graph() -> dict[str, Any]:
-    """Call real Memory MCP read_graph function"""
+    """Call real Memory MCP read_graph function.
+
+    Raises:
+        MCPMemoryError: If MCP not available or operation fails.
+    """
     return _mcp_client.read_graph()
 
 
 # Backward compatible initialization functions
 def initialize_mcp_functions():
-    """Initialize MCP function references (called once at startup)"""
+    """Initialize MCP function references (called once at startup).
+
+    Raises:
+        MCPMemoryError: If required MCP functions are not available.
+    """
     _mcp_client.initialize()
 
 
 def set_mcp_functions(
-    search_fn: Callable[[str], list[dict[str, Any]]],
-    open_fn: Callable[[list[str]], list[dict[str, Any]]],
-    read_fn: Callable[[], dict[str, Any]],
+    search_fn: Callable[[str], list[dict[str, Any]]] | None = None,
+    open_fn: Callable[[list[str]], list[dict[str, Any]]] | None = None,
+    read_fn: Callable[[], dict[str, Any]] | None = None,
 ):
-    """Dependency injection for testing (requires all functions)"""
+    """Dependency injection for testing (allows partial overrides).
+
+    At least one MCP function must be provided; omitted functions keep their
+    existing values.
+    """
     _mcp_client.set_functions(search_fn, open_fn, read_fn)

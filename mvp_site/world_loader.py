@@ -18,20 +18,24 @@ BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")
 
 def load_banned_names():
     """
-    Load the banned names from the dedicated banned_names.md file
+    Load the banned names from the dedicated banned_names.md file.
+
+    The banned names file is optional - if it doesn't exist, returns empty string.
+    However, if the file exists but cannot be read, that's an error and should fail.
 
     Returns:
-        str: Banned names content or empty string if not found.
-    """
-    try:
-        return read_file_cached(BANNED_NAMES_PATH).strip()
+        str: Banned names content or empty string if file doesn't exist.
 
-    except FileNotFoundError:
-        logging_util.warning(f"Banned names file not found at {BANNED_NAMES_PATH}")
+    Raises:
+        Exception: If file exists but cannot be read (permissions, encoding, etc.)
+    """
+    # Explicit existence check - don't use exceptions for control flow
+    if not os.path.exists(BANNED_NAMES_PATH):
+        logging_util.info(f"Banned names file not present at {BANNED_NAMES_PATH} (optional)")
         return ""
-    except Exception as e:
-        logging_util.warning(f"Could not load banned names file: {e}")
-        return ""
+
+    # File exists - if read fails, that's a real error
+    return read_file_cached(BANNED_NAMES_PATH).strip()
 
 
 def load_world_content_for_system_instruction():
