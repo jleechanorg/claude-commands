@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
-"""Utility for /savetmp command to archive evidence under /tmp."""
+"""Utility for /savetmp command to archive evidence under /tmp.
+
+Follows evidence standards from .claude/skills/evidence-standards.md:
+- SHA256 checksums for all evidence files
+- Git provenance capture (HEAD, origin/main, changed files)
+- Structured evidence directory layout
+"""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
+
+# Pre-compile regex for performance
+_SANITIZE_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
 
 
-def _run_git_command(args: List[str]) -> Optional[str]:
+def _run_git_command(args: List[str], timeout: int = 5) -> Optional[str]:
     """Run a git command and return stripped stdout or None on failure."""
     try:
         result = subprocess.run(
@@ -23,16 +34,58 @@ def _run_git_command(args: List[str]) -> Optional[str]:
             check=True,
             capture_output=True,
             text=True,
+            timeout=timeout,
         )
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ):
         return None
     return result.stdout.strip() or None
 
 
-def _resolve_repo_info() -> tuple[str, str]:
-    """Return (repo_name, branch_name) with sensible fallbacks."""
-    repo_root = _run_git_command(["rev-parse", "--show-toplevel"])
-    branch = _run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+def _run_git_commands_parallel(
+    commands: Dict[str, List[str]],
+) -> Dict[str, Optional[str]]:
+    """Run multiple git commands in parallel for speed."""
+    results: Dict[str, Optional[str]] = {}
+    with ThreadPoolExecutor(max_workers=min(len(commands), 8)) as executor:
+        futures = {
+            executor.submit(_run_git_command, args): name
+            for name, args in commands.items()
+        }
+        for future in as_completed(futures):
+            name = futures[future]
+            results[name] = future.result()
+    return results
+
+
+def _resolve_repo_info(
+    skip_git: bool = False,
+) -> Tuple[str, str, Optional[Dict[str, Optional[str]]]]:
+    """Return (repo_name, branch_name, git_provenance) with sensible fallbacks.
+
+    Git provenance follows evidence-standards.md requirements.
+    If skip_git=True, returns simplified info without running git commands.
+    """
+    if skip_git:
+        # Fast path: no git commands, use simple defaults
+        return "evidence", "local", None
+
+    # Run all git commands in parallel for speed
+    git_commands = {
+        "repo_root": ["rev-parse", "--show-toplevel"],
+        "branch": ["rev-parse", "--abbrev-ref", "HEAD"],
+        "head_commit": ["rev-parse", "HEAD"],
+        "origin_main": ["rev-parse", "origin/main"],
+        "upstream": ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+    }
+
+    results = _run_git_commands_parallel(git_commands)
+
+    repo_root = results.get("repo_root")
+    branch = results.get("branch")
 
     if repo_root:
         repo_name = Path(repo_root).name
@@ -42,7 +95,25 @@ def _resolve_repo_info() -> tuple[str, str]:
     if not branch:
         branch = "detached"
 
-    return repo_name, branch
+    # Determine a base ref for changed files with fallbacks
+    base_ref = results.get("upstream") or results.get("origin_main")
+    changed_files_output: Optional[str] = None
+    if base_ref and base_ref != "HEAD":
+        changed_files_output = _run_git_command(
+            ["diff", "--name-only", f"{base_ref}...HEAD"], timeout=10
+        )
+
+    # Build git provenance per evidence-standards.md
+    git_provenance = {
+        "head_commit": results.get("head_commit"),
+        "origin_main_commit": results.get("origin_main"),
+        "branch": branch,
+        "changed_files": changed_files_output.split("\n")
+        if changed_files_output
+        else [],
+    }
+
+    return repo_name, branch, git_provenance
 
 
 def _read_optional_file(path: Optional[str]) -> Optional[str]:
@@ -53,6 +124,31 @@ def _read_optional_file(path: Optional[str]) -> Optional[str]:
         print(f"⚠️  Skipping missing file referenced at {expanded}", file=sys.stderr)
         return None
     return expanded.read_text(encoding="utf-8")
+
+
+def _compute_sha256(path: Path) -> str:
+    """Compute SHA256 checksum of a file."""
+    sha256 = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
+def _write_checksum(path: Path, base_dir: Optional[Path] = None) -> Path:
+    """Write SHA256 checksum file per evidence-standards.md."""
+    checksum = _compute_sha256(path)
+    checksum_path = Path(str(path) + ".sha256")
+    path_str: str
+    if base_dir:
+        try:
+            path_str = path.relative_to(base_dir).as_posix()
+        except ValueError:
+            path_str = path.as_posix()
+    else:
+        path_str = path.as_posix()
+    checksum_path.write_text(f"{checksum}  {path_str}\n", encoding="utf-8")
+    return checksum_path
 
 
 def _write_section(path: Path, content: Optional[str]) -> Optional[Path]:
@@ -103,23 +199,38 @@ def _copy_artifact(
     return target
 
 
+def _write_artifact_checksums(
+    path: Path, base_dir: Optional[Path] = None
+) -> List[Path]:
+    """Write checksums for an artifact file or all files within a directory."""
+    if path.is_file():
+        return [_write_checksum(path, base_dir)]
+
+    checksum_paths: List[Path] = []
+    if path.is_dir():
+        for file_path in sorted(path.rglob("*")):
+            if file_path.is_file():
+                checksum_paths.append(_write_checksum(file_path, base_dir))
+    return checksum_paths
+
+
 def _sanitize_work_name(raw: str) -> str:
     """Return a filesystem-safe work name constrained to a single path segment."""
-
     cleaned = raw.strip()
     if not cleaned:
         raise ValueError("work name must not be empty")
 
-    forbidden_separators = {"/", "\\", os.sep}
-    if os.path.altsep:
-        forbidden_separators.add(os.path.altsep)
-    if any(sep and sep in cleaned for sep in forbidden_separators if sep):
+    # Fast check using set membership
+    if "/" in cleaned or "\\" in cleaned or os.sep in cleaned:
+        raise ValueError("work name must not contain path separators")
+    if os.path.altsep and os.path.altsep in cleaned:
         raise ValueError("work name must not contain path separators")
 
     if cleaned in {".", ".."}:
         raise ValueError("work name must not be '.' or '..'")
 
-    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", cleaned).strip("-_")
+    # Use pre-compiled regex for performance
+    sanitized = _SANITIZE_PATTERN.sub("-", cleaned).strip("-_")
     if not sanitized:
         raise ValueError("work name must include alphanumeric characters")
 
@@ -165,6 +276,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="File or directory to copy into the artifacts/ folder (can be provided multiple times).",
     )
+    parser.add_argument(
+        "--skip-git",
+        action="store_true",
+        help="Skip git commands for faster execution. Uses /tmp/evidence/local/<work>/ path.",
+    )
     return parser
 
 
@@ -172,7 +288,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    repo_name, branch = _resolve_repo_info()
+    # Run git resolution (skip for speed if --skip-git)
+    repo_name, branch, git_provenance = _resolve_repo_info(skip_git=args.skip_git)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     try:
@@ -197,6 +314,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ]
 
     saved_sections: Dict[str, Optional[str]] = {}
+    checksum_files: List[Path] = []
 
     for name, file_path, initial_text in file_sections:
         combined = initial_text.strip()
@@ -207,19 +325,22 @@ def main(argv: Optional[List[str]] = None) -> int:
             combined += file_content.strip()
         section_path = _write_section(run_dir / f"{name}.md", combined)
         saved_sections[name] = str(section_path) if section_path else None
+        # Write SHA256 checksum per evidence-standards.md
+        if section_path:
+            checksum_files.append(_write_checksum(section_path, run_dir))
 
     copied_artifacts: List[Dict[str, str]] = []
     reserved_targets: Set[Path] = set()
     for artifact in args.artifacts:
         src_path = Path(artifact).expanduser().resolve()
-        dest_path = _copy_artifact(
-            src_path, artifacts_dir, timestamp, reserved_targets
-        )
+        dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
         if dest_path:
             copied_artifacts.append(
                 {"source": str(src_path), "destination": str(dest_path)}
             )
+            checksum_files.extend(_write_artifact_checksums(dest_path, run_dir))
 
+    # Metadata includes git provenance per evidence-standards.md (if available)
     metadata = {
         "repo": repo_name,
         "branch": branch,
@@ -229,11 +350,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         "run_directory": str(run_dir),
         "sections": saved_sections,
         "artifacts": copied_artifacts,
+        "evidence_standards": ".claude/skills/evidence-standards.md",
     }
-    (run_dir / "metadata.json").write_text(
+    if git_provenance:
+        metadata["git_provenance"] = git_provenance
+    metadata_path = run_dir / "metadata.json"
+    metadata_path.write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    # Checksum for metadata.json
+    checksum_files.append(_write_checksum(metadata_path, run_dir))
 
     summary_lines = [
         "# Evidence Package",
@@ -242,8 +369,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"- Branch: {branch}",
         f"- Work: {args.work_name}",
         f"- Created: {timestamp}",
-        "",
     ]
+
+    # Git provenance in README per evidence-standards.md (if available)
+    if git_provenance:
+        head_commit = git_provenance.get("head_commit")
+        if head_commit and head_commit != "None":
+            summary_lines.append(f"- Commit: {head_commit}")
+        origin_main = git_provenance.get("origin_main_commit")
+        if origin_main and origin_main != "None":
+            summary_lines.append(f"- Origin/main: {origin_main}")
+    summary_lines.append("")
 
     if copied_artifacts:
         summary_lines.append("## Artifacts")
@@ -258,17 +394,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             summary_lines.append(f"- {section}.md saved at {path_str}")
     summary_lines.append("")
 
-    (run_dir / "README.md").write_text("\n".join(summary_lines), encoding="utf-8")
+    readme_path = run_dir / "README.md"
+    readme_path.write_text("\n".join(summary_lines), encoding="utf-8")
+    # Checksum for README.md
+    checksum_files.append(_write_checksum(readme_path, run_dir))
 
-    print("✅ Evidence archived")
-    print(f"Base directory: {base_dir}")
-    print(f"Run directory:  {run_dir}")
-    if copied_artifacts:
-        print("Copied artifacts:")
-        for artifact_entry in copied_artifacts:
-            print(
-                f"  - {artifact_entry['source']} → {artifact_entry['destination']}"
-            )
+    # Compact output for speed
+    print(f"✅ Evidence archived → {run_dir}")
+    if git_provenance:
+        head_commit = git_provenance.get("head_commit")
+        if head_commit:
+            print(f"   Git: {str(head_commit)[:8]}")
+    print(f"   Checksums: {len(checksum_files)} files")
 
     return 0
 
