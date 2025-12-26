@@ -151,6 +151,24 @@ class JleechanorgPRMonitor:
         re.IGNORECASE,
     )
 
+    # Known GitHub review bots that may appear without [bot] suffix in API responses.
+    # Note: Some bots (e.g., "coderabbitai", "copilot") appear in both this list and
+    # _codex_actor_keywords. This is intentional:
+    # - KNOWN_GITHUB_BOTS: Detects the review service (e.g., "coderabbitai" or "coderabbitai[bot]")
+    #   whose comments should trigger PR re-processing.
+    # - _codex_actor_keywords: Used to exclude our own automation bots from being
+    #   treated as external review bots when they have the [bot] suffix.
+    # The detection order in _is_github_bot_comment() ensures known bots are detected first.
+    KNOWN_GITHUB_BOTS = frozenset({
+        "github-actions",
+        "coderabbitai",
+        "copilot-swe-agent",
+        "dependabot",
+        "renovate",
+        "codecov",
+        "sonarcloud",
+    })
+
     @staticmethod
     def _extract_actor_fields(
         actor: Optional[Dict],
@@ -277,9 +295,35 @@ class JleechanorgPRMonitor:
         pr_number = pr_data.get("number", 0)
 
         if self._should_skip_pr(repo_name, branch_name, pr_number, head_ref_oid):
+            # Even if commit was processed, check for new bot comments that need attention
+            repo_full = pr_data.get("repositoryFullName") or ""
+
+            if not repo_full:
+                if repo_name:
+                    repo_full = self._normalize_repository_name(repo_name)
+                else:
+                    self.logger.warning(
+                        "Skipping PR comment state check: missing repository information "
+                        f"(pr_number={pr_number})"
+                    )
+                    return False
+
+            owner_repo = repo_full.split("/", 1)
+            if len(owner_repo) != 2 or not owner_repo[0].strip() or not owner_repo[1].strip():
+                self.logger.warning(
+                    "Skipping PR comment state check due to invalid repository identifier "
+                    f"repo_full='{repo_full}' (pr_number={pr_number})"
+                )
+                return False
+            _, comments = self._get_pr_comment_state(repo_full, pr_number)
+            if self._has_new_bot_comments_since_codex(comments):
+                self.logger.info(
+                    f"🤖 PR {repo_name}#{pr_number} has new bot comments since last processing - marking actionable"
+                )
+                return True
             return False
 
-        # Open PRs (including drafts) with new commits are actionable
+        # Open non-draft PRs with new commits are actionable
         return True
 
     def filter_eligible_prs(self, pr_list: List[Dict]) -> List[Dict]:
@@ -1023,15 +1067,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         return False
 
     def _is_github_bot_comment(self, comment: Dict) -> bool:
-        """Check if comment is from a GitHub bot (not Codex/AI automation)."""
+        """Check if comment is from a GitHub bot (not Codex/AI automation).
+
+        Detection order matters:
+        1. Check KNOWN_GITHUB_BOTS first (these are review bots we want to detect)
+        2. Then check [bot] suffix for other bots
+        3. Only exclude codex patterns for bots NOT in our known list
+        """
         author_login = self._get_comment_author_login(comment)
         if not author_login:
             return False
 
-        # GitHub bots have [bot] suffix
-        if author_login.endswith("[bot]"):
-            # Exclude our own Codex/AI automation bots
-            lower_login = author_login.lower()
+        lower_login = author_login.lower()
+
+        # Strip [bot] suffix for known bot comparison (handles both "coderabbitai" and "coderabbitai[bot]")
+        base_login = lower_login.removesuffix("[bot]")
+
+        # Check known review bots FIRST (before codex pattern exclusion)
+        # These are legitimate review bots whose comments should trigger re-processing
+        if base_login in self.KNOWN_GITHUB_BOTS:
+            return True
+
+        # GitHub bots have [bot] suffix - but exclude our own automation bots
+        # Use case-insensitive check for robustness
+        if lower_login.endswith("[bot]"):
+            # Exclude our own Codex/AI automation bots (chatgpt-codex-connector[bot], etc.)
             for pattern in self._codex_actor_patterns:
                 if pattern.search(lower_login):
                     return False
