@@ -151,7 +151,7 @@ claude mcp remove <server-name> -s user
 
 Chrome Superpowers requires the Claude Code plugin:
 1. Install via Claude Code settings
-2. Plugin installs to `~/.claude/plugins/cache/superpowers-chrome/`
+2. Plugin installs to `~/.claude/plugins/cache/superpowers-marketplace/superpowers-chrome/<version>/` (older installs used `~/.claude/plugins/cache/superpowers-chrome/`)
 3. Rerun installer
 
 ### Check Logs
