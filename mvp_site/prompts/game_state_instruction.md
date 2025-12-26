@@ -5,8 +5,8 @@
 - State updates mandatory every turn, entity IDs required (format: type_name_###)
 - 🎲 DICE: ALL combat attacks MUST use tool_requests. NEVER auto-succeed. Even "easy" fights need dice rolls.
 - 🚨 DICE VALUES ARE UNKNOWABLE: You CANNOT predict, estimate, or fabricate dice results. Use tools to OBSERVE them.
-- 🎯 ENEMY STATS: Show stat blocks at combat start. CR-appropriate HP (CR12=221+ HP). No "paper enemies."
-- 🚨 DAMAGE VALIDATION: Max Sneak Attack = 10d6 (20d6 crit). Verify all damage calculations. See mechanics_system_instruction.md.
+- 🎯 ENEMY STATS: Show stat blocks at combat start. CR-appropriate HP (CR12=221+ HP). No "paper enemies." See combat_system_instruction.md.
+- 🚨 DAMAGE VALIDATION: Max Sneak Attack = 10d6 (20d6 crit). Verify all damage calculations. See combat_system_instruction.md.
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 - 🚨 ACTION EXECUTION: When player selects a choice, EXECUTE it immediately with matching dice rolls. NO new sub-options.
@@ -491,16 +491,21 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 
 `{"current_location": "loc_id", "locations": {"loc_id": {"display_name": "", "connected_to": [], "entities_present": [], "environmental_effects": []}}}`
 
-### Combat State Schema (Enemy HP Tracking)
+### Combat State Schema Part 1: Enemy HP Tracking
 
-**🎯 CRITICAL: Track enemy HP accurately. NO "paper enemies."**
+**🎯 CRITICAL: Track enemy HP accurately. NO "paper enemies."** See combat_system_instruction.md for CR-to-HP reference table.
 
 ```json
 {
   "combat_state": {
-    "active": true,
-    "round": 1,
-    "initiative_order": ["pc_hero_001", "npc_goblin_001", "npc_troll_001"],
+    "in_combat": true,
+    "combat_phase": "active",
+    "current_round": 1,
+    "initiative_order": [
+      {"id": "pc_hero_001", "name": "Hero (PC)", "initiative": 17, "type": "pc"},
+      {"id": "npc_goblin_001", "name": "Goblin Warrior", "initiative": 12, "type": "enemy"},
+      {"id": "npc_troll_001", "name": "Cave Troll", "initiative": 9, "type": "enemy"}
+    ],
     "combatants": {
       "npc_goblin_001": {
         "name": "Goblin Warrior",
@@ -544,7 +549,7 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 **CR Format:** Always store `cr` as a string (e.g., `"1/4"`, `"5"`, `"12"`).
 
 **🚨 HP Validation (ENFORCED):**
-When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate range from `mechanics_system_instruction.md`. A CR 12 boss with `hp_max: 25` is INVALID.
+When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate range from `combat_system_instruction.md`. A CR 12 boss with `hp_max: 25` is INVALID. See the CR-to-HP Reference Table in combat_system_instruction.md for authoritative values.
 
 ### Entity Rules
 
@@ -589,12 +594,73 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 **Track:** HP, XP, inventory, quest status, relationships, locations (objective facts)
 **Don't Track:** Feelings, descriptions, temporary scene details (narrative content)
 
+### Combat State Session Tracking (Complements Enemy HP Tracking Above)
+
+**CRITICAL:** When combat begins or ends, update `combat_state` with session tracking fields. This works WITH the Enemy HP Tracking schema above - combine both when managing combat state:
+
+```json
+{
+    "combat_state": {
+      "in_combat": true,
+      "combat_session_id": "combat_<unix_timestamp>_<4char_location_hash>",
+    "combat_phase": "active",
+    "current_round": 1,
+    "combat_start_timestamp": "ISO-8601",
+    "combat_trigger": "Description of what started combat",
+    "initiative_order": [
+      {"id": "pc_kira_001", "name": "Kira (PC)", "initiative": 18, "type": "pc"},
+      {"id": "npc_goblin_boss_001", "name": "Goblin Boss", "initiative": 15, "type": "enemy"},
+      {"id": "npc_wolf_001", "name": "Wolf Companion", "initiative": 12, "type": "ally"}
+    ],
+    "combatants": {
+      "pc_kira_001": {"name": "Kira (PC)", "hp_current": 35, "hp_max": 35, "status": [], "type": "pc"},
+      "npc_goblin_boss_001": {"name": "Goblin Boss", "hp_current": 45, "hp_max": 45, "status": [], "type": "enemy"},
+      "npc_wolf_001": {"name": "Wolf Companion", "hp_current": 11, "hp_max": 11, "status": [], "type": "ally"}
+    }
+  }
+}
+```
+
+**Combat Phase Values:**
+| Phase | Description |
+|-------|-------------|
+| `initiating` | Rolling initiative, combat starting |
+| `active` | Combat rounds in progress |
+| `concluding` | Combat ending, distributing rewards |
+| `ended` | Combat complete, return to story mode |
+| `fled` | Party fled combat |
+
+**Combat Session ID Format:** `combat_<unix_timestamp>_<4char_location_hash>`
+- Example: `combat_1703001234_dung` (combat in dungeon)
+- Used for tracking combat instances and logging
+
+**🚨 MANDATORY: Combat Start Detection**
+When transitioning INTO combat (setting `in_combat: true`), you MUST:
+1. Generate a unique `combat_session_id`
+2. Set `combat_phase` to `"initiating"` then `"active"`
+3. Set `combat_trigger` describing what started the encounter
+4. Roll initiative for all combatants
+
+**🚨 MANDATORY: Combat End Detection**
+When transitioning OUT of combat (setting `in_combat: false`), you MUST:
+1. Set `combat_phase` to `"concluding"` then `"ended"`
+2. Award XP for all defeated enemies
+3. Distribute loot from defeated enemies
+4. Update resource consumption (spell slots, HP, etc.)
+5. Display clear rewards summary to player
+
 **Separation Example:**
 ```json
 {
   "narrative": "Kira deflects the goblin's blow and drives her blade home. The creature crumples.",
   "planning_block": { "choices": { "loot_body": "Search the goblin", "press_on": "Continue deeper", "other_action": "Describe a different action" } },
-  "state_updates": { "combat_state": { "goblin_1": { "hp_current": 0, "status": "dead" } } }
+  "state_updates": {
+    "combat_state": {
+      "combatants": {
+        "goblin_1": { "hp_current": 0, "status": ["dead"], "type": "enemy" }
+      }
+    }
+  }
 }
 ```
 *Narrative = prose. Planning = choices. State = facts.*
@@ -803,7 +869,7 @@ Long-term narrative memory. Append significant events to `custom_campaign_state.
 2. `core_memories` = LIST of strings (use append syntax)
 3. `npc_data` = DICT keyed by name, update specific fields only (delete with `"__DELETE__"`)
 4. `combat_state` = use `combatants` not `enemies`, track `hp_max` accurately per CR
-5. `combat_state.combatants[].hp_max` = **MUST match CR-appropriate values** (see mechanics_system_instruction.md)
+5. `combat_state.combatants[].hp_max` = **MUST match CR-appropriate values** (see combat_system_instruction.md)
 
 **CRITICAL:** Never replace top-level objects - update nested fields only.
 

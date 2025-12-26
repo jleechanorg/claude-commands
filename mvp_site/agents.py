@@ -113,6 +113,21 @@ class BaseAgent(ABC):
         """
         return False
 
+    @classmethod
+    def matches_game_state(cls, _game_state: "GameState | None") -> bool:
+        """
+        Check if this agent should handle the current game state.
+
+        Override in subclasses to implement game-state-based detection logic.
+
+        Args:
+            _game_state: Current GameState object (unused in base class)
+
+        Returns:
+            True if this agent should handle the game state
+        """
+        return False
+
     def preprocess_input(self, user_input: str) -> str:
         """
         Preprocess user input before sending to LLM.
@@ -369,6 +384,121 @@ class GodModeAgent(BaseAgent):
         return user_input
 
 
+class CombatAgent(BaseAgent):
+    """
+    Agent for Combat Mode (Active Combat Encounters).
+
+    This agent handles tactical combat encounters with focused prompts for
+    dice rolls, initiative tracking, combat rewards, and boss equipment.
+    It is automatically selected when game_state.combat_state.in_combat is True.
+
+    Responsibilities:
+    - Initiative and turn order management
+    - Combat dice roll enforcement (attacks, saves, damage)
+    - Combat state tracking (HP, conditions, position)
+    - Combat end rewards (XP, loot, resources)
+    - Boss/Special NPC equipment enforcement
+    - Combat session tracking with unique IDs
+
+    System Prompt Hierarchy:
+    1. Master directive (establishes AI authority)
+    2. Game state instructions (combat_state schema - loaded before combat rules)
+    3. Combat system instruction (tactical combat rules)
+    4. Narrative instruction (DM Note protocol, cinematic style)
+    5. D&D SRD (combat rules reference)
+    6. Mechanics (detailed combat mechanics)
+    7. Debug instructions (combat logging)
+
+    Note: Combat mode automatically transitions back to story mode when combat ends.
+    """
+
+    # Required prompts - always loaded for combat mode
+    REQUIRED_PROMPTS: frozenset[str] = frozenset({
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_COMBAT,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_NARRATIVE,  # For DM Note protocol and cinematic style
+        constants.PROMPT_TYPE_DND_SRD,
+        constants.PROMPT_TYPE_MECHANICS,
+    })
+
+    # No optional prompts for combat mode - it's focused on tactical combat
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset()
+
+    MODE: str = constants.MODE_COMBAT
+
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+    ) -> str:
+        """
+        Build system instructions for combat mode.
+
+        Uses a focused prompt set for tactical combat operations:
+        - Master directive (authority)
+        - Combat system instruction (tactical rules, dice, rewards)
+        - Game state (combat_state structure)
+        - D&D SRD (combat rules)
+        - Mechanics (detailed combat mechanics)
+        - Debug instructions (combat logging)
+
+        Note: selected_prompts parameter is accepted for interface consistency
+        but combat mode uses its fixed combat-focused prompt set.
+
+        Returns:
+            Complete system instruction string for combat encounters
+        """
+        # Parameters intentionally unused - combat mode uses fixed prompt set
+        del selected_prompts, include_continuation_reminder
+
+        builder = self._prompt_builder
+
+        # Build combat mode instructions (fixed prompt set)
+        parts: list[str] = builder.build_combat_mode_instructions()
+
+        # Finalize with optional world instructions (for combat in specific locations)
+        return builder.finalize_instructions(parts, use_default_world=use_default_world)
+
+    @classmethod
+    def matches_game_state(cls, game_state: "GameState | None") -> bool:
+        """
+        Check if combat mode should be active based on game state.
+
+        Combat mode is triggered when:
+        - game_state is not None
+        - game_state.combat_state.in_combat is True
+
+        Args:
+            game_state: Current GameState object
+
+        Returns:
+            True if combat is active and CombatAgent should be used
+        """
+        if game_state is None:
+            return False
+
+        combat_state = getattr(game_state, "combat_state", None)
+        if not isinstance(combat_state, dict):
+            return False
+
+        return combat_state.get("in_combat", False) is True
+
+    @classmethod
+    def matches_input(cls, _user_input: str) -> bool:
+        """
+        Combat mode is NOT triggered by input - only by game state.
+
+        Args:
+            _user_input: Raw user input text (unused)
+
+        Returns:
+            Always False - use matches_game_state instead
+        """
+        return False
+
+
 def get_agent_for_input(
     user_input: str, game_state: "GameState | None" = None
 ) -> BaseAgent:
@@ -376,8 +506,9 @@ def get_agent_for_input(
     Factory function to get the appropriate agent for user input.
 
     Determines which agent should handle the input based on mode detection:
-    - GodModeAgent if input starts with "GOD MODE:"
-    - StoryModeAgent for all other inputs (default)
+    1. GodModeAgent if input starts with "GOD MODE:" (highest priority)
+    2. CombatAgent if game_state.combat_state.in_combat is True
+    3. StoryModeAgent for all other inputs (default)
 
     Args:
         user_input: Raw user input text
@@ -390,14 +521,25 @@ def get_agent_for_input(
         >>> agent = get_agent_for_input("GOD MODE: Set my HP to 50")
         >>> isinstance(agent, GodModeAgent)
         True
-        >>> agent = get_agent_for_input("I attack the goblin!")
+        >>> # With combat_state.in_combat = True
+        >>> agent = get_agent_for_input("I attack the goblin!", combat_game_state)
+        >>> isinstance(agent, CombatAgent)
+        True
+        >>> agent = get_agent_for_input("I explore the tavern.")
         >>> isinstance(agent, StoryModeAgent)
         True
     """
+    # Priority 1: GOD MODE always takes precedence (administrative override)
     if GodModeAgent.matches_input(user_input):
         logging_util.info("🔮 GOD_MODE_DETECTED: Using GodModeAgent")
         return GodModeAgent(game_state)
 
+    # Priority 2: Combat mode when in active combat
+    if CombatAgent.matches_game_state(game_state):
+        logging_util.info("⚔️ COMBAT_MODE_ACTIVE: Using CombatAgent")
+        return CombatAgent(game_state)
+
+    # Priority 3: Default to story mode
     return StoryModeAgent(game_state)
 
 
@@ -406,5 +548,6 @@ __all__ = [
     "BaseAgent",
     "StoryModeAgent",
     "GodModeAgent",
+    "CombatAgent",
     "get_agent_for_input",
 ]

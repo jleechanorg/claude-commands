@@ -24,6 +24,7 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
     constants.PROMPT_TYPE_DND_SRD: constants.DND_SRD_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_GOD_MODE: constants.GOD_MODE_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_COMBAT: constants.COMBAT_SYSTEM_INSTRUCTION_PATH,
 }
 
 # Store loaded instruction content in a dictionary for easy access
@@ -212,6 +213,42 @@ class PromptBuilder:
         # Load mechanics instruction for detailed game rules
         # (spell slots, class features, combat rules, etc.)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
+
+        return parts
+
+    def build_combat_mode_instructions(self) -> list[str]:
+        """
+        Build system instructions for COMBAT MODE.
+        Combat mode is for active combat encounters with focused tactical prompts.
+        Emphasizes: dice rolls, initiative, combat rewards, boss equipment.
+        """
+        parts = []
+
+        # CRITICAL: Load master directive FIRST to establish hierarchy and authority
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+        # Load game state instruction SECOND - establishes authoritative state schema
+        # (AI needs to know combat_state structure before combat rules)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
+        # Load combat-specific instruction (tactical combat management)
+        # (References game_state schema for combat_state updates)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_COMBAT))
+
+        # Load narrative instruction for DM Note protocol and cinematic style
+        # (Enables out-of-character communication during combat)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_NARRATIVE))
+
+        # Load D&D SRD for combat rules
+        # (Attack rolls, saving throws, damage, conditions)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+
+        # Load mechanics instruction for detailed combat mechanics
+        # (Initiative, action economy, combat XP, etc.)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
+
+        # Add debug instructions for combat logging
+        parts.append(_build_debug_instructions())
 
         return parts
 

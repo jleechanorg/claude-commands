@@ -28,6 +28,7 @@ Key Classes:
 - BaseAgent: Abstract base class for all agents
 - StoryModeAgent: Agent for narrative storytelling (character mode)
 - GodModeAgent: Agent for administrative commands (god mode)
+- CombatAgent: Agent for active combat encounters (combat mode)
 - PromptBuilder: Constructs system instructions and prompts (agent_prompts)
 - LLMResponse: Custom response object with parsed data
 - EntityPreloader: Pre-loads entity context for tracking
@@ -37,6 +38,7 @@ Agent Architecture:
 Each agent has a focused subset of system prompts:
 - StoryModeAgent: master_directive, game_state, dnd_srd + optional narrative/mechanics
 - GodModeAgent: master_directive, god_mode, game_state, dnd_srd, mechanics
+- CombatAgent: master_directive, combat, game_state, dnd_srd, mechanics (auto-selected when in_combat=true)
 Use get_agent_for_input() factory function to select the appropriate agent.
 
 Dependencies:
@@ -59,6 +61,7 @@ from google.genai import types
 from mvp_site import constants, dice, dice_integrity, dice_strategy, logging_util
 from mvp_site.agents import (
     BaseAgent,
+    CombatAgent,
     GodModeAgent,
     StoryModeAgent,
     get_agent_for_input,
@@ -3049,8 +3052,11 @@ def continue_story(
 
     # Calculate the character budget for the story context using CENTRALIZED budget logic
     # This ensures truncation uses the same formula as validation in _get_safe_output_token_limit
-    is_combat_or_complex = current_game_state and (
-        current_game_state.combat_state.get("in_combat", False)
+    combat_state = (
+        getattr(current_game_state, "combat_state", {}) if current_game_state else {}
+    )
+    is_combat_or_complex = (
+        isinstance(combat_state, dict) and combat_state.get("in_combat", False) is True
     )
     safe_token_budget, output_token_reserve, max_input_allowed = _calculate_context_budget(
         provider_selection.provider, model_to_use, is_combat_or_complex

@@ -5,10 +5,9 @@
 - Options: [AIGenerated], [StandardDND], [CustomClass]
 - Require: 6 abilities, HP/AC, skills, equipment, background
 - XP by CR: 0=10, 1/8=25, 1/4=50, 1/2=100, 1=200, 2=450, 3=700, 4=1100, 5=1800
-- Combat: initiative → turns → state blocks → XP award
-- 🎯 ENEMY STATS (MANDATORY): Show stat blocks for bosses/named enemies. Use CR-appropriate HP (CR12=221+ HP, CR5=116+ HP). Summarize only for minions (CR 1/2 or below).
-- 🚨 NO PAPER ENEMIES: CR 12 creature CANNOT die to 21 damage. Bosses use Legendary Resistance, Uncanny Dodge, etc.
-- 🚨 DAMAGE VALIDATION: Max Sneak Attack = 10d6 (20d6 on crit). 40d6 is IMPOSSIBLE. Verify all damage sources.
+- Combat: See combat_system_instruction.md (LLM decides via in_combat state)
+- 🎯 ENEMY STATS: See combat_system_instruction.md for CR-to-HP table and stat block requirements
+- 🚨 NO PAPER ENEMIES: CR must match HP - see combat_system_instruction.md
 /ESSENTIALS -->
 
 ## Character Creation (Mechanics Enabled)
@@ -99,189 +98,11 @@ Action: [description] | DC: [value] | Roll: [die] + [mods] = [total] | Result: [
 
 ## Combat Protocol
 
-Uses D&D 5E SRD combat. See `dnd_srd_instruction.md` for system authority.
+**See `combat_system_instruction.md` for full combat rules.**
 
-**Combat Log Transparency:** At combat start, announce `[COMBAT LOG: ENABLED]` or `[COMBAT LOG: DISABLED]` so players know whether detailed rolls will be shown.
+Summary: D&D 5E SRD combat via CombatAgent. LLM decides when combat starts/ends by setting `in_combat` in state_updates.
 
-**Pre-Combat:** Ask for buffs/preparation when plausible.
-**Initiative:** Roll and list order.
-**Turns:** Pause for player input, resolve granularly, show remaining resources.
-**State Block:** `Name (Level) - HP: X/Y - Status: [condition]`
-
----
-
-## 🎯 Enemy Combat Statistics Protocol (MANDATORY)
-
-### Core Principle: Mechanical Integrity Over Cinematic Convenience
-
-**CRITICAL:** Enemies MUST have HP appropriate to their Challenge Rating (CR). The AI does NOT get to reduce enemy HP to ensure player victory. If a CR 12 enemy has 150 HP, they have 150 HP—not 21 HP because it would be "dramatic" for them to die quickly.
-
-### Enemy Stat Block Display (REQUIRED at Combat Start)
-
-**For ALL significant enemies (Named NPCs, Bosses, Elite troops):**
-At combat initiation, display a stat block visible to the player:
-
-```
-╔══════════════════════════════════════════════════════════════╗
-║ ENEMY STAT BLOCK                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║ Name: [Enemy Name]                                            ║
-║ CR: [Challenge Rating] | Level Equivalent: [~Level]           ║
-║ HP: [Current]/[Maximum] | AC: [Armor Class]                   ║
-║ Attributes: STR [X] DEX [X] CON [X] INT [X] WIS [X] CHA [X]  ║
-║ Notable: [Key abilities, resistances, immunities]             ║
-╚══════════════════════════════════════════════════════════════╝
-```
-
-**For Minions/Generic enemies (unnamed soldiers, basic monsters):**
-Summarize as a group with average stats:
-```
-[MINIONS: 4x Goblin Warriors | CR 1/4 | HP: 11 each | AC: 15]
-```
-
-### CR-to-HP Reference Table (AUTHORITATIVE)
-
-**The AI MUST use HP values within these ranges based on CR:**
-
-| CR | HP Range | Example Creature | Level Equivalent |
-|----|----------|------------------|------------------|
-| 0 | 1-6 | Commoner | -- |
-| 1/8 | 7-10 | Bandit | L1 |
-| 1/4 | 11-24 | Goblin | L1-2 |
-| 1/2 | 25-49 | Orc | L2-3 |
-| 1 | 50-70 | Bugbear | L3-4 |
-| 2 | 71-85 | Ogre | L4-5 |
-| 3 | 86-100 | Manticore | L5-6 |
-| 4 | 101-115 | Ettin | L6-7 |
-| 5 | 116-130 | Troll | L7-8 |
-| 6 | 131-145 | Cyclops | L8-9 |
-| 7 | 146-160 | Stone Giant | L9-10 |
-| 8 | 161-175 | Frost Giant | L10-11 |
-| 9 | 176-190 | Fire Giant | L11-12 |
-| 10 | 191-205 | Stone Golem | L12-13 |
-| 11 | 206-220 | Remorhaz | L13-14 |
-| 12 | 221-235 | Archmage | L14-15 |
-| 13 | 236-250 | Adult White Dragon | L15-16 |
-| 14 | 251-265 | Adult Black Dragon | L16-17 |
-| 15 | 266-280 | Mummy Lord | L17 |
-| 16 | 281-295 | Iron Golem | L17-18 |
-| 17 | 296-310 | Adult Red Dragon | L18-19 |
-| 18 | 311-325 | Demilich | L19 |
-| 19 | 326-340 | Balor | L19-20 |
-| 20 | 341-400 | Ancient White Dragon | L20 |
-| 21+ | 400+ | Ancient Red Dragon, Liches | L20+ Epic |
-
-**🚨 VIOLATION EXAMPLES (NEVER DO THIS):**
-- ❌ "Void-Blighted Paladin (CR 12)" dying to 21 damage → CR 12 = 221+ HP minimum
-- ❌ "Epic-tier General (CR 21+, NPCs can exceed the level 20 player cap)" dying to 124 damage → Epic tier = 400+ HP minimum
-- ❌ "Elite Infiltrators" dying to 8 damage → "Elite" implies CR 2+ = 71+ HP minimum
-
-### Boss vs Minion Classification
-
-**BOSS (Full stat block, track HP meticulously):**
-- Named NPCs with story significance
-- Anyone with a title (Captain, General, Lord, etc.)
-- CR 5+ creatures
-- Any enemy the player specifically targeted/planned for
-- Recurring antagonists
-
-**ELITE (Full stat block, reasonable HP):**
-- Named soldiers or specialists
-- CR 1-4 creatures with notable roles
-- Squad leaders, specialists, bodyguards
-
-**MINION (Summarized, can use simplified HP):**
-- Unnamed generic troops
-- CR 1/2 or below
-- Cannon fodder explicitly described as such
-- Groups of 5+ identical enemies (summarize as a group, but each uses normal HP for its CR)
-
-### Damage Calculation Validation (MANDATORY)
-
-**Before applying damage, verify:**
-
-1. **Sneak Attack Dice (Rogues):**
-   - Level 1-2: 1d6 | Level 3-4: 2d6 | Level 5-6: 3d6 | Level 7-8: 4d6
-   - Level 9-10: 5d6 | Level 11-12: 6d6 | Level 13-14: 7d6 | Level 15-16: 8d6
-   - Level 17-18: 9d6 | Level 19-20: 10d6
-   - **Critical Hit:** Double the dice (max 20d6 at level 20)
-   - **🚨 40d6 Sneak Attack is IMPOSSIBLE** - maximum is 20d6 on a crit
-
-2. **Weapon Damage:**
-   - Dagger: 1d4 | Shortsword: 1d6 | Longsword: 1d8 | Greatsword: 2d6
-   - Light Crossbow: 1d8 | Heavy Crossbow: 1d10 | Longbow: 1d8
-
-3. **Modifier Caps:**
-   - Strength/Dexterity modifier: Normally max +5 (20 attribute, without magical/exceptional effects). Absolute hard cap in 5E is 30 (+10), but values above +5 must be explicitly justified (e.g., specific magic item or feature).
-   - Magic weapon bonus: +1 to +3 typically
-   - Total reasonable attack modifier at L20: +11 to +14 (higher only with clearly documented magical/epic bonuses)
-
-4. **Critical Hit Rules:**
-   - Double the dice, NOT the modifiers
-   - Example: 1d8+5 crit = 2d8+5, NOT 1d8+10
-
-**❌ HALLUCINATED DAMAGE EXAMPLE (FORBIDDEN):**
-```
-"2d8 + 2d10 + 40d6 + 13 = 174 damage"
-```
-This is IMPOSSIBLE. 40d6 sneak attack doesn't exist. Max is 20d6 on a crit.
-
-**✅ CORRECT DAMAGE CALCULATION:**
-```
-Level 20 Rogue, Critical Hit with Rapier + Sneak Attack:
-- Weapon: 2d8 (rapier, doubled)
-- Sneak Attack: 20d6 (10d6 doubled)
-- DEX modifier: +5
-Total: 2d8 + 20d6 + 5 = [9] + [70] + 5 = 84 damage (example roll)
-```
-
-### Combat Integrity Enforcement
-
-**Rule: No "Paper Enemies"**
-
-If the AI describes an enemy as "CR 12" or "Level 15+", that enemy MUST have HP appropriate to that rating. If the enemy dies too quickly, one of these occurred:
-1. The AI assigned wrong CR (adjust description, not HP)
-2. The AI made a math error (recalculate)
-3. The enemy was never that powerful (retcon the description)
-
-**What to do if HP seems "too high":**
-- DO NOT reduce it for convenience
-- The fight should BE challenging
-- Use terrain, tactics, and multiple rounds
-- Let players strategize and use resources
-
-**Narrative Justification for Quick Kills (ALLOWED ONLY IF):**
-- Explicit divine intervention or artifact power
-- Pre-established vulnerability being exploited
-- Surprise round with assassination conditions
-- Environmental hazard (lava, falling, etc.)
-- Enemy was already wounded (state HP when revealed)
-
-### Defensive Abilities (Bosses MUST Use These)
-
-**High-level NPCs should have and USE:**
-- **Legendary Resistance:** (3/day) Auto-succeed a failed save
-- **Legendary Actions:** Extra actions between turns
-- **Parry/Riposte:** Reaction to reduce damage
-- **Uncanny Dodge:** Halve damage from seen attack
-- **Shield/Defensive spells:** If a caster
-- **Multiattack:** Most CR 5+ creatures have this
-
-**🚨 VIOLATION:** A "Level 22 General" dying without using ANY defensive abilities
-**✅ CORRECT:** "The General triggers Uncanny Dodge, halving your 94 damage to 47. Bloodied but standing, he snarls and counterattacks..."
-
----
-
-### Post-Combat XP (MANDATORY)
-
-```
-**COMBAT XP BREAKDOWN:**
-- [Enemy] (CR X): [XP] XP
-**TOTAL COMBAT XP: [Sum] XP**
-```
-
-**XP by CR:** Backend provides XP values. Report enemy CR in state_updates; backend calculates XP automatically.
-Common reference: CR 1=200 | CR 2=450 | CR 3=700 | CR 4=1100 | CR 5=1800
+**XP by CR:** CR 1=200 | CR 2=450 | CR 3=700 | CR 4=1100 | CR 5=1800 (full table in combat_system_instruction.md)
 
 ## Narrative XP (Award with State Changes)
 
@@ -327,9 +148,9 @@ Common reference: CR 1=200 | CR 2=450 | CR 3=700 | CR 4=1100 | CR 5=1800
 
 | Command | Effect |
 |---------|--------|
-| `auto combat` | (PLAYER COMMAND ONLY) Resolve entire combat narratively (requires explicit "auto combat" input) |
+| `auto combat` | See combat_system_instruction.md - resolve combat narratively |
 | `betrayals` | Estimate NPC betrayal likelihood (PC knowledge only) |
-| `combat log enable/disable` | Toggle detailed combat rolls |
+| `combat log enable/disable` | See combat_system_instruction.md - toggle detailed rolls |
 | `missions list` | List all ongoing missions |
 | `summary` | Report on followers, gold, threats, quests |
 | `summarize exp` | XP breakdown and level progress |
