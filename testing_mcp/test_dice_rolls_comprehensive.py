@@ -23,11 +23,9 @@ import argparse
 import json
 import os
 import re
-import socket
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from pathlib import Path
@@ -36,7 +34,26 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from mcp_client import MCPClient
 
-PROJECT_ROOT = Path(__file__).parent.parent
+# Import from centralized lib/
+from lib.server_utils import (
+    LocalServer,
+    pick_free_port,
+    start_local_mcp_server,
+)
+from lib.model_utils import (
+    DEFAULT_MODEL_MATRIX,
+    settings_for_model,
+    update_user_settings,
+)
+from lib.campaign_utils import (
+    create_campaign,
+    process_action,
+    ensure_game_state_seed,
+)
+
+# Backwards compatibility alias
+_pick_free_port = pick_free_port
+
 EVIDENCE_DIR = Path(__file__).parent / "evidence" / "mcp_dice_rolls"
 
 
@@ -62,11 +79,6 @@ TEST_SCENARIOS: list[dict[str, Any]] = [
     },
 ]
 
-DEFAULT_MODEL_MATRIX = [
-    "gemini-3-flash-preview",
-    "qwen-3-235b-a22b-instruct-2507",
-]
-
 DEFAULT_DISTRIBUTION_ROLLS = 200
 DEFAULT_CHI_SQUARE_ROLLS = 20
 # Empirical 99.9% cutoff from 200k sims of 20 d20 rolls (chi-square with expected=1 each).
@@ -77,239 +89,14 @@ EDGE_CASES = [
 ]
 
 
-@dataclass
-class LocalServer:
-    proc: subprocess.Popen[bytes]
-    base_url: str
-    log_path: Path
-
-    def stop(self) -> None:
-        if self.proc.poll() is None:
-            self.proc.terminate()
-            try:
-                self.proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                self.proc.kill()
-
-
-def _which(name: str) -> str | None:
-    for d in os.environ.get("PATH", "").split(os.pathsep):
-        candidate = Path(d) / name
-        if candidate.exists() and os.access(candidate, os.X_OK):
-            return str(candidate)
-    return None
-
-
-def _pick_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
-
-
-def _load_secret(env: dict[str, str], *, secret_name: str, env_var: str) -> None:
-    if env.get(env_var):
-        return
-    if not _which("gcloud"):
-        return
-
-    project = env.get("GCP_PROJECT") or env.get("GOOGLE_CLOUD_PROJECT") or "worldarchitecture-ai"
-    try:
-        value = subprocess.check_output(
-            [
-                "gcloud",
-                "secrets",
-                "versions",
-                "access",
-                "latest",
-                "--secret",
-                secret_name,
-                "--project",
-                project,
-            ],
-            stderr=subprocess.DEVNULL,
-        ).decode("utf-8").strip()
-        if value:
-            env[env_var] = value
-    except Exception:
-        return
-
-
-def start_local_mcp_server(
-    port: int,
-    *,
-    env_overrides: dict[str, str] | None = None,
-    log_dir: Path | None = None,
-) -> LocalServer:
-    """Start an HTTP-only MCP server (env overrides control mock/production behavior)."""
-    python_bin = PROJECT_ROOT / "venv" / "bin" / "python"
-    if not python_bin.exists():
-        python_bin = Path(sys.executable)
-
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(PROJECT_ROOT)
-    if env_overrides:
-        env.update(env_overrides)
-
-    # Some environments set WORLDAI_GOOGLE_APPLICATION_CREDENTIALS globally.
-    # When present, the app requires an explicit dev-mode acknowledgement.
-    if env.get("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS") and not env.get("WORLDAI_DEV_MODE"):
-        env["WORLDAI_DEV_MODE"] = "true"
-
-    # Load provider keys from Secret Manager if possible.
-    _load_secret(env, secret_name="gemini-api-key", env_var="GEMINI_API_KEY")
-    _load_secret(env, secret_name="cerebras-api-key", env_var="CEREBRAS_API_KEY")
-    _load_secret(env, secret_name="openrouter-api-key", env_var="OPENROUTER_API_KEY")
-
-    log_root = log_dir or EVIDENCE_DIR
-    log_root.mkdir(parents=True, exist_ok=True)
-    log_path = log_root / f"local_mcp_{port}.log"
-    log_f = open(log_path, "wb")  # noqa: SIM115
-
-    proc = subprocess.Popen(
-        [
-            str(python_bin),
-            "-m",
-            "mvp_site.mcp_api",
-            "--http-only",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-        ],
-        cwd=str(PROJECT_ROOT),
-        env=env,
-        stdout=log_f,
-        stderr=subprocess.STDOUT,
-    )
-
-    return LocalServer(proc=proc, base_url=f"http://127.0.0.1:{port}", log_path=log_path)
-
-
-def create_campaign(client: MCPClient, user_id: str) -> str:
-    payload = client.tools_call(
-        "create_campaign",
-        {
-            "user_id": user_id,
-            "title": "MCP Dice Test Campaign",
-            "character": "Aric the Fighter (STR 16)",
-            "setting": "A roadside ambush outside Phandalin",
-            "description": "Test campaign for dice roll validation",
-        },
-    )
-    campaign_id = payload.get("campaign_id") or payload.get("campaignId")
-    if not isinstance(campaign_id, str) or not campaign_id:
-        raise RuntimeError(f"create_campaign returned unexpected payload: {payload}")
-    return campaign_id
-
-
-def get_campaign_state(client: MCPClient, *, user_id: str, campaign_id: str) -> dict[str, Any]:
-    payload = client.tools_call(
-        "get_campaign_state",
-        {"user_id": user_id, "campaign_id": campaign_id},
-    )
-    if payload.get("error"):
-        raise RuntimeError(f"get_campaign_state error: {payload['error']}")
-    return payload
-
-
 def update_campaign(client: MCPClient, *, user_id: str, campaign_id: str, updates: dict[str, Any]) -> None:
+    """Update campaign settings (not moved to lib as less commonly used)."""
     payload = client.tools_call(
         "update_campaign",
         {"user_id": user_id, "campaign_id": campaign_id, "updates": updates},
     )
     if payload.get("error"):
         raise RuntimeError(f"update_campaign error: {payload['error']}")
-
-
-def ensure_game_state_seed(
-    client: MCPClient, *, user_id: str, campaign_id: str
-) -> bool:
-    state_payload = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    game_state = state_payload.get("game_state") or {}
-    pc = game_state.get("player_character_data") or {}
-    npc_data = game_state.get("npc_data") or {}
-
-    missing_pc = not (pc.get("name") and pc.get("attributes"))
-    missing_goblin = not any(
-        isinstance(value, dict) and value.get("name", "").lower() == "goblin"
-        for value in npc_data.values()
-    )
-
-    if not missing_pc and not missing_goblin:
-        return False
-
-    seeded_pc = {
-        "string_id": "pc_aric_001",
-        "name": "Aric",
-        "level": 1,
-        "class": "Fighter",
-        "hp_current": 12,
-        "hp_max": 12,
-        "attributes": {
-            "strength": 16,
-            "dexterity": 12,
-            "constitution": 14,
-            "intelligence": 10,
-            "wisdom": 10,
-            "charisma": 12,
-        },
-        "proficiency_bonus": 2,
-    }
-    seeded_goblin = {
-        "string_id": "npc_goblin_001",
-        "name": "Goblin",
-        "hp_current": 7,
-        "hp_max": 7,
-        "armor_class": 13,
-        "status": "healthy",
-        "present": True,
-    }
-
-    state_changes: dict[str, Any] = {}
-    if missing_pc:
-        state_changes["player_character_data"] = seeded_pc
-    if missing_goblin:
-        state_changes["npc_data"] = dict(npc_data)
-        state_changes["npc_data"]["npc_goblin_001"] = seeded_goblin
-
-    god_mode_payload = f"GOD_MODE_UPDATE_STATE:{json.dumps(state_changes)}"
-    result = process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        user_input=god_mode_payload,
-    )
-    if result.get("error"):
-        raise RuntimeError(f"GOD_MODE_UPDATE_STATE failed: {result['error']}")
-    return True
-
-
-def update_user_settings(client: MCPClient, *, user_id: str, settings: dict[str, Any]) -> None:
-    payload = client.tools_call(
-        "update_user_settings",
-        {"user_id": user_id, "settings": settings},
-    )
-    if payload.get("error"):
-        raise RuntimeError(f"update_user_settings error: {payload['error']}")
-
-
-def settings_for_model(model_id: str) -> dict[str, Any]:
-    model = model_id.strip()
-    model_lower = model.lower()
-    if model_lower.startswith("gemini-"):
-        return {"llm_provider": "gemini", "gemini_model": model}
-    if model_lower.startswith("qwen-") or model_lower in {"zai-glm-4.6", "llama-3.3-70b", "gpt-oss-120b"}:
-        return {"llm_provider": "cerebras", "cerebras_model": model}
-    if "/" in model_lower:
-        return {"llm_provider": "openrouter", "openrouter_model": model}
-    raise ValueError(f"Unknown model/provider mapping for: {model}")
-
-
-def process_action(client: MCPClient, *, user_id: str, campaign_id: str, user_input: str) -> dict[str, Any]:
-    return client.tools_call(
-        "process_action",
-        {"user_id": user_id, "campaign_id": campaign_id, "user_input": user_input, "mode": "character"},
-    )
 
 
 def validate_result(result: dict[str, Any], scenario: dict[str, Any]) -> list[str]:
@@ -521,7 +308,7 @@ def main() -> int:
         default=DEFAULT_CHI_SQUARE_THRESHOLD,
         help=(
             "Fail chi-square test if statistic exceeds this threshold. "
-            f"Default={DEFAULT_CHI_SQUARE_THRESHOLD:.1f} (empirical 99.9% cutoff for 20 rolls)."
+            f"Default={DEFAULT_CHI_SQUARE_THRESHOLD:.1f} (empirical 99.9%% cutoff for 20 rolls)."
         ),
     )
     parser.add_argument(

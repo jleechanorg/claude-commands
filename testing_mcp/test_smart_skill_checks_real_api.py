@@ -36,17 +36,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent))
 
 from mcp_client import MCPClient
-from test_dice_rolls_comprehensive import (
-    LocalServer,
-    _pick_free_port,
-    start_local_mcp_server,
-    settings_for_model,
-)
-
-DEFAULT_MODEL_MATRIX = [
-    "gemini-3-flash-preview",
-    "qwen-3-235b-a22b-instruct-2507",
-]
+from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
+from lib.model_utils import DEFAULT_MODEL_MATRIX, settings_for_model, update_user_settings
 
 # CRITICAL: These scenarios have NO combat keywords and NO explicit "Make a check" language
 # The LLM must intelligently decide a skill check is needed
@@ -211,16 +202,6 @@ def validate_smart_skill_check(
     return errors
 
 
-def update_user_settings(
-    client: MCPClient, *, user_id: str, settings: dict[str, Any]
-) -> None:
-    """Update user settings for model selection."""
-    payload = client.tools_call(
-        "update_user_settings",
-        {"user_id": user_id, "settings": settings},
-    )
-    if payload.get("error"):
-        raise RuntimeError(f"update_user_settings error: {payload['error']}")
 
 
 def save_evidence(
@@ -315,7 +296,7 @@ def main() -> int:
     try:
         # Start local MCP server if requested
         if args.start_local:
-            port = int(args.port) if int(args.port) > 0 else _pick_free_port()
+            port = args.port if args.port > 0 else pick_free_port()
             env_overrides: dict[str, str] = {}
             env_overrides["MOCK_SERVICES_MODE"] = "false" if args.real_services else "true"
             env_overrides["TESTING"] = "false"

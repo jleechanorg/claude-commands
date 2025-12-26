@@ -21,17 +21,8 @@ import time
 from typing import Any
 
 from mcp_client import MCPClient
-from test_dice_rolls_comprehensive import (
-    LocalServer,
-    _pick_free_port,
-    start_local_mcp_server,
-)
-
-
-DEFAULT_MODEL_MATRIX = [
-    "gemini-3-flash-preview",
-    "qwen-3-235b-a22b-instruct-2507",
-]
+from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
+from lib.model_utils import DEFAULT_MODEL_MATRIX, settings_for_model, update_user_settings
 
 
 def _expect_dice(payload: dict[str, Any], *, label: str) -> list[str]:
@@ -54,25 +45,6 @@ def _expect_dice(payload: dict[str, Any], *, label: str) -> list[str]:
     return errors
 
 
-def update_user_settings(client: MCPClient, *, user_id: str, settings: dict[str, Any]) -> None:
-    payload = client.tools_call(
-        "update_user_settings",
-        {"user_id": user_id, "settings": settings},
-    )
-    if payload.get("error"):
-        raise RuntimeError(f"update_user_settings error: {payload['error']}")
-
-
-def settings_for_model(model_id: str) -> dict[str, Any]:
-    model = model_id.strip()
-    model_lower = model.lower()
-    if model_lower.startswith("gemini-"):
-        return {"llm_provider": "gemini", "gemini_model": model}
-    if model_lower.startswith("qwen-") or model_lower in {"zai-glm-4.6", "llama-3.3-70b", "gpt-oss-120b"}:
-        return {"llm_provider": "cerebras", "cerebras_model": model}
-    if "/" in model_lower:
-        return {"llm_provider": "openrouter", "openrouter_model": model}
-    raise ValueError(f"Unknown model/provider mapping for: {model}")
 
 
 def main() -> int:
@@ -100,7 +72,7 @@ def main() -> int:
 
     try:
         if args.start_local:
-            port = int(args.port) if int(args.port) > 0 else _pick_free_port()
+            port = args.port if args.port > 0 else pick_free_port()
             local = start_local_mcp_server(port)
             base_url = local.base_url
 
