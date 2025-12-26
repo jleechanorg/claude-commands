@@ -157,12 +157,118 @@ Evidence MUST include:
 - Same scenario with fix applied
 - Different outcome proving fix works
 
+## Bulletproof Evidence Requirements (v3 Lessons)
+
+These requirements elevate evidence from "probably correct" to "provably correct."
+
+### Command Output with Exit Codes
+
+**Assertions are not evidence.** Capture raw command output AND exit codes:
+
+```bash
+# ❌ BAD - Assertion only
+echo "Fix commit is ancestor of test HEAD"
+
+# ✅ GOOD - Raw output with exit code
+echo "Command: git merge-base --is-ancestor $FIX_COMMIT $TEST_HEAD"
+git merge-base --is-ancestor $FIX_COMMIT $TEST_HEAD
+ANCESTRY_EXIT=$?
+echo "Exit code: $ANCESTRY_EXIT"
+echo "Interpretation: Exit 0 = TRUE (is ancestor), Exit 1 = FALSE (not ancestor), 128+ = error"
+```
+
+### Working Directory Anchor
+
+**Every git command needs context.** Capture `pwd` to prove which repo:
+
+```bash
+echo "Working directory: $(pwd)"
+echo "Git root: $(git rev-parse --show-toplevel)"
+git rev-parse HEAD
+```
+
+### CI Checks Tied to HEAD SHA
+
+**PR checks don't prove which commit was tested.** Link checks to specific SHA:
+
+```bash
+# Get the HEAD SHA being tested
+HEAD_SHA=$(git rev-parse HEAD)
+
+# Fetch check runs for that specific SHA
+# Note: :owner/:repo is auto-inferred from git remote when run in a cloned repo
+gh api repos/:owner/:repo/commits/$HEAD_SHA/check-runs \
+  --jq '.check_runs[] | {name, status, conclusion, html_url}'
+```
+
+**Filter out placeholder checks:**
+- Exclude checks with empty `html_url` or `completedAt = 0001-01-01T00:00:00Z`
+- Exclude external links (e.g., `cursor.com`) that aren't GH Action runs
+
+### Server-Process Git Linkage
+
+**Server health ≠ server code version.** Tie gunicorn PID to its git state:
+
+```bash
+# Get gunicorn process listening on port 8005
+PID=$(pgrep -f "gunicorn.*:8005" | head -1)
+
+# Get its working directory (cross-platform)
+if [ -L "/proc/$PID/cwd" ]; then
+  SERVER_CWD=$(readlink -f "/proc/$PID/cwd")  # Linux
+else
+  SERVER_CWD=$(lsof -a -p "$PID" -d cwd 2>/dev/null | tail -1 | awk '{print $NF}')  # macOS
+fi
+
+# Verify git HEAD in server's working directory
+git -C "$SERVER_CWD" rev-parse HEAD
+```
+
+### Timestamp Synchronization
+
+**Spread-out timestamps break provenance chains.** Collect all evidence in one pass:
+
+```bash
+#!/bin/bash
+# Single-pass evidence collection
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+EVIDENCE_DIR="/tmp/evidence_$(date +%s)"
+mkdir -p "$EVIDENCE_DIR"
+
+# Capture all state in rapid succession (< 60 seconds)
+echo "Collection started: $TIMESTAMP" > "$EVIDENCE_DIR/log.txt"
+curl -s http://localhost:8005/health >> "$EVIDENCE_DIR/server_state.txt"
+git rev-parse HEAD >> "$EVIDENCE_DIR/git_state.txt"
+# Run test
+python test.py >> "$EVIDENCE_DIR/test_output.txt"
+echo "Collection ended: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$EVIDENCE_DIR/log.txt"
+```
+
+### Summary vs Raw Data Consistency
+
+**Automated summaries must match raw data.** Always verify:
+
+```bash
+# If summary says "Copilot comments: 4"
+# Raw data MUST show 4 entries with user.login matching
+# Example: raw data shows .user.login == "Copilot" (not "github-copilot[bot]")
+
+# ❌ BAD - Exact match misses variations
+jq '[.[] | select(.user.login == "github-copilot[bot]")]'  # Misses "Copilot"
+
+# ✅ GOOD - Case-insensitive pattern matching
+jq '[.[] | select(.user.login | test("copilot"; "i"))]'
+```
+
 ## Anti-Patterns
 
 - **"Tests pass" without evidence type** - Mock tests passing ≠ production working
 - **Health endpoint only** - Proves server is up, not that features work
 - **Endpoint existence** - tools/list returning tools ≠ tools executing correctly
 - **Assuming mock = real** - Mock data is fabricated; production data is evidence
+- **Assertions without command output** - "Exit code 0" without showing the command
+- **Timestamp gaps** - Server captured at T, test run at T+1hr breaks provenance
+- **Summary/raw mismatch** - Automated counts that don't match raw data
 
 ## When to Stop and Ask
 
