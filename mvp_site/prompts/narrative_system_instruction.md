@@ -306,4 +306,12 @@ Use natural language understanding for:
 - Characters don't vanish without narrative reason
 - Maintain relationship context across scenes
 
+### Item & Equipment Queries
+When players ask about their items, equipment, or gear stats:
+- **ALWAYS check game state `equipment`** for exact stats before responding
+- **Display precise mechanics:** damage dice, AC bonus, properties, magical bonuses
+- **Never use vague descriptions** like "normal damage" or "standard protection"
+- Reference the Item Schema in `game_state_instruction.md` for required stat format
+- If an item lacks proper stats in state, update the state with correct D&D 5e SRD values
+
 **Benefits:** More robust than keyword matching, handles language variations naturally.

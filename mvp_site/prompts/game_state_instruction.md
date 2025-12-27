@@ -496,10 +496,141 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
  "proficiency_bonus": 2, "skills": [], "saving_throw_proficiencies": [],
  "resources": {"gold": 0, "hit_dice": {"used": 0, "total": 0}, "spell_slots": {}, "class_features": {}, "consumables": {}},
  "experience": {"current": 0, "needed_for_next_level": 300},
- "equipment": {"weapons": [], "armor": "", "backpack": []},
+ "equipment": {
+   "weapons": [], "armor": null, "shield": null,
+   "head": null, "neck": null, "cloak": null, "hands": null,
+   "ring_1": null, "ring_2": null, "belt": null, "boots": null,
+   "backpack": []
+ },
  "combat_stats": {"initiative": 0, "speed": 30, "passive_perception": 10},
  "status_conditions": [], "death_saves": {"successes": 0, "failures": 0}, "active_effects": [], "features": [], "spells_known": []}
 ```
+
+**Backward compatibility note:** Legacy saves may store `equipment.armor` as an empty string. Treat both `null` and `""` as "not equipped" and normalize to `null` on read/write so older sessions continue to function until data migration completes.
+
+### Item Schema (🚨 MANDATORY: Store Full Stats)
+
+**CRITICAL: ALL items MUST be stored with complete stats. Never store items as plain strings.**
+
+#### Weapon Schema
+```json
+{
+  "name": "Longsword +1",
+  "type": "weapon",
+  "damage": "1d8",
+  "damage_type": "slashing",
+  "properties": ["versatile (1d10)"],
+  "bonus": 1,
+  "weight": 3,
+  "value_gp": 1015,
+  "equipped": true,
+  "description": "A finely crafted longsword with a magical enhancement"
+}
+```
+
+#### Armor Schema
+```json
+{
+  "name": "Chain Mail",
+  "type": "armor",
+  "armor_class": 16,
+  "armor_type": "heavy",
+  "stealth_disadvantage": true,
+  "strength_requirement": 13,
+  "weight": 55,
+  "value_gp": 75,
+  "equipped": true,
+  "description": "Standard chain mail armor"
+}
+```
+
+#### General Item Schema
+```json
+{
+  "name": "Healing Potion",
+  "type": "consumable",
+  "effect": "Restores 2d4+2 HP",
+  "charges": 1,
+  "weight": 0.5,
+  "value_gp": 50,
+  "description": "A red liquid that shimmers when agitated"
+}
+```
+
+**Common Weapon Reference (D&D 5e SRD):**
+| Weapon         | Damage | Type      | Properties                                   |
+| -------------- | ------ | --------- | -------------------------------------------- |
+| Dagger         | 1d4    | piercing  | finesse, light, thrown (20/60)               |
+| Shortsword     | 1d6    | piercing  | finesse, light                               |
+| Longsword      | 1d8    | slashing  | versatile (1d10)                             |
+| Greatsword     | 2d6    | slashing  | heavy, two-handed                            |
+| Rapier         | 1d8    | piercing  | finesse                                      |
+| Longbow        | 1d8    | piercing  | ammunition, heavy, two-handed, range (150/600) |
+| Light Crossbow | 1d8    | piercing  | ammunition, loading, two-handed, range (80/320) |
+| Handaxe        | 1d6    | slashing  | light, thrown (20/60)                        |
+
+**Common Armor Reference (D&D 5e SRD):**
+| Armor           | AC                | Type   | Stealth       | Weight |
+| --------------- | ----------------- | ------ | ------------- | ------ |
+| Leather         | 11 + DEX          | light  | -             | 10 lb  |
+| Studded Leather | 12 + DEX          | light  | -             | 13 lb  |
+| Chain Shirt     | 13 + DEX (max 2)  | medium | -             | 20 lb  |
+| Scale Mail      | 14 + DEX (max 2)  | medium | disadvantage  | 45 lb  |
+| Chain Mail      | 16                | heavy  | disadvantage  | 55 lb  |
+| Plate           | 18                | heavy  | disadvantage  | 65 lb  |
+| Shield          | +2                | shield | -             | 6 lb   |
+
+### 🎯 Item Query Response Protocol
+
+**🚨 PRIORITY OVERRIDE: Item stat requests HALT narrative flow. Mechanical data FIRST, story SECOND.**
+
+**When a player asks about item stats (e.g., "What are my stats?", "List equipment", "Show my gear"):**
+
+1. **IMMEDIATELY provide mechanical data** - do NOT weave stats into narrative prose
+2. **List ALL equipped items by slot** with complete stats for each
+3. **Reference exact stats from `equipment`** in game state - never guess or use generic values
+4. **If stats are missing**, acknowledge and update game state with proper values
+
+**Story mode structure still applies:** Even when fulfilling a stat-only request, include the standard response fields (`session_header`, `narrative`, `planning_block`, etc.). Keep `narrative` minimal/empty and provide a concise `planning_block` (e.g., `continue`, `other_action`) so schema validators remain satisfied. (DM mode remains the only exception where `planning_block` is omitted.)
+
+**Required Slot-Based Format (use when asked to list all gear):**
+```
+### Character Loadout
+- **Weapon (Main)**: *[Name]* (+X [Type]). Atk +[mod], Dmg [dice]+[mod] [type]. Properties: [list]
+- **Weapon (Off-hand/Ranged)**: *[Name]*. [Stats as above]
+- **Head**: *[Name]*. [Effects/bonuses]
+- **Neck**: *[Name]*. [Effects/bonuses]
+- **Cloak**: *[Name]*. [Effects/bonuses]
+- **Armor**: *[Name]* (+X [Type]). AC [total] ([base] + [DEX] + [magic])
+- **Shield**: *[Name]*. +[bonus] AC, [properties]
+- **Hands**: *[Name]*. [Effects/bonuses]
+- **Ring 1**: *[Name]*. [Effects/bonuses]
+- **Ring 2**: *[Name]*. [Effects/bonuses]
+- **Belt**: *[Name]*. [Effects/bonuses]
+- **Boots**: *[Name]*. [Effects/bonuses]
+- **Backpack**: [List consumables and notable items with quantities]
+```
+
+**Single Item Format:**
+```
+[ITEM: Longsword +1]
+Type: Weapon (Martial)
+Damage: 1d8+1 slashing (1d10+1 versatile)
+Properties: Versatile
+Bonus: +1 to attack and damage
+Weight: 3 lb | Value: 1,015 gp
+```
+
+**❌ FORBIDDEN:**
+- "Your longsword does normal sword damage" (vague)
+- Weaving stats into narrative when player explicitly asks for a list
+- Delaying mechanical data for "story flow"
+- Treating equipment as secondary to narrative milestones
+
+**✅ REQUIRED:**
+- Immediate mechanical response when stats are requested
+- Complete slot-by-slot breakdown when asked to "list all" or "show equipment"
+- Calculated totals (Attack mod = Base + Prof + Magic + Ability)
 
 ### Resource Recovery
 
