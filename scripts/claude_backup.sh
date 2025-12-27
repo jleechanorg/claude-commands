@@ -33,8 +33,9 @@ backup_log() {
     echo "[$timestamp] $message" | tee -a "$LOG_FILE"
 }
 
-# Source directory - only backup conversation projects
-SOURCE_DIR="$HOME/.claude/projects"
+# Source directories - backup both Claude and Codex conversations
+CLAUDE_SOURCE_DIR="$HOME/.claude/projects"
+CODEX_SOURCE_DIR="$HOME/.codex/sessions"
 
 # Security: Hostname validation function
 validate_hostname() {
@@ -108,30 +109,32 @@ get_clean_hostname() {
     echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
 
-# Use hardcoded folder name for consistency across all devices
-BACKUP_FOLDER_NAME="claude_conversations"
+# Use hardcoded folder names for consistency across all devices
+CLAUDE_BACKUP_FOLDER="claude_conversations"
+CODEX_BACKUP_FOLDER="codex_conversations"
 
-# Destination directory - now supports parameter override with consistent folder name
-# If parameter provided, append folder name to it, otherwise use default
-DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/$BACKUP_FOLDER_NAME"
+# Destination directories - now supports parameter override with consistent folder names
+# Base directory for all backups
 if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
-    # Parameter provided and it's not a flag - append device suffix
+    # Parameter provided and it's not a flag
     # Security: Validate input parameter to prevent path traversal
     validate_path "${1}" "command line destination parameter"
-    BACKUP_DESTINATION="${1%/}/$BACKUP_FOLDER_NAME"
+    BACKUP_BASE_DIR="${1%/}"
+elif [ -n "${DROPBOX_DIR:-}" ]; then
+    # Security: Validate environment variable path
+    validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable"
+    BACKUP_BASE_DIR="${DROPBOX_DIR%/}"
 else
-    # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
-    if [ -n "${DROPBOX_DIR:-}" ]; then
-        # Security: Validate environment variable path
-        validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable"
-        BACKUP_DESTINATION="${DROPBOX_DIR%/}/$BACKUP_FOLDER_NAME"
-    else
-        BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
-    fi
+    BACKUP_BASE_DIR="$HOME/Library/CloudStorage/Dropbox"
 fi
 
-# Security: Validate final destination path
-validate_path "$BACKUP_DESTINATION" "final backup destination"
+# Create separate destinations for Claude and Codex
+CLAUDE_BACKUP_DESTINATION="$BACKUP_BASE_DIR/$CLAUDE_BACKUP_FOLDER"
+CODEX_BACKUP_DESTINATION="$BACKUP_BASE_DIR/$CODEX_BACKUP_FOLDER"
+
+# Security: Validate final destination paths
+validate_path "$CLAUDE_BACKUP_DESTINATION" "Claude backup destination"
+validate_path "$CODEX_BACKUP_DESTINATION" "Codex backup destination"
 
 # Email configuration
 SMTP_SERVER="smtp.gmail.com"
@@ -144,6 +147,7 @@ EMAIL_FROM="claude-backup@worldarchitect.ai"
 
 # Backup results
 BACKUP_STATUS="SUCCESS"
+SKIP_BACKUP=0
 declare -a BACKUP_RESULTS=()
 
 # (backup_log function moved to top of script)
@@ -156,7 +160,8 @@ add_result() {
 
     BACKUP_RESULTS+=("$status|$operation|$details")
 
-    if [ "$status" != "SUCCESS" ]; then
+    # Only ERROR status triggers failure - WARNING and SKIPPED are informational
+    if [ "$status" = "ERROR" ]; then
         BACKUP_STATUS="FAILURE"
     fi
 
@@ -167,13 +172,30 @@ add_result() {
 check_prerequisites() {
     backup_log "=== Checking Prerequisites ==="
 
-    # Check if source directory exists
-    if [ ! -d "$SOURCE_DIR" ]; then
-        add_result "ERROR" "Source Check" "Claude projects directory $SOURCE_DIR does not exist"
-        return 1
+    local claude_exists=1
+    local codex_exists=1
+
+    # Check if Claude source directory exists
+    if [ ! -d "$CLAUDE_SOURCE_DIR" ]; then
+        add_result "WARNING" "Claude Source Check" "Claude projects directory $CLAUDE_SOURCE_DIR does not exist"
+        claude_exists=0
+    else
+        add_result "SUCCESS" "Claude Source Check" "Claude projects directory found at $CLAUDE_SOURCE_DIR"
     fi
 
-    add_result "SUCCESS" "Source Check" "Claude projects directory found at $SOURCE_DIR"
+    # Check if Codex source directory exists
+    if [ ! -d "$CODEX_SOURCE_DIR" ]; then
+        add_result "WARNING" "Codex Source Check" "Codex sessions directory $CODEX_SOURCE_DIR does not exist"
+        codex_exists=0
+    else
+        add_result "SUCCESS" "Codex Source Check" "Codex sessions directory found at $CODEX_SOURCE_DIR"
+    fi
+
+    # If neither source exists, skip the backup run gracefully
+    if [[ $claude_exists -eq 0 && $codex_exists -eq 0 ]]; then
+        add_result "SKIPPED" "Source Check" "No Claude or Codex sources found; skipping backup"
+        SKIP_BACKUP=1
+    fi
 
     # Check if rsync is available
     if ! command -v rsync >/dev/null 2>&1; then
@@ -184,24 +206,32 @@ check_prerequisites() {
     add_result "SUCCESS" "Prerequisites" "rsync command available"
 
     # Check destination parent directory exists or can be created
-    local parent_dir=$(dirname "$BACKUP_DESTINATION")
-    if [ ! -d "$parent_dir" ]; then
-        if ! mkdir -p "$parent_dir" 2>/dev/null; then
-            add_result "WARNING" "Destination Path" "Parent directory $parent_dir not accessible"
+    if [ ! -d "$BACKUP_BASE_DIR" ]; then
+        if ! mkdir -p "$BACKUP_BASE_DIR" 2>/dev/null; then
+            add_result "WARNING" "Destination Path" "Base directory $BACKUP_BASE_DIR not accessible"
         else
-            add_result "SUCCESS" "Destination Path" "Parent directory created at $parent_dir"
+            add_result "SUCCESS" "Destination Path" "Base directory created at $BACKUP_BASE_DIR"
         fi
     else
-        add_result "SUCCESS" "Destination Path" "Parent directory accessible at $parent_dir"
+        add_result "SUCCESS" "Destination Path" "Base directory accessible at $BACKUP_BASE_DIR"
     fi
+
+    return 0
 }
 
 # Perform rsync backup
 backup_to_destination() {
-    local dest_dir="$1"
-    local dest_name="$2"
+    local source_dir="$1"
+    local dest_dir="$2"
+    local dest_name="$3"
 
-    backup_log "=== Backing up to $dest_name ==="
+    backup_log "=== Backing up $dest_name ==="
+
+    # Skip if source directory doesn't exist
+    if [ ! -d "$source_dir" ]; then
+        add_result "SKIPPED" "$dest_name Backup" "Source directory does not exist: $source_dir"
+        return 0
+    fi
 
     # Create destination directory if it doesn't exist
     if ! mkdir -p "$dest_dir" 2>/dev/null; then
@@ -209,9 +239,9 @@ backup_to_destination() {
         return 1
     fi
 
-    # Perform simple rsync backup of projects directory only
+    # Perform simple rsync backup
     if rsync -av \
-        "$SOURCE_DIR/" "$dest_dir/" >/dev/null 2>&1; then
+        "$source_dir/" "$dest_dir/" >/dev/null 2>&1; then
 
         local file_count=$(find "$dest_dir" -type f | wc -l)
         add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
@@ -252,20 +282,23 @@ EOF
 
 SUMMARY:
 ========
-Source Directory: $SOURCE_DIR
-Backup Destination: $BACKUP_DESTINATION
+Claude Source: $CLAUDE_SOURCE_DIR
+Codex Source: $CODEX_SOURCE_DIR
+Claude Backup: $CLAUDE_BACKUP_DESTINATION
+Codex Backup: $CODEX_BACKUP_DESTINATION
 Log File: $LOG_FILE
 
 TROUBLESHOOTING:
 ===============
 - Verify macOS CloudStorage path: ls -la "$HOME/Library/CloudStorage/Dropbox"
 - Verify rsync installation: which rsync
-- Check source directory: ls -la $SOURCE_DIR
+- Check Claude source: ls -la $CLAUDE_SOURCE_DIR
+- Check Codex source: ls -la $CODEX_SOURCE_DIR
 - Review full backup_log: cat $LOG_FILE
 
 ========================================
 Generated by Claude Backup System
-Scheduled every hour via cron (0 * * * *)
+Scheduled every 4 hours via cron (0 */4 * * *)
 ========================================
 EOF
 
@@ -307,7 +340,7 @@ send_failure_email() {
 
 # Main backup function
 run_backup() {
-    backup_log "Starting Claude backup at $(date)"
+    backup_log "Starting Claude & Codex backup at $(date)"
 
     # Check prerequisites
     if ! check_prerequisites; then
@@ -315,16 +348,25 @@ run_backup() {
         return 1
     fi
 
-    # Backup to specified destination
-    backup_to_destination "$BACKUP_DESTINATION" "Backup"
+    # Skip if prerequisites detected no sources to back up
+    if [[ $SKIP_BACKUP -eq 1 ]]; then
+        backup_log "No sources found; backup skipped"
+        return 0
+    fi
+
+    # Backup Claude conversations
+    backup_to_destination "$CLAUDE_SOURCE_DIR" "$CLAUDE_BACKUP_DESTINATION" "Claude Conversations"
+
+    # Backup Codex conversations
+    backup_to_destination "$CODEX_SOURCE_DIR" "$CODEX_BACKUP_DESTINATION" "Codex Conversations"
 
     # Send email notification only on failure
-    if [ "$BACKUP_STATUS" != "SUCCESS" ]; then
+    if [ "$BACKUP_STATUS" = "FAILURE" ]; then
         local report_file=$(generate_failure_email)
         send_failure_email "$report_file"
     fi
 
-    backup_log "Claude backup completed with status: $BACKUP_STATUS"
+    backup_log "Claude & Codex backup completed with status: $BACKUP_STATUS"
 
     # Return appropriate exit code
     if [ "$BACKUP_STATUS" = "SUCCESS" ]; then
@@ -337,10 +379,10 @@ run_backup() {
 # Show help
 show_help() {
     cat << EOF
-Claude Directory Backup Script (runs every 4 hours by default)
+Claude & Codex Backup Script (runs every 4 hours by default)
 
 USAGE:
-    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/claude_conversations)
+    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/)
     $0 --setup-cron [destination] # Setup cron job with destination
     $0 --remove-cron             # Remove cron job
     $0 --help                    # Show this help
@@ -352,20 +394,26 @@ EMAIL SETUP (for failure alerts):
 
     For Gmail App Password: https://myaccount.google.com/apppasswords
 
-BACKUP TARGETS:
-    Source: ~/.claude (selective sync)
-    Default: ~/Library/CloudStorage/Dropbox/claude_conversations
-    Custom: Specify any destination as first parameter
+BACKUP SOURCES:
+    Claude: ~/.claude/projects (all conversation history)
+    Codex: ~/.codex/sessions (all conversation logs)
+
+BACKUP DESTINATIONS:
+    Default Base: ~/Library/CloudStorage/Dropbox/
+    Claude Conversations: <base>/claude_conversations/
+    Codex Conversations: <base>/codex_conversations/
+    Custom Base: Specify any destination as first parameter
 
 BACKUP CONTENT:
-    📁 ~/.claude/projects directory only (all conversation history)
+    📁 ~/.claude/projects → claude_conversations/
+    📁 ~/.codex/sessions → codex_conversations/
 
 FEATURES:
-    ✅ Automated backups via cron every hour (0 * * * *)
+    ✅ Automated backups via cron every 4 hours (0 */4 * * *)
     ✅ rsync sync (no --delete for safety)
     ✅ Email alerts on backup failures only
-    ✅ Projects-only backup (conversation history)
-    ✅ Comprehensive backup_logging
+    ✅ Separate folders for Claude and Codex conversations
+    ✅ Comprehensive logging
 
 LOGS:
     Backup: $SECURE_TEMP/claude_backup_YYYYMMDD.backup_log (secure)
@@ -376,28 +424,10 @@ From: claude-backup@worldarchitect.ai
 EOF
 }
 
-# Helper function to extract parent directory of suffixed backup path
-# This prevents the double suffix bug when setting up cron without explicit destination
-extract_base_directory() {
-    local suffixed_path="$1"
-
-    # Validate input
-    if [[ -z "$suffixed_path" ]]; then
-        echo "Error: No path provided to extract_base_directory" >&2
-        return 1
-    fi
-
-    # Use dirname to get parent directory
-    local base_dir
-    base_dir="$(dirname "$suffixed_path")"
-
-    # Validate result
-    if [[ -z "$base_dir" ]] || [[ "$base_dir" == "." ]]; then
-        echo "Error: Failed to extract base directory from $suffixed_path" >&2
-        return 1
-    fi
-
-    echo "$base_dir"
+# Helper function to get base backup directory
+# Returns the base directory without subdirectory suffixes
+get_base_backup_directory() {
+    echo "$BACKUP_BASE_DIR"
     return 0
 }
 
@@ -405,18 +435,16 @@ extract_base_directory() {
 setup_cron() {
     local cron_destination="${2:-}"
 
-    # If no destination provided, extract base directory to avoid double suffix bug
-    # The main script always appends the device suffix, so we must pass the parent directory
-    # Example problem: DEFAULT_BACKUP_DIR="/path/claude_conversations" + main script suffix = "/path/claude_conversations/claude_conversations"
+    # If no destination provided, use the base backup directory
     if [[ -z "$cron_destination" ]]; then
-        cron_destination="$(extract_base_directory "$BACKUP_DESTINATION")"
+        cron_destination="$(get_base_backup_directory)"
         if [[ $? -ne 0 ]] || [[ -z "$cron_destination" ]]; then
-            echo "Error: Failed to extract base directory from $BACKUP_DESTINATION" >&2
+            echo "Error: Failed to get base backup directory" >&2
             return 1
         fi
     fi
 
-    echo "Setting up hourly Claude backup cron job with consistent folder naming..."
+    echo "Setting up Claude & Codex backup cron job (every 4 hours)..."
 
     # Create wrapper script for cron environment
     local wrapper_script="$SCRIPT_DIR/claude_backup_cron.sh"
@@ -462,19 +490,20 @@ EOF
     fi
 
     # Add new cron job for every 4 hours (handle empty crontab gracefully)
-    # Security: Use secure temp directory for backup_logs
-    local cron_entry="0 * * * * $wrapper_script > \$SECURE_TEMP/claude_backup_cron.backup_log 2>&1"
+    # Note: Logging is handled by the wrapper script itself, not cron redirection
+    local cron_entry="0 */4 * * * \"$wrapper_script\" \"$cron_destination\" 2>&1"
     {
         crontab -l 2>/dev/null || true
         echo "$cron_entry"
     } | crontab -
 
     echo "✅ Cron job setup complete!"
-    echo "   Schedule: Every hour (0 * * * *)"
+    echo "   Schedule: Every 4 hours (0 */4 * * *)"
     echo "   Script: $wrapper_script"
-    echo "   Destination: $cron_destination"
-    echo "   Backup folder: $BACKUP_FOLDER_NAME"
-    echo "   Log: \$SECURE_TEMP/claude_backup_cron.backup_log (secure location)"
+    echo "   Base Destination: $cron_destination"
+    echo "   Claude Folder: $CLAUDE_BACKUP_FOLDER"
+    echo "   Codex Folder: $CODEX_BACKUP_FOLDER"
+    echo "   Log: Wrapper script handles logging to secure temp directory"
     echo ""
     echo "To configure failure email alerts:"
     echo "   export EMAIL_USER=\"your-email@gmail.com\""
