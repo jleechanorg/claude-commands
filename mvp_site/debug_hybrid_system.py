@@ -9,7 +9,7 @@ import re
 from typing import Any
 
 from mvp_site import logging_util
-from mvp_site.json_utils import unescape_json_string, extract_nested_object
+from mvp_site.json_utils import extract_nested_object, unescape_json_string
 
 # Debug tag patterns - same as in llm_response.py
 DEBUG_START_PATTERN = re.compile(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]")
@@ -33,7 +33,7 @@ STATE_UPDATES_MALFORMED_PATTERN = re.compile(
 #   ---
 MARKDOWN_DEBUG_BLOCK_PATTERN = re.compile(
     r"---\s*\n\*\*(?:Dice Rolls|State Updates|Planning Block)\*\*:.*?(?=\n---|\Z)",
-    re.DOTALL
+    re.DOTALL,
 )
 # Inline debug_info JSON objects sometimes leak into narrative; we strip them
 # using bracket-aware extraction in strip_debug_content (regex alone breaks on nesting).

@@ -12,6 +12,7 @@ Performance Improvement:
 Note: Worker and thread configuration logic has been extracted to infrastructure package
 for testability and reusability across the project.
 """
+
 import os
 import sys
 
@@ -69,7 +70,7 @@ keepalive = 2
 
 # Logging
 accesslog = "-"  # Log to stdout (Cloud Run compatible)
-errorlog = "-"   # Log to stderr (Cloud Run compatible)
+errorlog = "-"  # Log to stderr (Cloud Run compatible)
 loglevel = "info"
 # Enhanced access log format with request duration
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'

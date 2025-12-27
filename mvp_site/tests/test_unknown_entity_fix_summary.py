@@ -53,7 +53,9 @@ class TestUnknownEntityFixSummary(unittest.TestCase):
         assert not result.retry_needed
 
         print("3. THE RESULT:")
-        print("   Entity validation no longer triggers unnecessary retries for 'Unknown'")
+        print(
+            "   Entity validation no longer triggers unnecessary retries for 'Unknown'"
+        )
         print("\n✅ Fix verified: No unnecessary retry for 'Unknown' entity!")
 
     def test_real_entities_still_validated(self):

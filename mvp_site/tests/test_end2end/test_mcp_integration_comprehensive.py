@@ -46,8 +46,12 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
         # Try to start MCP server for comprehensive testing
         try:
             # Use -m module syntax from repo root for reliable imports
-            repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-            
+            repo_root = os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                )
+            )
+
             cls.mcp_process = subprocess.Popen(
                 [
                     sys.executable,
@@ -174,9 +178,9 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             health_response = requests.get(
                 f"http://localhost:{self.mcp_port}", timeout=5
             )
-            assert (
-                health_response.status_code == 200
-            ), "MCP server should respond to health checks"
+            assert health_response.status_code == 200, (
+                "MCP server should respond to health checks"
+            )
         except Exception as e:
             self.fail(f"MCP server direct communication failed: {e}")
 

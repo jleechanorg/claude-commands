@@ -38,9 +38,9 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     def test_interface_manager_js_exists(self):
         """Test that interface manager JavaScript file exists"""
         interface_manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
-        assert (
-            interface_manager_path.exists()
-        ), "Interface manager JavaScript file should exist"
+        assert interface_manager_path.exists(), (
+            "Interface manager JavaScript file should exist"
+        )
 
         # Check file has meaningful content
         content = interface_manager_path.read_text()
@@ -141,9 +141,9 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
             # Check for modern mode integration (interface manager might not reference itself)
             if js_file != "interface-manager.js":
-                assert (
-                    "interfaceManager" in content
-                ), f"{js_file} should integrate with interface manager"
+                assert "interfaceManager" in content, (
+                    f"{js_file} should integrate with interface manager"
+                )
 
         print("✅ All JavaScript files have proper structure and integration")
 
@@ -242,16 +242,16 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
             assert "checkIfEnabled" in content, f"{js_file} should check if enabled"
 
             # Check that it doesn't break if interface manager isn't available
-            assert (
-                "window.interfaceManager" in content
-            ), f"{js_file} should check for interface manager"
+            assert "window.interfaceManager" in content, (
+                f"{js_file} should check for interface manager"
+            )
 
         # Test interface manager itself has safe defaults
         manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
         manager_content = manager_path.read_text()
-        assert (
-            "modern" in manager_content.lower()
-        ), "Interface manager should have safe defaults"
+        assert "modern" in manager_content.lower(), (
+            "Interface manager should have safe defaults"
+        )
 
         print("✅ All features maintain backward compatibility")
 
@@ -302,9 +302,9 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
             assert f"[data-theme='{theme}']" in content, f"Should support {theme} theme"
 
         # Check for no conflicts with existing classes
-        assert (
-            "!important" not in content.lower()
-        ), "Should not use !important declarations"
+        assert "!important" not in content.lower(), (
+            "Should not use !important declarations"
+        )
 
         print("✅ CSS integrates properly with existing theme system")
 

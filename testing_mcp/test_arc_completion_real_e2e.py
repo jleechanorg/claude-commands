@@ -38,6 +38,17 @@ STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
+def extract_arc_milestones(game_state: dict) -> dict:
+    """Extract arc_milestones, preserving empty dictionaries as valid values."""
+
+    arc_milestones = game_state.get("arc_milestones")
+    if arc_milestones is None:
+        arc_milestones = game_state.get("custom_campaign_state", {}).get(
+            "arc_milestones", {}
+        )
+    return arc_milestones
+
+
 def log(msg: str) -> None:
     """Log with timestamp."""
     ts = datetime.now(timezone.utc).isoformat()
@@ -174,8 +185,7 @@ def main():
     campaign_id = campaign_data.get("campaign_id")
     # arc_milestones can be at game_state.arc_milestones or game_state.custom_campaign_state.arc_milestones
     game_state = campaign_data.get("game_state", {})
-    initial_arc_milestones = game_state.get("arc_milestones", {}) or \
-        game_state.get("custom_campaign_state", {}).get("arc_milestones", {})
+    initial_arc_milestones = extract_arc_milestones(game_state)
 
     results["steps"].append({
         "name": "create_campaign",
@@ -249,8 +259,7 @@ def main():
     action3_data = extract_result(action3)
     action3_narrative = action3_data.get("narrative", action3_data.get("raw_text", ""))
     action3_game_state = action3_data.get("game_state", {})
-    arc_milestones_after = action3_game_state.get("arc_milestones", {}) or \
-        action3_game_state.get("custom_campaign_state", {}).get("arc_milestones", {})
+    arc_milestones_after = extract_arc_milestones(action3_game_state)
 
     results["steps"].append({
         "name": "action_3_complete_heist",
@@ -272,8 +281,7 @@ def main():
     })
     state_data = extract_result(state_response)
     final_game_state = state_data.get("game_state", {})
-    final_arc_milestones = final_game_state.get("arc_milestones", {}) or \
-        final_game_state.get("custom_campaign_state", {}).get("arc_milestones", {})
+    final_arc_milestones = extract_arc_milestones(final_game_state)
 
     results["steps"].append({
         "name": "get_final_state",

@@ -22,6 +22,7 @@ for path in (PROJECT_ROOT, MVP_SITE_ROOT):
 
 import constants  # noqa: E402
 from main import create_app  # noqa: E402
+
 from tests.fake_firestore import FakeFirestoreClient  # noqa: E402
 
 

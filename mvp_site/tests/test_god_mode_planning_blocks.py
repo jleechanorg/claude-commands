@@ -71,14 +71,14 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         # Verify all God mode choices have "god:" prefix
         choices = response_obj.planning_block.get("choices", {})
         for choice_key in choices:
-            assert choice_key.startswith(
-                "god:"
-            ), f"Choice key '{choice_key}' must start with 'god:' prefix"
+            assert choice_key.startswith("god:"), (
+                f"Choice key '{choice_key}' must start with 'god:' prefix"
+            )
 
         # Verify mandatory "god:return_story" choice exists
-        assert (
-            "god:return_story" in choices
-        ), "Must include 'god:return_story' as default choice"
+        assert "god:return_story" in choices, (
+            "Must include 'god:return_story' as default choice"
+        )
 
     def test_god_mode_choices_all_have_prefix(self):
         """Test that all God mode choices use the god: prefix."""

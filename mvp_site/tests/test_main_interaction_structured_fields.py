@@ -61,9 +61,9 @@ class TestMCPInteractionStructuredFields(unittest.TestCase):
         )
 
         # MCP gateway should handle interaction requests (may return 400 instead of 404)
-        assert (
-            response.status_code in [400, 404]
-        ), f"Should return 400 or 404 for missing interaction endpoint, got {response.status_code}"
+        assert response.status_code in [400, 404], (
+            f"Should return 400 or 404 for missing interaction endpoint, got {response.status_code}"
+        )
 
     def test_mcp_interaction_with_structured_response(self):
         """Test interaction expecting structured response through MCP."""
@@ -126,9 +126,9 @@ class TestMCPInteractionStructuredFields(unittest.TestCase):
         )
 
         # MCP should handle data type requests (may return 400 instead of 404)
-        assert (
-            response.status_code in [400, 404]
-        ), f"Should return 400 or 404 for missing interaction endpoint, got {response.status_code}"
+        assert response.status_code in [400, 404], (
+            f"Should return 400 or 404 for missing interaction endpoint, got {response.status_code}"
+        )
 
         # If successful, verify response structure
         if response.status_code == 200:

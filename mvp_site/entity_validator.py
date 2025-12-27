@@ -11,7 +11,6 @@ from typing import Any
 
 from mvp_site import logging_util
 
-
 # =============================================================================
 # Utility Functions (consolidated from entity_utils.py)
 # =============================================================================
@@ -647,7 +646,9 @@ class EntityRetryManager:
 
         # Log final result
         if validation_result.passed:
-            logging_util.info(f"Entity validation passed after {retry_attempts} retries")
+            logging_util.info(
+                f"Entity validation passed after {retry_attempts} retries"
+            )
         else:
             logging_util.warning(
                 f"Entity validation failed after {retry_attempts} retries. Missing: {validation_result.missing_entities}"

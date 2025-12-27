@@ -30,9 +30,7 @@ class NumericFieldConverter:
         return value
 
     @classmethod
-    def convert_dict_with_fields(
-        cls, data: Any, numeric_fields: set[str]
-    ) -> Any:
+    def convert_dict_with_fields(cls, data: Any, numeric_fields: set[str]) -> Any:
         """
         Recursively convert specified numeric fields in a dictionary.
 
@@ -56,7 +54,9 @@ class NumericFieldConverter:
                 converted_list = []
                 for item in value:
                     if isinstance(item, dict):
-                        converted_list.append(cls.convert_dict_with_fields(item, numeric_fields))
+                        converted_list.append(
+                            cls.convert_dict_with_fields(item, numeric_fields)
+                        )
                     elif key in numeric_fields:
                         converted_list.append(cls.try_convert_to_int(item))
                     else:

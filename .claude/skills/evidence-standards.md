@@ -62,6 +62,35 @@ sha256sum -c evidence.json.sha256
 
 **Anti-pattern:** Embedding checksums inside JSON files (self-invalidating).
 
+**Checksum usability requirement:** `.sha256` files must reference the **local basename**
+(e.g., `evidence.json`), not a nested path like `artifacts/run_.../evidence.json`.
+This ensures `sha256sum -c` works when run from the evidence directory.
+
+### Evidence Package Consistency (NEW)
+
+**Single-run attribution:** If a bundle contains multiple runs, the docs **must**
+name the exact run directory used for claims (e.g., `run_YYYYMMDD...`). Claims
+must be traceable to one run only.
+
+**Doc ↔ data alignment:** Any item lists in methodology/evidence **must** be
+derived from actual test inputs or `game_state_snapshot.json`. Hardcoded or
+handwritten lists are invalid.
+
+**Threshold capture:** If pass/fail depends on thresholds (e.g.,
+`min_narrative_items`), those values must be recorded in `evidence.json` or the
+methodology so reviewers can verify the criteria.
+
+**Environment claims:** Only claim env vars that are read from the actual
+environment during the run (or omit them).
+
+**Unsupported claims:** CI status, Copilot analysis, or external validations
+must include their own evidence artifacts, otherwise omit those claims.
+
+**Bug-fix classification:** If a bundle labels a change as "new feature" to
+avoid before/after evidence, it must include a justification. Otherwise, for
+bug-fix claims, include a pre-fix reproduction and a post-fix run.
+
+
 ### Git Provenance Requirements
 
 Every evidence bundle MUST capture:
@@ -141,6 +170,14 @@ python -m mvp_site.main serve
 
 The captured system instruction will appear in `debug_info.system_instruction_text` in API responses.
 
+**Lightweight Prompt Tracking (for high-volume tests):**
+
+When full text capture is impractical (>50KB per response), use the lightweight alternative:
+- `debug_info.system_instruction_files`: List of prompt files loaded (e.g., `["prompts/master_directive.md", "prompts/game_state_instruction.md"]`)
+- `debug_info.system_instruction_char_count`: Total character count of combined prompts
+
+This proves which prompts were used without the ~100KB overhead per response. The file list provides provenance while keeping evidence bundles manageable.
+
 ### For Integration Claims
 
 Evidence MUST show:
@@ -154,6 +191,14 @@ Evidence MUST include:
 - Reproduction of original bug (before fix)
 - Same scenario with fix applied
 - Different outcome proving fix works
+
+### For New Feature Claims
+
+New features don't require "before" evidence since there's no prior behavior to compare.
+Instead, prove:
+- Feature works as specified (test results with pass/fail counts)
+- Correct prompts/code were used (`system_instruction_files` or code paths)
+- State changes correctly (game_state snapshots, database records)
 
 ### For LLM/API Behavior Claims
 
@@ -315,6 +360,95 @@ jq '[.[] | select(.user.login == "github-copilot[bot]")]'  # Misses "Copilot"
 jq '[.[] | select(.user.login | test("copilot"; "i"))]'
 ```
 
+## Documentation-Data Alignment (Lessons from equipc Review)
+
+When generating evidence documentation (methodology, evidence summary, notes), these rules prevent common mismatches:
+
+### 1. Derive All Claims from Actual Data
+
+**Never hardcode documentation content.** Generate it from source data:
+
+```python
+# ❌ BAD - Hardcoded claim
+methodology = "WORLDAI_DEV_MODE=true"
+
+# ✅ GOOD - Read from actual environment
+dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
+methodology = f"WORLDAI_DEV_MODE: {dev_mode}"
+```
+
+### 2. Warn on Missing/Dropped Data
+
+**Silent drops hide real mismatches.** Track and report edge cases:
+
+```python
+# ❌ BAD - Silently skip missing items
+items = [registry[id] for id in seeds if id in registry]
+
+# ✅ GOOD - Track and warn
+missing_ids = []
+items = []
+for id in seeds:
+    if id in registry:
+        items.append(registry[id])
+    else:
+        missing_ids.append(id)
+if missing_ids:
+    notes += f"WARNING: Missing IDs: {missing_ids}"
+```
+
+### 3. Display Denominators Must Match Totals
+
+**"Found X/Y (need Z)" must use correct Y.** Common mistake: using min_required as denominator:
+
+```python
+# ❌ BAD - Misleading: "4/2 (need 2)" suggests 200% match
+stats_col = f"{found}/{min_required} (need {min_required})"
+
+# ✅ GOOD - Clear: "4/4 (need 2)" shows 4 of 4 found, 2 was minimum
+stats_col = f"{found}/{len(total_required)} (need {min_required})"
+```
+
+### 4. Avoid Unverifiable Scope Claims
+
+**Don't claim "bug fix" vs "new feature" unless explicit.** These are product decisions:
+
+```python
+# ❌ BAD - Makes unverifiable claim
+methodology += "## New Feature (Not Bug Fix)\nThis is a new feature..."
+
+# ✅ GOOD - Stick to verifiable facts
+methodology += "## Test Scope\nValidates equipment display functionality."
+```
+
+### 5. Always Check Subprocess Return Codes
+
+**Subprocess output alone doesn't prove success.** Check returncode:
+
+```python
+# ❌ BAD - Ignores failures
+result = subprocess.run(cmd, capture_output=True)
+print(result.stdout)
+
+# ✅ GOOD - Warns on failure
+result = subprocess.run(cmd, capture_output=True)
+print(result.stdout)
+if result.returncode != 0:
+    print(f"WARNING: Command exited with code {result.returncode}")
+```
+
+### 6. Single Run Attribution
+
+**Evidence bundles must reference exactly ONE test run.** Ambiguous artifact scope breaks traceability:
+
+```python
+# ❌ BAD - Copies entire directory with multiple runs
+--artifact /path/to/all_runs/
+
+# ✅ GOOD - Copies specific run only
+--artifact /path/to/all_runs/run_20251227T051227_953691
+```
+
 ## Anti-Patterns
 
 - **"Tests pass" without evidence type** - Mock tests passing ≠ production working
@@ -324,6 +458,9 @@ jq '[.[] | select(.user.login | test("copilot"; "i"))]'
 - **Assertions without command output** - "Exit code 0" without showing the command
 - **Timestamp gaps** - Server captured at T, test run at T+1hr breaks provenance
 - **Summary/raw mismatch** - Automated counts that don't match raw data
+- **Hardcoded env claims** - Claiming WORLDAI_DEV_MODE=true without reading os.environ
+- **Silent data drops** - Skipping missing items without warning hides mismatches
+- **Wrong denominators** - Display showing "4/2" when there are 4 total items
 
 ## When to Stop and Ask
 

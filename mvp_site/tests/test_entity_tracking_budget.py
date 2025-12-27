@@ -35,16 +35,18 @@ class TestEntityTrackingBudget(unittest.TestCase):
         # Entity tracking that gets added AFTER truncation
         # These are realistic sizes for a game with 10+ NPCs
         entity_preload_text = "E" * 8000  # ~2000 tokens - NPC summaries
-        entity_specific_instructions = "F" * 6000  # ~1500 tokens - per-turn instructions
+        entity_specific_instructions = (
+            "F" * 6000
+        )  # ~1500 tokens - per-turn instructions
         entity_tracking_instruction = "G" * 4000  # ~1000 tokens - tracking rules
         timeline_log = "H" * 12000  # ~3000 tokens - story timeline
 
         # Total entity tracking overhead
         entity_overhead = (
-            entity_preload_text +
-            entity_specific_instructions +
-            entity_tracking_instruction +
-            timeline_log
+            entity_preload_text
+            + entity_specific_instructions
+            + entity_tracking_instruction
+            + timeline_log
         )
         entity_overhead_tokens = estimate_tokens(entity_overhead)
 
@@ -53,7 +55,7 @@ class TestEntityTrackingBudget(unittest.TestCase):
             llm_service.ENTITY_TRACKING_TOKEN_RESERVE,
             entity_overhead_tokens,
             f"ENTITY_TRACKING_TOKEN_RESERVE ({llm_service.ENTITY_TRACKING_TOKEN_RESERVE}) "
-            f"must be >= entity tracking overhead ({entity_overhead_tokens} tokens)."
+            f"must be >= entity tracking overhead ({entity_overhead_tokens} tokens).",
         )
 
     def test_entity_tracking_reserve_covers_production_overhead(self):
@@ -72,7 +74,7 @@ class TestEntityTrackingBudget(unittest.TestCase):
             llm_service.ENTITY_TRACKING_TOKEN_RESERVE,
             production_overhead_tokens,
             f"ENTITY_TRACKING_TOKEN_RESERVE ({llm_service.ENTITY_TRACKING_TOKEN_RESERVE}) "
-            f"must cover production overhead ({production_overhead_tokens} tokens)."
+            f"must cover production overhead ({production_overhead_tokens} tokens).",
         )
 
 
@@ -90,34 +92,34 @@ class TestScaffoldBudgetCalculation(unittest.TestCase):
         MAX_TIMELINE_LOG_TOKENS = 4000  # Long story timeline
 
         TOTAL_ENTITY_OVERHEAD = (
-            MAX_ENTITY_PRELOAD_TOKENS +
-            MAX_ENTITY_INSTRUCTIONS_TOKENS +
-            MAX_ENTITY_TRACKING_TOKENS +
-            MAX_TIMELINE_LOG_TOKENS
+            MAX_ENTITY_PRELOAD_TOKENS
+            + MAX_ENTITY_INSTRUCTIONS_TOKENS
+            + MAX_ENTITY_TRACKING_TOKENS
+            + MAX_TIMELINE_LOG_TOKENS
         )
 
         self.assertGreaterEqual(
             llm_service.ENTITY_TRACKING_TOKEN_RESERVE,
             TOTAL_ENTITY_OVERHEAD,
             f"ENTITY_TRACKING_TOKEN_RESERVE ({llm_service.ENTITY_TRACKING_TOKEN_RESERVE}) "
-            f"must be >= max entity overhead ({TOTAL_ENTITY_OVERHEAD})."
+            f"must be >= max entity overhead ({TOTAL_ENTITY_OVERHEAD}).",
         )
 
     def test_entity_tracking_reserve_constant_exists(self):
         """Verify the ENTITY_TRACKING_TOKEN_RESERVE constant exists and is reasonable."""
         self.assertTrue(
-            hasattr(llm_service, 'ENTITY_TRACKING_TOKEN_RESERVE'),
-            "ENTITY_TRACKING_TOKEN_RESERVE constant must exist in llm_service"
+            hasattr(llm_service, "ENTITY_TRACKING_TOKEN_RESERVE"),
+            "ENTITY_TRACKING_TOKEN_RESERVE constant must exist in llm_service",
         )
         self.assertGreater(
             llm_service.ENTITY_TRACKING_TOKEN_RESERVE,
             5000,
-            "ENTITY_TRACKING_TOKEN_RESERVE should be > 5000 tokens for safety"
+            "ENTITY_TRACKING_TOKEN_RESERVE should be > 5000 tokens for safety",
         )
         self.assertLess(
             llm_service.ENTITY_TRACKING_TOKEN_RESERVE,
             20000,
-            "ENTITY_TRACKING_TOKEN_RESERVE should be < 20000 to leave room for story"
+            "ENTITY_TRACKING_TOKEN_RESERVE should be < 20000 to leave room for story",
         )
 
 

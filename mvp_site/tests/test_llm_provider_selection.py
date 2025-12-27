@@ -1,4 +1,3 @@
-
 from types import SimpleNamespace
 
 import pytest
@@ -127,7 +126,10 @@ def test_allowlisted_user_gets_gemini_3(monkeypatch):
     monkeypatch.setattr(
         llm_service,
         "get_user_settings",
-        lambda user_id: {"llm_provider": "gemini", "gemini_model": constants.GEMINI_PREMIUM_MODEL},
+        lambda user_id: {
+            "llm_provider": "gemini",
+            "gemini_model": constants.GEMINI_PREMIUM_MODEL,
+        },
     )
 
     selection = llm_service._select_provider_and_model("user-1")
@@ -142,7 +144,10 @@ def test_non_allowlisted_user_falls_back(monkeypatch):
     monkeypatch.setattr(
         llm_service,
         "get_user_settings",
-        lambda user_id: {"llm_provider": "gemini", "gemini_model": constants.GEMINI_PREMIUM_MODEL},
+        lambda user_id: {
+            "llm_provider": "gemini",
+            "gemini_model": constants.GEMINI_PREMIUM_MODEL,
+        },
     )
 
     selection = llm_service._select_provider_and_model("user-1")
@@ -159,7 +164,10 @@ def test_firebase_error_falls_back(monkeypatch):
     monkeypatch.setattr(
         llm_service,
         "get_user_settings",
-        lambda user_id: {"llm_provider": "gemini", "gemini_model": constants.GEMINI_PREMIUM_MODEL},
+        lambda user_id: {
+            "llm_provider": "gemini",
+            "gemini_model": constants.GEMINI_PREMIUM_MODEL,
+        },
     )
 
     selection = llm_service._select_provider_and_model("user-1")

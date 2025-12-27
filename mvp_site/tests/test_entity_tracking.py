@@ -87,8 +87,12 @@ class TestEntityTracking(unittest.TestCase):
         # Verify the NPC ID was regenerated with proper npc_ prefix
         assert len(manifest.npcs) == 1
         npc = manifest.npcs[0]
-        assert npc.entity_id.startswith("npc_"), f"Expected npc_ prefix, got: {npc.entity_id}"
-        assert re.match(r"^npc_[\w]+_\d{3}$", npc.entity_id), f"Invalid format: {npc.entity_id}"
+        assert npc.entity_id.startswith("npc_"), (
+            f"Expected npc_ prefix, got: {npc.entity_id}"
+        )
+        assert re.match(r"^npc_[\w]+_\d{3}$", npc.entity_id), (
+            f"Invalid format: {npc.entity_id}"
+        )
 
     def setUp(self):
         """Set up test data"""
@@ -524,21 +528,21 @@ class TestEntityTracking(unittest.TestCase):
         # RED: Verify missing entities are detected
         assert not red_result.passed, "RED: Should detect missing entities"
         assert red_result.retry_needed, "RED: Should need retry for missing entities"
-        assert (
-            "Gideon" in red_result.found_entities
-        ), "RED: Should find mentioned entity"
-        assert (
-            "Sariel" in red_result.missing_entities
-        ), "RED: Should detect missing entity"
-        assert (
-            "Rowan" in red_result.missing_entities
-        ), "RED: Should detect missing entity"
-        assert (
-            "Tavern Keeper" in red_result.missing_entities
-        ), "RED: Should detect missing entity"
-        assert (
-            len(red_result.retry_suggestions) > 0
-        ), "RED: Should provide retry suggestions"
+        assert "Gideon" in red_result.found_entities, (
+            "RED: Should find mentioned entity"
+        )
+        assert "Sariel" in red_result.missing_entities, (
+            "RED: Should detect missing entity"
+        )
+        assert "Rowan" in red_result.missing_entities, (
+            "RED: Should detect missing entity"
+        )
+        assert "Tavern Keeper" in red_result.missing_entities, (
+            "RED: Should detect missing entity"
+        )
+        assert len(red_result.retry_suggestions) > 0, (
+            "RED: Should provide retry suggestions"
+        )
 
         print(f"   ❌ DETECTED MISSING: {red_result.missing_entities}")
         print(f"   ✅ FOUND: {red_result.found_entities}")
@@ -557,12 +561,12 @@ class TestEntityTracking(unittest.TestCase):
             + red_result_with_unknown.missing_entities
         )
         assert "Unknown" not in all_entities, "RED: Should filter out Unknown entities"
-        assert (
-            "Gideon" in red_result_with_unknown.found_entities
-        ), "RED: Should still find real entities"
-        assert (
-            "Sariel" in red_result_with_unknown.missing_entities
-        ), "RED: Should still detect missing real entities"
+        assert "Gideon" in red_result_with_unknown.found_entities, (
+            "RED: Should still find real entities"
+        )
+        assert "Sariel" in red_result_with_unknown.missing_entities, (
+            "RED: Should still detect missing real entities"
+        )
 
         print("   🚫 FILTERED UNKNOWN: Unknown entities properly excluded")
 
@@ -584,12 +588,12 @@ class TestEntityTracking(unittest.TestCase):
         # GREEN: Verify all entities are found
         assert green_result.passed, "GREEN: Should pass with all entities present"
         assert not green_result.retry_needed, "GREEN: Should not need retry"
-        assert (
-            len(green_result.missing_entities) == 0
-        ), "GREEN: Should have no missing entities"
-        assert len(green_result.found_entities) == len(
-            expected_entities
-        ), "GREEN: Should find all entities"
+        assert len(green_result.missing_entities) == 0, (
+            "GREEN: Should have no missing entities"
+        )
+        assert len(green_result.found_entities) == len(expected_entities), (
+            "GREEN: Should find all entities"
+        )
         assert green_result.confidence > 0.8, "GREEN: Should have high confidence"
 
         # GREEN: Verify specific entities are found
@@ -606,16 +610,16 @@ class TestEntityTracking(unittest.TestCase):
         )
 
         # GREEN: Verify Unknown filtering doesn't break success case
-        assert (
-            green_result_with_unknown.passed
-        ), "GREEN: Should pass even with Unknown in input"
+        assert green_result_with_unknown.passed, (
+            "GREEN: Should pass even with Unknown in input"
+        )
         all_entities_green = (
             green_result_with_unknown.found_entities
             + green_result_with_unknown.missing_entities
         )
-        assert (
-            "Unknown" not in all_entities_green
-        ), "GREEN: Should filter out Unknown entities"
+        assert "Unknown" not in all_entities_green, (
+            "GREEN: Should filter out Unknown entities"
+        )
 
         print("   🚫 UNKNOWN FILTERED: Still properly excluded in success case")
 
@@ -641,12 +645,12 @@ class TestEntityTracking(unittest.TestCase):
         # Summary assertions
         assert not red_result.passed, "RED phase should fail"
         assert green_result.passed, "GREEN phase should pass"
-        assert len(red_result.found_entities) < len(
-            green_result.found_entities
-        ), "GREEN should find more entities than RED"
-        assert len(red_result.missing_entities) > len(
-            green_result.missing_entities
-        ), "RED should have more missing entities than GREEN"
+        assert len(red_result.found_entities) < len(green_result.found_entities), (
+            "GREEN should find more entities than RED"
+        )
+        assert len(red_result.missing_entities) > len(green_result.missing_entities), (
+            "RED should have more missing entities than GREEN"
+        )
 
 
 if __name__ == "__main__":

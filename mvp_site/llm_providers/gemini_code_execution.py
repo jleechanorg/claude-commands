@@ -48,9 +48,27 @@ _RNG_PATTERNS = (
     "np.random.permutation",
 )
 _RNG_FUNCTIONS_BY_MODULE = {
-    "random": {"randint", "choice", "random", "uniform", "randrange", "sample", "shuffle"},
+    "random": {
+        "randint",
+        "choice",
+        "random",
+        "uniform",
+        "randrange",
+        "sample",
+        "shuffle",
+    },
     "secrets": {"randbelow", "choice"},
-    "numpy.random": {"randint", "choice", "random", "uniform", "randrange", "sample", "shuffle", "integers", "permutation"},
+    "numpy.random": {
+        "randint",
+        "choice",
+        "random",
+        "uniform",
+        "randrange",
+        "sample",
+        "shuffle",
+        "integers",
+        "permutation",
+    },
 }
 _SYSTEM_RANDOM_METHODS = {"randint", "randrange", "choice", "random", "uniform"}
 _DEFAULT_RNG_METHODS = {"integers", "choice", "random", "uniform", "permutation"}
@@ -156,7 +174,10 @@ def _code_contains_rng(code_text: str) -> bool:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if alias.name in {"random", "secrets", "numpy", "numpy.random"} and alias.asname:
+                if (
+                    alias.name in {"random", "secrets", "numpy", "numpy.random"}
+                    and alias.asname
+                ):
                     alias_map[alias.asname] = alias.name
         elif isinstance(node, ast.ImportFrom):
             module = node.module
@@ -197,8 +218,12 @@ def _code_contains_rng(code_text: str) -> bool:
         if not call_target:
             return
         normalized = _normalize_call_target(call_target, alias_map)
-        is_system_random = normalized == "random.SystemRandom" or call_target in system_random_names
-        is_default_rng = normalized == "numpy.random.default_rng" or call_target in default_rng_names
+        is_system_random = (
+            normalized == "random.SystemRandom" or call_target in system_random_names
+        )
+        is_default_rng = (
+            normalized == "numpy.random.default_rng" or call_target in default_rng_names
+        )
         if not (is_system_random or is_default_rng):
             return
         for target in targets:
@@ -231,16 +256,18 @@ def _code_contains_rng(code_text: str) -> bool:
                 if isinstance(node.func.value, ast.Call):
                     factory_target = _get_call_target(node.func.value.func)
                     if factory_target:
-                        normalized_factory = _normalize_call_target(factory_target, alias_map)
+                        normalized_factory = _normalize_call_target(
+                            factory_target, alias_map
+                        )
                         if (
-                            (normalized_factory == "random.SystemRandom" or factory_target in system_random_names)
-                            and attr in _SYSTEM_RANDOM_METHODS
-                        ):
+                            normalized_factory == "random.SystemRandom"
+                            or factory_target in system_random_names
+                        ) and attr in _SYSTEM_RANDOM_METHODS:
                             return True
                         if (
-                            (normalized_factory == "numpy.random.default_rng" or factory_target in default_rng_names)
-                            and attr in _DEFAULT_RNG_METHODS
-                        ):
+                            normalized_factory == "numpy.random.default_rng"
+                            or factory_target in default_rng_names
+                        ) and attr in _DEFAULT_RNG_METHODS:
                             return True
                 elif isinstance(node.func.value, ast.Name):
                     base = node.func.value.id
@@ -405,7 +432,9 @@ def extract_code_execution_parts_summary(
                         output = getattr(result, "output", None)
                         summary["code_execution_result_samples"].append(
                             {
-                                "outcome": _truncate(outcome) if outcome is not None else "",
+                                "outcome": _truncate(outcome)
+                                if outcome is not None
+                                else "",
                                 "output": _truncate(output)
                                 if output is not None
                                 else _truncate(result),
@@ -433,9 +462,8 @@ def log_code_execution_parts(
         model_name,
         evidence,
     )
-    if (
-        logging_util.getLogger().isEnabledFor(logging_util.DEBUG)
-        and evidence.get("code_execution_used")
+    if logging_util.getLogger().isEnabledFor(logging_util.DEBUG) and evidence.get(
+        "code_execution_used"
     ):
         detail = extract_code_execution_parts_summary(response)
         logging_util.debug(
@@ -473,7 +501,12 @@ def _log_code_execution_dice_results(evidence: dict[str, int | bool | str]) -> N
         modifier = entry.get("modifier")
         total = entry.get("total")
         label = entry.get("label")
-        if notation is None or not isinstance(rolls, list) or not rolls or total is None:
+        if (
+            notation is None
+            or not isinstance(rolls, list)
+            or not rolls
+            or total is None
+        ):
             continue
         logging_util.info(
             logging_util.with_campaign(

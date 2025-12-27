@@ -4,6 +4,7 @@ Regression tests for output token budget calculation.
 These tests ensure that the output token budget is calculated correctly
 based on the actual model context window, not the compaction limit.
 """
+
 import os
 import unittest
 from unittest.mock import MagicMock, patch
@@ -71,7 +72,7 @@ class TestOutputTokenBudgetRegression(unittest.TestCase):
             output_limit,
             llm_service.OUTPUT_TOKEN_RESERVE_MIN,
             f"Output starved to {output_limit} tokens! "
-            f"Should be at least {llm_service.OUTPUT_TOKEN_RESERVE_MIN}"
+            f"Should be at least {llm_service.OUTPUT_TOKEN_RESERVE_MIN}",
         )
 
     def test_safe_output_limit_context_exceeded_raises_error(self):
@@ -107,11 +108,11 @@ class TestOutputTokenBudgetRegression(unittest.TestCase):
         error_msg = str(ctx.exception)
         self.assertTrue(
             "context" in error_msg.lower() or "token" in error_msg.lower(),
-            f"Error should mention context or tokens, got: {error_msg}"
+            f"Error should mention context or tokens, got: {error_msg}",
         )
         self.assertTrue(
             "20%" in error_msg or "80%" in error_msg,
-            f"Error should mention the 20%/80% reserve ratio, got: {error_msg}"
+            f"Error should mention the 20%/80% reserve ratio, got: {error_msg}",
         )
 
     def test_output_budget_independent_of_input_size(self):
@@ -126,10 +127,10 @@ class TestOutputTokenBudgetRegression(unittest.TestCase):
         """
         # Test various input sizes - all should get the same output budget
         input_sizes = [
-            (1_000, 500),       # Small: 1.5K tokens
-            (50_000, 10_000),   # Medium: 60K tokens
+            (1_000, 500),  # Small: 1.5K tokens
+            (50_000, 10_000),  # Medium: 60K tokens
             (200_000, 50_000),  # Large: 250K tokens
-            (400_000, 100_000), # Very large: 500K tokens (still within 1M context)
+            (400_000, 100_000),  # Very large: 500K tokens (still within 1M context)
         ]
 
         output_budgets = []
@@ -151,7 +152,7 @@ class TestOutputTokenBudgetRegression(unittest.TestCase):
                 budget,
                 expected_cap,
                 f"Input size {total_input:,} got output budget {budget:,}, "
-                f"expected {expected_cap:,}. Output should be independent of input size!"
+                f"expected {expected_cap:,}. Output should be independent of input size!",
             )
 
     def test_safe_output_limit_respects_context_budget_for_llama(self):
@@ -165,12 +166,15 @@ class TestOutputTokenBudgetRegression(unittest.TestCase):
         )
         # Use OUTPUT_TOKEN_RESERVE_MIN as minimum, not 1
         expected_remaining = max(
-            llm_service.OUTPUT_TOKEN_RESERVE_MIN, safe_budget - (prompt_tokens + system_tokens)
+            llm_service.OUTPUT_TOKEN_RESERVE_MIN,
+            safe_budget - (prompt_tokens + system_tokens),
         )
         model_cap = constants.MODEL_MAX_OUTPUT_TOKENS.get(
             "llama-3.3-70b", llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
         )
-        expected = min(llm_service.JSON_MODE_MAX_OUTPUT_TOKENS, model_cap, expected_remaining)
+        expected = min(
+            llm_service.JSON_MODE_MAX_OUTPUT_TOKENS, model_cap, expected_remaining
+        )
 
         result = llm_service._get_safe_output_token_limit(
             "llama-3.3-70b",  # Updated: 3.1-70b retired from Cerebras
@@ -199,22 +203,34 @@ class TestTokenCalculationProviders(unittest.TestCase):
         model_name = "zai-glm-4.6"  # A Cerebras model, not a Gemini model
 
         # Mock gemini_provider.count_tokens to fail if called (it should NOT be called)
-        with patch("mvp_site.llm_service.gemini_provider.count_tokens") as mock_gemini_count:
+        with patch(
+            "mvp_site.llm_service.gemini_provider.count_tokens"
+        ) as mock_gemini_count:
             mock_gemini_count.side_effect = Exception(
                 "FAIL: gemini_provider.count_tokens() should NOT be called for Cerebras provider!"
             )
 
             # This should NOT raise an exception - it should use estimate_tokens() instead
-            prompt_tokens, system_tokens = llm_service._calculate_prompt_and_system_tokens(
-                user_prompt_contents, system_instruction, provider_name, model_name
+            prompt_tokens, system_tokens = (
+                llm_service._calculate_prompt_and_system_tokens(
+                    user_prompt_contents, system_instruction, provider_name, model_name
+                )
             )
 
             # Verify gemini API was NOT called
             mock_gemini_count.assert_not_called()
 
             # Verify we got reasonable token estimates
-            self.assertGreater(prompt_tokens, 0, f"Expected positive prompt_tokens, got {prompt_tokens}")
-            self.assertGreater(system_tokens, 0, f"Expected positive system_tokens, got {system_tokens}")
+            self.assertGreater(
+                prompt_tokens,
+                0,
+                f"Expected positive prompt_tokens, got {prompt_tokens}",
+            )
+            self.assertGreater(
+                system_tokens,
+                0,
+                f"Expected positive system_tokens, got {system_tokens}",
+            )
 
     def test_calculate_tokens_openrouter_uses_estimate_not_gemini_api(self):
         """Verify OpenRouter provider also uses estimate_tokens() instead of Gemini API."""
@@ -223,13 +239,17 @@ class TestTokenCalculationProviders(unittest.TestCase):
         provider_name = constants.LLM_PROVIDER_OPENROUTER
         model_name = "anthropic/claude-3-opus"  # An OpenRouter model
 
-        with patch("mvp_site.llm_service.gemini_provider.count_tokens") as mock_gemini_count:
+        with patch(
+            "mvp_site.llm_service.gemini_provider.count_tokens"
+        ) as mock_gemini_count:
             mock_gemini_count.side_effect = Exception(
                 "FAIL: gemini_provider.count_tokens() should NOT be called for OpenRouter provider!"
             )
 
-            prompt_tokens, system_tokens = llm_service._calculate_prompt_and_system_tokens(
-                user_prompt_contents, system_instruction, provider_name, model_name
+            prompt_tokens, system_tokens = (
+                llm_service._calculate_prompt_and_system_tokens(
+                    user_prompt_contents, system_instruction, provider_name, model_name
+                )
             )
 
             mock_gemini_count.assert_not_called()
@@ -243,18 +263,22 @@ class TestTokenCalculationProviders(unittest.TestCase):
         provider_name = constants.LLM_PROVIDER_GEMINI
         model_name = constants.DEFAULT_GEMINI_MODEL
 
-        with patch("mvp_site.llm_service.gemini_provider.count_tokens") as mock_gemini_count:
+        with patch(
+            "mvp_site.llm_service.gemini_provider.count_tokens"
+        ) as mock_gemini_count:
             mock_gemini_count.return_value = 100  # Return mock token count
 
-            prompt_tokens, system_tokens = llm_service._calculate_prompt_and_system_tokens(
-                user_prompt_contents, system_instruction, provider_name, model_name
+            prompt_tokens, system_tokens = (
+                llm_service._calculate_prompt_and_system_tokens(
+                    user_prompt_contents, system_instruction, provider_name, model_name
+                )
             )
 
             # Gemini provider SHOULD call the Gemini API
             self.assertGreaterEqual(
                 mock_gemini_count.call_count,
                 1,
-                "Gemini provider should use gemini_provider.count_tokens()"
+                "Gemini provider should use gemini_provider.count_tokens()",
             )
 
 
@@ -293,11 +317,16 @@ class TestEndToEndOutputBudget(unittest.TestCase):
 
         # Ensure we have an API key to avoid fallback logic
         with patch.dict(os.environ, {"GEMINI_API_KEY": "dummy_key"}):
-            with patch.object(
-                gemini_provider, "count_tokens", side_effect=mock_count_tokens
-            ), patch.object(
-                # Updated to patch code_execution method as newer models (gemini-3) use this strategy
-                gemini_provider, "generate_content_with_code_execution", side_effect=mock_generate_json_mode_content
+            with (
+                patch.object(
+                    gemini_provider, "count_tokens", side_effect=mock_count_tokens
+                ),
+                patch.object(
+                    # Updated to patch code_execution method as newer models (gemini-3) use this strategy
+                    gemini_provider,
+                    "generate_content_with_code_execution",
+                    side_effect=mock_generate_json_mode_content,
+                ),
             ):
                 # Call the full LLM service flow
                 llm_service._call_llm_api(
@@ -311,14 +340,14 @@ class TestEndToEndOutputBudget(unittest.TestCase):
         # Verify output tokens were NOT starved
         self.assertIsNotNone(
             captured_max_output_tokens,
-            "json_mode_max_output_tokens was not passed to provider"
+            "json_mode_max_output_tokens was not passed to provider",
         )
         self.assertGreaterEqual(
             captured_max_output_tokens,
             llm_service.OUTPUT_TOKEN_RESERVE_MIN,
             f"OUTPUT STARVATION BUG: max_output_tokens={captured_max_output_tokens} "
             f"but should be at least {llm_service.OUTPUT_TOKEN_RESERVE_MIN}. "
-            f"This means the 305K input context starved the output budget!"
+            f"This means the 305K input context starved the output budget!",
         )
         # With the fix, we should get a healthy output budget (close to JSON_MODE_MAX_OUTPUT_TOKENS)
         # since 305K input is well within the 1M model context
@@ -326,7 +355,7 @@ class TestEndToEndOutputBudget(unittest.TestCase):
             captured_max_output_tokens,
             llm_service.JSON_MODE_MAX_OUTPUT_TOKENS,
             f"Expected max_output_tokens={llm_service.JSON_MODE_MAX_OUTPUT_TOKENS} (capped by JSON limit), "
-            f"got {captured_max_output_tokens}. Output budget should be independent of input size."
+            f"got {captured_max_output_tokens}. Output budget should be independent of input size.",
         )
 
 

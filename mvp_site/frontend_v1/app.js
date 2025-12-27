@@ -37,6 +37,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Global function for equipment button - sends "list my equipment" to backend
+  window.sendEquipmentQuery = async function () {
+    if (!currentCampaignId) {
+      console.warn('No campaign loaded - cannot send equipment query');
+      return;
+    }
+
+    const userInputEl = document.getElementById('user-input');
+    const localSpinner = document.getElementById('loading-spinner');
+    const timerInfo = document.getElementById('timer-info');
+    const equipmentQuery = 'list my equipment';
+
+    // Show spinner and disable input
+    if (localSpinner) localSpinner.style.display = 'block';
+    if (window.loadingMessages) {
+      const messageEl = localSpinner?.querySelector('.loading-message');
+      if (messageEl) window.loadingMessages.start('interaction', messageEl);
+    }
+    if (userInputEl) userInputEl.disabled = true;
+    if (timerInfo) timerInfo.textContent = '';
+
+    // Show user message in chat
+    appendToStory('user', equipmentQuery, 'character');
+
+    try {
+      const { data, duration } = await fetchApi(
+        `/api/campaigns/${currentCampaignId}/interaction`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ input: equipmentQuery, mode: 'character' }),
+        },
+      );
+      const narrativeText =
+        data.narrative || data.response || '[Error: No response from server]';
+      appendToStory(
+        'gemini',
+        narrativeText,
+        null,
+        data.debug_mode || false,
+        data.user_scene_number,
+        data,
+      );
+      if (timerInfo) timerInfo.textContent = `Response time: ${duration}s`;
+    } catch (error) {
+      console.error('Equipment query failed:', error);
+      appendToStory('system', 'Sorry, an error occurred. Please try again.');
+    } finally {
+      if (localSpinner) localSpinner.style.display = 'none';
+      if (window.loadingMessages) window.loadingMessages.stop();
+      if (userInputEl) {
+        userInputEl.disabled = false;
+        userInputEl.focus();
+      }
+    }
+  };
+
   const showView = (viewName) => {
     Object.values(views).forEach((v) => v && v.classList.remove('active-view'));
     if (views[viewName]) {
@@ -346,6 +402,32 @@ document.addEventListener('DOMContentLoaded', () => {
       html += '</div>';
     }
 
+    // 6. Equipment display (deterministic backend data, not LLM-generated)
+    if (
+      fullData.equipment_display &&
+      Array.isArray(fullData.equipment_display) &&
+      fullData.equipment_display.length > 0
+    ) {
+      // Filter out items without valid names
+      const validItems = fullData.equipment_display.filter((item) => {
+        const name = item.name || item.item || '';
+        return name && name.trim() !== '';
+      });
+
+      if (validItems.length > 0) {
+        html +=
+          '<div class="equipment-display" style="background-color: #e6f3ff; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+        html += '<strong>⚔️ Equipment:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
+        validItems.forEach((item) => {
+          const slot = sanitizeHtml(item.slot || 'unknown');
+          const itemName = sanitizeHtml(item.name || item.item || '');
+          const stats = item.stats ? ` - ${sanitizeHtml(item.stats)}` : '';
+          html += `<li><strong>${slot}:</strong> ${itemName}${stats}</li>`;
+        });
+        html += '</ul></div>';
+      }
+    }
+
     return html;
   };
 
@@ -485,6 +567,14 @@ document.addEventListener('DOMContentLoaded', () => {
     ) {
       const escapedHeader = sanitizeHtml(fullData.session_header);
       html += `<div class="session-header">${escapedHeader}</div>`;
+      // Quick action button for equipment list
+      html += `<div class="quick-actions" style="margin: 5px 0;">
+        <button class="btn btn-sm btn-outline-secondary equipment-btn"
+                onclick="window.sendEquipmentQuery()"
+                title="List all equipped items">
+          <i class="bi bi-backpack2"></i> Equipment
+        </button>
+      </div>`;
     }
 
     // Process debug content - backend now handles stripping based on debug_mode

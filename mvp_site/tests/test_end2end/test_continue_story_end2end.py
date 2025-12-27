@@ -59,10 +59,18 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "planning_block": {
                 "thinking": "The player wants to continue. I should describe the next leg of the journey.",
                 "choices": {
-                    "press_on": {"text": "Press On", "description": "Continue deeper into the mountains", "risk_level": "medium"},
-                    "set_camp": {"text": "Set Camp", "description": "Rest for the night", "risk_level": "low"}
-                }
-            }
+                    "press_on": {
+                        "text": "Press On",
+                        "description": "Continue deeper into the mountains",
+                        "risk_level": "medium",
+                    },
+                    "set_camp": {
+                        "text": "Set Camp",
+                        "description": "Rest for the night",
+                        "risk_level": "low",
+                    },
+                },
+            },
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
@@ -90,7 +98,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_continue_story_success_without_dice_rolls(
         self, mock_gemini_generate, mock_get_db
     ):
@@ -117,7 +127,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # Verify response - with auth stubbed, should get 200
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify story data structure
@@ -133,12 +145,14 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         assert found_narrative, "Expected narrative not found in response"
 
         # Verify Gemini (default provider) was called at least once
-        assert (
-            mock_gemini_generate.call_count >= 1
-        ), "Gemini native two-phase provider should be invoked as the default"
+        assert mock_gemini_generate.call_count >= 1, (
+            "Gemini native two-phase provider should be invoked as the default"
+        )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_time_anomaly_includes_dice_retry_notice(
         self, mock_gemini_generate, mock_get_db
     ):
@@ -150,7 +164,14 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
 
         # Set a known world_time in current game state
-        old_world_time = {"year": 1000, "month": 1, "day": 10, "hour": 10, "minute": 0, "second": 0}
+        old_world_time = {
+            "year": 1000,
+            "month": 1,
+            "day": 10,
+            "hour": 10,
+            "minute": 0,
+            "second": 0,
+        }
         fake_firestore.collection("users").document(self.test_user_id).collection(
             "campaigns"
         ).document(campaign_id).collection("game_states").document("current_state").set(
@@ -162,7 +183,10 @@ class TestContinueStoryEnd2End(unittest.TestCase):
                 "items": ["Magic Sword"],
                 "combat_state": {"in_combat": False},
                 "custom_campaign_state": {},
-                "world_data": {"world_time": old_world_time, "current_location_name": "Bridge"},
+                "world_data": {
+                    "world_time": old_world_time,
+                    "current_location_name": "Bridge",
+                },
             }
         )
 
@@ -182,7 +206,14 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         }
 
         # Second response: includes dice_rolls but moves time backward
-        backward_world_time = {"year": 999, "month": 1, "day": 9, "hour": 10, "minute": 0, "second": 0}
+        backward_world_time = {
+            "year": 999,
+            "month": 1,
+            "day": 9,
+            "hour": 10,
+            "minute": 0,
+            "second": 0,
+        }
         second_response = {
             "narrative": "Your blade strikes true.",
             "entities_mentioned": ["Goblin"],
@@ -221,7 +252,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         god_mode_response = data.get("god_mode_response", "")

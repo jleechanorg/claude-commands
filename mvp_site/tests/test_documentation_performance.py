@@ -74,6 +74,7 @@ def test_file_sizes():
     project_root = get_project_root()
     if not project_root:
         import pytest
+
         pytest.skip("Project root not found")
 
     for doc_file in DOCUMENTATION_FILES:
@@ -107,6 +108,7 @@ def test_read_performance():
     project_root = get_project_root()
     if not project_root:
         import pytest
+
         pytest.skip("Project root not found")
 
     for doc_file in DOCUMENTATION_FILES:

@@ -3,6 +3,7 @@
 Verification script for CampaignCreationV2 memory leak fixes
 This script verifies that the memory leak fixes are properly implemented
 """
+
 import os
 import re
 
@@ -10,8 +11,17 @@ import re
 def test_memory_leak_fixes():
     """Test that all memory leak fixes are properly implemented"""
     # Use absolute path from project root
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    component_path = os.path.join(project_root, "mvp_site", "frontend_v2", "src", "components", "CampaignCreationV2.tsx")
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    component_path = os.path.join(
+        project_root,
+        "mvp_site",
+        "frontend_v2",
+        "src",
+        "components",
+        "CampaignCreationV2.tsx",
+    )
 
     # Check if file exists
     if not os.path.exists(component_path):
@@ -25,42 +35,44 @@ def test_memory_leak_fixes():
     print("🔍 Verifying memory leak fixes in CampaignCreationV2...")
 
     # Test 1: Check for progressIntervalRef
-    if 'progressIntervalRef = useRef<NodeJS.Timeout | null>(null)' in content:
+    if "progressIntervalRef = useRef<NodeJS.Timeout | null>(null)" in content:
         print("✅ 1. progressIntervalRef properly declared")
     else:
         print("❌ 1. progressIntervalRef not found or incorrect")
         return False
 
     # Test 2: Check for completionTimeoutRef
-    if 'completionTimeoutRef = useRef<NodeJS.Timeout | null>(null)' in content:
+    if "completionTimeoutRef = useRef<NodeJS.Timeout | null>(null)" in content:
         print("✅ 2. completionTimeoutRef properly declared")
     else:
         print("❌ 2. completionTimeoutRef not found or incorrect")
         return False
 
     # Test 3: Check for clearAllTimers function
-    if 'const clearAllTimers = () =>' in content:
+    if "const clearAllTimers = () =>" in content:
         print("✅ 3. clearAllTimers helper function exists")
     else:
         print("❌ 3. clearAllTimers helper function not found")
         return False
 
     # Test 4: Check cleanup in useEffect
-    if 'clearAllTimers()' in content and 'return () => {' in content:
+    if "clearAllTimers()" in content and "return () => {" in content:
         print("✅ 4. useEffect cleanup calls clearAllTimers")
     else:
         print("❌ 4. useEffect cleanup not properly implemented")
         return False
 
     # Test 5: Check progressInterval is stored in ref
-    if 'progressIntervalRef.current = progressInterval' in content:
+    if "progressIntervalRef.current = progressInterval" in content:
         print("✅ 5. progressInterval stored in ref for cleanup")
     else:
         print("❌ 5. progressInterval not properly stored in ref")
         return False
 
     # Test 6: Check timeout clearing in error handling using ref
-    timeout_clear_pattern = r'if \(timeoutRef\.current\) \{\s*clearTimeout\(timeoutRef\.current\)'
+    timeout_clear_pattern = (
+        r"if \(timeoutRef\.current\) \{\s*clearTimeout\(timeoutRef\.current\)"
+    )
     if re.search(timeout_clear_pattern, content, re.MULTILINE):
         print("✅ 6. timeout properly cleared in error handling using ref")
     else:
@@ -68,21 +80,23 @@ def test_memory_leak_fixes():
         return False
 
     # Test 7: Check progressInterval cleared on error
-    if 'clearInterval(progressInterval)' in content:
+    if "clearInterval(progressInterval)" in content:
         print("✅ 7. progressInterval cleared on error")
     else:
         print("❌ 7. progressInterval not cleared on error")
         return False
 
     # Test 8: Check completion message improvement
-    if 'Campaign ready! Taking you to your adventure' in content:
+    if "Campaign ready! Taking you to your adventure" in content:
         print("✅ 8. Completion message improved for better UX")
     else:
         print("❌ 8. Completion message not improved")
         return False
 
     # Test 9: Check auto-retry timeout cleanup
-    retry_cleanup_pattern = r'if \(timeoutRef\.current\) \{\s*clearTimeout\(timeoutRef\.current\)'
+    retry_cleanup_pattern = (
+        r"if \(timeoutRef\.current\) \{\s*clearTimeout\(timeoutRef\.current\)"
+    )
     if re.search(retry_cleanup_pattern, content, re.MULTILINE):
         print("✅ 9. Auto-retry timeout properly cleaned up before setting new one")
     else:
@@ -90,7 +104,10 @@ def test_memory_leak_fixes():
         return False
 
     # Test 10: Check Promise-based completion timeout
-    if 'await new Promise<void>((resolve)' in content and 'completionTimeoutRef.current' in content:
+    if (
+        "await new Promise<void>((resolve)" in content
+        and "completionTimeoutRef.current" in content
+    ):
         print("✅ 10. Promise-based completion timeout with proper tracking")
     else:
         print("❌ 10. Promise-based completion timeout not properly implemented")
@@ -108,11 +125,21 @@ def test_memory_leak_fixes():
 
     return True
 
+
 def test_component_structure():
     """Test basic component structure"""
     # Use absolute path from project root
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    component_path = os.path.join(project_root, "mvp_site", "frontend_v2", "src", "components", "CampaignCreationV2.tsx")
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    component_path = os.path.join(
+        project_root,
+        "mvp_site",
+        "frontend_v2",
+        "src",
+        "components",
+        "CampaignCreationV2.tsx",
+    )
 
     with open(component_path) as f:
         content = f.read()
@@ -120,7 +147,7 @@ def test_component_structure():
     print("\n🔍 Verifying component structure...")
 
     # Check imports
-    required_imports = ['useState', 'useEffect', 'useRef']
+    required_imports = ["useState", "useEffect", "useRef"]
     for import_item in required_imports:
         if import_item in content:
             print(f"✅ {import_item} imported correctly")
@@ -129,7 +156,7 @@ def test_component_structure():
             return False
 
     # Check component exports
-    if 'export function CampaignCreationV2(' in content:
+    if "export function CampaignCreationV2(" in content:
         print("✅ Component properly exported")
     else:
         print("❌ Component export not found")
@@ -137,7 +164,8 @@ def test_component_structure():
 
     return True
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("=" * 60)
     print("CAMPAIGNCREATIONV2 MEMORY LEAK FIXES VERIFICATION")
     print("=" * 60)

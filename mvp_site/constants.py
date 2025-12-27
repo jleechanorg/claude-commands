@@ -64,18 +64,15 @@ GEMINI_MODEL_MAPPING = {
     # Knowledge cutoff: Jan 2025. Can handle 100+ tools simultaneously.
     # Source: https://blog.google/products/gemini/gemini-3-flash/
     "gemini-3-flash-preview": "gemini-3-flash-preview",  # ✅ New default (Dec 2025)
-
     # gemini-3-pro-preview: 1M context, 64K output, thought signatures for multi-step
     # reasoning, function calling, Google Search, Code Execution. Requires passing
     # thought signatures in conversation history for reliable agent behavior.
     # Source: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-pro
     "gemini-3-pro-preview": "gemini-3-pro-preview",
-
     # gemini-2.0-flash: 1M context, 50K output, compositional function calling,
     # code execution, native tool calling (search, code_execution, user functions).
     # Source: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash
     "gemini-2.0-flash": "gemini-2.0-flash",
-
     # Legacy compatibility - redirect 2.5 users to Gemini 3 Flash (better & similar price)
     "gemini-2.5-flash": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
     "gemini-2.5-pro": "gemini-3-flash-preview",  # Auto-redirect to Gemini 3 Flash
@@ -102,7 +99,7 @@ GEMINI_MODEL_MAPPING = {
 MODELS_WITH_CODE_EXECUTION: set[str] = {
     # Gemini 3.x - Full support (confirmed Dec 2025)
     "gemini-3-flash-preview",  # ✅ Released Dec 17, 2025 - default model
-    "gemini-3-pro-preview",    # ✅ Released Nov 2025 - most capable
+    "gemini-3-pro-preview",  # ✅ Released Nov 2025 - most capable
 }
 
 
@@ -114,24 +111,20 @@ ALLOWED_OPENROUTER_MODELS = [
     # parallel tool calls, zero-shot/few-shot tool use, multilingual (8 languages).
     # Source: https://ai.meta.com/blog/meta-llama-3-1/
     DEFAULT_OPENROUTER_MODEL,
-
     # meta-llama/llama-3.1-405b-instruct: 128K context, native function calling,
     # built-in tools (brave_search, wolfram_alpha), multilingual, state-of-the-art
     # tool use. Rivals frontier models on general knowledge and math.
     # Source: https://huggingface.co/blog/llama31
     "meta-llama/llama-3.1-405b-instruct",
-
     # openai/gpt-oss-120b: 131K context, native function calling, tool use,
     # structured outputs, browsing. Matches o4-mini on tool calling (TauBench).
     # Runs at 3K tokens/sec on Cerebras. $0.35/$0.75 per M tokens.
     # Source: https://openai.com/index/introducing-gpt-oss/
     "openai/gpt-oss-120b",
-
     # z-ai/glm-4.6: 200K context, OpenAI-style function calling, native tool use.
     # Note: OpenRouter spelling differs from Cerebras "zai-glm-4.6" (same model).
     # Source: https://docs.z.ai/guides/llm/glm-4.6
     "z-ai/glm-4.6",
-
     # x-ai/grok-4.1-fast: 2M context, frontier tool-calling performance, real-time
     # X data, web search, code execution in secure Python sandbox, Files/Collections
     # Search, MCP tools. Multi-turn RL training across full context window.
@@ -158,20 +151,17 @@ ALLOWED_CEREBRAS_MODELS = [
     # modes. Stronger tool use and search-based agents. $2.25/$2.75 per M tokens.
     # Source: https://docs.z.ai/guides/llm/glm-4.6
     DEFAULT_CEREBRAS_MODEL,
-
     # qwen-3-235b-a22b-instruct-2507: 256K context (extendable to 1M), excellent
     # tool calling, Qwen-Agent framework support. MoE model (235B total, 22B active).
     # Enhanced long-context understanding, multilingual, strong code/math/reasoning.
     # Most cost-efficient option at $0.60/$1.20 per M tokens.
     # Source: https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507
     "qwen-3-235b-a22b-instruct-2507",
-
     # llama-3.3-70b: 65K context, function calling supported BUT multi-turn tool
     # calling NOT supported on Cerebras. Will error if tool_calls array included
     # in assistant turn. Use single-turn pattern only. $0.85/$1.20 per M tokens.
     # Source: https://inference-docs.cerebras.ai/capabilities/tool-use
     "llama-3.3-70b",
-
     # gpt-oss-120b: 131K context, full function calling support, tool use,
     # structured outputs. TauBench tested for tool calling. Runs at 3K tokens/sec
     # on Cerebras infrastructure. Budget reasoning model at $0.35/$0.75 per M.
@@ -239,6 +229,7 @@ ALLOWED_DEBUG_MODE_VALUES = [True, False]
 MODE_CHARACTER = "character"
 MODE_GOD = "god"
 MODE_COMBAT = "combat"
+MODE_INFO = "info"  # For equipment/inventory/stats queries with trimmed prompts
 
 # Mode switching detection phrases
 MODE_SWITCH_PHRASES = [
@@ -430,7 +421,9 @@ GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.
 MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
 GOD_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "god_mode_instruction.md")
-COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "combat_system_instruction.md")
+COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
+    PROMPTS_DIR, "combat_system_instruction.md"
+)
 
 # --- PROMPT LOADING ORDER ---
 # User-selectable prompts that are conditionally added based on campaign settings
@@ -468,37 +461,43 @@ CHARACTER_CREATION_REMINDER = CHARACTER_DESIGN_REMINDER
 
 # Combatant types that should NOT be removed during cleanup
 # These represent friendly/allied combatants that persist after combat
-FRIENDLY_COMBATANT_TYPES: frozenset[str] = frozenset({
-    "pc",         # Player character
-    "player",     # Alternative player designation
-    "party",      # Party member
-    "companion",  # Animal companion, familiar, etc.
-    "ally",       # Friendly NPC fighting alongside party
-    "friendly",   # Explicitly friendly combatant
-    "support",    # Support character (healer, etc.)
-})
+FRIENDLY_COMBATANT_TYPES: frozenset[str] = frozenset(
+    {
+        "pc",  # Player character
+        "player",  # Alternative player designation
+        "party",  # Party member
+        "companion",  # Animal companion, familiar, etc.
+        "ally",  # Friendly NPC fighting alongside party
+        "friendly",  # Explicitly friendly combatant
+        "support",  # Support character (healer, etc.)
+    }
+)
 
 # Neutral combatant types that are non-hostile but not allied
-NEUTRAL_COMBATANT_TYPES: frozenset[str] = frozenset({
-    "neutral",      # Explicitly neutral
-    "bystander",    # Passive observer
-    "civilian",     # Non-combatant civilian
-    "noncombatant", # Explicit non-combatant
-})
+NEUTRAL_COMBATANT_TYPES: frozenset[str] = frozenset(
+    {
+        "neutral",  # Explicitly neutral
+        "bystander",  # Passive observer
+        "civilian",  # Non-combatant civilian
+        "noncombatant",  # Explicit non-combatant
+    }
+)
 
 # Generic/enemy roles that indicate a combatant can be removed after defeat
 # NPCs with these roles (or None/empty) are considered generic enemies
-GENERIC_ENEMY_ROLES: frozenset[str | None] = frozenset({
-    None,         # No role assigned
-    "",           # Empty role
-    "enemy",      # Standard enemy
-    "minion",     # Expendable enemy
-    "generic",    # Generic combatant
-    "unknown",    # Unknown type (default to enemy)
-    "hostile",    # Hostile NPC
-    "foe",        # Alternative enemy designation
-    "monster",    # Monster/creature enemy
-})
+GENERIC_ENEMY_ROLES: frozenset[str | None] = frozenset(
+    {
+        None,  # No role assigned
+        "",  # Empty role
+        "enemy",  # Standard enemy
+        "minion",  # Expendable enemy
+        "generic",  # Generic combatant
+        "unknown",  # Unknown type (default to enemy)
+        "hostile",  # Hostile NPC
+        "foe",  # Alternative enemy designation
+        "monster",  # Monster/creature enemy
+    }
+)
 
 
 def is_friendly_combatant(combatant_type: str | None) -> bool:
@@ -512,7 +511,11 @@ def is_friendly_combatant(combatant_type: str | None) -> bool:
     """
     if combatant_type is None:
         return False
-    normalized = combatant_type.lower().strip() if isinstance(combatant_type, str) else combatant_type
+    normalized = (
+        combatant_type.lower().strip()
+        if isinstance(combatant_type, str)
+        else combatant_type
+    )
     return normalized in FRIENDLY_COMBATANT_TYPES
 
 

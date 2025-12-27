@@ -48,8 +48,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         # Setup: Create game state with a named NPC (has role "merchant")
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Marcus", "initiative": 14, "type": "enemy", "hp_current": 0, "hp_max": 30},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Marcus",
+                "initiative": 14,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 30,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -75,7 +87,7 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
             "Marcus",
             game_state.npc_data,
             f"Named NPC 'Marcus' should be preserved in npc_data, not deleted. "
-            f"Current npc_data: {game_state.npc_data}"
+            f"Current npc_data: {game_state.npc_data}",
         )
 
         # The NPC should be marked as dead
@@ -83,14 +95,14 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertIn(
             "dead",
             marcus_data.get("status", []),
-            f"Marcus should have 'dead' in status. Current data: {marcus_data}"
+            f"Marcus should have 'dead' in status. Current data: {marcus_data}",
         )
 
         # HP should be 0
         self.assertEqual(
             marcus_data.get("hp_current", -1),
             0,
-            f"Marcus hp_current should be 0. Current data: {marcus_data}"
+            f"Marcus hp_current should be 0. Current data: {marcus_data}",
         )
 
     def test_named_npc_with_backstory_marked_dead_not_deleted(self):
@@ -99,8 +111,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Lady Vex", "initiative": 10, "type": "enemy", "hp_current": 0, "hp_max": 25},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Lady Vex",
+                "initiative": 10,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 25,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -122,14 +146,14 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertIn(
             "Lady Vex",
             game_state.npc_data,
-            f"Named NPC 'Lady Vex' should be preserved. npc_data: {game_state.npc_data}"
+            f"Named NPC 'Lady Vex' should be preserved. npc_data: {game_state.npc_data}",
         )
 
         lady_vex_data = game_state.npc_data.get("Lady Vex", {})
         self.assertIn(
             "dead",
             lady_vex_data.get("status", []),
-            f"Lady Vex should have 'dead' status. Data: {lady_vex_data}"
+            f"Lady Vex should have 'dead' status. Data: {lady_vex_data}",
         )
 
     def test_named_npc_with_background_marked_dead_not_deleted(self):
@@ -138,8 +162,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Archivist", "initiative": 9, "type": "enemy", "hp_current": 0, "hp_max": 18},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Archivist",
+                "initiative": 9,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 18,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -159,19 +195,19 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertIn(
             "Archivist",
             game_state.npc_data,
-            f"NPCs with narrative background should be preserved. npc_data: {game_state.npc_data}"
+            f"NPCs with narrative background should be preserved. npc_data: {game_state.npc_data}",
         )
 
         archivist = game_state.npc_data.get("Archivist", {})
         self.assertIn(
             "dead",
             archivist.get("status", []),
-            f"NPC with background should be marked dead. Data: {archivist}"
+            f"NPC with background should be marked dead. Data: {archivist}",
         )
         self.assertEqual(
             archivist.get("hp_current"),
             0,
-            f"HP should be zeroed for preserved NPCs. Data: {archivist}"
+            f"HP should be zeroed for preserved NPCs. Data: {archivist}",
         )
 
     def test_named_npc_with_is_important_flag_marked_dead(self):
@@ -180,8 +216,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "King Aldric", "initiative": 5, "type": "enemy", "hp_current": 0, "hp_max": 100},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "King Aldric",
+                "initiative": 5,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 100,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -200,7 +248,7 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertIn(
             "King Aldric",
             game_state.npc_data,
-            f"Important NPC should be preserved. npc_data: {game_state.npc_data}"
+            f"Important NPC should be preserved. npc_data: {game_state.npc_data}",
         )
 
         king_data = game_state.npc_data.get("King Aldric", {})
@@ -212,8 +260,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Archivist", "initiative": 7, "type": "enemy", "hp_current": 0, "hp_max": 18},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Archivist",
+                "initiative": 7,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 18,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -232,17 +292,17 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertIsInstance(
             archivist.get("status"),
             list,
-            f"Status should be normalized to list. Current: {archivist.get('status')}"
+            f"Status should be normalized to list. Current: {archivist.get('status')}",
         )
         self.assertIn(
             "dead",
             archivist.get("status", []),
-            f"Named NPC should be marked dead even when status was a string. Data: {archivist}"
+            f"Named NPC should be marked dead even when status was a string. Data: {archivist}",
         )
         self.assertIn(
             "exhausted",
             archivist.get("status", []),
-            f"Existing status value should be preserved. Data: {archivist}"
+            f"Existing status value should be preserved. Data: {archivist}",
         )
 
     def test_named_npc_status_none_becomes_dead_list(self):
@@ -251,8 +311,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Chronicler", "initiative": 9, "type": "enemy", "hp_current": 0, "hp_max": 12},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Chronicler",
+                "initiative": 9,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 12,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -270,7 +342,7 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertListEqual(
             chronicler.get("status"),
             ["dead"],
-            f"Status None should normalize to ['dead']. Data: {chronicler}"
+            f"Status None should normalize to ['dead']. Data: {chronicler}",
         )
 
     def test_generic_enemy_still_deleted(self):
@@ -281,8 +353,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Goblin Scout", "initiative": 12, "type": "enemy", "hp_current": 0, "hp_max": 10},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Goblin Scout",
+                "initiative": 12,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 10,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -304,7 +388,7 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertNotIn(
             "Goblin Scout",
             game_state.npc_data,
-            f"Generic enemy should be deleted. npc_data: {game_state.npc_data}"
+            f"Generic enemy should be deleted. npc_data: {game_state.npc_data}",
         )
 
     def test_generic_minion_enemy_deleted(self):
@@ -313,8 +397,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Orc Minion", "initiative": 8, "type": "enemy", "hp_current": 0, "hp_max": 15},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Orc Minion",
+                "initiative": 8,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 15,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -338,8 +434,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Random Wolf", "initiative": 6, "type": "enemy", "hp_current": 0, "hp_max": 8},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Random Wolf",
+                "initiative": 6,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 8,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -363,8 +471,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Silent Thug", "initiative": 11, "type": "enemy", "hp_current": 0, "hp_max": 12},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Silent Thug",
+                "initiative": 11,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 12,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -383,7 +503,7 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertNotIn(
             "Silent Thug",
             game_state.npc_data,
-            f"Enemies with empty role should be treated as generic. npc_data: {game_state.npc_data}"
+            f"Enemies with empty role should be treated as generic. npc_data: {game_state.npc_data}",
         )
 
     def test_enemy_with_uppercase_role_treated_as_generic_and_deleted(self):
@@ -392,8 +512,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Shouted Bandit", "initiative": 9, "type": "enemy", "hp_current": 0, "hp_max": 14},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Shouted Bandit",
+                "initiative": 9,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 14,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -412,7 +544,7 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertNotIn(
             "Shouted Bandit",
             game_state.npc_data,
-            f"Uppercase generic roles should be normalized and deleted. npc_data: {game_state.npc_data}"
+            f"Uppercase generic roles should be normalized and deleted. npc_data: {game_state.npc_data}",
         )
 
     def test_enemy_with_unknown_type_defaulted_to_generic_and_deleted(self):
@@ -422,32 +554,36 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
             # No type provided -> start_combat will default to "unknown"
             {"name": "Shadowy Figure", "initiative": 9, "hp_current": 0, "hp_max": 12},
         ]
 
         game_state.start_combat(combatants_data)
-        game_state.npc_data = {
-            "Shadowy Figure": {"name": "Shadowy Figure"}
-        }
+        game_state.npc_data = {"Shadowy Figure": {"name": "Shadowy Figure"}}
 
         defeated = game_state.cleanup_defeated_enemies()
 
         self.assertIn(
             "Shadowy Figure",
             defeated,
-            f"Enemies with missing type should still be treated as defeated. defeated: {defeated}"
+            f"Enemies with missing type should still be treated as defeated. defeated: {defeated}",
         )
         self.assertNotIn(
             "Shadowy Figure",
             game_state.combat_state["combatants"],
-            f"Unknown-type enemies should be removed from combatants. combatants: {game_state.combat_state['combatants']}"
+            f"Unknown-type enemies should be removed from combatants. combatants: {game_state.combat_state['combatants']}",
         )
         self.assertNotIn(
             "Shadowy Figure",
             game_state.npc_data,
-            f"Unknown-type enemies should be removed from npc_data as generic foes. npc_data: {game_state.npc_data}"
+            f"Unknown-type enemies should be removed from npc_data as generic foes. npc_data: {game_state.npc_data}",
         )
 
     def test_pc_not_removed_when_initiative_entry_missing_type(self):
@@ -456,14 +592,28 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 0, "hp_max": 50},
-            {"name": "Goblin Raider", "initiative": 12, "type": "enemy", "hp_current": 0, "hp_max": 20},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 0,
+                "hp_max": 50,
+            },
+            {
+                "name": "Goblin Raider",
+                "initiative": 12,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 20,
+            },
         ]
 
         game_state.start_combat(combatants_data)
         # Simulate missing initiative entry/type for the PC (e.g., LLM omitted it)
         game_state.combat_state["initiative_order"] = [
-            entry for entry in game_state.combat_state["initiative_order"] if entry["name"] != "Hero"
+            entry
+            for entry in game_state.combat_state["initiative_order"]
+            if entry["name"] != "Hero"
         ]
         game_state.npc_data = {
             "Hero": {"name": "Hero", "role": "pc", "status": ["unconscious"]},
@@ -476,22 +626,22 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
             "Hero",
             final_state["combat_state"]["combatants"],
             f"Friendly combatant should remain even when initiative type is missing. "
-            f"Combatants: {final_state['combat_state']['combatants']}"
+            f"Combatants: {final_state['combat_state']['combatants']}",
         )
         self.assertIn(
             "Hero",
             final_state["npc_data"],
-            f"Friendly combatant should not be removed from npc_data. npc_data: {final_state.get('npc_data', {})}"
+            f"Friendly combatant should not be removed from npc_data. npc_data: {final_state.get('npc_data', {})}",
         )
         self.assertNotIn(
             "Goblin Raider",
             final_state["combat_state"]["combatants"],
-            f"Enemy should still be cleaned up. Combatants: {final_state['combat_state']['combatants']}"
+            f"Enemy should still be cleaned up. Combatants: {final_state['combat_state']['combatants']}",
         )
         self.assertNotIn(
             "Goblin Raider",
             final_state["npc_data"],
-            f"Enemy should be removed from npc_data. npc_data: {final_state.get('npc_data', {})}"
+            f"Enemy should be removed from npc_data. npc_data: {final_state.get('npc_data', {})}",
         )
 
     def test_mixed_named_and_generic_enemies(self):
@@ -500,10 +650,34 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 20, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Marcus", "initiative": 14, "type": "enemy", "hp_current": 0, "hp_max": 30},
-            {"name": "Goblin 1", "initiative": 12, "type": "enemy", "hp_current": 0, "hp_max": 8},
-            {"name": "Goblin 2", "initiative": 10, "type": "enemy", "hp_current": 0, "hp_max": 8},
+            {
+                "name": "Hero",
+                "initiative": 20,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Marcus",
+                "initiative": 14,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 30,
+            },
+            {
+                "name": "Goblin 1",
+                "initiative": 12,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 8,
+            },
+            {
+                "name": "Goblin 2",
+                "initiative": 10,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 8,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -548,8 +722,20 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Marcus", "initiative": 14, "type": "enemy", "hp_current": 30, "hp_max": 30},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Marcus",
+                "initiative": 14,
+                "type": "enemy",
+                "hp_current": 30,
+                "hp_max": 30,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -564,9 +750,7 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         # Simulate AI response setting Marcus HP to 0
         ai_proposed_changes = {
             "combat_state": {
-                "combatants": {
-                    "Marcus": {"hp_current": 0, "status": ["dead"]}
-                }
+                "combatants": {"Marcus": {"hp_current": 0, "status": ["dead"]}}
             }
         }
 
@@ -579,21 +763,21 @@ class TestNamedNPCDeathStatePersistence(unittest.TestCase):
         self.assertNotIn(
             "Marcus",
             final_state["combat_state"]["combatants"],
-            "Dead NPC should not be in combatants list"
+            "Dead NPC should not be in combatants list",
         )
 
         # But Marcus SHOULD still exist in npc_data with dead status
         self.assertIn(
             "Marcus",
             final_state["npc_data"],
-            f"Named dead NPC should be preserved in npc_data. npc_data: {final_state.get('npc_data', {})}"
+            f"Named dead NPC should be preserved in npc_data. npc_data: {final_state.get('npc_data', {})}",
         )
 
         marcus_npc = final_state["npc_data"].get("Marcus", {})
         self.assertIn(
             "dead",
             marcus_npc.get("status", []),
-            f"Marcus should have dead status in npc_data. Data: {marcus_npc}"
+            f"Marcus should have dead status in npc_data. Data: {marcus_npc}",
         )
 
 
@@ -618,8 +802,20 @@ class TestMainStoryFlowCombatCleanup(unittest.TestCase):
         # Setup initial state with active combat
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Bandit Leader", "initiative": 14, "type": "enemy", "hp_current": 25, "hp_max": 25},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Bandit Leader",
+                "initiative": 14,
+                "type": "enemy",
+                "hp_current": 25,
+                "hp_max": 25,
+            },
         ]
 
         game_state.start_combat(combatants_data)
@@ -636,24 +832,26 @@ class TestMainStoryFlowCombatCleanup(unittest.TestCase):
         # Simulate AI response killing the bandit leader
         ai_response_state_changes = {
             "combat_state": {
-                "combatants": {
-                    "Bandit Leader": {"hp_current": 0, "status": ["dead"]}
-                }
+                "combatants": {"Bandit Leader": {"hp_current": 0, "status": ["dead"]}}
             }
         }
 
         # Apply state changes (simulating update_state_with_changes call)
-        updated_state = update_state_with_changes(initial_state, ai_response_state_changes)
+        updated_state = update_state_with_changes(
+            initial_state, ai_response_state_changes
+        )
 
         # CRITICAL: This cleanup call is what's missing in main story flow!
         # Without this, defeated enemies persist
-        final_state = apply_automatic_combat_cleanup(updated_state, ai_response_state_changes)
+        final_state = apply_automatic_combat_cleanup(
+            updated_state, ai_response_state_changes
+        )
 
         # Verify the dead enemy is removed from combat
         self.assertNotIn(
             "Bandit Leader",
             final_state["combat_state"]["combatants"],
-            "Defeated enemy should be removed from combatants after cleanup"
+            "Defeated enemy should be removed from combatants after cleanup",
         )
 
         # For named NPCs: Should be preserved with dead status (after Fix 2)
@@ -661,7 +859,7 @@ class TestMainStoryFlowCombatCleanup(unittest.TestCase):
         self.assertIn(
             "Bandit Leader",
             final_state["npc_data"],
-            f"Named NPC should be preserved in npc_data. npc_data: {final_state.get('npc_data', {})}"
+            f"Named NPC should be preserved in npc_data. npc_data: {final_state.get('npc_data', {})}",
         )
 
     def test_cleanup_without_explicit_changes_still_cleans_defeated(self):
@@ -673,30 +871,48 @@ class TestMainStoryFlowCombatCleanup(unittest.TestCase):
         """
         game_state = GameState()
         combatants_data = [
-            {"name": "Hero", "initiative": 18, "type": "pc", "hp_current": 50, "hp_max": 50},
-            {"name": "Dead Boss", "initiative": 14, "type": "enemy", "hp_current": 0, "hp_max": 50},
+            {
+                "name": "Hero",
+                "initiative": 18,
+                "type": "pc",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            {
+                "name": "Dead Boss",
+                "initiative": 14,
+                "type": "enemy",
+                "hp_current": 0,
+                "hp_max": 50,
+            },
         ]
 
         game_state.start_combat(combatants_data)
         game_state.npc_data = {
-            "Dead Boss": {"name": "Dead Boss", "role": "boss", "backstory": "Was a boss"}
+            "Dead Boss": {
+                "name": "Dead Boss",
+                "role": "boss",
+                "backstory": "Was a boss",
+            }
         }
 
         initial_state = game_state.to_dict()
 
         # AI makes unrelated changes (no combat_state updates)
-        ai_response_state_changes = {
-            "world_data": {"world_time": "afternoon"}
-        }
+        ai_response_state_changes = {"world_data": {"world_time": "afternoon"}}
 
-        updated_state = update_state_with_changes(initial_state, ai_response_state_changes)
-        final_state = apply_automatic_combat_cleanup(updated_state, ai_response_state_changes)
+        updated_state = update_state_with_changes(
+            initial_state, ai_response_state_changes
+        )
+        final_state = apply_automatic_combat_cleanup(
+            updated_state, ai_response_state_changes
+        )
 
         # The pre-existing defeated enemy should be cleaned up
         self.assertNotIn(
             "Dead Boss",
             final_state["combat_state"]["combatants"],
-            "Pre-defeated enemies should be cleaned up even without explicit combat changes"
+            "Pre-defeated enemies should be cleaned up even without explicit combat changes",
         )
 
 

@@ -44,7 +44,9 @@ def generate_openai_compatible_content(
     error_log_prefix: str = "",
     extract_text_from_message_fn: Callable[[dict[str, Any]], Any] | None = None,
     postprocess_text_fn: Callable[[Any], str] | None = None,
-    validate_response_fn: Callable[[dict[str, Any], dict[str, Any], Any, list[dict] | None], None]
+    validate_response_fn: Callable[
+        [dict[str, Any], dict[str, Any], Any, list[dict] | None], None
+    ]
     | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Call an OpenAI-compatible chat-completions endpoint and return (text, raw_json)."""

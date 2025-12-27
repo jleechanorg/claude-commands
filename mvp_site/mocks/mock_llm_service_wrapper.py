@@ -6,8 +6,8 @@ import os
 import sys
 
 from .structured_fields_fixtures import (
-    INITIAL_CAMPAIGN_RESPONSE,
     FULL_STRUCTURED_RESPONSE,
+    INITIAL_CAMPAIGN_RESPONSE,
 )
 
 # Add parent directory to path for imports

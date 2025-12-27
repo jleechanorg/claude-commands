@@ -82,11 +82,9 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
             "The ancient ruins stretch before you, their weathered stones telling "
             "tales of civilizations long forgotten. Mysterious runes pulse with "
             "ethereal energy as you step through the crumbling archway. ",
-
             "Your footsteps echo through the vast chamber, disturbing centuries "
             "of dust. Strange shadows dance along the walls, cast by torches "
             "that seem to burn without fuel. The air grows thick with magic. ",
-
             "A distant rumble echoes through the corridors as something ancient "
             "stirs in the depths below. The party exchanges nervous glances, "
             "weapons drawn and spells at the ready for whatever comes next. ",
@@ -103,23 +101,29 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
             if i % 2 == 0:
                 # Player turn - shorter but still substantial
                 action = player_actions[i % len(player_actions)]
-                story_context.append({
-                    "actor": "player",
-                    "text": f"Turn {i}: {action}" + action * 2,  # ~200 chars
-                    "sequence_id": i + 1,
-                })
+                story_context.append(
+                    {
+                        "actor": "player",
+                        "text": f"Turn {i}: {action}" + action * 2,  # ~200 chars
+                        "sequence_id": i + 1,
+                    }
+                )
             else:
                 # GM turn - longer narrative content
                 narrative = narrative_templates[i % len(narrative_templates)]
-                story_context.append({
-                    "actor": "gm",
-                    "text": f"Turn {i}: {narrative}" + narrative,  # ~400 chars
-                    "sequence_id": i + 1,
-                })
+                story_context.append(
+                    {
+                        "actor": "gm",
+                        "text": f"Turn {i}: {narrative}" + narrative,  # ~400 chars
+                        "sequence_id": i + 1,
+                    }
+                )
 
         return story_context
 
-    def _setup_fake_firestore_with_timeline_bug_campaign(self, fake_firestore, campaign_id):
+    def _setup_fake_firestore_with_timeline_bug_campaign(
+        self, fake_firestore, campaign_id
+    ):
         """Set up Firestore with game state designed to trigger timeline_log bug."""
         fake_firestore.collection("users").document(self.test_user_id).collection(
             "campaigns"
@@ -166,7 +170,9 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.cerebras_provider.generate_content")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_large_story_context_does_not_overflow_due_to_timeline_log(
         self, mock_gemini_generate, mock_cerebras_generate, mock_get_db
     ):
@@ -189,7 +195,9 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
         mock_get_db.return_value = fake_firestore
 
         campaign_id = "timeline_log_bug_test"
-        self._setup_fake_firestore_with_timeline_bug_campaign(fake_firestore, campaign_id)
+        self._setup_fake_firestore_with_timeline_bug_campaign(
+            fake_firestore, campaign_id
+        )
 
         mock_cerebras_generate.return_value = FakeLLMResponse(
             json.dumps(self.mock_llm_response_data)
@@ -202,10 +210,9 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
         # Before the fix, timeline_log duplication would cause overflow
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I examine the ancient altar carefully",
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {"input": "I examine the ancient altar carefully", "mode": "character"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -220,7 +227,7 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
                 response_data,
                 f"Timeline log budget bug triggered! The scaffold estimate does not "
                 f"account for timeline_log which duplicates story content. "
-                f"Response: {response_data[:500]}"
+                f"Response: {response_data[:500]}",
             )
 
         # Should succeed - if timeline_log budget fix works
@@ -228,7 +235,7 @@ class TestTimelineLogBudgetEnd2End(unittest.TestCase):
             response.status_code,
             200,
             f"Expected 200 (timeline_log budget fix working), got {response.status_code}: "
-            f"{response_data[:500]}"
+            f"{response_data[:500]}",
         )
 
 
@@ -269,7 +276,7 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
             overhead_ratio,
             1.10,
             f"Timeline log overhead is too high: {overhead_ratio:.2f}x story tokens. "
-            f"Story: {story_tokens}, Timeline: {timeline_tokens}"
+            f"Story: {story_tokens}, Timeline: {timeline_tokens}",
         )
 
         # Timeline log should be at LEAST as large as story (it contains all story text)
@@ -277,7 +284,7 @@ class TestTimelineLogBudgetCalculation(unittest.TestCase):
             timeline_tokens,
             story_tokens * 0.95,  # Allow 5% tolerance for estimation variance
             f"Timeline log should contain at least as many tokens as story. "
-            f"Story: {story_tokens}, Timeline: {timeline_tokens}"
+            f"Story: {story_tokens}, Timeline: {timeline_tokens}",
         )
 
 

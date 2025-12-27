@@ -48,12 +48,17 @@ class TestCentralizedModelSelection(unittest.TestCase):
         """
         # Mock user settings returning valid gemini model preference (non-premium)
         # Disable all three test mode environment variables
-        with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings, \
-             patch.dict(os.environ, {
-                 "TESTING": "false",
-                 "MOCK_SERVICES_MODE": "false",
-                 "FORCE_TEST_MODEL": "false"
-             }):
+        with (
+            patch("mvp_site.llm_service.get_user_settings") as mock_get_settings,
+            patch.dict(
+                os.environ,
+                {
+                    "TESTING": "false",
+                    "MOCK_SERVICES_MODE": "false",
+                    "FORCE_TEST_MODEL": "false",
+                },
+            ),
+        ):
             # Use default model explicitly set by user (not premium to avoid allowlist check)
             mock_get_settings.return_value = {"gemini_model": "gemini-2.0-flash"}
 
@@ -73,15 +78,17 @@ class TestCentralizedModelSelection(unittest.TestCase):
         If user has an invalid/unsupported model preference, fall back to DEFAULT_MODEL.
         """
         # Mock user settings returning invalid model preference
-        with patch("mvp_site.llm_service.get_user_settings") as mock_get_settings, \
-             patch.dict(
-                 os.environ,
-                 {
-                     "TESTING": "false",
-                     "MOCK_SERVICES_MODE": "false",
-                     "FORCE_TEST_MODEL": "false",
-                 },
-             ):
+        with (
+            patch("mvp_site.llm_service.get_user_settings") as mock_get_settings,
+            patch.dict(
+                os.environ,
+                {
+                    "TESTING": "false",
+                    "MOCK_SERVICES_MODE": "false",
+                    "FORCE_TEST_MODEL": "false",
+                },
+            ),
+        ):
             mock_get_settings.return_value = {"gemini_model": "invalid-model-name"}
 
             result = _select_model_for_user("test-user-789")

@@ -19,11 +19,11 @@ import os
 import unittest
 from unittest.mock import patch
 
-from mvp_site import main, constants
+from mvp_site import constants, main
 from mvp_site.agents import (
     BaseAgent,
-    StoryModeAgent,
     GodModeAgent,
+    StoryModeAgent,
     get_agent_for_input,
 )
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
@@ -68,10 +68,18 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
             "planning_block": {
                 "thinking": "The player is exploring the forest.",
                 "choices": {
-                    "continue": {"text": "Continue", "description": "Keep walking", "risk_level": "low"},
-                    "rest": {"text": "Rest", "description": "Take a break", "risk_level": "safe"}
-                }
-            }
+                    "continue": {
+                        "text": "Continue",
+                        "description": "Keep walking",
+                        "risk_level": "low",
+                    },
+                    "rest": {
+                        "text": "Rest",
+                        "description": "Take a break",
+                        "risk_level": "safe",
+                    },
+                },
+            },
         }
 
         # Standard mock god mode response
@@ -81,13 +89,11 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
             "narrative": "",
             "entities_mentioned": [],
             "location_confirmed": "Enchanted Forest",
-            "state_updates": {
-                "player_character_data": {"level": 10}
-            },
+            "state_updates": {"player_character_data": {"level": 10}},
             "planning_block": {
                 "thinking": "Administrative command to modify character level.",
-                "choices": {}
-            }
+                "choices": {},
+            },
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
@@ -123,7 +129,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
                         "day": 10,
                         "hour": 10,
                         "minute": 0,
-                    }
+                    },
                 },
                 "npc_data": {},
                 "combat_state": {"in_combat": False},
@@ -148,8 +154,9 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         for user_input in test_inputs:
             agent = get_agent_for_input(user_input)
             self.assertIsInstance(
-                agent, StoryModeAgent,
-                f"Expected StoryModeAgent for input: {user_input}"
+                agent,
+                StoryModeAgent,
+                f"Expected StoryModeAgent for input: {user_input}",
             )
             self.assertEqual(agent.MODE, constants.MODE_CHARACTER)
 
@@ -165,8 +172,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         for user_input in test_inputs:
             agent = get_agent_for_input(user_input)
             self.assertIsInstance(
-                agent, GodModeAgent,
-                f"Expected GodModeAgent for input: {user_input}"
+                agent, GodModeAgent, f"Expected GodModeAgent for input: {user_input}"
             )
             self.assertEqual(agent.MODE, constants.MODE_GOD)
 
@@ -184,8 +190,9 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         for user_input, expected_type in edge_cases:
             agent = get_agent_for_input(user_input)
             self.assertIsInstance(
-                agent, expected_type,
-                f"Expected {expected_type.__name__} for input: {user_input}"
+                agent,
+                expected_type,
+                f"Expected {expected_type.__name__} for input: {user_input}",
             )
 
     # =========================================================================
@@ -246,10 +253,9 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         # Make story mode request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I explore the forest deeper",
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {"input": "I explore the forest deeper", "mode": "character"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -282,10 +288,9 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         # Make god mode request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "GOD MODE: Set my level to 10",
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {"input": "GOD MODE: Set my level to 10", "mode": "character"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -297,7 +302,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
         self.assertIn("god_mode_response", data)
         self.assertEqual(
             data["god_mode_response"],
-            "Level has been set to 10. Character stats updated accordingly."
+            "Level has been set to 10. Character stats updated accordingly.",
         )
 
     @patch("mvp_site.firestore_service.get_db")
@@ -317,10 +322,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
 
         response1 = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I look around",
-                "mode": "character"
-            }),
+            data=json.dumps({"input": "I look around", "mode": "character"}),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -337,10 +339,9 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
 
         response2 = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "GOD MODE: Set level to 10",
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {"input": "GOD MODE: Set level to 10", "mode": "character"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -356,10 +357,7 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
 
         response3 = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "Continue exploring",
-                "mode": "character"
-            }),
+            data=json.dumps({"input": "Continue exploring", "mode": "character"}),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -379,7 +377,10 @@ class TestAgentArchitectureEnd2End(unittest.TestCase):
 
         agent = StoryModeAgent()
         instructions = agent.build_system_instructions(
-            selected_prompts=[constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS],
+            selected_prompts=[
+                constants.PROMPT_TYPE_NARRATIVE,
+                constants.PROMPT_TYPE_MECHANICS,
+            ],
             use_default_world=False,
             include_continuation_reminder=True,
         )

@@ -24,6 +24,9 @@ sys.path.insert(0, project_root)
 
 from mvp_site import constants
 
+# PromptBuilder lives with agent prompt utilities
+from mvp_site.agent_prompts import PromptBuilder
+
 # Import from agents module (canonical location)
 from mvp_site.agents import (
     BaseAgent,
@@ -33,18 +36,15 @@ from mvp_site.agents import (
     get_agent_for_input,
 )
 
-# PromptBuilder lives with agent prompt utilities
-from mvp_site.agent_prompts import PromptBuilder
-
 
 def create_mock_game_state(in_combat=False, combat_state_dict=None):
     """Helper to create a mock GameState with required methods."""
     mock_state = Mock()
     mock_state.is_in_combat.return_value = in_combat
-    
+
     if combat_state_dict is None:
         combat_state_dict = {"in_combat": in_combat}
-    
+
     mock_state.get_combat_state.return_value = combat_state_dict
     mock_state.combat_state = combat_state_dict
     return mock_state
@@ -145,7 +145,8 @@ class TestStoryModeAgent(unittest.TestCase):
         agent = StoryModeAgent()
         all_prompts = agent.get_all_prompts()
         self.assertEqual(
-            all_prompts, StoryModeAgent.REQUIRED_PROMPTS | StoryModeAgent.OPTIONAL_PROMPTS
+            all_prompts,
+            StoryModeAgent.REQUIRED_PROMPTS | StoryModeAgent.OPTIONAL_PROMPTS,
         )
 
     def test_story_mode_agent_repr(self):
@@ -315,19 +316,21 @@ class TestCombatAgent(unittest.TestCase):
         # With new interface, we expect game_state to have is_in_combat().
         # If it doesn't, it raises AttributeError, which is acceptable for invalid objects.
         # So we'll skip this test or update it to verify is_in_combat is called.
-        
+
         # Updated test: Verify matches_game_state relies on is_in_combat
         mock_game_state = Mock()
         # If is_in_combat raises error (simulating missing method), matches_game_state propagates it
         del mock_game_state.is_in_combat
         with self.assertRaises(AttributeError):
-             CombatAgent.matches_game_state(mock_game_state)
+            CombatAgent.matches_game_state(mock_game_state)
 
     def test_combat_agent_matches_game_state_false_when_combat_state_not_dict(self):
         """CombatAgent.matches_game_state returns False when combat_state not dict."""
         # With new implementation, is_in_combat() handles the check.
         # We mock is_in_combat to return False (simulating internal check failure)
-        mock_game_state = create_mock_game_state(in_combat=False, combat_state_dict=None)
+        mock_game_state = create_mock_game_state(
+            in_combat=False, combat_state_dict=None
+        )
         self.assertFalse(CombatAgent.matches_game_state(mock_game_state))
 
 
@@ -386,7 +389,9 @@ class TestGetAgentForInput(unittest.TestCase):
         mock_game_state = create_mock_game_state(in_combat=True)
 
         # GOD MODE should still work even during combat
-        agent = get_agent_for_input("GOD MODE: Set HP to 100", game_state=mock_game_state)
+        agent = get_agent_for_input(
+            "GOD MODE: Set HP to 100", game_state=mock_game_state
+        )
         self.assertIsInstance(agent, GodModeAgent)
 
     def test_get_agent_priority_order(self):

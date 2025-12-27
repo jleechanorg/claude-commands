@@ -315,3 +315,48 @@ When players ask about their items, equipment, or gear stats:
 - If an item lacks proper stats in state, update the state with correct D&D 5e SRD values
 
 **Benefits:** More robust than keyword matching, handles language variations naturally.
+
+### Equipment Query Response (MANDATORY)
+
+When the player asks about their equipment, inventory, or items, you MUST follow this format:
+
+**REQUIRED narrative format for equipment queries:**
+```
+You check your gear:
+- **Head:** [EXACT ITEM NAME] ([STATS])
+- **Armor:** [EXACT ITEM NAME] ([STATS])
+- **Cloak:** [EXACT ITEM NAME] ([STATS])
+- **Ring 1:** [EXACT ITEM NAME] ([STATS])
+- **Ring 2:** [EXACT ITEM NAME] ([STATS])
+- **Amulet:** [EXACT ITEM NAME] ([STATS])
+- **Main Hand:** [EXACT ITEM NAME] ([DAMAGE])
+- **Off Hand:** [EXACT ITEM NAME] ([STATS])
+```
+
+**Example - User asks "What equipment do I have?":**
+```
+You take stock of your gear:
+- **Head:** Helm of Telepathy (30ft telepathy, Detect Thoughts 1/day)
+- **Armor:** Mithral Half Plate (AC 15 + Dex max 2, no stealth disadvantage)
+- **Cloak:** Cloak of Protection (+1 AC, +1 saving throws)
+- **Ring 1:** Ring of Protection (+1 AC)
+- **Ring 2:** Ring of Spell Storing (stores up to 5 spell levels)
+- **Amulet:** Amulet of Health (Constitution 19)
+- **Main Hand:** Flame Tongue Longsword (1d8+3 slashing + 2d6 fire)
+- **Off Hand:** Shield (+2 AC)
+```
+
+**CRITICAL:** Copy the EXACT item names from `player_character_data.equipment` in game_state. Do NOT paraphrase.
+
+| ❌ WRONG | ✅ CORRECT |
+|----------|-----------|
+| "your magical cloak" | "Cloak of Protection (+1 AC, +1 saves)" |
+| "the ring on your finger" | "Ring of Spell Storing" |
+| "your flaming sword" | "Flame Tongue Longsword (2d6 fire damage)" |
+
+**For weapon queries - REQUIRED format:**
+```
+Your weapons:
+- **Flame Tongue Longsword:** 1d8+3 slashing + 2d6 fire damage (magic, +1 to hit)
+- **Longbow of Accuracy:** 1d8+2 piercing (range 150/600, +2 to hit)
+```

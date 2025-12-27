@@ -27,7 +27,9 @@ class TestJSONOnlyMode(unittest.TestCase):
     def test_all_gemini_calls_must_use_json_mode(self):
         """Test that all Gemini API calls enforce JSON mode"""
         # Mock the actual JSON mode generation function that all flows use
-        with patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content") as mock_json_gen:
+        with patch(
+            "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
+        ) as mock_json_gen:
             # Create a mock response with proper structure for gemini_provider code
             mock_response = Mock()
             mock_response.text = '{"narrative": "test", "planning_block": {"thinking": "", "choices": {}}, "session_header": "test"}'
@@ -39,7 +41,9 @@ class TestJSONOnlyMode(unittest.TestCase):
             llm_service.continue_story("test prompt", "story", [], test_game_state)
 
             # Verify generate_json_mode_content was called (enforces JSON mode)
-            assert mock_json_gen.called, "generate_json_mode_content should be called for JSON mode"
+            assert mock_json_gen.called, (
+                "generate_json_mode_content should be called for JSON mode"
+            )
 
     def test_main_py_no_fallback_parsing(self):
         """Test that main.py doesn't have fallback regex parsing"""
@@ -84,7 +88,9 @@ class TestJSONOnlyMode(unittest.TestCase):
     def test_generation_config_always_includes_json(self):
         """Test that generation config always includes JSON response format"""
         # Mock the JSON mode generation function that enforces JSON
-        with patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content") as mock_json_gen:
+        with patch(
+            "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
+        ) as mock_json_gen:
             # Create a mock response with proper structure
             mock_response = Mock()
             mock_response.text = '{"narrative": "test", "planning_block": {"thinking": "", "choices": {}}, "session_header": "test"}'
@@ -100,7 +106,9 @@ class TestJSONOnlyMode(unittest.TestCase):
                 pass  # Some might fail due to mocking, we just need the call args
 
             # Check that JSON mode function was called
-            assert mock_json_gen.called, "continue_story should use JSON mode via generate_json_mode_content"
+            assert mock_json_gen.called, (
+                "continue_story should use JSON mode via generate_json_mode_content"
+            )
 
     def test_robust_json_parser_is_only_fallback(self):
         """Test that robust JSON parser is the only fallback for malformed JSON"""

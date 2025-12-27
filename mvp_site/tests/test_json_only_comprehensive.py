@@ -53,7 +53,9 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
     def test_json_mode_always_enabled(self):
         """Test that all API calls use JSON mode"""
         # Mock the JSON mode generation function that enforces JSON
-        with patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content") as mock_json_gen:
+        with patch(
+            "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
+        ) as mock_json_gen:
             # Create a mock response with proper structure for gemini_provider code
             mock_response = Mock()
             mock_response.text = '{"narrative": "test", "planning_block": {"thinking": "", "choices": {}}, "session_header": "test"}'
@@ -66,7 +68,9 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
             )
 
             # Verify JSON mode function was called (enforces JSON mode)
-            assert mock_json_gen.called, "generate_json_mode_content should be called to enforce JSON mode"
+            assert mock_json_gen.called, (
+                "generate_json_mode_content should be called to enforce JSON mode"
+            )
 
     def test_parse_function_removed(self):
         """Test that parse_llm_response_for_state_changes is removed"""

@@ -26,44 +26,86 @@ from mvp_site.dice import DiceRollResult, execute_dice_tool
 # =============================================================================
 
 XP_THRESHOLDS = [
-    0,        # Level 1
-    300,      # Level 2
-    900,      # Level 3
-    2700,     # Level 4
-    6500,     # Level 5
-    14000,    # Level 6
-    23000,    # Level 7
-    34000,    # Level 8
-    48000,    # Level 9
-    64000,    # Level 10
-    85000,    # Level 11
-    100000,   # Level 12
-    120000,   # Level 13
-    140000,   # Level 14
-    165000,   # Level 15
-    195000,   # Level 16
-    225000,   # Level 17
-    265000,   # Level 18
-    305000,   # Level 19
-    355000,   # Level 20
+    0,  # Level 1
+    300,  # Level 2
+    900,  # Level 3
+    2700,  # Level 4
+    6500,  # Level 5
+    14000,  # Level 6
+    23000,  # Level 7
+    34000,  # Level 8
+    48000,  # Level 9
+    64000,  # Level 10
+    85000,  # Level 11
+    100000,  # Level 12
+    120000,  # Level 13
+    140000,  # Level 14
+    165000,  # Level 15
+    195000,  # Level 16
+    225000,  # Level 17
+    265000,  # Level 18
+    305000,  # Level 19
+    355000,  # Level 20
 ]
 
 XP_BY_CR = {
-    0: 10, 0.125: 25, 0.25: 50, 0.5: 100,
-    1: 200, 2: 450, 3: 700, 4: 1100, 5: 1800,
-    6: 2300, 7: 2900, 8: 3900, 9: 5000, 10: 5900,
-    11: 7200, 12: 8400, 13: 10000, 14: 11500, 15: 13000,
-    16: 15000, 17: 18000, 18: 20000, 19: 22000, 20: 25000,
-    21: 33000, 22: 41000, 23: 50000, 24: 62000, 25: 75000,
-    26: 90000, 27: 105000, 28: 120000, 29: 135000, 30: 155000
+    0: 10,
+    0.125: 25,
+    0.25: 50,
+    0.5: 100,
+    1: 200,
+    2: 450,
+    3: 700,
+    4: 1100,
+    5: 1800,
+    6: 2300,
+    7: 2900,
+    8: 3900,
+    9: 5000,
+    10: 5900,
+    11: 7200,
+    12: 8400,
+    13: 10000,
+    14: 11500,
+    15: 13000,
+    16: 15000,
+    17: 18000,
+    18: 20000,
+    19: 22000,
+    20: 25000,
+    21: 33000,
+    22: 41000,
+    23: 50000,
+    24: 62000,
+    25: 75000,
+    26: 90000,
+    27: 105000,
+    28: 120000,
+    29: 135000,
+    30: 155000,
 }
 
 PROFICIENCY_BY_LEVEL = {
-    1: 2, 2: 2, 3: 2, 4: 2,
-    5: 3, 6: 3, 7: 3, 8: 3,
-    9: 4, 10: 4, 11: 4, 12: 4,
-    13: 5, 14: 5, 15: 5, 16: 5,
-    17: 6, 18: 6, 19: 6, 20: 6
+    1: 2,
+    2: 2,
+    3: 2,
+    4: 2,
+    5: 3,
+    6: 3,
+    7: 3,
+    8: 3,
+    9: 4,
+    10: 4,
+    11: 4,
+    12: 4,
+    13: 5,
+    14: 5,
+    15: 5,
+    16: 5,
+    17: 6,
+    18: 6,
+    19: 6,
+    20: 6,
 }
 
 
@@ -186,7 +228,7 @@ def xp_to_next_level(current_xp: int, current_level: int = None) -> int:
     # Coerce to int for type safety
     current_xp = _coerce_int(current_xp, 0)
     current_xp = max(0, current_xp)
-    
+
     if current_level is None:
         current_level = level_from_xp(current_xp)
     else:
@@ -197,7 +239,9 @@ def xp_to_next_level(current_xp: int, current_level: int = None) -> int:
     if current_level >= 20:
         return 0
 
-    next_threshold = XP_THRESHOLDS[current_level]  # Index is level since we need level+1
+    next_threshold = XP_THRESHOLDS[
+        current_level
+    ]  # Index is level since we need level+1
     return next_threshold - current_xp
 
 
@@ -213,15 +257,17 @@ class GameState:
         self.player_character_data = kwargs.get("player_character_data", {})
         self.world_data = kwargs.get("world_data", {})
         self.npc_data = kwargs.get("npc_data", {})
+        # Item registry: maps item_id (string) → item definition (dict)
+        # Example: {"helm_telepathy": {"name": "Helm of Telepathy", "type": "head", "stats": "30ft telepathy"}}
+        self.item_registry = kwargs.get("item_registry", {})
         self.custom_campaign_state = kwargs.get("custom_campaign_state", {})
         if not isinstance(self.custom_campaign_state, dict):
             self.custom_campaign_state = {}
 
         # Ensure arc_milestones is initialized for tracking narrative arc completion
         # Handle both missing key AND null value from Firestore
-        if (
-            "arc_milestones" not in self.custom_campaign_state
-            or not isinstance(self.custom_campaign_state.get("arc_milestones"), dict)
+        if "arc_milestones" not in self.custom_campaign_state or not isinstance(
+            self.custom_campaign_state.get("arc_milestones"), dict
         ):
             self.custom_campaign_state["arc_milestones"] = {}
 
@@ -278,18 +324,24 @@ class GameState:
                 for entry in init_order:
                     if isinstance(entry, str):
                         # Convert string to dict with name
-                        normalized_order.append({
-                            "name": entry,
-                            "initiative": 0,
-                            "type": "unknown",
-                        })
+                        normalized_order.append(
+                            {
+                                "name": entry,
+                                "initiative": 0,
+                                "type": "unknown",
+                            }
+                        )
                     elif isinstance(entry, dict):
                         # Ensure required fields exist
-                        normalized_order.append({
-                            "name": entry.get("name", "Unknown"),
-                            "initiative": _coerce_int(entry.get("initiative", 0), 0),
-                            "type": entry.get("type", "unknown"),
-                        })
+                        normalized_order.append(
+                            {
+                                "name": entry.get("name", "Unknown"),
+                                "initiative": _coerce_int(
+                                    entry.get("initiative", 0), 0
+                                ),
+                                "type": entry.get("type", "unknown"),
+                            }
+                        )
                     # Skip non-string, non-dict entries
                 self.combat_state["initiative_order"] = normalized_order
 
@@ -301,7 +353,11 @@ class GameState:
                 combatants_dict = {}
                 for c in combatants:
                     if isinstance(c, str):
-                        combatants_dict[c] = {"hp_current": 1, "hp_max": 1, "status": []}
+                        combatants_dict[c] = {
+                            "hp_current": 1,
+                            "hp_max": 1,
+                            "status": [],
+                        }
                     elif isinstance(c, dict) and "name" in c:
                         name = c["name"]
                         combatants_dict[name] = {
@@ -316,7 +372,11 @@ class GameState:
                 for name, data in combatants.items():
                     if isinstance(data, str):
                         # String value - convert to minimal dict
-                        normalized_combatants[name] = {"hp_current": 1, "hp_max": 1, "status": []}
+                        normalized_combatants[name] = {
+                            "hp_current": 1,
+                            "hp_max": 1,
+                            "status": [],
+                        }
                     elif isinstance(data, dict):
                         normalized_combatants[name] = {
                             "hp_current": _coerce_int(data.get("hp_current", 1), 1),
@@ -353,7 +413,9 @@ class GameState:
             return
 
         # Get names from initiative_order
-        init_names = {entry.get("name") for entry in init_order if isinstance(entry, dict)}
+        init_names = {
+            entry.get("name") for entry in init_order if isinstance(entry, dict)
+        }
 
         # Get keys from combatants
         combatant_keys = set(combatants.keys())
@@ -469,10 +531,7 @@ class GameState:
     # =========================================================================
 
     def mark_arc_completed(
-        self,
-        arc_name: str,
-        phase: str | None = None,
-        metadata: dict | None = None
+        self, arc_name: str, phase: str | None = None, metadata: dict | None = None
     ) -> None:
         """
         Mark a narrative arc as completed with timestamp.
@@ -503,12 +562,7 @@ class GameState:
         milestones[arc_name] = milestone_data
         self.custom_campaign_state["arc_milestones"] = milestones
 
-    def update_arc_progress(
-        self,
-        arc_name: str,
-        phase: str,
-        progress: int = 0
-    ) -> None:
+    def update_arc_progress(self, arc_name: str, phase: str, progress: int = 0) -> None:
         """
         Update the progress of an in-progress arc.
 
@@ -610,7 +664,9 @@ class GameState:
         for arc_name, data in completed:
             phase = data.get("phase", "final")
             completed_at = data.get("completed_at", "unknown")
-            lines.append(f"- {arc_name}: COMPLETED (phase: {phase}, at: {completed_at})")
+            lines.append(
+                f"- {arc_name}: COMPLETED (phase: {phase}, at: {completed_at})"
+            )
 
         return "\n".join(lines)
 
@@ -911,8 +967,12 @@ class GameState:
                         if isinstance(self.npc_data, dict)
                         else None
                     )
-                    npc_role_raw = npc_record.get("role") if isinstance(npc_record, dict) else None
-                    npc_type_raw = npc_record.get("type") if isinstance(npc_record, dict) else None
+                    npc_role_raw = (
+                        npc_record.get("role") if isinstance(npc_record, dict) else None
+                    )
+                    npc_type_raw = (
+                        npc_record.get("type") if isinstance(npc_record, dict) else None
+                    )
                     npc_role = (
                         npc_role_raw.lower().strip()
                         if isinstance(npc_role_raw, str)
@@ -924,7 +984,9 @@ class GameState:
                         else npc_type_raw
                     )
 
-                    if constants.is_friendly_combatant(npc_role) or constants.is_friendly_combatant(npc_type):
+                    if constants.is_friendly_combatant(
+                        npc_role
+                    ) or constants.is_friendly_combatant(npc_type):
                         logging_util.info(
                             f"COMBAT CLEANUP: Skipping {name} removal because npc_data marks combatant as friendly "
                             f"(role/type: {npc_role or npc_type}) despite missing initiative type"
@@ -980,11 +1042,15 @@ class GameState:
                     if "dead" not in npc["status"]:
                         npc["status"].append("dead")
                     npc["hp_current"] = 0
-                    logging_util.info(f"COMBAT CLEANUP: Marked {enemy_name} as dead in npc_data (named NPC preserved)")
+                    logging_util.info(
+                        f"COMBAT CLEANUP: Marked {enemy_name} as dead in npc_data (named NPC preserved)"
+                    )
                 else:
                     # Generic enemies can be deleted
                     del self.npc_data[enemy_name]
-                    logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data (generic enemy)")
+                    logging_util.info(
+                        f"COMBAT CLEANUP: Removed {enemy_name} from npc_data (generic enemy)"
+                    )
 
         return defeated_enemies
 
@@ -1037,9 +1103,7 @@ class GameState:
             # Ensure microsecond field exists (default to 0 for existing campaigns)
             if "microsecond" not in world_data["world_time"]:
                 world_data["world_time"]["microsecond"] = 0
-                logging_util.info(
-                    "Added microsecond field to world_time (default: 0)"
-                )
+                logging_util.info("Added microsecond field to world_time (default: 0)")
 
             # Calculate time_of_day from hour if not present
             if "time_of_day" not in world_data["world_time"]:
@@ -1289,9 +1353,7 @@ class GameState:
         if new_total < old_total:
             old_str = self._format_time(current_world_time)
             new_str = self._format_time(new_time)
-            message = (
-                f"Time regression detected: {new_str} is earlier than {old_str}"
-            )
+            message = f"Time regression detected: {new_str} is earlier than {old_str}"
 
             if strict:
                 raise ValueError(f"Time cannot go backwards: {message}")
@@ -1303,7 +1365,9 @@ class GameState:
 
         return result
 
-    def _time_to_minutes(self, time_dict: dict[str, Any], default_day: int | None = None) -> int:
+    def _time_to_minutes(
+        self, time_dict: dict[str, Any], default_day: int | None = None
+    ) -> int:
         """Convert a time dict to total minutes for comparison."""
         fallback_day = 0 if default_day is None else _coerce_int(default_day, 0)
         day = _coerce_int(time_dict.get("day", fallback_day), fallback_day)
@@ -1373,9 +1437,13 @@ def roll_with_disadvantage(notation: str) -> tuple[DiceRollResult, DiceRollResul
     return dice_module.roll_with_disadvantage(notation)
 
 
-def calculate_attack_roll(attack_modifier: int, advantage: bool = False, disadvantage: bool = False) -> dict:
+def calculate_attack_roll(
+    attack_modifier: int, advantage: bool = False, disadvantage: bool = False
+) -> dict:
     """Backward-compatible wrapper that keeps monkeypatching stable in tests."""
-    notation = f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
+    notation = (
+        f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
+    )
 
     def _safe_natural_roll(roll: DiceRollResult) -> int:
         if roll.individual_rolls:
@@ -1453,17 +1521,23 @@ def calculate_modifier(attribute: int) -> int:
 
 def calculate_proficiency_bonus(level: int) -> int:
     """Get proficiency bonus for a given character level."""
-    if level < 1: return 2
-    if level > 20: return 6
+    if level < 1:
+        return 2
+    if level > 20:
+        return 6
     return PROFICIENCY_BY_LEVEL.get(level, 2)
 
 
-def calculate_armor_class(dex_modifier: int, armor_bonus: int = 0, shield_bonus: int = 0) -> int:
+def calculate_armor_class(
+    dex_modifier: int, armor_bonus: int = 0, shield_bonus: int = 0
+) -> int:
     """Calculate Armor Class."""
     return 10 + dex_modifier + armor_bonus + shield_bonus
 
 
-def calculate_passive_perception(wis_modifier: int, proficient: bool, proficiency_bonus: int) -> int:
+def calculate_passive_perception(
+    wis_modifier: int, proficient: bool, proficiency_bonus: int
+) -> int:
     """Calculate passive Perception score."""
     base = 10 + wis_modifier
     if proficient:
@@ -1489,7 +1563,7 @@ def calculate_resource_depletion(
 
 
 def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
-    '''
+    """
     Execute a list of tool requests with strict type validation.
 
     Args:
@@ -1497,7 +1571,7 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
 
     Returns:
         List of results with tool execution details.
-    '''
+    """
     if not isinstance(tool_requests, list):
         logging_util.error(f"tool_requests must be a list, got {type(tool_requests)}")
         return []
@@ -1513,7 +1587,9 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
 
         # Strict Type Validation
         if not isinstance(tool_name, str) or not tool_name:
-            logging_util.error(f"Invalid tool name type or empty: {tool_name} ({type(tool_name)})")
+            logging_util.error(
+                f"Invalid tool name type or empty: {tool_name} ({type(tool_name)})"
+            )
             continue
 
         if not isinstance(args, dict):
@@ -1527,11 +1603,13 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
             logging_util.error(f"Tool execution error: {tool_name}: {e}")
             result = {"error": str(e)}
 
-        results.append({
-            "tool": tool_name,
-            "args": args,
-            "result": result,
-        })
+        results.append(
+            {
+                "tool": tool_name,
+                "args": args,
+                "result": result,
+            }
+        )
 
     return results
 
@@ -1552,18 +1630,28 @@ def format_tool_results_text(tool_results: Any) -> str:
         result = item.get("result", {})
         if not isinstance(tool_name, str) or not tool_name:
             continue
-        if isinstance(result, dict) and isinstance(result.get("formatted"), str) and result["formatted"]:
+        if (
+            isinstance(result, dict)
+            and isinstance(result.get("formatted"), str)
+            and result["formatted"]
+        ):
             # Keep Phase 2 context tight: formatted strings already embed the exact numbers.
             lines.append(f"- {result['formatted']}")
             continue
-        if isinstance(result, dict) and isinstance(result.get("error"), str) and result["error"]:
+        if (
+            isinstance(result, dict)
+            and isinstance(result.get("error"), str)
+            and result["error"]
+        ):
             lines.append(f"- {tool_name}: ERROR {result['error']}")
             continue
         # Fallback: last-resort JSON (should be rare)
         try:
             result_str = json.dumps(result, sort_keys=True)
         except TypeError:
-            result_str = json.dumps({"error": "unserializable tool result"}, sort_keys=True)
+            result_str = json.dumps(
+                {"error": "unserializable tool result"}, sort_keys=True
+            )
         lines.append(f"- {tool_name}: {result_str}")
 
     return "\n".join(lines)

@@ -18,10 +18,10 @@ from mvp_site.game_state import GameState
 from mvp_site.llm_service import (
     _calculate_percentage_based_turns,
     _compact_middle_turns,
-    _split_into_sentences,
     _is_important_sentence,
-    estimate_tokens,
+    _split_into_sentences,
     _truncate_context,
+    estimate_tokens,
 )
 
 
@@ -147,7 +147,7 @@ class TestAdaptiveTruncation(unittest.TestCase):
         # Should contain one of the last entries (55-59)
         self.assertTrue(
             any(f"Entry number {i}" in last_entry_text for i in range(55, 60)),
-            f"Last entry should be from recent context, got: {last_entry_text[:50]}"
+            f"Last entry should be from recent context, got: {last_entry_text[:50]}",
         )
 
 
@@ -230,9 +230,15 @@ class TestMiddleCompaction(unittest.TestCase):
         # Create turns with mix of important and filler content
         middle_turns = [
             {"actor": "gemini", "text": "The party rested by the campfire."},
-            {"actor": "gemini", "text": "You attack the goblin! The creature takes 15 damage and falls."},
+            {
+                "actor": "gemini",
+                "text": "You attack the goblin! The creature takes 15 damage and falls.",
+            },
             {"actor": "user", "text": "I search the room."},
-            {"actor": "gemini", "text": "You discover a hidden treasure chest containing gold coins."},
+            {
+                "actor": "gemini",
+                "text": "You discover a hidden treasure chest containing gold coins.",
+            },
             {"actor": "gemini", "text": "The night passes uneventfully."},
         ]
 
@@ -245,13 +251,20 @@ class TestMiddleCompaction(unittest.TestCase):
         text = result.get("text", "")
         self.assertIn("key events occurred", text)
         # Should have extracted sentences with keywords
-        self.assertTrue("attack" in text.lower() or "damage" in text.lower() or "discover" in text.lower())
+        self.assertTrue(
+            "attack" in text.lower()
+            or "damage" in text.lower()
+            or "discover" in text.lower()
+        )
 
     def test_compact_middle_turns_respects_token_limit(self):
         """Middle compaction should not exceed token budget."""
         # Create many turns with important content
         middle_turns = [
-            {"actor": "gemini", "text": f"You defeat enemy number {i}. The battle was fierce." * 5}
+            {
+                "actor": "gemini",
+                "text": f"You defeat enemy number {i}. The battle was fierce." * 5,
+            }
             for i in range(20)
         ]
 
@@ -288,7 +301,7 @@ class TestMiddleCompaction(unittest.TestCase):
         text = result.get("text", "")
         self.assertTrue(
             "key events" in text or "sun shines" in text or "look around" in text,
-            f"Should contain sampled content or key events marker, got: {text}"
+            f"Should contain sampled content or key events marker, got: {text}",
         )
 
     def test_truncation_includes_middle_summary(self):
@@ -331,9 +344,11 @@ class TestMiddleCompaction(unittest.TestCase):
         # Check that combat events were preserved in the summary
         middle_summary = system_messages[0].get("text", "")
         self.assertTrue(
-            "attack" in middle_summary.lower() or "damage" in middle_summary.lower() or
-            "key events" in middle_summary.lower() or "turns" in middle_summary.lower(),
-            f"Middle summary should mention events or turns: {middle_summary[:200]}"
+            "attack" in middle_summary.lower()
+            or "damage" in middle_summary.lower()
+            or "key events" in middle_summary.lower()
+            or "turns" in middle_summary.lower(),
+            f"Middle summary should mention events or turns: {middle_summary[:200]}",
         )
 
 
@@ -378,8 +393,9 @@ class TestTruncationBudgetGuarantees(unittest.TestCase):
         max_tokens = estimate_tokens(" " * max_chars)
 
         self.assertLessEqual(
-            result_tokens, max_tokens,
-            f"Short transcript still over budget: {result_tokens} > {max_tokens}"
+            result_tokens,
+            max_tokens,
+            f"Short transcript still over budget: {result_tokens} > {max_tokens}",
         )
 
     def test_last_resort_respects_budget(self):
@@ -411,8 +427,9 @@ class TestTruncationBudgetGuarantees(unittest.TestCase):
         max_tokens = estimate_tokens(" " * max_chars)
 
         self.assertLessEqual(
-            result_tokens, max_tokens,
-            f"Last resort still over budget: {result_tokens} > {max_tokens}"
+            result_tokens,
+            max_tokens,
+            f"Last resort still over budget: {result_tokens} > {max_tokens}",
         )
 
     def test_middle_summary_respects_budget(self):
@@ -435,8 +452,9 @@ class TestTruncationBudgetGuarantees(unittest.TestCase):
 
         # Result MUST fit within budget (including wrapper overhead)
         self.assertLessEqual(
-            result_tokens, max_tokens,
-            f"Middle summary exceeds budget: {result_tokens} > {max_tokens}"
+            result_tokens,
+            max_tokens,
+            f"Middle summary exceeds budget: {result_tokens} > {max_tokens}",
         )
 
 
@@ -501,17 +519,21 @@ class TestImportanceDetection(unittest.TestCase):
 
     def test_detects_long_dialogue(self):
         """Should detect significant dialogue (20+ chars in quotes)."""
-        self.assertTrue(_is_important_sentence(
-            'The wizard says "Beware the ancient evil that sleeps beneath the mountain."'
-        ))
+        self.assertTrue(
+            _is_important_sentence(
+                'The wizard says "Beware the ancient evil that sleeps beneath the mountain."'
+            )
+        )
         # Short quotes should not trigger
         self.assertFalse(_is_important_sentence('He said "No" quietly.'))
 
     def test_detects_exclamatory_sentences(self):
         """Long exclamatory sentences often indicate dramatic moments."""
-        self.assertTrue(_is_important_sentence(
-            "The dragon rises from the depths with a thunderous roar!"
-        ))
+        self.assertTrue(
+            _is_important_sentence(
+                "The dragon rises from the depths with a thunderous roar!"
+            )
+        )
         # Short exclamations should not trigger alone
         self.assertFalse(_is_important_sentence("Stop!"))
 
@@ -554,10 +576,17 @@ class TestFallbackSampling(unittest.TestCase):
         self.assertIn("key events", text)
         # Should have preserved at least some sentences
         self.assertTrue(
-            any(phrase in text for phrase in [
-                "morning light", "surroundings", "Birds sing", "walking", "road"
-            ]),
-            f"Should contain sampled content, got: {text}"
+            any(
+                phrase in text
+                for phrase in [
+                    "morning light",
+                    "surroundings",
+                    "Birds sing",
+                    "walking",
+                    "road",
+                ]
+            ),
+            f"Should contain sampled content, got: {text}",
         )
 
 

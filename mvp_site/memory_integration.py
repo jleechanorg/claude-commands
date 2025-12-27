@@ -150,10 +150,14 @@ class MemoryIntegration:
                         score += recency_bonus
                 except Exception as e:
                     # Skip recency bonus if timestamp parsing fails
-                    logging_util.debug(f"Failed to parse timestamp for recency bonus: {e}")
+                    logging_util.debug(
+                        f"Failed to parse timestamp for recency bonus: {e}"
+                    )
         except Exception as e:
             # Skip recency calculation if no timestamp data available
-            logging_util.debug(f"No timestamp data available for recency calculation: {e}")
+            logging_util.debug(
+                f"No timestamp data available for recency calculation: {e}"
+            )
 
         return min(1.0, score)
 

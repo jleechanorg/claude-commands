@@ -32,6 +32,7 @@ def test_parses_string_world_time_from_llm():
         "microsecond": 123456,
     }
 
+
 def test_keeps_partial_world_time_unchanged():
     partial_time = {"hour": 8, "minute": 15, "time_of_day": "Morning"}
     state_changes = {"world_data": {"world_time": partial_time}}

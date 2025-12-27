@@ -30,6 +30,20 @@ PATH_MAP: dict[str, str] = {
 # Store loaded instruction content in a dictionary for easy access
 _loaded_instructions_cache: dict[str, str] = {}
 
+# Track which instruction files were loaded in the current request (for evidence)
+_current_request_loaded_files: list[str] = []
+
+
+def clear_loaded_files_tracking() -> None:
+    """Clear the loaded files tracking list. Call at start of each request."""
+    global _current_request_loaded_files
+    _current_request_loaded_files = []
+
+
+def get_loaded_instruction_files() -> list[str]:
+    """Get the list of instruction files loaded in the current request."""
+    return _current_request_loaded_files.copy()
+
 
 def _load_instruction_file(instruction_type: str) -> str:
     """
@@ -62,6 +76,11 @@ def _load_instruction_file(instruction_type: str) -> str:
                 f"CRITICAL: Error loading system instruction file {file_path}: {e}"
             )
             raise
+
+    # Track which files are loaded for evidence (only add if not already tracked)
+    relative_path = PATH_MAP.get(instruction_type)
+    if relative_path and relative_path not in _current_request_loaded_files:
+        _current_request_loaded_files.append(relative_path)
 
     return _loaded_instructions_cache[instruction_type]
 
@@ -213,6 +232,27 @@ class PromptBuilder:
         # Load mechanics instruction for detailed game rules
         # (spell slots, class features, combat rules, etc.)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
+
+        return parts
+
+    def build_info_mode_instructions(self) -> list[str]:
+        """
+        Build TRIMMED system instructions for INFO MODE.
+        Info mode is for pure information queries (equipment, inventory, stats).
+        Uses minimal prompts to maximize LLM focus on Equipment Query Protocol.
+
+        Note: NO narrative, mechanics, or combat prompts - keeps system instruction
+        under ~1100 lines vs ~2000 lines for story mode, improving LLM compliance.
+        The actual game state JSON is added by llm_service when building the prompt.
+        """
+        parts = []
+
+        # CRITICAL: Load master directive FIRST to establish hierarchy and authority
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+        # Load game state instruction - contains Equipment Query Protocol
+        # This is the key prompt with exact item naming requirements
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
 
         return parts
 
@@ -380,8 +420,16 @@ class PromptBuilder:
         Includes temporal enforcement to prevent backward time jumps.
         """
         # Extract current world_time for temporal enforcement
-        world_time = self.game_state.world_data.get("world_time", {}) if (hasattr(self.game_state, "world_data") and self.game_state.world_data) else {}
-        current_location = self.game_state.world_data.get("current_location_name", "current location") if (hasattr(self.game_state, "world_data") and self.game_state.world_data) else "current location"
+        world_time = (
+            self.game_state.world_data.get("world_time", {})
+            if (hasattr(self.game_state, "world_data") and self.game_state.world_data)
+            else {}
+        )
+        current_location = (
+            self.game_state.world_data.get("current_location_name", "current location")
+            if (hasattr(self.game_state, "world_data") and self.game_state.world_data)
+            else "current location"
+        )
 
         # Format current time for the prompt (including hidden microsecond for uniqueness)
         time_parts = []

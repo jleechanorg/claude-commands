@@ -53,7 +53,13 @@ def world_logic_module():
 def test_enriches_empty_header_with_progress(world_logic_module):
     result = world_logic_module._enrich_session_header_with_progress(
         "",
-        {"player_character_data": {"xp_current": 120, "xp_next_level": 200, "gold": 50}},
+        {
+            "player_character_data": {
+                "xp_current": 120,
+                "xp_next_level": 200,
+                "gold": 50,
+            }
+        },
     )
 
     assert result == "XP: 120/200 | Gold: 50gp"

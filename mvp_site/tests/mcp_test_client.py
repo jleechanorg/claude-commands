@@ -18,7 +18,9 @@ MCP_HTTP_PATH = "/mcp"
 class MCPTestClient:
     """Test client for WorldArchitect.AI MCP server."""
 
-    def __init__(self, base_url: str = "http://localhost:8000", log_file: str | None = None):
+    def __init__(
+        self, base_url: str = "http://localhost:8000", log_file: str | None = None
+    ):
         """Initialize MCP test client.
 
         Args:
@@ -38,16 +40,27 @@ class MCPTestClient:
 
         # Initialize log file if specified
         if self.log_file:
-            with open(self.log_file, 'w') as f:
-                json.dump({
-                    "test_run": {
-                        "start_time": datetime.utcnow().isoformat() + "Z",
-                        "base_url": base_url
+            with open(self.log_file, "w") as f:
+                json.dump(
+                    {
+                        "test_run": {
+                            "start_time": datetime.utcnow().isoformat() + "Z",
+                            "base_url": base_url,
+                        },
+                        "requests": [],
                     },
-                    "requests": []
-                }, f, indent=2)
+                    f,
+                    indent=2,
+                )
 
-    def _log_request_response(self, endpoint: str, method: str, request_data: Any, response_data: Any, status_code: int):
+    def _log_request_response(
+        self,
+        endpoint: str,
+        method: str,
+        request_data: Any,
+        response_data: Any,
+        status_code: int,
+    ):
         """Log request and response to file.
 
         Args:
@@ -64,22 +77,24 @@ class MCPTestClient:
 
         try:
             # Read existing log
-            with open(self.log_file, 'r') as f:
+            with open(self.log_file, "r") as f:
                 log_data = json.load(f)
 
             # Add new entry
-            log_data["requests"].append({
-                "sequence": self.request_counter,
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-                "endpoint": endpoint,
-                "method": method,
-                "request": request_data,
-                "response": response_data,
-                "status_code": status_code
-            })
+            log_data["requests"].append(
+                {
+                    "sequence": self.request_counter,
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "endpoint": endpoint,
+                    "method": method,
+                    "request": request_data,
+                    "response": response_data,
+                    "status_code": status_code,
+                }
+            )
 
             # Write updated log
-            with open(self.log_file, 'w') as f:
+            with open(self.log_file, "w") as f:
                 json.dump(log_data, f, indent=2)
         except Exception as e:
             print(f"Warning: Failed to log request/response: {e}", file=sys.stderr)
@@ -103,7 +118,7 @@ class MCPTestClient:
             method="GET",
             request_data=None,
             response_data=response_data,
-            status_code=response.status_code
+            status_code=response.status_code,
         )
 
         return response_data
@@ -141,7 +156,7 @@ class MCPTestClient:
             method=method,
             request_data=payload,
             response_data=response_data,
-            status_code=response.status_code
+            status_code=response.status_code,
         )
 
         return response_data
@@ -508,8 +523,7 @@ def main():
         help="Test to run",
     )
     parser.add_argument(
-        "--log-file",
-        help="Path to JSON file for logging requests/responses"
+        "--log-file", help="Path to JSON file for logging requests/responses"
     )
 
     args = parser.parse_args()

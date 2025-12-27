@@ -32,6 +32,7 @@ MONTH_MAP = {
     "dec": 12,
 }
 
+
 def _safe_int(value: Any) -> int:
     try:
         return int(value)

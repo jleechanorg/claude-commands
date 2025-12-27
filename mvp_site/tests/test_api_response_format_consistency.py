@@ -56,6 +56,7 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
 
         # Set up fake Firestore client
         from tests.fake_firestore import FakeFirestoreClient
+
         fake_firestore = FakeFirestoreClient()
         self.mock_get_db.return_value = fake_firestore
         self.app = create_app()
@@ -77,9 +78,9 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
         if response.status_code == 200:
             data = response.get_json()
             # Must be array directly for backward compatibility
-            assert isinstance(
-                data, list
-            ), "GET /api/campaigns must return array directly"
+            assert isinstance(data, list), (
+                "GET /api/campaigns must return array directly"
+            )
 
     def test_campaign_by_id_format(self):
         """Test GET /api/campaigns/<id> returns expected object format.
@@ -321,13 +322,13 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
                     assert True, f"{endpoint} is backward compatible"
                 else:
                     # These endpoints still use new format but frontend handles it
-                    assert (
-                        True
-                    ), f"{endpoint} uses new format but frontend is compatible"
+                    assert True, (
+                        f"{endpoint} uses new format but frontend is compatible"
+                    )
 
     def tearDown(self):
         """Clean up Firebase mocks."""
-        if hasattr(self, 'firebase_patcher'):
+        if hasattr(self, "firebase_patcher"):
             self.firebase_patcher.stop()
 
 

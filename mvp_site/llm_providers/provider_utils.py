@@ -156,7 +156,13 @@ NARRATIVE_RESPONSE_SCHEMA = {
                 "properties": {
                     "tool": {
                         "type": "string",
-                        "enum": ["roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw", "declare_no_roll_needed"],
+                        "enum": [
+                            "roll_dice",
+                            "roll_attack",
+                            "roll_skill_check",
+                            "roll_saving_throw",
+                            "declare_no_roll_needed",
+                        ],
                         "description": "The tool to call",
                     },
                     "args": {
@@ -239,7 +245,9 @@ def stringify_chat_parts(parts: list[Any]) -> str:
     return "\n\n".join(rendered)
 
 
-def build_tool_results_prompt(tool_results_text: str, extra_instructions: str = "") -> str:
+def build_tool_results_prompt(
+    tool_results_text: str, extra_instructions: str = ""
+) -> str:
     """Build the Phase 2 prompt snippet for injecting tool results."""
     base = (
         "Tool results (use these exact numbers in your narrative):\n"
@@ -304,7 +312,9 @@ def execute_openai_tool_calls(
             results.append(
                 {
                     "tool_call_id": str(call.get("id", "")),
-                    "tool": str((call.get("function", {}) or {}).get("name", "unknown")),
+                    "tool": str(
+                        (call.get("function", {}) or {}).get("name", "unknown")
+                    ),
                     "args": {},
                     "result": {"error": str(exc)},
                 }
@@ -330,17 +340,33 @@ def _compact_tool_result_for_prompt(result: Any) -> dict[str, Any]:
             compact[key] = result[key]
 
     # roll_attack
-    for key in ("hit", "critical", "fumble", "target_ac", "weapon_name", "ability_name"):
+    for key in (
+        "hit",
+        "critical",
+        "fumble",
+        "target_ac",
+        "weapon_name",
+        "ability_name",
+    ):
         if key in result:
             compact[key] = result[key]
     if isinstance(result.get("damage"), dict):
         dmg = result["damage"]
         compact["damage"] = {
-            k: dmg.get(k) for k in ("notation", "rolls", "modifier", "total", "critical")
+            k: dmg.get(k)
+            for k in ("notation", "rolls", "modifier", "total", "critical")
         }
 
     # roll_skill_check / roll_saving_throw
-    for key in ("skill", "dc", "success", "save_type", "proficiency_applied", "attribute_name", "roll"):
+    for key in (
+        "skill",
+        "dc",
+        "success",
+        "save_type",
+        "proficiency_applied",
+        "attribute_name",
+        "roll",
+    ):
         if key in result:
             compact[key] = result[key]
 
@@ -376,11 +402,15 @@ def run_openai_json_first_tool_requests_flow(
     def extract_text(resp: Any) -> str:
         return getattr(resp, "text", "") or ""
 
-    def build_history(*, prompt_contents: list[Any], phase1_text: str, tool_results_prompt: str) -> list[dict[str, Any]]:
+    def build_history(
+        *, prompt_contents: list[Any], phase1_text: str, tool_results_prompt: str
+    ) -> list[dict[str, Any]]:
         messages: list[dict[str, Any]] = []
         if system_instruction_text:
             messages.append({"role": "system", "content": system_instruction_text})
-        messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
+        messages.append(
+            {"role": "user", "content": stringify_chat_parts(prompt_contents)}
+        )
         messages.append({"role": "assistant", "content": phase1_text})
         messages.append({"role": "user", "content": tool_results_prompt})
         return messages
@@ -438,7 +468,9 @@ def run_json_first_tool_requests_flow(
     response_text = (extract_text_fn(response_1) or "").strip()
 
     try:
-        response_data: dict[str, Any] = json.loads(response_text) if response_text else {}
+        response_data: dict[str, Any] = (
+            json.loads(response_text) if response_text else {}
+        )
         phase1_text_for_history = response_text
     except json.JSONDecodeError:
         extracted = extract_json_boundaries(response_text) if response_text else None
@@ -450,7 +482,9 @@ def run_json_first_tool_requests_flow(
                     "Phase 1 response was not pure JSON; extracted JSON boundaries successfully"
                 )
             except json.JSONDecodeError:
-                logger.warning("Phase 1 response not valid JSON (even after extraction), returning as-is")
+                logger.warning(
+                    "Phase 1 response not valid JSON (even after extraction), returning as-is"
+                )
                 return _attach_tool_execution_metadata(response_1, executed=False)
         else:
             logger.warning("Phase 1 response not valid JSON, returning as-is")
@@ -492,9 +526,15 @@ def run_json_first_tool_requests_flow(
     # Defensive: Some providers/models occasionally omit dice_rolls even though tool results were injected.
     # If we executed any dice tools, retry Phase 2 once with an explicit dice_rolls requirement to avoid
     # llm_service reprompting later without tool context.
-    dice_tool_names = {"roll_dice", "roll_attack", "roll_skill_check", "roll_saving_throw"}
+    dice_tool_names = {
+        "roll_dice",
+        "roll_attack",
+        "roll_skill_check",
+        "roll_saving_throw",
+    }
     executed_dice_tools = any(
-        str((tr or {}).get("tool", "")) in dice_tool_names for tr in (tool_results or [])
+        str((tr or {}).get("tool", "")) in dice_tool_names
+        for tr in (tool_results or [])
     )
 
     if executed_dice_tools:
@@ -509,7 +549,9 @@ def run_json_first_tool_requests_flow(
             response2_data = json.loads(candidate2) if candidate2 else {}
             # Check for missing dice_rolls
             dice_rolls = response2_data.get("dice_rolls")
-            has_dice_rolls = isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
+            has_dice_rolls = isinstance(dice_rolls, list) and any(
+                str(r).strip() for r in dice_rolls
+            )
             if not has_dice_rolls:
                 needs_retry = True
                 retry_reason = "missing_dice_rolls"
@@ -541,9 +583,13 @@ def run_json_first_tool_requests_flow(
                 tool_results_prompt=tool_results_prompt_retry,
             )
             retry_response = phase2_generate_fn(history_retry)
-            return _attach_tool_execution_metadata(retry_response, executed=True, tool_results=tool_results)
+            return _attach_tool_execution_metadata(
+                retry_response, executed=True, tool_results=tool_results
+            )
 
-    return _attach_tool_execution_metadata(response_2, executed=True, tool_results=tool_results)
+    return _attach_tool_execution_metadata(
+        response_2, executed=True, tool_results=tool_results
+    )
 
 
 def run_openai_native_two_phase_flow(
@@ -564,7 +610,9 @@ def run_openai_native_two_phase_flow(
     base_messages: list[dict[str, Any]] = []
     if system_instruction_text:
         base_messages.append({"role": "system", "content": system_instruction_text})
-    base_messages.append({"role": "user", "content": stringify_chat_parts(prompt_contents)})
+    base_messages.append(
+        {"role": "user", "content": stringify_chat_parts(prompt_contents)}
+    )
 
     response1 = generate_content_fn(
         prompt_contents=prompt_contents,
@@ -596,7 +644,9 @@ def run_openai_native_two_phase_flow(
             temperature=temperature,
             max_output_tokens=max_output_tokens,
             tools=None,
-            messages=phase2_messages if getattr(response1, "text", "") else base_messages,
+            messages=phase2_messages
+            if getattr(response1, "text", "")
+            else base_messages,
         )
         return _attach_tool_execution_metadata(phase2_response, executed=False)
 
@@ -631,7 +681,9 @@ def run_openai_native_two_phase_flow(
             {
                 "role": "tool",
                 "tool_call_id": result["tool_call_id"],
-                "content": json.dumps(_compact_tool_result_for_prompt(result["result"])),
+                "content": json.dumps(
+                    _compact_tool_result_for_prompt(result["result"])
+                ),
             }
         )
     phase2_messages.append(
@@ -655,7 +707,9 @@ def run_openai_native_two_phase_flow(
         tools=None,
         messages=phase2_messages,
     )
-    return _attach_tool_execution_metadata(final_response, executed=True, tool_results=tool_results)
+    return _attach_tool_execution_metadata(
+        final_response, executed=True, tool_results=tool_results
+    )
 
 
 class ContextTooLargeError(ValueError):

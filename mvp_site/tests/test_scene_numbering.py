@@ -76,7 +76,9 @@ class TestSceneNumbering(unittest.TestCase):
             entry["sequence_id"] = i + 1
 
             actor_value = entry.get("actor")
-            normalized_actor = actor_value.lower() if isinstance(actor_value, str) else None
+            normalized_actor = (
+                actor_value.lower() if isinstance(actor_value, str) else None
+            )
             if normalized_actor == "gemini":
                 user_scene_counter += 1
                 entry["user_scene_number"] = user_scene_counter

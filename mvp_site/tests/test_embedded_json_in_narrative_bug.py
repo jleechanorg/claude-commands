@@ -41,7 +41,7 @@ class TestEmbeddedJsonInNarrativeBug(unittest.TestCase):
     def setUp(self):
         """Set up test data replicating the reported bug."""
         # This is the raw JSON that appeared in the user's narrative
-        self.embedded_planning_json = '''{
+        self.embedded_planning_json = """{
     "thinking": "The family has been completely broken by your dramatic revelation. Now is the perfect moment to extract binding oaths while their psychological defenses are shattered.",
     "choices": {
         "magical_oaths_binding": {
@@ -65,7 +65,7 @@ class TestEmbeddedJsonInNarrativeBug(unittest.TestCase):
             }
         }
     }
-}'''
+}"""
 
     def test_narrative_with_embedded_planning_json_is_cleaned(self):
         """
@@ -91,22 +91,27 @@ The family has been completely broken. Choose your approach."""
             "planning_block": {
                 "thinking": "Proper planning block in the correct field",
                 "choices": {
-                    "option_1": {
-                        "text": "Option 1",
-                        "description": "First option"
-                    }
-                }
-            }
+                    "option_1": {"text": "Option 1", "description": "First option"}
+                },
+            },
         }
 
         response_text = json.dumps(llm_response)
         narrative, response_obj = parse_structured_response(response_text)
 
         # The narrative should NOT contain raw JSON
-        assert '"thinking":' not in narrative, "BUG: Raw JSON key 'thinking' should not appear in narrative"
-        assert '"choices":' not in narrative, "BUG: Raw JSON key 'choices' should not appear in narrative"
-        assert '"magical_oaths_binding":' not in narrative, "BUG: Raw JSON choice key should not appear in narrative"
-        assert '"analysis":' not in narrative, "BUG: Raw JSON nested key should not appear in narrative"
+        assert '"thinking":' not in narrative, (
+            "BUG: Raw JSON key 'thinking' should not appear in narrative"
+        )
+        assert '"choices":' not in narrative, (
+            "BUG: Raw JSON key 'choices' should not appear in narrative"
+        )
+        assert '"magical_oaths_binding":' not in narrative, (
+            "BUG: Raw JSON choice key should not appear in narrative"
+        )
+        assert '"analysis":' not in narrative, (
+            "BUG: Raw JSON nested key should not appear in narrative"
+        )
 
         # Should still have the narrative context text
         assert "PLANNING BLOCK" in narrative
@@ -121,31 +126,41 @@ The family has been completely broken. Choose your approach."""
             "narrative": self.embedded_planning_json,
             "entities_mentioned": [],
             "location_confirmed": "Unknown",
-            "planning_block": {}
+            "planning_block": {},
         }
 
         response_text = json.dumps(llm_response)
         narrative, response_obj = parse_structured_response(response_text)
 
         # The narrative should NOT be raw JSON
-        assert not narrative.strip().startswith('{'), "BUG: Narrative should not start with JSON brace"
-        assert '"thinking":' not in narrative, "BUG: Raw JSON should not appear in narrative"
+        assert not narrative.strip().startswith("{"), (
+            "BUG: Narrative should not start with JSON brace"
+        )
+        assert '"thinking":' not in narrative, (
+            "BUG: Raw JSON should not appear in narrative"
+        )
 
     def test_narrative_response_strips_embedded_json_pattern(self):
         """
         RED TEST: NarrativeResponse should clean embedded JSON patterns from narrative.
         """
-        narrative_with_json = f"Before the JSON.\n\n{self.embedded_planning_json}\n\nAfter the JSON."
+        narrative_with_json = (
+            f"Before the JSON.\n\n{self.embedded_planning_json}\n\nAfter the JSON."
+        )
 
         response = NarrativeResponse(
             narrative=narrative_with_json,
             entities_mentioned=[],
-            location_confirmed="Unknown"
+            location_confirmed="Unknown",
         )
 
         # The narrative stored should not contain the raw JSON
-        assert '"thinking":' not in response.narrative, "BUG: NarrativeResponse should strip embedded JSON from narrative"
-        assert '"choices":' not in response.narrative, "BUG: NarrativeResponse should strip embedded JSON choices"
+        assert '"thinking":' not in response.narrative, (
+            "BUG: NarrativeResponse should strip embedded JSON from narrative"
+        )
+        assert '"choices":' not in response.narrative, (
+            "BUG: NarrativeResponse should strip embedded JSON choices"
+        )
 
         # Should preserve non-JSON content
         assert "Before the JSON" in response.narrative
@@ -194,18 +209,22 @@ The family has been completely broken."""
                     "magical_oaths_binding": {
                         "text": "Magical Oaths and Binding",
                         "description": "Use spellcasting to bind family members",
-                        "risk_level": "medium"
+                        "risk_level": "medium",
                     }
-                }
-            }
+                },
+            },
         }
 
         response_text = json.dumps(llm_response)
         narrative, response_obj = parse_structured_response(response_text)
 
         # The critical assertion: raw JSON should NOT appear in narrative
-        assert '{\n    "thinking":' not in narrative, "BUG: Raw embedded JSON block should be stripped from narrative"
-        assert '"choices": {' not in narrative, "BUG: Raw JSON choices should be stripped from narrative"
+        assert '{\n    "thinking":' not in narrative, (
+            "BUG: Raw embedded JSON block should be stripped from narrative"
+        )
+        assert '"choices": {' not in narrative, (
+            "BUG: Raw JSON choices should be stripped from narrative"
+        )
 
         # The planning_block field should still have the proper data
         assert response_obj.planning_block is not None
@@ -217,7 +236,7 @@ class TestEmbeddedJsonStripping(unittest.TestCase):
 
     def test_detect_embedded_planning_block_json(self):
         """Test detection of embedded planning block JSON pattern."""
-        text_with_json = '''Some narrative text.
+        text_with_json = """Some narrative text.
 
 {
     "thinking": "Planning thoughts",
@@ -226,18 +245,20 @@ class TestEmbeddedJsonStripping(unittest.TestCase):
     }
 }
 
-More narrative text.'''
+More narrative text."""
 
         cleaned = _strip_embedded_planning_json(text_with_json)
 
-        assert '"thinking":' not in cleaned, "Should remove embedded planning block JSON"
+        assert '"thinking":' not in cleaned, (
+            "Should remove embedded planning block JSON"
+        )
         assert "Some narrative text" in cleaned
         assert "More narrative text" in cleaned
 
     def test_strip_embedded_planning_json(self):
         """Test stripping embedded planning block JSON from text."""
 
-        text_with_json = '''Before.
+        text_with_json = """Before.
 
 {
     "thinking": "Test",
@@ -246,7 +267,7 @@ More narrative text.'''
     }
 }
 
-After.'''
+After."""
 
         cleaned = _strip_embedded_planning_json(text_with_json)
 
@@ -256,7 +277,7 @@ After.'''
 
     def test_words_thinking_and_choices_do_not_trigger(self):
         """Ensure plain text containing keywords is not altered."""
-        narrative = 'She was thinking about her choices in life and smiled.'
+        narrative = "She was thinking about her choices in life and smiled."
         cleaned = _strip_embedded_planning_json(narrative)
 
         assert narrative == cleaned
@@ -264,55 +285,57 @@ After.'''
     def test_nested_braces_inside_strings(self):
         """Handle braces that appear inside JSON string values."""
         narrative = (
-            'Intro {\n'
+            "Intro {\n"
             '    "thinking": "Use { and } characters in text",\n'
             '    "choices": {"a": {"text": "A"}}\n'
-            '}\nOutro'
+            "}\nOutro"
         )
 
         cleaned = _strip_embedded_planning_json(narrative)
 
         assert '"choices"' not in cleaned
-        assert 'Intro' in cleaned
-        assert 'Outro' in cleaned
+        assert "Intro" in cleaned
+        assert "Outro" in cleaned
 
     def test_escaped_quotes_in_json_values(self):
         """Brace matching should handle escaped quotes and backslashes."""
         narrative = (
-            'Before\n'
-            '{\n'
-            '    "thinking": "Path C\\\\Users\\\\Mage\\\"",\n'
+            "Before\n"
+            "{\n"
+            '    "thinking": "Path C\\\\Users\\\\Mage\\"",\n'
             '    "choices": {"stay": {"text": "Stay"}}\n'
-            '}\n'
-            'After'
+            "}\n"
+            "After"
         )
 
         cleaned = _strip_embedded_planning_json(narrative)
 
         assert '"thinking"' not in cleaned
-        assert 'Before' in cleaned
-        assert 'After' in cleaned
+        assert "Before" in cleaned
+        assert "After" in cleaned
 
     def test_multiple_json_blocks_all_removed(self):
         """Ensure multiple embedded planning blocks are stripped."""
         narrative = (
-            'Start\n'
+            "Start\n"
             '{"thinking": "First", "choices": {"a": {"text": "A"}}}\n'
-            'Middle\n'
+            "Middle\n"
             '{"thinking": "Second", "choices": {"b": {"text": "B"}}}\n'
-            'End'
+            "End"
         )
 
         cleaned = _strip_embedded_planning_json(narrative)
 
         assert '"thinking"' not in cleaned
-        assert 'Start' in cleaned
-        assert 'End' in cleaned
+        assert "Start" in cleaned
+        assert "End" in cleaned
 
     def test_empty_after_json_removal(self):
         """If only JSON is present, the cleaned narrative should be empty."""
         narrative = '{"thinking": "Only", "choices": {"a": {"text": "A"}}}'
-        response = NarrativeResponse(narrative=narrative, entities_mentioned=[], location_confirmed="Unknown")
+        response = NarrativeResponse(
+            narrative=narrative, entities_mentioned=[], location_confirmed="Unknown"
+        )
 
         assert response.narrative == ""
 
@@ -328,24 +351,30 @@ After.'''
 
         cleaned = _strip_embedded_planning_json(narrative)
 
-        assert '"thinking"' not in cleaned, "Should strip JSON even when thinking is not first key"
+        assert '"thinking"' not in cleaned, (
+            "Should strip JSON even when thinking is not first key"
+        )
         assert '"choices"' not in cleaned
-        assert 'foo' in cleaned
-        assert 'bar' in cleaned
+        assert "foo" in cleaned
+        assert "bar" in cleaned
 
     def test_key_order_permutation_choices_first(self):
         """
         Regression test: JSON with 'choices' before 'thinking' should still be stripped.
         """
         # JSON with choices first
-        narrative = 'before {"choices": {"a": {"text": "A"}}, "thinking": "analysis"} after'
+        narrative = (
+            'before {"choices": {"a": {"text": "A"}}, "thinking": "analysis"} after'
+        )
 
         cleaned = _strip_embedded_planning_json(narrative)
 
-        assert '"thinking"' not in cleaned, "Should strip JSON even when choices comes first"
+        assert '"thinking"' not in cleaned, (
+            "Should strip JSON even when choices comes first"
+        )
         assert '"choices"' not in cleaned
-        assert 'before' in cleaned
-        assert 'after' in cleaned
+        assert "before" in cleaned
+        assert "after" in cleaned
 
 
 if __name__ == "__main__":

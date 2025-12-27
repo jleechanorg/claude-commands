@@ -60,9 +60,9 @@ def test_delete_token_processing():
     assert "Drake 1" not in updated_state["npc_data"], "Drake 1 should be deleted"
     assert "Drake 2" not in updated_state["npc_data"], "Drake 2 should be deleted"
     assert "Friendly NPC" in updated_state["npc_data"], "Friendly NPC should remain"
-    assert (
-        updated_state["other_data"] == "should remain"
-    ), "Other data should be unchanged"
+    assert updated_state["other_data"] == "should remain", (
+        "Other data should be unchanged"
+    )
     print("✅ Test 1 passed!")
 
     # Test 2: Top-level deletion

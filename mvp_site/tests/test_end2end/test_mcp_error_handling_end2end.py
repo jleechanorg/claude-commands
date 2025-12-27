@@ -30,6 +30,7 @@ def has_firebase_credentials():
 
 
 from main import create_app
+
 from tests.fake_firestore import FakeFirestoreClient
 
 

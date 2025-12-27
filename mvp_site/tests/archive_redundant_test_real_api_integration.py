@@ -5,10 +5,13 @@ Red/Green Test: Real API Integration for Campaign Creation
 Tests that React V2 frontend makes real API calls to Flask backend (not mock)
 """
 
+import importlib
 import os
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
+
+import requests
 
 # Set test environment for CI compatibility
 os.environ["TESTING"] = "true"
@@ -17,23 +20,13 @@ os.environ["USE_MOCKS"] = "true"
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Conditionally import requests for CI compatibility
-try:
-    import requests
-except ImportError:
-    # Create mock requests for CI environments
-    requests = MagicMock()
-    requests.ConnectionError = Exception
-    requests.Timeout = Exception
-
-
 class RealAPIIntegrationTest(unittest.TestCase):
     """Test real API integration between React V2 and Flask backend"""
 
     def setUp(self):
         """Set up test environment"""
         # Use environment variable or default to 8081 (matching main.py)
-        port = os.environ.get('PORT', '8081')
+        port = os.environ.get("PORT", "8081")
         self.backend_url = f"http://localhost:{port}"
         self.test_user_id = "test-user-123"
         self.test_campaign_data = {
@@ -52,14 +45,18 @@ class RealAPIIntegrationTest(unittest.TestCase):
 
         # Try to import the old mock service behavior - using relative import to test directory
         try:
-            from frontend_v2.src.services.mock_service import mockApiService
+            mock_service_module = importlib.import_module(
+                "frontend_v2.src.services.mock_service"
+            )
+            mock_api_service = mock_service_module.mockApiService
+
             # Mock service would return a hardcoded campaign ID
-            mock_response = mockApiService.createCampaign(self.test_campaign_data)
+            mock_response = mock_api_service.createCampaign(self.test_campaign_data)
 
             # This should no longer return the hardcoded mock ID
-            assert (
-                mock_response.get("campaign", {}).get("id") != "campaign-12345"
-            ), "FAIL: Mock service still returning hardcoded campaign-12345"
+            assert mock_response.get("campaign", {}).get("id") != "campaign-12345", (
+                "FAIL: Mock service still returning hardcoded campaign-12345"
+            )
 
             print("✅ Confirmed: Mock mode no longer returns hardcoded IDs")
         except ImportError:
@@ -161,7 +158,7 @@ class RealAPIIntegrationTest(unittest.TestCase):
             print(f"⚠️  CI environment - file access error: {e}")
             self.assertTrue(True, "CI-compatible test passes")
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_flask_backend_reachable(self, mock_get):
         """
         🟢 GREEN TEST: Verify Flask backend is running and reachable
@@ -195,7 +192,7 @@ class RealAPIIntegrationTest(unittest.TestCase):
             print(f"⚠️  CI environment - mocked backend response: {e}")
             self.assertTrue(True, "CI-compatible test passes with mocked response")
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_campaign_creation_api_integration(self, mock_post):
         """
         🟢 GREEN TEST: Integration test - Campaign creation makes real API call
@@ -207,7 +204,7 @@ class RealAPIIntegrationTest(unittest.TestCase):
         mock_response.status_code = 201
         mock_response.json.return_value = {
             "success": True,
-            "campaign_id": "test-campaign-uuid-123"
+            "campaign_id": "test-campaign-uuid-123",
         }
         mock_post.return_value = mock_response
 

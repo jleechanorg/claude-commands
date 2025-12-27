@@ -54,6 +54,7 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
 
         # Set up fake Firestore client
         from tests.fake_firestore import FakeFirestoreClient
+
         fake_firestore = FakeFirestoreClient()
         self.mock_get_db.return_value = fake_firestore
         # Direct calls are now the default - no MCP server setup needed
@@ -94,14 +95,14 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
             data = response.get_json()
 
             # CRITICAL: Response must be an array directly
-            assert isinstance(
-                data, list
-            ), f"API must return array directly for backward compatibility. Got: {type(data)}"
+            assert isinstance(data, list), (
+                f"API must return array directly for backward compatibility. Got: {type(data)}"
+            )
 
             # Verify it's not wrapped in an object
-            assert not isinstance(
-                data, dict
-            ), "API must NOT return object wrapper for backward compatibility"
+            assert not isinstance(data, dict), (
+                "API must NOT return object wrapper for backward compatibility"
+            )
 
             # If we have campaigns, verify structure
             if data:

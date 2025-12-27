@@ -11,7 +11,9 @@ class TestContextBudgeting(unittest.TestCase):
             * constants.CONTEXT_WINDOW_SAFETY_RATIO
         )
         assert (
-            llm_service._get_safe_context_token_budget(constants.LLM_PROVIDER_OPENROUTER, model)
+            llm_service._get_safe_context_token_budget(
+                constants.LLM_PROVIDER_OPENROUTER, model
+            )
             == expected_tokens
         )
 

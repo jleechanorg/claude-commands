@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any
 
 from google import genai
@@ -16,18 +17,18 @@ from google.genai import types
 from mvp_site import constants, logging_util
 from mvp_site.dice import DICE_ROLL_TOOLS, execute_dice_tool
 from mvp_site.game_state import execute_tool_requests, format_tool_results_text
+from mvp_site.llm_providers import gemini_code_execution
 from mvp_site.llm_providers.provider_utils import (
     build_tool_results_prompt,
     run_json_first_tool_requests_flow,
     stringify_prompt_contents,
 )
-from mvp_site.llm_providers import gemini_code_execution
+
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
 # We rely on response_mime_type="application/json" + prompt instruction instead
 # Post-response validation in narrative_response_schema.py handles structure enforcement
 
-import re
 
 # Marker pattern for stripping tool_requests dice instructions when using code_execution
 _TOOL_REQUESTS_DICE_PATTERN = re.compile(
@@ -115,7 +116,6 @@ def maybe_log_code_execution_parts(
     gemini_code_execution.log_code_execution_parts(
         response, model_name=model_name, context=context
     )
-
 
 
 def generate_json_mode_content(
@@ -220,7 +220,7 @@ def generate_json_mode_content(
     if system_instruction_text:
         # Use plain string - all current Gemini SDK versions accept string directly
         config.system_instruction = system_instruction_text
-    
+
     # If messages are provided, use them (ChatSession style) or convert to contents
     # The Google GenAI SDK generate_content accepts a list of contents.
     # We need to ensure format compatibility.
@@ -230,19 +230,19 @@ def generate_json_mode_content(
         for msg in messages:
             role = "user" if msg["role"] == "user" else "model"
             if msg["role"] == "system":
-                continue # Handled in config
+                continue  # Handled in config
             if msg["role"] == "tool":
                 # Skip tool responses in history for JSON-mode calls; the tool results
                 # are already embedded in prompt_contents for Phase 2.
                 continue
-            
+
             parts = []
             if msg.get("content"):
                 parts.append(types.Part(text=msg["content"]))
-            
+
             # Helper for tool calls/responses would go here
             contents.append(types.Content(role=role, parts=parts))
-            
+
     else:
         contents = prompt_contents
 
@@ -256,8 +256,6 @@ def generate_json_mode_content(
 def _stringify_prompt_contents(prompt_contents: list[Any]) -> str:
     """Backward-compatible wrapper around provider_utils.stringify_prompt_contents."""
     return stringify_prompt_contents(prompt_contents)
-
-
 
 
 def generate_content_with_code_execution(
@@ -304,14 +302,14 @@ def generate_content_with_code_execution(
         "roll = random.randint(1, 20)  # This generates the REAL value - REQUIRED!\n"
         "modifier = 5\n"
         "total = roll + modifier\n"
-        "print(json.dumps({\"notation\": \"1d20+5\", \"rolls\": [roll], \"modifier\": modifier, \"total\": total}))\n"
+        'print(json.dumps({"notation": "1d20+5", "rolls": [roll], "modifier": modifier, "total": total}))\n'
         "```\n"
         "3. Stdout MUST be valid JSON ONLY (no extra text). The JSON output contains the ONLY valid dice value.\n"
         "4. Populate `dice_rolls` and `dice_audit_events` from the JSON stdout. Each item MUST include:\n"
-        "   label, notation, rolls (array of raw die values), modifier, total. For dice_audit_events also set source=\"code_execution\".\n\n"
+        '   label, notation, rolls (array of raw die values), modifier, total. For dice_audit_events also set source="code_execution".\n\n'
         "### ❌ FORBIDDEN (Fabrication - WILL BE DETECTED AND REJECTED):\n"
-        "- Writing dice values in narrative without code execution: \"[DICE: 1d20 = 15]\" ← REJECTED\n"
-        "- Inventing numbers: \"You roll a 17\" without running random.randint() ← REJECTED\n"
+        '- Writing dice values in narrative without code execution: "[DICE: 1d20 = 15]" ← REJECTED\n'
+        '- Inventing numbers: "You roll a 17" without running random.randint() ← REJECTED\n'
         "- Printing hardcoded values: `print('{\"rolls\": [16]}')` without RNG ← REJECTED\n"
         "- Populating dice_rolls/dice_audit_events without corresponding JSON stdout ← REJECTED\n\n"
         "### Why This Matters:\n"
@@ -355,29 +353,35 @@ def _execute_native_tool_calls(tool_calls: list) -> list[dict]:
     for i, call in enumerate(tool_calls):
         try:
             # Gemini FunctionCall has name and args attributes
-            tool_name = call.name if hasattr(call, 'name') else str(call.get('name', ''))
-            args = dict(call.args) if hasattr(call, 'args') else call.get('args', {})
+            tool_name = (
+                call.name if hasattr(call, "name") else str(call.get("name", ""))
+            )
+            args = dict(call.args) if hasattr(call, "args") else call.get("args", {})
             call_id = f"call_{i}"  # Gemini doesn't provide IDs like OpenAI
 
             # Execute the tool
             result = execute_dice_tool(tool_name, args)
 
-            results.append({
-                "tool_call_id": call_id,
-                "tool": tool_name,
-                "args": args,
-                "result": result,
-            })
+            results.append(
+                {
+                    "tool_call_id": call_id,
+                    "tool": tool_name,
+                    "args": args,
+                    "result": result,
+                }
+            )
             logging_util.info(f"GEMINI_NATIVE_TOOL: {tool_name}({args}) -> {result}")
 
         except Exception as e:
             logging_util.error(f"Gemini native tool execution error: {e}")
-            results.append({
-                "tool_call_id": f"call_{i}",
-                "tool": str(getattr(call, 'name', 'unknown')),
-                "args": {},
-                "result": {"error": str(e)},
-            })
+            results.append(
+                {
+                    "tool_call_id": f"call_{i}",
+                    "tool": str(getattr(call, "name", "unknown")),
+                    "args": {},
+                    "result": {"error": str(e)},
+                }
+            )
 
     return results
 
@@ -455,36 +459,45 @@ def generate_content_with_native_tools(
     function_calls = []
     if response1.candidates and response1.candidates[0].content.parts:
         for part in response1.candidates[0].content.parts:
-            if hasattr(part, 'function_call') and part.function_call:
+            if hasattr(part, "function_call") and part.function_call:
                 function_calls.append(part.function_call)
 
     if not function_calls:
         # No tools needed - make Phase 2 call for JSON schema response
-        logging_util.info("Gemini NATIVE Phase 1: No function_calls, proceeding to Phase 2")
+        logging_util.info(
+            "Gemini NATIVE Phase 1: No function_calls, proceeding to Phase 2"
+        )
 
         # Build history for Phase 2
         history = []
-        history.append(types.Content(
-            role="user",
-            parts=[types.Part(text=stringify_prompt_contents(prompt_contents))]
-        ))
+        history.append(
+            types.Content(
+                role="user",
+                parts=[types.Part(text=stringify_prompt_contents(prompt_contents))],
+            )
+        )
 
         # Add Phase 1 response if it has text
         phase1_text = ""
         if response1.candidates and response1.candidates[0].content.parts:
             for part in response1.candidates[0].content.parts:
-                if hasattr(part, 'text') and part.text:
+                if hasattr(part, "text") and part.text:
                     phase1_text += part.text
 
         if phase1_text:
-            history.append(types.Content(
-                role="model",
-                parts=[types.Part(text=phase1_text)]
-            ))
-            history.append(types.Content(
-                role="user",
-                parts=[types.Part(text="Now provide your response in the required JSON format.")]
-            ))
+            history.append(
+                types.Content(role="model", parts=[types.Part(text=phase1_text)])
+            )
+            history.append(
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part(
+                            text="Now provide your response in the required JSON format."
+                        )
+                    ],
+                )
+            )
 
         return generate_json_mode_content(
             prompt_contents=history if phase1_text else prompt_contents,
@@ -498,11 +511,15 @@ def generate_content_with_native_tools(
         )
 
     # Execute function calls
-    logging_util.info(f"Gemini NATIVE Phase 1: Executing {len(function_calls)} function call(s)")
+    logging_util.info(
+        f"Gemini NATIVE Phase 1: Executing {len(function_calls)} function call(s)"
+    )
     tool_results = _execute_native_tool_calls(function_calls)
 
     if not tool_results:
-        logging_util.warning("Gemini NATIVE: No valid tool results, making JSON-only call")
+        logging_util.warning(
+            "Gemini NATIVE: No valid tool results, making JSON-only call"
+        )
         return generate_json_mode_content(
             prompt_contents=prompt_contents,
             model_name=model_name,
@@ -519,35 +536,45 @@ def generate_content_with_native_tools(
 
     # Build conversation history for Phase 2
     history = []
-    history.append(types.Content(
-        role="user",
-        parts=[types.Part(text=stringify_prompt_contents(prompt_contents))]
-    ))
+    history.append(
+        types.Content(
+            role="user",
+            parts=[types.Part(text=stringify_prompt_contents(prompt_contents))],
+        )
+    )
 
     # Add model's Phase 1 response (with function calls)
     phase1_parts = []
     if response1.candidates and response1.candidates[0].content.parts:
         for part in response1.candidates[0].content.parts:
-            if hasattr(part, 'text') and part.text:
+            if hasattr(part, "text") and part.text:
                 phase1_parts.append(types.Part(text=part.text))
-            elif hasattr(part, 'function_call') and part.function_call:
+            elif hasattr(part, "function_call") and part.function_call:
                 # Include function call reference
-                phase1_parts.append(types.Part(text=f"[Called {part.function_call.name}]"))
+                phase1_parts.append(
+                    types.Part(text=f"[Called {part.function_call.name}]")
+                )
 
     if phase1_parts:
         history.append(types.Content(role="model", parts=phase1_parts))
 
     # Add tool results as user turn
-    history.append(types.Content(
-        role="user",
-        parts=[types.Part(text=build_tool_results_prompt(
-            tool_results_text,
-            extra_instructions=(
-                "Now provide the complete response in the required JSON format. "
-                "Include the dice roll results in the dice_rolls array."
-            ),
-        ))]
-    ))
+    history.append(
+        types.Content(
+            role="user",
+            parts=[
+                types.Part(
+                    text=build_tool_results_prompt(
+                        tool_results_text,
+                        extra_instructions=(
+                            "Now provide the complete response in the required JSON format. "
+                            "Include the dice roll results in the dice_rolls array."
+                        ),
+                    )
+                )
+            ],
+        )
+    )
 
     # Phase 2: JSON schema response with results
     logging_util.info("Gemini NATIVE Phase 2: JSON call with tool results")
@@ -591,6 +618,7 @@ def generate_content_with_tool_requests(
     Returns:
         Gemini API response with complete JSON
     """
+
     def phase1() -> Any:
         logging_util.info("Gemini Phase 1: JSON call (checking for tool_requests)")
         return generate_json_mode_content(

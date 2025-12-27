@@ -173,7 +173,9 @@ class LLMResponse:
                                 f"(found {len(matches)} times). Use proper JSON fields instead."
                             )
             except Exception as e:
-                logging_util.debug(f"Could not check structured response for old tags: {e}")
+                logging_util.debug(
+                    f"Could not check structured response for old tags: {e}"
+                )
 
         # Log summary if any old tags found
         total_found = sum(len(tags) for tags in old_tags_found.values())

@@ -8,6 +8,7 @@ Tests verify that the Gunicorn configuration file:
 4. Has appropriate timeout settings
 5. Responds to environment variables
 """
+
 import importlib.util
 import multiprocessing
 import os
@@ -78,7 +79,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self.assertEqual(
             actual_workers,
             expected_workers,
-            f"Workers should be (2*CPU)+1 = {expected_workers}, got {actual_workers}"
+            f"Workers should be (2*CPU)+1 = {expected_workers}, got {actual_workers}",
         )
 
     def test_worker_class_is_gthread(self):
@@ -88,7 +89,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self.assertEqual(
             self.config.worker_class,
             "gthread",
-            "Worker class should be 'gthread' for concurrent request handling"
+            "Worker class should be 'gthread' for concurrent request handling",
         )
 
     def test_threads_per_worker_default(self):
@@ -96,9 +97,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self._reload_config()
 
         self.assertEqual(
-            self.config.threads,
-            4,
-            "Default threads per worker should be 4"
+            self.config.threads, 4, "Default threads per worker should be 4"
         )
 
     def test_timeout_is_sufficient_for_ai_operations(self):
@@ -108,7 +107,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self.assertEqual(
             self.config.timeout,
             600,
-            "Timeout should be 600 seconds for Gemini API calls"
+            "Timeout should be 600 seconds for Gemini API calls",
         )
 
     def test_timeout_respects_central_environment_variable(self):
@@ -134,7 +133,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self.assertEqual(
             self.config.workers,
             7,
-            "Workers should respect GUNICORN_WORKERS environment variable"
+            "Workers should respect GUNICORN_WORKERS environment variable",
         )
 
     def test_threads_respects_environment_variable(self):
@@ -148,7 +147,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self.assertEqual(
             self.config.threads,
             8,
-            "Threads should respect GUNICORN_THREADS environment variable"
+            "Threads should respect GUNICORN_THREADS environment variable",
         )
 
     def test_bind_address_is_cloud_run_compatible(self):
@@ -158,7 +157,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self.assertEqual(
             self.config.bind,
             "0.0.0.0:8080",
-            "Should bind to 0.0.0.0:8080 for container compatibility"
+            "Should bind to 0.0.0.0:8080 for container compatibility",
         )
 
     def test_logging_outputs_to_stdout_stderr(self):
@@ -166,14 +165,10 @@ class TestGunicornConfiguration(unittest.TestCase):
         self._reload_config()
 
         self.assertEqual(
-            self.config.accesslog,
-            "-",
-            "Access log should output to stdout ('-')"
+            self.config.accesslog, "-", "Access log should output to stdout ('-')"
         )
         self.assertEqual(
-            self.config.errorlog,
-            "-",
-            "Error log should output to stderr ('-')"
+            self.config.errorlog, "-", "Error log should output to stderr ('-')"
         )
 
     def test_worker_restart_policy_prevents_memory_leaks(self):
@@ -182,17 +177,13 @@ class TestGunicornConfiguration(unittest.TestCase):
 
         self.assertIsNotNone(
             self.config.max_requests,
-            "max_requests should be set for worker restart policy"
+            "max_requests should be set for worker restart policy",
         )
         self.assertGreater(
-            self.config.max_requests,
-            0,
-            "max_requests should be positive"
+            self.config.max_requests, 0, "max_requests should be positive"
         )
         self.assertEqual(
-            self.config.max_requests,
-            1000,
-            "Workers should restart after 1000 requests"
+            self.config.max_requests, 1000, "Workers should restart after 1000 requests"
         )
 
     def test_jitter_prevents_simultaneous_worker_restarts(self):
@@ -200,13 +191,12 @@ class TestGunicornConfiguration(unittest.TestCase):
         self._reload_config()
 
         self.assertIsNotNone(
-            self.config.max_requests_jitter,
-            "max_requests_jitter should be set"
+            self.config.max_requests_jitter, "max_requests_jitter should be set"
         )
         self.assertGreater(
             self.config.max_requests_jitter,
             0,
-            "Jitter should be positive to add randomness"
+            "Jitter should be positive to add randomness",
         )
 
     def test_daemon_mode_is_disabled_for_containers(self):
@@ -214,8 +204,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self._reload_config()
 
         self.assertFalse(
-            self.config.daemon,
-            "Daemon mode should be False for Docker/Cloud Run"
+            self.config.daemon, "Daemon mode should be False for Docker/Cloud Run"
         )
 
     def test_process_name_is_identifiable(self):
@@ -223,13 +212,12 @@ class TestGunicornConfiguration(unittest.TestCase):
         self._reload_config()
 
         self.assertIsNotNone(
-            self.config.proc_name,
-            "Process name should be set for monitoring"
+            self.config.proc_name, "Process name should be set for monitoring"
         )
         self.assertIn(
             "worldarchitect",
             self.config.proc_name.lower(),
-            "Process name should identify the application"
+            "Process name should identify the application",
         )
 
     def test_graceful_timeout_allows_request_completion(self):
@@ -237,13 +225,10 @@ class TestGunicornConfiguration(unittest.TestCase):
         self._reload_config()
 
         self.assertIsNotNone(
-            self.config.graceful_timeout,
-            "Graceful timeout should be set"
+            self.config.graceful_timeout, "Graceful timeout should be set"
         )
         self.assertGreater(
-            self.config.graceful_timeout,
-            0,
-            "Graceful timeout should be positive"
+            self.config.graceful_timeout, 0, "Graceful timeout should be positive"
         )
 
     def test_worker_connections_for_async_workers(self):
@@ -251,13 +236,10 @@ class TestGunicornConfiguration(unittest.TestCase):
         self._reload_config()
 
         self.assertIsNotNone(
-            self.config.worker_connections,
-            "worker_connections should be set"
+            self.config.worker_connections, "worker_connections should be set"
         )
         self.assertGreater(
-            self.config.worker_connections,
-            0,
-            "worker_connections should be positive"
+            self.config.worker_connections, 0, "worker_connections should be positive"
         )
 
     def test_hooks_are_callable(self):
@@ -275,10 +257,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         for hook_name in hooks_to_test:
             if hasattr(self.config, hook_name):
                 hook = getattr(self.config, hook_name)
-                self.assertTrue(
-                    callable(hook),
-                    f"{hook_name} hook should be callable"
-                )
+                self.assertTrue(callable(hook), f"{hook_name} hook should be callable")
 
     def test_calculated_concurrency_is_correct(self):
         """RED→GREEN: Total concurrency should be workers × threads"""
@@ -294,7 +273,7 @@ class TestGunicornConfiguration(unittest.TestCase):
         self.assertEqual(
             actual_concurrency,
             expected_concurrency,
-            f"Total concurrency should be workers×threads = {expected_concurrency}"
+            f"Total concurrency should be workers×threads = {expected_concurrency}",
         )
 
 

@@ -104,7 +104,10 @@ class TestLLMResponseValidation(unittest.TestCase):
         response = {
             "narrative": "You lunge forward.",
             "entities_mentioned": ["hero"],
-            "planning_block": {"thinking": "Attack!", "choices": {"attack": {"text": "Attack", "description": "Strike"}}},
+            "planning_block": {
+                "thinking": "Attack!",
+                "choices": {"attack": {"text": "Attack", "description": "Strike"}},
+            },
             "dice_rolls": ["Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)"],
             "dice_audit_events": [
                 {
@@ -232,7 +235,7 @@ class TestLLMResponseValidation(unittest.TestCase):
 
         # Should handle graceful recovery (default to empty list)
         parsed_text, structured = parse_structured_response(response_text)
-        
+
         assert isinstance(structured, NarrativeResponse)
         assert structured.entities_mentioned == []
 

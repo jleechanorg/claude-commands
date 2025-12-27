@@ -9,18 +9,18 @@ from mvp_site.game_state import GameState, format_tool_results_text
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 DICE_ROLL_PATTERN = re.compile(
-    r'\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b|\brolls?\s+(?:a\s+)?\d+\b',
+    r"\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b|\brolls?\s+(?:a\s+)?\d+\b",
     re.IGNORECASE,
 )
 _NARRATIVE_DICE_NOTATION_PATTERN = re.compile(
-    r'\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b', re.IGNORECASE
+    r"\b\d*d\d+(?:\s*[+\-]\s*\d+)?\b", re.IGNORECASE
 )
-_NARRATIVE_DICE_TAG_PATTERN = re.compile(r'\[dice:[^\]]+\]', re.IGNORECASE)
+_NARRATIVE_DICE_TAG_PATTERN = re.compile(r"\[dice:[^\]]+\]", re.IGNORECASE)
 _NARRATIVE_DICE_ROLL_RESULT_PATTERN = re.compile(
-    r'\brolls?\s+(?:a\s+)?\d+\b', re.IGNORECASE
+    r"\brolls?\s+(?:a\s+)?\d+\b", re.IGNORECASE
 )
 _NARRATIVE_DICE_CONTEXT_PATTERN = re.compile(
-    r'\b(attack|hit|damage|save|saving throw|skill|check|initiative|ac|dc)\b',
+    r"\b(attack|hit|damage|save|saving throw|skill|check|initiative|ac|dc)\b",
     re.IGNORECASE,
 )
 _NARRATIVE_DICE_SCAN_MAX_CHARS = 5000
@@ -62,13 +62,11 @@ def _detect_narrative_dice_fabrication(
 
     has_dice_in_structured = False
     if structured_response:
-        dice_rolls = getattr(structured_response, 'dice_rolls', None)
+        dice_rolls = getattr(structured_response, "dice_rolls", None)
         dice_audit_events = getattr(structured_response, "dice_audit_events", None)
         has_dice_in_structured = (
             isinstance(dice_rolls, list) and any(str(r).strip() for r in dice_rolls)
-        ) or (
-            isinstance(dice_audit_events, list) and any(dice_audit_events)
-        )
+        ) or (isinstance(dice_audit_events, list) and any(dice_audit_events))
 
     dice.log_narrative_dice_detected(bool(has_dice_in_narrative))
 
@@ -309,9 +307,9 @@ def _has_dice_tool_results(tool_results: Any) -> bool:
         if not isinstance(result, dict):
             continue
 
-        tool_name = result.get('tool') or result.get('name', '')
+        tool_name = result.get("tool") or result.get("name", "")
         if isinstance(tool_name, str) and tool_name in _DICE_TOOL_NAMES:
-            result_data = result.get('result')
+            result_data = result.get("result")
             if result_data and isinstance(result_data, dict):
                 return True
 
@@ -590,8 +588,7 @@ _COMBAT_ACTION_KEYWORDS_USER_INPUT = (
 
 _COMBAT_KEYWORD_MAX_CHARS = 5000
 _COMBAT_KEYWORD_PATTERNS = tuple(
-    re.compile(r"\b" + re.escape(keyword) + r"\b")
-    for keyword in COMBAT_ACTION_KEYWORDS
+    re.compile(r"\b" + re.escape(keyword) + r"\b") for keyword in COMBAT_ACTION_KEYWORDS
 )
 _COMBAT_KEYWORD_PATTERNS_USER_INPUT = tuple(
     re.compile(r"\b" + re.escape(keyword) + r"\b")
@@ -758,9 +755,11 @@ def _validate_combat_dice_integrity(
     user_text = (user_input or "").strip().lower()
     if user_text:
         user_text = _truncate_for_combat_scan(user_text)
-    user_has_combat = any(
-        pattern.search(user_text) for pattern in _COMBAT_KEYWORD_PATTERNS
-    ) if user_text else False
+    user_has_combat = (
+        any(pattern.search(user_text) for pattern in _COMBAT_KEYWORD_PATTERNS)
+        if user_text
+        else False
+    )
 
     narrative_has_combat = _detect_combat_in_narrative(narrative_text)
 

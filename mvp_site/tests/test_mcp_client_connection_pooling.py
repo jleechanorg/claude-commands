@@ -8,6 +8,7 @@ Tests verify that the MCP client:
 4. Has retry configuration
 5. Mounts adapters for both HTTP and HTTPS
 """
+
 import unittest
 
 import requests
@@ -118,9 +119,7 @@ class TestMCPClientConnectionPooling(unittest.TestCase):
         client = MCPClient("http://localhost:8000", skip_http=True)
 
         # Session should be None in skip_http mode
-        self.assertIsNone(
-            client.session, "Session should be None when skip_http=True"
-        )
+        self.assertIsNone(client.session, "Session should be None when skip_http=True")
 
     def test_session_has_correct_headers(self):
         """RED→GREEN: Session should have correct default headers"""
@@ -135,7 +134,9 @@ class TestMCPClientConnectionPooling(unittest.TestCase):
             "Content-Type should be application/json",
         )
         self.assertEqual(
-            headers.get("Accept"), "application/json", "Accept should be application/json"
+            headers.get("Accept"),
+            "application/json",
+            "Accept should be application/json",
         )
         self.assertIn(
             "WorldArchitect",
@@ -179,7 +180,9 @@ class TestMCPClientConnectionPooling(unittest.TestCase):
 
         # Base URLs should be different
         self.assertNotEqual(
-            client1.base_url, client2.base_url, "Clients should have different base URLs"
+            client1.base_url,
+            client2.base_url,
+            "Clients should have different base URLs",
         )
 
     def test_connection_pool_configuration_values(self):

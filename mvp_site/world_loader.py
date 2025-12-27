@@ -31,7 +31,9 @@ def load_banned_names():
     """
     # Explicit existence check - don't use exceptions for control flow
     if not os.path.exists(BANNED_NAMES_PATH):
-        logging_util.info(f"Banned names file not present at {BANNED_NAMES_PATH} (optional)")
+        logging_util.info(
+            f"Banned names file not present at {BANNED_NAMES_PATH} (optional)"
+        )
         return ""
 
     # File exists - if read fails, that's a real error

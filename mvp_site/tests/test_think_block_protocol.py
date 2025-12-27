@@ -132,9 +132,9 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
 
         # Check that most keywords are mentioned (not all need to be present)
         found_keywords = [kw for kw in keywords if kw in self.prompt_content.lower()]
-        assert (
-            len(found_keywords) >= 3
-        ), f"Expected at least 3 of the think keywords {keywords}, but only found {found_keywords}"
+        assert len(found_keywords) >= 3, (
+            f"Expected at least 3 of the think keywords {keywords}, but only found {found_keywords}"
+        )
 
     def test_forbidden_actions_defined(self):
         """Test that forbidden actions are clearly defined"""
@@ -148,7 +148,7 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
             r"(never|don't|must not).*take.*story.*action",  # Don't take story action
             r"generate.*(planning|deep think).*block",  # Generate planning block
             r"only.*contemplation",  # Only contemplation
-            r"wait.*for.*player.*selection", # Wait for player
+            r"wait.*for.*player.*selection",  # Wait for player
         ]
 
         found_concepts = sum(
@@ -203,9 +203,9 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
             for pattern in key_sections
             if self._contains_pattern(self.prompt_content, pattern)
         )
-        assert (
-            found_sections >= 2
-        ), "Should have at least 2 key protocol sections (triggers, format, rules, etc.)"
+        assert found_sections >= 2, (
+            "Should have at least 2 key protocol sections (triggers, format, rules, etc.)"
+        )
 
     def test_protocol_presence(self):
         """Test that think block protocol is present somewhere in the file"""
@@ -221,9 +221,9 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
                 think_block_found = True
                 break
 
-        assert (
-            think_block_found
-        ), "Think Block Protocol should be present somewhere in the file"
+        assert think_block_found, (
+            "Think Block Protocol should be present somewhere in the file"
+        )
 
     def test_protocol_overrides_other_instructions(self):
         """Test that protocol explicitly states it overrides other instructions"""
@@ -231,7 +231,9 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
         assert self._contains_pattern(
             self.prompt_content,
             r"(priority|override|supersede|critical|important|must follow|absolute)",
-        ), "Protocol should indicate its priority or that it overrides other instructions"
+        ), (
+            "Protocol should indicate its priority or that it overrides other instructions"
+        )
 
 
 class TestThinkBlockScenarios(unittest.TestCase):
@@ -285,9 +287,9 @@ class TestPromptFileIntegrity(unittest.TestCase):
 
     def test_prompt_file_exists(self):
         """Test that the prompt file exists"""
-        assert os.path.exists(
-            self.prompt_file
-        ), f"Prompt file not found at {self.prompt_file}"
+        assert os.path.exists(self.prompt_file), (
+            f"Prompt file not found at {self.prompt_file}"
+        )
 
     def test_prompt_file_readable(self):
         """Test that the prompt file is readable"""
@@ -341,9 +343,9 @@ class TestPromptFileIntegrity(unittest.TestCase):
 
         for concepts, description in essential_concepts:
             found = any(concept.lower() in content.lower() for concept in concepts)
-            assert (
-                found
-            ), f"Essential concept '{description}' not found. Looked for: {concepts}"
+            assert found, (
+                f"Essential concept '{description}' not found. Looked for: {concepts}"
+            )
 
 
 class TestThinkBlockStateManagement(unittest.TestCase):

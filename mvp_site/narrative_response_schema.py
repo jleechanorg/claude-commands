@@ -83,7 +83,7 @@ def _strip_embedded_planning_json(text: str) -> str:
     cleaned, removed = _remove_planning_json_blocks(cleaned)
 
     # Clean up multiple consecutive newlines that might result from removal
-    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
 
     if removed and cleaned != text:
         logging_util.info("Stripped embedded planning block JSON from narrative text")
@@ -105,11 +105,11 @@ def _remove_planning_json_blocks(text: str) -> tuple[str, bool]:
 
     while i < text_len:
         # Look for potential JSON object start
-        if text[i] == '{':
+        if text[i] == "{":
             # Try to extract the full JSON object
             json_end = _find_matching_brace(text, i)
             if json_end != -1:
-                json_block = text[i:json_end + 1]
+                json_block = text[i : json_end + 1]
                 # Check if this looks like a planning block
                 if _is_planning_block_json(json_block):
                     # Skip this JSON block (don't add to result)
@@ -120,7 +120,7 @@ def _remove_planning_json_blocks(text: str) -> tuple[str, bool]:
         result.append(text[i])
         i += 1
 
-    return ''.join(result), removed
+    return "".join(result), removed
 
 
 def _find_matching_brace(text: str, start: int) -> int:
@@ -129,7 +129,7 @@ def _find_matching_brace(text: str, start: int) -> int:
 
     Returns -1 if no matching brace is found.
     """
-    if start >= len(text) or text[start] != '{':
+    if start >= len(text) or text[start] != "{":
         return -1
 
     depth = 0
@@ -142,14 +142,14 @@ def _find_matching_brace(text: str, start: int) -> int:
 
         if escape_next:
             escape_next = False
-        elif char == '\\':
+        elif char == "\\":
             escape_next = True
         elif char == '"':
             in_string = not in_string
         elif not in_string:
-            if char == '{':
+            if char == "{":
                 depth += 1
-            elif char == '}':
+            elif char == "}":
                 depth -= 1
                 if depth == 0:
                     return i
@@ -184,10 +184,10 @@ def _is_planning_block_json(json_text: str) -> bool:
         # still remove it (it's likely malformed planning block)
         # Use a looser check
         return (
-            '"thinking"' in json_text and
-            '"choices"' in json_text and
-            json_text.strip().startswith('{') and
-            json_text.strip().endswith('}')
+            '"thinking"' in json_text
+            and '"choices"' in json_text
+            and json_text.strip().startswith("{")
+            and json_text.strip().endswith("}")
         )
 
     return False
@@ -830,7 +830,10 @@ def parse_structured_response(
                 if k not in known_fields and k != "planning_block"
             }
             fallback_response = NarrativeResponse(**known_fields, **extra_fields)
-            return fallback_response.narrative, fallback_response  # Return cleaned narrative from response
+            return (
+                fallback_response.narrative,
+                fallback_response,
+            )  # Return cleaned narrative from response
 
     # Additional mitigation: Try to extract narrative from raw JSON-like text
     # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."

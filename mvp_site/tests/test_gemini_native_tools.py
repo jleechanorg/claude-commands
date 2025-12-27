@@ -50,12 +50,14 @@ class TestGeminiNativeTools(unittest.TestCase):
         config = kwargs["config"]
         assert config.tool_config is not None
         assert config.tool_config.function_calling_config is not None
-        assert (
-            config.tool_config.function_calling_config.mode == "AUTO"
-        ), "Should not use mode='ANY' (forced tool calling)"
+        assert config.tool_config.function_calling_config.mode == "AUTO", (
+            "Should not use mode='ANY' (forced tool calling)"
+        )
 
     @patch("mvp_site.llm_providers.gemini_provider.get_client")
-    def test_native_tools_no_function_calls_still_returns_json(self, mock_get_client: MagicMock):
+    def test_native_tools_no_function_calls_still_returns_json(
+        self, mock_get_client: MagicMock
+    ):
         """No-roll turns should still produce a valid JSON response via Phase 2."""
         from mvp_site.llm_providers import gemini_provider
 
@@ -89,5 +91,6 @@ class TestGeminiNativeTools(unittest.TestCase):
             )
 
         assert out.text == '{"narrative":"ok"}'
-        assert mock_json.called, "Phase 2 JSON call should happen when no function_calls"
-
+        assert mock_json.called, (
+            "Phase 2 JSON call should happen when no function_calls"
+        )

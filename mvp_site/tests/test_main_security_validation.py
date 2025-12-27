@@ -685,9 +685,9 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
                 has_traversal = (
                     ".." in dangerous_path or "%2e" in dangerous_path.lower()
                 )
-                assert (
-                    has_traversal
-                ), f"Path {dangerous_path} should contain traversal pattern"
+                assert has_traversal, (
+                    f"Path {dangerous_path} should contain traversal pattern"
+                )
 
             # In production, path validation would:
             # 1. Resolve to absolute path
@@ -702,9 +702,9 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
                 or "\\" in dangerous_path
             )
 
-            assert (
-                is_dangerous
-            ), f"Path {dangerous_path} should be recognized as dangerous"
+            assert is_dangerous, (
+                f"Path {dangerous_path} should be recognized as dangerous"
+            )
 
     def test_json_bomb_protection(self):
         """Test protection against JSON bomb/billion laughs attacks."""

@@ -64,7 +64,11 @@ class TestRealProvider(unittest.TestCase):
             assert client is not None
         except Exception as e:
             # Expected to fail on actual Google Cloud auth, which is fine
-            assert "google" in str(e).lower() or "auth" in str(e).lower() or "firestore" in str(e).lower()
+            assert (
+                "google" in str(e).lower()
+                or "auth" in str(e).lower()
+                or "firestore" in str(e).lower()
+            )
 
     def test_get_gemini_creates_client(self):
         """Test that get_gemini attempts to create real Gemini client."""
@@ -76,7 +80,11 @@ class TestRealProvider(unittest.TestCase):
             assert client is not None
         except Exception as e:
             # Expected to potentially fail on client creation, which is fine for testing
-            assert "gemini" in str(e).lower() or "api" in str(e).lower() or "client" in str(e).lower()
+            assert (
+                "gemini" in str(e).lower()
+                or "api" in str(e).lower()
+                or "client" in str(e).lower()
+            )
 
     def test_get_auth_creates_test_auth(self):
         """Test that get_auth creates test auth object."""

@@ -30,7 +30,10 @@ os.environ["TESTING"] = "true"
 
 # Add parent directory to path for imports
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ),
 )
 
 
@@ -44,34 +47,40 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         """
         Verify Gemini 2.x models use JSON-first tool_requests flow for dice rolling.
         """
-        with patch('mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests') as mock_tool_requests:
+        with patch(
+            "mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests"
+        ) as mock_tool_requests:
             mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
             # Call the API function with a Gemini 2.x model (not remapped to Gemini 3)
             llm_service._call_llm_api(
-                ['test prompt'],
-                'gemini-2.0-flash',
-                'test logging',
-                provider_name=constants.LLM_PROVIDER_GEMINI
+                ["test prompt"],
+                "gemini-2.0-flash",
+                "test logging",
+                provider_name=constants.LLM_PROVIDER_GEMINI,
             )
 
             self.assertTrue(
                 mock_tool_requests.called,
-                "generate_content_with_tool_requests should be called for Gemini 2.x models"
+                "generate_content_with_tool_requests should be called for Gemini 2.x models",
             )
 
     def test_gemini_3_code_execution_is_single_call(self):
         """Verify Gemini 3 code_execution path does not do Phase 2 calls."""
         from mvp_site.llm_providers import gemini_provider
 
-        with patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content") as mock_json_mode:
+        with patch(
+            "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
+        ) as mock_json_mode:
             mock_json_mode.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
 
-            with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests") as mock_tool_flow:
+            with patch(
+                "mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests"
+            ) as mock_tool_flow:
                 gemini_provider.generate_content_with_code_execution(
                     prompt_contents=["test prompt"],
                     model_name="gemini-3-flash-preview",
@@ -165,7 +174,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         instruction_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
             "prompts",
-            "game_state_instruction.md"
+            "game_state_instruction.md",
         )
 
         with open(instruction_path) as f:
@@ -175,7 +184,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         self.assertIn(
             "Dice Roll",
             instruction_content,
-            "FAIL: Instruction file missing Dice Roll section"
+            "FAIL: Instruction file missing Dice Roll section",
         )
 
     def test_dice_tool_schemas_defined(self):
@@ -215,11 +224,14 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         """
         from mvp_site.game_state import execute_dice_tool
 
-        result = execute_dice_tool("roll_attack", {
-            "attack_modifier": 5,
-            "damage_notation": "1d8+3",
-            "target_ac": 15,
-        })
+        result = execute_dice_tool(
+            "roll_attack",
+            {
+                "attack_modifier": 5,
+                "damage_notation": "1d8+3",
+                "target_ac": 15,
+            },
+        )
 
         self.assertIn("attack_roll", result)
         self.assertIn("hit", result)
@@ -235,7 +247,9 @@ class TestHybridDiceRollSystem(unittest.TestCase):
         """
         Verify API calls pass required parameters to JSON-first tool_requests flow.
         """
-        with patch("mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests") as mock_tool_requests:
+        with patch(
+            "mvp_site.llm_providers.gemini_provider.generate_content_with_tool_requests"
+        ) as mock_tool_requests:
             mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
@@ -252,6 +266,7 @@ class TestHybridDiceRollSystem(unittest.TestCase):
             self.assertEqual(call_kwargs.get("model_name"), "gemini-2.0-flash")
             self.assertEqual(call_kwargs.get("temperature"), llm_service.TEMPERATURE)
 
+
 class TestCerebrasToolUseIntegration(unittest.TestCase):
     """Test Cerebras provider tool use for dice rolling (two-stage inference)."""
 
@@ -263,13 +278,14 @@ class TestCerebrasToolUseIntegration(unittest.TestCase):
         import inspect
 
         from mvp_site.llm_providers import cerebras_provider
+
         sig = inspect.signature(cerebras_provider.generate_content)
         param_names = list(sig.parameters.keys())
 
         self.assertIn(
             "tools",
             param_names,
-            "FAIL: cerebras_provider.generate_content should accept 'tools' parameter"
+            "FAIL: cerebras_provider.generate_content should accept 'tools' parameter",
         )
 
     def test_cerebras_response_handles_tool_calls(self):
@@ -280,29 +296,33 @@ class TestCerebrasToolUseIntegration(unittest.TestCase):
 
         # Mock response with tool_calls
         mock_response = {
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [{
-                        "id": "call_123",
-                        "type": "function",
-                        "function": {
-                            "name": "roll_dice",
-                            "arguments": '{"notation": "1d20+5"}'
-                        }
-                    }]
-                },
-                "finish_reason": "tool_calls"
-            }]
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_123",
+                                "type": "function",
+                                "function": {
+                                    "name": "roll_dice",
+                                    "arguments": '{"notation": "1d20+5"}',
+                                },
+                            }
+                        ],
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ]
         }
 
         response = CerebrasResponse("", mock_response)
 
         # Verify tool_calls can be extracted
         self.assertTrue(
-            hasattr(response, 'tool_calls') or hasattr(response, 'get_tool_calls'),
-            "FAIL: CerebrasResponse should expose tool_calls"
+            hasattr(response, "tool_calls") or hasattr(response, "get_tool_calls"),
+            "FAIL: CerebrasResponse should expose tool_calls",
         )
 
 
@@ -336,7 +356,9 @@ class TestDiceRollTools(unittest.TestCase):
         """
         from mvp_site.game_state import execute_dice_tool
 
-        result = execute_dice_tool("roll_dice", {"notation": "2d6+3", "purpose": "damage"})
+        result = execute_dice_tool(
+            "roll_dice", {"notation": "2d6+3", "purpose": "damage"}
+        )
 
         self.assertIn("notation", result)
         self.assertIn("total", result)
@@ -350,11 +372,10 @@ class TestDiceRollTools(unittest.TestCase):
         """
         from mvp_site.game_state import execute_dice_tool
 
-        result = execute_dice_tool("roll_attack", {
-            "attack_modifier": 5,
-            "damage_notation": "1d8+3",
-            "target_ac": 15
-        })
+        result = execute_dice_tool(
+            "roll_attack",
+            {"attack_modifier": 5, "damage_notation": "1d8+3", "target_ac": 15},
+        )
 
         self.assertIn("attack_roll", result)
         self.assertIn("target_ac", result)
@@ -367,13 +388,16 @@ class TestDiceRollTools(unittest.TestCase):
         """
         from mvp_site.game_state import execute_dice_tool
 
-        result = execute_dice_tool("roll_skill_check", {
-            "attribute_modifier": 3,
-            "proficiency_bonus": 2,
-            "proficient": True,
-            "dc": 15,
-            "skill_name": "Stealth"
-        })
+        result = execute_dice_tool(
+            "roll_skill_check",
+            {
+                "attribute_modifier": 3,
+                "proficiency_bonus": 2,
+                "proficient": True,
+                "dc": 15,
+                "skill_name": "Stealth",
+            },
+        )
 
         self.assertIn("skill", result)
         self.assertIn("total", result)
@@ -392,7 +416,9 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
         to avoid forced tool calls and match prompt documentation.
         Phase 1: JSON with optional tool_requests, Phase 2: JSON with results.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests") as mock_tool_requests:
+        with patch(
+            "mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests"
+        ) as mock_tool_requests:
             mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
@@ -402,7 +428,7 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 ["test prompt"],
                 "qwen-3-235b-a22b-instruct-2507",
                 "test logging",
-                provider_name=constants.LLM_PROVIDER_CEREBRAS
+                provider_name=constants.LLM_PROVIDER_CEREBRAS,
             )
 
             # Verify JSON-first tool_requests flow was called
@@ -419,7 +445,9 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
         to avoid forced tool calls and match prompt documentation.
         Phase 1: JSON with optional tool_requests, Phase 2: JSON with results.
         """
-        with patch("mvp_site.llm_providers.openrouter_provider.generate_content_with_tool_requests") as mock_tool_requests:
+        with patch(
+            "mvp_site.llm_providers.openrouter_provider.generate_content_with_tool_requests"
+        ) as mock_tool_requests:
             mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
@@ -429,7 +457,7 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 ["test prompt"],
                 "meta-llama/llama-3.1-70b-instruct",
                 "test logging",
-                provider_name=constants.LLM_PROVIDER_OPENROUTER
+                provider_name=constants.LLM_PROVIDER_OPENROUTER,
             )
 
             # Verify JSON-first tool_requests flow was called
@@ -446,7 +474,9 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
         to avoid forced tool calls. The old MODELS_WITH_TOOL_USE distinction
         is removed - all models now use optional tool_requests in JSON.
         """
-        with patch("mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests") as mock_tool_requests:
+        with patch(
+            "mvp_site.llm_providers.cerebras_provider.generate_content_with_tool_requests"
+        ) as mock_tool_requests:
             mock_tool_requests.return_value = Mock(
                 text='{"narrative": "test", "entities_mentioned": [], "dice_rolls": []}'
             )
@@ -456,7 +486,7 @@ class TestLLMServiceToolIntegration(unittest.TestCase):
                 ["test prompt"],
                 "llama-3.3-70b",
                 "test logging",
-                provider_name=constants.LLM_PROVIDER_CEREBRAS
+                provider_name=constants.LLM_PROVIDER_CEREBRAS,
             )
 
             # Verify JSON-first tool_requests flow was called
@@ -486,13 +516,17 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
 
         # Phase 1 response: No tool_requests
-        phase1_json = json.dumps({
-            "narrative": "You look around the room.",
-            "planning_block": {"thinking": "Observing surroundings"},
-        })
+        phase1_json = json.dumps(
+            {
+                "narrative": "You look around the room.",
+                "planning_block": {"thinking": "Observing surroundings"},
+            }
+        )
 
         with patch.object(cerebras_provider, "generate_content") as mock_gen:
-            mock_gen.return_value = CerebrasResponse(text=phase1_json, raw_response=None)
+            mock_gen.return_value = CerebrasResponse(
+                text=phase1_json, raw_response=None
+            )
 
             result = cerebras_provider.generate_content_with_tool_requests(
                 prompt_contents=["Look around"],
@@ -512,17 +546,23 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         from mvp_site.llm_providers.cerebras_provider import CerebrasResponse
 
         # Phase 1 response: Has tool_requests
-        phase1_json = json.dumps({
-            "narrative": "You attack the goblin!",
-            "tool_requests": [{"tool": "roll_dice", "args": {"notation": "1d20+5"}}],
-        })
+        phase1_json = json.dumps(
+            {
+                "narrative": "You attack the goblin!",
+                "tool_requests": [
+                    {"tool": "roll_dice", "args": {"notation": "1d20+5"}}
+                ],
+            }
+        )
 
         # Phase 2 response: Final narrative with results
-        phase2_json = json.dumps({
-            "narrative": "You rolled a 17! The goblin is hit.",
-            "planning_block": {"thinking": "Attack successful"},
-            "dice_rolls": ["17"],
-        })
+        phase2_json = json.dumps(
+            {
+                "narrative": "You rolled a 17! The goblin is hit.",
+                "planning_block": {"thinking": "Attack successful"},
+                "dice_rolls": ["17"],
+            }
+        )
 
         with patch.object(cerebras_provider, "generate_content") as mock_gen:
             mock_gen.side_effect = [
@@ -545,7 +585,9 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
             # Verify Phase 2 call includes tool results in messages
             phase2_call_args = mock_gen.call_args_list[1]
             messages = phase2_call_args.kwargs.get("messages", [])
-            self.assertTrue(len(messages) >= 3, "Phase 2 should have messages with tool results")
+            self.assertTrue(
+                len(messages) >= 3, "Phase 2 should have messages with tool results"
+            )
 
             # Check that tool results message is included
             tool_results_msg = messages[-1]["content"]
@@ -562,7 +604,9 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         invalid_response = "This is not valid JSON"
 
         with patch.object(cerebras_provider, "generate_content") as mock_gen:
-            mock_gen.return_value = CerebrasResponse(text=invalid_response, raw_response=None)
+            mock_gen.return_value = CerebrasResponse(
+                text=invalid_response, raw_response=None
+            )
 
             result = cerebras_provider.generate_content_with_tool_requests(
                 prompt_contents=["Test"],
@@ -602,7 +646,10 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         tool_requests = [
             {"tool": "roll_dice", "args": {"notation": "2d6+3", "purpose": "damage"}},
             {"tool": "roll_attack", "args": {"modifier": 5, "target_ac": 15}},
-            {"tool": "roll_skill_check", "args": {"skill": "perception", "modifier": 2}},
+            {
+                "tool": "roll_skill_check",
+                "args": {"skill": "perception", "modifier": 2},
+            },
         ]
 
         results = execute_tool_requests(tool_requests)
@@ -625,10 +672,12 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         from mvp_site.llm_providers import openrouter_provider
         from mvp_site.llm_providers.openrouter_provider import OpenRouterResponse
 
-        phase1_json = json.dumps({
-            "narrative": "The forest is peaceful.",
-            "planning_block": {"thinking": "Peaceful scene"},
-        })
+        phase1_json = json.dumps(
+            {
+                "narrative": "The forest is peaceful.",
+                "planning_block": {"thinking": "Peaceful scene"},
+            }
+        )
 
         with patch.object(openrouter_provider, "generate_content") as mock_gen:
             mock_gen.return_value = OpenRouterResponse(text=phase1_json)
@@ -649,16 +698,25 @@ class TestToolRequestsE2EFlow(unittest.TestCase):
         from mvp_site.llm_providers import openrouter_provider
         from mvp_site.llm_providers.openrouter_provider import OpenRouterResponse
 
-        phase1_json = json.dumps({
-            "narrative": "You attempt a skill check.",
-            "tool_requests": [{"tool": "roll_skill_check", "args": {"skill": "stealth", "modifier": 4}}],
-        })
+        phase1_json = json.dumps(
+            {
+                "narrative": "You attempt a skill check.",
+                "tool_requests": [
+                    {
+                        "tool": "roll_skill_check",
+                        "args": {"skill": "stealth", "modifier": 4},
+                    }
+                ],
+            }
+        )
 
-        phase2_json = json.dumps({
-            "narrative": "You rolled a 16! You move silently.",
-            "planning_block": {"thinking": "Stealth success"},
-            "dice_rolls": ["16"],
-        })
+        phase2_json = json.dumps(
+            {
+                "narrative": "You rolled a 16! You move silently.",
+                "planning_block": {"thinking": "Stealth success"},
+                "dice_rolls": ["16"],
+            }
+        )
 
         with patch.object(openrouter_provider, "generate_content") as mock_gen:
             mock_gen.side_effect = [
@@ -689,15 +747,16 @@ class TestThinkingConfigEnforcement(unittest.TestCase):
         - thinkingConfig with thinking_budget increases code_execution compliance
         - Forces model to deliberate before skipping tool use
         """
-        from mvp_site.llm_providers import gemini_provider
         from google.genai import types
+
+        from mvp_site.llm_providers import gemini_provider
 
         # Mock get_client to return a fake client that captures config
         mock_client = Mock()
         mock_response = Mock(text='{"narrative": "test", "dice_rolls": []}')
         mock_client.models.generate_content.return_value = mock_response
 
-        with patch.object(gemini_provider, 'get_client', return_value=mock_client):
+        with patch.object(gemini_provider, "get_client", return_value=mock_client):
             gemini_provider.generate_content_with_code_execution(
                 prompt_contents=["test prompt"],
                 model_name="gemini-3-flash-preview",
@@ -710,7 +769,7 @@ class TestThinkingConfigEnforcement(unittest.TestCase):
         # Verify generate_content was called
         self.assertTrue(
             mock_client.models.generate_content.called,
-            "Should call Client.models.generate_content"
+            "Should call Client.models.generate_content",
         )
 
         # Get the config from the call
@@ -718,13 +777,13 @@ class TestThinkingConfigEnforcement(unittest.TestCase):
         if call_args is None:
             self.fail("generate_content was not called")
 
-        config = call_args.kwargs.get('config')
+        config = call_args.kwargs.get("config")
         self.assertIsNotNone(config, "Should pass config")
 
         # Verify thinking_config is present
         self.assertIsNotNone(
-            getattr(config, 'thinking_config', None),
-            "Config should have thinking_config attribute"
+            getattr(config, "thinking_config", None),
+            "Config should have thinking_config attribute",
         )
 
 
@@ -742,7 +801,9 @@ class TestNativeToolsSystemInstruction(unittest.TestCase):
         mock_client.models.generate_content.return_value = mock_response
 
         with patch.object(gemini_provider, "get_client", return_value=mock_client):
-            with patch.object(gemini_provider, "generate_json_mode_content") as mock_json:
+            with patch.object(
+                gemini_provider, "generate_json_mode_content"
+            ) as mock_json:
                 gemini_provider.generate_content_with_native_tools(
                     prompt_contents=["prompt"],
                     model_name="gemini-2.5-flash",
@@ -762,6 +823,7 @@ class TestCodeExecutionFabricationDetection(unittest.TestCase):
     def test_empty_evidence_dict_flags_fabrication_when_dice_present(self):
         """Empty evidence dict should still evaluate fabrication when dice are present."""
         from types import SimpleNamespace
+
         from mvp_site.dice_integrity import _is_code_execution_fabrication
 
         structured = SimpleNamespace(dice_rolls=["1d20 = 12"])
@@ -790,35 +852,36 @@ class TestJSONStdoutValidation(unittest.TestCase):
         mock_response = Mock()
         mock_part = Mock()
         mock_part.executable_code = Mock(
-            language='python',
-            code='import random; print(\'{"notation":"1d20","rolls":[15],"total":15}\')'
+            language="python",
+            code='import random; print(\'{"notation":"1d20","rolls":[15],"total":15}\')',
         )
         mock_part.code_execution_result = Mock(
-            outcome='OUTCOME_OK',
-            output='{"notation":"1d20","rolls":[15],"total":15}'
+            outcome="OUTCOME_OK", output='{"notation":"1d20","rolls":[15],"total":15}'
         )
         mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
-        mock_response.text = '{"narrative": "You rolled 15!", "dice_rolls": ["1d20 = 15"]}'
+        mock_response.text = (
+            '{"narrative": "You rolled 15!", "dice_rolls": ["1d20 = 15"]}'
+        )
 
         # Extract and validate code execution evidence
         evidence = gemini_provider.extract_code_execution_evidence(mock_response)
 
         # Should validate that stdout is valid JSON
         self.assertTrue(
-            evidence.get('code_execution_used', False),
-            "Should detect code execution was used"
+            evidence.get("code_execution_used", False),
+            "Should detect code execution was used",
         )
 
         # Should parse stdout as JSON
-        stdout = evidence.get('stdout', '')
+        stdout = evidence.get("stdout", "")
         self.assertIsNotNone(stdout, "Should extract stdout")
 
         # This will FAIL until we add JSON validation
         try:
             json_output = json.loads(stdout)
-            self.assertIn('notation', json_output, "Should have notation field")
-            self.assertIn('rolls', json_output, "Should have rolls field")
-            self.assertIn('total', json_output, "Should have total field")
+            self.assertIn("notation", json_output, "Should have notation field")
+            self.assertIn("rolls", json_output, "Should have rolls field")
+            self.assertIn("total", json_output, "Should have total field")
         except json.JSONDecodeError:
             self.fail("Code execution stdout should be valid JSON")
 
@@ -841,11 +904,11 @@ class TestRNGVerification(unittest.TestCase):
         mock_response = Mock()
         mock_part = Mock()
         mock_part.executable_code = Mock(
-            language='python',
+            language="python",
             code=code,
         )
         mock_part.code_execution_result = Mock(
-            outcome='OUTCOME_OK',
+            outcome="OUTCOME_OK",
             output=output,
         )
         mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
@@ -859,6 +922,7 @@ class TestRNGVerification(unittest.TestCase):
         _is_code_execution_fabrication should return True.
         """
         from types import SimpleNamespace
+
         from mvp_site.dice_integrity import _is_code_execution_fabrication
 
         structured = SimpleNamespace(dice_rolls=["1d20 = 16"], dice_audit_events=None)
@@ -878,7 +942,7 @@ class TestRNGVerification(unittest.TestCase):
         # because existing code only checks code_execution_used
         self.assertTrue(
             _is_code_execution_fabrication(structured, evidence_no_rng),
-            "Code execution WITHOUT random.randint() should be detected as FABRICATION"
+            "Code execution WITHOUT random.randint() should be detected as FABRICATION",
         )
 
     def test_extract_evidence_includes_rng_verified_field(self):
@@ -891,24 +955,22 @@ class TestRNGVerification(unittest.TestCase):
         mock_part = Mock()
         # Code that fabricates values without RNG
         mock_part.executable_code = Mock(
-            language='python',
-            code='import json; print(json.dumps({"rolls": [16], "total": 21}))'
+            language="python",
+            code='import json; print(json.dumps({"rolls": [16], "total": 21}))',
         )
         mock_part.code_execution_result = Mock(
-            outcome='OUTCOME_OK',
-            output='{"rolls": [16], "total": 21}'
+            outcome="OUTCOME_OK", output='{"rolls": [16], "total": 21}'
         )
         mock_response.candidates = [Mock(content=Mock(parts=[mock_part]))]
 
         evidence = gemini_provider.extract_code_execution_evidence(mock_response)
 
         self.assertIn(
-            'rng_verified', evidence,
-            "Evidence should include 'rng_verified' field"
+            "rng_verified", evidence, "Evidence should include 'rng_verified' field"
         )
         self.assertFalse(
-            evidence.get('rng_verified', True),
-            "rng_verified should be False when code lacks random.randint()"
+            evidence.get("rng_verified", True),
+            "rng_verified should be False when code lacks random.randint()",
         )
 
     def test_valid_rng_passes_verification(self):
@@ -916,6 +978,7 @@ class TestRNGVerification(unittest.TestCase):
         This tests the positive case - legitimate dice rolls with actual RNG.
         """
         from types import SimpleNamespace
+
         from mvp_site.dice_integrity import _is_code_execution_fabrication
 
         structured = SimpleNamespace(dice_rolls=["1d20 = 15"], dice_audit_events=None)
@@ -934,7 +997,7 @@ class TestRNGVerification(unittest.TestCase):
         # This should be False (NOT fabrication) - dice came from real RNG
         self.assertFalse(
             _is_code_execution_fabrication(structured, evidence_with_rng),
-            "Code with random.randint() should NOT be flagged as fabrication"
+            "Code with random.randint() should NOT be flagged as fabrication",
         )
 
     def test_extract_evidence_detects_rng_in_code(self):
@@ -945,60 +1008,84 @@ class TestRNGVerification(unittest.TestCase):
 
         # Code that actually uses random.randint
         mock_response = self._make_mock_response(
-            'import random, json; roll = random.randint(1, 20); '
+            "import random, json; roll = random.randint(1, 20); "
             'print(json.dumps({"rolls": [roll], "total": roll}))'
         )
 
         evidence = gemini_provider.extract_code_execution_evidence(mock_response)
 
-        self.assertTrue(evidence.get('code_execution_used'), "Should detect code execution")
-        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG in code")
-        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage")
+        self.assertTrue(
+            evidence.get("code_execution_used"), "Should detect code execution"
+        )
+        self.assertTrue(evidence.get("code_contains_rng"), "Should detect RNG in code")
+        self.assertTrue(evidence.get("rng_verified"), "Should verify RNG usage")
 
     def test_extract_evidence_detects_rng_from_imported_randint(self):
         from mvp_site.llm_providers import gemini_provider
 
         mock_response = self._make_mock_response(
-            'from random import randint; import json; roll = randint(1, 20); '
+            "from random import randint; import json; roll = randint(1, 20); "
             'print(json.dumps({"rolls": [roll], "total": roll}))'
         )
         evidence = gemini_provider.extract_code_execution_evidence(mock_response)
-        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for from-import randint")
-        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for from-import randint")
+        self.assertTrue(
+            evidence.get("code_contains_rng"),
+            "Should detect RNG for from-import randint",
+        )
+        self.assertTrue(
+            evidence.get("rng_verified"),
+            "Should verify RNG usage for from-import randint",
+        )
 
     def test_extract_evidence_detects_rng_for_numpy_alias(self):
         from mvp_site.llm_providers import gemini_provider
 
         mock_response = self._make_mock_response(
-            'import numpy as np, json; roll = np.random.randint(1, 21); '
+            "import numpy as np, json; roll = np.random.randint(1, 21); "
             'print(json.dumps({"rolls": [int(roll)], "total": int(roll)}))'
         )
         evidence = gemini_provider.extract_code_execution_evidence(mock_response)
-        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for numpy alias")
-        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for numpy alias")
+        self.assertTrue(
+            evidence.get("code_contains_rng"), "Should detect RNG for numpy alias"
+        )
+        self.assertTrue(
+            evidence.get("rng_verified"), "Should verify RNG usage for numpy alias"
+        )
 
     def test_extract_evidence_detects_rng_for_default_rng_generator(self):
         from mvp_site.llm_providers import gemini_provider
 
         mock_response = self._make_mock_response(
-            'import numpy as np, json; rng = np.random.default_rng(); '
-            'roll = rng.integers(1, 21); '
+            "import numpy as np, json; rng = np.random.default_rng(); "
+            "roll = rng.integers(1, 21); "
             'print(json.dumps({"rolls": [int(roll)], "total": int(roll)}))'
         )
         evidence = gemini_provider.extract_code_execution_evidence(mock_response)
-        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for default_rng generator")
-        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for default_rng generator")
+        self.assertTrue(
+            evidence.get("code_contains_rng"),
+            "Should detect RNG for default_rng generator",
+        )
+        self.assertTrue(
+            evidence.get("rng_verified"),
+            "Should verify RNG usage for default_rng generator",
+        )
 
     def test_extract_evidence_detects_rng_for_system_random_chain(self):
         from mvp_site.llm_providers import gemini_provider
 
         mock_response = self._make_mock_response(
-            'import random, json; roll = random.SystemRandom().randint(1, 20); '
+            "import random, json; roll = random.SystemRandom().randint(1, 20); "
             'print(json.dumps({"rolls": [roll], "total": roll}))'
         )
         evidence = gemini_provider.extract_code_execution_evidence(mock_response)
-        self.assertTrue(evidence.get('code_contains_rng'), "Should detect RNG for SystemRandom chain")
-        self.assertTrue(evidence.get('rng_verified'), "Should verify RNG usage for SystemRandom chain")
+        self.assertTrue(
+            evidence.get("code_contains_rng"),
+            "Should detect RNG for SystemRandom chain",
+        )
+        self.assertTrue(
+            evidence.get("rng_verified"),
+            "Should verify RNG usage for SystemRandom chain",
+        )
 
 
 class TestSystemPromptEnforcementWarning(unittest.TestCase):
@@ -1033,7 +1120,9 @@ class TestSystemPromptEnforcementWarning(unittest.TestCase):
             return Mock(text='{"narrative": "test", "dice_rolls": []}')
 
         with patch.object(
-            gemini_provider, "generate_json_mode_content", side_effect=capture_system_instruction
+            gemini_provider,
+            "generate_json_mode_content",
+            side_effect=capture_system_instruction,
         ):
             gemini_provider.generate_content_with_code_execution(
                 prompt_contents=["Test prompt"],
@@ -1047,22 +1136,22 @@ class TestSystemPromptEnforcementWarning(unittest.TestCase):
         # Assert enforcement warning phrases are present
         self.assertIsNotNone(
             captured_system_instruction,
-            "RED: system_instruction_text should be captured"
+            "RED: system_instruction_text should be captured",
         )
         self.assertIn(
             "ENFORCEMENT WARNING",
             captured_system_instruction,
-            "RED: System prompt must include 'ENFORCEMENT WARNING' section"
+            "RED: System prompt must include 'ENFORCEMENT WARNING' section",
         )
         self.assertIn(
             "IS INSPECTED",
             captured_system_instruction,
-            "RED: System prompt must warn that code 'IS INSPECTED'"
+            "RED: System prompt must warn that code 'IS INSPECTED'",
         )
         self.assertIn(
             "WILL BE REJECTED",
             captured_system_instruction,
-            "RED: System prompt must warn that fabrication 'WILL BE REJECTED'"
+            "RED: System prompt must warn that fabrication 'WILL BE REJECTED'",
         )
 
     def test_RED_fabrication_example_is_documented(self):
@@ -1084,7 +1173,9 @@ class TestSystemPromptEnforcementWarning(unittest.TestCase):
             return Mock(text='{"narrative": "test", "dice_rolls": []}')
 
         with patch.object(
-            gemini_provider, "generate_json_mode_content", side_effect=capture_system_instruction
+            gemini_provider,
+            "generate_json_mode_content",
+            side_effect=capture_system_instruction,
         ):
             gemini_provider.generate_content_with_code_execution(
                 prompt_contents=["Test prompt"],
@@ -1099,12 +1190,12 @@ class TestSystemPromptEnforcementWarning(unittest.TestCase):
         self.assertIn(
             "hardcoded",
             captured_system_instruction.lower(),
-            "RED: System prompt must warn about 'hardcoded' values"
+            "RED: System prompt must warn about 'hardcoded' values",
         )
         self.assertIn(
             "without RNG",
             captured_system_instruction,
-            "RED: System prompt must mention 'without RNG' pattern"
+            "RED: System prompt must mention 'without RNG' pattern",
         )
 
 

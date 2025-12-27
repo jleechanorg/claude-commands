@@ -11,6 +11,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from mvp_site.constants import FRIENDLY_COMBATANT_TYPES, NEUTRAL_COMBATANT_TYPES
+
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
 
@@ -75,9 +76,9 @@ class CombatDisposition(Enum):
     schema-level type safety for new code paths.
     """
 
-    FRIENDLY = "friendly"   # PC, companions, allies - preserved after combat
-    HOSTILE = "hostile"     # Enemies, monsters - removed when defeated
-    NEUTRAL = "neutral"     # Bystanders, non-combatants
+    FRIENDLY = "friendly"  # PC, companions, allies - preserved after combat
+    HOSTILE = "hostile"  # Enemies, monsters - removed when defeated
+    NEUTRAL = "neutral"  # Bystanders, non-combatants
 
     @classmethod
     def from_type_string(cls, type_str: str | None) -> "CombatDisposition":

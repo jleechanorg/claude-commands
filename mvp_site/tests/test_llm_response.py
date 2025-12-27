@@ -18,8 +18,8 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.game_state import GameState
 from mvp_site import constants
+from mvp_site.game_state import GameState
 from mvp_site.llm_response import LLMResponse
 from mvp_site.llm_service import continue_story, get_initial_story
 from mvp_site.narrative_response_schema import NarrativeResponse

@@ -214,6 +214,11 @@ Every response MUST be valid JSON with this exact structure:
   - Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting).
   - Let the backend format the session header time for you—do not invent a new calendar mid-session.
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
+- `equipment_list`: (array, **optional**) **POPULATE WHEN player asks about equipment/inventory/gear:**
+  - Each item: `{"slot": "head", "name": "Helm of Telepathy", "stats": "30ft telepathy, Detect Thoughts 1/day"}`
+  - Read from `player_character_data.equipment` in game_state
+  - Include ALL equipped items, weapons, and backpack contents when queried
+  - This field ensures 100% accuracy even if narrative paraphrases item names
 - `debug_info`: (object) Internal DM information (only visible in debug mode)
   - `dm_notes`: (array of strings) DM reasoning and rule considerations
   - `state_rationale`: (string) Explanation of state changes made

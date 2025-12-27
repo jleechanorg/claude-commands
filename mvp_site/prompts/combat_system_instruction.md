@@ -227,7 +227,11 @@ document the two-handed grip instead of being null.
         "ring_1": {"name": "Ring of Spell Storing", "magical": true, "spells": 5},
         "ring_2": {"name": "Ring of Mind Shielding", "magical": true, "bonus": "Immune charm"},
         "main_hand": {"name": "Soulsplitter Greatsword", "magical": true, "damage": "2d6+5 slashing + 2d6 necrotic"},
-        "off_hand": {"name": "Two-handed grip", "magical": false, "notes": "Main-hand weapon requires both hands"}
+        "off_hand": {
+          "name": "Two-handed grip",
+          "magical": false,
+          "notes": "Main-hand weapon requires both hands; for two-handed weapons, always use this placeholder object (never null)"
+        }
       },
       "loot_table": {
         "guaranteed": ["Soulsplitter Greatsword", "Crown of Dominion"],

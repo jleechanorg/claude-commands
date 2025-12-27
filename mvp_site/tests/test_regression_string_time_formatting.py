@@ -6,7 +6,9 @@ Using :02d format specifier without int() conversion causes ValueError.
 
 Related cursor[bot] comment: PR #2235
 """
+
 import unittest
+
 from mvp_site.agent_prompts import PromptBuilder
 from mvp_site.game_state import GameState
 
@@ -26,14 +28,16 @@ class TestStringTimeFormattingRegression(unittest.TestCase):
         instead of integers, the code handles them gracefully via int() conversion.
         """
         # Create GameState with STRING time values (bug scenario)
-        game_state = GameState(world_data={
-            "world_time": {
-                "hour": "15",      # STRING not int - will crash with :02d
-                "minute": "30",    # STRING not int - will crash with :02d
-                "second": "45"     # STRING not int - will crash with :02d
-            },
-            "current_location_name": "Test Location"
-        })
+        game_state = GameState(
+            world_data={
+                "world_time": {
+                    "hour": "15",  # STRING not int - will crash with :02d
+                    "minute": "30",  # STRING not int - will crash with :02d
+                    "second": "45",  # STRING not int - will crash with :02d
+                },
+                "current_location_name": "Test Location",
+            }
+        )
 
         # Attach game state to prompt builder
         self.prompt_builder.game_state = game_state
@@ -43,22 +47,29 @@ class TestStringTimeFormattingRegression(unittest.TestCase):
             result = self.prompt_builder.build_continuation_reminder()
 
             # Verify time is properly formatted in result
-            self.assertIn("15:30:45", result,
-                         "Time should be formatted correctly even with string inputs")
+            self.assertIn(
+                "15:30:45",
+                result,
+                "Time should be formatted correctly even with string inputs",
+            )
 
         except ValueError as e:
-            self.fail(f"build_continuation_reminder() crashed with string time values: {e}")
+            self.fail(
+                f"build_continuation_reminder() crashed with string time values: {e}"
+            )
 
     def test_integer_time_values_work_correctly(self):
         """Control test - integer values should always work"""
-        game_state = GameState(world_data={
-            "world_time": {
-                "hour": 15,        # INTEGER - should work
-                "minute": 30,      # INTEGER - should work
-                "second": 45       # INTEGER - should work
-            },
-            "current_location_name": "Test Location"
-        })
+        game_state = GameState(
+            world_data={
+                "world_time": {
+                    "hour": 15,  # INTEGER - should work
+                    "minute": 30,  # INTEGER - should work
+                    "second": 45,  # INTEGER - should work
+                },
+                "current_location_name": "Test Location",
+            }
+        )
 
         self.prompt_builder.game_state = game_state
 
@@ -68,14 +79,16 @@ class TestStringTimeFormattingRegression(unittest.TestCase):
 
     def test_mixed_string_and_integer_values(self):
         """Edge case - mixed types should be handled gracefully"""
-        game_state = GameState(world_data={
-            "world_time": {
-                "hour": "12",      # STRING
-                "minute": 30,      # INTEGER
-                "second": "00"     # STRING
-            },
-            "current_location_name": "Test Location"
-        })
+        game_state = GameState(
+            world_data={
+                "world_time": {
+                    "hour": "12",  # STRING
+                    "minute": 30,  # INTEGER
+                    "second": "00",  # STRING
+                },
+                "current_location_name": "Test Location",
+            }
+        )
 
         self.prompt_builder.game_state = game_state
 

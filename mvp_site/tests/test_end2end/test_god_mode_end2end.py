@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
@@ -54,24 +54,22 @@ class TestGodModeEnd2End(unittest.TestCase):
             "narrative": "",
             "entities_mentioned": [],
             "location_confirmed": "Tavern",
-            "state_updates": {
-                "player_character_data": {"hp_current": 50}
-            },
+            "state_updates": {"player_character_data": {"hp_current": 50}},
             "planning_block": {
                 "thinking": "The user wants to modify HP. This is an administrative command.",
                 "choices": {
                     "god:set_gold": {
                         "text": "Set Gold",
                         "description": "Modify character gold",
-                        "risk_level": "safe"
+                        "risk_level": "safe",
                     },
                     "god:return_story": {
                         "text": "Return to Story",
                         "description": "Exit God Mode and resume gameplay",
-                        "risk_level": "safe"
-                    }
-                }
-            }
+                        "risk_level": "safe",
+                    },
+                },
+            },
         }
 
         # Standard mock story mode response (for comparison)
@@ -84,10 +82,18 @@ class TestGodModeEnd2End(unittest.TestCase):
             "planning_block": {
                 "thinking": "The player enters the tavern.",
                 "choices": {
-                    "talk_bartender": {"text": "Talk to bartender", "description": "Ask about rumors", "risk_level": "low"},
-                    "observe_patrons": {"text": "Observe Patrons", "description": "Study the other tavern guests from a discreet corner", "risk_level": "low"}
-                }
-            }
+                    "talk_bartender": {
+                        "text": "Talk to bartender",
+                        "description": "Ask about rumors",
+                        "risk_level": "low",
+                    },
+                    "observe_patrons": {
+                        "text": "Observe Patrons",
+                        "description": "Study the other tavern guests from a discreet corner",
+                        "risk_level": "low",
+                    },
+                },
+            },
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
@@ -125,8 +131,8 @@ class TestGodModeEnd2End(unittest.TestCase):
                         "day": 10,
                         "hour": 14,
                         "minute": 0,
-                        "time_of_day": "Afternoon"
-                    }
+                        "time_of_day": "Afternoon",
+                    },
                 },
                 "npc_data": {},
                 "combat_state": {"in_combat": False},
@@ -135,8 +141,12 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
-    def test_god_mode_returns_god_mode_response_field(self, mock_gemini_generate, mock_get_db):
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
+    def test_god_mode_returns_god_mode_response_field(
+        self, mock_gemini_generate, mock_get_db
+    ):
         """Test that GOD MODE commands return god_mode_response field."""
 
         # Set up fake Firestore
@@ -154,24 +164,28 @@ class TestGodModeEnd2End(unittest.TestCase):
         # Make GOD MODE request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "GOD MODE: Set HP to 50",
-                "mode": "character"
-            }),
+            data=json.dumps({"input": "GOD MODE: Set HP to 50", "mode": "character"}),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify response
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify god_mode_response is present in the response
         assert "god_mode_response" in data, "god_mode_response field should be present"
-        assert data["god_mode_response"] == "HP has been set to 50. Character is now at full health."
+        assert (
+            data["god_mode_response"]
+            == "HP has been set to 50. Character is now at full health."
+        )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_god_mode_uses_separate_prompts(self, mock_gemini_generate, mock_get_db):
         """Test that GOD MODE uses separate system prompts (not narrative prompts)."""
 
@@ -190,16 +204,17 @@ class TestGodModeEnd2End(unittest.TestCase):
         # Make GOD MODE request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "GOD MODE: Show current state",
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {"input": "GOD MODE: Show current state", "mode": "character"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify request succeeded
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
 
         # Verify Gemini was called
         assert mock_gemini_generate.call_count >= 1, "LLM should be called"
@@ -216,15 +231,15 @@ class TestGodModeEnd2End(unittest.TestCase):
 
             # God mode should have "Administrative interface" or "pause menu" language
             has_god_mode_prompt = (
-                "Administrative interface" in all_args_str or
-                "pause menu" in all_args_str or
-                "god_mode_response" in all_args_str
+                "Administrative interface" in all_args_str
+                or "pause menu" in all_args_str
+                or "god_mode_response" in all_args_str
             )
 
             # God mode should NOT have narrative generation language
             has_narrative_prompt = (
-                "Master Game Weaver" in all_args_str or
-                "Subtlety and realism over theatrical drama" in all_args_str
+                "Master Game Weaver" in all_args_str
+                or "Subtlety and realism over theatrical drama" in all_args_str
             )
 
             # We expect god mode prompts, not narrative prompts
@@ -233,7 +248,9 @@ class TestGodModeEnd2End(unittest.TestCase):
                 self.fail("GOD MODE should use god_mode prompts, not narrative prompts")
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_god_mode_with_lowercase_prefix(self, mock_gemini_generate, mock_get_db):
         """Test that god mode works with lowercase 'god mode:' prefix."""
 
@@ -252,24 +269,34 @@ class TestGodModeEnd2End(unittest.TestCase):
         # Make request with lowercase god mode prefix
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "god mode: set hp to 50",  # lowercase
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {
+                    "input": "god mode: set hp to 50",  # lowercase
+                    "mode": "character",
+                }
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify response - should still work due to .upper() in detection
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify god_mode_response is present
-        assert "god_mode_response" in data, "god_mode_response should be present for lowercase prefix"
+        assert "god_mode_response" in data, (
+            "god_mode_response should be present for lowercase prefix"
+        )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
-    def test_regular_input_does_not_trigger_god_mode(self, mock_gemini_generate, mock_get_db):
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
+    def test_regular_input_does_not_trigger_god_mode(
+        self, mock_gemini_generate, mock_get_db
+    ):
         """Test that regular input without GOD MODE prefix uses normal prompts."""
 
         # Set up fake Firestore
@@ -287,16 +314,15 @@ class TestGodModeEnd2End(unittest.TestCase):
         # Make regular (non-god-mode) request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I walk into the tavern",
-                "mode": "character"
-            }),
+            data=json.dumps({"input": "I walk into the tavern", "mode": "character"}),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify response
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify narrative is present (story mode)
@@ -304,10 +330,14 @@ class TestGodModeEnd2End(unittest.TestCase):
 
         # god_mode_response should be empty or missing for regular input
         god_mode_resp = data.get("god_mode_response", "")
-        assert not god_mode_resp or god_mode_resp == "", "god_mode_response should be empty for regular input"
+        assert not god_mode_resp or god_mode_resp == "", (
+            "god_mode_response should be empty for regular input"
+        )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_god_mode_state_updates_applied(self, mock_gemini_generate, mock_get_db):
         """Test that GOD MODE state_updates are properly applied."""
 
@@ -326,16 +356,15 @@ class TestGodModeEnd2End(unittest.TestCase):
         # Make GOD MODE request to set HP
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "GOD MODE: Set HP to 50",
-                "mode": "character"
-            }),
+            data=json.dumps({"input": "GOD MODE: Set HP to 50", "mode": "character"}),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify response
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify game_state is returned with updates
@@ -366,25 +395,30 @@ class TestGodModePromptSelection(unittest.TestCase):
 
         for user_input, expected in test_cases:
             is_god_mode = user_input.strip().upper().startswith("GOD MODE:")
-            assert is_god_mode == expected, f"Failed for '{user_input}': expected {expected}, got {is_god_mode}"
+            assert is_god_mode == expected, (
+                f"Failed for '{user_input}': expected {expected}, got {is_god_mode}"
+            )
 
     def test_prompt_builder_has_god_mode_method(self):
         """Test that PromptBuilder has build_god_mode_instructions method."""
         from mvp_site.agent_prompts import PromptBuilder
 
         builder = PromptBuilder(None)
-        assert hasattr(builder, 'build_god_mode_instructions'), \
+        assert hasattr(builder, "build_god_mode_instructions"), (
             "PromptBuilder should have build_god_mode_instructions method"
+        )
 
         # Call the method and verify it returns a list
         instructions = builder.build_god_mode_instructions()
-        assert isinstance(instructions, list), "build_god_mode_instructions should return a list"
+        assert isinstance(instructions, list), (
+            "build_god_mode_instructions should return a list"
+        )
         assert len(instructions) > 0, "God mode instructions should not be empty"
 
     def test_god_mode_instructions_contain_required_prompts(self):
         """Test that god mode instructions include required prompt types."""
-        from mvp_site.agent_prompts import PromptBuilder
         from mvp_site import constants
+        from mvp_site.agent_prompts import PromptBuilder
 
         builder = PromptBuilder(None)
         instructions = builder.build_god_mode_instructions()
@@ -394,11 +428,15 @@ class TestGodModePromptSelection(unittest.TestCase):
 
         # God mode should include master directive content
         # (we check for content that should be in master_directive)
-        assert len(all_instructions) > 1000, "God mode instructions should include substantial content"
+        assert len(all_instructions) > 1000, (
+            "God mode instructions should include substantial content"
+        )
 
         # God mode should include game state schema information
-        assert "state_updates" in all_instructions.lower() or "game_state" in all_instructions.lower(), \
-            "God mode instructions should include game state information"
+        assert (
+            "state_updates" in all_instructions.lower()
+            or "game_state" in all_instructions.lower()
+        ), "God mode instructions should include game state information"
 
 
 if __name__ == "__main__":

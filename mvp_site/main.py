@@ -93,11 +93,11 @@ from infrastructure.executor_config import (
 from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
 
 # Firestore service imports
+from mvp_site import world_logic  # For MCP fallback logic
 from mvp_site import (
     constants,
     firestore_service,
     logging_util,
-    world_logic,  # For MCP fallback logic
 )
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
@@ -239,7 +239,11 @@ def _ensure_async_infrastructure() -> None:
     Configures asyncio.to_thread() to use this executor by default.
     """
 
-    global _background_loop, _loop_thread, _blocking_io_executor, _async_shutdown_registered
+    global \
+        _background_loop, \
+        _loop_thread, \
+        _blocking_io_executor, \
+        _async_shutdown_registered
 
     with _async_init_lock:
         if _background_loop is None:
@@ -570,7 +574,9 @@ def create_app() -> Flask:
                         # Decode JWT to check if within extended tolerance
                         token_parts = id_token.split(".")
                         if len(token_parts) >= 2:
-                            payload_b64 = token_parts[1] + "=" * (4 - len(token_parts[1]) % 4)
+                            payload_b64 = token_parts[1] + "=" * (
+                                4 - len(token_parts[1]) % 4
+                            )
                             payload = json.loads(base64.urlsafe_b64decode(payload_b64))
                             token_exp = payload.get("exp", 0)
                             current_time = time.time()
@@ -581,7 +587,9 @@ def create_app() -> Flask:
                                 decoded_token = payload
                                 # Normalize uid field - Firebase SDK returns 'uid', JWT has 'sub' or 'user_id'
                                 if "uid" not in decoded_token:
-                                    decoded_token["uid"] = payload.get("sub") or payload.get("user_id")
+                                    decoded_token["uid"] = payload.get(
+                                        "sub"
+                                    ) or payload.get("user_id")
                                 logging_util.info(
                                     f"Token {int(current_time - token_exp)}s past expiry, "
                                     f"within {extended_tolerance}s tolerance - accepting"
@@ -1239,9 +1247,7 @@ def create_app() -> Flask:
         return render_template("settings.html")
 
     @app.route("/api/settings", methods=["GET", "POST"])
-    @limiter.limit(
-        settings_rate_limit
-    )  # Settings access is moderate frequency
+    @limiter.limit(settings_rate_limit)  # Settings access is moderate frequency
     @check_token
     @async_route
     async def api_settings(user_id: UserId) -> Response | tuple[Response, int]:
@@ -1252,7 +1258,9 @@ def create_app() -> Flask:
                 request_data = {"user_id": user_id}
 
                 # Delegate to world_logic for centralized defaults handling
-                result = await world_logic.get_user_settings_unified({"user_id": user_id})
+                result = await world_logic.get_user_settings_unified(
+                    {"user_id": user_id}
+                )
 
                 if not result.get(KEY_SUCCESS):
                     return jsonify(result), result.get("status_code", 400)
@@ -1300,19 +1308,25 @@ def create_app() -> Flask:
                 if "llm_provider" not in filtered_data:
                     # Check if any model-specific settings were updated
                     if "gemini_model" in filtered_data:
-                        filtered_data["llm_provider"] = constants.infer_provider_from_model(
-                            filtered_data["gemini_model"],
-                            provider_hint=constants.LLM_PROVIDER_GEMINI,
+                        filtered_data["llm_provider"] = (
+                            constants.infer_provider_from_model(
+                                filtered_data["gemini_model"],
+                                provider_hint=constants.LLM_PROVIDER_GEMINI,
+                            )
                         )
                     elif "openrouter_model" in filtered_data:
-                        filtered_data["llm_provider"] = constants.infer_provider_from_model(
-                            filtered_data["openrouter_model"],
-                            provider_hint=constants.LLM_PROVIDER_OPENROUTER,
+                        filtered_data["llm_provider"] = (
+                            constants.infer_provider_from_model(
+                                filtered_data["openrouter_model"],
+                                provider_hint=constants.LLM_PROVIDER_OPENROUTER,
+                            )
                         )
                     elif "cerebras_model" in filtered_data:
-                        filtered_data["llm_provider"] = constants.infer_provider_from_model(
-                            filtered_data["cerebras_model"],
-                            provider_hint=constants.LLM_PROVIDER_CEREBRAS,
+                        filtered_data["llm_provider"] = (
+                            constants.infer_provider_from_model(
+                                filtered_data["cerebras_model"],
+                                provider_hint=constants.LLM_PROVIDER_CEREBRAS,
+                            )
                         )
 
                 request_data = {"user_id": user_id, "settings": filtered_data}

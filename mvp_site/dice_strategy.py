@@ -23,4 +23,3 @@ def get_dice_roll_strategy(model_name: str, provider: str = "") -> str:
         return DICE_STRATEGY_CODE_EXECUTION
 
     return DICE_STRATEGY_NATIVE_TWO_PHASE
-

@@ -62,7 +62,11 @@ def test_extract_code_execution_parts_summary_truncates():
                 _FakeContent(
                     parts=[
                         _FakePart(executable_code=_FakeExecutableCode(code=big_code)),
-                        _FakePart(code_execution_result=_FakeCodeExecutionResult(output="y" * 2000)),
+                        _FakePart(
+                            code_execution_result=_FakeCodeExecutionResult(
+                                output="y" * 2000
+                            )
+                        ),
                     ]
                 )
             )
@@ -75,4 +79,6 @@ def test_extract_code_execution_parts_summary_truncates():
     assert len(summary["executable_code_samples"]) == 1
     assert len(summary["code_execution_result_samples"]) == 1
     assert summary["executable_code_samples"][0]["code"].endswith("...(truncated)")
-    assert summary["code_execution_result_samples"][0]["output"].endswith("...(truncated)")
+    assert summary["code_execution_result_samples"][0]["output"].endswith(
+        "...(truncated)"
+    )

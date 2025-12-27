@@ -83,13 +83,21 @@ class TestJsonSchemaSupport:
 
         # Must have core NarrativeResponse fields
         assert "narrative" in properties, "Schema must include 'narrative' field"
-        assert "planning_block" in properties, "Schema must include 'planning_block' field"
+        assert "planning_block" in properties, (
+            "Schema must include 'planning_block' field"
+        )
         assert properties["planning_block"].get("type") == "object"
-        assert "entities_mentioned" in properties, "Schema must include 'entities_mentioned' field"
-        assert "state_updates" in properties, "Schema must include 'state_updates' field"
+        assert "entities_mentioned" in properties, (
+            "Schema must include 'entities_mentioned' field"
+        )
+        assert "state_updates" in properties, (
+            "Schema must include 'state_updates' field"
+        )
         assert "turn_summary" in properties, "Schema must include 'turn_summary' field"
         assert "debug_info" in properties, "Schema must include 'debug_info' field"
-        assert "god_mode_response" in properties, "Schema must include 'god_mode_response' field"
+        assert "god_mode_response" in properties, (
+            "Schema must include 'god_mode_response' field"
+        )
 
     def test_detects_schema_echo_response(self, monkeypatch):
         """Detect when API returns schema config instead of content."""
@@ -149,7 +157,9 @@ class TestJsonSchemaSupport:
             "narrative": "unwrapped content",
             "entities_mentioned": [],
         }, f"Expected unwrapped structure but got {parsed}"
-        assert "type" not in parsed, "Unwrapped response should not contain 'type' field"
+        assert "type" not in parsed, (
+            "Unwrapped response should not contain 'type' field"
+        )
 
     @pytest.mark.parametrize(
         "model_name",

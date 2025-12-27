@@ -3,6 +3,7 @@ SIMPLIFIED RED-GREEN test for temporal correction misleading success message bug
 
 Tests the specific code block (world_logic.py:809-819) directly without full integration.
 """
+
 import unittest
 
 from mvp_site.world_logic import (
@@ -41,14 +42,17 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
 
         # ASSERTION: Verify fix is working correctly
         # When temporal_correction_attempts > MAX, message should mention "exceeded"
-        if temporal_warning and temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
+        if (
+            temporal_warning
+            and temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS
+        ):
             # Check that warning mentions "exceeded" (NOT "fix")
             self.assertIn(
                 "exceeded",
                 temporal_warning.lower(),
                 f"When max attempts exceeded, warning should mention 'exceeded'.\n"
                 f"temporal_correction_attempts={temporal_correction_attempts}\n"
-                f"Actual warning: '{temporal_warning}'"
+                f"Actual warning: '{temporal_warning}'",
             )
 
             # Ensure it does NOT falsely claim success with "fix"
@@ -63,9 +67,8 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
         # Verify warning was created
         self.assertIsNotNone(
             temporal_warning,
-            "Warning should exist when temporal_correction_attempts > 0"
+            "Warning should exist when temporal_correction_attempts > 0",
         )
-
 
     def test_correct_message_when_corrections_succeed(self):
         """
@@ -78,8 +81,14 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
         temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
 
         # When corrections succeed (attempts <= MAX), saying "fix" is correct
-        self.assertIsNotNone(temporal_warning, "Warning should exist when corrections succeeded")
-        self.assertIn("fix", temporal_warning.lower(), "Message can say 'fix' when corrections succeeded")
+        self.assertIsNotNone(
+            temporal_warning, "Warning should exist when corrections succeeded"
+        )
+        self.assertIn(
+            "fix",
+            temporal_warning.lower(),
+            "Message can say 'fix' when corrections succeeded",
+        )
         self.assertEqual(temporal_correction_attempts, 1, "1 correction should succeed")
 
 

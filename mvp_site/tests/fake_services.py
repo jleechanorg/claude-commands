@@ -17,17 +17,17 @@ from contextlib import suppress
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-# Import fake modules (fail fast if missing)
-from .fake_auth import FakeFirebaseAuth, FakeUserRecord
-from .fake_firestore import FakeFirestoreClient
-from .fake_llm import create_fake_llm_client
+# Import firebase_admin (fail fast if missing)
+import firebase_admin.auth
 
 # Import functions from main at module level to avoid inline imports
 # Note: HEADER_TEST_BYPASS and HEADER_TEST_USER_ID removed with testing mode deletion
 from main import create_app
 
-# Import firebase_admin (fail fast if missing)
-import firebase_admin.auth
+# Import fake modules (fail fast if missing)
+from .fake_auth import FakeFirebaseAuth, FakeUserRecord
+from .fake_firestore import FakeFirestoreClient
+from .fake_llm import create_fake_llm_client
 
 FIREBASE_ADMIN_AVAILABLE = True
 

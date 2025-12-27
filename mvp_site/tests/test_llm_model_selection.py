@@ -137,9 +137,9 @@ class TestGeminiModelSelection(unittest.TestCase):
         call_kwargs = mock_api_call.call_args.kwargs
         actual_model = call_kwargs.get("model_name")
 
-        assert (
-            actual_model == "gemini-3-pro-preview"
-        ), f"get_initial_story() should respect user preference (got {actual_model})"
+        assert actual_model == "gemini-3-pro-preview", (
+            f"get_initial_story() should respect user preference (got {actual_model})"
+        )
 
 
 if __name__ == "__main__":

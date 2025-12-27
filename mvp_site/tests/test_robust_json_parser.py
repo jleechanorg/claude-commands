@@ -250,7 +250,7 @@ class TestRegressionListResult(unittest.TestCase):
         Error signature: TypeError | ["list indices must be integers"] | robust_json_parser:parse_llm_json_response
         """
         # This is valid JSON that parses to a list, not a dict
-        list_json = '[1, 2, 3]'
+        list_json = "[1, 2, 3]"
 
         # This should NOT crash - should handle gracefully
         result, was_incomplete = parse_llm_json_response(list_json)
@@ -269,7 +269,7 @@ class TestRegressionListResult(unittest.TestCase):
 
         Error signature: TypeError | ["list indices must be integers"] | robust_json_parser:parse_llm_json_response
         """
-        empty_list_json = '[]'
+        empty_list_json = "[]"
 
         # This should NOT crash
         result, was_incomplete = parse_llm_json_response(empty_list_json)
@@ -308,7 +308,9 @@ class TestRealWorldScenarios(unittest.TestCase):
         result, was_incomplete = parse_llm_json_response(response)
 
         assert was_incomplete
-        assert result["narrative"] == 'She says "We\'ll get your gear back," and smiles.'
+        assert (
+            result["narrative"] == 'She says "We\'ll get your gear back," and smiles.'
+        )
 
     def test_parse_truncated_narrative(self):
         """Test the example from the module"""

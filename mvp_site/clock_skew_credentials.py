@@ -111,9 +111,7 @@ def apply_clock_skew_patch() -> bool:
     _helpers.utcnow = _adjusted_utcnow
     _patch_applied = True
 
-    logging_util.info(
-        f"Applied clock skew patch: adjusting time by -{skew} seconds"
-    )
+    logging_util.info(f"Applied clock skew patch: adjusting time by -{skew} seconds")
     return True
 
 

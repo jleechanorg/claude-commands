@@ -43,7 +43,9 @@ def build_messages(
     messages: list[dict[str, Any]] = []
     if system_instruction_text:
         messages.append({"role": "system", "content": system_instruction_text})
-    messages.append({"role": "user", "content": stringify_chat_parts_fn(prompt_contents)})
+    messages.append(
+        {"role": "user", "content": stringify_chat_parts_fn(prompt_contents)}
+    )
     return messages
 
 

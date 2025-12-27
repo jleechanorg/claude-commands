@@ -204,9 +204,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
 
             # Verify the API was called
             # JSON mode is now always enabled internally, no need to check for use_json_mode parameter
-            assert (
-                mock_api.called
-            ), "API should have been called (JSON mode is always enabled)"
+            assert mock_api.called, (
+                "API should have been called (JSON mode is always enabled)"
+            )
 
             # Verify we got a clean LLMResponse with JSON-first structure
             assert result is not None
@@ -298,9 +298,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
 
             # Verify the API was called
             # JSON mode is now always enabled internally, no need to check for use_json_mode parameter
-            assert (
-                mock_api.called
-            ), "API should have been called (JSON mode is always enabled)"
+            assert mock_api.called, (
+                "API should have been called (JSON mode is always enabled)"
+            )
 
     def test_generic_json_instruction_format(self):
         """Test the generic JSON instruction format"""
@@ -308,9 +308,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
 
         # Since always-JSON mode is enabled, this function returns empty string
         # JSON format is handled automatically by the system
-        assert (
-            instruction == ""
-        ), "Generic JSON instruction should be empty when always-JSON mode is enabled"
+        assert instruction == "", (
+            "Generic JSON instruction should be empty when always-JSON mode is enabled"
+        )
 
     def test_structured_prompt_injection_without_entities(self):
         """Test that structured prompt injection works without entities"""
@@ -318,9 +318,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
         instruction = create_structured_prompt_injection("", [])
 
         # Should return empty string since JSON format is handled automatically
-        assert (
-            instruction == ""
-        ), "Structured prompt injection should be empty when no entities and always-JSON mode is enabled"
+        assert instruction == "", (
+            "Structured prompt injection should be empty when no entities and always-JSON mode is enabled"
+        )
 
     def test_structured_prompt_injection_with_entities(self):
         """Test that structured prompt injection works with entities"""

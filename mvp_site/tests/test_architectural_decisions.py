@@ -46,9 +46,9 @@ class TestArchitecturalDecisions(unittest.TestCase):
     def test_adt_001_pydantic_validation_is_used(self):
         """ADT-001: Entity validation uses Pydantic implementation for robust data validation"""
         # Verify we're using Pydantic
-        assert "pydantic" in str(
-            entities_pydantic.SceneManifest.__module__
-        ), "SceneManifest should be using Pydantic implementation"
+        assert "pydantic" in str(entities_pydantic.SceneManifest.__module__), (
+            "SceneManifest should be using Pydantic implementation"
+        )
 
         # Verify Pydantic is in requirements since it's now the default
         req_path = os.path.join(os.path.dirname(__file__), "..", "requirements.txt")
@@ -65,23 +65,23 @@ class TestArchitecturalDecisions(unittest.TestCase):
             if f.startswith("entities") and f.endswith(".py")
         ]
 
-        assert (
-            len(entity_files) == 1
-        ), f"Should have only Pydantic implementation, found: {entity_files}"
-        assert (
-            "entities_pydantic.py" in entity_files
-        ), "Only Pydantic version should exist"
-        assert (
-            "entities_simple.py" not in entity_files
-        ), "Simple version should be removed"
+        assert len(entity_files) == 1, (
+            f"Should have only Pydantic implementation, found: {entity_files}"
+        )
+        assert "entities_pydantic.py" in entity_files, (
+            "Only Pydantic version should exist"
+        )
+        assert "entities_simple.py" not in entity_files, (
+            "Simple version should be removed"
+        )
 
     def test_adt_003_entity_tracking_imports_pydantic_module(self):
         """ADT-003: entity_tracking.py imports from Pydantic module"""
         # Check what module is actually imported
         manifest_module = entity_tracking.SceneManifest.__module__
-        assert (
-            manifest_module == "mvp_site.schemas.entities_pydantic"
-        ), "entity_tracking should import from mvp_site.schemas.entities_pydantic"
+        assert manifest_module == "mvp_site.schemas.entities_pydantic", (
+            "entity_tracking should import from mvp_site.schemas.entities_pydantic"
+        )
 
         # Verify validation type is set correctly
         assert entity_tracking.VALIDATION_TYPE == "Pydantic"
@@ -249,9 +249,9 @@ def broken_function(:
         # Verify file content is captured
         assert result["size_chars"] > 0, "Should have file content"
         assert result["analysis_scope"] == "single_file"
-        assert (
-            "def hello():" in result["content_preview"]
-        ), "Should contain function definition"
+        assert "def hello():" in result["content_preview"], (
+            "Should contain function definition"
+        )
 
     def test_adt_008_analyze_file_architecture_syntax_error(self):
         """ADT-008: File analysis processes syntax error files as text"""
@@ -260,9 +260,9 @@ def broken_function(:
         # Analysis should succeed even with syntax errors (it treats file as text)
         assert "error" not in result, "Analysis should not fail on syntax error files"
         assert result["size_chars"] > 0, "Should have file content"
-        assert (
-            "def broken_function(:" in result["content_preview"]
-        ), "Should contain the broken code"
+        assert "def broken_function(:" in result["content_preview"], (
+            "Should contain the broken code"
+        )
 
     def test_adt_009_analyze_file_architecture_missing_file(self):
         """ADT-009: AST analysis handles missing files gracefully"""
@@ -280,9 +280,9 @@ def broken_function(:
         assert "error" not in result, "Empty file should not cause errors"
         assert result["size_chars"] == 0, "Empty file should have 0 characters"
         assert result["fake_patterns"] == 0, "Empty file should have 0 fake patterns"
-        assert (
-            result["content_preview"] == ""
-        ), "Empty file should have empty content preview"
+        assert result["content_preview"] == "", (
+            "Empty file should have empty content preview"
+        )
 
     def test_adt_011_calculate_cyclomatic_complexity_simple(self):
         """ADT-011: Cyclomatic complexity calculation for simple code"""
@@ -603,9 +603,9 @@ def simple_good_function():
 
         assert isinstance(formatted, str), "Should return a string"
         assert len(formatted) > 0, "Should have content"
-        assert (
-            "ARCHITECTURE REVIEW REPORT" in formatted
-        ), "Should include analysis header"
+        assert "ARCHITECTURE REVIEW REPORT" in formatted, (
+            "Should include analysis header"
+        )
 
     def test_adt_019_analyze_project_files_multiple_files(self):
         """ADT-019: Analysis of multiple files"""
@@ -632,12 +632,12 @@ def simple_good_function():
         complex_result = self.arch.analyze_file_architecture(self.complex_file)
 
         # Both should succeed (not have 'error' key)
-        assert (
-            "error" not in simple_result
-        ), "Simple file analysis should not have errors"
-        assert (
-            "error" not in complex_result
-        ), "Complex file analysis should not have errors"
+        assert "error" not in simple_result, (
+            "Simple file analysis should not have errors"
+        )
+        assert "error" not in complex_result, (
+            "Complex file analysis should not have errors"
+        )
 
         # Both should have expected keys
         expected_keys = [
@@ -655,14 +655,14 @@ def simple_good_function():
         # Should have different file sizes (complexity proxy)
         simple_size = simple_result["size_chars"]
         complex_size = complex_result["size_chars"]
-        assert (
-            simple_size != complex_size
-        ), "Different files should have different sizes"
+        assert simple_size != complex_size, (
+            "Different files should have different sizes"
+        )
 
         # Complex file should be larger than simple file
-        assert (
-            complex_size > simple_size
-        ), "Complex file should be larger than simple file"
+        assert complex_size > simple_size, (
+            "Complex file should be larger than simple file"
+        )
 
 
 if __name__ == "__main__":

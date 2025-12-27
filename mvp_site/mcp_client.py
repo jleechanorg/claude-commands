@@ -157,12 +157,12 @@ class MCPClient:
 
             adapter = requests.adapters.HTTPAdapter(
                 pool_connections=10,  # Cache pools for up to 10 hosts
-                pool_maxsize=20,      # Max 20 connections per pool
+                pool_maxsize=20,  # Max 20 connections per pool
                 max_retries=retry_strategy,  # Use Retry object for better control
-                pool_block=False      # Don't block, raise error if pool full
+                pool_block=False,  # Don't block, raise error if pool full
             )
-            self.session.mount('http://', adapter)
-            self.session.mount('https://', adapter)
+            self.session.mount("http://", adapter)
+            self.session.mount("https://", adapter)
 
             self.world_logic = None
         else:
@@ -256,7 +256,9 @@ class MCPClient:
 
             request_data = self._make_jsonrpc_request("tools/call", params)
 
-            logging_util.debug(f"Calling MCP tool {tool_name} with request: {request_data}")
+            logging_util.debug(
+                f"Calling MCP tool {tool_name} with request: {request_data}"
+            )
 
             # Make HTTP request (non-blocking)
             response = await asyncio.to_thread(
@@ -349,7 +351,9 @@ class MCPClient:
                                 f"🔧 DEBUG: Checked FakeFirestore for {campaign_id}: exists={campaign_exists}"
                             )
                         except Exception as e:
-                            logging_util.info(f"🔧 DEBUG: FakeFirestore check failed: {e}")
+                            logging_util.info(
+                                f"🔧 DEBUG: FakeFirestore check failed: {e}"
+                            )
 
                     if campaign_exists:
                         # Return mock response for existing campaigns
@@ -467,7 +471,9 @@ class MCPClient:
                 )
 
             function = getattr(self.world_logic, function_name)
-            logging_util.debug(f"Calling {function_name} directly with args: {arguments}")
+            logging_util.debug(
+                f"Calling {function_name} directly with args: {arguments}"
+            )
             maybe_result = function(arguments or {})
             result = (
                 await maybe_result
@@ -562,8 +568,12 @@ class MCPClient:
                 cls._loop_thread.start()
                 # Wait for event loop to be ready (with timeout)
                 if not cls._loop_ready.wait(timeout=1.0):
-                    logging_util.warning("Event loop not ready after 1s, proceeding anyway")
-                logging_util.debug("Created and started shared event loop for MCP operations")
+                    logging_util.warning(
+                        "Event loop not ready after 1s, proceeding anyway"
+                    )
+                logging_util.debug(
+                    "Created and started shared event loop for MCP operations"
+                )
             return cls._shared_event_loop
 
     @classmethod

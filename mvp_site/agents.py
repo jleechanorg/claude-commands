@@ -8,10 +8,18 @@ subset of system prompts.
 Agent Hierarchy:
 - BaseAgent: Abstract base class with common functionality
 - StoryModeAgent: Handles narrative storytelling (character mode)
+- InfoAgent: Handles equipment/inventory queries (trimmed prompts)
+- CombatAgent: Handles active combat encounters (combat mode)
 - GodModeAgent: Handles administrative commands (god mode)
 
 Usage:
-    from mvp_site.agents import get_agent_for_input, StoryModeAgent, GodModeAgent
+    from mvp_site.agents import (
+        get_agent_for_input,
+        StoryModeAgent,
+        InfoAgent,
+        CombatAgent,
+        GodModeAgent,
+    )
 
     # Get appropriate agent for user input
     agent = get_agent_for_input(user_input, game_state)
@@ -176,18 +184,22 @@ class StoryModeAgent(BaseAgent):
     """
 
     # Required prompts - always loaded for story mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset({
-        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-        constants.PROMPT_TYPE_GAME_STATE,
-        constants.PROMPT_TYPE_DND_SRD,
-    })
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(
+        {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_DND_SRD,
+        }
+    )
 
     # Optional prompts - loaded based on campaign settings
-    OPTIONAL_PROMPTS: frozenset[str] = frozenset({
-        constants.PROMPT_TYPE_NARRATIVE,
-        constants.PROMPT_TYPE_MECHANICS,
-        constants.PROMPT_TYPE_CHARACTER_TEMPLATE,
-    })
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset(
+        {
+            constants.PROMPT_TYPE_NARRATIVE,
+            constants.PROMPT_TYPE_MECHANICS,
+            constants.PROMPT_TYPE_CHARACTER_TEMPLATE,
+        }
+    )
 
     MODE: str = constants.MODE_CHARACTER
 
@@ -308,13 +320,15 @@ class GodModeAgent(BaseAgent):
     """
 
     # Required prompts - always loaded for god mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset({
-        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-        constants.PROMPT_TYPE_GOD_MODE,
-        constants.PROMPT_TYPE_GAME_STATE,
-        constants.PROMPT_TYPE_DND_SRD,
-        constants.PROMPT_TYPE_MECHANICS,
-    })
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(
+        {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GOD_MODE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_DND_SRD,
+            constants.PROMPT_TYPE_MECHANICS,
+        }
+    )
 
     # No optional prompts for god mode - it's focused on administration
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
@@ -384,6 +398,142 @@ class GodModeAgent(BaseAgent):
         return user_input
 
 
+# --- INFO QUERY CLASSIFICATION ---
+# Conservative patterns: Only route to InfoAgent for CLEAR info-only queries
+
+INFO_QUERY_PATTERNS = [
+    "show me my",  # "show me my equipment"
+    "what do i have",  # "what do I have equipped"
+    "list my",  # "list my items"
+    "check my",  # "check my inventory"
+    "what's in my",  # "what's in my backpack"
+    "what am i wearing",
+    "what am i carrying",
+    "my equipment",  # "show my equipment"
+    "my inventory",  # "check my inventory"
+    "my gear",  # "list my gear"
+    "my items",  # "show my items"
+    "my weapons",  # "what are my weapons"
+    "what weapons",  # "what weapons do I have"
+    "do i have",  # "what items do I have" - broader pattern
+]
+
+# If ANY action verb present, stay in StoryMode (conservative)
+STORY_ACTION_VERBS = [
+    "find",
+    "buy",
+    "sell",
+    "search",
+    "look for",
+    "upgrade",
+    "equip",
+    "unequip",
+    "drop",
+    "pick up",
+    "use",
+    "trade",
+    "get",
+    "acquire",
+    "steal",
+    "loot",
+    "craft",
+    "repair",
+]
+
+
+class InfoAgent(BaseAgent):
+    """
+    Agent for Information Queries (Equipment, Inventory, Stats).
+
+    This agent handles pure information queries with TRIMMED system prompts
+    to improve LLM compliance with exact item naming. It does NOT advance
+    the narrative - use StoryModeAgent for any action-based queries.
+
+    Responsibilities:
+    - Equipment listing with exact item names
+    - Inventory display (backpack, weapons, equipped items)
+    - Character stats display
+    - Pure information retrieval (no story advancement)
+
+    System Prompt Hierarchy (TRIMMED for focus):
+    1. Master directive (establishes AI authority)
+    2. Game state instructions (contains Equipment Query Protocol)
+
+    Note: NO narrative, mechanics, or character_template prompts.
+    This reduces prompt from ~2000 lines to ~1100 lines, improving
+    LLM focus on the Equipment Query Protocol.
+    """
+
+    # TRIMMED prompts - only essentials for info queries
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(
+        {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GAME_STATE,  # Contains Equipment Query Protocol
+        }
+    )
+
+    # No optional prompts - keep it focused
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset()
+
+    MODE: str = constants.MODE_INFO
+
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+    ) -> str:
+        """
+        Build TRIMMED system instructions for info queries.
+
+        Uses minimal prompt set to maximize LLM focus on Equipment Query Protocol:
+        - Master directive (authority)
+        - Game state instruction (contains Equipment Query Protocol)
+        - Current game state (for context)
+
+        Note: selected_prompts is intentionally ignored - info mode uses fixed set.
+
+        Returns:
+            Trimmed system instruction string for information queries
+        """
+        # Parameters intentionally unused - info mode uses fixed prompt set
+        del selected_prompts, use_default_world, include_continuation_reminder
+
+        builder = self._prompt_builder
+
+        # Build info mode instructions (trimmed prompt set)
+        parts: list[str] = builder.build_info_mode_instructions()
+
+        # Finalize WITHOUT world lore (info mode doesn't need it)
+        return builder.finalize_instructions(parts, use_default_world=False)
+
+    @classmethod
+    def matches_input(cls, user_input: str) -> bool:
+        """
+        Conservative detection: Only match CLEAR info-only queries.
+
+        Route to InfoAgent only when:
+        1. Input matches an info query pattern (show/list/check)
+        2. No action verbs present (find/buy/sell/search)
+
+        If uncertain, returns False (defaults to StoryModeAgent).
+
+        Args:
+            user_input: Raw user input text
+
+        Returns:
+            True only for clear info-only queries
+        """
+        lower = user_input.lower()
+
+        # If ANY action verb present, it's a story query
+        if any(verb in lower for verb in STORY_ACTION_VERBS):
+            return False
+
+        # Only route to InfoAgent for clear info patterns
+        return any(pattern in lower for pattern in INFO_QUERY_PATTERNS)
+
+
 class CombatAgent(BaseAgent):
     """
     Agent for Combat Mode (Active Combat Encounters).
@@ -413,14 +563,16 @@ class CombatAgent(BaseAgent):
     """
 
     # Required prompts - always loaded for combat mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset({
-        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-        constants.PROMPT_TYPE_COMBAT,
-        constants.PROMPT_TYPE_GAME_STATE,
-        constants.PROMPT_TYPE_NARRATIVE,  # For DM Note protocol and cinematic style
-        constants.PROMPT_TYPE_DND_SRD,
-        constants.PROMPT_TYPE_MECHANICS,
-    })
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(
+        {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_COMBAT,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_NARRATIVE,  # For DM Note protocol and cinematic style
+            constants.PROMPT_TYPE_DND_SRD,
+            constants.PROMPT_TYPE_MECHANICS,
+        }
+    )
 
     # No optional prompts for combat mode - it's focused on tactical combat
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
@@ -446,6 +598,8 @@ class CombatAgent(BaseAgent):
 
         Note: selected_prompts parameter is accepted for interface consistency
         but combat mode uses its fixed combat-focused prompt set.
+        include_continuation_reminder is ignored because combat mode always uses
+        the same fixed prompt stack.
 
         Returns:
             Complete system instruction string for combat encounters
@@ -514,8 +668,9 @@ def get_agent_for_input(
 
     Determines which agent should handle the input based on mode detection:
     1. GodModeAgent if input starts with "GOD MODE:" (highest priority)
-    2. CombatAgent if game_state.combat_state.in_combat is True
-    3. StoryModeAgent for all other inputs (default)
+    2. InfoAgent for pure info queries (equipment, inventory, stats)
+    3. CombatAgent if game_state.combat_state.in_combat is True
+    4. StoryModeAgent for all other inputs (default)
 
     Args:
         user_input: Raw user input text
@@ -527,6 +682,9 @@ def get_agent_for_input(
     Example:
         >>> agent = get_agent_for_input("GOD MODE: Set my HP to 50")
         >>> isinstance(agent, GodModeAgent)
+        True
+        >>> agent = get_agent_for_input("list my equipment")
+        >>> isinstance(agent, InfoAgent)
         True
         >>> # With combat_state.in_combat = True
         >>> agent = get_agent_for_input("I attack the goblin!", combat_game_state)
@@ -541,12 +699,17 @@ def get_agent_for_input(
         logging_util.info("🔮 GOD_MODE_DETECTED: Using GodModeAgent")
         return GodModeAgent(game_state)
 
-    # Priority 2: Combat mode when in active combat
+    # Priority 2: Info queries (equipment, inventory, stats) - trimmed prompts
+    if InfoAgent.matches_input(user_input):
+        logging_util.info("📦 INFO_QUERY_DETECTED: Using InfoAgent (trimmed prompts)")
+        return InfoAgent(game_state)
+
+    # Priority 3: Combat mode when in active combat
     if CombatAgent.matches_game_state(game_state):
         logging_util.info("⚔️ COMBAT_MODE_ACTIVE: Using CombatAgent")
         return CombatAgent(game_state)
 
-    # Priority 3: Default to story mode
+    # Priority 4: Default to story mode
     return StoryModeAgent(game_state)
 
 
@@ -555,6 +718,7 @@ __all__ = [
     "BaseAgent",
     "StoryModeAgent",
     "GodModeAgent",
+    "InfoAgent",
     "CombatAgent",
     "get_agent_for_input",
 ]

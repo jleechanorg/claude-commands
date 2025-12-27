@@ -30,9 +30,9 @@ def has_firebase_credentials():
 
 
 from main import create_app
-from tests.fake_firestore import FakeFirestoreClient
 
 from mvp_site.game_state import GameState
+from tests.fake_firestore import FakeFirestoreClient
 
 # Import JSON input schema components
 # Legacy json_input_schema imports removed - using LLMRequest now
@@ -282,9 +282,7 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
     def test_json_input_validation_in_campaign_context(self):
         """Test JSON input validation in campaign visit context."""
         # Legacy JSON input schema components removed - using LLMRequest now
-        self.assertTrue(
-            True, "JSON input schema components replaced with LLMRequest"
-        )
+        self.assertTrue(True, "JSON input schema components replaced with LLMRequest")
 
         # Legacy FakeServiceManager removed - using direct mocking
         # Test that narrative response structure is valid
@@ -295,9 +293,7 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
     def test_json_input_validation_error_handling(self):
         """Test JSON input validation error handling in end2end context."""
         # Legacy JSON input schema components removed - using LLMRequest now
-        self.assertTrue(
-            True, "JSON input schema components replaced with LLMRequest"
-        )
+        self.assertTrue(True, "JSON input schema components replaced with LLMRequest")
 
         # Legacy JsonInputValidator removed - using LLMRequest validation
         result_valid = True  # LLMRequest handles validation internally

@@ -39,8 +39,6 @@ from mvp_site.schemas.entities_pydantic import (
     EntityStatus,
     SceneManifest,
     Visibility,
-)
-from mvp_site.schemas.entities_pydantic import (
     create_from_game_state as schemas_create_from_game_state,
 )
 

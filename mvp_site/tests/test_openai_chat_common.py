@@ -4,10 +4,10 @@ import unittest
 from unittest.mock import Mock, patch
 
 from mvp_site.llm_providers.openai_chat_common import (
-    build_messages,
     build_chat_payload,
-    extract_tool_calls,
+    build_messages,
     extract_first_choice_message,
+    extract_tool_calls,
     post_chat_completions,
 )
 
@@ -36,7 +36,9 @@ class TestOpenAIChatCommon(unittest.TestCase):
     def test_extract_tool_calls_none_for_missing(self):
         self.assertIsNone(extract_tool_calls({}))
         self.assertIsNone(extract_tool_calls({"choices": []}))
-        self.assertIsNone(extract_tool_calls({"choices": [{"message": {"content": "x"}}]}))
+        self.assertIsNone(
+            extract_tool_calls({"choices": [{"message": {"content": "x"}}]})
+        )
 
     def test_extract_tool_calls_returns_list(self):
         raw = {"choices": [{"message": {"tool_calls": [{"id": "1"}]}}]}

@@ -333,7 +333,9 @@ async def _roll_dice_tool(args: dict[str, Any]) -> list[TextContent]:
             TextContent(
                 type="text",
                 text=json.dumps(
-                    {"error": "roll_dice tool disabled (set ENABLE_DICE_TEST_TOOL=true)"}
+                    {
+                        "error": "roll_dice tool disabled (set ENABLE_DICE_TEST_TOOL=true)"
+                    }
                 ),
             )
         ]
@@ -685,9 +687,7 @@ def create_mcp_handler(
                 self.wfile.write(response_json.encode("utf-8"))
             except Exception as e:
                 logging_util.error(f"JSON-RPC error: {e}")
-                is_production = (
-                    os.environ.get("PRODUCTION_MODE", "").lower() == "true"
-                )
+                is_production = os.environ.get("PRODUCTION_MODE", "").lower() == "true"
                 error_data = None if is_production else traceback.format_exc()
                 error_response = {
                     "jsonrpc": "2.0",

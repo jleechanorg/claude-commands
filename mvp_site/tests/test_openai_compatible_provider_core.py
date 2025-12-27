@@ -12,11 +12,13 @@ class TestOpenAICompatibleProviderCore(unittest.TestCase):
     def test_generates_payload_with_response_format_when_no_tools(self):
         seen = {}
 
-        def fake_post(*, url, headers, payload, timeout, logger=None, error_log_prefix=""):
+        def fake_post(
+            *, url, headers, payload, timeout, logger=None, error_log_prefix=""
+        ):
             seen["url"] = url
             seen["headers"] = headers
             seen["payload"] = payload
-            return {"choices": [{"message": {"content": "{\"narrative\":\"ok\"}"}}]}
+            return {"choices": [{"message": {"content": '{"narrative":"ok"}'}}]}
 
         with patch(
             "mvp_site.llm_providers.openai_compatible_provider_core.post_chat_completions",
@@ -35,17 +37,21 @@ class TestOpenAICompatibleProviderCore(unittest.TestCase):
                 response_format={"type": "json_object"},
             )
 
-        self.assertEqual(text, "{\"narrative\":\"ok\"}")
+        self.assertEqual(text, '{"narrative":"ok"}')
         self.assertIn("response_format", seen["payload"])
         self.assertNotIn("tools", seen["payload"])
-        self.assertEqual(raw["choices"][0]["message"]["content"], "{\"narrative\":\"ok\"}")
+        self.assertEqual(raw["choices"][0]["message"]["content"], '{"narrative":"ok"}')
 
     def test_generates_payload_with_tools_and_tool_choice(self):
         seen = {}
 
-        def fake_post(*, url, headers, payload, timeout, logger=None, error_log_prefix=""):
+        def fake_post(
+            *, url, headers, payload, timeout, logger=None, error_log_prefix=""
+        ):
             seen["payload"] = payload
-            return {"choices": [{"message": {"content": None, "tool_calls": [{"id": "1"}]}}]}
+            return {
+                "choices": [{"message": {"content": None, "tool_calls": [{"id": "1"}]}}]
+            }
 
         with patch(
             "mvp_site.llm_providers.openai_compatible_provider_core.post_chat_completions",
@@ -72,7 +78,9 @@ class TestOpenAICompatibleProviderCore(unittest.TestCase):
         self.assertNotIn("response_format", seen["payload"])
 
     def test_raises_when_no_content_and_no_tool_calls(self):
-        def fake_post(*, url, headers, payload, timeout, logger=None, error_log_prefix=""):
+        def fake_post(
+            *, url, headers, payload, timeout, logger=None, error_log_prefix=""
+        ):
             return {"choices": [{"message": {"content": None}}]}
 
         with patch(
@@ -94,8 +102,13 @@ class TestOpenAICompatibleProviderCore(unittest.TestCase):
                 )
 
     def test_custom_validator_can_override_default(self):
-        def fake_post(*, url, headers, payload, timeout, logger=None, error_log_prefix=""):
-            return {"choices": [{"message": {"content": None}}], "usage": {"prompt_tokens": 1}}
+        def fake_post(
+            *, url, headers, payload, timeout, logger=None, error_log_prefix=""
+        ):
+            return {
+                "choices": [{"message": {"content": None}}],
+                "usage": {"prompt_tokens": 1},
+            }
 
         def validator(_data, _message, _raw_text, _tool_calls):
             # Allow missing content (provider will handle it elsewhere)

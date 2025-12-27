@@ -33,7 +33,9 @@ def test_builds_openrouter_payload(monkeypatch):
             {"choices": [{"message": {"content": '{"narrative": "ok"}'}}]}
         )
 
-    monkeypatch.setattr(openrouter_provider, "requests", types.SimpleNamespace(post=fake_post))
+    monkeypatch.setattr(
+        openrouter_provider, "requests", types.SimpleNamespace(post=fake_post)
+    )
 
     response = openrouter_provider.generate_content(
         prompt_contents=["first", "second"],

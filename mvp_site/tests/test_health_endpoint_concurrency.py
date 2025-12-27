@@ -8,6 +8,7 @@ Tests verify that the /health endpoint:
 4. Returns MCP client configuration status
 5. Is exempt from rate limiting
 """
+
 import json
 import os
 import unittest
@@ -46,7 +47,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertEqual(
             response.status_code,
             200,
-            f"Health endpoint should return 200 OK, got {response.status_code}"
+            f"Health endpoint should return 200 OK, got {response.status_code}",
         )
 
     def test_health_endpoint_returns_json(self):
@@ -56,7 +57,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertEqual(
             response.content_type,
             "application/json",
-            "Health endpoint should return JSON content type"
+            "Health endpoint should return JSON content type",
         )
 
         # Verify JSON is parseable
@@ -81,15 +82,11 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertEqual(
             data["service"],
             "worldarchitect-ai",
-            "Service should be 'worldarchitect-ai'"
+            "Service should be 'worldarchitect-ai'",
         )
 
         self.assertIn("timestamp", data, "Response should include 'timestamp' field")
-        self.assertIsInstance(
-            data["timestamp"],
-            str,
-            "Timestamp should be a string"
-        )
+        self.assertIsInstance(data["timestamp"], str, "Timestamp should be a string")
 
     def test_health_endpoint_includes_concurrency_with_workers_env(self):
         """RED→GREEN: Should include concurrency info when GUNICORN_WORKERS is set"""
@@ -107,17 +104,15 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertIn(
             "concurrency",
             data,
-            "Response should include 'concurrency' field when GUNICORN_WORKERS is set"
+            "Response should include 'concurrency' field when GUNICORN_WORKERS is set",
         )
         self.assertIn(
-            "workers",
-            data["concurrency"],
-            "Concurrency should include 'workers' field"
+            "workers", data["concurrency"], "Concurrency should include 'workers' field"
         )
         self.assertEqual(
             data["concurrency"]["workers"],
             5,
-            "Workers should match GUNICORN_WORKERS environment variable"
+            "Workers should match GUNICORN_WORKERS environment variable",
         )
 
     def test_health_endpoint_includes_threads_in_concurrency(self):
@@ -141,7 +136,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertEqual(
             data["concurrency"]["threads"],
             4,
-            "Threads should match GUNICORN_THREADS environment variable"
+            "Threads should match GUNICORN_THREADS environment variable",
         )
 
     def test_health_endpoint_calculates_max_concurrent_requests(self):
@@ -161,7 +156,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertEqual(
             data["concurrency"]["max_concurrent_requests"],
             20,  # 5 workers × 4 threads
-            "max_concurrent_requests should be workers × threads"
+            "max_concurrent_requests should be workers × threads",
         )
 
     def test_health_endpoint_no_concurrency_without_env_vars(self):
@@ -182,7 +177,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertNotIn(
             "concurrency",
             data,
-            "Health response should omit 'concurrency' when no GUNICORN_* env vars are set"
+            "Health response should omit 'concurrency' when no GUNICORN_* env vars are set",
         )
 
     def test_health_endpoint_includes_mcp_client_status(self):
@@ -190,35 +185,25 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         response = self.client.get("/health")
         data = json.loads(response.data)
 
-        self.assertIn(
-            "mcp_client",
-            data,
-            "Response should include 'mcp_client' field"
-        )
+        self.assertIn("mcp_client", data, "Response should include 'mcp_client' field")
 
         mcp_client = data["mcp_client"]
         self.assertIn(
-            "initialized",
-            mcp_client,
-            "MCP client should have 'initialized' field"
+            "initialized", mcp_client, "MCP client should have 'initialized' field"
         )
         self.assertIsInstance(
             mcp_client["initialized"],
             bool,
-            "MCP client 'initialized' should be boolean"
+            "MCP client 'initialized' should be boolean",
         )
 
         # If initialized, should have additional info
         if mcp_client["initialized"]:
             self.assertIn(
-                "base_url",
-                mcp_client,
-                "Configured MCP client should have 'base_url'"
+                "base_url", mcp_client, "Configured MCP client should have 'base_url'"
             )
             self.assertIn(
-                "skip_http",
-                mcp_client,
-                "Configured MCP client should have 'skip_http'"
+                "skip_http", mcp_client, "Configured MCP client should have 'skip_http'"
             )
 
     def test_health_endpoint_handles_mcp_client_error_gracefully(self):
@@ -252,14 +237,13 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         all_success = all(status == 200 for status in responses)
         self.assertTrue(
             all_success,
-            "Health endpoint should not be rate limited (all requests should return 200)"
+            "Health endpoint should not be rate limited (all requests should return 200)",
         )
 
         # Verify no 429 responses
         rate_limited = any(status == 429 for status in responses)
         self.assertFalse(
-            rate_limited,
-            "Health endpoint should never return 429 Too Many Requests"
+            rate_limited, "Health endpoint should never return 429 Too Many Requests"
         )
 
     def test_health_endpoint_response_structure_is_consistent(self):
@@ -277,7 +261,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
             self.assertEqual(
                 set(data.keys()),
                 first_keys,
-                "All health responses should have consistent structure"
+                "All health responses should have consistent structure",
             )
 
     def test_health_endpoint_timestamp_format(self):
@@ -292,7 +276,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         self.assertRegex(
             timestamp,
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}",
-            "Timestamp should be in ISO 8601 format"
+            "Timestamp should be in ISO 8601 format",
         )
 
     def test_health_endpoint_with_full_concurrency_info(self):

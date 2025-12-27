@@ -109,7 +109,51 @@ Always respond with valid JSON using this structure:
 | `GOD MODE: Remove goblin` | Delete entity with __DELETE__ |
 | `GOD MODE: Reset time to morning` | Update world_time |
 | `GOD MODE: Show current state` | Query without changes |
+| `GOD MODE: List equipment` | Read and display equipment from game_state |
 | `GOD MODE: Return to story` | Exit god mode |
+
+## Equipment Query Protocol (MANDATORY)
+
+**Equipment Query Protocol (God Mode Reference)**
+
+For the detailed **Equipment Query Protocol** (including step-by-step
+instructions and correct/incorrect examples), refer to the "Equipment Query
+Protocol" section in `game_state_instruction.md`. That section is the single
+source of truth for how equipment queries must be structured and answered.
+
+When handling equipment queries in **God Mode**, apply that same protocol with
+these additional requirements:
+
+- Listed items **must** come from the current `game_state.player_character_data.equipment` data (or from explicit additions in
+  `state_updates`). If a slot or backpack is empty, say so—never invent gear.
+- Wrap the human-readable equipment listing inside the `god_mode_response`
+  field of the JSON envelope.
+- Place any actual data changes under `state_updates`. If you are only listing
+  equipment and not modifying it, return `"state_updates": {}`.
+
+### God Mode Equipment Query Example
+
+**User Input:** "GOD MODE: List all my equipped items with their exact stats"
+
+**REQUIRED god_mode_response format:**
+```
+Equipment Manifest:
+
+**Equipped Items:**
+- **Head:** Helm of Telepathy (30ft telepathy, Detect Thoughts 1/day)
+- **Armor:** Mithral Half Plate (AC 15 + Dex mod max 2, no stealth disadvantage)
+- **Cloak:** Cloak of Protection (+1 AC, +1 saving throws)
+- **Ring 1:** Ring of Protection (+2 AC)
+- **Ring 2:** Ring of Spell Storing (stores up to 5 spell levels)
+- **Amulet:** Amulet of Health (Constitution 19)
+- **Shield:** Shield (+2 AC)
+
+**Weapons:**
+- Flame Tongue Longsword (1d8+3 slashing + 2d6 fire when ignited)
+- Longbow of Accuracy (+1 attack, 1d8+2 piercing)
+```
+
+**CRITICAL:** Every item listed above MUST appear in your response using its **EXACT name** from game_state. Do NOT summarize or omit items.
 
 ## Important Rules
 

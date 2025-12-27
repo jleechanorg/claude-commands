@@ -3,15 +3,15 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from mvp_site import constants
-from mvp_site.llm_service import _check_missing_required_fields
 from mvp_site.dice_integrity import (
     _check_dice_integrity,
     _detect_combat_in_narrative,
     _detect_narrative_dice_fabrication,
     _is_code_execution_fabrication,
-    _validate_combat_dice_integrity,
     _should_require_dice_rolls_for_turn,
+    _validate_combat_dice_integrity,
 )
+from mvp_site.llm_service import _check_missing_required_fields
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
@@ -64,7 +64,7 @@ def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_require
 
 def test_should_require_dice_rolls_only_for_combat_actions():
     from mvp_site.game_state import GameState
-    
+
     gs = GameState(combat_state={"in_combat": True})
 
     assert (
@@ -106,7 +106,7 @@ def test_should_require_dice_rolls_only_for_combat_actions():
 def test_should_require_dice_rolls_ignores_non_combat_verbs():
     """Non-combat phrasing should not force dice requirement."""
     from mvp_site.game_state import GameState
-    
+
     gs = GameState(combat_state={"in_combat": False})
 
     assert (
@@ -146,7 +146,7 @@ def test_should_require_dice_rolls_ignores_non_combat_verbs():
 def test_should_require_dice_rolls_detects_initiative():
     """Explicit initiative should still require dice."""
     from mvp_site.game_state import GameState
-    
+
     gs = GameState(combat_state={"in_combat": False})
     assert (
         _should_require_dice_rolls_for_turn(
@@ -169,7 +169,9 @@ def test_detect_combat_in_narrative_active_attack():
     """Active present-tense attack should be detected as combat."""
     assert _detect_combat_in_narrative("The goblin attacks you with its club.") is True
     assert _detect_combat_in_narrative("The orc swings at you.") is True
-    assert _detect_combat_in_narrative("The wizard casts fireball at the party.") is True
+    assert (
+        _detect_combat_in_narrative("The wizard casts fireball at the party.") is True
+    )
 
 
 def test_detect_combat_in_narrative_damage_being_dealt():
@@ -188,15 +190,22 @@ def test_detect_combat_in_narrative_dice_patterns():
 
 def test_detect_combat_in_narrative_past_tense():
     """Past tense combat references should NOT be detected as active combat."""
-    assert _detect_combat_in_narrative("The goblin died in the last encounter.") is False
+    assert (
+        _detect_combat_in_narrative("The goblin died in the last encounter.") is False
+    )
     assert _detect_combat_in_narrative("You killed the orc previously.") is False
     assert _detect_combat_in_narrative("The battle was won last session.") is False
 
 
 def test_detect_combat_in_narrative_hypothetical():
     """Hypothetical/conditional combat should NOT be detected as active combat."""
-    assert _detect_combat_in_narrative("You could attack the goblin if you wanted.") is False
-    assert _detect_combat_in_narrative("If you attack, the guard will retaliate.") is False
+    assert (
+        _detect_combat_in_narrative("You could attack the goblin if you wanted.")
+        is False
+    )
+    assert (
+        _detect_combat_in_narrative("If you attack, the guard will retaliate.") is False
+    )
     assert _detect_combat_in_narrative("You might want to cast a spell.") is False
 
 
@@ -297,12 +306,15 @@ def test_detect_narrative_dice_fabrication_flags_without_tool_evidence():
     api_response = Mock()
     api_response._tool_requests_executed = False
 
-    assert _detect_narrative_dice_fabrication(
-        narrative_text=narrative,
-        structured_response=resp,
-        api_response=api_response,
-        code_execution_evidence=None,
-    ) is True
+    assert (
+        _detect_narrative_dice_fabrication(
+            narrative_text=narrative,
+            structured_response=resp,
+            api_response=api_response,
+            code_execution_evidence=None,
+        )
+        is True
+    )
 
 
 def test_detect_narrative_dice_fabrication_ignored_with_tool_evidence():
@@ -322,12 +334,15 @@ def test_detect_narrative_dice_fabrication_ignored_with_tool_evidence():
         }
     ]
 
-    assert _detect_narrative_dice_fabrication(
-        narrative_text=narrative,
-        structured_response=resp,
-        api_response=api_response,
-        code_execution_evidence=None,
-    ) is False
+    assert (
+        _detect_narrative_dice_fabrication(
+            narrative_text=narrative,
+            structured_response=resp,
+            api_response=api_response,
+            code_execution_evidence=None,
+        )
+        is False
+    )
 
 
 def test_detect_narrative_dice_fabrication_rejects_non_dice_tool_results():
@@ -343,12 +358,15 @@ def test_detect_narrative_dice_fabrication_rejects_non_dice_tool_results():
         }
     ]
 
-    assert _detect_narrative_dice_fabrication(
-        narrative_text=narrative,
-        structured_response=resp,
-        api_response=api_response,
-        code_execution_evidence=None,
-    ) is True
+    assert (
+        _detect_narrative_dice_fabrication(
+            narrative_text=narrative,
+            structured_response=resp,
+            api_response=api_response,
+            code_execution_evidence=None,
+        )
+        is True
+    )
 
 
 def test_detect_narrative_dice_fabrication_ignored_without_dice():
@@ -358,12 +376,15 @@ def test_detect_narrative_dice_fabrication_ignored_without_dice():
     api_response = Mock()
     api_response._tool_requests_executed = False
 
-    assert _detect_narrative_dice_fabrication(
-        narrative_text=narrative,
-        structured_response=resp,
-        api_response=api_response,
-        code_execution_evidence=None,
-    ) is False
+    assert (
+        _detect_narrative_dice_fabrication(
+            narrative_text=narrative,
+            structured_response=resp,
+            api_response=api_response,
+            code_execution_evidence=None,
+        )
+        is False
+    )
 
 
 def test_detect_narrative_dice_fabrication_requires_context_for_rolls():
@@ -373,12 +394,15 @@ def test_detect_narrative_dice_fabrication_requires_context_for_rolls():
     api_response = Mock()
     api_response._tool_requests_executed = False
 
-    assert _detect_narrative_dice_fabrication(
-        narrative_text=narrative,
-        structured_response=resp,
-        api_response=api_response,
-        code_execution_evidence=None,
-    ) is False
+    assert (
+        _detect_narrative_dice_fabrication(
+            narrative_text=narrative,
+            structured_response=resp,
+            api_response=api_response,
+            code_execution_evidence=None,
+        )
+        is False
+    )
 
 
 # =============================================================================
@@ -555,7 +579,11 @@ def test_build_reprompt_includes_tool_results_when_available():
 
     # Tool results that should be included in reprompt
     tool_results = [
-        {"tool": "roll_dice", "args": {"notation": "1d20+5"}, "result": {"total": 17, "rolls": [12]}},
+        {
+            "tool": "roll_dice",
+            "args": {"notation": "1d20+5"},
+            "result": {"total": 17, "rolls": [12]},
+        },
     ]
 
     # RED: Current implementation doesn't accept tool_results parameter

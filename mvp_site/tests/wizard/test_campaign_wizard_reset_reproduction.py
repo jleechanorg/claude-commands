@@ -33,8 +33,10 @@ except ImportError:
 
 
 @unittest.skipUnless(
-    not os.environ.get('CI') and not os.environ.get('GITHUB_ACTIONS') and os.environ.get('ENABLE_BROWSER_TESTS') == '1',
-    "Browser automation tests disabled in CI - set ENABLE_BROWSER_TESTS=1 to run locally"
+    not os.environ.get("CI")
+    and not os.environ.get("GITHUB_ACTIONS")
+    and os.environ.get("ENABLE_BROWSER_TESTS") == "1",
+    "Browser automation tests disabled in CI - set ENABLE_BROWSER_TESTS=1 to run locally",
 )
 class CampaignWizardResetReproductionTest(unittest.TestCase):
     """
@@ -112,9 +114,13 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
 
     def setUp(self):
         if not SELENIUM_AVAILABLE:
-            self.skipTest("Resource not available: Selenium not available, skipping Selenium automation test")
+            self.skipTest(
+                "Resource not available: Selenium not available, skipping Selenium automation test"
+            )
         if not hasattr(self, "driver") or not self.driver:
-            self.skipTest("Resource not available: Chrome driver not available, skipping Chrome automation test")
+            self.skipTest(
+                "Resource not available: Chrome driver not available, skipping Chrome automation test"
+            )
 
     def test_campaign_wizard_reset_issue_reproduction(self):
         """

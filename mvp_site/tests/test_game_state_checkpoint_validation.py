@@ -10,7 +10,9 @@ def test_validate_checkpoint_consistency_coerces_hp_strings():
         custom_campaign_state={},
     )
 
-    discrepancies = state.validate_checkpoint_consistency("You are wounded but still standing.")
+    discrepancies = state.validate_checkpoint_consistency(
+        "You are wounded but still standing."
+    )
     assert isinstance(discrepancies, list)
 
 

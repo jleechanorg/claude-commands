@@ -4,9 +4,7 @@ from mvp_site.debug_hybrid_system import contains_debug_tags, strip_debug_conten
 
 
 def test_strip_debug_content_strips_inline_debug_info_no_space_after_colon():
-    text = (
-        'Before {"narrative":"hi","debug_info":{"nested":{"k":"v"}},"x":1} After'
-    )
+    text = 'Before {"narrative":"hi","debug_info":{"nested":{"k":"v"}},"x":1} After'
 
     assert contains_debug_tags(text)
     stripped = strip_debug_content(text)

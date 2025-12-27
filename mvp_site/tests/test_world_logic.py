@@ -32,6 +32,7 @@ class _TestValidationError(Exception):
 class _TestLLMRequestError(Exception):
     """Test-only stand-in for LLM request failures."""
 
+
 # CRITICAL FIX: Mock firebase_admin completely to avoid google.auth namespace conflicts
 # This prevents the test from trying to import firebase_admin which triggers the google.auth issue
 firebase_admin_mock = MagicMock()
@@ -778,7 +779,9 @@ class TestCodeHealthChecks(unittest.TestCase):
 # =============================================================================
 
 
-def _calculate_parallel_threshold(serial_time: float, buffer_ratio: float = 0.8) -> float:
+def _calculate_parallel_threshold(
+    serial_time: float, buffer_ratio: float = 0.8
+) -> float:
     """Helper to keep parallel timing thresholds consistent across tests."""
     return serial_time * buffer_ratio
 
@@ -820,7 +823,9 @@ class _MockHelperMixin:
     ):
         """Apply shared mock configuration used across tests."""
         mock_llm_service.continue_story.side_effect = llm_side_effect
-        mock_llm_service.LLMRequestError = _TestLLMRequestError  # For exception handling
+        mock_llm_service.LLMRequestError = (
+            _TestLLMRequestError  # For exception handling
+        )
 
         mock_firestore.get_campaign_by_id.side_effect = campaign_side_effect
         mock_firestore.update_campaign_game_state = MagicMock()
@@ -928,7 +933,9 @@ class TestAsyncNonBlocking(unittest.TestCase, _MockHelperMixin):
         )
 
         # Calculate expected times
-        serial_time = NUM_CONCURRENT * SIMULATED_BLOCKING_TIME * 2  # 2 blocking calls per op
+        serial_time = (
+            NUM_CONCURRENT * SIMULATED_BLOCKING_TIME * 2
+        )  # 2 blocking calls per op
         # CI systems may have scheduling overhead; allow buffer to reduce flakiness
         parallel_threshold = _calculate_parallel_threshold(serial_time)
 
@@ -1231,25 +1238,28 @@ class TestParallelismIntegration(unittest.TestCase):
             )
 
         async def run_parallel_test():
-            with patch.object(
-                world_logic, "firestore_service", MagicMock()
-            ) as mock_fs:
+            with patch.object(world_logic, "firestore_service", MagicMock()) as mock_fs:
                 mock_fs.get_campaign_state = mock_get_state
                 mock_fs.get_campaign_by_id = mock_get_campaign
 
-                with patch.object(
-                    world_logic, "get_user_settings", lambda x: {"debug_mode": False}
-                ), patch.object(
-                    world_logic, "_prepare_game_state", mock_get_state
+                with (
+                    patch.object(
+                        world_logic,
+                        "get_user_settings",
+                        lambda x: {"debug_mode": False},
+                    ),
+                    patch.object(world_logic, "_prepare_game_state", mock_get_state),
                 ):
                     start = time.time()
 
                     # Run concurrent operations
                     tasks = [
-                        world_logic.get_campaign_state_unified({
-                            "user_id": f"user-{i}",
-                            "campaign_id": f"campaign-{i}",
-                        })
+                        world_logic.get_campaign_state_unified(
+                            {
+                                "user_id": f"user-{i}",
+                                "campaign_id": f"campaign-{i}",
+                            }
+                        )
                         for i in range(NUM_OPS)
                     ]
                     await asyncio.gather(*tasks, return_exceptions=True)

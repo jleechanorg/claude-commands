@@ -18,12 +18,7 @@ def test_mock_services_mode_persists_documents(monkeypatch):
     monkeypatch.setenv("MOCK_SERVICES_MODE", "true")
 
     db = firestore_service.get_db()
-    doc = (
-        db.collection("users")
-        .document("u1")
-        .collection("campaigns")
-        .document("c1")
-    )
+    doc = db.collection("users").document("u1").collection("campaigns").document("c1")
     doc.set({"ok": True})
 
     # New get_db() call should see same document.
@@ -62,20 +57,18 @@ def test_update_campaign_dot_notation(monkeypatch):
         .collection("campaigns")
         .document(campaign_id)
     )
-    doc.set({
-        "title": "Test Campaign",
-        "game_state": {
-            "custom_campaign_state": {
-                "arc_milestones": {}
-            }
+    doc.set(
+        {
+            "title": "Test Campaign",
+            "game_state": {"custom_campaign_state": {"arc_milestones": {}}},
         }
-    })
+    )
 
     # Update using dot-notation (the problematic case from the issue)
     updates = {
         "game_state.custom_campaign_state.arc_milestones.wedding_tour": {
             "status": "completed",
-            "phase": "ceremony_complete"
+            "phase": "ceremony_complete",
         }
     }
 
@@ -91,9 +84,13 @@ def test_update_campaign_dot_notation(monkeypatch):
     assert "game_state" in data
     assert "custom_campaign_state" in data["game_state"]
     assert "arc_milestones" in data["game_state"]["custom_campaign_state"]
-    assert "wedding_tour" in data["game_state"]["custom_campaign_state"]["arc_milestones"]
+    assert (
+        "wedding_tour" in data["game_state"]["custom_campaign_state"]["arc_milestones"]
+    )
 
-    wedding_tour = data["game_state"]["custom_campaign_state"]["arc_milestones"]["wedding_tour"]
+    wedding_tour = data["game_state"]["custom_campaign_state"]["arc_milestones"][
+        "wedding_tour"
+    ]
     assert wedding_tour["status"] == "completed"
     assert wedding_tour["phase"] == "ceremony_complete"
     assert data["title"] == "Test Campaign"
@@ -119,10 +116,7 @@ def test_update_campaign_without_dot_notation(monkeypatch):
     doc.set({"title": "Original Title", "status": "active"})
 
     # Update using simple keys (no dots)
-    updates = {
-        "title": "Updated Title",
-        "status": "completed"
-    }
+    updates = {"title": "Updated Title", "status": "completed"}
 
     result = firestore_service.update_campaign(user_id, campaign_id, updates)
     assert result is True
@@ -150,16 +144,16 @@ def test_update_campaign_dot_notation_existing_nested(monkeypatch):
         .collection("campaigns")
         .document(campaign_id)
     )
-    doc.set({
-        "title": "Existing Campaign",
-        "game_state": {
-            "custom_campaign_state": {
-                "arc_milestones": {
-                    "wedding_tour": {"status": "in_progress"}
+    doc.set(
+        {
+            "title": "Existing Campaign",
+            "game_state": {
+                "custom_campaign_state": {
+                    "arc_milestones": {"wedding_tour": {"status": "in_progress"}}
                 }
-            }
-        },
-    })
+            },
+        }
+    )
 
     updates = {
         "game_state.custom_campaign_state.arc_milestones.wedding_tour": {
@@ -173,7 +167,9 @@ def test_update_campaign_dot_notation_existing_nested(monkeypatch):
 
     updated_doc = doc.get()
     data = updated_doc.to_dict()
-    wedding_tour = data["game_state"]["custom_campaign_state"]["arc_milestones"]["wedding_tour"]
+    wedding_tour = data["game_state"]["custom_campaign_state"]["arc_milestones"][
+        "wedding_tour"
+    ]
 
     assert data["title"] == "Existing Campaign"
     assert wedding_tour == {

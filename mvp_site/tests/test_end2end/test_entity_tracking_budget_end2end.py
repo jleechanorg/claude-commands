@@ -62,10 +62,13 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
             npc_data[npc_name] = {
                 "mbti": "INTJ",
                 "role": "ally" if i % 2 == 0 else "neutral",
-                "background": f"A mysterious {npc_name.split('_')[-1].lower()} with a complex past involving ancient artifacts and forgotten kingdoms. " * 3,
+                "background": f"A mysterious {npc_name.split('_')[-1].lower()} with a complex past involving ancient artifacts and forgotten kingdoms. "
+                * 3,
                 "relationship": "companion" if i < 5 else "acquaintance",
-                "skills": ["combat", "magic", "stealth", "diplomacy"][:((i % 4) + 1)],
-                "personality_traits": ["brave", "cunning", "loyal", "mysterious"][:((i % 4) + 1)],
+                "skills": ["combat", "magic", "stealth", "diplomacy"][: ((i % 4) + 1)],
+                "personality_traits": ["brave", "cunning", "loyal", "mysterious"][
+                    : ((i % 4) + 1)
+                ],
                 "equipment": [f"item_{j}" for j in range(3)],
                 "current_hp": 50 + i,
                 "max_hp": 100,
@@ -79,21 +82,27 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
         for i in range(turns):
             # Alternate between player and GM turns
             if i % 2 == 0:
-                story_context.append({
-                    "actor": "player",
-                    "text": f"Turn {i}: The player decides to explore the ancient ruins, "
-                            f"searching for clues about the mysterious artifact. "
-                            f"They examine the weathered stone walls and find inscriptions. " * 2,
-                    "sequence_id": i + 1,
-                })
+                story_context.append(
+                    {
+                        "actor": "player",
+                        "text": f"Turn {i}: The player decides to explore the ancient ruins, "
+                        f"searching for clues about the mysterious artifact. "
+                        f"They examine the weathered stone walls and find inscriptions. "
+                        * 2,
+                        "sequence_id": i + 1,
+                    }
+                )
             else:
-                story_context.append({
-                    "actor": "gm",
-                    "text": f"Turn {i}: The Game Master describes the scene in vivid detail. "
-                            f"Ancient runes glow with ethereal light as the party advances. "
-                            f"NPCs react to the player's actions with varied emotions. " * 3,
-                    "sequence_id": i + 1,
-                })
+                story_context.append(
+                    {
+                        "actor": "gm",
+                        "text": f"Turn {i}: The Game Master describes the scene in vivid detail. "
+                        f"Ancient runes glow with ethereal light as the party advances. "
+                        f"NPCs react to the player's actions with varied emotions. "
+                        * 3,
+                        "sequence_id": i + 1,
+                    }
+                )
         return story_context
 
     def _setup_fake_firestore_with_large_campaign(self, fake_firestore, campaign_id):
@@ -129,7 +138,9 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.cerebras_provider.generate_content")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_large_context_with_many_npcs_does_not_overflow(
         self, mock_gemini_generate, mock_cerebras_generate, mock_get_db
     ):
@@ -157,10 +168,12 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
         # Before the fix, large entity tracking overhead would cause overflow
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I approach the ancient altar and examine the runes closely",
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {
+                    "input": "I approach the ancient altar and examine the runes closely",
+                    "mode": "character",
+                }
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -170,7 +183,7 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
             response.status_code,
             200,
             f"Expected 200 (entity budget fix working), got {response.status_code}: "
-            f"{response.data.decode()[:500]}"
+            f"{response.data.decode()[:500]}",
         )
 
         data = json.loads(response.data)
@@ -179,7 +192,9 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.cerebras_provider.generate_content")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_maximum_npc_count_still_succeeds(
         self, mock_gemini_generate, mock_cerebras_generate, mock_get_db
     ):
@@ -194,9 +209,7 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
         # Set up campaign with 25 NPCs (stress test)
         fake_firestore.collection("users").document(self.test_user_id).collection(
             "campaigns"
-        ).document(campaign_id).set(
-            {"title": "Max NPC Test", "setting": "Epic War"}
-        )
+        ).document(campaign_id).set({"title": "Max NPC Test", "setting": "Epic War"})
 
         game_state = {
             "user_id": self.test_user_id,
@@ -234,7 +247,7 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
         self.assertEqual(
             response.status_code,
             200,
-            f"Max NPC test failed: {response.status_code}: {response.data.decode()[:500]}"
+            f"Max NPC test failed: {response.status_code}: {response.data.decode()[:500]}",
         )
 
 

@@ -116,12 +116,19 @@ def _resolve_repo_info(
         branch = "detached"
 
     # Determine a base ref for changed files with fallbacks
-    base_ref = results.get("upstream") or results.get("origin_main")
+    # Use origin/main as baseline, with two-dot diff for merge commits
+    base_ref = results.get("origin_main")
     changed_files_output: Optional[str] = None
-    if base_ref and base_ref != "HEAD":
+    if base_ref and base_ref != results.get("head_commit"):
+        # Try three-dot first (commits unique to HEAD)
         changed_files_output = _run_git_command(
             ["diff", "--name-only", f"{base_ref}...HEAD"], timeout=10
         )
+        # If empty, fall back to two-dot (all differences)
+        if not changed_files_output:
+            changed_files_output = _run_git_command(
+                ["diff", "--name-only", f"{base_ref}..HEAD"], timeout=10
+            )
 
     # Build git provenance per evidence-standards.md
     git_provenance = {
@@ -156,17 +163,14 @@ def _compute_sha256(path: Path) -> str:
 
 
 def _write_checksum(path: Path, base_dir: Optional[Path] = None) -> Path:
-    """Write SHA256 checksum file per evidence-standards.md."""
+    """Write SHA256 checksum file per evidence-standards.md.
+
+    Uses filename-only for checksums to ensure sha256sum -c works from any directory.
+    """
     checksum = _compute_sha256(path)
     checksum_path = Path(str(path) + ".sha256")
-    path_str: str
-    if base_dir:
-        try:
-            path_str = path.relative_to(base_dir).as_posix()
-        except ValueError:
-            path_str = path.as_posix()
-    else:
-        path_str = path.as_posix()
+    # Use filename only for portable verification (sha256sum -c works in same dir)
+    path_str = path.name
     checksum_path.write_text(f"{checksum}  {path_str}\n", encoding="utf-8")
     return checksum_path
 

@@ -21,11 +21,13 @@ def test_execute_openai_tool_calls():
         {
             "id": "call_1",
             "type": "function",
-            "function": {"name": "roll_dice", "arguments": "{\"notation\":\"1d20+5\"}"},
+            "function": {"name": "roll_dice", "arguments": '{"notation":"1d20+5"}'},
         }
     ]
 
-    results = execute_openai_tool_calls(tool_calls, execute_tool_fn=executor, logger=None)
+    results = execute_openai_tool_calls(
+        tool_calls, execute_tool_fn=executor, logger=None
+    )
     assert len(results) == 1
     assert results[0]["tool_call_id"] == "call_1"
     assert results[0]["tool"] == "roll_dice"
@@ -44,9 +46,9 @@ def test_run_openai_json_first_tool_requests_flow_runs_phase2():
         calls.append(kwargs)
         if len(calls) == 1:
             return Resp(
-                "{\"tool_requests\":[{\"tool\":\"roll_dice\",\"args\":{\"notation\":\"1d20\"}}]}"
+                '{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}'
             )
-        return Resp("{\"narrative\":\"ok\",\"dice_rolls\":[\"Roll: 1d20 = 7\"]}")
+        return Resp('{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}')
 
     def exec_tool_requests(tool_requests):
         return [
@@ -79,7 +81,7 @@ def test_run_openai_json_first_tool_requests_flow_runs_phase2():
         format_tool_results_text_fn=format_results,
         logger=Logger(),
     )
-    assert out.text == "{\"narrative\":\"ok\",\"dice_rolls\":[\"Roll: 1d20 = 7\"]}"
+    assert out.text == '{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}'
     assert len(calls) == 2
     phase2_messages = calls[1].get("messages", [])
     assert phase2_messages, "Phase 2 should pass messages"
@@ -95,7 +97,7 @@ def test_run_json_first_tool_requests_flow_runs_phase2():
 
     def phase1():
         return Resp(
-            "{\"tool_requests\":[{\"tool\":\"roll_dice\",\"args\":{\"notation\":\"1d20\"}}]}"
+            '{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}'
         )
 
     def extract_text(resp: Resp) -> str:
@@ -122,7 +124,7 @@ def test_run_json_first_tool_requests_flow_runs_phase2():
 
     def phase2(history):
         phase2_calls.append(history)
-        return Resp("{\"narrative\":\"ok\",\"dice_rolls\":[\"Roll: 1d20 = 7\"]}")
+        return Resp('{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}')
 
     class Logger:
         def info(self, _m): ...
@@ -143,7 +145,7 @@ def test_run_json_first_tool_requests_flow_runs_phase2():
         no_tool_requests_log_msg="no tool requests",
     )
 
-    assert out.text == "{\"narrative\":\"ok\",\"dice_rolls\":[\"Roll: 1d20 = 7\"]}"
+    assert out.text == '{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}'
     assert len(phase2_calls) == 1
     history = phase2_calls[0]
     assert history["prompt_contents"] == ["hi"]
@@ -289,7 +291,9 @@ def test_run_json_first_tool_requests_flow_retries_phase2_when_phase2_invalid_js
     tool_exec_calls: list[list[dict]] = []
 
     def phase1():
-        return Resp('{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}')
+        return Resp(
+            '{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}'
+        )
 
     def extract_text(resp: Resp) -> str:
         return resp.text
@@ -354,7 +358,7 @@ def test_run_json_first_tool_requests_flow_returns_phase1_when_no_tools():
     phase2_calls: list[object] = []
 
     def phase1():
-        return Resp("{\"narrative\":\"ok\"}")
+        return Resp('{"narrative":"ok"}')
 
     def extract_text(resp: Resp) -> str:
         return resp.text
@@ -370,7 +374,7 @@ def test_run_json_first_tool_requests_flow_returns_phase1_when_no_tools():
 
     def phase2(history):
         phase2_calls.append(history)
-        return Resp("{\"narrative\":\"phase2\"}")
+        return Resp('{"narrative":"phase2"}')
 
     class Logger:
         def info(self, _m): ...
@@ -391,7 +395,7 @@ def test_run_json_first_tool_requests_flow_returns_phase1_when_no_tools():
         no_tool_requests_log_msg="no tool requests",
     )
 
-    assert out.text == "{\"narrative\":\"ok\"}"
+    assert out.text == '{"narrative":"ok"}'
     assert phase2_calls == []
 
 
@@ -411,7 +415,7 @@ def test_run_openai_native_two_phase_flow_injects_tool_messages():
         {
             "id": "call_1",
             "type": "function",
-            "function": {"name": "roll_dice", "arguments": "{\"notation\":\"1d20\"}"},
+            "function": {"name": "roll_dice", "arguments": '{"notation":"1d20"}'},
         }
     ]
 
@@ -419,7 +423,7 @@ def test_run_openai_native_two_phase_flow_injects_tool_messages():
         calls.append(kwargs)
         if len(calls) == 1:
             return Resp("", tool_calls=tool_calls)
-        return Resp("{\"narrative\":\"ok\"}", tool_calls=None)
+        return Resp('{"narrative":"ok"}', tool_calls=None)
 
     def exec_tool(name: str, args: dict):
         return {"tool": name, "args": args, "total": 3}
@@ -442,7 +446,7 @@ def test_run_openai_native_two_phase_flow_injects_tool_messages():
         execute_tool_fn=exec_tool,
         logger=Logger(),
     )
-    assert out.text == "{\"narrative\":\"ok\"}"
+    assert out.text == '{"narrative":"ok"}'
     assert len(calls) == 2
     phase2_messages = calls[1].get("messages", [])
     assert any(m.get("role") == "tool" for m in phase2_messages)
@@ -458,7 +462,7 @@ def test_stringify_chat_parts():
 
 
 def test_build_tool_results_prompt():
-    base = build_tool_results_prompt("- roll_dice({}): {\"total\": 1}")
+    base = build_tool_results_prompt('- roll_dice({}): {"total": 1}')
     assert "Tool results" in base
     assert "Do NOT include tool_requests" in base
 

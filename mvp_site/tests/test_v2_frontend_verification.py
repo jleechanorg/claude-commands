@@ -357,7 +357,10 @@ class TestSecurityTokenMatrix(unittest.TestCase):
 
         for i, (detected, offset, force, expected_force) in enumerate(test_cases):
             with self.subTest(
-                matrix_cell=f"[2,{i+1}]", detected=detected, offset=offset, force=force
+                matrix_cell=f"[2,{i + 1}]",
+                detected=detected,
+                offset=offset,
+                force=force,
             ):
                 # REFACTOR: Using helper methods for cleaner test code
                 token = self._setup_valid_token()

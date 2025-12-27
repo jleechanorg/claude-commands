@@ -35,10 +35,10 @@ Key Classes:
 - EntityInstructionGenerator: Creates entity-specific instructions
 
 Agent Architecture:
-Each agent has a focused subset of system prompts:
-- StoryModeAgent: master_directive, game_state, dnd_srd + optional narrative/mechanics
-- GodModeAgent: master_directive, god_mode, game_state, dnd_srd, mechanics
-- CombatAgent: master_directive, combat, game_state, dnd_srd, mechanics (auto-selected when in_combat=true)
+Each agent has a focused subset of system prompts (in load order):
+- StoryModeAgent: master_directive → game_state → debug → narrative/mechanics (selected) → dnd_srd → continuation reminder → optional world
+- GodModeAgent: master_directive → god_mode → game_state → mechanics → dnd_srd → debug
+- CombatAgent: master_directive → game_state → combat → narrative → dnd_srd → mechanics → debug (auto-selected when in_combat=true)
 Use get_agent_for_input() factory function to select the appropriate agent.
 
 Dependencies:
@@ -84,6 +84,10 @@ from firebase_admin import auth as firebase_auth
 from google.genai import types
 
 from mvp_site import constants, dice, dice_integrity, dice_strategy, logging_util
+from mvp_site.agent_prompts import (
+    clear_loaded_files_tracking,
+    get_loaded_instruction_files,
+)
 from mvp_site.agents import (
     BaseAgent,
     CombatAgent,
@@ -143,6 +147,257 @@ entity_validator = EntityValidator()
 # Expected companion count for validation
 EXPECTED_COMPANION_COUNT = 3
 
+# --- EQUIPMENT QUERY DETECTION AND EXTRACTION ---
+# Keywords that indicate user is asking about equipment/inventory
+EQUIPMENT_QUERY_KEYWORDS = [
+    "equipment",
+    "inventory",
+    "gear",
+    "items",
+    "what do i have",
+    "show me my",
+    "list my",
+    "check my",
+    "my stuff",
+    "backpack",
+    "weapons",
+    "armor",
+    "what am i wearing",
+    "what am i carrying",
+]
+
+
+def is_equipment_query(user_input: str) -> bool:
+    """Detect if user is asking about equipment/inventory."""
+    user_lower = user_input.lower()
+    return any(keyword in user_lower for keyword in EQUIPMENT_QUERY_KEYWORDS)
+
+
+def classify_equipment_query(user_input: str) -> str:
+    """Classify equipment query scope for narrative summaries.
+
+    Returns one of: "backpack", "weapons", "equipped", "all".
+    """
+    user_lower = user_input.lower()
+
+    if "backpack" in user_lower or "inventory" in user_lower:
+        return "backpack"
+    if "weapon" in user_lower or "weapons" in user_lower:
+        return "weapons"
+    if "equipped" in user_lower or "wearing" in user_lower or "armor" in user_lower:
+        return "equipped"
+    return "all"
+
+
+def _filter_equipment_for_summary(
+    equipment_display: list[dict[str, str]], query_type: str
+) -> list[dict[str, str]]:
+    """Filter equipment_display entries by query scope."""
+    if not equipment_display:
+        return []
+
+    def is_weapon_slot(slot: str) -> bool:
+        return slot.lower() in {"weapon", "main hand", "off hand"}
+
+    def is_backpack_slot(slot: str) -> bool:
+        return slot.lower() == "backpack"
+
+    filtered: list[dict[str, str]] = []
+
+    for item in equipment_display:
+        slot = item.get("slot", "")
+        if query_type == "backpack":
+            if is_backpack_slot(slot):
+                filtered.append(item)
+        elif query_type == "weapons":
+            if is_weapon_slot(slot):
+                filtered.append(item)
+        elif query_type == "equipped":
+            if not is_backpack_slot(slot) and not slot.lower() == "weapon":
+                filtered.append(item)
+        else:
+            filtered.append(item)
+
+    # Deduplicate by name while preserving order
+    seen_names: set[str] = set()
+    deduped: list[dict[str, str]] = []
+    for item in filtered:
+        name = item.get("name", "")
+        if not name:
+            continue
+        if name in seen_names:
+            continue
+        seen_names.add(name)
+        deduped.append(item)
+
+    return deduped
+
+
+def _count_equipment_mentions(narrative_text: str, items: list[dict[str, str]]) -> int:
+    """Count how many distinct item names appear in narrative_text."""
+    if not narrative_text or not items:
+        return 0
+    narrative_lower = narrative_text.lower()
+    count = 0
+    for item in items:
+        name = item.get("name", "")
+        if name and name.lower() in narrative_lower:
+            count += 1
+    return count
+
+
+def _build_equipment_summary(items: list[dict[str, str]], label: str) -> str:
+    """Build a concise equipment summary string for narrative fallback."""
+    if not items:
+        return ""
+
+    parts: list[str] = []
+    for item in items:
+        name = item.get("name", "").strip()
+        stats = item.get("stats", "").strip()
+        if not name:
+            continue
+        if stats:
+            parts.append(f"{name} ({stats})")
+        else:
+            parts.append(name)
+
+    if not parts:
+        return ""
+
+    return f"{label}: " + ", ".join(parts) + "."
+
+
+def ensure_equipment_summary_in_narrative(
+    narrative_text: str,
+    equipment_display: list[dict[str, str]],
+    *,
+    user_input: str,
+    min_item_mentions: int = 2,
+) -> str:
+    """Append deterministic equipment summary if narrative omits item names."""
+    if not equipment_display:
+        return narrative_text
+
+    query_type = classify_equipment_query(user_input)
+    filtered_items = _filter_equipment_for_summary(equipment_display, query_type)
+    if not filtered_items:
+        filtered_items = equipment_display
+
+    mentions = _count_equipment_mentions(narrative_text, filtered_items)
+    if mentions >= min_item_mentions:
+        return narrative_text
+
+    if query_type == "backpack":
+        label = "Backpack items"
+    elif query_type == "weapons":
+        label = "Weapons"
+    elif query_type == "equipped":
+        label = "Equipped items"
+    else:
+        label = "Equipment summary"
+
+    summary = _build_equipment_summary(filtered_items, label)
+    if not summary:
+        return narrative_text
+
+    if narrative_text and not narrative_text.endswith("\n"):
+        narrative_text = narrative_text.rstrip() + "\n\n"
+    elif narrative_text:
+        narrative_text = narrative_text + "\n"
+
+    return f"{narrative_text}{summary}"
+
+
+def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:
+    """Extract equipment from game_state into structured display format.
+
+    This is deterministic - reads directly from game_state, no LLM involved.
+    Guarantees 100% accuracy of item names and stats.
+
+    Supports two data formats:
+    1. String IDs: Equipment slots contain item_id strings, looked up in item_registry
+    2. Legacy inline: Equipment slots contain full descriptions like "Helm (stats)"
+    """
+    equipment_list = []
+
+    try:
+        # Get item registry for string ID lookups
+        item_registry = getattr(game_state, "item_registry", {}) or {}
+
+        # Get player character data
+        pc_data = (
+            game_state.player_character_data
+            if hasattr(game_state, "player_character_data")
+            else {}
+        )
+        if isinstance(pc_data, dict):
+            equipment = pc_data.get("equipment", {})
+        else:
+            equipment = getattr(pc_data, "equipment", {}) if pc_data else {}
+            if hasattr(equipment, "to_dict"):
+                equipment = equipment.to_dict()
+
+        def resolve_item(item_ref: str) -> tuple[str, str]:
+            """Resolve an item reference to (name, stats).
+
+            If item_ref is a string ID in item_registry, use registry data.
+            Otherwise, parse as inline "Name (stats)" format.
+            """
+            if item_ref in item_registry:
+                item_data = item_registry[item_ref]
+                name = item_data.get("name", item_ref)
+                stats = item_data.get("stats", "")
+                return name, stats
+            # Legacy: parse inline format "Item Name (stats)"
+            if "(" in str(item_ref):
+                parts = str(item_ref).split("(", 1)
+                name = parts[0].strip()
+                stats = parts[1].rstrip(")").strip() if len(parts) > 1 else ""
+                return name, stats
+            return str(item_ref), ""
+
+        # Extract equipped items
+        equipped = equipment.get("equipped", {})
+        for slot, item_ref in equipped.items():
+            if item_ref:
+                name, stats = resolve_item(item_ref)
+                equipment_list.append(
+                    {
+                        "slot": slot.replace("_", " ").title(),
+                        "name": name,
+                        "stats": stats,
+                    }
+                )
+
+        # Extract weapons - can be string IDs or dicts
+        weapons = equipment.get("weapons", [])
+        for weapon in weapons:
+            if isinstance(weapon, str):
+                # String ID reference
+                name, stats = resolve_item(weapon)
+                equipment_list.append({"slot": "Weapon", "name": name, "stats": stats})
+            elif isinstance(weapon, dict):
+                # Legacy dict format
+                equipment_list.append(
+                    {
+                        "slot": "Weapon",
+                        "name": weapon.get("name", "Unknown"),
+                        "stats": f"{weapon.get('damage', '')} {weapon.get('properties', '')}".strip(),
+                    }
+                )
+
+        # Extract backpack items - can be string IDs
+        backpack = equipment.get("backpack", [])
+        for item in backpack:
+            name, stats = resolve_item(str(item))
+            equipment_list.append({"slot": "Backpack", "name": name, "stats": stats})
+
+    except Exception as e:
+        logging_util.warning(f"Error extracting equipment display: {e}")
+
+    return equipment_list
+
 
 # Remove redundant json_datetime_serializer - use json_default_serializer instead
 # which properly handles Firestore Sentinels, datetime objects, and other special types
@@ -155,11 +410,12 @@ if constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_CEREBRAS:
     DEFAULT_MODEL: str = constants.DEFAULT_CEREBRAS_MODEL
     TEST_MODEL: str = constants.DEFAULT_CEREBRAS_MODEL
 elif constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_OPENROUTER:
-    DEFAULT_MODEL: str = constants.DEFAULT_OPENROUTER_MODEL
-    TEST_MODEL: str = constants.DEFAULT_OPENROUTER_MODEL
+    DEFAULT_MODEL = constants.DEFAULT_OPENROUTER_MODEL
+    TEST_MODEL = constants.DEFAULT_OPENROUTER_MODEL
 else:  # Gemini (default fallback)
-    DEFAULT_MODEL: str = constants.DEFAULT_GEMINI_MODEL
-    TEST_MODEL: str = constants.DEFAULT_GEMINI_MODEL
+    DEFAULT_MODEL = constants.DEFAULT_GEMINI_MODEL
+    TEST_MODEL = constants.DEFAULT_GEMINI_MODEL
+
 
 @dataclass(frozen=True)
 class ProviderSelection:
@@ -327,13 +583,17 @@ def _tier_entities(
         npc_location = data.get("current_location", data.get("location", ""))
         # Normalize locations for comparison (strip whitespace, lowercase)
         npc_location_normalized = npc_location.strip().lower() if npc_location else ""
-        current_location_normalized = current_location.strip().lower() if current_location else ""
+        current_location_normalized = (
+            current_location.strip().lower() if current_location else ""
+        )
 
         if name in recently_mentioned:
             # Recently mentioned - candidate for ACTIVE tier
             active_candidates.append((name, recently_mentioned[name]))
-        elif npc_location_normalized and current_location_normalized and (
-            npc_location_normalized == current_location_normalized
+        elif (
+            npc_location_normalized
+            and current_location_normalized
+            and (npc_location_normalized == current_location_normalized)
         ):
             # In same location but not recently mentioned - PRESENT tier
             present.append(name)
@@ -346,9 +606,7 @@ def _tier_entities(
     present = present[:ENTITY_TIER_PRESENT_MAX]
 
     # Everything not ACTIVE or PRESENT is considered DORMANT (for logging only)
-    dormant = [
-        name for name in npc_data if name not in active and name not in present
-    ]
+    dormant = [name for name in npc_data if name not in active and name not in present]
 
     return active, present, dormant
 
@@ -394,7 +652,9 @@ def _trim_entity_fields(npc_data: dict[str, Any], tier: str) -> dict[str, Any]:
             "attitude": npc_data.get("attitude_to_party", "neutral"),
             "status": status,
             "hp": f"{hp_current}/{hp_max}",
-            "location": npc_data.get("current_location", npc_data.get("location", "unknown")),
+            "location": npc_data.get(
+                "current_location", npc_data.get("location", "unknown")
+            ),
         }
 
     if tier == "PRESENT":
@@ -434,9 +694,7 @@ def _build_trimmed_entity_tracking(
     npc_names = list(npc_data.keys())
 
     # Find recently mentioned entities via LRU scan
-    recently_mentioned = _extract_recently_mentioned_entities(
-        story_context, npc_names
-    )
+    recently_mentioned = _extract_recently_mentioned_entities(story_context, npc_names)
 
     # Tier the entities
     active, present, dormant = _tier_entities(
@@ -679,53 +937,186 @@ TURNS_TO_KEEP_AT_END: int = 500
 # Percentage-based story budget allocation
 # Story budget = available tokens after scaffold and output reserve
 # These ratios ensure turns scale with model context size
-STORY_BUDGET_START_RATIO: float = 0.25  # 25% of story budget for first turns (context setup)
+STORY_BUDGET_START_RATIO: float = (
+    0.25  # 25% of story budget for first turns (context setup)
+)
 STORY_BUDGET_MIDDLE_RATIO: float = 0.10  # 10% for compacted middle (key events summary)
-STORY_BUDGET_END_RATIO: float = 0.60    # 60% of story budget for recent turns (most important)
+STORY_BUDGET_END_RATIO: float = (
+    0.60  # 60% of story budget for recent turns (most important)
+)
 # Remaining 5% reserved for truncation marker and safety margin
 
 # Keywords that indicate important events worth preserving in middle compaction
 # Organized by category for maintainability
 MIDDLE_COMPACTION_KEYWORDS: set[str] = {
     # Combat and conflict (English)
-    "attack", "hit", "damage", "kill", "defeat", "victory", "died", "death",
-    "combat", "fight", "battle", "wound", "heal", "critical", "strike", "slash",
-    "stab", "shoot", "cast", "spell", "miss", "dodge", "block", "parry",
+    "attack",
+    "hit",
+    "damage",
+    "kill",
+    "defeat",
+    "victory",
+    "died",
+    "death",
+    "combat",
+    "fight",
+    "battle",
+    "wound",
+    "heal",
+    "critical",
+    "strike",
+    "slash",
+    "stab",
+    "shoot",
+    "cast",
+    "spell",
+    "miss",
+    "dodge",
+    "block",
+    "parry",
     # Discovery and acquisition
-    "discover", "find", "found", "acquire", "obtain", "receive", "gain", "loot",
-    "treasure", "gold", "item", "weapon", "armor", "artifact", "key", "unlock",
-    "open", "chest", "reward", "coins", "gems", "potion", "scroll", "map",
+    "discover",
+    "find",
+    "found",
+    "acquire",
+    "obtain",
+    "receive",
+    "gain",
+    "loot",
+    "treasure",
+    "gold",
+    "item",
+    "weapon",
+    "armor",
+    "artifact",
+    "key",
+    "unlock",
+    "open",
+    "chest",
+    "reward",
+    "coins",
+    "gems",
+    "potion",
+    "scroll",
+    "map",
     # Story progression
-    "quest", "mission", "objective", "complete", "accomplish", "learn", "warn",
-    "reveal", "secret", "clue", "mystery", "truth", "prophecy", "legend", "oath",
-    "promise", "vow", "betray", "deceive", "lie", "confess", "admit",
+    "quest",
+    "mission",
+    "objective",
+    "complete",
+    "accomplish",
+    "learn",
+    "warn",
+    "reveal",
+    "secret",
+    "clue",
+    "mystery",
+    "truth",
+    "prophecy",
+    "legend",
+    "oath",
+    "promise",
+    "vow",
+    "betray",
+    "deceive",
+    "lie",
+    "confess",
+    "admit",
     # Location and movement
-    "arrive", "enter", "leave", "travel", "reach", "escape", "flee", "run",
-    "climb", "descend", "cross", "portal", "gate", "door", "passage", "hidden",
+    "arrive",
+    "enter",
+    "leave",
+    "travel",
+    "reach",
+    "escape",
+    "flee",
+    "run",
+    "climb",
+    "descend",
+    "cross",
+    "portal",
+    "gate",
+    "door",
+    "passage",
+    "hidden",
     # Character interactions
-    "meet", "ally", "join", "hire", "recruit", "dismiss", "farewell", "greet",
-    "negotiate", "bargain", "trade", "buy", "sell", "steal", "pickpocket",
+    "meet",
+    "ally",
+    "join",
+    "hire",
+    "recruit",
+    "dismiss",
+    "farewell",
+    "greet",
+    "negotiate",
+    "bargain",
+    "trade",
+    "buy",
+    "sell",
+    "steal",
+    "pickpocket",
     # Major events and mechanics
-    "level", "experience", "rest", "camp", "merchant", "shop", "inn", "tavern",
-    "save", "rescue", "capture", "imprison", "free", "liberate", "transform",
+    "level",
+    "experience",
+    "rest",
+    "camp",
+    "merchant",
+    "shop",
+    "inn",
+    "tavern",
+    "save",
+    "rescue",
+    "capture",
+    "imprison",
+    "free",
+    "liberate",
+    "transform",
     # Emotional/dramatic markers
-    "suddenly", "finally", "unfortunately", "fortunately", "surprisingly",
-    "importantly", "critically", "desperately", "triumphantly",
+    "suddenly",
+    "finally",
+    "unfortunately",
+    "fortunately",
+    "surprisingly",
+    "importantly",
+    "critically",
+    "desperately",
+    "triumphantly",
 }
 
 # Regex patterns for importance detection (language-agnostic)
 # DICE_ROLL_PATTERN is provided by mvp_site.dice_integrity
 
 # Pattern for numeric results (damage, HP, gold amounts - "15 damage", "50 gold", "-10 HP")
-NUMERIC_RESULT_PATTERN = re.compile(r'\b[+\-]?\d+\s*(?:damage|hp|gold|coins|xp|exp|points?|gp|sp|cp)\b', re.IGNORECASE)
+NUMERIC_RESULT_PATTERN = re.compile(
+    r"\b[+\-]?\d+\s*(?:damage|hp|gold|coins|xp|exp|points?|gp|sp|cp)\b", re.IGNORECASE
+)
 
 # Pattern for quoted dialogue (may contain important information)
 DIALOGUE_PATTERN = re.compile(r'"[^"]{20,}"')
 
 # Common abbreviations to avoid splitting on (case-insensitive)
 ABBREVIATIONS = {
-    "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "vs", "etc", "inc", "ltd",
-    "st", "ave", "blvd", "no", "vol", "pg", "pp", "fig", "approx", "dept",
+    "mr",
+    "mrs",
+    "ms",
+    "dr",
+    "prof",
+    "sr",
+    "jr",
+    "vs",
+    "etc",
+    "inc",
+    "ltd",
+    "st",
+    "ave",
+    "blvd",
+    "no",
+    "vol",
+    "pg",
+    "pp",
+    "fig",
+    "approx",
+    "dept",
 }
 
 
@@ -755,31 +1146,31 @@ def _split_into_sentences(text: str) -> list[str]:
         current.append(word)
 
         # Check if this word ends a sentence
-        if word and word[-1] in '.!?':
+        if word and word[-1] in ".!?":
             # Check if it's an abbreviation (word without punctuation, lowercase)
-            word_base = word.rstrip('.!?').lower()
+            word_base = word.rstrip(".!?").lower()
 
             # Don't split on abbreviations
             if word_base in ABBREVIATIONS:
                 continue
 
             # Don't split on single letters followed by period (initials like "J.")
-            if len(word_base) == 1 and word.endswith('.'):
+            if len(word_base) == 1 and word.endswith("."):
                 continue
 
             # Don't split on numbers (decimal numbers like "3.14")
-            if word_base.replace('.', '').replace(',', '').isdigit():
+            if word_base.replace(".", "").replace(",", "").isdigit():
                 continue
 
             # This looks like a real sentence ending
-            sentence = ' '.join(current).strip()
+            sentence = " ".join(current).strip()
             if len(sentence) > 10:  # Minimum sentence length
                 sentences.append(sentence)
             current = []
 
     # Add any remaining text as final sentence
     if current:
-        sentence = ' '.join(current).strip()
+        sentence = " ".join(current).strip()
         if len(sentence) > 10:
             sentences.append(sentence)
 
@@ -821,10 +1212,11 @@ def _is_important_sentence(sentence: str) -> bool:
         return True
 
     # Exclamatory sentences are often important dramatic moments
-    if sentence.rstrip().endswith('!') and len(sentence) > 30:
+    if sentence.rstrip().endswith("!") and len(sentence) > 30:
         return True
 
     return False
+
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
@@ -844,6 +1236,7 @@ SAFETY_SETTINGS: list[types.SafetySetting] = [
         threshold=types.HarmBlockThreshold.BLOCK_NONE,
     ),
 ]
+
 
 def _clear_client() -> None:
     """FOR TESTING ONLY: Clears the cached Gemini client."""
@@ -879,16 +1272,16 @@ def _prepare_entity_tracking(
 
     # Simple in-memory cache for the request duration
     if not hasattr(game_state, "_manifest_cache"):
-        game_state._manifest_cache = {}
+        game_state._manifest_cache = {}  # type: ignore[attr-defined]
 
-    if manifest_cache_key in game_state._manifest_cache:
-        entity_manifest = game_state._manifest_cache[manifest_cache_key]
+    if manifest_cache_key in game_state._manifest_cache:  # type: ignore[attr-defined]
+        entity_manifest = game_state._manifest_cache[manifest_cache_key]  # type: ignore[attr-defined]
         logging_util.debug("Using cached entity manifest")
     else:
         entity_manifest = create_from_game_state(
             game_state_dict, session_number, turn_number
         )
-        game_state._manifest_cache[manifest_cache_key] = entity_manifest
+        game_state._manifest_cache[manifest_cache_key] = entity_manifest  # type: ignore[attr-defined]
         logging_util.debug("Created new entity manifest")
 
     if entity_manifest is None:
@@ -1117,7 +1510,9 @@ def _log_token_count(
             f"🔍 TOKEN_LIMITS: Output limit set to {current_output_limit} tokens (conservative limit, API max: 65535)"
         )
 
-        model_info_msg = f"🔍 MODEL_INFO: Using provider '{provider_name}', model '{model_name}'"
+        model_info_msg = (
+            f"🔍 MODEL_INFO: Using provider '{provider_name}', model '{model_name}'"
+        )
         logging_util.info(model_info_msg)
 
     except Exception as e:
@@ -1268,9 +1663,7 @@ def _call_llm_api(
             provider_name,
         )
 
-        logging_util.info(
-            f"Calling LLM provider/model: {provider_name}/{model_name}"
-        )
+        logging_util.info(f"Calling LLM provider/model: {provider_name}/{model_name}")
 
         safe_output_limit = _get_safe_output_token_limit(
             model_name,
@@ -1374,7 +1767,9 @@ def _call_llm_api(
             status_code = 429
 
         if status_code in (503, 429):
-            human_reason = "service unavailable" if status_code == 503 else "rate limited"
+            human_reason = (
+                "service unavailable" if status_code == 503 else "rate limited"
+            )
             logging_util.error(
                 f"Provider {current_selection.provider}/{current_selection.model} {human_reason}: {error_message}"
             )
@@ -1576,6 +1971,8 @@ def _call_llm_api_with_json_schema(
         model_name,
         system_instruction_text,
     )
+
+
 def _get_text_from_response(response: Any) -> str:
     """Safely extracts text from a Gemini response object."""
     try:
@@ -1629,7 +2026,7 @@ def _get_context_stats(
     estimated_tokens = estimate_tokens(combined_text)
 
     # Try to get exact token count via API, fall back to estimate
-    actual_tokens = "N/A"
+    actual_tokens: str | int | None = "N/A"
     try:
         if provider_name == constants.LLM_PROVIDER_GEMINI:
             text_contents = [entry.get(constants.KEY_TEXT, "") for entry in context]
@@ -1708,7 +2105,9 @@ def _calculate_percentage_based_turns(
         int(end_token_budget / avg_tokens_per_turn),
         TURNS_TO_KEEP_AT_END,
     )
-    desired_end_turns = max(5, raw_end_turns) if total_turns >= 5 else min(total_turns, raw_end_turns)
+    desired_end_turns = (
+        max(5, raw_end_turns) if total_turns >= 5 else min(total_turns, raw_end_turns)
+    )
 
     # Enforce non-overlap using the post-minimum start_turns value
     remaining_turns = max(0, total_turns - start_turns)
@@ -1953,7 +2352,7 @@ def _truncate_context(
                     continue
 
                 # FIX: Check for JSON/structured content - don't corrupt it
-                if text.strip().startswith('{') or text.strip().startswith('['):
+                if text.strip().startswith("{") or text.strip().startswith("["):
                     # This looks like JSON - either keep fully or drop
                     if len(text) > entry_max_chars:
                         continue  # Drop JSON entry rather than corrupt it
@@ -1968,12 +2367,16 @@ def _truncate_context(
 
             # If we've dropped all entries, keep at least one minimal marker
             if not trimmed_entries:
-                trimmed_entries = [{
-                    "actor": "system",
-                    "text": "[...context truncated to fit budget...]"
-                }]
+                trimmed_entries = [
+                    {
+                        "actor": "system",
+                        "text": "[...context truncated to fit budget...]",
+                    }
+                ]
 
-            trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in trimmed_entries)
+            trimmed_text = "".join(
+                e.get(constants.KEY_TEXT, "") for e in trimmed_entries
+            )
             trimmed_tokens = estimate_tokens(trimmed_text)
 
             if trimmed_tokens <= max_tokens:
@@ -1991,10 +2394,7 @@ def _truncate_context(
             f"Hard-trim exhausted iterations, returning minimal marker: "
             f"{candidate_tokens} tokens -> budget: {max_tokens}"
         )
-        return [{
-            "actor": "system",
-            "text": "[...context truncated to fit budget...]"
-        }]
+        return [{"actor": "system", "text": "[...context truncated to fit budget...]"}]
 
     # Calculate middle token budget (10% of story budget)
     middle_token_budget = int(max_tokens * STORY_BUDGET_MIDDLE_RATIO)
@@ -2003,7 +2403,9 @@ def _truncate_context(
     # Use absolute minimums but respect passed-in values if they're smaller
     ABS_MIN_START = 3
     ABS_MIN_END = 5
-    min_start = min(ABS_MIN_START, turns_to_keep_at_start) if turns_to_keep_at_start > 0 else 0
+    min_start = (
+        min(ABS_MIN_START, turns_to_keep_at_start) if turns_to_keep_at_start > 0 else 0
+    )
     min_end = min(ABS_MIN_END, turns_to_keep_at_end)
 
     current_start = turns_to_keep_at_start
@@ -2016,7 +2418,11 @@ def _truncate_context(
         # Extract and compact middle turns instead of dropping them
         middle_start_idx = current_start
         middle_end_idx = total_turns - current_end
-        middle_turns = story_context[middle_start_idx:middle_end_idx] if middle_end_idx > middle_start_idx else []
+        middle_turns = (
+            story_context[middle_start_idx:middle_end_idx]
+            if middle_end_idx > middle_start_idx
+            else []
+        )
 
         # Compact middle turns to preserve key events
         middle_summary = _compact_middle_turns(middle_turns, middle_token_budget)
@@ -2033,7 +2439,10 @@ def _truncate_context(
             final_stats = _get_context_stats(
                 truncated_context, model_name, current_game_state, provider_name
             )
-            if current_start < turns_to_keep_at_start or current_end < turns_to_keep_at_end:
+            if (
+                current_start < turns_to_keep_at_start
+                or current_end < turns_to_keep_at_end
+            ):
                 logging_util.warning(
                     f"Adaptive truncation reduced to {current_start}+{current_end} turns "
                     f"(from {turns_to_keep_at_start}+{turns_to_keep_at_end}) to fit budget. "
@@ -2046,9 +2455,15 @@ def _truncate_context(
                     f"{current_end} end = {truncated_tokens} tokens"
                 )
             # Log comprehensive budget breakdown
-            utilization_pct = (truncated_tokens / max_tokens * 100) if max_tokens > 0 else 0
-            start_tokens = estimate_tokens("".join(e.get(constants.KEY_TEXT, "") for e in start_context))
-            end_tokens = estimate_tokens("".join(e.get(constants.KEY_TEXT, "") for e in end_context))
+            utilization_pct = (
+                (truncated_tokens / max_tokens * 100) if max_tokens > 0 else 0
+            )
+            start_tokens = estimate_tokens(
+                "".join(e.get(constants.KEY_TEXT, "") for e in start_context)
+            )
+            end_tokens = estimate_tokens(
+                "".join(e.get(constants.KEY_TEXT, "") for e in end_context)
+            )
             middle_tokens = estimate_tokens(middle_summary.get(constants.KEY_TEXT, ""))
             logging_util.info(
                 f"📊 BUDGET UTILIZATION: {truncated_tokens:,}/{max_tokens:,} tokens ({utilization_pct:.1f}%) | "
@@ -2081,7 +2496,11 @@ def _truncate_context(
     # Extract and compact middle turns for last resort
     middle_start_idx = min_start
     middle_end_idx = total_turns - min_end
-    middle_turns = story_context[middle_start_idx:middle_end_idx] if middle_end_idx > middle_start_idx else []
+    middle_turns = (
+        story_context[middle_start_idx:middle_end_idx]
+        if middle_end_idx > middle_start_idx
+        else []
+    )
     middle_summary = _compact_middle_turns(middle_turns, middle_token_budget)
 
     truncated_context = start_context + [middle_summary] + end_context
@@ -2115,7 +2534,9 @@ def _truncate_context(
 
                 # FIX: Detect JSON content and drop instead of corrupting
                 text_stripped = text.strip()
-                if (text_stripped.startswith("{") or text_stripped.startswith("[")) and len(text) > entry_max_chars:
+                if (
+                    text_stripped.startswith("{") or text_stripped.startswith("[")
+                ) and len(text) > entry_max_chars:
                     # JSON content would be corrupted by truncation - drop it
                     continue
 
@@ -2127,10 +2548,12 @@ def _truncate_context(
 
             # If we dropped all entries, return minimal marker
             if not hard_trimmed:
-                hard_trimmed = [{
-                    "actor": "system",
-                    "text": "[...previous context truncated to fit model limits...]",
-                }]
+                hard_trimmed = [
+                    {
+                        "actor": "system",
+                        "text": "[...previous context truncated to fit model limits...]",
+                    }
+                ]
 
             trimmed_text = "".join(e.get(constants.KEY_TEXT, "") for e in hard_trimmed)
             new_tokens = estimate_tokens(trimmed_text)
@@ -2296,7 +2719,9 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
                 try:
                     user_record = firebase_auth.get_user(user_id)
                     user_email = (user_record.email or "").lower()
-                    allowed_users = [email.lower() for email in constants.GEMINI_3_ALLOWED_USERS]
+                    allowed_users = [
+                        email.lower() for email in constants.GEMINI_3_ALLOWED_USERS
+                    ]
                     if user_email in allowed_users:
                         model = constants.GEMINI_PREMIUM_MODEL
                         logging_util.info("Premium user using Gemini 3")
@@ -2316,8 +2741,7 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
                 model = constants.DEFAULT_GEMINI_MODEL
 
         logging_util.info(
-            "🔍 PROVIDER_SELECTION_FINAL: "
-            f"provider={provider}, model={model}"
+            f"🔍 PROVIDER_SELECTION_FINAL: provider={provider}, model={model}"
         )
         return ProviderSelection(provider, model)
     except (KeyError, AttributeError, ValueError) as e:
@@ -2348,6 +2772,9 @@ def get_initial_story(
             - narrative_text: Clean text for display (guaranteed to be clean narrative)
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
+    # Clear file tracking for this request (for lightweight evidence capture)
+    clear_loaded_files_tracking()
+
     # Check for mock mode and return mock response immediately
     mock_mode = os.environ.get("MOCK_SERVICES_MODE") == "true"
     if mock_mode:
@@ -2553,15 +2980,17 @@ def get_initial_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", model_to_use)
-        # Always capture system instruction for debugging and evidence
-        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
-        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        # Capture which instruction files were loaded (lightweight evidence)
+        debug_info["system_instruction_files"] = get_loaded_instruction_files()
+        debug_info["system_instruction_char_count"] = len(system_instruction_final)
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:
             # Persist server-verified evidence (do not rely on model self-reporting).
             debug_info.update(code_execution_evidence)
-            _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+            _log_fabricated_dice_if_detected(
+                structured_response, code_execution_evidence
+            )
         structured_response.debug_info = debug_info
         dice_integrity.apply_dice_metadata_to_structured_response(
             structured_response=structured_response,
@@ -2759,6 +3188,7 @@ def _check_missing_required_fields(
 
     return missing
 
+
 def _build_reprompt_for_missing_fields(
     original_response_text: str,
     missing_fields: list[str],
@@ -2799,7 +3229,7 @@ def _build_reprompt_for_missing_fields(
             dice_integrity.build_dice_integrity_reprompt_lines(dice_roll_strategy)
         )
 
-    requested_block = '\n'.join(requested_lines)
+    requested_block = "\n".join(requested_lines)
 
     # Build tool results context if available (preserves dice provenance)
     tool_results_context = ""
@@ -2811,7 +3241,9 @@ def _build_reprompt_for_missing_fields(
             if isinstance(result, dict):
                 total = result.get("total", result.get("result"))
                 purpose = tr.get("args", {}).get("purpose", "")
-                tool_lines.append(f"  - {tool_name}: {total}" + (f" ({purpose})" if purpose else ""))
+                tool_lines.append(
+                    f"  - {tool_name}: {total}" + (f" ({purpose})" if purpose else "")
+                )
             else:
                 tool_lines.append(f"  - {tool_name}: {result}")
         if tool_lines:
@@ -2890,7 +3322,9 @@ def _validate_and_enforce_planning_block(
     if response_text and (
         "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
     ):
-        logging_util.info("Response indicates mode switch - skipping planning block validation")
+        logging_util.info(
+            "Response indicates mode switch - skipping planning block validation"
+        )
         return response_text
 
     # Check if response already contains a valid planning block
@@ -2964,6 +3398,9 @@ def continue_story(
     # because tests use patches on _call_llm_api_with_llm_request to control responses.
     # The _select_provider_and_model() guard already prevents hitting real providers
     # in test mode by returning default Gemini provider which is then mocked.
+
+    # Clear file tracking for this request (for lightweight evidence capture)
+    clear_loaded_files_tracking()
 
     # Determine which model to use based on user preferences
     # Use centralized helper for consistent model selection across all story generation
@@ -3079,8 +3516,10 @@ def continue_story(
     is_combat_or_complex = (
         current_game_state.is_in_combat() if current_game_state else False
     )
-    safe_token_budget, output_token_reserve, max_input_allowed = _calculate_context_budget(
-        provider_selection.provider, model_to_use, is_combat_or_complex
+    safe_token_budget, output_token_reserve, max_input_allowed = (
+        _calculate_context_budget(
+            provider_selection.provider, model_to_use, is_combat_or_complex
+        )
     )
 
     scaffold_tokens_raw = estimate_tokens(prompt_scaffold)
@@ -3119,11 +3558,6 @@ def continue_story(
     # Now that we have the final, truncated context, we can generate the real prompt parts.
     checkpoint_block, core_memories_summary, sequence_id_list_string = (
         _get_static_prompt_parts(current_game_state, truncated_story_context)
-    )
-
-    # Serialize the game state for inclusion in the prompt
-    serialized_game_state: str = json.dumps(
-        current_game_state.to_dict(), indent=2, default=json_default_serializer
     )
 
     # --- ENTITY TRACKING: Create scene manifest for entity tracking ---
@@ -3166,6 +3600,34 @@ def continue_story(
 
     # Create the final prompt for the current user turn (User's preferred method)
     current_prompt_text: str = _get_current_turn_prompt(user_input, mode)
+
+    # EQUIPMENT CONTEXT INJECTION: When user asks about equipment/items,
+    # inject explicit equipment list so LLM has clear context (not buried in JSON)
+    if is_equipment_query(user_input):
+        equipment_display = extract_equipment_display(current_game_state)
+        if equipment_display:
+            # Build human-readable equipment summary
+            equipment_lines = []
+            for item in equipment_display:
+                name = item.get("name", "Unknown")
+                slot = item.get("slot", "")
+                stats = item.get("stats", "")
+                if stats:
+                    equipment_lines.append(f"  - {slot}: {name} ({stats})")
+                else:
+                    equipment_lines.append(f"  - {slot}: {name}")
+            equipment_context = (
+                "\n\n[PLAYER EQUIPMENT - YOU MUST MENTION THESE BY NAME]\n"
+                + "\n".join(equipment_lines)
+                + "\n\nCRITICAL INSTRUCTION: In your narrative response, you MUST explicitly name "
+                + "at least 3-4 of the items listed above. Do NOT use vague terms like "
+                + "'your gear' or 'your equipment'. Instead, write things like "
+                + "'Your Helm of Telepathy gleams...' or 'You grip the Flame Tongue...'.\n\n"
+            )
+            current_prompt_text = equipment_context + current_prompt_text
+            logging_util.info(
+                f"📦 EQUIPMENT_CONTEXT_INJECTED: {len(equipment_display)} items added to prompt"
+            )
 
     # Build the full prompt with entity tracking enhancements
     enhanced_entity_tracking = entity_tracking_instruction
@@ -3210,18 +3672,32 @@ def continue_story(
     # Entity data is now provided via trimmed entity_tracking_data instead
     full_game_state = current_game_state.to_dict()
     # Serialize and deserialize to convert Firestore timestamps to JSON-compatible types
-    full_game_state = json.loads(json.dumps(full_game_state, default=json_default_serializer))
-    game_state_for_llm = {
-        k: v for k, v in full_game_state.items()
-        if k != "npc_data"
-    }
+    full_game_state = json.loads(
+        json.dumps(full_game_state, default=json_default_serializer)
+    )
+    game_state_for_llm = {k: v for k, v in full_game_state.items() if k != "npc_data"}
 
     # DEBUG: Log game_state component sizes to identify bloat sources
     try:
-        npc_data_tokens = estimate_tokens(json.dumps(full_game_state.get("npc_data", {}), default=json_default_serializer))
-        world_data_tokens = estimate_tokens(json.dumps(full_game_state.get("world_data", {}), default=json_default_serializer))
-        player_data_tokens = estimate_tokens(json.dumps(full_game_state.get("player_character_data", {}), default=json_default_serializer))
-        remaining_state_tokens = estimate_tokens(json.dumps(game_state_for_llm, default=json_default_serializer))
+        npc_data_tokens = estimate_tokens(
+            json.dumps(
+                full_game_state.get("npc_data", {}), default=json_default_serializer
+            )
+        )
+        world_data_tokens = estimate_tokens(
+            json.dumps(
+                full_game_state.get("world_data", {}), default=json_default_serializer
+            )
+        )
+        player_data_tokens = estimate_tokens(
+            json.dumps(
+                full_game_state.get("player_character_data", {}),
+                default=json_default_serializer,
+            )
+        )
+        remaining_state_tokens = estimate_tokens(
+            json.dumps(game_state_for_llm, default=json_default_serializer)
+        )
         logging_util.info(
             f"GAME_STATE_BREAKDOWN: npc_data={npc_data_tokens}tk (EXCLUDED), "
             f"world_data={world_data_tokens}tk, player_data={player_data_tokens}tk, "
@@ -3259,8 +3735,14 @@ def continue_story(
     # DEBUG: Log full LLMRequest payload size breakdown
     try:
         payload_json = gemini_request.to_json()
-        story_history_tokens = estimate_tokens(json.dumps(payload_json.get("story_history", []), default=json_default_serializer))
-        total_payload_tokens = estimate_tokens(json.dumps(payload_json, default=json_default_serializer))
+        story_history_tokens = estimate_tokens(
+            json.dumps(
+                payload_json.get("story_history", []), default=json_default_serializer
+            )
+        )
+        total_payload_tokens = estimate_tokens(
+            json.dumps(payload_json, default=json_default_serializer)
+        )
         logging_util.info(
             f"LLMREQUEST_PAYLOAD: story_history={story_history_tokens}tk, "
             f"total_payload={total_payload_tokens}tk"
@@ -3275,9 +3757,7 @@ def continue_story(
         system_instruction_text=system_instruction_final,
         provider_name=provider_selection.provider,
     )
-    logging_util.info(
-        "Successfully used LLMRequest for structured JSON communication"
-    )
+    logging_util.info("Successfully used LLMRequest for structured JSON communication")
     final_api_response = api_response
 
     code_execution_evidence = _maybe_get_gemini_code_execution_evidence(
@@ -3452,7 +3932,8 @@ def continue_story(
                     )
                 if (
                     tool_results_for_dice
-                    and dice_roll_strategy == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE
+                    and dice_roll_strategy
+                    == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE
                 ):
                     # Preserve authoritative tool execution evidence for reprompt validation.
                     reprompt_response._tool_results = tool_results_for_dice  # type: ignore[attr-defined]
@@ -3508,7 +3989,7 @@ def continue_story(
 
                 # CRITICAL: Never accept responses with dice_integrity violations
                 # If reprompt still has fabricated dice, reject and continue loop
-                if 'dice_integrity' in reprompt_missing:
+                if "dice_integrity" in reprompt_missing:
                     logging_util.warning(
                         f"🚨 REPROMPT_DICE_FABRICATION: Reprompt attempt {attempt} still has "
                         f"dice fabrication. Rejecting and continuing loop."
@@ -3548,7 +4029,7 @@ def continue_story(
 
         # CRITICAL: Final validation - reject entire response if dice_integrity still violated
         # After all reprompt attempts, if we still have fabricated dice, throw error
-        if 'dice_integrity' in missing_fields:
+        if "dice_integrity" in missing_fields:
             logging_util.error(
                 f"🚨 DICE_INTEGRITY_FAILURE: All {MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} "
                 f"reprompt attempts failed to produce real dice. Rejecting response."
@@ -3582,14 +4063,16 @@ def continue_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", chosen_model)
-        # Always capture system instruction for debugging and evidence
-        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
-        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        # Capture which instruction files were loaded (lightweight evidence)
+        debug_info["system_instruction_files"] = get_loaded_instruction_files()
+        debug_info["system_instruction_char_count"] = len(system_instruction_final)
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:
             debug_info.update(code_execution_evidence)
-            _log_fabricated_dice_if_detected(structured_response, code_execution_evidence)
+            _log_fabricated_dice_if_detected(
+                structured_response, code_execution_evidence
+            )
         structured_response.debug_info = debug_info
         dice_integrity.apply_dice_metadata_to_structured_response(
             structured_response=structured_response,
@@ -3694,6 +4177,30 @@ def continue_story(
     # The structured_response is now the authoritative source, response_text is for backward compatibility only
     # The frontend uses gemini_response.structured_response directly, not narrative_text
 
+    # POST-PROCESSING: Add equipment_display if this was an equipment query
+    # This guarantees 100% accuracy by reading directly from game_state
+    logging_util.debug(f"🔍 EQUIPMENT_QUERY_CHECK: user_input={user_input[:80]}...")
+    if is_equipment_query(user_input):
+        logging_util.info(
+            f"📦 EQUIPMENT_QUERY_DETECTED: Extracting equipment from game_state"
+        )
+        equipment_display = extract_equipment_display(current_game_state)
+        logging_util.info(f"📦 EQUIPMENT_EXTRACTED: {len(equipment_display)} items")
+        if equipment_display:
+            gemini_response.processing_metadata["equipment_display"] = equipment_display
+            logging_util.info(
+                f"📦 EQUIPMENT_DISPLAY: Added {len(equipment_display)} items from game_state"
+            )
+            # Ensure narrative includes item names so users know equipment isn't ignored
+            gemini_response.narrative_text = ensure_equipment_summary_in_narrative(
+                gemini_response.narrative_text,
+                equipment_display,
+                user_input=raw_user_input,
+                min_item_mentions=2,
+            )
+    else:
+        logging_util.debug(f"🔍 EQUIPMENT_QUERY_SKIP: Not an equipment query")
+
     # Log LLMResponse creation - INFO level for production visibility
     logging_util.info(
         f"📝 FINAL_RESPONSE: narrative_length={len(gemini_response.narrative_text)}, "
@@ -3704,6 +4211,7 @@ def continue_story(
     # This object contains:
     # - narrative_text: Clean text for display (guaranteed to be clean narrative)
     # - structured_response: Parsed JSON structure with state updates, entities, etc.
+    # - processing_metadata: Additional metadata including equipment_display when relevant
     return gemini_response
 
 

@@ -18,6 +18,12 @@ from typing import Any
 from mvp_site import logging_util
 from mvp_site.dice import DICE_ROLL_TOOLS, execute_dice_tool
 from mvp_site.game_state import execute_tool_requests, format_tool_results_text
+from mvp_site.llm_providers.openai_chat_common import (
+    extract_tool_calls as extract_openai_tool_calls,
+)
+from mvp_site.llm_providers.openai_compatible_provider_core import (
+    generate_openai_compatible_content,
+)
 from mvp_site.llm_providers.provider_utils import (
     ContextTooLargeError,
     check_context_too_large,
@@ -25,12 +31,6 @@ from mvp_site.llm_providers.provider_utils import (
     run_openai_json_first_tool_requests_flow,
     run_openai_native_two_phase_flow,
     stringify_chat_parts,
-)
-from mvp_site.llm_providers.openai_chat_common import (
-    extract_tool_calls as extract_openai_tool_calls,
-)
-from mvp_site.llm_providers.openai_compatible_provider_core import (
-    generate_openai_compatible_content,
 )
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
@@ -92,7 +92,9 @@ def _postprocess_response_text(text: Any) -> str:
 
     unwrapped, was_unwrapped = _unwrap_nested_json(text_str)
     if was_unwrapped:
-        logging_util.info("CEREBRAS_WRAPPER_FIX: Unwrapped nested JSON wrapper in response")
+        logging_util.info(
+            "CEREBRAS_WRAPPER_FIX: Unwrapped nested JSON wrapper in response"
+        )
     return unwrapped
 
 
@@ -210,7 +212,11 @@ def generate_content(
         tool_calls: list[dict] | None,
     ) -> None:
         try:
-            choice = data.get("choices", [{}])[0] if isinstance(data.get("choices"), list) else {}
+            choice = (
+                data.get("choices", [{}])[0]
+                if isinstance(data.get("choices"), list)
+                else {}
+            )
             finish_reason = choice.get("finish_reason")
             usage = data.get("usage", {}) or {}
             prompt_tokens = usage.get("prompt_tokens", 0)

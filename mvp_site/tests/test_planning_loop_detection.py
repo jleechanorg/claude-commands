@@ -43,22 +43,34 @@ class TestPlanningLoopDetection(unittest.TestCase):
         # This is what a BAD response looks like - no skill check for social action
         bad_response = {
             "narrative": "The sterile briefing room remains charged with intellectual intensity. "
-                        "Agent Reynolds stands frozen, his professional composure utterly dismantled "
-                        "by the mathematical proof you've just proven.",
+            "Agent Reynolds stands frozen, his professional composure utterly dismantled "
+            "by the mathematical proof you've just proven.",
             "planning_block": {
                 "thinking": "Reynolds is cornered by irrefutable logic.",
                 "choices": {
-                    "maintain_pressure": {"text": "Maintain Pressure", "description": "..."},
-                    "press_argument": {"text": "Press the Logical Argument", "description": "..."},
-                }
+                    "maintain_pressure": {
+                        "text": "Maintain Pressure",
+                        "description": "...",
+                    },
+                    "press_argument": {
+                        "text": "Press the Logical Argument",
+                        "description": "...",
+                    },
+                },
             },
             "dice_rolls": [],  # BAD: No dice rolls for social action
             "tool_requests": [],  # BAD: No skill check requested
         }
 
         # This test documents the bad pattern - actual validation is in tool definition tests
-        self.assertEqual(len(bad_response.get("tool_requests", [])), 0, "Bad response has no tool_requests")
-        self.assertEqual(len(bad_response.get("dice_rolls", [])), 0, "Bad response has no dice_rolls")
+        self.assertEqual(
+            len(bad_response.get("tool_requests", [])),
+            0,
+            "Bad response has no tool_requests",
+        )
+        self.assertEqual(
+            len(bad_response.get("dice_rolls", [])), 0, "Bad response has no dice_rolls"
+        )
 
     def test_anti_loop_rule_enforcement(self):
         """
@@ -74,22 +86,34 @@ class TestPlanningLoopDetection(unittest.TestCase):
             {"role": "assistant", "content": "Reynolds considers... [no resolution]"},
             {"role": "user", "content": "Maintain Pressure"},
             {"role": "assistant", "content": "The room is tense... [no resolution]"},
-            {"role": "user", "content": "Press the Logical Argument"},  # 3rd similar action!
+            {
+                "role": "user",
+                "content": "Press the Logical Argument",
+            },  # 3rd similar action!
         ]
 
         # Count how many times user selected similar actions
-        similar_action_keywords = ["press", "maintain", "logical", "argument", "pressure", "mathematical"]
+        similar_action_keywords = [
+            "press",
+            "maintain",
+            "logical",
+            "argument",
+            "pressure",
+            "mathematical",
+        ]
         similar_action_count = sum(
-            1 for msg in conversation_history
-            if msg["role"] == "user" and
-            any(kw in msg["content"].lower() for kw in similar_action_keywords)
+            1
+            for msg in conversation_history
+            if msg["role"] == "user"
+            and any(kw in msg["content"].lower() for kw in similar_action_keywords)
         )
 
         # After 2 similar actions, the Anti-Loop Rule should force execution
         # RED ASSERTION: This demonstrates the detection logic
         self.assertGreaterEqual(
-            similar_action_count, 2,
-            "Test setup: Should have at least 2 similar actions"
+            similar_action_count,
+            2,
+            "Test setup: Should have at least 2 similar actions",
         )
 
         # In a real fix, the system would detect this and force resolution
@@ -98,7 +122,7 @@ class TestPlanningLoopDetection(unittest.TestCase):
         self.assertTrue(
             is_loop_detected,
             f"Planning loop detected: {similar_action_count} similar actions selected. "
-            "System should force execution with dice roll on second similar action."
+            "System should force execution with dice roll on second similar action.",
         )
 
     def test_dice_roll_required_for_social_resolution(self):
@@ -120,23 +144,23 @@ class TestPlanningLoopDetection(unittest.TestCase):
                         "attribute_modifier": 4,  # INT 18 = +4 for logical argument
                         "proficiency_bonus": 2,
                         "dc": 18,  # FBI agent = high DC
-                        "purpose": "Convince Reynolds with logical framework"
-                    }
+                        "purpose": "Convince Reynolds with logical framework",
+                    },
                 }
             ],
             "dice_rolls": [],  # Empty until Phase 2 fills in results
             "planning_block": {
                 "thinking": "Awaiting skill check result to determine outcome",
-                "choices": {}  # No choices until resolution!
+                "choices": {},  # No choices until resolution!
             },
             "entities_mentioned": ["Agent Reynolds"],
-            "state_updates": {}
+            "state_updates": {},
         }
 
         # Validate the good response structure
         self.assertTrue(
             bool(good_response.get("tool_requests")),
-            "Social resolution MUST include tool_requests for skill check"
+            "Social resolution MUST include tool_requests for skill check",
         )
 
         tool_request = good_response["tool_requests"][0]
@@ -147,8 +171,9 @@ class TestPlanningLoopDetection(unittest.TestCase):
         # Choices should be empty during resolution (waiting for dice)
         choices = good_response.get("planning_block", {}).get("choices", {})
         self.assertEqual(
-            len(choices), 0,
-            "During skill check resolution, choices should be empty (awaiting result)"
+            len(choices),
+            0,
+            "During skill check resolution, choices should be empty (awaiting result)",
         )
 
 
@@ -174,9 +199,15 @@ class TestToolDefinitionsForSocialSkills(unittest.TestCase):
         description = roll_skill_check["function"]["description"].lower()
 
         # Verify social skills are mentioned
-        self.assertIn("persuasion", description, "roll_skill_check must mention Persuasion")
-        self.assertIn("intimidation", description, "roll_skill_check must mention Intimidation")
-        self.assertIn("deception", description, "roll_skill_check must mention Deception")
+        self.assertIn(
+            "persuasion", description, "roll_skill_check must mention Persuasion"
+        )
+        self.assertIn(
+            "intimidation", description, "roll_skill_check must mention Intimidation"
+        )
+        self.assertIn(
+            "deception", description, "roll_skill_check must mention Deception"
+        )
 
     def test_declare_no_roll_excludes_social_encounters(self):
         """
@@ -197,9 +228,19 @@ class TestToolDefinitionsForSocialSkills(unittest.TestCase):
         description = no_roll_tool["function"]["description"].lower()
 
         # Verify it excludes social skill checks
-        self.assertIn("persuasion", description, "declare_no_roll_needed must exclude Persuasion")
-        self.assertIn("intimidation", description, "declare_no_roll_needed must exclude Intimidation")
-        self.assertIn("convincing", description, "declare_no_roll_needed must mention convincing NPCs")
+        self.assertIn(
+            "persuasion", description, "declare_no_roll_needed must exclude Persuasion"
+        )
+        self.assertIn(
+            "intimidation",
+            description,
+            "declare_no_roll_needed must exclude Intimidation",
+        )
+        self.assertIn(
+            "convincing",
+            description,
+            "declare_no_roll_needed must mention convincing NPCs",
+        )
 
 
 class TestPromptEnforcementForSocialEncounters(unittest.TestCase):
@@ -215,7 +256,7 @@ class TestPromptEnforcementForSocialEncounters(unittest.TestCase):
         prompt_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             "prompts",
-            "game_state_instruction.md"
+            "game_state_instruction.md",
         )
 
         with open(prompt_path, "r") as f:
@@ -225,20 +266,23 @@ class TestPromptEnforcementForSocialEncounters(unittest.TestCase):
         self.assertIn(
             "Action Execution Rule",
             prompt_content,
-            "Prompt must contain Action Execution Rule"
+            "Prompt must contain Action Execution Rule",
         )
 
         # Check if Anti-Loop Rule exists
         self.assertIn(
-            "Anti-Loop Rule",
-            prompt_content,
-            "Prompt must contain Anti-Loop Rule"
+            "Anti-Loop Rule", prompt_content, "Prompt must contain Anti-Loop Rule"
         )
 
         # GREEN CHECK: Does prompt explicitly mention social skill resolution?
         social_keywords_in_rule = any(
             keyword in prompt_content.lower()
-            for keyword in ["persuasion", "intimidation", "deception", "social encounter"]
+            for keyword in [
+                "persuasion",
+                "intimidation",
+                "deception",
+                "social encounter",
+            ]
         )
 
         # This should PASS after fix adds social encounter guidance
@@ -246,7 +290,7 @@ class TestPromptEnforcementForSocialEncounters(unittest.TestCase):
             social_keywords_in_rule,
             "Action Execution Rule MUST explicitly mention social skill checks "
             "(Persuasion, Intimidation, Deception) to prevent planning loops in social encounters. "
-            "Current prompt only shows combat examples."
+            "Current prompt only shows combat examples.",
         )
 
 

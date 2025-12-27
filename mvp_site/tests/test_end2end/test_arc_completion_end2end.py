@@ -79,13 +79,8 @@ class TestArcCompletionEnd2End(unittest.TestCase):
                 "phase": "post_wedding",
             }
         }
-        gs = GameState(
-            custom_campaign_state={"arc_milestones": initial_milestones}
-        )
-        self.assertEqual(
-            gs.custom_campaign_state["arc_milestones"],
-            initial_milestones
-        )
+        gs = GameState(custom_campaign_state={"arc_milestones": initial_milestones})
+        self.assertEqual(gs.custom_campaign_state["arc_milestones"], initial_milestones)
 
     # =========================================================================
     # Test 2: Arc milestone completion tracking
@@ -141,7 +136,9 @@ class TestArcCompletionEnd2End(unittest.TestCase):
     def test_arc_milestones_handles_corrupt_entries(self):
         """Per-arc entries that are None/non-dict should not crash and should recover."""
         for bad_value in (None, "bad-data"):
-            gs = GameState(custom_campaign_state={"arc_milestones": {"wedding_tour": bad_value}})
+            gs = GameState(
+                custom_campaign_state={"arc_milestones": {"wedding_tour": bad_value}}
+            )
 
             # Safe defaults for corrupt entries
             self.assertFalse(gs.is_arc_completed("wedding_tour"))
@@ -222,7 +219,7 @@ class TestArcCompletionEnd2End(unittest.TestCase):
         self.assertIn("arc_milestones", data["custom_campaign_state"])
         self.assertEqual(
             data["custom_campaign_state"]["arc_milestones"]["wedding_tour"]["status"],
-            "completed"
+            "completed",
         )
 
     # =========================================================================
@@ -230,7 +227,9 @@ class TestArcCompletionEnd2End(unittest.TestCase):
     # =========================================================================
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_arc_milestones_included_in_llm_context(
         self, mock_gemini_generate, mock_get_db
     ):
@@ -264,28 +263,32 @@ class TestArcCompletionEnd2End(unittest.TestCase):
 
         # Mock LLM response
         mock_gemini_generate.return_value = FakeLLMResponse(
-            json.dumps({
-                "narrative": "The wedding tour has concluded. You are now on Nathema.",
-                "entities_mentioned": [],
-                "state_updates": {},
-                "planning_block": {
-                    "thinking": "The user has completed the wedding arc. Transitioning to post-wedding state.",
-                    "choices": [
-                        {
-                            "text": "Explore Nathema",
-                            "description": "Look around your new home.",
-                            "risk_level": "low",
-                        }
-                    ],
-                },
-                "session_header": "Session 5: Post-Wedding",
-            })
+            json.dumps(
+                {
+                    "narrative": "The wedding tour has concluded. You are now on Nathema.",
+                    "entities_mentioned": [],
+                    "state_updates": {},
+                    "planning_block": {
+                        "thinking": "The user has completed the wedding arc. Transitioning to post-wedding state.",
+                        "choices": [
+                            {
+                                "text": "Explore Nathema",
+                                "description": "Look around your new home.",
+                                "risk_level": "low",
+                            }
+                        ],
+                    },
+                    "session_header": "Session 5: Post-Wedding",
+                }
+            )
         )
 
         # Make API request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({"input": "Where am I in the timeline?", "mode": "character"}),
+            data=json.dumps(
+                {"input": "Where am I in the timeline?", "mode": "character"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -307,7 +310,9 @@ class TestArcCompletionEnd2End(unittest.TestCase):
     # =========================================================================
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
     def test_completed_arc_prevents_regression(self, mock_gemini_generate, mock_get_db):
         """
         When an arc is marked completed, subsequent state updates should NOT
@@ -335,7 +340,7 @@ class TestArcCompletionEnd2End(unittest.TestCase):
         self.assertTrue(gs.is_arc_completed("wedding_tour"))
         self.assertEqual(
             gs.custom_campaign_state["arc_milestones"]["wedding_tour"]["status"],
-            "completed"
+            "completed",
         )
 
     # =========================================================================
@@ -374,7 +379,7 @@ class TestArcCompletionEnd2End(unittest.TestCase):
         self.assertIn("arc_milestones", data["custom_campaign_state"])
         self.assertEqual(
             data["custom_campaign_state"]["arc_milestones"]["wedding_tour"]["status"],
-            "completed"
+            "completed",
         )
 
     def test_arc_milestones_deserialized_from_dict(self):
@@ -408,20 +413,22 @@ class TestArcMilestonesIntegration(unittest.TestCase):
                 "3_masks": {
                     "status": "in_progress",
                     "phase": "wedding_tour",
-                    "sub_arcs": {
-                        "wedding_tour": {"status": "completed"}
-                    }
+                    "sub_arcs": {"wedding_tour": {"status": "completed"}},
                 }
             }
         }
 
         # Apply the update
-        gs.custom_campaign_state["arc_milestones"].update(god_mode_update["arc_milestones"])
+        gs.custom_campaign_state["arc_milestones"].update(
+            god_mode_update["arc_milestones"]
+        )
 
         # Verify nested structure is preserved
         self.assertEqual(
-            gs.custom_campaign_state["arc_milestones"]["3_masks"]["sub_arcs"]["wedding_tour"]["status"],
-            "completed"
+            gs.custom_campaign_state["arc_milestones"]["3_masks"]["sub_arcs"][
+                "wedding_tour"
+            ]["status"],
+            "completed",
         )
 
     def test_arc_milestones_with_time_skip(self):
@@ -434,8 +441,8 @@ class TestArcMilestonesIntegration(unittest.TestCase):
             phase="domestic_peace",
             metadata={
                 "in_game_duration": "3 months",
-                "narrative_summary": "Retired to Nathema, domestic peace"
-            }
+                "narrative_summary": "Retired to Nathema, domestic peace",
+            },
         )
 
         milestone = gs.custom_campaign_state["arc_milestones"]["time_skip_3_months"]

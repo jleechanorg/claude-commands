@@ -27,6 +27,7 @@ os.environ.setdefault("USE_MOCKS", "true")
 with FakeServiceManager():
     pass  # FakeServiceManager configures firebase_admin mocks
 
+
 # Create StateHelper wrapper for test compatibility
 class StateHelper:
     """Test wrapper for state helper functions."""

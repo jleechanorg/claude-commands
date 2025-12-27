@@ -308,7 +308,14 @@ def _prepare_game_state(
     # while allowing the previous action's response to include combat_summary
     combat_state = cleaned_state_dict.get("combat_state", {})
     # Accept multiple "finished" phase names since LLM may use different terms
-    finished_phases = {"ended", "concluding", "concluded", "finished", "complete", "completed"}
+    finished_phases = {
+        "ended",
+        "concluding",
+        "concluded",
+        "finished",
+        "complete",
+        "completed",
+    }
     combat_phase = combat_state.get("combat_phase", "")
     if (
         not combat_state.get("in_combat", True)
@@ -956,7 +963,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         current_state_as_dict = current_game_state.to_dict()
         # Use `or {}` to handle both missing and explicitly-null world_data
         # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
-        original_world_time = copy.deepcopy((current_state_as_dict.get("world_data") or {}).get("world_time"))
+        original_world_time = copy.deepcopy(
+            (current_state_as_dict.get("world_data") or {}).get("world_time")
+        )
 
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
@@ -971,9 +980,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Validate and auto-correct XP/level and time consistency
         # Use `or {}` to handle both missing and explicitly-null world_data in state_changes
-        new_world_time = (response.get("state_changes", {}).get("world_data") or {}).get("world_time")
+        new_world_time = (
+            response.get("state_changes", {}).get("world_data") or {}
+        ).get("world_time")
         updated_game_state_dict = validate_game_state_updates(
-            updated_game_state_dict, new_time=new_world_time, original_time=original_world_time
+            updated_game_state_dict,
+            new_time=new_world_time,
+            original_time=original_world_time,
         )
 
         # Validate and auto-correct state before persistence
@@ -1134,6 +1147,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["tool_requests_executed"] = metadata[
                     "tool_requests_executed"
                 ]
+            # Add equipment_display if present (deterministic extraction from game_state)
+            if "equipment_display" in metadata:
+                unified_response["equipment_display"] = metadata["equipment_display"]
+
+        # Always check for equipment_display even outside capture_evidence mode
+        metadata = getattr(llm_response_obj, "processing_metadata", {}) or {}
+        if (
+            "equipment_display" in metadata
+            and "equipment_display" not in unified_response
+        ):
+            unified_response["equipment_display"] = metadata["equipment_display"]
 
         if prevention_extras.get("god_mode_response"):
             # Prefer synthesized god mode responses from preventive guards when present
@@ -1630,8 +1654,10 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
                 )
             }
             # Also allow legacy models that have a mapping
-            allowed_models.update(k.lower() for k in constants.GEMINI_MODEL_MAPPING.keys())
-            
+            allowed_models.update(
+                k.lower() for k in constants.GEMINI_MODEL_MAPPING.keys()
+            )
+
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model
@@ -1910,7 +1936,9 @@ def _handle_set_command(
     # Note: current_game_state is a GameState instance, use dict version
     # Use `or {}` to handle both missing and explicitly-null world_data
     # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
-    original_world_time = copy.deepcopy((current_state_dict_before_update.get("world_data") or {}).get("world_time"))
+    original_world_time = copy.deepcopy(
+        (current_state_dict_before_update.get("world_data") or {}).get("world_time")
+    )
 
     updated_state = update_state_with_changes(
         current_state_dict_before_update, proposed_changes
@@ -1920,7 +1948,9 @@ def _handle_set_command(
     # Validate XP/level and time consistency before persisting
     # Use `or {}` to handle both missing and explicitly-null world_data
     new_world_time = (proposed_changes.get("world_data") or {}).get("world_time")
-    updated_state = validate_game_state_updates(updated_state, new_time=new_world_time, original_time=original_world_time)
+    updated_state = validate_game_state_updates(
+        updated_state, new_time=new_world_time, original_time=original_world_time
+    )
 
     logging_util.info(
         f"GOD_MODE_SET state AFTER update:\n{_truncate_log_json(updated_state, json_serializer=json_default_serializer)}"
@@ -1984,7 +2014,9 @@ def _handle_update_state_command(
         # Note: current_game_state is a GameState instance, use dict version
         # Use `or {}` to handle both missing and explicitly-null world_data
         # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
-        original_world_time = copy.deepcopy((current_state_dict.get("world_data") or {}).get("world_time"))
+        original_world_time = copy.deepcopy(
+            (current_state_dict.get("world_data") or {}).get("world_time")
+        )
 
         # Perform an update
         updated_state_dict = update_state_with_changes(
@@ -1998,7 +2030,9 @@ def _handle_update_state_command(
         # Use `or {}` to handle both missing and explicitly-null world_data
         new_world_time = (state_changes.get("world_data") or {}).get("world_time")
         updated_state_dict = validate_game_state_updates(
-            updated_state_dict, new_time=new_world_time, original_time=original_world_time
+            updated_state_dict,
+            new_time=new_world_time,
+            original_time=original_world_time,
         )
 
         # Convert back to GameState object after the update to validate

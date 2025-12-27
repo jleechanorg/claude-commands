@@ -19,13 +19,17 @@ class TestGeminiToolRequestsFlow(unittest.TestCase):
         )
         response2 = SimpleNamespace(text='{"narrative":"ok"}')
 
-        with patch(
-            "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
-        ) as mock_json, patch(
-            "mvp_site.llm_providers.gemini_provider.execute_tool_requests"
-        ) as mock_exec, patch(
-            "mvp_site.llm_providers.gemini_provider.format_tool_results_text"
-        ) as mock_format:
+        with (
+            patch(
+                "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
+            ) as mock_json,
+            patch(
+                "mvp_site.llm_providers.gemini_provider.execute_tool_requests"
+            ) as mock_exec,
+            patch(
+                "mvp_site.llm_providers.gemini_provider.format_tool_results_text"
+            ) as mock_format,
+        ):
             mock_json.side_effect = [response1, response2]
             mock_exec.return_value = [
                 {
@@ -34,7 +38,7 @@ class TestGeminiToolRequestsFlow(unittest.TestCase):
                     "result": {"total": 7},
                 }
             ]
-            mock_format.return_value = "- roll_dice({\"notation\":\"1d20\"}): {\"total\": 7}"
+            mock_format.return_value = '- roll_dice({"notation":"1d20"}): {"total": 7}'
 
             out = gemini_provider.generate_content_with_tool_requests(
                 prompt_contents=["hi"],
@@ -54,11 +58,14 @@ class TestGeminiToolRequestsFlow(unittest.TestCase):
 
         response1 = SimpleNamespace(text='{"narrative":"ok"}')
 
-        with patch(
-            "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
-        ) as mock_json, patch(
-            "mvp_site.llm_providers.gemini_provider.execute_tool_requests"
-        ) as mock_exec:
+        with (
+            patch(
+                "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
+            ) as mock_json,
+            patch(
+                "mvp_site.llm_providers.gemini_provider.execute_tool_requests"
+            ) as mock_exec,
+        ):
             mock_json.return_value = response1
 
             out = gemini_provider.generate_content_with_tool_requests(
@@ -73,4 +80,3 @@ class TestGeminiToolRequestsFlow(unittest.TestCase):
         assert out.text == '{"narrative":"ok"}'
         assert mock_json.call_count == 1
         assert not mock_exec.called
-

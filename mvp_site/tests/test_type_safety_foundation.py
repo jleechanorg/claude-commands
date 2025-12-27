@@ -12,9 +12,12 @@ import sys
 import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 # Import logging utility to test the syntax fix
+
 
 class TestTypeSafetyFoundation(unittest.TestCase):
     """Tests for type safety foundation changes."""
@@ -23,11 +26,11 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         """Test that the logging statement syntax fix works correctly."""
         # Test data simulating a campaign creation request
         test_data = {
-            'character': 'Test Character',
-            'setting': 'Test Setting',
-            'description': 'Test Description',
-            'custom_options': ['Option 1', 'Option 2'],
-            'selected_prompts': ['Prompt 1', 'Prompt 2']
+            "character": "Test Character",
+            "setting": "Test Setting",
+            "description": "Test Description",
+            "custom_options": ["Option 1", "Option 2"],
+            "selected_prompts": ["Prompt 1", "Prompt 2"],
         }
 
         # This should not raise a syntax error
@@ -47,10 +50,10 @@ class TestTypeSafetyFoundation(unittest.TestCase):
 
         # Valid campaign object
         valid_campaign = {
-            'id': 'test-campaign-123',
-            'title': 'Test Campaign',
-            'created_at': '2025-08-15T00:00:00Z',
-            'last_played': '2025-08-15T01:00:00Z'
+            "id": "test-campaign-123",
+            "title": "Test Campaign",
+            "created_at": "2025-08-15T00:00:00Z",
+            "last_played": "2025-08-15T01:00:00Z",
         }
 
         # Test validation logic (simulating what TypeScript type guards do)
@@ -60,9 +63,9 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         invalid_campaigns = [
             None,  # null
             {},  # missing required fields
-            {'id': None, 'title': 'Test'},  # invalid ID
-            {'id': 'test', 'title': None},  # invalid title
-            {'id': 'test', 'title': 123},  # wrong type for title
+            {"id": None, "title": "Test"},  # invalid ID
+            {"id": "test", "title": None},  # invalid title
+            {"id": "test", "title": 123},  # wrong type for title
         ]
 
         for invalid_campaign in invalid_campaigns:
@@ -77,14 +80,22 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         """
         if not campaign or not isinstance(campaign, dict):
             return False
-        if not campaign.get('id') or not isinstance(campaign.get('id'), str):
+        if not campaign.get("id") or not isinstance(campaign.get("id"), str):
             return False
-        if not campaign.get('title') or not isinstance(campaign.get('title'), str):
+        if not campaign.get("title") or not isinstance(campaign.get("title"), str):
             return False
         # Optional fields validation (preserve empty strings as valid; None means absent)
-        if 'created_at' in campaign and campaign['created_at'] is not None and not isinstance(campaign['created_at'], str):
+        if (
+            "created_at" in campaign
+            and campaign["created_at"] is not None
+            and not isinstance(campaign["created_at"], str)
+        ):
             return False
-        if 'last_played' in campaign and campaign['last_played'] is not None and not isinstance(campaign['last_played'], str):
+        if (
+            "last_played" in campaign
+            and campaign["last_played"] is not None
+            and not isinstance(campaign["last_played"], str)
+        ):
             return False
         return True
 
@@ -93,31 +104,25 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         # Test API response validation (simulating TypeScript ApiResponse type casting)
 
         # Valid response
-        valid_response = {
-            'success': True,
-            'campaign_id': 'test-123'
-        }
+        valid_response = {"success": True, "campaign_id": "test-123"}
         self.assertTrue(self._validate_api_response(valid_response))
 
         # Error response
-        error_response = {
-            'success': False,
-            'error': 'Test error message'
-        }
+        error_response = {"success": False, "error": "Test error message"}
         self.assertTrue(self._validate_api_response(error_response))
 
         # Invalid responses
         invalid_responses = [
             None,
             {},
-            {'success': 'not_boolean'},
-            {'success': True, 'campaign_id': None}
+            {"success": "not_boolean"},
+            {"success": True, "campaign_id": None},
         ]
 
         for invalid_response in invalid_responses:
             self.assertFalse(
                 self._validate_api_response(invalid_response),
-                f"Invalid response unexpectedly passed validation: {invalid_response}"
+                f"Invalid response unexpectedly passed validation: {invalid_response}",
             )
 
         print("✅ Error handling patterns verified")
@@ -126,16 +131,16 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         """Simulate API response validation with type safety."""
         if not response or not isinstance(response, dict):
             return False
-        if 'success' not in response or not isinstance(response.get('success'), bool):
+        if "success" not in response or not isinstance(response.get("success"), bool):
             return False
 
         # If success is True, require campaign_id
-        if response.get('success') and not response.get('campaign_id'):
+        if response.get("success") and not response.get("campaign_id"):
             return False
 
         # If success is False, allow error field
-        if not response.get('success') and response.get('error'):
-            return isinstance(response.get('error'), str)
+        if not response.get("success") and response.get("error"):
+            return isinstance(response.get("error"), str)
 
         return True
 
@@ -143,21 +148,21 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         """Test null safety patterns that would be enforced by TypeScript improvements."""
         # Test safe access patterns
         test_data = {
-            'valid_field': 'value',
-            'null_field': None,
-            'empty_array': [],
-            'populated_array': ['item1', 'item2']
+            "valid_field": "value",
+            "null_field": None,
+            "empty_array": [],
+            "populated_array": ["item1", "item2"],
         }
 
         # Safe access with defaults (pattern used in logging fix)
-        safe_array = test_data.get('populated_array', [])
-        self.assertEqual(safe_array, ['item1', 'item2'])
+        safe_array = test_data.get("populated_array", [])
+        self.assertEqual(safe_array, ["item1", "item2"])
 
         # Handle None values properly - get() returns the actual value if key exists, even if None
-        safe_null_array = test_data.get('null_field') or []
+        safe_null_array = test_data.get("null_field") or []
         self.assertEqual(safe_null_array, [])
 
-        safe_missing_array = test_data.get('missing_field', [])
+        safe_missing_array = test_data.get("missing_field", [])
         self.assertEqual(safe_missing_array, [])
 
         # Type checking patterns
@@ -169,13 +174,15 @@ class TestTypeSafetyFoundation(unittest.TestCase):
 
     def test_foundation_documentation(self):
         """Document the foundation changes and their purpose."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("TYPE SAFETY FOUNDATION CHANGES")
-        print("="*60)
+        print("=" * 60)
         print("This test validates the foundation changes made in this PR:")
         print()
         print("🔧 PYTHON CHANGES (mvp_site/main.py):")
-        print("- Fixed syntax error: removed extra closing parenthesis in logging statement")
+        print(
+            "- Fixed syntax error: removed extra closing parenthesis in logging statement"
+        )
         print("- Enhanced error handling and logging security improvements")
         print("- Comprehensive validation patterns")
         print()
@@ -194,17 +201,17 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         print("- Type validation patterns tested")
         print("- Error handling improvements validated")
         print("- Null safety patterns confirmed")
-        print("="*60)
+        print("=" * 60)
 
         # This test always passes - it's for documentation
         self.assertTrue(True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("🔧 Type Safety Foundation Tests")
-    print("="*50)
+    print("=" * 50)
     print("Testing foundation changes for enhanced type safety and validation")
-    print("="*50)
+    print("=" * 50)
 
     # Run with detailed output
     unittest.main(verbosity=2)

@@ -24,7 +24,9 @@ import unittest
 from unittest.mock import patch
 
 # Add project root to sys.path for proper import resolution
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 sys.path.insert(0, project_root)
 
 from mvp_site import main
@@ -73,67 +75,71 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
         # Create campaign
         fake_firestore.collection("users").document(self.test_user_id).collection(
             "campaigns"
-        ).document(campaign_id).set({
-            "title": "Death State Test Campaign",
-            "setting": "Dark Fantasy",
-            "created_at": "2025-01-01T00:00:00Z",
-        })
+        ).document(campaign_id).set(
+            {
+                "title": "Death State Test Campaign",
+                "setting": "Dark Fantasy",
+                "created_at": "2025-01-01T00:00:00Z",
+            }
+        )
 
         # Create game state with active combat and named NPC
         fake_firestore.collection("users").document(self.test_user_id).collection(
             "campaigns"
-        ).document(campaign_id).collection("game_states").document("current_state").set({
-            "user_id": self.test_user_id,
-            "story_text": "You face Marcus the Betrayer in combat.",
-            "player_character_data": {
-                "name": "Hero",
-                "level": 5,
-                "hp_current": 50,
-                "hp_max": 50,
-                "class": "Fighter",
-            },
-            "combat_state": {
-                "in_combat": True,
-                "current_round": 1,
-                "current_turn_index": 0,
-                "initiative_order": [
-                    {"name": "Hero", "initiative": 18, "type": "pc"},
-                    {"name": "Marcus", "initiative": 14, "type": "enemy"},
-                ],
-                "combatants": {
-                    "Hero": {
-                        "name": "Hero",
-                        "hp_current": 50,
-                        "hp_max": 50,
-                        "type": "pc",
-                        "status": [],
+        ).document(campaign_id).collection("game_states").document("current_state").set(
+            {
+                "user_id": self.test_user_id,
+                "story_text": "You face Marcus the Betrayer in combat.",
+                "player_character_data": {
+                    "name": "Hero",
+                    "level": 5,
+                    "hp_current": 50,
+                    "hp_max": 50,
+                    "class": "Fighter",
+                },
+                "combat_state": {
+                    "in_combat": True,
+                    "current_round": 1,
+                    "current_turn_index": 0,
+                    "initiative_order": [
+                        {"name": "Hero", "initiative": 18, "type": "pc"},
+                        {"name": "Marcus", "initiative": 14, "type": "enemy"},
+                    ],
+                    "combatants": {
+                        "Hero": {
+                            "name": "Hero",
+                            "hp_current": 50,
+                            "hp_max": 50,
+                            "type": "pc",
+                            "status": [],
+                        },
+                        "Marcus": {
+                            "name": "Marcus",
+                            "hp_current": 30,
+                            "hp_max": 30,
+                            "type": "enemy",
+                            "status": [],
+                        },
                     },
+                    "combat_log": ["Combat initiated with Marcus the Betrayer"],
+                },
+                "npc_data": {
                     "Marcus": {
-                        "name": "Marcus",
+                        "name": "Marcus the Betrayer",
+                        "role": "villain",  # Named NPC - has meaningful role
+                        "backstory": "A corrupt merchant who betrayed the town for gold",
+                        "description": "A well-dressed man with shifty eyes and a cruel smile",
                         "hp_current": 30,
                         "hp_max": 30,
-                        "type": "enemy",
-                        "status": [],
                     },
                 },
-                "combat_log": ["Combat initiated with Marcus the Betrayer"],
-            },
-            "npc_data": {
-                "Marcus": {
-                    "name": "Marcus the Betrayer",
-                    "role": "villain",  # Named NPC - has meaningful role
-                    "backstory": "A corrupt merchant who betrayed the town for gold",
-                    "description": "A well-dressed man with shifty eyes and a cruel smile",
-                    "hp_current": 30,
-                    "hp_max": 30,
+                "world_data": {
+                    "current_location": "Town Square",
+                    "world_time": {"hour": 14, "day": 1},
                 },
-            },
-            "world_data": {
-                "current_location": "Town Square",
-                "world_time": {"hour": 14, "day": 1},
-            },
-            "custom_campaign_state": {},
-        })
+                "custom_campaign_state": {},
+            }
+        )
 
     def _create_kill_npc_response(self, npc_name: str) -> dict:
         """Create a mock LLM response that kills the specified NPC.
@@ -163,7 +169,9 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
-    def test_named_npc_death_persists_in_npc_data(self, mock_gemini_generate, mock_get_db):
+    def test_named_npc_death_persists_in_npc_data(
+        self, mock_gemini_generate, mock_get_db
+    ):
         """
         End-to-end test: Named NPC killed in combat should be preserved in npc_data with dead status.
 
@@ -188,15 +196,18 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
         # Make the API request - attack Marcus
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({"input": "I attack Marcus with my sword!", "mode": "character"}),
+            data=json.dumps(
+                {"input": "I attack Marcus with my sword!", "mode": "character"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify response success
         self.assertEqual(
-            response.status_code, 200,
-            f"Expected 200, got {response.status_code}: {response.data.decode()}"
+            response.status_code,
+            200,
+            f"Expected 200, got {response.status_code}: {response.data.decode()}",
         )
 
         # Get the updated game state from fake Firestore
@@ -217,7 +228,7 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
             "Marcus",
             combatants,
             f"Dead NPC 'Marcus' should be removed from combat combatants. "
-            f"Combatants: {list(combatants.keys())}"
+            f"Combatants: {list(combatants.keys())}",
         )
 
         # CRITICAL ASSERTION 2: Marcus should be PRESERVED in npc_data
@@ -227,7 +238,7 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
             "Marcus",
             npc_data,
             f"Named NPC 'Marcus' should be preserved in npc_data (not deleted). "
-            f"npc_data keys: {list(npc_data.keys())}"
+            f"npc_data keys: {list(npc_data.keys())}",
         )
 
         # CRITICAL ASSERTION 3: Marcus should have "dead" status
@@ -237,19 +248,21 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
             "dead",
             marcus_status,
             f"Marcus should have 'dead' in status list. "
-            f"Current status: {marcus_status}, Full data: {marcus_npc}"
+            f"Current status: {marcus_status}, Full data: {marcus_npc}",
         )
 
         # CRITICAL ASSERTION 4: Marcus HP should be 0
         self.assertEqual(
             marcus_npc.get("hp_current"),
             0,
-            f"Marcus hp_current should be 0. Current: {marcus_npc.get('hp_current')}"
+            f"Marcus hp_current should be 0. Current: {marcus_npc.get('hp_current')}",
         )
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
-    def test_generic_enemy_deleted_from_npc_data(self, mock_gemini_generate, mock_get_db):
+    def test_generic_enemy_deleted_from_npc_data(
+        self, mock_gemini_generate, mock_get_db
+    ):
         """
         End-to-end test: Generic enemies (not named NPCs) should be fully deleted.
 
@@ -264,45 +277,59 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
         # Set up campaign with a GENERIC enemy (role=enemy, no backstory)
         fake_firestore.collection("users").document(self.test_user_id).collection(
             "campaigns"
-        ).document(campaign_id).set({
-            "title": "Generic Enemy Test",
-            "setting": "Fantasy",
-        })
+        ).document(campaign_id).set(
+            {
+                "title": "Generic Enemy Test",
+                "setting": "Fantasy",
+            }
+        )
 
         fake_firestore.collection("users").document(self.test_user_id).collection(
             "campaigns"
-        ).document(campaign_id).collection("game_states").document("current_state").set({
-            "user_id": self.test_user_id,
-            "story_text": "A goblin attacks!",
-            "player_character_data": {
-                "name": "Hero",
-                "level": 3,
-                "hp_current": 40,
-                "hp_max": 40,
-            },
-            "combat_state": {
-                "in_combat": True,
-                "current_round": 1,
-                "initiative_order": [
-                    {"name": "Hero", "initiative": 15, "type": "pc"},
-                    {"name": "Goblin Scout", "initiative": 12, "type": "enemy"},
-                ],
-                "combatants": {
-                    "Hero": {"name": "Hero", "hp_current": 40, "hp_max": 40, "type": "pc"},
-                    "Goblin Scout": {"name": "Goblin Scout", "hp_current": 8, "hp_max": 8, "type": "enemy"},
+        ).document(campaign_id).collection("game_states").document("current_state").set(
+            {
+                "user_id": self.test_user_id,
+                "story_text": "A goblin attacks!",
+                "player_character_data": {
+                    "name": "Hero",
+                    "level": 3,
+                    "hp_current": 40,
+                    "hp_max": 40,
                 },
-            },
-            "npc_data": {
-                "Goblin Scout": {
-                    "name": "Goblin Scout",
-                    "role": "enemy",  # Generic role - should be deleted
-                    "description": "A sneaky goblin",
-                    # No backstory - generic enemy
+                "combat_state": {
+                    "in_combat": True,
+                    "current_round": 1,
+                    "initiative_order": [
+                        {"name": "Hero", "initiative": 15, "type": "pc"},
+                        {"name": "Goblin Scout", "initiative": 12, "type": "enemy"},
+                    ],
+                    "combatants": {
+                        "Hero": {
+                            "name": "Hero",
+                            "hp_current": 40,
+                            "hp_max": 40,
+                            "type": "pc",
+                        },
+                        "Goblin Scout": {
+                            "name": "Goblin Scout",
+                            "hp_current": 8,
+                            "hp_max": 8,
+                            "type": "enemy",
+                        },
+                    },
                 },
-            },
-            "world_data": {},
-            "custom_campaign_state": {},
-        })
+                "npc_data": {
+                    "Goblin Scout": {
+                        "name": "Goblin Scout",
+                        "role": "enemy",  # Generic role - should be deleted
+                        "description": "A sneaky goblin",
+                        # No backstory - generic enemy
+                    },
+                },
+                "world_data": {},
+                "custom_campaign_state": {},
+            }
+        )
 
         # Mock LLM response killing the goblin
         kill_response = self._create_kill_npc_response("Goblin Scout")
@@ -336,19 +363,21 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
         self.assertNotIn(
             "Goblin Scout",
             combatants,
-            "Generic enemy should be removed from combatants"
+            "Generic enemy should be removed from combatants",
         )
 
         self.assertNotIn(
             "Goblin Scout",
             npc_data,
             f"Generic enemy should be fully DELETED from npc_data. "
-            f"npc_data: {npc_data}"
+            f"npc_data: {npc_data}",
         )
 
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_providers.gemini_provider.generate_json_mode_content")
-    def test_dead_npc_not_offered_as_target_next_turn(self, mock_gemini_generate, mock_get_db):
+    def test_dead_npc_not_offered_as_target_next_turn(
+        self, mock_gemini_generate, mock_get_db
+    ):
         """
         End-to-end test: After killing an NPC, they should not appear in combat next turn.
 
@@ -387,7 +416,10 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
 
         # Verify Marcus is dead but preserved
         self.assertIn("Marcus", state_after_kill.get("npc_data", {}))
-        self.assertIn("dead", state_after_kill.get("npc_data", {}).get("Marcus", {}).get("status", []))
+        self.assertIn(
+            "dead",
+            state_after_kill.get("npc_data", {}).get("Marcus", {}).get("status", []),
+        )
 
         # Verify Marcus is NOT in combatants (the bug we're fixing!)
         combatants = state_after_kill.get("combat_state", {}).get("combatants", {})
@@ -395,7 +427,7 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
             "Marcus",
             combatants,
             f"Dead NPC should NOT be in combatants on next turn. "
-            f"This is the bug we're testing! Combatants: {list(combatants.keys())}"
+            f"This is the bug we're testing! Combatants: {list(combatants.keys())}",
         )
 
 

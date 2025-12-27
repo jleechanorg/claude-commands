@@ -76,12 +76,12 @@ def test_dashboard_shows_campaigns_not_welcome_for_authenticated_user():
     # Test assertions that should PASS when fixed
     assert campaigns_length == 19, f"Expected 19 campaigns, got {campaigns_length}"
     assert user_authenticated, "User should be authenticated"
-    assert (
-        not should_show_welcome_page
-    ), "Welcome page should NOT show when campaigns exist"
-    assert (
-        should_show_campaigns_dashboard
-    ), "Campaigns dashboard should show for authenticated user with campaigns"
+    assert not should_show_welcome_page, (
+        "Welcome page should NOT show when campaigns exist"
+    )
+    assert should_show_campaigns_dashboard, (
+        "Campaigns dashboard should show for authenticated user with campaigns"
+    )
 
     # The bug: Even with campaigns.length > 0, V2 shows welcome page
     # This indicates the campaigns array is not being properly passed to Dashboard component

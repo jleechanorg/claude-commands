@@ -31,9 +31,7 @@ class TestContextTooLargeHandling(unittest.TestCase):
             del os.environ["MOCK_SERVICES_MODE"]
 
     @patch("mvp_site.llm_service.gemini_provider")
-    def test_context_too_large_error_returns_422_status(
-        self, mock_gemini
-    ):
+    def test_context_too_large_error_returns_422_status(self, mock_gemini):
         """
         ContextTooLargeError should be converted to LLMRequestError with 422 status.
 
@@ -67,9 +65,7 @@ class TestContextTooLargeHandling(unittest.TestCase):
         self.assertEqual(ctx.exception.status_code, 422)
 
     @patch("mvp_site.llm_service.gemini_provider")
-    def test_context_too_large_error_message_is_helpful(
-        self, mock_gemini
-    ):
+    def test_context_too_large_error_message_is_helpful(self, mock_gemini):
         """
         LLMRequestError from ContextTooLargeError should contain helpful message.
         """

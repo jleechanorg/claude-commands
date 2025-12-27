@@ -16,7 +16,11 @@ if _DICE_SEED:
     except ValueError:
         _DICE_SEED_VALUE = _DICE_SEED
     _DICE_RNG = random.Random(_DICE_SEED_VALUE)
-    logging_util.info(logging_util.with_campaign(f"DICE_SEED enabled for deterministic rolls: {_DICE_SEED}"))
+    logging_util.info(
+        logging_util.with_campaign(
+            f"DICE_SEED enabled for deterministic rolls: {_DICE_SEED}"
+        )
+    )
 else:
     _DICE_RNG = random
 
@@ -169,7 +173,9 @@ class DiceRollResult:
             rolls_value = str(self.individual_rolls[0])
         else:
             rolls_sum = sum(self.individual_rolls)
-            rolls_value = f"[{'+'.join(str(r) for r in self.individual_rolls)}={rolls_sum}]"
+            rolls_value = (
+                f"[{'+'.join(str(r) for r in self.individual_rolls)}={rolls_sum}]"
+            )
 
         if self.modifier_breakdown:
             mod_parts = []
@@ -298,15 +304,44 @@ DICE_ROLL_TOOLS: list[dict] = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier (DEX for Stealth, INT for Investigation, etc.)"},
-                    "attribute_name": {"type": "string", "description": "Ability score abbreviation: STR, DEX, CON, INT, WIS, or CHA"},
-                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus (typically 2-6)"},
-                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this skill"},
-                    "expertise": {"type": "boolean", "default": False, "description": "True if character has expertise (double proficiency)"},
-                    "dc": {"type": "integer", "description": "Difficulty Class to beat (10=easy, 15=medium, 20=hard, 25=very hard)"},
-                    "skill_name": {"type": "string", "description": "Name of the skill (e.g., 'Thieves Tools', 'Stealth', 'Perception')"},
+                    "attribute_modifier": {
+                        "type": "integer",
+                        "description": "Relevant ability modifier (DEX for Stealth, INT for Investigation, etc.)",
+                    },
+                    "attribute_name": {
+                        "type": "string",
+                        "description": "Ability score abbreviation: STR, DEX, CON, INT, WIS, or CHA",
+                    },
+                    "proficiency_bonus": {
+                        "type": "integer",
+                        "description": "Character's proficiency bonus (typically 2-6)",
+                    },
+                    "proficient": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "True if proficient in this skill",
+                    },
+                    "expertise": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "True if character has expertise (double proficiency)",
+                    },
+                    "dc": {
+                        "type": "integer",
+                        "description": "Difficulty Class to beat (10=easy, 15=medium, 20=hard, 25=very hard)",
+                    },
+                    "skill_name": {
+                        "type": "string",
+                        "description": "Name of the skill (e.g., 'Thieves Tools', 'Stealth', 'Perception')",
+                    },
                 },
-                "required": ["attribute_modifier", "attribute_name", "proficiency_bonus", "dc", "skill_name"],
+                "required": [
+                    "attribute_modifier",
+                    "attribute_name",
+                    "proficiency_bonus",
+                    "dc",
+                    "skill_name",
+                ],
             },
         },
     },
@@ -320,13 +355,34 @@ DICE_ROLL_TOOLS: list[dict] = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "attribute_modifier": {"type": "integer", "description": "Relevant ability modifier for the save"},
-                    "proficiency_bonus": {"type": "integer", "description": "Character's proficiency bonus"},
-                    "proficient": {"type": "boolean", "default": False, "description": "True if proficient in this saving throw"},
-                    "dc": {"type": "integer", "description": "Difficulty Class to beat"},
-                    "save_type": {"type": "string", "description": "Type of save: STR, DEX, CON, INT, WIS, or CHA"},
+                    "attribute_modifier": {
+                        "type": "integer",
+                        "description": "Relevant ability modifier for the save",
+                    },
+                    "proficiency_bonus": {
+                        "type": "integer",
+                        "description": "Character's proficiency bonus",
+                    },
+                    "proficient": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "True if proficient in this saving throw",
+                    },
+                    "dc": {
+                        "type": "integer",
+                        "description": "Difficulty Class to beat",
+                    },
+                    "save_type": {
+                        "type": "string",
+                        "description": "Type of save: STR, DEX, CON, INT, WIS, or CHA",
+                    },
                 },
-                "required": ["attribute_modifier", "proficiency_bonus", "dc", "save_type"],
+                "required": [
+                    "attribute_modifier",
+                    "proficiency_bonus",
+                    "dc",
+                    "save_type",
+                ],
             },
         },
     },
@@ -419,7 +475,9 @@ def roll_with_disadvantage(notation: str) -> tuple[DiceRollResult, DiceRollResul
 def calculate_attack_roll(
     attack_modifier: int, advantage: bool = False, disadvantage: bool = False
 ) -> dict:
-    notation = f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
+    notation = (
+        f"1d20+{attack_modifier}" if attack_modifier >= 0 else f"1d20{attack_modifier}"
+    )
 
     if advantage and disadvantage:
         roll = roll_dice(notation)
@@ -478,7 +536,9 @@ def calculate_skill_check(
         total_modifier += proficiency_bonus
     if expertise:
         total_modifier += proficiency_bonus
-    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    notation = (
+        f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    )
     return roll_dice(notation)
 
 
@@ -488,7 +548,9 @@ def calculate_saving_throw(
     total_modifier = attribute_modifier
     if proficient:
         total_modifier += proficiency_bonus
-    notation = f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    notation = (
+        f"1d20+{total_modifier}" if total_modifier >= 0 else f"1d20{total_modifier}"
+    )
     return roll_dice(notation)
 
 
@@ -500,7 +562,11 @@ def _get_damage_total_for_log(damage: Any) -> Any:
 
 def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     """Execute a dice roll tool call and return the result."""
-    logging_util.info(logging_util.with_campaign(f"DICE_TOOL_EXEC: tool={tool_name} | args={arguments}"))
+    logging_util.info(
+        logging_util.with_campaign(
+            f"DICE_TOOL_EXEC: tool={tool_name} | args={arguments}"
+        )
+    )
 
     def _coerce_int_inner(value: Any, default: int | None = 0) -> int | None:
         if isinstance(value, bool):
@@ -554,7 +620,9 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         ability_name = arguments.get("ability_name", "").upper() or None
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), None)
         weapon_name = arguments.get("weapon_name", "")
-        damage_notation = arguments.get("damage_notation") or arguments.get("damage_dice") or "1d6"
+        damage_notation = (
+            arguments.get("damage_notation") or arguments.get("damage_dice") or "1d6"
+        )
         target_ac = _coerce_int_inner(arguments.get("target_ac"), 10)
         if target_ac is None:
             target_ac = 10
@@ -563,12 +631,16 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
 
         attack = calculate_attack_roll(attack_mod, advantage, disadvantage)
         rolls = attack["rolls"]
-        hit = not attack["is_fumble"] and (attack["total"] >= target_ac or attack["is_critical"])
+        hit = not attack["is_fumble"] and (
+            attack["total"] >= target_ac or attack["is_critical"]
+        )
 
         mod_parts = []
         if ability_mod is not None and ability_name:
             mod_parts.append(
-                f"+{ability_mod} {ability_name}" if ability_mod >= 0 else f"{ability_mod} {ability_name}"
+                f"+{ability_mod} {ability_name}"
+                if ability_mod >= 0
+                else f"{ability_mod} {ability_name}"
             )
         if prof_bonus is not None and prof_bonus > 0:
             mod_parts.append(f"+{prof_bonus} PROF")
@@ -730,7 +802,11 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
     if tool_name == "declare_no_roll_needed":
         action = arguments.get("action", "unspecified action")
         reason = arguments.get("reason", "no reason provided")
-        logging_util.info(logging_util.with_campaign(f"DICE_TOOL_RESULT: tool={tool_name} | no_roll=True | action={action}"))
+        logging_util.info(
+            logging_util.with_campaign(
+                f"DICE_TOOL_RESULT: tool={tool_name} | no_roll=True | action={action}"
+            )
+        )
         return {
             "no_roll": True,
             "action": action,
@@ -738,5 +814,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "formatted": f"No roll needed for '{action}': {reason}",
         }
 
-    logging_util.warning(logging_util.with_campaign(f"DICE_TOOL_RESULT: Unknown tool={tool_name}"))
+    logging_util.warning(
+        logging_util.with_campaign(f"DICE_TOOL_RESULT: Unknown tool={tool_name}")
+    )
     return {"error": f"Unknown tool: {tool_name}"}

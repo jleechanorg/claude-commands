@@ -26,8 +26,8 @@ sys.path.insert(0, project_root)
 from mvp_site import constants
 from mvp_site.agents import (
     BaseAgent,
-    StoryModeAgent,
     GodModeAgent,
+    StoryModeAgent,
     get_agent_for_input,
 )
 
@@ -103,7 +103,10 @@ class TestAgentInstructionBuildingIntegration(unittest.TestCase):
 
         agent = StoryModeAgent()
         instructions = agent.build_system_instructions(
-            selected_prompts=[constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS],
+            selected_prompts=[
+                constants.PROMPT_TYPE_NARRATIVE,
+                constants.PROMPT_TYPE_MECHANICS,
+            ],
             use_default_world=False,
             include_continuation_reminder=True,
         )
@@ -217,7 +220,9 @@ class TestAgentPromptSetIntegration(unittest.TestCase):
 
     def test_prompt_set_overlap(self):
         """Test that both agents share appropriate core prompts."""
-        story_prompts = StoryModeAgent.REQUIRED_PROMPTS | StoryModeAgent.OPTIONAL_PROMPTS
+        story_prompts = (
+            StoryModeAgent.REQUIRED_PROMPTS | StoryModeAgent.OPTIONAL_PROMPTS
+        )
         god_prompts = GodModeAgent.REQUIRED_PROMPTS | GodModeAgent.OPTIONAL_PROMPTS
 
         # Both should have these fundamental prompts
@@ -240,8 +245,8 @@ class TestAgentBackwardCompatibility(unittest.TestCase):
         # This tests backward compatibility
         from mvp_site.llm_service import (
             BaseAgent as LLMBaseAgent,
-            StoryModeAgent as LLMStoryModeAgent,
             GodModeAgent as LLMGodModeAgent,
+            StoryModeAgent as LLMStoryModeAgent,
             get_agent_for_input as llm_get_agent,
         )
 
@@ -255,8 +260,8 @@ class TestAgentBackwardCompatibility(unittest.TestCase):
         """Test that agents can be imported from agents module."""
         from mvp_site.agents import (
             BaseAgent,
-            StoryModeAgent,
             GodModeAgent,
+            StoryModeAgent,
             get_agent_for_input,
         )
 

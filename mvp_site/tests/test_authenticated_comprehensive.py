@@ -271,7 +271,7 @@ class AuthenticatedTestSuite:
         results["overall_score"] = overall_score
         results["test_passed"] = overall_score >= 80
 
-        logger.info(f"\n{'='*65}")
+        logger.info(f"\n{'=' * 65}")
         logger.info("🏆 COMPREHENSIVE TEST RESULTS:")
         logger.info(f"Overall Score: {overall_score}/100")
         logger.info(

@@ -99,7 +99,9 @@ def generate_content(
     # Other models fall back to json_object (best-effort JSON)
     if model_name in MODELS_WITH_JSON_SCHEMA_SUPPORT:
         response_format = get_openai_json_schema_format()
-        logging_util.info(f"OpenRouter using json_schema (strict:false) for {model_name}")
+        logging_util.info(
+            f"OpenRouter using json_schema (strict:false) for {model_name}"
+        )
     else:
         response_format = {"type": "json_object"}
 

@@ -73,7 +73,9 @@ class TestLLMRequestTDD(unittest.TestCase):
             },
         ]
 
-    @patch("mvp_site.llm_service.get_client")  # Mock client to prevent API key requirement
+    @patch(
+        "mvp_site.llm_service.get_client"
+    )  # Mock client to prevent API key requirement
     @patch("mvp_site.llm_service._get_text_from_response")
     @patch("mvp_site.llm_service._call_llm_api")  # Mock underlying API calls
     def test_continue_story_sends_structured_json_to_gemini(
@@ -112,7 +114,9 @@ class TestLLMRequestTDD(unittest.TestCase):
         first_call = mock_api_call.call_args_list[0]
 
         # The EXPECTED behavior: First argument should be structured JSON string, not string list
-        prompt_content = first_call.args[0][0] if first_call.args and first_call.args[0] else None
+        prompt_content = (
+            first_call.args[0][0] if first_call.args and first_call.args[0] else None
+        )
 
         # CRITICAL TEST: The content sent to Gemini should be structured JSON string, not concatenated blob
         self.assertIsInstance(

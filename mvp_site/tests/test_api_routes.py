@@ -14,7 +14,16 @@ os.environ["USE_MOCKS"] = "true"
 
 # Add parent directory to path for imports
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_api_routes.py'))))
+    0,
+    os.path.join(
+        os.path.dirname(
+            os.path.dirname(
+                os.path.abspath(
+                    __file__ if "__file__" in globals() else "tests/test_api_routes.py"
+                )
+            )
+        )
+    ),
 )
 
 from main import create_app
@@ -41,14 +50,16 @@ class TestAPIRoutes(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # With testing mode removed, expect 401 (auth required) or 200/404 if mocked properly
-        assert response.status_code in [200, 401, 404], f"Expected 200/401/404 for campaigns list, got {response.status_code}"
+        assert response.status_code in [200, 401, 404], (
+            f"Expected 200/401/404 for campaigns list, got {response.status_code}"
+        )
 
         # If successful, should return valid JSON format
         if response.status_code == 200:
             data = response.get_json()
-            assert isinstance(
-                data, (dict, list)
-            ), "Campaigns response should be dict or list format"
+            assert isinstance(data, (dict, list)), (
+                "Campaigns response should be dict or list format"
+            )
 
     def test_mcp_get_specific_campaign_endpoint(self):
         """Test specific campaign retrieval through MCP gateway."""
@@ -73,19 +84,21 @@ class TestAPIRoutes(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # With testing mode removed, expect 401 (auth required) or 200/404 if mocked properly
-        assert response.status_code in [200, 401, 404], f"Expected 200/401/404 for campaigns list, got {response.status_code}"
+        assert response.status_code in [200, 401, 404], (
+            f"Expected 200/401/404 for campaigns list, got {response.status_code}"
+        )
 
         data = response.get_json()
-        assert isinstance(
-            data, (list, dict)
-        ), "Campaigns should return list or dict format"
+        assert isinstance(data, (list, dict)), (
+            "Campaigns should return list or dict format"
+        )
 
         # Accept any response format - could be empty list or list with existing campaigns
         if isinstance(data, list):
             # Could be empty or have campaigns
-            assert all(
-                isinstance(item, dict) for item in data
-            ), "Campaign items should be dict format"
+            assert all(isinstance(item, dict) for item in data), (
+                "Campaign items should be dict format"
+            )
         elif isinstance(data, dict):
             # Could be wrapped response format
             assert data is not None, "Response should not be None"
@@ -97,9 +110,9 @@ class TestAPIRoutes(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=invalid_headers)
 
         # MCP should handle authentication errors gracefully
-        assert (
-            response.status_code == 401
-        ), f"Expected 401 for authentication error, got {response.status_code}"
+        assert response.status_code == 401, (
+            f"Expected 401 for authentication error, got {response.status_code}"
+        )
 
     def test_mcp_campaign_with_debug_mode(self):
         """Test campaign retrieval with debug mode through MCP."""
@@ -119,7 +132,9 @@ class TestAPIRoutes(unittest.TestCase):
         response = self.client.get("/api/settings", headers=self.test_headers)
 
         # With testing mode removed, expect 401 (auth required) or 200 if mocked properly
-        assert response.status_code in [200, 401], f"Expected 200 or 401 for settings, got {response.status_code}"
+        assert response.status_code in [200, 401], (
+            f"Expected 200 or 401 for settings, got {response.status_code}"
+        )
 
         # If successful, should return valid settings format
         if response.status_code == 200:
@@ -135,7 +150,9 @@ class TestAPIRoutes(unittest.TestCase):
         )
 
         # With testing mode removed, expect 401 (auth required) or 200 if mocked properly
-        assert response.status_code in [200, 401], f"Expected 200 or 401 for settings update, got {response.status_code}"
+        assert response.status_code in [200, 401], (
+            f"Expected 200 or 401 for settings update, got {response.status_code}"
+        )
 
     def test_mcp_campaign_interaction_endpoint(self):
         """Test campaign interaction endpoint through MCP gateway."""
@@ -148,9 +165,9 @@ class TestAPIRoutes(unittest.TestCase):
         )
 
         # MCP gateway should handle interaction requests gracefully (may return 400 instead of 404)
-        assert (
-            response.status_code in [400, 404, 401]
-        ), f"Expected 400/404/401 for campaign interaction, got {response.status_code}"
+        assert response.status_code in [400, 404, 401], (
+            f"Expected 400/404/401 for campaign interaction, got {response.status_code}"
+        )
 
         # If successful, should return valid interaction response
         if response.status_code == 200:
@@ -164,7 +181,9 @@ class TestAPIRoutes(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=cors_headers)
 
         # With testing mode removed, expect 401 (auth required) or 200/404 if mocked properly
-        assert response.status_code in [200, 401, 404], f"Expected 200/401/404 for CORS campaigns list, got {response.status_code}"
+        assert response.status_code in [200, 401, 404], (
+            f"Expected 200/401/404 for CORS campaigns list, got {response.status_code}"
+        )
 
 
 if __name__ == "__main__":

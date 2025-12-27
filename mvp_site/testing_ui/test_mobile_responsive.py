@@ -119,20 +119,20 @@ def test_choice_id_mobile_responsive():
             )
 
             # Assertions for responsive behavior
-            assert (
-                mobile_px < desktop_px
-            ), f"Mobile font-size ({mobile_px}px) should be smaller than desktop ({desktop_px}px)"
-            assert (
-                mobile_px <= 12
-            ), f"Mobile font-size ({mobile_px}px) should be small (≤12px for readability)"
-            assert (
-                mobile_px >= 8
-            ), f"Mobile font-size ({mobile_px}px) should be readable (≥8px)"
+            assert mobile_px < desktop_px, (
+                f"Mobile font-size ({mobile_px}px) should be smaller than desktop ({desktop_px}px)"
+            )
+            assert mobile_px <= 12, (
+                f"Mobile font-size ({mobile_px}px) should be small (≤12px for readability)"
+            )
+            assert mobile_px >= 8, (
+                f"Mobile font-size ({mobile_px}px) should be readable (≥8px)"
+            )
 
             # Tablet should be between mobile and desktop, or same as mobile
-            assert (
-                tablet_px <= desktop_px
-            ), f"Tablet font-size ({tablet_px}px) should not be larger than desktop ({desktop_px}px)"
+            assert tablet_px <= desktop_px, (
+                f"Tablet font-size ({tablet_px}px) should not be larger than desktop ({desktop_px}px)"
+            )
 
             print("✅ Mobile responsive font scaling works correctly")
             print(f"   Mobile (320px): {mobile_px}px")
@@ -237,12 +237,12 @@ def test_choice_button_mobile_layout():
             print(f"Mobile choice button margin-bottom: {mobile_margin_bottom}")
 
             # Verify mobile adaptations
-            assert (
-                "0.08rem" in mobile_padding or "1.28px" in mobile_padding
-            ), "Mobile padding should be reduced"
-            assert (
-                "0.7rem" in mobile_font_size or "11.2px" in mobile_font_size
-            ), "Mobile font should be 0.7rem"
+            assert "0.08rem" in mobile_padding or "1.28px" in mobile_padding, (
+                "Mobile padding should be reduced"
+            )
+            assert "0.7rem" in mobile_font_size or "11.2px" in mobile_font_size, (
+                "Mobile font should be 0.7rem"
+            )
 
             print("✅ Mobile choice button layout is properly optimized")
 

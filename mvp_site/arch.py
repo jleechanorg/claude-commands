@@ -5,6 +5,7 @@ These helpers provide simple, deterministic analysis for local files without
 relying on external tooling. They surface key metadata and formatted summaries
 expected by the test suite.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
