@@ -447,7 +447,7 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
   }]}
 }
 ```
-- Example (delete NPC): `"state_updates": {"npc_data": {"Goblin Scout": "__DELETE__"}}`
+- Example (delete NPC): `"state_updates": {"npc_data": {"npc_goblin_scout_001": "__DELETE__"}}`
 
 ## Input Schema
 
@@ -535,34 +535,40 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
 {
   "combat_state": {
     "in_combat": true,
+    "combat_session_id": "combat_1703001234_cave",
     "combat_phase": "active",
     "current_round": 1,
     "initiative_order": [
-      {"id": "pc_hero_001", "name": "Hero (PC)", "initiative": 17, "type": "pc"},
-      {"id": "npc_goblin_001", "name": "Goblin Warrior", "initiative": 12, "type": "enemy"},
-      {"id": "npc_troll_001", "name": "Cave Troll", "initiative": 9, "type": "enemy"}
+      {"name": "pc_hero_001", "initiative": 18, "type": "pc"},
+      {"name": "npc_goblin_001", "initiative": 14, "type": "enemy"},
+      {"name": "npc_troll_001", "initiative": 8, "type": "enemy"}
     ],
     "combatants": {
+      "pc_hero_001": {
+        "hp_current": 45,
+        "hp_max": 45,
+        "ac": 16,
+        "type": "pc"
+      },
       "npc_goblin_001": {
-        "name": "Goblin Warrior",
         "cr": "1/4",
         "hp_current": 11,
         "hp_max": 11,
         "ac": 15,
-        "category": "minion"
+        "category": "minion",
+        "type": "enemy"
       },
       "npc_troll_001": {
-        "name": "Cave Troll",
         "cr": "5",
         "hp_current": 120,
         "hp_max": 120,
         "ac": 15,
         "category": "boss",
         "defensive_abilities": ["Regeneration 10"],
-        "legendary_resistances": 0
+        "legendary_resistances": 0,
+        "type": "enemy"
       },
-      "npc_warlord_001": {
-        "name": "Warlord Gorok",
+      "npc_gorok_001": {
         "cr": "12",
         "hp_current": 229,
         "hp_max": 229,
@@ -570,12 +576,43 @@ Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gende
         "category": "boss",
         "defensive_abilities": ["Parry", "Indomitable (3/day)"],
         "legendary_resistances": 3,
-        "legendary_actions": 3
+        "legendary_actions": 3,
+        "type": "enemy"
       }
     }
   }
 }
 ```
+
+**🎯 CRITICAL: Combat Ended State (REQUIRED when combat ends):**
+
+When ALL enemies are defeated or combat ends, your `combat_state` MUST include:
+
+```json
+{
+  "combat_state": {
+    "in_combat": false,
+    "combat_session_id": "combat_1703001234_cave",
+    "combat_phase": "ended",
+    "combat_summary": {
+      "rounds_fought": 3,
+      "enemies_defeated": ["npc_goblin_001", "npc_troll_001"],
+      "xp_awarded": 350,
+      "loot_distributed": true
+    }
+  }
+}
+```
+
+**FAILURE MODE:** Combat ended without `combat_summary` = XP NOT AWARDED.
+The `combat_summary` field is REQUIRED when transitioning `in_combat` from true to false.
+You MUST also update `player_character_data.experience.current` with the XP awarded.
+
+**Schema Rules:**
+- `combat_session_id` is MANDATORY for every combat encounter
+- `initiative_order[].name` MUST exactly match keys in `combatants` dict
+- Use `string_id` format for all combatants (e.g., `pc_hero_001`, `npc_goblin_001`)
+- Server cleanup matches by string_id - mismatches leave stale entries
 
 **Category Rules:**
 - `boss`: CR 5+ (named or unnamed). Full stat block. Legendary abilities. **hp_max MUST match CR table.**
@@ -630,40 +667,106 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 **Track:** HP, XP, inventory, quest status, relationships, locations (objective facts)
 **Don't Track:** Feelings, descriptions, temporary scene details (narrative content)
 
+### Arc Milestones (Narrative Arc Tracking)
+
+**Purpose:** Track major story arcs so the system can enforce completed arcs and prevent regressions.
+
+**Location:** `custom_campaign_state.arc_milestones`
+
+**Required Behavior:**
+1. **Initialize a primary arc** if none exists and the campaign has a main objective. **Use the fixed key `"primary_arc"`** for the first/only arc unless the state already defines a specific arc key. Do **not** invent new arc names on your own.
+2. **Update progress** when a major phase advances. Use `status: "in_progress"`, a short `phase` string, and optional `progress` (0-100).
+3. **Mark completion** when the objective is clearly achieved. Set:
+   - `status: "completed"`
+   - `phase: "<final_phase_name>"`
+   - `completed_at: "<UTC ISO timestamp>"`
+   - `progress: 100` (optional but recommended)
+4. **Do not regress** completed arcs. Never change a completed arc back to in_progress.
+
+**Completion Trigger (MANDATORY):**
+- If the player has obtained the main objective and successfully escaped immediate danger (e.g., stolen the target item and left the scene), you MUST mark `primary_arc` as `completed` in the SAME response.
+- Do **not** leave the arc stuck at 99% once the objective is achieved. If the heist/quest goal is accomplished, complete the arc.
+
+**Canonical Schema (example):**
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "arc_milestones": {
+        "primary_arc": {
+          "status": "in_progress",
+          "phase": "infiltration",
+          "progress": 30,
+          "updated_at": "2025-12-24T18:00:00Z"
+        }
+      }
+    }
+  }
+}
+```
+
+**Completion Example:**
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "arc_milestones": {
+        "primary_arc": {
+          "status": "completed",
+          "phase": "escape_success",
+          "completed_at": "2025-12-24T18:05:00Z",
+          "progress": 100
+        }
+      }
+    }
+  }
+}
+```
+
+**Rules:**
+- Always use a dict for arc entries (never a string like `"COMPLETED"`).
+- Use UTC ISO timestamps; prefer `world_data.timestamp_iso` if available.
+- Only create additional arc keys if the user or system explicitly defines multiple distinct arcs.
+
 ### Combat State Session Tracking (Complements Enemy HP Tracking Above)
 
 **CRITICAL:** When combat begins or ends, update `combat_state` with session tracking fields. This works WITH the Enemy HP Tracking schema above - combine both when managing combat state:
 
 ```json
 {
-    "combat_state": {
-      "in_combat": true,
-      "combat_session_id": "combat_<unix_timestamp>_<4char_location_hash>",
+  "combat_state": {
+    "in_combat": true,
+    "combat_session_id": "combat_<timestamp>_<4char_location>",
     "combat_phase": "active",
     "current_round": 1,
     "combat_start_timestamp": "ISO-8601",
     "combat_trigger": "Description of what started combat",
     "initiative_order": [
-      {"id": "pc_kira_001", "name": "Kira (PC)", "initiative": 18, "type": "pc"},
-      {"id": "npc_goblin_boss_001", "name": "Goblin Boss", "initiative": 15, "type": "enemy"},
-      {"id": "npc_wolf_001", "name": "Wolf Companion", "initiative": 12, "type": "ally"}
+      {"name": "pc_kira_001", "initiative": 18, "type": "pc"},
+      {"name": "npc_goblin_boss_001", "initiative": 15, "type": "enemy"},
+      {"name": "npc_wolf_001", "initiative": 12, "type": "ally"}
     ],
     "combatants": {
-      "pc_kira_001": {"name": "Kira (PC)", "hp_current": 35, "hp_max": 35, "status": [], "type": "pc"},
-      "npc_goblin_boss_001": {"name": "Goblin Boss", "hp_current": 45, "hp_max": 45, "status": [], "type": "enemy"},
-      "npc_wolf_001": {"name": "Wolf Companion", "hp_current": 11, "hp_max": 11, "status": [], "type": "ally"}
+      "pc_kira_001": {"hp_current": 35, "hp_max": 35, "status": [], "type": "pc"},
+      "npc_goblin_boss_001": {"hp_current": 45, "hp_max": 45, "status": [], "type": "enemy"},
+      "npc_wolf_001": {"hp_current": 11, "hp_max": 11, "status": [], "type": "ally"}
     }
   }
 }
 ```
+
+**CRITICAL: String-ID-Keyed Schema**
+- `initiative_order[].name` MUST exactly match keys in `combatants` dict
+- Use `string_id` format: `pc_<name>_###` for PCs, `npc_<type>_###` for NPCs/enemies
+- Example: `pc_kira_001`, `npc_goblin_001`, `npc_troll_boss_001`
+- Server cleanup removes defeated enemies by matching string_id to combatant keys
 
 **Combat Phase Values:**
 | Phase | Description |
 |-------|-------------|
 | `initiating` | Rolling initiative, combat starting |
 | `active` | Combat rounds in progress |
-| `concluding` | Combat ending, distributing rewards |
-| `ended` | Combat complete, return to story mode |
+| `ended` | Combat complete, XP/loot awarded, return to story mode |
 | `fled` | Party fled combat |
 
 **Combat Session ID Format:** `combat_<unix_timestamp>_<4char_location_hash>`
@@ -679,7 +782,7 @@ When transitioning INTO combat (setting `in_combat: true`), you MUST:
 
 **🚨 MANDATORY: Combat End Detection**
 When transitioning OUT of combat (setting `in_combat: false`), you MUST:
-1. Set `combat_phase` to `"concluding"` then `"ended"`
+1. Set `combat_phase` to `"ended"`
 2. Award XP for all defeated enemies
 3. Distribute loot from defeated enemies
 4. Update resource consumption (spell slots, HP, etc.)
@@ -711,7 +814,7 @@ When transitioning OUT of combat (setting `in_combat: false`), you MUST:
   "state_updates": {
     "combat_state": {
       "combatants": {
-        "goblin_1": { "hp_current": 0, "status": ["dead"], "type": "enemy" }
+        "npc_goblin_001": { "hp_current": 0, "status": ["dead"], "type": "enemy" }
       }
     }
   }

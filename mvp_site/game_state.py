@@ -331,6 +331,84 @@ class GameState:
                         continue
                 self.combat_state["combatants"] = normalized_combatants
 
+        # CRITICAL: Validate schema consistency between initiative_order and combatants
+        self._validate_combat_state_consistency()
+
+    def _validate_combat_state_consistency(self) -> None:
+        """
+        Validate that initiative_order and combatants are consistent.
+
+        Logs warnings for:
+        1. initiative_order names that don't exist in combatants (orphaned entries)
+        2. combatants keys that don't appear in initiative_order (missing from turn order)
+        3. Empty combatants with populated initiative_order (invalid state)
+        """
+        if not isinstance(self.combat_state, dict):
+            return
+
+        init_order = self.combat_state.get("initiative_order", [])
+        combatants = self.combat_state.get("combatants", {})
+
+        if not isinstance(init_order, list) or not isinstance(combatants, dict):
+            return
+
+        # Get names from initiative_order
+        init_names = {entry.get("name") for entry in init_order if isinstance(entry, dict)}
+
+        # Get keys from combatants
+        combatant_keys = set(combatants.keys())
+
+        # Check for orphaned initiative entries (name not in combatants)
+        orphaned_init = init_names - combatant_keys
+        if orphaned_init:
+            logging_util.warning(
+                f"⚠️ COMBAT_STATE_MISMATCH: initiative_order has names not in combatants: {orphaned_init}. "
+                "Cleanup may fail for these entries."
+            )
+
+        # Check for combatants missing from initiative_order
+        missing_from_init = combatant_keys - init_names
+        if missing_from_init:
+            logging_util.warning(
+                f"⚠️ COMBAT_STATE_MISMATCH: combatants has keys not in initiative_order: {missing_from_init}. "
+                "These combatants won't have a turn."
+            )
+
+        # Check for empty combatants with populated initiative_order (INVALID STATE)
+        if init_order and not combatants:
+            logging_util.error(
+                f"🔴 INVALID_COMBAT_STATE: initiative_order has {len(init_order)} entries but combatants is empty. "
+                "Combat cleanup will fail. This violates the combat schema."
+            )
+
+        # Check for missing combat_summary when combat has ended
+        in_combat = self.combat_state.get("in_combat", False)
+        combat_phase = self.combat_state.get("combat_phase", "")
+        combat_summary = self.combat_state.get("combat_summary")
+
+        if not in_combat and combat_phase == "ended":
+            if not combat_summary:
+                logging_util.warning(
+                    "⚠️ MISSING_COMBAT_SUMMARY: Combat ended (in_combat=false, combat_phase=ended) "
+                    "but no combat_summary provided. XP and loot may not be awarded."
+                )
+            elif isinstance(combat_summary, dict):
+                # Validate combat_summary has required fields
+                required_fields = ["xp_awarded", "enemies_defeated"]
+                missing = [f for f in required_fields if f not in combat_summary]
+                if missing:
+                    logging_util.warning(
+                        f"⚠️ INCOMPLETE_COMBAT_SUMMARY: Missing fields: {missing}. "
+                        "XP awards may be incorrect."
+                    )
+                # Validate xp_awarded is a number
+                xp = combat_summary.get("xp_awarded")
+                if xp is not None and not isinstance(xp, (int, float)):
+                    logging_util.warning(
+                        f"⚠️ INVALID_XP_AWARDED: xp_awarded is {type(xp).__name__}, expected int. "
+                        f"Value: {xp}"
+                    )
+
     def to_dict(self) -> dict:
         """Serializes the GameState object to a dictionary for Firestore."""
         # Copy all attributes from the instance's __dict__
@@ -354,6 +432,34 @@ class GameState:
 
         # The constructor now directly accepts the dictionary.
         return cls(**source)
+
+    def get_combat_state(self) -> dict:
+        """
+        Get combat_state as a normalized dict.
+
+        This is the standardized way to access combat_state throughout the codebase.
+        Always returns a dict (never None), with sensible defaults.
+
+        Returns:
+            dict: Combat state with at minimum {"in_combat": False}
+        """
+        if not hasattr(self, "combat_state"):
+            return {"in_combat": False}
+        if not isinstance(self.combat_state, dict):
+            return {"in_combat": False}
+        return self.combat_state
+
+    def is_in_combat(self) -> bool:
+        """
+        Check if combat is currently active.
+
+        This is the standardized way to check combat status.
+
+        Returns:
+            bool: True if in_combat is explicitly True, False otherwise
+        """
+        combat_state = self.get_combat_state()
+        return combat_state.get("in_combat", False) is True
 
     # =========================================================================
     # Arc Milestone Tracking Methods

@@ -26,6 +26,7 @@ import os
 import re
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import ValidationError
@@ -301,6 +302,48 @@ def _prepare_game_state(
     cleaned_state_dict, was_cleaned, num_cleaned = _cleanup_legacy_state(
         current_game_state.to_dict()
     )
+
+    # Archive finished combat to history and clear active state at action START
+    # This prevents stale combat_summary from being seen by LLM on next action
+    # while allowing the previous action's response to include combat_summary
+    combat_state = cleaned_state_dict.get("combat_state", {})
+    # Accept multiple "finished" phase names since LLM may use different terms
+    finished_phases = {"ended", "concluding", "concluded", "finished", "complete", "completed"}
+    combat_phase = combat_state.get("combat_phase", "")
+    if (
+        not combat_state.get("in_combat", True)
+        and combat_phase in finished_phases
+        and combat_state.get("combat_summary")
+    ):
+        # Archive to combat_history
+        combat_history = combat_state.get("combat_history", [])
+        archived_entry = {
+            **combat_state["combat_summary"],
+            "session_id": combat_state.get("combat_session_id"),
+            "archived_at": datetime.now(timezone.utc).isoformat(),
+        }
+        combat_history.append(archived_entry)
+
+        logging_util.info(
+            f"Archived finished combat to history: session_id={combat_state.get('combat_session_id')}, "
+            f"xp_awarded={combat_state['combat_summary'].get('xp_awarded')}"
+        )
+
+        # Clear active combat state for clean LLM context
+        combat_state["combat_history"] = combat_history
+        combat_state["combat_summary"] = None
+        combat_state["combat_phase"] = "idle"
+        combat_state["combat_session_id"] = None
+        combat_state["combatants"] = {}
+        combat_state["initiative_order"] = []
+        combat_state["current_round"] = None
+        cleaned_state_dict["combat_state"] = combat_state
+        was_cleaned = True
+
+        # Persist the cleaned state immediately so LLM sees clean context
+        firestore_service.update_campaign_game_state(
+            user_id, campaign_id, cleaned_state_dict
+        )
 
     if was_cleaned:
         # Ensure user_id is preserved in cleaned state

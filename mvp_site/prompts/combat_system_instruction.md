@@ -7,7 +7,44 @@
 - MANDATORY: All attacks require dice rolls via tool_requests
 - Combat end: XP, loot, resources MUST be awarded and clearly displayed
 - Boss/Special NPCs: MUST have equipment in ALL gear slots
+- CRITICAL: combatants dict MUST be populated with HP/AC for every combatant
 /ESSENTIALS -->
+
+## ⚠️ COMBAT STATE CHECKLIST (Verify Before Every Combat Action)
+
+**When starting combat, your state_updates MUST include:**
+- [ ] `in_combat: true`
+- [ ] `combat_session_id: "combat_<timestamp>_<location>"`
+- [ ] `initiative_order: [...]` with name, initiative, type for each combatant
+- [ ] `combatants: {...}` with hp_current, hp_max, ac, type for each combatant
+- [ ] Names in initiative_order EXACTLY match keys in combatants
+
+**FAILURE MODE:** Empty combatants dict with populated initiative_order = INVALID STATE
+
+**During each combat round, your state_updates MUST include:**
+- [ ] Update `combatants.<id>.hp_current` after ANY damage is dealt
+- [ ] Remove defeated enemies from `initiative_order` (or mark with status: ["dead"])
+- [ ] Track conditions/status effects in `combatants.<id>.status` array
+
+**FAILURE MODE:** Dice rolled for damage but hp_current not updated = STATE DRIFT
+
+**When ending combat, your state_updates MUST include:**
+- [ ] `in_combat: false`
+- [ ] `combat_phase: "ended"`
+- [ ] `combat_summary: { rounds_fought, enemies_defeated, xp_awarded, loot_distributed }`
+- [ ] Update `player_character_data.experience.current` with XP awarded
+- [ ] **CRITICAL: Update `combatants` with final HP** (defeated enemies must have `hp_current: 0`)
+
+**FAILURE MODE:** Combat ended without combat_summary or XP = REWARDS NOT GIVEN
+**FAILURE MODE:** Enemies in `enemies_defeated` with hp_current > 0 = INCONSISTENT STATE
+
+**Quick Combat / Single-Turn Combat (executions, coup de grace):**
+Even instant kills require a FRESH combat session:
+- [ ] Generate NEW `combat_session_id` (format: `combat_<timestamp>_<context>`)
+- [ ] `enemies_defeated` contains ONLY the target of THIS action (not prior combats)
+- [ ] `xp_awarded` for ONLY the enemy killed in THIS action
+
+**FAILURE MODE:** Reusing prior session's `enemies_defeated` = STALE DATA
 
 ## 🚨 CRITICAL: LLM Authority Over Combat State
 
@@ -46,40 +83,48 @@ This protocol governs ALL combat encounters in the game. When `combat_state.in_c
 
 **MANDATORY:** Every combat encounter MUST have a unique session ID for tracking.
 
-**Integration:** `combat_state` is a nested portion of the overall `game_state`. See `game_state_instruction.md` for how these combat fields align with the broader state schema.
-
 ### Combat Session Schema
 ```json
 {
   "combat_state": {
     "in_combat": true,
-    "combat_session_id": "combat_<unix_timestamp>_<4char_location_hash>",
+    "combat_session_id": "combat_<timestamp>_<location_hash>",
     "combat_phase": "active",
     "current_round": 1,
-    "initiative_order": [...],
-    "combatants": {...},
+    "initiative_order": [{"name": "...", "initiative": N, "type": "pc|enemy|ally"}],
+    "combatants": {"<name>": {"hp_current": N, "hp_max": N, "ac": N, "type": "pc|enemy|ally"}},
     "combat_start_timestamp": "ISO-8601",
     "combat_trigger": "description of what started combat"
   }
 }
 ```
 
+**Schema Rules:**
+- `initiative_order[].name` MUST exactly match keys in `combatants` dict
+- Names are the unique identifiers (no separate `id` field needed)
+- Server cleanup matches by name - mismatches leave stale entries
+
 ### Combat Phases
 | Phase | Description | Transition Trigger |
 |-------|-------------|-------------------|
 | `initiating` | Rolling initiative, setting up combatants | All participants ready |
 | `active` | Combat rounds in progress | Combat ends |
-| `concluding` | Awarding XP, loot, resources | Rewards distributed |
-| `ended` | Combat complete | Return to story mode |
+| `ended` | Combat complete, XP/loot awarded | Return to story mode |
 
 ### Entering Combat
 
-When combat begins, you MUST:
-1. Generate a unique `combat_session_id` (strict format: `combat_<unix_timestamp>_<4char_location_hash>`)
-2. Set `combat_phase` to `"initiating"`
-3. Roll initiative for ALL combatants
+When combat begins, you MUST include ALL of these in state_updates:
+1. Generate a unique `combat_session_id` (format: `combat_<unix_timestamp>_<4char_location_hash>`)
+2. Set `in_combat` to `true`
+3. Set `combat_phase` to `"active"` (or `"initiating"` briefly)
 4. Set `combat_trigger` describing what started the encounter
-5. Transition to `active` phase after initiative is established
+5. Roll initiative for ALL combatants and populate `initiative_order` array
+6. **CRITICAL: Populate `combatants` dict** with HP, AC, and type for EVERY combatant:
+   - Key = exact name matching `initiative_order[].name`
+   - Value = `{hp_current, hp_max, ac, type}` (minimum required fields)
+   - Missing combatants dict = **INVALID COMBAT STATE**
+
+**⚠️ VALIDATION RULE:** If `initiative_order` has entries but `combatants` is empty, the combat state is INVALID and will cause cleanup failures.
 
 **state_updates for combat start:**
 ```json
@@ -92,20 +137,24 @@ When combat begins, you MUST:
     "combat_start_timestamp": "2025-12-19T10:00:00Z",
     "combat_trigger": "Goblins ambush the party in the dungeon corridor",
     "initiative_order": [
-      {"id": "pc_kira_001", "name": "Kira (PC)", "initiative": 18, "type": "pc"},
-      {"id": "npc_goblin_leader_001", "name": "Goblin Leader", "initiative": 14, "type": "enemy"},
-      {"id": "npc_goblin_001", "name": "Goblin", "initiative": 8, "type": "enemy"}
+      {"name": "pc_kira_001", "initiative": 18, "type": "pc"},
+      {"name": "npc_goblin_leader_001", "initiative": 14, "type": "enemy"},
+      {"name": "npc_goblin_001", "initiative": 8, "type": "enemy"}
     ],
     "combatants": {
-      "pc_kira_001": {"name": "Kira (PC)", "hp_current": 35, "hp_max": 35, "ac": 16, "type": "pc"},
-      "npc_goblin_leader_001": {"name": "Goblin Leader", "cr": "1", "hp_current": 55, "hp_max": 55, "ac": 15, "category": "elite", "type": "enemy"},
-      "npc_goblin_001": {"name": "Goblin", "cr": "1/4", "hp_current": 11, "hp_max": 11, "ac": 13, "category": "minion", "type": "enemy"}
+      "pc_kira_001": {"hp_current": 35, "hp_max": 35, "ac": 16, "type": "pc"},
+      "npc_goblin_leader_001": {"cr": "1", "hp_current": 55, "hp_max": 55, "ac": 15, "category": "elite", "type": "enemy"},
+      "npc_goblin_001": {"cr": "1/4", "hp_current": 11, "hp_max": 11, "ac": 13, "category": "minion", "type": "enemy"}
     }
   }
 }
 ```
 
-**Note:** The `initiative_order[].id` field MUST match the keys in `combatants` for proper server-side matching. The `combat_session_id` MUST follow the deterministic format `combat_<unix_timestamp>_<4char_location_hash>` (e.g., `combat_1703001234_dung`) to align with server-side matching expectations.
+**CRITICAL: String-ID-Keyed Schema**
+- The `initiative_order[].name` field MUST match the keys in `combatants` dictionary exactly
+- Use `string_id` format: `pc_<name>_###` for PCs, `npc_<type>_###` for NPCs/enemies
+- Example: `pc_kira_001`, `npc_goblin_001`, `npc_goblin_leader_001`
+- Server uses string_id for matching during cleanup - defeated enemies are removed by string_id
 
 ## 🎲 CRITICAL: Combat Dice Protocol
 
@@ -366,16 +415,15 @@ If the AI describes an enemy as "CR 12" or "Level 15+", that enemy MUST have HP 
 
 ## Combat End Protocol
 
-**CRITICAL:** When combat ends, you MUST transition through the `concluding` phase and award ALL rewards.
+**CRITICAL:** When combat ends, you MUST set `combat_phase` to `"ended"` and award ALL rewards.
 
 ### Ending Combat - Required Steps
 
-1. **Set combat_phase to "concluding"**
-2. **Calculate and award XP** (per enemy CR)
-3. **Distribute loot** (roll loot tables for bosses)
-4. **Update resources** (ammunition, spell slots used, HP)
-5. **Set combat_phase to "ended"**
-6. **Set in_combat to false**
+1. **Set in_combat to false**
+2. **Set combat_phase to "ended"**
+3. **Calculate and award XP** (per enemy CR)
+4. **Distribute loot** (roll loot tables for bosses)
+5. **Update resources** (ammunition, spell slots used, HP)
 
 ### Combat End state_updates
 ```json
@@ -387,7 +435,7 @@ If the AI describes an enemy as "CR 12" or "Level 15+", that enemy MUST have HP 
     "combat_end_timestamp": "2025-12-19T10:15:00Z",
     "combat_summary": {
       "rounds_fought": 5,
-      "enemies_defeated": ["Goblin 1", "Goblin 2", "Goblin Boss"],
+      "enemies_defeated": ["npc_goblin_001", "npc_goblin_002", "npc_goblin_boss_001"],
       "xp_awarded": 450,
       "loot_distributed": true
     }
@@ -454,11 +502,11 @@ If the AI describes an enemy as "CR 12" or "Level 15+", that enemy MUST have HP 
 ```json
 {
   "initiative_order": [
-    {"name": "Kira (PC)", "initiative": 18, "type": "pc"},
-    {"name": "Goblin Boss", "initiative": 15, "type": "enemy"},
-    {"name": "Companion Wolf", "initiative": 12, "type": "ally"},
-    {"name": "Goblin 1", "initiative": 8, "type": "enemy"},
-    {"name": "Goblin 2", "initiative": 5, "type": "enemy"}
+    {"name": "pc_kira_001", "initiative": 18, "type": "pc"},
+    {"name": "npc_goblin_boss_001", "initiative": 15, "type": "enemy"},
+    {"name": "npc_wolf_001", "initiative": 12, "type": "ally"},
+    {"name": "npc_goblin_001", "initiative": 8, "type": "enemy"},
+    {"name": "npc_goblin_002", "initiative": 5, "type": "enemy"}
   ]
 }
 ```

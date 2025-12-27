@@ -152,13 +152,16 @@ class TestAgentGameStateIntegration(unittest.TestCase):
 
     def test_agent_with_game_state(self):
         """Test that agents properly receive and use game state."""
-        # Create mock game state
+        # Create mock game state with properly configured combat helper methods
         mock_game_state = Mock()
         mock_game_state.world_data = {
             "world_time": {"year": 1492, "month": "Mirtul", "day": 15},
             "current_location_name": "Waterdeep",
         }
         mock_game_state.combat_state = {"in_combat": False}
+        # CombatAgent.matches_game_state() calls is_in_combat() and get_combat_state()
+        mock_game_state.is_in_combat.return_value = False
+        mock_game_state.get_combat_state.return_value = {"in_combat": False}
 
         # Test story mode agent
         story_agent = get_agent_for_input("I look around", game_state=mock_game_state)

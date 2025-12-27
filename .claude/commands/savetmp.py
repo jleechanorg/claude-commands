@@ -25,6 +25,26 @@ from typing import Dict, List, Optional, Set, Tuple
 # Pre-compile regex for performance
 _SANITIZE_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
 
+# Evidence standards file locations (checked in order)
+_EVIDENCE_STANDARDS_PATHS = [
+    ".claude/skills/evidence-standards.md",  # Project-local
+    "~/.claude/skills/evidence-standards.md",  # User global
+]
+
+
+def _find_evidence_standards() -> str:
+    """Find evidence-standards.md, checking project-local first then ~/.claude/.
+
+    Returns:
+        Path to evidence-standards.md if found, otherwise the default local path.
+    """
+    for path_str in _EVIDENCE_STANDARDS_PATHS:
+        path = Path(path_str).expanduser()
+        if path.exists():
+            return str(path)
+    # Default to local path even if not found (for documentation purposes)
+    return _EVIDENCE_STANDARDS_PATHS[0]
+
 
 def _run_git_command(args: List[str], timeout: int = 5) -> Optional[str]:
     """Run a git command and return stripped stdout or None on failure."""
@@ -350,7 +370,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "run_directory": str(run_dir),
         "sections": saved_sections,
         "artifacts": copied_artifacts,
-        "evidence_standards": ".claude/skills/evidence-standards.md",
+        "evidence_standards": _find_evidence_standards(),
     }
     if git_provenance:
         metadata["git_provenance"] = git_provenance

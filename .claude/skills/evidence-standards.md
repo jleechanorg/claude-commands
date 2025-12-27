@@ -96,7 +96,6 @@ lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
 - `WORLDAI_DEV_MODE`
 - `PORT`
 - `FIREBASE_PROJECT_ID`
-- `CAPTURE_SYSTEM_INSTRUCTION` (if applicable)
 
 ### Evidence Directory Structure
 
@@ -133,15 +132,14 @@ If you claim a specific system instruction or enforcement block was included in 
 **Runtime Capture Mechanism (WorldArchitect.AI):**
 
 ```bash
-# Start server with system instruction capture enabled
-CAPTURE_SYSTEM_INSTRUCTION=true \
+# Start server (system instruction capture is always enabled)
 CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS=120000 \
 WORLDAI_DEV_MODE=true \
 PORT=8005 \
 python -m mvp_site.main serve
 ```
 
-The captured system instruction will appear in `debug_info.system_instruction_excerpt` in API responses.
+The captured system instruction will appear in `debug_info.system_instruction_text` in API responses.
 
 ### For Integration Claims
 
@@ -156,6 +154,63 @@ Evidence MUST include:
 - Reproduction of original bug (before fix)
 - Same scenario with fix applied
 - Different outcome proving fix works
+
+### For LLM/API Behavior Claims
+
+When proving LLM or API behavior, evidence MUST capture the full request/response cycle:
+
+**Required captures:**
+1. **Raw request payload** - The exact input sent to the API/LLM
+2. **Raw response payload** - The exact output returned, before any parsing or transformation
+3. **System instructions/prompts** - The full prompt text sent to the LLM (not just a reference to a file)
+4. **Timestamps** - When each request was made and response received
+
+**Why raw capture matters:**
+- Parsed/transformed responses may hide LLM misbehavior
+- System instruction files may differ from what was actually sent at runtime
+- Summaries can mask edge cases or errors
+
+**Capture format:**
+```
+request_responses.jsonl   # One JSON object per line, each containing:
+{
+  "timestamp": "ISO8601",
+  "request": { ... full request ... },
+  "response": { ... full response ... },
+  "debug_info": {
+    "system_instruction_text": "actual prompt sent",
+    "raw_response_text": "LLM output before parsing"
+  }
+}
+```
+
+**Server configuration:**
+- Enable full request/response logging in your server
+- Set capture limits high enough to avoid truncation (e.g., 80K+ chars for LLM responses)
+- Capture system instructions at runtime, not just file references
+
+### For Test Result Portability
+
+Test output files should be self-contained with embedded provenance:
+
+```json
+{
+  "test_name": "feature_validation",
+  "timestamp": "2025-12-27T05:00:00Z",
+  "provenance": {
+    "git_head": "abc123def456...",
+    "git_branch": "feature-branch",
+    "server_url": "http://localhost:8001"
+  },
+  "steps": [ ... ],
+  "summary": { ... }
+}
+```
+
+**Why embedded provenance:**
+- Evidence bundle can be shared/moved without losing context
+- Validates that test ran against claimed code version
+- External provenance files can get separated from results
 
 ## Bulletproof Evidence Requirements (v3 Lessons)
 

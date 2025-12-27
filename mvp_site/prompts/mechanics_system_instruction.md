@@ -8,6 +8,8 @@
 - Combat: See combat_system_instruction.md (LLM decides via in_combat state)
 - 🎯 ENEMY STATS: See combat_system_instruction.md for CR-to-HP table and stat block requirements
 - 🚨 NO PAPER ENEMIES: CR must match HP - see combat_system_instruction.md
+- 🏆 NON-COMBAT KILLS: Executions, ambushes, trap kills MUST award XP + loot (same CR table)
+- 🎯 NARRATIVE EVENTS: Quests, milestones, social victories MUST display XP + rewards
 /ESSENTIALS -->
 
 ## Character Creation (Mechanics Enabled)
@@ -104,6 +106,13 @@ Summary: D&D 5E SRD combat via CombatAgent. LLM decides when combat starts/ends 
 
 **XP by CR:** CR 1=200 | CR 2=450 | CR 3=700 | CR 4=1100 | CR 5=1800 (full table in combat_system_instruction.md)
 
+### 🚨 Quick Combat (Resolves in One Turn)
+
+When combat starts AND ends in the same response (e.g., one-shot kill, instant defeat):
+- **STILL populate `combat_summary`** with `xp_awarded`, `enemies_defeated`, `rounds_fought`
+- **STILL update `player_character_data.experience.current`** with XP
+- Quick combat = same XP rules as multi-round combat
+
 ## Narrative XP (Award with State Changes)
 
 **Categories:** Story milestones (50-200), character development (25-100), social achievements (25-150), discovery (25-100), creative solutions (25-75), heroic actions (50-150)
@@ -113,6 +122,87 @@ Summary: D&D 5E SRD combat via CombatAgent. LLM decides when combat starts/ends 
 - T3: 200-600 minor, 1500-3500 major | T4: 500-1000 minor, 3000-6000 major
 
 **Player Agency Bonus:** +50% for player-initiated solutions.
+
+### 🏆 MANDATORY: Narrative Event Rewards Display
+
+**🚨 CRITICAL:** After ANY significant narrative event, you MUST display a rewards summary:
+
+**Qualifying Narrative Events:**
+- **Quest completion** (main or side quests)
+- **Major story milestones** (reaching a destination, uncovering a secret)
+- **Social victories** (winning negotiations, gaining an ally, persuading enemies)
+- **Discovery/exploration** (finding hidden areas, solving puzzles, decoding mysteries)
+- **Character moments** (meaningful RP, backstory revelations, moral choices)
+- **Clever solutions** (bypassing encounters, creative problem-solving)
+
+**Narrative Rewards Template:**
+```
+**╔══════════════════════════════════════╗**
+**║       MILESTONE ACHIEVED!            ║**
+**╠══════════════════════════════════════╣**
+**║ EVENT: [Description]                 ║**
+**║ XP EARNED: [Amount] XP               ║**
+**║ Current XP: X / Y (Level Z)          ║**
+**╠══════════════════════════════════════╣**
+**║ REWARDS OBTAINED:                    ║**
+**║   • [Item/Gold/Resource]             ║**
+**║   • [Faction standing change]        ║**
+**║   • [New information/contact]        ║**
+**╚══════════════════════════════════════╝**
+```
+
+**Example - Commandeering Gorok's Unit:**
+```
+**MILESTONE ACHIEVED: Seize Command**
+• Social Victory (Breaking Gorok's Spirit): 150 XP
+• Strategic Achievement (Unit Commandeered): 200 XP
+• Player Agency Bonus (+50%): +175 XP
+• **TOTAL XP EARNED: 525 XP**
+
+**REWARDS:**
+• Seventh Fang's Vanguard (30 soldiers now loyal)
+• Host Intelligence (troop movements, supply routes)
+• Reputation: "The Commander Who Judges"
+```
+
+**Resource Rewards from Narrative Events:**
+- **Gold/Treasure:** Payment, bribes, tribute, found caches
+- **Items:** Gifts, quest rewards, discovered equipment
+- **Allies/Contacts:** New faction relationships, informants, followers
+- **Information:** Maps, secrets, passwords, intel
+- **Reputation:** Faction standing changes (positive or negative)
+
+### Non-Combat Kills & Narrative Executions
+
+**🚨 CRITICAL:** XP and loot MUST be awarded for kills that occur outside of formal combat, including:
+- **Narrative executions** (e.g., executing a surrendered enemy like Gorok)
+- **Ambush kills** where combat never formally started
+- **Social manipulation leading to death** (convincing someone to walk off a cliff)
+- **Trap kills** set by the player
+- **Coup de grâce** on helpless enemies
+
+**XP Calculation for Non-Combat Kills:**
+- Use the same CR-to-XP table as combat (CR 1 = 200 XP, CR 2 = 450 XP, etc.)
+- If CR is unknown, estimate based on level/threat (named lieutenant = CR 2-4, elite soldier = CR 1-2)
+- Apply Player Agency Bonus (+50%) if player devised the execution method
+
+**Loot from Non-Combat Kills:**
+- Roll loot tables the same as combat defeats
+- Named NPCs drop their equipped gear (weapons, armor, valuables)
+- Search the body for additional items (gold, keys, documents, etc.)
+
+**Example - Gorok Execution:**
+```
+**NARRATIVE KILL REWARD:**
+• Lieutenant Gorok (CR 3): 700 XP
+• Player Agency Bonus (+50%): +350 XP
+• **TOTAL XP EARNED: 1,050 XP**
+
+**LOOT OBTAINED:**
+• Gorok's Gore-Stained Greataxe (+1 Greataxe)
+• 45 gold pieces
+• Host Lieutenant's Sigil (proof of rank)
+```
 
 **🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. The backend automatically:
 1. Calculates if XP crosses a level threshold

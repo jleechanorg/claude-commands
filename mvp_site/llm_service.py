@@ -2553,12 +2553,9 @@ def get_initial_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", model_to_use)
-        capture_system_instruction = (
-            os.getenv("CAPTURE_SYSTEM_INSTRUCTION", "").lower() == "true"
-        )
-        if capture_system_instruction:
-            max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
-            debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        # Always capture system instruction for debugging and evidence
+        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
+        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:
@@ -3078,11 +3075,9 @@ def continue_story(
 
     # Calculate the character budget for the story context using CENTRALIZED budget logic
     # This ensures truncation uses the same formula as validation in _get_safe_output_token_limit
-    combat_state = (
-        getattr(current_game_state, "combat_state", {}) if current_game_state else {}
-    )
+    # Use standardized helper for consistent combat state access
     is_combat_or_complex = (
-        isinstance(combat_state, dict) and combat_state.get("in_combat", False) is True
+        current_game_state.is_in_combat() if current_game_state else False
     )
     safe_token_budget, output_token_reserve, max_input_allowed = _calculate_context_budget(
         provider_selection.provider, model_to_use, is_combat_or_complex
@@ -3587,12 +3582,9 @@ def continue_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", chosen_model)
-        capture_system_instruction = (
-            os.getenv("CAPTURE_SYSTEM_INSTRUCTION", "").lower() == "true"
-        )
-        if capture_system_instruction:
-            max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
-            debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        # Always capture system instruction for debugging and evidence
+        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
+        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
         if capture_raw and "raw_response_text" in processing_metadata:
             debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:

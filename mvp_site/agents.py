@@ -468,7 +468,9 @@ class CombatAgent(BaseAgent):
 
         Combat mode is triggered when:
         - game_state is not None
-        - game_state.combat_state.in_combat is True
+        - game_state.is_in_combat() returns True
+
+        Uses standardized GameState.is_in_combat() helper for consistent access.
 
         Args:
             game_state: Current GameState object
@@ -477,13 +479,18 @@ class CombatAgent(BaseAgent):
             True if combat is active and CombatAgent should be used
         """
         if game_state is None:
+            logging_util.debug("⚔️ COMBAT_CHECK: game_state is None, not in combat")
             return False
 
-        combat_state = getattr(game_state, "combat_state", None)
-        if not isinstance(combat_state, dict):
-            return False
+        # Use standardized helper method for consistent combat state access
+        in_combat = game_state.is_in_combat()
+        combat_state = game_state.get_combat_state()
 
-        return combat_state.get("in_combat", False) is True
+        logging_util.info(
+            f"⚔️ COMBAT_CHECK: in_combat={in_combat}, "
+            f"combat_state_keys={list(combat_state.keys())}"
+        )
+        return in_combat
 
     @classmethod
     def matches_input(cls, _user_input: str) -> bool:

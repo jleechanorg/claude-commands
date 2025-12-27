@@ -199,7 +199,10 @@ class TestLLMResponse(unittest.TestCase):
         mock_get_client.return_value = (
             Mock()
         )  # Mock Gemini client to prevent API key error
-        mock_api.return_value = Mock()
+        mock_response = Mock()
+        mock_response._tool_results = []  # Required for len() call in continue_story
+        mock_response._tool_requests_executed = False
+        mock_api.return_value = mock_response
         mock_get_text.return_value = self.sample_raw_response
 
         game_state = GameState(user_id="test-user-123")  # Add required user_id
@@ -245,7 +248,10 @@ class TestLLMResponse(unittest.TestCase):
         """Ensure GOD MODE detection uses raw input and bypasses planning blocks."""
 
         mock_get_client.return_value = Mock()
-        mock_call_llm_api_with_llm_request.return_value = Mock()
+        mock_response = Mock()
+        mock_response._tool_results = []  # Required for len() call in continue_story
+        mock_response._tool_requests_executed = False
+        mock_call_llm_api_with_llm_request.return_value = mock_response
         mock_get_text.return_value = json.dumps(
             {
                 "narrative": "",

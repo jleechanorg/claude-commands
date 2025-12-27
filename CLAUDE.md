@@ -30,6 +30,7 @@ For any AI-driven feature (dice rolls, game decisions, content generation):
 - Stripping tool definitions based on predicted need
 - Pre-computing results the LLM should request
 - "Optimizations" that reduce information available to the LLM
+- **Disabled-by-default environment variables** - If a feature is useful, enable it by default. Never add `if os.getenv("FEATURE") == "true"` guards that require manual activation. Features requested by the user must work out of the box.
 
 ### Session Context Evaluation
 When resuming from prior sessions or inheriting TODOs:
