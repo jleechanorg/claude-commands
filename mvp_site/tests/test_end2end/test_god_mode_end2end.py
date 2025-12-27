@@ -85,7 +85,7 @@ class TestGodModeEnd2End(unittest.TestCase):
                 "thinking": "The player enters the tavern.",
                 "choices": {
                     "talk_bartender": {"text": "Talk to bartender", "description": "Ask about rumors", "risk_level": "low"},
-                    "other_action": {"text": "Other Action", "description": "Do something else", "risk_level": "low"}
+                    "observe_patrons": {"text": "Observe Patrons", "description": "Study the other tavern guests from a discreet corner", "risk_level": "low"}
                 }
             }
         }

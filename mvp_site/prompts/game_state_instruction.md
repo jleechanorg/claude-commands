@@ -143,10 +143,10 @@ Every response MUST be valid JSON with this exact structure:
                 "description": "Try to reason with the creature and avoid combat",
                 "risk_level": "medium"
             },
-            "other_action": {
-                "text": "Other Action",
-                "description": "Describe a different action you'd like to take",
-                "risk_level": "low"
+            "flank_behind_door": {
+                "text": "Flank Behind Door",
+                "description": "Circle around to position yourself behind the iron door for a tactical advantage",
+                "risk_level": "medium"
             }
         }
     },
@@ -338,7 +338,7 @@ Entry 6: AI response   → turn 6, sequence_id=6, scene=3 (Scene #3)
 **REQUIRED in STORY MODE.** Preserves player agency and moves story forward.
 
 **Types:**
-1. **Standard** - 3-5 choices with snake_case keys, always include "other_action"
+1. **Standard** - 3-5 choices with snake_case keys. **ALL choices must be specific, concrete tactical options** - never include generic placeholders like "Other Action" or "Do something else"
 2. **Deep Think** - Triggered by "think/plan/consider/strategize" keywords, includes analysis object with pros/cons/confidence
 
 **Deep Think adds:** `"analysis": {"pros": [], "cons": [], "confidence": "..."}`
@@ -689,7 +689,25 @@ When transitioning OUT of combat (setting `in_combat: false`), you MUST:
 ```json
 {
   "narrative": "Kira deflects the goblin's blow and drives her blade home. The creature crumples.",
-  "planning_block": { "choices": { "loot_body": "Search the goblin", "press_on": "Continue deeper", "other_action": "Describe a different action" } },
+  "planning_block": {
+    "choices": {
+      "loot_body": {
+        "text": "Search the Goblin",
+        "description": "Search the goblin",
+        "risk_level": "low"
+      },
+      "press_on": {
+        "text": "Continue Deeper",
+        "description": "Continue deeper",
+        "risk_level": "medium"
+      },
+      "check_for_traps": {
+        "text": "Check for Traps",
+        "description": "Scan the path ahead for hidden dangers",
+        "risk_level": "low"
+      }
+    }
+  },
   "state_updates": {
     "combat_state": {
       "combatants": {

@@ -545,7 +545,7 @@ After combat ends and rewards are distributed:
       "search_bodies": {"text": "Search the Fallen", "description": "Thoroughly search defeated enemies for loot", "risk_level": "low"},
       "short_rest": {"text": "Take a Short Rest", "description": "Spend 1 hour recovering HP and abilities", "risk_level": "medium"},
       "press_on": {"text": "Press Onward", "description": "Continue deeper into the dungeon", "risk_level": "high"},
-      "other_action": {"text": "Other Action", "description": "Describe what you want to do", "risk_level": "low"}
+      "secure_area": {"text": "Secure the Area", "description": "Check for additional threats and set up a defensive position", "risk_level": "low"}
     }
   },
   "state_updates": {
