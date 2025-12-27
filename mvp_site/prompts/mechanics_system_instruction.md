@@ -218,9 +218,10 @@ When combat starts AND ends in the same response (e.g., one-shot kill, instant d
 - If you receive XP/level values in state, USE them exactly as provided
 - When awarding XP, only set `state_updates.player_character_data.experience.current` - backend handles the rest
 
-**Complete D&D 5e XP Progression Table:**
-| Level | Total XP Required | Level | Total XP Required |
-|-------|-------------------|-------|-------------------|
+**Complete D&D 5e XP Progression Table (XP Threshold TO REACH Each Level):**
+
+| Level | XP to REACH | Level | XP to REACH |
+|-------|-------------|-------|-------------|
 | 1 | 0 | 11 | 85,000 |
 | 2 | 300 | 12 | 100,000 |
 | 3 | 900 | 13 | 120,000 |
@@ -231,6 +232,26 @@ When combat starts AND ends in the same response (e.g., one-shot kill, instant d
 | 8 | 34,000 | 18 | 265,000 |
 | 9 | 48,000 | 19 | 305,000 |
 | 10 | 64,000 | 20 | 355,000 |
+
+**🚨 HOW TO READ THIS TABLE - COMMON MISTAKE WARNING:**
+- The XP column shows the threshold TO REACH that level
+- Example: "Level 8 | 34,000" means **at 34,000 XP you BECOME Level 8**
+- **❌ WRONG:** "To reach level 8, you need 48,000 XP" (48,000 is for level 9!)
+- **✅ RIGHT:** "To reach level 8, you need 34,000 XP"
+- When player asks "how much XP for level X?", look at the row FOR level X, not the row AFTER
+
+**Level-Up Threshold Examples (Common Lookup Reference):**
+| Current Level | XP Needed for NEXT Level | Example |
+|---------------|--------------------------|---------|
+| Level 7 | 34,000 XP | "You need 34,000 total XP to reach Level 8" |
+| Level 8 | 48,000 XP | "You need 48,000 total XP to reach Level 9" |
+| Level 9 | 64,000 XP | "You need 64,000 total XP to reach Level 10" |
+
+**NEVER CALCULATE THRESHOLDS YOURSELF.** When player asks about XP:
+1. Look at their CURRENT level in the state
+2. Find the NEXT level row in the table
+3. Report that number as their threshold
+4. Let backend handle actual level-up logic
 
 **Display:** Backend provides `experience.progress_display` with formatted progress string.
 

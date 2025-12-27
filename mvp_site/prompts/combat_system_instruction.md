@@ -277,7 +277,7 @@ At combat initiation, display a stat block visible to the player:
 **For Minions/Generic enemies (unnamed soldiers, basic monsters):**
 Summarize as a group with average stats:
 ```
-[MINIONS: 4x Goblin Warriors | CR 1/4 | HP: 11 each | AC: 15]
+[MINIONS: 4x Goblin Warriors | CR 1/8 | HP: 11 each | AC: 15]
 ```
 
 ### CR-to-HP Reference Table (AUTHORITATIVE)
@@ -287,35 +287,44 @@ Summarize as a group with average stats:
 | CR | HP Range | Example Creature | Level Equivalent |
 |----|----------|------------------|------------------|
 | 0 | 1-6 | Commoner | -- |
-| 1/8 | 7-10 | Bandit | L1 |
-| 1/4 | 11-24 | Goblin | L1-2 |
-| 1/2 | 25-49 | Orc | L2-3 |
-| 1 | 50-70 | Bugbear | L3-4 |
-| 2 | 71-85 | Ogre | L4-5 |
-| 3 | 86-100 | Manticore | L5-6 |
-| 4 | 101-115 | Ettin | L6-7 |
-| 5 | 116-130 | Troll | L7-8 |
-| 6 | 131-145 | Cyclops | L8-9 |
-| 7 | 146-160 | Stone Giant | L9-10 |
-| 8 | 161-175 | Frost Giant | L10-11 |
-| 9 | 176-190 | Fire Giant | L11-12 |
-| 10 | 191-205 | Stone Golem | L12-13 |
-| 11 | 206-220 | Remorhaz | L13-14 |
-| 12 | 221-235 | Archmage | L14-15 |
-| 13 | 236-250 | Adult White Dragon | L15-16 |
-| 14 | 251-265 | Adult Black Dragon | L16-17 |
-| 15 | 266-280 | Mummy Lord | L17 |
-| 16 | 281-295 | Iron Golem | L17-18 |
-| 17 | 296-310 | Adult Red Dragon | L18-19 |
-| 18 | 311-325 | Demilich | L19 |
-| 19 | 326-340 | Balor | L19-20 |
-| 20 | 341-400 | Ancient White Dragon | L20 |
-| 21+ | 400+ | Ancient Red Dragon, Liches | L20+ Epic |
+| 1/8 | 7-35 | Bandit | L1 |
+| 1/4 | 36-49 | Goblin | L1-2 |
+| 1/2 | 50-70 | Orc | L2-3 |
+| 1 | 71-85 | Bugbear | L3-4 |
+| 2 | 86-100 | Ogre | L4-5 |
+| 3 | 101-115 | Manticore | L5-6 |
+| 4 | 116-130 | Ettin | L6-7 |
+| 5 | 131-145 | Troll | L7-8 |
+| 6 | 146-160 | Cyclops | L8-9 |
+| 7 | 161-175 | Stone Giant | L9-10 |
+| 8 | 176-190 | Frost Giant | L10-11 |
+| 9 | 191-205 | Fire Giant | L11-12 |
+| 10 | 206-220 | Stone Golem | L12-13 |
+| 11 | 221-235 | Remorhaz | L13-14 |
+| 12 | 236-250 | Archmage | L14-15 |
+| 13 | 251-265 | Adult White Dragon | L15-16 |
+| 14 | 266-280 | Adult Black Dragon | L16-17 |
+| 15 | 281-295 | Mummy Lord | L17 |
+| 16 | 296-310 | Iron Golem | L17-18 |
+| 17 | 311-325 | Adult Red Dragon | L18-19 |
+| 18 | 326-340 | Demilich | L19 |
+| 19 | 341-355 | Balor | L19-20 |
+| 20 | 356-400 | Ancient White Dragon | L20 |
+| 21 | 401-445 | Ancient Blue Dragon | Epic |
+| 22 | 446-490 | Ancient Silver Dragon | Epic |
+| 23 | 491-535 | Ancient Gold Dragon | Epic |
+| 24 | 536-580 | Tarrasque (lower bound) | Epic |
+| 25 | 581-625 | Empyrean | Epic |
+| 26 | 626-670 | Solar | Epic |
+| 27 | 671-715 | Primordial Titans | Epic |
+| 28 | 716-760 | Elder Evils | Epic |
+| 29 | 761-805 | Demi-gods | Epic |
+| 30 | 806-850 | Reality-ending threats | Epic |
 
 **🚨 VIOLATION EXAMPLES (NEVER DO THIS):**
-- ❌ "Void-Blighted Paladin (CR 12)" dying to 21 damage → CR 12 = 221+ HP minimum
-- ❌ "Epic-tier General (CR 21+, NPCs can exceed the level 20 player cap)" dying to 124 damage → Epic tier = 400+ HP minimum
-- ❌ "Elite Infiltrators" dying to 8 damage → "Elite" implies CR 2+ = 71+ HP minimum
+- ❌ "Void-Blighted Paladin (CR 12)" dying to 21 damage → CR 12 = 236+ HP minimum
+- ❌ "Epic-tier General (CR 21+, NPCs can exceed the level 20 player cap)" dying to 124 damage → CR 21+ = 401+ HP minimum
+- ❌ "Elite Infiltrators" dying to 8 damage → "Elite" implies CR 2+ = 86+ HP minimum
 
 ### Boss vs Minion Classification
 

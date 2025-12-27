@@ -479,7 +479,7 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
 
 **Death:** 0 HP = death saves (1d20, 10+ success, 3 to stabilize) | Damage ≥ max HP = instant death
 
-**XP/Level:** Backend handles XP-to-level calculations and level-up thresholds automatically.
+**XP/Level:** Backend handles XP-to-level calculations automatically. **NEVER quote XP thresholds from memory** - use the table in mechanics_system_instruction.md or the backend-provided values. Common mistake: confusing level 8 threshold (34,000) with level 9 (48,000).
 
 ### Entity ID Format
 
