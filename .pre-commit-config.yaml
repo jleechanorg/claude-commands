@@ -3,8 +3,9 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
+      # DISABLED: These modify ALL staged files, causing unwanted whitespace changes
+      # - id: trailing-whitespace
+      # - id: end-of-file-fixer
       - id: check-yaml
       - id: check-json
         exclude: ^analysis/test_results/.*\.json$
