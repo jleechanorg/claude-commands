@@ -1631,7 +1631,7 @@ def main():
     parser.add_argument("--list-eligible", action="store_true",
                         help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
     parser.add_argument("--codex-update", action="store_true",
-                        help="Run Codex automation to update first 50 tasks via browser automation")
+                        help="Run Codex automation to update first 200 tasks via browser automation")
 
     args = parser.parse_args()
 
@@ -1644,7 +1644,7 @@ def main():
     monitor = JleechanorgPRMonitor()
 
     if args.codex_update:
-        print("🤖 Running Codex automation (first 50 tasks)...")
+        print("🤖 Running Codex automation (first 200 tasks)...")
 
         # Validate Chrome CDP is accessible before running (auto-starts if needed)
         cdp_ok, cdp_msg = ensure_chrome_cdp_accessible()
@@ -1671,18 +1671,18 @@ def main():
                     "--cdp-port",
                     str(port),
                     "--limit",
-                    "50",
+                    "200",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=600  # 10 minute timeout
+                timeout=2400  # 40 minute timeout (scaled for 200 tasks)
             )
             print(result.stdout)
             if result.stderr:
                 print(result.stderr, file=sys.stderr)
             sys.exit(result.returncode)
         except subprocess.TimeoutExpired:
-            print("❌ Codex automation timed out after 10 minutes")
+            print("❌ Codex automation timed out after 40 minutes")
             sys.exit(1)
         except Exception as e:
             print(f"❌ Failed to run Codex automation: {e}")
