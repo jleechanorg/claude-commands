@@ -16,7 +16,7 @@ from .utils import (
     validate_email_config,
 )
 
-__version__ = "0.2.21"
+__version__ = "0.2.27"
 __author__ = "jleechan"
 __email__ = "jlee@jleechan.org"
 
