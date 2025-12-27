@@ -46,6 +46,31 @@ Dependencies:
 - Custom entity tracking and validation modules
 - Game state management for context
 - Token utilities for cost management
+
+Turn/Scene Terminology (IMPORTANT):
+The codebase uses distinct counting systems for story progression:
+
+- **story_entry_count / turn_number**: Internal counter of ALL story entries
+  (both user inputs and AI responses). Calculated as len(story_context) + 1.
+  Used for: caching, entity manifest tracking, internal sequencing.
+
+- **sequence_id**: Absolute position in story array. Every entry (user + AI)
+  gets an incrementing sequence_id. Technical identifier for ordering.
+
+- **user_scene_number**: User-facing "Scene #X" counter. ONLY increments for
+  AI (Gemini) responses. User inputs get user_scene_number=None.
+  This is what players see as the scene progression.
+
+Relationship (approximate, assumes perfect alternation):
+  user_scene_number ≈ story_entry_count / 2
+
+Example with 6 entries (alternating user/AI):
+  Entry 1: user   → sequence_id=1, user_scene_number=None
+  Entry 2: gemini → sequence_id=2, user_scene_number=1 (Scene #1)
+  Entry 3: user   → sequence_id=3, user_scene_number=None
+  Entry 4: gemini → sequence_id=4, user_scene_number=2 (Scene #2)
+  Entry 5: user   → sequence_id=5, user_scene_number=None
+  Entry 6: gemini → sequence_id=6, user_scene_number=3 (Scene #3)
 """
 
 import json
@@ -844,7 +869,8 @@ def _prepare_entity_tracking(
     Returns:
         tuple: (entity_manifest_text, expected_entities, entity_tracking_instruction)
     """
-    # Extract turn number from story context
+    # story_entry_count (aka turn_number): Total entries in story (user + AI)
+    # NOTE: This is NOT the user-facing "Scene #X" - see module docstring for terminology
     turn_number: int = len(story_context) + 1
 
     # Create entity manifest from current game state (with basic caching)
@@ -3124,6 +3150,7 @@ def continue_story(
     if expected_entities:
         # 1. Entity Pre-Loading (Option 3)
         game_state_dict = current_game_state.to_dict()
+        # story_entry_count (aka turn_number) - see module docstring for turn vs scene terminology
         turn_number = len(truncated_story_context) + 1
         current_location = current_game_state.world_data.get(
             "current_location_name", "Unknown"

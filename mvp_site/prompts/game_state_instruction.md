@@ -10,7 +10,16 @@
 - Planning block: thinking + snake_case choice keys with risk levels
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 - 🚨 ACTION EXECUTION: When player selects a choice, EXECUTE it immediately with matching dice rolls. NO new sub-options.
+- Scene vs Turn: "Scene #X" counts AI responses only. "Turn" counts ALL entries. scene ≈ turn/2.
 /ESSENTIALS -->
+
+### Turn vs Scene vs Sequence (numbering quick reference)
+
+- **turn_number / story_entry_count** — internal counter for every story entry (user + AI). This is the absolute order of exchanges.
+- **sequence_id** — absolute index in the stored story array (mirrors turn_number but can be remapped during replay/restore).
+- **user_scene_number** — user-facing "Scene #X" that increments **only** on AI (Gemini) responses. It stays `null` on user inputs so scenes do not jump by 2.
+
+When the conversation alternates perfectly, `user_scene_number` ≈ `turn_number / 2`. If the player sends multiple messages in a row, the scene number only advances the next time the AI responds.
 
 ## 🎲 CRITICAL: Dice Values Are UNKNOWABLE (Read First)
 
@@ -295,6 +304,33 @@ Timestamp: [Year] [Era], [Month] [Day], [Time]
 Location: [Current Location Name]
 Status: Lvl [X] [Class] | HP: [current]/[max] (Temp: [temp]) | XP: [current]/[needed] | Gold: [X]gp
 Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
+```
+
+## Scene vs Turn Terminology
+
+**IMPORTANT: Understand the distinction between scenes and turns.**
+
+The system uses distinct counting mechanisms for story progression:
+
+| Term | What It Counts | Description |
+|------|----------------|-------------|
+| **Scene #X** | AI responses only | User-facing counter shown as "Scene #751". Only increments when the AI (you) responds. User inputs do NOT increment the scene count. |
+| **Turn** | ALL entries | Internal counter of every story entry (user input + AI response). With perfect alternation, turn ≈ scene × 2. |
+| **sequence_id** | Position in array | Technical identifier for ordering. Every entry gets one (1, 2, 3...). |
+
+**Key Insight:**
+- When user sees "Scene #751", there have been ~1500 total story entries (turns)
+- You are generating scene content; user submissions don't create new scenes
+- This prevents the "increment-by-2" display bug where scenes would skip numbers
+
+**Example with 6 entries:**
+```
+Entry 1: user input    → turn 1, sequence_id=1, scene=None
+Entry 2: AI response   → turn 2, sequence_id=2, scene=1 (Scene #1)
+Entry 3: user input    → turn 3, sequence_id=3, scene=None
+Entry 4: AI response   → turn 4, sequence_id=4, scene=2 (Scene #2)
+Entry 5: user input    → turn 5, sequence_id=5, scene=None
+Entry 6: AI response   → turn 6, sequence_id=6, scene=3 (Scene #3)
 ```
 
 ## Planning Block Protocol

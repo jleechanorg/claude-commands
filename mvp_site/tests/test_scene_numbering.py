@@ -10,7 +10,29 @@ import datetime
 
 
 class TestSceneNumbering(unittest.TestCase):
-    """Test that user-facing scene numbers only increment for AI responses."""
+    """Test that user-facing scene numbers only increment for AI responses.
+
+    Turn/Scene Terminology:
+    -----------------------
+    The codebase uses distinct counting systems for story progression:
+
+    - story_entry_count / turn_number: Internal counter of ALL story entries
+      (user inputs + AI responses). Example: With 6 entries, turn_number = 6.
+
+    - sequence_id: Absolute position in story array. Every entry gets an
+      incrementing sequence_id (1, 2, 3, ...). Technical ordering identifier.
+
+    - user_scene_number: User-facing "Scene #X" counter. ONLY increments for
+      AI (Gemini) responses. User inputs get user_scene_number=None.
+      This is what players see as the scene progression.
+
+    Key relationship (approximate, assumes alternating user/AI):
+      user_scene_number ≈ story_entry_count / 2
+
+    This test validates that user_scene_number correctly tracks only AI
+    responses, preventing the "increment-by-2" bug where scene numbers
+    would appear to skip values when counting all entries.
+    """
 
     def test_user_scene_numbering(self):
         """Test that user_scene_number only increments for gemini responses."""
@@ -19,32 +41,32 @@ class TestSceneNumbering(unittest.TestCase):
             {
                 "actor": "user",
                 "text": "First user input",
-                "timestamp": datetime.datetime.now(),
+                "timestamp": datetime.datetime.now(datetime.UTC),
             },
             {
                 "actor": "gemini",
                 "text": "First AI response",
-                "timestamp": datetime.datetime.now(),
+                "timestamp": datetime.datetime.now(datetime.UTC),
             },
             {
                 "actor": "user",
                 "text": "Second user input",
-                "timestamp": datetime.datetime.now(),
+                "timestamp": datetime.datetime.now(datetime.UTC),
             },
             {
-                "actor": "gemini",
+                "actor": "Gemini",  # mixed case should still increment
                 "text": "Second AI response",
-                "timestamp": datetime.datetime.now(),
+                "timestamp": datetime.datetime.now(datetime.UTC),
             },
             {
                 "actor": "user",
                 "text": "Third user input",
-                "timestamp": datetime.datetime.now(),
+                "timestamp": datetime.datetime.now(datetime.UTC),
             },
             {
                 "actor": "gemini",
                 "text": "Third AI response",
-                "timestamp": datetime.datetime.now(),
+                "timestamp": datetime.datetime.now(datetime.UTC),
             },
         ]
 
@@ -53,7 +75,9 @@ class TestSceneNumbering(unittest.TestCase):
         for i, entry in enumerate(mock_story_entries):
             entry["sequence_id"] = i + 1
 
-            if entry.get("actor") == "gemini":
+            actor_value = entry.get("actor")
+            normalized_actor = actor_value.lower() if isinstance(actor_value, str) else None
+            if normalized_actor == "gemini":
                 user_scene_counter += 1
                 entry["user_scene_number"] = user_scene_counter
             else:

@@ -822,13 +822,17 @@ def get_campaign_by_id(
     )
 
     # 4. Add a sequence ID and convert timestamps AFTER sorting.
-    # Also add user_scene_number that only increments for AI responses
+    # TERMINOLOGY: sequence_id = absolute position (ALL entries)
+    #              user_scene_number = user-facing "Scene #X" (AI responses only)
+    # See llm_service.py module docstring for full turn/scene terminology.
     user_scene_counter: int = 0
     for i, entry in enumerate(all_story_entries):
         entry["sequence_id"] = i + 1
 
-        # Only increment user scene number for AI responses
-        if entry.get("actor") == "gemini":
+        # Only increment user scene number for AI responses (case-insensitive)
+        actor_value = entry.get("actor")
+        normalized_actor = actor_value.lower() if isinstance(actor_value, str) else None
+        if normalized_actor == "gemini":
             user_scene_counter += 1
             entry["user_scene_number"] = user_scene_counter
         else:
