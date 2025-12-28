@@ -8,16 +8,12 @@ import json
 import os
 import subprocess
 import time
-import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any
 
-try:
-    import logging_util
-except ImportError:  # pragma: no cover - fallback when logging_util unavailable
-    logging_util = None
+import logging_util
 
 
 class RecoveryReason(Enum):
@@ -66,12 +62,7 @@ class RecoveryCoordinator:
         self.logs_dir = "/tmp/orchestration_logs"
         self.metrics_file = os.path.join(self.orchestration_dir, "recovery_metrics.json")
 
-        if logging_util:
-            self.logger = logging_util.getLogger(__name__)
-        else:
-            self.logger = logging.getLogger(__name__)
-            if not self.logger.handlers:
-                logging.basicConfig(level=logging.INFO)
+        self.logger = logging_util.getLogger(__name__)
 
         # Create directories
         os.makedirs(self.checkpoints_dir, exist_ok=True)

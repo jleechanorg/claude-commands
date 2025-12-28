@@ -166,7 +166,7 @@ def _compute_sha256(path: Path) -> str:
     return sha256.hexdigest()
 
 
-def _write_checksum(path: Path, base_dir: Optional[Path] = None) -> Path:
+def _write_checksum(path: Path) -> Path:
     """Write SHA256 checksum file per evidence-standards.md.
 
     Uses filename-only for checksums to ensure sha256sum -c works from any directory.
@@ -227,9 +227,7 @@ def _copy_artifact(
     return target
 
 
-def _write_artifact_checksums(
-    path: Path, base_dir: Optional[Path] = None
-) -> List[Path]:
+def _write_artifact_checksums(path: Path) -> List[Path]:
     """Write checksums for an artifact file or all files within a directory.
 
     Skips files that already end with .sha256 to prevent checksum pollution
@@ -240,14 +238,14 @@ def _write_artifact_checksums(
         return []
 
     if path.is_file():
-        return [_write_checksum(path, base_dir)]
+        return [_write_checksum(path)]
 
     checksum_paths: List[Path] = []
     if path.is_dir():
         for file_path in sorted(path.rglob("*")):
             # Skip existing .sha256 files to prevent .sha256.sha256 pollution
             if file_path.is_file() and file_path.suffix != ".sha256":
-                checksum_paths.append(_write_checksum(file_path, base_dir))
+                checksum_paths.append(_write_checksum(file_path))
     return checksum_paths
 
 
@@ -326,7 +324,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--clean-checksums",
         action="store_true",
-        help="Remove existing .sha256 files from artifacts before packaging to prevent checksum layering.",
+        help=(
+            "Remove existing .sha256 files from artifacts before packaging to prevent "
+            "checksum layering. Note: .sha256 files passed directly as artifacts will "
+            "be skipped entirely."
+        ),
     )
     return parser
 
@@ -376,28 +378,31 @@ def main(argv: Optional[List[str]] = None) -> int:
         saved_sections[name] = str(section_path) if section_path else None
         # Write SHA256 checksum per evidence-standards.md
         if section_path:
-            checksum_files.append(_write_checksum(section_path, run_dir))
+            checksum_files.append(_write_checksum(section_path))
 
     copied_artifacts: List[Dict[str, str]] = []
     reserved_targets: Set[Path] = set()
     for artifact in args.artifacts:
         src_path = Path(artifact).expanduser().resolve()
         # Clean existing checksums from source if --clean-checksums is set
-        if args.clean_checksums and src_path.exists():
-            if src_path.is_dir():
-                for sha_file in list(src_path.rglob("*.sha256")):
-                    try:
-                        sha_file.unlink()
-                    except OSError:
-                        pass  # Ignore if can't delete
-            elif src_path.suffix == ".sha256":
-                continue  # Skip .sha256 files entirely in clean mode
+            if args.clean_checksums and src_path.exists():
+                if src_path.is_dir():
+                    for sha_file in list(src_path.rglob("*.sha256")):
+                        try:
+                            sha_file.unlink()
+                        except OSError as cleanup_error:
+                            print(
+                                f"⚠️  Could not remove {sha_file}: {cleanup_error}",
+                                file=sys.stderr,
+                            )
+                elif src_path.suffix == ".sha256":
+                    continue  # Skip .sha256 files entirely in clean mode
         dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
         if dest_path:
             copied_artifacts.append(
                 {"source": str(src_path), "destination": str(dest_path)}
             )
-            checksum_files.extend(_write_artifact_checksums(dest_path, run_dir))
+            checksum_files.extend(_write_artifact_checksums(dest_path))
 
     # Metadata includes git provenance per evidence-standards.md (if available)
     metadata = {
@@ -419,7 +424,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         encoding="utf-8",
     )
     # Checksum for metadata.json
-    checksum_files.append(_write_checksum(metadata_path, run_dir))
+    checksum_files.append(_write_checksum(metadata_path))
 
     summary_lines = [
         "# Evidence Package",
@@ -433,10 +438,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Git provenance in README per evidence-standards.md (if available)
     if git_provenance:
         head_commit = git_provenance.get("head_commit")
-        if head_commit and head_commit != "None":
+        if head_commit is not None:
             summary_lines.append(f"- Commit: {head_commit}")
         origin_main = git_provenance.get("origin_main_commit")
-        if origin_main and origin_main != "None":
+        if origin_main is not None:
             summary_lines.append(f"- Origin/main: {origin_main}")
     summary_lines.append("")
 
@@ -456,14 +461,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     readme_path = run_dir / "README.md"
     readme_path.write_text("\n".join(summary_lines), encoding="utf-8")
     # Checksum for README.md
-    checksum_files.append(_write_checksum(readme_path, run_dir))
+    checksum_files.append(_write_checksum(readme_path))
 
     # Compact output for speed
     print(f"✅ Evidence archived → {run_dir}")
     if git_provenance:
         head_commit = git_provenance.get("head_commit")
         if head_commit:
-            print(f"   Git: {str(head_commit)[:8]}")
+            print(f"   Git: {head_commit[:8]}")
     print(f"   Checksums: {len(checksum_files)} files")
 
     return 0

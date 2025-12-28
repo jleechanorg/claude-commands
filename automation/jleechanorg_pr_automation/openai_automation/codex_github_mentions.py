@@ -21,12 +21,14 @@ Usage:
 
 import argparse
 import asyncio
-import logging
 import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
+
+import logging
+import logging_util
 
 from playwright.async_api import (
     Browser,
@@ -39,11 +41,7 @@ from playwright.async_api import (
 
 from ..cdp_utils import format_cdp_host_for_url as _format_cdp_host_for_url
 
-try:
-    import logging_util
-    logger = logging_util.getLogger(__name__)
-except ImportError:  # pragma: no cover - fallback when logging_util unavailable
-    logger = logging.getLogger(__name__)
+logger = logging_util.getLogger(__name__)
 
 LOG_DIR = Path.home() / ".cache" / "automate_codex_update"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -536,6 +534,8 @@ class CodexGitHubMentionsAutomation:
             except Exception as nav_err:
                 print(f"  ⚠️ Failed to navigate back to Codex after update: {nav_err}")
             return True
+
+        return False
 
     async def process_all_github_mentions(self):
         """Find all GitHub mention tasks and update their PRs."""
