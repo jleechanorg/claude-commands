@@ -30,11 +30,17 @@ from .orchestrated_pr_runner import has_failing_checks, run_fixpr_batch
 
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
-from .cdp_utils import format_cdp_host_for_url as _format_cdp_host_for_url
-from .codex_config import CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX
-from .codex_config import CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX
-from .codex_config import build_comment_intro
+from .codex_config import (
+    CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
+)
+from .codex_config import (
+    CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
+)
+from .codex_config import (
+    build_comment_intro,
+)
 from .utils import json_manager, setup_logging
+from .cdp_utils import format_cdp_host_for_url as _format_cdp_host_for_url
 from orchestration.task_dispatcher import CLI_PROFILES
 
 
