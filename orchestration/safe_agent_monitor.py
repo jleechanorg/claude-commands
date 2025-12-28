@@ -19,9 +19,7 @@ class SafeAgentMonitor:
     def list_agents(self):
         """List all running agent tmux sessions"""
         try:
-            result = subprocess.run(
-                ["tmux", "ls"], check=False, capture_output=True, text=True
-            )
+            result = subprocess.run(["tmux", "ls"], check=False, capture_output=True, text=True)
             if result.returncode == 0:
                 sessions = []
                 for line in result.stdout.strip().split("\n"):
@@ -54,9 +52,7 @@ class SafeAgentMonitor:
 
         if continuous:
             print(f"Continuous monitoring every {interval}s. Press Ctrl+C to stop.")
-            print(
-                "⚠️  This monitor is READ-ONLY - no keyboard input will be sent to agent"
-            )
+            print("⚠️  This monitor is READ-ONLY - no keyboard input will be sent to agent")
             print("=" * 60)
 
         try:
@@ -111,21 +107,13 @@ class SafeAgentMonitor:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Safe agent monitoring without keyboard interference"
-    )
+    parser = argparse.ArgumentParser(description="Safe agent monitoring without keyboard interference")
     parser.add_argument("agent", nargs="?", help="Agent session name to monitor")
     parser.add_argument("-a", "--all", action="store_true", help="Monitor all agents")
     parser.add_argument("-l", "--list", action="store_true", help="List running agents")
-    parser.add_argument(
-        "-c", "--continuous", action="store_true", help="Continuous monitoring"
-    )
-    parser.add_argument(
-        "-i", "--interval", type=int, default=5, help="Update interval in seconds"
-    )
-    parser.add_argument(
-        "-n", "--lines", type=int, default=50, help="Number of lines to show"
-    )
+    parser.add_argument("-c", "--continuous", action="store_true", help="Continuous monitoring")
+    parser.add_argument("-i", "--interval", type=int, default=5, help="Update interval in seconds")
+    parser.add_argument("-n", "--lines", type=int, default=50, help="Number of lines to show")
 
     args = parser.parse_args()
     monitor = SafeAgentMonitor()
@@ -135,9 +123,7 @@ def main():
         if agents:
             print("🤖 Running agents:")
             for agent in agents:
-                status = (
-                    "✅ Active" if monitor.check_agent_status(agent) else "❌ Inactive"
-                )
+                status = "✅ Active" if monitor.check_agent_status(agent) else "❌ Inactive"
                 print(f"  - {agent} {status}")
         else:
             print("No agents currently running")
@@ -147,9 +133,7 @@ def main():
 
     elif args.agent:
         if monitor.check_agent_status(args.agent):
-            monitor.monitor_agent(
-                args.agent, continuous=args.continuous, interval=args.interval
-            )
+            monitor.monitor_agent(args.agent, continuous=args.continuous, interval=args.interval)
         else:
             print(f"❌ Agent '{args.agent}' not found")
             print("\nAvailable agents:")

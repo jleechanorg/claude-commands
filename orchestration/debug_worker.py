@@ -4,6 +4,7 @@
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -62,16 +63,12 @@ def main():
                         payload = msg_dict.get("payload", {})
                         task_desc = payload.get("description", "unknown")
                         task_id = msg_dict.get("id", "no-id")
-                        print(
-                            f"Processing task '{task_desc}' (ID: {task_id}) from queue:queue:{agent_id}"
-                        )
+                        print(f"Processing task '{task_desc}' (ID: {task_id}) from queue:{agent_id}")
 
                         # Create result
                         result = {
                             "task_id": msg_dict.get("id"),
-                            "original_task_id": payload.get(
-                                "task_id", msg_dict.get("id")
-                            ),
+                            "original_task_id": payload.get("task_id", msg_dict.get("id")),
                             "status": "completed",
                             "result": f"Processed by {agent_id}: {payload.get('description')}",
                             "processed_by": agent_id,

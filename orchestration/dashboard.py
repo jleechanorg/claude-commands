@@ -26,9 +26,7 @@ class OrchestrationDashboard:
 
         try:
             # Get list of sessions
-            result = subprocess.run(
-                ["tmux", "list-sessions"], check=False, capture_output=True, text=True
-            )
+            result = subprocess.run(["tmux", "list-sessions"], check=False, capture_output=True, text=True)
 
             if result.returncode == 0:
                 for line in result.stdout.strip().split("\n"):
@@ -55,9 +53,7 @@ class OrchestrationDashboard:
 
                         if create_result.returncode == 0:
                             created_timestamp = int(create_result.stdout.strip())
-                            details["created"] = datetime.fromtimestamp(
-                                created_timestamp
-                            )
+                            details["created"] = datetime.fromtimestamp(created_timestamp)
                             details["uptime"] = datetime.now() - details["created"]
 
                         # Get recent activity
@@ -77,9 +73,7 @@ class OrchestrationDashboard:
 
                         if activity_result.returncode == 0:
                             activity_timestamp = int(activity_result.stdout.strip())
-                            details["last_activity"] = datetime.fromtimestamp(
-                                activity_timestamp
-                            )
+                            details["last_activity"] = datetime.fromtimestamp(activity_timestamp)
 
                         # Get recent output
                         output_result = subprocess.run(
@@ -218,9 +212,7 @@ class OrchestrationDashboard:
             "unknown": "⚪",
         }
 
-        print(
-            f"\n🏥 SYSTEM HEALTH: {status_emoji.get(system_status, '⚪')} {system_status.upper()}"
-        )
+        print(f"\n🏥 SYSTEM HEALTH: {status_emoji.get(system_status, '⚪')} {system_status.upper()}")
 
         if "average_health_score" in health_report:
             print(f"   Health Score: {health_report['average_health_score']:.2f}/1.0")
@@ -230,9 +222,7 @@ class OrchestrationDashboard:
         sessions = self.get_tmux_session_info()
 
         # Only task-coordinator is predefined - all others are dynamic
-        expected_agents = [
-            ("task-coordinator", "🎯 Task Coordinator", "Task coordination")
-        ]
+        expected_agents = [("task-coordinator", "🎯 Task Coordinator", "Task coordination")]
 
         for agent_name, display_name, _description in expected_agents:
             if agent_name in sessions:
@@ -247,11 +237,7 @@ class OrchestrationDashboard:
                 recent_output = session_info.get("recent_output", "")
                 if recent_output:
                     # Get last non-empty line
-                    lines = [
-                        line.strip()
-                        for line in recent_output.split("\n")
-                        if line.strip()
-                    ]
+                    lines = [line.strip() for line in recent_output.split("\n") if line.strip()]
                     if lines:
                         last_line = lines[-1][:60]  # Truncate long lines
                         print(f"      Recent: {last_line}")
@@ -312,11 +298,9 @@ class OrchestrationDashboard:
 
         # Check Redis
         try:
-            redis_result = subprocess.run(
-                ["redis-cli", "ping"], check=False, capture_output=True, text=True
-            )
+            redis_result = subprocess.run(["redis-cli", "ping"], check=False, capture_output=True, text=True)
             redis_status = "🟢 ONLINE" if redis_result.returncode == 0 else "🔴 OFFLINE"
-        except:
+        except (FileNotFoundError, subprocess.SubprocessError, OSError):
             redis_status = "🔴 OFFLINE"
 
         print(f"   Redis: {redis_status}")
@@ -332,13 +316,11 @@ class OrchestrationDashboard:
             if disk_usage.returncode == 0:
                 size = disk_usage.stdout.split()[0]
                 print(f"   Tasks directory: {size}")
-        except:
+        except (FileNotFoundError, subprocess.SubprocessError, OSError):
             pass
 
         print(f"\n{'=' * 80}")
-        print(
-            f"Dashboard refreshes every {self.refresh_interval}s | Press Ctrl+C to exit"
-        )
+        print(f"Dashboard refreshes every {self.refresh_interval}s | Press Ctrl+C to exit")
 
     def run_dashboard(self):
         """Run the dashboard in a loop"""

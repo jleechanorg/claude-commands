@@ -9,6 +9,7 @@ Beyond slash commands, this provides a persistent terminal interface to AI assis
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -69,10 +70,7 @@ class LiveMode:
         """Check if tmux session exists."""
         try:
             result = subprocess.run(
-                ["tmux", "has-session", "-t", session_name],
-                shell=False,
-                capture_output=True,
-                timeout=10
+                ["tmux", "has-session", "-t", session_name], shell=False, capture_output=True, timeout=10
             )
             return result.returncode == 0
         except subprocess.TimeoutExpired:
@@ -87,7 +85,7 @@ class LiveMode:
                 shell=False,
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
 
             if result.returncode != 0:
@@ -98,7 +96,7 @@ class LiveMode:
             if not output:
                 return []
 
-            sessions = output.split('\n')
+            sessions = output.split("\n")
             return [s for s in sessions if s.startswith(self.session_prefix)]
         except subprocess.TimeoutExpired:
             # If tmux hangs, return empty list
@@ -109,7 +107,7 @@ class LiveMode:
         session_name: Optional[str] = None,
         working_dir: Optional[str] = None,
         model: Optional[str] = None,
-        attach: bool = True
+        attach: bool = True,
     ) -> str:
         """
         Start an interactive tmux session with the AI CLI.
@@ -187,11 +185,7 @@ class LiveMode:
             # - tmux executes our command via $SHELL -c "command"
             # - shlex.quote() ensures the command is safe for shell execution
             # This is the correct and secure way to pass commands to tmux.
-            tmux_cmd = [
-                "tmux", "new-session",
-                "-s", session_name,
-                "-c", working_dir
-            ]
+            tmux_cmd = ["tmux", "new-session", "-s", session_name, "-c", working_dir]
 
             if not attach:
                 tmux_cmd.insert(2, "-d")  # Detached mode
@@ -200,10 +194,7 @@ class LiveMode:
             tmux_cmd.append(cmd)
 
             # Add timeout only for detached mode (attached mode blocks until user exits)
-            run_kwargs = {
-                "shell": False,
-                "check": True
-            }
+            run_kwargs = {"shell": False, "check": True}
             if not attach:
                 run_kwargs["timeout"] = 30  # Detached mode should return quickly
 
@@ -246,11 +237,7 @@ class LiveMode:
         print("   (Detach with: Ctrl+b, then d)")
 
         try:
-            subprocess.run(
-                ["tmux", "attach-session", "-t", session_name],
-                shell=False,
-                check=True
-            )
+            subprocess.run(["tmux", "attach-session", "-t", session_name], shell=False, check=True)
         except subprocess.CalledProcessError as e:
             print(f"❌ Error attaching to session: {e}")
             sys.exit(1)
@@ -267,12 +254,7 @@ class LiveMode:
             sys.exit(1)
 
         try:
-            subprocess.run(
-                ["tmux", "kill-session", "-t", session_name],
-                shell=False,
-                check=True,
-                timeout=10
-            )
+            subprocess.run(["tmux", "kill-session", "-t", session_name], shell=False, check=True, timeout=10)
             print(f"✅ Session '{session_name}' killed.")
         except subprocess.TimeoutExpired:
             print("❌ Error: Killing session timed out after 10 seconds.")
@@ -310,7 +292,7 @@ Examples:
 
   # Kill a session
   ai_orch kill my-session
-        """
+        """,
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Commands")
@@ -318,27 +300,13 @@ Examples:
     # Live command
     live_parser = subparsers.add_parser("live", help="Start interactive AI CLI session")
     live_parser.add_argument(
-        "--cli",
-        choices=list(CLI_PROFILES.keys()),
-        default="claude",
-        help="AI CLI to use (default: claude)"
+        "--cli", choices=list(CLI_PROFILES.keys()), default="claude", help="AI CLI to use (default: claude)"
     )
+    live_parser.add_argument("--name", help="Custom session name")
+    live_parser.add_argument("--dir", help="Working directory (default: current directory)")
+    live_parser.add_argument("--model", help="Model to use (default: sonnet for claude)")
     live_parser.add_argument(
-        "--name",
-        help="Custom session name"
-    )
-    live_parser.add_argument(
-        "--dir",
-        help="Working directory (default: current directory)"
-    )
-    live_parser.add_argument(
-        "--model",
-        help="Model to use (default: sonnet for claude)"
-    )
-    live_parser.add_argument(
-        "--detached",
-        action="store_true",
-        help="Start in detached mode (don't attach immediately)"
+        "--detached", action="store_true", help="Start in detached mode (don't attach immediately)"
     )
 
     # List command
@@ -367,10 +335,7 @@ Examples:
     if args.command == "live":
         live_mode = LiveMode(cli_name=args.cli)
         live_mode.start_interactive_session(
-            session_name=args.name,
-            working_dir=args.dir,
-            model=args.model,
-            attach=not args.detached
+            session_name=args.name, working_dir=args.dir, model=args.model, attach=not args.detached
         )
 
     elif args.command == "list":
@@ -396,7 +361,8 @@ Examples:
             live_mode = LiveMode(cli_name=cli_name)
             # Normalize session name before checking (add prefix if missing)
             normalized_name = (
-                session_name if session_name.startswith(live_mode.session_prefix)
+                session_name
+                if session_name.startswith(live_mode.session_prefix)
                 else f"{live_mode.session_prefix}-{session_name}"
             )
             if live_mode._session_exists(normalized_name):
@@ -423,7 +389,8 @@ Examples:
             live_mode = LiveMode(cli_name=cli_name)
             # Normalize session name before checking (add prefix if missing)
             normalized_name = (
-                session_name if session_name.startswith(live_mode.session_prefix)
+                session_name
+                if session_name.startswith(live_mode.session_prefix)
                 else f"{live_mode.session_prefix}-{session_name}"
             )
             if live_mode._session_exists(normalized_name):
