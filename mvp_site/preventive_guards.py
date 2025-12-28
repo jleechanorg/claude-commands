@@ -6,8 +6,11 @@ from typing import Any
 from mvp_site import constants
 from mvp_site.game_state import GameState
 from mvp_site.llm_response import LLMResponse
-
-AUTO_MEMORY_PREFIX = "[auto]"
+from mvp_site.memory_utils import (
+    AUTO_MEMORY_MAX_LENGTH,
+    AUTO_MEMORY_PREFIX,
+    is_duplicate_memory,
+)
 
 
 def enforce_preventive_guards(
@@ -71,8 +74,9 @@ def _ensure_core_memory(state_changes: dict[str, Any], narrative: str) -> None:
         core_memories = []
     snippet = narrative.strip()
     if snippet:
-        entry = f"{AUTO_MEMORY_PREFIX} {snippet}"[:180]
-        if entry not in core_memories:
+        entry = f"{AUTO_MEMORY_PREFIX} {snippet}"[:AUTO_MEMORY_MAX_LENGTH]
+        # Check for duplicates or near-duplicates using centralized logic
+        if not is_duplicate_memory(entry, core_memories):
             core_memories.append(entry)
     custom_state["core_memories"] = core_memories
 

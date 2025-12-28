@@ -114,6 +114,7 @@ from mvp_site.llm_providers import (
 )
 from mvp_site.llm_request import LLMRequest, LLMRequestError
 from mvp_site.llm_response import LLMResponse
+from mvp_site.memory_utils import format_memories_for_prompt, select_memories_by_budget
 
 # Removed old json_input_schema import - now using LLMRequest for structured JSON
 from mvp_site.narrative_response_schema import (
@@ -4282,15 +4283,12 @@ def _get_static_prompt_parts(
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
 
-    core_memories: list[str] = current_game_state.custom_campaign_state.get(
+    all_core_memories: list[str] = current_game_state.custom_campaign_state.get(
         "core_memories", []
     )
-    core_memories_summary: str = ""
-    if core_memories:
-        core_memories_list: str = "\\n".join([f"- {item}" for item in core_memories])
-        core_memories_summary = (
-            f"CORE MEMORY LOG (SUMMARY OF KEY EVENTS):\\n{core_memories_list}\\n\\n"
-        )
+    # Apply token budget to prevent memory overflow
+    selected_memories = select_memories_by_budget(all_core_memories)
+    core_memories_summary: str = format_memories_for_prompt(selected_memories)
 
     checkpoint_block: str = (
         f"[CHECKPOINT BLOCK:]\\n"
