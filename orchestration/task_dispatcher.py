@@ -15,6 +15,7 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+
 from .a2a_integration import TaskPool, get_a2a_status
 from .a2a_monitor import get_monitor
 from .constants import (
@@ -83,7 +84,7 @@ CLI_PROFILES = {
         "restart_env": "GEMINI_RESTART",
         # Stick to configured GEMINI_MODEL (default gemini-3-pro-preview) unless overridden
         # YOLO mode enabled to allow file access outside workspace (user directive)
-        # NOTE: Prompt must come via stdin only; the deprecated -p flag must not be used
+        # NOTE: Prompt must come via stdin (not -p flag which is deprecated and only appends to stdin)
         "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,
@@ -522,7 +523,7 @@ class TaskDispatcher:
             2. --agent-cli flag in task_description
             3. Keyword detection (CLI profile detection_keywords / binary names)
             4. Auto-select if only one CLI is installed
-            5. Default to 'claude' if multiple CLIs available
+            5. Default to 'gemini' if multiple CLIs available
         """
 
         cli_flag = re.search(r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE)
@@ -569,6 +570,8 @@ class TaskDispatcher:
                 available_clis.append(cli_name)
 
         if len(available_clis) == 0:
+            if self._is_testing_mode():
+                return "claude"
             raise RuntimeError(
                 "No agent CLI is available. Please install at least one supported CLI "
                 "(e.g., 'claude', 'codex', 'gemini', or 'cursor-agent') and ensure it is in your PATH."
@@ -577,9 +580,11 @@ class TaskDispatcher:
         if len(available_clis) == 1:
             return available_clis[0]
 
-        # Default to Claude when multiple CLIs are available
-        # Fallback logic: Prioritize Claude CLI as the most tested and supported option.
-        # If Claude is not available, use the first available CLI from the list.
+        # Default to Gemini when multiple CLIs are available
+        # Fallback logic: Prioritize Gemini CLI as the default orchestration agent.
+        # If Gemini is not available, fall back to Claude, then the first available CLI.
+        if "gemini" in available_clis:
+            return "gemini"
         if "claude" in available_clis:
             return "claude"
         return available_clis[0]
@@ -692,6 +697,8 @@ class TaskDispatcher:
         cli_path = shutil.which(cli_binary) or ""
         if not cli_path and cli_name == "claude":
             cli_path = self._ensure_mock_claude_binary() or ""
+        if not cli_path and self._is_testing_mode():
+            cli_path = self._ensure_mock_cli_binary(cli_name) or ""
 
         return cli_path or None
 
@@ -993,6 +1000,11 @@ Complete the task, then use /pr to create a new pull request."""
 
         return [agent_spec]
 
+    @staticmethod
+    def _is_safe_branch_name(branch_name: str) -> bool:
+        """Validate branch name against safe pattern to avoid injection risks."""
+        return bool(re.match(r"^[A-Za-z0-9._/-]+$", branch_name))
+
     def _extract_repository_name(self):
         """Extract repository name from git remote origin URL or fallback to directory name."""
         try:
@@ -1105,7 +1117,7 @@ Complete the task, then use /pr to create a new pull request."""
             print(f"Error calculating agent directory: {e}")
             raise
 
-    def _create_worktree_at_location(self, agent_spec, branch_name):
+    def _create_worktree_at_location(self, agent_spec, branch_name, base_ref="main", create_new_branch=True):
         """Create git worktree at the calculated location."""
         try:
             agent_dir = self._calculate_agent_directory(agent_spec)
@@ -1115,8 +1127,13 @@ Complete the task, then use /pr to create a new pull request."""
             self._ensure_directory_exists(parent_dir)
 
             # Create the worktree
+            command = ["git", "worktree", "add"]
+            if create_new_branch:
+                command.extend(["-b", branch_name, agent_dir, base_ref])
+            else:
+                command.extend([agent_dir, branch_name])
             result = subprocess.run(
-                ["git", "worktree", "add", "-b", branch_name, agent_dir, "main"],
+                command,
                 capture_output=True,
                 text=True,
                 check=False,
@@ -1140,6 +1157,13 @@ Complete the task, then use /pr to create a new pull request."""
         agent_type = agent_spec.get("type", "general")
         capabilities = agent_spec.get("capabilities", [])
         workspace_config = agent_spec.get("workspace_config", {})
+        existing_branch = agent_spec.get("existing_branch")
+        existing_pr = agent_spec.get("existing_pr")
+        mcp_agent_name = agent_spec.get("mcp_agent_name")
+        bead_id = agent_spec.get("bead_id")
+        validation_command = agent_spec.get("validation_command")
+        no_new_pr = bool(agent_spec.get("no_new_pr"))
+        no_new_branch = bool(agent_spec.get("no_new_branch"))
 
         # Refresh actively working agents count from tmux sessions (excludes idle agents)
         # This ensures we check against the actual running system state,
@@ -1272,8 +1296,24 @@ Complete the task, then use /pr to create a new pull request."""
 
             # Create worktree for agent using new location logic
             try:
-                branch_name = f"{agent_name}-work"
-                agent_dir, git_result = self._create_worktree_at_location(agent_spec, branch_name)
+                if no_new_branch and not existing_branch:
+                    print("❌ Branch creation is blocked but no existing branch was provided.")
+                    return False
+
+                if existing_branch:
+                    if not self._is_safe_branch_name(existing_branch):
+                        print(f"❌ Unsafe branch name provided: {existing_branch}")
+                        return False
+                    branch_name = existing_branch
+                    agent_dir, git_result = self._create_worktree_at_location(
+                        agent_spec, branch_name, create_new_branch=False
+                    )
+                else:
+                    branch_name = f"{agent_name}-work"
+                    if not self._is_safe_branch_name(branch_name):
+                        print(f"❌ Unsafe branch name generated: {branch_name}")
+                        return False
+                    agent_dir, git_result = self._create_worktree_at_location(agent_spec, branch_name)
 
                 print(f"🏗️ Created worktree at: {agent_dir}")
 
@@ -1297,11 +1337,24 @@ Complete the task, then use /pr to create a new pull request."""
             # Enhanced prompt with completion enforcement
             # Determine if we're in PR update mode
             pr_context = agent_spec.get("pr_context", {})
+            if existing_pr and not pr_context:
+                pr_context = {"mode": "update", "pr_number": existing_pr}
+                agent_spec["pr_context"] = pr_context
             is_update_mode = pr_context and pr_context.get("mode") == "update"
+            if existing_pr is None and pr_context.get("pr_number"):
+                existing_pr = pr_context.get("pr_number")
 
             attribution_line = cli_profile["generated_with"]
             co_author_line = cli_profile["co_author"]
             attribution_block = f"   {attribution_line}\n\n   Co-Authored-By: {co_author_line}"
+
+            validation_instructions = ""
+            if validation_command:
+                validation_instructions = f"""
+✅ Validation command:
+- Run: {validation_command}
+- Report results in your completion summary.
+"""
 
             if is_update_mode:
                 completion_instructions = f"""
@@ -1323,6 +1376,8 @@ Complete the task, then use /pr to create a new pull request."""
 3. Verify the PR was updated (if PR number exists):
    {f"gh pr view {pr_context.get('pr_number')} --json state,mergeable" if pr_context.get("pr_number") else "echo 'No PR number provided, skipping verification'"}
 
+{validation_instructions}
+
 4. Create completion report:
    echo '{{"agent": "{agent_name}", "status": "completed", "pr_updated": "{pr_context.get("pr_number", "none")}"}}' > {result_file}
 
@@ -1333,6 +1388,32 @@ Complete the task, then use /pr to create a new pull request."""
 4. ✓ Completion report written to {result_file}
 """
             else:
+                if no_new_pr:
+                    pr_creation_instructions = "4. Do NOT create a PR. PR creation is blocked by orchestration."
+                    pr_creation_note = "PR creation is BLOCKED."
+                else:
+                    pr_creation_instructions = """
+4. Decide if a PR is needed based on the context and nature of the work:
+
+   # Use your judgment to determine if a PR is appropriate:
+   # - Did the user ask for review or collaboration?
+   # - Are the changes significant enough to warrant review?
+   # - Would a PR help with tracking or documentation?
+   # - Is this experimental work that needs feedback?
+
+   # If you determine a PR is needed:
+   /pr  # Or use gh pr create with appropriate title and body
+"""
+                    pr_creation_note = """
+Note: PR creation is OPTIONAL - use your judgment based on:
+- User intent: Did they ask for review, collaboration, or visibility?
+- Change significance: Are these substantial modifications?
+- Work nature: Is this exploratory, fixing issues, or adding features?
+- Context: Would a PR help track this work or get feedback?
+
+Trust your understanding of the task context, not keyword patterns.
+"""
+
                 completion_instructions = f"""
 🚨 MANDATORY COMPLETION STEPS:
 
@@ -1350,16 +1431,8 @@ Complete the task, then use /pr to create a new pull request."""
 3. Push your branch:
    git push -u origin {branch_name}
 
-4. Decide if a PR is needed based on the context and nature of the work:
-
-   # Use your judgment to determine if a PR is appropriate:
-   # - Did the user ask for review or collaboration?
-   # - Are the changes significant enough to warrant review?
-   # - Would a PR help with tracking or documentation?
-   # - Is this experimental work that needs feedback?
-
-   # If you determine a PR is needed:
-   /pr  # Or use gh pr create with appropriate title and body
+{pr_creation_instructions}
+{validation_instructions}
 
 5. Create completion report:
    echo '{{"agent": "{agent_name}", "status": "completed", "branch": "{branch_name}"}}' > {result_file}
@@ -1370,13 +1443,7 @@ Complete the task, then use /pr to create a new pull request."""
 3. ✓ Branch pushed to origin
 4. ✓ Completion report written to {result_file}
 
-Note: PR creation is OPTIONAL - use your judgment based on:
-- User intent: Did they ask for review, collaboration, or visibility?
-- Change significance: Are these substantial modifications?
-- Work nature: Is this exploratory, fixing issues, or adding features?
-- Context: Would a PR help track this work or get feedback?
-
-Trust your understanding of the task context, not keyword patterns.
+{pr_creation_note}
 """
 
             full_prompt = f"""{agent_prompt}
@@ -1387,7 +1454,13 @@ Agent Configuration:
 - Focus: {agent_focus}
 - Capabilities: {", ".join(capabilities)}
 - Working Directory: {agent_dir}
-- Branch: {branch_name} {"(updating existing PR)" if is_update_mode else "(fresh from main)"}
+- Branch: {branch_name} {"(existing branch)" if existing_branch else "(fresh from main)"}
+- PR Creation: {"BLOCKED" if no_new_pr else "ALLOWED"}
+- Branch Creation: {"BLOCKED" if no_new_branch else "ALLOWED"}
+{f"- Target PR: #{existing_pr}" if existing_pr else ""}
+{f"- MCP Agent Name: {mcp_agent_name}" if mcp_agent_name else ""}
+{f"- Bead ID: {bead_id}" if bead_id else ""}
+{f"- Validation Command: {validation_command}" if validation_command else ""}
 
 🚨 CRITICAL: {"You are updating an EXISTING PR" if is_update_mode else "You are starting with a FRESH BRANCH from main"}
 - {"Work on the existing PR branch" if is_update_mode else "Your branch contains ONLY the main branch code"}
@@ -1687,40 +1760,46 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             print(f"❌ Failed to create {agent_name}: {e}")
             return False
 
-    def _ensure_mock_claude_binary(self) -> str:
-        """Provide a lightweight mock Claude binary when running in testing mode."""
+    def _is_testing_mode(self) -> bool:
+        """Return True when running in a testing/CI context."""
 
         def _is_truthy(value: str | None) -> bool:
             return (value or "").strip().lower() in {"1", "true", "yes"}
 
-        testing_mode = any(
-            _is_truthy(os.environ.get(env_var)) for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS")
-        )
+        return any(_is_truthy(os.environ.get(env_var)) for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS"))
 
-        if not testing_mode:
+    def _ensure_mock_cli_binary(self, cli_name: str) -> str:
+        """Provide a lightweight mock CLI binary when running in testing mode."""
+
+        if not self._is_testing_mode():
             return ""
 
-        if self._mock_claude_path and os.path.exists(self._mock_claude_path):
+        if cli_name == "claude" and self._mock_claude_path and os.path.exists(self._mock_claude_path):
             return self._mock_claude_path
 
         try:
             mock_dir = Path(tempfile.gettempdir()) / "worldarchitect_ai"
             mock_dir.mkdir(parents=True, exist_ok=True)
-            mock_path = mock_dir / "mock_claude.sh"
+            mock_path = mock_dir / f"mock_{cli_name}.sh"
 
             # Simple shim that echoes the call for logging and exits successfully
-            script_contents = """#!/usr/bin/env bash
-echo "[mock claude] $@"
+            script_contents = f"""#!/usr/bin/env bash
+echo "[mock {cli_name}] $@"
 exit 0
 """
             mock_path.write_text(script_contents, encoding="utf-8")
             os.chmod(mock_path, 0o755)
-            self._mock_claude_path = str(mock_path)
-            print("⚠️ 'claude' command not found. Using mock binary for testing.")
-            return self._mock_claude_path
+            if cli_name == "claude":
+                self._mock_claude_path = str(mock_path)
+            print(f"⚠️ '{cli_name}' command not found. Using mock binary for testing.")
+            return str(mock_path)
         except Exception as exc:
-            print(f"⚠️ Failed to create mock Claude binary: {exc}")
+            print(f"⚠️ Failed to create mock {cli_name} binary: {exc}")
             return ""
+
+    def _ensure_mock_claude_binary(self) -> str:
+        """Provide a lightweight mock Claude binary when running in testing mode."""
+        return self._ensure_mock_cli_binary("claude")
 
 
 if __name__ == "__main__":

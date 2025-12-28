@@ -7,8 +7,8 @@ import sys
 import unittest
 from unittest import TextTestRunner
 
-# Add orchestration directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# Add project root directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
 def run_specific_test(test_name):
@@ -49,17 +49,13 @@ def main():
         help='Specific test to run (e.g., "unified" for test_orchestrate_unified.py)',
     )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument(
-        "--list", "-l", action="store_true", help="List available tests"
-    )
+    parser.add_argument("--list", "-l", action="store_true", help="List available tests")
 
     args = parser.parse_args()
 
     if args.list:
         print("Available tests:")
-        test_files = [
-            f for f in os.listdir(".") if f.startswith("test_") and f.endswith(".py")
-        ]
+        test_files = [f for f in os.listdir(".") if f.startswith("test_") and f.endswith(".py")]
         for test_file in test_files:
             test_name = test_file[5:-3]  # Remove 'test_' prefix and '.py' suffix
             print(f"  {test_name}")

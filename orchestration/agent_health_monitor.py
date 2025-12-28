@@ -7,6 +7,7 @@ Monitors agent health, handles failures, and provides auto-recovery
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -58,12 +59,7 @@ class AgentHealthMonitor:
         """Get list of active tmux sessions"""
         try:
             result = subprocess.run(
-                ["tmux", "list-sessions"],
-                shell=False,
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=30
+                ["tmux", "list-sessions"], shell=False, check=False, capture_output=True, text=True, timeout=30
             )
             if result.returncode == 0:
                 sessions = []
@@ -87,17 +83,13 @@ class AgentHealthMonitor:
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode == 0:
                 output = result.stdout.strip()
                 # Look for signs of activity or Claude prompt
-                return len(output) > 0 and (
-                    "claude" in output.lower()
-                    or "agent" in output.lower()
-                    or ">" in output
-                )
+                return len(output) > 0 and ("claude" in output.lower() or "agent" in output.lower() or ">" in output)
             return False
         except Exception as e:
             print(f"Error checking agent responsiveness: {e}")
@@ -230,16 +222,12 @@ class AgentHealthMonitor:
                     check=True,
                 ).stdout.strip()
             except subprocess.CalledProcessError as e:
-                print(
-                    f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}"
-                )
+                print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
                 project_root = os.path.dirname(self.orchestration_dir)
 
             # Find Claude executable portably
             claude_path = None
-            if "CLAUDE_PATH" in os.environ and os.path.exists(
-                os.environ["CLAUDE_PATH"]
-            ):
+            if "CLAUDE_PATH" in os.environ and os.path.exists(os.environ["CLAUDE_PATH"]):
                 claude_path = os.environ["CLAUDE_PATH"]
             else:
                 claude_path = shutil.which("claude")
@@ -258,13 +246,9 @@ class AgentHealthMonitor:
             if os.path.exists(tmux_config):
                 tmux_cmd.extend(["-f", tmux_config])
             else:
-                print(
-                    f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config"
-                )
+                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
 
-            tmux_cmd.extend(
-                ["new-session", "-d", "-s", agent_name, "-c", project_root, claude_path]
-            )
+            tmux_cmd.extend(["new-session", "-d", "-s", agent_name, "-c", project_root, claude_path])
 
             subprocess.run(tmux_cmd, capture_output=True, check=False)
             # Send initialization message
@@ -297,12 +281,8 @@ class AgentHealthMonitor:
     def get_system_health(self) -> dict[str, Any]:
         """Get overall system health report"""
         total_agents = len(self.expected_agents)
-        active_agents = sum(
-            1 for agent in self.agents.values() if agent.status == "active"
-        )
-        avg_health = sum(agent.health_score for agent in self.agents.values()) / max(
-            total_agents, 1
-        )
+        active_agents = sum(1 for agent in self.agents.values() if agent.status == "active")
+        avg_health = sum(agent.health_score for agent in self.agents.values()) / max(total_agents, 1)
 
         return {
             "timestamp": datetime.now(),
@@ -310,11 +290,7 @@ class AgentHealthMonitor:
             "active_agents": active_agents,
             "stopped_agents": total_agents - active_agents,
             "average_health_score": avg_health,
-            "system_status": "healthy"
-            if avg_health > 0.8
-            else "degraded"
-            if avg_health > 0.5
-            else "critical",
+            "system_status": "healthy" if avg_health > 0.8 else "degraded" if avg_health > 0.5 else "critical",
             "agents": {
                 name: {
                     "status": agent.status,
@@ -330,10 +306,7 @@ class AgentHealthMonitor:
     def auto_recover_failed_agents(self):
         """Automatically recover failed agents"""
         for agent_name, agent in self.agents.items():
-            if (
-                agent.status in ["stopped", "error"]
-                and agent.error_count <= self.max_error_count
-            ):
+            if agent.status in ["stopped", "error"] and agent.error_count <= self.max_error_count:
                 print(f"🔄 Auto-recovering {agent_name}...")
                 self.restart_agent(agent_name)
 
@@ -357,8 +330,7 @@ class AgentHealthMonitor:
             for agent_name, agent_data in health_report["agents"].items():
                 emoji = "✅" if agent_data["status"] == "active" else "❌"
                 f.write(
-                    f"{emoji} {agent_name}: {agent_data['status'].upper()} "
-                    f"(Health: {agent_data['health_score']:.2f})\n"
+                    f"{emoji} {agent_name}: {agent_data['status'].upper()} (Health: {agent_data['health_score']:.2f})\n"
                 )
 
             f.write("\nConnection commands:\n")

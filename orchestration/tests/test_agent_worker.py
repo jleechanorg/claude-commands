@@ -6,6 +6,7 @@ Used to verify A2A integration functionality.
 
 import sys
 import time
+
 from orchestration.message_broker import MessageBroker, MessageType
 
 
@@ -44,19 +45,13 @@ class TestWorkerAgent:
                     print(f"Message type: {message.type} (type: {type(message.type)})")
 
                     # Handle both enum and string types
-                    if (
-                        message.type in (MessageType.TASK_ASSIGNMENT, MessageType.TASK_ASSIGNMENT.value)
-                    ):
+                    if message.type in (MessageType.TASK_ASSIGNMENT, MessageType.TASK_ASSIGNMENT.value):
                         # Process the task
                         result = self._process_task(message)
 
                         # Send result back with proper task correlation
-                        self.broker.send_result(
-                            self.agent_id, message.from_agent, result
-                        )
-                        print(
-                            f"Test worker sent result back to {message.from_agent}: {result}"
-                        )
+                        self.broker.send_result(self.agent_id, message.from_agent, result)
+                        print(f"Test worker sent result back to {message.from_agent}: {result}")
 
                 # Send heartbeat
                 self.broker.heartbeat(self.agent_id)

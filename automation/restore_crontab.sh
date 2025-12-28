@@ -95,7 +95,10 @@ EOF
 # Show what will be restored
 echo -e "${BLUE}📝 Crontab entries to be restored:${NC}"
 echo -e "${YELLOW}──────────────────────────────────────────────────────────────${NC}"
-echo "$CRONTAB_TEMPLATE" | sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g"
+# Show with $HOME expanded so preview matches what will be installed
+echo "$CRONTAB_TEMPLATE" | \
+    sed "s/\$(date +\"%Y-%m-%d %H:%M:%S\")/$(date +"%Y-%m-%d %H:%M:%S")/g" | \
+    sed "s|\$HOME|$HOME|g"
 echo -e "${YELLOW}──────────────────────────────────────────────────────────────${NC}\n"
 
 # Confirm before proceeding (unless --force or --dry-run)
