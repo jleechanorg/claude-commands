@@ -28,7 +28,7 @@ doc = db.collection('users').document(uid).collection('campaigns').document('CAM
 ## Database Structure
 
 ```
-Firestore Database: your-project-db
+Firestore Database: worldarchitecture-ai
 ├── campaigns/                    # ← WRONG: Only test data here (5 campaigns)
 │   └── {test_campaign_id}/
 │
@@ -50,7 +50,7 @@ Firestore Database: your-project-db
 ## User Identification
 - Users are identified by **Firebase Auth UID**, NOT email
 - Primary user: `$USER@gmail.com` → UID: `vnLp2G3m21PJL6kxcuAqmWSOtm73`
-- Test user: `$TEST_USER@gmail.com`
+- Test user: `<your-email@gmail.com>`
 - Use `auth.get_user_by_email()` to convert email → UID
 
 ## Prerequisites
@@ -63,7 +63,7 @@ export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json
 
 ### Service Account Key
 Location: `~/serviceAccountKey.json`
-Project: `your-project-db`
+Project: `worldarchitecture-ai`
 
 ## Using campaign_manager.py
 
@@ -102,10 +102,10 @@ For custom queries, use this pattern:
 
 ```python
 import sys
-sys.path.insert(0, '$PROJECT_ROOT')
+sys.path.insert(0, 'mvp_site')
 
 # CRITICAL: Apply clock skew patch BEFORE importing Firebase
-from your_project.clock_skew_credentials import apply_clock_skew_patch
+from mvp_site.clock_skew_credentials import apply_clock_skew_patch
 apply_clock_skew_patch()
 
 import firebase_admin

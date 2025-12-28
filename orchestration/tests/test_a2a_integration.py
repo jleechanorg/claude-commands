@@ -13,7 +13,6 @@ import sys
 import unittest
 from typing import Any, cast
 
-
 # Skip this entire test module if a2a is not available
 # This approach works with both pytest and unittest
 if __name__ == "__main__":
@@ -22,10 +21,7 @@ if __name__ == "__main__":
     sys.exit(0)
 
 # Check A2A availability using importlib to avoid crashing on missing dependencies
-A2A_AVAILABLE = (
-    importlib.util.find_spec("httpx") is not None
-    and importlib.util.find_spec("a2a") is not None
-)
+A2A_AVAILABLE = importlib.util.find_spec("httpx") is not None and importlib.util.find_spec("a2a") is not None
 
 # Conditional imports - only import if dependencies are available
 if A2A_AVAILABLE:
@@ -78,9 +74,7 @@ class RealA2AClientTester(unittest.TestCase):
                         "protocolVersion",
                     ]
 
-                    missing_fields = [
-                        field for field in required_fields if field not in agent_card
-                    ]
+                    missing_fields = [field for field in required_fields if field not in agent_card]
 
                     if missing_fields:
                         print(f"❌ Missing required A2A fields: {missing_fields}")
@@ -137,11 +131,7 @@ class RealA2AClientTester(unittest.TestCase):
                 payload = {
                     "jsonrpc": "2.0",
                     "method": "sendMessage",
-                    "params": {
-                        "message": {
-                            "parts": [{"text": "orchestrate a simple workflow"}]
-                        }
-                    },
+                    "params": {"message": {"parts": [{"text": "orchestrate a simple workflow"}]}},
                     "id": "test_request_001",
                 }
 
@@ -184,12 +174,8 @@ class RealA2AClientTester(unittest.TestCase):
 
             # Test that we can create real SDK objects
 
-            client = A2AClient(
-                httpx_client=httpx.AsyncClient(), url="http://localhost:8000"
-            )
-            assert hasattr(client, "_httpx_client"), (
-                "Not real A2AClient - missing httpx client"
-            )
+            client = A2AClient(httpx_client=httpx.AsyncClient(), url="http://localhost:8000")
+            assert hasattr(client, "_httpx_client"), "Not real A2AClient - missing httpx client"
 
             print("✅ Real A2A SDK imports successful")
             print("✅ Real A2AClient instance created")
@@ -230,12 +216,9 @@ class RealA2AClientTester(unittest.TestCase):
                 # Check for real SDK markers
                 real_markers = {
                     "has_protocol_version": "protocolVersion" in agent_card,
-                    "proper_capabilities_format": isinstance(
-                        agent_card.get("capabilities"), dict
-                    ),
+                    "proper_capabilities_format": isinstance(agent_card.get("capabilities"), dict),
                     "sdk_generated_structure": all(
-                        field in agent_card
-                        for field in ["protocolVersion", "capabilities", "skills"]
+                        field in agent_card for field in ["protocolVersion", "capabilities", "skills"]
                     ),
                     "proper_skill_format": (
                         isinstance(agent_card.get("skills"), list)
@@ -260,9 +243,7 @@ class RealA2AClientTester(unittest.TestCase):
                     status = "✅" if not present else "❌"
                     print(f"  {status} {marker}: {present}")
 
-                is_real_integration = all(real_markers.values()) and not any(
-                    fake_markers.values()
-                )
+                is_real_integration = all(real_markers.values()) and not any(fake_markers.values())
 
                 return {
                     "success": True,
@@ -305,9 +286,7 @@ async def run_real_a2a_integration_tests():
     print("🎉 REAL A2A INTEGRATION TEST RESULTS")
     print("=" * 70)
 
-    successful_tests = sum(
-        1 for result in test_results.values() if result.get("success", False)
-    )
+    successful_tests = sum(1 for result in test_results.values() if result.get("success", False))
     total_tests = len(test_results)
 
     print(f"✅ Successful tests: {successful_tests}/{total_tests}")

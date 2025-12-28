@@ -9,6 +9,7 @@ all existing tmux-based orchestration functionality.
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -157,9 +158,7 @@ class A2AAgentWrapper:
                 # Check if agent can handle this task
                 if self._can_handle_task(task_requirements):
                     if self.a2a_client.claim_task(task["task_id"]):
-                        logger.info(
-                            f"Agent {self.agent_id} claimed task {task['task_id']}"
-                        )
+                        logger.info(f"Agent {self.agent_id} claimed task {task['task_id']}")
                         self._execute_task(task)
                         break  # Only claim one task at a time
 
@@ -180,9 +179,7 @@ class A2AAgentWrapper:
             task_id = task["task_id"]
             description = task["description"]
 
-            logger.info(
-                f"Agent {self.agent_id} executing task {task_id}: {description}"
-            )
+            logger.info(f"Agent {self.agent_id} executing task {task_id}: {description}")
 
             # Update status to busy
             self.a2a_client.update_status("busy", task_id)
@@ -309,9 +306,7 @@ class A2AAgentWrapper:
         agents = self.a2a_client.discover_agents()
         return [asdict(agent) for agent in agents]
 
-    def publish_task(
-        self, description: str, requirements: list[str] = None
-    ) -> str | None:
+    def publish_task(self, description: str, requirements: list[str] | None = None) -> str | None:
         """Publish a new task for other agents to claim"""
         return self.a2a_client.publish_task(description, requirements)
 
@@ -338,9 +333,7 @@ def create_a2a_wrapper(
     message_handler: Callable | None = None,
 ) -> A2AAgentWrapper:
     """Factory function to create A2A wrapper for agents"""
-    return A2AAgentWrapper(
-        agent_id, agent_type, capabilities, workspace, message_handler
-    )
+    return A2AAgentWrapper(agent_id, agent_type, capabilities, workspace, message_handler)
 
 
 def get_all_agents_status() -> dict[str, Any]:
