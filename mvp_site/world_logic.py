@@ -1111,16 +1111,27 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
         structured_fields.update(prevention_extras)
 
-        # Merge annotated world_events from game state into structured_fields
-        # The annotations (turn_generated, scene_generated) are applied to
-        # updated_game_state_dict, not llm_response_obj, so we need to use
-        # the annotated version for storage and frontend display
-        annotated_world_events = updated_game_state_dict.get("world_events")
-        if annotated_world_events and isinstance(annotated_world_events, dict):
-            structured_fields["world_events"] = annotated_world_events
-            # Also update state_updates if present
+        # Annotate THIS TURN's world_events (from LLM response) with turn/scene numbers
+        # NOTE: We annotate structured_fields directly, NOT game_state.world_events
+        # game_state.world_events is CUMULATIVE (contains all historical events)
+        # structured_fields.world_events contains only THIS TURN's new events
+        # BUG FIX: Previously copied cumulative game_state.world_events causing duplicates
+        llm_world_events = structured_fields.get("world_events")
+        if not llm_world_events:
+            # Check state_updates for world_events
+            llm_world_events = structured_fields.get("state_updates", {}).get(
+                "world_events"
+            )
+
+        if llm_world_events and isinstance(llm_world_events, dict):
+            # Annotate the LLM response's world_events with current turn/scene
+            annotate_world_events_with_turn_scene(
+                {"world_events": llm_world_events}, player_turn
+            )
+            # Ensure it's in structured_fields for storage
+            structured_fields["world_events"] = llm_world_events
             if "state_updates" in structured_fields:
-                structured_fields["state_updates"]["world_events"] = annotated_world_events
+                structured_fields["state_updates"]["world_events"] = llm_world_events
 
         await asyncio.to_thread(
             firestore_service.add_story_entry,

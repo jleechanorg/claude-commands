@@ -311,5 +311,138 @@ class TestLivingWorldEnd2End(unittest.TestCase):
         )
 
 
+    @patch("mvp_site.firestore_service.get_db")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
+    def test_world_events_not_duplicated_across_turns(
+        self, mock_gemini_generate, mock_get_db
+    ):
+        """Test that story entries contain ONLY their turn's world_events, not accumulated.
+
+        BUG REPRODUCTION: The system was copying game_state.world_events (cumulative)
+        to every story entry's structured_fields, causing all turns to show the same
+        world_events regardless of when they were generated.
+
+        EXPECTED: Each turn should only include world_events that were generated on THAT
+        turn (based on turn_generated annotation).
+        """
+        fake_firestore = FakeFirestoreClient()
+        mock_get_db.return_value = fake_firestore
+
+        campaign_id = "test_no_duplicate_world_events"
+
+        # Use helper to set up basic campaign
+        self._setup_fake_firestore_with_campaign(
+            fake_firestore, campaign_id, player_turn=10
+        )
+
+        # Add pre-existing world_events from turn 5 to game_state
+        existing_world_events = {
+            "background_events": [
+                {
+                    "actor": "Old Faction",
+                    "action": "Old action from turn 5",
+                    "turn_generated": 5,
+                    "scene_generated": 3,
+                }
+            ]
+        }
+
+        # Update game_state to include old world_events
+        game_state_ref = (
+            fake_firestore.collection("users")
+            .document(self.test_user_id)
+            .collection("campaigns")
+            .document(campaign_id)
+            .collection("game_states")
+            .document("current_state")
+        )
+        current_state = game_state_ref.get().to_dict()
+        current_state["world_events"] = existing_world_events
+        game_state_ref.set(current_state)
+
+        # LLM returns NEW world_events for turn 11 (this turn)
+        turn_11_response = {
+            "narrative": "The adventure continues on turn 11...",
+            "entities_mentioned": ["Hero"],
+            "location_confirmed": "Town Square",
+            "state_updates": {
+                "world_events": {
+                    "background_events": [
+                        {
+                            "actor": "New Faction",
+                            "action": "New action happening NOW on turn 11",
+                            # Note: turn_generated will be added by annotation
+                        }
+                    ]
+                }
+            },
+            "session_header": "Session 1: Continuing",
+            "planning_block": {"thinking": "New events for this turn."},
+        }
+
+        mock_gemini_generate.return_value = FakeLLMResponse(json.dumps(turn_11_response))
+
+        response = self.client.post(
+            f"/api/campaigns/{campaign_id}/interaction",
+            data=json.dumps({"input": "I explore the town", "mode": "character"}),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
+
+        data = json.loads(response.data)
+
+        # Get world_events from response - check multiple possible locations
+        response_world_events = data.get("world_events") or data.get(
+            "state_updates", {}
+        ).get("world_events")
+
+        # CRITICAL: Assert world_events is present in response
+        # The LLM response includes state_updates.world_events, so the API MUST return it
+        # Without this assertion, the test could pass without validating the fix
+        assert response_world_events is not None, (
+            f"TEST GAP: world_events not found in API response! "
+            f"LLM mock returns world_events but API didn't include them. "
+            f"Response keys: {list(data.keys())}, "
+            f"state_updates: {data.get('state_updates', {})}"
+        )
+
+        # The response should NOT contain the old turn 5 events
+        # It should only contain the new turn 11 events
+        background_events = response_world_events.get("background_events", [])
+        for event in background_events:
+            # OLD BUG: Events from turn 5 were appearing in turn 11's response
+            turn_generated = event.get("turn_generated")
+            if turn_generated is not None:
+                assert turn_generated != 5, (
+                    f"DUPLICATE BUG: Found old event from turn 5 in turn 11 response! "
+                    f"Event: {event}"
+                )
+            # Check for the old action text that shouldn't be there
+            action = event.get("action", "")
+            assert "Old action from turn 5" not in action, (
+                f"DUPLICATE BUG: Old turn 5 event found in turn 11 response! "
+                f"Response world_events should only contain NEW events. "
+                f"Got: {response_world_events}"
+            )
+
+        # Verify the fix works: API response should contain ONLY new events
+        # The game_state may have merged or replaced events (separate concern)
+        # The key bug was old events appearing in the API response when they shouldn't
+        # The new event should be present
+        new_events = [
+            e for e in response_world_events.get("background_events", [])
+            if "New action happening NOW" in e.get("action", "")
+        ]
+        assert new_events, (
+            f"New events should be in API response. Got: {response_world_events}"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
