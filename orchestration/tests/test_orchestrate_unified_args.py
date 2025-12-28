@@ -314,7 +314,6 @@ class TestEnhancedTaskWithContext(unittest.TestCase):
     def test_task_not_enhanced_without_context(self):
         """Test that task description is unchanged without context."""
         task_description = "Simple task"
-        context_content = None
 
         enhanced_task = task_description
 
