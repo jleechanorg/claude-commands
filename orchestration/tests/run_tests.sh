@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 for test_file in "$SCRIPT_DIR"/test_*.py; do
     if [ -f "$test_file" ]; then
         echo "Running $test_file..."
-        python3 "$test_file" -v
+        PYTHONPATH=. python3 "$test_file" -v
         if [ $? -ne 0 ]; then
             echo "❌ Tests failed in $test_file"
             exit 1

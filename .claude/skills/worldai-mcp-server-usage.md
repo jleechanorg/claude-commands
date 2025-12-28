@@ -6,7 +6,7 @@ The Your Project MCP server uses **JSON-RPC 2.0** protocol over HTTP POST.
 
 ## Endpoint
 
-```text
+```
 POST http://localhost:8081/mcp
 Content-Type: application/json
 ```

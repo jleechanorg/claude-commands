@@ -8,10 +8,9 @@ when installed via pip, not just when run from the source directory.
 This would have caught the missing __init__.py bug in openai_automation/
 """
 
-import os
 import subprocess
 import sys
-
+import os
 import jleechanorg_pr_automation
 from jleechanorg_pr_automation.openai_automation import codex_github_mentions
 
@@ -48,8 +47,7 @@ class TestPackagingIntegration:
             ],
             capture_output=True,
             text=True,
-            timeout=10,
-            check=False,
+            timeout=10
         )
 
         assert result.returncode == 0, (
