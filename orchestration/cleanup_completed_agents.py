@@ -9,6 +9,7 @@ Agents are considered completed if they have completion markers in their logs.
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -32,9 +33,9 @@ def get_tmux_sessions() -> List[str]:
             capture_output=True,
             text=True,
             check=True,
-            timeout=30
+            timeout=30,
         )
-        return [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
+        return [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
     except subprocess.CalledProcessError:
         return []
 
@@ -42,20 +43,19 @@ def get_tmux_sessions() -> List[str]:
 def get_task_agent_sessions() -> List[str]:
     """Get list of task-agent-* tmux sessions."""
     all_sessions = get_tmux_sessions()
-    return [s for s in all_sessions if s.startswith('task-agent-')]
+    return [s for s in all_sessions if s.startswith("task-agent-")]
 
 
 def get_all_monitoring_sessions() -> List[str]:
     """Get list of ALL monitoring tmux sessions (orchestration + manual)."""
     all_sessions = get_tmux_sessions()
     monitoring_patterns = [
-        'task-agent-',           # Orchestration agents
-        'gh-comment-monitor-',   # GitHub comment monitoring
-        'copilot-',             # Copilot analysis sessions
-        'agent-',               # Generic agent sessions
+        "task-agent-",  # Orchestration agents
+        "gh-comment-monitor-",  # GitHub comment monitoring
+        "copilot-",  # Copilot analysis sessions
+        "agent-",  # Generic agent sessions
     ]
-    return [s for s in all_sessions
-            if any(s.startswith(pattern) for pattern in monitoring_patterns)]
+    return [s for s in all_sessions if any(s.startswith(pattern) for pattern in monitoring_patterns)]
 
 
 def get_session_timeout(session_name: str) -> int:
@@ -69,10 +69,10 @@ def get_session_timeout(session_name: str) -> int:
     """
     # Pattern-based timeouts (in seconds)
     SESSION_TIMEOUTS = {
-        'task-agent-': 3600,           # 1 hour (orchestration)
-        'gh-comment-monitor-': 14400,  # 4 hours (monitoring)
-        'copilot-': 7200,              # 2 hours (analysis)
-        'agent-': 10800,               # 3 hours (generic agents)
+        "task-agent-": 3600,  # 1 hour (orchestration)
+        "gh-comment-monitor-": 14400,  # 4 hours (monitoring)
+        "copilot-": 7200,  # 2 hours (analysis)
+        "agent-": 10800,  # 3 hours (generic agents)
     }
 
     for pattern, timeout in SESSION_TIMEOUTS.items():
@@ -93,28 +93,18 @@ def check_agent_completion(agent_name: str) -> Dict[str, Any]:
         "Claude exit code: 0",
         "Agent completed successfully",
         '"subtype":"success"',
-        '"is_error":false,"duration_ms"'
+        '"is_error":false,"duration_ms"',
     ]
 
     try:
         # Check last 50 lines for completion markers
-        result = subprocess.run(
-            ["tail", "-50", log_path],
-            shell=False,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        result = subprocess.run(["tail", "-50", log_path], shell=False, capture_output=True, text=True, timeout=30)
 
         log_content = result.stdout.lower()
 
         for marker in completion_markers:
             if marker.lower() in log_content:
-                return {
-                    "completed": True,
-                    "reason": f"found_marker: {marker}",
-                    "log_path": log_path
-                }
+                return {"completed": True, "reason": f"found_marker: {marker}", "log_path": log_path}
 
         # Check if session has been idle (no recent activity)
         stat = os.stat(log_path)
@@ -123,11 +113,7 @@ def check_agent_completion(agent_name: str) -> Dict[str, Any]:
         idle_minutes = (now - last_modified) / 60
 
         if idle_minutes > IDLE_MINUTES_THRESHOLD:  # Minutes of no activity threshold
-            return {
-                "completed": True,
-                "reason": f"idle_for_{idle_minutes:.1f}_minutes",
-                "log_path": log_path
-            }
+            return {"completed": True, "reason": f"idle_for_{idle_minutes:.1f}_minutes", "log_path": log_path}
 
         return {"completed": False, "reason": "still_active"}
 
@@ -152,7 +138,7 @@ def check_session_timeout(session_name: str) -> Dict[str, Any]:
             capture_output=True,
             text=True,
             check=True,
-            timeout=30
+            timeout=30,
         )
 
         if not result.stdout.strip():
@@ -174,14 +160,14 @@ def check_session_timeout(session_name: str) -> Dict[str, Any]:
                 "reason": "timeout_exceeded",
                 "elapsed_seconds": elapsed_seconds,
                 "timeout_seconds": timeout_seconds,
-                "elapsed_hours": elapsed_seconds / 3600
+                "elapsed_hours": elapsed_seconds / 3600,
             }
         else:
             return {
                 "timeout": False,
                 "reason": "within_timeout",
                 "elapsed_seconds": elapsed_seconds,
-                "timeout_seconds": timeout_seconds
+                "timeout_seconds": timeout_seconds,
             }
 
     except Exception as e:
@@ -203,12 +189,7 @@ def cleanup_agent_session(agent_name: str, dry_run: bool = False) -> bool:
     if not dry_run:
         try:
             # Kill the tmux session
-            subprocess.run(
-                ["tmux", "kill-session", "-t", agent_name],
-                shell=False,
-                check=True,
-                timeout=30
-            )
+            subprocess.run(["tmux", "kill-session", "-t", agent_name], shell=False, check=True, timeout=30)
             print(f"  ✅ Session {agent_name} terminated")
             return True
         except subprocess.CalledProcessError as e:
@@ -241,32 +222,38 @@ def cleanup_completed_agents(dry_run: bool = False) -> Dict[str, Any]:
 
     for session in all_monitoring:
         # Check for completion (for task-agent sessions with logs)
-        if session.startswith('task-agent-'):
+        if session.startswith("task-agent-"):
             status = check_agent_completion(session)
             if status["completed"]:
-                completed_agents.append({
-                    "name": session,
-                    "reason": status["reason"],
-                    "log_path": status.get("log_path"),
-                    "cleanup_type": "completion"
-                })
+                completed_agents.append(
+                    {
+                        "name": session,
+                        "reason": status["reason"],
+                        "log_path": status.get("log_path"),
+                        "cleanup_type": "completion",
+                    }
+                )
                 continue
 
         # Check for timeout (all sessions including manual ones)
         timeout_status = check_session_timeout(session)
         if timeout_status["timeout"]:
-            timeout_agents.append({
-                "name": session,
-                "reason": timeout_status["reason"],
-                "elapsed_hours": timeout_status.get("elapsed_hours", 0),
-                "cleanup_type": "timeout"
-            })
+            timeout_agents.append(
+                {
+                    "name": session,
+                    "reason": timeout_status["reason"],
+                    "elapsed_hours": timeout_status.get("elapsed_hours", 0),
+                    "cleanup_type": "timeout",
+                }
+            )
         else:
-            active_agents.append({
-                "name": session,
-                "reason": timeout_status["reason"],
-                "elapsed_seconds": timeout_status.get("elapsed_seconds", 0)
-            })
+            active_agents.append(
+                {
+                    "name": session,
+                    "reason": timeout_status["reason"],
+                    "elapsed_seconds": timeout_status.get("elapsed_seconds", 0),
+                }
+            )
 
     total_to_cleanup = len(completed_agents) + len(timeout_agents)
 
@@ -316,7 +303,7 @@ def cleanup_completed_agents(dry_run: bool = False) -> Dict[str, Any]:
         "cleaned_up": cleanup_success if not dry_run else 0,
         "completed_agents": completed_agents,
         "timeout_agents": timeout_agents,
-        "active_agents": active_agents
+        "active_agents": active_agents,
     }
 
 
@@ -325,15 +312,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="Cleanup completed tmux agents")
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be cleaned up without actually doing it"
+        "--dry-run", action="store_true", help="Show what would be cleaned up without actually doing it"
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output results in JSON format"
-    )
+    parser.add_argument("--json", action="store_true", help="Output results in JSON format")
 
     args = parser.parse_args()
 

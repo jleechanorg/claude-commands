@@ -7,6 +7,7 @@ import sys
 import time
 from dataclasses import asdict
 from datetime import datetime
+
 from orchestration.message_broker import MessageBroker, MessageType, TaskMessage
 
 # Ensure imports work for direct execution
@@ -19,7 +20,7 @@ def test_simple_flow():
 
     # Check if Redis is available
     try:
-        if not hasattr(broker, 'redis_client') or broker.redis_client is None:
+        if not hasattr(broker, "redis_client") or broker.redis_client is None:
             print("⚠️  Redis client not available - skipping Redis-specific test")
             print("✅ Test skipped gracefully (file-based broker in use)")
             return True  # Return True for graceful skip

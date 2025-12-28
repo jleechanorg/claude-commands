@@ -11,9 +11,7 @@ class MockClaude:
     def __init__(self):
         self.call_history = []
         self.responses = {}
-        self.default_response = Mock(
-            returncode=0, stdout="Task completed successfully", stderr=""
-        )
+        self.default_response = Mock(returncode=0, stdout="Task completed successfully", stderr="")
 
     def set_response(self, task_pattern, response):
         """Set mock response for specific task patterns."""
@@ -21,9 +19,7 @@ class MockClaude:
 
     def mock_subprocess_run(self, cmd, **kwargs):
         """Mock subprocess.run for claude commands."""
-        self.call_history.append(
-            {"cmd": cmd, "kwargs": kwargs, "cwd": kwargs.get("cwd", os.getcwd())}
-        )
+        self.call_history.append({"cmd": cmd, "kwargs": kwargs, "cwd": kwargs.get("cwd", os.getcwd())})
 
         if not cmd or "claude" not in str(cmd[0]):
             # Not a claude command, pass through
@@ -102,7 +98,6 @@ class MockClaude:
                 if arg.startswith("@"):
                     return True
         return False
-
 
 
 @contextmanager

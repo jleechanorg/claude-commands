@@ -22,8 +22,10 @@ class TestTaskDispatcherFix(unittest.TestCase):
         # RED: This would have failed before the fix
         task = "Start a test server on port 8082"
         # Mock shutil.which to ensure CLI is available in CI
-        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
-            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
             agents = self.dispatcher.analyze_task_and_create_agents(task)
 
@@ -47,8 +49,10 @@ class TestTaskDispatcherFix(unittest.TestCase):
         """Test that /testserver command creates general agent."""
         task = "tell the agent to start the test server on 8082 instead"
         # Mock shutil.which to ensure CLI is available in CI
-        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
-            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
             agents = self.dispatcher.analyze_task_and_create_agents(task)
 
@@ -63,8 +67,10 @@ class TestTaskDispatcherFix(unittest.TestCase):
         """Test that copilot tasks create general agents."""
         task = "run /copilot on PR 825"
         # Mock shutil.which to ensure CLI is available in CI
-        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
-            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
             agents = self.dispatcher.analyze_task_and_create_agents(task)
 
@@ -90,8 +96,10 @@ class TestTaskDispatcherFix(unittest.TestCase):
         for task in test_tasks:
             with self.subTest(task=task):
                 # Mock shutil.which to ensure CLI is available in CI
-                with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
-                    patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+                with (
+                    patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+                    patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+                ):
                     mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
                     agents = self.dispatcher.analyze_task_and_create_agents(task)
 

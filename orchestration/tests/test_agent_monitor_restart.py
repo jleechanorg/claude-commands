@@ -17,7 +17,7 @@ from unittest.mock import Mock, patch
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-agent_monitor_module = importlib.import_module('agent_monitor')
+agent_monitor_module = importlib.import_module("agent_monitor")
 ConvergeAgentRestarter = agent_monitor_module.ConvergeAgentRestarter
 AgentMonitor = agent_monitor_module.AgentMonitor
 
@@ -49,7 +49,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
         # Create converge state file
         converge_state_file = f"{workspace_path}/converge_state.json"
-        with open(converge_state_file, 'w') as f:
+        with open(converge_state_file, "w") as f:
             json.dump({"status": "converging"}, f)
 
         # Should detect as converge agent
@@ -63,7 +63,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
         # Create progress log file
         progress_log_file = f"{workspace_path}/convergence_progress.log"
-        with open(progress_log_file, 'w') as f:
+        with open(progress_log_file, "w") as f:
             f.write("Progress log entry")
 
         # Should detect as converge agent
@@ -77,7 +77,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
         # Create converge marker file
         marker_file = f"{workspace_path}/.converge_marker"
-        with open(marker_file, 'w') as f:
+        with open(marker_file, "w") as f:
             f.write("converge")
 
         # Should detect as converge agent
@@ -108,18 +108,15 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
         # Create converge marker
         marker_file = f"{workspace_path}/.converge_marker"
-        with open(marker_file, 'w') as f:
+        with open(marker_file, "w") as f:
             f.write("converge")
 
         # Recent activity (within threshold)
         recent_time = datetime.now() - timedelta(minutes=5)
-        status = {
-            "workspace_info": {"last_modified": recent_time},
-            "recent_output": ["Working on task..."]
-        }
+        status = {"workspace_info": {"last_modified": recent_time}, "recent_output": ["Working on task..."]}
 
         # Mock is_converge_agent to return True
-        with patch.object(self.restarter, 'is_converge_agent', return_value=True):
+        with patch.object(self.restarter, "is_converge_agent", return_value=True):
             self.assertFalse(self.restarter.detect_stuck_agent(agent_name, status))
 
     def test_detect_stuck_agent_old_activity_but_progress_indicators(self):
@@ -130,11 +127,11 @@ class TestConvergeAgentRestarter(unittest.TestCase):
         old_time = datetime.now() - timedelta(minutes=15)
         status = {
             "workspace_info": {"last_modified": old_time},
-            "recent_output": ["Processing data...", "Making progress on convergence"]
+            "recent_output": ["Processing data...", "Making progress on convergence"],
         }
 
         # Mock is_converge_agent to return True
-        with patch.object(self.restarter, 'is_converge_agent', return_value=True):
+        with patch.object(self.restarter, "is_converge_agent", return_value=True):
             self.assertFalse(self.restarter.detect_stuck_agent(agent_name, status))
 
     def test_detect_stuck_agent_truly_stuck(self):
@@ -143,13 +140,10 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
         # Old activity and no progress indicators
         old_time = datetime.now() - timedelta(minutes=15)
-        status = {
-            "workspace_info": {"last_modified": old_time},
-            "recent_output": ["Error occurred", "Waiting..."]
-        }
+        status = {"workspace_info": {"last_modified": old_time}, "recent_output": ["Error occurred", "Waiting..."]}
 
         # Mock is_converge_agent to return True
-        with patch.object(self.restarter, 'is_converge_agent', return_value=True):
+        with patch.object(self.restarter, "is_converge_agent", return_value=True):
             # Initialize last_activity tracking
             self.restarter.last_activity[agent_name] = old_time
 
@@ -165,7 +159,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
         # Create command file
         command_file = f"{workspace_path}/original_command.txt"
         expected_command = "/converge Complete all pending tasks"
-        with open(command_file, 'w') as f:
+        with open(command_file, "w") as f:
             f.write(expected_command)
 
         result = self.restarter.get_original_command(agent_name)
@@ -187,7 +181,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
         result = self.restarter.get_original_command(agent_name)
         self.assertEqual(result, "/orch Resume task execution")
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_restart_converge_agent_success(self, mock_subprocess):
         """Test successful agent restart"""
         agent_name = "task-agent-test"
@@ -196,13 +190,13 @@ class TestConvergeAgentRestarter(unittest.TestCase):
         mock_subprocess.return_value = Mock(returncode=0)
 
         # Mock get_original_command
-        with patch.object(self.restarter, 'get_original_command', return_value="/converge test"):
+        with patch.object(self.restarter, "get_original_command", return_value="/converge test"):
             result = self.restarter.restart_converge_agent(agent_name)
 
         self.assertTrue(result)
         self.assertEqual(self.restarter.restart_attempts[agent_name], 1)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_restart_converge_agent_max_attempts_exceeded(self, mock_subprocess):
         """Test restart rejection when max attempts exceeded"""
         agent_name = "task-agent-test"
@@ -216,7 +210,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
         # Should not attempt restart
         mock_subprocess.assert_not_called()
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_restart_converge_agent_subprocess_failure(self, mock_subprocess):
         """Test restart failure due to subprocess error"""
         agent_name = "task-agent-test"
@@ -224,7 +218,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
         # Mock subprocess failure
         mock_subprocess.side_effect = Exception("Subprocess failed")
 
-        with patch.object(self.restarter, 'get_original_command', return_value="/converge test"):
+        with patch.object(self.restarter, "get_original_command", return_value="/converge test"):
             result = self.restarter.restart_converge_agent(agent_name)
 
         self.assertFalse(result)
@@ -247,7 +241,7 @@ class TestAgentMonitorIntegration(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.temp_dir)
 
-    @patch('agent_monitor.ConvergeAgentRestarter')
+    @patch("agent_monitor.ConvergeAgentRestarter")
     def test_agent_monitor_initializes_restarter(self, mock_restarter_class):
         """Test that AgentMonitor properly initializes ConvergeAgentRestarter"""
         mock_restarter = Mock()
@@ -259,14 +253,11 @@ class TestAgentMonitorIntegration(unittest.TestCase):
         mock_restarter_class.assert_called_once_with(monitor.logger)
         self.assertEqual(monitor.restarter, mock_restarter)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_ping_all_agents_triggers_restart_for_stuck_agent(self, mock_subprocess):
         """Test that ping_all_agents triggers restart for stuck converge agents"""
         # Mock tmux list-sessions to return a test agent
-        mock_subprocess.return_value = Mock(
-            returncode=0,
-            stdout="task-agent-stuck-converge"
-        )
+        mock_subprocess.return_value = Mock(returncode=0, stdout="task-agent-stuck-converge")
 
         monitor = AgentMonitor()
 
@@ -275,12 +266,14 @@ class TestAgentMonitorIntegration(unittest.TestCase):
         monitor.restarter.restart_converge_agent = Mock(return_value=True)
 
         # Mock other AgentMonitor methods
-        monitor.ping_agent = Mock(return_value={
-            "agent_name": "task-agent-stuck-converge",
-            "tmux_active": True,
-            "workspace_info": {},
-            "result_info": {}
-        })
+        monitor.ping_agent = Mock(
+            return_value={
+                "agent_name": "task-agent-stuck-converge",
+                "tmux_active": True,
+                "workspace_info": {},
+                "result_info": {},
+            }
+        )
         monitor.log_agent_status = Mock()
 
         # Execute ping_all_agents
@@ -305,7 +298,7 @@ class TestEndToEndIntegration(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.temp_dir)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_full_restart_workflow(self, mock_subprocess):
         """Test complete workflow from detection to restart"""
         agent_name = "task-agent-converge-e2e"
@@ -316,12 +309,12 @@ class TestEndToEndIntegration(unittest.TestCase):
 
         # Create converge marker
         marker_file = f"{workspace_path}/.converge_marker"
-        with open(marker_file, 'w') as f:
+        with open(marker_file, "w") as f:
             f.write("converge")
 
         # Create original command file
         command_file = f"{workspace_path}/original_command.txt"
-        with open(command_file, 'w') as f:
+        with open(command_file, "w") as f:
             f.write("/converge Complete integration tests")
 
         # Mock logger and subprocess
@@ -335,10 +328,7 @@ class TestEndToEndIntegration(unittest.TestCase):
         old_time = datetime.now() - timedelta(minutes=15)
         restarter.last_activity[agent_name] = old_time
 
-        status = {
-            "workspace_info": {"last_modified": old_time},
-            "recent_output": ["Stuck in loop..."]
-        }
+        status = {"workspace_info": {"last_modified": old_time}, "recent_output": ["Stuck in loop..."]}
 
         # Test detection
         self.assertTrue(restarter.is_converge_agent(agent_name))
@@ -352,6 +342,6 @@ class TestEndToEndIntegration(unittest.TestCase):
         self.assertEqual(restarter.restart_attempts[agent_name], 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests with detailed output
     unittest.main(verbosity=2)

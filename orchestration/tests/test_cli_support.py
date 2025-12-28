@@ -4,7 +4,12 @@ import shlex
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, TaskDispatcher, GEMINI_MODEL
+from orchestration.task_dispatcher import (
+    CLI_PROFILES,
+    CURSOR_MODEL,
+    GEMINI_MODEL,
+    TaskDispatcher,
+)
 
 
 class TestAgentCliSelection(unittest.TestCase):
@@ -29,7 +34,9 @@ class TestAgentCliSelection(unittest.TestCase):
         """Keywords should select CLI when no explicit override is provided."""
         with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
             mock_which.side_effect = (
-                lambda command: "/usr/bin/codex" if command == "codex" else "/usr/bin/claude"
+                lambda command: "/usr/bin/codex"
+                if command == "codex"
+                else "/usr/bin/claude"
                 if command == "claude"
                 else None
             )
@@ -201,6 +208,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
             patch("orchestration.task_dispatcher.shutil.which") as mock_which,
             patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None),
+            patch.object(self.dispatcher, "_ensure_mock_cli_binary", return_value=None),
         ):
 
             def which_side_effect(command):
@@ -250,7 +258,9 @@ class TestGeminiCliSupport(unittest.TestCase):
         """Gemini keywords should select CLI when not overridden."""
         with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
             mock_which.side_effect = (
-                lambda command: "/usr/bin/gemini" if command == "gemini" else "/usr/bin/claude"
+                lambda command: "/usr/bin/gemini"
+                if command == "gemini"
+                else "/usr/bin/claude"
                 if command == "claude"
                 else None
             )
@@ -370,6 +380,7 @@ class TestGeminiCliSupport(unittest.TestCase):
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
             patch("orchestration.task_dispatcher.shutil.which") as mock_which,
             patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None),
+            patch.object(self.dispatcher, "_ensure_mock_cli_binary", return_value=None),
         ):
 
             def which_side_effect(command):
@@ -469,8 +480,8 @@ class TestGeminiCliIntegration(unittest.TestCase):
         except KeyError as e:
             self.fail(f"Command template has unknown placeholder: {e}")
 
-    def test_gemini_cli_priority_over_claude_when_explicit(self):
-        """Integration: Explicit --agent-cli gemini overrides default Claude."""
+    def test_claude_cli_priority_over_gemini_when_explicit(self):
+        """Integration: Explicit --agent-cli claude overrides default Gemini."""
         # Mock both CLIs as available
         with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
 
@@ -479,15 +490,15 @@ class TestGeminiCliIntegration(unittest.TestCase):
 
             mock_which.side_effect = which_side_effect
 
-            # Without explicit flag, would default to claude
+            # Without explicit flag, now defaults to gemini
             task_without_flag = "Fix the authentication bug"
             specs_without = self.dispatcher.analyze_task_and_create_agents(task_without_flag)
-            self.assertEqual(specs_without[0]["cli"], "claude")
+            self.assertEqual(specs_without[0]["cli"], "gemini")
 
-            # With explicit flag, should use gemini
-            task_with_flag = "Fix the authentication bug --agent-cli gemini"
+            # With explicit flag, should use claude
+            task_with_flag = "Fix the authentication bug --agent-cli claude"
             specs_with = self.dispatcher.analyze_task_and_create_agents(task_with_flag)
-            self.assertEqual(specs_with[0]["cli"], "gemini")
+            self.assertEqual(specs_with[0]["cli"], "claude")
 
     def test_gemini_detection_case_insensitive(self):
         """Integration: Gemini detection works regardless of case."""

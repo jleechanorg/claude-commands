@@ -1452,19 +1452,33 @@ install_batch_parallel() {
 
 # Function to install Chrome Superpowers MCP server (local plugin)
 install_chrome_superpower_mcp() {
-    local chrome_plugin_path="${HOME}/.claude/plugins/cache/superpowers-chrome/mcp/dist/index.js"
+    local chrome_plugin_path=""
+    local legacy_plugin_path="${HOME}/.claude/plugins/cache/superpowers-chrome/mcp/dist/index.js"
+    local marketplace_plugin_root="${HOME}/.claude/plugins/cache/superpowers-marketplace/superpowers-chrome"
 
     echo -e "${BLUE}  🌐 Installing Chrome Superpowers MCP server...${NC}"
 
     update_stats "TOTAL" "chrome-superpower" ""
 
     # Check if Chrome Superpowers plugin is installed
-    if [ ! -f "$chrome_plugin_path" ]; then
-        echo -e "${YELLOW}  ⚠️ Chrome Superpowers plugin not found at: $chrome_plugin_path${NC}"
+    if [ -f "$legacy_plugin_path" ]; then
+        chrome_plugin_path="$legacy_plugin_path"
+    elif [ -d "$marketplace_plugin_root" ]; then
+        chrome_plugin_path="$(ls -1d "$marketplace_plugin_root"/*/mcp/dist/index.js 2>/dev/null | sort | tail -n 1)"
+    fi
+
+    if [ -z "$chrome_plugin_path" ] || [ ! -f "$chrome_plugin_path" ]; then
+        chrome_plugin_path="$(find "$HOME/.claude/plugins/cache" -path "*/superpowers-chrome/*/mcp/dist/index.js" -print 2>/dev/null | sort | tail -n 1)"
+    fi
+
+    if [ -z "$chrome_plugin_path" ] || [ ! -f "$chrome_plugin_path" ]; then
+        echo -e "${YELLOW}  ⚠️ Chrome Superpowers plugin not found in ~/.claude/plugins/cache${NC}"
         echo -e "${YELLOW}  💡 Install via Claude Code settings or skip this server${NC}"
         update_stats "FAILURE" "chrome-superpower" "DEPENDENCY_MISSING"
         return 0
     fi
+
+    echo -e "${BLUE}  🔎 Using Chrome Superpowers plugin at: $chrome_plugin_path${NC}"
 
     # Check if server already exists
     if server_already_exists "chrome-superpower"; then

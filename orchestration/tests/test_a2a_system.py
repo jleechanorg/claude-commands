@@ -10,8 +10,13 @@ import signal
 import sys
 import tempfile
 import time
+
 from orchestration.a2a_agent_wrapper import create_a2a_wrapper
-from orchestration.a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
+from orchestration.a2a_integration import (
+    A2A_BASE_DIR,
+    create_a2a_client,
+    get_a2a_status,
+)
 from orchestration.a2a_monitor import A2AMonitor
 from orchestration.task_dispatcher import TaskDispatcher
 
@@ -28,12 +33,8 @@ def test_basic_a2a_functionality():
         # Create two test agents with secure temporary directories
         agent1_workspace = tempfile.mkdtemp(prefix="test-agent-1-")
         agent2_workspace = tempfile.mkdtemp(prefix="test-agent-2-")
-        agent1 = create_a2a_client(
-            "test-agent-1", "frontend", ["javascript", "react"], agent1_workspace
-        )
-        agent2 = create_a2a_client(
-            "test-agent-2", "backend", ["python", "api"], agent2_workspace
-        )
+        agent1 = create_a2a_client("test-agent-1", "frontend", ["javascript", "react"], agent1_workspace)
+        agent2 = create_a2a_client("test-agent-2", "backend", ["python", "api"], agent2_workspace)
 
         # Test agent discovery
         agents = agent1.discover_agents()
@@ -59,9 +60,7 @@ def test_basic_a2a_functionality():
         assert len(available_tasks) >= 1, f"Should find published task after {max_retries} attempts"
 
         # Test messaging
-        success = agent1.send_message(
-            "test-agent-2", "status", {"message": "Hello from agent 1"}
-        )
+        success = agent1.send_message("test-agent-2", "status", {"message": "Hello from agent 1"})
         print(f"✓ Messaging: Send success = {success}")
         assert success, "Message should be sent successfully"
 
@@ -71,9 +70,7 @@ def test_basic_a2a_functionality():
 
         # Test system status
         status = get_a2a_status()
-        print(
-            f"✓ System status: {status['agents_online']} agents online, {status['available_tasks']} tasks available"
-        )
+        print(f"✓ System status: {status['agents_online']} agents online, {status['available_tasks']} tasks available")
 
         print("✅ Basic A2A functionality test PASSED")
         return True
@@ -176,9 +173,7 @@ def test_task_dispatcher_integration():
 
         if dispatcher.a2a_enabled:
             # Test A2A task broadcasting
-            task_id = dispatcher.broadcast_task_to_a2a(
-                "Test orchestration task", ["orchestration"]
-            )
+            task_id = dispatcher.broadcast_task_to_a2a("Test orchestration task", ["orchestration"])
             print(f"✓ Task broadcast: {task_id}")
 
             # Test A2A status
@@ -225,6 +220,7 @@ def run_all_tests():
 
 
 if __name__ == "__main__":
+
     def timeout_handler(signum, frame):
         print("⏰ Test timed out after 30 seconds - A2A tests may be hanging")
         sys.exit(3)

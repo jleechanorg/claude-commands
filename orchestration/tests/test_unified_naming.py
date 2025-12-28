@@ -20,20 +20,20 @@ class TestUnifiedNaming(unittest.TestCase):
         """Set up test environment"""
         self.dispatcher = TaskDispatcher()
         # CI-specific: Add small delay to prevent race conditions
-        if os.getenv('GITHUB_ACTIONS'):
+        if os.getenv("GITHUB_ACTIONS"):
             time.sleep(0.1)
 
     def tearDown(self):
         """Clean up test environment"""
         # CI-specific: Ensure proper cleanup with retries
-        if hasattr(self, 'dispatcher'):
+        if hasattr(self, "dispatcher"):
             try:
                 # Clean up any created directories/files
                 self.dispatcher = None
             except Exception:
                 pass
         # CI-specific: Additional delay for cleanup completion
-        if os.getenv('GITHUB_ACTIONS'):
+        if os.getenv("GITHUB_ACTIONS"):
             time.sleep(0.1)
 
     def test_meaningful_pr_naming(self):
@@ -55,11 +55,7 @@ class TestUnifiedNaming(unittest.TestCase):
         # RED: This should fail initially
         task = "Run copilot analysis on PR #123 --workspace-name tmux-pr123 --workspace-root /tmp/.worktrees"
         config = self.dispatcher._extract_workspace_config(task)
-        expected = {
-            "workspace_name": "tmux-pr123",
-            "workspace_root": "/tmp/.worktrees",
-            "pr_number": "123"
-        }
+        expected = {"workspace_name": "tmux-pr123", "workspace_root": "/tmp/.worktrees", "pr_number": "123"}
         self.assertEqual(config, expected)
 
     def test_agent_workspace_name_alignment(self):
@@ -67,19 +63,16 @@ class TestUnifiedNaming(unittest.TestCase):
         # RED: This should fail initially
         agent_spec = {
             "name": "task-agent-test",
-            "workspace_config": {
-                "workspace_name": "tmux-pr456",
-                "workspace_root": "/tmp/.worktrees"
-            }
+            "workspace_config": {"workspace_name": "tmux-pr456", "workspace_root": "/tmp/.worktrees"},
         }
 
         # Mock the git worktree creation to avoid actual filesystem operations
-        with patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
-            with patch('os.makedirs'):
-                with patch('os.path.exists', return_value=True):
+            with patch("os.makedirs"):
+                with patch("os.path.exists", return_value=True):
                     # Mock shutil.which to ensure claude is found in CI
-                    with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'):
+                    with patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"):
                         result = self.dispatcher.create_dynamic_agent(agent_spec)
 
         # Agent name should be updated to match workspace name
@@ -87,8 +80,8 @@ class TestUnifiedNaming(unittest.TestCase):
         self.assertTrue(result, f"FAIL DEBUG: expected True result. {debug_info}")
 
         # Check that git worktree was called with correct directory name
-        git_calls = [call for call in mock_run.call_args_list if 'git' in str(call)]
-        has_tmux_pr456 = any('tmux-pr456' in str(call) for call in git_calls)
+        git_calls = [call for call in mock_run.call_args_list if "git" in str(call)]
+        has_tmux_pr456 = any("tmux-pr456" in str(call) for call in git_calls)
         debug_info = f"mock_calls={mock_run.call_args_list}, git_calls={git_calls}, has_tmux_pr456={has_tmux_pr456}"
         self.assertTrue(has_tmux_pr456, f"FAIL DEBUG: tmux-pr456 not found in git calls. {debug_info}")
 
@@ -106,7 +99,7 @@ class TestUnifiedNaming(unittest.TestCase):
         task = "Fix bug in authentication"
 
         # Mock existing agents to force collision
-        with patch.object(self.dispatcher, '_check_existing_agents', return_value={'task-agent-fix-bug-authen'}):
+        with patch.object(self.dispatcher, "_check_existing_agents", return_value={"task-agent-fix-bug-authen"}):
             # Use a proper mock for the active_agents property
             original_active_agents = self.dispatcher._active_agents
             self.dispatcher._active_agents = set()
@@ -174,8 +167,10 @@ class TestWorkspaceConfiguration(unittest.TestCase):
         task = "Run copilot on PR #555 --workspace-name tmux-pr555 --workspace-root /external/.worktrees"
 
         # Mock shutil.which to ensure CLI is available in CI
-        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
-            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
             agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
 
@@ -189,6 +184,6 @@ class TestWorkspaceConfiguration(unittest.TestCase):
             self.assertEqual(workspace_config["workspace_root"], "/external/.worktrees")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests to confirm they fail (RED phase)
     unittest.main(verbosity=2)

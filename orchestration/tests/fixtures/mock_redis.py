@@ -187,7 +187,6 @@ class MockMessageBroker:
         assert agent_id in self.registered_agents, f"Agent {agent_id} not registered"
 
 
-
 @contextmanager
 def mock_redis_fixture(should_fail=False):
     """Fixture that provides a mock Redis environment."""

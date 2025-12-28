@@ -6,7 +6,7 @@ Playwright-based automation scripts for OpenAI Codex and ChatGPT that connect to
 
 This directory contains scripts for:
 
-1. **Codex GitHub Mentions** - Automate finding and updating "GitHub mention" tasks in Codex
+1. **Codex GitHub Mentions** - Automate finding and updating "github mention" tasks in Codex
 2. **Oracle CLI** - Ask GPT-5 Pro questions via browser (no API key needed)
 3. **Chrome Debug Mode** - Helper to start Chrome with remote debugging
 
@@ -48,13 +48,17 @@ This will:
 
 **Important:** Log in to OpenAI/ChatGPT in this browser window!
 
+Tip: If you run `jleechanorg-pr-monitor --codex-update`, the monitor can auto-start
+Chrome when CDP is unavailable. Configure with `CODEX_CDP_AUTO_START`,
+`CODEX_CDP_HOST`, `CODEX_CDP_PORT`, and `CODEX_CDP_USER_DATA_DIR`.
+
 ---
 
 ## Usage
 
 ### Codex GitHub Mentions Automation
 
-Finds all "GitHub mention" tasks in Codex and clicks "Update PR" on each one.
+Finds all "github mention" tasks in Codex and clicks "Update PR" on each one.
 
 ```bash
 # Make sure Chrome is running in debug mode first!
@@ -75,7 +79,7 @@ python3 scripts/openai_automation/codex_github_mentions.py --verbose
 1. Connects to your existing Chrome browser
 2. Checks if you're logged into OpenAI (prompts if not)
 3. Navigates to Codex
-4. Finds all tasks containing "GitHub mention"
+4. Finds all tasks containing "github mention"
 5. Opens each task and clicks "Update PR"
 6. Reports results
 
@@ -147,7 +151,7 @@ These scripts avoid detection by:
 
 ### Architecture
 
-```text
+```
 ┌─────────────────────┐
 │   Python Script     │
 │  (Playwright)       │
@@ -268,7 +272,7 @@ pkill -f 'remote-debugging-port=9222'
 
 ### Tasks Not Found
 
-**Error:** "No tasks found with 'GitHub mention'"
+**Error:** "No tasks found with 'github mention'"
 
 **Solution:**
 

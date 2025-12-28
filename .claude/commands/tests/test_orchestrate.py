@@ -130,6 +130,103 @@ class TestOrchestrateModule(unittest.TestCase):
                     self.assertEqual(orchestrate.main(), 0)
                     self.assertTrue(mock_run.called)
 
+    def test_optional_argument_forwarding(self):
+        """Test that optional arguments are properly forwarded to unified orchestration."""
+        test_args = [
+            'orchestrate.py',
+            '--context', '/tmp/context.md',
+            '--branch', 'my-branch',
+            '--pr', '123',
+            '--mcp-agent', 'TestAgent',
+            '--bead', 'bead-123',
+            '--validate', 'make test',
+            '--no-new-pr',
+            '--no-new-branch',
+            'My task description'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('subprocess.run') as mock_run:
+                with patch('os.path.exists', return_value=True):
+                    mock_run.return_value.returncode = 0
+                    self.assertEqual(orchestrate.main(), 0)
+
+                    # Verify subprocess was called with all forwarded arguments
+                    self.assertTrue(mock_run.called)
+                    call_args = mock_run.call_args[0][0]
+                    call_str = ' '.join(call_args)
+
+                    # Check all optional arguments are forwarded
+                    self.assertIn('--context', call_str)
+                    self.assertIn('/tmp/context.md', call_str)
+                    self.assertIn('--branch', call_str)
+                    self.assertIn('my-branch', call_str)
+                    self.assertIn('--pr', call_str)
+                    self.assertIn('123', call_str)
+                    self.assertIn('--mcp-agent', call_str)
+                    self.assertIn('TestAgent', call_str)
+                    self.assertIn('--bead', call_str)
+                    self.assertIn('bead-123', call_str)
+                    self.assertIn('--validate', call_str)
+                    self.assertIn('make test', call_str)
+                    self.assertIn('--no-new-pr', call_str)
+                    self.assertIn('--no-new-branch', call_str)
+                    self.assertIn('My task description', call_str)
+
+    def test_partial_optional_arguments(self):
+        """Test forwarding with only some optional arguments."""
+        test_args = [
+            'orchestrate.py',
+            '--branch', 'feature-branch',
+            '--pr', '456',
+            'Update feature'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('subprocess.run') as mock_run:
+                with patch('os.path.exists', return_value=True):
+                    mock_run.return_value.returncode = 0
+                    self.assertEqual(orchestrate.main(), 0)
+
+                    self.assertTrue(mock_run.called)
+                    call_args = mock_run.call_args[0][0]
+                    call_str = ' '.join(call_args)
+
+                    # Check partial arguments are forwarded
+                    self.assertIn('--branch', call_str)
+                    self.assertIn('feature-branch', call_str)
+                    self.assertIn('--pr', call_str)
+                    self.assertIn('456', call_str)
+                    self.assertIn('Update feature', call_str)
+
+    def test_no_new_pr_flag_forwarding(self):
+        """Test that --no-new-pr flag is forwarded correctly."""
+        test_args = ['orchestrate.py', '--no-new-pr', 'Fix bug']
+
+        with patch('sys.argv', test_args):
+            with patch('subprocess.run') as mock_run:
+                with patch('os.path.exists', return_value=True):
+                    mock_run.return_value.returncode = 0
+                    self.assertEqual(orchestrate.main(), 0)
+
+                    self.assertTrue(mock_run.called)
+                    call_args = mock_run.call_args[0][0]
+                    self.assertIn('--no-new-pr', call_args)
+
+    def test_no_new_branch_flag_forwarding(self):
+        """Test that --no-new-branch flag is forwarded correctly."""
+        test_args = ['orchestrate.py', '--no-new-branch', 'Continue work']
+
+        with patch('sys.argv', test_args):
+            with patch('subprocess.run') as mock_run:
+                with patch('os.path.exists', return_value=True):
+                    mock_run.return_value.returncode = 0
+                    self.assertEqual(orchestrate.main(), 0)
+
+                    self.assertTrue(mock_run.called)
+                    call_args = mock_run.call_args[0][0]
+                    self.assertIn('--no-new-branch', call_args)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -58,9 +58,7 @@ class RecoveryCoordinator:
         self.results_dir = "/tmp/orchestration_results"
         self.checkpoints_dir = "/tmp/orchestration_checkpoints"
         self.logs_dir = "/tmp/orchestration_logs"
-        self.metrics_file = os.path.join(
-            self.orchestration_dir, "recovery_metrics.json"
-        )
+        self.metrics_file = os.path.join(self.orchestration_dir, "recovery_metrics.json")
 
         # Create directories
         os.makedirs(self.checkpoints_dir, exist_ok=True)
@@ -248,9 +246,7 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
 
         # Record metrics
         self.metrics["required_recovery"] += 1
-        self.metrics["reason_counts"][reason.value] = (
-            self.metrics["reason_counts"].get(reason.value, 0) + 1
-        )
+        self.metrics["reason_counts"][reason.value] = self.metrics["reason_counts"].get(reason.value, 0) + 1
 
         # Log recovery attempt
         print(f"\n🔄 RECOVERY INITIATED for {agent_name}")
@@ -264,9 +260,7 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
             recovery_success = False
         else:
             # Create recovery agent
-            self.generate_recovery_prompt(
-                agent_name, task_desc, partial_work, strategy
-            )
+            self.generate_recovery_prompt(agent_name, task_desc, partial_work, strategy)
 
             # Use orchestration system to create recovery agent
             recovery_agent_name = f"{agent_name}-recovery-{int(time.time())}"
@@ -331,16 +325,12 @@ Recovery Reasons:
 """
         for reason, count in self.metrics["reason_counts"].items():
             percentage = (
-                (count / self.metrics["required_recovery"]) * 100
-                if self.metrics["required_recovery"] > 0
-                else 0
+                (count / self.metrics["required_recovery"]) * 100 if self.metrics["required_recovery"] > 0 else 0
             )
             report += f"  - {reason}: {count} ({percentage:.1f}%)\n"
 
         if self.metrics["required_recovery"] > 0:
-            avg_recovery_time = (
-                self.metrics["total_recovery_time"] / self.metrics["required_recovery"]
-            )
+            avg_recovery_time = self.metrics["total_recovery_time"] / self.metrics["required_recovery"]
             report += f"\nAverage Recovery Time: {avg_recovery_time:.2f} seconds"
 
         return report

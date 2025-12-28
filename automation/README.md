@@ -22,7 +22,7 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 
 ### How It Works
 
-```text
+```
 ┌─────────────────────────────────────────────────────────────┐
 │  1. DISCOVERY PHASE                                         │
 │  ───────────────────────────────────────────────────────────│
@@ -416,8 +416,12 @@ The automation runs automatically via cron every hour at :15 past the hour (offs
 
 **Note:** The `--codex-update` flag internally calls:
 ```bash
-python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions --limit 50
+python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+  --use-existing-browser --cdp-host 127.0.0.1 --cdp-port 9222 --limit 50
 ```
+
+**Self-healing:** If Chrome CDP is not reachable, `--codex-update` will auto-start Chrome
+using the settings below before retrying.
 
 #### Slash Command Integration
 
@@ -438,6 +442,15 @@ export CODEX_TASK_LIMIT=50  # Default: 50
 
 # Optional: Auth state file location
 # Default: ~/.chatgpt_codex_auth_state.json
+
+# Optional: CDP self-heal controls (used by jleechanorg-pr-monitor --codex-update)
+export CODEX_CDP_AUTO_START=1            # default: 1 (auto-start Chrome if needed)
+export CODEX_CDP_HOST=127.0.0.1          # default: 127.0.0.1
+export CODEX_CDP_PORT=9222               # default: 9222
+export CODEX_CDP_USER_DATA_DIR="$HOME/.chrome-automation-profile"
+export CODEX_CDP_START_TIMEOUT=20        # seconds to wait for CDP after start
+# Optional: custom launcher (script path). Port is appended as final arg.
+export CODEX_CDP_START_SCRIPT="/path/to/start_chrome_debug.sh"
 ```
 
 ### Key Features
@@ -529,12 +542,6 @@ pip install jleechanorg-pr-automation[email]
 
 # For development
 pip install jleechanorg-pr-automation[dev]
-```
-
-**Playwright browser install (required):**
-
-```bash
-python -m playwright install
 ```
 
 ### From Source (Development)
@@ -784,7 +791,18 @@ MIT License - see LICENSE file for details.
 
 ## Changelog
 
-### 0.2.5 (Latest)
+### 0.2.21 (Latest)
+- Refined Codex updater logging and update-branch click handling.
+
+### 0.2.20
+- Stabilized Codex updater tab reuse and recovery when pages close mid-run.
+- Added login verification guard and extra diagnostics for tab switching.
+
+### 0.2.19
+- Fixed `cleanup()` indentation so `CodexGitHubMentionsAutomation` can release resources.
+- Note: version 0.2.18 was intentionally skipped (no public release).
+
+### 0.2.5
 - Enhanced @codex comment detection with actor pattern matching
 - Improved commit marker parsing for multiple AI assistants
 - Added Gemini CLI support for FixPR workflow

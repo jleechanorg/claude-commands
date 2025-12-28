@@ -23,7 +23,20 @@ execution_mode: immediate
 
 **Action**: Coordinate multiple specialized agents to work on complex development tasks with proper task distribution and result integration
 
-**Usage**: `/orchestrate [task_description]`
+**Usage**: `/orchestrate [task_description] [OPTIONS]`
+
+**Options**:
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--agent-cli <cli>` | Agent CLI to use (claude, codex, gemini, cursor). Supports comma-separated chain for fallback (e.g., 'gemini,claude') | gemini |
+| `--context <path>` | Path to markdown file to inject into agent prompt as context | - |
+| `--branch <name>` | Force checkout of specific branch (prevents new branch creation) | - |
+| `--pr <number>` | Existing PR number to update (prevents new PR creation) | - |
+| `--mcp-agent <name>` | Pre-fill agent name for MCP Mail registration | - |
+| `--bead <id>` | Pre-fill bead ID for tracking | - |
+| `--validate <cmd>` | Semantic validation command to run after agent completes | - |
+| `--no-new-pr` | Hard block on PR creation (agents must use existing PR) | false |
+| `--no-new-branch` | Hard block on branch creation (agents must use existing branch) | false |
 
 **CRITICAL RULE**: When `/orchestrate` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
 
@@ -120,15 +133,42 @@ execution_mode: immediate
 - **Task Agents**: Dynamic agents with reuse optimization (`task-agent-*`)
 
 **Examples**:
-- `/orchestrate implement user authentication with tests and documentation`
-- `/orchestrate refactor database layer with migration scripts`
-- `/orchestrate add new feature with full test coverage and UI updates`
-- `/orchestrate optimize performance across frontend and backend`
-- `/orchestrate Run copilot analysis on PR #123 with agent reuse preference`
-- `/orchestrate What's the status?`
-- `/orchestrate connect to sonnet 1`
-- `/orchestrate monitor agents`
-- `/orchestrate help me with connections`
+```bash
+# Basic usage (defaults to gemini CLI)
+/orchestrate implement user authentication with tests and documentation
+/orchestrate refactor database layer with migration scripts
+/orchestrate add new feature with full test coverage and UI updates
+/orchestrate optimize performance across frontend and backend
+
+# Specify agent CLI
+/orchestrate --agent-cli claude "Fix security vulnerability in auth module"
+/orchestrate --agent-cli codex "Generate test suite for API endpoints"
+
+# CLI chain with fallback (tries gemini first, falls back to claude)
+/orchestrate --agent-cli gemini,claude "Implement complex feature X"
+
+# Update existing PR on specific branch
+/orchestrate --branch feature-x --pr 123 "Add more tests and fix review comments"
+
+# With context file injection
+/orchestrate --context ./design-doc.md "Implement according to the design spec"
+
+# With validation command
+/orchestrate --validate "./run_tests.sh" "Fix the failing tests"
+
+# Hard blocks (prevent new PR/branch creation)
+/orchestrate --no-new-pr --branch main "Update documentation only"
+/orchestrate --no-new-branch --branch feature-y "Continue work on feature-y"
+
+# Combined options
+/orchestrate --agent-cli gemini --context ./spec.md --pr 456 --validate "pytest" "Implement feature from spec"
+
+# Status and monitoring
+/orchestrate What's the status?
+/orchestrate connect to sonnet 1
+/orchestrate monitor agents
+/orchestrate help me with connections
+```
 
 **Natural Language Commands**:
 - **Task Delegation**: "Build X", "Create Y", "Implement Z urgently"

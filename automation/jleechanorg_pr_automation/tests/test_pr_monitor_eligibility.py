@@ -2,7 +2,6 @@ import unittest
 
 from _pytest.capture import CaptureFixture
 from _pytest.monkeypatch import MonkeyPatch
-
 from automation.jleechanorg_pr_automation import jleechanorg_pr_monitor as mon
 
 FAILED_PR_NUMBER = 2
@@ -13,9 +12,7 @@ def codex_marker(monitor: mon.JleechanorgPRMonitor, token: str) -> str:
     return f"{monitor.CODEX_COMMIT_MARKER_PREFIX}{token}{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
 
 
-def test_list_actionable_prs_conflicts_and_failing(
-    monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]
-) -> None:
+def test_list_actionable_prs_conflicts_and_failing(monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]) -> None:
     monitor = mon.JleechanorgPRMonitor()
 
     sample_prs = [
@@ -46,7 +43,7 @@ class TestBotCommentDetection(unittest.TestCase):
     def setUp(self) -> None:
         self.monitor = mon.JleechanorgPRMonitor()
 
-    def test_detects_new_github_actions_bot_comment(self) -> None:
+    def test_identifies_new_github_actions_bot_comment(self) -> None:
         """Should detect new comment from github-actions[bot] after Codex comment."""
         comments = [
             {
@@ -63,7 +60,7 @@ class TestBotCommentDetection(unittest.TestCase):
 
         assert self.monitor._has_new_bot_comments_since_codex(comments)  # noqa: SLF001
 
-    def test_detects_new_dependabot_comment(self) -> None:
+    def test_identifies_new_dependabot_comment(self) -> None:
         """Should detect new comment from dependabot[bot] after Codex comment."""
         comments = [
             {
@@ -97,7 +94,7 @@ class TestBotCommentDetection(unittest.TestCase):
 
         assert not self.monitor._has_new_bot_comments_since_codex(comments)  # noqa: SLF001
 
-    def test_detects_bot_comment_without_prior_codex_comment(self) -> None:
+    def test_identifies_bot_comment_without_prior_codex_comment(self) -> None:
         """Should treat any bot comment as new when no Codex automation comment exists."""
         comments = [
             {
@@ -131,8 +128,8 @@ class TestBotCommentDetection(unittest.TestCase):
 
         assert not self.monitor._has_new_bot_comments_since_codex(comments)  # noqa: SLF001
 
-    def test_excludes_coderabbitai_bot_comments(self) -> None:
-        """Should NOT count coderabbitai[bot] as a new bot comment to process."""
+    def test_identifies_coderabbitai_bot_comments(self) -> None:
+        """Should count coderabbitai[bot] as a new bot comment to process."""
         comments = [
             {
                 "author": {"login": "jleechan"},
@@ -146,7 +143,7 @@ class TestBotCommentDetection(unittest.TestCase):
             },
         ]
 
-        assert not self.monitor._has_new_bot_comments_since_codex(comments)  # noqa: SLF001
+        assert self.monitor._has_new_bot_comments_since_codex(comments)  # noqa: SLF001
 
     def test_excludes_copilot_bot_comments(self) -> None:
         """Should NOT count copilot[bot] as a new bot comment to process."""
@@ -205,7 +202,7 @@ class TestBotCommentDetection(unittest.TestCase):
         # Bot comment at 11:00 is BEFORE latest Codex comment at 12:00
         assert not self.monitor._has_new_bot_comments_since_codex(comments)  # noqa: SLF001
 
-    def test_detects_bot_comment_after_latest_codex(self) -> None:
+    def test_identifies_bot_comment_after_latest_codex(self) -> None:
         """Should detect bot comment that comes after the latest Codex comment."""
         comments = [
             {
@@ -267,13 +264,25 @@ class TestIsGithubBotComment(unittest.TestCase):
         comment = {"author": {"login": "renovate[bot]"}}
         assert self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
 
+    def test_identifies_coderabbitai_without_bot_suffix(self) -> None:
+        comment = {"author": {"login": "coderabbitai"}}
+        assert self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
+
+    def test_identifies_copilot_swe_agent_without_bot_suffix(self) -> None:
+        comment = {"author": {"login": "copilot-swe-agent"}}
+        assert self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
+
+    def test_identifies_github_actions_without_bot_suffix(self) -> None:
+        comment = {"author": {"login": "github-actions"}}
+        assert self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
+
     def test_excludes_codex_bot(self) -> None:
         comment = {"author": {"login": "codex[bot]"}}
         assert not self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
 
-    def test_excludes_coderabbitai_bot(self) -> None:
+    def test_identifies_coderabbitai_bot_with_suffix(self) -> None:
         comment = {"author": {"login": "coderabbitai[bot]"}}
-        assert not self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
+        assert self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
 
     def test_excludes_copilot_bot(self) -> None:
         comment = {"author": {"login": "copilot[bot]"}}

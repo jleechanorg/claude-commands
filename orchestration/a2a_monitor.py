@@ -9,6 +9,7 @@ and provides system status reporting.
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -64,9 +65,7 @@ class A2AMonitor:
             return
 
         self._running = True
-        self._monitor_thread = threading.Thread(
-            target=self._monitor_loop, name="A2A-Monitor", daemon=True
-        )
+        self._monitor_thread = threading.Thread(target=self._monitor_loop, name="A2A-Monitor", daemon=True)
         self._monitor_thread.start()
         logger.info("A2A Monitor started")
 
@@ -117,8 +116,7 @@ class A2AMonitor:
 
             cleanup_time = time.time() - cleanup_start
             logger.info(
-                f"Cleanup completed in {cleanup_time:.2f}s: "
-                f"{agents_cleaned} agents, {tasks_cleaned} tasks cleaned"
+                f"Cleanup completed in {cleanup_time:.2f}s: {agents_cleaned} agents, {tasks_cleaned} tasks cleaned"
             )
 
         except Exception as e:
@@ -158,11 +156,7 @@ class A2AMonitor:
             agent_dir = Path(A2A_BASE_DIR) / "agents" / agent_id
             if agent_dir.exists():
                 # Move to cleanup directory instead of deleting
-                cleanup_dir = (
-                    Path(A2A_BASE_DIR)
-                    / "cleanup"
-                    / f"agent_{agent_id}_{int(time.time())}"
-                )
+                cleanup_dir = Path(A2A_BASE_DIR) / "cleanup" / f"agent_{agent_id}_{int(time.time())}"
                 cleanup_dir.parent.mkdir(parents=True, exist_ok=True)
                 agent_dir.rename(cleanup_dir)
                 logger.info(f"Moved stale agent directory to cleanup: {cleanup_dir}")
@@ -193,20 +187,13 @@ class A2AMonitor:
                             task_data.pop("claimed_by", None)
                             task_data.pop("claimed_at", None)
 
-                            available_file = (
-                                Path(A2A_BASE_DIR)
-                                / "tasks"
-                                / "available"
-                                / f"{task_id}.json"
-                            )
+                            available_file = Path(A2A_BASE_DIR) / "tasks" / "available" / f"{task_id}.json"
                             with open(available_file, "w") as f:
                                 json.dump(task_data, f, indent=2)
 
                             task_file.unlink()
                             tasks_cleaned += 1
-                            logger.info(
-                                f"Restored orphaned task to available pool: {task_id}"
-                            )
+                            logger.info(f"Restored orphaned task to available pool: {task_id}")
 
                     except Exception as e:
                         logger.error(f"Error processing task file {task_file}: {e}")
@@ -223,7 +210,7 @@ class A2AMonitor:
             if not agents_dir.exists():
                 return
 
-            cutoff_time = time.time() - (1 * 3600)   # 1 hour (was 24 hours)
+            cutoff_time = time.time() - (1 * 3600)  # 1 hour (was 24 hours)
 
             for agent_dir in agents_dir.iterdir():
                 if not agent_dir.is_dir():
@@ -288,15 +275,11 @@ class A2AMonitor:
 
             # Count claimed tasks
             claimed_dir = Path(A2A_BASE_DIR) / "tasks" / "claimed"
-            claimed_count = (
-                len(list(claimed_dir.glob("*.json"))) if claimed_dir.exists() else 0
-            )
+            claimed_count = len(list(claimed_dir.glob("*.json"))) if claimed_dir.exists() else 0
 
             # Count completed tasks
             completed_dir = Path(A2A_BASE_DIR) / "tasks" / "completed"
-            completed_count = (
-                len(list(completed_dir.glob("*.json"))) if completed_dir.exists() else 0
-            )
+            completed_count = len(list(completed_dir.glob("*.json"))) if completed_dir.exists() else 0
 
             return {
                 "timestamp": current_time,

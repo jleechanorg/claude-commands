@@ -117,7 +117,6 @@ class MockTmux:
             self.sessions[session_name].running = False
 
 
-
 @contextmanager
 def mock_tmux_fixture():
     """Fixture that provides a mock tmux environment."""
