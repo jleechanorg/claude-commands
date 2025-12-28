@@ -149,7 +149,7 @@ class TestOrchestrateModule(unittest.TestCase):
             with patch('subprocess.run') as mock_run:
                 with patch('os.path.exists', return_value=True):
                     mock_run.return_value.returncode = 0
-                    orchestrate.main()
+                    result = orchestrate.main()
 
                     # Verify subprocess was called with all forwarded arguments
                     self.assertTrue(mock_run.called)
@@ -186,7 +186,7 @@ class TestOrchestrateModule(unittest.TestCase):
             with patch('subprocess.run') as mock_run:
                 with patch('os.path.exists', return_value=True):
                     mock_run.return_value.returncode = 0
-                    orchestrate.main()
+                    result = orchestrate.main()
 
                     self.assertTrue(mock_run.called)
                     call_args = mock_run.call_args[0][0]
@@ -207,7 +207,7 @@ class TestOrchestrateModule(unittest.TestCase):
             with patch('subprocess.run') as mock_run:
                 with patch('os.path.exists', return_value=True):
                     mock_run.return_value.returncode = 0
-                    orchestrate.main()
+                    result = orchestrate.main()
 
                     self.assertTrue(mock_run.called)
                     call_args = mock_run.call_args[0][0]
@@ -221,7 +221,7 @@ class TestOrchestrateModule(unittest.TestCase):
             with patch('subprocess.run') as mock_run:
                 with patch('os.path.exists', return_value=True):
                     mock_run.return_value.returncode = 0
-                    orchestrate.main()
+                    result = orchestrate.main()
 
                     self.assertTrue(mock_run.called)
                     call_args = mock_run.call_args[0][0]
