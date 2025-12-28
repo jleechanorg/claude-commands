@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="btn btn-sm btn-outline-secondary equipment-btn"
                 onclick="window.sendEquipmentQuery()"
                 title="List all equipped items">
-          <i class="bi bi-backpack2"></i> Equipment
+          <i class="bi bi-backpack2"></i> View Equipment
         </button>
       </div>`;
     }
