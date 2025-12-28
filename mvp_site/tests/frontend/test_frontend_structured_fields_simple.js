@@ -54,6 +54,114 @@ class StructuredFieldsSimpleTest {
       html += `<div class="planning-block">${this.escapeHtml(fullData.planning_block)}</div>`;
     }
 
+    // Add living world updates when debug mode is enabled
+    if (debugMode && fullData.state_updates) {
+      const worldEvents = fullData.state_updates?.world_events;
+      const factionUpdates = fullData.state_updates?.faction_updates;
+      const timeEvents = fullData.state_updates?.time_events;
+      const rumors = fullData.state_updates?.rumors;
+      const sceneEvent = fullData.state_updates?.scene_event;
+      const complications = fullData.state_updates?.complications;
+
+      const hasBackgroundEvents =
+        worldEvents &&
+        Array.isArray(worldEvents.background_events) &&
+        worldEvents.background_events.length > 0;
+      const hasFactionUpdates =
+        factionUpdates && Object.keys(factionUpdates).length > 0;
+      const hasTimeEvents = timeEvents && Object.keys(timeEvents).length > 0;
+      const hasRumors = Array.isArray(rumors) && rumors.length > 0;
+      const hasSceneEvent = !!sceneEvent;
+      // Check for boolean true or string "true" to handle LLM type inconsistency
+      const hasComplications = complications && (complications.triggered === true || complications.triggered === 'true');
+
+      const hasLivingWorldData =
+        hasBackgroundEvents ||
+        hasFactionUpdates ||
+        hasTimeEvents ||
+        hasRumors ||
+        hasSceneEvent ||
+        hasComplications;
+
+      if (hasLivingWorldData) {
+        html += '<div class="living-world-updates">';
+        html += '<strong>🌍 Living World Updates (Debug):</strong>';
+
+        if (hasBackgroundEvents) {
+          html += '<div class="living-world-section"><strong>📜 Background Events:</strong><ul class="living-world-list">';
+          worldEvents.background_events.forEach((event) => {
+            const actor = event.actor || 'Unknown';
+            const action = event.action || 'Unknown action';
+            const eventType = event.event_type || 'unknown';
+            const status = event.status || 'pending';
+            const statusEmoji =
+              status === 'discovered'
+                ? '👁️'
+                : status === 'resolved'
+                  ? '✅'
+                  : '⏳';
+            html += `<li>${statusEmoji} <strong>${this.escapeHtml(actor)}</strong>: ${this.escapeHtml(action)} <em>[${this.escapeHtml(eventType)}, ${this.escapeHtml(status)}]</em></li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        if (hasSceneEvent) {
+          html += '<div class="living-world-section living-world-scene"><strong>⚡ Scene Event:</strong> ';
+          html += `<strong>${this.escapeHtml(sceneEvent.type || 'event')}</strong> - ${this.escapeHtml(sceneEvent.description || 'No description')}`;
+          if (sceneEvent.actor) {
+            html += ` (Actor: ${this.escapeHtml(sceneEvent.actor)})`;
+          }
+          html += '</div>';
+        }
+
+        if (hasFactionUpdates) {
+          html += '<div class="living-world-section"><strong>⚔️ Faction Updates:</strong><ul class="living-world-list">';
+          Object.entries(factionUpdates).forEach(([faction, update]) => {
+            const objective = update.current_objective || 'Unknown objective';
+            html += `<li><strong>${this.escapeHtml(faction)}</strong>: ${this.escapeHtml(objective)}</li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        if (hasTimeEvents) {
+          html += '<div class="living-world-section"><strong>⏰ Time Events:</strong><ul class="living-world-list">';
+          Object.entries(timeEvents).forEach(([eventName, event]) => {
+            const timeRemaining = event.time_remaining || 'Unknown';
+            const status = event.status || 'ongoing';
+            html += `<li><strong>${this.escapeHtml(eventName)}</strong>: ${this.escapeHtml(timeRemaining)} [${this.escapeHtml(status)}]</li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        if (hasRumors) {
+          html += '<div class="living-world-section"><strong>💬 Rumors:</strong><ul class="living-world-list">';
+          rumors.forEach((rumor) => {
+            const content = rumor.content || 'Unknown rumor';
+            const accuracy = rumor.accuracy || 'unknown';
+            const accuracyEmoji =
+              accuracy === 'true'
+                ? '✓'
+                : accuracy === 'false'
+                  ? '✗'
+                  : accuracy === 'partial'
+                    ? '≈'
+                    : '?';
+            html += `<li>${accuracyEmoji} ${this.escapeHtml(content)} <em>[${this.escapeHtml(rumor.source_type || 'unknown source')}]</em></li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        if (hasComplications) {
+          html += '<div class="living-world-section living-world-complication"><strong>⚠️ Complication:</strong> ';
+          html += `<strong>${this.escapeHtml(complications.type || 'unknown')}</strong> - ${this.escapeHtml(complications.description || 'No description')}`;
+          html += ` [Severity: ${this.escapeHtml(complications.severity || 'unknown')}]`;
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+    }
+
     // Add debug info if in debug mode
     if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
       html += '<div class="debug-info">';
@@ -209,6 +317,63 @@ class StructuredFieldsSimpleTest {
     this.assert(html.includes('class="debug-info"'), 'Debug info has correct CSS class');
   }
 
+  // Test 7: Living world updates rendering
+  testLivingWorldUpdatesRendering() {
+    this.log('📝 Test 7: Living world updates rendering');
+
+    const livingWorldData = {
+      state_updates: {
+        world_events: {
+          background_events: [
+            { actor: 'Guild', action: 'Secured new outpost', event_type: 'expansion', status: 'discovered' }
+          ]
+        },
+        faction_updates: {
+          Rangers: { current_objective: 'Patrol the forest' }
+        },
+        time_events: {
+          Eclipse: { time_remaining: '2 turns', status: 'pending' }
+        },
+        rumors: [
+          { content: 'A dragon sleeps nearby', accuracy: 'partial', source_type: 'traveler' }
+        ],
+        scene_event: { type: 'alert', description: 'Torchlight flickers', actor: 'Scout' },
+        complications: { triggered: true, type: 'ambush', description: 'Wolves approach', severity: 'high' }
+      }
+    };
+
+    const html = this.generateStructuredFieldsHTML(livingWorldData, true);
+
+    this.assert(html.includes('🌍 Living World Updates'), 'Living world header rendered');
+    this.assert(html.includes('📜 Background Events:'), 'Background events rendered');
+    this.assert(html.includes('👁️'), 'Discovered status emoji rendered');
+    this.assert(html.includes('⚔️ Faction Updates:'), 'Faction updates rendered');
+    this.assert(html.includes('⏰ Time Events:'), 'Time events rendered');
+    this.assert(html.includes('≈'), 'Partial rumor accuracy indicator rendered');
+    this.assert(html.includes('⚡ Scene Event:'), 'Scene event rendered');
+    this.assert(html.includes('⚠️ Complication:'), 'Complication rendered');
+  }
+
+  // Test 8: Empty living world data should not render container
+  testLivingWorldUpdatesEmpty() {
+    this.log('📝 Test 8: Living world updates hidden when empty');
+
+    const emptyLivingWorldData = {
+      state_updates: {
+        world_events: {},
+        faction_updates: {},
+        time_events: {},
+        rumors: [],
+        scene_event: null,
+        complications: { triggered: false }
+      }
+    };
+
+    const html = this.generateStructuredFieldsHTML(emptyLivingWorldData, true);
+
+    this.assert(!html.includes('living-world-updates'), 'Living world container not rendered when empty');
+  }
+
   // Run all tests
   runTests() {
     this.log('🚀 Starting Structured Fields Frontend Tests (Simple Version)', 'info');
@@ -221,6 +386,8 @@ class StructuredFieldsSimpleTest {
     this.testXSSPrevention();
     this.testSpecialCharacters();
     this.testCSSClasses();
+    this.testLivingWorldUpdatesRendering();
+    this.testLivingWorldUpdatesEmpty();
 
     // Summary
     this.log('='.repeat(60), 'info');

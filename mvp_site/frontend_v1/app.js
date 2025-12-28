@@ -389,6 +389,141 @@ document.addEventListener('DOMContentLoaded', () => {
         '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
     }
 
+    // 4.5 Living World Updates (debug mode only)
+    const stateUpdates = fullData.state_updates || {};
+    const worldEvents = stateUpdates.world_events || fullData.world_events;
+    const factionUpdates = stateUpdates.faction_updates || fullData.faction_updates;
+    const timeEvents = stateUpdates.time_events || fullData.time_events;
+    const rumors = stateUpdates.rumors || fullData.rumors;
+    const sceneEvent = stateUpdates.scene_event || fullData.scene_event;
+    const complications = stateUpdates.complications || fullData.complications;
+
+    const hasBackgroundEvents =
+      Array.isArray(worldEvents?.background_events) &&
+      worldEvents.background_events.some((event) => event && typeof event === 'object');
+    const hasFactionUpdates =
+      factionUpdates &&
+      Object.keys(factionUpdates).length > 0 &&
+      Object.values(factionUpdates).some((update) => update && typeof update === 'object');
+    const hasTimeEvents =
+      timeEvents &&
+      Object.keys(timeEvents).length > 0 &&
+      Object.values(timeEvents).some((event) => event && typeof event === 'object');
+    const hasRumors =
+      Array.isArray(rumors) && rumors.some((rumor) => rumor && typeof rumor === 'object');
+    const hasSceneEvent =
+      sceneEvent &&
+      typeof sceneEvent === 'object' &&
+      (sceneEvent.type || sceneEvent.description || sceneEvent.actor);
+    // Check for boolean true or string "true" to handle LLM type inconsistency
+    const hasComplications =
+      complications &&
+      typeof complications === 'object' &&
+      (complications.triggered === true || complications.triggered === 'true');
+
+    const hasLivingWorldData =
+      debugMode &&
+      (hasBackgroundEvents ||
+        hasFactionUpdates ||
+        hasTimeEvents ||
+        hasRumors ||
+        hasSceneEvent ||
+        hasComplications);
+
+    if (hasLivingWorldData) {
+        html += '<div class="living-world-updates">';
+        html += '<strong>🌍 Living World Updates (Debug):</strong>';
+
+        // Background events
+        if (hasBackgroundEvents) {
+          html +=
+            '<div class="living-world-section"><strong>📜 Background Events:</strong><ul class="living-world-list">';
+          worldEvents.background_events.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const actor = event.actor || 'Unknown';
+            const action = event.action || 'Unknown action';
+            const eventType = event.event_type || 'unknown';
+            const status = event.status || 'pending';
+            const statusEmoji =
+              status === 'discovered'
+                ? '👁️'
+                : status === 'resolved'
+                  ? '✅'
+                  : '⏳';
+            html += `<li>${statusEmoji} <strong>${sanitizeHtml(actor)}</strong>: ${sanitizeHtml(action)} <em>[${sanitizeHtml(eventType)}, ${sanitizeHtml(status)}]</em></li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        // Scene event (immediate player-facing)
+        if (hasSceneEvent) {
+          html +=
+            '<div class="living-world-section living-world-scene"><strong>⚡ Scene Event:</strong> ';
+          html += `<strong>${sanitizeHtml(sceneEvent.type || 'event')}</strong> - ${sanitizeHtml(sceneEvent.description || 'No description')}`;
+          if (sceneEvent.actor) {
+            html += ` (Actor: ${sanitizeHtml(sceneEvent.actor)})`;
+          }
+          html += '</div>';
+        }
+
+        // Faction updates
+        if (hasFactionUpdates) {
+          html +=
+            '<div class="living-world-section"><strong>⚔️ Faction Updates:</strong><ul class="living-world-list">';
+          Object.entries(factionUpdates).forEach(([faction, update]) => {
+            if (!update || typeof update !== 'object') return;
+            const objective = update.current_objective || 'Unknown objective';
+            html += `<li><strong>${sanitizeHtml(faction)}</strong>: ${sanitizeHtml(objective)}</li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        // Time events
+        if (hasTimeEvents) {
+          html +=
+            '<div class="living-world-section"><strong>⏰ Time Events:</strong><ul class="living-world-list">';
+          Object.entries(timeEvents).forEach(([eventName, event]) => {
+            if (!event || typeof event !== 'object') return;
+            const timeRemaining = event.time_remaining || 'Unknown';
+            const status = event.status || 'ongoing';
+            html += `<li><strong>${sanitizeHtml(eventName)}</strong>: ${sanitizeHtml(timeRemaining)} [${sanitizeHtml(status)}]</li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        // Rumors
+        if (hasRumors) {
+          html +=
+            '<div class="living-world-section"><strong>💬 Rumors:</strong><ul class="living-world-list">';
+          rumors.forEach((rumor) => {
+            if (!rumor || typeof rumor !== 'object') return;
+            const content = rumor.content || 'Unknown rumor';
+            const accuracy = rumor.accuracy || 'unknown';
+            const accuracyEmoji =
+              accuracy === 'true'
+                ? '✓'
+                : accuracy === 'false'
+                  ? '✗'
+                  : accuracy === 'partial'
+                    ? '≈'
+                    : '?';
+            html += `<li>${accuracyEmoji} ${sanitizeHtml(content)} <em>[${sanitizeHtml(rumor.source_type || 'unknown source')}]</em></li>`;
+          });
+          html += '</ul></div>';
+        }
+
+        // Complications
+        if (hasComplications) {
+          html +=
+            '<div class="living-world-section living-world-complication"><strong>⚠️ Complication:</strong> ';
+          html += `<strong>${sanitizeHtml(complications.type || 'unknown')}</strong> - ${sanitizeHtml(complications.description || 'No description')}`;
+          html += ` [Severity: ${sanitizeHtml(complications.severity || 'unknown')}]`;
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+
     // 5. God mode response (if present, before narrative)
     if (
       fullData.god_mode_response &&

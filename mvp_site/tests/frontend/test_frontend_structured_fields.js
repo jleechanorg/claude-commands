@@ -112,6 +112,95 @@ class StructuredFieldsTest {
         html += '</div>';
       }
 
+      if (fullData.god_mode_response) {
+        html += `<div class="god-mode-response"><strong>🔮 God Mode Response:</strong><pre>${fullData.god_mode_response}</pre></div>`;
+      }
+
+      if (fullData.narrative) {
+        html += fullData.narrative;
+      }
+
+      // Add living world updates (simplified)
+      if (debugMode && fullData.state_updates) {
+        const worldEvents = fullData.state_updates?.world_events;
+        const factionUpdates = fullData.state_updates?.faction_updates;
+        const timeEvents = fullData.state_updates?.time_events;
+        const rumors = fullData.state_updates?.rumors;
+        const sceneEvent = fullData.state_updates?.scene_event;
+        const complications = fullData.state_updates?.complications;
+
+        const hasBackgroundEvents =
+          worldEvents &&
+          Array.isArray(worldEvents.background_events) &&
+          worldEvents.background_events.length > 0;
+        const hasFactionUpdates =
+          factionUpdates && Object.keys(factionUpdates).length > 0;
+        const hasTimeEvents = timeEvents && Object.keys(timeEvents).length > 0;
+        const hasRumors = Array.isArray(rumors) && rumors.length > 0;
+        const hasSceneEvent = !!sceneEvent;
+        // Check for boolean true or string "true" to handle LLM type inconsistency
+        const hasComplications = complications && (complications.triggered === true || complications.triggered === 'true');
+
+        const hasLivingWorldData =
+          hasBackgroundEvents ||
+          hasFactionUpdates ||
+          hasTimeEvents ||
+          hasRumors ||
+          hasSceneEvent ||
+          hasComplications;
+
+        if (hasLivingWorldData) {
+          html += '<div class="living-world-updates">';
+          html += '<strong>🌍 Living World Updates (Debug):</strong>';
+
+          if (hasBackgroundEvents) {
+            html += '<div class="living-world-section"><strong>📜 Background Events:</strong><ul class="living-world-list">';
+            worldEvents.background_events.forEach((event) => {
+              const status = event.status || 'pending';
+              const statusEmoji = status === 'discovered' ? '👁️' : status === 'resolved' ? '✅' : '⏳';
+              html += `<li>${statusEmoji} <strong>${event.actor || 'Unknown'}</strong>: ${event.action || 'Unknown action'}</li>`;
+            });
+            html += '</ul></div>';
+          }
+
+          if (hasSceneEvent) {
+            html += `<div class="living-world-section living-world-scene"><strong>⚡ Scene Event:</strong> ${sceneEvent.type || 'event'} - ${sceneEvent.description || 'No description'}</div>`;
+          }
+
+          if (hasFactionUpdates) {
+            html += '<div class="living-world-section"><strong>⚔️ Faction Updates:</strong><ul class="living-world-list">';
+            Object.entries(factionUpdates).forEach(([faction, update]) => {
+              html += `<li><strong>${faction}</strong>: ${update.current_objective || 'Unknown objective'}</li>`;
+            });
+            html += '</ul></div>';
+          }
+
+          if (hasTimeEvents) {
+            html += '<div class="living-world-section"><strong>⏰ Time Events:</strong><ul class="living-world-list">';
+            Object.entries(timeEvents).forEach(([name, event]) => {
+              html += `<li><strong>${name}</strong>: ${event.time_remaining || 'Unknown'} [${event.status || 'ongoing'}]</li>`;
+            });
+            html += '</ul></div>';
+          }
+
+          if (hasRumors) {
+            html += '<div class="living-world-section"><strong>💬 Rumors:</strong><ul class="living-world-list">';
+            rumors.forEach((rumor) => {
+              const accuracy = rumor.accuracy || 'unknown';
+              const accuracyEmoji = accuracy === 'true' ? '✓' : accuracy === 'false' ? '✗' : accuracy === 'partial' ? '≈' : '?';
+              html += `<li>${accuracyEmoji} ${rumor.content || 'Unknown rumor'}</li>`;
+            });
+            html += '</ul></div>';
+          }
+
+          if (hasComplications) {
+            html += `<div class="living-world-section living-world-complication"><strong>⚠️ Complication:</strong> ${complications.type || 'unknown'} - ${complications.description || 'No description'}</div>`;
+          }
+
+          html += '</div>';
+        }
+      }
+
       return html;
     };
   }
@@ -235,6 +324,29 @@ class StructuredFieldsTest {
     this.assert(html.includes('Regular narrative text'), 'Regular narrative still displayed');
   }
 
+  // Test 5: Living world updates rendering
+  async testLivingWorldRendering() {
+    this.log('📝 Testing living world updates rendering', 'info');
+
+    const dataWithLivingWorld = {
+      state_updates: {
+        world_events: { background_events: [{ actor: 'Guild', action: 'Secures bridge', status: 'resolved' }] },
+        rumors: [{ content: 'Hidden cache nearby', accuracy: 'partial' }],
+        scene_event: { type: 'warning', description: 'Distant howl' },
+        complications: { triggered: true, type: 'trap', description: 'Floor gives way' }
+      }
+    };
+
+    const html = this.window.generateStructuredFieldsHTML(dataWithLivingWorld, true);
+
+    this.assert(html.includes('Living World Updates'), 'Living world header present');
+    this.assert(html.includes('📜 Background Events'), 'Background events shown');
+    this.assert(html.includes('✅') || html.includes('⏳') || html.includes('👁️'), 'Status emoji shown');
+    this.assert(html.includes('≈'), 'Partial rumor accuracy emoji shown');
+    this.assert(html.includes('⚡ Scene Event'), 'Scene event shown');
+    this.assert(html.includes('⚠️ Complication'), 'Complication shown');
+  }
+
   // Run all tests
   async runTests() {
     this.log('🚀 Starting Structured Fields Frontend Tests', 'info');
@@ -251,6 +363,7 @@ class StructuredFieldsTest {
     await this.testEmptyFieldsHandling();
     await this.testMissingFieldsHandling();
     await this.testGodModeResponseRendering();
+    await this.testLivingWorldRendering();
 
     return this.summarizeResults();
   }

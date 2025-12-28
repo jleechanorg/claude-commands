@@ -1249,8 +1249,13 @@ def get_client():
     return gemini_provider.get_client()
 
 
-def _compute_player_turn_number(story_context: list[dict[str, Any]]) -> int:
-    """Compute 1-indexed player turn number, excluding GOD-mode prompts."""
+def compute_player_turn_number(story_context: list[dict[str, Any]]) -> int:
+    """Compute 1-indexed player turn number, excluding GOD-mode prompts.
+
+    This counts only player (user) turns, excluding GOD-mode commands.
+    Used for living world cadence (fires every 3 player turns) and
+    turn/scene annotation in world_events.
+    """
     if not story_context:
         return 1
     user_turns = 0
@@ -3480,10 +3485,19 @@ def continue_story(
     agent: BaseAgent = get_agent_for_input(raw_user_input, current_game_state)
     is_god_mode_command: bool = isinstance(agent, GodModeAgent)
 
-    # Calculate turn number for living world advancement
-    # Turn number is 1-indexed (first turn = 1) and counts player turns,
-    # excluding the initial GOD-mode seed prompt and any later GOD MODE commands.
-    turn_number: int = _compute_player_turn_number(story_context)
+    # Get turn number for living world advancement from game state
+    # Falls back to computing from context for backward compatibility with old campaigns
+    # IMPORTANT: stored_turn is the value AFTER the last completed action.
+    # For the current request, we need stored_turn + 1 (for non-GOD mode).
+    # GOD mode doesn't increment player_turn, so we use stored_turn as-is.
+    stored_turn = getattr(current_game_state, "player_turn", 0)
+    if stored_turn > 0:
+        # Use stored value + 1 for current turn (non-GOD mode will increment after)
+        # For GOD mode, this gives the correct "current" turn since it won't increment
+        turn_number = stored_turn + 1 if not is_god_mode_command else stored_turn
+    else:
+        # Fallback for old campaigns without player_turn
+        turn_number = compute_player_turn_number(story_context)
 
     if is_god_mode_command:
         # GOD MODE: Use GodModeAgent with focused administrative prompts

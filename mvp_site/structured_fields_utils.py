@@ -64,4 +64,29 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
             ),
         }
 
+        # Store a filtered subset of state_updates needed for Living World UI
+        # This keeps storage small while still surfacing relevant debug data
+        state_updates = _get_structured_attr(sr, constants.FIELD_STATE_UPDATES, {})
+        if isinstance(state_updates, dict):
+            allowed_keys = {
+                "world_events",
+                "faction_updates",
+                "time_events",
+                "rumors",
+                "scene_event",
+                "complications",
+            }
+            filtered_state_updates = {
+                key: value
+                for key, value in state_updates.items()
+                if key in allowed_keys and value not in (None, {}, [])
+            }
+
+            if filtered_state_updates:
+                structured_fields[constants.FIELD_STATE_UPDATES] = filtered_state_updates
+
+            world_events = filtered_state_updates.get("world_events")
+            if world_events and isinstance(world_events, dict):
+                structured_fields["world_events"] = world_events
+
     return structured_fields

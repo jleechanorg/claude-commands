@@ -178,10 +178,12 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify all constants are used as keys
+        # Note: world_events is only included when state_updates.world_events exists
         expected_keys = {
             constants.FIELD_SESSION_HEADER,
             constants.FIELD_PLANNING_BLOCK,
             constants.FIELD_DICE_ROLLS,
+            constants.FIELD_DICE_AUDIT_EVENTS,
             constants.FIELD_RESOURCES,
             constants.FIELD_DEBUG_INFO,
             constants.FIELD_GOD_MODE_RESPONSE,
@@ -272,3 +274,65 @@ Next Objective: Investigate the glowing altar"""
         assert result[constants.FIELD_PLANNING_BLOCK] == long_planning_block
         assert "Ancient Temple - Main Chamber" in result[constants.FIELD_SESSION_HEADER]
         assert "different approach" in result[constants.FIELD_PLANNING_BLOCK]
+
+    def test_extract_structured_fields_with_world_events(self):
+        """Test extraction of world_events from state_updates."""
+        world_events_data = {
+            "background_events": [
+                {"description": "A caravan arrives", "turn_generated": 5}
+            ],
+            "rumors": [
+                {"description": "Strange sounds from the forest", "turn_generated": 5}
+            ],
+            "faction_updates": {
+                "merchant_guild": {"activity": "Trading routes expanded"}
+            },
+        }
+        state_updates = {"world_events": world_events_data, "other_data": "ignored"}
+
+        mock_structured_response = Mock(spec=NarrativeResponse)
+        mock_structured_response.session_header = "Turn 5"
+        mock_structured_response.planning_block = "Options"
+        mock_structured_response.dice_rolls = []
+        mock_structured_response.dice_audit_events = []
+        mock_structured_response.resources = {}
+        mock_structured_response.debug_info = {}
+        mock_structured_response.god_mode_response = ""
+        mock_structured_response.state_updates = state_updates
+
+        mock_gemini_response = Mock(spec=LLMResponse)
+        mock_gemini_response.structured_response = mock_structured_response
+
+        result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
+
+        # Verify world_events is extracted and state_updates is filtered
+        assert "world_events" in result
+        assert result["world_events"] == world_events_data
+        assert result[constants.FIELD_STATE_UPDATES] == {
+            "world_events": world_events_data
+        }
+        # other_data from state_updates should NOT be present
+        assert "other_data" not in result
+
+    def test_extract_structured_fields_without_world_events(self):
+        """Test extraction when state_updates has no world_events."""
+        state_updates = {"some_other_field": "value"}
+
+        mock_structured_response = Mock(spec=NarrativeResponse)
+        mock_structured_response.session_header = "Turn 1"
+        mock_structured_response.planning_block = ""
+        mock_structured_response.dice_rolls = []
+        mock_structured_response.dice_audit_events = []
+        mock_structured_response.resources = {}
+        mock_structured_response.debug_info = {}
+        mock_structured_response.god_mode_response = ""
+        mock_structured_response.state_updates = state_updates
+
+        mock_gemini_response = Mock(spec=LLMResponse)
+        mock_gemini_response.structured_response = mock_structured_response
+
+        result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
+
+        # world_events should NOT be in result if not present in state_updates
+        assert "world_events" not in result
+        assert constants.FIELD_STATE_UPDATES not in result

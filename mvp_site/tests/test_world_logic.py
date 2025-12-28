@@ -373,6 +373,10 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         mock_gemini_response.narrative_text = "Here's a test story"
         mock_gemini_response.get_state_updates.return_value = {}
         mock_gemini_response.structured_response = None
+        # Properly mock LLMResponse methods to avoid Mock pollution in state changes
+        mock_gemini_response.get_location_confirmed.return_value = "Test Location"
+        mock_gemini_response.resources = "HP: 10/10"
+        mock_gemini_response.processing_metadata = {}  # Avoid Mock in metadata check
         mock_gemini.return_value = mock_gemini_response
 
         # Execute the async function
@@ -432,6 +436,10 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         mock_gemini_response.narrative_text = "Test story response"
         mock_gemini_response.get_state_updates.return_value = {}
         mock_gemini_response.structured_response = None
+        # Properly mock LLMResponse methods to avoid Mock pollution in state changes
+        mock_gemini_response.get_location_confirmed.return_value = "Test Location"
+        mock_gemini_response.resources = "HP: 10/10"
+        mock_gemini_response.processing_metadata = {}  # Avoid Mock in metadata check
         mock_gemini.return_value = mock_gemini_response
 
         # Execute the async function

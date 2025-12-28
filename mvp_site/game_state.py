@@ -284,6 +284,10 @@ class GameState:
             "last_state_update_timestamp", datetime.datetime.now(datetime.UTC)
         )
 
+        # Player turn counter (1-indexed, excludes GOD mode commands)
+        # Used for living world cadence (fires every 3 player turns)
+        self.player_turn = kwargs.get("player_turn", 0)
+
         # Initialize time pressure structures
         self.time_sensitive_events = kwargs.get("time_sensitive_events", {})
         self.npc_agendas = kwargs.get("npc_agendas", {})

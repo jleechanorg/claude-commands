@@ -109,6 +109,83 @@ _apply_timestamp_to_world_time = world_time.apply_timestamp_to_world_time
 _format_world_time_for_prompt = world_time.format_world_time_for_prompt
 
 
+def _annotate_entry(entry: dict[str, Any], turn: int, scene: int) -> None:
+    """Add turn/scene to a dict entry if not already present."""
+    if "turn_generated" not in entry:
+        entry["turn_generated"] = turn
+        entry["scene_generated"] = scene
+
+
+def annotate_world_events_with_turn_scene(
+    game_state_dict: dict[str, Any],
+    player_turn: int,
+) -> dict[str, Any]:
+    """Annotate living world entries with turn and scene numbers.
+
+    Adds turn_generated and scene_generated to living world entries for UI display.
+
+    NOTE: This function intentionally checks both nested and top-level locations.
+    Living world data can appear in different locations based on LLM schema version:
+    1. Under world_events.X (nested) - older schema
+    2. At top level: rumors, faction_updates, etc. (direct) - newer schema
+
+    These are DIFFERENT data structures, not duplicates. Even if the same object
+    existed in both (by reference), annotation is idempotent (same turn/scene values).
+
+    Args:
+        game_state_dict: The game state dictionary to annotate
+        player_turn: Player turn number (matches LLM cadence, not story entry count)
+
+    Returns:
+        The annotated game state dictionary
+    """
+    turn = player_turn
+    # Each scene spans 2 player turns (e.g., turns 1-2 = scene 1, turns 3-4 = scene 2)
+    TURNS_PER_SCENE = 2
+    scene = (player_turn + 1) // TURNS_PER_SCENE
+
+    def annotate_list(items: Any) -> None:
+        """Annotate a list of dict entries."""
+        if not isinstance(items, list):
+            return
+        for item in items:
+            if isinstance(item, dict):
+                _annotate_entry(item, turn, scene)
+
+    def annotate_dict_values(container: Any) -> None:
+        """Annotate all dict values in a container."""
+        if not isinstance(container, dict):
+            return
+        for value in container.values():
+            if isinstance(value, dict):
+                _annotate_entry(value, turn, scene)
+
+    def annotate_single(entry: Any) -> None:
+        """Annotate a single dict entry."""
+        if isinstance(entry, dict):
+            _annotate_entry(entry, turn, scene)
+
+    # 1. Annotate world_events.background_events (nested under world_events)
+    world_events = game_state_dict.get("world_events")
+    if isinstance(world_events, dict):
+        annotate_list(world_events.get("background_events"))
+        # Also check for nested versions (some schemas nest everything under world_events)
+        annotate_list(world_events.get("rumors"))
+        annotate_dict_values(world_events.get("faction_updates"))
+        annotate_dict_values(world_events.get("time_events"))
+        annotate_single(world_events.get("complications"))
+        annotate_single(world_events.get("scene_event"))
+
+    # 2. Annotate top-level living world fields (per schema, these are direct on state_updates)
+    annotate_list(game_state_dict.get("rumors"))
+    annotate_dict_values(game_state_dict.get("faction_updates"))
+    annotate_dict_values(game_state_dict.get("time_events"))
+    annotate_single(game_state_dict.get("complications"))
+    annotate_single(game_state_dict.get("scene_event"))
+
+    return game_state_dict
+
+
 def _build_temporal_correction_prompt(
     original_user_input: str,
     old_time: dict[str, Any],
@@ -994,6 +1071,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             updated_game_state_dict, previous_world_time=original_world_time
         )
 
+        # Increment player turn counter for non-GOD mode actions
+        if not is_god_mode:
+            current_turn = updated_game_state_dict.get("player_turn", 0)
+            updated_game_state_dict["player_turn"] = current_turn + 1
+
+        # Annotate world_events entries with turn/scene numbers for UI display
+        player_turn = updated_game_state_dict.get("player_turn", 1)
+        updated_game_state_dict = annotate_world_events_with_turn_scene(
+            updated_game_state_dict, player_turn
+        )
+
         # Update in Firestore (blocking I/O - run in thread)
         await asyncio.to_thread(
             firestore_service.update_campaign_game_state,
@@ -1022,6 +1110,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             updated_game_state_dict,
         )
         structured_fields.update(prevention_extras)
+
+        # Merge annotated world_events from game state into structured_fields
+        # The annotations (turn_generated, scene_generated) are applied to
+        # updated_game_state_dict, not llm_response_obj, so we need to use
+        # the annotated version for storage and frontend display
+        annotated_world_events = updated_game_state_dict.get("world_events")
+        if annotated_world_events and isinstance(annotated_world_events, dict):
+            structured_fields["world_events"] = annotated_world_events
+            # Also update state_updates if present
+            if "state_updates" in structured_fields:
+                structured_fields["state_updates"]["world_events"] = annotated_world_events
 
         await asyncio.to_thread(
             firestore_service.add_story_entry,
@@ -1059,8 +1158,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # User input gets len(story_context) + 1, AI response gets len(story_context) + 2
         sequence_id = len(story_context) + 2
 
-        # Calculate user_scene_number for this AI response (critical missing field)
-        # Count existing gemini responses in story_context
+        # Calculate user_scene_number: count of AI responses (includes GOD mode)
+        # This is different from player_turn which skips GOD mode
         user_scene_number = (
             sum(1 for entry in story_context if entry.get("actor") == "gemini") + 1
         )
