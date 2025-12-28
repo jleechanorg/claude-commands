@@ -21,14 +21,13 @@ Usage:
 
 import argparse
 import asyncio
-import logging
 import sys
-import time
 import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+import logging_util
 from playwright.async_api import (
     Browser,
     BrowserContext,
@@ -38,8 +37,10 @@ from playwright.async_api import (
     async_playwright,
 )
 
+from ..cdp_utils import format_cdp_host_for_url as _format_cdp_host_for_url
 
-# Set up logging to /tmp
+
+# Set up logging to /tmp using project logger
 def setup_logging():
     """Set up logging to /tmp directory."""
     log_dir = Path("/tmp/automate_codex_update")
@@ -47,25 +48,16 @@ def setup_logging():
 
     log_file = log_dir / "codex_automation.log"
 
-    # Create logger
-    logger = logging.getLogger("codex_automation")
-    logger.setLevel(logging.INFO)
-
-    # File handler
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(logging.INFO)
-
-    # Console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    # Formatter
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
+    logger = logging_util.getLogger("codex_automation")
+    if not logger.handlers:
+        logger.setLevel(logging_util.logging.INFO)
+        file_handler = logging_util.logging.FileHandler(log_file)
+        stream_handler = logging_util.logging.StreamHandler()
+        formatter = logging_util.logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        logger.addHandler(stream_handler)
 
     return logger
 
@@ -657,12 +649,6 @@ class CodexGitHubMentionsAutomation:
 
     def _is_task_detail_url(self, url: str) -> bool:
         return "/codex/tasks/" in url and "task_" in url
-
-
-def _format_cdp_host_for_url(host: str) -> str:
-    if ":" in host and not (host.startswith("[") and host.endswith("]")):
-        return f"[{host}]"
-    return host
 
 
 async def main():

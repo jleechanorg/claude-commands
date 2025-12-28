@@ -33,12 +33,12 @@ elif [[ "${1:-}" == "--force" ]]; then
 fi
 
 # Verify GITHUB_TOKEN is set
-if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-    echo -e "${RED}❌ ERROR: GITHUB_TOKEN environment variable is not set${NC}"
-    echo -e "   Export your GitHub token before running this script:"
-    echo -e "   ${BLUE}export GITHUB_TOKEN='ghp_xxxxxxxxxxxx'${NC}"
-    exit 1
-fi
+  if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+      echo -e "${RED}❌ ERROR: GITHUB_TOKEN environment variable is not set${NC}"
+      echo -e "   Export your GitHub token before running this script:"
+      echo -e "   ${BLUE}export GITHUB_TOKEN='ghp_xxxxxxxxxxxx'${NC}"
+      return 1
+  fi
 
 # Create logs directory if it doesn't exist (cross-platform)
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -107,12 +107,12 @@ if [[ "$DRY_RUN" == "false" ]] && [[ "$FORCE" == "false" ]]; then
     echo -e "   Your existing crontab has been backed up to: $BACKUP_FILE"
     echo ""
     read -p "Do you want to proceed? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${RED}❌ Aborted by user${NC}"
-        exit 1
-    fi
-fi
+      echo
+      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+          echo -e "${RED}❌ Aborted by user${NC}"
+          return 1
+      fi
+  fi
 
 # Apply the new crontab
 if [[ "$DRY_RUN" == "false" ]]; then

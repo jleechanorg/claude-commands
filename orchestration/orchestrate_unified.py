@@ -17,17 +17,21 @@ if parent_dir not in sys.path:
 import argparse
 import glob
 import json
-import logging
 import re
 import shutil
 import subprocess
 import time
 from datetime import datetime, timedelta, timezone
 
+import logging_util
+
 # Use absolute imports with package name for __main__ compatibility
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
+
+
+logger = logging_util.getLogger(__name__)
 
 
 class UnifiedOrchestration:
@@ -324,7 +328,6 @@ class UnifiedOrchestration:
         # ENHANCED LOGGING: Track orchestration session
         start_time = time.time()
         session_id = int(start_time)
-        logger = logging.getLogger(__name__)
         logger.info(
             "orchestration_session_start",
             extra={
@@ -408,7 +411,7 @@ class UnifiedOrchestration:
                         with open(resolved_context_path, "r", encoding="utf-8") as f:
                             context_content = f.read()
                         print(f"  └─ Context Loaded: {len(context_content)} characters")
-                except Exception as e:
+                except (OSError, UnicodeDecodeError) as e:
                     print(f"  ⚠️ Failed to load context file: {e}")
 
         print("=" * 60)
@@ -453,7 +456,7 @@ class UnifiedOrchestration:
 
         for i, agent_spec in enumerate(agents):
             # Inject orchestration options into agent spec
-            if options.get("agent_cli") is not None:
+            if options.get("agent_cli_provided") and options.get("agent_cli") is not None:
                 agent_spec["cli"] = options["agent_cli"]
             if options.get("branch"):
                 agent_spec["existing_branch"] = options["branch"]
@@ -712,8 +715,6 @@ The orchestration system will:
 
     agent_cli = args.agent_cli
     agent_cli_provided = args.agent_cli is not None
-    if agent_cli is None:
-        agent_cli = "gemini"
 
     # Validate task description
     task = " ".join(args.task).strip()

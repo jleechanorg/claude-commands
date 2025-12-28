@@ -12,6 +12,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
 PORT="${1:-9222}"
 USER_DATA_DIR="${HOME}/.chrome-automation-profile"
 
@@ -117,8 +120,8 @@ echo "🔗 CDP Endpoint: http://localhost:$PORT"
 echo ""
 echo "📝 Next steps:"
 echo "  1. Log in to OpenAI in the Chrome window that just opened"
-echo "  2. Run the automation script:"
-echo "     python3 scripts/openai_automation/codex_github_mentions.py"
+  echo "  2. Run the automation script:"
+  echo "     python3 ${REPO_ROOT}/scripts/openai_automation/codex_github_mentions.py"
 echo ""
 echo "💡 To stop Chrome:"
 echo "     kill $CHROME_PID"
