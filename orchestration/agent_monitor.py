@@ -15,14 +15,13 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-import logging_util
-
-# Add orchestration directory to path
-sys.path.insert(0, os.path.dirname(__file__))
-
-# MessageBroker removed - using file-based A2A only
-
-logger = logging_util.getLogger(__name__)
+try:
+    import logging_util
+    logger = logging_util.getLogger(__name__)
+except ImportError:
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
 
 class ConvergeAgentRestarter:

@@ -2,6 +2,7 @@
 """Test runner for orchestration system tests."""
 
 import argparse
+import importlib
 import os
 import sys
 import unittest
@@ -11,10 +12,13 @@ from unittest import TextTestRunner
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
-def run_specific_test(test_name):
+def run_specific_test(test_name, test_dir: str):
     """Run a specific test module."""
+    module_path = f"orchestration.tests.test_{test_name}"
     try:
-        module = __import__(f"test_{test_name}")
+        if test_dir not in sys.path:
+            sys.path.insert(0, test_dir)
+        module = importlib.import_module(module_path)
         suite = unittest.TestLoader().loadTestsFromModule(module)
         runner = TextTestRunner(verbosity=2)
         result = runner.run(suite)
@@ -53,9 +57,11 @@ def main():
 
     args = parser.parse_args()
 
+    test_dir = os.path.dirname(__file__)
+
     if args.list:
         print("Available tests:")
-        test_files = [f for f in os.listdir(".") if f.startswith("test_") and f.endswith(".py")]
+        test_files = [f for f in os.listdir(test_dir) if f.startswith("test_") and f.endswith(".py")]
         for test_file in test_files:
             test_name = test_file[5:-3]  # Remove 'test_' prefix and '.py' suffix
             print(f"  {test_name}")
@@ -66,7 +72,7 @@ def main():
 
     if args.test:
         print(f"Running specific test: {args.test}")
-        success = run_specific_test(args.test)
+        success = run_specific_test(args.test, test_dir)
     else:
         print("Running all tests...")
         success = run_all_tests()

@@ -315,6 +315,7 @@ class TestEnhancedTaskWithContext(unittest.TestCase):
         """Test that task description is unchanged without context."""
         task_description = "Simple task"
 
+
         enhanced_task = task_description
 
         self.assertEqual(enhanced_task, "Simple task")

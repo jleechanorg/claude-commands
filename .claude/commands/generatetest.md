@@ -31,7 +31,7 @@ execution_mode: immediate
 4. Generate descriptive `work_name` for evidence directory
 
 **Example Parsing:**
-```
+```text
 Input: "for this PR make sure the equipment logic works"
 → Focus: equipment logic
 → Context: current PR/branch changes
@@ -252,7 +252,7 @@ From `.claude/skills/evidence-standards.md`:
 
 ## 🔧 PRIORITY MATRIX
 
-```
+```text
 🚨 CRITICAL: Blocks core functionality, data corruption risk
 ⚠️ HIGH: Significant degradation, wrong behavior
 📝 MEDIUM: Minor issues, cosmetic problems

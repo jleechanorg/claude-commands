@@ -22,7 +22,7 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 
 ### How It Works
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  1. DISCOVERY PHASE                                         │
 │  ───────────────────────────────────────────────────────────│

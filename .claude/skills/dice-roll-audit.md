@@ -45,7 +45,7 @@ The script extracts dice from:
 
 ## Output Example
 
-```
+```text
 ============================================================
 CAMPAIGN DICE ROLL AUDIT
 ============================================================

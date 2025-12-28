@@ -23,16 +23,21 @@ import subprocess
 import time
 from datetime import datetime, timedelta, timezone
 
-import logging_util
+# Use project logging utility when available
+try:
+    import logging_util
+
+    logger = logging_util.getLogger(__name__)
+except ImportError:  # pragma: no cover - fallback for environments without logging_util
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
 # Use absolute imports with package name for __main__ compatibility
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
-
-
-logger = logging_util.getLogger(__name__)
-
 
 class UnifiedOrchestration:
     """Unified orchestration using file-based A2A coordination with LLM-driven intelligence."""
@@ -715,6 +720,7 @@ The orchestration system will:
 
     agent_cli = args.agent_cli
     agent_cli_provided = args.agent_cli is not None
+
 
     # Validate task description
     task = " ".join(args.task).strip()

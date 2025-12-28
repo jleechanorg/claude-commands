@@ -30,7 +30,7 @@ class TestUnifiedNaming(unittest.TestCase):
             try:
                 # Clean up any created directories/files
                 self.dispatcher = None
-            except Exception:
+            except (OSError, IOError, AttributeError):
                 pass
         # CI-specific: Additional delay for cleanup completion
         if os.getenv("GITHUB_ACTIONS"):

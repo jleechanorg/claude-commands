@@ -1441,6 +1441,7 @@ def _validate_cdp_host(raw_host: str) -> str:
     return "127.0.0.1"
 
 
+
 def _resolve_cdp_host_port() -> Tuple[str, int]:
     raw_host = os.environ.get("CODEX_CDP_HOST", "127.0.0.1")
     host = _validate_cdp_host(raw_host)

@@ -26,6 +26,7 @@ execution_mode: immediate
 **Usage**: `/orchestrate [task_description] [OPTIONS]`
 
 **Options**:
+
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--agent-cli <cli>` | Agent CLI to use (claude, codex, gemini, cursor). Supports comma-separated chain for fallback (e.g., 'gemini,claude') | gemini |
@@ -226,13 +227,13 @@ These patterns trigger NEW PR creation:
 ### 📢 User Feedback
 
 Orchestration will clearly indicate the detected mode:
-```
+```text
 🔍 Detected PR context: #950 - Agent will UPDATE existing PR
    Branch: feature-xyz
    Status: OPEN
 ```
 OR
-```
+```text
 🆕 No PR context detected - Agent will create NEW PR
    New branch will be created from main
 ```
