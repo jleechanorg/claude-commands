@@ -26,7 +26,7 @@ import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from playwright.async_api import (
     Browser,
@@ -38,38 +38,26 @@ from playwright.async_api import (
 )
 
 
-# Set up logging to /tmp
-def setup_logging():
-    """Set up logging to /tmp directory."""
-    log_dir = Path("/tmp/automate_codex_update")
-    log_dir.mkdir(parents=True, exist_ok=True)
+try:
+    import logging_util
 
-    log_file = log_dir / "codex_automation.log"
+    logger = logging_util.getLogger(__name__)
+except ImportError:  # pragma: no cover - fallback when logging_util unavailable
+    logger = logging.getLogger(__name__)
 
-    # Create logger
-    logger = logging.getLogger("codex_automation")
+LOG_DIR = Path.home() / ".cache" / "automate_codex_update"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / "codex_automation.log"
+
+if not logger.handlers:
     logger.setLevel(logging.INFO)
-
-    # File handler
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(logging.INFO)
-
-    # Console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    # Formatter
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    return logger
-
-
-logger = setup_logging()
+    file_handler = logging.FileHandler(LOG_FILE)
+    stream_handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    for handler in (file_handler, stream_handler):
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
 # Storage state path for persisting authentication.
 # This file contains sensitive session data; enforce restrictive permissions.
@@ -369,7 +357,7 @@ class CodexGitHubMentionsAutomation:
         print(f"✅ Navigated to {codex_url} (title: {final_title})")
         logger.info(f"Successfully navigated to {codex_url} (title: {final_title})")
 
-    async def find_github_mention_tasks(self) -> List[Dict[str, str]]:
+    async def find_github_mention_tasks(self) -> list[dict[str, str]]:
         """
         Find task links in Codex.
 
@@ -424,8 +412,8 @@ class CodexGitHubMentionsAutomation:
                 print("⚠️  Still no tasks found")
                 return []
 
-            deduped: List[Dict[str, str]] = []
-            seen: Set[str] = set()
+            deduped: list[dict[str, str]] = []
+            seen: set[str] = set()
             for task in tasks:
                 href = task.get("href", "")
                 if not href or href in seen:
@@ -447,10 +435,10 @@ class CodexGitHubMentionsAutomation:
 
     async def _collect_task_links(
         self,
-        selector_candidates: List[str],
+        selector_candidates: list[str],
         limit: Optional[int],
         tab_label: str,
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         locator_selector = selector_candidates[0]
         locator = self.page.locator(locator_selector)
         task_count = await locator.count()
@@ -472,7 +460,7 @@ class CodexGitHubMentionsAutomation:
                 return []
 
         local_limit = task_count if limit is None else min(task_count, limit)
-        tasks: List[Dict[str, str]] = []
+        tasks: list[dict[str, str]] = []
         for idx in range(local_limit):
             item = locator.nth(idx)
             href = await item.get_attribute("href") or ""
@@ -499,7 +487,7 @@ class CodexGitHubMentionsAutomation:
         logger.debug("Unable to switch to tab %s using selectors %s", label, selectors)
         return False
 
-    async def update_pr_for_task(self, task_link: Dict[str, str]):
+    async def update_pr_for_task(self, task_link: dict[str, str]):
         """
         Open task and click 'Update branch' button to update the PR.
 

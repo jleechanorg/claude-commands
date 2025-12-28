@@ -8,10 +8,16 @@ import json
 import os
 import subprocess
 import time
+import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
+try:
+    import logging_util
+except ImportError:  # pragma: no cover - fallback when logging_util unavailable
+    logging_util = None
 
 
 class RecoveryReason(Enum):
@@ -59,6 +65,13 @@ class RecoveryCoordinator:
         self.checkpoints_dir = "/tmp/orchestration_checkpoints"
         self.logs_dir = "/tmp/orchestration_logs"
         self.metrics_file = os.path.join(self.orchestration_dir, "recovery_metrics.json")
+
+        if logging_util:
+            self.logger = logging_util.getLogger(__name__)
+        else:
+            self.logger = logging.getLogger(__name__)
+            if not self.logger.handlers:
+                logging.basicConfig(level=logging.INFO)
 
         # Create directories
         os.makedirs(self.checkpoints_dir, exist_ok=True)
@@ -249,14 +262,23 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
         self.metrics["reason_counts"][reason.value] = self.metrics["reason_counts"].get(reason.value, 0) + 1
 
         # Log recovery attempt
-        print(f"\n🔄 RECOVERY INITIATED for {agent_name}")
-        print(f"   Reason: {reason.value}")
-        print(f"   Strategy: {strategy.value}")
-        print(f"   Partial work completed: {len(partial_work)} items")
+        self.logger.info(
+            "recovery_initiated",
+            extra={
+                "agent_name": agent_name,
+                "reason": reason.value,
+                "strategy": strategy.value,
+                "partial_work_count": len(partial_work),
+                "correlation_id": agent_name,
+            },
+        )
 
         recovery_agent_name = None
         if strategy == RecoveryStrategy.ESCALATE:
-            print("   ⚠️  Manual intervention required")
+            self.logger.warning(
+                "recovery_escalation_required",
+                extra={"agent_name": agent_name, "correlation_id": agent_name},
+            )
             recovery_success = False
         else:
             # Create recovery agent
@@ -269,9 +291,14 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
 
             # For now, return the recovery plan
             recovery_success = True
-            print(f"   ✅ Recovery agent prepared: {recovery_agent_name}")
-            print("   📄 Recovery prompt prepared:")
-            print(recovery_prompt)
+            self.logger.info(
+                "recovery_agent_prepared",
+                extra={
+                    "agent_name": agent_name,
+                    "recovery_agent": recovery_agent_name,
+                    "correlation_id": agent_name,
+                },
+            )
 
         # Record recovery event
         recovery_time = time.time() - start_time
@@ -292,6 +319,8 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
         event_dict = asdict(event)
         event_dict["reason"] = event.reason.value
         event_dict["strategy"] = event.strategy.value
+        if strategy != RecoveryStrategy.ESCALATE:
+            event_dict["recovery_prompt"] = recovery_prompt
         self.metrics["recovery_events"].append(event_dict)
         self.metrics["total_recovery_time"] += recovery_time
 
@@ -306,6 +335,7 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
             "strategy": strategy.value,
             "partial_work": partial_work,
             "recovery_agent": recovery_agent_name if recovery_success else None,
+            "recovery_prompt": recovery_prompt if recovery_success else None,
         }
 
     def get_recovery_report(self) -> str:
