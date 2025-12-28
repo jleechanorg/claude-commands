@@ -12,6 +12,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
 PORT="${1:-9222}"
 USER_DATA_DIR="${HOME}/.chrome-automation-profile"
 

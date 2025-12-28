@@ -190,7 +190,7 @@ class TestContextFileLoading(unittest.TestCase):
 
     def test_context_file_loads_successfully(self):
         """Test that context file content is loaded correctly."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", dir=project_root, delete=False) as f:
             f.write("# Test Context\n\nThis is test context content.")
             context_path = f.name
 
@@ -314,7 +314,7 @@ class TestEnhancedTaskWithContext(unittest.TestCase):
     def test_task_not_enhanced_without_context(self):
         """Test that task description is unchanged without context."""
         task_description = "Simple task"
-        context_content = None
+
 
         enhanced_task = task_description
 

@@ -26,7 +26,7 @@ import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional, Set
 
 from playwright.async_api import (
     Browser,
@@ -37,10 +37,10 @@ from playwright.async_api import (
     async_playwright,
 )
 
+from ..cdp_utils import format_cdp_host_for_url as _format_cdp_host_for_url
 
 try:
     import logging_util
-
     logger = logging_util.getLogger(__name__)
 except ImportError:  # pragma: no cover - fallback when logging_util unavailable
     logger = logging.getLogger(__name__)
@@ -645,11 +645,6 @@ class CodexGitHubMentionsAutomation:
     def _is_task_detail_url(self, url: str) -> bool:
         return "/codex/tasks/" in url and "task_" in url
 
-
-def _format_cdp_host_for_url(host: str) -> str:
-    if ":" in host and not (host.startswith("[") and host.endswith("]")):
-        return f"[{host}]"
-    return host
 
 
 async def main():

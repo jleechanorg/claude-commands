@@ -7,7 +7,6 @@ Enhanced with converge agent restart capabilities
 """
 
 import json
-import logging
 import os
 import re
 import shlex
@@ -16,18 +15,13 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-# Add orchestration directory to path
-sys.path.insert(0, os.path.dirname(__file__))
-
-# MessageBroker removed - using file-based A2A only
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-logger = logging.getLogger(__name__)
+try:
+    import logging_util
+    logger = logging_util.getLogger(__name__)
+except ImportError:
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
 
 class ConvergeAgentRestarter:

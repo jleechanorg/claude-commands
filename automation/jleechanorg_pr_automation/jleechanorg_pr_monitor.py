@@ -40,6 +40,7 @@ from .codex_config import (
     build_comment_intro,
 )
 from .utils import json_manager, setup_logging
+from .cdp_utils import format_cdp_host_for_url as _format_cdp_host_for_url
 from orchestration.task_dispatcher import CLI_PROFILES
 
 
@@ -1439,11 +1440,6 @@ def _validate_cdp_host(raw_host: str) -> str:
     )
     return "127.0.0.1"
 
-
-def _format_cdp_host_for_url(host: str) -> str:
-    if ":" in host and not (host.startswith("[") and host.endswith("]")):
-        return f"[{host}]"
-    return host
 
 
 def _resolve_cdp_host_port() -> Tuple[str, int]:

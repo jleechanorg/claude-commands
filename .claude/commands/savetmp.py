@@ -433,10 +433,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Git provenance in README per evidence-standards.md (if available)
     if git_provenance:
         head_commit = git_provenance.get("head_commit")
-        if head_commit is not None:
+        if head_commit and head_commit != "None":
             summary_lines.append(f"- Commit: {head_commit}")
         origin_main = git_provenance.get("origin_main_commit")
-        if origin_main is not None:
+        if origin_main and origin_main != "None":
             summary_lines.append(f"- Origin/main: {origin_main}")
     summary_lines.append("")
 
