@@ -604,19 +604,9 @@ document.addEventListener('DOMContentLoaded', () => {
       html += '</div>';
     }
 
-    // 9. State updates (backend now handles debug mode filtering)
-    if (
-      fullData.state_updates &&
-      Object.keys(fullData.state_updates).length > 0
-    ) {
-      html += '<div class="state-updates">';
-      html += '<strong>🔧 State Updates:</strong>';
-      html +=
-        '<pre>' +
-        sanitizeHtml(JSON.stringify(fullData.state_updates, null, 2)) +
-        '</pre>';
-      html += '</div>';
-    }
+    // 9. State updates - DISABLED: too verbose, not useful for gameplay
+    // State updates are still returned by the backend for data integrity
+    // but no longer displayed in the UI even in debug mode
 
     // 10. Debug info (backend now handles debug mode filtering)
     if (fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
@@ -640,14 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
         html += `<div class="state-rationale"><strong>💭 State Rationale:</strong> ${sanitizeHtml(fullData.debug_info.state_rationale)}</div>`;
       }
 
-      // Show raw debug info for anything else
-      const debugCopy = { ...fullData.debug_info };
-      delete debugCopy.dm_notes;
-      delete debugCopy.state_rationale;
-      if (Object.keys(debugCopy).length > 0) {
-        html +=
-          '<pre>' + sanitizeHtml(JSON.stringify(debugCopy, null, 2)) + '</pre>';
-      }
+      // Raw debug info JSON - DISABLED: too verbose (code_contains_rng, stdout, etc.)
 
       html += '</div>';
     }
