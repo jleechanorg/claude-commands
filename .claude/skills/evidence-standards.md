@@ -564,6 +564,117 @@ python .claude/commands/savetmp.py "evidence-name" --artifact ./results --pr-mod
 - After merging main, this shows merge changes, not PR changes
 - PR mode always captures `origin/main...HEAD` (full PR diff)
 
+## Runtime Behavior Evidence (Lessons from Memory Budget Testing)
+
+### Inferential vs Direct Evidence
+
+**Inferential evidence is insufficient.** "Action succeeded therefore truncation worked" is not proof.
+
+```
+# ❌ INFERENTIAL - Proves nothing about internal behavior
+"budget_truncation_proof": "Action succeeded with memories exceeding budget = truncation worked"
+
+# ✅ DIRECT - Runtime logs FROM THE CODE showing selection/exclusion
+[MEMORY_BUDGET] Input: 605 memories, 43,816 tokens (budget: 40,000)
+[MEMORY_BUDGET] TRUNCATED: 554 selected, 51 excluded, 39,959 tokens used
+```
+
+### Code Instrumentation for Evidence
+
+When claiming internal behavior (truncation, filtering, deduplication), the code MUST produce logs that prove the behavior:
+
+```python
+# ❌ BAD - No evidence of truncation behavior
+def select_memories_by_budget(memories, max_tokens):
+    # ... selection logic ...
+    return selected_memories
+
+# ✅ GOOD - Runtime evidence captured in logs
+def select_memories_by_budget(memories, max_tokens):
+    logging_util.info(
+        f"[MEMORY_BUDGET] Input: {len(memories)} memories, "
+        f"{total_tokens:,} tokens (budget: {max_tokens:,})"
+    )
+    # ... selection logic ...
+    logging_util.info(
+        f"[MEMORY_BUDGET] TRUNCATED: {len(result)} selected, "
+        f"{excluded_count} excluded, {final_tokens:,} tokens used"
+    )
+    return result
+```
+
+**Key principle:** If you can't point to a log line proving the behavior, add logging to produce that evidence.
+
+### Server Logs During Test Execution
+
+For any test claiming internal behavior:
+
+1. Start server with logs captured to file
+2. Run test against that server
+3. Extract behavior proof from server logs
+4. Include extracted proof as separate evidence file
+
+```bash
+# Start server with log capture
+nohup python -m mvp_site.mcp_api --http-only --port 8003 > "$EVIDENCE_DIR/server_logs.txt" 2>&1 &
+
+# Run tests against that server
+python test.py --server-url http://127.0.0.1:8003
+
+# Extract proof
+grep "MEMORY_BUDGET" "$EVIDENCE_DIR/server_logs.txt" > "$EVIDENCE_DIR/memory_budget_proof.txt"
+```
+
+### Full Git Provenance Requirements
+
+Beyond basic provenance, include:
+
+```bash
+cat > "$EVIDENCE_DIR/git_provenance_full.txt" << EOF
+=== CURRENT STATE ===
+Branch: $(git rev-parse --abbrev-ref HEAD)
+Commit: $(git rev-parse HEAD)
+
+=== COMMIT DETAILS ===
+$(git log -1 --format="Author: %an <%ae>%nDate: %aI%nSubject: %s")
+
+=== RECENT COMMITS ON BRANCH ===
+$(git log --oneline -10)
+
+=== ORIGIN/MAIN REFERENCE ===
+origin/main: $(git rev-parse origin/main)
+
+=== DIFF FROM ORIGIN/MAIN ===
+$(git diff --stat origin/main...HEAD)
+
+=== COMMITS AHEAD/BEHIND ===
+Ahead: $(git rev-list --count origin/main..HEAD)
+Behind: $(git rev-list --count HEAD..origin/main)
+
+=== MODIFIED FILES ===
+$(git diff --name-only origin/main...HEAD)
+EOF
+```
+
+### Per-File Checksums (Preferred for Important Artifacts)
+
+For key evidence files, use per-file checksums alongside the artifact:
+
+```bash
+# Generate per-file checksums
+for file in server_logs.txt memory_budget_proof.txt server_env_capture.txt; do
+    shasum -a 256 "$file" > "${file}.sha256"
+done
+
+# Results in:
+# server_logs.txt
+# server_logs.txt.sha256
+# memory_budget_proof.txt
+# memory_budget_proof.txt.sha256
+```
+
+**Why per-file:** Easier to verify individual artifacts; no need to parse a combined file.
+
 ## Related Standards
 
 - `CLAUDE.md` - Three Evidence Rule (lines 110-113)
