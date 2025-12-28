@@ -247,26 +247,230 @@ def _count_equipment_mentions(narrative_text: str, items: list[dict[str, str]]) 
     return count
 
 
+def _categorize_equipment_slot(slot: str) -> str:
+    """Map equipment slot to a display category."""
+    slot_lower = slot.lower().strip()
+
+    # Armor/worn equipment
+    if slot_lower in {"head", "helmet", "helm", "crown"}:
+        return "Head"
+    if slot_lower in {"armor", "chest", "body", "torso", "plate"}:
+        return "Armor"
+    if slot_lower in {"boots", "feet", "footwear"}:
+        return "Boots"
+    if slot_lower in {"gloves", "hands", "gauntlets"}:
+        return "Gloves"
+    if slot_lower in {"cloak", "back", "cape", "mantle"}:
+        return "Cloak"
+    if slot_lower in {"ring", "ring1", "ring 1", "ring2", "ring 2", "rings"}:
+        return "Rings"
+    if slot_lower in {"amulet", "neck", "necklace", "pendant"}:
+        return "Amulet"
+    if slot_lower in {"belt", "waist"}:
+        return "Belt"
+
+    # Weapons
+    if slot_lower in {"weapon", "main hand", "off hand", "mainhand", "offhand"}:
+        return "Weapons"
+
+    # Backpack goes to miscellaneous categories based on item analysis
+    if slot_lower == "backpack":
+        return "Backpack"
+
+    # Default
+    return "Other"
+
+
+def _classify_backpack_item(name: str, stats: str) -> str:
+    """Classify a backpack item into a subcategory based on name/stats."""
+    name_lower = name.lower()
+    stats_lower = stats.lower() if stats else ""
+    combined = f"{name_lower} {stats_lower}"
+
+    # Documents and papers
+    if any(
+        kw in combined
+        for kw in [
+            "document",
+            "ledger",
+            "cipher",
+            "letter",
+            "scroll",
+            "note",
+            "journal",
+            "book",
+            "tome",
+            "manuscript",
+            "deed",
+            "contract",
+        ]
+    ):
+        return "Documents"
+
+    # Keys and access items
+    if any(kw in combined for kw in ["key", "bypass", "lockpick", "access"]):
+        return "Keys"
+
+    # Rings and signets (in backpack)
+    if any(kw in combined for kw in ["signet", "ring"]):
+        return "Signets & Rings"
+
+    # Currency and valuables
+    if any(
+        kw in combined
+        for kw in ["coin", "gold", "platinum", "gem", "jewel", "currency", "purse"]
+    ):
+        return "Currency"
+
+    # Consumable resources
+    if any(kw in combined for kw in ["shard", "crystal", "soul", "essence", "potion"]):
+        return "Resources"
+
+    # Tools and kits
+    if any(
+        kw in combined
+        for kw in ["kit", "tools", "thieves", "disguise", "artisan", "instrument"]
+    ):
+        return "Tools"
+
+    # Weapons in backpack
+    if any(
+        kw in combined
+        for kw in [
+            "dagger",
+            "sword",
+            "rapier",
+            "crossbow",
+            "bow",
+            "staff",
+            "wand",
+            "d4",
+            "d6",
+            "d8",
+            "d10",
+            "d12",
+            "piercing",
+            "slashing",
+            "bludgeoning",
+        ]
+    ):
+        return "Weapons"
+
+    # Magical items
+    if any(
+        kw in combined
+        for kw in [
+            "magical",
+            "artifact",
+            "enchanted",
+            "+1",
+            "+2",
+            "+3",
+            "dc",
+            "spell",
+            "arcane",
+            "focus",
+            "lens",
+            "scepter",
+            "staff",
+            "amulet",
+        ]
+    ):
+        return "Magical Items"
+
+    # Clothing and apparel
+    if any(kw in combined for kw in ["clothes", "robe", "cloak", "boots", "gloves"]):
+        return "Apparel"
+
+    # Musical instruments
+    if any(
+        kw in combined
+        for kw in ["lute", "flute", "drum", "harp", "instrument", "horn", "violin"]
+    ):
+        return "Instruments"
+
+    # Default
+    return "Miscellaneous"
+
+
 def _build_equipment_summary(items: list[dict[str, str]], label: str) -> str:
-    """Build a concise equipment summary string for narrative fallback."""
+    """Build a well-formatted equipment summary grouped by category."""
     if not items:
         return ""
 
-    parts: list[str] = []
+    # Define category display order
+    category_order = [
+        "Head",
+        "Armor",
+        "Cloak",
+        "Gloves",
+        "Belt",
+        "Boots",
+        "Amulet",
+        "Rings",
+        "Weapons",
+        "Magical Items",
+        "Tools",
+        "Instruments",
+        "Apparel",
+        "Documents",
+        "Keys",
+        "Signets & Rings",
+        "Currency",
+        "Resources",
+        "Miscellaneous",
+        "Other",
+    ]
+
+    # Group items by category
+    categorized: dict[str, list[str]] = {}
+
     for item in items:
         name = item.get("name", "").strip()
         stats = item.get("stats", "").strip()
+        slot = item.get("slot", "").strip()
+
         if not name:
             continue
-        if stats:
-            parts.append(f"{name} ({stats})")
-        else:
-            parts.append(name)
 
-    if not parts:
+        # Determine category
+        base_category = _categorize_equipment_slot(slot)
+        if base_category == "Backpack":
+            category = _classify_backpack_item(name, stats)
+        else:
+            category = base_category
+
+        # Format the item string
+        if stats:
+            item_str = f"{name} ({stats})"
+        else:
+            item_str = name
+
+        if category not in categorized:
+            categorized[category] = []
+        categorized[category].append(item_str)
+
+    if not categorized:
         return ""
 
-    return f"{label}: " + ", ".join(parts) + "."
+    # Build formatted output
+    lines: list[str] = [f"━━━ {label} ━━━"]
+
+    for category in category_order:
+        if category in categorized:
+            items_list = categorized[category]
+            lines.append(f"▸ {category}:")
+            for item_str in items_list:
+                lines.append(f"  • {item_str}")
+
+    # Add any categories not in our predefined order
+    for category, items_list in categorized.items():
+        if category not in category_order:
+            lines.append(f"▸ {category}:")
+            for item_str in items_list:
+                lines.append(f"  • {item_str}")
+
+    return "\n".join(lines)
 
 
 def ensure_equipment_summary_in_narrative(
