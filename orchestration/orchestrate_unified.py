@@ -17,12 +17,22 @@ if parent_dir not in sys.path:
 import argparse
 import glob
 import json
-import logging
 import re
 import shutil
 import subprocess
 import time
 from datetime import datetime, timedelta, timezone
+
+# Use project logging utility when available
+try:
+    import logging_util
+
+    logger = logging_util.getLogger(__name__)
+except ImportError:  # pragma: no cover - fallback for environments without logging_util
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
 # Use absolute imports with package name for __main__ compatibility
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
@@ -324,7 +334,6 @@ class UnifiedOrchestration:
         # ENHANCED LOGGING: Track orchestration session
         start_time = time.time()
         session_id = int(start_time)
-        logger = logging.getLogger(__name__)
         logger.info(
             "orchestration_session_start",
             extra={

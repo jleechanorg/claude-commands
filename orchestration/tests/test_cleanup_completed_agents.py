@@ -620,7 +620,7 @@ class TestCleanupCompletedAgents:
         # Act
         with patch("orchestration.cleanup_completed_agents.check_agent_completion") as mock_completion:
             mock_completion.return_value = {"completed": False, "reason": "still_active"}
-            result = cleanup_completed_agents(dry_run=True)
+            cleanup_completed_agents(dry_run=True)
 
             # Assert
             mock_completion.assert_called_once_with("task-agent-123")  # Only task-agent checked
@@ -637,7 +637,7 @@ class TestCleanupCompletedAgents:
         # Act
         with patch("orchestration.cleanup_completed_agents.check_agent_completion") as mock_completion:
             mock_completion.return_value = {"completed": False, "reason": "still_active"}
-            result = cleanup_completed_agents(dry_run=True)
+            cleanup_completed_agents(dry_run=True)
 
             # Assert
             assert mock_timeout.call_count == 4  # All sessions checked for timeout

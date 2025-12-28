@@ -75,7 +75,7 @@ response = client.models.generate_content(
 
 ## Checklist for Gemini 3 integrations
 
-- Use thinking_config with thinking_level (Gemini 3).
+- Use thinking_config with thinking_budget (Gemini 3).
 - Enable code execution via tools=[types.Tool(code_execution=types.ToolCodeExecution)].
 - Use response_mime_type="application/json" (and optional response_json_schema) for JSON mode.
 - Extract code execution evidence from response parts (executable_code/code_execution_result).

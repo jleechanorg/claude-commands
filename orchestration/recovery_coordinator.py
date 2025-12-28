@@ -260,7 +260,9 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
             recovery_success = False
         else:
             # Create recovery agent
-            self.generate_recovery_prompt(agent_name, task_desc, partial_work, strategy)
+            recovery_prompt = self.generate_recovery_prompt(
+                agent_name, task_desc, partial_work, strategy
+            )
 
             # Use orchestration system to create recovery agent
             recovery_agent_name = f"{agent_name}-recovery-{int(time.time())}"
@@ -268,6 +270,8 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
             # For now, return the recovery plan
             recovery_success = True
             print(f"   ✅ Recovery agent prepared: {recovery_agent_name}")
+            print("   📄 Recovery prompt prepared:")
+            print(recovery_prompt)
 
         # Record recovery event
         recovery_time = time.time() - start_time

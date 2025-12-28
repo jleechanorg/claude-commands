@@ -6,7 +6,7 @@ Playwright-based automation scripts for OpenAI Codex and ChatGPT that connect to
 
 This directory contains scripts for:
 
-1. **Codex GitHub Mentions** - Automate finding and updating "github mention" tasks in Codex
+1. **Codex GitHub Mentions** - Automate finding and updating "GitHub mention" tasks in Codex
 2. **Oracle CLI** - Ask GPT-5 Pro questions via browser (no API key needed)
 3. **Chrome Debug Mode** - Helper to start Chrome with remote debugging
 
