@@ -128,7 +128,34 @@ lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
 
 ### Evidence Directory Structure
 
-Standard layout for evidence bundles:
+**Canonical format** (use `/savetmp` command):
+
+```
+/tmp/<repo>/<branch>/<work>/<timestamp>/
+├── README.md              # Package manifest with git provenance
+├── README.md.sha256
+├── methodology.md         # Testing methodology documentation
+├── methodology.md.sha256
+├── evidence.md            # Evidence summary with metrics
+├── evidence.md.sha256
+├── notes.md               # Additional context, TODOs, follow-ups
+├── notes.md.sha256
+├── metadata.json          # Machine-readable: git_provenance, timestamps
+├── metadata.json.sha256
+└── artifacts/             # Copied evidence files (test outputs, logs, etc.)
+    └── <copied files with checksums>
+```
+
+**Usage:**
+```bash
+python .claude/commands/savetmp.py "<work-name>" \
+  --methodology "Testing approach description" \
+  --evidence "Results summary" \
+  --notes "Follow-up notes" \
+  --artifact /path/to/test/output
+```
+
+**Legacy format** (still valid for specialized tests):
 
 ```
 /tmp/{feature}_api_tests_v{N}/
@@ -137,10 +164,7 @@ Standard layout for evidence bundles:
 ├── api_completion_test.json.sha256
 ├── post_process_analysis.json     # Validation/regression checks
 ├── post_process_analysis.json.sha256
-├── pip_freeze.txt                 # Python environment
-├── pip_freeze.txt.sha256
-├── evidence_capture.sh            # Reproducible script
-└── run_api_completion_test.py     # Test runner
+└── evidence_capture.sh            # Reproducible script
 ```
 
 ### For Production Claims
@@ -469,6 +493,76 @@ If you're about to:
 - Claim "tests pass" without specifying mode → STOP, clarify mode
 - Skip actual execution evidence → STOP, collect real evidence
 - Trust health checks as feature validation → STOP, test actual features
+
+## Self-Contained Evidence Files
+
+Evidence JSON files must use **relative paths** for portability:
+
+```json
+// ❌ BAD - Absolute paths break when bundle is moved
+{
+  "artifacts_dir": "/tmp/worktree_worker7/dev123/e2e_test",
+  "output_file": "/tmp/worktree_worker7/dev123/results.json"
+}
+
+// ✅ GOOD - Relative paths work anywhere
+{
+  "artifacts_dir": "./artifacts",
+  "output_file": "./results.json"
+}
+```
+
+**Post-processing requirement:** After copying test output into a bundle:
+1. Validate all embedded paths are relative
+2. If absolute paths exist, update them to be bundle-relative
+3. Or document the original source location separately
+
+## Single Checksum Layer
+
+Evidence bundles must have **exactly one layer** of checksums:
+
+| Strategy | When to Use |
+|----------|-------------|
+| Per-file `.sha256` | Simple bundles, few files |
+| Root `checksums.sha256` | Complex bundles, many files |
+| **NEVER both** | Causes `.sha256.sha256` pollution |
+
+**When packaging artifacts that already have checksums:**
+
+```bash
+# Use --clean-checksums with /savetmp
+python .claude/commands/savetmp.py "work-name" \
+  --artifact /path/to/source \
+  --clean-checksums  # Removes existing .sha256 before packaging
+```
+
+**Manual cleanup if needed:**
+
+```bash
+# Remove all .sha256 files from artifact source before copying
+find /path/to/source -name "*.sha256" -delete
+
+# Then create fresh checksums at bundle level
+cd /bundle/root
+find . -type f ! -name "*.sha256" -exec sha256sum {} \; > checksums.sha256
+```
+
+## PR Mode for Full Diff Capture
+
+When creating evidence for a PR, use `--pr-mode` to capture the full diff:
+
+```bash
+# Default: uses upstream or last commit (may miss PR context)
+python .claude/commands/savetmp.py "evidence-name" --artifact ./results
+
+# PR mode: always uses origin/main...HEAD (full PR diff)
+python .claude/commands/savetmp.py "evidence-name" --artifact ./results --pr-mode
+```
+
+**Why this matters:**
+- Default mode captures `HEAD~1..HEAD` (last commit only)
+- After merging main, this shows merge changes, not PR changes
+- PR mode always captures `origin/main...HEAD` (full PR diff)
 
 ## Related Standards
 

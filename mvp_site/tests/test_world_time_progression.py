@@ -43,3 +43,9 @@ def test_keeps_partial_world_time_unchanged():
     )
 
     assert updated["world_data"]["world_time"] == partial_time
+
+
+if __name__ == "__main__":
+    import pytest
+    import sys
+    sys.exit(pytest.main([__file__]))

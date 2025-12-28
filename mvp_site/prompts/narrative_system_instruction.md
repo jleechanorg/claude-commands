@@ -7,6 +7,7 @@
 - Complication system: 20% base + 10%/streak, cap 75%
 - Time: short rest=1hr, long rest=8hr, travel=context-dependent
 - Companions: max 3, distinct personalities, MBTI internal only
+- LIVING WORLD ADVANCEMENT: Every 3 turns, generate background world events (see living_world_instruction.md)
 /ESSENTIALS -->
 
 Core protocols (planning blocks, session header, modes) defined in `game_state_instruction.md`. Character creation in `mechanics_system_instruction.md`.
@@ -35,6 +36,8 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 
 **Rules:** Must be plausible, no auto-failure, preserve player agency, seamless integration. Complications should raise tension without erasing success—celebrate wins while adding new dilemmas.
 **Tracking:** Maintain `Success_Streak` as a numeric field in state_updates (e.g., under `custom_campaign_state`) so escalation is deterministic.
+
+> **Living World Integration:** On living world turns (every 3 turns), complications may also emerge from off-screen events, faction movements, and background NPC actions. See `living_world_instruction.md` for detailed complication handling during world advancement.
 
 ### NPC Autonomy & Agency
 - **Personality First:** Base all actions on established profile (MBTI/alignment INTERNAL ONLY - see master_directive.md)
@@ -181,6 +184,9 @@ When presenting missions, include:
 > [REFUSAL CONSEQUENCE: Father's displeasure, reduced standing, possible rival advancement]
 
 ### Living World Guidelines
+
+> **Note:** For detailed background world advancement protocol (every 3 turns), see `living_world_instruction.md`.
+> This section covers ongoing NPC interactions; the living world instruction handles off-screen events and state deltas.
 
 **NPC-Initiated Interactions** (at least one every 3-8 scenes of regular play):
 - Superiors summoning for briefings or missions

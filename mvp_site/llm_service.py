@@ -1248,6 +1248,24 @@ def get_client():
     return gemini_provider.get_client()
 
 
+def _compute_player_turn_number(story_context: list[dict[str, Any]]) -> int:
+    """Compute 1-indexed player turn number, excluding GOD-mode prompts."""
+    if not story_context:
+        return 1
+    user_turns = 0
+    for entry in story_context:
+        if entry.get(constants.KEY_ACTOR) != constants.ACTOR_USER:
+            continue
+        mode = entry.get(constants.KEY_MODE)
+        text = entry.get(constants.KEY_TEXT, "")
+        if mode == constants.MODE_GOD:
+            continue
+        if isinstance(text, str) and text.strip().upper().startswith("GOD MODE:"):
+            continue
+        user_turns += 1
+    return max(1, user_turns + 1)
+
+
 def _prepare_entity_tracking(
     game_state: GameState, story_context: list[dict[str, Any]], session_number: int
 ) -> tuple[str, list[str], str]:
@@ -3461,6 +3479,11 @@ def continue_story(
     agent: BaseAgent = get_agent_for_input(raw_user_input, current_game_state)
     is_god_mode_command: bool = isinstance(agent, GodModeAgent)
 
+    # Calculate turn number for living world advancement
+    # Turn number is 1-indexed (first turn = 1) and counts player turns,
+    # excluding the initial GOD-mode seed prompt and any later GOD MODE commands.
+    turn_number: int = _compute_player_turn_number(story_context)
+
     if is_god_mode_command:
         # GOD MODE: Use GodModeAgent with focused administrative prompts
         # God mode is for correcting mistakes/changing campaign, NOT playing
@@ -3469,10 +3492,12 @@ def continue_story(
         # STORY MODE: Use StoryModeAgent with full gameplay prompts
         # Include continuation reminders only in character mode
         include_continuation = mode == constants.MODE_CHARACTER
+        # Pass turn_number for living world advancement (every 3 turns)
         system_instruction_final = agent.build_system_instructions(
             selected_prompts=selected_prompts,
             use_default_world=use_default_world,
             include_continuation_reminder=include_continuation,
+            turn_number=turn_number,
         )
 
     # --- NEW: Budget-based Truncation ---
@@ -3579,8 +3604,10 @@ def continue_story(
     if expected_entities:
         # 1. Entity Pre-Loading (Option 3)
         game_state_dict = current_game_state.to_dict()
-        # story_entry_count (aka turn_number) - see module docstring for turn vs scene terminology
-        turn_number = len(truncated_story_context) + 1
+        # Use player turns (user/AI pairs) based on the truncated context to keep
+        # entity tracking cadence aligned with the visible story log. This may
+        # differ from the living-world cadence when earlier turns are truncated.
+        turn_number = (len(truncated_story_context) // 2) + 1
         current_location = current_game_state.world_data.get(
             "current_location_name", "Unknown"
         )

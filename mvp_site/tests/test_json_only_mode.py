@@ -34,6 +34,7 @@ class TestJSONOnlyMode(unittest.TestCase):
             mock_response = Mock()
             mock_response.text = '{"narrative": "test", "planning_block": {"thinking": "", "choices": {}}, "session_header": "test"}'
             mock_response.candidates = []  # Empty candidates means no function_calls
+            mock_response._tool_results = []  # Fix for len() check
             mock_json_gen.return_value = mock_response
 
             # Test continue_story (need proper parameters)
@@ -95,6 +96,7 @@ class TestJSONOnlyMode(unittest.TestCase):
             mock_response = Mock()
             mock_response.text = '{"narrative": "test", "planning_block": {"thinking": "", "choices": {}}, "session_header": "test"}'
             mock_response.candidates = []  # Empty candidates means no function_calls
+            mock_response._tool_results = []  # Fix for len() check
             mock_json_gen.return_value = mock_response
 
             # Test continue_story (the main narrative generation function)

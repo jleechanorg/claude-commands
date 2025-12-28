@@ -38,63 +38,70 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
     def test_argparse_all_optional_arguments(self):
         """Test that all optional arguments are parsed correctly."""
         test_args = [
-            'orchestrate_unified.py',
-            '--context', '/tmp/context.md',
-            '--branch', 'my-branch',
-            '--pr', '123',
-            '--agent-cli', 'codex',
-            '--mcp-agent', 'TestAgent',
-            '--bead', 'bead-123',
-            '--validate', 'make test',
-            '--no-new-pr',
-            '--no-new-branch',
-            'My task description'
+            "orchestrate_unified.py",
+            "--context",
+            "/tmp/context.md",
+            "--branch",
+            "my-branch",
+            "--pr",
+            "123",
+            "--agent-cli",
+            "codex",
+            "--mcp-agent",
+            "TestAgent",
+            "--bead",
+            "bead-123",
+            "--validate",
+            "make test",
+            "--no-new-pr",
+            "--no-new-branch",
+            "My task description",
         ]
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('task', nargs='+')
-        parser.add_argument('--context', type=str, default=None)
-        parser.add_argument('--branch', type=str, default=None)
-        parser.add_argument('--pr', type=int, default=None)
-        parser.add_argument('--agent-cli', type=str, default=None)
-        parser.add_argument('--mcp-agent', type=str, default=None)
-        parser.add_argument('--bead', type=str, default=None)
-        parser.add_argument('--validate', type=str, default=None)
-        parser.add_argument('--no-new-pr', action='store_true')
-        parser.add_argument('--no-new-branch', action='store_true')
+        parser.add_argument("task", nargs="+")
+        parser.add_argument("--context", type=str, default=None)
+        parser.add_argument("--branch", type=str, default=None)
+        parser.add_argument("--pr", type=int, default=None)
+        parser.add_argument("--agent-cli", type=str, default=None)
+        parser.add_argument("--mcp-agent", type=str, default=None)
+        parser.add_argument("--bead", type=str, default=None)
+        parser.add_argument("--validate", type=str, default=None)
+        parser.add_argument("--no-new-pr", action="store_true")
+        parser.add_argument("--no-new-branch", action="store_true")
 
         args = parser.parse_args(test_args[1:])
 
-        self.assertEqual(args.task, ['My task description'])
-        self.assertEqual(args.context, '/tmp/context.md')
-        self.assertEqual(args.branch, 'my-branch')
+        self.assertEqual(args.task, ["My task description"])
+        self.assertEqual(args.context, "/tmp/context.md")
+        self.assertEqual(args.branch, "my-branch")
         self.assertEqual(args.pr, 123)
-        self.assertEqual(args.agent_cli, 'codex')
-        self.assertEqual(args.mcp_agent, 'TestAgent')
-        self.assertEqual(args.bead, 'bead-123')
-        self.assertEqual(args.validate, 'make test')
+        self.assertEqual(args.agent_cli, "codex")
+        self.assertEqual(args.mcp_agent, "TestAgent")
+        self.assertEqual(args.bead, "bead-123")
+        self.assertEqual(args.validate, "make test")
         self.assertTrue(args.no_new_pr)
         self.assertTrue(args.no_new_branch)
 
     def test_argparse_no_optional_arguments(self):
         """Test parsing with only task description (backward compatibility)."""
-        test_args = ['orchestrate_unified.py', 'Simple', 'task', 'here']
+        test_args = ["orchestrate_unified.py", "Simple", "task", "here"]
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('task', nargs='+')
-        parser.add_argument('--context', type=str, default=None)
-        parser.add_argument('--branch', type=str, default=None)
-        parser.add_argument('--pr', type=int, default=None)
-        parser.add_argument('--agent-cli', type=str, default=None)
-        parser.add_argument('--mcp-agent', type=str, default=None)
-        parser.add_argument('--bead', type=str, default=None)
-        parser.add_argument('--validate', type=str, default=None)
-        parser.add_argument('--no-new-pr', action='store_true')
-        parser.add_argument('--no-new-branch', action='store_true')
+        parser.add_argument("task", nargs="+")
+        parser.add_argument("--context", type=str, default=None)
+        parser.add_argument("--branch", type=str, default=None)
+        parser.add_argument("--pr", type=int, default=None)
+        parser.add_argument("--agent-cli", type=str, default=None)
+        parser.add_argument("--mcp-agent", type=str, default=None)
+        parser.add_argument("--bead", type=str, default=None)
+        parser.add_argument("--validate", type=str, default=None)
+        parser.add_argument("--no-new-pr", action="store_true")
+        parser.add_argument("--no-new-branch", action="store_true")
 
         args = parser.parse_args(test_args[1:])
 
-        self.assertEqual(args.task, ['Simple', 'task', 'here'])
+        self.assertEqual(args.task, ["Simple", "task", "here"])
         self.assertIsNone(args.context)
         self.assertIsNone(args.branch)
         self.assertIsNone(args.pr)
@@ -107,30 +114,25 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
 
     def test_argparse_partial_arguments(self):
         """Test parsing with only some optional arguments."""
-        test_args = [
-            'orchestrate_unified.py',
-            '--branch', 'feature-branch',
-            '--pr', '456',
-            'Update feature'
-        ]
+        test_args = ["orchestrate_unified.py", "--branch", "feature-branch", "--pr", "456", "Update feature"]
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('task', nargs='+')
-        parser.add_argument('--context', type=str, default=None)
-        parser.add_argument('--branch', type=str, default=None)
-        parser.add_argument('--pr', type=int, default=None)
-        parser.add_argument('--agent-cli', type=str, default=None)
-        parser.add_argument('--mcp-agent', type=str, default=None)
-        parser.add_argument('--bead', type=str, default=None)
-        parser.add_argument('--validate', type=str, default=None)
-        parser.add_argument('--no-new-pr', action='store_true')
-        parser.add_argument('--no-new-branch', action='store_true')
+        parser.add_argument("task", nargs="+")
+        parser.add_argument("--context", type=str, default=None)
+        parser.add_argument("--branch", type=str, default=None)
+        parser.add_argument("--pr", type=int, default=None)
+        parser.add_argument("--agent-cli", type=str, default=None)
+        parser.add_argument("--mcp-agent", type=str, default=None)
+        parser.add_argument("--bead", type=str, default=None)
+        parser.add_argument("--validate", type=str, default=None)
+        parser.add_argument("--no-new-pr", action="store_true")
+        parser.add_argument("--no-new-branch", action="store_true")
 
         args = parser.parse_args(test_args[1:])
 
-        self.assertEqual(args.task, ['Update feature'])
+        self.assertEqual(args.task, ["Update feature"])
         self.assertIsNone(args.context)
-        self.assertEqual(args.branch, 'feature-branch')
+        self.assertEqual(args.branch, "feature-branch")
         self.assertEqual(args.pr, 456)
         self.assertIsNone(args.agent_cli)
         self.assertIsNone(args.mcp_agent)
@@ -141,19 +143,20 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
 
     def test_options_dict_construction(self):
         """Test that options dict is built correctly from parsed args."""
+
         # Simulate parsed args
         class MockArgs:
-            context = '/tmp/ctx.md'
-            branch = 'test-branch'
+            context = "/tmp/ctx.md"
+            branch = "test-branch"
             pr = 789
-            agent_cli = 'gemini'
+            agent_cli = "gemini"
             agent_cli_provided = False
-            mcp_agent = 'Agent1'
-            bead = 'bead-xyz'
-            validate = './run_tests.sh'
+            mcp_agent = "Agent1"
+            bead = "bead-xyz"
+            validate = "./run_tests.sh"
             no_new_pr = True
             no_new_branch = False
-            task = ['Test task']
+            task = ["Test task"]
 
         args = MockArgs()
 
@@ -170,16 +173,16 @@ class TestOrchestrateUnifiedArguments(unittest.TestCase):
             "no_new_branch": args.no_new_branch,
         }
 
-        self.assertEqual(options['context'], '/tmp/ctx.md')
-        self.assertEqual(options['branch'], 'test-branch')
-        self.assertEqual(options['pr'], 789)
-        self.assertEqual(options['agent_cli'], 'gemini')
-        self.assertFalse(options['agent_cli_provided'])
-        self.assertEqual(options['mcp_agent'], 'Agent1')
-        self.assertEqual(options['bead'], 'bead-xyz')
-        self.assertEqual(options['validate'], './run_tests.sh')
-        self.assertTrue(options['no_new_pr'])
-        self.assertFalse(options['no_new_branch'])
+        self.assertEqual(options["context"], "/tmp/ctx.md")
+        self.assertEqual(options["branch"], "test-branch")
+        self.assertEqual(options["pr"], 789)
+        self.assertEqual(options["agent_cli"], "gemini")
+        self.assertFalse(options["agent_cli_provided"])
+        self.assertEqual(options["mcp_agent"], "Agent1")
+        self.assertEqual(options["bead"], "bead-xyz")
+        self.assertEqual(options["validate"], "./run_tests.sh")
+        self.assertTrue(options["no_new_pr"])
+        self.assertFalse(options["no_new_branch"])
 
 
 class TestContextFileLoading(unittest.TestCase):
@@ -187,12 +190,12 @@ class TestContextFileLoading(unittest.TestCase):
 
     def test_context_file_loads_successfully(self):
         """Test that context file content is loaded correctly."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', dir=project_root, delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", dir=project_root, delete=False) as f:
             f.write("# Test Context\n\nThis is test context content.")
             context_path = f.name
 
         try:
-            with open(context_path, 'r') as f:
+            with open(context_path, "r") as f:
                 content = f.read()
 
             self.assertIn("# Test Context", content)
@@ -202,7 +205,7 @@ class TestContextFileLoading(unittest.TestCase):
 
     def test_context_file_not_found_handling(self):
         """Test handling of missing context file."""
-        context_path = '/nonexistent/path/context.md'
+        context_path = "/nonexistent/path/context.md"
         self.assertFalse(os.path.exists(context_path))
 
 
@@ -211,20 +214,17 @@ class TestAgentSpecInjection(unittest.TestCase):
 
     def test_agent_spec_receives_all_options(self):
         """Test that agent spec is properly augmented with options."""
-        agent_spec = {
-            'name': 'test-agent',
-            'capabilities': 'Test capabilities'
-        }
+        agent_spec = {"name": "test-agent", "capabilities": "Test capabilities"}
 
         options = {
-            'agent_cli': 'codex',
-            'branch': 'feature-branch',
-            'pr': 123,
-            'mcp_agent': 'TestAgent',
-            'bead': 'bead-id',
-            'validate': 'make test',
-            'no_new_pr': True,
-            'no_new_branch': True,
+            "agent_cli": "codex",
+            "branch": "feature-branch",
+            "pr": 123,
+            "mcp_agent": "TestAgent",
+            "bead": "bead-id",
+            "validate": "make test",
+            "no_new_pr": True,
+            "no_new_branch": True,
         }
 
         # Simulate injection logic from orchestrate method
@@ -246,30 +246,27 @@ class TestAgentSpecInjection(unittest.TestCase):
             agent_spec["no_new_branch"] = True
 
         # Verify injected values
-        self.assertEqual(agent_spec['cli'], 'codex')
-        self.assertEqual(agent_spec['existing_branch'], 'feature-branch')
-        self.assertEqual(agent_spec['existing_pr'], 123)
-        self.assertEqual(agent_spec['mcp_agent_name'], 'TestAgent')
-        self.assertEqual(agent_spec['bead_id'], 'bead-id')
-        self.assertEqual(agent_spec['validation_command'], 'make test')
-        self.assertTrue(agent_spec['no_new_pr'])
-        self.assertTrue(agent_spec['no_new_branch'])
+        self.assertEqual(agent_spec["cli"], "codex")
+        self.assertEqual(agent_spec["existing_branch"], "feature-branch")
+        self.assertEqual(agent_spec["existing_pr"], 123)
+        self.assertEqual(agent_spec["mcp_agent_name"], "TestAgent")
+        self.assertEqual(agent_spec["bead_id"], "bead-id")
+        self.assertEqual(agent_spec["validation_command"], "make test")
+        self.assertTrue(agent_spec["no_new_pr"])
+        self.assertTrue(agent_spec["no_new_branch"])
 
     def test_agent_spec_partial_options(self):
         """Test agent spec with only some options provided."""
-        agent_spec = {
-            'name': 'test-agent',
-            'capabilities': 'Test capabilities'
-        }
+        agent_spec = {"name": "test-agent", "capabilities": "Test capabilities"}
 
         options = {
-            'branch': 'my-branch',
-            'pr': None,
-            'mcp_agent': None,
-            'bead': None,
-            'validate': None,
-            'no_new_pr': False,
-            'no_new_branch': False,
+            "branch": "my-branch",
+            "pr": None,
+            "mcp_agent": None,
+            "bead": None,
+            "validate": None,
+            "no_new_pr": False,
+            "no_new_branch": False,
         }
 
         # Simulate injection logic
@@ -289,13 +286,13 @@ class TestAgentSpecInjection(unittest.TestCase):
             agent_spec["no_new_branch"] = True
 
         # Only branch should be set
-        self.assertEqual(agent_spec['existing_branch'], 'my-branch')
-        self.assertNotIn('existing_pr', agent_spec)
-        self.assertNotIn('mcp_agent_name', agent_spec)
-        self.assertNotIn('bead_id', agent_spec)
-        self.assertNotIn('validation_command', agent_spec)
-        self.assertNotIn('no_new_pr', agent_spec)
-        self.assertNotIn('no_new_branch', agent_spec)
+        self.assertEqual(agent_spec["existing_branch"], "my-branch")
+        self.assertNotIn("existing_pr", agent_spec)
+        self.assertNotIn("mcp_agent_name", agent_spec)
+        self.assertNotIn("bead_id", agent_spec)
+        self.assertNotIn("validation_command", agent_spec)
+        self.assertNotIn("no_new_pr", agent_spec)
+        self.assertNotIn("no_new_branch", agent_spec)
 
 
 class TestEnhancedTaskWithContext(unittest.TestCase):
@@ -343,38 +340,35 @@ class TestMainFunctionImport(unittest.TestCase):
 
     def test_module_imports(self):
         """Test that orchestrate_unified module imports successfully."""
-        self.assertTrue(hasattr(orchestrate_unified, 'main'))
-        self.assertTrue(hasattr(orchestrate_unified, 'UnifiedOrchestration'))
+        self.assertTrue(hasattr(orchestrate_unified, "main"))
+        self.assertTrue(hasattr(orchestrate_unified, "UnifiedOrchestration"))
 
     def test_unified_orchestration_class_exists(self):
         """Test that UnifiedOrchestration class exists and has orchestrate method."""
         from orchestration import orchestrate_unified
-        self.assertTrue(hasattr(orchestrate_unified.UnifiedOrchestration, 'orchestrate'))
+
+        self.assertTrue(hasattr(orchestrate_unified.UnifiedOrchestration, "orchestrate"))
 
     def test_orchestrate_method_accepts_options(self):
         """Test that orchestrate method accepts options parameter."""
         sig = inspect.signature(orchestrate_unified.UnifiedOrchestration.orchestrate)
         params = list(sig.parameters.keys())
 
-        self.assertIn('task_description', params)
-        self.assertIn('options', params)
+        self.assertIn("task_description", params)
+        self.assertIn("options", params)
 
         # Verify options has default value
-        options_param = sig.parameters['options']
+        options_param = sig.parameters["options"]
         self.assertEqual(options_param.default, None)
 
 
 class TestGhCommandMocking(unittest.TestCase):
     """Test gh command interactions are properly mockable."""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_gh_pr_list_command_structure(self, mock_run):
         """Test that gh pr list command is called with correct arguments."""
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout='[]',
-            stderr=''
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
 
         # Simulate the command structure used in _find_recent_agent_work
         result = subprocess.run(
@@ -404,13 +398,13 @@ class TestGhCommandMocking(unittest.TestCase):
         self.assertIn("--author", call_args)
         self.assertIn("--json", call_args)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_gh_pr_list_with_branch_pattern(self, mock_run):
         """Test gh pr list with --head branch pattern."""
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout='[{"number": 123, "url": "https://github.com/test/repo/pull/123", "title": "Test PR", "state": "OPEN"}]',
-            stderr=''
+            stderr="",
         )
 
         branch_pattern = "task-agent-test-work"
@@ -436,10 +430,10 @@ class TestGhCommandMocking(unittest.TestCase):
         self.assertIn("--head", call_args)
         self.assertIn(branch_pattern, call_args)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_gh_command_timeout_handling(self, mock_run):
         """Test that gh commands use appropriate timeout."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='[]', stderr='')
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
 
         subprocess.run(
             ["gh", "pr", "list"],
@@ -452,10 +446,10 @@ class TestGhCommandMocking(unittest.TestCase):
 
         # Verify timeout was set
         call_kwargs = mock_run.call_args[1]
-        self.assertEqual(call_kwargs.get('timeout'), 30)
-        self.assertEqual(call_kwargs.get('shell'), False)
+        self.assertEqual(call_kwargs.get("timeout"), 30)
+        self.assertEqual(call_kwargs.get("shell"), False)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_gh_command_failure_handling(self, mock_run):
         """Test handling of gh command failures."""
         mock_run.side_effect = subprocess.CalledProcessError(1, "gh")

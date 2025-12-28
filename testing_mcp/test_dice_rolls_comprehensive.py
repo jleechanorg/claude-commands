@@ -308,7 +308,7 @@ def main() -> int:
         default=DEFAULT_CHI_SQUARE_THRESHOLD,
         help=(
             "Fail chi-square test if statistic exceeds this threshold. "
-            f"Default={DEFAULT_CHI_SQUARE_THRESHOLD:.1f} (empirical 99.9%% cutoff for 20 rolls)."
+            f"Default={DEFAULT_CHI_SQUARE_THRESHOLD:.1f} (empirical 99.9% cutoff for 20 rolls)."
         ),
     )
     parser.add_argument(

@@ -4,7 +4,12 @@ import shlex
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, TaskDispatcher, GEMINI_MODEL
+from orchestration.task_dispatcher import (
+    CLI_PROFILES,
+    CURSOR_MODEL,
+    GEMINI_MODEL,
+    TaskDispatcher,
+)
 
 
 class TestAgentCliSelection(unittest.TestCase):
@@ -29,7 +34,9 @@ class TestAgentCliSelection(unittest.TestCase):
         """Keywords should select CLI when no explicit override is provided."""
         with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
             mock_which.side_effect = (
-                lambda command: "/usr/bin/codex" if command == "codex" else "/usr/bin/claude"
+                lambda command: "/usr/bin/codex"
+                if command == "codex"
+                else "/usr/bin/claude"
                 if command == "claude"
                 else None
             )
@@ -201,6 +208,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
             patch("orchestration.task_dispatcher.shutil.which") as mock_which,
             patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None),
+            patch.object(self.dispatcher, "_ensure_mock_cli_binary", return_value=None),
         ):
 
             def which_side_effect(command):
@@ -250,7 +258,9 @@ class TestGeminiCliSupport(unittest.TestCase):
         """Gemini keywords should select CLI when not overridden."""
         with patch("orchestration.task_dispatcher.shutil.which") as mock_which:
             mock_which.side_effect = (
-                lambda command: "/usr/bin/gemini" if command == "gemini" else "/usr/bin/claude"
+                lambda command: "/usr/bin/gemini"
+                if command == "gemini"
+                else "/usr/bin/claude"
                 if command == "claude"
                 else None
             )
@@ -370,6 +380,7 @@ class TestGeminiCliSupport(unittest.TestCase):
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
             patch("orchestration.task_dispatcher.shutil.which") as mock_which,
             patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None),
+            patch.object(self.dispatcher, "_ensure_mock_cli_binary", return_value=None),
         ):
 
             def which_side_effect(command):

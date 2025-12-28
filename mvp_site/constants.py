@@ -386,6 +386,7 @@ FILENAME_GAME_STATE = "game_state_instruction.md"
 FILENAME_MASTER_DIRECTIVE = "master_directive.md"
 FILENAME_DND_SRD = "dnd_srd_instruction.md"
 FILENAME_CHARACTER_TEMPLATE = "character_template.md"
+FILENAME_LIVING_WORLD = "living_world_instruction.md"
 FILENAME_COMBAT_SYSTEM = "combat_system_instruction.md"
 
 # --- ARCHIVED FILENAMES (for reference) ---
@@ -405,6 +406,7 @@ PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
 PROMPT_TYPE_MASTER_DIRECTIVE = "master_directive"
 PROMPT_TYPE_DND_SRD = "dnd_srd"
 PROMPT_TYPE_GOD_MODE = "god_mode"
+PROMPT_TYPE_LIVING_WORLD = "living_world"
 PROMPT_TYPE_COMBAT = "combat"
 
 
@@ -421,9 +423,14 @@ GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.
 MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
 GOD_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "god_mode_instruction.md")
-COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
-    PROMPTS_DIR, "combat_system_instruction.md"
-)
+LIVING_WORLD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, FILENAME_LIVING_WORLD)
+COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "combat_system_instruction.md")
+
+# --- LIVING WORLD SETTINGS ---
+# The living world instruction is included every N turns to advance world state.
+# If this value changes, update living_world_instruction.md and references in
+# narrative_system_instruction.md to keep cadence documentation in sync.
+LIVING_WORLD_TURN_INTERVAL = 3
 
 # --- PROMPT LOADING ORDER ---
 # User-selectable prompts that are conditionally added based on campaign settings

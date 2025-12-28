@@ -54,6 +54,10 @@ try:
     google_module.genai.Client = MagicMock()
     sys.modules["google"] = google_module
     sys.modules["google.genai"] = google_module.genai
+    
+    # Mock google.auth to prevent "google is not a package" error
+    google_auth_module = MagicMock()
+    sys.modules["google.auth"] = google_auth_module
 
     # Mock other optional dependencies that might not be available
     docx_module = MagicMock()

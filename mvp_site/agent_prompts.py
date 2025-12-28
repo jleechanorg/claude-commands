@@ -24,6 +24,7 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
     constants.PROMPT_TYPE_DND_SRD: constants.DND_SRD_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_GOD_MODE: constants.GOD_MODE_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_LIVING_WORLD: constants.LIVING_WORLD_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_COMBAT: constants.COMBAT_SYSTEM_INSTRUCTION_PATH,
 }
 
@@ -505,6 +506,54 @@ class PromptBuilder:
             f"⚠️ DO NOT reset or regress the status of completed arcs.\n"
             f"⚠️ References to these arcs should acknowledge they are COMPLETE.\n\n"
         )
+
+    def should_include_living_world(self, turn_number: int) -> bool:
+        """
+        Check if living world instruction should be included based on turn number.
+
+        The living world instruction is included every N turns (configured via
+        constants.LIVING_WORLD_TURN_INTERVAL, default 3) to advance world state
+        without overwhelming every response.
+
+        Args:
+            turn_number: Current turn number (1-indexed)
+
+        Returns:
+            True if living world instruction should be included this turn
+        """
+        if turn_number < 1:
+            return False
+        return turn_number % constants.LIVING_WORLD_TURN_INTERVAL == 0
+
+    def build_living_world_instruction(self, turn_number: int) -> str:
+        """
+        Build living world advancement instruction for this turn.
+
+        This instruction triggers the LLM to advance world state for characters,
+        factions, and events that are not directly in the player's current scene.
+        The world continues to move even when the player isn't watching.
+
+        Args:
+            turn_number: Current turn number for context
+
+        Returns:
+            Living world instruction with turn context, or empty string if not
+            a living world turn.
+        """
+        if not self.should_include_living_world(turn_number):
+            return ""
+
+        # Load the living world instruction file
+        base_instruction = _load_instruction_file(constants.PROMPT_TYPE_LIVING_WORLD)
+
+        # Add turn context header
+        turn_context = (
+            f"\n**🌍 LIVING WORLD TURN {turn_number}**\n"
+            f"This is turn {turn_number} - a living world advancement turn.\n"
+            f"You MUST generate background world events as specified below.\n\n"
+        )
+
+        return turn_context + base_instruction
 
     def finalize_instructions(
         self, parts: list[str], use_default_world: bool = False

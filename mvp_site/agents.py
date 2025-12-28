@@ -92,6 +92,7 @@ class BaseAgent(ABC):
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
+        turn_number: int = 0,
     ) -> str:
         """
         Build the complete system instructions for this agent.
@@ -100,6 +101,7 @@ class BaseAgent(ABC):
             selected_prompts: User-selected prompt types (narrative, mechanics, etc.)
             use_default_world: Whether to include world content in instructions
             include_continuation_reminder: Whether to include continuation reminders
+            turn_number: Current turn number (used for living world advancement)
 
         Returns:
             Complete system instruction string for the LLM call
@@ -208,6 +210,7 @@ class StoryModeAgent(BaseAgent):
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
+        turn_number: int = 0,
     ) -> str:
         """
         Build system instructions for story mode.
@@ -218,6 +221,7 @@ class StoryModeAgent(BaseAgent):
         - Selected prompts (narrative, mechanics)
         - System references (D&D SRD)
         - Continuation reminders (planning blocks, temporal enforcement)
+        - Living world instruction (every 3 turns)
         - World content (if enabled)
 
         Args:
@@ -225,6 +229,7 @@ class StoryModeAgent(BaseAgent):
             use_default_world: Whether to include world content
             include_continuation_reminder: Whether to add planning block reminders
                                            (True for continue_story, False for initial)
+            turn_number: Current turn number (used for living world advancement)
 
         Returns:
             Complete system instruction string
@@ -232,6 +237,7 @@ class StoryModeAgent(BaseAgent):
         parts = self.build_system_instruction_parts(
             selected_prompts=selected_prompts,
             include_continuation_reminder=include_continuation_reminder,
+            turn_number=turn_number,
         )
 
         # Finalize with world content if requested
@@ -241,6 +247,7 @@ class StoryModeAgent(BaseAgent):
         self,
         selected_prompts: list[str] | None = None,
         include_continuation_reminder: bool = True,
+        turn_number: int = 0,
     ) -> list[str]:
         """
         Build the ordered instruction parts for story mode before finalization.
@@ -252,6 +259,7 @@ class StoryModeAgent(BaseAgent):
         Args:
             selected_prompts: User-selected prompt types
             include_continuation_reminder: Whether to add planning block reminders
+            turn_number: Current turn number (used for living world advancement)
 
         Returns:
             List of ordered system instruction parts (without world content).
@@ -276,6 +284,13 @@ class StoryModeAgent(BaseAgent):
         # Add continuation-specific reminders for story continuation
         if include_continuation_reminder:
             parts.append(builder.build_continuation_reminder())
+
+        # Add living world instruction every N turns (default: 3)
+        # This advances world state for off-screen characters, factions, and events
+        if turn_number > 0:
+            living_world_instruction = builder.build_living_world_instruction(turn_number)
+            if living_world_instruction:
+                parts.append(living_world_instruction)
 
         return parts
 
@@ -340,6 +355,7 @@ class GodModeAgent(BaseAgent):
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
+        turn_number: int = 0,
     ) -> str:
         """
         Build system instructions for god mode.
@@ -351,15 +367,16 @@ class GodModeAgent(BaseAgent):
         - D&D SRD (game rules knowledge)
         - Mechanics (detailed game rules)
 
-        Note: selected_prompts and use_default_world parameters are accepted to
-        match the BaseAgent interface but are intentionally ignored because god
-        mode always uses its fixed prompt set without world lore.
+        Note: selected_prompts, use_default_world, and turn_number parameters are
+        accepted to match the BaseAgent interface but are intentionally ignored
+        because god mode always uses its fixed prompt set without world lore or
+        living world advancement.
 
         Returns:
             Complete system instruction string for administrative commands
         """
         # Parameters intentionally unused - god mode uses fixed prompt set
-        del selected_prompts, use_default_world, include_continuation_reminder
+        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
 
         builder = self._prompt_builder
 
@@ -482,6 +499,7 @@ class InfoAgent(BaseAgent):
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
+        turn_number: int = 0,
     ) -> str:
         """
         Build TRIMMED system instructions for info queries.
@@ -491,13 +509,14 @@ class InfoAgent(BaseAgent):
         - Game state instruction (contains Equipment Query Protocol)
         - Current game state (for context)
 
-        Note: selected_prompts is intentionally ignored - info mode uses fixed set.
+        Note: selected_prompts and turn_number are intentionally ignored -
+        info mode uses fixed set without living world advancement.
 
         Returns:
             Trimmed system instruction string for information queries
         """
         # Parameters intentionally unused - info mode uses fixed prompt set
-        del selected_prompts, use_default_world, include_continuation_reminder
+        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
 
         builder = self._prompt_builder
 
@@ -584,6 +603,7 @@ class CombatAgent(BaseAgent):
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
+        turn_number: int = 0,
     ) -> str:
         """
         Build system instructions for combat mode.
@@ -596,16 +616,15 @@ class CombatAgent(BaseAgent):
         - Mechanics (detailed combat mechanics)
         - Debug instructions (combat logging)
 
-        Note: selected_prompts parameter is accepted for interface consistency
-        but combat mode uses its fixed combat-focused prompt set.
-        include_continuation_reminder is ignored because combat mode always uses
-        the same fixed prompt stack.
+        Note: selected_prompts and turn_number parameters are accepted for
+        interface consistency but combat mode uses its fixed combat-focused
+        prompt set without living world advancement.
 
         Returns:
             Complete system instruction string for combat encounters
         """
         # Parameters intentionally unused - combat mode uses fixed prompt set
-        del selected_prompts, include_continuation_reminder
+        del selected_prompts, include_continuation_reminder, turn_number
 
         builder = self._prompt_builder
 

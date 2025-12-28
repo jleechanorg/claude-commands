@@ -594,6 +594,65 @@ class EntityTrackingInstruction:
                 "npc_data": {"npc_name": {"status": "updated status"}},
                 "world_data": {"current_location": "if moved"},
                 "custom_campaign_state": {"any": "custom updates"},
+                "world_events": {
+                    "background_events": [
+                        {
+                            "actor": "Baroness Kess",
+                            "action": "ordered her scouts to sabotage the bridge",
+                            "location": "Northbridge Crossing",
+                            "outcome": "bridge supports weakened, travel slowed",
+                            "event_type": "immediate",
+                            "status": "pending",  # pending|discovered|resolved
+                            "discovery_condition": "locals report repairs needed; player notices delays",
+                            "player_impact": "harder to move troops north next turn",
+                        },
+                        {
+                            "actor": "Undertow Cult",
+                            "action": "performed a midnight rite",
+                            "location": "Shimmerfen Marsh",
+                            "outcome": "ghostly lights seen, wards destabilizing",
+                            "event_type": "immediate",
+                            "status": "discovered",  # player learned of this
+                            "discovered_turn": 4,  # when player learned
+                            "discovery_condition": "rumors from ferrymen or scouting the marsh",
+                            "player_impact": "increases undead activity near routes east of the marsh",
+                        },
+                    ],
+                    # Actual turn number when these background events were generated.
+                    "turn_generated": 3,
+                },
+                "faction_updates": {
+                    "Iron Syndicate": {
+                        "current_objective": "complete hidden tunnel to the docks",
+                        "progress": "construction 75% complete",
+                        "resource_change": "+2 shipments of illicit tools delivered",
+                        "player_standing_change": "none yet (player unaware)",
+                        "next_action": "bribe harbor master to ignore new night shipments",
+                    }
+                },
+                "time_events": {
+                    "Blood Moon Ritual": {
+                        "time_remaining": "1 turn until completion",
+                        "status": "ongoing",
+                        "changes_this_turn": "cultists gathered final components",
+                        "new_consequences": "summons a vengeful spirit if not interrupted",
+                    }
+                },
+                "rumors": [
+                    {
+                        "content": "ferrymen say the marsh glows at night and patrols vanish",
+                        "accuracy": "partial",
+                        "source_type": "traveler",
+                        "related_event": "Undertow Cult midnight rite",
+                    }
+                ],
+                "npc_status_changes": {
+                    "Captain Mara": {
+                        "previous_state": "patrolling the harbor",
+                        "new_state": "missing",
+                        "reason": "abducted during the night raid",
+                    }
+                },
             },
         }
 

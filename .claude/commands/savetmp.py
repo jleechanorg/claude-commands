@@ -83,6 +83,7 @@ def _run_git_commands_parallel(
 
 def _resolve_repo_info(
     skip_git: bool = False,
+    pr_mode: bool = False,
 ) -> Tuple[str, str, Optional[Dict[str, Optional[str]]]]:
     """Return (repo_name, branch_name, git_provenance) with sensible fallbacks.
 
@@ -116,8 +117,11 @@ def _resolve_repo_info(
         branch = "detached"
 
     # Determine a base ref for changed files with fallbacks
-    # Use origin/main as baseline, with two-dot diff for merge commits
-    base_ref = results.get("origin_main")
+    # In PR mode, always use origin/main to capture full PR diff
+    if pr_mode:
+        base_ref = results.get("origin_main")
+    else:
+        base_ref = results.get("upstream") or results.get("origin_main")
     changed_files_output: Optional[str] = None
     if base_ref and base_ref != results.get("head_commit"):
         # Try three-dot first (commits unique to HEAD)
@@ -226,14 +230,23 @@ def _copy_artifact(
 def _write_artifact_checksums(
     path: Path, base_dir: Optional[Path] = None
 ) -> List[Path]:
-    """Write checksums for an artifact file or all files within a directory."""
+    """Write checksums for an artifact file or all files within a directory.
+
+    Skips files that already end with .sha256 to prevent checksum pollution
+    (creating .sha256.sha256 files).
+    """
+    # Skip if path itself is a checksum file
+    if path.suffix == ".sha256":
+        return []
+
     if path.is_file():
         return [_write_checksum(path, base_dir)]
 
     checksum_paths: List[Path] = []
     if path.is_dir():
         for file_path in sorted(path.rglob("*")):
-            if file_path.is_file():
+            # Skip existing .sha256 files to prevent .sha256.sha256 pollution
+            if file_path.is_file() and file_path.suffix != ".sha256":
                 checksum_paths.append(_write_checksum(file_path, base_dir))
     return checksum_paths
 
@@ -305,6 +318,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip git commands for faster execution. Uses /tmp/evidence/local/<work>/ path.",
     )
+    parser.add_argument(
+        "--pr-mode",
+        action="store_true",
+        help="Use origin/main as base for changed files (captures full PR diff, not just last commit).",
+    )
+    parser.add_argument(
+        "--clean-checksums",
+        action="store_true",
+        help="Remove existing .sha256 files from artifacts before packaging to prevent checksum layering.",
+    )
     return parser
 
 
@@ -312,8 +335,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # Run git resolution (skip for speed if --skip-git)
-    repo_name, branch, git_provenance = _resolve_repo_info(skip_git=args.skip_git)
+    # Run git resolution (skip for speed if --skip-git, use pr_mode for full PR diff)
+    repo_name, branch, git_provenance = _resolve_repo_info(
+        skip_git=args.skip_git, pr_mode=args.pr_mode
+    )
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     try:
@@ -357,6 +382,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     reserved_targets: Set[Path] = set()
     for artifact in args.artifacts:
         src_path = Path(artifact).expanduser().resolve()
+        # Clean existing checksums from source if --clean-checksums is set
+        if args.clean_checksums and src_path.exists():
+            if src_path.is_dir():
+                for sha_file in list(src_path.rglob("*.sha256")):
+                    try:
+                        sha_file.unlink()
+                    except OSError:
+                        pass  # Ignore if can't delete
+            elif src_path.suffix == ".sha256":
+                continue  # Skip .sha256 files entirely in clean mode
         dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
         if dest_path:
             copied_artifacts.append(

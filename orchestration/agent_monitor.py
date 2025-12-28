@@ -36,7 +36,7 @@ class ConvergeAgentRestarter:
     def __init__(self, logger):
         self.logger = logger
         self.restart_attempts = {}  # Track restart attempts per agent
-        self.last_activity = {}     # Track last activity per agent
+        self.last_activity = {}  # Track last activity per agent
         self.max_restart_attempts = 3
         self.stuck_threshold = timedelta(minutes=10)
 
@@ -48,7 +48,7 @@ class ConvergeAgentRestarter:
         indicators = [
             f"{workspace_path}/converge_state.json",
             f"{workspace_path}/convergence_progress.log",
-            f"{workspace_path}/.converge_marker"
+            f"{workspace_path}/.converge_marker",
         ]
 
         return any(os.path.exists(indicator) for indicator in indicators)
@@ -94,14 +94,20 @@ class ConvergeAgentRestarter:
         # Check for progress indicators in recent output
         if recent_output:
             progress_indicators = [
-                "completing", "progress", "processing", "currently working",
-                "converging", "analyzing", "generating", "updating", "creating", "building"
+                "completing",
+                "progress",
+                "processing",
+                "currently working",
+                "converging",
+                "analyzing",
+                "generating",
+                "updating",
+                "creating",
+                "building",
             ]
 
             # Exclude stuck indicators
-            stuck_indicators = [
-                "stuck", "waiting", "error", "failed", "timeout", "hanging"
-            ]
+            stuck_indicators = ["stuck", "waiting", "error", "failed", "timeout", "hanging"]
 
             for line in recent_output:
                 line_lower = line.lower()
@@ -119,10 +125,7 @@ class ConvergeAgentRestarter:
         is_stuck = time_since_activity > self.stuck_threshold
 
         if is_stuck:
-            self.logger.warning(
-                f"🚨 Converge agent {agent_name} appears stuck "
-                f"(inactive for {time_since_activity})"
-            )
+            self.logger.warning(f"🚨 Converge agent {agent_name} appears stuck (inactive for {time_since_activity})")
 
         return is_stuck
 
@@ -132,12 +135,7 @@ class ConvergeAgentRestarter:
         last_modified = self.get_workspace_modified_time(agent_name)
         self.logger.info(f"🕐 Workspace last modified for {agent_name}: {last_modified}")
 
-        status = {
-            "workspace_info": {
-                "last_modified": last_modified
-            },
-            "recent_output": []
-        }
+        status = {"workspace_info": {"last_modified": last_modified}, "recent_output": []}
 
         # Check if stuck
         if self.detect_stuck_agent(agent_name, status):
@@ -158,7 +156,7 @@ class ConvergeAgentRestarter:
         # Check various possible workspace locations
         workspace_paths = [
             os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}"),
-            os.path.expanduser(f"~/projects/worldarchitect.ai/worktree_human/{agent_name}")
+            os.path.expanduser(f"~/projects/worldarchitect.ai/worktree_human/{agent_name}"),
         ]
 
         for path in workspace_paths:
@@ -169,9 +167,9 @@ class ConvergeAgentRestarter:
                     latest_time = 0
                     for root, dirs, files in os.walk(expanded_path):
                         # Skip hidden and cache directories
-                        dirs[:] = [d for d in dirs if not d.startswith('.') and d != '__pycache__' and d != 'venv']
+                        dirs[:] = [d for d in dirs if not d.startswith(".") and d != "__pycache__" and d != "venv"]
                         for file in files:
-                            if not file.startswith('.'):
+                            if not file.startswith("."):
                                 file_path = os.path.join(root, file)
                                 try:
                                     mtime = os.path.getmtime(file_path)
@@ -194,7 +192,7 @@ class ConvergeAgentRestarter:
             return False
 
         # Only allow alphanumeric, hyphens, and underscores
-        safe_pattern = r'^[a-zA-Z0-9_-]+$'
+        safe_pattern = r"^[a-zA-Z0-9_-]+$"
         return bool(re.match(safe_pattern, agent_name))
 
     def _is_safe_command(self, cmd: str) -> bool:
@@ -206,17 +204,17 @@ class ConvergeAgentRestarter:
             return False
 
         # Check for dangerous characters that could enable command injection
-        dangerous_chars = [';', '|', '&', '$', '`', '$(', '&&', '||', '>', '<', '>>', '\n', '\r']
+        dangerous_chars = [";", "|", "&", "$", "`", "$(", "&&", "||", ">", "<", ">>", "\n", "\r"]
         if any(char in cmd_clean for char in dangerous_chars):
             return False
 
         # Check against allowed command patterns - more strict validation
         safe_patterns = [
-            r'^/converge\b[^;|&$`<>\n\r]*$',
-            r'^/orch\b[^;|&$`<>\n\r]*$',
-            r'^/execute\b[^;|&$`<>\n\r]*$',
-            r'^/plan\b[^;|&$`<>\n\r]*$',
-            r'^/test\b[^;|&$`<>\n\r]*$'
+            r"^/converge\b[^;|&$`<>\n\r]*$",
+            r"^/orch\b[^;|&$`<>\n\r]*$",
+            r"^/execute\b[^;|&$`<>\n\r]*$",
+            r"^/plan\b[^;|&$`<>\n\r]*$",
+            r"^/test\b[^;|&$`<>\n\r]*$",
         ]
         return any(re.match(pattern, cmd_clean) for pattern in safe_patterns)
 
@@ -246,7 +244,7 @@ class ConvergeAgentRestarter:
 
         if os.path.exists(command_file):
             try:
-                with open(command_file, 'r', encoding='utf-8') as f:
+                with open(command_file, "r", encoding="utf-8") as f:
                     content = f.read().strip()
 
                 # Validate command content
@@ -271,20 +269,14 @@ class ConvergeAgentRestarter:
         # Check restart attempt limits
         attempts = self.restart_attempts.get(agent_name, 0)
         if attempts >= self.max_restart_attempts:
-            self.logger.error(
-                f"❌ Agent {agent_name} exceeded max restart attempts ({attempts})"
-            )
+            self.logger.error(f"❌ Agent {agent_name} exceeded max restart attempts ({attempts})")
             return False
 
         self.logger.info(f"🔄 Restarting stuck converge agent: {agent_name}")
 
         try:
             # Kill existing tmux session
-            subprocess.run(
-                ["tmux", "kill-session", "-t", agent_name],
-                check=False,
-                capture_output=True
-            )
+            subprocess.run(["tmux", "kill-session", "-t", agent_name], check=False, capture_output=True)
 
             # Get original command (already validated)
             original_cmd = self.get_original_command(agent_name)
@@ -305,7 +297,7 @@ class ConvergeAgentRestarter:
 
             # Create new tmux session with same name (agent_name already validated)
             # Ensure the working directory path is safe
-            work_dir = os.path.expanduser('~/projects/worldarchitect.ai/worktree_human')
+            work_dir = os.path.expanduser("~/projects/worldarchitect.ai/worktree_human")
             work_dir = os.path.abspath(work_dir)  # Get absolute path
 
             # Log security event
@@ -314,22 +306,21 @@ class ConvergeAgentRestarter:
             )
 
             tmux_cmd = [
-                "tmux", "new-session", "-d", "-s", agent_name,
-                "bash", "-c",
+                "tmux",
+                "new-session",
+                "-d",
+                "-s",
+                agent_name,
+                "bash",
+                "-c",
                 f"cd {shlex.quote(work_dir)} && "
-                f"source \"$HOME/.bashrc\" 2>/dev/null || true && "
+                f'source "$HOME/.bashrc" 2>/dev/null || true && '
                 f"echo 'Restarting agent due to inactivity...' && "
                 f"echo 'Enhanced prompt: {shlex.quote(enhanced_prompt)}' && "
-                f"claude --model sonnet {shlex.quote(enhanced_prompt)}"
+                f"claude --model sonnet {shlex.quote(enhanced_prompt)}",
             ]
 
-            result = subprocess.run(
-                tmux_cmd,
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            result = subprocess.run(tmux_cmd, check=True, capture_output=True, text=True, timeout=30)
 
             # Update restart tracking
             self.restart_attempts[agent_name] = attempts + 1
@@ -383,7 +374,7 @@ class AgentMonitor:
             return False
 
         # Only allow alphanumeric, hyphens, and underscores
-        safe_pattern = r'^[a-zA-Z0-9_-]+$'
+        safe_pattern = r"^[a-zA-Z0-9_-]+$"
         return bool(re.match(safe_pattern, agent_name))
 
     # Redis/MessageBroker functionality removed - using file-based A2A only
@@ -508,7 +499,7 @@ class AgentMonitor:
                 "result_info": {"status": "invalid_name"},
                 "recent_output": [],
                 "uptime_estimate": None,
-                "validation_error": "Invalid agent name format"
+                "validation_error": "Invalid agent name format",
             }
 
         ping_time = datetime.now()
@@ -558,9 +549,7 @@ class AgentMonitor:
             self.logger.info("📭 No active agents found")
             return
 
-        self.logger.info(
-            f"👥 Found {len(active_agents)} active agents: {', '.join(active_agents)}"
-        )
+        self.logger.info(f"👥 Found {len(active_agents)} active agents: {', '.join(active_agents)}")
 
         # Ping each agent
         for agent_name in active_agents:
@@ -569,9 +558,7 @@ class AgentMonitor:
                 self.log_agent_status(status)
 
                 # Check if converge agent needs restart
-                if (status.get("tmux_active", False) and
-                    self.restarter.detect_stuck_agent(agent_name, status)):
-
+                if status.get("tmux_active", False) and self.restarter.detect_stuck_agent(agent_name, status):
                     self.logger.warning(f"🔄 Attempting to restart stuck agent: {agent_name}")
                     restart_success = self.restarter.restart_converge_agent(agent_name)
 
@@ -612,9 +599,7 @@ class AgentMonitor:
 
         # Log completion info
         if status["result_info"]["status"] in ["completed", "failed"]:
-            self.logger.info(
-                f"🏁 {agent_name} finished with status: {status['result_info']['status']}"
-            )
+            self.logger.info(f"🏁 {agent_name} finished with status: {status['result_info']['status']}")
 
     def register_with_a2a(self):
         """A2A registration handled via file-based protocol only"""
@@ -625,15 +610,11 @@ class AgentMonitor:
         completed = []
         for agent_name, status in self.monitored_agents.items():
             if status.get("result_info", {}).get("status") == "completed":
-                if not status.get(
-                    "tmux_active", True
-                ):  # Only cleanup if tmux is also done
+                if not status.get("tmux_active", True):  # Only cleanup if tmux is also done
                     completed.append(agent_name)
 
         for agent_name in completed:
-            self.logger.info(
-                f"🧹 Removing completed agent from monitoring: {agent_name}"
-            )
+            self.logger.info(f"🧹 Removing completed agent from monitoring: {agent_name}")
             del self.monitored_agents[agent_name]
 
     def run(self):
@@ -642,9 +623,7 @@ class AgentMonitor:
         self.register_with_a2a()
 
         self.logger.info("🚀 Agent Monitor started - pinging every 2 minutes")
-        self.logger.info(
-            "📋 Monitor logs: tail -f /tmp/orchestration_logs/agent_monitor.log"
-        )
+        self.logger.info("📋 Monitor logs: tail -f /tmp/orchestration_logs/agent_monitor.log")
 
         try:
             while self.running:
@@ -657,7 +636,11 @@ class AgentMonitor:
 
                     # Check for stuck converge agents and restart if needed
                     for agent_name in list(self.monitored_agents.keys()):
-                        if "converge" in agent_name.lower() or "conver" in agent_name.lower() or "compre" in agent_name.lower():
+                        if (
+                            "converge" in agent_name.lower()
+                            or "conver" in agent_name.lower()
+                            or "compre" in agent_name.lower()
+                        ):
                             self.logger.info(f"🔍 Checking {agent_name} for stuck state...")
                             if self.restarter.check_and_restart(agent_name):
                                 self.logger.info(f"✅ Successfully restarted {agent_name}")

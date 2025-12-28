@@ -15,6 +15,7 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+
 from .a2a_integration import TaskPool, get_a2a_status
 from .a2a_monitor import get_monitor
 from .constants import (
@@ -569,6 +570,8 @@ class TaskDispatcher:
                 available_clis.append(cli_name)
 
         if len(available_clis) == 0:
+            if self._is_testing_mode():
+                return "claude"
             raise RuntimeError(
                 "No agent CLI is available. Please install at least one supported CLI "
                 "(e.g., 'claude', 'codex', 'gemini', or 'cursor-agent') and ensure it is in your PATH."
@@ -694,6 +697,8 @@ class TaskDispatcher:
         cli_path = shutil.which(cli_binary) or ""
         if not cli_path and cli_name == "claude":
             cli_path = self._ensure_mock_claude_binary() or ""
+        if not cli_path and self._is_testing_mode():
+            cli_path = self._ensure_mock_cli_binary(cli_name) or ""
 
         return cli_path or None
 
@@ -1755,40 +1760,46 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             print(f"❌ Failed to create {agent_name}: {e}")
             return False
 
-    def _ensure_mock_claude_binary(self) -> str:
-        """Provide a lightweight mock Claude binary when running in testing mode."""
+    def _is_testing_mode(self) -> bool:
+        """Return True when running in a testing/CI context."""
 
         def _is_truthy(value: str | None) -> bool:
             return (value or "").strip().lower() in {"1", "true", "yes"}
 
-        testing_mode = any(
-            _is_truthy(os.environ.get(env_var)) for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS")
-        )
+        return any(_is_truthy(os.environ.get(env_var)) for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS"))
 
-        if not testing_mode:
+    def _ensure_mock_cli_binary(self, cli_name: str) -> str:
+        """Provide a lightweight mock CLI binary when running in testing mode."""
+
+        if not self._is_testing_mode():
             return ""
 
-        if self._mock_claude_path and os.path.exists(self._mock_claude_path):
+        if cli_name == "claude" and self._mock_claude_path and os.path.exists(self._mock_claude_path):
             return self._mock_claude_path
 
         try:
             mock_dir = Path(tempfile.gettempdir()) / "worldarchitect_ai"
             mock_dir.mkdir(parents=True, exist_ok=True)
-            mock_path = mock_dir / "mock_claude.sh"
+            mock_path = mock_dir / f"mock_{cli_name}.sh"
 
             # Simple shim that echoes the call for logging and exits successfully
-            script_contents = """#!/usr/bin/env bash
-echo "[mock claude] $@"
+            script_contents = f"""#!/usr/bin/env bash
+echo "[mock {cli_name}] $@"
 exit 0
 """
             mock_path.write_text(script_contents, encoding="utf-8")
             os.chmod(mock_path, 0o755)
-            self._mock_claude_path = str(mock_path)
-            print("⚠️ 'claude' command not found. Using mock binary for testing.")
-            return self._mock_claude_path
+            if cli_name == "claude":
+                self._mock_claude_path = str(mock_path)
+            print(f"⚠️ '{cli_name}' command not found. Using mock binary for testing.")
+            return str(mock_path)
         except Exception as exc:
-            print(f"⚠️ Failed to create mock Claude binary: {exc}")
+            print(f"⚠️ Failed to create mock {cli_name} binary: {exc}")
             return ""
+
+    def _ensure_mock_claude_binary(self) -> str:
+        """Provide a lightweight mock Claude binary when running in testing mode."""
+        return self._ensure_mock_cli_binary("claude")
 
 
 if __name__ == "__main__":

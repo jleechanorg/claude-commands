@@ -34,7 +34,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
 
     def test_gemini_response_logs_error_without_structured(self):
         """Test that LLMResponse logs error when no structured response"""
-        with patch("logging.error") as mock_log_error:
+        with patch("mvp_site.logging_util.error") as mock_log_error:
             response = LLMResponse(
                 narrative_text="Story text",
                 structured_response=None,
