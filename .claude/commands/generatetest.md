@@ -1,4 +1,4 @@
----
+--- 
 description: /generatetest - Evidence-Based Test Generator (Real Mode Only)
 type: llm-orchestration
 execution_mode: immediate
@@ -7,10 +7,14 @@ execution_mode: immediate
 **When this command is invoked, YOU (Claude) must execute these steps immediately.**
 **This is NOT documentation - these are COMMANDS to execute right now.**
 
+**MANDATORY**: Read `.claude/skills/evidence-standards.md` before generating any test code.
+This ensures generated tests follow current evidence standards.
+
 ## 🚨 CORE PRINCIPLES
 
 **REAL MODE ONLY**: All generated tests use real local servers, real databases, nothing mocked.
-**EVIDENCE-FIRST**: Tests generate savetmp-compatible evidence bundles to `/tmp/<repo>/<branch>/<work>/<timestamp>/`.
+**EVIDENCE-FIRST**: Tests generate evidence bundles directly to `/tmp/<repo>/<branch>/<work>/<timestamp>/`.
+**SELF-CONTAINED**: Tests write evidence files directly - no external dependencies.
 **FREE-FORM INPUT**: Accept natural language like "for this PR make sure the equipment logic works".
 
 ## 📁 OUTPUT LOCATIONS
@@ -43,8 +47,8 @@ Input: "for this PR make sure the equipment logic works"
 
 **Action Steps:**
 1. Create test file in `testing_mcp/test_<focus>.py` (or custom `--test-dir`)
-2. Include savetmp-compatible evidence generation (methodology, evidence, notes)
-3. Add `--savetmp` and `--work-name` CLI arguments to test
+2. Include self-contained evidence generation (methodology, evidence, notes)
+3. Add `--save-evidence` and `--work-name` CLI arguments to test
 4. Ensure test uses REAL servers (no mocks, no test mode)
 
 **Generated Test Structure:**
@@ -56,8 +60,10 @@ Focus: [extracted focus]
 Work Name: [work_name]
 
 REAL MODE ONLY - No mocks, no test mode
+Evidence standards: .claude/skills/evidence-standards.md
 """
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -68,15 +74,105 @@ from pathlib import Path
 SERVER_URL = "http://localhost:8082"  # Real local server
 WORK_NAME = "[work_name]"
 
-def generate_savetmp_docs(results, git_info, server_url):
-    """Generate methodology/evidence/notes from actual test data."""
-    # Methodology: derive from actual environment, not hardcoded
+
+def get_evidence_dir(work_name: str, timestamp: str | None = None) -> Path:
+    """Create evidence directory following standards."""
+    try:
+        repo = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"], stderr=subprocess.STDOUT
+        ).decode().strip()
+        repo_name = os.path.basename(repo)
+        branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.STDOUT
+        ).decode().strip()
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "Git not found in PATH. Ensure git is installed and available."
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        output = exc.output.decode().strip() if exc.output else str(exc)
+        raise RuntimeError(
+            f"Failed to read git repository info: {output or 'unknown git error'}"
+        ) from exc
+
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    evidence_dir = Path(f"/tmp/{repo_name}/{branch}/{work_name}/{timestamp}")
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / "artifacts").mkdir(exist_ok=True)
+    return evidence_dir
+
+
+def capture_git_provenance() -> dict:
+    """Capture git state for evidence."""
+    git_info = {
+        "head_commit": None,
+        "branch": None,
+        "origin_main": None,
+        "changed_files": [],
+        "errors": [],
+    }
+
+    def _run_git(cmd):
+        try:
+            return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode().strip()
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                "Git not found in PATH. Ensure git is installed and available."
+            ) from exc
+        except subprocess.CalledProcessError as exc:
+            message = exc.output.decode().strip() if exc.output else str(exc)
+            git_info["errors"].append({"cmd": " ".join(cmd), "error": message})
+            return None
+
+    git_info["head_commit"] = _run_git(["git", "rev-parse", "HEAD"])
+    git_info["branch"] = _run_git(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    git_info["origin_main"] = _run_git(["git", "rev-parse", "origin/main"])
+
+    changed_raw = _run_git(["git", "diff", "--name-only", "origin/main...HEAD"])
+    git_info["changed_files"] = [f for f in changed_raw.split("\n") if f] if changed_raw else []
+
+    if not git_info["errors"]:
+        git_info.pop("errors")
+    return git_info
+
+
+def write_with_checksum(path: Path, content: str):
+    """Write file and generate SHA256 checksum."""
+    path.write_text(content)
+    sha256 = hashlib.sha256(content.encode()).hexdigest()
+    checksum_path = Path(str(path) + ".sha256")
+    # Intentionally use only the base filename in the checksum content to match
+    # standard `sha256sum` output format: "{sha256}  {filename}\n".
+    checksum_path.write_text(f"{sha256}  {path.name}\n")
+
+
+def save_evidence(
+    results,
+    git_info,
+    server_url,
+    evidence_dir: Path,
+    work_name: str,
+    collection_timestamp: str,
+    collection_iso: str,
+):
+    """Write evidence files directly (no external dependencies)."""
+    # If copying artifacts into evidence_dir, strip any pre-existing .sha256 files
+    # before generating new bundle-level checksums.
+    # Methodology: derive from actual environment
     dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
     methodology = f"""# Test Methodology
+
 ## Environment
 - Server: {server_url}
 - WORLDAI_DEV_MODE: {dev_mode}
-- Timestamp: {datetime.now(timezone.utc).isoformat()}
+- Timestamp: {collection_iso}
+
+## Git Provenance
+- HEAD: {git_info.get('head_commit') or 'unknown'}
+- Branch: {git_info.get('branch') or 'unknown'}
+- origin/main: {git_info.get('origin_main') or 'unknown'}
 
 ## Test Scope
 [Generated from actual test execution]
@@ -86,6 +182,7 @@ def generate_savetmp_docs(results, git_info, server_url):
     passed = sum(1 for r in results if r.passed)
     total = len(results)
     evidence = f"""# Evidence Summary
+
 ## Results: {passed}/{total} PASS
 
 | Test | Status | Details |
@@ -95,37 +192,125 @@ def generate_savetmp_docs(results, git_info, server_url):
         status = "✅ PASS" if r.passed else "❌ FAIL"
         evidence += f"| {r.name} | {status} | {r.details} |\n"
 
-    # Notes: warnings and follow-ups
-    notes = "# Notes\n"
-    # Add any warnings from test execution
+    # Notes: track warnings and follow-ups derived from actual results
+    warnings = []
+    follow_ups = []
+    failed_tests = [r for r in results if not r.passed]
+    if failed_tests:
+        warnings.append(f"{len(failed_tests)} test(s) failed")
+        follow_ups.append("Review failed test logs for root cause analysis")
 
-    return methodology, evidence, notes
+    warnings_str = "\n".join(f"- {w}" for w in warnings) if warnings else "(none)"
+    followups_str = "\n".join(f"- {f}" for f in follow_ups) if follow_ups else "(none)"
+
+    notes = f"""# Notes
+
+## Warnings
+{warnings_str}
+
+## Follow-ups
+{followups_str}
+"""
+
+    # Metadata JSON
+    clean_git_info = dict(git_info)
+    changed_files = clean_git_info.get("changed_files")
+    if isinstance(changed_files, list):
+        clean_git_info["changed_files"] = [f for f in changed_files if f]
+
+    metadata = {
+        "timestamp": collection_iso,
+        "git_provenance": clean_git_info,
+        "server_url": server_url,
+        "results_summary": {"passed": passed, "total": total}
+    }
+
+    repo_name = evidence_dir.parts[2] if len(evidence_dir.parts) > 2 else "unknown repo"
+
+    readme = f"""# Evidence Package Manifest
+
+- Repository: {repo_name}
+- Branch: {clean_git_info.get('branch') or 'unknown'}
+- Head Commit: {clean_git_info.get('head_commit') or 'unknown'}
+- Origin/Main: {clean_git_info.get('origin_main') or 'unknown'}
+- Server: {server_url}
+- Work Name: {work_name}
+- Collected At (UTC): {collection_iso}
+
+All files in this directory were generated directly by the test run and include
+per-file SHA256 checksums for integrity verification.
+"""
+
+    # Write all files with checksums
+    write_with_checksum(evidence_dir / "README.md", readme)
+    write_with_checksum(evidence_dir / "methodology.md", methodology)
+    write_with_checksum(evidence_dir / "evidence.md", evidence)
+    write_with_checksum(evidence_dir / "notes.md", notes)
+    write_with_checksum(
+        evidence_dir / "metadata.json",
+        json.dumps(metadata, indent=2)
+    )
+
+    print(f"Evidence saved to: {evidence_dir}")
+    print("Reminder: update documentation files and regenerate checksums if you add or edit content.")
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", default=SERVER_URL)
-    parser.add_argument("--savetmp", action="store_true",
+    parser.add_argument("--save-evidence", action="store_true",
                         help="Save evidence to /tmp structure")
     parser.add_argument("--work-name", default=WORK_NAME)
     args = parser.parse_args()
 
+    # Capture a synchronized timestamp for directory naming and metadata
+    collection_dt = datetime.now(timezone.utc)
+    collection_timestamp = collection_dt.strftime("%Y%m%dT%H%M%SZ")
+    collection_iso = collection_dt.isoformat()
+
     # Run tests against REAL server
     results = run_tests(args.server)
 
-    if args.savetmp:
-        # Generate savetmp-compatible evidence
-        git_info = capture_git_provenance()
-        methodology, evidence, notes = generate_savetmp_docs(
-            results, git_info, args.server
+    if args.save_evidence:
+        # Generate evidence directly (no external dependencies)
+        try:
+            git_info = capture_git_provenance()
+        except Exception as exc:
+            print(f"Warning: failed to capture git provenance: {exc}")
+            git_info = {
+                "head_commit": None,
+                "branch": None,
+                "origin_main": None,
+                "changed_files": [],
+                "errors": [
+                    {"stage": "git_provenance_capture", "error": str(exc)}
+                ],
+            }
+        try:
+            evidence_dir = get_evidence_dir(args.work_name, collection_timestamp)
+        except Exception as exc:
+            print(
+                "Warning: failed to derive evidence directory from git context; "
+                "using fallback path"
+            )
+            evidence_dir = Path(
+                f"/tmp/unknown/{args.work_name}/{collection_timestamp}"
+            )
+            evidence_dir.mkdir(parents=True, exist_ok=True)
+            (evidence_dir / "artifacts").mkdir(exist_ok=True)
+            git_info.setdefault("errors", []).append(
+                {"stage": "get_evidence_dir", "error": str(exc)}
+            )
+        save_evidence(
+            results,
+            git_info,
+            args.server,
+            evidence_dir,
+            args.work_name,
+            collection_timestamp,
+            collection_iso,
         )
 
-        # Call savetmp.py with generated docs
-        subprocess.run([
-            "python", ".claude/commands/savetmp.py", args.work_name,
-            "--methodology", methodology,
-            "--evidence", evidence,
-            "--notes", notes
-        ], check=True)
 
 if __name__ == "__main__":
     main()
@@ -141,13 +326,12 @@ if __name__ == "__main__":
 5. Check subprocess return codes
 
 **Evidence Standards Checklist (from `.claude/skills/evidence-standards.md`):**
-- [ ] Git provenance: `git_head`, `git_branch`, `merge_base`, `commits_ahead_of_main`, `diff_stat_vs_main`
-- [ ] Server environment: `server.pid`, `server.port`, `server.process_cmdline`, `server.env_vars`
-- [ ] Required env vars: `WORLDAI_DEV_MODE`, `TESTING`, `GOOGLE_APPLICATION_CREDENTIALS`
-- [ ] Checksums: SHA256 for all evidence files
-- [ ] Server logs: Capture logs during test with proper timezone handling (UTC→local)
+- [ ] Git provenance: HEAD commit, origin/main, changed files
+- [ ] Server environment: PID, port, WORLDAI_DEV_MODE
+- [ ] Checksums: SHA256 for all evidence files (use `write_with_checksum()` helper)
 - [ ] Timestamp synchronization: collect all evidence in one pass
 - [ ] Documentation-Data alignment: derive claims from actual data
+- [ ] Self-contained: no external script dependencies
 
 ### Phase 4: Verify Real Mode
 
@@ -166,7 +350,7 @@ if __name__ == "__main__":
 
 # /generatetest - Evidence-Based Test Generator
 
-**Purpose**: Generate tests with built-in savetmp-compatible evidence generation
+**Purpose**: Generate self-contained tests with built-in evidence generation
 
 **Usage**: `/generatetest <free-form description>`
 
@@ -197,8 +381,16 @@ Every generated test MUST include:
 
 ### 1. Evidence Generation Function
 ```python
-def generate_savetmp_docs(results, git_info, server_url, run_dir):
-    """Generate methodology/evidence/notes from ACTUAL test data."""
+def save_evidence(
+    results,
+    git_info,
+    server_url,
+    evidence_dir: Path,
+    work_name: str,
+    collection_timestamp: str,
+    collection_iso: str,
+):
+    """Write evidence files directly from ACTUAL test data."""
     # ✅ Derive from os.environ, not hardcoded
     dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
 
@@ -207,11 +399,14 @@ def generate_savetmp_docs(results, git_info, server_url, run_dir):
 
     # ✅ Use correct denominators (found/total, not found/min)
     stats_col = f"{found}/{len(total_items)} (need {min_required})"
+
+    # ✅ Write with checksums
+    write_with_checksum(evidence_dir / "methodology.md", methodology)
 ```
 
 ### 2. CLI Arguments for Evidence
 ```python
-parser.add_argument("--savetmp", action="store_true")
+parser.add_argument("--save-evidence", action="store_true")
 parser.add_argument("--work-name", default="<auto_generated>")
 ```
 
@@ -228,15 +423,25 @@ def verify_real_mode(server_url):
 ```python
 def capture_git_provenance():
     """Capture git state for evidence."""
-    return {
-        "head_commit": subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip(),
-        "branch": subprocess.check_output(["git", "branch", "--show-current"]).decode().strip(),
-        "origin_main": subprocess.check_output(["git", "rev-parse", "origin/main"]).decode().strip(),
-        "changed_files": subprocess.check_output(
-            ["git", "diff", "--name-only", "origin/main...HEAD"]
-        ).decode().strip().split("\n"),
-    }
+    try:
+        changed_raw = subprocess.check_output(
+            ["git", "diff", "--name-only", "origin/main...HEAD"],
+            stderr=subprocess.STDOUT,
+        ).decode()
+        changed_files = [f for f in changed_raw.split("\n") if f]
+        return {
+            "head_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.STDOUT).decode().strip(),
+            "branch": subprocess.check_output(["git", "branch", "--show-current"], stderr=subprocess.STDOUT).decode().strip(),
+            "origin_main": subprocess.check_output(["git", "rev-parse", "origin/main"], stderr=subprocess.STDOUT).decode().strip(),
+            "changed_files": changed_files,
+        }
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        raise RuntimeError(f"Git provenance capture failed: {exc}") from exc
 ```
+
+> Wrap git calls in try/except so missing remotes or detached HEADs surface clear
+> errors instead of crashing generation. Always filter empty strings from
+> `changed_files` to avoid `[""]` payloads.
 
 ## 🚨 EVIDENCE STANDARDS COMPLIANCE
 
@@ -249,9 +454,9 @@ From `.claude/skills/evidence-standards.md`:
 | **Correct denominators** | `found/total (need min)`, not `found/min` |
 | **Check return codes** | `if result.returncode != 0: warn()` |
 | **Single run attribution** | Evidence bundle references ONE test run |
-| **Git provenance** | HEAD, branch, merge_base, commits_ahead, diff_stat |
-| **Server provenance** | PID, port, cmdline, env_vars |
-| **Checksums** | SHA256 via savetmp.py |
+| **Git provenance** | HEAD, origin/main, changed files |
+| **Checksums** | SHA256 via `write_with_checksum()` helper |
+| **Self-contained** | No external script dependencies |
 
 ## 🔧 PRIORITY MATRIX
 
@@ -267,7 +472,9 @@ From `.claude/skills/evidence-standards.md`:
 ## ✅ COMPLETION CRITERIA
 
 - [ ] Test file created in `testing_mcp/` (or custom dir)
-- [ ] Evidence generation integrated (methodology, evidence, notes)
+- [ ] Self-contained evidence generation (no external dependencies)
+- [ ] `write_with_checksum()` helper included
+- [ ] `get_evidence_dir()` helper included
 - [ ] Real mode verified (no mocks, no TESTING=true)
 - [ ] Git provenance captured
 - [ ] All results derived from actual data

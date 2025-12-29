@@ -174,7 +174,7 @@ lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
 
 ### Evidence Directory Structure
 
-**Canonical format** (use `/savetmp` command):
+**Canonical format:**
 
 ```
 /tmp/<repo>/<branch>/<work>/<timestamp>/
@@ -188,20 +188,72 @@ lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
 ├── notes.md.sha256
 ├── metadata.json          # Machine-readable: git_provenance, timestamps
 ├── metadata.json.sha256
+├── pr_diff.txt            # Optional (PR mode): full diff origin/main...HEAD
+├── pr_diff_summary.txt    # Optional (PR mode): diff summary
 └── artifacts/             # Copied evidence files (test outputs, logs, etc.)
     └── <copied files with checksums>
 ```
 
-**Usage:**
+**Which flow to use?**
+
+- **Automated (preferred):** When running `/generatetest` or automated test runners, rely on the built-in `save_evidence()` helper to produce metadata, README, and checksums in one pass.
+- **Manual (shell-based):** Use when working in bare environments or ad-hoc investigations without the Python helper. The structure and required files remain the same; ensure metadata/README are created manually.
+
+**Manual creation (shell-based):**
 ```bash
-python .claude/commands/savetmp.py "<work-name>" \
-  --methodology "Testing approach description" \
-  --evidence "Results summary" \
-  --notes "Follow-up notes" \
-  --artifact /path/to/test/output
+# Set up directory structure
+REPO=$(basename $(git rev-parse --show-toplevel))
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+WORK="your-work-name"
+TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+EVIDENCE_DIR="/tmp/${REPO}/${BRANCH}/${WORK}/${TIMESTAMP}"
+mkdir -p "${EVIDENCE_DIR}/artifacts"
+
+# Capture git provenance
+git rev-parse HEAD > "${EVIDENCE_DIR}/git_head.txt"
+git log -1 --format="%H%n%an <%ae>%n%aI%n%s" > "${EVIDENCE_DIR}/git_commit_info.txt"
+git diff --name-only origin/main...HEAD > "${EVIDENCE_DIR}/changed_files.txt"
+
+# Create package manifest and metadata to mirror automated flow
+cat > "${EVIDENCE_DIR}/README.md" <<EOF
+# Evidence Package Manifest
+- Repository: ${REPO}
+- Branch: ${BRANCH}
+- Work Name: ${WORK}
+- Collected At (UTC): ${TIMESTAMP}
+EOF
+
+cat > "${EVIDENCE_DIR}/metadata.json" <<EOF
+{
+  "repository": "${REPO}",
+  "branch": "${BRANCH}",
+  "work_item": "${WORK}",
+  "timestamp": "${TIMESTAMP}",
+  "created_by": "manual_shell_example"
+}
+EOF
+
+# Create documentation files
+echo "# Methodology" > "${EVIDENCE_DIR}/methodology.md"
+echo "# Evidence Summary" > "${EVIDENCE_DIR}/evidence.md"
+echo "# Notes" > "${EVIDENCE_DIR}/notes.md"
+
+# Generate checksums
+cd "${EVIDENCE_DIR}" || { echo "Failed to enter evidence directory" >&2; exit 1; }
+shopt -s nullglob
+for f in *.md *.txt *.json; do
+  [ -f "$f" ] && sha256sum "$f" > "${f}.sha256"
+done
+shopt -u nullglob
+
+# After populating methodology.md, evidence.md, and notes.md with real content,
+# regenerate checksums to reflect the final state:
+# for f in *.md *.txt *.json; do
+#   [ -f "$f" ] && sha256sum "$f" > "${f}.sha256"
+# done
 ```
 
-**Legacy format** (still valid for specialized tests):
+**Alternative format** (still valid for specialized tests):
 
 ```
 /tmp/{feature}_api_tests_v{N}/
@@ -576,13 +628,14 @@ Evidence bundles must have **exactly one layer** of checksums:
 **When packaging artifacts that already have checksums:**
 
 ```bash
-# Use --clean-checksums with /savetmp
-python .claude/commands/savetmp.py "work-name" \
-  --artifact /path/to/source \
-  --clean-checksums  # Removes existing .sha256 before packaging
+# Clean existing checksums before copying
+find /path/to/source -name "*.sha256" -delete
+
+# Then copy artifacts to bundle
+cp -r /path/to/source "${EVIDENCE_DIR}/artifacts/"
 ```
 
-**Manual cleanup if needed:**
+**Manual cleanup alternative:**
 
 ```bash
 # Remove all .sha256 files from artifact source before copying
@@ -595,20 +648,21 @@ find . -type f ! -name "*.sha256" -exec sha256sum {} \; > checksums.sha256
 
 ## PR Mode for Full Diff Capture
 
-When creating evidence for a PR, use `--pr-mode` to capture the full diff:
+When creating evidence for a PR, always capture the full diff from `origin/main`:
 
 ```bash
-# Default: uses upstream or last commit (may miss PR context)
-python .claude/commands/savetmp.py "evidence-name" --artifact ./results
+# ❌ AVOID - Last commit only (may miss PR context after merge)
+git diff HEAD~1..HEAD
 
-# PR mode: always uses origin/main...HEAD (full PR diff)
-python .claude/commands/savetmp.py "evidence-name" --artifact ./results --pr-mode
+# ✅ PREFER - Full PR diff from origin/main
+git diff origin/main...HEAD > "${EVIDENCE_DIR}/pr_diff.txt"
+git diff --stat origin/main...HEAD > "${EVIDENCE_DIR}/pr_diff_summary.txt"
 ```
 
 **Why this matters:**
-- Default mode captures `HEAD~1..HEAD` (last commit only)
+- `HEAD~1..HEAD` captures only the last commit
 - After merging main, this shows merge changes, not PR changes
-- PR mode always captures `origin/main...HEAD` (full PR diff)
+- `origin/main...HEAD` always captures the full PR diff
 
 ## Runtime Behavior Evidence (Lessons from Memory Budget Testing)
 
