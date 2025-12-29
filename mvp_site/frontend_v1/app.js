@@ -731,7 +731,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Quick action button for equipment list
       html += `<div class="quick-actions" style="margin: 5px 0;">
         <button class="btn btn-sm btn-outline-secondary equipment-btn"
-                onclick="window.sendEquipmentQuery()"
                 title="List all equipped items">
           <i class="bi bi-backpack2"></i> View Equipment
         </button>
@@ -792,6 +791,12 @@ document.addEventListener('DOMContentLoaded', () => {
       choiceButtons.forEach((button) => {
         button.addEventListener('click', handleChoiceClick);
       });
+
+      // Add click handler for equipment button (CSP blocks inline onclick)
+      const equipmentBtn = entryEl.querySelector('.equipment-btn');
+      if (equipmentBtn) {
+        equipmentBtn.addEventListener('click', window.sendEquipmentQuery);
+      }
     }
   };
 
