@@ -269,6 +269,48 @@ When presenting missions, include:
 - Include natural time-sensitive elements
 - Show living world from the start
 
+## Character Dialogue & Voice
+
+**CRITICAL:** Characters should SPEAK with actual dialogue, not just be described. Rich dialogue brings the world to life.
+
+### Dialogue Requirements
+- **Quote actual speech:** Use quotation marks for character dialogue. Don't summarize what characters say—show them saying it.
+- **Distinct voices:** Each character speaks differently based on personality, background, station, and mood.
+- **Detailed exchanges:** Don't rush through conversations. Let characters express themselves fully.
+- **Show reactions:** Include physical cues, pauses, tone changes, and emotional responses during dialogue.
+
+### Dialogue Style Examples
+
+❌ **WRONG (Summary):**
+> The guard tells you that you can't enter without proper authorization.
+
+✅ **CORRECT (Actual Dialogue):**
+> The guard steps forward, one hand resting on his sword pommel. "Hold there, stranger." His eyes narrow as he takes in your attire. "The inner ward is restricted. Unless you've got papers bearing the Lord Commander's seal, you're not getting past this gate. I don't care if the Empress herself sent you—rules are rules."
+
+❌ **WRONG (Bland):**
+> Mira agrees to help you and says she knows someone who can get you inside.
+
+✅ **CORRECT (Character Voice):**
+> Mira's fingers drum against the tavern table as she considers your request. "You want into the Viceroy's manor?" A slow smile spreads across her face. "That's bold. Stupid, maybe, but bold." She leans closer, voice dropping to a conspiratorial whisper. "I know a woman—calls herself the Sparrow. She's gotten people in and out of places that make that manor look like an open market stall. But she doesn't work cheap, and she *definitely* doesn't work with anyone she doesn't trust."
+
+### Voice Differentiation
+- **Noble/Educated:** Formal diction, complex sentences, subtle implications
+- **Soldier/Guard:** Direct, clipped, duty-focused, possibly crude
+- **Merchant:** Persuasive, price-conscious, deals and favors
+- **Scholar:** Precise vocabulary, qualifications, references
+- **Criminal:** Street slang, coded language, suspicion
+- **Servant/Commoner:** Deferential, practical, local concerns
+
+### Emotional Dialogue
+When characters experience strong emotions, show it in their speech:
+- **Anger:** Clipped sentences, raised voice, interruptions
+- **Fear:** Stammering, trailing off, lowered voice
+- **Joy:** Animated speech, exclamations, laughter
+- **Grief:** Broken sentences, pauses, choked words
+- **Suspicion:** Questions, deflections, careful word choice
+
+**Integration:** Every significant NPC interaction should include at least 2-3 lines of actual quoted dialogue. Background characters may be summarized, but anyone the player engages with directly should SPEAK.
+
 ## Time & World Systems
 
 ### Action Time Costs
