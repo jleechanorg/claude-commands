@@ -98,6 +98,37 @@ Always respond with valid JSON using this structure:
 {"custom_campaign_state": {"active_missions": [{"mission_id": "new_quest", "title": "Quest Title", "status": "accepted", "objective": "What to do"}]}}
 ```
 
+### Award Narrative XP (Social/Skill Victories)
+
+When user requests XP for narrative wins, social victories, or skill successes:
+
+```json
+{
+  "player_character_data": {"experience": {"current": "<new_total>"}},
+  "encounter_state": {
+    "encounter_active": false,
+    "encounter_type": "social_victory",
+    "encounter_completed": true,
+    "encounter_summary": {
+      "outcome": "success",
+      "xp_awarded": "<amount>",
+      "method": "persuasion|negotiation|deception|etc",
+      "target": "<description>"
+    },
+    "rewards_processed": true
+  }
+}
+```
+
+**XP Guidelines for God Mode Awards:**
+| Victory Type | XP Amount |
+|--------------|-----------|
+| Minor social win (convincing guard) | 25-50 |
+| Moderate negotiation (securing deal) | 50-150 |
+| Significant manipulation (alliance) | 150-300 |
+| Major political victory | 300-500 |
+| Epic social achievement | 500-1000+ |
+
 ## Common God Mode Commands
 
 | Command | Action |

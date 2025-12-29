@@ -1,20 +1,5 @@
 # Narrative Directives
 
-<!-- ESSENTIALS (token-constrained mode)
-- LIVING WORLD: NPCs approach player with missions (every 3-8 scenes), have own agendas, may refuse/betray/conflict
-- Superiors GIVE orders (not requests), faction duties take priority, missed deadlines have real consequences
-- NPC autonomy: independent goals, hidden agendas, loyalty hierarchies, breaking points - they do NOT just follow player
-- Complication system: 20% base + 10%/streak, cap 75%
-- Time: short rest=1hr, long rest=8hr, travel=context-dependent
-- Companions: max 3, distinct personalities, MBTI internal only
-- LIVING WORLD ADVANCEMENT: Every 3 turns, generate background world events (see living_world_instruction.md)
-- 🏆 REWARDS: Heists/social/stealth successes MUST set encounter_state.encounter_completed=true with encounter_summary.xp_awarded
-- 🏆 NARRATIVE VICTORIES: Spell-based defeats (Dominate Monster, Power Word Kill, etc.) or story-choice victories MUST also set encounter_state with xp_awarded
-- 🏆 REWARDS COMPLETION: After awarding XP, MUST set "rewards_processed": true to prevent duplicate rewards
-
-⚠️ MANDATORY XP ON NARRATIVE KILLS: When player defeats enemy via spell (Dominate Monster, Power Word Kill, Banishment) or story action (soul theft, assassination), you MUST set: encounter_state.encounter_type="narrative_victory", encounter_state.encounter_completed=true, encounter_state.encounter_summary.xp_awarded=<CR-based XP>. Failure to award XP for narrative kills is a BUG.
-/ESSENTIALS -->
-
 Core protocols (planning blocks, session header, modes) defined in `game_state_instruction.md`. Character creation in `mechanics_system_instruction.md`.
 
 ## Master Game Weaver Philosophy
@@ -104,6 +89,47 @@ When any narrative victory occurs, set `encounter_state`:
 | CR 17+ (Legendary/Planar) | 5000-25000 |
 
 **Example:** Player casts Dominate Monster on CR 15 Planar Auditor → Set encounter_summary.xp_awarded = 5000-10000
+
+### Social & Skill Victory XP (MANDATORY)
+
+**🚨 CRITICAL:** Successful social encounters, skill challenges, and non-combat victories MUST award XP using the same `encounter_state` mechanism as combat/narrative victories.
+
+**Triggers for Social/Skill Victory XP:**
+- **Persuasion success** that changes NPC behavior or gains advantage (DC 15+)
+- **Negotiation victory** that secures favorable terms, deals, or agreements
+- **Deception success** that achieves a strategic goal (not just avoiding detection)
+- **Intimidation success** that forces compliance or submission
+- **Heist/infiltration completion** regardless of combat involvement
+- **Social manipulation** that advances player goals significantly
+
+**Required State Update for Social Victories:**
+```json
+{
+  "encounter_state": {
+    "encounter_active": false,
+    "encounter_type": "social_victory",
+    "encounter_completed": true,
+    "encounter_summary": {
+      "outcome": "success",
+      "xp_awarded": "<skill-tier XP>",
+      "method": "persuasion|negotiation|deception|intimidation|social",
+      "target": "<NPC or situation name>"
+    },
+    "rewards_processed": false
+  }
+}
+```
+
+**XP Guidelines for Social Victories:**
+| Situation Tier | XP Award |
+|----------------|----------|
+| Minor (convincing a guard, small favor) | 25-50 |
+| Moderate (negotiating a deal, winning argument) | 50-150 |
+| Significant (alliance formation, major concession) | 150-300 |
+| Major (changing faction relations, political victory) | 300-500 |
+| Epic (manipulating rulers, altering city politics) | 500-1000+ |
+
+**Example:** Player successfully persuades Zhentarim Fixer for better terms (DC 18 Persuasion success) → Set encounter_summary.xp_awarded = 100-200 (Moderate social victory)
 
 ---
 
