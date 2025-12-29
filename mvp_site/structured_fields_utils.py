@@ -89,4 +89,23 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
             if world_events and isinstance(world_events, dict):
                 structured_fields["world_events"] = world_events
 
+            # BEAD W2-7m1: Also check for world_events nested inside custom_campaign_state
+            # The LLM sometimes incorrectly nests world_events here instead of at top-level.
+            # Extract it to prevent split storage between correct and incorrect locations.
+            if not world_events or not isinstance(world_events, dict):
+                custom_state = state_updates.get("custom_campaign_state", {})
+                if isinstance(custom_state, dict):
+                    nested_world_events = custom_state.get("world_events")
+                    if nested_world_events and isinstance(nested_world_events, dict):
+                        structured_fields["world_events"] = nested_world_events
+                        # Also add to filtered_state_updates for consistency
+                        if constants.FIELD_STATE_UPDATES in structured_fields:
+                            structured_fields[constants.FIELD_STATE_UPDATES][
+                                "world_events"
+                            ] = nested_world_events
+                        else:
+                            structured_fields[constants.FIELD_STATE_UPDATES] = {
+                                "world_events": nested_world_events
+                            }
+
     return structured_fields
