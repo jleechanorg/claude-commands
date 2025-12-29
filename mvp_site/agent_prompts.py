@@ -26,6 +26,7 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_GOD_MODE: constants.GOD_MODE_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_LIVING_WORLD: constants.LIVING_WORLD_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_COMBAT: constants.COMBAT_SYSTEM_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_REWARDS: constants.REWARDS_SYSTEM_INSTRUCTION_PATH,
 }
 
 # Store loaded instruction content in a dictionary for easy access
@@ -289,6 +290,38 @@ class PromptBuilder:
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
 
         # Add debug instructions for combat logging
+        parts.append(_build_debug_instructions())
+
+        return parts
+
+    def build_rewards_mode_instructions(self) -> list[str]:
+        """
+        Build system instructions for REWARDS MODE.
+        Rewards mode handles XP, loot, and level-up processing from any source:
+        - Combat victories (when combat_phase == "ended")
+        - Non-combat encounters (heists, social victories, stealth)
+        - Quest completions
+        - Milestone achievements
+        """
+        parts = []
+
+        # CRITICAL: Load master directive FIRST to establish hierarchy and authority
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+        # Load game state instruction SECOND - establishes authoritative state schema
+        # (AI needs to know reward/encounter state structure)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
+        # Load rewards-specific instruction (XP, loot, level-up rules)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_REWARDS))
+
+        # Load D&D SRD for XP thresholds and level rules
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+
+        # Load mechanics instruction for detailed level-up mechanics
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
+
+        # Add debug instructions for reward processing logging
         parts.append(_build_debug_instructions())
 
         return parts

@@ -88,6 +88,7 @@ export interface StoryEntry {
   planning_block?: string;
   dice_rolls?: DiceRoll[];
   resources?: string;
+  rewards_box?: RewardsBox;
   god_mode_response?: string;
   user_scene_number?: number;
 }
@@ -98,6 +99,17 @@ export interface DiceRoll {
   modifier?: number;
   total?: number;
   reason?: string;
+}
+
+export interface RewardsBox {
+  source?: string;
+  xp_gained?: number;
+  current_xp?: number;
+  next_level_xp?: number;
+  progress_percent?: number;
+  level_up_available?: boolean;
+  loot?: string[];
+  gold?: number;
 }
 
 export interface InteractionRequest {
@@ -118,6 +130,7 @@ export interface InteractionResponse {
   planning_block?: string;
   dice_rolls?: DiceRoll[];
   resources?: string;
+  rewards_box?: RewardsBox;
   god_mode_response?: string;
   user_scene_number?: number;
   error?: string;

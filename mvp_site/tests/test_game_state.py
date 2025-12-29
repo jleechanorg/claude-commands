@@ -207,6 +207,124 @@ class TestGameState(unittest.TestCase):
         assert gs.last_state_update_timestamp == custom_time
         assert gs.extra_field == "extra_value"
 
+    def test_get_encounter_state_defaults_and_valid(self):
+        """get_encounter_state returns defaults for missing/invalid data."""
+        gs = GameState()
+        if hasattr(gs, "encounter_state"):
+            del gs.encounter_state
+
+        self.assertEqual(gs.get_encounter_state(), {"encounter_active": False})
+
+        gs.encounter_state = "not a dict"
+        self.assertEqual(gs.get_encounter_state(), {"encounter_active": False})
+
+        valid_state = {"encounter_active": True, "encounter_completed": True}
+        gs.encounter_state = valid_state
+        self.assertIs(gs.get_encounter_state(), valid_state)
+
+    def test_get_rewards_pending_returns_none_for_invalid(self):
+        """get_rewards_pending handles missing, non-dict, and empty values."""
+        gs = GameState()
+        if hasattr(gs, "rewards_pending"):
+            del gs.rewards_pending
+
+        self.assertIsNone(gs.get_rewards_pending())
+
+        gs.rewards_pending = "not a dict"
+        self.assertIsNone(gs.get_rewards_pending())
+
+        gs.rewards_pending = {}
+        self.assertIsNone(gs.get_rewards_pending())
+
+    def test_get_rewards_pending_returns_value_when_present(self):
+        """get_rewards_pending returns the dict when data is valid."""
+        gs = GameState()
+        rewards_data = {"source": "quest", "xp": 100, "processed": False}
+        gs.rewards_pending = rewards_data
+
+        self.assertIs(gs.get_rewards_pending(), rewards_data)
+
+    def test_has_pending_rewards_checks_all_sources(self):
+        """has_pending_rewards returns True for any pending source."""
+        gs = GameState()
+        gs.rewards_pending = {"source": "quest", "processed": False}
+        gs.combat_state = {"in_combat": False}
+        gs.encounter_state = {"encounter_active": False}
+
+        self.assertTrue(gs.has_pending_rewards())
+
+    def test_has_pending_rewards_combat_and_encounter(self):
+        """has_pending_rewards detects combat end and encounter completion."""
+        gs = GameState()
+
+        gs.combat_state = {
+            "in_combat": False,
+            "combat_phase": "finished",
+            "combat_summary": {"result": "victory"},
+            "rewards_processed": False,
+        }
+        gs.encounter_state = {"encounter_active": False}
+        self.assertTrue(gs.has_pending_rewards())
+
+        gs.combat_state["rewards_processed"] = True
+        gs.encounter_state = {
+            "encounter_completed": True,
+            "rewards_processed": False,
+            "encounter_summary": {"result": "success", "xp_awarded": 80},
+        }
+        gs.rewards_pending = None
+        self.assertTrue(gs.has_pending_rewards())
+
+    def test_has_pending_rewards_returns_false_when_processed(self):
+        """has_pending_rewards returns False when everything is processed/cleared."""
+        gs = GameState()
+        gs.rewards_pending = {"source": "quest", "processed": True}
+        gs.combat_state = {
+            "combat_phase": "ended",
+            "combat_summary": {"result": "victory"},
+            "rewards_processed": True,
+        }
+        gs.encounter_state = {
+            "encounter_completed": True,
+            "rewards_processed": True,
+            "encounter_summary": {"result": "success", "xp_awarded": 42},
+        }
+
+        self.assertFalse(gs.has_pending_rewards())
+
+    def test_has_pending_rewards_ignores_unfinished_combat(self):
+        """Non-finished combat phases should not trigger rewards detection."""
+        gs = GameState()
+        gs.combat_state = {
+            "combat_phase": "in_progress",
+            "combat_summary": {"result": "pending"},
+            "rewards_processed": False,
+        }
+
+        self.assertFalse(gs.has_pending_rewards())
+
+    def test_has_pending_rewards_encounter_missing_summary(self):
+        """Encounter completion without summary should not trigger rewards."""
+        gs = GameState()
+        gs.encounter_state = {
+            "encounter_completed": True,
+            "rewards_processed": False,
+            # encounter_summary intentionally missing
+        }
+
+        self.assertFalse(gs.has_pending_rewards())
+
+    def test_has_pending_rewards_encounter_missing_xp(self):
+        """Encounter summary missing xp_awarded should not trigger rewards."""
+        gs = GameState()
+        gs.encounter_state = {
+            "encounter_completed": True,
+            "rewards_processed": False,
+            "encounter_summary": {"result": "success"},
+        }
+
+        self.assertFalse(gs.has_pending_rewards())
+
     def test_to_dict(self):
         """Test serialization to dictionary."""
         custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)

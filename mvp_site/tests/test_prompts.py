@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import unittest
+from unittest.mock import patch
 
 # Add parent directory to path for imports
 sys.path.insert(
@@ -318,6 +319,42 @@ class TestPromptLoading(unittest.TestCase):
         print(
             f"✓ Conditional prompts: {len(conditional_referenced)}/{len(conditional_prompts)} properly referenced"
         )
+
+    @patch("mvp_site.agent_prompts._build_debug_instructions")
+    @patch("mvp_site.agent_prompts._load_instruction_file")
+    def test_build_rewards_mode_instructions_order(self, mock_load, mock_debug):
+        """Rewards mode builder loads prompts in the expected order."""
+
+        def side_effect(prompt_type):
+            return f"PROMPT:{prompt_type}"
+
+        mock_load.side_effect = side_effect
+        mock_debug.return_value = "DEBUG"
+
+        builder = agent_prompts.PromptBuilder(None)
+        parts = builder.build_rewards_mode_instructions()
+
+        expected = [
+            f"PROMPT:{constants.PROMPT_TYPE_MASTER_DIRECTIVE}",
+            f"PROMPT:{constants.PROMPT_TYPE_GAME_STATE}",
+            f"PROMPT:{constants.PROMPT_TYPE_REWARDS}",
+            f"PROMPT:{constants.PROMPT_TYPE_DND_SRD}",
+            f"PROMPT:{constants.PROMPT_TYPE_MECHANICS}",
+            "DEBUG",
+        ]
+
+        self.assertEqual(parts, expected)
+        self.assertEqual(
+            [call.args[0] for call in mock_load.call_args_list],
+            [
+                constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+                constants.PROMPT_TYPE_GAME_STATE,
+                constants.PROMPT_TYPE_REWARDS,
+                constants.PROMPT_TYPE_DND_SRD,
+                constants.PROMPT_TYPE_MECHANICS,
+            ],
+        )
+        mock_debug.assert_called_once()
 
 
 if __name__ == "__main__":

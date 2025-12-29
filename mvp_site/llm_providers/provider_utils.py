@@ -130,6 +130,55 @@ NARRATIVE_RESPONSE_SCHEMA = {
             "type": "string",
             "description": "Resource tracking information",
         },
+        "rewards_box": {
+            "type": "object",
+            "description": "Structured rewards summary for user-visible display",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": "Reward source: combat, encounter, quest, milestone",
+                },
+                "xp_gained": {
+                    "type": "number",
+                    "description": "XP gained from this reward event",
+                },
+                "current_xp": {
+                    "type": "number",
+                    "description": "Player's current total XP after rewards",
+                },
+                "next_level_xp": {
+                    "type": "number",
+                    "description": "XP threshold for next level",
+                },
+                "progress_percent": {
+                    "type": "number",
+                    "description": "Percent progress toward next level",
+                },
+                "level_up_available": {
+                    "type": "boolean",
+                    "description": "Whether the player can level up now",
+                },
+                "loot": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Loot items gained (use 'None' if no loot)",
+                },
+                "gold": {
+                    "type": "number",
+                    "description": "Gold gained (0 if none)",
+                },
+            },
+            "required": [
+                "source",
+                "xp_gained",
+                "current_xp",
+                "next_level_xp",
+                "progress_percent",
+                "level_up_available",
+                "loot",
+            ],
+            "additionalProperties": False,
+        },
         "turn_summary": {
             "type": "string",
             "description": "Summary of what happened this turn",

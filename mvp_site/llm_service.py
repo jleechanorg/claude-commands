@@ -92,6 +92,7 @@ from mvp_site.agents import (
     BaseAgent,
     CombatAgent,
     GodModeAgent,
+    RewardsAgent,
     StoryModeAgent,
     get_agent_for_input,
 )
@@ -3685,8 +3686,12 @@ def continue_story(
         )
 
     # Use agent architecture to construct system instructions
-    # The agent is selected based on the raw user input (before validation mutations)
-    agent: BaseAgent = get_agent_for_input(raw_user_input, current_game_state)
+    # Rewards mode is explicit and must always use RewardsAgent for focused prompts.
+    if mode == constants.MODE_REWARDS:
+        agent = RewardsAgent(current_game_state)
+    else:
+        # The agent is selected based on the raw user input (before validation mutations)
+        agent = get_agent_for_input(raw_user_input, current_game_state)
     is_god_mode_command: bool = isinstance(agent, GodModeAgent)
 
     # Get turn number for living world advancement from game state

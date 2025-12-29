@@ -29,8 +29,14 @@ import requests
 from datetime import datetime, timezone
 from typing import Any
 
+from pathlib import Path
+
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from testing_mcp.dev_server import ensure_server_running, get_base_url
+
 # Configuration
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
+BASE_URL = get_base_url()  # Uses worktree-specific port
 USER_ID = f"e2e-prompted-arc-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 OUTPUT_DIR = "/tmp/arc_milestones_prompted_e2e"
 STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
@@ -136,6 +142,14 @@ def extract_result(response: dict) -> dict:
 
 
 def main():
+    # Ensure development server is running with fresh code (auto-reload enabled)
+    log("Ensuring development server is running with fresh code...")
+    try:
+        ensure_server_running(check_code_changes=True)
+    except Exception as e:
+        log(f"⚠️  Could not manage server: {e}")
+        log("   Proceeding with existing server or BASE_URL...")
+
     results = {
         "test_name": "arc_milestones_prompted_e2e",
         "test_type": "prompted_completion",

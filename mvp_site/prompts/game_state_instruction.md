@@ -12,6 +12,8 @@
 - Modes: STORY (default), GOD (admin), DM (OOC/meta discussion)
 - 🚨 ACTION EXECUTION: When player selects a choice, EXECUTE it immediately with matching dice rolls. NO new sub-options.
 - Scene vs Turn: "Scene #X" counts AI responses only. "Turn" counts ALL entries. scene ≈ turn/2.
+- 🏆 NON-COMBAT ENCOUNTERS: For heists/social/stealth, use encounter_state with encounter_active, encounter_type, encounter_completed, encounter_summary.xp_awarded
+- 🏆 REWARDS COMPLETION: After awarding XP, MUST set "rewards_processed": true in combat_state or encounter_state
 /ESSENTIALS -->
 
 ### Turn vs Scene vs Sequence (numbering quick reference)
@@ -209,6 +211,15 @@ Every response MUST be valid JSON with this exact structure:
   - **Phase 2:** Server gives you results - write final narrative using those exact numbers.
 <!-- END_TOOL_REQUESTS_DICE -->
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
+- `rewards_box`: (object) **REQUIRED when xp_awarded > 0**. Include whenever rewards are processed (combat, heist, social, quest). Without this, users cannot see their rewards!
+  - `source`: (string) combat | encounter | quest | milestone
+  - `xp_gained`: (number)
+  - `current_xp`: (number)
+  - `next_level_xp`: (number)
+  - `progress_percent`: (number)
+  - `level_up_available`: (boolean)
+  - `loot`: (array of strings; use ["None"] if no loot)
+  - `gold`: (number; 0 if none)
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
   - The engine converts this into structured `world_time` for temporal enforcement and session headers.
@@ -823,6 +834,96 @@ When ALL enemies are defeated or combat ends, your `combat_state` MUST include:
 The `combat_summary` field is REQUIRED when transitioning `in_combat` from true to false.
 You MUST also update `player_character_data.experience.current` with the XP awarded.
 
+### Non-Combat Encounter State Schema (Heists, Social, Stealth)
+
+**Purpose:** Track non-combat challenges that award XP - heists, social victories, stealth missions, puzzles, quests.
+
+**When to use encounter_state:**
+- Player initiates a heist/theft attempt
+- Player attempts to persuade/deceive/intimidate for significant advantage
+- Player engages in stealth infiltration
+- Player solves a puzzle or completes a quest objective
+
+```json
+{
+  "encounter_state": {
+    "encounter_active": true,
+    "encounter_id": "enc_<timestamp>_<type>_<sequence>",
+    "encounter_type": "heist",
+    "difficulty": "medium",
+    "participants": ["pc_rogue_001"],
+    "objectives": ["Bypass guard", "Pick lock", "Grab gem", "Escape"],
+    "objectives_completed": ["Bypass guard"],
+    "encounter_completed": false,
+    "encounter_summary": null,
+    "rewards_processed": false
+  }
+}
+```
+
+**Encounter Types:**
+| Type | Description | XP Range |
+|------|-------------|----------|
+| `heist` | Stealing valuables (+25% XP bonus) | 50-500 |
+| `social` | Persuasion/Deception/Intimidation victory | 25-200 |
+| `stealth` | Infiltration without detection (+10% XP) | 50-300 |
+| `puzzle` | Mental challenges (+15% XP) | 25-150 |
+| `quest` | Objective completion | Variable |
+| `narrative_victory` | Spell/story defeat of enemy without combat | CR-based (50-25000) |
+
+**Difficulty XP Base:**
+| Difficulty | Base XP |
+|------------|---------|
+| easy | 25-50 |
+| medium | 50-100 |
+| hard | 100-200 |
+| deadly | 200-500 |
+
+**🚨 MANDATORY: Encounter Start Detection**
+When a non-combat challenge begins, set:
+1. `encounter_active: true`
+2. `encounter_id`: unique ID format `enc_<timestamp>_<type>_###`
+3. `encounter_type`: one of heist/social/stealth/puzzle/quest/narrative_victory
+4. `difficulty`: easy/medium/hard/deadly
+5. `objectives`: list of goals to complete
+
+**🚨 NARRATIVE VICTORY (Spell/Story Defeats):**
+When player defeats enemy via spell (Dominate Monster, Power Word Kill, etc.) or story action without formal combat:
+- Set `encounter_type: "narrative_victory"`
+- Set `encounter_completed: true` immediately
+- Calculate `xp_awarded` based on enemy CR (see narrative_system_instruction.md)
+
+**🚨 MANDATORY: Encounter End Detection**
+When a non-combat challenge completes (success OR failure), set:
+1. `encounter_completed: true`
+2. `encounter_summary`: with outcome, xp_awarded, loot if any
+3. This triggers RewardsAgent to process and display rewards
+
+**Encounter Completed Schema:**
+```json
+{
+  "encounter_state": {
+    "encounter_active": false,
+    "encounter_id": "enc_1703001234_heist_001",
+    "encounter_type": "heist",
+    "difficulty": "medium",
+    "encounter_completed": true,
+    "encounter_summary": {
+      "outcome": "success",
+      "objectives_achieved": 4,
+      "objectives_total": 4,
+      "xp_awarded": 125,
+      "loot_distributed": true,
+      "special_achievements": ["Perfect Stealth - No alarms"]
+    },
+    "rewards_processed": false
+  }
+}
+```
+
+**FAILURE MODE:** Encounter completed without `encounter_summary` = XP NOT AWARDED.
+You MUST populate `encounter_summary.xp_awarded` when setting `encounter_completed: true`.
+
 **Schema Rules:**
 - `combat_session_id` is MANDATORY for every combat encounter
 - `initiative_order[].name` MUST exactly match keys in `combatants` dict
@@ -876,7 +977,7 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 
 ### State Update Rules
 
-**Keys:** `player_character_data`, `world_data`, `npc_data`, `custom_campaign_state`, `combat_state`
+**Keys:** `player_character_data`, `world_data`, `npc_data`, `custom_campaign_state`, `combat_state`, `encounter_state`
 **Delete:** Set value to `"__DELETE__"` | **Consistency:** Use same paths once established
 
 **Track:** HP, XP, inventory, quest status, relationships, locations (objective facts)

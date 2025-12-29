@@ -12,10 +12,10 @@ The LLM should focus on narrative while code handles all mathematical operations
 
 import datetime
 import json
-import os
 from typing import Any, Optional
 
-from mvp_site import constants, dice as dice_module, logging_util
+from mvp_site import constants, logging_util
+from mvp_site import dice as dice_module
 from mvp_site.dice import DiceRollResult, execute_dice_tool
 
 # =============================================================================
@@ -526,6 +526,112 @@ class GameState:
         """
         combat_state = self.get_combat_state()
         return combat_state.get("in_combat", False) is True
+
+    def get_encounter_state(self) -> dict:
+        """
+        Get encounter_state as a normalized dict.
+
+        This is the standardized way to access encounter_state throughout the codebase.
+        Used for non-combat encounters (heists, social victories, stealth, puzzles).
+        Always returns a dict (never None), with sensible defaults.
+
+        Returns:
+            dict: Encounter state with at minimum {"encounter_active": False}
+
+        Schema:
+            {
+                "encounter_active": bool,
+                "encounter_id": str,
+                "encounter_type": "heist" | "social" | "stealth" | "puzzle" | "quest",
+                "difficulty": "easy" | "medium" | "hard" | "deadly",
+                "participants": [...],
+                "encounter_completed": bool,
+                "encounter_summary": {...},
+                "rewards_processed": bool
+            }
+        """
+        if not hasattr(self, "encounter_state"):
+            return {"encounter_active": False}
+        if not isinstance(self.encounter_state, dict):
+            return {"encounter_active": False}
+        return self.encounter_state
+
+    def get_rewards_pending(self) -> dict | None:
+        """
+        Get rewards_pending from game state.
+
+        This is the standardized way to access pending rewards throughout the codebase.
+        Used by RewardsAgent to detect when rewards need to be processed.
+
+        Returns:
+            dict: Rewards pending data, or None if no rewards pending
+
+        Schema:
+            {
+                "source": "combat" | "encounter" | "quest" | "milestone",
+                "source_id": str,  # combat_session_id or encounter_id
+                "xp": int,
+                "gold": int,
+                "items": [...],
+                "level_up_available": bool,
+                "processed": bool
+            }
+        """
+        if not hasattr(self, "rewards_pending"):
+            return None
+        if not isinstance(self.rewards_pending, dict):
+            return None
+        # Return None if rewards is empty dict
+        if not self.rewards_pending:
+            return None
+        return self.rewards_pending
+
+    def has_pending_rewards(self) -> bool:
+        """
+        Check if there are any pending rewards from any source.
+
+        Checks:
+        1. Explicit rewards_pending field
+        2. Combat ended with summary but not processed
+        3. Encounter completed with encounter_summary but not processed
+
+        Returns:
+            bool: True if rewards are pending and need processing
+        """
+        # Check explicit rewards_pending
+        rewards = self.get_rewards_pending()
+        if rewards and not rewards.get("processed", False):
+            return True
+
+        # Check combat ended with summary
+        combat_state = self.get_combat_state()
+        # Use centralized constant for combat finished phases
+        if (
+            combat_state.get("combat_phase") in constants.COMBAT_FINISHED_PHASES
+            and combat_state.get("combat_summary")
+            and not combat_state.get("rewards_processed", False)
+        ):
+            return True
+
+        # Check encounter completed with summary
+        encounter_state = self.get_encounter_state()
+        encounter_completed = encounter_state.get("encounter_completed", False)
+        encounter_summary = encounter_state.get("encounter_summary")
+        encounter_processed = encounter_state.get("rewards_processed", False)
+
+        if encounter_completed:
+            if not isinstance(encounter_summary, dict):
+                logging_util.debug(
+                    "🏆 REWARDS_CHECK: Encounter completed but encounter_summary missing/invalid"
+                )
+            elif encounter_summary.get("xp_awarded") is None:
+                logging_util.debug(
+                    "🏆 REWARDS_CHECK: Encounter completed but encounter_summary missing xp_awarded"
+                )
+            elif not encounter_processed:
+                return True
+
+        return False
 
     # =========================================================================
     # Arc Milestone Tracking Methods

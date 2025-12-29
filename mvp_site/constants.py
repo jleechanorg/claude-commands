@@ -229,7 +229,23 @@ ALLOWED_DEBUG_MODE_VALUES = [True, False]
 MODE_CHARACTER = "character"
 MODE_GOD = "god"
 MODE_COMBAT = "combat"
+MODE_REWARDS = "rewards"
 MODE_INFO = "info"  # For equipment/inventory/stats queries with trimmed prompts
+
+# --- COMBAT PHASE CONSTANTS ---
+# Canonical set of combat phases indicating combat has ended
+# Used by RewardsAgent, world_logic enforcement, and state archival
+# IMPORTANT: This is the SINGLE SOURCE OF TRUTH - all combat phase checks must use this set
+COMBAT_FINISHED_PHASES = frozenset({
+    "ended",
+    "concluding",
+    "concluded",
+    "finished",
+    "complete",
+    "completed",
+    "resolved",
+    "victory",
+})
 
 # Mode switching detection phrases
 MODE_SWITCH_PHRASES = [
@@ -389,6 +405,7 @@ FILENAME_DND_SRD = "dnd_srd_instruction.md"
 FILENAME_CHARACTER_TEMPLATE = "character_template.md"
 FILENAME_LIVING_WORLD = "living_world_instruction.md"
 FILENAME_COMBAT_SYSTEM = "combat_system_instruction.md"
+FILENAME_REWARDS_SYSTEM = "rewards_system_instruction.md"
 
 # --- ARCHIVED FILENAMES (for reference) ---
 # These files have been archived to prompt_archive/ directory:
@@ -409,6 +426,7 @@ PROMPT_TYPE_DND_SRD = "dnd_srd"
 PROMPT_TYPE_GOD_MODE = "god_mode"
 PROMPT_TYPE_LIVING_WORLD = "living_world"
 PROMPT_TYPE_COMBAT = "combat"
+PROMPT_TYPE_REWARDS = "rewards"
 
 
 # --- PROMPT PATHS ---
@@ -425,7 +443,10 @@ MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
 GOD_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "god_mode_instruction.md")
 LIVING_WORLD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, FILENAME_LIVING_WORLD)
-COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "combat_system_instruction.md")
+COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
+    PROMPTS_DIR, "combat_system_instruction.md"
+)
+REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "rewards_system_instruction.md")
 
 # --- LIVING WORLD SETTINGS ---
 # The living world instruction is included every N turns to advance world state.

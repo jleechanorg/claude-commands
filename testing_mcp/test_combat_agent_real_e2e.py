@@ -32,9 +32,14 @@ from datetime import datetime, timezone
 from typing import Any
 
 import requests
+from pathlib import Path
+
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from testing_mcp.dev_server import ensure_server_running, get_base_url
 
 # Configuration
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
+BASE_URL = get_base_url()  # Uses worktree-specific port
 USER_ID = f"e2e-combat-agent-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/tmp/combat_xp_e2e_v1")
 STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
@@ -270,6 +275,14 @@ def validate_combat_state_schema(combat_state: dict) -> dict:
 
 
 def main():
+    # Ensure development server is running with fresh code (auto-reload enabled)
+    log("Ensuring development server is running with fresh code...")
+    try:
+        ensure_server_running(check_code_changes=True)
+    except Exception as e:
+        log(f"⚠️  Could not manage server: {e}")
+        log("   Proceeding with existing server or BASE_URL...")
+
     results = {
         "test_name": "combat_agent_real_e2e",
         "test_type": "combat_mode_validation",

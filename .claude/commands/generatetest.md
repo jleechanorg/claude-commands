@@ -141,9 +141,11 @@ if __name__ == "__main__":
 5. Check subprocess return codes
 
 **Evidence Standards Checklist (from `.claude/skills/evidence-standards.md`):**
-- [ ] Git provenance: HEAD commit, origin/main, changed files
-- [ ] Server environment: PID, port, WORLDAI_DEV_MODE
+- [ ] Git provenance: `git_head`, `git_branch`, `merge_base`, `commits_ahead_of_main`, `diff_stat_vs_main`
+- [ ] Server environment: `server.pid`, `server.port`, `server.process_cmdline`, `server.env_vars`
+- [ ] Required env vars: `WORLDAI_DEV_MODE`, `TESTING`, `GOOGLE_APPLICATION_CREDENTIALS`
 - [ ] Checksums: SHA256 for all evidence files
+- [ ] Server logs: Capture logs during test with proper timezone handling (UTC→local)
 - [ ] Timestamp synchronization: collect all evidence in one pass
 - [ ] Documentation-Data alignment: derive claims from actual data
 
@@ -247,7 +249,8 @@ From `.claude/skills/evidence-standards.md`:
 | **Correct denominators** | `found/total (need min)`, not `found/min` |
 | **Check return codes** | `if result.returncode != 0: warn()` |
 | **Single run attribution** | Evidence bundle references ONE test run |
-| **Git provenance** | HEAD, origin/main, changed files |
+| **Git provenance** | HEAD, branch, merge_base, commits_ahead, diff_stat |
+| **Server provenance** | PID, port, cmdline, env_vars |
 | **Checksums** | SHA256 via savetmp.py |
 
 ## 🔧 PRIORITY MATRIX

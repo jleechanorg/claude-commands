@@ -679,6 +679,162 @@ class CombatAgent(BaseAgent):
         return False
 
 
+class RewardsAgent(BaseAgent):
+    """
+    Agent for Rewards Mode (XP, Loot, Level-Up Processing).
+
+    This agent handles ALL reward processing from any source:
+    - Combat victories (triggered after combat ends)
+    - Non-combat encounters (heists, social victories, stealth successes)
+    - Quest completions
+    - Milestone achievements
+
+    Responsibilities:
+    - XP calculation and awarding from any source
+    - Loot distribution and inventory updates
+    - Level-up detection and processing
+    - Encounter history archival
+    - Resource restoration (if applicable)
+
+    Trigger Conditions (matches_game_state returns True when):
+    1. combat_phase == "ended" AND combat_summary exists
+    2. encounter_state.encounter_completed == true
+    3. rewards_pending exists in game_state
+
+    System Prompt Hierarchy:
+    1. Master directive (establishes AI authority)
+    2. Game state instructions (state structure reference)
+    3. Rewards system instruction (XP/loot/level-up rules)
+    4. D&D SRD (game rules for XP thresholds)
+    5. Mechanics (detailed level-up rules)
+
+    Note: After rewards are processed, this agent transitions back to story mode.
+    """
+
+    # Required prompts - always loaded for rewards mode
+    REQUIRED_PROMPTS: frozenset[str] = frozenset({
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_REWARDS,
+        constants.PROMPT_TYPE_DND_SRD,
+        constants.PROMPT_TYPE_MECHANICS,
+    })
+
+    # No optional prompts for rewards mode - focused on reward processing
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset()
+
+    MODE: str = constants.MODE_REWARDS
+
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+        turn_number: int = 0,
+    ) -> str:
+        """
+        Build system instructions for rewards mode.
+
+        Uses a focused prompt set for reward processing:
+        - Master directive (authority)
+        - Rewards system instruction (XP/loot/level-up rules)
+        - Game state (state structure reference)
+        - D&D SRD (XP thresholds, level rules)
+        - Mechanics (detailed level-up mechanics)
+
+        Returns:
+            Complete system instruction string for rewards processing
+        """
+        # Parameters intentionally unused - rewards mode uses fixed prompt set
+        del selected_prompts, include_continuation_reminder, use_default_world, turn_number
+
+        builder = self._prompt_builder
+
+        # Build rewards mode instructions (fixed prompt set)
+        parts: list[str] = builder.build_rewards_mode_instructions()
+
+        # Finalize without world instructions (rewards don't need world lore)
+        return builder.finalize_instructions(parts, use_default_world=False)
+
+    @classmethod
+    def matches_game_state(cls, game_state: "GameState | None") -> bool:
+        """
+        Check if rewards mode should be active based on game state.
+
+        Rewards mode is triggered when ANY of these conditions are true:
+        1. combat_phase == "ended" AND combat_summary exists
+        2. encounter_state.encounter_completed == true AND encounter_summary exists
+        3. rewards_pending exists in game_state
+
+        Args:
+            game_state: Current GameState object
+
+        Returns:
+            True if rewards are pending and RewardsAgent should be used
+        """
+        if game_state is None:
+            logging_util.debug("🏆 REWARDS_CHECK: game_state is None, no rewards pending")
+            return False
+
+        # Check 1: Combat just ended with summary (needs reward processing)
+        combat_state = game_state.get_combat_state()
+        # Use centralized constant for combat finished phases
+        if (
+            combat_state.get("combat_phase") in constants.COMBAT_FINISHED_PHASES
+            and combat_state.get("combat_summary")
+            and not combat_state.get("rewards_processed", False)
+        ):
+            logging_util.info(
+                "🏆 REWARDS_CHECK: Combat ended with summary, rewards pending"
+            )
+            return True
+
+        # Check 2: Encounter completed (non-combat rewards)
+        encounter_state = game_state.get_encounter_state()
+        encounter_completed = encounter_state.get("encounter_completed", False)
+        encounter_summary = encounter_state.get("encounter_summary")
+        encounter_processed = encounter_state.get("rewards_processed", False)
+
+        if encounter_completed:
+            if not isinstance(encounter_summary, dict):
+                logging_util.debug(
+                    "🏆 REWARDS_CHECK: Encounter completed but encounter_summary missing/invalid"
+                )
+            elif encounter_summary.get("xp_awarded") is None:
+                logging_util.debug(
+                    "🏆 REWARDS_CHECK: Encounter completed but encounter_summary missing xp_awarded"
+                )
+            elif not encounter_processed:
+                logging_util.info(
+                    "🏆 REWARDS_CHECK: Encounter completed, rewards pending"
+                )
+                return True
+
+        # Check 3: Explicit rewards_pending flag
+        rewards_pending = game_state.get_rewards_pending()
+        if rewards_pending and not rewards_pending.get("processed", False):
+            logging_util.info(
+                f"🏆 REWARDS_CHECK: Explicit rewards_pending={rewards_pending}"
+            )
+            return True
+
+        logging_util.debug("🏆 REWARDS_CHECK: No rewards pending")
+        return False
+
+    @classmethod
+    def matches_input(cls, _user_input: str) -> bool:
+        """
+        Rewards mode is NOT triggered by input - only by game state.
+
+        Args:
+            _user_input: Raw user input text (unused)
+
+        Returns:
+            Always False - use matches_game_state instead
+        """
+        return False
+
+
 def get_agent_for_input(
     user_input: str, game_state: "GameState | None" = None
 ) -> BaseAgent:
@@ -689,7 +845,8 @@ def get_agent_for_input(
     1. GodModeAgent if input starts with "GOD MODE:" (highest priority)
     2. InfoAgent for pure info queries (equipment, inventory, stats)
     3. CombatAgent if game_state.combat_state.in_combat is True
-    4. StoryModeAgent for all other inputs (default)
+    4. RewardsAgent if rewards are pending (combat end, encounter completion)
+    5. StoryModeAgent for all other inputs (default)
 
     Args:
         user_input: Raw user input text
@@ -708,6 +865,10 @@ def get_agent_for_input(
         >>> # With combat_state.in_combat = True
         >>> agent = get_agent_for_input("I attack the goblin!", combat_game_state)
         >>> isinstance(agent, CombatAgent)
+        True
+        >>> # With rewards pending (combat ended or encounter completed)
+        >>> agent = get_agent_for_input("continue", rewards_pending_state)
+        >>> isinstance(agent, RewardsAgent)
         True
         >>> agent = get_agent_for_input("I explore the tavern.")
         >>> isinstance(agent, StoryModeAgent)
@@ -728,7 +889,12 @@ def get_agent_for_input(
         logging_util.info("⚔️ COMBAT_MODE_ACTIVE: Using CombatAgent")
         return CombatAgent(game_state)
 
-    # Priority 4: Default to story mode
+    # Priority 4: Rewards mode when rewards are pending
+    if RewardsAgent.matches_game_state(game_state):
+        logging_util.info("🏆 REWARDS_MODE_ACTIVE: Using RewardsAgent")
+        return RewardsAgent(game_state)
+
+    # Priority 5: Default to story mode
     return StoryModeAgent(game_state)
 
 
@@ -739,5 +905,6 @@ __all__ = [
     "GodModeAgent",
     "InfoAgent",
     "CombatAgent",
+    "RewardsAgent",
     "get_agent_for_input",
 ]

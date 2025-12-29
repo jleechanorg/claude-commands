@@ -32,6 +32,7 @@ from mvp_site.agents import (
     BaseAgent,
     CombatAgent,
     GodModeAgent,
+    RewardsAgent,
     StoryModeAgent,
     get_agent_for_input,
 )
@@ -47,6 +48,25 @@ def create_mock_game_state(in_combat=False, combat_state_dict=None):
 
     mock_state.get_combat_state.return_value = combat_state_dict
     mock_state.combat_state = combat_state_dict
+    return mock_state
+
+
+def create_rewards_game_state(
+    combat_state: dict | None = None,
+    encounter_state: dict | None = None,
+    rewards_pending: dict | None = None,
+):
+    """Helper to create a mock GameState for rewards detection tests."""
+
+    mock_state = Mock()
+    mock_state.get_combat_state.return_value = combat_state or {"in_combat": False}
+    mock_state.get_encounter_state.return_value = encounter_state or {
+        "encounter_active": False
+    }
+    mock_state.get_rewards_pending.return_value = rewards_pending
+    mock_state.is_in_combat.return_value = mock_state.get_combat_state.return_value.get(
+        "in_combat", False
+    )
     return mock_state
 
 
@@ -334,6 +354,134 @@ class TestCombatAgent(unittest.TestCase):
         self.assertFalse(CombatAgent.matches_game_state(mock_game_state))
 
 
+class TestRewardsAgent(unittest.TestCase):
+    """Test cases for RewardsAgent class."""
+
+    def test_rewards_agent_creation(self):
+        """RewardsAgent can be instantiated."""
+        agent = RewardsAgent()
+        self.assertIsInstance(agent, BaseAgent)
+        self.assertIsInstance(agent, RewardsAgent)
+
+    def test_rewards_agent_required_prompts(self):
+        """RewardsAgent has correct required prompts."""
+        expected_prompts = {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_REWARDS,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_DND_SRD,
+            constants.PROMPT_TYPE_MECHANICS,
+        }
+        self.assertEqual(RewardsAgent.REQUIRED_PROMPTS, frozenset(expected_prompts))
+        self.assertEqual(RewardsAgent.OPTIONAL_PROMPTS, frozenset())
+        self.assertEqual(RewardsAgent.MODE, constants.MODE_REWARDS)
+
+    def test_rewards_agent_matches_input_always_false(self):
+        """RewardsAgent.matches_input always returns False (state-driven)."""
+        self.assertFalse(RewardsAgent.matches_input("any input"))
+
+    def test_rewards_agent_matches_game_state_combat_end(self):
+        """RewardsAgent triggers when combat ended with summary and not processed."""
+        combat_state = {
+            "in_combat": False,
+            "combat_phase": "ended",
+            "combat_summary": {"result": "victory"},
+            "rewards_processed": False,
+        }
+        mock_state = create_rewards_game_state(combat_state=combat_state)
+
+        self.assertTrue(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_combat_finished_variants(self):
+        """RewardsAgent handles alternate finished combat phases."""
+        combat_state = {
+            "in_combat": False,
+            "combat_phase": "finished",
+            "combat_summary": {"result": "victory"},
+            "rewards_processed": False,
+        }
+        mock_state = create_rewards_game_state(combat_state=combat_state)
+
+        self.assertTrue(RewardsAgent.matches_game_state(mock_state))
+
+        combat_state["combat_phase"] = "victory"
+        self.assertTrue(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_combat_phase_not_finished(self):
+        """RewardsAgent ignores combat states that are not finished."""
+        combat_state = {
+            "in_combat": False,
+            "combat_phase": "in_progress",
+            "combat_summary": {"result": "pending"},
+            "rewards_processed": False,
+        }
+        mock_state = create_rewards_game_state(combat_state=combat_state)
+
+        self.assertFalse(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_encounter_completed(self):
+        """RewardsAgent triggers when encounter is completed and not processed."""
+        encounter_state = {
+            "encounter_completed": True,
+            "rewards_processed": False,
+            "encounter_summary": {"result": "success", "xp_awarded": 120},
+        }
+        mock_state = create_rewards_game_state(encounter_state=encounter_state)
+
+        self.assertTrue(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_encounter_missing_summary(self):
+        """RewardsAgent does not trigger when encounter summary is missing."""
+        encounter_state = {
+            "encounter_completed": True,
+            "rewards_processed": False,
+            # Missing encounter_summary should prevent rewards processing
+        }
+        mock_state = create_rewards_game_state(encounter_state=encounter_state)
+
+        self.assertFalse(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_encounter_missing_xp(self):
+        """RewardsAgent does not trigger when encounter_summary lacks xp_awarded."""
+        encounter_state = {
+            "encounter_completed": True,
+            "rewards_processed": False,
+            "encounter_summary": {"result": "success"},
+        }
+        mock_state = create_rewards_game_state(encounter_state=encounter_state)
+
+        self.assertFalse(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_rewards_pending(self):
+        """RewardsAgent triggers when rewards_pending exists and not processed."""
+        rewards_pending = {"source": "quest", "xp": 100, "processed": False}
+        mock_state = create_rewards_game_state(rewards_pending=rewards_pending)
+
+        self.assertTrue(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_returns_false_when_processed(self):
+        """RewardsAgent does not trigger when rewards are already processed."""
+        rewards_pending = {"source": "quest", "xp": 50, "processed": True}
+        mock_state = create_rewards_game_state(rewards_pending=rewards_pending)
+
+        self.assertFalse(RewardsAgent.matches_game_state(mock_state))
+
+    def test_rewards_agent_matches_game_state_returns_false_for_none(self):
+        """RewardsAgent returns False when game_state is None."""
+        self.assertFalse(RewardsAgent.matches_game_state(None))
+
+    @patch("mvp_site.agent_prompts._load_instruction_file")
+    def test_rewards_agent_builds_instructions(self, mock_load):
+        """RewardsAgent.build_system_instructions returns instruction string."""
+        mock_load.return_value = "Test instruction content"
+
+        agent = RewardsAgent()
+        instructions = agent.build_system_instructions()
+
+        self.assertIsInstance(instructions, str)
+        self.assertGreater(len(instructions), 0)
+
+
 class TestGetAgentForInput(unittest.TestCase):
     """Test cases for get_agent_for_input factory function."""
 
@@ -395,7 +543,7 @@ class TestGetAgentForInput(unittest.TestCase):
         self.assertIsInstance(agent, GodModeAgent)
 
     def test_get_agent_priority_order(self):
-        """Verify agent priority: GOD MODE > Combat > Story."""
+        """Verify agent priority: GOD MODE > Combat > Rewards > Story."""
         # Priority 1: GOD MODE always wins
         combat_state = create_mock_game_state(in_combat=True)
         god_agent = get_agent_for_input("GOD MODE: test", game_state=combat_state)
@@ -405,10 +553,35 @@ class TestGetAgentForInput(unittest.TestCase):
         combat_agent = get_agent_for_input("attack", game_state=combat_state)
         self.assertIsInstance(combat_agent, CombatAgent)
 
-        # Priority 3: Story mode as default
+        # Priority 3: Rewards mode when rewards are pending
+        rewards_state = create_rewards_game_state(
+            combat_state={
+                "in_combat": False,
+                "combat_phase": "ended",
+                "combat_summary": {"result": "victory"},
+                "rewards_processed": False,
+            }
+        )
+        rewards_agent = get_agent_for_input("continue", game_state=rewards_state)
+        self.assertIsInstance(rewards_agent, RewardsAgent)
+
+        # Priority 4: Story mode as default
         no_combat_state = create_mock_game_state(in_combat=False)
         story_agent = get_agent_for_input("attack", game_state=no_combat_state)
         self.assertIsInstance(story_agent, StoryModeAgent)
+
+    def test_get_agent_returns_rewards_agent_when_encounter_rewards_pending(self):
+        """get_agent_for_input returns RewardsAgent when encounter rewards pending."""
+        rewards_state = create_rewards_game_state(
+            encounter_state={
+                "encounter_completed": True,
+                "rewards_processed": False,
+                "encounter_summary": {"result": "success", "xp_awarded": 50},
+            }
+        )
+
+        agent = get_agent_for_input("collect", game_state=rewards_state)
+        self.assertIsInstance(agent, RewardsAgent)
 
 
 class TestAgentInstructionBuilding(unittest.TestCase):

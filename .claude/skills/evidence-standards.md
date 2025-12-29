@@ -4,6 +4,52 @@
 
 **Evidence must prove what you claim.** Mock data cannot prove production behavior.
 
+## Minimum Viable Evidence Checklist
+
+**Every test MUST capture these at minimum (copy-paste into test setup):**
+
+```python
+def capture_provenance():
+    """REQUIRED: Capture all evidence standards."""
+    provenance = {}
+
+    # === GIT PROVENANCE (MANDATORY) ===
+    subprocess.run(["git", "fetch", "origin", "main"], timeout=10, capture_output=True)
+    provenance["git_head"] = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True).strip()
+    provenance["git_branch"] = subprocess.check_output(
+        ["git", "branch", "--show-current"], text=True).strip()
+    provenance["merge_base"] = subprocess.check_output(
+        ["git", "merge-base", "HEAD", "origin/main"], text=True).strip()
+    provenance["commits_ahead_of_main"] = int(subprocess.check_output(
+        ["git", "rev-list", "--count", "origin/main..HEAD"], text=True).strip())
+    provenance["diff_stat_vs_main"] = subprocess.check_output(
+        ["git", "diff", "--stat", "origin/main...HEAD"], text=True).strip()
+
+    # === SERVER RUNTIME (MANDATORY for server tests) ===
+    port = BASE_URL.split(":")[-1].rstrip("/")
+    pids = subprocess.check_output(
+        ["lsof", "-i", f":{port}", "-t"], text=True).strip().split("\n")
+    provenance["server"] = {
+        "pid": pids[0] if pids else None,
+        "port": port,
+        "process_cmdline": subprocess.check_output(
+            ["ps", "-p", pids[0], "-o", "command="], text=True).strip() if pids else None,
+        "env_vars": {var: os.environ.get(var) for var in
+            ["WORLDAI_DEV_MODE", "TESTING", "GOOGLE_APPLICATION_CREDENTIALS"]}
+    }
+
+    return provenance
+```
+
+**Quick validation:** If your evidence.json is missing ANY of these fields, the test is incomplete:
+- `provenance.merge_base`
+- `provenance.commits_ahead_of_main`
+- `provenance.diff_stat_vs_main`
+- `provenance.server.pid`
+- `provenance.server.port`
+- `provenance.server.process_cmdline`
+
 ## Three Evidence Rule (from CLAUDE.md)
 
 **MANDATORY for ANY integration claim:**

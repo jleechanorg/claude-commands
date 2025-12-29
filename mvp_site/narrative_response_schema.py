@@ -261,6 +261,7 @@ class NarrativeResponse:
         self.dice_rolls = self._validate_list_field(dice_rolls, "dice_rolls")
         self.dice_audit_events = self._validate_dice_audit_events(dice_audit_events)
         self.resources = self._validate_string_field(resources, "resources")
+        self.rewards_box = self._validate_rewards_box(kwargs.pop("rewards_box", None))
 
         # Store any extra fields that Gemini might include (shouldn't be any now)
         self.extra_fields = kwargs
@@ -351,6 +352,51 @@ class NarrativeResponse:
                     )
 
         return validated_list
+
+    def _validate_rewards_box(self, rewards_box: Any) -> dict[str, Any]:
+        """Validate rewards_box structured field."""
+        if rewards_box is None:
+            return {}
+
+        if not isinstance(rewards_box, dict):
+            logging_util.warning(
+                f"Invalid rewards_box type: {type(rewards_box).__name__}, expected dict. Using empty dict."
+            )
+            return {}
+
+        def _coerce_number(value: Any, default: float = 0.0) -> float:
+            if isinstance(value, (int, float)):
+                return float(value)
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        def _coerce_bool(value: Any) -> bool:
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                return value.strip().lower() in ("true", "yes", "1")
+            return bool(value)
+
+        validated: dict[str, Any] = {
+            "source": str(rewards_box.get("source", "")).strip(),
+            "xp_gained": _coerce_number(rewards_box.get("xp_gained", 0)),
+            "current_xp": _coerce_number(rewards_box.get("current_xp", 0)),
+            "next_level_xp": _coerce_number(rewards_box.get("next_level_xp", 0)),
+            "progress_percent": _coerce_number(rewards_box.get("progress_percent", 0)),
+            "level_up_available": _coerce_bool(
+                rewards_box.get("level_up_available", False)
+            ),
+            "gold": _coerce_number(rewards_box.get("gold", 0)),
+        }
+
+        loot = rewards_box.get("loot", [])
+        if not isinstance(loot, list):
+            loot = [str(loot)] if loot is not None else []
+        validated["loot"] = [str(item).strip() for item in loot if str(item).strip()]
+
+        return validated
 
     def _validate_dice_audit_events(self, value: Any) -> list[dict[str, Any]]:
         """Validate dice_audit_events as a list of dicts.

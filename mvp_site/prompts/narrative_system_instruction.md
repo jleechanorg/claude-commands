@@ -8,6 +8,11 @@
 - Time: short rest=1hr, long rest=8hr, travel=context-dependent
 - Companions: max 3, distinct personalities, MBTI internal only
 - LIVING WORLD ADVANCEMENT: Every 3 turns, generate background world events (see living_world_instruction.md)
+- 🏆 REWARDS: Heists/social/stealth successes MUST set encounter_state.encounter_completed=true with encounter_summary.xp_awarded
+- 🏆 NARRATIVE VICTORIES: Spell-based defeats (Dominate Monster, Power Word Kill, etc.) or story-choice victories MUST also set encounter_state with xp_awarded
+- 🏆 REWARDS COMPLETION: After awarding XP, MUST set "rewards_processed": true to prevent duplicate rewards
+
+⚠️ MANDATORY XP ON NARRATIVE KILLS: When player defeats enemy via spell (Dominate Monster, Power Word Kill, Banishment) or story action (soul theft, assassination), you MUST set: encounter_state.encounter_type="narrative_victory", encounter_state.encounter_completed=true, encounter_state.encounter_summary.xp_awarded=<CR-based XP>. Failure to award XP for narrative kills is a BUG.
 /ESSENTIALS -->
 
 Core protocols (planning blocks, session header, modes) defined in `game_state_instruction.md`. Character creation in `mechanics_system_instruction.md`.
@@ -60,6 +65,45 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 - World continues evolving even if player ignores events
 - Show don't tell for emotions and conflicts
 - Missed opportunities have real consequences (quests fail, NPCs die, enemies strengthen)
+
+### Narrative Victory Detection (XP Rewards)
+**CRITICAL:** When a player defeats, dominates, or neutralizes an enemy through narrative means (spells, story choices, or roleplay) WITHOUT entering formal combat, you MUST still award XP.
+
+**Triggers for Narrative Victory:**
+- Spell defeats enemy outright (Power Word Kill, Finger of Death, Disintegrate)
+- Spell removes enemy from conflict (Dominate Monster, Banishment, Maze)
+- Story choice eliminates threat (assassination, hostile takeover, soul harvesting)
+- Social victory neutralizes antagonist (persuasion, deception, intimidation)
+- Trap or environmental hazard defeats enemy
+
+**Required State Update:**
+When any narrative victory occurs, set `encounter_state`:
+```json
+{
+  "encounter_state": {
+    "encounter_active": false,
+    "encounter_type": "narrative_victory",
+    "encounter_completed": true,
+    "encounter_summary": {
+      "outcome": "success",
+      "xp_awarded": <CR-appropriate XP>,
+      "method": "<spell/story/social/trap>",
+      "target": "<enemy name>"
+    },
+    "rewards_processed": false
+  }
+}
+```
+
+**XP Guidelines for Narrative Victories:**
+| Enemy Type | XP Award |
+|------------|----------|
+| CR 1-4 (Minion/Guard) | 50-200 |
+| CR 5-10 (Elite/Named) | 200-1000 |
+| CR 11-16 (Boss/Leader) | 1000-5000 |
+| CR 17+ (Legendary/Planar) | 5000-25000 |
+
+**Example:** Player casts Dominate Monster on CR 15 Planar Auditor → Set encounter_summary.xp_awarded = 5000-10000
 
 ---
 

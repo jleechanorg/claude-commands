@@ -389,6 +389,49 @@ document.addEventListener('DOMContentLoaded', () => {
         '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
     }
 
+    // 4b. Rewards box (if XP was awarded)
+    if (fullData.rewards_box && fullData.rewards_box.xp_gained > 0) {
+      const rb = fullData.rewards_box;
+      const source = sanitizeHtml(rb.source || 'earned');
+      const xpGained = rb.xp_gained || 0;
+      const currentXp = rb.current_xp;
+      const nextLevelXp = rb.next_level_xp;
+      const progressPercent = rb.progress_percent;
+      const levelUpAvailable = rb.level_up_available;
+      const loot = rb.loot || [];
+      const gold = rb.gold || 0;
+
+      html += '<div class="rewards-box" style="background-color: #d4edda; border: 2px solid #28a745; padding: 12px; margin: 10px 0; border-radius: 8px;">';
+      html += `<strong style="color: #155724;">✨ REWARDS (${source}):</strong>`;
+      html += `<div style="margin-top: 8px; color: #155724;"><strong>+${xpGained} XP</strong>`;
+
+      if (currentXp !== undefined && nextLevelXp !== undefined) {
+        html += ` | XP: ${currentXp}/${nextLevelXp}`;
+        if (progressPercent !== undefined) {
+          html += ` (${Math.round(progressPercent)}%)`;
+        }
+      }
+      html += '</div>';
+
+      // Loot display
+      const validLoot = loot.filter(item => item && item !== 'None');
+      if (gold > 0 || validLoot.length > 0) {
+        html += '<div style="margin-top: 6px; color: #155724;"><strong>Loot:</strong> ';
+        const lootParts = [];
+        if (gold > 0) lootParts.push(`${gold} gold`);
+        if (validLoot.length > 0) lootParts.push(...validLoot.map(item => sanitizeHtml(item)));
+        html += lootParts.join(', ');
+        html += '</div>';
+      }
+
+      // Level up notification
+      if (levelUpAvailable) {
+        html += '<div style="margin-top: 8px; font-weight: bold; color: #856404; background-color: #fff3cd; padding: 6px; border-radius: 4px;">🎉 LEVEL UP AVAILABLE!</div>';
+      }
+
+      html += '</div>';
+    }
+
     // 4.5 Living World Updates (debug mode only)
     const stateUpdates = fullData.state_updates || {};
     const worldEvents = stateUpdates.world_events || fullData.world_events;

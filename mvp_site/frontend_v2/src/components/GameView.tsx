@@ -20,7 +20,8 @@ import {
   Eye,
   Target,
   Move,
-  Sparkles
+  Sparkles,
+  Gift
 } from 'lucide-react'
 import type { Campaign, Theme } from '../types'
 import { apiService } from '../services/api.service'
@@ -36,7 +37,7 @@ interface GameViewProps {
 
 interface StoryEntry {
   id: string
-  type: 'narration' | 'action' | 'dialogue' | 'system' | 'error'
+  type: 'narration' | 'action' | 'dialogue' | 'system' | 'rewards' | 'error'
   content: string
   timestamp: string
   author?: 'player' | 'ai' | 'system'
@@ -258,7 +259,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           const diceEntry: StoryEntry = {
             id: (Date.now() + 2).toString(),
             type: 'system',
-            content: `🎲 Dice rolls: ${aiResponse.dice_rolls.map(roll => 
+            content: `🎲 Dice rolls: ${aiResponse.dice_rolls.map(roll =>
               `${roll.type}: ${roll.result}${roll.modifier ? ` + ${roll.modifier}` : ''} = ${roll.total || roll.result}${roll.reason ? ` (${roll.reason})` : ''}`
             ).join(', ')}`,
             timestamp: new Date().toISOString(),
@@ -266,7 +267,38 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           }
           setStory(prev => [...prev, diceEntry])
         }
-        
+
+        // Add rewards box if XP was awarded
+        if (aiResponse.rewards_box && (aiResponse.rewards_box.xp_gained || 0) > 0) {
+          const rb = aiResponse.rewards_box
+          const lootText = rb.loot && rb.loot.length > 0 && rb.loot[0] !== 'None'
+            ? rb.loot.join(', ')
+            : null
+          const goldText = rb.gold && rb.gold > 0 ? `${rb.gold} gold` : null
+          const levelUpText = rb.level_up_available ? ' 🎉 LEVEL UP AVAILABLE!' : ''
+
+          let rewardsContent = `✨ REWARDS (${rb.source || 'earned'}): +${rb.xp_gained} XP`
+          if (rb.current_xp !== undefined && rb.next_level_xp !== undefined) {
+            rewardsContent += ` | XP: ${rb.current_xp}/${rb.next_level_xp}`
+            if (rb.progress_percent !== undefined) {
+              rewardsContent += ` (${Math.round(rb.progress_percent)}%)`
+            }
+          }
+          if (goldText || lootText) {
+            rewardsContent += ` | Loot: ${[goldText, lootText].filter(Boolean).join(', ')}`
+          }
+          rewardsContent += levelUpText
+
+          const rewardsEntry: StoryEntry = {
+            id: (Date.now() + 3).toString(),
+            type: 'rewards',
+            content: rewardsContent,
+            timestamp: new Date().toISOString(),
+            author: 'system'
+          }
+          setStory(prev => [...prev, rewardsEntry])
+        }
+
         setLoadingState({ isLoading: false, status: 'Success!', progress: 100 })
         showSuccessToast('AI response received', { context: 'Game', duration: 2000 })
       } else {
@@ -428,6 +460,8 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
         return <MessageSquare className="w-4 h-4" />
       case 'system':
         return <Settings className="w-4 h-4" />
+      case 'rewards':
+        return <Gift className="w-4 h-4 text-green-400" />
       case 'error':
         return <Sparkles className="w-4 h-4 text-red-400" />
       default:
@@ -445,6 +479,8 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
         return 'bg-accent/20 border-accent/30 text-accent-foreground'
       case 'system':
         return 'bg-muted/30 border-muted/40 text-muted-foreground'
+      case 'rewards':
+        return 'bg-green-500/10 border-green-500/20 text-green-400'
       case 'error':
         return 'bg-red-500/10 border-red-500/20 text-red-400'
       default:
@@ -520,7 +556,8 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                             {getEntryIcon(entry)}
                             <Badge variant="outline" className="text-xs">
                               {entry.author === 'player' ? 'You' :
-                               entry.author === 'ai' ? 'GM' : 'System'}
+                               entry.author === 'ai' ? 'GM' :
+                               entry.type === 'rewards' ? 'Rewards' : 'System'}
                             </Badge>
                           </div>
                           <div className="flex-1">

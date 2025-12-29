@@ -279,6 +279,326 @@ def truncate_game_state_for_logging(
     )
 
 
+def _has_rewards_narrative(narrative: str | None) -> bool:
+    """Heuristic check for user-visible rewards in narrative text."""
+    if not narrative:
+        return False
+
+    narrative_lower = narrative.lower()
+    indicators = (
+        "reward",
+        "rewards",
+        "xp",
+        "experience",
+        "level up",
+        "level-up",
+        "levelup",
+        "loot",
+        "gold",
+        "treasure",
+        "awarded",
+        "gained",
+        "victory",
+    )
+    if any(indicator in narrative_lower for indicator in indicators):
+        return True
+
+    # Common box markers used by RewardsAgent (format may vary)
+    return "══" in narrative or "──" in narrative
+
+
+
+def _has_rewards_context(
+    state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
+) -> bool:
+    """Detect whether the current state suggests rewards should be visible."""
+    combat_state = state_dict.get("combat_state", {}) or {}
+    encounter_state = state_dict.get("encounter_state", {}) or {}
+    rewards_pending = state_dict.get("rewards_pending") or {}
+
+    if combat_state.get("combat_summary"):
+        return True
+
+    encounter_summary = encounter_state.get("encounter_summary")
+    if isinstance(encounter_summary, dict) and encounter_summary:
+        return True
+
+    if rewards_pending:
+        return True
+
+    if original_state_dict is not None:
+        # Use "or {}" to handle None values safely
+        # (dict.get returns None when key exists with None value, not the default)
+        current_xp = (
+            (state_dict.get("player_character_data") or {}).get("experience") or {}
+        ).get("current", 0)
+        original_xp = (
+            (original_state_dict.get("player_character_data") or {}).get("experience")
+            or {}
+        ).get("current", 0)
+        if current_xp > original_xp:
+            return True
+
+    return False
+
+
+def _enforce_rewards_processed_flag(
+    state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    Server-side enforcement: Ensure rewards_processed is set when rewards were processed.
+
+    This is a safety net for when the LLM doesn't follow the prompt to set this flag.
+    The flag is critical to prevent RewardsAgent from triggering again on the next action.
+
+    Sets rewards_processed=True when:
+    1. Combat just ended (combat_phase="ended" and combat_summary exists)
+    2. Encounter completed (encounter_completed=True and encounter_summary exists)
+    3. XP increased from the previous state (with active combat or encounter)
+
+    Args:
+        state_dict: The game state dict after updates are applied
+        original_state_dict: Optional original state before the update (for XP comparison)
+
+    Returns:
+        The game state dict with rewards_processed enforced
+    """
+    combat_state = state_dict.get("combat_state", {}) or {}
+    encounter_state = state_dict.get("encounter_state", {}) or {}
+
+    # Check combat rewards condition
+    combat_phase = combat_state.get("combat_phase", "")
+    combat_summary = combat_state.get("combat_summary")
+    combat_rewards_processed = combat_state.get("rewards_processed", False)
+
+    if (
+        combat_phase in constants.COMBAT_FINISHED_PHASES
+        and combat_summary
+        and not combat_rewards_processed
+    ):
+        logging_util.info(
+            "🏆 SERVER_ENFORCEMENT: Setting combat_state.rewards_processed=True "
+            f"(combat_phase={combat_phase}, combat_summary exists)"
+        )
+        if "combat_state" not in state_dict:
+            state_dict["combat_state"] = {}
+        state_dict["combat_state"]["rewards_processed"] = True
+
+    # Check encounter rewards condition
+    # CRITICAL: Must require encounter_completed to match RewardsAgent trigger condition
+    # (agents.py:798). Otherwise rewards get marked processed before RewardsAgent runs.
+    encounter_completed = encounter_state.get("encounter_completed", False)
+    encounter_summary = encounter_state.get("encounter_summary")
+    encounter_rewards_processed = encounter_state.get("rewards_processed", False)
+
+    if (
+        encounter_completed
+        and isinstance(encounter_summary, dict)
+        and encounter_summary.get("xp_awarded") is not None
+        and not encounter_rewards_processed
+    ):
+        logging_util.info(
+            "🏆 SERVER_ENFORCEMENT: Setting encounter_state.rewards_processed=True "
+            f"(encounter_completed={encounter_completed}, xp_awarded={encounter_summary.get('xp_awarded')})"
+        )
+        if "encounter_state" not in state_dict:
+            state_dict["encounter_state"] = {}
+        state_dict["encounter_state"]["rewards_processed"] = True
+
+    # Check XP increase condition (fallback when LLM doesn't set summary structures)
+    # Only trigger if combat/encounter context exists and XP increased
+    if original_state_dict is not None:
+        # Get XP values - use "or {}" to handle None values safely
+        # (dict.get returns None when key exists with None value, not the default)
+        current_xp = (
+            (state_dict.get("player_character_data") or {}).get("experience") or {}
+        ).get("current", 0)
+        original_xp = (
+            (original_state_dict.get("player_character_data") or {}).get("experience")
+            or {}
+        ).get("current", 0)
+
+        # Detect XP increase
+        xp_increased = current_xp > original_xp
+        xp_gain = current_xp - original_xp if xp_increased else 0
+
+        # Check if rewards_processed is set anywhere
+        any_rewards_processed = (
+            combat_state.get("rewards_processed", False)
+            or encounter_state.get("rewards_processed", False)
+        )
+
+        # If XP increased but no rewards_processed flag is set, try to set it
+        if xp_increased and not any_rewards_processed:
+            # Check for combat context (even if ended without summary)
+            combat_phase = combat_state.get("combat_phase", "")
+            has_combat_context = combat_phase in constants.COMBAT_FINISHED_PHASES
+
+            # Check for encounter context
+            encounter_completed = encounter_state.get("encounter_completed", False)
+            has_encounter_active = encounter_state.get("encounter_active", False)
+            has_encounter_context = encounter_completed or has_encounter_active
+
+            if has_combat_context:
+                logging_util.info(
+                    "🏆 SERVER_ENFORCEMENT: Setting combat_state.rewards_processed=True "
+                    f"(XP increased by {xp_gain}: {original_xp} → {current_xp}, combat_phase={combat_phase})"
+                )
+                if "combat_state" not in state_dict:
+                    state_dict["combat_state"] = {}
+                state_dict["combat_state"]["rewards_processed"] = True
+            elif has_encounter_context:
+                logging_util.info(
+                    "🏆 SERVER_ENFORCEMENT: Setting encounter_state.rewards_processed=True "
+                    f"(XP increased by {xp_gain}: {original_xp} → {current_xp}, encounter context present)"
+                )
+                if "encounter_state" not in state_dict:
+                    state_dict["encounter_state"] = {}
+                state_dict["encounter_state"]["rewards_processed"] = True
+
+    return state_dict
+
+
+async def _process_rewards_followup(
+    mode: str,
+    llm_response_obj: Any,
+    updated_game_state_dict: dict[str, Any],
+    current_state_as_dict: dict[str, Any],
+    original_world_time: dict[str, Any] | None,
+    story_context: str,
+    selected_prompts: list[str],
+    use_default_world: bool,
+    user_id: str,
+    prevention_extras: dict[str, Any],
+) -> tuple[dict[str, Any], Any, dict[str, Any]]:
+    """
+    Process rewards follow-up if needed after primary action.
+
+    This function checks if RewardsAgent needs to run as a follow-up to ensure
+    user-visible rewards output. It prevents double invocation by checking if
+    rewards_box already exists in the response.
+
+    Args:
+        mode: The original action mode (MODE_CHARACTER, MODE_COMBAT, etc.)
+        llm_response_obj: The primary LLM response object
+        updated_game_state_dict: Current game state dict after primary updates
+        current_state_as_dict: Original state dict before the action
+        original_world_time: Original world time for validation
+        story_context: Story context for LLM calls
+        selected_prompts: Selected prompts for LLM calls
+        use_default_world: Whether using default world
+        user_id: User ID for LLM calls
+        prevention_extras: Dict to accumulate prevention extras
+
+    Returns:
+        Tuple of (updated_game_state_dict, llm_response_obj, prevention_extras)
+    """
+    # Check if RewardsAgent already ran (rewards_box in response = no follow-up needed)
+    # This prevents double agent invocation when get_agent_for_input() selected RewardsAgent
+    rewards_already_in_response = (
+        hasattr(llm_response_obj, "structured_response")
+        and llm_response_obj.structured_response is not None
+        and getattr(llm_response_obj.structured_response, "rewards_box", None)
+        is not None
+    )
+
+    if mode == constants.MODE_REWARDS or rewards_already_in_response:
+        return updated_game_state_dict, llm_response_obj, prevention_extras
+
+    post_update_state = GameState.from_dict(updated_game_state_dict)
+    rewards_visible = _has_rewards_narrative(llm_response_obj.narrative_text)
+    rewards_expected = _has_rewards_context(
+        updated_game_state_dict, original_state_dict=current_state_as_dict
+    )
+    rewards_pending = post_update_state.has_pending_rewards() if post_update_state else False
+
+    if not post_update_state or not (rewards_pending or (rewards_expected and not rewards_visible)):
+        return updated_game_state_dict, llm_response_obj, prevention_extras
+
+    logging_util.info(
+        "🏆 REWARDS_FOLLOWUP: Invoking RewardsAgent "
+        f"(pending={rewards_pending}, visible={rewards_visible}, expected={rewards_expected})"
+    )
+
+    rewards_response_obj = await asyncio.to_thread(
+        llm_service.continue_story,
+        "continue",  # neutral prompt for rewards mode
+        constants.MODE_REWARDS,
+        story_context,
+        post_update_state,
+        selected_prompts,
+        use_default_world,
+        user_id,
+    )
+
+    rewards_state_changes, rewards_prevention_extras = (
+        preventive_guards.enforce_preventive_guards(
+            post_update_state, rewards_response_obj, constants.MODE_REWARDS
+        )
+    )
+
+    if rewards_pending:
+        # Apply preventive guards and update state with rewards response
+        rewards_state_changes = _apply_timestamp_to_world_time(rewards_state_changes)
+        rewards_state_changes = world_time.ensure_progressive_world_time(
+            rewards_state_changes, is_god_mode=False
+        )
+        rewards_new_world_time = (
+            rewards_state_changes.get("world_data", {}) or {}
+        ).get("world_time")
+
+        updated_game_state_dict = update_state_with_changes(
+            updated_game_state_dict, rewards_state_changes
+        )
+        updated_game_state_dict = validate_game_state_updates(
+            updated_game_state_dict,
+            new_time=rewards_new_world_time,
+            original_time=original_world_time,
+        )
+        updated_game_state_dict = _enforce_rewards_processed_flag(
+            updated_game_state_dict,
+            original_state_dict=current_state_as_dict,
+        )
+        updated_game_state_dict = validate_and_correct_state(
+            updated_game_state_dict,
+            previous_world_time=original_world_time,
+        )
+    else:
+        # Rewards already applied; avoid double-awarding state changes.
+        updated_game_state_dict = _enforce_rewards_processed_flag(
+            updated_game_state_dict,
+            original_state_dict=current_state_as_dict,
+        )
+
+    # Merge prevention extras for response visibility
+    prevention_extras.update(rewards_prevention_extras)
+
+    # Append rewards narrative to original narrative for user visibility
+    primary_text = llm_response_obj.narrative_text or ""
+    rewards_text = rewards_response_obj.narrative_text or ""
+    if rewards_text:
+        combined = f"{primary_text}\n\n{rewards_text}" if primary_text else rewards_text
+        llm_response_obj.narrative_text = combined
+
+    # Merge structured response from rewards follow-up (critical: rewards_box)
+    rewards_structured = getattr(rewards_response_obj, "structured_response", None)
+    if rewards_structured:
+        primary_structured = getattr(llm_response_obj, "structured_response", None)
+        if primary_structured is None:
+            # No original structured response, use rewards response
+            llm_response_obj.structured_response = rewards_structured
+        else:
+            # Merge rewards_box from rewards response into primary
+            if hasattr(rewards_structured, "rewards_box") and rewards_structured.rewards_box:
+                primary_structured.rewards_box = rewards_structured.rewards_box
+                logging_util.info(
+                    f"🏆 REWARDS_FOLLOWUP: Merged rewards_box into response "
+                    f"(xp={rewards_structured.rewards_box.get('xp_gained', 'N/A')})"
+                )
+
+    return updated_game_state_dict, llm_response_obj, prevention_extras
+
+
 def validate_game_state_updates(
     updated_state_dict: dict[str, Any],
     new_time: dict[str, Any] | None = None,
@@ -383,51 +703,56 @@ def _prepare_game_state(
     # Archive finished combat to history and clear active state at action START
     # This prevents stale combat_summary from being seen by LLM on next action
     # while allowing the previous action's response to include combat_summary
+    #
+    # IMPORTANT: Only clean if rewards_processed=True, otherwise RewardsAgent
+    # needs to trigger first to display the rewards box and process XP/loot.
     combat_state = cleaned_state_dict.get("combat_state", {})
-    # Accept multiple "finished" phase names since LLM may use different terms
-    finished_phases = {
-        "ended",
-        "concluding",
-        "concluded",
-        "finished",
-        "complete",
-        "completed",
-    }
+    # Use centralized constant for combat finished phases
     combat_phase = combat_state.get("combat_phase", "")
+    rewards_processed = combat_state.get("rewards_processed", False)
+
     if (
         not combat_state.get("in_combat", True)
-        and combat_phase in finished_phases
+        and combat_phase in constants.COMBAT_FINISHED_PHASES
         and combat_state.get("combat_summary")
     ):
-        # Archive to combat_history
-        combat_history = combat_state.get("combat_history", [])
-        archived_entry = {
-            **combat_state["combat_summary"],
-            "session_id": combat_state.get("combat_session_id"),
-            "archived_at": datetime.now(timezone.utc).isoformat(),
-        }
-        combat_history.append(archived_entry)
+        if not rewards_processed:
+            # Keep combat state intact for RewardsAgent to trigger
+            logging_util.info(
+                f"Combat ended but rewards_processed=False, keeping combat_summary for RewardsAgent. "
+                f"xp_awarded={combat_state['combat_summary'].get('xp_awarded')}"
+            )
+        else:
+            # Rewards already processed, safe to archive and clean
+            combat_history = combat_state.get("combat_history", [])
+            archived_entry = {
+                **combat_state["combat_summary"],
+                "session_id": combat_state.get("combat_session_id"),
+                "archived_at": datetime.now(timezone.utc).isoformat(),
+            }
+            combat_history.append(archived_entry)
 
-        logging_util.info(
-            f"Archived finished combat to history: session_id={combat_state.get('combat_session_id')}, "
-            f"xp_awarded={combat_state['combat_summary'].get('xp_awarded')}"
-        )
+            logging_util.info(
+                f"Archived finished combat to history: session_id={combat_state.get('combat_session_id')}, "
+                f"xp_awarded={combat_state['combat_summary'].get('xp_awarded')}"
+            )
 
-        # Clear active combat state for clean LLM context
-        combat_state["combat_history"] = combat_history
-        combat_state["combat_summary"] = None
-        combat_state["combat_phase"] = "idle"
-        combat_state["combat_session_id"] = None
-        combat_state["combatants"] = {}
-        combat_state["initiative_order"] = []
-        combat_state["current_round"] = None
-        cleaned_state_dict["combat_state"] = combat_state
-        was_cleaned = True
+            # Clear active combat state for clean LLM context
+            combat_state["combat_history"] = combat_history
+            combat_state["combat_summary"] = None
+            combat_state["combat_phase"] = "idle"
+            combat_state["combat_session_id"] = None
+            combat_state["combatants"] = {}
+            combat_state["initiative_order"] = []
+            combat_state["current_round"] = None
+            combat_state["rewards_processed"] = False  # Reset for next combat
+            cleaned_state_dict["combat_state"] = combat_state
+            was_cleaned = True
 
-        # Persist the cleaned state immediately so LLM sees clean context
-        firestore_service.update_campaign_game_state(
-            user_id, campaign_id, cleaned_state_dict
-        )
+            # Persist the cleaned state immediately so LLM sees clean context
+            firestore_service.update_campaign_game_state(
+                user_id, campaign_id, cleaned_state_dict
+            )
 
     if was_cleaned:
         # Ensure user_id is preserved in cleaned state
@@ -1066,10 +1391,38 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             original_time=original_world_time,
         )
 
+        # SERVER-SIDE ENFORCEMENT: Apply for any mode that can award XP/rewards
+        # This ensures rewards_processed is set when combat ends, encounters complete, etc.
+        # Pass original state for XP comparison (detects XP increases even without summary structures)
+        if mode in (constants.MODE_REWARDS, constants.MODE_COMBAT, constants.MODE_CHARACTER):
+            updated_game_state_dict = _enforce_rewards_processed_flag(
+                updated_game_state_dict, original_state_dict=current_state_as_dict
+            )
+
         # Validate and auto-correct state before persistence
         updated_game_state_dict = validate_and_correct_state(
             updated_game_state_dict, previous_world_time=original_world_time
         )
+
+        # If rewards are now pending but we did NOT run RewardsAgent, run it once
+        # to ensure user-visible rewards output.
+        try:
+            updated_game_state_dict, llm_response_obj, prevention_extras = (
+                await _process_rewards_followup(
+                    mode=mode,
+                    llm_response_obj=llm_response_obj,
+                    updated_game_state_dict=updated_game_state_dict,
+                    current_state_as_dict=current_state_as_dict,
+                    original_world_time=original_world_time,
+                    story_context=story_context,
+                    selected_prompts=selected_prompts,
+                    use_default_world=use_default_world,
+                    user_id=user_id,
+                    prevention_extras=prevention_extras,
+                )
+            )
+        except Exception as e:
+            logging_util.warning(f"⚠️ REWARDS_FOLLOWUP failed: {e}")
 
         # Increment player turn counter for non-GOD mode actions
         if not is_god_mode:
@@ -1159,11 +1512,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Note: With "text" field fix, empty narratives should now be properly handled
         # by the translation layer without needing fallback messages
 
-        # Process story for display (convert narrative text to story entries format)
-        # Use "text" field to match translation layer expectations in main.py
-        story_entries = [{"text": final_narrative}]
-        processed_story = process_story_for_display(story_entries, debug_mode)
-
         # Calculate sequence_id (critical missing field)
         # AI response should be next sequential number after user input
         # User input gets len(story_context) + 1, AI response gets len(story_context) + 2
@@ -1177,6 +1525,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Extract structured fields from LLM response (critical missing fields)
         structured_response = getattr(llm_response_obj, "structured_response", None)
+
+        # Process story for display (convert narrative text to story entries format)
+        # Use "text" field to match translation layer expectations in main.py
+        story_entries = [{"text": final_narrative}]
+        processed_story = process_story_for_display(story_entries, debug_mode)
 
         # Build comprehensive response with all frontend-required fields
         unified_response = {
@@ -1222,6 +1575,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 )
             if hasattr(structured_response, "resources"):
                 unified_response["resources"] = structured_response.resources
+            if hasattr(structured_response, "rewards_box"):
+                unified_response["rewards_box"] = structured_response.rewards_box
             # debug_info only in debug mode
             if debug_mode and hasattr(structured_response, "debug_info"):
                 unified_response["debug_info"] = structured_response.debug_info
@@ -1767,7 +2122,6 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
             allowed_models.update(
                 k.lower() for k in constants.GEMINI_MODEL_MAPPING.keys()
             )
-
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model
