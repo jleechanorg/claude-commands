@@ -331,8 +331,10 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     @patch("mvp_site.world_logic.llm_service.continue_story")
     @patch("mvp_site.world_logic._prepare_game_state")
     @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.structured_fields_utils")
     def test_sequence_id_calculation_bug_red_phase(
         self,
+        mock_structured_utils,
         mock_settings,
         mock_prepare,
         mock_gemini,
@@ -350,6 +352,10 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
 
         Before the fix, both would get len(story_context) + 1 = 5 (WRONG!)
         """
+        # Mock structured fields extraction to return a plain dict
+        # This prevents "argument of type 'Mock' is not iterable" error
+        mock_structured_utils.extract_structured_fields.return_value = {}
+
         # Mock the campaign data and story context
         mock_get_campaign.return_value = (
             {"selected_prompts": [], "use_default_world": False},
@@ -403,8 +409,10 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     @patch("mvp_site.world_logic.llm_service.continue_story")
     @patch("mvp_site.world_logic._prepare_game_state")
     @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.structured_fields_utils")
     def test_user_scene_number_field_red_phase(
         self,
+        mock_structured_utils,
         mock_settings,
         mock_prepare,
         mock_gemini,
@@ -419,6 +427,9 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         This test verifies that the user_scene_number field is present in API responses.
         Before the fix, this field was missing and would break frontend compatibility.
         """
+        # Mock structured fields extraction
+        mock_structured_utils.extract_structured_fields.return_value = {}
+
         # Mock setup (same as sequence_id test)
         mock_get_campaign.return_value = (
             {"selected_prompts": [], "use_default_world": False},
