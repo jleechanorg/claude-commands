@@ -14,6 +14,15 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 # Server logs go to /tmp per evidence-standards.md
 DEFAULT_LOG_DIR = Path("/tmp/mcp_server_logs")
 
+# Evidence capture settings per evidence-standards.md
+# Note: CAPTURE_RAW_LLM defaults to true in the server (llm_service.py)
+# These overrides are for tests that need custom limits
+DEFAULT_EVIDENCE_ENV = {
+    "CAPTURE_RAW_LLM": "true",  # Server default, included for explicitness
+    "CAPTURE_RAW_LLM_MAX_CHARS": "50000",  # Test override (server default: 20000)
+    "CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS": "120000",
+}
+
 
 @dataclass
 class LocalServer:
@@ -116,6 +125,11 @@ def start_local_mcp_server(
 
     env = dict(os.environ)
     env["PYTHONPATH"] = str(PROJECT_ROOT)
+
+    # Apply default evidence capture settings (can be overridden)
+    for key, value in DEFAULT_EVIDENCE_ENV.items():
+        env.setdefault(key, value)
+
     if env_overrides:
         env.update(env_overrides)
 

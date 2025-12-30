@@ -112,6 +112,20 @@ sha256sum -c evidence.json.sha256
 (e.g., `evidence.json`), not a nested path like `artifacts/run_.../evidence.json`.
 This ensures `sha256sum -c` works when run from the evidence directory.
 
+**ALL evidence files require checksums, including:**
+- Individual test result files (PASS_*.json, FAIL_*.json)
+- Aggregated files (request_responses.jsonl)
+- Server logs (artifacts/server.log)
+
+```python
+def _write_checksum_for_file(filepath: Path) -> None:
+    """Generate SHA256 checksum file for an existing file."""
+    content = filepath.read_bytes()
+    sha256_hash = hashlib.sha256(content).hexdigest()
+    checksum_file = Path(str(filepath) + ".sha256")
+    checksum_file.write_text(f"{sha256_hash}  {filepath.name}\n")
+```
+
 ### Evidence Package Consistency (NEW)
 
 **Single-run attribution:** If a bundle contains multiple runs, the docs **must**
@@ -276,7 +290,7 @@ Evidence MUST include:
 ### For Prompt Enforcement Claims
 
 If you claim a specific system instruction or enforcement block was included in a live LLM call:
-- Capture runtime system instruction text from the actual request (debug output or logs)
+- Capture runtime prompt filenames (`debug_info.system_instruction_files`). Record `system_instruction_char_count` when available.
 - Tie it to the same execution that produced the response (timestamp + request/response evidence)
 - Static code references alone are insufficient
 
@@ -290,15 +304,28 @@ PORT=8005 \
 python -m mvp_site.main serve
 ```
 
-The captured system instruction will appear in `debug_info.system_instruction_text` in API responses.
+When enabled, full system instruction text appears in `debug_info.system_instruction_text` (optional).
 
-**Lightweight Prompt Tracking (for high-volume tests):**
+**Prompt Tracking (default):**
 
-When full text capture is impractical (>50KB per response), use the lightweight alternative:
+Capture prompt filenames (and char count when available):
 - `debug_info.system_instruction_files`: List of prompt files loaded (e.g., `["prompts/master_directive.md", "prompts/game_state_instruction.md"]`)
-- `debug_info.system_instruction_char_count`: Total character count of combined prompts
+- `debug_info.system_instruction_char_count`: Total character count of combined prompts (optional)
 
 This proves which prompts were used without the ~100KB overhead per response. The file list provides provenance while keeping evidence bundles manageable.
+
+**Evidence Mode Documentation (MANDATORY when using lightweight tracking):**
+
+When using lightweight prompt tracking, evidence files MUST include explicit documentation:
+
+```json
+{
+  "evidence_mode": "lightweight_prompt_tracking",
+  "evidence_mode_notes": "System instruction captured as filenames + char_count (not full text). Full raw_response_text from LLM is captured. Server logs in artifacts/."
+}
+```
+
+This ensures reviewers know what capture approach was used and can assess evidence completeness accordingly.
 
 ### For Integration Claims
 
@@ -329,7 +356,7 @@ When proving LLM or API behavior, evidence MUST capture the full request/respons
 **Required captures:**
 1. **Raw request payload** - The exact input sent to the API/LLM
 2. **Raw response payload** - The exact output returned, before any parsing or transformation
-3. **System instructions/prompts** - The full prompt text sent to the LLM (not just a reference to a file)
+3. **System instructions/prompts** - Prompt filenames; char count optional; full text only when explicitly requested
 4. **Timestamps** - When each request was made and response received
 
 **Why raw capture matters:**
@@ -345,7 +372,8 @@ request_responses.jsonl   # One JSON object per line, each containing:
   "request": { ... full request ... },
   "response": { ... full response ... },
   "debug_info": {
-    "system_instruction_text": "actual prompt sent",
+    "system_instruction_files": ["prompts/master_directive.md", "..."],
+    "system_instruction_char_count": 93180,
     "raw_response_text": "LLM output before parsing"
   }
 }
@@ -354,7 +382,25 @@ request_responses.jsonl   # One JSON object per line, each containing:
 **Server configuration:**
 - Enable full request/response logging in your server
 - Set capture limits high enough to avoid truncation (e.g., 80K+ chars for LLM responses)
-- Capture system instructions at runtime, not just file references
+- Capture prompt filenames at runtime; full prompt text only when explicitly requested
+
+**Default Evidence Capture:**
+
+Raw LLM capture is **enabled by default** in the server (`mvp_site/llm_service.py`):
+- `CAPTURE_RAW_LLM` defaults to `"true"` - no env var required
+- Server default limit: 20,000 chars (sufficient for most use cases)
+
+For tests needing higher limits, `server_utils.DEFAULT_EVIDENCE_ENV` provides overrides:
+
+```python
+DEFAULT_EVIDENCE_ENV = {
+    "CAPTURE_RAW_LLM": "true",  # Server default, included for explicitness
+    "CAPTURE_RAW_LLM_MAX_CHARS": "50000",  # Test override (server: 20000)
+    "CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS": "120000",
+}
+```
+
+This ensures raw request/response capture works automatically without manual configuration.
 
 ### For Test Result Portability
 

@@ -14,9 +14,131 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mvp_site import world_logic
+from mvp_site import world_logic, world_time
 from mvp_site.game_state import GameState
 from mvp_site.llm_response import LLMResponse
+
+
+class TestIncompleteWorldTimeNotViolation:
+    """Tests for the fix where incomplete world_time doesn't trigger temporal violations.
+
+    ROOT CAUSE FIXED: When LLM generates partial world_time (e.g., only hour/minute
+    without year/month/day), the missing fields were converted to 0, causing
+    (0, 0, 0, 14, 15, ...) < (431, 5, 12, 14, 5, ...) to be flagged as a violation.
+
+    This was a false positive - incomplete data should NOT be treated as backward time.
+    """
+
+    def test_incomplete_new_time_not_flagged_as_violation(self):
+        """Incomplete new_time (missing year/month/day) should NOT be a violation."""
+        old_time = {
+            "year": 431,
+            "month": "Mirtul",
+            "day": 12,
+            "hour": 14,
+            "minute": 5,
+        }
+        # LLM only provided hour/minute, missing year/month/day
+        incomplete_new_time = {
+            "hour": 14,
+            "minute": 15,
+            "time_of_day": "Afternoon",
+        }
+
+        result = world_time.check_temporal_violation(old_time, incomplete_new_time)
+
+        assert result is False, (
+            "Incomplete world_time should NOT trigger temporal violation. "
+            "Missing year/month/day is malformed data, not backward time travel."
+        )
+
+    def test_complete_backward_time_still_flagged_as_violation(self):
+        """Complete new_time that goes backward SHOULD be flagged as violation."""
+        old_time = {
+            "year": 431,
+            "month": "Mirtul",
+            "day": 12,
+            "hour": 14,
+            "minute": 15,
+        }
+        backward_new_time = {
+            "year": 431,
+            "month": "Mirtul",
+            "day": 12,
+            "hour": 14,
+            "minute": 5,  # 10 minutes earlier
+        }
+
+        result = world_time.check_temporal_violation(old_time, backward_new_time)
+
+        assert result is True, (
+            "Complete backward time SHOULD trigger temporal violation"
+        )
+
+    def test_missing_year_not_violation(self):
+        """Missing year (but other date fields present) should NOT be violation."""
+        old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
+        new_time_no_year = {"month": 5, "day": 12, "hour": 14, "minute": 15}
+
+        result = world_time.check_temporal_violation(old_time, new_time_no_year)
+
+        assert result is False, "Missing year should NOT trigger violation"
+
+    def test_year_zero_not_violation(self):
+        """Year of 0 (invalid) should NOT be treated as violation."""
+        old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
+        new_time_zero_year = {"year": 0, "month": 5, "day": 12, "hour": 14, "minute": 15}
+
+        result = world_time.check_temporal_violation(old_time, new_time_zero_year)
+
+        assert result is False, "Year 0 (invalid) should NOT trigger violation"
+
+    def test_forward_time_with_complete_data_not_violation(self):
+        """Forward time movement with complete data should NOT be violation."""
+        old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
+        forward_new_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 15}
+
+        result = world_time.check_temporal_violation(old_time, forward_new_time)
+
+        assert result is False, "Forward time should NOT be a violation"
+
+    def test_none_times_not_violation(self):
+        """None old_time or new_time should NOT be violation (existing behavior)."""
+        old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
+
+        assert world_time.check_temporal_violation(None, old_time) is False
+        assert world_time.check_temporal_violation(old_time, None) is False
+        assert world_time.check_temporal_violation(None, None) is False
+
+    def test_incomplete_old_time_not_violation(self):
+        """Incomplete old_time (missing year/month/day) should NOT be a violation.
+
+        While this scenario is rare in practice (old_time typically comes from
+        stored game state or previous complete LLM responses), the function should
+        handle this edge case gracefully and not flag it as a violation since we
+        cannot make a meaningful temporal comparison.
+        """
+        # old_time missing date fields
+        incomplete_old_time = {
+            "hour": 10,
+            "minute": 0,
+            "time_of_day": "Morning",
+        }
+        # new_time is complete
+        complete_new_time = {
+            "year": 431,
+            "month": "Mirtul",
+            "day": 12,
+            "hour": 14,
+            "minute": 0,
+        }
+
+        result = world_time.check_temporal_violation(incomplete_old_time, complete_new_time)
+
+        assert result is False, (
+            "Incomplete old_time should NOT trigger temporal violation. "
+            "Cannot make meaningful comparison with incomplete historical data."
+        )
 
 
 @pytest.mark.asyncio

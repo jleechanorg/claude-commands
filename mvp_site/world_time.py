@@ -131,12 +131,60 @@ def extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None
         return None
 
 
+def _has_required_date_fields(world_time: dict[str, Any] | None) -> bool:
+    """Check if world_time has all required date fields (year, month, day).
+
+    When the LLM generates partial world_time (e.g., only hour/minute),
+    it should not be treated as a temporal violation - it's incomplete data,
+    not backward time travel.
+    """
+    if not world_time or not isinstance(world_time, dict):
+        return False
+
+    # Year must be present and non-zero
+    year = _safe_int(world_time.get("year", 0))
+    if year == 0:
+        return False
+
+    # Month must be present and valid (non-zero after normalization)
+    month = _normalize_month(world_time.get("month", 0))
+    if month == 0:
+        return False
+
+    # Day must be present and non-zero
+    day = _safe_int(world_time.get("day", 0))
+    if day == 0:
+        return False
+
+    return True
+
+
 def check_temporal_violation(
     old_time: dict[str, Any] | None, new_time: dict[str, Any] | None
 ) -> bool:
-    """Return True if new_time moves backward compared to old_time."""
+    """Return True if new_time moves backward compared to old_time.
+
+    Returns False (no violation) when:
+    - Either time is None/empty
+    - Either time is incomplete (missing year/month/day)
+
+    Incomplete times are NOT temporal violations - they're malformed data
+    that should be handled elsewhere (either preserved from previous state or
+    logged as a warning). This prevents false positives when the LLM
+    generates partial world_time objects like {hour: 14, minute: 15}.
+
+    The check is symmetric: if EITHER old_time OR new_time is incomplete,
+    we cannot make a meaningful temporal comparison, so we return False.
+    """
 
     if not old_time or not new_time:
+        return False
+
+    # If either time is incomplete (missing date fields), don't flag as violation.
+    # This happens when LLM generates partial world_time (e.g., only time portion).
+    # Converting missing year/month/day to 0 would make ANY time appear "backward".
+    # We check both for symmetry and clarity: cannot compare incomplete times.
+    if not _has_required_date_fields(old_time) or not _has_required_date_fields(new_time):
         return False
 
     old_tuple = world_time_to_comparable(old_time)

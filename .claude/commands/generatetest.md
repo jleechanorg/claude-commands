@@ -277,10 +277,14 @@ if __name__ == "__main__":
 **Evidence Standards Checklist (from `.claude/skills/evidence-standards.md`):**
 - [ ] Git provenance: HEAD commit, origin/main, changed files (via `capture_git_provenance()`)
 - [ ] Server environment: PID, port, env vars (via `capture_server_runtime()`)
-- [ ] Checksums: SHA256 for all evidence files (via `write_with_checksum()`)
+- [ ] Checksums: SHA256 for ALL evidence files including JSONL and server logs
 - [ ] Timestamp synchronization: collect all evidence in one pass
 - [ ] Documentation-Data alignment: derive claims from actual data
 - [ ] Centralized utilities: use `lib/evidence_utils.py`
+- [ ] Raw capture: use `DEFAULT_EVIDENCE_ENV` from `server_utils.py` for automatic raw LLM capture
+- [ ] JSONL file: create `request_responses.jsonl` with full request/response pairs
+- [ ] Server logs: copy to `artifacts/server.log` with checksum
+- [ ] Evidence mode: document capture approach with `evidence_mode` field
 
 ### Phase 4: Verify Real Mode
 
