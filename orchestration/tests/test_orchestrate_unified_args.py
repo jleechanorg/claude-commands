@@ -393,6 +393,7 @@ class TestGhCommandMocking(unittest.TestCase):
         mock_run.assert_called_once()
         call_args = mock_run.call_args[0][0]
         self.assertEqual(call_args[0], "gh")
+        self.assertEqual(result.returncode, 0)
         self.assertEqual(call_args[1], "pr")
         self.assertEqual(call_args[2], "list")
         self.assertIn("--author", call_args)
@@ -429,6 +430,7 @@ class TestGhCommandMocking(unittest.TestCase):
         call_args = mock_run.call_args[0][0]
         self.assertIn("--head", call_args)
         self.assertIn(branch_pattern, call_args)
+        self.assertEqual(result.returncode, 0)
 
     @patch("subprocess.run")
     def test_gh_command_timeout_handling(self, mock_run):

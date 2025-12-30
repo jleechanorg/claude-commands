@@ -408,7 +408,7 @@ class UnifiedOrchestration:
                         with open(resolved_context_path, "r", encoding="utf-8") as f:
                             context_content = f.read()
                         print(f"  └─ Context Loaded: {len(context_content)} characters")
-                except Exception as e:
+                except (OSError, UnicodeDecodeError) as e:
                     print(f"  ⚠️ Failed to load context file: {e}")
 
         print("=" * 60)
@@ -714,10 +714,8 @@ The orchestration system will:
                 f"Invalid agent CLI(s): {', '.join(invalid)}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}"
             )
 
-    agent_cli = args.agent_cli
+    agent_cli = args.agent_cli if args.agent_cli is not None else "gemini"
     agent_cli_provided = args.agent_cli is not None
-    if agent_cli is None:
-        agent_cli = "gemini"
 
     # Validate task description
     task = " ".join(args.task).strip()
