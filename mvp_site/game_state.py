@@ -258,7 +258,7 @@ class GameState:
         self.world_data = kwargs.get("world_data", {})
         self.npc_data = kwargs.get("npc_data", {})
         # Item registry: maps item_id (string) → item definition (dict)
-        # Example: {"helm_telepathy": {"name": "Helm of Telepathy", "type": "head", "stats": "30ft telepathy"}}
+        # Example item: helm_telepathy → name "Helm of Telepathy", type "head", stats "30ft telepathy"
         self.item_registry = kwargs.get("item_registry", {})
         self.custom_campaign_state = kwargs.get("custom_campaign_state", {})
         if not isinstance(self.custom_campaign_state, dict):
@@ -270,6 +270,14 @@ class GameState:
             self.custom_campaign_state.get("arc_milestones"), dict
         ):
             self.custom_campaign_state["arc_milestones"] = {}
+
+        # Ensure active_constraints exists for tracking secrecy/deception rules
+        # (player OOC constraints such as "don't reveal X to Y") and remains
+        # list-typed for prompt rules that append entries.
+        if "active_constraints" not in self.custom_campaign_state or not isinstance(
+            self.custom_campaign_state.get("active_constraints"), list
+        ):
+            self.custom_campaign_state["active_constraints"] = []
 
         # Ensure attribute_system is set (defaults to Destiny system)
         if "attribute_system" not in self.custom_campaign_state:
@@ -305,7 +313,7 @@ class GameState:
         # Apply time consolidation migration
         self._consolidate_time_tracking()
 
-    def _normalize_combat_state(self) -> None:
+    def _normalize_combat_state(self) -> None:  # noqa: PLR0912
         """
         Normalize combat_state to handle LLM-generated malformed data.
 
@@ -794,7 +802,7 @@ class GameState:
 
         return "\n".join(lines)
 
-    def validate_checkpoint_consistency(self, narrative_text: str) -> list[str]:
+    def validate_checkpoint_consistency(self, narrative_text: str) -> list[str]:  # noqa: PLR0912,PLR0915,SIM102
         """
         Validates that critical checkpoint data in the state matches references in the narrative.
         Returns a list of discrepancies found.
@@ -817,20 +825,21 @@ class GameState:
                 if (
                     "unconscious" in narrative_lower
                     or "lies unconscious" in narrative_lower
-                ):
-                    if hp_current > 0:
-                        discrepancies.append(
-                            f"Narrative mentions unconsciousness but HP is {hp_current}/{hp_max}"
-                        )
+                ) and hp_current > 0:
+                    discrepancies.append(
+                        f"Narrative mentions unconsciousness but HP is {hp_current}/{hp_max}"
+                    )
 
-                if any(
-                    phrase in narrative_lower
-                    for phrase in ["completely drained", "drained of life"]
-                ):
-                    if hp_current > 5:  # Should be very low if "drained of life"
-                        discrepancies.append(
-                            f"Narrative describes being drained of life but HP is {hp_current}/{hp_max}"
-                        )
+                if (
+                    any(
+                        phrase in narrative_lower
+                        for phrase in ["completely drained", "drained of life"]
+                    )
+                    and hp_current > 5
+                ):  # Should be very low if "drained of life"
+                    discrepancies.append(
+                        f"Narrative describes being drained of life but HP is {hp_current}/{hp_max}"
+                    )
 
                 hp_percentage = (hp_current / hp_max) * 100
 
@@ -850,20 +859,19 @@ class GameState:
                         discrepancies.append(
                             f"State shows character critically wounded ({hp_current}/{hp_max} HP) but narrative doesn't reflect injury"
                         )
-                elif hp_percentage > 90:  # Healthy
-                    if any(
-                        word in narrative_lower
-                        for word in [
-                            "wounded",
-                            "injured",
-                            "bleeding",
-                            "dying",
-                            "unconscious",
-                        ]
-                    ):
-                        discrepancies.append(
-                            f"Narrative describes character as injured but state shows healthy ({hp_current}/{hp_max} HP)"
-                        )
+                elif hp_percentage > 90 and any(
+                    word in narrative_lower
+                    for word in [
+                        "wounded",
+                        "injured",
+                        "bleeding",
+                        "dying",
+                        "unconscious",
+                    ]
+                ):
+                    discrepancies.append(
+                        f"Narrative describes character as injured but state shows healthy ({hp_current}/{hp_max} HP)"
+                    )
             elif hp_current is not None and hp_max == 0:
                 # Skip validation only during character creation when HP is not yet initialized
                 campaign_state = self.world_data.get("campaign_state", "")
@@ -1018,7 +1026,7 @@ class GameState:
         has_story = npc.get("backstory") or npc.get("background")
         return bool(has_named_role or has_story or npc.get("is_important"))
 
-    def cleanup_defeated_enemies(self) -> list[str]:
+    def cleanup_defeated_enemies(self) -> list[str]:  # noqa: PLR0912,PLR0915
         """
         Identifies and removes defeated enemies from both combat_state and npc_data.
         Returns a list of defeated enemy names for logging.
@@ -1242,7 +1250,7 @@ class GameState:
                     f"Calculated time_of_day as '{world_data['world_time']['time_of_day']}' from hour {hour}"
                 )
 
-    def _calculate_time_of_day(self, hour: int) -> str:
+    def _calculate_time_of_day(self, hour: int) -> str:  # noqa: PLR0911
         """
         Calculate descriptive time of day from hour value.
 
@@ -1297,7 +1305,7 @@ class GameState:
     # XP/Level Validation Methods
     # =========================================================================
 
-    def validate_xp_level(self, strict: bool = False) -> dict[str, Any]:
+    def validate_xp_level(self, strict: bool = False) -> dict[str, Any]:  # noqa: PLR0912,PLR0915
         """
         Validate that the player's level matches their XP using D&D 5e thresholds.
 
@@ -1929,7 +1937,7 @@ def calculate_resource_depletion(
     current_amount: float,
     depletion_rate: float,
     time_elapsed: float,
-    depletion_unit: str = "per_day",
+    _depletion_unit: str = "per_day",
 ) -> float:
     """Calculate resource depletion over time."""
     depleted = depletion_rate * time_elapsed

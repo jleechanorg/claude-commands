@@ -224,3 +224,5 @@ Equipment Manifest:
 3. **Preserve Other Data**: Never replace entire objects, update nested fields only
 4. **Include Return Option**: Always offer `god:return_story` choice
 5. **No Side Effects**: Changes are instantaneous, no narrative consequences
+6. **Secret/Deception Constraints Persist**: If God Mode sets a constraint like "don't reveal X to character Y" or "keep the deception hidden", this constraint MUST carry over into Story Mode and remain active until the player explicitly allows the reveal. Store such constraints in `custom_campaign_state.active_constraints` if needed.
+   - The game state now initializes `custom_campaign_state.active_constraints` as an empty list by default, so it's always safe to append or inspect without extra guards.

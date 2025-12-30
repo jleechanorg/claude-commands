@@ -167,9 +167,11 @@ class TestGameState(unittest.TestCase):
         assert gs.player_character_data == {}
         assert gs.world_data == {}
         assert gs.npc_data == {}
+        assert gs.item_registry == {}
         assert gs.custom_campaign_state == {
             "attribute_system": "D&D",
             "arc_milestones": {},
+            "active_constraints": [],
         }
 
         # Test that timestamp is recent
@@ -203,6 +205,7 @@ class TestGameState(unittest.TestCase):
             "quest_active": True,
             "attribute_system": "D&D",
             "arc_milestones": {},
+            "active_constraints": [],
         }
         assert gs.last_state_update_timestamp == custom_time
         assert gs.extra_field == "extra_value"
@@ -343,7 +346,11 @@ class TestGameState(unittest.TestCase):
             "world_data": {},
             "npc_data": {},
             "item_registry": {},  # Item registry for string ID entity system
-            "custom_campaign_state": {"attribute_system": "D&D", "arc_milestones": {}},
+            "custom_campaign_state": {
+                "attribute_system": "D&D",
+                "arc_milestones": {},
+                "active_constraints": [],
+            },
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
             "player_turn": 0,
@@ -1836,7 +1843,7 @@ class TestD5EMechanicsCalculations(unittest.TestCase):
         """roll_attack formatting should not crash if attack['rolls'] is empty."""
         from unittest.mock import patch
 
-        import mvp_site.game_state as game_state
+        from mvp_site import game_state
 
         def _fake_calculate_attack_roll(_mod: int, _adv: bool, _dis: bool):
             return {
