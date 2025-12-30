@@ -12,7 +12,7 @@ LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
 
 echo "🚀 Installing WorldArchitect PR Automation for macOS"
 echo "   Project: $PROJECT_ROOT"
-echo "   Safety: Max 5 attempts per PR, 50 total runs before approval"
+echo "   Safety: Max 10 attempts per PR, 50 total runs before approval"
 
 # Create log directory
 mkdir -p "$LOG_DIR"
@@ -57,7 +57,7 @@ echo "🎯 Installation Complete!"
 echo ""
 echo "📊 Configuration:"
 echo "   • Schedule: Every 10 minutes"
-echo "   • PR Limit: 5 attempts per PR"
+echo "   • PR Limit: 10 attempts per PR"
 echo "   • Global Limit: 50 total runs"
 echo "   • Safety Wrapper: automation_safety_wrapper.py"
 echo "   • Logs: $LOG_DIR"
