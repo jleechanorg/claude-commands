@@ -10,11 +10,11 @@ import argparse
 import json
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import sys
-import shutil
 import time
-import shlex
 import traceback
 import urllib.request
 from collections import Counter
@@ -26,7 +26,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from .orchestrated_pr_runner import has_failing_checks, run_fixpr_batch
+from orchestration.task_dispatcher import CLI_PROFILES
 
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
@@ -39,8 +39,8 @@ from .codex_config import (
 from .codex_config import (
     build_comment_intro,
 )
+from .orchestrated_pr_runner import has_failing_checks, run_fixpr_batch
 from .utils import json_manager, setup_logging
-from orchestration.task_dispatcher import CLI_PROFILES
 
 
 def _parse_fixpr_agent_chain(value: str) -> str:
@@ -1113,6 +1113,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return last_time
 
+    def _count_codex_automation_comments(self, comments: List[Dict]) -> int:
+        """Count the number of Codex automation comments (with commit marker).
+
+        This is used for safety limits - we only count comments that contain
+        the CODEX_COMMIT_MARKER_PREFIX, not all comments from jleechan2015.
+        """
+        count = 0
+        for comment in comments:
+            body = comment.get("body", "")
+            if self.CODEX_COMMIT_MARKER_PREFIX in body:
+                count += 1
+        return count
+
     def _has_new_bot_comments_since_codex(self, comments: List[Dict]) -> bool:
         """Check if there are new GitHub bot comments since the last Codex automation comment.
 
@@ -1322,9 +1335,20 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             branch_name = pr.get("headRefName", "unknown")
 
+            # Check automation comment count on GitHub (not internal attempts)
+            _, comments = self._get_pr_comment_state(repo_full_name, pr_number)
+            automation_comment_count = self._count_codex_automation_comments(comments)
+            if automation_comment_count >= self.safety_manager.pr_limit:
+                self.logger.info(
+                    f"🚫 Safety limits exceeded for PR {repo_full_name} #{pr_number}; "
+                    f"{automation_comment_count}/{self.safety_manager.pr_limit} automation comments"
+                )
+                skipped_count += 1
+                continue
+
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full_name, branch=branch_name):
                 self.logger.info(
-                    f"🚫 Safety limits exceeded for PR {repo_full_name} #{pr_number}; skipping"
+                    f"🚫 Internal safety limits exceeded for PR {repo_full_name} #{pr_number}; skipping"
                 )
                 skipped_count += 1
                 continue
@@ -1673,7 +1697,7 @@ def main():
                     "--limit",
                     "200",
                 ],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=2400  # 40 minute timeout (scaled for 200 tasks)
             )
@@ -1712,11 +1736,10 @@ def main():
         if args.list_eligible:
             print("\n🔎 Eligible for fixpr (conflicts/failing checks):")
             monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
+    elif args.list_eligible:
+        monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
     else:
-        if args.list_eligible:
-            monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
-        else:
-            monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs)
+        monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs)
 
 
 if __name__ == "__main__":

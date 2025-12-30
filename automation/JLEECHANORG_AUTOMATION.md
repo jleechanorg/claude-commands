@@ -40,7 +40,7 @@ Each PR gets its own isolated environment:
 ## 🛡️ Enhanced Safety System
 
 ### Multi-Level Protection
-1. **Per-PR Limits**: Max 5 attempts per `repo-pr` combination
+1. **Per-PR Limits**: Max 10 attempts per `repo-pr` combination
 2. **Global Limits**: Max 50 total automation runs across all repos
 3. **Manual Approval**: Required after global limit reached
 4. **Email Notifications**: Automatic alerts at safety thresholds
@@ -55,9 +55,9 @@ python3 automation/automation_safety_manager.py --status
 # Requires approval: False
 # Has approval: False
 # PR attempts:
-#   ai_universe-11: 2/5 (OK)
-#   worldarchitect-ai-1634: 1/5 (OK)
-#   claude-commands-42: 5/5 (BLOCKED)
+#   ai_universe-11: 2/10 (OK)
+#   worldarchitect-ai-1634: 1/10 (OK)
+#   claude-commands-42: 10/10 (BLOCKED)
 ```
 
 ## 🚀 Installation & Setup
@@ -110,7 +110,7 @@ launchctl list | grep jleechanorg
 export PR_AUTOMATION_WORKSPACE=/custom/path/to/workspaces
 
 # Safety limits (defaults shown)
-export AUTOMATION_PR_LIMIT=5        # Max attempts per PR
+export AUTOMATION_PR_LIMIT=10       # Max attempts per PR
 export AUTOMATION_GLOBAL_LIMIT=50   # Max total runs
 
 # Email notifications
