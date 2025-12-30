@@ -32,7 +32,7 @@ keywords = [
     "pull-request",
     "monitoring",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "requests>=2.25.0",
     "jleechanorg-orchestration>=0.1.18",

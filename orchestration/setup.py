@@ -41,7 +41,7 @@ setup(
     },
 
     # Python version requirement
-    python_requires=">=3.9",
+    python_requires=">=3.10",
 
     # No external dependencies - uses only stdlib
     install_requires=[],

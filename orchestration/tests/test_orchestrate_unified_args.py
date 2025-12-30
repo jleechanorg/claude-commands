@@ -371,7 +371,7 @@ class TestGhCommandMocking(unittest.TestCase):
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
 
         # Simulate the command structure used in _find_recent_agent_work
-        result = subprocess.run(
+        subprocess.run(
             [
                 "gh",
                 "pr",
@@ -408,7 +408,7 @@ class TestGhCommandMocking(unittest.TestCase):
         )
 
         branch_pattern = "task-agent-test-work"
-        result = subprocess.run(
+        subprocess.run(
             [
                 "gh",
                 "pr",
