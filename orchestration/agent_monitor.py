@@ -320,7 +320,7 @@ class ConvergeAgentRestarter:
                 f"claude --model sonnet {shlex.quote(enhanced_prompt)}",
             ]
 
-            subprocess.run(tmux_cmd, check=True, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(tmux_cmd, check=True, capture_output=True, text=True, timeout=30)
 
             # Update restart tracking
             self.restart_attempts[agent_name] = attempts + 1

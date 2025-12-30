@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 FAILED=0
 
-# Run all test files from project root
+# Run all test files with project root in PYTHONPATH
 for test_file in "$SCRIPT_DIR"/test_*.py; do
     if [ -f "$test_file" ]; then
         echo "Running $test_file..."

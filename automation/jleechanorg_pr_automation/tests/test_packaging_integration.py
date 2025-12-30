@@ -11,6 +11,7 @@ This would have caught the missing __init__.py bug in openai_automation/
 import subprocess
 import sys
 import os
+import pytest
 import jleechanorg_pr_automation
 from jleechanorg_pr_automation.openai_automation import codex_github_mentions
 
