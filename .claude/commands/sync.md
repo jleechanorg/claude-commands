@@ -44,6 +44,15 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
+# ALWAYS fetch latest info from remote first - ensures we know about ALL branches
+# Fail hard if any remote fetch fails so we don't end up partially pruned
+echo "🔄 Fetching latest info from all remotes..."
+if ! git fetch --all --prune; then
+    echo "❌ Error: Failed to fetch from all remotes. Please resolve git remote issues and try again."
+    exit 1
+fi
+echo "✅ Remote refs updated"
+
 # Parse input to extract PR number
 
 if [[ "$1" =~ ^[0-9]+$ ]]; then
@@ -80,9 +89,7 @@ if [ "$HEAD_REPO" != "$(gh api repos/:owner/:repo --jq .owner.login)" ]; then
     echo "🔗 Fork detected, using gh pr checkout for proper remote setup..."
     gh pr checkout "$PR_NUMBER"
 else
-    # Fetch all remote refs
-    echo "🔄 Fetching remote refs..."
-    git fetch origin
+    # Remote refs already fetched at start - proceed with branch operations
 
     # Try to switch to matching local branch name first
     if git rev-parse --verify "$HEAD_BRANCH" >/dev/null 2>&1; then

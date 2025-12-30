@@ -40,11 +40,48 @@ Firestore Database: worldarchitecture-ai
                 ├── created_at
                 ├── last_played
                 ├── world_name
+                ├── game_states/              # ← SUBCOLLECTION for game state
+                │   └── current_state/        # Main game state document
+                │       ├── player_character_data
+                │       ├── combat_state
+                │       ├── npc_data
+                │       └── custom_campaign_state/
+                │           └── god_mode_directives[]  # ← Persisted rules
                 └── story/
                     └── {entry_id}/
                         ├── actor (user/gemini)
                         ├── text
                         └── timestamp
+```
+
+## IMPORTANT: Game State Location
+
+**Game state is in a SUBCOLLECTION, not a field!**
+
+```python
+# WRONG - game_state is NOT a field on the campaign document:
+campaign = db.collection('users').document(uid).collection('campaigns').document(campaign_id).get()
+game_state = campaign.to_dict().get('game_state')  # Returns empty!
+
+# CORRECT - game_state is in a subcollection called 'game_states':
+game_state_ref = db.collection('users').document(uid).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
+game_state = game_state_ref.get().to_dict()
+```
+
+### Querying God Mode Directives
+
+```python
+# Get god mode directives for a campaign
+game_state_ref = campaign_ref.collection('game_states').document('current_state')
+game_state = game_state_ref.get().to_dict()
+
+custom_campaign_state = game_state.get('custom_campaign_state', {})
+god_mode_directives = custom_campaign_state.get('god_mode_directives', [])
+
+for directive in god_mode_directives:
+    if isinstance(directive, dict):
+        print(f"Rule: {directive.get('rule')}")
+        print(f"Added: {directive.get('added')}")
 ```
 
 ## User Identification

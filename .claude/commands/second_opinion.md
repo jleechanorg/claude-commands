@@ -11,6 +11,42 @@ Get comprehensive multi-model AI feedback on your code, design decisions, or bug
 
 **🚀 Uses command-line approach to bypass 25K token limits and send full PR context!**
 
+---
+
+## ⚠️ CRITICAL: AI Universe Server Routing (MANDATORY)
+
+**This command MUST route ALL requests through the AI Universe MCP server.**
+
+### The Only Valid Endpoint
+Set an environment variable so the endpoint can switch between dev/stage/prod without editing docs:
+```
+export AI_UNIVERSE_MCP_ENDPOINT="${AI_UNIVERSE_MCP_ENDPOINT:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}"
+```
+> Use the dev URL only as the default. Override `AI_UNIVERSE_MCP_ENDPOINT` for staging/production deployments.
+
+### BANNED Anti-Patterns (NEVER DO THESE)
+
+❌ **NEVER** call Gemini MCP tools directly (e.g., `mcp__gemini__*`, `mcp__google__*`)
+❌ **NEVER** call Perplexity MCP tools directly (e.g., `mcp__perplexity__*`)
+❌ **NEVER** call OpenAI MCP tools directly (e.g., `mcp__openai__*`)
+❌ **NEVER** use WebSearch as a substitute for second opinion
+❌ **NEVER** skip the AI Universe authentication flow
+❌ **NEVER** construct direct API calls to Gemini/Perplexity/OpenAI endpoints
+
+### WHY This Matters
+
+The AI Universe server provides:
+1. **Unified Authentication** - One OAuth flow for all models
+2. **Cost Tracking** - Centralized billing and usage metrics
+3. **multi-model orchestration** - Parallel calls to Gemini, Perplexity, OpenAI
+4. **Synthesis Engine** - Combines responses into unified verdict
+5. **Source Aggregation** - 50+ authoritative sources per analysis
+6. **Rate Limiting** - Fair usage across all authenticated users
+
+**If you call model MCPs directly, you bypass all these benefits and get inferior results.**
+
+---
+
 ## Usage
 
 ```bash
@@ -49,7 +85,7 @@ This command uses a direct approach with auth-cli.mjs for secure token managemen
 
 4. **Direct MCP Server Call**:
    - Uses HTTPie with auto-refreshed Bearer token
-   - Sends to: `https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp`
+   - Sends to the endpoint specified by `AI_UNIVERSE_MCP_ENDPOINT` (dev URL is the default)
    - Handles streaming responses properly
    - Saves results locally
 
@@ -68,6 +104,10 @@ This command uses a direct approach with auth-cli.mjs for secure token managemen
 
 When executing `/second_opinion` or `/secondo`:
 
+> **Testing note (documentation-only update):** This change clarifies routing and auth requirements for the existing workflow. No application code was modified, so no automated test suite was rerun for this documentation revision.
+
+> **Testing note (documentation-only update):** This change clarifies routing and auth requirements for the existing workflow. No application code was modified, so no automated test suite was rerun for this documentation revision.
+
 ### Step 0: Authentication Setup (Auto-Refresh)
 ```bash
 # Verify auth-cli.mjs is installed
@@ -79,7 +119,8 @@ fi
 # CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
 export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:-<your-firebase-project-id>}"
 export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-<your-firebase-project-id>.firebaseapp.com}"
-export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:-<YOUR_FIREBASE_API_KEY>}"
+# API key must come from secure config (Secret Manager, env file, or `auth-cli.mjs` login).
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:?Set AI_UNIVERSE_FIREBASE_API_KEY from secure config}"
 
 # Get token (auto-refreshes if expired using refresh token)
 # This is silent - only prompts for login if refresh token is invalid/missing
@@ -88,9 +129,9 @@ TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 # If this fails, user needs to authenticate with AI Universe credentials
 if [ $? -ne 0 ]; then
   echo "❌ Authentication failed. Please run:"
-  echo "   FIREBASE_PROJECT_ID=<your-firebase-project-id> \\"
-  echo "   FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com \\"
-  echo "   FIREBASE_API_KEY=<YOUR_FIREBASE_API_KEY> \\"
+  echo "   FIREBASE_PROJECT_ID=<your-firebase-project-id> \\" 
+  echo "   FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com \\" 
+  echo "   FIREBASE_API_KEY=<your-ai-universe-firebase-api-key> \\" 
   echo "   node ~/.claude/scripts/auth-cli.mjs login"
   exit 1
 fi
@@ -179,7 +220,8 @@ The generated payload now includes the git context automatically:
 
 ```bash
 # Call MCP server with HTTPie (matches request_second_opinion.sh)
-http POST "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp" \
+MCP_ENDPOINT="${AI_UNIVERSE_MCP_ENDPOINT:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}"
+http POST "$MCP_ENDPOINT" \
   "Accept:application/json, text/event-stream" \
   "Authorization:Bearer $TOKEN" \
   < /tmp/secondo_request.json \
