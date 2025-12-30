@@ -14,6 +14,11 @@
 
 set -euo pipefail
 
+fail_out() {
+    local status="$1"
+    return "$status" 2>/dev/null || exit "$status"
+}
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -37,7 +42,7 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     echo -e "${RED}❌ ERROR: GITHUB_TOKEN environment variable is not set${NC}"
     echo -e "   Export your GitHub token before running this script:"
     echo -e "   ${BLUE}export GITHUB_TOKEN='ghp_xxxxxxxxxxxx'${NC}"
-    exit 1
+    fail_out 1
 fi
 
 # Create logs directory if it doesn't exist (cross-platform)
@@ -110,7 +115,7 @@ if [[ "$DRY_RUN" == "false" ]] && [[ "$FORCE" == "false" ]]; then
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${RED}❌ Aborted by user${NC}"
-        exit 1
+        fail_out 1
     fi
 fi
 

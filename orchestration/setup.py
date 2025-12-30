@@ -41,7 +41,7 @@ setup(
     },
 
     # Python version requirement
-    python_requires=">=3.9",
+    python_requires=">=3.10",
 
     # No external dependencies - uses only stdlib
     install_requires=[],
@@ -60,7 +60,6 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",

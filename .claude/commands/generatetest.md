@@ -98,6 +98,17 @@ SERVER_URL = "http://localhost:8082"  # Real local server
 WORK_NAME = "[work_name]"
 
 
+def run_tests(server: str) -> list[dict]:
+    """Execute the REAL integration tests against the provided server.
+
+    Replace this stub with project-specific test execution logic that returns a
+    list of result dicts in the shape expected by save_evidence(). Each dict
+    should include at minimum: name (str), passed (bool), and details (str).
+    """
+
+    raise NotImplementedError("Implement run_tests(server) for your environment")
+
+
 def get_evidence_dir(work_name: str, timestamp: str | None = None) -> Path:
     """Create evidence directory following standards."""
     provenance = capture_git_provenance(fetch_origin=False)
@@ -169,8 +180,8 @@ def save_evidence(
         warnings.append(f"{len(failed_tests)} test(s) failed")
         follow_ups.append("Review failed test logs for root cause analysis")
 
-    warnings_str = "\\n".join(f"- {w}" for w in warnings) if warnings else "(none)"
-    followups_str = "\\n".join(f"- {f}" for f in follow_ups) if follow_ups else "(none)"
+    warnings_str = "\n".join(f"- {w}" for w in warnings) if warnings else "(none)"
+    followups_str = "\n".join(f"- {f}" for f in follow_ups) if follow_ups else "(none)"
 
     notes = f"""# Notes
 
