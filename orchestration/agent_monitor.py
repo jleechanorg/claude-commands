@@ -176,6 +176,7 @@ class ConvergeAgentRestarter:
                                     if mtime > latest_time:
                                         latest_time = mtime
                                 except OSError:
+                                    # Ignore filesystem errors for individual files (e.g., permissions, missing files)
                                     pass
 
                     if latest_time > 0:
@@ -320,7 +321,7 @@ class ConvergeAgentRestarter:
                 f"claude --model sonnet {shlex.quote(enhanced_prompt)}",
             ]
 
-            result = subprocess.run(tmux_cmd, check=True, capture_output=True, text=True, timeout=30)
+            subprocess.run(tmux_cmd, check=True, capture_output=True, text=True, timeout=30)
 
             # Update restart tracking
             self.restart_attempts[agent_name] = attempts + 1

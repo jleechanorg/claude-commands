@@ -300,7 +300,8 @@ class OrchestrationDashboard:
         try:
             redis_result = subprocess.run(["redis-cli", "ping"], check=False, capture_output=True, text=True)
             redis_status = "🟢 ONLINE" if redis_result.returncode == 0 else "🔴 OFFLINE"
-        except:
+        except (FileNotFoundError, subprocess.SubprocessError, OSError):
+            # Redis CLI not available or connection failed; treat as offline
             redis_status = "🔴 OFFLINE"
 
         print(f"   Redis: {redis_status}")
@@ -316,7 +317,8 @@ class OrchestrationDashboard:
             if disk_usage.returncode == 0:
                 size = disk_usage.stdout.split()[0]
                 print(f"   Tasks directory: {size}")
-        except (subprocess.SubprocessError, OSError, FileNotFoundError):
+        except (FileNotFoundError, subprocess.SubprocessError, OSError):
+            # Disk usage is a non-critical, best-effort metric; ignore failures (e.g., missing 'du' or directory)
             pass
 
         print(f"\n{'=' * 80}")

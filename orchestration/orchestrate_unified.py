@@ -723,10 +723,8 @@ The orchestration system will:
                 f"Invalid agent CLI(s): {', '.join(invalid)}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}"
             )
 
-    agent_cli = args.agent_cli
+    agent_cli = args.agent_cli if args.agent_cli is not None else "gemini"
     agent_cli_provided = args.agent_cli is not None
-    if agent_cli is None:
-        agent_cli = "gemini"
 
     # Validate task description
     task = " ".join(args.task).strip()
