@@ -41,7 +41,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp_client import MCPClient
+from lib import MCPClient
 from lib.campaign_utils import create_campaign, process_action, get_campaign_state
 
 

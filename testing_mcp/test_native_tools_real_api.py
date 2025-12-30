@@ -28,7 +28,7 @@ import os
 import time
 from datetime import UTC, datetime
 
-from mcp_client import MCPClient
+from lib import MCPClient
 
 
 def main() -> int:

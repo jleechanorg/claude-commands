@@ -40,7 +40,7 @@ from typing import Any
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from mcp_client import MCPClient
+from lib import MCPClient
 from lib.campaign_utils import create_campaign, process_action, get_campaign_state
 
 # Configuration

@@ -32,9 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp_client import MCPClient
-
-# Import from centralized lib/
+from lib import MCPClient
 from lib.server_utils import (
     LocalServer,
     pick_free_port,

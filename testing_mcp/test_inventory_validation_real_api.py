@@ -46,7 +46,7 @@ from lib.model_utils import (
 )
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 from lib.evidence_utils import get_evidence_dir
-from mcp_client import MCPClient
+from lib import MCPClient
 
 # Character setup: Known inventory for validation
 # The character has specific items - tests will try to use items NOT in this list

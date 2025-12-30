@@ -4,6 +4,10 @@ This package provides reusable utilities for tests that create real campaigns
 and perform real actions via the MCP server.
 """
 
+from .mcp_client import (
+    MCPClient,
+    MCPResponse,
+)
 from .model_utils import (
     DEFAULT_MODEL_MATRIX,
     settings_for_model,
@@ -30,6 +34,9 @@ from .evidence_utils import (
 )
 
 __all__ = [
+    # MCP client
+    "MCPClient",
+    "MCPResponse",
     # Model utilities
     "DEFAULT_MODEL_MATRIX",
     "settings_for_model",

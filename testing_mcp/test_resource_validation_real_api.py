@@ -55,7 +55,7 @@ from lib.model_utils import (
 )
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 from lib.evidence_utils import get_evidence_dir
-from mcp_client import MCPClient
+from lib import MCPClient
 
 # =============================================================================
 # CHARACTER SETUPS - Each designed to test specific resource exhaustion

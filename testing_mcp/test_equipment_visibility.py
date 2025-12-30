@@ -31,7 +31,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp_client import MCPClient
+from lib import MCPClient
 from lib.evidence_utils import get_evidence_dir
 
 PROJECT_ROOT = Path(__file__).parent.parent

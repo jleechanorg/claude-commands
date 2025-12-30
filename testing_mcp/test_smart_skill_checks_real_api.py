@@ -35,7 +35,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp_client import MCPClient
+from lib import MCPClient
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 from lib.model_utils import DEFAULT_MODEL_MATRIX, settings_for_model, update_user_settings
 from lib.evidence_utils import get_evidence_dir

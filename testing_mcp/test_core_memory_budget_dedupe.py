@@ -41,7 +41,7 @@ from lib.server_utils import (
     pick_free_port,
     start_local_mcp_server,
 )
-from mcp_client import MCPClient
+from lib import MCPClient
 
 try:
     from mvp_site.memory_utils import MEMORY_SIMILARITY_THRESHOLD, is_similar_memory

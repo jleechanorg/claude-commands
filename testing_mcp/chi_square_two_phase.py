@@ -20,7 +20,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp_client import MCPClient  # noqa: E402
+from lib import MCPClient  # noqa: E402
 from test_dice_rolls_comprehensive import (  # noqa: E402
     _chi_square_stat,
     create_campaign,

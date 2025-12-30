@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mcp_client import MCPClient
+from .mcp_client import MCPClient
 
 
 # Default model matrix for multi-provider testing
