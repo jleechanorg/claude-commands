@@ -314,8 +314,11 @@ class TestEnhancedTaskWithContext(unittest.TestCase):
     def test_task_not_enhanced_without_context(self):
         """Test that task description is unchanged without context."""
         task_description = "Simple task"
+        context_content = None
 
         enhanced_task = task_description
+        if context_content:
+            enhanced_task = f"{task_description}\n\n---\n## Pre-computed Context\n{context_content}"
 
         self.assertEqual(enhanced_task, "Simple task")
 
@@ -368,7 +371,7 @@ class TestGhCommandMocking(unittest.TestCase):
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
 
         # Simulate the command structure used in _find_recent_agent_work
-        subprocess.run(
+        result = subprocess.run(
             [
                 "gh",
                 "pr",
@@ -405,7 +408,7 @@ class TestGhCommandMocking(unittest.TestCase):
         )
 
         branch_pattern = "task-agent-test-work"
-        subprocess.run(
+        result = subprocess.run(
             [
                 "gh",
                 "pr",

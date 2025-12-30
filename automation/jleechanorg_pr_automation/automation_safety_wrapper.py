@@ -3,7 +3,7 @@
 Automation Safety Wrapper for launchd
 
 This wrapper enforces safety limits before running PR automation:
-- Max 5 attempts per PR
+- Max 10 attempts per PR
 - Max 50 total automation runs before requiring manual approval
 - Email notifications when limits are reached
 """

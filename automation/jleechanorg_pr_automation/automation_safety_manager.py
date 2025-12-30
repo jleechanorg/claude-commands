@@ -3,7 +3,7 @@
 Automation Safety Manager - GREEN Phase Implementation
 
 Minimal implementation to pass the RED phase tests with:
-- PR attempt limits (max 5 per PR)
+- PR attempt limits (max 10 per PR)
 - Global run limits (max 50 per day with automatic midnight reset)
 - Manual approval system
 - Thread-safe operations

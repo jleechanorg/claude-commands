@@ -184,7 +184,7 @@ def validate_email_config(config: Dict[str, str]) -> bool:
 def get_automation_limits() -> Dict[str, int]:
     """Get automation safety limits from environment or defaults"""
     return {
-        "pr_limit": int(os.getenv("AUTOMATION_PR_LIMIT", "5")),
+        "pr_limit": int(os.getenv("AUTOMATION_PR_LIMIT", "10")),
         "global_limit": int(os.getenv("AUTOMATION_GLOBAL_LIMIT", "50")),
         "approval_hours": int(os.getenv("AUTOMATION_APPROVAL_HOURS", "24")),
         "subprocess_timeout": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300"))

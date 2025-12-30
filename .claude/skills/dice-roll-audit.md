@@ -12,8 +12,8 @@ WORLDAI_DEV_MODE=true python scripts/audit_dice_rolls.py <campaign_id>
 
 ### Example
 ```bash
-# Audit campaign from URL: https://your-project.com/game/<campaign_id>
-WORLDAI_DEV_MODE=true python scripts/audit_dice_rolls.py <campaign_id>
+# Audit campaign from URL: https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/game/tAE30bFvyfO0rUd9cgyv
+WORLDAI_DEV_MODE=true python scripts/audit_dice_rolls.py tAE30bFvyfO0rUd9cgyv
 ```
 
 ## What It Analyzes
@@ -74,7 +74,7 @@ Distribution: {0: 2, 1: 2, 2: 10, 3: 9, ...}
 
 From a game URL like:
 ```
-https://your-project.com/game/tAE30bFvyfO0rUd9cgyv
+https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/game/tAE30bFvyfO0rUd9cgyv
 ```
 The campaign ID is the last segment: `tAE30bFvyfO0rUd9cgyv`
 
@@ -88,7 +88,7 @@ export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json
 
 ### Service Account Key
 Location: `~/serviceAccountKey.json`
-Project: `your-project.com`
+Project: `worldarchitecture-ai`
 
 ## Understanding Results
 

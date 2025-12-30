@@ -3,48 +3,52 @@ description: /generatetest - Evidence-Based Test Generator (Real Mode Only)
 type: llm-orchestration
 execution_mode: immediate
 ---
-## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+## EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately.**
 **This is NOT documentation - these are COMMANDS to execute right now.**
 
-## 🚨 CORE PRINCIPLES
+**MANDATORY**: Read `.claude/skills/evidence-standards.md` before generating any test code.
+This ensures generated tests follow current evidence standards.
+
+## CORE PRINCIPLES
 
 **REAL MODE ONLY**: All generated tests use real local servers, real databases, nothing mocked.
-**EVIDENCE-FIRST**: Tests generate savetmp-compatible evidence bundles to `/tmp/<repo>/<branch>/<work>/<timestamp>/`.
+**EVIDENCE-FIRST**: Tests generate evidence bundles directly to `/tmp/<repo>/<branch>/<work>/<timestamp>/`.
+**CENTRALIZED UTILITIES**: Use `testing_mcp/lib/` modules - DO NOT reimplement evidence capture.
 **FREE-FORM INPUT**: Accept natural language like "for this PR make sure the equipment logic works".
 
-## 📁 OUTPUT LOCATIONS
+## OUTPUT LOCATIONS
 
 | Output Type | Default Location | Override Flag |
 |-------------|------------------|---------------|
 | **Test files** | `testing_mcp/` | `--test-dir <path>` |
 | **Evidence** | `/tmp/<repo>/<branch>/<work>/<timestamp>/` | `--evidence-dir <path>` |
 
-## 🚨 EXECUTION WORKFLOW
+## EXECUTION WORKFLOW
 
 ### Phase 1: Parse Free-Form Input
 
 **Action Steps:**
 1. Extract test focus from natural language input (e.g., "equipment logic", "dice rolls", "campaign creation")
-2. Identify PR context if mentioned (e.g., "for this PR" → analyze current branch changes)
+2. Identify PR context if mentioned (e.g., "for this PR" -> analyze current branch changes)
 3. Determine test type: MCP integration, browser automation, or hybrid
 4. Generate descriptive `work_name` for evidence directory
 
 **Example Parsing:**
 ```
 Input: "for this PR make sure the equipment logic works"
-→ Focus: equipment logic
-→ Context: current PR/branch changes
-→ Type: MCP integration (equipment = game state)
-→ work_name: equipment_validation
+-> Focus: equipment logic
+-> Context: current PR/branch changes
+-> Type: MCP integration (equipment = game state)
+-> work_name: equipment_validation
 ```
 
 ### Phase 2: Generate Test File
 
 **Action Steps:**
 1. Create test file in `testing_mcp/test_<focus>.py` (or custom `--test-dir`)
-2. Include savetmp-compatible evidence generation (methodology, evidence, notes)
-3. Add `--savetmp` and `--work-name` CLI arguments to test
+2. Import from `lib/` modules - DO NOT reimplement evidence capture
+3. Add `--save-evidence` and `--work-name` CLI arguments to test
 4. Ensure test uses REAL servers (no mocks, no test mode)
 
 **Generated Test Structure:**
@@ -56,76 +60,206 @@ Focus: [extracted focus]
 Work Name: [work_name]
 
 REAL MODE ONLY - No mocks, no test mode
+Evidence standards: .claude/skills/evidence-standards.md
 """
 import argparse
 import json
 import os
-import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Add project root to path for lib imports
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "testing_mcp"))
+
+# Import shared utilities from lib/ - DO NOT REIMPLEMENT
+from lib.server_utils import (
+    LocalServer,
+    pick_free_port,
+    start_local_mcp_server,
+)
+from lib.campaign_utils import (
+    create_campaign,
+    process_action,
+    get_campaign_state,
+)
+from lib.evidence_utils import (
+    capture_git_provenance,
+    capture_server_runtime,
+    capture_server_health,
+    capture_full_provenance,
+    write_with_checksum,
+)
+from mcp_client import MCPClient
 
 # Test configuration
 SERVER_URL = "http://localhost:8082"  # Real local server
 WORK_NAME = "[work_name]"
 
-def generate_savetmp_docs(results, git_info, server_url):
-    """Generate methodology/evidence/notes from actual test data."""
-    # Methodology: derive from actual environment, not hardcoded
+
+def get_evidence_dir(work_name: str, timestamp: str | None = None) -> Path:
+    """Create evidence directory following standards."""
+    provenance = capture_git_provenance(fetch_origin=False)
+    repo_name = Path(provenance.get("working_directory", ".")).name
+    branch = provenance.get("git_branch", "unknown")
+
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    evidence_dir = Path(f"/tmp/{repo_name}/{branch}/{work_name}/{timestamp}")
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / "artifacts").mkdir(exist_ok=True)
+    return evidence_dir
+
+
+def save_evidence(
+    results: list[dict],
+    provenance: dict,
+    server_url: str,
+    evidence_dir: Path,
+    work_name: str,
+    collection_iso: str,
+):
+    """Write evidence files using centralized utilities."""
+    git_info = provenance.get("git", {})
+    server_info = provenance.get("server", {})
+
     dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
     methodology = f"""# Test Methodology
+
 ## Environment
 - Server: {server_url}
 - WORLDAI_DEV_MODE: {dev_mode}
-- Timestamp: {datetime.now(timezone.utc).isoformat()}
+- Timestamp: {collection_iso}
+
+## Git Provenance
+- HEAD: {git_info.get('git_head', 'unknown')[:12] if git_info.get('git_head') else 'unknown'}
+- Branch: {git_info.get('git_branch', 'unknown')}
+- origin/main: {git_info.get('origin_main', 'unknown')[:12] if git_info.get('origin_main') else 'unknown'}
+- Commits ahead: {git_info.get('commits_ahead_of_main', 'unknown')}
+
+## Server Runtime
+- PID: {server_info.get('pid', 'unknown')}
+- Port: {server_info.get('port', 'unknown')}
 
 ## Test Scope
 [Generated from actual test execution]
 """
 
     # Evidence: derive from actual results
-    passed = sum(1 for r in results if r.passed)
+    passed = sum(1 for r in results if r.get('passed'))
     total = len(results)
     evidence = f"""# Evidence Summary
+
 ## Results: {passed}/{total} PASS
 
 | Test | Status | Details |
 |------|--------|---------|
 """
     for r in results:
-        status = "✅ PASS" if r.passed else "❌ FAIL"
-        evidence += f"| {r.name} | {status} | {r.details} |\n"
+        status = "PASS" if r.get('passed') else "FAIL"
+        evidence += f"| {r.get('name')} | {status} | {r.get('details', '')} |\n"
 
-    # Notes: warnings and follow-ups
-    notes = "# Notes\n"
-    # Add any warnings from test execution
+    # Notes: track warnings and follow-ups
+    warnings = []
+    follow_ups = []
+    failed_tests = [r for r in results if not r.get('passed')]
+    if failed_tests:
+        warnings.append(f"{len(failed_tests)} test(s) failed")
+        follow_ups.append("Review failed test logs for root cause analysis")
 
-    return methodology, evidence, notes
+    warnings_str = "\\n".join(f"- {w}" for w in warnings) if warnings else "(none)"
+    followups_str = "\\n".join(f"- {f}" for f in follow_ups) if follow_ups else "(none)"
+
+    notes = f"""# Notes
+
+## Warnings
+{warnings_str}
+
+## Follow-ups
+{followups_str}
+"""
+
+    # Metadata JSON
+    metadata = {
+        "timestamp": collection_iso,
+        "git_provenance": git_info,
+        "server_info": server_info,
+        "server_url": server_url,
+        "results_summary": {"passed": passed, "total": total}
+    }
+
+    repo_name = evidence_dir.parts[2] if len(evidence_dir.parts) > 2 else "unknown"
+
+    readme = f"""# Evidence Package Manifest
+
+- Repository: {repo_name}
+- Branch: {git_info.get('git_branch', 'unknown')}
+- Head Commit: {git_info.get('git_head', 'unknown')}
+- Origin/Main: {git_info.get('origin_main', 'unknown')}
+- Server: {server_url}
+- Work Name: {work_name}
+- Collected At (UTC): {collection_iso}
+
+All files in this directory were generated directly by the test run and include
+per-file SHA256 checksums for integrity verification.
+"""
+
+    # Write all files with checksums using centralized utility
+    write_with_checksum(evidence_dir / "README.md", readme)
+    write_with_checksum(evidence_dir / "methodology.md", methodology)
+    write_with_checksum(evidence_dir / "evidence.md", evidence)
+    write_with_checksum(evidence_dir / "notes.md", notes)
+    write_with_checksum(
+        evidence_dir / "metadata.json",
+        json.dumps(metadata, indent=2)
+    )
+
+    print(f"Evidence saved to: {evidence_dir}")
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", default=SERVER_URL)
-    parser.add_argument("--savetmp", action="store_true",
+    parser.add_argument("--save-evidence", action="store_true",
                         help="Save evidence to /tmp structure")
     parser.add_argument("--work-name", default=WORK_NAME)
     args = parser.parse_args()
 
+    # Capture synchronized timestamp
+    collection_dt = datetime.now(timezone.utc)
+    collection_iso = collection_dt.isoformat()
+    collection_timestamp = collection_dt.strftime("%Y%m%dT%H%M%SZ")
+
+    # Capture full provenance using centralized utility
+    port = int(args.server.split(":")[-1])
+    try:
+        provenance = capture_full_provenance(port, args.server)
+    except Exception as exc:
+        print(f"Warning: failed to capture provenance: {exc}")
+        provenance = {"git": {}, "server": {}, "health": {}}
+
     # Run tests against REAL server
     results = run_tests(args.server)
 
-    if args.savetmp:
-        # Generate savetmp-compatible evidence
-        git_info = capture_git_provenance()
-        methodology, evidence, notes = generate_savetmp_docs(
-            results, git_info, args.server
+    if args.save_evidence:
+        try:
+            evidence_dir = get_evidence_dir(args.work_name, collection_timestamp)
+        except Exception as exc:
+            print(f"Warning: failed to get evidence dir: {exc}")
+            evidence_dir = Path(f"/tmp/unknown/{args.work_name}/{collection_timestamp}")
+            evidence_dir.mkdir(parents=True, exist_ok=True)
+
+        save_evidence(
+            results,
+            provenance,
+            args.server,
+            evidence_dir,
+            args.work_name,
+            collection_iso,
         )
 
-        # Call savetmp.py with generated docs
-        subprocess.run([
-            "python", ".claude/commands/savetmp.py", args.work_name,
-            "--methodology", methodology,
-            "--evidence", evidence,
-            "--notes", notes
-        ], check=True)
 
 if __name__ == "__main__":
     main()
@@ -134,18 +268,19 @@ if __name__ == "__main__":
 ### Phase 3: Add Evidence Standards Compliance
 
 **Action Steps:**
-1. Include git provenance capture (HEAD, origin/main, changed files)
-2. Add server environment capture (process info, ports, env vars)
+1. Import from `lib/evidence_utils.py` - DO NOT reimplement
+2. Use `capture_full_provenance()` for all-in-one capture
 3. Derive ALL documentation from actual data (never hardcode)
 4. Track missing/dropped data with warnings
 5. Check subprocess return codes
 
 **Evidence Standards Checklist (from `.claude/skills/evidence-standards.md`):**
-- [ ] Git provenance: HEAD commit, origin/main, changed files
-- [ ] Server environment: PID, port, WORLDAI_DEV_MODE
-- [ ] Checksums: SHA256 for all evidence files
+- [ ] Git provenance: HEAD commit, origin/main, changed files (via `capture_git_provenance()`)
+- [ ] Server environment: PID, port, env vars (via `capture_server_runtime()`)
+- [ ] Checksums: SHA256 for all evidence files (via `write_with_checksum()`)
 - [ ] Timestamp synchronization: collect all evidence in one pass
 - [ ] Documentation-Data alignment: derive claims from actual data
+- [ ] Centralized utilities: use `lib/evidence_utils.py`
 
 ### Phase 4: Verify Real Mode
 
@@ -155,16 +290,16 @@ if __name__ == "__main__":
 3. Ensure NO mock imports or test mode flags
 4. Validate API responses are from real server
 
-**🚨 MOCK MODE = INVALID EVIDENCE**:
-- ❌ FORBIDDEN: `TESTING=true`, mock imports, fake services
-- ❌ FORBIDDEN: Hardcoded responses or placeholder data
-- ✅ REQUIRED: Real local server, real database, real API responses
+**MOCK MODE = INVALID EVIDENCE**:
+- FORBIDDEN: `TESTING=true`, mock imports, fake services
+- FORBIDDEN: Hardcoded responses or placeholder data
+- REQUIRED: Real local server, real database, real API responses
 
-## 📋 REFERENCE DOCUMENTATION
+## REFERENCE DOCUMENTATION
 
 # /generatetest - Evidence-Based Test Generator
 
-**Purpose**: Generate tests with built-in savetmp-compatible evidence generation
+**Purpose**: Generate tests using centralized `lib/` utilities for evidence generation
 
 **Usage**: `/generatetest <free-form description>`
 
@@ -175,7 +310,7 @@ if __name__ == "__main__":
 /generatetest test campaign creation flow end-to-end
 ```
 
-## 🔍 TEST TYPE DETECTION
+## TEST TYPE DETECTION
 
 **Automatic Detection from Free-Form Input:**
 
@@ -189,27 +324,29 @@ if __name__ == "__main__":
 
 **Default**: MCP Integration (most common for this project)
 
-## 📊 GENERATED TEST REQUIREMENTS
+## GENERATED TEST REQUIREMENTS
 
 Every generated test MUST include:
 
-### 1. Evidence Generation Function
+### 1. Centralized Imports (MANDATORY)
 ```python
-def generate_savetmp_docs(results, git_info, server_url, run_dir):
-    """Generate methodology/evidence/notes from ACTUAL test data."""
-    # ✅ Derive from os.environ, not hardcoded
-    dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
+# Import from centralized lib module - DO NOT REIMPLEMENT
+from lib.evidence_utils import (
+    capture_git_provenance,
+    capture_server_runtime,
+    capture_full_provenance,
+    write_with_checksum,
+)
 
-    # ✅ Track missing data with warnings
-    missing_items = []
-
-    # ✅ Use correct denominators (found/total, not found/min)
-    stats_col = f"{found}/{len(total_items)} (need {min_required})"
+# Usage:
+provenance = capture_git_provenance()  # Returns git_head, git_branch, merge_base, etc.
+server_info = capture_server_runtime(port=8082)  # Returns pid, cmdline, env_vars
+full = capture_full_provenance(port=8082, server_url="http://localhost:8082")  # All-in-one
 ```
 
 ### 2. CLI Arguments for Evidence
 ```python
-parser.add_argument("--savetmp", action="store_true")
+parser.add_argument("--save-evidence", action="store_true")
 parser.add_argument("--work-name", default="<auto_generated>")
 ```
 
@@ -222,21 +359,11 @@ def verify_real_mode(server_url):
     assert "mock" not in response.text.lower()
 ```
 
-### 4. Git Provenance Capture
-```python
-def capture_git_provenance():
-    """Capture git state for evidence."""
-    return {
-        "head_commit": subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip(),
-        "branch": subprocess.check_output(["git", "branch", "--show-current"]).decode().strip(),
-        "origin_main": subprocess.check_output(["git", "rev-parse", "origin/main"]).decode().strip(),
-        "changed_files": subprocess.check_output(
-            ["git", "diff", "--name-only", "origin/main...HEAD"]
-        ).decode().strip().split("\n"),
-    }
-```
+> Wrap git calls in try/except so missing remotes or detached HEADs surface clear
+> errors instead of crashing generation. The centralized `lib/evidence_utils.py`
+> handles this automatically.
 
-## 🚨 EVIDENCE STANDARDS COMPLIANCE
+## EVIDENCE STANDARDS COMPLIANCE
 
 From `.claude/skills/evidence-standards.md`:
 
@@ -247,25 +374,28 @@ From `.claude/skills/evidence-standards.md`:
 | **Correct denominators** | `found/total (need min)`, not `found/min` |
 | **Check return codes** | `if result.returncode != 0: warn()` |
 | **Single run attribution** | Evidence bundle references ONE test run |
-| **Git provenance** | HEAD, origin/main, changed files |
-| **Checksums** | SHA256 via savetmp.py |
+| **Git provenance** | Use `capture_git_provenance()` from lib/ |
+| **Server provenance** | Use `capture_server_runtime()` from lib/ |
+| **Checksums** | Use `write_with_checksum()` from lib/ |
+| **Centralized** | Import from `lib/evidence_utils.py` |
 
-## 🔧 PRIORITY MATRIX
+## PRIORITY MATRIX
 
 ```
-🚨 CRITICAL: Blocks core functionality, data corruption risk
-⚠️ HIGH: Significant degradation, wrong behavior
-📝 MEDIUM: Minor issues, cosmetic problems
-ℹ️ LOW: Documentation, edge cases
+CRITICAL: Blocks core functionality, data corruption risk
+HIGH: Significant degradation, wrong behavior
+MEDIUM: Minor issues, cosmetic problems
+LOW: Documentation, edge cases
 ```
 
-**Stop Rule**: 🚨 CRITICAL → Stop testing, fix immediately, verify, resume
+**Stop Rule**: CRITICAL -> Stop testing, fix immediately, verify, resume
 
-## ✅ COMPLETION CRITERIA
+## COMPLETION CRITERIA
 
 - [ ] Test file created in `testing_mcp/` (or custom dir)
-- [ ] Evidence generation integrated (methodology, evidence, notes)
+- [ ] Imports from `lib/evidence_utils.py` (NOT reimplemented)
+- [ ] Uses `capture_full_provenance()` for all provenance
+- [ ] Uses `write_with_checksum()` for evidence files
 - [ ] Real mode verified (no mocks, no TESTING=true)
-- [ ] Git provenance captured
 - [ ] All results derived from actual data
 - [ ] Missing data tracked with warnings

@@ -23,6 +23,7 @@ import argparse
 import asyncio
 import logging
 import sys
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -36,8 +37,6 @@ from playwright.async_api import (
     TimeoutError as PlaywrightTimeoutError,
     async_playwright,
 )
-
-from ..cdp_utils import format_cdp_host_for_url as _format_cdp_host_for_url
 
 
 # Set up logging to /tmp
@@ -658,6 +657,12 @@ class CodexGitHubMentionsAutomation:
 
     def _is_task_detail_url(self, url: str) -> bool:
         return "/codex/tasks/" in url and "task_" in url
+
+
+def _format_cdp_host_for_url(host: str) -> str:
+    if ":" in host and not (host.startswith("[") and host.endswith("]")):
+        return f"[{host}]"
+    return host
 
 
 async def main():

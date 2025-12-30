@@ -42,7 +42,7 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 ┌─────────────────────────────────────────────────────────────┐
 │  3. SAFETY CHECKS                                           │
 │  ───────────────────────────────────────────────────────────│
-│  • Verify PR hasn't exceeded attempt limits (max 5)         │
+│  • Verify PR hasn't exceeded attempt limits (max 10)        │
 │  • Check global automation limit (max 50 runs)              │
 │  • Skip if safety limits reached                            │
 └─────────────────────────────────────────────────────────────┘
@@ -125,7 +125,7 @@ automation-safety-cli clear
 export GITHUB_TOKEN="your_github_token_here"
 
 # Optional - Safety Limits
-export AUTOMATION_PR_LIMIT=5           # Max attempts per PR (default: 5)
+export AUTOMATION_PR_LIMIT=10          # Max attempts per PR (default: 10)
 export AUTOMATION_GLOBAL_LIMIT=50      # Max global runs (default: 50)
 export AUTOMATION_APPROVAL_HOURS=24    # Approval expiry (default: 24)
 
@@ -607,7 +607,7 @@ Both workflows use `AutomationSafetyManager` for rate limiting:
 
 ### Dual Limits
 
-1. **Per-PR Limit**: Max 5 consecutive attempts per PR
+1. **Per-PR Limit**: Max 10 consecutive attempts per PR
 2. **Global Limit**: Max 50 total automation runs per day
 
 ### Safety Data Storage
@@ -633,8 +633,8 @@ automation-safety-cli status
 # Global runs: 23/50
 # Requires approval: False
 # PR attempts:
-#   worldarchitect.ai-1634: 2/5 (OK)
-#   ai_universe-42: 5/5 (BLOCKED)
+#   worldarchitect.ai-1634: 2/10 (OK)
+#   ai_universe-42: 10/10 (BLOCKED)
 
 # Clear all data (reset limits)
 automation-safety-cli clear
@@ -671,7 +671,7 @@ export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
 
 ```bash
 # Safety limits
-export AUTOMATION_PR_LIMIT=5           # Default: 5
+export AUTOMATION_PR_LIMIT=10          # Default: 10
 export AUTOMATION_GLOBAL_LIMIT=50      # Default: 50
 export AUTOMATION_APPROVAL_HOURS=24    # Default: 24
 
