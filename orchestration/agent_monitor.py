@@ -7,7 +7,6 @@ Enhanced with converge agent restart capabilities
 """
 
 import json
-import logging
 import os
 import re
 import shlex
@@ -21,13 +20,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # MessageBroker removed - using file-based A2A only
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-logger = logging.getLogger(__name__)
+import logging_util
+
+logger = logging_util.get_logger(__name__)
 
 
 class ConvergeAgentRestarter:
@@ -175,7 +170,7 @@ class ConvergeAgentRestarter:
                                     mtime = os.path.getmtime(file_path)
                                     if mtime > latest_time:
                                         latest_time = mtime
-                                except:
+                                except OSError:
                                     pass
 
                     if latest_time > 0:
@@ -320,7 +315,7 @@ class ConvergeAgentRestarter:
                 f"claude --model sonnet {shlex.quote(enhanced_prompt)}",
             ]
 
-            result = subprocess.run(tmux_cmd, check=True, capture_output=True, text=True, timeout=30)
+            subprocess.run(tmux_cmd, check=True, capture_output=True, text=True, timeout=30)
 
             # Update restart tracking
             self.restart_attempts[agent_name] = attempts + 1
