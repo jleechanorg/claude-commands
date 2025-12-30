@@ -63,7 +63,7 @@ def main():
                         payload = msg_dict.get("payload", {})
                         task_desc = payload.get("description", "unknown")
                         task_id = msg_dict.get("id", "no-id")
-                        print(f"Processing task '{task_desc}' (ID: {task_id}) from queue:{agent_id}")
+                        print(f"Processing task '{task_desc}' (ID: {task_id}) from queue:queue:{agent_id}")
 
                         # Create result
                         result = {
