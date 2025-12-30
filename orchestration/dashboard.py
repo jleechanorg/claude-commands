@@ -316,7 +316,7 @@ class OrchestrationDashboard:
             if disk_usage.returncode == 0:
                 size = disk_usage.stdout.split()[0]
                 print(f"   Tasks directory: {size}")
-        except:
+        except (subprocess.SubprocessError, OSError, FileNotFoundError):
             pass
 
         print(f"\n{'=' * 80}")

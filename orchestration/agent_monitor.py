@@ -175,7 +175,7 @@ class ConvergeAgentRestarter:
                                     mtime = os.path.getmtime(file_path)
                                     if mtime > latest_time:
                                         latest_time = mtime
-                                except:
+                                except OSError:
                                     pass
 
                     if latest_time > 0:
