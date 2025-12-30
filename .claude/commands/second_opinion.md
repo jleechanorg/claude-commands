@@ -106,8 +106,6 @@ When executing `/second_opinion` or `/secondo`:
 
 > **Testing note (documentation-only update):** This change clarifies routing and auth requirements for the existing workflow. No application code was modified, so no automated test suite was rerun for this documentation revision.
 
-> **Testing note (documentation-only update):** This change clarifies routing and auth requirements for the existing workflow. No application code was modified, so no automated test suite was rerun for this documentation revision.
-
 ### Step 0: Authentication Setup (Auto-Refresh)
 ```bash
 # Verify auth-cli.mjs is installed
@@ -129,9 +127,9 @@ TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 # If this fails, user needs to authenticate with AI Universe credentials
 if [ $? -ne 0 ]; then
   echo "❌ Authentication failed. Please run:"
-  echo "   FIREBASE_PROJECT_ID=<your-firebase-project-id> \\" 
-  echo "   FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com \\" 
-  echo "   FIREBASE_API_KEY=<your-ai-universe-firebase-api-key> \\" 
+  echo "   FIREBASE_PROJECT_ID=<your-firebase-project-id> \\"
+  echo "   FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com \\"
+  echo "   FIREBASE_API_KEY=<your-ai-universe-firebase-api-key> \\"
   echo "   node ~/.claude/scripts/auth-cli.mjs login"
   exit 1
 fi
