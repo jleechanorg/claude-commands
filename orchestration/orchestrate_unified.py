@@ -453,7 +453,7 @@ class UnifiedOrchestration:
 
         for i, agent_spec in enumerate(agents):
             # Inject orchestration options into agent spec
-            if options.get("agent_cli_provided") and options.get("agent_cli") is not None:
+            if options.get("agent_cli") is not None:
                 agent_spec["cli"] = options["agent_cli"]
             if options.get("branch"):
                 agent_spec["existing_branch"] = options["branch"]
@@ -714,7 +714,6 @@ The orchestration system will:
             )
 
     agent_cli = args.agent_cli
-    agent_cli_provided = args.agent_cli is not None
 
     # Validate task description
     task = " ".join(args.task).strip()

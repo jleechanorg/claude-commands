@@ -104,8 +104,6 @@ This command uses a direct approach with auth-cli.mjs for secure token managemen
 
 When executing `/second_opinion` or `/secondo`:
 
-> **Testing note (documentation-only update):** This change clarifies routing and auth requirements for the existing workflow. No application code was modified, so no automated test suite was rerun for this documentation revision.
-
 ### Step 0: Authentication Setup (Auto-Refresh)
 ```bash
 # Verify auth-cli.mjs is installed

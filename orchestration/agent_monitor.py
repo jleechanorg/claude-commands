@@ -175,8 +175,9 @@ class ConvergeAgentRestarter:
                                     mtime = os.path.getmtime(file_path)
                                     if mtime > latest_time:
                                         latest_time = mtime
-                                except OSError:
-                                    pass
+                                except OSError as e:
+                                    # Ignore filesystem errors for individual files but log for debugging
+                                    self.logger.debug(f"Error getting mtime for {file_path}: {e}")
 
                     if latest_time > 0:
                         return datetime.fromtimestamp(latest_time)

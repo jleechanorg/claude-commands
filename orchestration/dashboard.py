@@ -317,6 +317,7 @@ class OrchestrationDashboard:
                 size = disk_usage.stdout.split()[0]
                 print(f"   Tasks directory: {size}")
         except (FileNotFoundError, subprocess.SubprocessError, OSError):
+            # Disk usage is a non-critical, best-effort metric; ignore failures (e.g., missing 'du' or directory)
             pass
 
         print(f"\n{'=' * 80}")
