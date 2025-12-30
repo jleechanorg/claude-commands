@@ -50,11 +50,13 @@ from lib.campaign_utils import (
     process_action,
     ensure_game_state_seed,
 )
+from lib.evidence_utils import get_evidence_dir
 
 # Backwards compatibility alias
 _pick_free_port = pick_free_port
 
-EVIDENCE_DIR = Path(__file__).parent / "evidence" / "mcp_dice_rolls"
+# Evidence stored per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
+# No longer using testing_mcp/evidence/ - use get_evidence_dir() instead
 
 
 TEST_SCENARIOS: list[dict[str, Any]] = [
@@ -319,8 +321,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--evidence-dir",
-        default=str(EVIDENCE_DIR),
-        help="Directory to store evidence artifacts.",
+        default="",  # Empty means use get_evidence_dir() per evidence-standards.md
+        help="Directory to store evidence artifacts. Defaults to /tmp/<repo>/<branch>/mcp_dice_rolls/<timestamp>/",
     )
     parser.add_argument(
         "--models",
@@ -335,7 +337,8 @@ def main() -> int:
 
     local: LocalServer | None = None
     base_url = str(args.server_url)
-    evidence_dir = Path(args.evidence_dir)
+    # Use standard evidence path if not specified
+    evidence_dir = Path(args.evidence_dir) if args.evidence_dir else get_evidence_dir("mcp_dice_rolls")
 
     if args.evidence and args.distribution_rolls == 0:
         args.distribution_rolls = DEFAULT_DISTRIBUTION_ROLLS

@@ -237,6 +237,7 @@ class NarrativeResponse:
         state_updates: dict[str, Any] = None,
         debug_info: dict[str, Any] = None,
         god_mode_response: str = None,
+        directives: dict[str, Any] = None,  # God mode: {add: [...], drop: [...]}
         session_header: str = None,
         planning_block: dict[str, Any] | None = None,
         dice_rolls: list[str] = None,
@@ -252,6 +253,7 @@ class NarrativeResponse:
         self.state_updates = self._validate_state_updates(state_updates)
         self.debug_info = self._validate_debug_info(debug_info)
         self.god_mode_response = god_mode_response
+        self.directives = directives or {}  # God mode directives: {add: [...], drop: [...]}
 
         # New always-visible fields
         self.session_header = self._validate_string_field(

@@ -410,6 +410,86 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     @patch("mvp_site.world_logic._prepare_game_state")
     @patch("mvp_site.world_logic.get_user_settings")
     @patch("mvp_site.world_logic.structured_fields_utils")
+    def test_god_mode_directives_drop_dict_red_phase(
+        self,
+        mock_structured_utils,
+        mock_settings,
+        mock_prepare,
+        mock_gemini,
+        mock_add_story,
+        mock_update_state,
+        mock_get_campaign,
+        mock_get_campaign_state,
+    ):
+        """
+        🔴 RED PHASE: Directives drop should not crash when LLM returns dicts.
+
+        Before the fix, directives.drop containing dict entries (e.g. {"rule": "X"})
+        triggers "'dict' object has no attribute 'lower'" and returns an error.
+        """
+        # Mock structured fields to include directives with dict entries in drop list
+        mock_structured_utils.extract_structured_fields.return_value = {
+            "directives": {"drop": [{"rule": "Always award XP"}]}
+        }
+
+        # Mock the campaign data and story context
+        mock_get_campaign.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            self.mock_story_context,
+        )
+
+        # Mock game state preparation with existing directive
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.to_dict.return_value = {
+            "world_data": {"world_time": {"hour": 1, "minute": 0}},
+            "combat_state": {"in_combat": False},
+            "player_character_data": {"experience": {"current": 0}, "level": 1},
+            "custom_campaign_state": {
+                "god_mode_directives": [{"rule": "Always award XP"}]
+            },
+        }
+        mock_prepare.return_value = (mock_game_state, False, 0)
+
+        # Prevent Firestore client creation
+        mock_get_campaign_state.return_value = {}
+
+        # Mock user settings
+        mock_settings.return_value = {"debug_mode": False}
+
+        # Mock Gemini response with minimal fields used downstream
+        mock_gemini_response = Mock()
+        mock_gemini_response.narrative_text = "OK"
+        mock_gemini_response.get_state_updates.return_value = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini_response.get_location_confirmed.return_value = "Test Location"
+        mock_gemini_response.get_narrative_text.return_value = "OK"
+        mock_gemini_response.resources = "HP: 10/10"
+        mock_gemini_response.processing_metadata = {}
+        mock_gemini.return_value = mock_gemini_response
+
+        request_data = {
+            "user_id": "test-user-123",
+            "campaign_id": "test-campaign-456",
+            "user_input": "GOD MODE: drop old directive",
+            "mode": "character",
+        }
+
+        result = asyncio.run(world_logic.process_action_unified(request_data))
+
+        self.assertTrue(
+            result.get("success"),
+            f"Expected success, got error: {result}",
+        )
+
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.structured_fields_utils")
     def test_user_scene_number_field_red_phase(
         self,
         mock_structured_utils,

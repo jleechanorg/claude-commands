@@ -395,6 +395,20 @@ class GameState:
                         continue
                 self.combat_state["combatants"] = normalized_combatants
 
+        # Ensure consistency: Remove initiative entries that don't have a corresponding combatant
+        # This prevents "orphaned" turns and invalid states where init exists but combatants don't
+        if "initiative_order" in self.combat_state and "combatants" in self.combat_state:
+            init_order = self.combat_state.get("initiative_order")
+            combatants = self.combat_state.get("combatants")
+            # Guard: Only proceed if types are correct
+            if isinstance(init_order, list) and isinstance(combatants, dict):
+                combatants_keys = set(combatants.keys())
+                self.combat_state["initiative_order"] = [
+                    entry
+                    for entry in init_order
+                    if isinstance(entry, dict) and entry.get("name") in combatants_keys
+                ]
+
         # CRITICAL: Validate schema consistency between initiative_order and combatants
         self._validate_combat_state_consistency()
 
@@ -1497,39 +1511,290 @@ class GameState:
             return f"Day {day}, {hour:02d}:{minute:02d}"
         return f"{hour:02d}:{minute:02d}"
 
+    # =========================================================================
+    # Character Identity Methods
+    # =========================================================================
+
+    def get_character_identity_block(self) -> str:
+        """
+        Generate a character identity block for system prompts.
+
+        This ensures the LLM always has access to immutable character facts
+        like name, gender, pronouns, and key relationships.
+
+        Returns:
+            Formatted string block for system prompts
+        """
+        pc = self.player_character_data
+        if not pc or not isinstance(pc, dict):
+            return ""
+
+        lines = ["## Character Identity (IMMUTABLE)"]
+
+        # Name
+        name = pc.get("name")
+        if name:
+            lines.append(f"- **Name**: {name}")
+
+        # Gender and pronouns - handle None values properly
+        # Note: .get("gender", "") returns None if key exists with None value
+        gender_raw = pc.get("gender")
+        gender = str(gender_raw).lower() if gender_raw else ""
+        if gender:
+            if gender in ("female", "woman", "f"):
+                lines.append("- **Gender**: Female (she/her)")
+                lines.append(
+                    "- **NEVER** refer to this character as 'he', 'him', "
+                    "or use male-gendered familial terms for them"
+                )
+            elif gender in ("male", "man", "m"):
+                lines.append("- **Gender**: Male (he/him)")
+                lines.append(
+                    "- **NEVER** refer to this character as 'she', 'her', "
+                    "or use female-gendered familial terms for them"
+                )
+            else:
+                lines.append(f"- **Gender**: {gender}")
+
+        # Race
+        race = pc.get("race")
+        if race:
+            lines.append(f"- **Race**: {race}")
+
+        # Class
+        char_class = pc.get("class") or pc.get("character_class")
+        if char_class:
+            lines.append(f"- **Class**: {char_class}")
+
+        # Key relationships (from backstory or explicit field)
+        relationships = pc.get("relationships", {})
+        if isinstance(relationships, dict) and relationships:
+            lines.append("- **Key Relationships**:")
+            for rel_name, rel_type in relationships.items():
+                lines.append(f"  - {rel_name}: {rel_type}")
+
+        # Parentage (important for characters like Alexiel)
+        parentage = pc.get("parentage") or pc.get("parents")
+        if parentage:
+            if isinstance(parentage, dict):
+                for parent_type, parent_name in parentage.items():
+                    lines.append(f"- **{parent_type.title()}**: {parent_name}")
+            elif isinstance(parentage, str):
+                lines.append(f"- **Parentage**: {parentage}")
+
+        if len(lines) == 1:
+            return ""  # Only header, no actual data
+
+        return "\n".join(lines)
+
+    # =========================================================================
+    # God Mode Directive Management
+    # =========================================================================
+
+    def add_god_mode_directive(self, directive: str) -> None:
+        """
+        Add a God Mode directive to the campaign rules.
+
+        These directives persist across sessions and are injected into prompts.
+
+        Args:
+            directive: The rule to add (e.g., "always award XP after combat")
+        """
+        if "god_mode_directives" not in self.custom_campaign_state:
+            self.custom_campaign_state["god_mode_directives"] = []
+
+        directives = self.custom_campaign_state["god_mode_directives"]
+
+        # Check for duplicates
+        existing_texts = [d.get("rule") if isinstance(d, dict) else d for d in directives]
+        if directive not in existing_texts:
+            directives.append({
+                "rule": directive,
+                "added": datetime.datetime.now(datetime.UTC).isoformat(),
+            })
+            logging_util.info(f"GOD MODE DIRECTIVE ADDED: {directive}")
+
+    def get_god_mode_directives(self) -> list[str]:
+        """
+        Get all active God Mode directives as a list of strings.
+
+        Returns:
+            List of directive rule strings
+        """
+        directives = self.custom_campaign_state.get("god_mode_directives", [])
+        result = []
+        for d in directives:
+            if isinstance(d, dict):
+                result.append(d.get("rule", str(d)))
+            else:
+                result.append(str(d))
+        return result
+
+    def get_god_mode_directives_block(self) -> str:
+        """
+        Generate a formatted block of God Mode directives for system prompts.
+
+        Returns:
+            Formatted string block for system prompts
+        """
+        directives = self.get_god_mode_directives()
+        if not directives:
+            return ""
+
+        lines = ["## Active God Mode Directives"]
+        lines.append("The following rules were set by the player and MUST be followed:")
+        for i, directive in enumerate(directives, 1):
+            lines.append(f"{i}. {directive}")
+
+        return "\n".join(lines)
+
+    # =========================================================================
+    # Post-Combat Reward Detection
+    # =========================================================================
+
+    def detect_post_combat_issues(
+        self,
+        previous_combat_state: dict[str, Any] | None,
+        state_changes: dict[str, Any],
+    ) -> list[str]:
+        """
+        Detect issues after combat ends, such as missing XP awards.
+
+        Args:
+            previous_combat_state: Combat state before the update
+            state_changes: The state changes being applied
+
+        Returns:
+            List of warning messages
+        """
+        warnings: list[str] = []
+
+        # Normalize inputs - handle None and non-dict types
+        if not previous_combat_state or not isinstance(previous_combat_state, dict):
+            return warnings
+        if not isinstance(state_changes, dict):
+            state_changes = {}
+
+        was_in_combat = previous_combat_state.get("in_combat", False)
+        is_now_in_combat = self.combat_state.get("in_combat", False)
+
+        # Check if combat just ended
+        if was_in_combat and not is_now_in_combat:
+            # Check if XP was awarded in the state changes
+            # Use `or {}` to handle explicit null values in state_changes
+            pc_changes = state_changes.get("player_character_data") or {}
+            if not isinstance(pc_changes, dict):
+                pc_changes = {}
+            xp_awarded = False
+
+            # Check various XP fields
+            if "xp" in pc_changes or "xp_current" in pc_changes:
+                xp_awarded = True
+            elif "experience" in pc_changes:
+                exp_changes = pc_changes["experience"]
+                if isinstance(exp_changes, dict) and "current" in exp_changes:
+                    xp_awarded = True
+                elif isinstance(exp_changes, (int, float, str)):
+                    xp_awarded = True
+
+            if not xp_awarded:
+                # Count only defeated enemies (hp <= 0, excluding player/allies)
+                combatants = previous_combat_state.get("combatants") or {}
+                if not isinstance(combatants, dict):
+                    combatants = {}
+                defeated_count = sum(
+                    1
+                    for combatant in combatants.values()
+                    if isinstance(combatant, dict)
+                    and _coerce_int(combatant.get("hp_current", 1), 1) <= 0
+                    and not combatant.get("is_player", False)
+                    and not combatant.get("is_ally", False)
+                )
+                if defeated_count == 0:
+                    # Fallback to combat_summary if combatants were already cleaned up
+                    combat_summary = previous_combat_state.get("combat_summary")
+                    if isinstance(combat_summary, dict):
+                        enemies_defeated = combat_summary.get("enemies_defeated", 0)
+                        enemies_defeated_int = _coerce_int(enemies_defeated, 0)
+                        defeated_count = max(defeated_count, enemies_defeated_int)
+                if defeated_count > 0:
+                    warnings.append(
+                        f"Combat ended but no XP was awarded. "
+                        f"Consider awarding XP for {defeated_count} defeated enemy/enemies."
+                    )
+
+        return warnings
+
 
 def validate_and_correct_state(
-    state_dict: dict[str, Any], previous_world_time: dict[str, Any] | None = None
-) -> dict[str, Any]:
+    state_dict: dict[str, Any],
+    previous_world_time: dict[str, Any] | None = None,
+    return_corrections: bool = False,
+) -> dict[str, Any] | tuple[dict[str, Any], list[str]]:
     """
     Validate state dict and apply corrections before persistence.
 
     Uses GameState's internal validation logic.
+
+    Args:
+        state_dict: The state dictionary to validate
+        previous_world_time: Previous world time for monotonicity check
+        return_corrections: If True, returns tuple of (state, corrections_list)
+
+    Returns:
+        If return_corrections=False: corrected state dict
+        If return_corrections=True: tuple of (corrected state dict, list of correction messages)
     """
+    corrections: list[str] = []
+
     # Create temporary GameState to run validations
     temp_state = GameState.from_dict(state_dict.copy())
     if temp_state is None:
         logging_util.warning(
             "VALIDATION: Could not create GameState from dict, skipping validation"
         )
+        if return_corrections:
+            return state_dict, corrections
         return state_dict
 
     # 1. XP/Level Validation (using Main's logic)
     # This modifies temp_state in-place (auto-corrects)
     xp_result = temp_state.validate_xp_level(strict=False)
-    if xp_result.get("corrected") or xp_result.get("computed_level"):
+    if xp_result.get("corrected"):
+        provided = xp_result.get("provided_level")
+        expected = xp_result.get("expected_level")
+        corrections.append(
+            f"Level auto-corrected from {provided} to {expected} based on XP"
+        )
         logging_util.info(f"XP Validation applied corrections: {xp_result}")
+    elif xp_result.get("computed_level"):
+        corrections.append(
+            f"Level computed as {xp_result.get('computed_level')} from XP"
+        )
+        logging_util.info(f"XP Validation applied corrections: {xp_result}")
+    if xp_result.get("clamped_xp") is not None:
+        corrections.append("Negative XP clamped to 0")
+    if xp_result.get("clamped_level") is not None:
+        corrections.append(
+            f"Level clamped to valid range (1-20): {xp_result.get('clamped_level')}"
+        )
 
     # 2. Time Monotonicity (using Main's logic)
     # Get current time from world_data in state_dict (not temp_state, as we want to check input)
     new_time = (state_dict.get("world_data", {}) or {}).get("world_time")
     if new_time:
         # Note: In strict mode this raises, in default mode it just warns
-        temp_state.validate_time_monotonicity(
+        time_result = temp_state.validate_time_monotonicity(
             new_time, strict=False, previous_time=previous_world_time
         )
+        if time_result.get("warning"):
+            corrections.append(f"Time warning: {time_result.get('message', 'time regression detected')}")
 
-    return temp_state.to_dict()
+    result_state = temp_state.to_dict()
+
+    if return_corrections:
+        return result_state, corrections
+    return result_state
 
 
 def roll_dice(notation: str) -> DiceRollResult:

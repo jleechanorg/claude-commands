@@ -448,6 +448,134 @@ class PromptBuilder:
             "After the background summary, proceed with the normal opening scene and narrative.\n\n"
         )
 
+    def build_character_identity_block(self) -> str:
+        """
+        Build character identity block for system prompts.
+
+        This ensures the LLM always has access to immutable character facts
+        like name, gender, pronouns, and key relationships, preventing
+        misgendering and identity confusion.
+
+        Returns:
+            Formatted string block or empty string if no game state
+        """
+        if not self.game_state:
+            return ""
+
+        # Use the GameState method if available
+        if hasattr(self.game_state, "get_character_identity_block"):
+            return self.game_state.get_character_identity_block()
+
+        # Fallback for dict-based game state
+        pc = None
+        if hasattr(self.game_state, "player_character_data"):
+            pc = self.game_state.player_character_data
+        elif isinstance(self.game_state, dict):
+            pc = self.game_state.get("player_character_data", {})
+
+        if not pc or not isinstance(pc, dict):
+            return ""
+
+        lines = ["## Character Identity (IMMUTABLE)"]
+
+        # Name
+        name = pc.get("name")
+        if name:
+            lines.append(f"- **Name**: {name}")
+
+        # Gender and pronouns - handle None values properly
+        gender_raw = pc.get("gender")
+        gender = str(gender_raw).lower() if gender_raw else ""
+        if gender:
+            if gender in ("female", "woman", "f"):
+                lines.append("- **Gender**: Female (she/her)")
+                lines.append(
+                    "- **NEVER** refer to this character as 'he', 'him', "
+                    "or use male-gendered familial terms for them"
+                )
+            elif gender in ("male", "man", "m"):
+                lines.append("- **Gender**: Male (he/him)")
+                lines.append(
+                    "- **NEVER** refer to this character as 'she', 'her', "
+                    "or use female-gendered familial terms for them"
+                )
+            else:
+                lines.append(f"- **Gender**: {gender}")
+
+        # Race
+        race = pc.get("race")
+        if race:
+            lines.append(f"- **Race**: {race}")
+
+        # Class
+        char_class = pc.get("class") or pc.get("character_class")
+        if char_class:
+            lines.append(f"- **Class**: {char_class}")
+
+        # Key relationships
+        relationships = pc.get("relationships", {})
+        if isinstance(relationships, dict) and relationships:
+            lines.append("- **Key Relationships**:")
+            for rel_name, rel_type in relationships.items():
+                lines.append(f"  - {rel_name}: {rel_type}")
+
+        # Parentage (important for characters like Alexiel)
+        parentage = pc.get("parentage") or pc.get("parents")
+        if parentage:
+            if isinstance(parentage, dict):
+                for parent_type, parent_name in parentage.items():
+                    lines.append(f"- **{parent_type.title()}**: {parent_name}")
+            elif isinstance(parentage, str):
+                lines.append(f"- **Parentage**: {parentage}")
+
+        if len(lines) == 1:
+            return ""  # Only header, no actual data
+
+        return "\n".join(lines)
+
+    def build_god_mode_directives_block(self) -> str:
+        """
+        Build god mode directives block for system prompts.
+
+        These are player-defined rules that persist across sessions
+        and MUST be followed by the LLM.
+
+        Returns:
+            Formatted string block or empty string if no directives
+        """
+        if not self.game_state:
+            return ""
+
+        # Use the GameState method if available
+        if hasattr(self.game_state, "get_god_mode_directives_block"):
+            return self.game_state.get_god_mode_directives_block()
+
+        # Fallback for dict-based game state
+        custom_state = None
+        if hasattr(self.game_state, "custom_campaign_state"):
+            custom_state = self.game_state.custom_campaign_state
+        elif isinstance(self.game_state, dict):
+            custom_state = self.game_state.get("custom_campaign_state", {})
+
+        if not custom_state or not isinstance(custom_state, dict):
+            return ""
+
+        directives = custom_state.get("god_mode_directives", [])
+        if not directives:
+            return ""
+
+        lines = ["## Active God Mode Directives"]
+        lines.append("The following rules were set by the player and MUST be followed:")
+
+        for i, directive in enumerate(directives, 1):
+            if isinstance(directive, dict):
+                rule = directive.get("rule", str(directive))
+            else:
+                rule = str(directive)
+            lines.append(f"{i}. {rule}")
+
+        return "\n".join(lines)
+
     def build_continuation_reminder(self) -> str:
         """
         Build reminders for story continuation, especially planning blocks.
@@ -594,7 +722,26 @@ class PromptBuilder:
         """
         Finalize the system instructions by adding world instructions.
         Returns the complete system instruction string.
+
+        Includes:
+        - Character identity block (immutable facts like name, gender, pronouns)
+        - God mode directives (player-defined rules that persist across sessions)
+        - World instructions (if requested)
         """
+        # Add character identity block early (after core instructions)
+        # This ensures the LLM always knows immutable character facts
+        identity_block = self.build_character_identity_block()
+        if identity_block:
+            parts.insert(1, identity_block)  # Insert after first (master directive)
+
+        # Add god mode directives (player-defined rules)
+        # These MUST be followed by the LLM
+        directives_block = self.build_god_mode_directives_block()
+        if directives_block:
+            # Insert after identity block (or after master directive if no identity)
+            insert_pos = 2 if identity_block else 1
+            parts.insert(insert_pos, directives_block)
+
         # Add world instructions if requested
         if use_default_world:
             _add_world_instructions_to_system(parts)

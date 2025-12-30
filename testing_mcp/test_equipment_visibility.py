@@ -32,9 +32,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent))
 
 from mcp_client import MCPClient
+from lib.evidence_utils import get_evidence_dir
 
 PROJECT_ROOT = Path(__file__).parent.parent
-EVIDENCE_DIR = Path(__file__).parent / "evidence" / "equipment_visibility"
+
+# Evidence stored per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
+# No longer using testing_mcp/evidence/ - set dynamically in main()
 
 
 # ============================================================================
@@ -811,7 +814,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    # Evidence stored per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
+    evidence_dir = get_evidence_dir("equipment_visibility")
 
     print(f"\n{'='*70}")
     print("EQUIPMENT VISIBILITY TEST (Evidence Standards Compliant)")
@@ -1002,7 +1006,7 @@ def main() -> int:
         summary={"passed": passed, "failed": failed, "total": len(results)},
     )
 
-    evidence_path = save_evidence_bundle(EVIDENCE_DIR, bundle)
+    evidence_path = save_evidence_bundle(evidence_dir, bundle)
     print(f"\nEvidence saved to: {evidence_path}")
     print("  - evidence.json + checksum")
     print("  - api_responses.json + checksum")

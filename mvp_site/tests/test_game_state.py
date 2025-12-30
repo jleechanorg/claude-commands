@@ -346,6 +346,7 @@ class TestGameState(unittest.TestCase):
             "custom_campaign_state": {"attribute_system": "D&D", "arc_milestones": {}},
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
+            "player_turn": 0,
             "extra_field": "test_value",
             # Time pressure structures
             "time_sensitive_events": {},

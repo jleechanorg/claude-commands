@@ -62,6 +62,9 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
             constants.FIELD_GOD_MODE_RESPONSE: _get_structured_attr(
                 sr, constants.FIELD_GOD_MODE_RESPONSE, ""
             ),
+            constants.FIELD_DIRECTIVES: _get_structured_attr(
+                sr, constants.FIELD_DIRECTIVES, {}
+            ),
         }
 
         # Store a filtered subset of state_updates needed for Living World UI

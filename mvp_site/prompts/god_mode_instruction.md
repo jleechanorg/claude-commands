@@ -39,6 +39,10 @@ Always respond with valid JSON using this structure:
     "state_updates": {
         "path.to.field": "new_value"
     },
+    "directives": {
+        "add": ["Rule to remember going forward"],
+        "drop": ["Rule to stop following"]
+    },
     "planning_block": {
         "thinking": "What administrative options are available",
         "choices": {
@@ -62,7 +66,34 @@ Always respond with valid JSON using this structure:
 - `session_header`: (string) **OPTIONAL** - Current character status for reference (include for clarity; omit when query-only)
 - `god_mode_response`: (string) **REQUIRED** - Confirmation of changes made
 - `state_updates`: (object) **REQUIRED** - The actual state modifications (can be `{}` if query-only)
+- `directives`: (object) **OPTIONAL** - Ongoing rules to add or drop (see below)
 - `planning_block.choices`: (object) **REQUIRED** - Must include `god:return_story` option
+
+## Directives Field
+
+Use the `directives` field when the user establishes or removes **ongoing rules** that should persist across the campaign. These are NOT one-time state changes - they are behavioral instructions for you to follow.
+
+**When to use `directives.add`:**
+- User says "stop forgetting X" → add "Always X"
+- User says "remember to always X" → add "Always X"
+- User says "keep track of X" → add "Track X and apply it"
+- User says "from now on, X" → add "X"
+
+**When to use `directives.drop`:**
+- User says "forget about the X rule"
+- User says "stop doing X"
+- User says "remove the directive about X"
+
+**Examples:**
+
+| User Says | Directive Action |
+|-----------|------------------|
+| "stop forgetting to use Foresight" | `"add": ["Always apply Foresight advantage to rolls"]` |
+| "remember to track masked level" | `"add": ["Track masked_level separately from real level"]` |
+| "always roll with advantage on Stealth" | `"add": ["Apply advantage to all Stealth rolls"]` |
+| "forget the extra attack rule" | `"drop": ["Extra attack applies to Twin Stings"]` |
+
+**Important:** Only add directives for things that should be remembered across turns. One-time modifications go in `state_updates`.
 
 ## State Update Patterns
 

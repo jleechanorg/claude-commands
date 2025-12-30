@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-DEFAULT_EVIDENCE_DIR = Path(__file__).parent.parent / "evidence"
+# Server logs go to /tmp per evidence-standards.md
+DEFAULT_LOG_DIR = Path("/tmp/mcp_server_logs")
 
 
 @dataclass
@@ -130,7 +131,7 @@ def start_local_mcp_server(
     _load_secret(env, secret_name="cerebras-api-key", env_var="CEREBRAS_API_KEY")
     _load_secret(env, secret_name="openrouter-api-key", env_var="OPENROUTER_API_KEY")
 
-    log_root = log_dir or DEFAULT_EVIDENCE_DIR
+    log_root = log_dir or DEFAULT_LOG_DIR
     log_root.mkdir(parents=True, exist_ok=True)
     log_path = log_root / f"local_mcp_{port}.log"
     log_f = open(log_path, "wb")  # noqa: SIM115

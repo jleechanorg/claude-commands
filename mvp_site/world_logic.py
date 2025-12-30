@@ -109,6 +109,48 @@ _apply_timestamp_to_world_time = world_time.apply_timestamp_to_world_time
 _format_world_time_for_prompt = world_time.format_world_time_for_prompt
 
 
+def _extract_xp_from_player_data(pc_data: dict[str, Any]) -> int:
+    """Extract XP value from player_character_data dict.
+
+    Handles int, float, and string formats (including commas like "2,700").
+    Returns 0 if XP cannot be parsed or is not present.
+
+    Args:
+        pc_data: Player character data dictionary
+
+    Returns:
+        Integer XP value, or 0 if not found/parseable
+    """
+    if not isinstance(pc_data, dict):
+        return 0
+
+    def _parse_numeric(val: Any) -> int:
+        if isinstance(val, (int, float)):
+            return int(val)
+        if isinstance(val, str):
+            # Remove commas and whitespace, then try to parse
+            cleaned = val.replace(",", "").replace(" ", "").strip()
+            if not cleaned:
+                return 0
+            try:
+                return int(float(cleaned))
+            except (ValueError, TypeError):
+                return 0
+        return 0
+
+    exp = pc_data.get("experience")
+    if isinstance(exp, dict):
+        return _parse_numeric(exp.get("current", 0))
+    if exp is not None:
+        return _parse_numeric(exp)
+    xp = pc_data.get("xp")
+    if xp is None:
+        xp = pc_data.get("xp_current")
+    if xp is not None:
+        return _parse_numeric(xp)
+    return 0
+
+
 def _annotate_entry(entry: dict[str, Any], turn: int, scene: int) -> None:
     """Add turn/scene to a dict entry if not already present."""
     if "turn_generated" not in entry:
@@ -465,7 +507,7 @@ async def _process_rewards_followup(
     updated_game_state_dict: dict[str, Any],
     current_state_as_dict: dict[str, Any],
     original_world_time: dict[str, Any] | None,
-    story_context: str,
+    story_context: list[dict[str, Any]],
     selected_prompts: list[str],
     use_default_world: bool,
     user_id: str,
@@ -559,10 +601,14 @@ async def _process_rewards_followup(
             updated_game_state_dict,
             original_state_dict=current_state_as_dict,
         )
-        updated_game_state_dict = validate_and_correct_state(
+        updated_game_state_dict, rewards_corrections = validate_and_correct_state(
             updated_game_state_dict,
             previous_world_time=original_world_time,
+            return_corrections=True,
         )
+        # Store rewards corrections so they reach system_warnings in main flow
+        if rewards_corrections:
+            prevention_extras.setdefault("rewards_corrections", []).extend(rewards_corrections)
     else:
         # Rewards already applied; avoid double-awarding state changes.
         updated_game_state_dict = _enforce_rewards_processed_flag(
@@ -1175,6 +1221,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         if not campaign_data:
             return {KEY_ERROR: "Campaign not found", "status_code": 404}
 
+        story_context = story_context or []
+
         # Get campaign settings
         selected_prompts = campaign_data.get("selected_prompts", [])
         use_default_world = campaign_data.get("use_default_world", False)
@@ -1369,6 +1417,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             (current_state_as_dict.get("world_data") or {}).get("world_time")
         )
 
+        # Capture previous combat state for post-combat warning detection
+        previous_combat_state = copy.deepcopy(current_state_as_dict.get("combat_state", {}))
+
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
             current_state_as_dict, response.get("state_changes", {})
@@ -1385,12 +1436,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         new_world_time = (
             response.get("state_changes", {}).get("world_data") or {}
         ).get("world_time")
-        updated_game_state_dict = validate_game_state_updates(
-            updated_game_state_dict,
-            new_time=new_world_time,
-            original_time=original_world_time,
-        )
-
         # SERVER-SIDE ENFORCEMENT: Apply for any mode that can award XP/rewards
         # This ensures rewards_processed is set when combat ends, encounters complete, etc.
         # Pass original state for XP comparison (detects XP increases even without summary structures)
@@ -1399,13 +1444,15 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 updated_game_state_dict, original_state_dict=current_state_as_dict
             )
 
-        # Validate and auto-correct state before persistence
-        updated_game_state_dict = validate_and_correct_state(
-            updated_game_state_dict, previous_world_time=original_world_time
+        # Validate and auto-correct state before persistence, capturing any corrections made
+        updated_game_state_dict, state_corrections = validate_and_correct_state(
+            updated_game_state_dict, previous_world_time=original_world_time, return_corrections=True
         )
 
         # If rewards are now pending but we did NOT run RewardsAgent, run it once
         # to ensure user-visible rewards output.
+        # NOTE: This must happen BEFORE post-combat detection to avoid false-positive
+        # "no XP awarded" warnings when RewardsAgent awards XP in the followup.
         try:
             updated_game_state_dict, llm_response_obj, prevention_extras = (
                 await _process_rewards_followup(
@@ -1424,10 +1471,118 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         except Exception as e:
             logging_util.warning(f"⚠️ REWARDS_FOLLOWUP failed: {e}")
 
+        # Re-validate state after rewards followup to capture any additional corrections
+        # This ensures corrections from RewardsAgent state changes are surfaced to user
+        updated_game_state_dict, followup_corrections = validate_and_correct_state(
+            updated_game_state_dict, previous_world_time=original_world_time, return_corrections=True
+        )
+        # Merge corrections (deduplicate since some may overlap)
+        all_corrections = state_corrections + [c for c in followup_corrections if c not in state_corrections]
+
+        # Detect post-combat issues AFTER rewards followup to avoid false positives
+        # when RewardsAgent awards XP during the followup
+        updated_game_state_obj = GameState.from_dict(updated_game_state_dict)
+        post_combat_warnings = []
+        if updated_game_state_obj:
+            # Compare final state against original to detect if XP was ever awarded
+            final_pc = updated_game_state_dict.get("player_character_data", {})
+            original_pc = current_state_as_dict.get("player_character_data", {})
+            final_xp = _extract_xp_from_player_data(final_pc)
+            original_xp = _extract_xp_from_player_data(original_pc)
+
+            # Only warn if XP didn't increase at all (including from rewards followup)
+            xp_increased = final_xp > original_xp
+            if not xp_increased:
+                post_combat_warnings = updated_game_state_obj.detect_post_combat_issues(
+                    previous_combat_state, response.get("state_changes", {})
+                )
+
+        # Combine all system warnings (including any from rewards followup)
+        rewards_corrections = prevention_extras.get("rewards_corrections", [])
+        system_warnings = all_corrections + rewards_corrections + post_combat_warnings
+
         # Increment player turn counter for non-GOD mode actions
         if not is_god_mode:
             current_turn = updated_game_state_dict.get("player_turn", 0)
             updated_game_state_dict["player_turn"] = current_turn + 1
+        else:
+            # GOD MODE: Process directives from LLM response
+            # The GodModeAgent analyzes the user's message and returns directives
+            # Format: {"directives": {"add": ["rule1", ...], "drop": ["rule2", ...]}}
+            early_structured = structured_fields_utils.extract_structured_fields(
+                llm_response_obj
+            )
+            llm_directives = early_structured.get("directives", {})
+            if not isinstance(llm_directives, dict):
+                llm_directives = {}
+
+            def _normalize_directive_list(value: Any) -> list[str]:
+                if value is None:
+                    return []
+                if isinstance(value, str):
+                    return [value] if value.strip() else []
+                if isinstance(value, dict):
+                    rule = value.get("rule")
+                    return [rule] if isinstance(rule, str) and rule.strip() else []
+                if isinstance(value, list):
+                    normalized: list[str] = []
+                    for item in value:
+                        if isinstance(item, str):
+                            if item.strip():
+                                normalized.append(item)
+                        elif isinstance(item, dict):
+                            rule = item.get("rule")
+                            if isinstance(rule, str) and rule.strip():
+                                normalized.append(rule)
+                    return normalized
+                return []
+
+            directives_to_add = _normalize_directive_list(llm_directives.get("add"))
+            directives_to_drop = _normalize_directive_list(llm_directives.get("drop"))
+
+            ccs = updated_game_state_dict.setdefault("custom_campaign_state", {}) or {}
+            directives_list = ccs.setdefault("god_mode_directives", [])
+
+            # Process directives to drop (remove matching rules)
+            if directives_to_drop:
+                drop_lower = [d.strip().lower() for d in directives_to_drop if d]
+                original_count = len(directives_list)
+
+                def _get_rule_lower(d: Any) -> str:
+                    """Safely extract and lowercase a rule, handling None values."""
+                    if isinstance(d, dict):
+                        rule = d.get("rule")
+                        return (rule.strip().lower() if isinstance(rule, str) else "")
+                    return str(d).strip().lower() if d else ""
+
+                directives_list[:] = [
+                    d for d in directives_list
+                    if _get_rule_lower(d) not in drop_lower
+                ]
+                dropped_count = original_count - len(directives_list)
+                if dropped_count > 0:
+                    logging_util.info(f"GOD MODE: Dropped {dropped_count} directives")
+
+            # Process directives to add (avoid duplicates, case-insensitive)
+            for new_rule in directives_to_add:
+                if not new_rule or not isinstance(new_rule, str):
+                    continue
+                # Strip whitespace from new rule
+                new_rule_clean = new_rule.strip()
+                if not new_rule_clean:
+                    continue
+                # Case-insensitive duplicate check
+                existing_rules_lower = [
+                    (d.get("rule", "").strip().lower() if isinstance(d, dict) else str(d).strip().lower())
+                    for d in directives_list
+                    if (isinstance(d, dict) and d.get("rule")) or (not isinstance(d, dict) and d)
+                ]
+                if new_rule_clean.lower() not in existing_rules_lower:
+                    directives_list.append({
+                        "rule": new_rule_clean,
+                        "added": datetime.now(timezone.utc).isoformat(),
+                    })
+                    logging_util.info(f"GOD MODE DIRECTIVE ADDED: {new_rule_clean}")
 
         # Annotate world_events entries with turn/scene numbers for UI display
         player_turn = updated_game_state_dict.get("player_turn", 1)
@@ -1639,6 +1794,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             unified_response["temporal_correction_attempts"] = prevention_extras.get(
                 "temporal_correction_attempts", 0
             )
+
+        # Add system warnings from validation corrections and post-combat checks
+        if system_warnings:
+            unified_response["system_warnings"] = system_warnings
+            # Log warnings for visibility
+            for warning in system_warnings:
+                logging_util.warning(f"SYSTEM WARNING: {warning}")
 
         # Track story mode sequence ID for character mode
         if mode == constants.MODE_CHARACTER:
@@ -2473,6 +2635,7 @@ def _handle_update_state_command(
             )
 
         current_state_dict = current_game_state.to_dict()
+        previous_combat_state = copy.deepcopy(current_state_dict.get("combat_state", {}))
 
         # Capture original time before update for accurate monotonicity validation
         # Note: current_game_state is a GameState instance, use dict version
@@ -2490,16 +2653,7 @@ def _handle_update_state_command(
             updated_state_dict, state_changes
         )
 
-        # Validate XP/level and time consistency before persisting
-        # Use `or {}` to handle both missing and explicitly-null world_data
-        new_world_time = (state_changes.get("world_data") or {}).get("world_time")
-        updated_state_dict = validate_game_state_updates(
-            updated_state_dict,
-            new_time=new_world_time,
-            original_time=original_world_time,
-        )
-
-        # Convert back to GameState object after the update to validate
+        # Convert to GameState object for validation
         final_game_state = GameState.from_dict(updated_state_dict)
         if final_game_state is None:
             logging_util.error(
@@ -2510,19 +2664,62 @@ def _handle_update_state_command(
             )
 
         # Validate and auto-correct state before persistence
-        validated_state_dict = validate_and_correct_state(
-            final_game_state.to_dict(), previous_world_time=original_world_time
+        # Surface corrections to user so they see what was actually applied
+        validated_state_dict, corrections = validate_and_correct_state(
+            final_game_state.to_dict(),
+            previous_world_time=original_world_time,
+            return_corrections=True,
         )
+
+        # Detect post-combat warnings for GOD_MODE_UPDATE_STATE (no rewards followup here)
+        # Uses shared _extract_xp_from_player_data helper to avoid duplication with unified flow
+        post_combat_warnings: list[str] = []
+        try:
+            updated_game_state_obj = GameState.from_dict(validated_state_dict)
+            if updated_game_state_obj:
+                final_xp = _extract_xp_from_player_data(
+                    validated_state_dict.get("player_character_data", {})
+                )
+                original_xp = _extract_xp_from_player_data(
+                    current_state_dict.get("player_character_data", {})
+                )
+                if final_xp <= original_xp:
+                    post_combat_warnings = updated_game_state_obj.detect_post_combat_issues(
+                        previous_combat_state, state_changes
+                    )
+        except Exception as e:
+            logging_util.warning(f"POST_COMBAT warning detection failed: {e}")
+
+        system_warnings = corrections + post_combat_warnings
 
         firestore_service.update_campaign_game_state(
             user_id, campaign_id, validated_state_dict
         )
 
         log_message = format_game_state_updates(state_changes, for_html=False)
-        return {
+
+        # Build response with corrections if any were applied
+        response_parts = [
+            "[System Message: The following state changes were applied via GOD MODE]",
+            log_message,
+        ]
+        if corrections:
+            response_parts.append("\n[Auto-Corrections Applied]")
+            for correction in corrections:
+                response_parts.append(f"  - {correction}")
+        if post_combat_warnings:
+            response_parts.append("\n[System Warnings]")
+            for warning in post_combat_warnings:
+                response_parts.append(f"  - {warning}")
+
+        response_payload = {
             KEY_SUCCESS: True,
-            KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\n{log_message}",
+            KEY_RESPONSE: "\n".join(response_parts),
         }
+        if system_warnings:
+            response_payload["system_warnings"] = system_warnings
+
+        return response_payload
 
     except json.JSONDecodeError:
         return create_error_response(

@@ -154,8 +154,8 @@ def capture_server_health(server_url: str) -> dict[str, Any]:
         }
 
 
-# Legacy evidence dir for backward compatibility
-EVIDENCE_DIR = Path(__file__).parent / "evidence" / "level_up_xp"
+# Evidence stored per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
+# No longer using testing_mcp/evidence/ - see get_evidence_dir() above
 
 # D&D 5e XP thresholds - authoritative reference
 XP_THRESHOLDS = {
@@ -683,12 +683,6 @@ def run_tests(server_url: str) -> dict[str, Any]:
 - test_results.json.sha256 - Checksum for verification
 """
     write_with_checksum(evidence_base / "README.md", readme_content)
-
-    # Also save to legacy location for backward compatibility
-    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
-    legacy_file = EVIDENCE_DIR / f"test_run_{test_run_id}.json"
-    legacy_file.write_text(evidence_json)
-    print(f"Legacy evidence: {legacy_file}")
 
     return results
 

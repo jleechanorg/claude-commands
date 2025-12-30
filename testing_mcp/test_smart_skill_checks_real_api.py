@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from mcp_client import MCPClient
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 from lib.model_utils import DEFAULT_MODEL_MATRIX, settings_for_model, update_user_settings
+from lib.evidence_utils import get_evidence_dir
 
 # CRITICAL: These scenarios have NO combat keywords and NO explicit "Make a check" language
 # The LLM must intelligently decide a skill check is needed
@@ -320,11 +321,10 @@ def main() -> int:
         if not models:
             models = list(DEFAULT_MODEL_MATRIX)
 
-        # Setup evidence directory if requested
+        # Setup evidence directory if requested (per evidence-standards.md)
         evidence_dir = None
         if args.evidence:
-            evidence_dir = Path(__file__).parent / "evidence" / "smart_skill_checks"
-            evidence_dir.mkdir(parents=True, exist_ok=True)
+            evidence_dir = get_evidence_dir("smart_skill_checks")
             print(f"📁 Evidence directory: {evidence_dir}\n")
 
         all_passed = True

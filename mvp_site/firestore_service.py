@@ -493,6 +493,10 @@ def update_state_with_changes(
         f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}"
     )
 
+    # Normalize dotted keys in changes (e.g., "player_character_data.level" -> nested dict)
+    # This handles LLM responses that use dotted paths instead of nested structures
+    changes = _normalize_dotted_keys_in_place(changes)
+
     for key, value in changes.items():
         # Try each handler in order of precedence
 
@@ -599,6 +603,52 @@ def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
             expanded_dict[k] = v
             terminal_paths.add((k,))
     return expanded_dict
+
+
+def _normalize_dotted_keys_in_place(d: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize a dict by merging dotted-notation keys into nested structures.
+
+    Unlike _expand_dot_notation which creates a new dict, this function:
+    1. Works with existing nested structures in the dict
+    2. Merges dotted keys into those structures
+    3. Removes the original dotted keys
+
+    Example:
+        Input: {"player": {"name": "X"}, "player.level": 5}
+        Output: {"player": {"name": "X", "level": 5}}
+
+    This handles the common case where LLM outputs both nested objects AND
+    dotted paths for additional fields.
+    """
+    # Find all dotted keys
+    dotted_keys = [k for k in d.keys() if "." in k]
+
+    for dotted_key in dotted_keys:
+        parts = dotted_key.split(".")
+        value = d[dotted_key]
+
+        # Navigate/create nested structure
+        current = d
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = {}
+            elif not isinstance(current[part], dict):
+                # Can't merge into non-dict - skip this key
+                logging_util.warning(
+                    f"Cannot merge dotted key '{dotted_key}': "
+                    f"'{part}' is not a dict"
+                )
+                break
+            current = current[part]
+        else:
+            # Successfully navigated - set the value
+            final_key = parts[-1]
+            current[final_key] = value
+            # Remove the original dotted key
+            del d[dotted_key]
+
+    return d
 
 
 # json_serial and json_default_serializer are now imported from mvp_site.serialization
@@ -1294,6 +1344,10 @@ def update_campaign_game_state(
         # NOTE: This function now expects a COMPLETE game state dictionary.
         # The merge logic has been moved to the handle_interaction function in main.py
         # to ensure consistency across all update types (AI, GOD_MODE, etc.)
+
+        # Normalize dotted keys (e.g., "player_character_data.level" -> nested in player_character_data)
+        # This handles LLM output that uses both nested objects AND dotted paths
+        game_state_update = _normalize_dotted_keys_in_place(game_state_update)
 
         # Add the last updated timestamp before setting.
         game_state_update["last_state_update_timestamp"] = firestore.SERVER_TIMESTAMP

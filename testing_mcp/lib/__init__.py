@@ -20,6 +20,14 @@ from .campaign_utils import (
     get_campaign_state,
     ensure_game_state_seed,
 )
+from .evidence_utils import (
+    get_evidence_dir,
+    capture_git_provenance,
+    capture_server_runtime,
+    capture_server_health,
+    capture_full_provenance,
+    write_with_checksum,
+)
 
 __all__ = [
     # Model utilities
@@ -35,4 +43,11 @@ __all__ = [
     "process_action",
     "get_campaign_state",
     "ensure_game_state_seed",
+    # Evidence utilities
+    "get_evidence_dir",
+    "capture_git_provenance",
+    "capture_server_runtime",
+    "capture_server_health",
+    "capture_full_provenance",
+    "write_with_checksum",
 ]

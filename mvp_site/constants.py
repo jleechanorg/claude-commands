@@ -282,6 +282,7 @@ FIELD_DICE_AUDIT_EVENTS = "dice_audit_events"
 FIELD_RESOURCES = "resources"
 FIELD_DEBUG_INFO = "debug_info"
 FIELD_GOD_MODE_RESPONSE = "god_mode_response"
+FIELD_DIRECTIVES = "directives"  # God mode directives: {add: [...], drop: [...]}
 FIELD_STATE_UPDATES = "state_updates"
 KEY_USER_INPUT = "user_input"
 KEY_SELECTED_PROMPTS = "selected_prompts"

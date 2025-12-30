@@ -27,9 +27,9 @@ from test_dice_rolls_comprehensive import (  # noqa: E402
     start_local_mcp_server,
     update_user_settings,
 )
+from lib.evidence_utils import get_evidence_dir  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).parent.parent
-EVIDENCE_DIR = Path(__file__).parent / "evidence" / "chi_square_two_phase"
 
 
 def _pick_free_port() -> int:
@@ -49,8 +49,8 @@ def main() -> int:
     rolls_target = int(os.environ.get("CHI_SQUARE_ROLLS", "20"))
     threshold = float(os.environ.get("CHI_SQUARE_THRESHOLD", "46"))
 
-    evidence_dir = EVIDENCE_DIR
-    evidence_dir.mkdir(parents=True, exist_ok=True)
+    # Evidence stored per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
+    evidence_dir = get_evidence_dir("chi_square_two_phase")
 
     port = _pick_free_port()
     env_overrides: dict[str, str] = {

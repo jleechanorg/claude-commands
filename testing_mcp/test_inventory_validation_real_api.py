@@ -45,6 +45,7 @@ from lib.model_utils import (
     update_user_settings,
 )
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
+from lib.evidence_utils import get_evidence_dir
 from mcp_client import MCPClient
 
 # Character setup: Known inventory for validation
@@ -418,11 +419,10 @@ def main() -> int:  # noqa: PLR0912, PLR0915 - integration harness needs explici
         if not models:
             models = list(DEFAULT_MODEL_MATRIX)
 
-        # Setup evidence directory if requested
+        # Setup evidence directory if requested (per evidence-standards.md)
         evidence_dir = None
         if args.evidence:
-            evidence_dir = Path(__file__).parent / "evidence" / "inventory_validation"
-            evidence_dir.mkdir(parents=True, exist_ok=True)
+            evidence_dir = get_evidence_dir("inventory_validation")
             print(f"📁 Evidence directory: {evidence_dir}\n")
 
         all_passed = True
