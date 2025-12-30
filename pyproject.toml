@@ -70,6 +70,7 @@ ban-relative-imports = "parents"  # Only allow relative imports within same pack
 "test_*.py" = ["S101", "PLR2004", "ARG001"]
 "tests/*.py" = ["S101", "PLR2004", "ARG001"]
 "**/tests/*.py" = ["S101", "PLR2004", "ARG001"]
+"mvp_site/tests/test_equipment_display.py" = ["PT"]
 
 [tool.ruff.format]
 # Use double quotes for strings
