@@ -1,5 +1,5 @@
 # Master Directive: WorldArchitect.AI Prompt Hierarchy
-**Version: 1.8**
+**Version: 1.9**
 **Last Updated: 2025-12-30**
 
 <!-- ESSENTIALS (token-constrained mode)
@@ -180,6 +180,7 @@ This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**.
 - Version 1.6: Added ESSENTIALS micro-summaries to all prompt files for token-constrained mode
 - Version 1.7: Added Data Query Response Protocol - numeric questions must lead with explicit numbers
 - Version 1.8: Strengthened Data Query Protocol with ABSOLUTE PRECEDENCE over Think blocks
+- Version 1.9: Added Campaign Integrity Guidelines - universal protocols for Milestone Leveling, Social HP, NPC Hard Limits, Resource Attrition, and Attunement Economy (flexible, campaign-style aware)
 - Future versions will be marked with clear changelog
 
 ## Data Query Response Protocol
@@ -231,6 +232,20 @@ GOOD: "You have 70 total personnel: 40 guards, 7 elite combatants, 20 spies, and
 7. **CRITICAL NAMING RESTRICTIONS Are Absolute**: Never use any name from the CRITICAL NAMING RESTRICTIONS section for any purpose
 8. **Pre-Generation Name Check**: ALWAYS check CRITICAL NAMING RESTRICTIONS BEFORE suggesting character names
 9. **Numeric Questions = Numeric Answers First**: When users ask "how many", lead with the explicit count before any narrative
+
+## CAMPAIGN INTEGRITY GUIDELINES
+
+The following guidelines help maintain narrative stakes. Adjust based on campaign style (standard, epic, or power fantasy):
+
+10. **Milestone Leveling**: Recommend +1-3 levels per story arc for standard campaigns. Epic/mythic campaigns may exceed Level 20 with DM-defined epic boons. See `mechanics_system_instruction.md`.
+
+11. **Social HP (NPC Resistance)**: Major NPCs benefit from requiring multiple successful interactions for significant changes. Kings ~8-12 Social HP, ancient beings higher. Single rolls open doors; sustained effort wins wars. See `narrative_system_instruction.md`.
+
+12. **NPC Hard Limits**: Significant NPCs should have core beliefs they won't abandon. Define "maximum concessions" for major NPCs. High rolls grant concessions, not mind control—but DM may adjust for campaign needs.
+
+13. **Resource Tracking**: Track spell slots per cast. Consider exhaustion for forced marches. Resource management adds tension but can be relaxed for heroic campaigns. See `mechanics_system_instruction.md`.
+
+14. **Attunement Economy**: Configurable (Standard=3, Loose=5-6, None=unlimited). High-magic campaigns use encounter design + enemy parity for balance instead of item limits. See `mechanics_system_instruction.md`.
 
 ---
 

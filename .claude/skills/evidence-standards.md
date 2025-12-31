@@ -115,7 +115,11 @@ This ensures `sha256sum -c` works when run from the evidence directory.
 **ALL evidence files require checksums, including:**
 - Individual test result files (PASS_*.json, FAIL_*.json)
 - Aggregated files (request_responses.jsonl)
-- Server logs (artifacts/server.log)
+- Server logs (artifacts/server.log, local_mcp_*.log)
+- Browser logs when included as evidence
+
+**Log checksum requirement:** If logs are included as evidence (e.g., `local_mcp_*.log`,
+server logs, browser logs), each log file **must** have its own `.sha256`.
 
 ```python
 def _write_checksum_for_file(filepath: Path) -> None:
@@ -378,6 +382,10 @@ request_responses.jsonl   # One JSON object per line, each containing:
   }
 }
 ```
+
+**Required artifact:** `request_responses.jsonl` **and** `request_responses.jsonl.sha256`
+must be present in the evidence bundle for any LLM/API behavior claim. If missing,
+the claim is invalid.
 
 **Server configuration:**
 - Enable full request/response logging in your server

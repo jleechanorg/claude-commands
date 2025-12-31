@@ -109,11 +109,11 @@ def start_local_mcp_server(
     env_overrides: dict[str, str] | None = None,
     log_dir: Path | None = None,
 ) -> LocalServer:
-    """Start an HTTP-only MCP server (env overrides control mock/production behavior).
+    """Start an HTTP-only MCP server (real services only).
 
     Args:
         port: Port to listen on.
-        env_overrides: Environment variables to override (e.g., MOCK_SERVICES_MODE).
+        env_overrides: Environment variables to override (real mode enforced).
         log_dir: Directory to write server logs. Defaults to evidence dir.
 
     Returns:
@@ -132,6 +132,9 @@ def start_local_mcp_server(
 
     if env_overrides:
         env.update(env_overrides)
+
+    # Enforce real mode: mock services are never allowed.
+    env["MOCK_SERVICES_MODE"] = "false"
 
     # Some environments set WORLDAI_GOOGLE_APPLICATION_CREDENTIALS globally.
     # When present, the app requires an explicit dev-mode acknowledgement.

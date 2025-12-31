@@ -277,7 +277,9 @@ if __name__ == "__main__":
 **Evidence Standards Checklist (from `.claude/skills/evidence-standards.md`):**
 - [ ] Git provenance: HEAD commit, origin/main, changed files (via `capture_git_provenance()`)
 - [ ] Server environment: PID, port, env vars (via `capture_server_runtime()`)
-- [ ] Checksums: SHA256 for ALL evidence files including JSONL and server logs
+- [ ] Checksums: SHA256 for ALL evidence files including JSONL and server logs (via `write_with_checksum()`)
+- [ ] Log checksums: any `*.log` evidence file has a matching `.sha256`
+- [ ] LLM/API claims: `request_responses.jsonl` + `.sha256` present when behavior is asserted
 - [ ] Timestamp synchronization: collect all evidence in one pass
 - [ ] Documentation-Data alignment: derive claims from actual data
 - [ ] Centralized utilities: use `lib/evidence_utils.py`
@@ -285,6 +287,7 @@ if __name__ == "__main__":
 - [ ] JSONL file: create `request_responses.jsonl` with full request/response pairs
 - [ ] Server logs: copy to `artifacts/server.log` with checksum
 - [ ] Evidence mode: document capture approach with `evidence_mode` field
+- [ ] Post-setup validation: confirm `GOD_MODE_UPDATE_STATE` did not auto-correct state (or record warning)
 
 ### Phase 4: Verify Real Mode
 
@@ -361,6 +364,13 @@ def verify_real_mode(server_url):
     response = requests.get(f"{server_url}/health")
     assert response.status_code == 200
     assert "mock" not in response.text.lower()
+```
+
+### 4. LLM/API Behavior Evidence (when applicable)
+```python
+# If the test asserts LLM/API behavior, write request/response capture:
+write_with_checksum(evidence_dir / "request_responses.jsonl", jsonl_text)
+# And ensure any log evidence has a .sha256
 ```
 
 > Wrap git calls in try/except so missing remotes or detached HEADs surface clear

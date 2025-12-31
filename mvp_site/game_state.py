@@ -1401,7 +1401,7 @@ class GameState:
         # Store original level BEFORE clamping (per docstring: "Original level value")
         result["provided_level"] = provided_level
 
-        # Clamp level to valid range (1-20)
+        # Clamp level minimum to 1 (no max - epic levels 21+ allowed)
         if provided_level < 1:
             result["clamped_level"] = 1
             logging_util.warning(f"XP validation: Level {provided_level} clamped to 1")
@@ -1411,15 +1411,19 @@ class GameState:
             ):
                 self.player_character_data["level"] = provided_level
         elif provided_level > 20:
-            result["clamped_level"] = 20
-            logging_util.warning(f"XP validation: Level {provided_level} clamped to 20")
-            provided_level = 20
-            if hasattr(self, "player_character_data") and isinstance(
-                self.player_character_data, dict
-            ):
-                self.player_character_data["level"] = provided_level
+            # Epic levels (21+) are allowed for epic/mythic campaigns
+            # Log as info, not warning - this is intentional for epic play
+            result["epic_level"] = True
+            logging_util.info(f"Epic level detected: Level {provided_level} (beyond standard D&D 5e cap)")
 
-        # Check for mismatch
+        # Check for mismatch (skip XP validation for epic levels 21+)
+        # Epic levels are set by the LLM for epic/mythic campaigns and don't follow XP table
+        if provided_level > 20:
+            # Epic level - valid by definition, no XP-based validation needed
+            result["valid"] = True
+            result["epic_level"] = True
+            return result
+
         if provided_level != expected_level:
             result["valid"] = False
             result["corrected"] = True
@@ -1784,7 +1788,11 @@ def validate_and_correct_state(
         corrections.append("Negative XP clamped to 0")
     if xp_result.get("clamped_level") is not None:
         corrections.append(
-            f"Level clamped to valid range (1-20): {xp_result.get('clamped_level')}"
+            f"Level clamped to minimum 1: {xp_result.get('clamped_level')}"
+        )
+    if xp_result.get("epic_level"):
+        corrections.append(
+            f"Epic level {xp_result.get('provided_level')} accepted (beyond standard D&D 5e)"
         )
 
     # 2. Time Monotonicity (using Main's logic)

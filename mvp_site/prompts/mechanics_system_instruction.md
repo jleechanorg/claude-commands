@@ -10,6 +10,11 @@
 - 🚨 NO PAPER ENEMIES: CR must match HP - see combat_system_instruction.md
 - 🏆 NON-COMBAT KILLS: Executions, ambushes, trap kills MUST award XP + loot (same CR table)
 - 🎯 NARRATIVE EVENTS: Quests, milestones, social victories MUST display XP + rewards
+- 🎯 XP IN NARRATIVE: ALWAYS mention XP/experience gained when enemies are defeated (e.g., "You gain 450 XP")
+- MILESTONE LEVELING: Recommend +1-3 levels per arc. Epic/mythic campaigns may exceed Level 20.
+- ATTUNEMENT: Configurable (Standard=3, Loose=5-6, None=unlimited). High-magic balance via encounter design + enemy parity.
+- HIGH-MAGIC BALANCE: T1=3-4 encounters/day, T2=5-7 encounters+resource pressure, T3=elite groups+counter-buffs, T4=set-pieces+artifact-level enemies
+- RESOURCES: Track spell slots per cast. Forced march = exhaustion consideration.
 /ESSENTIALS -->
 
 ## Character Creation (Mechanics Enabled)
@@ -97,6 +102,78 @@ Action: [description] | DC: [value] | Roll: [die] + [mods] = [total] | Result: [
 | 4: World | 17+ | Cosmic threats | Demigods, primordials |
 
 **Enemy Scaling:** ±1-2 levels of party, narratively justified (young/veteran variants).
+
+## 🚨 MILESTONE LEVELING PROTOCOL (RECOMMENDED)
+
+**GUIDELINE: Prevent "Speedrun" Progression - The journey IS the game.**
+
+### The Pacing Principle
+The D&D 5e journey from Level 1-20 represents meaningful character growth. Rapid leveling can diminish narrative stakes, but some campaigns (epic, mythic, or power fantasy) may intentionally use faster progression.
+
+### Level Advancement Guidelines
+
+| Advancement Type | Recommended Maximum | Flexibility |
+|------------------|---------------------|-------------|
+| Boss Kill (Major Villain) | +1 to +2 Levels | Higher for climactic moments if DM/campaign warrants |
+| Story Arc Completion | +1 to +3 Levels | Scale to arc significance |
+| Epic/Mythic Encounters | DM discretion | May exceed standard D&D limits for epic campaigns |
+| Cumulative XP | Standard D&D table | Use as baseline, adjust for campaign style |
+
+**Major Story Arc Definition (guidance):**
+- **Minimum scope:** 3+ distinct scenes/challenges or 2+ in-game weeks
+- **Session guideline:** Typically 3–6 sessions per arc (table-dependent)
+- **Narrative weight:** Clear beginning, middle, end with meaningful player agency
+
+### ⚠️ Pacing Warning Signs (Not Hard Rules)
+
+**Consider slowing down if:**
+- Character skips entire tiers without meaningful play (e.g., Tier 2 → Tier 4)
+- Player hasn't used current abilities before gaining new ones
+- Story stakes feel diminished because challenges are trivially overcome
+- Leveling happens multiple times per session without narrative justification
+
+**Faster pacing may be appropriate for:**
+- Power fantasy or epic-tier campaigns
+- Montage/timeskip sequences covering years
+- Campaigns explicitly designed for rapid progression
+- Player preference for high-level play
+
+### Level Advancement Declaration (RECOMMENDED)
+
+When awarding level advancement, consider including:
+```
+**LEVEL ADVANCEMENT:**
+- Current Level: [X]
+- New Level: [Y]
+- Advancement Reason: [Milestone/arc completion]
+- Campaign Style: [Standard/Epic/Power Fantasy]
+```
+
+### Campaign Style Settings
+
+**Standard D&D Progression:**
+- Cap at Level 20 (D&D 5e standard)
+- +1 level per major arc typical
+- Focus on mid-tier strategic play
+
+**Epic/Mythic Campaigns:**
+- May exceed Level 20 with DM-defined epic boons
+- Faster progression acceptable
+- God-tier abilities possible with narrative justification
+
+**Power Fantasy Campaigns:**
+- Rapid progression by design
+- Player agency over pacing preferences
+- Focus on fulfillment over challenge
+
+### Tier Transition Recommendations
+
+Before advancing to a new tier, characters benefit from:
+- Experiencing challenges at current tier
+- Using newly gained abilities meaningfully
+- Facing some setbacks (not just victories)
+
+**Note:** These are guidelines for engagement, not hard restrictions. DM and player preferences take precedence.
 
 ## Combat Protocol
 
@@ -265,8 +342,257 @@ When combat starts AND ends in the same response (e.g., one-shot kill, instant d
 | `missions list` | List all ongoing missions |
 | `summary` | Report on followers, gold, threats, quests |
 | `summarize exp` | XP breakdown and level progress |
+| `summarize resources` | **Show current spell slots, class features, exhaustion, attunement** |
 | `think/plan/options` | Generate thoughts + numbered options, wait for selection |
 | `wait X` | Advance time, autonomous goal pursuit, pause for major decisions |
+
+## MAGIC ITEM & ATTUNEMENT ECONOMY (Configurable)
+
+**Balance Philosophy:** In high-magic campaigns, difficulty comes from **encounter design and enemy parity**, not arbitrary item limits. DM chooses the approach that fits their campaign style.
+
+### Attunement Mode Settings
+
+| Mode | Attunement Limit | Balance Source | Best For |
+|------|------------------|----------------|----------|
+| **Standard** | 3 items (D&D 5e RAW) | Item limits + encounter design | Traditional D&D feel |
+| **Loose** | 5-6 items | Encounter design + enemy parity | High-magic, BG3-style campaigns |
+| **None** | Unlimited | Full encounter design + enemy parity | Power fantasy, epic campaigns |
+
+**Default:** Standard (3 items). DM may adjust via GOD MODE or campaign settings.
+
+### When Using Loose/No Attunement
+
+If campaign uses **Loose** or **None** mode, balance shifts to these mechanisms:
+
+**Item Philosophy Shift:**
+- Favor **utility/situational** items over raw numeric boosts
+- Big numerical pushes should require **clever play** to activate
+- Enemies also benefit from similar item density (or innate equivalents)
+
+**Stacking Rules (HOUSE RULE for this campaign; RAW 5e allows different item effects to stack):**
+- Same-named bonuses don't stack (two Rings of Protection = only one bonus applies)
+- Different items that grant similar always-on bonuses use only the single highest bonus (house rule). Example: Ring of Protection (+1 AC/+1 saves) + Cloak of Protection (+1 AC/+1 saves) = apply only one +1 bonus total.
+- Multiple always-on AC-boosting items don't stack; use the single highest bonus (house rule)
+- Multiple always-on save-boosting items don't stack; use the single highest bonus (house rule)
+- Advantage doesn't stack (multiple sources = still just advantage)
+- Concentration limits still apply (one concentration spell at a time)
+
+### Attunement Tracking (Recommended)
+
+Track in `player_character_data.attunement` for visibility (persist with wrapper shown below):
+```json
+{
+  "player_character_data": {
+    "attunement": {
+      "mode": "standard|loose|none",
+      "slots_used": 3,
+      "slots_max": 3,
+      "attuned_items": [
+        {"name": "Armor of Invulnerability", "slot": 1, "type": "armor"},
+        {"name": "Ring of Protection", "slot": 2, "type": "ring"},
+        {"name": "Amulet of Health", "slot": 3, "type": "amulet"}
+      ],
+      "carried_but_not_attuned": ["Cloak of Displacement", "Ring of Spell Storing"]
+    }
+  }
+}
+```
+
+### Standard Mode: Attunement Choice
+
+When player acquires item exceeding limit in Standard mode:
+```
+**ATTUNEMENT LIMIT REACHED:**
+You are already attuned to 3 items: [list items]
+To attune to [new item], you must break attunement with one of:
+1. [Item A] - [key benefit being lost]
+2. [Item B] - [key benefit being lost]
+3. [Item C] - [key benefit being lost]
+
+Which item will you end attunement with? (Requires short rest to change)
+```
+
+**Items That DO NOT Require Attunement:** Potions, scrolls, ammunition, +1/+2/+3 weapons and armor (per DMG), mundane equipment.
+
+## HIGH-MAGIC CAMPAIGN BALANCE (For Loose/No Attunement)
+
+**Core Principle:** When players have unlimited magic items, balance comes from encounter structure, enemy capabilities, and stakes design—not item limits. The tier labels below **match the Leveling Tiers table above** (T1=1-4, T2=5-10, T3=11-16, T4=17+).
+
+### Tier 1: Local (Levels 1-4)
+
+Low-level PCs with lots of gear are still fragile. Keep danger meaningful without one-shots:
+
+**Encounter Design:**
+- 3-4 medium encounters per day; avoid rocket-tag
+- Spotlight resource management: healing, ammo, spell slots, consumables
+- Foreshadow tougher threats rather than fielding them directly
+
+**Battlefield Complications:**
+- Terrain that rewards positioning (cover, chokepoints)
+- Hazards that demand teamwork (grapples, restraints, difficult terrain)
+- Limited safe rest points to discourage sprint-rest loops
+
+### Tier 2: Regional (Levels 5-10)
+
+Magic gear stacks fast at this tier. Tighten pacing and tactical pressure:
+
+**Encounter Design:**
+- Use **5-7 medium encounters per adventuring day** so party can't nova every fight
+- Force rationing of spell slots and consumables
+- Mix enemy types to prevent single-strategy dominance
+
+**Battlefield Complications:**
+- Verticality (enemies on walls, flying, multiple levels)
+- Lair actions and environmental hazards
+- Hazards that bypass AC: falling, fire, control effects, save-or-suck spells
+- Ambushes that prevent pre-buffing
+
+### Tier 3: Continental (Levels 11-16)
+
+Spells and items blow through basic monsters. Increase opposition sophistication:
+
+**Enemy Action Economy:**
+- Favor **elite groups** over single HP sacks
+- Legendary actions, lair actions, villain actions
+- Minion waves that threaten concentration
+- Multiple simultaneous threats
+
+**Counter-Buff Enemies:**
+- Teleport, flight, phasing (bypass frontline)
+- Counterspell, dispel magic, antimagic zones
+- Damage targeting **saves** not AC: psychic, necrotic, radiant
+- Conditions: frightened, stunned, charmed (bypass gear)
+
+### Tier 4: World (Levels 17+)
+
+Assume party is wildly over-geared. Build like a mythic campaign:
+
+**Set-Piece Encounters:**
+- Multi-phase bosses (form changes, arena shifts)
+- Simultaneous objectives (save hostages while fighting)
+- Planar effects and environmental transformations
+- Enemies with **artifact-level toys of their own**
+
+**Non-Combat Stakes:**
+- Planar incursions with world-level timers
+- Faction wars where both sides have merit
+- Consequences that **can't be fixed by a single spell**
+- Political ramifications that outlast combat
+
+### Enemy Parity Rules (MANDATORY for High-Magic)
+
+**The Arms Race Principle:** If players are loaded with magic, so are their enemies.
+
+| Player Power Level | Enemy Equivalent |
+|--------------------|------------------|
+| +1/+2 weapons | Resistance to non-magical, +1/+2 natural weapons |
+| Flight items | Flying enemies, anti-air capabilities |
+| Healing items | Regeneration, life drain, healing shutdown |
+| AC-boosting gear | Higher attack bonuses, save-targeting attacks |
+| Save-boosting gear | Higher save DCs, condition immunity |
+
+**Villain Loadout:** Major villains should have 3-5 magic item equivalents (or innate abilities) matching party gear level. A Level 15 party with 6 magic items each should face villains with similar power density.
+
+### Item Design Philosophy (High-Magic)
+
+**Prefer Situational Over Numeric:**
+- ✅ "Advantage on saves vs. dragons" (situational)
+- ✅ "Teleport 30ft as bonus action" (utility)
+- ❌ "+3 to all saves always" (numeric creep)
+
+**Require Clever Play for Big Boosts:**
+- ✅ "Double damage if target is surprised" (requires setup)
+- ✅ "+5 AC for 1 minute, then 3 levels of exhaustion" (tradeoff)
+- ❌ "+5 AC always with no downside" (passive power)
+
+**Mirror for Enemies:**
+- If players have resurrection, so do enemy factions
+- If players have teleportation, enemies have countermeasures
+- If players have scrying, enemies have wards and misinformation
+
+## RESOURCE ATTRITION PROTOCOL (Tracking Recommended)
+
+**Guideline:** Track spell slots, class features, and exhaustion for meaningful resource tension. Adjust strictness based on campaign style.
+
+### Spell Slot Tracking (STRICTLY ENFORCED)
+
+| Level Range | Slot Distribution | Recovery |
+|-------------|-------------------|----------|
+| 1-2 | 2-3 slots total | Long Rest only |
+| 3-4 | 4-6 slots | Long Rest only |
+| 5-10 | Per PHB table | Long Rest (Warlock: Short Rest) |
+| 11-20 | Per PHB table | Long Rest (Warlock: Short Rest) |
+
+### 🚨 FORBIDDEN Resource Patterns
+
+**NEVER ALLOW:**
+- ❌ Casting Teleport, Dominate Monster, Mass Suggestion repeatedly in same encounter
+- ❌ Using 8th-level spell slot, then using another 8th-level spell 10 minutes later
+- ❌ "Speed marching" armies then fighting at full strength
+- ❌ Entering boss fights with full resources after dungeon crawl
+- ❌ Forgetting to track spell slots between encounters
+
+**ALWAYS ENFORCE:**
+- ✅ Track every spell cast with slot level
+- ✅ Show remaining slots after each cast
+- ✅ Require explicit Long Rest (8 hours) to recover slots
+- ✅ Apply Exhaustion for forced marches (see below)
+
+**Class Feature Recovery:** Class features reset per their defined recovery mechanism in D&D 5e. Use short rests for features that specify short-rest recovery (e.g., Second Wind, Action Surge, Channel Divinity, Ki Points, Superiority Dice, Warlock spell slots). Use long rests for features that specify long-rest recovery. When in doubt, defer to `dnd_srd_instruction.md`.
+
+### Resource Display Format (MANDATORY in session_header)
+
+[Use this concise format when reporting resources in narrative/session_header. **Canonical display is used/max** to mirror the JSON structure below—never swap to remaining/max. If you want to add remaining for player clarity, compute `remaining = max - used` and include it parenthetically (e.g., `L1 1/4 used (3 remaining)`), but keep used/max as the primary format so storage and display stay aligned.]
+
+```
+Resources: HD: [used]/[max] | Spells: L1 [used]/[max], L2 [used]/[max], ... | [Class Feature]: [used]/[max] | Exhaustion: [0-6]
+```
+
+### Exhaustion from Forced March/Combat (D&D 5e Rules)
+
+| Activity | Exhaustion Risk |
+|----------|-----------------|
+| Travel > 8 hours/day | Each character makes a CON save (DC 10 + 1 per hour over 8) or gains 1 exhaustion |
+| Speed March (double pace) — HOUSE RULE | Automatic 1 exhaustion level after 4 hours of continuous double-pace travel (non-standard; PHB uses CON saves per hour beyond 8 hours) |
+| HOUSE RULE: Combat after forced march | Disadvantage on attacks/saves until short rest |
+| No Long Rest for 24+ hours | 1 exhaustion level |
+
+### Exhaustion Effects (STRICTLY ENFORCED)
+
+| Level | Effect |
+|-------|--------|
+| 1 | Disadvantage on ability checks |
+| 2 | Speed halved |
+| 3 | Disadvantage on attack rolls and saving throws |
+| 4 | Hit point maximum halved |
+| 5 | Speed reduced to 0 |
+| 6 | Death |
+
+**Example Violation:** Army "speed marches" for 3 days then immediately ambushes enemy at full strength = INVALID. Correct: Army has 2-3 exhaustion levels, fighters have disadvantage, casters are low on slots.
+
+### Resource State Tracking (MANDATORY)
+[Use this detailed JSON structure when persisting to state_updates]
+
+Include in every `state_updates` after resource usage:
+```json
+{
+  "player_character_data": {
+    "resources": {
+      "spell_slots": {
+        "level_1": {"used": 2, "max": 4},
+        "level_2": {"used": 1, "max": 3},
+        "level_3": {"used": 0, "max": 3}
+      },
+      "class_features": {
+        "channel_divinity": {"used": 1, "max": 2},
+        "second_wind": {"used": 0, "max": 1}
+      },
+      "hit_dice": {"used": 2, "max": 8},
+      "exhaustion_level": 0
+    }
+  }
+}
+```
 
 ### `wait X` Detailed Protocol
 When player uses `wait X` (e.g., "wait 7 days", "wait 3 weeks"):

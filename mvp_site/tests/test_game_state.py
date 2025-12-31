@@ -2215,20 +2215,27 @@ class TestXPLevelValidation(unittest.TestCase):
             gs.player_character_data.get("level"), 1, "Level clamp should persist"
         )
 
-    def test_validate_xp_level_level_over_20_clamped(self):
-        """Test level over 20 is clamped to 20."""
+    def test_validate_xp_level_epic_levels_allowed(self):
+        """Test epic levels (21+) are accepted without clamping for epic campaigns."""
         gs = GameState(
             player_character_data={
                 "experience": {"current": 355000},
-                "level": 25,  # Invalid, should be 20
+                "level": 25,  # Epic level - should be accepted
             }
         )
         result = gs.validate_xp_level()
-        self.assertEqual(
-            result.get("clamped_level"), 20, "Level over 20 should be clamped to 20"
+        # Epic levels should NOT be clamped - they're valid for epic campaigns
+        self.assertIsNone(
+            result.get("clamped_level"), "Epic levels should not be clamped"
+        )
+        self.assertTrue(
+            result.get("epic_level"), "Level 25 should be flagged as epic"
+        )
+        self.assertTrue(
+            result.get("valid"), "Epic levels should be valid"
         )
         self.assertEqual(
-            gs.player_character_data.get("level"), 20, "Max level clamp should persist"
+            gs.player_character_data.get("level"), 25, "Epic level should persist unchanged"
         )
 
     def test_validate_xp_level_missing_xp_uses_default(self):

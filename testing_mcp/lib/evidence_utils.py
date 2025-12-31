@@ -194,6 +194,7 @@ def capture_server_runtime(
             "GOOGLE_APPLICATION_CREDENTIALS",
             "GEMINI_API_KEY",
             "FIREBASE_PROJECT_ID",
+            "PORT",  # Added per evidence-standards.md requirements
         ]
 
     server_info: dict[str, Any] = {
