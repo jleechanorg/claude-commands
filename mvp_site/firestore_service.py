@@ -493,6 +493,14 @@ def update_state_with_changes(
         f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}"
     )
 
+    # Auto-initialize completed_missions if active_missions exists but completed_missions doesn't
+    # Fix for older campaigns that predate the completed_missions field
+    if "active_missions" in state_to_update and "completed_missions" not in state_to_update:
+        logging_util.info(
+            "Auto-initializing completed_missions field for older campaign"
+        )
+        state_to_update["completed_missions"] = []
+
     # Normalize dotted keys in changes (e.g., "player_character_data.level" -> nested dict)
     # This handles LLM responses that use dotted paths instead of nested structures
     changes = _normalize_dotted_keys_in_place(changes)
@@ -512,8 +520,24 @@ def update_state_with_changes(
         if _handle_core_memories_safeguard(state_to_update, key, value):
             continue
 
-        # Case 4: Active missions smart conversion
+        # Case 4: Auto-initialize completed_missions if active_missions is being updated
+        # CRITICAL: Must run BEFORE smart conversion (which calls continue)
+        # Fix for bug where older campaigns don't have completed_missions field
+        if key == "active_missions" and "completed_missions" not in state_to_update:
+            logging_util.info(
+                "Auto-initializing completed_missions field (missing in older campaigns)"
+            )
+            state_to_update["completed_missions"] = []
+
+        # Case 4.5: Active missions smart conversion
         if key == "active_missions" and not isinstance(value, list):
+            MissionHandler.handle_active_missions_conversion(
+                state_to_update, key, value
+            )
+            continue
+
+        # Case 4.6: Completed missions smart conversion (same as active_missions)
+        if key == "completed_missions" and not isinstance(value, list):
             MissionHandler.handle_active_missions_conversion(
                 state_to_update, key, value
             )
