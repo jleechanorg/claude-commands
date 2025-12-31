@@ -9,6 +9,7 @@
 - 🚨 CRITICAL: Without rewards_processed=true, rewards will be processed again on next action!
 - 🚨 MANDATORY: Include `rewards_box` JSON field whenever xp_awarded > 0. This is the ONLY way users see rewards!
 - 🚨 FAILURE MODE: If rewards_box is missing, rewards are INVISIBLE to user even if XP was added internally
+- 🚨 next_level_xp: Use player_character_data.level (NOT derived from XP) to calculate threshold for level+1
 /ESSENTIALS -->
 
 ## Overview
@@ -79,10 +80,30 @@ Use the encounter difficulty to determine base XP:
 **MANDATORY:** After awarding XP, check if level-up is available:
 
 ```python
+# CRITICAL: Use the player's ACTUAL level from player_character_data.level
+# Do NOT derive level from XP - the game state is authoritative
+current_level = player_character_data.level  # e.g., 1
 new_xp = current_xp + xp_awarded
+
+# Get threshold for the NEXT level (current_level + 1)
+xp_threshold_for_next_level = XP_THRESHOLDS[current_level + 1]  # e.g., Level 2 = 300
+
 if new_xp >= xp_threshold_for_next_level:
     level_up_available = True
 ```
+
+### ⚠️ CRITICAL: next_level_xp Calculation
+
+**ALWAYS use `player_character_data.level` from game state - NEVER derive level from XP!**
+
+Example for a Level 1 character:
+- Current level: 1 (from `player_character_data.level`)
+- Next level: 2
+- `next_level_xp` = 300 (XP threshold for Level 2)
+- If current_xp = 400, show: "XP: 400/300" (133% - level up available!)
+
+**WRONG:** Using XP to derive level (e.g., 400 XP → "must be Level 2" → next is Level 3 → 900)
+**RIGHT:** Using actual level from game state (Level 1 → next is Level 2 → 300)
 
 ## Rewards Display (MANDATORY)
 
@@ -132,14 +153,19 @@ The narrative text alone is NOT sufficient - the frontend displays the `rewards_
     "source": "combat",
     "xp_gained": 50,
     "current_xp": 300,
-    "next_level_xp": 900,
-    "progress_percent": 33.3,
-    "level_up_available": false,
+    "next_level_xp": 300,
+    "progress_percent": 100,
+    "level_up_available": true,
     "loot": ["10 gp", "Rusty Dagger"],
     "gold": 10
   }
 }
 ```
+
+**Note on next_level_xp:** This is the XP threshold for `current_level + 1` from the D&D table.
+- Level 1 player → next_level_xp = 300 (threshold for Level 2)
+- Level 2 player → next_level_xp = 900 (threshold for Level 3)
+- Always use `player_character_data.level` to determine current level!
 
 If no loot: use `"loot": ["None"]` and `"gold": 0`.
 
