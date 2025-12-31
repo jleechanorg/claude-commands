@@ -748,6 +748,7 @@ class RewardsAgent(BaseAgent):
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
     ) -> str:
         """
         Build system instructions for rewards mode.
@@ -759,11 +760,18 @@ class RewardsAgent(BaseAgent):
         - D&D SRD (XP thresholds, level rules)
         - Mechanics (detailed level-up mechanics)
 
+        Args:
+            selected_prompts: List of prompt types to include
+            use_default_world: Whether to use default world background
+            include_continuation_reminder: Whether to include continuation reminder
+            turn_number: Current turn number
+            llm_requested_sections: Sections requested by LLM (compatibility parameter, unused)
+
         Returns:
             Complete system instruction string for rewards processing
         """
         # Parameters intentionally unused - rewards mode uses fixed prompt set
-        del selected_prompts, include_continuation_reminder, use_default_world, turn_number
+        del selected_prompts, include_continuation_reminder, use_default_world, turn_number, llm_requested_sections
 
         builder = self._prompt_builder
 

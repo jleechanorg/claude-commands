@@ -14,9 +14,10 @@ import time
 import unittest
 
 # ExitStack removed - using decorator-based patching instead
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from mvp_site import world_logic
+from mvp_site.game_state import GameState
 from mvp_site.debug_hybrid_system import convert_json_escape_sequences
 from mvp_site.prompt_utils import _convert_and_format_field
 
@@ -1721,6 +1722,452 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             )
         except (TypeError, AttributeError) as e:
             self.fail(f"Crashed on None experience: {e}")
+
+
+class TestCheckAndSetLevelUpPending(unittest.TestCase):
+    """Deterministic tests for server-side level-up detection helper."""
+
+    def test_sets_level_up_and_merges_existing_rewards(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6400},
+            },
+            "rewards_pending": {
+                "xp": 50,
+                "gold": 100,
+                "items": ["ring"],
+                "processed": False,
+                "source": "combat",
+            },
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6600},
+            },
+            "rewards_pending": {
+                "xp": 50,
+                "gold": 100,
+                "items": ["ring"],
+                "processed": False,
+                "source": "combat",
+            },
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        rewards_pending = result.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+        self.assertEqual(50, rewards_pending.get("xp"))
+        self.assertEqual(100, rewards_pending.get("gold"))
+        self.assertEqual(["ring"], rewards_pending.get("items"))
+        self.assertFalse(rewards_pending.get("processed"))
+        self.assertEqual("combat", rewards_pending.get("source"))
+
+    def test_no_level_up_when_threshold_not_crossed(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6100},
+            }
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6200},
+            }
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        rewards_pending = result.get("rewards_pending") or {}
+        self.assertFalse(rewards_pending.get("level_up_available", False))
+
+    def test_detects_missed_level_up_without_new_xp(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 8006},
+            }
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 8006},
+            }
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        rewards_pending = result.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+        self.assertEqual(0, rewards_pending.get("xp"))
+
+    def test_uses_original_level_before_validation(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6400},
+            }
+        }
+        updated_state = {
+            "player_character_data": {
+                # Level already auto-corrected to expected level (5)
+                "level": 5,
+                "experience": {"current": 6600},
+            }
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        rewards_pending = result.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+        self.assertEqual("level_up_4_to_5", rewards_pending.get("source_id"))
+
+    def test_skips_when_level_up_already_pending(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6400},
+            }
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6600},
+            },
+            "rewards_pending": {
+                "level_up_available": True,
+                "new_level": 5,
+                "processed": False,
+            },
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        self.assertEqual(updated_state, result)
+
+    def test_upgrades_pending_level_up_when_new_level_higher(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 7000},
+            },
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": 4,
+                # Large XP jump should upgrade a pending level-up to the higher target level
+                "experience": {"current": 24000},
+            },
+            "rewards_pending": {
+                "level_up_available": True,
+                "new_level": 5,
+                "processed": False,
+                "xp": 100,
+                "gold": 25,
+                "items": ["amulet"],
+            },
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        rewards_pending = result.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        # XP jump should update the pending level target to the higher expected level
+        self.assertEqual(7, rewards_pending.get("new_level"))
+        self.assertEqual(100, rewards_pending.get("xp"))
+        self.assertEqual(25, rewards_pending.get("gold"))
+        self.assertEqual(["amulet"], rewards_pending.get("items"))
+        self.assertFalse(rewards_pending.get("processed"))
+
+    def test_coerces_string_level_without_type_error(self):
+        original_state = {
+            "player_character_data": {
+                "level": "4",  # string from serialized state
+                "experience": {"current": 6400},
+            }
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": "4",
+                "experience": {"current": 6600},
+            }
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        rewards_pending = result.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+
+    def test_preserves_processed_level_up_without_resetting(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6400},
+            }
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": 6600},
+            },
+            "rewards_pending": {
+                "level_up_available": True,
+                "new_level": 5,
+                "processed": True,
+            },
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        # Guard should bail out and keep processed flag intact
+        self.assertEqual(updated_state, result)
+        self.assertTrue(result["rewards_pending"].get("processed"))
+
+    def test_coerces_string_xp_values_before_arithmetic(self):
+        original_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": "6400"},  # string XP
+            }
+        }
+        updated_state = {
+            "player_character_data": {
+                "level": 4,
+                "experience": {"current": "6600"},  # string XP
+            }
+        }
+
+        result = world_logic._check_and_set_level_up_pending(
+            updated_state, original_state_dict=original_state
+        )
+
+        rewards_pending = result.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+
+
+class TestGodModeLevelUpDetection(unittest.TestCase):
+    def test_god_mode_set_triggers_level_up_pending(self):
+        game_state = GameState()
+        game_state.player_character_data = {
+            "level": 4,
+            "experience": {"current": 6400},
+        }
+        game_state.world_data = {}
+
+        user_input = (
+            "GOD_MODE_SET:\n"
+            "player_character_data.experience.current = 6600\n"
+        )
+
+        with patch(
+            "mvp_site.world_logic.firestore_service.update_campaign_game_state"
+        ) as mock_update_state:
+            response = world_logic._handle_set_command(
+                user_input, game_state, "user-1", "campaign-1"
+            )
+
+        self.assertTrue(response[world_logic.KEY_SUCCESS])
+        # Access third positional arg (state_dict) passed to update_campaign_game_state
+        updated_state = mock_update_state.call_args[0][2]
+
+        rewards_pending = updated_state.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+        self.assertFalse(rewards_pending.get("processed", False))
+
+
+    def test_god_mode_update_state_triggers_level_up_pending(self):
+        current_game_state = GameState()
+        current_game_state.player_character_data = {
+            "level": 4,
+            "experience": {"current": 6400},
+        }
+        current_game_state.world_data = {}
+
+        user_input = (
+            "GOD_MODE_UPDATE_STATE:{\"player_character_data\": {"
+            "\"experience\": {\"current\": 6600}}}"
+        )
+
+        with patch(
+            "mvp_site.world_logic.firestore_service.get_campaign_game_state",
+            return_value=current_game_state,
+        ) as mock_get_state, patch(
+            "mvp_site.world_logic.firestore_service.update_campaign_game_state"
+        ) as mock_update_state:
+            response = world_logic._handle_update_state_command(
+                user_input, "user-2", "campaign-2"
+            )
+
+        mock_get_state.assert_called_once()
+        self.assertTrue(response[world_logic.KEY_SUCCESS])
+
+        # Access third positional arg (state_dict) passed to update_campaign_game_state
+        updated_state = mock_update_state.call_args[0][2]
+        rewards_pending = updated_state.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+        self.assertFalse(rewards_pending.get("processed", False))
+
+    def test_god_mode_update_state_uses_snapshot_for_post_combat_warnings(self):
+        current_game_state = GameState()
+        current_game_state.player_character_data = {
+            "level": 4,
+            "experience": {"current": 6400},
+        }
+        current_game_state.world_data = {}
+
+        user_input = (
+            "GOD_MODE_UPDATE_STATE:{\"player_character_data\": {"
+            "\"experience\": {\"current\": 6600}}}"
+        )
+
+        with patch(
+            "mvp_site.world_logic.firestore_service.get_campaign_game_state",
+            return_value=current_game_state,
+        ) as mock_get_state, patch(
+            "mvp_site.world_logic.firestore_service.update_campaign_game_state",
+        ) as mock_update_state, patch.object(
+            GameState, "detect_post_combat_issues", autospec=True
+        ) as mock_detect_warnings:
+            response = world_logic._handle_update_state_command(
+                user_input, "user-3", "campaign-3"
+            )
+
+        mock_get_state.assert_called_once()
+        self.assertTrue(response[world_logic.KEY_SUCCESS])
+        # With XP increasing, post-combat warnings should not be evaluated
+        mock_detect_warnings.assert_not_called()
+
+        updated_state = mock_update_state.call_args[0][2]
+        rewards_pending = updated_state.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+        self.assertFalse(rewards_pending.get("processed", False))
+
+
+class TestProcessActionLevelUpSnapshot(unittest.TestCase):
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic.preventive_guards.enforce_preventive_guards")
+    @patch("mvp_site.world_logic.update_state_with_changes")
+    @patch("mvp_site.world_logic.apply_automatic_combat_cleanup")
+    @patch("mvp_site.world_logic._enforce_rewards_processed_flag")
+    @patch(
+        "mvp_site.world_logic._process_rewards_followup",
+        new_callable=AsyncMock,
+    )
+    def test_preserves_original_state_for_level_up_detection(
+        self,
+        mock_process_rewards_followup,
+        mock_enforce_rewards_processed_flag,
+        mock_apply_automatic_combat_cleanup,
+        mock_update_state_with_changes,
+        mock_enforce_guards,
+        mock_continue_story,
+        mock_prepare_game_state,
+        mock_get_user_settings,
+        mock_get_campaign_by_id,
+        mock_update_campaign_state,
+        mock_add_story_entry,
+    ):
+        # Prepare original game state
+        game_state = GameState()
+        game_state.player_character_data = {
+            "level": 4,
+            "experience": {"current": 6400},
+        }
+        game_state.world_data = {}
+
+        mock_prepare_game_state.return_value = (game_state, False, 0)
+        mock_get_user_settings.return_value = {"debug_mode": False}
+        mock_get_campaign_by_id.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            [],
+        )
+
+        state_changes = {
+            "player_character_data": {
+                "experience": {"current": 6600},
+                "level": 5,
+            }
+        }
+
+        llm_response = Mock()
+        llm_response.narrative_text = ""
+        llm_response.structured_response = None
+        llm_response.processing_metadata = {}
+        mock_continue_story.return_value = llm_response
+
+        mock_enforce_guards.return_value = (state_changes, {})
+
+        def mutate_state(state_dict, changes):
+            # Mimic in-place mutation performed by update_state_with_changes
+            state_dict.setdefault("player_character_data", {})
+            state_dict["player_character_data"].setdefault("experience", {})[
+                "current"
+            ] = changes["player_character_data"]["experience"]["current"]
+            state_dict["player_character_data"]["level"] = changes[
+                "player_character_data"
+            ]["level"]
+            return state_dict
+
+        mock_update_state_with_changes.side_effect = mutate_state
+        mock_apply_automatic_combat_cleanup.side_effect = lambda state, changes: state
+        mock_enforce_rewards_processed_flag.side_effect = lambda state, **_: state
+
+        async def followup_side_effect(**kwargs):
+            return (
+                kwargs["updated_game_state_dict"],
+                kwargs["llm_response_obj"],
+                kwargs["prevention_extras"],
+            )
+
+        mock_process_rewards_followup.side_effect = followup_side_effect
+
+        request_data = {
+            "user_id": "user-1",
+            "campaign_id": "campaign-1",
+            "user_input": "Take action",
+            "mode": world_logic.constants.MODE_CHARACTER,
+        }
+
+        asyncio.run(world_logic.process_action_unified(request_data))
+
+        # Validate Firestore update contained a pending level-up
+        updated_state = mock_update_campaign_state.call_args[0][2]
+        rewards_pending = updated_state.get("rewards_pending", {})
+        self.assertTrue(rewards_pending.get("level_up_available"))
+        self.assertEqual(5, rewards_pending.get("new_level"))
+        self.assertFalse(rewards_pending.get("processed", False))
 
 
 if __name__ == "__main__":

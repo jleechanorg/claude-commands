@@ -12,7 +12,7 @@ The LLM should focus on narrative while code handles all mathematical operations
 
 import datetime
 import json
-from typing import Any, Optional
+from typing import Any, Literal, Optional, overload
 
 from mvp_site import constants, logging_util
 from mvp_site import dice as dice_module
@@ -134,6 +134,12 @@ def _coerce_int(value: Any, default: int | None = 0) -> int | None:
     if isinstance(value, float):
         return int(value)
     return default
+
+
+def coerce_int(value: Any, default: int | None = 0) -> int | None:
+    """Public wrapper around :func:`_coerce_int` for safe int coercion."""
+
+    return _coerce_int(value, default)
 
 
 def level_from_xp(xp: int) -> int:
@@ -1741,6 +1747,22 @@ class GameState:
                     )
 
         return warnings
+
+
+@overload
+def validate_and_correct_state(
+    state_dict: dict[str, Any],
+    previous_world_time: dict[str, Any] | None = None,
+    return_corrections: Literal[False] = False,
+) -> dict[str, Any]: ...
+
+
+@overload
+def validate_and_correct_state(
+    state_dict: dict[str, Any],
+    previous_world_time: dict[str, Any] | None = None,
+    return_corrections: Literal[True] = ...,
+) -> tuple[dict[str, Any], list[str]]: ...
 
 
 def validate_and_correct_state(

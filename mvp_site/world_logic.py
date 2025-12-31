@@ -57,7 +57,12 @@ from mvp_site.firestore_service import (
     get_user_settings,
     update_state_with_changes,
 )
-from mvp_site.game_state import GameState, validate_and_correct_state
+from mvp_site.game_state import (
+    GameState,
+    coerce_int,
+    level_from_xp,
+    validate_and_correct_state,
+)
 from mvp_site.agent_prompts import extract_llm_instruction_hints
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
@@ -184,8 +189,8 @@ def annotate_world_events_with_turn_scene(
     """
     turn = player_turn
     # Each scene spans 2 player turns (e.g., turns 1-2 = scene 1, turns 3-4 = scene 2)
-    TURNS_PER_SCENE = 2
-    scene = (player_turn + 1) // TURNS_PER_SCENE
+    turns_per_scene = 2
+    scene = (player_turn + 1) // turns_per_scene
 
     def annotate_list(items: Any) -> None:
         """Annotate a list of dict entries."""
@@ -350,7 +355,6 @@ def _has_rewards_narrative(narrative: str | None) -> bool:
     return "══" in narrative or "──" in narrative
 
 
-
 def _has_rewards_context(
     state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
 ) -> bool:
@@ -372,13 +376,16 @@ def _has_rewards_context(
     if original_state_dict is not None:
         # Use "or {}" to handle None values safely
         # (dict.get returns None when key exists with None value, not the default)
-        current_xp = (
+        current_xp_raw = (
             (state_dict.get("player_character_data") or {}).get("experience") or {}
         ).get("current", 0)
-        original_xp = (
+        original_xp_raw = (
             (original_state_dict.get("player_character_data") or {}).get("experience")
             or {}
         ).get("current", 0)
+
+        current_xp = coerce_int(current_xp_raw, 0)
+        original_xp = coerce_int(original_xp_raw, 0)
         if current_xp > original_xp:
             return True
 
@@ -453,23 +460,25 @@ def _enforce_rewards_processed_flag(
     if original_state_dict is not None:
         # Get XP values - use "or {}" to handle None values safely
         # (dict.get returns None when key exists with None value, not the default)
-        current_xp = (
+        current_xp_raw = (
             (state_dict.get("player_character_data") or {}).get("experience") or {}
         ).get("current", 0)
-        original_xp = (
+        original_xp_raw = (
             (original_state_dict.get("player_character_data") or {}).get("experience")
             or {}
         ).get("current", 0)
+
+        current_xp = coerce_int(current_xp_raw, 0)
+        original_xp = coerce_int(original_xp_raw, 0)
 
         # Detect XP increase
         xp_increased = current_xp > original_xp
         xp_gain = current_xp - original_xp if xp_increased else 0
 
         # Check if rewards_processed is set anywhere
-        any_rewards_processed = (
-            combat_state.get("rewards_processed", False)
-            or encounter_state.get("rewards_processed", False)
-        )
+        any_rewards_processed = combat_state.get(
+            "rewards_processed", False
+        ) or encounter_state.get("rewards_processed", False)
 
         # If XP increased but no rewards_processed flag is set, try to set it
         if xp_increased and not any_rewards_processed:
@@ -502,11 +511,105 @@ def _enforce_rewards_processed_flag(
     return state_dict
 
 
+def _check_and_set_level_up_pending(
+    state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    Server-side level-up detection: Set rewards_pending when XP now supports a higher level.
+
+    This ensures level-up is offered to the player even when XP is awarded outside
+    the normal rewards pipeline (e.g., God Mode, narrative milestones) or when a
+    previous level-up was missed. Comparison uses the original state (pre-update)
+    to avoid relying on validation that may auto-correct the stored level.
+
+    The RewardsAgent will be triggered when rewards_pending exists with processed=False,
+    allowing the player to see the LEVEL UP AVAILABLE! message and process their level-up.
+
+    Args:
+        state_dict: The game state dict after updates are applied
+        original_state_dict: Original state before the update (for XP comparison)
+
+    Returns:
+        The game state dict with rewards_pending set if level-up is available
+    """
+    if original_state_dict is None:
+        return state_dict
+
+    # Get current and original XP
+    player_data = state_dict.get("player_character_data") or {}
+    experience = player_data.get("experience") or {}
+    current_xp = coerce_int(experience.get("current"), 0)
+
+    original_player_data = original_state_dict.get("player_character_data") or {}
+    original_experience = original_player_data.get("experience") or {}
+    original_xp = coerce_int(original_experience.get("current"), 0)
+
+    # Get stored level from original state (before validation may auto-correct)
+    stored_level = coerce_int(original_player_data.get("level"), 1)
+
+    # Calculate what level SHOULD be based on XP
+    expected_level = level_from_xp(current_xp)
+
+    # If expected level is higher than stored level, level-up is available
+    if expected_level <= stored_level:
+        return state_dict
+
+    # Check if rewards_pending already exists and handles this level-up
+    existing_rewards = state_dict.get("rewards_pending") or {}
+    if existing_rewards.get("level_up_available") is True:
+        existing_new_level = coerce_int(
+            existing_rewards.get("new_level"), default=stored_level
+        )
+        if expected_level <= existing_new_level:
+            # Already have an equal-or-higher pending level-up; avoid resetting flags
+            logging_util.debug(
+                "📈 LEVEL_UP_CHECK: existing level_up_available covers current level"
+            )
+            return state_dict
+
+        # XP has pushed the player to a higher level than the pending notification;
+        # refresh rewards_pending to surface the higher target level.
+        logging_util.info(
+            "📈 LEVEL_UP_CHECK: Upgrading pending level-up notification "
+            f"from {existing_new_level} to {expected_level}"
+        )
+
+    # Set rewards_pending to trigger RewardsAgent (either new or upgraded)
+    xp_delta = current_xp - original_xp
+    logging_util.info(
+        f"📈 LEVEL_UP_CHECK: Level-up available! "
+        f"XP {original_xp} → {current_xp} ({'+' if xp_delta >= 0 else ''}{xp_delta}), "
+        f"stored_level={stored_level}, expected_level={expected_level}. "
+        f"Setting rewards_pending.level_up_available=True"
+    )
+
+    existing_rewards = state_dict.get("rewards_pending") or {}
+    merged_items = list(existing_rewards.get("items") or [])
+    new_source_id = f"level_up_{stored_level}_to_{expected_level}"
+
+    state_dict["rewards_pending"] = {
+        **existing_rewards,
+        "source": existing_rewards.get("source", "milestone"),
+        # Always align source_id with the current target level (upgrade-safe)
+        "source_id": new_source_id,
+        # XP has already been applied to state; preserve any existing rewards XP
+        "xp": existing_rewards.get("xp", 0),
+        "gold": existing_rewards.get("gold", 0),
+        "items": merged_items,
+        "level_up_available": True,
+        "new_level": expected_level,
+        # Always reset processed to False so RewardsAgent prompts for the higher level
+        "processed": False,
+    }
+
+    return state_dict
+
+
 async def _process_rewards_followup(
     mode: str,
     llm_response_obj: Any,
     updated_game_state_dict: dict[str, Any],
-    current_state_as_dict: dict[str, Any],
+    original_state_as_dict: dict[str, Any],
     original_world_time: dict[str, Any] | None,
     story_context: list[dict[str, Any]],
     selected_prompts: list[str],
@@ -525,7 +628,7 @@ async def _process_rewards_followup(
         mode: The original action mode (MODE_CHARACTER, MODE_COMBAT, etc.)
         llm_response_obj: The primary LLM response object
         updated_game_state_dict: Current game state dict after primary updates
-        current_state_as_dict: Original state dict before the action
+        original_state_as_dict: Original state dict before the action
         original_world_time: Original world time for validation
         story_context: Story context for LLM calls
         selected_prompts: Selected prompts for LLM calls
@@ -551,11 +654,15 @@ async def _process_rewards_followup(
     post_update_state = GameState.from_dict(updated_game_state_dict)
     rewards_visible = _has_rewards_narrative(llm_response_obj.narrative_text)
     rewards_expected = _has_rewards_context(
-        updated_game_state_dict, original_state_dict=current_state_as_dict
+        updated_game_state_dict, original_state_dict=original_state_as_dict
     )
-    rewards_pending = post_update_state.has_pending_rewards() if post_update_state else False
+    rewards_pending = (
+        post_update_state.has_pending_rewards() if post_update_state else False
+    )
 
-    if not post_update_state or not (rewards_pending or (rewards_expected and not rewards_visible)):
+    if not post_update_state or not (
+        rewards_pending or (rewards_expected and not rewards_visible)
+    ):
         return updated_game_state_dict, llm_response_obj, prevention_extras
 
     logging_util.info(
@@ -600,7 +707,12 @@ async def _process_rewards_followup(
         )
         updated_game_state_dict = _enforce_rewards_processed_flag(
             updated_game_state_dict,
-            original_state_dict=current_state_as_dict,
+            original_state_dict=original_state_as_dict,
+        )
+        # Check for level-up after rewards processing
+        updated_game_state_dict = _check_and_set_level_up_pending(
+            updated_game_state_dict,
+            original_state_dict=original_state_as_dict,
         )
         updated_game_state_dict, rewards_corrections = validate_and_correct_state(
             updated_game_state_dict,
@@ -609,12 +721,19 @@ async def _process_rewards_followup(
         )
         # Store rewards corrections so they reach system_warnings in main flow
         if rewards_corrections:
-            prevention_extras.setdefault("rewards_corrections", []).extend(rewards_corrections)
+            prevention_extras.setdefault("rewards_corrections", []).extend(
+                rewards_corrections
+            )
     else:
         # Rewards already applied; avoid double-awarding state changes.
         updated_game_state_dict = _enforce_rewards_processed_flag(
             updated_game_state_dict,
-            original_state_dict=current_state_as_dict,
+            original_state_dict=original_state_as_dict,
+        )
+        # Check for level-up in case XP was awarded in this follow-up
+        updated_game_state_dict = _check_and_set_level_up_pending(
+            updated_game_state_dict,
+            original_state_dict=original_state_as_dict,
         )
 
     # Merge prevention extras for response visibility
@@ -634,14 +753,16 @@ async def _process_rewards_followup(
         if primary_structured is None:
             # No original structured response, use rewards response
             llm_response_obj.structured_response = rewards_structured
-        else:
-            # Merge rewards_box from rewards response into primary
-            if hasattr(rewards_structured, "rewards_box") and rewards_structured.rewards_box:
-                primary_structured.rewards_box = rewards_structured.rewards_box
-                logging_util.info(
-                    f"🏆 REWARDS_FOLLOWUP: Merged rewards_box into response "
-                    f"(xp={rewards_structured.rewards_box.get('xp_gained', 'N/A')})"
-                )
+        # Merge rewards_box from rewards response into primary
+        elif (
+            hasattr(rewards_structured, "rewards_box")
+            and rewards_structured.rewards_box
+        ):
+            primary_structured.rewards_box = rewards_structured.rewards_box
+            logging_util.info(
+                f"🏆 REWARDS_FOLLOWUP: Merged rewards_box into response "
+                f"(xp={rewards_structured.rewards_box.get('xp_gained', 'N/A')})"
+            )
 
     return updated_game_state_dict, llm_response_obj, prevention_extras
 
@@ -775,7 +896,7 @@ def _prepare_game_state(
             archived_entry = {
                 **combat_state["combat_summary"],
                 "session_id": combat_state.get("combat_session_id"),
-                "archived_at": datetime.now(timezone.utc).isoformat(),
+                "archived_at": datetime.now(timezone.utc).isoformat(),  # noqa: UP017
             }
             combat_history.append(archived_entry)
 
@@ -1425,15 +1546,20 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Capture original time before update for accurate monotonicity validation
         # Note: current_game_state is a GameState instance (has to_dict() method)
-        current_state_as_dict = current_game_state.to_dict()
+        # Preserve an immutable snapshot for XP/level comparisons
+        original_state_for_level_check = copy.deepcopy(current_game_state.to_dict())
+        # Work on a deep copy so in-place mutations do not affect the original snapshot
+        current_state_as_dict = copy.deepcopy(original_state_for_level_check)
         # Use `or {}` to handle both missing and explicitly-null world_data
         # CRITICAL: Deep-copy to prevent mutation by update_state_with_changes
         original_world_time = copy.deepcopy(
-            (current_state_as_dict.get("world_data") or {}).get("world_time")
+            (original_state_for_level_check.get("world_data") or {}).get("world_time")
         )
 
         # Capture previous combat state for post-combat warning detection
-        previous_combat_state = copy.deepcopy(current_state_as_dict.get("combat_state", {}))
+        previous_combat_state = copy.deepcopy(
+            original_state_for_level_check.get("combat_state", {})
+        )
 
         # Update game state with changes
         updated_game_state_dict = update_state_with_changes(
@@ -1454,14 +1580,29 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # SERVER-SIDE ENFORCEMENT: Apply for any mode that can award XP/rewards
         # This ensures rewards_processed is set when combat ends, encounters complete, etc.
         # Pass original state for XP comparison (detects XP increases even without summary structures)
-        if mode in (constants.MODE_REWARDS, constants.MODE_COMBAT, constants.MODE_CHARACTER):
+        if mode in (
+            constants.MODE_REWARDS,
+            constants.MODE_COMBAT,
+            constants.MODE_CHARACTER,
+        ):
             updated_game_state_dict = _enforce_rewards_processed_flag(
-                updated_game_state_dict, original_state_dict=current_state_as_dict
+                updated_game_state_dict,
+                original_state_dict=original_state_for_level_check,
             )
+
+        # SERVER-SIDE LEVEL-UP DETECTION: Check for level-up in ALL modes where
+        # original_state_dict is available for XP comparison. This ensures
+        # level-up is offered even when XP is awarded outside rewards pipeline
+        # (e.g., God Mode, narrative milestones, manual XP grants)
+        updated_game_state_dict = _check_and_set_level_up_pending(
+            updated_game_state_dict, original_state_dict=original_state_for_level_check
+        )
 
         # Validate and auto-correct state before persistence, capturing any corrections made
         updated_game_state_dict, state_corrections = validate_and_correct_state(
-            updated_game_state_dict, previous_world_time=original_world_time, return_corrections=True
+            updated_game_state_dict,
+            previous_world_time=original_world_time,
+            return_corrections=True,
         )
 
         # If rewards are now pending but we did NOT run RewardsAgent, run it once
@@ -1469,19 +1610,21 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # NOTE: This must happen BEFORE post-combat detection to avoid false-positive
         # "no XP awarded" warnings when RewardsAgent awards XP in the followup.
         try:
-            updated_game_state_dict, llm_response_obj, prevention_extras = (
-                await _process_rewards_followup(
-                    mode=mode,
-                    llm_response_obj=llm_response_obj,
-                    updated_game_state_dict=updated_game_state_dict,
-                    current_state_as_dict=current_state_as_dict,
-                    original_world_time=original_world_time,
-                    story_context=story_context,
-                    selected_prompts=selected_prompts,
-                    use_default_world=use_default_world,
-                    user_id=user_id,
-                    prevention_extras=prevention_extras,
-                )
+            (
+                updated_game_state_dict,
+                llm_response_obj,
+                prevention_extras,
+            ) = await _process_rewards_followup(
+                mode=mode,
+                llm_response_obj=llm_response_obj,
+                updated_game_state_dict=updated_game_state_dict,
+                original_state_as_dict=original_state_for_level_check,
+                original_world_time=original_world_time,
+                story_context=story_context,
+                selected_prompts=selected_prompts,
+                use_default_world=use_default_world,
+                user_id=user_id,
+                prevention_extras=prevention_extras,
             )
         except Exception as e:
             logging_util.warning(f"⚠️ REWARDS_FOLLOWUP failed: {e}")
@@ -1489,10 +1632,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Re-validate state after rewards followup to capture any additional corrections
         # This ensures corrections from RewardsAgent state changes are surfaced to user
         updated_game_state_dict, followup_corrections = validate_and_correct_state(
-            updated_game_state_dict, previous_world_time=original_world_time, return_corrections=True
+            updated_game_state_dict,
+            previous_world_time=original_world_time,
+            return_corrections=True,
         )
         # Merge corrections (deduplicate since some may overlap)
-        all_corrections = state_corrections + [c for c in followup_corrections if c not in state_corrections]
+        all_corrections = state_corrections + [
+            c for c in followup_corrections if c not in state_corrections
+        ]
 
         # Detect post-combat issues AFTER rewards followup to avoid false positives
         # when RewardsAgent awards XP during the followup
@@ -1501,7 +1648,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         if updated_game_state_obj:
             # Compare final state against original to detect if XP was ever awarded
             final_pc = updated_game_state_dict.get("player_character_data", {})
-            original_pc = current_state_as_dict.get("player_character_data", {})
+            # Use the preserved pre-update snapshot for XP comparison to avoid
+            # false negatives when update_state_with_changes mutates the current
+            # state dict in-place.
+            original_pc = original_state_for_level_check.get(
+                "player_character_data", {}
+            )
             final_xp = _extract_xp_from_player_data(final_pc)
             original_xp = _extract_xp_from_player_data(original_pc)
 
@@ -1523,7 +1675,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         else:
             # GOD MODE: Process directives from LLM response
             # The GodModeAgent analyzes the user's message and returns directives
-            # Format: {"directives": {"add": ["rule1", ...], "drop": ["rule2", ...]}}
+            # Format: {"directives": {"add": ["rule1", ...], "drop": ["rule2", ...]}}  # noqa: ERA001
             early_structured = structured_fields_utils.extract_structured_fields(
                 llm_response_obj
             )
@@ -1567,12 +1719,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     """Safely extract and lowercase a rule, handling None values."""
                     if isinstance(d, dict):
                         rule = d.get("rule")
-                        return (rule.strip().lower() if isinstance(rule, str) else "")
+                        return rule.strip().lower() if isinstance(rule, str) else ""
                     return str(d).strip().lower() if d else ""
 
                 directives_list[:] = [
-                    d for d in directives_list
-                    if _get_rule_lower(d) not in drop_lower
+                    d for d in directives_list if _get_rule_lower(d) not in drop_lower
                 ]
                 dropped_count = original_count - len(directives_list)
                 if dropped_count > 0:
@@ -1588,15 +1739,22 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     continue
                 # Case-insensitive duplicate check
                 existing_rules_lower = [
-                    (d.get("rule", "").strip().lower() if isinstance(d, dict) else str(d).strip().lower())
+                    (
+                        d.get("rule", "").strip().lower()
+                        if isinstance(d, dict)
+                        else str(d).strip().lower()
+                    )
                     for d in directives_list
-                    if (isinstance(d, dict) and d.get("rule")) or (not isinstance(d, dict) and d)
+                    if (isinstance(d, dict) and d.get("rule"))
+                    or (not isinstance(d, dict) and d)
                 ]
                 if new_rule_clean.lower() not in existing_rules_lower:
-                    directives_list.append({
-                        "rule": new_rule_clean,
-                        "added": datetime.now(timezone.utc).isoformat(),
-                    })
+                    directives_list.append(
+                        {
+                            "rule": new_rule_clean,
+                            "added": datetime.now(timezone.utc).isoformat(),  # noqa: UP017
+                        }
+                    )
                     logging_util.info(f"GOD MODE DIRECTIVE ADDED: {new_rule_clean}")
 
         # Annotate world_events entries with turn/scene numbers for UI display
@@ -1701,12 +1859,48 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         story_entries = [{"text": final_narrative}]
         processed_story = process_story_for_display(story_entries, debug_mode)
 
+        # Check if level-up is available and append planning block to narrative
+        rewards_pending = updated_game_state_dict.get("rewards_pending") or {}
+        level_up_planning_block = None
+        if rewards_pending.get("level_up_available") is True:
+            new_level = rewards_pending.get("new_level")
+            planning_text_parts = [
+                "\n\n🎉 **LEVEL UP AVAILABLE!**",
+                f"You've earned enough XP to advance to level {new_level}!",
+                "\n**Would you like to level up now?**",
+                "  1. Level up immediately",
+                "  2. Continue adventuring (level up later)",
+            ]
+            planning_text = "\n".join(planning_text_parts)
+
+            # Append to narrative
+            final_narrative_with_planning = final_narrative + planning_text
+
+            # Update story entries with planning block
+            story_entries_with_planning = [{"text": final_narrative_with_planning}]
+            processed_story_with_planning = process_story_for_display(
+                story_entries_with_planning, debug_mode
+            )
+
+            # Store planning block data for structured output
+            level_up_planning_block = {
+                "type": "level_up",
+                "new_level": new_level,
+                "choices": [
+                    {"id": 1, "text": "Level up immediately"},
+                    {"id": 2, "text": "Continue adventuring (level up later)"},
+                ],
+            }
+        else:
+            final_narrative_with_planning = final_narrative
+            processed_story_with_planning = processed_story
+
         # Build comprehensive response with all frontend-required fields
         unified_response = {
             KEY_SUCCESS: True,
-            "story": processed_story,
-            "narrative": final_narrative,  # Add for frontend compatibility
-            "response": final_narrative,  # Fallback for older frontend versions
+            "story": processed_story_with_planning,
+            "narrative": final_narrative_with_planning,  # Add for frontend compatibility
+            "response": final_narrative_with_planning,  # Fallback for older frontend versions
             "game_state": updated_game_state_dict,
             "mode": mode,
             "user_input": user_input,
@@ -1717,6 +1911,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "user_scene_number": user_scene_number,  # Scene number for current AI response: count of existing Gemini responses + 1
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
         }
+
+        # Add level-up planning block if present
+        if level_up_planning_block:
+            unified_response["planning_block"] = level_up_planning_block
 
         # Include state fields only when debug mode is enabled (shows MORE info)
         if debug_mode:
@@ -2296,9 +2494,7 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
                 )
             }
             # Also allow legacy models that have a mapping
-            allowed_models.update(
-                k.lower() for k in constants.GEMINI_MODEL_MAPPING.keys()
-            )
+            allowed_models.update(k.lower() for k in constants.GEMINI_MODEL_MAPPING)
             if model_lower not in allowed_models:
                 return create_error_response("Invalid model selection")
             settings_to_update["gemini_model"] = model
@@ -2569,6 +2765,7 @@ def _handle_set_command(
         }
 
     current_state_dict_before_update = current_game_state.to_dict()
+    original_state_for_level_check = copy.deepcopy(current_state_dict_before_update)
     logging_util.info(
         f"GOD_MODE_SET state BEFORE update: {current_state_dict_before_update}"
     )
@@ -2600,6 +2797,11 @@ def _handle_set_command(
     # Validate and auto-correct state before persistence
     updated_state = validate_and_correct_state(
         updated_state, previous_world_time=original_world_time
+    )
+
+    # SERVER-SIDE LEVEL-UP DETECTION for God Mode SET
+    updated_state = _check_and_set_level_up_pending(
+        updated_state, original_state_dict=original_state_for_level_check
     )
 
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
@@ -2650,7 +2852,10 @@ def _handle_update_state_command(
             )
 
         current_state_dict = current_game_state.to_dict()
-        previous_combat_state = copy.deepcopy(current_state_dict.get("combat_state", {}))
+        original_state_for_level_check = copy.deepcopy(current_state_dict)
+        previous_combat_state = copy.deepcopy(
+            current_state_dict.get("combat_state", {})
+        )
 
         # Capture original time before update for accurate monotonicity validation
         # Note: current_game_state is a GameState instance, use dict version
@@ -2686,6 +2891,11 @@ def _handle_update_state_command(
             return_corrections=True,
         )
 
+        # SERVER-SIDE LEVEL-UP DETECTION for God Mode UPDATE_STATE
+        validated_state_dict = _check_and_set_level_up_pending(
+            validated_state_dict, original_state_dict=original_state_for_level_check
+        )
+
         # Detect post-combat warnings for GOD_MODE_UPDATE_STATE (no rewards followup here)
         # Uses shared _extract_xp_from_player_data helper to avoid duplication with unified flow
         post_combat_warnings: list[str] = []
@@ -2696,11 +2906,13 @@ def _handle_update_state_command(
                     validated_state_dict.get("player_character_data", {})
                 )
                 original_xp = _extract_xp_from_player_data(
-                    current_state_dict.get("player_character_data", {})
+                    original_state_for_level_check.get("player_character_data", {})
                 )
                 if final_xp <= original_xp:
-                    post_combat_warnings = updated_game_state_obj.detect_post_combat_issues(
-                        previous_combat_state, state_changes
+                    post_combat_warnings = (
+                        updated_game_state_obj.detect_post_combat_issues(
+                            previous_combat_state, state_changes
+                        )
                     )
         except Exception as e:
             logging_util.warning(f"POST_COMBAT warning detection failed: {e}")
@@ -2726,6 +2938,18 @@ def _handle_update_state_command(
             response_parts.append("\n[System Warnings]")
             for warning in post_combat_warnings:
                 response_parts.append(f"  - {warning}")
+
+        # Check if level-up is available and add planning/choice block
+        rewards_pending = validated_state_dict.get("rewards_pending") or {}
+        if rewards_pending.get("level_up_available") is True:
+            new_level = rewards_pending.get("new_level")
+            response_parts.append("\n🎉 LEVEL UP AVAILABLE!")
+            response_parts.append(
+                f"You've earned enough XP to advance to level {new_level}!"
+            )
+            response_parts.append("\nWould you like to level up now?")
+            response_parts.append("  1. Level up immediately")
+            response_parts.append("  2. Continue adventuring (level up later)")
 
         response_payload = {
             KEY_SUCCESS: True,
