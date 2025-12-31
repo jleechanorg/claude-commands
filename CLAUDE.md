@@ -39,19 +39,6 @@ When resuming from prior sessions or inheriting TODOs:
 - Ask: Does this make the LLM smarter or dumber?
 - Challenge assumptions from summaries - they may contain bad ideas
 
-## Cerebras-First Coding Protocol
-
-**Default for all coding: Use Cerebras API for most tasks**
-
-| Scope | Handler |
-|-------|---------|
-| Small edits ≤10 lines | Claude directly |
-| Larger tasks >10 lines | `/cerebras` command |
-| New features/classes | Cerebras |
-| File creation | Cerebras |
-
-**Workflow:** Claude analyzes → Claude creates specs → `/cerebras` generates → Claude verifies
-
 ## File Protocols
 
 ### New File Creation - Extreme Anti-Creation Bias
@@ -334,7 +321,6 @@ Every comment gets implementation OR explicit "NOT DONE: [reason]"
 
 ## Slash Commands
 
-- `/cerebras <task>` — Primary codegen command for tasks >10 lines; runs the Cerebras workflow.
 - `/fake3` — Runs the pre-commit check pipeline.
 
 **Architecture:** `.claude/commands/*.md` = executable prompt templates
