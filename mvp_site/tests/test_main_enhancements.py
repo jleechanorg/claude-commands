@@ -13,7 +13,7 @@ HAS_MAIN_APP = True
 IMPORT_ERROR = None
 
 
-@pytest.fixture()
+@pytest.fixture
 def client():
     """Flask test client fixture with proper error handling"""
     app.config["TESTING"] = True

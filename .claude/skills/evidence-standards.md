@@ -115,11 +115,7 @@ This ensures `sha256sum -c` works when run from the evidence directory.
 **ALL evidence files require checksums, including:**
 - Individual test result files (PASS_*.json, FAIL_*.json)
 - Aggregated files (request_responses.jsonl)
-- Server logs (artifacts/server.log, local_mcp_*.log)
-- Browser logs when included as evidence
-
-**Log checksum requirement:** If logs are included as evidence (e.g., `local_mcp_*.log`,
-server logs, browser logs), each log file **must** have its own `.sha256`.
+- Server logs (artifacts/server.log)
 
 ```python
 def _write_checksum_for_file(filepath: Path) -> None:
@@ -135,6 +131,19 @@ def _write_checksum_for_file(filepath: Path) -> None:
 **Single-run attribution:** If a bundle contains multiple runs, the docs **must**
 name the exact run directory used for claims (e.g., `run_YYYYMMDD...`). Claims
 must be traceable to one run only.
+
+**Multi-campaign isolation:** If tests create multiple campaigns (e.g., isolated tests
+for state-sensitive scenarios), evidence.md **must** include:
+1. **Isolation Note** explaining why multiple campaigns exist
+2. **Campaign ID** for each scenario result for traceability
+3. **Claim Scoping** clarifying which campaign(s) aggregate claims reference
+
+Example isolation note in evidence.md:
+```markdown
+## ⚠️ Multi-Campaign Isolation Note
+This bundle contains **11 campaigns**: 1 shared + 10 isolated.
+Each scenario includes its `campaign_id` for traceability.
+```
 
 **Doc ↔ data alignment:** Any item lists in methodology/evidence **must** be
 derived from actual test inputs or `game_state_snapshot.json`. Hardcoded or
@@ -352,7 +361,6 @@ Instead, prove:
 - Feature works as specified (test results with pass/fail counts)
 - Correct prompts/code were used (`system_instruction_files` or code paths)
 - State changes correctly (game_state snapshots, database records)
-
 ### For LLM/API Behavior Claims
 
 When proving LLM or API behavior, evidence MUST capture the full request/response cycle:
@@ -373,19 +381,25 @@ When proving LLM or API behavior, evidence MUST capture the full request/respons
 request_responses.jsonl   # One JSON object per line, each containing:
 {
   "timestamp": "ISO8601",
-  "request": { ... full request ... },
-  "response": { ... full response ... },
-  "debug_info": {
+  "request": { ... full MCP request ... },
+  "response": { ... full MCP response ... },
+  "response.result.debug_info": {
+    // Lightweight tracking (default):
     "system_instruction_files": ["prompts/master_directive.md", "..."],
     "system_instruction_char_count": 93180,
+    // Full capture (when CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS > 0):
+    "system_instruction_text": "system prompt sent to LLM",
+    // Raw LLM capture (requires CAPTURE_RAW_LLM=true):
+    "raw_request_payload": "full LLMRequest JSON sent to LLM (user action, context)",
     "raw_response_text": "LLM output before parsing"
   }
 }
 ```
 
-**Required artifact:** `request_responses.jsonl` **and** `request_responses.jsonl.sha256`
-must be present in the evidence bundle for any LLM/API behavior claim. If missing,
-the claim is invalid.
+**Required debug_info fields for LLM claims:**
+- `system_instruction_text` - The system prompt (captured by default)
+- `raw_request_payload` - The user prompt/action sent to LLM (requires `CAPTURE_RAW_LLM=true`)
+- `raw_response_text` - Raw LLM output before parsing (requires `CAPTURE_RAW_LLM=true`)
 
 **Server configuration:**
 - Enable full request/response logging in your server

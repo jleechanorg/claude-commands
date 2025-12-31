@@ -706,7 +706,6 @@ def create_mcp_handler(
 
         def log_message(self, format, *args):
             """Suppress default HTTP server logging for cleaner output."""
-            pass
 
     return MCPHandler
 

@@ -13,7 +13,8 @@ robust first-choice parsing) is centralized here.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from mvp_site.llm_providers.openai_chat_common import (
     build_chat_payload,
@@ -89,9 +90,8 @@ def generate_openai_compatible_content(
     tool_calls = extract_tool_calls(data)
     if validate_response_fn is not None:
         validate_response_fn(data, message, raw_text, tool_calls)
-    else:
-        if raw_text is None and not tool_calls:
-            raise ValueError("No content and no tool_calls in response message")
+    elif raw_text is None and not tool_calls:
+        raise ValueError("No content and no tool_calls in response message")
 
     if postprocess_text_fn is None:
         text = "" if raw_text is None else str(raw_text)

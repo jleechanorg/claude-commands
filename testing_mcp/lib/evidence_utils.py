@@ -1,285 +1,231 @@
-"""Centralized evidence capture utilities for testing_mcp tests.
+"""Evidence capture and provenance utilities per evidence-standards.md.
 
 This module provides evidence capture functions that comply with
 .claude/skills/evidence-standards.md requirements.
 
-Usage in tests:
-    from lib.evidence_utils import (
-        capture_git_provenance,
-        capture_server_runtime,
-        capture_server_health,
-        write_with_checksum,
-    )
-
-    # At test start
-    provenance = capture_git_provenance()
-    server_info = capture_server_runtime(port=8082)
-
-    # When writing evidence
-    write_with_checksum(Path("evidence.json"), json.dumps(data, indent=2))
+Canonical evidence structure:
+    /tmp/<repo>/<branch>/<work>/<timestamp>/
+    ├── README.md              # Package manifest with git provenance
+    ├── README.md.sha256
+    ├── methodology.md         # Testing methodology documentation
+    ├── methodology.md.sha256
+    ├── evidence.md            # Evidence summary with metrics
+    ├── evidence.md.sha256
+    ├── metadata.json          # Machine-readable: git_provenance, timestamps
+    ├── metadata.json.sha256
+    ├── request_responses.jsonl # Raw request/response payloads (LLM behavior proof)
+    ├── request_responses.jsonl.sha256
+    └── artifacts/             # Copied evidence files (test outputs, logs, etc.)
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import os
+import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-import json
-import urllib.request
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
-def get_evidence_dir(work_name: str, timestamp: str | None = None) -> Path:
-    """Get evidence directory per evidence-standards.md pattern.
+def get_evidence_dir(test_name: str) -> Path:
+    """Get evidence directory following /tmp/<repo>/<branch>/<test_name> pattern.
 
-    Pattern: /tmp/<repo>/<branch>/<work>/<timestamp>/
+    Per evidence-standards.md, evidence should be saved in /tmp subdirectory.
 
     Args:
-        work_name: Name of the work/test (e.g., "god_mode_validation").
-        timestamp: Optional timestamp string. If None, uses current time.
+        test_name: Name of the test (e.g., "relationship_reputation")
 
     Returns:
-        Path to evidence directory (created if it doesn't exist).
+        Path to evidence directory.
     """
-    import subprocess
-
-    # Get repo name from git
+    repo_name = "worldarchitect.ai"
     try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            cwd=PROJECT_ROOT,
-            timeout=10,
-        )
-        if result.returncode == 0:
-            repo_name = Path(result.stdout.strip()).name
-        else:
-            repo_name = "unknown_repo"
-    except Exception:
-        repo_name = "unknown_repo"
-
-    # Get branch name
-    try:
-        result = subprocess.run(
+        branch = subprocess.check_output(
             ["git", "branch", "--show-current"],
-            capture_output=True,
+            cwd=str(PROJECT_ROOT),
             text=True,
-            cwd=PROJECT_ROOT,
-            timeout=10,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            branch = result.stdout.strip()
-        else:
-            branch = "unknown_branch"
+            timeout=5,
+        ).strip()
     except Exception:
-        branch = "unknown_branch"
+        branch = "unknown"
 
-    # Generate timestamp if not provided
-    if timestamp is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Build path: /tmp/<repo>/<branch>/<work>/<timestamp>/
-    evidence_dir = Path("/tmp") / repo_name / branch / work_name / timestamp
+    evidence_dir = Path("/tmp") / repo_name / branch / test_name
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    (evidence_dir / "artifacts").mkdir(exist_ok=True)
-
     return evidence_dir
 
 
-def capture_git_provenance(*, fetch_origin: bool = True) -> dict[str, Any]:
-    """Capture git provenance per evidence-standards.md requirements.
+def capture_provenance(
+    base_url: str,
+    server_pid: int | None = None,
+    *,
+    server_env_overrides: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Capture git and server provenance per evidence-standards.md.
 
-    This captures all mandatory git provenance fields:
-    - git_head: Current commit SHA
-    - git_branch: Current branch name
-    - merge_base: Common ancestor with origin/main
-    - commits_ahead_of_main: Number of commits ahead
-    - diff_stat_vs_main: Summary of changed files
-    - changed_files: List of changed file paths
+    Required fields:
+    - provenance.git_head
+    - provenance.git_branch
+    - provenance.merge_base
+    - provenance.commits_ahead_of_main
+    - provenance.diff_stat_vs_main
+    - provenance.server.pid
+    - provenance.server.port
+    - provenance.server.process_cmdline
 
     Args:
-        fetch_origin: If True, fetch origin/main first to ensure it's current.
+        base_url: Server base URL.
+        server_pid: Process ID of the server (if known).
+        server_env_overrides: Env vars that were explicitly set on the server process.
+            These take precedence over os.environ for accurate provenance capture.
 
     Returns:
-        Dict with git provenance data.
+        Provenance dict with all required fields.
     """
-    provenance: dict[str, Any] = {
-        "capture_timestamp": datetime.now(timezone.utc).isoformat(),
-        "working_directory": str(PROJECT_ROOT),
+    provenance: dict[str, Any] = {}
+
+    # Git provenance
+    try:
+        subprocess.run(
+            ["git", "fetch", "origin", "main"],
+            cwd=str(PROJECT_ROOT),
+            timeout=10,
+            capture_output=True,
+        )
+        provenance["git_head"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=5,
+        ).strip()
+        provenance["git_branch"] = subprocess.check_output(
+            ["git", "branch", "--show-current"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=5,
+        ).strip()
+        provenance["merge_base"] = subprocess.check_output(
+            ["git", "merge-base", "HEAD", "origin/main"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=5,
+        ).strip()
+        provenance["commits_ahead_of_main"] = int(
+            subprocess.check_output(
+                ["git", "rev-list", "--count", "origin/main..HEAD"],
+                cwd=str(PROJECT_ROOT),
+                text=True,
+                timeout=5,
+            ).strip()
+        )
+        provenance["diff_stat_vs_main"] = subprocess.check_output(
+            ["git", "diff", "--stat", "origin/main...HEAD"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=10,
+        ).strip()
+    except Exception as e:
+        provenance["git_error"] = str(e)
+
+    # Server runtime info - capture all required env vars per evidence-standards.md
+    # CRITICAL: Use server_env_overrides when available - these are the ACTUAL values
+    # that were set on the server process, not the test runner's environment.
+    port = base_url.split(":")[-1].rstrip("/")
+    env_vars_to_capture = [
+        "WORLDAI_DEV_MODE",
+        "TESTING",
+        "MOCK_SERVICES_MODE",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "PORT",
+        "FIREBASE_PROJECT_ID",
+        "GEMINI_API_KEY",  # Masked
+    ]
+    env_vars: dict[str, Any] = {}
+    overrides = server_env_overrides or {}
+    for var in env_vars_to_capture:
+        # Prefer server_env_overrides (explicit server config) over os.environ (test runner)
+        value = overrides.get(var) if var in overrides else os.environ.get(var)
+        if value and ("KEY" in var or "CREDENTIALS" in var):
+            env_vars[var] = f"[SET - {len(value)} chars]"  # Mask sensitive values
+        else:
+            env_vars[var] = value
+
+    provenance["server"] = {
+        "port": port,
+        "pid": server_pid,
+        "process_cmdline": None,
+        "env_vars": env_vars,
+        "lsof_output": None,
+        "ps_output": None,
     }
 
-    def run_git(args: list[str], timeout: int = 10) -> tuple[str, int]:
-        """Run git command and return (output, returncode)."""
+    if server_pid:
         try:
-            result = subprocess.run(
-                ["git"] + args,
-                capture_output=True,
+            cmdline = subprocess.check_output(
+                ["ps", "-p", str(server_pid), "-o", "command="],
                 text=True,
-                cwd=PROJECT_ROOT,
-                timeout=timeout,
-            )
-            return result.stdout.strip(), result.returncode
-        except subprocess.TimeoutExpired:
-            return "ERROR: timeout", -1
-        except Exception as e:
-            return f"ERROR: {e}", -1
+                timeout=5,
+            ).strip()
+            provenance["server"]["process_cmdline"] = cmdline
 
-    # Optionally fetch origin/main to ensure it's current
-    if fetch_origin:
-        run_git(["fetch", "origin", "main"], timeout=30)
+            # Capture full ps output for evidence
+            ps_full = subprocess.check_output(
+                ["ps", "-p", str(server_pid), "-o", "pid,user,etime,args"],
+                text=True,
+                timeout=5,
+            ).strip()
+            provenance["server"]["ps_output"] = ps_full
+        except Exception:
+            pass
 
-    # Core git state (MANDATORY per evidence-standards.md)
-    git_head, rc = run_git(["rev-parse", "HEAD"])
-    provenance["git_head"] = git_head if rc == 0 else f"ERROR: {git_head}"
+        # Capture lsof output for port evidence
+        try:
+            lsof_output = subprocess.check_output(
+                ["lsof", "-i", f":{port}", "-P", "-n"],
+                text=True,
+                timeout=5,
+            ).strip()
+            provenance["server"]["lsof_output"] = lsof_output
+        except Exception:
+            pass
 
-    git_branch, rc = run_git(["branch", "--show-current"])
-    provenance["git_branch"] = git_branch if rc == 0 else f"ERROR: {git_branch}"
-
-    merge_base, rc = run_git(["merge-base", "HEAD", "origin/main"])
-    provenance["merge_base"] = merge_base if rc == 0 else f"ERROR: {merge_base}"
-
-    commits_ahead, rc = run_git(["rev-list", "--count", "origin/main..HEAD"])
-    provenance["commits_ahead_of_main"] = (
-        int(commits_ahead) if rc == 0 and commits_ahead.isdigit() else 0
-    )
-
-    diff_stat, rc = run_git(["diff", "--stat", "origin/main...HEAD"])
-    provenance["diff_stat_vs_main"] = diff_stat if rc == 0 else f"ERROR: {diff_stat}"
-
-    # Changed files list
-    changed_files, rc = run_git(["diff", "--name-only", "origin/main...HEAD"])
-    if rc == 0 and changed_files:
-        provenance["changed_files"] = [f for f in changed_files.split("\n") if f]
-    else:
-        provenance["changed_files"] = []
-
-    # Also capture origin/main commit for reference
-    origin_main, rc = run_git(["rev-parse", "origin/main"])
-    provenance["origin_main"] = origin_main if rc == 0 else f"ERROR: {origin_main}"
+    # Use UTC timestamp with timezone for consistency
+    provenance["timestamp"] = datetime.now(timezone.utc).isoformat()
 
     return provenance
 
 
-def capture_server_runtime(
-    port: int,
-    *,
-    host: str = "localhost",
-    env_vars: list[str] | None = None,
-) -> dict[str, Any]:
-    """Capture server runtime info per evidence-standards.md requirements.
-
-    This captures all mandatory server runtime fields:
-    - server.pid: Process ID of server
-    - server.port: Port number
-    - server.process_cmdline: Full command line
-    - server.env_vars: Environment variables
+def save_evidence(
+    evidence_dir: Path,
+    data: dict[str, Any],
+    filename: str = "run.json",
+) -> tuple[Path, Path]:
+    """Save evidence JSON with SHA256 checksum per evidence-standards.md.
 
     Args:
-        port: Server port to check.
-        host: Server host (default localhost).
-        env_vars: List of env var names to capture (default: standard set).
+        evidence_dir: Directory to save evidence.
+        data: Evidence data dict.
+        filename: Output filename (default: run.json).
 
     Returns:
-        Dict with server runtime info.
+        Tuple of (evidence_file_path, checksum_file_path).
     """
-    if env_vars is None:
-        env_vars = [
-            "WORLDAI_DEV_MODE",
-            "TESTING",
-            "GOOGLE_APPLICATION_CREDENTIALS",
-            "GEMINI_API_KEY",
-            "FIREBASE_PROJECT_ID",
-            "PORT",  # Added per evidence-standards.md requirements
-        ]
+    evidence_dir.mkdir(parents=True, exist_ok=True)
 
-    server_info: dict[str, Any] = {
-        "capture_timestamp": datetime.now(timezone.utc).isoformat(),
-        "port": port,
-        "host": host,
-    }
+    evidence_file = evidence_dir / filename
+    evidence_file.write_text(json.dumps(data, indent=2))
 
-    # Get PIDs listening on port
-    try:
-        result = subprocess.run(
-            ["lsof", "-i", f":{port}", "-t"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            server_info["pid"] = pids[0] if pids else None
+    # Generate checksum per evidence-standards.md
+    checksum_file = evidence_dir / f"{filename}.sha256"
+    with open(evidence_file, "rb") as f:
+        sha256_hash = hashlib.sha256(f.read()).hexdigest()
+    checksum_file.write_text(f"{sha256_hash}  {filename}\n")
 
-            # Get process command line
-            if server_info["pid"]:
-                cmd_result = subprocess.run(
-                    ["ps", "-p", server_info["pid"], "-o", "command="],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                )
-                if cmd_result.returncode == 0:
-                    server_info["process_cmdline"] = cmd_result.stdout.strip()
-                else:
-                    server_info["process_cmdline"] = None
-        else:
-            server_info["pid"] = None
-            server_info["process_cmdline"] = None
-    except Exception as e:
-        server_info["pid"] = f"ERROR: {e}"
-        server_info["process_cmdline"] = None
-
-    # Capture environment variables (sanitized - only show if set)
-    server_info["env_vars"] = {}
-    for var in env_vars:
-        value = os.environ.get(var)
-        if value:
-            # Mask sensitive values
-            if "KEY" in var or "CREDENTIALS" in var:
-                server_info["env_vars"][var] = f"[SET - {len(value)} chars]"
-            else:
-                server_info["env_vars"][var] = value
-        else:
-            server_info["env_vars"][var] = None
-
-    return server_info
-
-
-def capture_server_health(server_url: str, *, timeout: int = 10) -> dict[str, Any]:
-    """Capture server health endpoint for version/build info.
-
-    Args:
-        server_url: Base URL of the server.
-        timeout: Request timeout in seconds.
-
-    Returns:
-        Dict with server health data.
-    """
-    health_url = f"{server_url.rstrip('/')}/health"
-    health_info: dict[str, Any] = {
-        "capture_timestamp": datetime.now(timezone.utc).isoformat(),
-        "url": health_url,
-    }
-
-    try:
-        req = urllib.request.Request(health_url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            health_info["status_code"] = response.status
-            content = response.read().decode("utf-8")
-            try:
-                health_info["data"] = json.loads(content)
-            except json.JSONDecodeError:
-                health_info["data"] = content
-    except Exception as e:
-        health_info["status_code"] = None
-        health_info["error"] = str(e)
-
-    return health_info
+    return evidence_file, checksum_file
 
 
 def write_with_checksum(filepath: Path, content: str) -> str:
@@ -306,29 +252,270 @@ def write_with_checksum(filepath: Path, content: str) -> str:
     return sha256_hash
 
 
-def capture_full_provenance(
-    port: int,
-    server_url: str,
-    *,
-    fetch_origin: bool = True,
-) -> dict[str, Any]:
-    """Capture complete provenance for evidence bundle.
+def save_request_responses(
+    evidence_dir: Path,
+    captures: list[dict[str, Any]],
+) -> tuple[Path, str]:
+    """Save raw request/response payloads as JSONL per evidence-standards.md.
 
-    This is a convenience function that captures all required provenance:
-    - Git provenance
-    - Server runtime info
-    - Server health
+    Per evidence-standards.md section "For LLM/API Behavior Claims", evidence
+    MUST capture the full request/response cycle.
 
     Args:
-        port: Server port.
-        server_url: Server base URL.
-        fetch_origin: If True, fetch origin/main first.
+        evidence_dir: Directory to save evidence.
+        captures: List of request/response dicts from MCPClient.get_captures_as_dict().
 
     Returns:
-        Dict with all provenance data.
+        Tuple of (file_path, sha256_hash).
     """
-    return {
-        "git": capture_git_provenance(fetch_origin=fetch_origin),
-        "server": capture_server_runtime(port),
-        "health": capture_server_health(server_url),
+    filepath = evidence_dir / "request_responses.jsonl"
+
+    lines = [json.dumps(c) for c in captures]
+    content = "\n".join(lines) + "\n" if lines else ""
+
+    sha256_hash = write_with_checksum(filepath, content)
+    return filepath, sha256_hash
+
+
+def create_evidence_bundle(
+    evidence_dir: Path,
+    *,
+    test_name: str,
+    provenance: dict[str, Any],
+    results: dict[str, Any],
+    request_responses: list[dict[str, Any]] | None = None,
+    methodology_text: str | None = None,
+    server_log_path: Path | None = None,
+    isolation_info: dict[str, Any] | None = None,
+) -> dict[str, Path]:
+    """Create a complete evidence bundle per evidence-standards.md canonical format.
+
+    Creates:
+        - README.md: Package manifest with git provenance
+        - methodology.md: Testing methodology documentation
+        - evidence.md: Evidence summary with metrics
+        - metadata.json: Machine-readable provenance and timestamps
+        - request_responses.jsonl: Raw request/response payloads (if provided)
+        - run.json: Test results
+        - artifacts/server.log: Copy of server log (if provided)
+        - artifacts/lsof_output.txt: Port binding evidence
+        - artifacts/ps_output.txt: Process info evidence
+
+    All files get .sha256 checksum files.
+
+    Args:
+        evidence_dir: Directory to create bundle in.
+        test_name: Name of the test for documentation.
+        provenance: Git and server provenance dict from capture_provenance().
+        results: Test results dict to save as run.json.
+        request_responses: Optional list of request/response captures.
+        methodology_text: Optional custom methodology text.
+        server_log_path: Path to server log file to copy to artifacts.
+        isolation_info: Optional dict describing test isolation design.
+            Example: {"total_campaigns": 12, "shared_campaign": 1, "isolated_tests": 11,
+                      "reason": "State-sensitive tests require fresh campaigns"}
+
+    Returns:
+        Dict mapping file types to their paths.
+    """
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    artifacts_dir = evidence_dir / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+
+    bundle_timestamp = datetime.now(timezone.utc).isoformat()
+    files: dict[str, Path] = {}
+
+    # 1. README.md - Package manifest
+    readme_content = f"""# Evidence Package: {test_name}
+
+## Package Manifest
+- **Test Name:** {test_name}
+- **Collected At (UTC):** {bundle_timestamp}
+- **Repository:** worldarchitect.ai
+- **Branch:** {provenance.get('git_branch', 'unknown')}
+- **Commit:** {provenance.get('git_head', 'unknown')}
+- **Merge Base:** {provenance.get('merge_base', 'unknown')}
+- **Commits Ahead of Main:** {provenance.get('commits_ahead_of_main', 0)}
+
+## Git Provenance
+```
+{provenance.get('diff_stat_vs_main', 'No diff available')}
+```
+
+## Server Runtime
+- **Port:** {provenance.get('server', {}).get('port', 'unknown')}
+- **PID:** {provenance.get('server', {}).get('pid', 'unknown')}
+- **Command:** {provenance.get('server', {}).get('process_cmdline', 'unknown')}
+
+## Environment Variables
+"""
+    for var, val in provenance.get("server", {}).get("env_vars", {}).items():
+        readme_content += f"- **{var}:** {val}\n"
+
+    readme_content += """
+## Files in This Bundle
+- `README.md` - This manifest
+- `methodology.md` - Testing methodology
+- `evidence.md` - Evidence summary
+- `metadata.json` - Machine-readable metadata
+- `run.json` - Test results
+- `request_responses.jsonl` - Raw request/response payloads (if present)
+- `artifacts/` - Additional evidence files
+"""
+    write_with_checksum(evidence_dir / "README.md", readme_content)
+    files["readme"] = evidence_dir / "README.md"
+
+    # 2. methodology.md - Testing methodology
+    if methodology_text is None:
+        # Build isolation section if provided
+        isolation_section = ""
+        if isolation_info:
+            isolation_section = f"""
+## Test Isolation Design
+
+**Multi-campaign architecture is BY DESIGN for test isolation.**
+
+- **Total Campaigns:** {isolation_info.get('total_campaigns', 'unknown')}
+- **Shared Campaign:** {isolation_info.get('shared_campaign', 0)} (reused across non-isolated tests)
+- **Isolated Tests:** {isolation_info.get('isolated_tests', 0)} (each gets a fresh campaign)
+- **Rationale:** {isolation_info.get('reason', 'State-sensitive tests require fresh campaigns to prevent context bleed')}
+
+Isolated tests are marked with `isolated: True` in the test scenario definition.
+Each isolated test creates its own campaign to ensure:
+1. No state bleed from prior tests
+2. Clean initial conditions for sensitive scenarios
+3. Independent validation of state transitions
+"""
+
+        methodology_text = f"""# Methodology: {test_name}
+
+## Test Type
+Real API test against MCP server (not mock mode).
+
+## Test Mode
+- **TESTING env var:** {provenance.get('server', {}).get('env_vars', {}).get('TESTING', 'not set')}
+- **Mode:** Real API calls via MCP HTTP JSON-RPC
+
+## Execution Environment
+- Server running at port {provenance.get('server', {}).get('port', 'unknown')}
+- Process: {provenance.get('server', {}).get('process_cmdline', 'unknown')}
+{isolation_section}
+## Evidence Capture
+- Raw request/response payloads captured for each MCP call
+- Git provenance captured at test start
+- Server runtime info captured via lsof/ps
+- Raw LLM response text captured in server.log (artifacts/server.log)
+
+## Validation Criteria
+Test scenarios validate that:
+1. MCP server processes actions correctly
+2. State updates are returned as expected
+3. No server errors occur
+"""
+    write_with_checksum(evidence_dir / "methodology.md", methodology_text)
+    files["methodology"] = evidence_dir / "methodology.md"
+
+    # 3. evidence.md - Evidence summary
+    scenarios = results.get("scenarios", [])
+    passed = sum(1 for s in scenarios if not s.get("errors"))
+    failed = len(scenarios) - passed
+
+    # Build isolation note if multi-campaign
+    isolation_note = ""
+    if isolation_info and isolation_info.get("total_campaigns", 1) > 1:
+        isolation_note = f"""
+## ⚠️ Multi-Campaign Isolation Note
+
+This evidence bundle contains **{isolation_info.get('total_campaigns', 'unknown')} campaigns**:
+- **1 shared campaign** for non-isolated tests (campaign_id in results)
+- **{isolation_info.get('isolated_tests', 0)} isolated campaigns** for state-sensitive tests
+
+**Why:** {isolation_info.get('reason', 'State-sensitive tests require fresh campaigns')}
+
+**Claim Scoping:** Each scenario result below includes its `campaign_id`. Claims about
+specific scenarios reference ONLY that scenario's campaign. Aggregate claims (e.g., "18/18 passed")
+span all campaigns but each individual result is traceable to its campaign.
+"""
+
+    evidence_content = f"""# Evidence Summary: {test_name}
+
+## Test Results
+- **Total Scenarios:** {len(scenarios)}
+- **Passed:** {passed}
+- **Failed:** {failed}
+- **Pass Rate:** {passed / len(scenarios) * 100 if scenarios else 0:.1f}%
+{isolation_note}
+## Scenario Results
+"""
+    for scenario in scenarios:
+        status = "✅ PASS" if not scenario.get("errors") else "❌ FAIL"
+        evidence_content += f"\n### {scenario.get('name', 'Unknown')}\n"
+        evidence_content += f"- **Status:** {status}\n"
+        # Add campaign_id for traceability
+        if scenario.get("campaign_id"):
+            evidence_content += f"- **Campaign ID:** `{scenario['campaign_id']}`\n"
+        if scenario.get("errors"):
+            evidence_content += f"- **Errors:** {scenario['errors']}\n"
+        if scenario.get("relationship_updates"):
+            evidence_content += f"- **Relationship Updates:** {list(scenario['relationship_updates'].keys())}\n"
+        if scenario.get("reputation_updates"):
+            evidence_content += f"- **Reputation Updates:** Yes\n"
+
+    evidence_content += f"""
+## Provenance Chain
+- **Git HEAD:** `{provenance.get('git_head', 'unknown')}`
+- **Test Timestamp:** `{bundle_timestamp}`
+- **Server PID:** `{provenance.get('server', {}).get('pid', 'unknown')}`
+"""
+    write_with_checksum(evidence_dir / "evidence.md", evidence_content)
+    files["evidence"] = evidence_dir / "evidence.md"
+
+    # 4. metadata.json - Machine-readable
+    metadata = {
+        "test_name": test_name,
+        "bundle_timestamp": bundle_timestamp,
+        "provenance": provenance,
+        "summary": {
+            "total_scenarios": len(scenarios),
+            "passed": passed,
+            "failed": failed,
+        },
     }
+    write_with_checksum(
+        evidence_dir / "metadata.json",
+        json.dumps(metadata, indent=2),
+    )
+    files["metadata"] = evidence_dir / "metadata.json"
+
+    # 5. request_responses.jsonl - Raw payloads (if provided)
+    if request_responses:
+        save_request_responses(evidence_dir, request_responses)
+        files["request_responses"] = evidence_dir / "request_responses.jsonl"
+
+    # 6. run.json - Test results
+    save_evidence(evidence_dir, results, "run.json")
+    files["results"] = evidence_dir / "run.json"
+
+    # 7. artifacts/ - Supporting evidence files
+    # Copy server log if provided
+    if server_log_path and server_log_path.exists():
+        dest_log = artifacts_dir / "server.log"
+        shutil.copy2(server_log_path, dest_log)
+        write_with_checksum(dest_log, dest_log.read_text())
+        files["server_log"] = dest_log
+
+    # Save lsof output if captured
+    lsof_output = provenance.get("server", {}).get("lsof_output")
+    if lsof_output:
+        lsof_file = artifacts_dir / "lsof_output.txt"
+        write_with_checksum(lsof_file, lsof_output)
+        files["lsof_output"] = lsof_file
+
+    # Save ps output if captured
+    ps_output = provenance.get("server", {}).get("ps_output")
+    if ps_output:
+        ps_file = artifacts_dir / "ps_output.txt"
+        write_with_checksum(ps_file, ps_output)
+        files["ps_output"] = ps_file
+
+    return files

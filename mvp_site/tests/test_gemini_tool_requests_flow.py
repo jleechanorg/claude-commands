@@ -1,47 +1,65 @@
+"""Tests for Gemini native function calling flow.
+
+Tests generate_content_with_native_tools which uses Gemini's native
+function_call API (not JSON-first tool_requests parsing).
+"""
+
 from __future__ import annotations
 
 import os
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 
-class TestGeminiToolRequestsFlow(unittest.TestCase):
+class TestGeminiNativeToolsFlow(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["TESTING"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test")
 
-    def test_tool_requests_flow_runs_phase2_when_needed(self):
+    def test_native_tools_runs_phase2_when_function_calls_present(self):
+        """Phase 2 runs when model returns function calls."""
         from mvp_site.llm_providers import gemini_provider
 
-        response1 = SimpleNamespace(
-            text='{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}'
-        )
-        response2 = SimpleNamespace(text='{"narrative":"ok"}')
+        # Mock Phase 1 response with function calls
+        mock_function_call = MagicMock()
+        mock_function_call.name = "roll_dice"
+        mock_function_call.args = {"notation": "1d20"}
+
+        mock_part = MagicMock()
+        mock_part.function_call = mock_function_call
+
+        mock_content = MagicMock()
+        mock_content.parts = [mock_part]
+
+        mock_candidate = MagicMock()
+        mock_candidate.content = mock_content
+
+        phase1_response = MagicMock()
+        phase1_response.candidates = [mock_candidate]
+
+        phase2_response = SimpleNamespace(text='{"narrative":"Rolled a 15!"}')
 
         with (
-            patch(
-                "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
-            ) as mock_json,
-            patch(
-                "mvp_site.llm_providers.gemini_provider.execute_tool_requests"
+            patch.object(gemini_provider, "get_client") as mock_get_client,
+            patch.object(
+                gemini_provider, "execute_tool_requests"
             ) as mock_exec,
-            patch(
-                "mvp_site.llm_providers.gemini_provider.format_tool_results_text"
-            ) as mock_format,
+            patch.object(
+                gemini_provider, "generate_json_mode_content"
+            ) as mock_json,
         ):
-            mock_json.side_effect = [response1, response2]
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = phase1_response
+            mock_get_client.return_value = mock_client
+
             mock_exec.return_value = [
-                {
-                    "tool": "roll_dice",
-                    "args": {"notation": "1d20"},
-                    "result": {"total": 7},
-                }
+                {"tool": "roll_dice", "args": {"notation": "1d20"}, "result": 15}
             ]
-            mock_format.return_value = '- roll_dice({"notation":"1d20"}): {"total": 7}'
+            mock_json.return_value = phase2_response
 
-            out = gemini_provider.generate_content_with_tool_requests(
-                prompt_contents=["hi"],
+            out = gemini_provider.generate_content_with_native_tools(
+                prompt_contents=["Roll for initiative"],
                 model_name="gemini-2.0-flash",
                 system_instruction_text="sys",
                 temperature=0.0,
@@ -49,27 +67,46 @@ class TestGeminiToolRequestsFlow(unittest.TestCase):
                 json_mode_max_output_tokens=256,
             )
 
-        assert out.text == '{"narrative":"ok"}'
-        assert mock_json.call_count == 2
+        assert out.text == '{"narrative":"Rolled a 15!"}'
         assert mock_exec.called
+        assert mock_json.called
 
-    def test_tool_requests_flow_returns_phase1_when_none_present(self):
+    def test_native_tools_skips_phase2_when_no_function_calls(self):
+        """No Phase 2 when model doesn't call functions."""
         from mvp_site.llm_providers import gemini_provider
 
-        response1 = SimpleNamespace(text='{"narrative":"ok"}')
+        # Mock Phase 1 response without function calls (just text)
+        mock_part = MagicMock()
+        mock_part.function_call = None
+
+        mock_content = MagicMock()
+        mock_content.parts = [mock_part]
+
+        mock_candidate = MagicMock()
+        mock_candidate.content = mock_content
+
+        phase1_response = MagicMock()
+        phase1_response.candidates = [mock_candidate]
+
+        phase2_response = SimpleNamespace(text='{"narrative":"No dice needed"}')
 
         with (
-            patch(
-                "mvp_site.llm_providers.gemini_provider.generate_json_mode_content"
-            ) as mock_json,
-            patch(
-                "mvp_site.llm_providers.gemini_provider.execute_tool_requests"
+            patch.object(gemini_provider, "get_client") as mock_get_client,
+            patch.object(
+                gemini_provider, "execute_tool_requests"
             ) as mock_exec,
+            patch.object(
+                gemini_provider, "generate_json_mode_content"
+            ) as mock_json,
         ):
-            mock_json.return_value = response1
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = phase1_response
+            mock_get_client.return_value = mock_client
 
-            out = gemini_provider.generate_content_with_tool_requests(
-                prompt_contents=["hi"],
+            mock_json.return_value = phase2_response
+
+            out = gemini_provider.generate_content_with_native_tools(
+                prompt_contents=["Hello"],
                 model_name="gemini-2.0-flash",
                 system_instruction_text="sys",
                 temperature=0.0,
@@ -77,6 +114,8 @@ class TestGeminiToolRequestsFlow(unittest.TestCase):
                 json_mode_max_output_tokens=256,
             )
 
-        assert out.text == '{"narrative":"ok"}'
-        assert mock_json.call_count == 1
+        assert out.text == '{"narrative":"No dice needed"}'
+        # execute_tool_requests should NOT be called when no function calls
         assert not mock_exec.called
+        # Phase 2 still runs to get final JSON output
+        assert mock_json.called

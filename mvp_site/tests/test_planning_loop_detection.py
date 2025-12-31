@@ -15,11 +15,9 @@ The Action Execution Rule (game_state_instruction.md line 239-244) says:
 This test should FAIL until the prompt is strengthened to enforce resolution.
 """
 
-import json
 import os
 import sys
 import unittest
-from unittest.mock import Mock, patch
 
 # Set TESTING environment variable
 os.environ["TESTING"] = "true"
@@ -259,7 +257,7 @@ class TestPromptEnforcementForSocialEncounters(unittest.TestCase):
             "game_state_instruction.md",
         )
 
-        with open(prompt_path, "r") as f:
+        with open(prompt_path) as f:
             prompt_content = f.read()
 
         # Check if Action Execution Rule exists

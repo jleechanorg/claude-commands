@@ -93,13 +93,15 @@ def _load_secret(env: dict[str, str], *, secret_name: str, env_var: str) -> None
                     project,
                 ],
                 stderr=subprocess.DEVNULL,
+                timeout=30,  # Prevent indefinite hang if gcloud is unresponsive
             )
             .decode("utf-8")
             .strip()
         )
         if value:
             env[env_var] = value
-    except (subprocess.CalledProcessError, OSError):
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        # Silent failure is intentional - secret loading is optional
         return
 
 

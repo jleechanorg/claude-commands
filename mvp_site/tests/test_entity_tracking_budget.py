@@ -16,9 +16,8 @@ explicitly added to scaffold budget before truncation calculation.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
 
-from mvp_site import constants, llm_service
+from mvp_site import llm_service
 from mvp_site.token_utils import estimate_tokens
 
 

@@ -92,8 +92,8 @@ class TestGodModeEnd2End(unittest.TestCase):
                         "description": "Study the other tavern guests from a discreet corner",
                         "risk_level": "low",
                     },
-                },
-            },
+                }
+            }
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):

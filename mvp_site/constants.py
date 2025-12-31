@@ -428,6 +428,8 @@ PROMPT_TYPE_GOD_MODE = "god_mode"
 PROMPT_TYPE_LIVING_WORLD = "living_world"
 PROMPT_TYPE_COMBAT = "combat"
 PROMPT_TYPE_REWARDS = "rewards"
+PROMPT_TYPE_RELATIONSHIP = "relationship"
+PROMPT_TYPE_REPUTATION = "reputation"
 
 
 # --- PROMPT PATHS ---
@@ -448,6 +450,8 @@ COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
     PROMPTS_DIR, "combat_system_instruction.md"
 )
 REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "rewards_system_instruction.md")
+RELATIONSHIP_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "relationship_instruction.md")
+REPUTATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "reputation_instruction.md")
 
 # --- LIVING WORLD SETTINGS ---
 # The living world instruction is included every N turns to advance world state.

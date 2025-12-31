@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 from mvp_site import firestore_service
 
 

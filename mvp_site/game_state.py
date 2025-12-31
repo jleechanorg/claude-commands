@@ -305,6 +305,13 @@ class GameState:
         # Debug mode flag
         self.debug_mode = kwargs.get("debug_mode", constants.DEFAULT_DEBUG_MODE)
 
+        # LLM-requested instruction hints for next turn
+        # Extracted from debug_info.meta.needs_detailed_instructions and used to load
+        # detailed prompt sections (e.g., relationships, reputation) on subsequent turns
+        self.pending_instruction_hints: list[str] = kwargs.get(
+            "pending_instruction_hints", []
+        )
+
         # Dynamically set any other attributes from kwargs
         for key, value in kwargs.items():
             if not hasattr(self, key):
@@ -416,7 +423,6 @@ class GameState:
                     for entry in init_order
                     if isinstance(entry, dict) and entry.get("name") in combatants_keys
                 ]
-
         # CRITICAL: Validate schema consistency between initiative_order and combatants
         self._validate_combat_state_consistency()
 
@@ -654,7 +660,6 @@ class GameState:
                 return True
 
         return False
-
     # =========================================================================
     # Arc Milestone Tracking Methods
     # =========================================================================

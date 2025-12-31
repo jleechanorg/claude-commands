@@ -58,6 +58,7 @@ from mvp_site.firestore_service import (
     update_state_with_changes,
 )
 from mvp_site.game_state import GameState, validate_and_correct_state
+from mvp_site.agent_prompts import extract_llm_instruction_hints
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
 
@@ -1401,6 +1402,20 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             prevention_extras["temporal_correction_warning"] = temporal_warning
             prevention_extras["temporal_correction_attempts"] = (
                 temporal_correction_attempts
+            )
+
+        # Extract LLM-requested instruction hints for next turn
+        # The LLM can signal it needs detailed sections (e.g., relationships, reputation)
+        # via debug_info.meta.needs_detailed_instructions in its response
+        llm_debug_info = llm_response_obj.get_debug_info() if hasattr(llm_response_obj, "get_debug_info") else {}
+        # Wrap in dict as extract_llm_instruction_hints expects {"debug_info": {...}}
+        instruction_hints = extract_llm_instruction_hints({"debug_info": llm_debug_info})
+        # Always update pending_instruction_hints - either with new hints or empty list to clear
+        # This ensures hints are consumed on the next turn and don't persist indefinitely
+        state_changes["pending_instruction_hints"] = instruction_hints
+        if instruction_hints:
+            logging_util.info(
+                f"📋 DYNAMIC_PROMPTS: LLM requested detailed sections for next turn: {instruction_hints}"
             )
 
         response = {

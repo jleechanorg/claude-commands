@@ -390,6 +390,7 @@ def extract_code_execution_parts_summary(
         "executable_code_samples": [],
         "code_execution_result_samples": [],
     }
+    code_execution_used = False
 
     def _truncate(value: Any) -> str:
         try:
@@ -399,6 +400,11 @@ def extract_code_execution_parts_summary(
         if len(text) <= max_chars:
             return text
         return text[:max_chars] + "...(truncated)"
+
+    def _get_part_attr(part: Any, attr: str) -> Any:
+        if hasattr(part, "__dict__") and attr not in part.__dict__:
+            return None
+        return getattr(part, attr, None)
 
     try:
         candidates = getattr(response, "candidates", None) or []
@@ -410,9 +416,10 @@ def extract_code_execution_parts_summary(
                 continue
             for part in parts:
                 summary["parts"] += 1
-                if len(summary["executable_code_samples"]) < max_parts:
-                    executable = getattr(part, "executable_code", None)
-                    if executable is not None:
+                executable = _get_part_attr(part, "executable_code")
+                if executable is not None:
+                    code_execution_used = True
+                    if len(summary["executable_code_samples"]) < max_parts:
                         # SDK shape varies; capture common fields if present.
                         lang = getattr(executable, "language", None)
                         code = getattr(executable, "code", None)
@@ -425,9 +432,10 @@ def extract_code_execution_parts_summary(
                             }
                         )
 
-                if len(summary["code_execution_result_samples"]) < max_parts:
-                    result = getattr(part, "code_execution_result", None)
-                    if result is not None:
+                result = _get_part_attr(part, "code_execution_result")
+                if result is not None:
+                    code_execution_used = True
+                    if len(summary["code_execution_result_samples"]) < max_parts:
                         outcome = getattr(result, "outcome", None)
                         output = getattr(result, "output", None)
                         summary["code_execution_result_samples"].append(
@@ -443,6 +451,7 @@ def extract_code_execution_parts_summary(
     except Exception:
         return summary
 
+    summary["code_execution_used"] = code_execution_used
     return summary
 
 

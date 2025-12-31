@@ -1449,7 +1449,7 @@ def update_campaign(
         )
 
     # Check if any keys use dot-notation
-    has_dot_notation = any("." in key for key in updates.keys())
+    has_dot_notation = any("." in key for key in updates)
 
     if has_dot_notation:
         # Expand dot-notation to nested dicts and use set(merge=True).

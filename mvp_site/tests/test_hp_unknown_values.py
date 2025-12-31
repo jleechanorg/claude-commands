@@ -5,12 +5,9 @@ import os
 import sys
 import unittest
 
-from pydantic import ValidationError
-
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import pytest
 
 from mvp_site.schemas.entities_pydantic import HealthStatus
 

@@ -26,11 +26,16 @@ from .campaign_utils import (
 )
 from .evidence_utils import (
     get_evidence_dir,
-    capture_git_provenance,
-    capture_server_runtime,
-    capture_server_health,
-    capture_full_provenance,
+    capture_provenance,
+    save_evidence,
     write_with_checksum,
+    save_request_responses,
+    create_evidence_bundle,
+)
+from .narrative_validation import (
+    validate_narrative_compliance,
+    validate_state_update_compliance,
+    validate_directive_compliance,
 )
 
 __all__ = [
@@ -52,9 +57,13 @@ __all__ = [
     "ensure_game_state_seed",
     # Evidence utilities
     "get_evidence_dir",
-    "capture_git_provenance",
-    "capture_server_runtime",
-    "capture_server_health",
-    "capture_full_provenance",
+    "capture_provenance",
+    "save_evidence",
     "write_with_checksum",
+    "save_request_responses",
+    "create_evidence_bundle",
+    # Narrative validation utilities
+    "validate_narrative_compliance",
+    "validate_state_update_compliance",
+    "validate_directive_compliance",
 ]

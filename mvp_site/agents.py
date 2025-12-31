@@ -93,6 +93,7 @@ class BaseAgent(ABC):
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
     ) -> str:
         """
         Build the complete system instructions for this agent.
@@ -211,6 +212,7 @@ class StoryModeAgent(BaseAgent):
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
     ) -> str:
         """
         Build system instructions for story mode.
@@ -230,6 +232,8 @@ class StoryModeAgent(BaseAgent):
             include_continuation_reminder: Whether to add planning block reminders
                                            (True for continue_story, False for initial)
             turn_number: Current turn number (used for living world advancement)
+            llm_requested_sections: Sections the LLM requested via meta.needs_detailed_instructions
+                                    from the previous turn (e.g., ["relationships", "reputation"])
 
         Returns:
             Complete system instruction string
@@ -238,6 +242,7 @@ class StoryModeAgent(BaseAgent):
             selected_prompts=selected_prompts,
             include_continuation_reminder=include_continuation_reminder,
             turn_number=turn_number,
+            llm_requested_sections=llm_requested_sections,
         )
 
         # Finalize with world content if requested
@@ -248,6 +253,7 @@ class StoryModeAgent(BaseAgent):
         selected_prompts: list[str] | None = None,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
     ) -> list[str]:
         """
         Build the ordered instruction parts for story mode before finalization.
@@ -260,6 +266,8 @@ class StoryModeAgent(BaseAgent):
             selected_prompts: User-selected prompt types
             include_continuation_reminder: Whether to add planning block reminders
             turn_number: Current turn number (used for living world advancement)
+            llm_requested_sections: Sections the LLM requested via meta.needs_detailed_instructions
+                                    from the previous turn (e.g., ["relationships", "reputation"])
 
         Returns:
             List of ordered system instruction parts (without world content).
@@ -276,7 +284,10 @@ class StoryModeAgent(BaseAgent):
         builder.add_character_instructions(parts, selected_prompts)
 
         # Add selected prompt instructions (narrative, mechanics)
-        builder.add_selected_prompt_instructions(parts, selected_prompts)
+        # Pass LLM-requested sections to load detailed prompts dynamically
+        builder.add_selected_prompt_instructions(
+            parts, selected_prompts, llm_requested_sections=llm_requested_sections
+        )
 
         # Add system reference instructions (D&D SRD)
         builder.add_system_reference_instructions(parts)
@@ -356,6 +367,7 @@ class GodModeAgent(BaseAgent):
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
     ) -> str:
         """
         Build system instructions for god mode.
@@ -377,6 +389,7 @@ class GodModeAgent(BaseAgent):
         """
         # Parameters intentionally unused - god mode uses fixed prompt set
         del selected_prompts, use_default_world, include_continuation_reminder, turn_number
+        del llm_requested_sections
 
         builder = self._prompt_builder
 
@@ -500,6 +513,7 @@ class InfoAgent(BaseAgent):
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
     ) -> str:
         """
         Build TRIMMED system instructions for info queries.
@@ -517,6 +531,7 @@ class InfoAgent(BaseAgent):
         """
         # Parameters intentionally unused - info mode uses fixed prompt set
         del selected_prompts, use_default_world, include_continuation_reminder, turn_number
+        del llm_requested_sections
 
         builder = self._prompt_builder
 
@@ -604,6 +619,7 @@ class CombatAgent(BaseAgent):
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
     ) -> str:
         """
         Build system instructions for combat mode.
@@ -625,6 +641,7 @@ class CombatAgent(BaseAgent):
         """
         # Parameters intentionally unused - combat mode uses fixed prompt set
         del selected_prompts, include_continuation_reminder, turn_number
+        del llm_requested_sections
 
         builder = self._prompt_builder
 

@@ -136,6 +136,25 @@ This document captures implicit patterns and preferences observed through intera
 3. **Learning Mode**: Track success/failure to adjust confidence
 4. **Conflict Resolution**: When patterns conflict, prefer higher confidence or ask
 
+## Merge Conflict Resolution Patterns
+
+### Evidence Standards Documentation Conflicts
+- **Pattern**: When merging evidence standards changes, prefer combining both approaches
+- **Application**:
+  - `evidence-standards.md`: Maintain support for both lightweight tracking (filenames + char count) AND full capture (raw text)
+  - `generatetest.md`: Use the more comprehensive checklist that points to centralized utilities
+- **Rationale**: Evidence capture approaches vary by use case - lightweight for CI, full for debugging
+- **Example** (PR #2578, 2025-12-30):
+  - HEAD had simplified checklist with inline helpers
+  - main had comprehensive checklist with centralized `lib/evidence_utils.py`
+  - Resolution: Used main's comprehensive approach as it's more maintainable
+- **Confidence**: 90%
+
+### Beads Merge Artifact Cleanup
+- **Pattern**: Remove `.beads/beads.base.jsonl` and `.beads/beads.left.jsonl` after merge conflicts
+- **Application**: These files are merge conflict artifacts, not production data
+- **Confidence**: 100%
+
 ## Continuous Learning
 
 This document updates automatically as new patterns are observed. Each pattern includes:

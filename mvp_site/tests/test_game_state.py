@@ -355,12 +355,15 @@ class TestGameState(unittest.TestCase):
             "last_state_update_timestamp": custom_time,
             "player_turn": 0,
             "extra_field": "test_value",
+            "player_turn": 0,
             # Time pressure structures
             "time_sensitive_events": {},
             "npc_agendas": {},
             "world_resources": {},
             "time_pressure_warnings": {},
             "debug_mode": True,  # Should default to True per updated DEFAULT_DEBUG_MODE
+            # LLM-requested instruction hints for dynamic prompt loading
+            "pending_instruction_hints": [],
         }
 
         assert result == expected

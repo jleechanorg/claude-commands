@@ -10,13 +10,17 @@ import json
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 
 @dataclass(frozen=True)
 class MCPResponse:
     raw: dict[str, Any]
+    request_payload: dict[str, Any] | None = None
+    response_timestamp: str | None = None
+    request_timestamp: str | None = None
 
     @property
     def result(self) -> Any:
@@ -27,10 +31,53 @@ class MCPResponse:
         return self.raw.get("error")
 
 
+@dataclass
+class RequestResponseCapture:
+    """Captures raw request/response for evidence per evidence-standards.md."""
+
+    request_timestamp: str
+    response_timestamp: str
+    request: dict[str, Any]
+    response: dict[str, Any]
+    url: str
+    method: str
+
+
 class MCPClient:
-    def __init__(self, base_url: str, *, timeout_s: float = 60.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        timeout_s: float = 60.0,
+        capture_requests: bool = True,
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout_s = timeout_s
+        self._capture_requests = capture_requests
+        self._captured_requests: list[RequestResponseCapture] = []
+
+    @property
+    def captured_requests(self) -> list[RequestResponseCapture]:
+        """Return captured request/response pairs for evidence."""
+        return self._captured_requests
+
+    def clear_captures(self) -> None:
+        """Clear captured requests (e.g., between test scenarios)."""
+        self._captured_requests = []
+
+    def get_captures_as_dict(self) -> list[dict[str, Any]]:
+        """Export captures as dicts for JSON serialization."""
+        return [
+            {
+                "request_timestamp": c.request_timestamp,
+                "response_timestamp": c.response_timestamp,
+                "url": c.url,
+                "method": c.method,
+                "request": c.request,
+                "response": c.response,
+            }
+            for c in self._captured_requests
+        ]
 
     @property
     def mcp_url(self) -> str:
@@ -64,15 +111,36 @@ class MCPClient:
 
     def rpc(self, method: str, params: dict[str, Any] | None = None, *, rpc_id: int = 1) -> MCPResponse:
         payload = {"jsonrpc": "2.0", "id": rpc_id, "method": method, "params": params or {}}
+        request_ts = datetime.now(timezone.utc).isoformat()
         raw = self._http_json(
             self.mcp_url,
             method="POST",
             body=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
+        response_ts = datetime.now(timezone.utc).isoformat()
         if not isinstance(raw, dict):
             raise RuntimeError(f"Unexpected MCP response type: {type(raw)}")
-        return MCPResponse(raw=raw)
+
+        # Capture request/response for evidence (enabled by default)
+        if self._capture_requests:
+            self._captured_requests.append(
+                RequestResponseCapture(
+                    request_timestamp=request_ts,
+                    response_timestamp=response_ts,
+                    request=payload,
+                    response=raw,
+                    url=self.mcp_url,
+                    method="POST",
+                )
+            )
+
+        return MCPResponse(
+            raw=raw,
+            request_payload=payload,
+            request_timestamp=request_ts,
+            response_timestamp=response_ts,
+        )
 
     def tools_list(self) -> list[dict[str, Any]]:
         resp = self.rpc("tools/list", rpc_id=int(time.time() * 1000))

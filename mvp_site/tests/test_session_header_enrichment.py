@@ -31,7 +31,7 @@ def world_logic_module():
     sys.modules["firebase_admin"] = firebase_admin_mock
     sys.modules["firebase_admin.credentials"] = credentials_module
 
-    import mvp_site.world_logic as world_logic
+    from mvp_site import world_logic
 
     importlib.reload(world_logic)
 

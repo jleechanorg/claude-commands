@@ -6,6 +6,7 @@ llm_service can focus on request/response orchestration.
 """
 
 import os
+import re
 from typing import Any
 
 from mvp_site import constants, logging_util
@@ -27,6 +28,8 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_LIVING_WORLD: constants.LIVING_WORLD_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_COMBAT: constants.COMBAT_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_REWARDS: constants.REWARDS_SYSTEM_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_RELATIONSHIP: constants.RELATIONSHIP_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_REPUTATION: constants.REPUTATION_INSTRUCTION_PATH,
 }
 
 # Store loaded instruction content in a dictionary for easy access
@@ -38,7 +41,7 @@ _current_request_loaded_files: list[str] = []
 
 def clear_loaded_files_tracking() -> None:
     """Clear the loaded files tracking list. Call at start of each request."""
-    global _current_request_loaded_files
+    global _current_request_loaded_files  # noqa: PLW0603
     _current_request_loaded_files = []
 
 
@@ -85,6 +88,98 @@ def _load_instruction_file(instruction_type: str) -> str:
         _current_request_loaded_files.append(relative_path)
 
     return _loaded_instructions_cache[instruction_type]
+
+
+def _extract_essentials(content: str) -> str:
+    """Extract the ESSENTIALS block from instruction content.
+
+    The instruction files include a concise, token-optimized block wrapped
+    between `<!-- ESSENTIALS ...` and `/ESSENTIALS -->`. This parser confines
+    the opening match to the end of the marker line and captures only the inner
+    block to avoid stripping content. If no block is present, it returns a
+    trimmed prefix to keep token usage bounded.
+    """
+
+    essentials_match = re.search(
+        r"<!--\s*ESSENTIALS[^\n]*\n(.*?)\n\s*/ESSENTIALS\s*-->",
+        content,
+        re.DOTALL,
+    )
+
+    if essentials_match:
+        return essentials_match.group(1).strip()
+
+    # Fallback: return a trimmed prefix for files without an ESSENTIALS block
+    # so token-constrained modes still receive a concise summary.
+    return content[:2000].strip()
+
+
+# Map section names to their prompt types for conditional loading
+SECTION_TO_PROMPT_TYPE: dict[str, str] = {
+    "relationships": constants.PROMPT_TYPE_RELATIONSHIP,
+    "reputation": constants.PROMPT_TYPE_REPUTATION,
+}
+
+
+def load_detailed_sections(requested_sections: list[str]) -> str:
+    """
+    Load detailed instruction sections based on LLM hints from previous turn.
+
+    Args:
+        requested_sections: List of section names like ["relationships", "reputation"]
+
+    Returns:
+        Combined detailed sections as a string
+    """
+    if not requested_sections:
+        return ""
+
+    parts = []
+    for section in requested_sections:
+        prompt_type = SECTION_TO_PROMPT_TYPE.get(section)
+        if prompt_type:
+            try:
+                content = _load_instruction_file(prompt_type)
+                parts.append(f"\n--- {section.upper()} MECHANICS ---\n")
+                parts.append(content)
+            except (FileNotFoundError, ValueError) as e:
+                logging_util.warning(f"Could not load section {section}: {e}")
+
+    return "\n".join(parts)
+
+
+def extract_llm_instruction_hints(llm_response: dict[str, Any]) -> list[str]:
+    """
+    Extract instruction hints from an LLM response's debug_info.meta field.
+
+    The LLM can signal that it needs detailed instructions for the next turn
+    by including: {"debug_info": {"meta": {"needs_detailed_instructions": ["relationships"]}}}
+
+    Args:
+        llm_response: The parsed JSON response from the LLM
+
+    Returns:
+        List of requested section names, or empty list if none requested
+    """
+    if not isinstance(llm_response, dict):
+        return []
+
+    # Look for meta inside debug_info (as documented in game_state_instruction.md)
+    debug_info = llm_response.get("debug_info", {})
+    if not isinstance(debug_info, dict):
+        return []
+
+    meta = debug_info.get("meta", {})
+    if not isinstance(meta, dict):
+        return []
+
+    hints = meta.get("needs_detailed_instructions", [])
+    if not isinstance(hints, list):
+        return []
+
+    # Validate hint values (only sections currently supported by detailed loaders)
+    valid_hints = set(SECTION_TO_PROMPT_TYPE.keys())
+    return [h for h in hints if isinstance(h, str) and h in valid_hints]
 
 
 def _add_world_instructions_to_system(system_instruction_parts: list[str]) -> None:
@@ -339,10 +434,22 @@ class PromptBuilder:
             )
 
     def add_selected_prompt_instructions(
-        self, parts: list[str], selected_prompts: list[str]
+        self,
+        parts: list[str],
+        selected_prompts: list[str],
+        llm_requested_sections: list[str] | None = None,
+        essentials_only: bool = False,
     ) -> None:
         """
         Add instructions for selected prompt types in consistent order.
+
+        Args:
+            parts: List to append instruction parts to
+            selected_prompts: List of prompt types to include
+            llm_requested_sections: Sections the LLM requested via meta.needs_detailed_instructions
+            essentials_only: When True, append detailed sections (for token-constrained mode).
+                When False, assume the full narrative prompt already contains these sections
+                and avoid duplicating them.
         """
         # Define the order for consistency (calibration archived)
         prompt_order = [
@@ -353,7 +460,33 @@ class PromptBuilder:
         # Add in order
         for p_type in prompt_order:
             if p_type in selected_prompts:
-                parts.append(_load_instruction_file(p_type))
+                content = _load_instruction_file(p_type)
+                parts.append(
+                    _extract_essentials(content) if essentials_only else content
+                )
+
+        # Append detailed sections based on mode and LLM requests
+        if essentials_only:
+            # ESSENTIALS mode: Always load detailed sections (either LLM-requested or all)
+            if llm_requested_sections:
+                requested = llm_requested_sections
+            elif constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
+                requested = list(SECTION_TO_PROMPT_TYPE.keys())
+            else:
+                requested = []
+
+            detailed_content = load_detailed_sections(requested)
+            if detailed_content:
+                parts.append(detailed_content)
+        elif llm_requested_sections:
+            # NON-ESSENTIALS (Story Mode): Load ONLY LLM-requested detailed sections
+            # This enables dynamic prompt loading where the LLM can request specific
+            # sections (e.g., relationships, reputation) for the next turn via
+            # debug_info.meta.needs_detailed_instructions.
+            # These detailed sections are separate files, not duplicated in narrative.
+            detailed_content = load_detailed_sections(llm_requested_sections)
+            if detailed_content:
+                parts.append(detailed_content)
 
     def add_system_reference_instructions(self, parts: list[str]) -> None:
         """
@@ -448,7 +581,7 @@ class PromptBuilder:
             "After the background summary, proceed with the normal opening scene and narrative.\n\n"
         )
 
-    def build_character_identity_block(self) -> str:
+    def build_character_identity_block(self) -> str:  # noqa: PLR0912
         """
         Build character identity block for system prompts.
 
@@ -582,14 +715,18 @@ class PromptBuilder:
         Includes temporal enforcement to prevent backward time jumps.
         """
         # Extract current world_time for temporal enforcement
+        world_data = None
+        if (
+            self.game_state is not None
+            and getattr(self.game_state, "world_data", None) is not None
+        ):
+            world_data = self.game_state.world_data
         world_time = (
-            self.game_state.world_data.get("world_time", {})
-            if (hasattr(self.game_state, "world_data") and self.game_state.world_data)
-            else {}
+            world_data.get("world_time", {}) if isinstance(world_data, dict) else {}
         )
         current_location = (
-            self.game_state.world_data.get("current_location_name", "current location")
-            if (hasattr(self.game_state, "world_data") and self.game_state.world_data)
+            world_data.get("current_location_name", "current location")
+            if isinstance(world_data, dict)
             else "current location"
         )
 

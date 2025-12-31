@@ -186,19 +186,16 @@ class DiceRollResult:
                     mod_parts.append(f"{value} {label}")
             mod_str = " ".join(mod_parts)
             mod_display = f" {mod_str}" if mod_str else ""
+        elif self.modifier > 0:
+            mod_display = f"+{self.modifier}"
+        elif self.modifier < 0:
+            mod_display = str(self.modifier)
         else:
-            if self.modifier > 0:
-                mod_display = f"+{self.modifier}"
-            elif self.modifier < 0:
-                mod_display = str(self.modifier)
-            else:
-                mod_display = ""
+            mod_display = ""
 
         parts = [f"{self.notation} {mod_display}".strip()]
 
-        if self.modifier_breakdown:
-            parts.append(f"= {rolls_value}{mod_display} = {self.total}")
-        elif mod_display:
+        if self.modifier_breakdown or mod_display:
             parts.append(f"= {rolls_value}{mod_display} = {self.total}")
         else:
             parts.append(f"= {rolls_value} = {self.total}")
@@ -211,11 +208,10 @@ class DiceRollResult:
                 parts.append("(NAT 20!)")
             elif self.natural_1:
                 parts.append("(NAT 1!)")
-        else:
-            if self.natural_20:
-                parts[-1] += " (NAT 20!)"
-            elif self.natural_1:
-                parts[-1] += " (NAT 1!)"
+        elif self.natural_20:
+            parts[-1] += " (NAT 20!)"
+        elif self.natural_1:
+            parts[-1] += " (NAT 1!)"
 
         return " ".join(parts)
 
@@ -417,7 +413,7 @@ DICE_ROLL_TOOLS: list[dict] = [
 ]
 
 
-def roll_dice(notation: str) -> DiceRollResult:
+def roll_dice_notation(notation: str) -> DiceRollResult:
     """Roll dice using standard notation (e.g., '2d6+3')."""
     pattern = r"(\d+)d(\d+)([+-]\d+)?"
     match = re.match(pattern, notation.lower().replace(" ", ""))
@@ -456,6 +452,33 @@ def roll_dice(notation: str) -> DiceRollResult:
     )
 
     return DiceRollResult(notation, rolls, modifier, total, natural_20, natural_1)
+
+
+def _normalize_dice_result(
+    result: DiceRollResult | dict, notation: str
+) -> DiceRollResult:
+    if isinstance(result, DiceRollResult):
+        return result
+    if isinstance(result, dict):
+        rolls = result.get("rolls") or result.get("individual_rolls") or []
+        modifier = int(result.get("modifier", 0) or 0)
+        total = result.get("total")
+        if total is None:
+            total = sum(rolls) + modifier
+        return DiceRollResult(
+            result.get("notation") or notation,
+            list(rolls),
+            modifier,
+            int(total),
+            bool(result.get("natural_20", False)),
+            bool(result.get("natural_1", False)),
+        )
+    return DiceRollResult(notation, [], 0, 0)
+
+
+def roll_dice(notation: str) -> DiceRollResult:
+    """Backward-compatible wrapper around roll_dice_notation."""
+    return _normalize_dice_result(roll_dice_notation(notation), notation)
 
 
 def roll_with_advantage(notation: str) -> tuple[DiceRollResult, DiceRollResult, int]:

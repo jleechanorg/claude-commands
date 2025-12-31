@@ -14,7 +14,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Set testing environment
 os.environ["TESTING"] = "true"
 
-import pytest
 
 from mvp_site.narrative_response_schema import (
     NarrativeResponse,

@@ -97,7 +97,6 @@ from mvp_site.agent_prompts import (
 )
 from mvp_site.agents import (
     BaseAgent,
-    CombatAgent,
     GodModeAgent,
     RewardsAgent,
     StoryModeAgent,
@@ -176,6 +175,7 @@ elif constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_OPENROUTER:
 else:  # Gemini (default fallback)
     DEFAULT_MODEL = constants.DEFAULT_GEMINI_MODEL
     TEST_MODEL = constants.DEFAULT_GEMINI_MODEL
+
 
 
 @dataclass(frozen=True)
@@ -1486,7 +1486,7 @@ def _call_llm_api(
             logging_util.info(
                 f"🔍 CALL_LLM_API_GEMINI: json_first_tool_requests strategy for {model_name}"
             )
-            return gemini_provider.generate_content_with_tool_requests(
+            return gemini_provider.generate_content_with_native_tools(
                 prompt_contents=prompt_contents,
                 model_name=model_name,
                 system_instruction_text=system_instruction_text,
@@ -2767,8 +2767,23 @@ def get_initial_story(
         # Capture which instruction files were loaded (lightweight evidence)
         debug_info["system_instruction_files"] = get_loaded_instruction_files()
         debug_info["system_instruction_char_count"] = len(system_instruction_final)
-        if capture_raw and "raw_response_text" in processing_metadata:
-            debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+        # Always capture system instruction for debugging and evidence
+        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
+        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        if capture_raw:
+            # Capture raw LLM request payload (user prompt contents) per evidence-standards.md
+            raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
+            try:
+                request_payload = gemini_request.to_dict() if hasattr(gemini_request, "to_dict") else str(gemini_request)
+                if isinstance(request_payload, dict):
+                    request_str = json.dumps(request_payload, default=str)[:raw_limit]
+                else:
+                    request_str = str(request_payload)[:raw_limit]
+                debug_info["raw_request_payload"] = request_str
+            except Exception:
+                debug_info["raw_request_payload"] = f"[capture failed: {type(gemini_request).__name__}]"
+            if "raw_response_text" in processing_metadata:
+                debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:
             # Persist server-verified evidence (do not rely on model self-reporting).
             debug_info.update(code_execution_evidence)
@@ -3263,6 +3278,14 @@ def continue_story(
         # Fallback for old campaigns without player_turn
         turn_number = compute_player_turn_number(story_context)
 
+    # Read LLM-requested instruction hints from previous turn
+    # These are sections the LLM requested via debug_info.meta.needs_detailed_instructions
+    pending_hints: list[str] = getattr(current_game_state, "pending_instruction_hints", []) or []
+    if pending_hints:
+        logging_util.info(
+            f"📋 DYNAMIC_PROMPTS: Loading LLM-requested sections from previous turn: {pending_hints}"
+        )
+
     if is_god_mode_command:
         # GOD MODE: Use GodModeAgent with focused administrative prompts
         # God mode is for correcting mistakes/changing campaign, NOT playing
@@ -3272,11 +3295,13 @@ def continue_story(
         # Include continuation reminders only in character mode
         include_continuation = mode == constants.MODE_CHARACTER
         # Pass turn_number for living world advancement (every 3 turns)
+        # Pass pending_hints to load LLM-requested detailed sections
         system_instruction_final = agent.build_system_instructions(
             selected_prompts=selected_prompts,
             use_default_world=use_default_world,
             include_continuation_reminder=include_continuation,
             turn_number=turn_number,
+            llm_requested_sections=pending_hints if pending_hints else None,
         )
 
     # --- NEW: Budget-based Truncation ---
@@ -3384,8 +3409,7 @@ def continue_story(
         # 1. Entity Pre-Loading (Option 3)
         game_state_dict = current_game_state.to_dict()
         # Use player turns (user/AI pairs) based on the truncated context to keep
-        # entity tracking cadence aligned with the visible story log. This may
-        # differ from the living-world cadence when earlier turns are truncated.
+        # entity tracking cadence aligned with the visible story log.
         turn_number = (len(truncated_story_context) // 2) + 1
         current_location = current_game_state.world_data.get(
             "current_location_name", "Unknown"
@@ -3872,8 +3896,23 @@ def continue_story(
         # Capture which instruction files were loaded (lightweight evidence)
         debug_info["system_instruction_files"] = get_loaded_instruction_files()
         debug_info["system_instruction_char_count"] = len(system_instruction_final)
-        if capture_raw and "raw_response_text" in processing_metadata:
-            debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+        # Always capture system instruction for debugging and evidence
+        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
+        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        if capture_raw:
+            # Capture raw LLM request payload (user prompt contents) per evidence-standards.md
+            raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
+            try:
+                request_payload = gemini_request.to_dict() if hasattr(gemini_request, "to_dict") else str(gemini_request)
+                if isinstance(request_payload, dict):
+                    request_str = json.dumps(request_payload, default=str)[:raw_limit]
+                else:
+                    request_str = str(request_payload)[:raw_limit]
+                debug_info["raw_request_payload"] = request_str
+            except Exception:
+                debug_info["raw_request_payload"] = f"[capture failed: {type(gemini_request).__name__}]"
+            if "raw_response_text" in processing_metadata:
+                debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
         if code_execution_evidence:
             debug_info.update(code_execution_evidence)
             _log_fabricated_dice_if_detected(

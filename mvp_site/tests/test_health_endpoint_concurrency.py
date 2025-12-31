@@ -310,7 +310,7 @@ class TestHealthEndpointConcurrency(unittest.TestCase):
         for field, expected_type in expected_structure.items():
             if field == "concurrency":
                 self.assertIn(field, data)
-                for sub_field, sub_type in expected_structure[field].items():
+                for sub_field, sub_type in expected_type.items():
                     self.assertIn(sub_field, data[field])
                     self.assertIsInstance(data[field][sub_field], sub_type)
             elif field == "mcp_client":

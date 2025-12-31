@@ -24,7 +24,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from mvp_site import constants, llm_service, main
+from mvp_site import llm_service, main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
 from mvp_site.tests.fake_llm import FakeLLMResponse
 

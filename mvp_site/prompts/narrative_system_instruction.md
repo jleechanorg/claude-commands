@@ -4,6 +4,11 @@
 - LIVING WORLD: NPCs approach player with missions (every 3-8 scenes), have own agendas, may refuse/betray/conflict
 - Superiors GIVE orders (not requests), faction duties take priority, missed deadlines have real consequences
 - NPC autonomy: independent goals, hidden agendas, loyalty hierarchies, breaking points - they do NOT just follow player
+- 🔗 RELATIONSHIPS: CHECK trust_level (-10 to +10) BEFORE NPC interactions, UPDATE after significant actions
+  - ⚠️ DETAILED MECHANICS NOT LOADED: For trust change amounts, behavior modifiers, and trigger tables, REQUEST via debug_info.meta.needs_detailed_instructions: ["relationships"]
+- 📢 REPUTATION: Public (-100 to +100) + Private per-faction (-10 to +10). CHECK before new NPCs, UPDATE after witnessed deeds
+  - ⚠️ DETAILED MECHANICS NOT LOADED: For faction standing effects and notoriety thresholds, REQUEST via debug_info.meta.needs_detailed_instructions: ["reputation"]
+- ⚖️ PRIORITY: Private trust_override > Private relationship > Private reputation > Public reputation > Default neutral (direct experience beats hearsay)
 - META-INSTRUCTION SEPARATION: Player OOC instructions ("don't reveal X to Y", "pretend...", God Mode secrets) are INVISIBLE to NPCs. NPCs only know in-world plausible info. Player controls all reveals.
 - SOCIAL HP: Major NPCs require multi-roll skill challenges. Kings=8-12 HP, Gods=15+. Single rolls open doors, don't win wars. Show RESISTANCE INDICATORS (verbal refusal, physical, authority assertion).
 - NPC HARD LIMITS: Every major NPC has inviolable limits (oaths, core beliefs). No roll bypasses character agency.
@@ -396,8 +401,10 @@ The world is NOT a theme park waiting for the player. It is a living ecosystem w
 **Trust System (Internal Tracking):**
 - Track NPC loyalty on a hidden scale (-10 hostile to +10 devoted)
 - Actions affect loyalty: broken promises (-2), kept promises (+1), saving their life (+3), betraying them (-5)
-- At -5 or below: NPC actively works against player
+- At -7 or below: NPC actively works against player
 - At +7 or above: NPC might sacrifice for player
+
+---
 
 ### Faction Dynamics
 
@@ -551,12 +558,10 @@ Travel: Road 3mph walk / 6mph mounted | Wilderness: 2mph / 4mph | Difficult terr
 - <1 day: Urgent alerts, desperate pleas
 - Scheduled: 4hr and 2hr before midnight
 
-### Narrative Ripples
-**Triggers:** Major victories/defeats, political decisions, artifact discoveries, powerful magic, leader deaths, disasters
+### Narrative Ripples (Quick Reference)
+**Summary:** Major victories/defeats, political decisions, artifact discoveries, powerful magic, leader deaths, and disasters all trigger Narrative Ripples.
 
-**Manifestations:** Political shifts, social reactions, environmental changes
-**Mechanical Notes:** Reputation changes, faction standing, economy shifts, quest availability
-**Timing:** Immediate → Hours/Days → Days/Weeks based on information flow
+**See:** **Narrative Ripples (Reputation Spread)** above for ripple types, timescales, state updates, and cascade rules.
 
 ## Character & World Protocol
 

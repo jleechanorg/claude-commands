@@ -12,9 +12,6 @@ import unittest
 from unittest.mock import MagicMock
 
 # Import required dependencies (fail fast if missing)
-import cachetools
-import google.genai
-import pydantic
 
 # All dependencies available in test environment
 CACHETOOLS_AVAILABLE = True

@@ -234,13 +234,25 @@ Every response MUST be valid JSON with this exact structure:
 - `debug_info`: (object) Internal DM information (only visible in debug mode)
   - `dm_notes`: (array of strings) DM reasoning and rule considerations
   - `state_rationale`: (string) Explanation of state changes made
+  - `meta`: (object) Signals to backend for dynamic instruction loading
+    - `needs_detailed_instructions`: (array of strings) **MUST REQUEST** when detailed mechanics are needed
+      - Valid values: `"relationships"`, `"reputation"` (additional sections will be added later)
+      - Example: `{"meta": {"needs_detailed_instructions": ["relationships", "reputation"]}}`
+    - **🚨 MANDATORY REQUEST TRIGGERS:**
+      - First meeting with NPC → request `"relationships"` (need trust change tables)
+      - NPC relationship changes (trust increase/decrease) → request `"relationships"`
+      - Faction standing affected → request `"reputation"`
+      - New faction encountered → request `"reputation"`
+      - Witnessed public deed → request `"reputation"`
+    - **Backend behavior:** Next turn will include the full detailed sections for requested mechanics
+    - **⚠️ WITHOUT THIS REQUEST:** You do NOT have access to trust change amounts, behavior modifier tables, faction standing thresholds, or notoriety effects. The detailed instruction files are NOT loaded by default.
 
 **Choice Key Format (STRICTLY ENFORCED):**
 ✅ VALID: `attack_goblin`, `explore_ruins`, `talk_to_innkeeper` (snake_case only)
 ❌ INVALID: `AttackGoblin` (PascalCase), `attack-goblin` (kebab-case), `attack goblin` (spaces)
 
 **FORBIDDEN:**
-- Do NOT add any fields beyond those specified above
+- Do NOT add any fields beyond those specified above (except optional `meta` for instruction requests)
 - Do NOT include debug blocks or state update blocks in the narrative
 - Do NOT wrap response in markdown code blocks
 - Do NOT include any text outside the JSON structure (except Mode Declaration line)
@@ -465,6 +477,56 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
 }
 ```
 - Example (delete NPC): `"state_updates": {"npc_data": {"npc_goblin_scout_001": "__DELETE__"}}`
+
+### 🚨 CRITICAL: Relationship Update Rules
+
+**NEVER replace entire relationship objects. Only update changed fields.**
+
+The server performs SHALLOW MERGE on state_updates. If you output a complete relationship object, it REPLACES the existing one, erasing history.
+
+**✅ CORRECT - Incremental Update:**
+```json
+// Existing state: trust_level=5, history=["saved shop", "regular customer"]
+// Player action: Asked about necklace price
+
+"state_updates": {
+  "npc_data": {
+    "Jeweler Elara": {
+      "relationships": {
+        "player": {
+          "history": ["saved shop", "regular customer", "inquired about ruby necklace"]
+        }
+      }
+    }
+  }
+}
+// Result: trust_level preserved at 5, history appended
+```
+
+**❌ WRONG - Full Object Replacement:**
+```json
+// This ERASES trust_level and history!
+"state_updates": {
+  "npc_data": {
+    "Jeweler Elara": {
+      "relationships": {
+        "player": {
+          "trust_level": 1,
+          "disposition": "neutral",
+          "history": ["inquired about ruby necklace"]  // Lost all prior history!
+        }
+      }
+    }
+  }
+}
+```
+
+**Rules for Relationship Updates:**
+1. **trust_level**: Only include if it CHANGED due to player action
+2. **disposition**: Only include if trust crossed a threshold (e.g., friendly→hostile)
+3. **history**: APPEND new events, include full array with prior events + new event
+4. **debts/grievances**: APPEND new items, preserve existing
+5. If nothing changed, don't include the relationship in state_updates
 
 ## Input Schema
 
@@ -1108,6 +1170,25 @@ LLM: [Checks resources.wild_shape.current = 0]
 
 Key: display name. Required: `string_id`, `role`, `mbti` (INTERNAL ONLY), `gender`, `age`, `level`, `hp_current/max`, `armor_class`, `attributes`, `combat_stats` (initiative/speed/passive_perception), `present`, `conscious`, `hidden`, `status`, `relationships`
 
+**🔗 Relationships Object (REQUIRED for recurring NPCs):**
+```json
+"relationships": {
+  "player": {
+    "trust_level": 0,
+    "disposition": "neutral",
+    "history": [],
+    "debts": [],
+    "grievances": []
+  }
+}
+```
+- `trust_level`: Integer -10 to +10 (hostile to bonded)
+- `disposition`: "hostile" | "antagonistic" | "cold" | "neutral" | "friendly" | "trusted" | "devoted" | "bonded"
+- `history`: Array of significant past interactions
+- `debts`: Array of favors owed (either direction)
+- `grievances`: Array of unresolved offenses
+- **⚠️ Detailed mechanics (behavior modifiers, update triggers) require:** `debug_info.meta.needs_detailed_instructions: ["relationships"]`
+
 ### Location Schema
 
 `{"current_location": "loc_id", "locations": {"loc_id": {"display_name": "", "connected_to": [], "entities_present": [], "environmental_effects": []}}}`
@@ -1282,7 +1363,6 @@ When a non-combat challenge completes (success OR failure), set:
 
 **FAILURE MODE:** Encounter completed without `encounter_summary` = XP NOT AWARDED.
 You MUST populate `encounter_summary.xp_awarded` when setting `encounter_completed: true`.
-
 **Schema Rules:**
 - `combat_session_id` is MANDATORY for every combat encounter
 - `initiative_order[].name` MUST exactly match keys in `combatants` dict
@@ -1339,8 +1419,10 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 **Keys:** `player_character_data`, `world_data`, `npc_data`, `custom_campaign_state`, `combat_state`, `encounter_state`
 **Delete:** Set value to `"__DELETE__"` | **Consistency:** Use same paths once established
 
-**Track:** HP, XP, inventory, quest status, relationships, locations (objective facts)
+**Track:** HP, XP, inventory, quest status, **🔗 relationships (trust_level, history, debts, grievances)**, locations (objective facts)
 **Don't Track:** Feelings, descriptions, temporary scene details (narrative content)
+
+**🚨 RELATIONSHIP UPDATES ARE MANDATORY:** After any significant NPC interaction, update that NPC's `relationships.player.trust_level` and relevant arrays. For trust change amounts and trigger tables, request `debug_info.meta.needs_detailed_instructions: ["relationships"]`.
 
 ### Arc Milestones (Narrative Arc Tracking)
 
@@ -1677,6 +1759,51 @@ Long-term narrative memory. Append significant events to `custom_campaign_state.
 - `attribute_system`: "dnd" (legacy "destiny" values are deprecated; migrate to D&D 6-attribute system)
 - `active_missions`: **ALWAYS a LIST** of `{mission_id, title, status, objective}`
 - `core_memories`: **ALWAYS a LIST** of strings (use `{"append": "..."}` to add)
+- `reputation`: **REQUIRED** - Public/Private reputation tracking (see below)
+
+### 📢 Reputation Schema (REQUIRED)
+
+**Track in `custom_campaign_state.reputation`:**
+```json
+"reputation": {
+  "public": {
+    "score": 0,
+    "titles": [],
+    "known_deeds": [],
+    "rumors": [],
+    "notoriety_level": "unknown"
+  },
+  "private": {
+    "faction_string_id": {
+      "score": 0,
+      "standing": "neutral",
+      "known_deeds": [],
+      "secret_knowledge": [],
+      "trust_override": null
+    }
+  }
+}
+```
+
+**Public Reputation:**
+- `score`: -100 to +100 (infamous to legendary)
+- `notoriety_level`: "infamous" | "notorious" | "disreputable" | "unknown" | "known" | "respected" | "famous" | "legendary"
+- `titles`: Array of earned titles/epithets
+- `known_deeds`: Array of publicly witnessed actions
+- `rumors`: Array of current gossip (true or false)
+
+**Private Reputation (per faction):**
+- `score`: -10 to +10 (enemy to champion)
+- `standing`: "enemy" | "hostile" | "unfriendly" | "neutral" | "friendly" | "trusted" | "ally" | "champion"
+- `known_deeds`: Actions this faction knows about
+- `secret_knowledge`: What faction knows that isn't public
+- `trust_override`: If set, overrides NPC relationship trust_level for this faction's members
+
+**🚨 PRIORITY HIERARCHY:** Private trust_override (if set) > Private relationship > Private reputation > Public reputation > Default
+- If `trust_override` is set for a faction, it overrides `trust_level` for that faction's members
+- Direct experience trumps hearsay when no override is set
+
+**⚠️ For behavior modifiers and update triggers, request:** `debug_info.meta.needs_detailed_instructions: ["reputation"]`
 
 ### ❌ INVALID FORMAT WARNING
 **Never use dictionary format for `active_missions`:**

@@ -11,8 +11,7 @@ sys.path.insert(
 
 import pytest
 
-import mvp_site.agent_prompts as agent_prompts
-from mvp_site import constants, logging_util
+from mvp_site import agent_prompts, constants, logging_util
 from mvp_site.agent_prompts import (
     _load_instruction_file,
     _loaded_instructions_cache,
@@ -240,13 +239,15 @@ class TestPromptLoading(unittest.TestCase):
                     except (UnicodeDecodeError, PermissionError):
                         continue
 
-        # Define prompts that are loaded conditionally
+        # Define prompts that are loaded conditionally (not always loaded)
         conditional_prompts = set()
         if constants:
             conditional_prompts = {
                 constants.PROMPT_TYPE_NARRATIVE,  # Only when narrative selected
                 constants.PROMPT_TYPE_MECHANICS,  # Only when mechanics selected
                 constants.PROMPT_TYPE_CHARACTER_TEMPLATE,  # Only when narrative is selected
+                constants.PROMPT_TYPE_RELATIONSHIP,  # Dynamic: loaded on LLM request
+                constants.PROMPT_TYPE_REPUTATION,  # Dynamic: loaded on LLM request
             }
 
         # Separate always-loaded vs conditional prompts
