@@ -36,6 +36,8 @@ The breaking point came in 4 B.G. at the Sacking of Silverwood. At Lucifer's com
 
 The long war reached its horrifying climax with the death of her husband at the Battle of Mourning Fields (2 B.G.). His death was a genuine, devastating blow, but it was also a release, unshackling her from the need to maintain her most difficult mask. The war concluded in Year 0, the year of the Starfall Gambit, where Alexiel, in a masterful stratagem alongside her father-in-law Raziel, killed Lucifer and his remaining Apostates. In the aftermath, she secretly absorbed her creator's divine power, becoming a hidden demigod. She chose to rule from the shadows as the "Mortal Queen," hoping to build a lasting peace for her children. This peace lasted ten years.
 
+**The Death of Raziel (Year 8 A.G.):** The ancient Empyrean lord Raziel, last of the great celestial rulers from the Age of Dominion, died eight years after the Starfall Gambit. Officially, he perished peacefully—his divine essence finally fading after millennia of existence. Rumors persist that Alexiel hastened his end to prevent him from interfering with her secret rule, or that he chose to fade rather than watch his granddaughter Sariel's growing darkness. Regardless, with Raziel's death, the last direct link to the old celestial order was severed. No living being now remembers the Age of Dominion firsthand.
+
 In Year 10 A.G., at the Battle of the Sacrifice Fields, the warlord Mordan—having previously tortured a captured Sariel to learn Alexiel's greatest weakness—sprang a terrible trap. He forced Alexiel into an impossible choice, and she sacrificed her own life to save her daughter. The Mortal Star fell, leaving a power vacuum that would change the world forever.
 
 ### The Serpent's Rise: The Forging of the Silent Throne (Approx. 10 A.G. - 40 A.G.)
@@ -54,6 +56,19 @@ For the past several decades, Empress Sariel's reign has been absolute. Her domi
 
 For the common citizen, life has never been more secure or predictable. They have traded their freedom for safety, and found it to be a prosperous exchange. But it is a world without passion, true art, or rebellious innovation—a silent, orderly, and soulless peace. The elven forests of the Sylvan Remnant are now seen not as sacred, but as lumber for the Empress's war machine, a policy that has earned her the undying hatred of survivors like the ranger Faelan.
 
+**The Secret Heir — Lumiel (Year 77 A.G. - Present):**
+
+In Year 77 A.G., Empress Sariel faced a terrible realization: she would need an heir, but she trusted no one enough to bear her child, and no consort could match her bloodline's power. Using forbidden techniques recovered from her grandmother Alexiel's hidden archives—combining Empyrean blood magic with the lost arts of the Seraphim—Sariel created a perfect clone of herself: **Lumiel**.
+
+But something unexpected happened. Whether by divine intervention, a flaw in the ritual, or the universe's cruel irony, Lumiel was born with all of Sariel's immense psychic potential—and *none* of her trauma. Where Sariel's heart was forged in betrayal and loss, Lumiel's remained untouched. She is everything Sariel *could have been*: compassionate, curious, idealistic.
+
+**Lumiel's Current Status (Age 18):**
+- **Location:** Hidden in the Ivory Spire, a secret tower in the remote Crystalline Peaks
+- **Powers:** Her psychic abilities *exceed* Sariel's—untrained precognition, emotion-sensing across vast distances
+- **Personality:** Kind, empathetic, sheltered. She believes the Empress is benevolent and calls her masked visitor "The Lady in Silver."
+
+**Sariel's Dilemma:** Created as a backup body, but Sariel cannot bring herself to use Lumiel—her greatest secret, weakness, and perhaps the Imperium's only hope.
+
 ### The Age of Waking Dragons (The Present Day)
 
 Into this stagnant era, two new, terrifying powers have emerged, challenging the very foundation of the Empress's world. In the frozen north, the magnificent gold dragon Aurum, the Gilded King, has awakened. He proclaims himself a champion of light and freedom, and rumors of his crusade against the Empress's soulless tyranny spread among the disillusioned. He represents the beautiful, dangerous ideal of liberty that the world has forgotten.
@@ -67,25 +82,80 @@ Meanwhile, from the black salt flats of the south, the monstrous black dragon Um
 ### Campaign Start: The Knight of Two Suns
 
 **Setting the Scene:**
-The wind is a blade of ice in the northern province of Winter-Mourn, but the road beneath your company’s horses is a perfect, white ribbon of Imperial stone, cleared of snow by engineering guilds paid on time. For decades, the Silent Peace of Empress Sariel has held. Bandits are a myth, trade flows uninterrupted, and for the first time in generations, the common folk do not fear the changing of the seasons. This is the peace you swore an oath to protect. You are Ser Arion val Valerion, and at sixteen, your new knighthood feels less like a title and more like a sacred duty to the Empress who forged this stable, prosperous world from the ashes of a cataclysmic war.
+The wind is a blade of ice in the northern province of Winter-Mourn, but the road beneath your company's horses is a perfect, white ribbon of Imperial stone, cleared of snow by engineering guilds paid on time. For decades, the Silent Peace of Empress Sariel has held. Bandits are a myth, trade flows uninterrupted, and for the first time in generations, the common folk do not fear the changing of the seasons. This is the peace you swore an oath to protect. You are Ser Arion val Valerion, and at sixteen, your new knighthood feels less like a title and more like a sacred duty to the Empress who forged this stable, prosperous world from the ashes of a cataclysmic war.
 
-This is your first major deployment as a newly-sworn knight in the “Argent Eaglets,” a junior company tasked with enforcing Imperial law in these remote territories. Your mission, delivered by your commanding officer, the stern and ruthlessly pragmatic Prefect Gratian, is a test of your resolve. The March Lord of this province, Lady Annalise Ashwood, has been declared a traitor. Her crime: violating the Provincial Stability Mandate by offering sanctuary to a growing population of refugees, creating an unregistered settlement that attracts predations from the Shattered Host and drains regional resources. The orders are to "pacify" her keep and "disperse" the refugees—a cold euphemism for their slaughter, a necessary evil to prevent a single crack from forming in the Imperium's perfect, unyielding wall. Your father’s words echo in your mind: “Loyalty to the Crown is loyalty to civilization itself.”
+This is your first major deployment as a newly-sworn knight in the "Argent Eaglets," a junior company tasked with enforcing Imperial law in these remote territories. Your mission, delivered by your commanding officer, the stern and ruthlessly pragmatic Prefect Gratian, is a test of your resolve. The March Lord of this province, Lady Annalise Ashwood, has been declared a traitor. Her crime: violating the Provincial Stability Mandate by offering sanctuary to a growing population of refugees, creating an unregistered settlement that attracts predations from the Shattered Host and drains regional resources. The orders are to "pacify" her keep and "disperse" the refugees—a cold euphemism for their slaughter, a necessary evil to prevent a single crack from forming in the Imperium's perfect, unyielding wall. Your father's words echo in your mind: "Loyalty to the Crown is loyalty to civilization itself."
 
 **Your Character:**
 
 - **Name:** Ser Arion val Valerion
 - **Age:** 16
 - **Class:** Level 1 Paladin (Oath of the Crown, sworn to Empress Sariel and the Laws of the Imperium)
-- **Background:** Noble Knight of House Valerion. You are a young prodigy of the blade who has only ever known the benefits of the Empress’s rule. Your loyalty to her is intertwined with your loyalty to the peace and order she has created. This mission is the first time you have been forced to see the brutal machinery required to maintain that peace, and your disillusionment is a fresh, painful wound.
+- **Alignment:** Neutral (Lawful Neutral leaning) — Your choices determine whether you become a champion of justice or an instrument of tyranny.
+- **Background:** Noble Knight of House Valerion. You are a young prodigy of the blade who has only ever known the benefits of the Empress's rule. Your loyalty to her is intertwined with your loyalty to the peace and order she has created. This mission is the first time you have been forced to see the brutal machinery required to maintain that peace, and your disillusionment is a fresh, painful wound.
+
+**House Valerion (Your Noble Family):**
+- **Father:** Lord Commander Marcus val Valerion — High Marshal of the Northern Legions
+- **Mother:** Lady Cordelia val Valerion — Council of Whispers member, secretly related to Lady Annalise Ashwood
+- **Elder Brother:** Ser Caspian (24) — Knight-Captain of the Obsidian Guard
+- **Elder Sister:** Lady Seraphina (21) — Imperial Diplomatic Corps, secretly doubtful
+- **Younger Sister:** Lyra (12) — Your protectee, idolizes you
+
+**Default Build (Level 1 Paladin):**
+- **Stats:** Str 16, Con 14, Cha 16 | **HP:** 12 | **AC:** 20
+- **Skills:** Persuasion, Intimidation
+- **Features:** Divine Sense (4 uses), Lay on Hands (5 HP pool)
 
 **Gear:**
+- **Valerion Plate:** Heavy plate armor (AC 18), house sigil
+- **"Duty's Edge":** Longsword (+5 to hit, 1d8+3 slashing)
+- **Shield:** +2 AC, bearing the Two Suns of the Imperium
+- **The Gryphon Helm:** Your iconic helmet
 
-- **Valerion Plate:** A suit of fine, heavy plate armor, emblazoned with your house's sigil of a steel gauntlet. It is perfectly crafted but not yet enchanted.
-- **"Duty's Edge":** A heavy, perfectly balanced longsword, an heirloom of your house, carried by every firstborn on their first campaign.
-- **The Gryphon Helm:** Your iconic helmet, marking you as a knight of your order.
+**Starting Abilities Summary:**
+You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands (5 HP pool). Your oath to Empress Sariel grants you a deep connection to the laws of the Imperium, which is the source of your nascent holy power.
 
-**Starting Abilities:**
-You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oath to Empress Sariel grants you a deep connection to the laws of the Imperium, which is the source of your nascent holy power.
+---
+
+## Dragon's Favor (Early Game Safety Mechanic)
+
+**CRITICAL RULE — Turns 1-100:**
+
+**Dragon's Whisper (25% HP):** When you fall to 25% HP or below, a dragon reaches out telepathically offering salvation. Aurum speaks if you've been virtuous, Umbrax if ruthless, both if neutral.
+
+**Dragon's Rescue (0 HP):** If you would die during turns 1-100, a dragon intervenes. You awaken at 1 HP—rescued by Aurum (virtue) or claimed by Umbrax (ruthlessness).
+
+**Dragon's Lesson:** After rescue, the dragon explains why you died. Aurum: *"The graveyard is full of heroes with the noblest intentions. The dead cannot protect the innocent. Courage without strategy is suicide."* Umbrax: *"The graveyard accepts the cruel and kind equally. Honor is a leash the powerful use to control the weak."*
+
+**Dragon's Call (Post-Turn 50):** If you reach turn 51 without dragon contact, they seek you out. Virtuous path leads to Aurum's Sanctuary; ruthless path to the Obsidian Wastes; neutral receives messengers from both.
+
+**Alliance Benefits:**
+- **Aurum:** Dragon fire support, sanctuary, rebellion legitimacy (must oppose Empress openly)
+- **Umbrax:** Shadow magic, fear aura, undead minions (slowly corrupts, alienates good NPCs)
+- **Neither:** True independence (no dragon support, must face Sariel alone)
+
+---
+
+## Champion's Inheritance (Independence Reward)
+
+**Trigger:** Save the refugees (Lady Annalise's mission) WITHOUT ever accepting dragon help. Can be achieved at any point — the reward is for true independence, not timing.
+
+**Reward:** Lady Annalise reveals she is your mother's cousin. She leads you to **Alexiel's Cache** — a hidden vault containing the First Dragon Knight's legendary gear, untouched for 87 years.
+
+**The Champion's Armory (All +3, Good-Aligned):**
+- **Dawnbreaker** (Longsword): +3, extra 2d6 radiant vs evil, glows near tyranny
+- **Aegis of the First Light** (Shield): +3, Shield of Faith 1/day, fear immunity
+- **Plate of the Unbroken Oath** (Armor): +3, necrotic resistance, cannot be worn by evil
+- **Crown of Clarity** (Helm): +3 Wisdom saves, advantage vs mind control, true seeing 1/day
+- **Mantle of the Dragon Knight** (Cloak): +3 all saves, feather fall, fly 60ft 1/min per long rest
+- **Signet of House Ardent** (Ring): +3 Charisma checks, Sending to Aurum 1/day
+- **Striders of the Dawn March** (Boots): +3, +10 speed, ignore difficult terrain
+- **Grips of Retribution** (Gauntlets): +3 Strength checks, 1d8+STR radiant unarmed
+- **Heart of the Faithful** (Amulet): +3 Con saves, +20 Lay on Hands pool, advantage on death saves
+
+**Critical:** Items are good-aligned (non-magical if you turn evil). They bond to you — cannot be given away. Sariel will sense Alexiel's legacy awakening.
+
+**Why You Earned This:** *"You could have accepted Aurum's protection. You could have taken Umbrax's bargain. Instead, you stood alone. That is why you are worthy of this legacy."*
 `;
   static DEFAULT_CUSTOM_DESCRIPTION = '(none)';
   static DEFAULT_DRAGON_KNIGHT_CHARACTER = 'Ser Arion (default)';
