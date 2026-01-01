@@ -315,19 +315,146 @@ When Arion delivers the refugees to safety, Lady Annalise reveals a secret: she 
 
 Lady Annalise leads Arion to a hidden vault beneath the refugee sanctuary — **Alexiel's Cache**, untouched for 87 years. The First Dragon Knight foresaw that one day, a true champion would arise without relying on dragon patrons.
 
-**The Champion's Armory (All +3, Good-Aligned):**
+**The Champion's Armory (All +3, Good-Aligned, Class-Adaptive):**
+
+Alexiel's Cache contains artifacts that reshape themselves to match the champion's fighting style and class. The vault recognizes the bearer's true nature and presents gear optimized for their abilities.
+
+**Universal Items (All Classes Receive):**
 
 | Slot | Item | Property |
 |------|------|----------|
-| **Weapon** | *Dawnbreaker* — Alexiel's original longsword | +3, deals extra 2d6 radiant damage to evil creatures; glows golden in the presence of tyranny |
-| **Shield** | *Aegis of the First Light* | +3, once per long rest can cast *Shield of Faith* as a bonus action; immune to fear while wielding |
-| **Armor** | *Plate of the Unbroken Oath* | +3 plate, resistance to necrotic damage; cannot be worn by evil-aligned creatures |
-| **Helm** | *Crown of Clarity* | +3 to Wisdom saves, advantage on saves vs. mind control; true seeing 1/day |
 | **Cloak** | *Mantle of the Dragon Knight* | +3 to all saves, feather fall at will; can fly 60 ft for 1 minute, 1/long rest |
-| **Ring** | *Signet of House Ardent* | +3 to Charisma checks, can cast *Sending* to Aurum 1/day (even without alliance); marks Arion as Alexiel's spiritual heir |
+| **Ring** | *Signet of House Ardent* | +3 to primary ability checks (adapts to class — Str: Paladin/Fighter/Barbarian, Dex: Rogue/Ranger, Int: Wizard/Artificer, Wis: Cleric/Druid/Monk, Cha: Sorcerer/Warlock/Bard; hybrids use their highest primary), can cast *Sending* to Aurum 1/day; marks bearer as Alexiel's spiritual heir |
 | **Boots** | *Striders of the Dawn March* | +3, speed increased by 10 ft, ignore difficult terrain, leave no tracks |
-| **Gauntlets** | *Grips of Retribution* | +3 to Strength checks, unarmed strikes deal 1d8+STR radiant damage; can grapple Large creatures |
-| **Amulet** | *Heart of the Faithful* | +3 to Constitution saves, Lay on Hands pool increased by 20; death saves at advantage |
+| **Amulet** | *Heart of the Faithful* | +3 to Constitution saves, class resource pool increased by 20% (spell slots, ki, rage, etc.); advantage on death saving throws |
+
+*GM note:* The Signet's adaptive +3 bonus keys off the bearer’s primary casting or combat ability:
+- **Strength:** Paladin, Fighter, Barbarian
+- **Dexterity:** Rogue, Ranger
+- **Intelligence:** Wizard, Artificer
+- **Wisdom:** Cleric, Druid, Monk
+- **Charisma:** Sorcerer, Warlock, Bard, and Charisma-focused hybrids (e.g., Sorcerer/Warlock, Bard multiclass)
+
+For multi-class or custom builds, use the ability that reflects the character's highest primary focus; default Charisma builds (any mix including Sorcerer/Warlock/Bard) to Charisma unless table rules define a different primary ability.
+
+---
+
+**Class-Specific Loadouts:**
+
+#### Paladin / Fighter (Sword & Board)
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker* — Longsword | +3, extra 2d6 radiant damage to evil creatures; glows golden in presence of tyranny |
+| **Secondary** | *Aegis of the First Light* — Shield | +3, *Shield of Faith* 1/long rest as bonus action; immune to fear while wielding |
+| **Armor** | *Plate of the Unbroken Oath* | +3 plate (AC 21), resistance to necrotic damage |
+| **Helm** | *Crown of Clarity* | +3 Wisdom saves, advantage vs. mind control; true seeing 1/day |
+| **Gauntlets** | *Grips of Retribution* | +3 Strength checks, unarmed 1d8+STR radiant; grapple Large creatures |
+
+#### Fighter (Two-Handed) / Barbarian
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Greatsword Form* — Greatsword | +3, extra 2d6 radiant damage to evil; on crit, blinding flash (DC 16 Con or blinded 1 round) |
+| **Secondary** | *Sash of the Raging Dawn* | +3, advantage on first attack each combat; resistance to being frightened |
+| **Armor** | *Breastplate of the Unbroken* | +3 half-plate (AC 18), resistance to necrotic; no Stealth disadvantage |
+| **Helm** | *Warhelm of Clarity* | +3 Wisdom saves, advantage vs. mind control; rage damage +2 |
+| **Gauntlets** | *Grips of Retribution* | +3 Strength checks, unarmed 1d8+STR radiant; grapple Large creatures |
+
+#### Rogue / Ranger (Finesse)
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Rapier Form* — Rapier | +3, extra 2d6 radiant to evil; sneak attack deals radiant damage |
+| **Secondary** | *Shadowbane Dagger* | +3, can be thrown 60 ft and returns; advantage on attacks from stealth |
+| **Armor** | *Leathers of Silent Light* | +3 studded leather (AC 15), resistance to necrotic; +5 Stealth |
+| **Helm** | *Hood of Clarity* | +3 Wisdom saves, advantage vs. mind control; darkvision 120 ft |
+| **Bracers** | *Bracers of Swift Justice* | +3 Dexterity checks, +10 ft movement; bonus action Disengage 3/day |
+
+#### Ranger (Archery)
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Longbow Form* — Longbow | +3, extra 2d6 radiant to evil; 200/800 ft range; arrows leave golden trails |
+| **Secondary** | *Quiver of the Dawn* | Produces unlimited +1 radiant arrows; 3 +3 *Arrows of Dragon Slaying* per long rest |
+| **Armor** | *Leathers of the Wild Warden* | +3 studded leather (AC 15), resistance to necrotic; advantage on nature/survival |
+| **Helm** | *Cowl of the Hunter* | +3 Wisdom saves, advantage vs. mind control; Hunter's Mark no concentration |
+| **Bracers** | *Bracers of True Aim* | +3 Dexterity checks, ignore half/three-quarters cover; treat long-range attacks as if at normal range (no penalties or disadvantage) |
+
+#### Wizard / Artificer
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Staff Form* — Quarterstaff/Arcane Focus | +3 spell attack/save DC, extra 2d6 radiant to evil; 3 free *Shield* spells per long rest |
+| **Secondary** | *Spellbook of the First Light* | +3, contains 10 additional spells of your school; copying spells costs half gold/time |
+| **Armor** | *Robes of the Unbroken Mind* | +3 (AC 13 + Dex), resistance to necrotic; advantage on concentration checks |
+| **Helm** | *Diadem of Clarity* | +3 Wisdom saves, advantage vs. mind control; true seeing 1/day |
+| **Bracers** | *Bracers of Arcane Might* | +3 Intelligence checks, +2 spell slots (highest level available) |
+
+#### Sorcerer / Warlock
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Rod Form* — Arcane Focus | +3 spell attack/save DC, extra 2d6 radiant to evil; Eldritch Blast/cantrips +1d6 radiant |
+| **Secondary** | *Orb of Inner Fire* | +3, 3 free Metamagic sorcery points or Warlock spell slot recovery per long rest |
+| **Armor** | *Vestments of the Unbroken Will* | +3 (AC 13 + Dex), resistance to necrotic; frightening presence 1/short rest |
+| **Helm** | *Circlet of Clarity* | +3 Wisdom saves, advantage vs. mind control; *Counterspell* 1/day (no slot) |
+| **Bracers** | *Bracers of Charismatic Power* | +3 Charisma checks, intimidation causes fear (DC = spell save) |
+
+#### Cleric
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Mace Form* — Holy Mace | +3, extra 2d6 radiant to evil; undead must save or flee |
+| **Secondary** | *Aegis of Divine Light* — Shield | +3, *Spirit Guardians* 1/long rest (no concentration, 1 min) |
+| **Armor** | *Vestments of the Faithful* | +3 chain mail or plate (domain dependent), resistance to necrotic |
+| **Helm** | *Mitre of Clarity* | +3 Wisdom saves, advantage vs. mind control; *Commune* 1/day (no slot) |
+| **Gauntlets** | *Hands of Healing* | +3 Wisdom checks, healing spells +1d8; *Revivify* 1/day (no components) |
+
+#### Druid
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Scimitar Form* — Wooden Scimitar | +3, extra 2d6 radiant to evil; functions in Wild Shape (mental stats) |
+| **Secondary** | *Totem of the First Grove* | +3, Wild Shape forms gain +3 natural armor; 2 extra Wild Shape uses |
+| **Armor** | *Hide of the Ancient Oak* | +3 hide (AC 15), resistance to necrotic; *Barkskin* always active (no concentration) |
+| **Helm** | *Antler Crown of Clarity* | +3 Wisdom saves, advantage vs. mind control; *Speak with Plants/Animals* at will |
+| **Bracers** | *Bracers of Natural Wrath* | +3 Wisdom checks, Wild Shape attacks count as magical +3 |
+
+#### Bard
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Rapier Form* — Elegant Blade | +3, extra 2d6 radiant to evil; can be played like an instrument (flavor only; no additional mechanical benefit) |
+| **Secondary** | *Lute of the Mortal Star* — Legendary Instrument | +3 spell attack/save DC; Bardic Inspiration dice are d12s; *Charm Monster* 1/long rest (uses normal concentration) |
+| **Armor** | *Performer's Leathers of Light* | +3 studded leather (AC 15), resistance to necrotic; advantage on Performance |
+| **Helm** | *Mask of Clarity* | +3 Wisdom saves, advantage vs. mind control; *Glibness* 1/long rest |
+| **Bracers** | *Bracers of Inspiring Presence* | +3 Charisma checks, allies within 30 ft +1 to all saves |
+
+#### Monk
+
+| Slot | Item | Property |
+|------|------|----------|
+| **Weapon** | *Dawnbreaker, Quarterstaff Form* — Monk Weapon | +3, extra 2d6 radiant to evil; unarmed strikes also gain +3 and radiant damage |
+| **Secondary** | *Sash of the Enlightened Warrior* | +3, +4 ki points; Flurry of Blows adds 1d6 radiant per hit |
+| **Armor** | *Wraps of the Unbroken Spirit* | +3 to unarmored AC, resistance to necrotic; creatures you target with your Stunning Strike have disadvantage on their saving throws |
+| **Helm** | *Headband of Clarity* | +3 Wisdom saves, advantage vs. mind control; immune to poison and disease |
+| **Bracers** | *Bracers of Ki Mastery* | +3 Dexterity/Wisdom checks, *Step of the Wind* costs 0 ki |
+
+#### Multi-Class / Custom Build
+
+For characters with multiple classes or unusual builds, the Cache presents a **hybrid loadout**:
+- **Weapon** adapts to primary attack style (melee/ranged/magic)
+- **Armor** matches highest armor proficiency
+- **Secondary** supports the secondary class feature
+- **Helm** always provides mental protection
+- **Gauntlets/Bracers** boost the primary ability score
+
+Any hybrid helm keeps the universal benefit shared across the cache: +3 to Wisdom saving throws and advantage against mind-control effects.
+
+*The GM should work with the player to select the most thematically and mechanically appropriate combination.*
+
+---
 
 **Critical Notes:**
 - These items are **good-aligned** — they will not function (count as non-magical) if Arion's alignment shifts to evil
