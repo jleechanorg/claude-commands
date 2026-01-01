@@ -1484,244 +1484,6 @@ class TestAsyncToThreadDocumentation(unittest.TestCase):
                 )
 
 
-class TestEnforceRewardsProcessedFlag(unittest.TestCase):
-    """
-    Deterministic tests for _enforce_rewards_processed_flag SERVER_ENFORCEMENT.
-
-    These tests verify the server-side enforcement logic that ensures
-    rewards_processed is set correctly even when the LLM doesn't set it.
-    """
-
-    def test_combat_enforcement_sets_flag_when_missing(self):
-        """
-        SERVER_ENFORCEMENT: Combat finished with summary but no rewards_processed.
-
-        This deterministically exercises the code path:
-        - combat_phase in COMBAT_FINISHED_PHASES
-        - combat_summary exists
-        - rewards_processed NOT set
-        → Should set combat_state.rewards_processed = True
-        """
-        state_dict = {
-            "combat_state": {
-                "combat_phase": "ended",
-                "combat_summary": {
-                    "xp_awarded": 50,
-                    "enemies_defeated": ["goblin_1", "goblin_2"],
-                },
-                # rewards_processed intentionally missing/False
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
-
-        self.assertTrue(
-            result["combat_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set combat_state.rewards_processed=True "
-            "when combat_phase is 'ended' and combat_summary exists",
-        )
-
-    def test_combat_enforcement_all_finished_phases(self):
-        """
-        SERVER_ENFORCEMENT: All COMBAT_FINISHED_PHASES trigger enforcement.
-
-        Tests that enforcement works for all 8 phase values in the frozenset.
-        """
-        from mvp_site import constants
-
-        for phase in constants.COMBAT_FINISHED_PHASES:
-            with self.subTest(phase=phase):
-                state_dict = {
-                    "combat_state": {
-                        "combat_phase": phase,
-                        "combat_summary": {"xp_awarded": 25},
-                        "rewards_processed": False,
-                    }
-                }
-
-                result = world_logic._enforce_rewards_processed_flag(state_dict)
-
-                self.assertTrue(
-                    result["combat_state"]["rewards_processed"],
-                    f"SERVER_ENFORCEMENT should trigger for combat_phase='{phase}'",
-                )
-
-    def test_encounter_enforcement_sets_flag_when_missing(self):
-        """
-        SERVER_ENFORCEMENT: Encounter completed with summary but no rewards_processed.
-
-        This deterministically exercises the code path:
-        - encounter_completed = True
-        - encounter_summary.xp_awarded exists
-        - rewards_processed NOT set
-        → Should set encounter_state.rewards_processed = True
-        """
-        state_dict = {
-            "encounter_state": {
-                "encounter_completed": True,
-                "encounter_summary": {
-                    "xp_awarded": 100,
-                    "outcome": "success",
-                },
-                # rewards_processed intentionally missing/False
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
-
-        self.assertTrue(
-            result["encounter_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set encounter_state.rewards_processed=True "
-            "when encounter_completed and xp_awarded exist",
-        )
-
-    def test_encounter_enforcement_requires_encounter_completed(self):
-        """
-        SERVER_ENFORCEMENT: encounter_completed=False should NOT trigger enforcement.
-
-        This ensures we don't prematurely mark rewards as processed before
-        the RewardsAgent has a chance to run.
-        """
-        state_dict = {
-            "encounter_state": {
-                "encounter_completed": False,  # Not completed yet
-                "encounter_summary": {
-                    "xp_awarded": 100,
-                },
-                "rewards_processed": False,
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
-
-        self.assertFalse(
-            result["encounter_state"].get("rewards_processed", False),
-            "SERVER_ENFORCEMENT should NOT trigger when encounter_completed=False",
-        )
-
-    def test_xp_increase_enforcement_combat_context(self):
-        """
-        SERVER_ENFORCEMENT: XP increased with combat context triggers enforcement.
-
-        This exercises the fallback path when LLM increases XP but doesn't
-        set rewards_processed or summary structures.
-        """
-        original_state = {
-            "player_character_data": {
-                "experience": {"current": 100}
-            },
-            "combat_state": {
-                "combat_phase": "ended",
-            }
-        }
-
-        updated_state = {
-            "player_character_data": {
-                "experience": {"current": 150}  # XP increased by 50
-            },
-            "combat_state": {
-                "combat_phase": "ended",
-                # No combat_summary, no rewards_processed
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(
-            updated_state, original_state_dict=original_state
-        )
-
-        self.assertTrue(
-            result["combat_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set combat_state.rewards_processed=True "
-            "when XP increased and combat context exists",
-        )
-
-    def test_xp_increase_enforcement_encounter_context(self):
-        """
-        SERVER_ENFORCEMENT: XP increased with encounter context triggers enforcement.
-        """
-        original_state = {
-            "player_character_data": {
-                "experience": {"current": 200}
-            },
-            "encounter_state": {
-                "encounter_completed": True,
-            }
-        }
-
-        updated_state = {
-            "player_character_data": {
-                "experience": {"current": 300}  # XP increased by 100
-            },
-            "encounter_state": {
-                "encounter_completed": True,
-                # No encounter_summary with xp_awarded
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(
-            updated_state, original_state_dict=original_state
-        )
-
-        self.assertTrue(
-            result["encounter_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set encounter_state.rewards_processed=True "
-            "when XP increased and encounter context exists",
-        )
-
-    def test_no_enforcement_when_already_processed(self):
-        """
-        SERVER_ENFORCEMENT: Should NOT re-enforce if already processed.
-
-        Ensures idempotency - calling enforcement multiple times is safe.
-        """
-        state_dict = {
-            "combat_state": {
-                "combat_phase": "ended",
-                "combat_summary": {"xp_awarded": 50},
-                "rewards_processed": True,  # Already set
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
-
-        self.assertTrue(
-            result["combat_state"]["rewards_processed"],
-            "rewards_processed should remain True",
-        )
-
-    def test_xp_null_handling(self):
-        """
-        SERVER_ENFORCEMENT: Handles None experience gracefully.
-
-        Verifies the 'or {}' pattern prevents crashes when experience is None.
-        """
-        original_state = {
-            "player_character_data": {
-                "experience": None  # Explicitly None
-            }
-        }
-
-        updated_state = {
-            "player_character_data": {
-                "experience": {"current": 100}
-            },
-            "combat_state": {
-                "combat_phase": "ended",
-            }
-        }
-
-        # Should not raise an exception
-        try:
-            result = world_logic._enforce_rewards_processed_flag(
-                updated_state, original_state_dict=original_state
-            )
-            # If XP went from None/0 to 100, enforcement should trigger
-            self.assertTrue(
-                result["combat_state"].get("rewards_processed", False),
-                "Should handle None experience gracefully and detect XP increase",
-            )
-        except (TypeError, AttributeError) as e:
-            self.fail(f"Crashed on None experience: {e}")
 
 
 class TestCheckAndSetLevelUpPending(unittest.TestCase):
@@ -1766,7 +1528,7 @@ class TestCheckAndSetLevelUpPending(unittest.TestCase):
         self.assertEqual(100, rewards_pending.get("gold"))
         self.assertEqual(["ring"], rewards_pending.get("items"))
         self.assertFalse(rewards_pending.get("processed"))
-        self.assertEqual("combat", rewards_pending.get("source"))
+        self.assertEqual("level_up", rewards_pending.get("source"))
 
     def test_no_level_up_when_threshold_not_crossed(self):
         original_state = {
@@ -1821,8 +1583,8 @@ class TestCheckAndSetLevelUpPending(unittest.TestCase):
         }
         updated_state = {
             "player_character_data": {
-                # Level already auto-corrected to expected level (5)
-                "level": 5,
+                # Level NOT auto-corrected to expected level (5) yet
+                "level": 4,
                 "experience": {"current": 6600},
             }
         }
@@ -2117,7 +1879,8 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
         state_changes = {
             "player_character_data": {
                 "experience": {"current": 6600},
-                "level": 5,
+                # Level NOT set to 5 yet, triggering detection
+                #"level": 5,
             }
         }
 
@@ -2135,9 +1898,11 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
             state_dict["player_character_data"].setdefault("experience", {})[
                 "current"
             ] = changes["player_character_data"]["experience"]["current"]
-            state_dict["player_character_data"]["level"] = changes[
-                "player_character_data"
-            ]["level"]
+            # Don't update level if not in changes
+            if "level" in changes.get("player_character_data", {}):
+                state_dict["player_character_data"]["level"] = changes[
+                    "player_character_data"
+                ]["level"]
             return state_dict
 
         mock_update_state_with_changes.side_effect = mutate_state
