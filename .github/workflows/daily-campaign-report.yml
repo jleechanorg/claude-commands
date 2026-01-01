@@ -1,0 +1,146 @@
+name: Daily Campaign Activity Report
+
+on:
+  schedule:
+    # 9am PST = 17:00 UTC (PST is UTC-8)
+    - cron: '0 17 * * *'
+  workflow_dispatch:  # Allow manual trigger for testing
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Setup Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5
+        with:
+          python-version: '3.11'
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Install dependencies
+        run: |
+          pip install firebase-admin google-cloud-firestore
+
+      - name: Generate Campaign Activity Report
+        id: report
+        run: |
+          # Run the report script and capture output
+          python scripts/daily_campaign_report.py --no-daily 2>&1 | tee /tmp/report.txt
+
+          # Extract LAST WEEK metrics
+          WEEK1_SECTION=$(sed -n '/LAST WEEK STATS/,/LAST 4 WEEKS STATS/p' /tmp/report.txt)
+          WEEK1_DAU_AVG=$(echo "$WEEK1_SECTION" | grep "Average:" | head -1 | awk '{print $2}')
+          WEEK1_DAU_P50=$(echo "$WEEK1_SECTION" | grep "P50" | head -1 | awk '{print $3}')
+          WEEK1_DAU_P90=$(echo "$WEEK1_SECTION" | grep "P90:" | head -1 | awk '{print $2}')
+          WEEK1_DAU_P99=$(echo "$WEEK1_SECTION" | grep "P99:" | head -1 | awk '{print $2}')
+          WEEK1_USERS=$(echo "$WEEK1_SECTION" | grep "Total Unique Users:" | awk '{print $4}')
+
+          # Extract LAST 4 WEEKS metrics
+          WEEK4_SECTION=$(sed -n '/LAST 4 WEEKS STATS/,/Top 10 Users/p' /tmp/report.txt)
+          WEEK4_DAU_AVG=$(echo "$WEEK4_SECTION" | grep "Average:" | head -1 | awk '{print $2}')
+          WEEK4_DAU_P50=$(echo "$WEEK4_SECTION" | grep "P50" | head -1 | awk '{print $3}')
+          WEEK4_DAU_P90=$(echo "$WEEK4_SECTION" | grep "P90:" | head -1 | awk '{print $2}')
+          WEEK4_DAU_P99=$(echo "$WEEK4_SECTION" | grep "P99:" | head -1 | awk '{print $2}')
+          WEEK4_WAU_AVG=$(echo "$WEEK4_SECTION" | grep "Average:" | tail -1 | awk '{print $2}')
+          WEEK4_WAU_P50=$(echo "$WEEK4_SECTION" | grep "P50" | tail -1 | awk '{print $3}')
+          WEEK4_WAU_P90=$(echo "$WEEK4_SECTION" | grep "P90:" | tail -1 | awk '{print $2}')
+          WEEK4_WAU_P99=$(echo "$WEEK4_SECTION" | grep "P99:" | tail -1 | awk '{print $2}')
+          WEEK4_USERS=$(echo "$WEEK4_SECTION" | grep "Total Unique Users:" | awk '{print $4}')
+
+          # Extract top users for each period
+          TOP_WEEK=$(grep -A 12 "Top 10 Users (Last Week):" /tmp/report.txt | tail -10)
+          TOP_4WEEKS=$(grep -A 12 "Top 10 Users (Last 4 Weeks):" /tmp/report.txt | tail -10)
+
+          # Set outputs
+          echo "week1_dau_avg=$WEEK1_DAU_AVG" >> $GITHUB_OUTPUT
+          echo "week1_dau_p50=$WEEK1_DAU_P50" >> $GITHUB_OUTPUT
+          echo "week1_dau_p90=$WEEK1_DAU_P90" >> $GITHUB_OUTPUT
+          echo "week1_dau_p99=$WEEK1_DAU_P99" >> $GITHUB_OUTPUT
+          echo "week1_users=$WEEK1_USERS" >> $GITHUB_OUTPUT
+          echo "week4_dau_avg=$WEEK4_DAU_AVG" >> $GITHUB_OUTPUT
+          echo "week4_dau_p50=$WEEK4_DAU_P50" >> $GITHUB_OUTPUT
+          echo "week4_dau_p90=$WEEK4_DAU_P90" >> $GITHUB_OUTPUT
+          echo "week4_dau_p99=$WEEK4_DAU_P99" >> $GITHUB_OUTPUT
+          echo "week4_wau_avg=$WEEK4_WAU_AVG" >> $GITHUB_OUTPUT
+          echo "week4_wau_p50=$WEEK4_WAU_P50" >> $GITHUB_OUTPUT
+          echo "week4_wau_p90=$WEEK4_WAU_P90" >> $GITHUB_OUTPUT
+          echo "week4_wau_p99=$WEEK4_WAU_P99" >> $GITHUB_OUTPUT
+          echo "week4_users=$WEEK4_USERS" >> $GITHUB_OUTPUT
+
+          # Multiline outputs for top users
+          {
+            echo 'top_week<<EOF'
+            echo "$TOP_WEEK"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+          {
+            echo 'top_4weeks<<EOF'
+            echo "$TOP_4WEEKS"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+          # Legacy outputs for email subject
+          echo "dau_avg=$WEEK4_DAU_AVG" >> $GITHUB_OUTPUT
+          echo "wau_avg=$WEEK4_WAU_AVG" >> $GITHUB_OUTPUT
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+
+      - name: Send Email Report
+        uses: dawidd6/action-send-mail@6d98ae34d733f9a723a9e04e94f2f24ba05e1402  # v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_APP_PASSWORD }}
+          subject: "📊 WorldArchitect.AI Daily Report - DAU: ${{ steps.report.outputs.dau_avg }}, WAU: ${{ steps.report.outputs.wau_avg }}"
+          to: ${{ secrets.EMAIL_USER }}
+          from: WorldArchitect Reports <${{ secrets.EMAIL_USER }}>
+          body: |
+            📊 WorldArchitect.AI Daily Campaign Activity Report
+            ====================================================
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            📅 LAST WEEK STATS
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            Total Unique Users: ${{ steps.report.outputs.week1_users }}
+
+            Daily Active Users (DAU):
+              Average: ${{ steps.report.outputs.week1_dau_avg }} users/day
+              P50 (Median): ${{ steps.report.outputs.week1_dau_p50 }} users/day
+              P90: ${{ steps.report.outputs.week1_dau_p90 }} users/day
+              P99: ${{ steps.report.outputs.week1_dau_p99 }} users/day
+
+            👥 Top 10 Users (Last Week):
+            ${{ steps.report.outputs.top_week }}
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            📅 LAST 4 WEEKS STATS
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            Total Unique Users: ${{ steps.report.outputs.week4_users }}
+
+            Daily Active Users (DAU):
+              Average: ${{ steps.report.outputs.week4_dau_avg }} users/day
+              P50 (Median): ${{ steps.report.outputs.week4_dau_p50 }} users/day
+              P90: ${{ steps.report.outputs.week4_dau_p90 }} users/day
+              P99: ${{ steps.report.outputs.week4_dau_p99 }} users/day
+
+            Weekly Active Users (WAU):
+              Average: ${{ steps.report.outputs.week4_wau_avg }} users/week
+              P50 (Median): ${{ steps.report.outputs.week4_wau_p50 }} users/week
+              P90: ${{ steps.report.outputs.week4_wau_p90 }} users/week
+              P99: ${{ steps.report.outputs.week4_wau_p99 }} users/week
+
+            👥 Top 10 Users (Last 4 Weeks):
+            ${{ steps.report.outputs.top_4weeks }}
+
+            ---
+            Generated by WorldArchitect.AI automated reporting
+            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          attachments: /tmp/report.txt
