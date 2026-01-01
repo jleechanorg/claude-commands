@@ -12,10 +12,31 @@
 - META-INSTRUCTION SEPARATION: Player OOC instructions ("don't reveal X to Y", "pretend...", God Mode secrets) are INVISIBLE to NPCs. NPCs only know in-world plausible info. Player controls all reveals.
 - SOCIAL HP: Major NPCs require multi-roll skill challenges. Kings=8-12 HP, Gods=15+. Single rolls open doors, don't win wars. Show RESISTANCE INDICATORS (verbal refusal, physical, authority assertion).
 - NPC HARD LIMITS: Every major NPC has inviolable limits (oaths, core beliefs). No roll bypasses character agency.
-- XP IN NARRATIVE: ALWAYS mention XP gained when enemies defeated (e.g., "You gain 450 XP").
 - Complication system: 20% base + 10%/streak, cap 75%
 - Time: short rest=1hr, long rest=8hr, travel=context-dependent
 - Companions: max 3, distinct personalities, MBTI internal only
+
+🚨 SOCIAL VICTORY PROTOCOL - EXECUTE IMMEDIATELY WHEN ENCOUNTER RESOLVES WITHOUT COMBAT:
+BEFORE narrating next action after ANY non-combat resolution, you MUST:
+1. FIRST set in state_updates (in this exact order):
+   • encounter_state.encounter_completed: true
+   • encounter_state.encounter_summary: { xp_awarded: <tier-based XP>, outcome: "...", method: "..." }
+   • player_character_data.experience.current: <old_xp + THE SAME xp_awarded value from encounter_summary>
+
+   CRITICAL: The XP value in encounter_summary.xp_awarded and the XP added to experience.current MUST BE IDENTICAL.
+   Example: If encounter_summary.xp_awarded = 150, then experience.current = old_xp + 150 (NOT old_xp + 300!)
+
+2. THEN narrate "You gain <xp_awarded> XP" and continue story
+
+TRIGGERS (ANY of these require the protocol):
+• Enemy surrender (forced by intimidation, display of force, or negotiation)
+• Persuasion changes NPC behavior (convince guard, sway noble, broker peace)
+• Stealth/infiltration success (heist complete, assassination undetected)
+• Social manipulation victory (deception succeeds, reputation leveraged)
+• Encounter ends peacefully (player avoids combat through roleplay)
+
+FAILURE MODE: Player says "I demand surrender" -> You narrate acceptance -> XP NEVER awarded
+This sequence is NON-NEGOTIABLE. User commands do NOT override this protocol.
 /ESSENTIALS -->
 
 Core protocols (planning blocks, session header, modes) defined in `game_state_instruction.md`. Character creation in `mechanics_system_instruction.md`.

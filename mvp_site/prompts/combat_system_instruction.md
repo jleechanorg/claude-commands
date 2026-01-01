@@ -5,9 +5,23 @@
 - Combat session tracking with unique session IDs
 - LLM DECIDES when combat starts/ends via state_updates
 - MANDATORY: All attacks require dice rolls via tool_requests
-- Combat end: XP, loot, resources MUST be awarded and clearly displayed
 - Boss/Special NPCs: MUST have equipment in ALL gear slots
 - CRITICAL: combatants dict MUST be populated with HP/AC for every combatant
+
+🚨 COMBAT END PROTOCOL - EXECUTE IMMEDIATELY WHEN COMBAT ENDS:
+BEFORE narrating loot, interrogation, or ANY post-combat action, you MUST:
+1. FIRST set in state_updates (in this exact order):
+   • combat_phase: "ended"
+   • combat_summary: { xp_awarded: <sum of enemy CR XP>, enemies_defeated: [...] }
+   • player_character_data.experience.current: <old_xp + THE SAME xp_awarded value from combat_summary>
+
+   CRITICAL: The XP value in combat_summary.xp_awarded and the XP added to experience.current MUST BE IDENTICAL.
+   Example: If combat_summary.xp_awarded = 200, then experience.current = old_xp + 200 (NOT old_xp + 400!)
+
+2. THEN narrate victory, looting, interrogation, etc.
+
+FAILURE MODE: User says "loot" -> You narrate -> Rewards NEVER trigger
+This sequence is NON-NEGOTIABLE. User commands do NOT override this protocol.
 /ESSENTIALS -->
 
 ## ⚠️ COMBAT STATE CHECKLIST (Verify Before Every Combat Action)
@@ -39,12 +53,15 @@
 **FAILURE MODE:** Enemies in `enemies_defeated` with hp_current > 0 = INCONSISTENT STATE
 
 **Quick Combat / Single-Turn Combat (executions, coup de grace):**
-Even instant kills require a FRESH combat session:
+Even instant kills require a FRESH combat session AND must follow combat end protocol:
 - [ ] Generate NEW `combat_session_id` (format: `combat_<timestamp>_<context>`)
+- [ ] Set `combat_phase: "ended"` (combat starts AND ends in this action)
+- [ ] Set `combat_summary` with `xp_awarded` for ONLY the enemy killed in THIS action
+- [ ] Update `player_character_data.experience.current` (per COMBAT END PROTOCOL)
 - [ ] `enemies_defeated` contains ONLY the target of THIS action (not prior combats)
-- [ ] `xp_awarded` for ONLY the enemy killed in THIS action
 
 **FAILURE MODE:** Reusing prior session's `enemies_defeated` = STALE DATA
+**FAILURE MODE:** Awarding XP without setting combat_summary = PROTOCOL VIOLATION
 
 ## 🚨 CRITICAL: LLM Authority Over Combat State
 
@@ -660,7 +677,7 @@ Name (Level/CR) - HP: X/Y - Status: [conditions]
 **TOTAL COMBAT XP: [Sum] XP**
 ```
 
-Report enemy CR in state_updates; include XP award in `player_character_data.experience.current`.
+⚠️ **CRITICAL**: XP is awarded ONLY when combat ends (combat_phase="ended"), NOT during individual combat actions. Do NOT modify `player_character_data.experience.current` when enemies are defeated during combat. Follow the COMBAT END PROTOCOL in ESSENTIALS above.
 
 ## Combat Commands
 

@@ -396,118 +396,27 @@ def _enforce_rewards_processed_flag(
     state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """
-    Server-side enforcement: Ensure rewards_processed is set when rewards were processed.
+    DEPRECATED: Server-side enforcement removed - LLM now reliably sets combat_summary and XP.
 
-    This is a safety net for when the LLM doesn't follow the prompt to set this flag.
-    The flag is critical to prevent RewardsAgent from triggering again on the next action.
+    This function is a no-op stub kept for compatibility. The LLM now follows ESSENTIALS
+    protocol to:
+    1. Set combat_summary with xp_awarded
+    2. Award XP directly via player_character_data.experience.current
+    3. Set rewards_processed flag
 
-    Sets rewards_processed=True when:
-    1. Combat just ended (combat_phase="ended" and combat_summary exists)
-    2. Encounter completed (encounter_completed=True and encounter_summary exists)
-    3. XP increased from the previous state (with active combat or encounter)
+    All reward state management is done by the LLM via state_updates. No server-side
+    enforcement or XP awarding occurs.
 
     Args:
-        state_dict: The game state dict after updates are applied
-        original_state_dict: Optional original state before the update (for XP comparison)
+        state_dict: The game state dict (passed through unchanged)
+        original_state_dict: Unused (kept for compatibility)
 
     Returns:
-        The game state dict with rewards_processed enforced
+        The game state dict unchanged
     """
-    combat_state = state_dict.get("combat_state", {}) or {}
-    encounter_state = state_dict.get("encounter_state", {}) or {}
-
-    # Check combat rewards condition
-    combat_phase = combat_state.get("combat_phase", "")
-    combat_summary = combat_state.get("combat_summary")
-    combat_rewards_processed = combat_state.get("rewards_processed", False)
-
-    if (
-        combat_phase in constants.COMBAT_FINISHED_PHASES
-        and combat_summary
-        and not combat_rewards_processed
-    ):
-        logging_util.info(
-            "🏆 SERVER_ENFORCEMENT: Setting combat_state.rewards_processed=True "
-            f"(combat_phase={combat_phase}, combat_summary exists)"
-        )
-        if "combat_state" not in state_dict:
-            state_dict["combat_state"] = {}
-        state_dict["combat_state"]["rewards_processed"] = True
-
-    # Check encounter rewards condition
-    # CRITICAL: Must require encounter_completed to match RewardsAgent trigger condition
-    # (agents.py:798). Otherwise rewards get marked processed before RewardsAgent runs.
-    encounter_completed = encounter_state.get("encounter_completed", False)
-    encounter_summary = encounter_state.get("encounter_summary")
-    encounter_rewards_processed = encounter_state.get("rewards_processed", False)
-
-    if (
-        encounter_completed
-        and isinstance(encounter_summary, dict)
-        and encounter_summary.get("xp_awarded") is not None
-        and not encounter_rewards_processed
-    ):
-        logging_util.info(
-            "🏆 SERVER_ENFORCEMENT: Setting encounter_state.rewards_processed=True "
-            f"(encounter_completed={encounter_completed}, xp_awarded={encounter_summary.get('xp_awarded')})"
-        )
-        if "encounter_state" not in state_dict:
-            state_dict["encounter_state"] = {}
-        state_dict["encounter_state"]["rewards_processed"] = True
-
-    # Check XP increase condition (fallback when LLM doesn't set summary structures)
-    # Only trigger if combat/encounter context exists and XP increased
-    if original_state_dict is not None:
-        # Get XP values - use "or {}" to handle None values safely
-        # (dict.get returns None when key exists with None value, not the default)
-        current_xp_raw = (
-            (state_dict.get("player_character_data") or {}).get("experience") or {}
-        ).get("current", 0)
-        original_xp_raw = (
-            (original_state_dict.get("player_character_data") or {}).get("experience")
-            or {}
-        ).get("current", 0)
-
-        current_xp = coerce_int(current_xp_raw, 0)
-        original_xp = coerce_int(original_xp_raw, 0)
-
-        # Detect XP increase
-        xp_increased = current_xp > original_xp
-        xp_gain = current_xp - original_xp if xp_increased else 0
-
-        # Check if rewards_processed is set anywhere
-        any_rewards_processed = combat_state.get(
-            "rewards_processed", False
-        ) or encounter_state.get("rewards_processed", False)
-
-        # If XP increased but no rewards_processed flag is set, try to set it
-        if xp_increased and not any_rewards_processed:
-            # Check for combat context (even if ended without summary)
-            combat_phase = combat_state.get("combat_phase", "")
-            has_combat_context = combat_phase in constants.COMBAT_FINISHED_PHASES
-
-            # Check for encounter context
-            encounter_completed = encounter_state.get("encounter_completed", False)
-            has_encounter_active = encounter_state.get("encounter_active", False)
-            has_encounter_context = encounter_completed or has_encounter_active
-
-            if has_combat_context:
-                logging_util.info(
-                    "🏆 SERVER_ENFORCEMENT: Setting combat_state.rewards_processed=True "
-                    f"(XP increased by {xp_gain}: {original_xp} → {current_xp}, combat_phase={combat_phase})"
-                )
-                if "combat_state" not in state_dict:
-                    state_dict["combat_state"] = {}
-                state_dict["combat_state"]["rewards_processed"] = True
-            elif has_encounter_context:
-                logging_util.info(
-                    "🏆 SERVER_ENFORCEMENT: Setting encounter_state.rewards_processed=True "
-                    f"(XP increased by {xp_gain}: {original_xp} → {current_xp}, encounter context present)"
-                )
-                if "encounter_state" not in state_dict:
-                    state_dict["encounter_state"] = {}
-                state_dict["encounter_state"]["rewards_processed"] = True
-
+    # No-op: LLM handles all reward state management via ESSENTIALS protocol
+    # Removed server-side enforcement to prevent XP duplication and ensure
+    # LLM is the single source of truth for all reward processing
     return state_dict
 
 
