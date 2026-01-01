@@ -522,8 +522,8 @@ def _check_and_set_level_up_pending(
     previous level-up was missed. Comparison uses the original state (pre-update)
     to avoid relying on validation that may auto-correct the stored level.
 
-    The RewardsAgent will be triggered when rewards_pending exists with processed=False,
-    allowing the player to see the LEVEL UP AVAILABLE! message and process their level-up.
+    The LLM receives rewards_pending in game state context and generates level-up
+    rewards boxes per rewards_system_instruction.md when level_up_available=True.
 
     Args:
         state_dict: The game state dict after updates are applied
@@ -1859,48 +1859,16 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         story_entries = [{"text": final_narrative}]
         processed_story = process_story_for_display(story_entries, debug_mode)
 
-        # Check if level-up is available and append planning block to narrative
-        rewards_pending = updated_game_state_dict.get("rewards_pending") or {}
-        level_up_planning_block = None
-        if rewards_pending.get("level_up_available") is True:
-            new_level = rewards_pending.get("new_level")
-            planning_text_parts = [
-                "\n\n🎉 **LEVEL UP AVAILABLE!**",
-                f"You've earned enough XP to advance to level {new_level}!",
-                "\n**Would you like to level up now?**",
-                "  1. Level up immediately",
-                "  2. Continue adventuring (level up later)",
-            ]
-            planning_text = "\n".join(planning_text_parts)
-
-            # Append to narrative
-            final_narrative_with_planning = final_narrative + planning_text
-
-            # Update story entries with planning block
-            story_entries_with_planning = [{"text": final_narrative_with_planning}]
-            processed_story_with_planning = process_story_for_display(
-                story_entries_with_planning, debug_mode
-            )
-
-            # Store planning block data for structured output
-            level_up_planning_block = {
-                "type": "level_up",
-                "new_level": new_level,
-                "choices": [
-                    {"id": 1, "text": "Level up immediately"},
-                    {"id": 2, "text": "Continue adventuring (level up later)"},
-                ],
-            }
-        else:
-            final_narrative_with_planning = final_narrative
-            processed_story_with_planning = processed_story
+        # NOTE: Level-up handling is fully delegated to the LLM. The LLM receives
+        # rewards_pending in game state context and should recognize level-up eligibility
+        # to generate appropriate rewards boxes per rewards_system_instruction.md.
 
         # Build comprehensive response with all frontend-required fields
         unified_response = {
             KEY_SUCCESS: True,
-            "story": processed_story_with_planning,
-            "narrative": final_narrative_with_planning,  # Add for frontend compatibility
-            "response": final_narrative_with_planning,  # Fallback for older frontend versions
+            "story": processed_story,
+            "narrative": final_narrative,  # Add for frontend compatibility
+            "response": final_narrative,  # Fallback for older frontend versions
             "game_state": updated_game_state_dict,
             "mode": mode,
             "user_input": user_input,
@@ -1911,10 +1879,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "user_scene_number": user_scene_number,  # Scene number for current AI response: count of existing Gemini responses + 1
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
         }
-
-        # Add level-up planning block if present
-        if level_up_planning_block:
-            unified_response["planning_block"] = level_up_planning_block
 
         # Include state fields only when debug mode is enabled (shows MORE info)
         if debug_mode:
@@ -2939,17 +2903,9 @@ def _handle_update_state_command(
             for warning in post_combat_warnings:
                 response_parts.append(f"  - {warning}")
 
-        # Check if level-up is available and add planning/choice block
-        rewards_pending = validated_state_dict.get("rewards_pending") or {}
-        if rewards_pending.get("level_up_available") is True:
-            new_level = rewards_pending.get("new_level")
-            response_parts.append("\n🎉 LEVEL UP AVAILABLE!")
-            response_parts.append(
-                f"You've earned enough XP to advance to level {new_level}!"
-            )
-            response_parts.append("\nWould you like to level up now?")
-            response_parts.append("  1. Level up immediately")
-            response_parts.append("  2. Continue adventuring (level up later)")
+        # NOTE: Level-up handling is fully delegated to the LLM. The LLM receives
+        # rewards_pending in game state context and should recognize level-up eligibility
+        # to generate appropriate rewards boxes per rewards_system_instruction.md.
 
         response_payload = {
             KEY_SUCCESS: True,
