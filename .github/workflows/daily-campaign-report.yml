@@ -20,13 +20,14 @@ jobs:
           python-version: '3.11'
 
       - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Install dependencies
-        run: |
-          pip install firebase-admin google-cloud-firestore
+          pip install firebase-admin google-cloud-firestore pydantic requests
+          pip install -r mvp_site/requirements.txt
 
       - name: Generate Campaign Activity Report
         id: report
@@ -55,8 +56,9 @@ jobs:
           WEEK4_USERS=$(echo "$WEEK4_SECTION" | grep "Total Unique Users:" | awk '{print $4}')
 
           # Extract top users for each period
-          TOP_WEEK=$(grep -A 12 "Top 10 Users (Last Week):" /tmp/report.txt | tail -10)
-          TOP_4WEEKS=$(grep -A 12 "Top 10 Users (Last 4 Weeks):" /tmp/report.txt | tail -10)
+          # Skip header line and separator, then take up to 10 user lines
+          TOP_WEEK=$(grep -A 12 "Top 10 Users (Last Week):" /tmp/report.txt | tail -n +3 | head -10)
+          TOP_4WEEKS=$(grep -A 12 "Top 10 Users (Last 4 Weeks):" /tmp/report.txt | tail -n +3 | head -10)
 
           # Set outputs
           echo "week1_dau_avg=$WEEK1_DAU_AVG" >> $GITHUB_OUTPUT
