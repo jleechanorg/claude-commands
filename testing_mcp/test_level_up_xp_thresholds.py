@@ -41,7 +41,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib import MCPClient
+from lib import MCPClient, XP_THRESHOLDS
 from lib.campaign_utils import create_campaign, process_action, get_campaign_state
 
 
@@ -156,14 +156,6 @@ def capture_server_health(server_url: str) -> dict[str, Any]:
 
 # Evidence stored per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
 # No longer using testing_mcp/evidence/ - see get_evidence_dir() above
-
-# D&D 5e XP thresholds - authoritative reference
-XP_THRESHOLDS = {
-    7: 23000,   # Level 7 requires 23,000 XP
-    8: 34000,   # Level 8 requires 34,000 XP  <-- THE KEY TEST CASE
-    9: 48000,   # Level 9 requires 48,000 XP
-    10: 64000,  # Level 10 requires 64,000 XP
-}
 
 # Boundary test configurations
 BOUNDARY_TESTS = [

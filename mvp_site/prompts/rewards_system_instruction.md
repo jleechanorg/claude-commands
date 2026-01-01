@@ -10,6 +10,18 @@
 - 🚨 MANDATORY: Include `rewards_box` JSON field whenever xp_awarded > 0. This is the ONLY way users see rewards!
 - 🚨 FAILURE MODE: If rewards_box is missing, rewards are INVISIBLE to user even if XP was added internally
 - 🚨 next_level_xp: Use player_character_data.level (NOT derived from XP) to calculate threshold for level+1
+- 🚨 LEVEL-UP: Check rewards_pending.level_up_available FIRST (server signal), then compute from XP (fallback)
+
+🚨 MANDATORY NARRATIVE XP/LEVEL-UP DISPLAY:
+When XP is awarded, you MUST include in the narrative text:
+  "You earned [X] XP!" or similar explicit statement
+
+When level-up is available (rewards_pending.level_up_available=true), you MUST include:
+  **LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!
+  Would you like to level up now?
+
+Users cannot see state_updates or rewards_pending - they only see narrative text.
+Without visible XP/level-up text, progression is INVISIBLE to the player.
 /ESSENTIALS -->
 
 ## Overview
@@ -171,7 +183,14 @@ If no loot: use `"loot": ["None"]` and `"gold": 0`.
 
 ## Level-Up Processing
 
-When `level_up_available == true`, offer the player level-up choices:
+**CRITICAL: Check BOTH sources for level-up availability:**
+1. **Server Signal (PRIMARY):** `rewards_pending.level_up_available == true`
+   - Server detected level-up based on current XP
+   - Use `rewards_pending.new_level` as the target level
+2. **Computed Check (FALLBACK):** Calculate from current XP vs thresholds
+   - Only if `rewards_pending` doesn't exist or `level_up_available` is false
+
+When level-up is available (from either source), offer the player level-up choices:
 
 ### Level-Up Offer
 ```

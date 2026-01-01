@@ -37,6 +37,7 @@ from .narrative_validation import (
     validate_state_update_compliance,
     validate_directive_compliance,
 )
+from .game_constants import XP_GAIN_PATTERNS, XP_THRESHOLDS
 
 __all__ = [
     # MCP client
@@ -66,4 +67,7 @@ __all__ = [
     "validate_narrative_compliance",
     "validate_state_update_compliance",
     "validate_directive_compliance",
+    # Game constants
+    "XP_THRESHOLDS",
+    "XP_GAIN_PATTERNS",
 ]

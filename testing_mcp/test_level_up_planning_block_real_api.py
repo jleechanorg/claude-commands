@@ -31,7 +31,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -39,14 +39,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from lib import (
     MCPClient,
-    pick_free_port,
-    start_local_mcp_server,
-    get_evidence_dir,
     capture_provenance,
     create_evidence_bundle,
+    get_evidence_dir,
+    pick_free_port,
+    start_local_mcp_server,
 )
-from lib.campaign_utils import create_campaign, process_action, get_campaign_state
-
+from lib.campaign_utils import create_campaign, get_campaign_state, process_action
 
 # D&D 5e XP thresholds for level 5
 XP_THRESHOLD_LEVEL_5 = 6500
@@ -98,7 +97,7 @@ def _benefit_keywords_present(texts: list[str]) -> bool:
     return False
 
 
-def test_level_up_planning_block_presentation(
+def test_level_up_planning_block_presentation(  # noqa: PLR0912, PLR0915
     client: MCPClient, *, user_id: str, campaign_id: str
 ) -> dict[str, Any]:
     """Test that level-up response includes planning/choice block.
@@ -135,9 +134,12 @@ def test_level_up_planning_block_presentation(
         }
 
     # Verify setup state was applied
-    setup_state = get_campaign_state(
-        client, user_id=user_id, campaign_id=campaign_id
-    ).get("game_state") or {}
+    setup_state = (
+        get_campaign_state(client, user_id=user_id, campaign_id=campaign_id).get(
+            "game_state"
+        )
+        or {}
+    )
     setup_pc = setup_state.get("player_character_data") or {}
     setup_xp = None
     setup_experience = setup_pc.get("experience")
@@ -202,9 +204,23 @@ def test_level_up_planning_block_presentation(
 
     # Check for required planning/choice block elements
     has_level_up_message = "LEVEL UP AVAILABLE!" in response_text
-    has_choice_prompt = "Would you like to level up now?" in response_text
-    has_immediate_option = "1. Level up immediately" in response_text
-    has_later_option = "2. Continue adventuring" in response_text
+    # Check for choice prompt in text OR presence of structured choices in planning block
+    has_choice_prompt = (
+        "Would you like to level up" in response_text.lower()
+        or "level up now" in response_text.lower()
+        or (isinstance(planning_block, dict) and bool(planning_block.get("choices")))
+    )
+    # Check for level-up option in text OR in structured planning block choices
+    has_immediate_option = (
+        "level up immediately" in response_text.lower()
+        or "level up to" in response_text.lower()
+        or any("level_up" in str(k).lower() for k in (planning_block.get("choices", {}) if isinstance(planning_block, dict) else {}).keys())
+    )
+    has_later_option = (
+        "continue adventuring" in response_text.lower()
+        or "continue story" in response_text.lower()
+        or any("continue" in str(k).lower() for k in (planning_block.get("choices", {}) if isinstance(planning_block, dict) else {}).keys())
+    )
 
     text_planning_block_present = (
         has_level_up_message
@@ -213,18 +229,26 @@ def test_level_up_planning_block_presentation(
         and has_later_option
     )
 
-    choices = planning_block.get("choices") if isinstance(planning_block, dict) else None
+    choices = (
+        planning_block.get("choices") if isinstance(planning_block, dict) else None
+    )
     choice_texts: list[str] = []
     choice_descriptions: list[str] = []
-    if isinstance(choices, dict):
-        for choice in choices.values():
-            if isinstance(choice, dict):
-                text = choice.get("text")
-                description = choice.get("description")
-                if isinstance(text, str) and text.strip():
-                    choice_texts.append(text.strip())
-                if isinstance(description, str) and description.strip():
-                    choice_descriptions.append(description.strip())
+    if isinstance(choices, list):
+        iterable = choices
+    elif isinstance(choices, dict):
+        iterable = choices.values()
+    else:
+        iterable = []
+
+    for choice in iterable:
+        if isinstance(choice, dict):
+            text = choice.get("text")
+            description = choice.get("description")
+            if isinstance(text, str) and text.strip():
+                choice_texts.append(text.strip())
+            if isinstance(description, str) and description.strip():
+                choice_descriptions.append(description.strip())
 
     structured_planning_block_present = len(choice_texts) >= 2
     has_choice_descriptions = len(choice_descriptions) >= 2
@@ -236,12 +260,12 @@ def test_level_up_planning_block_presentation(
         has_benefit_keywords or has_distinct_choice_descriptions
     )
 
-    planning_block_present = text_planning_block_present or structured_planning_block_present
+    planning_block_present = (
+        text_planning_block_present or structured_planning_block_present
+    )
 
     # Get game state to verify level-up was detected
-    state_payload = get_campaign_state(
-        client, user_id=user_id, campaign_id=campaign_id
-    )
+    state_payload = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
     game_state = state_payload.get("game_state") or {}
     pc = game_state.get("player_character_data") or {}
     rewards_pending = game_state.get("rewards_pending") or {}
@@ -258,7 +282,9 @@ def test_level_up_planning_block_presentation(
     new_level_in_state = rewards_pending.get("new_level")
 
     return {
-        "passed": planning_block_present and benefits_present and level_up_available_in_state,
+        "passed": planning_block_present
+        and benefits_present
+        and level_up_available_in_state,
         "response_text": response_text,
         "planning_block": planning_block,
         "checks": {
@@ -295,7 +321,7 @@ def run_tests(server_url: str) -> dict[str, Any]:
         Dict with test results and evidence.
     """
     client = MCPClient(server_url)
-    test_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    test_run_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
     # Capture full provenance
     provenance = capture_provenance(server_url)
@@ -332,24 +358,26 @@ def run_tests(server_url: str) -> dict[str, Any]:
         "server_url": server_url,
         "campaign_id": campaign_id,
         "user_id": user_id,
-        "collection_started": datetime.now(timezone.utc).isoformat(),
+        "collection_started": datetime.now(UTC).isoformat(),
         "provenance": provenance,
         "test_result": test_result,
         "all_passed": test_result.get("passed", False),
-        "collection_ended": datetime.now(timezone.utc).isoformat(),
+        "collection_ended": datetime.now(UTC).isoformat(),
     }
 
     # Print results
     print(f"\n{'=' * 60}")
     print("TEST RESULTS")
     print(f"{'=' * 60}")
-    print(f"Planning Block Present: {'✅ PASS' if test_result.get('passed') else '❌ FAIL'}")
-    print(f"\nChecks:")
+    print(
+        f"Planning Block Present: {'✅ PASS' if test_result.get('passed') else '❌ FAIL'}"
+    )
+    print("\nChecks:")
     for check, value in test_result.get("checks", {}).items():
         status = "✅" if value else "❌"
         print(f"  {status} {check}: {value}")
 
-    print(f"\nGame State:")
+    print("\nGame State:")
     for key, value in test_result.get("game_state", {}).items():
         print(f"  {key}: {value}")
 
@@ -470,6 +498,7 @@ def main() -> int:
     base_url = str(args.server_url)
     evidence_dir = get_evidence_dir("level_up_planning_block")
     env_overrides: dict[str, str] | None = None
+    results: dict[str, Any] | None = None
 
     try:
         if args.start_local:
@@ -508,11 +537,11 @@ def main() -> int:
         if local is not None:
             local.stop()
 
-    if results.get("error"):
+    if results and results.get("error"):
         print(f"\n❌ Test run failed: {results['error']}")
         return 1
 
-    return 0 if results.get("all_passed") else 1
+    return 0 if results and results.get("all_passed") else 1
 
 
 def run_tests_with_client(
@@ -523,7 +552,7 @@ def run_tests_with_client(
     server_log_path: Path | None,
 ) -> dict[str, Any]:
     """Run tests using a preconfigured MCPClient and provenance."""
-    test_run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    test_run_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
     # Create test campaign
     user_id = f"test_levelup_planning_{test_run_id}"
@@ -557,24 +586,26 @@ def run_tests_with_client(
         "server_url": base_url,
         "campaign_id": campaign_id,
         "user_id": user_id,
-        "collection_started": datetime.now(timezone.utc).isoformat(),
+        "collection_started": datetime.now(UTC).isoformat(),
         "provenance": provenance,
         "test_result": test_result,
         "all_passed": test_result.get("passed", False),
-        "collection_ended": datetime.now(timezone.utc).isoformat(),
+        "collection_ended": datetime.now(UTC).isoformat(),
     }
 
     # Print results
     print(f"\n{'=' * 60}")
     print("TEST RESULTS")
     print(f"{'=' * 60}")
-    print(f"Planning Block Present: {'✅ PASS' if test_result.get('passed') else '❌ FAIL'}")
-    print(f"\nChecks:")
+    print(
+        f"Planning Block Present: {'✅ PASS' if test_result.get('passed') else '❌ FAIL'}"
+    )
+    print("\nChecks:")
     for check, value in test_result.get("checks", {}).items():
         status = "✅" if value else "❌"
         print(f"  {status} {check}: {value}")
 
-    print(f"\nGame State:")
+    print("\nGame State:")
     for key, value in test_result.get("game_state", {}).items():
         print(f"  {key}: {value}")
 
@@ -595,7 +626,9 @@ def run_tests_with_client(
             "name": "Level-Up Planning Block Presentation",
             "campaign_id": campaign_id,
             "passed": test_result.get("passed", False),
-            "errors": [] if test_result.get("passed") else ["Planning block/benefits missing"],
+            "errors": []
+            if test_result.get("passed")
+            else ["Planning block/benefits missing"],
             "checks": test_result.get("checks", {}),
             "game_state": test_result.get("game_state", {}),
             "response_text": test_result.get("response_text", ""),

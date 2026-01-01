@@ -1437,7 +1437,6 @@ class GameState:
 
         if provided_level != expected_level:
             result["valid"] = False
-            result["corrected"] = True
 
             message = (
                 f"XP/Level mismatch: XP={xp} should be Level {expected_level}, "
@@ -1447,15 +1446,27 @@ class GameState:
             if strict:
                 raise ValueError(message)
 
-            # Default: warn and auto-correct by persisting expected level
-            logging_util.warning(
-                f"XP validation: {message} - auto-correcting and persisting"
-            )
-            if hasattr(self, "player_character_data") and isinstance(
-                self.player_character_data, dict
-            ):
-                self.player_character_data["level"] = expected_level
-                result["corrected_level"] = expected_level
+            # CRITICAL FIX: Don't auto-correct on level-up - let LLM handle it via rewards flow
+            # Only auto-correct on level REGRESSION (cheat detection / data integrity)
+            if expected_level > provided_level:
+                # Level-up scenario: XP indicates higher level than stored
+                # DON'T auto-correct - rewards_pending flow will handle the level-up
+                logging_util.info(
+                    f"XP validation: {message} - level-up detected, letting LLM handle via rewards_pending"
+                )
+                result["level_up_pending"] = True
+            else:
+                # Level regression/mismatch: stored level is HIGHER than XP indicates
+                # This is a data integrity issue - auto-correct it
+                result["corrected"] = True
+                logging_util.warning(
+                    f"XP validation: {message} - auto-correcting level regression"
+                )
+                if hasattr(self, "player_character_data") and isinstance(
+                    self.player_character_data, dict
+                ):
+                    self.player_character_data["level"] = expected_level
+                    result["corrected_level"] = expected_level
 
         return result
 

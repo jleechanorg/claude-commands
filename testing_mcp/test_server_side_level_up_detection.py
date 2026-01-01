@@ -40,19 +40,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from lib import (
     MCPClient,
+    XP_THRESHOLDS,
     get_evidence_dir,
-    capture_full_provenance,
+    capture_provenance,
     write_with_checksum,
 )
 from lib.campaign_utils import create_campaign, process_action, get_campaign_state
-
-
-# D&D 5e XP thresholds for levels 4-6
-XP_THRESHOLDS = {
-    4: 2700,   # Level 4 requires 2,700 XP
-    5: 6500,   # Level 5 requires 6,500 XP  <-- Key threshold
-    6: 14000,  # Level 6 requires 14,000 XP
-}
+from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 
 
 def seed_level_4_character(
@@ -320,7 +314,7 @@ def run_tests(server_url: str) -> dict[str, Any]:
     """
     # Capture full provenance FIRST per evidence standards
     print("Capturing git provenance...")
-    provenance = capture_full_provenance(server_url)
+    provenance = capture_provenance(server_url, server_pid=None)
     collection_start = datetime.now(timezone.utc).isoformat()
 
     client = MCPClient(server_url, timeout_s=120.0)
@@ -444,7 +438,7 @@ def run_tests(server_url: str) -> dict[str, Any]:
     print(f"\nOverall: {'✅ ALL TESTS PASSED' if all_passed else '❌ SOME TESTS FAILED'}")
 
     # Save evidence to /tmp structure with checksums per evidence-standards.md
-    evidence_base = get_evidence_dir("level_up_detection_tests", test_run_id)
+    evidence_base = get_evidence_dir("level_up_detection_tests") / test_run_id
     evidence_base.mkdir(parents=True, exist_ok=True)
 
     # Write main evidence file with checksum
@@ -498,15 +492,41 @@ def main() -> int:
         default="https://mvp-site-app-s6-754683067800.us-central1.run.app",
         help="Server URL to test against",
     )
+    parser.add_argument(
+        "--start-local",
+        action="store_true",
+        help="Start local MCP server automatically",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=0,
+        help="Port for --start-local (0 = random free port)",
+    )
     args = parser.parse_args()
 
-    results = run_tests(args.server_url)
+    local: LocalServer | None = None
+    server_url = args.server_url
+    env_overrides = {"DEBUG_MODE": "true"}
 
-    if results.get("error"):
-        print(f"\n❌ Test run failed: {results['error']}")
-        return 1
+    try:
+        if args.start_local:
+            port = args.port or pick_free_port()
+            local = start_local_mcp_server(port, env_overrides=env_overrides)
+            server_url = f"http://127.0.0.1:{port}"
+            print(f"Started local MCP server on {server_url} (pid={local.proc.pid})")
 
-    return 0 if results.get("all_passed") else 1
+        results = run_tests(server_url)
+
+        if results.get("error"):
+            print(f"\n❌ Test run failed: {results['error']}")
+            return 1
+
+        return 0 if results.get("all_passed") else 1
+    finally:
+        if local:
+            local.stop()
+            print("Stopped local MCP server")
 
 
 if __name__ == "__main__":

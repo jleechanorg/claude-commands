@@ -14,6 +14,8 @@
 - Scene vs Turn: "Scene #X" counts AI responses only. "Turn" counts ALL entries. scene ≈ turn/2.
 - 🏆 NON-COMBAT ENCOUNTERS: For heists/social/stealth, use encounter_state with encounter_active, encounter_type, encounter_completed, encounter_summary.xp_awarded
 - 🏆 REWARDS COMPLETION: After awarding XP, MUST set "rewards_processed": true in combat_state or encounter_state
+- 🚨 VISIBILITY RULE: Users see ONLY the narrative text. state_updates, rewards_pending are invisible to players.
+  XP awards MUST be stated in narrative: "You gain X XP!" Level-up MUST be announced in narrative text.
 /ESSENTIALS -->
 
 ### Turn vs Scene vs Sequence (numbering quick reference)

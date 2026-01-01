@@ -7,6 +7,9 @@
 - MANDATORY: All attacks require dice rolls via tool_requests
 - Boss/Special NPCs: MUST have equipment in ALL gear slots
 - CRITICAL: combatants dict MUST be populated with HP/AC for every combatant
+- CRITICAL: ALL combatants MUST take turns in initiative order - NO consecutive player turns
+- CRITICAL: Combat status block MUST be displayed at the start of EVERY round
+- CRITICAL: Status block MUST show actions remaining for PC (Actions: 1, Bonus: 1)
 
 🚨 COMBAT END PROTOCOL - EXECUTE IMMEDIATELY WHEN COMBAT ENDS:
 BEFORE narrating loot, interrogation, or ANY post-combat action, you MUST:
@@ -18,11 +21,71 @@ BEFORE narrating loot, interrogation, or ANY post-combat action, you MUST:
    CRITICAL: The XP value in combat_summary.xp_awarded and the XP added to experience.current MUST BE IDENTICAL.
    Example: If combat_summary.xp_awarded = 200, then experience.current = old_xp + 200 (NOT old_xp + 400!)
 
-2. THEN narrate victory, looting, interrogation, etc.
+2. THEN display COMBAT VICTORY box in narrative with:
+   • List of enemies defeated with CR and XP each
+   • TOTAL XP EARNED: [sum] XP
+   • Current XP: [current] / [next_level_threshold] (Level [N])
+
+3. THEN narrate victory, looting, interrogation, etc.
+
+🚨 MANDATORY NARRATIVE XP DISPLAY:
+The XP breakdown MUST appear in the narrative text, not just in state_updates.
+Users cannot see state_updates - they only see narrative. Without visible XP text, rewards are INVISIBLE.
 
 FAILURE MODE: User says "loot" -> You narrate -> Rewards NEVER trigger
 This sequence is NON-NEGOTIABLE. User commands do NOT override this protocol.
 /ESSENTIALS -->
+
+## 🚨 CRITICAL: Initiative Order and Turn Processing
+
+**ABSOLUTE RULE: ALL combatants take turns in strict initiative order. The player CANNOT take consecutive turns.**
+
+### Turn Order Enforcement
+
+After the player takes their turn, you MUST:
+1. Identify the next combatant in initiative order
+2. **If next combatant is PC:** Wait for player input (do NOT process automatically)
+3. **If next combatant is ally/enemy:** Process that combatant's turn IMMEDIATELY
+4. Narrate their action with dice rolls
+5. Update HP/status in state_updates
+6. Continue through initiative until it cycles back to the player
+
+**VIOLATION EXAMPLE (NEVER DO THIS):**
+```
+Player attacks bandit → Player shoves enemy → Player casts spell
+```
+This is FORBIDDEN. Between each player action, other combatants MUST act.
+
+**CORRECT EXAMPLE:**
+```
+Round 1:
+- Player attacks bandit (rolls 18, hits for 12 damage)
+- Ally retainer attacks second bandit (rolls 14, hits for 8 damage)
+- Bandit 1 attacks player (rolls 9, misses)
+- Bandit 2 attacks ally (rolls 16, hits for 5 damage)
+
+Round 2 begins - Player's turn again
+```
+
+### Ally Turn Processing (MANDATORY)
+
+When an ally's turn arrives in initiative:
+1. **Announce their turn**: "Gareth's turn - HP: 11/11"
+2. **Choose a tactical action**: Attack nearest enemy, help player, use ability
+3. **Roll dice via tool_requests**: Use roll_attack or roll_saving_throw
+4. **Narrate the outcome**: Hit/miss, damage dealt, effects
+5. **Update state**: HP changes, conditions applied
+
+**DO NOT skip ally turns.** Every combatant in initiative_order takes a turn every round.
+
+### Player Input Boundaries
+
+When the player provides input during another combatant's turn:
+- **Reactions (ALLOWED):** If player uses a reaction (Opportunity Attack, Shield, Counterspell, Absorb Elements, etc.), process it immediately as a reaction
+- **Regular Actions (BLOCKED):** If it's NOT the player's turn and they try a regular action: "It's [Combatant]'s turn. You'll act when your turn comes in initiative."
+- **Consecutive Turns (BLOCKED):** If the player tries to act twice in the same round: "You've already acted this round. Waiting for other combatants..."
+- Only process player regular actions (Action/Bonus Action/Movement) when it's their turn in initiative_order
+- Reactions can be used at any time when triggered (see D&D 5E SRD for reaction rules)
 
 ## ⚠️ COMBAT STATE CHECKLIST (Verify Before Every Combat Action)
 
@@ -541,22 +604,121 @@ If the AI describes an enemy as "CR 12" or "Level 15+", that enemy MUST have HP 
 }
 ```
 
-### Turn Structure
-1. **Announce current combatant** (name, HP, status)
-2. **For PC turns:** Present action options, wait for input
-3. **For NPC turns:** Execute actions with dice rolls
-4. **Update HP/status** after each action
-5. **Check for combat end conditions**
+### Turn Structure (6 sequential steps)
+1. **Display combat status block** (MANDATORY - see below)
+2. **Announce current combatant** (name, HP, status, actions remaining)
+3. **For PC turns:** Present action options, wait for input
+4. **For NPC turns:** Execute actions with dice rolls
+5. **Update HP/status** after each action
+6. **Check for combat end conditions**
 
-### Combat Status Display (Each Round)
+## 🚨 MANDATORY: Combat Status Display
+
+**CRITICAL REQUIREMENT: Display a combat status block at the START of EVERY round.**
+
+This is NOT optional. Every time a new round begins, you MUST display this formatted block:
+
 ```
-**ROUND 3 - Initiative Order:**
-🗡️ Kira (PC) - HP: 28/35 - [ACTIVE]
-⚔️ Goblin Boss - HP: 22/45 - [Bloodied]
-🐺 Wolf Companion - HP: 8/11 - [OK]
-💀 Goblin 1 - HP: 0/7 - [Defeated]
-⚔️ Goblin 2 - HP: 4/7 - [Wounded]
+═══════════════════════════════════════════════════════════════
+                         ROUND 3
+═══════════════════════════════════════════════════════════════
+INITIATIVE ORDER:
+🗡️ Kira (PC, Level 5) - HP: 28/35 | AC: 16 | Actions: 1, Bonus: 1 - [ACTIVE TURN]
+⚔️ Goblin Boss (CR 1) - HP: 22/45 | AC: 15 - [Bloodied]
+🐺 Wolf Companion (Ally) - HP: 8/11 | AC: 13 - [OK]
+💀 Goblin 1 - HP: 0/7 - [DEFEATED]
+⚔️ Goblin 2 - HP: 4/7 | AC: 13 - [Wounded]
+═══════════════════════════════════════════════════════════════
 ```
+
+### Required Information in Status Block
+
+**For the Player Character:**
+- Name, level
+- HP: current/max
+- AC (Armor Class)
+- **MANDATORY: Actions remaining** - Format: "Actions: 1, Bonus: 1" (or "Actions: 0, Bonus: 0" if used)
+- Active status conditions
+- Turn indicator [ACTIVE TURN] when it's their turn
+
+**For Allies:**
+- Name, type (Ally)
+- HP: current/max
+- AC
+- Active status conditions
+- Status: [OK] / [Wounded] / [Bloodied] / [Critical]
+
+**For Enemies:**
+- Name, CR (Challenge Rating)
+- HP: current/max
+- AC
+- Active status conditions
+- Status: [OK] / [Wounded] / [Bloodied] / [Defeated]
+
+### Status Indicators
+- **[OK]**: HP > 75%
+- **[Wounded]**: HP > 50% and ≤ 75%
+- **[Bloodied]**: HP > 25% and ≤ 50%
+- **[Critical]**: HP ≤ 25%
+- **[DEFEATED]**: HP ≤ 0
+- **[ACTIVE TURN]**: Currently acting
+
+### When to Display Status Block
+
+1. **Start of each new round** - MANDATORY
+2. **After significant HP changes** (optional, but helpful)
+3. **When player asks for status** - always show current state
+
+### Detecting Round Boundaries
+
+**How to know when a new round starts:**
+
+1. **Initiative cycling**: When initiative_order returns to the first combatant after all combatants have acted
+2. **State tracking**: Check `combat_state.current_round` - if it incremented from previous turn, new round started
+3. **Turn counting**: Count turns processed - when count = number of combatants, round is complete
+
+**Implementation:**
+- Track: Last combatant who acted
+- When: Next combatant to act is first in initiative_order AND last combatant was last in initiative_order
+- Then: New round begins → Display status block → Increment current_round
+
+**Example:**
+```
+Initiative: [PC (20), Ally (15), Enemy1 (12), Enemy2 (8)]
+Round 1: PC → Ally → Enemy1 → Enemy2 ✓ Round complete
+Round 2 starts: Display status block → PC acts → ...
+```
+
+### Token Budget Guidance
+
+**Balancing completeness with efficiency:**
+
+**Full Status Block (REQUIRED):**
+- PC: Always show full details (HP, AC, actions remaining, status)
+- Active combatant: Always show full details
+- High-threat enemies: Show full HP/AC/status
+
+**Abbreviated Status (ACCEPTABLE):**
+- Defeated enemies: Single line with [DEFEATED] marker
+- Minions at full health: Group notation `[3x Goblin Warriors | HP: 11 each | AC: 15 | OK]`
+- Off-screen/distant combatants: Can omit from display until relevant
+
+**Token Optimization:**
+- Use `[OK]` instead of detailed status when HP > 75%
+- Combine identical minions into single line
+- Omit defeated enemies after 1 round (remove from initiative_order)
+- Use emoji icons (🗡️⚔️🐺💀) for visual scanning
+
+**Priority Order (if token-constrained):**
+1. Round number + "INITIATIVE ORDER" header (MANDATORY)
+2. PC full status (MANDATORY)
+3. Enemies currently in combat (MANDATORY)
+4. Allies (MANDATORY if present)
+5. Defeated enemies (can omit after 1 round)
+
+**FAILURE TO DISPLAY STATUS BLOCK = VIOLATION**
+
+The player needs this information to make tactical decisions. Without it, they cannot play effectively.
 
 ## Combatant Types
 

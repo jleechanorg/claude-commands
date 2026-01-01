@@ -62,6 +62,7 @@ from mvp_site.game_state import (
     coerce_int,
     level_from_xp,
     validate_and_correct_state,
+    xp_needed_for_level,
 )
 from mvp_site.agent_prompts import extract_llm_instruction_hints
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
@@ -374,18 +375,12 @@ def _has_rewards_context(
         return True
 
     if original_state_dict is not None:
-        # Use "or {}" to handle None values safely
-        # (dict.get returns None when key exists with None value, not the default)
-        current_xp_raw = (
-            (state_dict.get("player_character_data") or {}).get("experience") or {}
-        ).get("current", 0)
-        original_xp_raw = (
-            (original_state_dict.get("player_character_data") or {}).get("experience")
-            or {}
-        ).get("current", 0)
+        # Use robust XP extractor to handle multiple field formats
+        player_data = state_dict.get("player_character_data") or {}
+        original_player_data = original_state_dict.get("player_character_data") or {}
 
-        current_xp = coerce_int(current_xp_raw, 0)
-        original_xp = coerce_int(original_xp_raw, 0)
+        current_xp = _extract_xp_robust(player_data)
+        original_xp = _extract_xp_robust(original_player_data)
         if current_xp > original_xp:
             return True
 
@@ -420,6 +415,37 @@ def _enforce_rewards_processed_flag(
     return state_dict
 
 
+def _extract_xp_robust(player_data: dict[str, Any]) -> int:
+    """Extract XP from player_character_data, handling multiple field formats.
+
+    Tries in order:
+    1. experience.current (canonical format)
+    2. xp (flat format)
+    3. xp_current (flat variant)
+
+    Also handles comma-formatted strings like "1,500".
+
+    Args:
+        player_data: The player_character_data dict
+
+    Returns:
+        XP as integer, or 0 if not found
+    """
+    # Try canonical format first
+    experience = player_data.get("experience") or {}
+    xp_raw = experience.get("current")
+
+    # Try flat formats if canonical not found
+    if xp_raw is None:
+        xp_raw = player_data.get("xp") or player_data.get("xp_current")
+
+    # Handle comma-formatted strings (e.g., "1,500" -> 1500)
+    if isinstance(xp_raw, str):
+        xp_raw = xp_raw.replace(",", "")
+
+    return coerce_int(xp_raw, 0)
+
+
 def _check_and_set_level_up_pending(
     state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -444,23 +470,46 @@ def _check_and_set_level_up_pending(
     if original_state_dict is None:
         return state_dict
 
-    # Get current and original XP
+    # Get current and original XP using robust extractor
     player_data = state_dict.get("player_character_data") or {}
-    experience = player_data.get("experience") or {}
-    current_xp = coerce_int(experience.get("current"), 0)
+    current_xp = _extract_xp_robust(player_data)
 
     original_player_data = original_state_dict.get("player_character_data") or {}
-    original_experience = original_player_data.get("experience") or {}
-    original_xp = coerce_int(original_experience.get("current"), 0)
+    original_xp = _extract_xp_robust(original_player_data)
 
-    # Get stored level from original state (before validation may auto-correct)
-    stored_level = coerce_int(original_player_data.get("level"), 1)
+    # Get stored level from CURRENT state (after GOD_MODE or other updates)
+    # This ensures that if level is explicitly set (e.g., via GOD_MODE), we use that value
+    stored_level = coerce_int(player_data.get("level"), 1)
 
     # Calculate what level SHOULD be based on XP
     expected_level = level_from_xp(current_xp)
 
-    # If expected level is higher than stored level, level-up is available
+    # If expected level is NOT higher than stored level, NO level-up needed
     if expected_level <= stored_level:
+        # CRITICAL: Clear stale level-up notifications if:
+        # 1. Player actually leveled up (stored_level >= pending new_level), OR
+        # 2. XP dropped below the threshold for the pending level-up
+        existing_rewards = state_dict.get("rewards_pending") or {}
+        if existing_rewards.get("level_up_available") is True:
+            existing_new_level = coerce_int(
+                existing_rewards.get("new_level"), default=0
+            )
+            # Get XP threshold for the pending level-up
+            xp_threshold_for_pending = xp_needed_for_level(existing_new_level)
+            if stored_level >= existing_new_level:
+                # Player reached or exceeded the pending level → clear the notification
+                logging_util.info(
+                    f"📈 LEVEL_UP_CHECK: Clearing stale level-up notification "
+                    f"(stored_level={stored_level} >= pending new_level={existing_new_level})"
+                )
+                state_dict.pop("rewards_pending", None)
+            elif current_xp < xp_threshold_for_pending:
+                # XP dropped below threshold for pending level-up → clear stale notification
+                logging_util.info(
+                    f"📈 LEVEL_UP_CHECK: Clearing stale level-up notification "
+                    f"(XP {current_xp} < threshold {xp_threshold_for_pending} for level {existing_new_level})"
+                )
+                state_dict.pop("rewards_pending", None)
         return state_dict
 
     # Check if rewards_pending already exists and handles this level-up
@@ -493,17 +542,29 @@ def _check_and_set_level_up_pending(
     )
 
     existing_rewards = state_dict.get("rewards_pending") or {}
-    merged_items = list(existing_rewards.get("items") or [])
+
+    # CRITICAL FIX: Don't resurrect already-processed rewards
+    # If existing rewards were already processed, clear them before merging new level-up
+    if existing_rewards.get("processed") is True:
+        # Old rewards already processed - start fresh for this level-up
+        merged_items = []
+        preserved_xp = 0
+        preserved_gold = 0
+    else:
+        # Old rewards not yet processed - merge them with this level-up
+        merged_items = list(existing_rewards.get("items") or [])
+        preserved_xp = existing_rewards.get("xp", 0)
+        preserved_gold = existing_rewards.get("gold", 0)
+
     new_source_id = f"level_up_{stored_level}_to_{expected_level}"
 
     state_dict["rewards_pending"] = {
-        **existing_rewards,
-        "source": existing_rewards.get("source", "milestone"),
+        "source": "level_up",
         # Always align source_id with the current target level (upgrade-safe)
         "source_id": new_source_id,
-        # XP has already been applied to state; preserve any existing rewards XP
-        "xp": existing_rewards.get("xp", 0),
-        "gold": existing_rewards.get("gold", 0),
+        # XP has already been applied to state; preserve any existing rewards XP (if not processed)
+        "xp": preserved_xp,
+        "gold": preserved_gold,
         "items": merged_items,
         "level_up_available": True,
         "new_level": expected_level,

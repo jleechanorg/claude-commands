@@ -2154,25 +2154,58 @@ class TestXPLevelValidation(unittest.TestCase):
             result.get("valid", True), "Valid XP/level should pass validation"
         )
 
-    def test_validate_xp_level_mismatch_autocorrects(self):
-        """Test validation auto-corrects level when XP doesn't match."""
-        # Level 1 with 5000 XP should be corrected to Level 4 (2700-6499 range)
+    def test_validate_xp_level_levelup_sets_pending_no_correction(self):
+        """Test level-up case: sets level_up_pending but does NOT auto-correct.
+
+        Level-ups should be handled by LLM via rewards_pending flow, not server.
+        """
+        # Level 1 with 5000 XP indicates Level 4 (level-up scenario)
         gs = GameState(
             player_character_data={
                 "experience": {"current": 5000},
-                "level": 1,  # Wrong! Should be Level 4
+                "level": 1,  # Lower than XP indicates
             }
         )
         result = gs.validate_xp_level()
-        self.assertTrue(result.get("corrected", False), "Should flag as corrected")
+        # Should NOT auto-correct level-ups
+        self.assertFalse(result.get("corrected", False), "Should NOT auto-correct level-up")
+        self.assertTrue(result.get("level_up_pending", False), "Should set level_up_pending")
         self.assertEqual(result.get("expected_level"), 4, "Expected level should be 4")
         self.assertEqual(
             result.get("provided_level"), 1, "Provided level should be recorded as 1"
         )
+        # Level should NOT be mutated
         self.assertEqual(
             gs.player_character_data.get("level"),
-            4,
-            "Level should be auto-corrected in state",
+            1,
+            "Level should NOT be changed (LLM handles level-up)",
+        )
+
+    def test_validate_xp_level_regression_autocorrects(self):
+        """Test level regression: auto-corrects when stored level > XP-indicated level.
+
+        Level regressions are data integrity issues and should be auto-corrected.
+        """
+        # Level 5 with 500 XP indicates Level 2 (regression scenario)
+        gs = GameState(
+            player_character_data={
+                "experience": {"current": 500},
+                "level": 5,  # Higher than XP indicates - data integrity issue
+            }
+        )
+        result = gs.validate_xp_level()
+        # Should auto-correct regressions
+        self.assertTrue(result.get("corrected", False), "Should auto-correct regression")
+        self.assertFalse(result.get("level_up_pending", False), "Should NOT set level_up_pending")
+        self.assertEqual(result.get("expected_level"), 2, "Expected level should be 2")
+        self.assertEqual(
+            result.get("provided_level"), 5, "Provided level should be recorded as 5"
+        )
+        # Level SHOULD be corrected
+        self.assertEqual(
+            gs.player_character_data.get("level"),
+            2,
+            "Level should be auto-corrected to match XP",
         )
 
     def test_validate_xp_level_strict_mode_raises(self):

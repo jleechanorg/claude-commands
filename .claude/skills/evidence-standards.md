@@ -42,7 +42,7 @@ def capture_provenance():
     return provenance
 ```
 
-**Quick validation:** If your evidence.json is missing ANY of these fields, the test is incomplete:
+**Quick validation:** If your metadata.json is missing ANY of these fields, the test is incomplete:
 - `provenance.merge_base`
 - `provenance.commits_ahead_of_main`
 - `provenance.diff_stat_vs_main`
@@ -110,22 +110,61 @@ environment. Evidence from `--start-local --evidence` is valid proof.
 
 ## Evidence Collection Requirements
 
+### Canonical Evidence Bundle Files
+
+**Required files in every evidence bundle:**
+
+| File | Purpose | Required Keys |
+|------|---------|---------------|
+| `run.json` | Test results | `scenarios[*].name`, `scenarios[*].campaign_id`, `scenarios[*].errors` |
+| `metadata.json` | Git/server provenance | `git_provenance`, `server`, `timestamp` |
+| `evidence.md` | Human-readable summary | Pass/fail counts matching run.json |
+| `methodology.md` | Test methodology | Environment, steps, validation |
+| `README.md` | Package manifest | Git commit, branch, collection time |
+| `request_responses.jsonl` | Raw MCP captures | Full request/response pairs |
+
+**DEPRECATED:** `evidence.json` - use `run.json` + `metadata.json` instead.
+
+### Mandatory Scenarios Array
+
+**Every test MUST emit `results["scenarios"]`** even for single-scenario runs:
+
+```python
+# ❌ BAD - Missing scenarios array causes "Total Scenarios: 0"
+results = {"test_result": {...}}
+
+# ✅ GOOD - Always include scenarios array
+results = {
+    "scenarios": [
+        {
+            "name": "scenario_name",
+            "campaign_id": "abc123",  # Required for log traceability
+            "passed": True,
+            "errors": [],  # Always include, even if empty
+            "checks": {...}
+        }
+    ],
+    "test_result": {...}  # Optional summary
+}
+```
+
 ### Evidence Integrity (Checksums)
 
 **ALL evidence files MUST have separate checksum files:**
 
 ```bash
 # Generate checksums AFTER finalizing content
-sha256sum evidence.json > evidence.json.sha256
+sha256sum run.json > run.json.sha256
+sha256sum metadata.json > metadata.json.sha256
 
 # Verify checksums
-sha256sum -c evidence.json.sha256
+sha256sum -c run.json.sha256
 ```
 
 **Anti-pattern:** Embedding checksums inside JSON files (self-invalidating).
 
 **Checksum usability requirement:** `.sha256` files must reference the **local basename**
-(e.g., `evidence.json`), not a nested path like `artifacts/run_.../evidence.json`.
+(e.g., `run.json`), not a nested path like `artifacts/run_.../run.json`.
 This ensures `sha256sum -c` works when run from the evidence directory.
 
 **ALL evidence files require checksums, including:**
@@ -185,7 +224,7 @@ derived from actual test inputs or `game_state_snapshot.json`. Hardcoded or
 handwritten lists are invalid.
 
 **Threshold capture:** If pass/fail depends on thresholds (e.g.,
-`min_narrative_items`), those values must be recorded in `evidence.json` or the
+`min_narrative_items`), those values must be recorded in `run.json` or the
 methodology so reviewers can verify the criteria.
 
 **Environment claims:** Only claim env vars that are read from the actual
@@ -731,6 +770,110 @@ if result.returncode != 0:
 # ✅ GOOD - Copies specific run only
 --artifact /path/to/all_runs/run_20251227T051227_953691
 ```
+
+## Pass Quality Classification
+
+Not all passes are equal. Track evidence quality with explicit pass types:
+
+| Pass Type | Criteria | Evidence Value |
+|-----------|----------|----------------|
+| **STRONG** | All conditions met with robust proof | Highest - conclusive |
+| **WEAK** | Core requirement proven, secondary conditions not met | Valid but with caveats |
+| **FAIL** | Core requirement not proven | Invalid |
+
+**Example implementation:**
+```python
+# Track pass strength in evidence
+strong_pass = primary_condition and secondary_condition
+weak_pass = primary_condition and not secondary_condition
+passed = primary_condition  # Core requirement
+
+result = {
+    "status": "PASS" if passed else "FAIL",
+    "pass_type": "strong" if strong_pass else ("weak" if weak_pass else "fail"),
+    ...
+}
+```
+
+**Why this matters:**
+- Weak passes prove the feature works but with less conclusive evidence
+- Reviewers can assess confidence level from pass_type
+- Follow-up tests can target "weak" areas for stronger proof
+
+## Partial State Update Handling
+
+APIs often return only changed fields. Tests MUST handle missing fields correctly:
+
+```python
+# ❌ BAD - Treats missing field as False
+still_in_combat = response.get("combat_state", {}).get("in_combat") is True
+
+# ✅ GOOD - Check field presence, use fallback logic
+combat_state = response.get("combat_state", {})
+if "in_combat" in combat_state:
+    # Explicit value - use it
+    still_in_combat = combat_state["in_combat"] is True
+elif combat_state.get("current_round") is not None:
+    # Partial update with round info - combat ongoing
+    still_in_combat = True
+else:
+    # Fall back to previous state
+    still_in_combat = previous_combat_state
+```
+
+**Common partial update scenarios:**
+- Combat state updates: may include `current_round` but omit unchanged `in_combat`
+- Character updates: may include `hp_current` but omit unchanged `level`
+- Inventory updates: may include added item but not entire inventory
+
+## Model Settings Forcing
+
+**Always set explicit model settings** to avoid PROVIDER_SELECTION_NULL_SETTINGS fallback noise:
+
+```python
+from lib.model_utils import settings_for_model, update_user_settings
+
+# ❌ BAD - Relies on server defaults, causes fallback noise in logs
+result = process_action(client, user_id=user_id, campaign_id=campaign_id, ...)
+
+# ✅ GOOD - Explicit model pinning before any actions
+DEFAULT_MODEL = "gemini-3-flash-preview"
+
+# Pin model settings at test start
+update_user_settings(
+    client,
+    user_id=user_id,
+    settings=settings_for_model(DEFAULT_MODEL),
+)
+
+# Now process actions with deterministic model selection
+result = process_action(client, user_id=user_id, campaign_id=campaign_id, ...)
+```
+
+**Why this matters:**
+- Eliminates "PROVIDER_SELECTION_NULL_SETTINGS" log noise
+- Ensures reproducible behavior across test runs
+- Makes evidence claims specific to a known model
+
+## LLM Scenario Forcing
+
+LLMs may "shortcut" scenarios by resolving them too quickly. Force extended scenarios when needed:
+
+```python
+# ❌ BAD - LLM may end combat in 1-2 actions
+SCENARIO = "Fight three bandits"
+
+# ✅ GOOD - Forces multi-round combat
+SCENARIO = """You face an Ogre Warlord (CR 5, HP 120, AC 16) and two Ogre Guards (CR 2, HP 59 each).
+This is a BOSS FIGHT - it CANNOT be resolved in fewer than 3 combat rounds.
+DO NOT end combat prematurely. All enemies have full HP and fight to the death."""
+```
+
+**Forcing techniques:**
+- High HP enemies (100+ HP for bosses)
+- Explicit round count requirements
+- "Fight to the death" instructions
+- Multiple high-CR enemies
 
 ## Anti-Patterns
 

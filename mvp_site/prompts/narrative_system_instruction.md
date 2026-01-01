@@ -15,6 +15,7 @@
 - Complication system: 20% base + 10%/streak, cap 75%
 - Time: short rest=1hr, long rest=8hr, travel=context-dependent
 - Companions: max 3, distinct personalities, MBTI internal only
+- 🎲 COMBAT: Process ALL combatants in initiative order - NO consecutive player turns. Display status block every round.
 
 🚨 SOCIAL VICTORY PROTOCOL - EXECUTE IMMEDIATELY WHEN ENCOUNTER RESOLVES WITHOUT COMBAT:
 BEFORE narrating next action after ANY non-combat resolution, you MUST:
@@ -26,7 +27,12 @@ BEFORE narrating next action after ANY non-combat resolution, you MUST:
    CRITICAL: The XP value in encounter_summary.xp_awarded and the XP added to experience.current MUST BE IDENTICAL.
    Example: If encounter_summary.xp_awarded = 150, then experience.current = old_xp + 150 (NOT old_xp + 300!)
 
-2. THEN narrate "You gain <xp_awarded> XP" and continue story
+2. THEN narrate "You gain <xp_awarded> XP" explicitly in the narrative text
+3. CHECK rewards_pending.level_up_available - if true, announce level-up opportunity:
+   "**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!"
+
+🚨 VISIBILITY RULE: Users cannot see state_updates - they only see narrative.
+XP and level-up MUST be mentioned in narrative text or they are INVISIBLE to the player.
 
 TRIGGERS (ANY of these require the protocol):
 • Enemy surrender (forced by intimidation, display of force, or negotiation)

@@ -73,6 +73,7 @@ from pathlib import Path
 # Test configuration
 SERVER_URL = "http://localhost:8082"  # Real local server
 WORK_NAME = "[work_name]"
+DEFAULT_MODEL = "gemini-3-flash-preview"  # Pin model to avoid fallback noise
 
 
 def get_evidence_dir(work_name: str, timestamp: str | None = None) -> Path:
@@ -212,6 +213,23 @@ def save_evidence(
 {followups_str}
 """
 
+    # Run.json - MUST include scenarios array
+    run_data = {
+        "scenarios": [
+            {
+                "name": r.name,
+                "campaign_id": getattr(r, 'campaign_id', None),
+                "passed": r.passed,
+                "errors": getattr(r, 'errors', []),
+            }
+            for r in results
+        ],
+        "test_result": {
+            "passed": passed,
+            "total": total,
+        }
+    }
+
     # Metadata JSON
     clean_git_info = dict(git_info)
     changed_files = clean_git_info.get("changed_files")
@@ -246,6 +264,10 @@ per-file SHA256 checksums for integrity verification.
     write_with_checksum(evidence_dir / "methodology.md", methodology)
     write_with_checksum(evidence_dir / "evidence.md", evidence)
     write_with_checksum(evidence_dir / "notes.md", notes)
+    write_with_checksum(
+        evidence_dir / "run.json",
+        json.dumps(run_data, indent=2)
+    )
     write_with_checksum(
         evidence_dir / "metadata.json",
         json.dumps(metadata, indent=2)
@@ -423,7 +445,84 @@ def verify_real_mode(server_url):
     assert "mock" not in response.text.lower()
 ```
 
-### 4. Git Provenance Capture
+### 4. Model Settings Forcing
+```python
+from lib.model_utils import settings_for_model, update_user_settings
+
+DEFAULT_MODEL = "gemini-3-flash-preview"
+
+# Pin model at test start to avoid fallback noise
+update_user_settings(
+    client,
+    user_id=user_id,
+    settings=settings_for_model(DEFAULT_MODEL),
+)
+```
+
+### 5. Request/Response Capture (MANDATORY for behavior claims)
+```python
+from lib.evidence_utils import save_request_responses
+
+# Track all MCP tool calls
+request_responses: list[dict] = []
+
+# After each action, capture request/response pair
+request_responses.append({
+    "request": {"tool": "process_action", "user_id": user_id, ...},
+    "response": action_response,
+})
+
+# Save to JSONL at end
+save_request_responses(evidence_dir, request_responses)
+```
+
+**Minimal inline helper if not using evidence_utils:**
+```python
+def save_request_responses(evidence_dir: Path, pairs: list[dict]):
+    """Write request/response pairs to JSONL with checksum."""
+    jsonl_path = evidence_dir / "request_responses.jsonl"
+    with jsonl_path.open("w") as f:
+        for pair in pairs:
+            f.write(json.dumps(pair) + "\n")
+    # Generate checksum
+    sha256 = hashlib.sha256(jsonl_path.read_bytes()).hexdigest()
+    (evidence_dir / "request_responses.jsonl.sha256").write_text(
+        f"{sha256}  request_responses.jsonl\n"
+    )
+```
+
+### 6. Server Runtime Artifacts (REQUIRED for integration claims)
+```python
+import subprocess
+
+def capture_server_artifacts(evidence_dir: Path, port: int, server_pid: int | None):
+    """Capture server runtime state for evidence."""
+    artifacts_dir = evidence_dir / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+
+    # lsof - what's listening on the port
+    try:
+        lsof_output = subprocess.check_output(
+            ["lsof", "-i", f":{port}", "-P", "-n"],
+            stderr=subprocess.STDOUT, text=True
+        )
+        (artifacts_dir / "lsof_output.txt").write_text(lsof_output)
+    except subprocess.CalledProcessError:
+        pass
+
+    # ps - process info
+    if server_pid:
+        try:
+            ps_output = subprocess.check_output(
+                ["ps", "-p", str(server_pid), "-o", "pid,ppid,user,etime,command"],
+                stderr=subprocess.STDOUT, text=True
+            )
+            (artifacts_dir / "ps_output.txt").write_text(ps_output)
+        except subprocess.CalledProcessError:
+            pass
+```
+
+### 7. Git Provenance Capture
 ```python
 def capture_git_provenance():
     """Capture git state for evidence."""
@@ -463,6 +562,9 @@ From `.claude/skills/evidence-standards.md`:
 | **Self-contained** | No external script dependencies |
 | **Per-scenario campaign_id** | Include `campaign_id` for each scenario in run.json |
 | **Model matrix** | Test multiple models when behavior varies by provider |
+| **Pass quality** | Track `pass_type: "strong"/"weak"` in results |
+| **Partial state handling** | Check field presence, not just truthiness |
+| **Scenario forcing** | Use high HP + explicit instructions to prevent shortcuts |
 
 ## 🔬 ADVANCED PATTERNS (from dice_rolls_comprehensive.py)
 
@@ -517,6 +619,66 @@ for model_id in models:
 }
 ```
 
+### Pass Quality Classification
+
+Track evidence strength in results:
+
+```python
+# Define pass criteria with quality levels
+strong_pass = primary_condition and secondary_condition
+weak_pass = primary_condition and not secondary_condition
+passed = primary_condition  # Core requirement
+
+result = {
+    "status": "PASS" if passed else "FAIL",
+    "pass_type": "strong" if strong_pass else ("weak" if weak_pass else "fail"),
+    "primary_condition": primary_condition,
+    "secondary_condition": secondary_condition,
+}
+
+# Output for evidence
+if strong_pass:
+    print("✅ TEST PASSED (STRONG): All conditions met")
+elif weak_pass:
+    print("✅ TEST PASSED (WEAK): Core proven, secondary not met")
+else:
+    print("❌ TEST FAILED: Core requirement not proven")
+```
+
+### Partial State Update Handling
+
+APIs return only changed fields. Handle missing fields correctly:
+
+```python
+# ❌ BAD - Treats missing field as False
+still_active = response.get("state", {}).get("active") is True
+
+# ✅ GOOD - Check field presence with fallback
+state = response.get("state", {})
+if "active" in state:
+    still_active = state["active"] is True
+elif state.get("round_number") is not None:
+    # Partial update with progress indicator - still active
+    still_active = True
+else:
+    # Fall back to previous known state
+    still_active = previous_state.get("active", False)
+```
+
+### LLM Scenario Forcing
+
+Prevent LLM shortcuts with explicit constraints:
+
+```python
+# ❌ BAD - LLM may resolve in 1-2 actions
+SCENARIO = "Fight the enemies"
+
+# ✅ GOOD - Forces extended scenario
+SCENARIO = """You face a Boss (CR 5, HP 120) with two Guards (HP 59 each).
+This encounter CANNOT be resolved in fewer than 3 rounds.
+DO NOT end prematurely. All enemies fight to the death."""
+```
+
 ### Statistical Validation
 
 For RNG-dependent features, include distribution tests:
@@ -550,3 +712,7 @@ for notation in ("1d6", "1d20"):
 - [ ] Git provenance captured
 - [ ] All results derived from actual data
 - [ ] Missing data tracked with warnings
+- [ ] **run.json includes scenarios array** with campaign_id and errors
+- [ ] **Model settings pinned** via update_user_settings()
+- [ ] **request_responses.jsonl captured** for behavior claims
+- [ ] **Server artifacts collected** (lsof, ps) for integration claims

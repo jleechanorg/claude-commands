@@ -1,0 +1,61 @@
+{
+  "scenario_name": "Dragon Knight Consecutive Turns Bug",
+  "bug_location": "Entries 58-62 of Dragon Knight campaign (wBoMKQuMnvLfyjTFTBHd)",
+  "description": "Player took two consecutive combat actions (Divine Smite → Shove) without ally/enemy turns in between",
+
+  "setup": {
+    "character": "Ser Arion (Level 5 Paladin)",
+    "allies": ["Retainers (2x fighters)"],
+    "enemies": ["Shadow-born (creature)", "Malakor agent (human)"],
+    "location": "Solar (room) after kicking open doors",
+    "combat_state": "in_combat: true, initiative rolled"
+  },
+
+  "entry_57_context": "You do not waste another second on subtlety. The creak of the door has already alerted them; now you will provide the punctuation. Drawing upon the cold fury of your station, you lunge forward and drive your heavy boot into the center of the oaked double doors. [DICE: Strength (Athletics) 1d20 +3 STR = 14 +3 = 17 vs DC 15 (Success)]. The iron latch shears off with a violent crack, and the doors explode inward, slamming against the interior stone walls. You storm into the solar...",
+
+  "bug_sequence": [
+    {
+      "entry": 58,
+      "actor": "user",
+      "action": "Divine Smite Shadow-born",
+      "text": "Divine Smite Shadow-born - Unleash a Divine Smite on the creature of darkness to burn away its shadows."
+    },
+    {
+      "entry": 59,
+      "actor": "gemini",
+      "response": "The Shadow-born's form flickers like a dying candle as you lunge, 'Duty's Edge' erupting in a sudden, blinding corona of white-gold radiance...",
+      "note": "LLM responds to player action but does NOT include ally/enemy turns"
+    },
+    {
+      "entry": 60,
+      "actor": "user",
+      "action": "Shove Agent into Shadow",
+      "text": "Shove Agent into Shadow - Use your Strength to shove the Malakor agent into the path of the Shadow-born's shifting form.",
+      "bug": "CONSECUTIVE PLAYER TURN - No ally/enemy actions between entry 58 and 60"
+    },
+    {
+      "entry": 61,
+      "actor": "gemini",
+      "response": "You pivot with the sudden, heavy violence of a falling wall, your gauntlet lashing out...",
+      "note": "LLM responds again without ally/enemy turns"
+    },
+    {
+      "entry": 62,
+      "actor": "user",
+      "complaint": "make sure my team is also taking combat turns automatically...",
+      "note": "USER HAD TO MANUALLY REMIND LLM - Proof of bug"
+    }
+  ],
+
+  "expected_behavior": "After entry 58 (Divine Smite), the LLM should have included ally/enemy turns in entry 59's response BEFORE allowing the player to take another action",
+
+  "test_reproduction": {
+    "step1": "Create campaign with combat scenario: Paladin + 2 retainers vs Shadow-born + Malakor agent",
+    "step2": "Action 1: Player uses Divine Smite on Shadow-born",
+    "step3": "Verify: LLM response includes ally/enemy turns",
+    "step4": "Action 2: Player attempts Shove",
+    "step5": "Expected: System prevents consecutive turn OR LLM includes ally/enemy actions first",
+    "red_state": "Player can take Action 2 immediately without ally/enemy turns",
+    "green_state": "Ally/enemy turns occur between player actions"
+  }
+}
