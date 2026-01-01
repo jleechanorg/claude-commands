@@ -35,7 +35,7 @@ import firestore_service
 class CampaignManager:
     """Unified campaign management class with all operations."""
 
-    def __init__(self, output_dir: str = "docs"):
+    def __init__(self, output_dir: str = "/tmp/worldarchitect.ai/campaign_manager"):
         """Initialize campaign manager with configurable output directory."""
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
@@ -613,8 +613,8 @@ Examples:
         """
     )
 
-    parser.add_argument('--output-dir', default=os.environ.get("OUTPUT_DIR", "docs"),
-                        help='Output directory for results (default: docs)')
+    parser.add_argument('--output-dir', default=os.environ.get("OUTPUT_DIR", "/tmp/worldarchitect.ai/campaign_manager"),
+                        help='Output directory for results (default: /tmp/worldarchitect.ai/campaign_manager)')
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 

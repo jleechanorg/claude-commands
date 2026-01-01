@@ -26,9 +26,10 @@ import os
 import smtplib
 import sys
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from zoneinfo import ZoneInfo
 
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,6 +40,7 @@ if not os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
 os.environ['WORLDAI_DEV_MODE'] = 'true'
 
 from mvp_site.clock_skew_credentials import apply_clock_skew_patch
+
 apply_clock_skew_patch()
 
 import firebase_admin
@@ -90,6 +92,15 @@ def get_week_key(dt: datetime) -> str:
     return f"{dt.isocalendar()[0]}-W{dt.isocalendar()[1]:02d}"
 
 
+def format_pst(dt: datetime) -> str:
+    """Format datetime to Pacific Time string with the correct PST/PDT label."""
+    pst = ZoneInfo('America/Los_Angeles')
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    pst_time = dt.astimezone(pst)
+    return pst_time.strftime('%m/%d %I:%M%p %Z')
+
+
 def calculate_percentile(values: list, percentile: float) -> float:
     """Calculate percentile of a list of values."""
     if not values:
@@ -114,7 +125,7 @@ def query_campaign_activity():
     """Query all campaign activity from Firebase."""
     db = init_firebase()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     one_week_ago = now - timedelta(days=7)
     four_weeks_ago = now - timedelta(days=28)
 
@@ -160,7 +171,7 @@ def query_campaign_activity():
                 if last_played:
                     # Convert to datetime if needed
                     if hasattr(last_played, 'timestamp'):
-                        last_played = datetime.fromtimestamp(last_played.timestamp(), tz=timezone.utc)
+                        last_played = datetime.fromtimestamp(last_played.timestamp(), tz=UTC)
 
                     campaign_data = {
                         'id': camp.id,
@@ -287,7 +298,7 @@ def format_report(dau_wau_stats, top_users_week, top_users_4weeks, show_daily=Tr
     # Header
     lines.append("WorldArchitect.AI Daily Campaign Activity Report")
     lines.append("=" * 50)
-    lines.append(f"Generated: {datetime.now(timezone.utc).isoformat()}")
+    lines.append(f"Generated: {datetime.now(UTC).isoformat()}")
     lines.append("")
 
     # Last Week Stats
@@ -308,7 +319,8 @@ def format_report(dau_wau_stats, top_users_week, top_users_4weeks, show_daily=Tr
     lines.append("👥 Top 10 Users (Last Week):")
     lines.append("-" * 100)
     for i, user in enumerate(top_users_week, 1):
-        lines.append(f"  {i} {user['email']} ({user['total_entries']} entries, {user['campaigns']} campaigns)")
+        last_played = format_pst(user['last_activity'])
+        lines.append(f"  {i} {user['email']} ({user['total_entries']} entries, {user['campaigns']} campaigns) - Last: {last_played}")
     lines.append("-" * 100)
     lines.append("")
 
@@ -336,7 +348,8 @@ def format_report(dau_wau_stats, top_users_week, top_users_4weeks, show_daily=Tr
     lines.append("👥 Top 10 Users (Last 4 Weeks):")
     lines.append("-" * 100)
     for i, user in enumerate(top_users_4weeks, 1):
-        lines.append(f"  {i} {user['email']} ({user['total_entries']} entries, {user['campaigns']} campaigns)")
+        last_played = format_pst(user['last_activity'])
+        lines.append(f"  {i} {user['email']} ({user['total_entries']} entries, {user['campaigns']} campaigns) - Last: {last_played}")
     lines.append("-" * 100)
 
     # Daily breakdown if requested
