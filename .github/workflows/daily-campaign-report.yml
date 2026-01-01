@@ -26,7 +26,7 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Install dependencies
-          pip install firebase-admin google-cloud-firestore pydantic requests
+        run: |
           pip install -r mvp_site/requirements.txt
 
       - name: Generate Campaign Activity Report
