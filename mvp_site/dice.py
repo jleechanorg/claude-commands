@@ -326,6 +326,14 @@ DICE_ROLL_TOOLS: list[dict] = [
                         "type": "integer",
                         "description": "Difficulty Class to beat (10=easy, 15=medium, 20=hard, 25=very hard)",
                     },
+                    "dc_reasoning": {
+                        "type": "string",
+                        "description": "REQUIRED: Explain WHY this DC was chosen BEFORE seeing the roll. "
+                        "Include factors: NPC disposition, task difficulty, environmental conditions. "
+                        "Examples: 'guard is alert but not suspicious', "
+                        "'hardened criminal, resistant to intimidation', "
+                        "'friendly merchant, already inclined to help'",
+                    },
                     "skill_name": {
                         "type": "string",
                         "description": "Name of the skill (e.g., 'Thieves Tools', 'Stealth', 'Perception')",
@@ -336,6 +344,7 @@ DICE_ROLL_TOOLS: list[dict] = [
                     "attribute_name",
                     "proficiency_bonus",
                     "dc",
+                    "dc_reasoning",
                     "skill_name",
                 ],
             },
@@ -368,6 +377,13 @@ DICE_ROLL_TOOLS: list[dict] = [
                         "type": "integer",
                         "description": "Difficulty Class to beat",
                     },
+                    "dc_reasoning": {
+                        "type": "string",
+                        "description": "REQUIRED: Explain WHY this DC was chosen BEFORE seeing the roll. "
+                        "Include: spell/effect source, caster level, environmental factors. "
+                        "Examples: 'Fireball from 5th-level caster (8 + 3 INT + 3 PROF)', "
+                        "'ancient trap, still functional after centuries'",
+                    },
                     "save_type": {
                         "type": "string",
                         "description": "Type of save: STR, DEX, CON, INT, WIS, or CHA",
@@ -377,6 +393,7 @@ DICE_ROLL_TOOLS: list[dict] = [
                     "attribute_modifier",
                     "proficiency_bonus",
                     "dc",
+                    "dc_reasoning",
                     "save_type",
                 ],
             },
@@ -732,6 +749,12 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         proficient = _coerce_bool(arguments.get("proficient"), False)
         expertise = _coerce_bool(arguments.get("expertise"), False)
         dc = _coerce_int_inner(arguments.get("dc"), 10)
+        dc_reasoning = arguments.get("dc_reasoning")
+        if not isinstance(dc_reasoning, str) or not dc_reasoning.strip():
+            return {
+                "error": "dc_reasoning is required and must be a non-empty string for roll_skill_check"
+            }
+        dc_reasoning = dc_reasoning.strip()
         skill_name = arguments.get("skill_name") or arguments.get("skill") or ""
 
         result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
@@ -753,15 +776,18 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         if effective_prof > 0:
             mod_parts.append(f"+{effective_prof} {prof_label}")
         mod_str = " ".join(mod_parts)
+        # Include DC reasoning in parentheses after DC for clarity
+        dc_explanation = f" ({dc_reasoning})" if dc_reasoning else ""
         formatted = (
             f"{skill_name}: 1d20 {mod_str} = {roll} {mod_str} = {result.total} "
-            f"vs DC {dc} ({'Success' if success else 'Fail'})"
+            f"vs DC {dc}{dc_explanation} - {'Success' if success else 'Fail'}"
         )
 
         logging_util.info(
             logging_util.with_campaign(
                 f"DICE_TOOL_RESULT: tool=roll_skill_check | skill={skill_name} | "
-                f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+                f"roll={roll} | total={result.total} | dc={dc} | "
+                f"dc_reasoning={dc_reasoning} | success={success}"
             )
         )
         return {
@@ -770,6 +796,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "modifier": result.modifier,
             "total": result.total,
             "dc": dc,
+            "dc_reasoning": dc_reasoning,
             "success": success,
             "natural_20": result.natural_20,
             "natural_1": result.natural_1,
@@ -786,6 +813,12 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
         proficient = _coerce_bool(arguments.get("proficient"), False)
         dc = _coerce_int_inner(arguments.get("dc"), 10)
+        dc_reasoning = arguments.get("dc_reasoning")
+        if not isinstance(dc_reasoning, str) or not dc_reasoning.strip():
+            return {
+                "error": "dc_reasoning is required and must be a non-empty string for roll_saving_throw"
+            }
+        dc_reasoning = dc_reasoning.strip()
         save_type = arguments.get("save_type", "").upper() or "SAVE"
 
         result = calculate_saving_throw(attr_mod, prof_bonus, proficient)
@@ -798,15 +831,18 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         if proficient:
             mod_parts.append(f"+{prof_bonus} PROF")
         mod_str = " ".join(mod_parts)
+        # Include DC reasoning in parentheses after DC for clarity
+        dc_explanation = f" ({dc_reasoning})" if dc_reasoning else ""
         formatted = (
             f"{save_type} save: 1d20 {mod_str} = {roll} {mod_str} = {result.total} "
-            f"vs DC {dc} ({'Success' if success else 'Fail'})"
+            f"vs DC {dc}{dc_explanation} - {'Success' if success else 'Fail'}"
         )
 
         logging_util.info(
             logging_util.with_campaign(
                 f"DICE_TOOL_RESULT: tool=roll_saving_throw | save_type={save_type} | "
-                f"roll={roll} | total={result.total} | dc={dc} | success={success}"
+                f"roll={roll} | total={result.total} | dc={dc} | "
+                f"dc_reasoning={dc_reasoning} | success={success}"
             )
         )
         return {
@@ -815,6 +851,7 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
             "modifier": result.modifier,
             "total": result.total,
             "dc": dc,
+            "dc_reasoning": dc_reasoning,
             "success": success,
             "natural_20": result.natural_20,
             "natural_1": result.natural_1,

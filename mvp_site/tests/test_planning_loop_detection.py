@@ -142,6 +142,7 @@ class TestPlanningLoopDetection(unittest.TestCase):
                         "attribute_modifier": 4,  # INT 18 = +4 for logical argument
                         "proficiency_bonus": 2,
                         "dc": 18,  # FBI agent = high DC
+                        "dc_reasoning": "FBI agent, professionally trained to resist manipulation",
                         "purpose": "Convince Reynolds with logical framework",
                     },
                 }

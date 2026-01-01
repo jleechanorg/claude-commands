@@ -412,34 +412,46 @@ def _extract_dice_audit_events_from_tool_results(
 
         if tool_name == "roll_skill_check":
             skill = result.get("skill") or "Skill Check"
-            events.append(
-                {
-                    "source": "server_tool",
-                    "label": str(skill).title(),
-                    "notation": result.get("notation")
-                    or _notation_from_modifier(result.get("modifier")),
-                    "rolls": result.get("rolls")
-                    or ([result.get("roll")] if result.get("roll") is not None else []),
-                    "modifier": result.get("modifier") or 0,
-                    "total": result.get("total"),
-                }
-            )
+            event = {
+                "source": "server_tool",
+                "label": str(skill).title(),
+                "notation": result.get("notation")
+                or _notation_from_modifier(result.get("modifier")),
+                "rolls": result.get("rolls")
+                or ([result.get("roll")] if result.get("roll") is not None else []),
+                "modifier": result.get("modifier") or 0,
+                "total": result.get("total"),
+            }
+            # Include DC and reasoning for audit trail - proves DC set before roll
+            if result.get("dc") is not None:
+                event["dc"] = result.get("dc")
+            if result.get("dc_reasoning"):
+                event["dc_reasoning"] = result.get("dc_reasoning")
+            if result.get("success") is not None:
+                event["success"] = result.get("success")
+            events.append(event)
             continue
 
         if tool_name == "roll_saving_throw":
             save_type = result.get("save_type") or "Save"
-            events.append(
-                {
-                    "source": "server_tool",
-                    "label": f"{str(save_type).upper()} Save",
-                    "notation": result.get("notation")
-                    or _notation_from_modifier(result.get("modifier")),
-                    "rolls": result.get("rolls")
-                    or ([result.get("roll")] if result.get("roll") is not None else []),
-                    "modifier": result.get("modifier") or 0,
-                    "total": result.get("total"),
-                }
-            )
+            event = {
+                "source": "server_tool",
+                "label": f"{str(save_type).upper()} Save",
+                "notation": result.get("notation")
+                or _notation_from_modifier(result.get("modifier")),
+                "rolls": result.get("rolls")
+                or ([result.get("roll")] if result.get("roll") is not None else []),
+                "modifier": result.get("modifier") or 0,
+                "total": result.get("total"),
+            }
+            # Include DC and reasoning for audit trail - proves DC set before roll
+            if result.get("dc") is not None:
+                event["dc"] = result.get("dc")
+            if result.get("dc_reasoning"):
+                event["dc_reasoning"] = result.get("dc_reasoning")
+            if result.get("success") is not None:
+                event["success"] = result.get("success")
+            events.append(event)
             continue
 
         if tool_name == "roll_dice":

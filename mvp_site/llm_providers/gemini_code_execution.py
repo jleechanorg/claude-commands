@@ -461,7 +461,7 @@ def log_code_execution_parts(
     model_name: str,
     context: str,
 ) -> dict[str, int | bool | str]:
-    """Log Gemini code_execution evidence (always INFO, optional DEBUG detail)."""
+    """Log Gemini code_execution evidence and executed code (always INFO)."""
     evidence = extract_code_execution_evidence(response)
     logging_util.info(
         logging_util.with_campaign(
@@ -471,18 +471,26 @@ def log_code_execution_parts(
         model_name,
         evidence,
     )
-    if logging_util.getLogger().isEnabledFor(logging_util.DEBUG) and evidence.get(
-        "code_execution_used"
-    ):
-        detail = extract_code_execution_parts_summary(response)
-        logging_util.debug(
-            logging_util.with_campaign(
-                "GEMINI_CODE_EXECUTION_PARTS_DETAIL[%s]: model=%s detail=%s"
-            ),
-            context,
-            model_name,
-            detail,
-        )
+    # Always log executed code at INFO level (for /tmp logs and GCP)
+    if evidence.get("code_execution_used"):
+        detail = extract_code_execution_parts_summary(response, max_chars=2000)
+        # Log each executed code sample
+        for i, code_sample in enumerate(detail.get("executable_code_samples", [])):
+            code_text = code_sample.get("code", "")
+            if code_text:
+                logging_util.info(
+                    logging_util.with_campaign(
+                        "GEMINI_EXECUTED_CODE[%s][%d]: model=%s\n%s"
+                    ),
+                    context,
+                    i,
+                    model_name,
+                    code_text,
+                )
+        # Add executed code to evidence dict for Firestore storage
+        evidence["executed_code"] = [
+            sample.get("code", "") for sample in detail.get("executable_code_samples", [])
+        ]
     _log_code_execution_dice_results(evidence)
     return evidence
 

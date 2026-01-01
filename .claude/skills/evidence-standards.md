@@ -71,6 +71,22 @@ Before running ANY test, answer:
 | Development workflow validation only? | Mock mode acceptable |
 | Unit testing isolated functions? | Mock mode acceptable |
 
+### Production Mode vs Real Mode
+
+**Production mode is NOT required for valid evidence.** Local testing with real services
+(real LLM APIs, real Firebase, real dice) is sufficient to prove behavior.
+If a run artifact records `production_mode`, `production_mode: false` is acceptable
+for evidence as long as the claim is not about production configuration or prod-only behavior.
+
+| Mode | When to Use | Evidence Value |
+|------|-------------|----------------|
+| `--production-mode` | Final deployment validation | Highest (actual prod config) |
+| `--evidence` (local server) | PR validation, feature proof | **Valid** (real APIs, real data) |
+| Mock mode | Unit tests, CI speed | Invalid for behavior claims |
+
+The key requirement is **real execution** (actual API calls, actual RNG), not production
+environment. Evidence from `--start-local --evidence` is valid proof.
+
 ## Mock Mode Prohibition
 
 **MOCK MODE = INVALID EVIDENCE** for:
@@ -145,6 +161,25 @@ This bundle contains **11 campaigns**: 1 shared + 10 isolated.
 Each scenario includes its `campaign_id` for traceability.
 ```
 
+**Per-scenario campaign ID in run.json:** When using fresh campaigns per scenario,
+the test output **must** include `campaign_id` for each scenario entry:
+
+```json
+{
+  "scenarios": [
+    {
+      "name": "Skill Check (Stealth)",
+      "campaign_id": "zuFsywkYErTZpGBGDhDC",  // ← Required for log traceability
+      "dice_audit_events": [...],
+      "tool_results": [...]
+    }
+  ]
+}
+```
+
+This enables matching server logs (which include `campaign_id=...`) to specific
+scenario results in the evidence bundle.
+
 **Doc ↔ data alignment:** Any item lists in methodology/evidence **must** be
 derived from actual test inputs or `game_state_snapshot.json`. Hardcoded or
 handwritten lists are invalid.
@@ -163,6 +198,64 @@ must include their own evidence artifacts, otherwise omit those claims.
 avoid before/after evidence, it must include a justification. Otherwise, for
 bug-fix claims, include a pre-fix reproduction and a post-fix run.
 
+### Evidence Bundle Structure Requirements
+
+**Claim → Artifact Map:** Every evidence.md MUST include a section mapping claims to files:
+
+```markdown
+## Claim → Artifact Map
+
+| Claim | File | Key Field(s) |
+|-------|------|--------------|
+| DC set before roll (Gemini) | run.json | scenarios[].dice_audit_events[].dc_reasoning |
+| DC set before roll (Qwen) | run.json | scenarios[].tool_results[].args.dc_reasoning |
+| Executed code proof | gemini3_executed_code.log | dc = X before random.randint() |
+```
+
+**Coverage Matrix:** For multi-model or multi-scenario tests, include a summary table:
+
+```markdown
+## Coverage Matrix
+
+| Scenario | Gemini 3 | Qwen | Key Params |
+|----------|----------|------|------------|
+| Attack Roll | Pass (dc=15) | Pass (ac=13) | AC-based |
+| Skill Check | Pass (dc=13) | Pass (dc=13) | dc_reasoning required |
+| Saving Throw | Pass (dc=15) | Pass (dc=17) | dc + dc_reasoning |
+```
+
+**Raw Response Retention:** Every scenario MUST have its raw LLM output saved:
+- File pattern: `raw_{model}_{scenario}.txt`
+- Contains unparsed LLM response for provenance
+
+**Executed Code Capture (code_execution strategy):** When LLM uses code_execution:
+- Log the exact Python code at INFO level
+- Include campaign_id for traceability
+- Show dc/dc_reasoning set BEFORE random.randint()
+
+**Tool Request/Response Pairing (two-phase strategy):** When LLM uses tool calling:
+- Capture full `args` (request) and `result` (response) together
+- Temporal separation proven by: args sent → server generates roll → result returned
+
+**Traceability Metadata:** Every evidence bundle MUST include:
+- Run ID (timestamp-based: YYYYMMDD_HHMMSS)
+- Per-scenario identifiers (campaign_id)
+- Explicit statement tying log entries to scenarios
+
+**Evidence Integrity Note:** Include a section documenting:
+- Any scenarios with warnings or errors
+- Where errors are recorded (even if empty: `"errors": []`)
+- Overall pass/fail count
+
+**What is NOT Proven (Exclusion List):** Explicitly state limitations:
+
+```markdown
+## What This Evidence Does NOT Prove
+
+- Production server behavior (tested on local server)
+- Performance under load (single-request tests)
+- Edge cases not covered by scenarios (e.g., contested checks)
+```
 
 ### Git Provenance Requirements
 

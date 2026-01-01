@@ -431,10 +431,15 @@ def main() -> int:
             )
 
             for scenario in TEST_SCENARIOS:
+                # Create fresh campaign per scenario to avoid context pollution
+                # (e.g., Qwen continuing combat context into skill check)
+                scenario_campaign_id = create_campaign(client, user_id)
+                ensure_game_state_seed(client, user_id=user_id, campaign_id=scenario_campaign_id)
+
                 result = process_action(
                     client,
                     user_id=user_id,
-                    campaign_id=campaign_id,
+                    campaign_id=scenario_campaign_id,
                     user_input=str(scenario["user_input"]),
                 )
                 errors = validate_result(result, scenario)
@@ -545,6 +550,7 @@ def main() -> int:
                     {
                         "model": model_id,
                         "name": scenario["name"],
+                        "campaign_id": scenario_campaign_id,  # Per-scenario campaign for traceability
                         "user_input": scenario["user_input"],
                         "dice_rolls": result.get("dice_rolls"),
                         "dice_audit_events": result.get("dice_audit_events"),

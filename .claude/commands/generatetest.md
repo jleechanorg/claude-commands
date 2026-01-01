@@ -461,6 +461,73 @@ From `.claude/skills/evidence-standards.md`:
 | **Git provenance** | HEAD, origin/main, changed files |
 | **Checksums** | SHA256 via `write_with_checksum()` helper |
 | **Self-contained** | No external script dependencies |
+| **Per-scenario campaign_id** | Include `campaign_id` for each scenario in run.json |
+| **Model matrix** | Test multiple models when behavior varies by provider |
+
+## 🔬 ADVANCED PATTERNS (from dice_rolls_comprehensive.py)
+
+### Per-Scenario Campaign Isolation
+
+When scenarios can pollute each other's context (e.g., LLM continuing previous combat):
+
+```python
+for scenario in TEST_SCENARIOS:
+    # Create fresh campaign per scenario to avoid context pollution
+    scenario_campaign_id = create_campaign(client, user_id)
+    ensure_game_state_seed(client, user_id=user_id, campaign_id=scenario_campaign_id)
+
+    result = process_action(client, campaign_id=scenario_campaign_id, ...)
+
+    # Include campaign_id in evidence for log traceability
+    run_summary["scenarios"].append({
+        "name": scenario["name"],
+        "campaign_id": scenario_campaign_id,  # ← Required
+        ...
+    })
+```
+
+### Model Matrix Testing
+
+Test across multiple providers when behavior varies:
+
+```python
+DEFAULT_MODEL_MATRIX = [
+    "gemini-3-flash-preview",      # code_execution strategy
+    "qwen-3-235b-a22b-instruct",   # native_two_phase strategy
+]
+
+for model_id in models:
+    model_settings = settings_for_model(model_id)
+    # Run scenarios for each model...
+```
+
+### dice_audit_events Schema (for dice/RNG evidence)
+
+```python
+{
+    "source": "code_execution" | "server_tool",
+    "label": "Stealth Check",
+    "notation": "1d20+1",
+    "rolls": [10],
+    "modifier": 1,
+    "total": 11,
+    "dc": 12,                    # Required for skill/save
+    "dc_reasoning": "...",       # Required - proves DC set before roll
+    "success": false             # Required for skill/save
+}
+```
+
+### Statistical Validation
+
+For RNG-dependent features, include distribution tests:
+
+```python
+# Distribution test
+for notation in ("1d6", "1d20"):
+    rolls = [roll_dice(notation) for _ in range(200)]
+    stats = {"count": len(rolls), "min": min(rolls), "max": max(rolls), "mean": sum(rolls)/len(rolls)}
+    assert abs(stats["mean"] - expected_mean) < tolerance
+```
 
 ## 🔧 PRIORITY MATRIX
 
