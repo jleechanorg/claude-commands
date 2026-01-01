@@ -42,6 +42,9 @@ def enforce_preventive_guards(
     if resources:
         _ensure_resource_checkpoint(state_changes, resources)
 
+    # Persist dm_notes from debug_info to state so they survive across turns
+    _ensure_dm_notes_persistence(state_changes, llm_response, game_state)
+
     return state_changes, extras
 
 
@@ -105,3 +108,45 @@ def _ensure_resource_checkpoint(state_changes: dict[str, Any], resources: str) -
     resource_state = state_changes.setdefault("world_resources", {})
     if isinstance(resource_state, dict):
         resource_state["last_note"] = resources
+
+
+def _ensure_dm_notes_persistence(
+    state_changes: dict[str, Any],
+    llm_response: LLMResponse,
+    game_state: GameState,
+) -> None:
+    """Copy dm_notes from LLM debug_info to state_changes for persistence.
+
+    The LLM writes dm_notes to debug_info (top-level response field), but only
+    state_updates get persisted to game state. This function bridges the gap
+    by copying dm_notes into state_changes["debug_info"]["dm_notes"].
+
+    Existing dm_notes from game_state are preserved and new notes appended.
+    """
+    llm_debug_info = llm_response.get_debug_info()
+    new_dm_notes = llm_debug_info.get("dm_notes", [])
+
+    # Normalize to list
+    if isinstance(new_dm_notes, str):
+        new_dm_notes = [new_dm_notes] if new_dm_notes.strip() else []
+    elif not isinstance(new_dm_notes, list):
+        new_dm_notes = []
+
+    if not new_dm_notes:
+        return
+
+    # Get existing dm_notes from game_state
+    existing_debug_info = getattr(game_state, "debug_info", {}) or {}
+    existing_dm_notes = existing_debug_info.get("dm_notes", [])
+    if not isinstance(existing_dm_notes, list):
+        existing_dm_notes = []
+
+    # Merge: existing + new (deduplicated)
+    merged_notes = list(existing_dm_notes)
+    for note in new_dm_notes:
+        if isinstance(note, str) and note.strip() and note not in merged_notes:
+            merged_notes.append(note)
+
+    # Write to state_changes so it persists
+    debug_info_state = state_changes.setdefault("debug_info", {})
+    debug_info_state["dm_notes"] = merged_notes

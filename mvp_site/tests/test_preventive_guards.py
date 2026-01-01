@@ -21,6 +21,7 @@ def base_game_state():
 
 
 def _make_response(**kwargs):
+    debug_info = kwargs.pop("debug_info", None)
     structured = NarrativeResponse(
         narrative=kwargs.pop("narrative", ""),
         entities_mentioned=[],
@@ -29,6 +30,9 @@ def _make_response(**kwargs):
         dice_rolls=kwargs.pop("dice_rolls", []),
         resources=kwargs.pop("resources", ""),
     )
+    # Inject debug_info into structured response if provided
+    if debug_info is not None:
+        structured.debug_info = debug_info
     return LLMResponse(
         narrative_text=structured.narrative,
         structured_response=structured,
@@ -125,3 +129,68 @@ def test_preserves_prior_location_when_unknown_confirmed(base_game_state):
 
     assert state_changes["world_data"]["current_location_name"] == "Harbor"
     assert state_changes["custom_campaign_state"]["last_location"] == "Harbor"
+
+
+def test_persists_dm_notes_from_debug_info(base_game_state):
+    """Verify dm_notes from LLM debug_info are copied to state_changes for persistence.
+
+    This tests the fix for the issue where LLM writes dm_notes to debug_info but
+    only state_updates get persisted. The preventive_guards module now bridges
+    this gap by copying dm_notes into state_changes.
+    """
+    response = _make_response(
+        narrative="Power level adjusted for Tier 2.",
+        debug_info={"dm_notes": ["Updating narrative tone to 'Tier 2 Heroic'"]},
+        state_updates={},
+    )
+
+    state_changes, _ = preventive_guards.enforce_preventive_guards(
+        base_game_state, response, constants.MODE_GOD
+    )
+
+    # dm_notes should be persisted in state_changes.debug_info
+    assert "debug_info" in state_changes
+    assert "dm_notes" in state_changes["debug_info"]
+    assert state_changes["debug_info"]["dm_notes"] == [
+        "Updating narrative tone to 'Tier 2 Heroic'"
+    ]
+
+
+def test_dm_notes_merged_with_existing(base_game_state):
+    """Verify new dm_notes are appended to existing notes without duplicates."""
+    # Set up existing dm_notes in game state
+    base_game_state.debug_info = {"dm_notes": ["Previous note"]}
+
+    response = _make_response(
+        narrative="Another adjustment.",
+        debug_info={"dm_notes": ["New note", "Previous note"]},  # One duplicate
+        state_updates={},
+    )
+
+    state_changes, _ = preventive_guards.enforce_preventive_guards(
+        base_game_state, response, constants.MODE_GOD
+    )
+
+    # Should have both notes, with duplicate removed
+    dm_notes = state_changes["debug_info"]["dm_notes"]
+    assert "Previous note" in dm_notes
+    assert "New note" in dm_notes
+    assert dm_notes.count("Previous note") == 1  # No duplicate
+
+
+def test_dm_notes_handles_string_input():
+    """Verify dm_notes works when LLM returns a string instead of list."""
+    game_state = GameState(user_id="user-123")
+
+    response = _make_response(
+        narrative="Single note test.",
+        debug_info={"dm_notes": "Single note as string"},
+        state_updates={},
+    )
+
+    state_changes, _ = preventive_guards.enforce_preventive_guards(
+        game_state, response, constants.MODE_GOD
+    )
+
+    # String should be normalized to list
+    assert state_changes["debug_info"]["dm_notes"] == ["Single note as string"]

@@ -84,6 +84,80 @@ for directive in god_mode_directives:
         print(f"Added: {directive.get('added')}")
 ```
 
+### Using the Directive Query Script
+
+```bash
+# List all directives for a campaign
+WORLDAI_DEV_MODE=true \
+WORLDAI_GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json \
+python scripts/query_directives.py wBoMKQuMnvLfyjTFTBHd
+
+# Debug why a directive wasn't saved
+python scripts/query_directives.py wBoMKQuMnvLfyjTFTBHd --debug-missing "power scaling"
+
+# Manually add a missing directive
+python scripts/query_directives.py wBoMKQuMnvLfyjTFTBHd --add "Level 9 is extremely powerful - never use 'mere' or 'modest'"
+```
+
+## Debugging Missing God Mode Directives
+
+When a user's god mode request doesn't result in a saved directive, follow this process:
+
+### 1. How Directives Are Saved
+
+The LLM must return a `directives` field in its structured JSON response:
+
+```json
+{
+    "god_mode_response": "Acknowledged...",
+    "directives": {
+        "add": ["Rule to remember going forward"],
+        "drop": ["Rule to stop following"]
+    }
+}
+```
+
+**Processing code:** `mvp_site/world_logic.py:1585-1667`
+**Prompt instructions:** `mvp_site/prompts/god_mode_instruction.md:72-96`
+
+### 2. Common Failure Modes
+
+| Symptom | Cause | Solution |
+|---------|-------|----------|
+| Directive acknowledged but not saved | LLM returned `god_mode_response` but no `directives.add` | Check raw LLM response |
+| Directive in `dm_notes` only | LLM put rule in `state_updates.debug_info.dm_notes` | `dm_notes` are now injected into future prompts as part of the system prompt |
+| Empty `god_mode_directives` list | No directives ever saved | Check story entries for god mode responses |
+
+### 3. Debugging Process
+
+```python
+# 1. Check if directives exist
+custom_state = game_state.get('custom_campaign_state', {})
+directives = custom_state.get('god_mode_directives', [])
+print(f"Saved directives: {len(directives)}")
+
+# 2. Find god mode story entries
+story_ref = campaign_ref.collection('story')
+for entry in story_ref.order_by('timestamp', direction='DESCENDING').limit(100).stream():
+    data = entry.to_dict()
+    if data.get('actor') == 'gemini' and 'God Mode active' in data.get('text', ''):
+        debug_info = data.get('debug_info', {})
+        raw_response = debug_info.get('raw_response_text', '')
+        if raw_response:
+            parsed = json.loads(raw_response)
+            print(f"Entry {entry.id}:")
+            print(f"  Has directives field: {'directives' in parsed}")
+            if 'directives' not in parsed:
+                print(f"  State updates: {parsed.get('state_updates', {})}")
+```
+
+### 4. Key Insight: `dm_notes` vs `directives`
+
+- **`dm_notes`**: Internal notes stored in `state_updates.debug_info.dm_notes`. ARE injected into future system prompts (as of this PR) to provide important context the LLM wrote but did not formally save as directives.
+- **`directives`**: Persisted rules stored in `god_mode_directives[]`. ARE injected into system prompts via `agent_prompts.py:669-753`.
+
+If the LLM writes to `dm_notes` instead of `directives`, the rule won't persist as a formal directive.
+
 ## User Identification
 - Users are identified by **Firebase Auth UID**, NOT email
 - Primary user: `jleechan@gmail.com` → UID: `vnLp2G3m21PJL6kxcuAqmWSOtm73`

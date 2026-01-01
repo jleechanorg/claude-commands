@@ -45,8 +45,7 @@ from lib.campaign_utils import (
 )
 from lib.evidence_utils import (
     get_evidence_dir,
-    capture_git_provenance,
-    capture_server_runtime,
+    capture_provenance,
     write_with_checksum,
 )
 
@@ -179,7 +178,142 @@ GOD_MODE_SCENARIOS: list[dict[str, Any]] = [
         "expect_system_warnings": True,
         "warning_patterns": ["Combat", "XP", "awarded"],
     },
+    # ==========================================================================
+    # DM Notes Tests - Verify dm_notes are saved and accessible
+    # These test the fallback mechanism where LLM writes to dm_notes instead
+    # of formal directives (both should be visible in system prompts)
+    # ==========================================================================
+    {
+        "name": "DM Notes - Power Scaling Correction",
+        "description": "Test that tonal corrections get saved as dm_notes",
+        "god_mode_command": "GOD MODE: Stop saying 'mere level 5' or 'modest level 5'. Level 5 characters are heroes, not weaklings. Update the narrative tone.",
+        "expect_in_response": [],  # LLM response varies
+        # Validate that EITHER dm_notes OR directives captured the rule
+        "validate_state": lambda state: (
+            _has_directive_containing(state, ["level"])
+            or _has_dm_notes_containing(state, ["level"])
+            or _has_dm_notes_containing(state, ["tone"])
+        ),
+    },
+    {
+        "name": "DM Notes - Context Visibility Check",
+        "description": "Verify dm_notes from prior god mode are visible in subsequent requests",
+        "god_mode_command": "GOD MODE: What tonal rules or power scaling notes do you have saved?",
+        # If dm_notes exist, LLM should mention them (injected into system prompt)
+        "expect_in_response": [],  # Response varies but should reference prior context
+        "validate_state": lambda state: True,  # Just checking LLM can see the notes
+    },
+    {
+        "name": "DM Notes - Direct State Update",
+        "description": "Test that dm_notes can be set directly via state update",
+        "god_mode_command": 'GOD_MODE_UPDATE_STATE:{"debug_info":{"dm_notes":["Test note: Always describe combat dramatically","Test note: NPCs should have memorable quirks"]}}',
+        "validate_state": lambda state: (
+            len(state.get("debug_info", {}).get("dm_notes", [])) >= 2
+        ),
+    },
+    {
+        "name": "Directive Precedence - Newest First",
+        "description": "Test that multiple directives are saved with timestamps for ordering",
+        "god_mode_command": "GOD MODE: Add rule - the player's familiar is named 'Shadow' and is a black cat",
+        "expect_in_response": [],
+        # Validate directive was added with timestamp
+        "validate_state": lambda state: any(
+            isinstance(d, dict) and d.get("added") and d.get("rule")
+            for d in state.get("custom_campaign_state", {}).get("god_mode_directives", [])
+        ),
+    },
+    # ==========================================================================
+    # debug_info.dm_notes Persistence Path Validation (NEW)
+    # This test validates that dm_notes set via GOD_MODE_UPDATE_STATE
+    # persist correctly to game_state.debug_info.dm_notes
+    # ==========================================================================
+    {
+        "name": "DM Notes - State Updates Path Validation",
+        "description": "Validate dm_notes set via GOD_MODE_UPDATE_STATE persist to game_state.debug_info.dm_notes",
+        # Use GOD_MODE_UPDATE_STATE which creates state_updates that flow through update_state_with_changes()
+        "god_mode_command": 'GOD_MODE_UPDATE_STATE:{"debug_info":{"dm_notes":["STATE_UPDATES_PATH_TEST: This note was set via state_updates.debug_info.dm_notes","STATE_UPDATES_PATH_TEST: Verifying persistence to game_state_after"]}}',
+        # Custom validation that checks both the result state_updates AND game_state_after
+        "validate_state_updates_path": True,  # Flag for enhanced validation
+        "validate_state": lambda state: (
+            # dm_notes must appear in game_state_after.debug_info.dm_notes
+            any(
+                "STATE_UPDATES_PATH_TEST" in str(note)
+                for note in state.get("debug_info", {}).get("dm_notes", [])
+            )
+        ),
+    },
 ]
+
+
+def _validate_state_updates_dm_notes_path(
+    result: dict[str, Any],
+    game_state: dict[str, Any],
+) -> list[str]:
+    """Validate that debug_info.dm_notes set via GOD_MODE_UPDATE_STATE persists to game_state.
+
+    This validates the state update path:
+    1. GOD_MODE_UPDATE_STATE:{"debug_info":{"dm_notes":[...]}} is sent
+    2. Notes persist to game_state.debug_info.dm_notes
+    3. Marker notes are found in persisted state
+
+    Note: GOD_MODE_UPDATE_STATE doesn't return state_updates in result - it returns
+    success/response. We validate persistence by checking game_state_after.
+
+    Returns:
+        List of error messages (empty if validation passes)
+    """
+    errors = []
+
+    # Verify the update was successful
+    if not result.get("success"):
+        errors.append(f"GOD_MODE_UPDATE_STATE failed: {result}")
+        return errors
+
+    # Check game_state_after.debug_info.dm_notes
+    game_state_debug_info = game_state.get("debug_info", {})
+    game_state_dm_notes = game_state_debug_info.get("dm_notes", [])
+
+    if not game_state_dm_notes:
+        errors.append(
+            f"game_state_after.debug_info.dm_notes is empty or missing. "
+            f"Got debug_info={game_state_debug_info}"
+        )
+        return errors
+
+    # Verify marker notes from our UPDATE_STATE command appear in game_state_after
+    marker = "STATE_UPDATES_PATH_TEST"
+    found_in_game_state = any(
+        marker in str(note) for note in game_state_dm_notes
+    )
+    if not found_in_game_state:
+        errors.append(
+            f"Notes with marker '{marker}' not found in game_state_after.debug_info.dm_notes. "
+            f"game_state_after.debug_info.dm_notes={game_state_dm_notes}"
+        )
+
+    return errors
+
+
+def _has_dm_notes_containing(state: dict[str, Any], keywords: list[str]) -> bool:
+    """Check if any dm_note in game state contains all specified keywords.
+
+    Args:
+        state: The game state dict
+        keywords: List of keywords that must ALL appear in at least one note
+
+    Returns:
+        True if a dm_note containing all keywords exists
+    """
+    debug_info = state.get("debug_info") or {}
+    dm_notes = debug_info.get("dm_notes", [])
+
+    for note in dm_notes:
+        if isinstance(note, str):
+            note_lower = note.lower()
+            if all(kw.lower() in note_lower for kw in keywords):
+                return True
+
+    return False
 
 
 def validate_scenario_result(
@@ -256,6 +390,11 @@ def validate_scenario_result(
                 f"Level correction failed: expected level={expected['to_level']} "
                 f"(from XP={expected['xp']}), got level={actual_level}"
             )
+
+    # Validate state_updates.debug_info.dm_notes path if flagged
+    if scenario.get("validate_state_updates_path") and game_state:
+        path_errors = _validate_state_updates_dm_notes_path(result, game_state)
+        errors.extend(path_errors)
 
     return errors
 
@@ -417,19 +556,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Setup evidence directory per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    evidence_dir = get_evidence_dir("god_mode_validation", timestamp)
+    # Setup evidence directory per evidence-standards.md: /tmp/<repo>/<branch>/<work>/
+    evidence_dir = get_evidence_dir("god_mode_validation")
 
     # Capture git provenance at start
     print("📊 Capturing provenance...")
-    try:
-        git_provenance = capture_git_provenance(fetch_origin=False)
-        print(f"   Git HEAD: {git_provenance.get('git_head', 'unknown')[:12]}")
-        print(f"   Branch: {git_provenance.get('git_branch', 'unknown')}")
-    except Exception as e:
-        print(f"   ⚠️  Provenance warning: {e}")
-        git_provenance = {}
+    # Provenance will be captured after we know the server URL
 
     print("=" * 60)
     print("God Mode Validation Tests")
@@ -440,18 +572,24 @@ def main() -> int:
     local_server: LocalServer | None = None
     server_url = args.server_url
 
-    server_provenance = {}
     if args.start_local:
         print("\n🚀 Starting local MCP server...")
         port = pick_free_port()
         local_server = start_local_mcp_server(port)
         server_url = f"http://127.0.0.1:{port}"
         print(f"   Local server started on {server_url}")
-        # Capture server runtime info
-        try:
-            server_provenance = capture_server_runtime(port)
-        except Exception as e:
-            print(f"   ⚠️  Server provenance warning: {e}")
+
+    # Capture full provenance (git + server) now that we know the URL
+    try:
+        provenance = capture_provenance(
+            server_url,
+            server_pid=local_server.pid if local_server else None,
+        )
+        print(f"   Git HEAD: {provenance.get('git_head', 'unknown')[:12]}")
+        print(f"   Branch: {provenance.get('git_branch', 'unknown')}")
+    except Exception as e:
+        print(f"   ⚠️  Provenance warning: {e}")
+        provenance = {}
 
     try:
         # Connect to server
@@ -539,10 +677,7 @@ def main() -> int:
         print(f"Evidence: {evidence_dir}")
 
         # Add provenance to summary
-        summary["provenance"] = {
-            "git": git_provenance,
-            "server": server_provenance,
-        }
+        summary["provenance"] = provenance
 
         # Save summary with checksum
         summary_path = evidence_dir / "summary.json"

@@ -671,7 +671,12 @@ class PromptBuilder:
         Build god mode directives block for system prompts.
 
         These are player-defined rules that persist across sessions
-        and MUST be followed by the LLM.
+        and MUST be followed by the LLM. Also includes DM notes that
+        may contain important context the LLM wrote but didn't formally
+        save as directives.
+
+        Directives are shown NEWEST FIRST for precedence - if there are
+        conflicting rules, the most recent one takes priority.
 
         Returns:
             Formatted string block or empty string if no directives
@@ -679,35 +684,101 @@ class PromptBuilder:
         if not self.game_state:
             return ""
 
-        # Use the GameState method if available
-        if hasattr(self.game_state, "get_god_mode_directives_block"):
-            return self.game_state.get_god_mode_directives_block()
-
         # Fallback for dict-based game state
         custom_state = None
+        debug_info = None
         if hasattr(self.game_state, "custom_campaign_state"):
             custom_state = self.game_state.custom_campaign_state
         elif isinstance(self.game_state, dict):
             custom_state = self.game_state.get("custom_campaign_state", {})
 
-        if not custom_state or not isinstance(custom_state, dict):
-            return ""
+        # Get debug_info for dm_notes
+        if hasattr(self.game_state, "debug_info"):
+            debug_info = self.game_state.debug_info
+        elif isinstance(self.game_state, dict):
+            debug_info = self.game_state.get("debug_info", {})
 
-        directives = custom_state.get("god_mode_directives", [])
-        if not directives:
-            return ""
+        # Build directives section - sorted NEWEST FIRST for precedence
+        base_block = ""
+        if custom_state and isinstance(custom_state, dict):
+            directives = custom_state.get("god_mode_directives", [])
+            if directives:
+                # Sort by 'added' timestamp descending (newest first)
+                def get_added_ts(d):
+                    if isinstance(d, dict):
+                        return d.get("added", "")
+                    return ""
 
-        lines = ["## Active God Mode Directives"]
-        lines.append("The following rules were set by the player and MUST be followed:")
+                sorted_directives = sorted(
+                    directives, key=get_added_ts, reverse=True
+                )
 
-        for i, directive in enumerate(directives, 1):
-            if isinstance(directive, dict):
-                rule = directive.get("rule", str(directive))
+                lines = ["## Active God Mode Directives (Newest First)"]
+                lines.append(
+                    "The following rules were set by the player and MUST be followed."
+                )
+                lines.append(
+                    "In case of conflicts, earlier rules take precedence (newest first):"
+                )
+                for i, directive in enumerate(sorted_directives, 1):
+                    if isinstance(directive, dict):
+                        rule = directive.get("rule", str(directive))
+                    else:
+                        rule = str(directive)
+                    lines.append(f"{i}. {rule}")
+                base_block = "\n".join(lines)
+
+        # Add DM notes section if present (also newest first - reverse order)
+        dm_notes = []
+        if debug_info and isinstance(debug_info, dict):
+            dm_notes = debug_info.get("dm_notes", [])
+
+        if dm_notes:
+            # Prefer timestamp-based ordering if available; otherwise fall back to reverse
+            def get_note_added_ts(note: Any) -> str:
+                if isinstance(note, dict):
+                    return note.get("added", "")
+                return ""
+
+            has_timestamped_notes = any(
+                isinstance(note, dict) and "added" in note for note in dm_notes
+            )
+
+            if has_timestamped_notes:
+                ordered_notes = sorted(dm_notes, key=get_note_added_ts, reverse=True)
             else:
-                rule = str(directive)
-            lines.append(f"{i}. {rule}")
+                # Maintain previous behavior when no timestamps are present
+                ordered_notes = list(reversed(dm_notes))
 
-        return "\n".join(lines)
+            dm_lines = ["\n## DM Notes (Context from God Mode, Newest First)"]
+            dm_lines.append(
+                "These notes were set during God Mode and provide important context."
+            )
+            dm_lines.append("In case of conflicts, earlier notes take precedence:")
+
+            for note in ordered_notes:
+                if isinstance(note, dict):
+                    note_text = note.get("note") or note.get("text") or str(note)
+                else:
+                    note_text = str(note)
+
+                if isinstance(note_text, str):
+                    note_text = note_text.strip()
+
+                if note_text:
+                    dm_lines.append(f"- {note_text}")
+
+            # Only include the DM notes block if at least one valid note was added
+            if len(dm_lines) > 3:
+                dm_block = "\n".join(dm_lines)
+
+                if base_block:
+                    return base_block + "\n" + dm_block
+                return dm_block
+
+            # If no valid notes remain after filtering, fall through to base_block
+
+        return base_block
 
     def build_continuation_reminder(self) -> str:
         """
