@@ -1,13 +1,14 @@
 """
-Test-Driven Development: Tests for Agent classes (StoryModeAgent, GodModeAgent, CombatAgent)
+Test-Driven Development: Tests for Agent classes (StoryModeAgent, GodModeAgent, CombatAgent, CharacterCreationAgent)
 
 These tests verify the behavior of the agent architecture that manages
-different interaction modes (story mode vs god mode vs combat mode) in WorldArchitect.AI.
+different interaction modes (story mode vs god mode vs combat mode vs character creation mode) in WorldArchitect.AI.
 
 Agent Architecture:
 - BaseAgent: Abstract base class with common functionality
 - StoryModeAgent: Handles narrative storytelling (character mode)
 - GodModeAgent: Handles administrative commands (god mode)
+- CharacterCreationAgent: Handles focused character creation (highest priority except god mode)
 - CombatAgent: Handles active combat encounters (combat mode)
 """
 
@@ -30,6 +31,7 @@ from mvp_site.agent_prompts import PromptBuilder
 # Import from agents module (canonical location)
 from mvp_site.agents import (
     BaseAgent,
+    CharacterCreationAgent,
     CombatAgent,
     GodModeAgent,
     RewardsAgent,
@@ -38,8 +40,23 @@ from mvp_site.agents import (
 )
 
 
-def create_mock_game_state(in_combat=False, combat_state_dict=None):
-    """Helper to create a mock GameState with required methods."""
+def create_mock_game_state(
+    in_combat=False,
+    combat_state_dict=None,
+    character_creation_completed=True,
+    character_name="Test Character",
+    character_class="Fighter",
+):
+    """Helper to create a mock GameState with required methods.
+
+    Args:
+        in_combat: Whether the game is in combat mode
+        combat_state_dict: Optional combat state dict
+        character_creation_completed: Whether character creation is done (default True
+            to avoid triggering CharacterCreationAgent in existing tests)
+        character_name: Name of the character (empty string triggers character creation)
+        character_class: Class of the character (empty string triggers character creation)
+    """
     mock_state = Mock()
     mock_state.is_in_combat.return_value = in_combat
 
@@ -48,6 +65,18 @@ def create_mock_game_state(in_combat=False, combat_state_dict=None):
 
     mock_state.get_combat_state.return_value = combat_state_dict
     mock_state.combat_state = combat_state_dict
+
+    # Mock custom_campaign_state for CharacterCreationAgent checks
+    mock_state.custom_campaign_state = {
+        "character_creation_completed": character_creation_completed,
+    }
+
+    # Mock player_character_data for CharacterCreationAgent checks
+    mock_state.player_character_data = {
+        "name": character_name,
+        "class": character_class,
+    }
+
     return mock_state
 
 
@@ -67,6 +96,39 @@ def create_rewards_game_state(
     mock_state.is_in_combat.return_value = mock_state.get_combat_state.return_value.get(
         "in_combat", False
     )
+
+    # Mock attributes for CharacterCreationAgent checks (character creation completed)
+    mock_state.custom_campaign_state = {"character_creation_completed": True}
+    mock_state.player_character_data = {"name": "Test Character", "class": "Fighter"}
+
+    return mock_state
+
+
+def create_character_creation_game_state(
+    character_creation_completed=False,
+    character_name="",
+    character_class="",
+):
+    """Helper to create a mock GameState for character creation mode tests.
+
+    Args:
+        character_creation_completed: Whether character creation is done
+        character_name: Name of the character (empty triggers creation mode)
+        character_class: Class of the character (empty triggers creation mode)
+    """
+    mock_state = Mock()
+    mock_state.is_in_combat.return_value = False
+    mock_state.get_combat_state.return_value = {"in_combat": False}
+    mock_state.combat_state = {"in_combat": False}
+
+    mock_state.custom_campaign_state = {
+        "character_creation_completed": character_creation_completed,
+    }
+    mock_state.player_character_data = {
+        "name": character_name,
+        "class": character_class,
+    }
+
     return mock_state
 
 
@@ -482,6 +544,121 @@ class TestRewardsAgent(unittest.TestCase):
         self.assertGreater(len(instructions), 0)
 
 
+class TestCharacterCreationAgent(unittest.TestCase):
+    """Test cases for CharacterCreationAgent class."""
+
+    def test_character_creation_agent_creation(self):
+        """CharacterCreationAgent can be instantiated."""
+        agent = CharacterCreationAgent()
+        self.assertIsInstance(agent, BaseAgent)
+        self.assertIsInstance(agent, CharacterCreationAgent)
+
+    def test_character_creation_agent_with_game_state(self):
+        """CharacterCreationAgent accepts game_state parameter."""
+        mock_game_state = create_character_creation_game_state()
+        agent = CharacterCreationAgent(game_state=mock_game_state)
+        self.assertEqual(agent.game_state, mock_game_state)
+
+    def test_character_creation_agent_required_prompts(self):
+        """CharacterCreationAgent has correct required prompts (minimal set)."""
+        expected_prompts = {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_CHARACTER_CREATION,
+            constants.PROMPT_TYPE_DND_SRD,
+        }
+        self.assertEqual(CharacterCreationAgent.REQUIRED_PROMPTS, frozenset(expected_prompts))
+
+    def test_character_creation_agent_no_optional_prompts(self):
+        """CharacterCreationAgent has no optional prompts (minimal focused mode)."""
+        self.assertEqual(CharacterCreationAgent.OPTIONAL_PROMPTS, frozenset())
+
+    def test_character_creation_agent_mode(self):
+        """CharacterCreationAgent has correct mode identifier."""
+        self.assertEqual(CharacterCreationAgent.MODE, constants.MODE_CHARACTER_CREATION)
+
+    def test_character_creation_matches_game_state_new_campaign(self):
+        """CharacterCreationAgent matches when character has no name/class."""
+        mock_state = create_character_creation_game_state(
+            character_creation_completed=False,
+            character_name="",
+            character_class="",
+        )
+        self.assertTrue(CharacterCreationAgent.matches_game_state(mock_state))
+
+    def test_character_creation_matches_game_state_partial_character(self):
+        """CharacterCreationAgent matches when character has name but no class."""
+        mock_state = create_character_creation_game_state(
+            character_creation_completed=False,
+            character_name="Test Hero",
+            character_class="",
+        )
+        self.assertTrue(CharacterCreationAgent.matches_game_state(mock_state))
+
+    def test_character_creation_does_not_match_completed(self):
+        """CharacterCreationAgent does not match when creation is completed."""
+        mock_state = create_character_creation_game_state(
+            character_creation_completed=True,
+            character_name="Test Hero",
+            character_class="Fighter",
+        )
+        self.assertFalse(CharacterCreationAgent.matches_game_state(mock_state))
+
+    def test_character_creation_does_not_match_full_character(self):
+        """CharacterCreationAgent does not match when character has name and class."""
+        mock_state = create_character_creation_game_state(
+            character_creation_completed=False,
+            character_name="Test Hero",
+            character_class="Wizard",
+        )
+        self.assertFalse(CharacterCreationAgent.matches_game_state(mock_state))
+
+    def test_character_creation_does_not_match_none(self):
+        """CharacterCreationAgent does not match when game_state is None."""
+        self.assertFalse(CharacterCreationAgent.matches_game_state(None))
+
+    def test_character_creation_matches_input_done_phrases(self):
+        """CharacterCreationAgent.matches_input detects completion phrases."""
+        done_phrases = [
+            "I'm done",
+            "im done",
+            "start the story",
+            "begin the adventure",
+            "let's start",
+            "ready to play",
+            "character complete",
+        ]
+        for phrase in done_phrases:
+            self.assertTrue(
+                CharacterCreationAgent.matches_input(phrase),
+                f"Should match done phrase: {phrase}",
+            )
+
+    def test_character_creation_does_not_match_regular_input(self):
+        """CharacterCreationAgent.matches_input returns False for regular creation input."""
+        regular_inputs = [
+            "I want to be a wizard",
+            "Make me a half-elf",
+            "What classes are available?",
+            "I choose high elf",
+        ]
+        for user_input in regular_inputs:
+            self.assertFalse(
+                CharacterCreationAgent.matches_input(user_input),
+                f"Should NOT match regular input: {user_input}",
+            )
+
+    @patch("mvp_site.agent_prompts._load_instruction_file")
+    def test_character_creation_agent_builds_instructions(self, mock_load):
+        """CharacterCreationAgent.build_system_instructions returns minimal instruction string."""
+        mock_load.return_value = "Test instruction content"
+
+        agent = CharacterCreationAgent()
+        instructions = agent.build_system_instructions()
+
+        self.assertIsInstance(instructions, str)
+        self.assertGreater(len(instructions), 0)
+
+
 class TestGetAgentForInput(unittest.TestCase):
     """Test cases for get_agent_for_input factory function."""
 
@@ -543,17 +720,26 @@ class TestGetAgentForInput(unittest.TestCase):
         self.assertIsInstance(agent, GodModeAgent)
 
     def test_get_agent_priority_order(self):
-        """Verify agent priority: GOD MODE > Combat > Rewards > Story."""
-        # Priority 1: GOD MODE always wins
-        combat_state = create_mock_game_state(in_combat=True)
-        god_agent = get_agent_for_input("GOD MODE: test", game_state=combat_state)
+        """Verify agent priority: GOD MODE > CharacterCreation > Combat > Rewards > Story."""
+        # Priority 1: GOD MODE always wins (even during character creation)
+        char_creation_state = create_character_creation_game_state()
+        god_agent = get_agent_for_input("GOD MODE: test", game_state=char_creation_state)
         self.assertIsInstance(god_agent, GodModeAgent)
 
-        # Priority 2: Combat when in_combat=True
+        # Priority 2: Character Creation when character not complete
+        char_agent = get_agent_for_input("I want to be a wizard", game_state=char_creation_state)
+        self.assertIsInstance(char_agent, CharacterCreationAgent)
+
+        # Priority 2b: Character Creation transitions to Story when done
+        done_agent = get_agent_for_input("I'm done", game_state=char_creation_state)
+        self.assertIsInstance(done_agent, StoryModeAgent)
+
+        # Priority 3: Combat when in_combat=True
+        combat_state = create_mock_game_state(in_combat=True)
         combat_agent = get_agent_for_input("attack", game_state=combat_state)
         self.assertIsInstance(combat_agent, CombatAgent)
 
-        # Priority 3: Rewards mode when rewards are pending
+        # Priority 4: Rewards mode when rewards are pending
         rewards_state = create_rewards_game_state(
             combat_state={
                 "in_combat": False,
@@ -565,7 +751,7 @@ class TestGetAgentForInput(unittest.TestCase):
         rewards_agent = get_agent_for_input("continue", game_state=rewards_state)
         self.assertIsInstance(rewards_agent, RewardsAgent)
 
-        # Priority 4: Story mode as default
+        # Priority 5: Story mode as default
         no_combat_state = create_mock_game_state(in_combat=False)
         story_agent = get_agent_for_input("attack", game_state=no_combat_state)
         self.assertIsInstance(story_agent, StoryModeAgent)

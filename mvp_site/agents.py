@@ -428,6 +428,200 @@ class GodModeAgent(BaseAgent):
         return user_input
 
 
+# --- CHARACTER CREATION COMPLETION DETECTION ---
+# Phrases that indicate the user is finished with character creation
+CHARACTER_CREATION_DONE_PHRASES = [
+    "i'm done",
+    "im done",
+    "i am done",
+    "i'm finished",
+    "im finished",
+    "i am finished",
+    "start the story",
+    "begin the story",
+    "start adventure",
+    "begin adventure",
+    "start the adventure",
+    "begin the adventure",
+    "let's start",
+    "lets start",
+    "let's begin",
+    "lets begin",
+    "ready to play",
+    "i'm ready",
+    "im ready",
+    "that's everything",
+    "thats everything",
+    "character complete",
+    "character is complete",
+    "done creating",
+    "finished creating",
+]
+
+
+class CharacterCreationAgent(BaseAgent):
+    """
+    Agent for Character Creation Mode (Focused Character Building).
+
+    This agent handles character creation with MINIMAL system prompts,
+    focusing exclusively on building the character. The story does NOT
+    begin until the user explicitly confirms they are finished.
+
+    PRECEDENCE: Second highest (just below GodModeAgent).
+
+    Trigger Conditions (matches_game_state returns True when):
+    1. Campaign exists but character_creation_completed is False
+    2. No story has begun (no story entries or player_character_data.name is empty)
+
+    Responsibilities:
+    - Guide character concept development
+    - Handle race/class/background selection
+    - Manage ability score assignment
+    - Develop personality and backstory
+    - Confirm completion before transitioning to story
+
+    System Prompt Hierarchy (MINIMAL for focus):
+    1. Master directive (establishes AI authority)
+    2. Character creation instruction (focused creation flow)
+    3. D&D SRD (mechanics reference for options)
+
+    Note: NO narrative, combat, or game state prompts - keeps focus on creation.
+    """
+
+    # Minimal prompts for focused character creation
+    REQUIRED_PROMPTS: frozenset[str] = frozenset({
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_CHARACTER_CREATION,
+        constants.PROMPT_TYPE_DND_SRD,
+    })
+
+    # No optional prompts - keep it focused
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset()
+
+    MODE: str = constants.MODE_CHARACTER_CREATION
+
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+        turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
+    ) -> str:
+        """
+        Build MINIMAL system instructions for character creation mode.
+
+        Uses a focused prompt set for character building:
+        - Master directive (authority)
+        - Character creation instruction (focused creation flow)
+        - D&D SRD (mechanics reference)
+
+        No narrative, no combat, no game state - keeps prompts minimal.
+
+        Returns:
+            Minimal system instruction string for character creation
+        """
+        # Parameters intentionally unused - character creation uses fixed minimal set
+        del selected_prompts, use_default_world, include_continuation_reminder
+        del turn_number, llm_requested_sections
+
+        builder = self._prompt_builder
+
+        # Build character creation instructions (minimal prompt set)
+        parts: list[str] = builder.build_character_creation_instructions()
+
+        # Finalize WITHOUT world lore (character creation doesn't need it)
+        return builder.finalize_instructions(parts, use_default_world=False)
+
+    @classmethod
+    def matches_game_state(cls, game_state: "GameState | None") -> bool:
+        """
+        Check if character creation mode should be active based on game state.
+
+        Character creation mode is active when:
+        1. game_state exists
+        2. character_creation_completed is False (or not set)
+        3. Character doesn't have a name yet OR is explicitly in creation mode
+
+        Args:
+            game_state: Current GameState object
+
+        Returns:
+            True if character creation is in progress
+        """
+        if game_state is None:
+            logging_util.debug(
+                "🎭 CHARACTER_CREATION_CHECK: game_state is None"
+            )
+            return False
+
+        # Check if character creation is explicitly completed
+        custom_state = None
+        if hasattr(game_state, "custom_campaign_state"):
+            custom_state = game_state.custom_campaign_state
+        elif isinstance(game_state, dict):
+            custom_state = game_state.get("custom_campaign_state", {})
+
+        if custom_state and isinstance(custom_state, dict):
+            if custom_state.get("character_creation_completed", False):
+                logging_util.debug(
+                    "🎭 CHARACTER_CREATION_CHECK: character_creation_completed=True"
+                )
+                return False
+
+        # Check if character has a name (indicates creation may be done)
+        pc_data = None
+        if hasattr(game_state, "player_character_data"):
+            pc_data = game_state.player_character_data
+        elif isinstance(game_state, dict):
+            pc_data = game_state.get("player_character_data", {})
+
+        if pc_data and isinstance(pc_data, dict):
+            # If character has a name AND class, likely creation is done
+            # (unless explicitly marked as in-progress)
+            char_name = pc_data.get("name", "")
+            char_class = pc_data.get("class", "") or pc_data.get("character_class", "")
+
+            if char_name and char_class:
+                # Character has name and class - check if explicitly in creation mode
+                in_creation_mode = custom_state.get(
+                    "character_creation_in_progress", False
+                ) if custom_state else False
+
+                if not in_creation_mode:
+                    logging_util.debug(
+                        f"🎭 CHARACTER_CREATION_CHECK: Character has name='{char_name}' "
+                        f"and class='{char_class}', creation assumed complete"
+                    )
+                    return False
+
+        # Default: if campaign is new and character isn't complete, we're in creation
+        logging_util.info(
+            "🎭 CHARACTER_CREATION_CHECK: Character creation mode ACTIVE"
+        )
+        return True
+
+    @classmethod
+    def matches_input(cls, user_input: str) -> bool:
+        """
+        Check if user input indicates character creation completion.
+
+        Returns True if the input suggests they want to START the story,
+        which means we should transition OUT of character creation.
+
+        Note: This returns True to MATCH when user is DONE with creation,
+        which the get_agent_for_input logic uses to transition to StoryMode.
+
+        Args:
+            user_input: Raw user input text
+
+        Returns:
+            True if user indicates they're done with character creation
+        """
+        lower = user_input.lower().strip()
+        return any(phrase in lower for phrase in CHARACTER_CREATION_DONE_PHRASES)
+
+
 # --- INFO QUERY CLASSIFICATION ---
 # Conservative patterns: Only route to InfoAgent for CLEAR info-only queries
 
@@ -868,10 +1062,12 @@ def get_agent_for_input(
 
     Determines which agent should handle the input based on mode detection:
     1. GodModeAgent if input starts with "GOD MODE:" (highest priority)
-    2. InfoAgent for pure info queries (equipment, inventory, stats)
-    3. CombatAgent if game_state.combat_state.in_combat is True
-    4. RewardsAgent if rewards are pending (combat end, encounter completion)
-    5. StoryModeAgent for all other inputs (default)
+    2. CharacterCreationAgent if character creation is in progress (second highest)
+       - UNLESS user indicates they're done, then transitions to StoryMode
+    3. InfoAgent for pure info queries (equipment, inventory, stats)
+    4. CombatAgent if game_state.combat_state.in_combat is True
+    5. RewardsAgent if rewards are pending (combat end, encounter completion)
+    6. StoryModeAgent for all other inputs (default)
 
     Args:
         user_input: Raw user input text
@@ -883,6 +1079,14 @@ def get_agent_for_input(
     Example:
         >>> agent = get_agent_for_input("GOD MODE: Set my HP to 50")
         >>> isinstance(agent, GodModeAgent)
+        True
+        >>> # During character creation
+        >>> agent = get_agent_for_input("I want to be a wizard", new_campaign_state)
+        >>> isinstance(agent, CharacterCreationAgent)
+        True
+        >>> # When done with character creation
+        >>> agent = get_agent_for_input("I'm done", new_campaign_state)
+        >>> isinstance(agent, StoryModeAgent)  # Transitions out
         True
         >>> agent = get_agent_for_input("list my equipment")
         >>> isinstance(agent, InfoAgent)
@@ -904,22 +1108,35 @@ def get_agent_for_input(
         logging_util.info("🔮 GOD_MODE_DETECTED: Using GodModeAgent")
         return GodModeAgent(game_state)
 
-    # Priority 2: Info queries (equipment, inventory, stats) - trimmed prompts
+    # Priority 2: Character Creation mode (second highest priority)
+    # Check if we're in character creation AND user isn't indicating they're done
+    if CharacterCreationAgent.matches_game_state(game_state):
+        # If user says they're done, transition to story mode
+        if CharacterCreationAgent.matches_input(user_input):
+            logging_util.info(
+                "🎭 CHARACTER_CREATION_COMPLETE: User finished, transitioning to StoryModeAgent"
+            )
+            return StoryModeAgent(game_state)
+        # Otherwise, stay in character creation mode
+        logging_util.info("🎭 CHARACTER_CREATION_ACTIVE: Using CharacterCreationAgent")
+        return CharacterCreationAgent(game_state)
+
+    # Priority 3: Info queries (equipment, inventory, stats) - trimmed prompts
     if InfoAgent.matches_input(user_input):
         logging_util.info("📦 INFO_QUERY_DETECTED: Using InfoAgent (trimmed prompts)")
         return InfoAgent(game_state)
 
-    # Priority 3: Combat mode when in active combat
+    # Priority 4: Combat mode when in active combat
     if CombatAgent.matches_game_state(game_state):
         logging_util.info("⚔️ COMBAT_MODE_ACTIVE: Using CombatAgent")
         return CombatAgent(game_state)
 
-    # Priority 4: Rewards mode when rewards are pending
+    # Priority 5: Rewards mode when rewards are pending
     if RewardsAgent.matches_game_state(game_state):
         logging_util.info("🏆 REWARDS_MODE_ACTIVE: Using RewardsAgent")
         return RewardsAgent(game_state)
 
-    # Priority 5: Default to story mode
+    # Priority 6: Default to story mode
     return StoryModeAgent(game_state)
 
 
@@ -928,6 +1145,7 @@ __all__ = [
     "BaseAgent",
     "StoryModeAgent",
     "GodModeAgent",
+    "CharacterCreationAgent",
     "InfoAgent",
     "CombatAgent",
     "RewardsAgent",

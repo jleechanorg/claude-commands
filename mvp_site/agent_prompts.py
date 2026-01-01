@@ -30,6 +30,7 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_REWARDS: constants.REWARDS_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_RELATIONSHIP: constants.RELATIONSHIP_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_REPUTATION: constants.REPUTATION_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_CHARACTER_CREATION: constants.CHARACTER_CREATION_INSTRUCTION_PATH,
 }
 
 # Store loaded instruction content in a dictionary for easy access
@@ -418,6 +419,32 @@ class PromptBuilder:
 
         # Add debug instructions for reward processing logging
         parts.append(_build_debug_instructions())
+
+        return parts
+
+    def build_character_creation_instructions(self) -> list[str]:
+        """
+        Build MINIMAL system instructions for CHARACTER CREATION MODE.
+        Character creation mode focuses exclusively on creating the character
+        and only starts the story when the user explicitly confirms they're done.
+
+        Minimal prompt set for focused character creation:
+        1. Master directive (establishes AI authority)
+        2. Character creation instruction (focused creation flow)
+        3. D&D SRD (for mechanics reference - class/race options)
+
+        No narrative, no combat, no game state instructions - keeps prompts minimal.
+        """
+        parts = []
+
+        # Load master directive first (establishes authority)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+        # Load character creation instruction (the focused creation flow)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_CREATION))
+
+        # Load D&D SRD for mechanics reference (race/class/background options)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
 
         return parts
 

@@ -231,6 +231,7 @@ MODE_GOD = "god"
 MODE_COMBAT = "combat"
 MODE_REWARDS = "rewards"
 MODE_INFO = "info"  # For equipment/inventory/stats queries with trimmed prompts
+MODE_CHARACTER_CREATION = "character_creation"  # For focused character creation flow
 
 # --- COMBAT PHASE CONSTANTS ---
 # Canonical set of combat phases indicating combat has ended
@@ -430,6 +431,7 @@ PROMPT_TYPE_COMBAT = "combat"
 PROMPT_TYPE_REWARDS = "rewards"
 PROMPT_TYPE_RELATIONSHIP = "relationship"
 PROMPT_TYPE_REPUTATION = "reputation"
+PROMPT_TYPE_CHARACTER_CREATION = "character_creation"
 
 
 # --- PROMPT PATHS ---
@@ -452,6 +454,9 @@ COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
 REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "rewards_system_instruction.md")
 RELATIONSHIP_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "relationship_instruction.md")
 REPUTATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "reputation_instruction.md")
+CHARACTER_CREATION_INSTRUCTION_PATH = os.path.join(
+    PROMPTS_DIR, "character_creation_instruction.md"
+)
 
 # --- LIVING WORLD SETTINGS ---
 # The living world instruction is included every N turns to advance world state.
