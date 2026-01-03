@@ -28,11 +28,13 @@ BEFORE narrating next action after ANY non-combat resolution, you MUST:
    Example: If encounter_summary.xp_awarded = 150, then experience.current = old_xp + 150 (NOT old_xp + 300!)
 
 2. THEN narrate "You gain <xp_awarded> XP" explicitly in the narrative text
-3. CHECK rewards_pending.level_up_available - if true, announce level-up opportunity:
-   "**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!"
+3. CHECK rewards_pending.level_up_available - if true, you MUST do BOTH:
+   a. In narrative: "**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!"
+   b. In planning_block.choices: Include `level_up_now` and `continue_adventuring` options
+      (See rewards_system_instruction.md for exact format)
 
-🚨 VISIBILITY RULE: Users cannot see state_updates - they only see narrative.
-XP and level-up MUST be mentioned in narrative text or they are INVISIBLE to the player.
+🚨 VISIBILITY RULE: Users cannot see state_updates - they only see narrative AND planning_block buttons.
+XP and level-up MUST be mentioned in narrative text AND have planning_block choices or they are INVISIBLE to the player.
 
 TRIGGERS (ANY of these require the protocol):
 • Enemy surrender (forced by intimidation, display of force, or negotiation)
