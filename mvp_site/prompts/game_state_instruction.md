@@ -68,13 +68,15 @@ Dice results are determined by quantum-seeded random number generators on the se
 **Phase 2: Server returns actual random result, then you use it**
 ```json
 {
-  "narrative": "Your blade finds its mark! [DICE: Longsword 1d20 +5 = 17 vs AC 13 (Hit!)]...",
+  "narrative": "Your blade finds its mark, slicing through the goblin's defenses!",
   "dice_rolls": ["Longsword: 1d20 +5 = 17 vs AC 13 (Hit!)"],
   "tool_requests": []
 }
 ```
 
 **The key difference:** In Phase 2, the dice value (17) came FROM the tool result. You didn't invent it.
+
+**🚨 NARRATIVE IMMERSION RULE:** NEVER embed `[DICE: ...]` notation in narrative text. Dice mechanics belong ONLY in the `dice_rolls` array. The narrative should describe outcomes cinematically without showing dice math.
 <!-- END_TOOL_REQUESTS_DICE -->
 
 ### Why This Matters
@@ -180,7 +182,8 @@ Every response MUST be valid JSON with this exact structure:
   - `choices`: Object with snake_case keys, each containing `text`, `description`, `risk_level`
 - `dice_rolls`: (array) **🎲 DICE ROLLING PROTOCOL:**
   - **NEVER roll dice manually or invent numbers.**
-  - **COPY EXACTLY:** When tool results are returned, copy their numbers verbatim into `dice_rolls`, session header, and narrative. Do NOT recalc, round, or change outcomes—the tool result is the truth.
+  - **COPY EXACTLY:** When tool results are returned, copy their numbers verbatim into `dice_rolls` and session header. Do NOT recalc, round, or change outcomes—the tool result is the truth.
+  - **🚨 NARRATIVE SEPARATION:** NEVER embed dice notation `[DICE: ...]` in the narrative field. Narrative describes outcomes cinematically; `dice_rolls` array tracks the mechanics separately.
   - **Output format:** `"Perception: 1d20 +3 WIS = 15 +3 WIS = 18 vs DC 15 (guard alert but distracted) - Success"`. Include DC reasoning in parentheses after DC to prove it was set before roll.
   - **Empty array [] if no dice rolls this turn.**
 - `dice_audit_events`: (array) **🎲 DICE AUDIT EVENTS (REQUIRED when any dice roll happens):**
@@ -408,20 +411,23 @@ AI: "You think about the direct approach... [presents: Ram the Vehicle, Block th
 **✅ CORRECT - Player selects action and it executes:**
 ```
 Player: "Intercept Transport"
-AI: "You sprint through alleyways, positioning yourself ahead of the van's route. [DICE: Stealth: 1d20 +5 DEX = 13 +5 DEX = 18 vs DC 15 (busy street with ambient noise) - Success]. You emerge from cover as the van approaches... [narrative continues with action resolution]"
+AI: "You sprint through alleyways, weaving between pedestrians and ducking through market stalls. The ambient noise of the busy street masks your footsteps perfectly. You emerge from cover just as the van approaches... [narrative continues with action resolution]"
+dice_rolls: ["Stealth: 1d20 +5 DEX = 13 +5 DEX = 18 vs DC 15 (busy street with ambient noise) - Success"]
 ```
 
 **❌ WRONG - Dice roll contradicts action intent:**
 ```
 Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
-AI: "You try to sneak in... [DICE: Stealth: 1d20 +5 DEX = 17 +5 DEX = 22 vs DC 25 (elite security, motion sensors, bright lighting) - Fail]. The guard spots you. [presents: Grand Entrance, Distraction, Silent Elimination]"
+AI: "You try to sneak in... The guard spots you. [presents: Grand Entrance, Distraction, Silent Elimination]"
+dice_rolls: ["Stealth: 1d20 +5 DEX = 17 +5 DEX = 22 vs DC 25 (elite security, motion sensors, bright lighting) - Fail"]
 ```
 The player explicitly said "Dramatic" and "Charisma" - rolling Stealth contradicts the intent and loops back to options.
 
 **✅ CORRECT - Dice match action intent:**
 ```
 Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
-AI: "You throw open the ballroom doors with theatrical flair! [DICE: Intimidation: 1d20 +8 CHA = 17 +8 CHA = 25 vs DC 15 (civilian crowd, unprepared for confrontation) - Success]. The crowd gasps as they recognize the legendary Silent Blade. Marcus freezes mid-sentence... [narrative continues with Marcus elimination]"
+AI: "You throw open the ballroom doors with theatrical flair! Your presence radiates authority—the crowd gasps as they recognize the legendary Silent Blade. Marcus freezes mid-sentence, the color draining from his face... [narrative continues with Marcus elimination]"
+dice_rolls: ["Intimidation: 1d20 +8 CHA = 17 +8 CHA = 25 vs DC 15 (civilian crowd, unprepared for confrontation) - Success"]
 ```
 
 **❌ WRONG - Social encounter loops without resolution:**
@@ -436,7 +442,8 @@ NPC never responds, story never advances, same options repeat = PLANNING LOOP VI
 **✅ CORRECT - Social encounter resolves with skill check:**
 ```
 Player: "Press the Logical Argument - convince Reynolds"
-AI: "[DICE: Persuasion: 1d20 +4 INT = 15 +4 INT = 19 vs DC 18 (FBI agent, professional training, but logical argument resonates) - Success]. Reynolds exhales slowly, the fight draining from his posture. 'Your numbers don't lie,' he admits, reaching for his authorization tablet. 'Framework Three it is. But I'm logging this under emergency protocols.' He signs the document..."
+AI: "Reynolds exhales slowly, the fight draining from his posture. 'Your numbers don't lie,' he admits, reaching for his authorization tablet. 'Framework Three it is. But I'm logging this under emergency protocols.' He signs the document..."
+dice_rolls: ["Persuasion: 1d20 +4 INT = 15 +4 INT = 19 vs DC 18 (FBI agent, professional training, but logical argument resonates) - Success"]
 ```
 Skill check rolled, NPC responds with dialogue and action, story advances.
 
