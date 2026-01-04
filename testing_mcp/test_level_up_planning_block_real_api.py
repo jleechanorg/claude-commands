@@ -200,33 +200,40 @@ def test_level_up_planning_block_presentation(  # noqa: PLR0912, PLR0915
         }
 
     response_text = _extract_response_text(narrative_result)
+    response_text_lower = response_text.lower()
     planning_block = _extract_planning_block(narrative_result)
 
     # Check for required planning/choice block elements
+    # The level-up banner must be visible in user-facing text.
     has_level_up_message = "LEVEL UP AVAILABLE!" in response_text
-    # Check for choice prompt in text OR presence of structured choices in planning block
-    has_choice_prompt = (
-        "Would you like to level up" in response_text.lower()
-        or "level up now" in response_text.lower()
-        or (isinstance(planning_block, dict) and bool(planning_block.get("choices")))
+    # Text-only checks for prompt/options/benefits to ensure visibility in narrative.
+    text_has_choice_prompt = "would you like to level up now" in response_text_lower
+    text_has_immediate_option = (
+        "level up immediately" in response_text_lower
+        or "level up now" in response_text_lower
+        or "level up to level" in response_text_lower
     )
-    # Check for level-up option in text OR in structured planning block choices
-    has_immediate_option = (
-        "level up immediately" in response_text.lower()
-        or "level up to" in response_text.lower()
-        or any("level_up" in str(k).lower() for k in (planning_block.get("choices", {}) if isinstance(planning_block, dict) else {}).keys())
+    text_has_later_option = (
+        "continue adventuring" in response_text_lower
+        or "continue your journey" in response_text_lower
+        or "continue the adventure" in response_text_lower
     )
-    has_later_option = (
-        "continue adventuring" in response_text.lower()
-        or "continue story" in response_text.lower()
-        or any("continue" in str(k).lower() for k in (planning_block.get("choices", {}) if isinstance(planning_block, dict) else {}).keys())
+    text_has_continue_difference = (
+        ("continue" in response_text_lower or "continuing" in response_text_lower)
+        and (
+            "defer" in response_text_lower
+            or "later" in response_text_lower
+            or "remain level" in response_text_lower
+            or "stay level" in response_text_lower
+        )
     )
 
     text_planning_block_present = (
         has_level_up_message
-        and has_choice_prompt
-        and has_immediate_option
-        and has_later_option
+        and text_has_choice_prompt
+        and text_has_immediate_option
+        and text_has_later_option
+        and text_has_continue_difference
     )
 
     choices = (
@@ -253,6 +260,7 @@ def test_level_up_planning_block_presentation(  # noqa: PLR0912, PLR0915
     structured_planning_block_present = len(choice_texts) >= 2
     has_choice_descriptions = len(choice_descriptions) >= 2
     has_distinct_choice_descriptions = len(set(choice_descriptions)) >= 2
+    text_has_benefit_keywords = _benefit_keywords_present([response_text])
     has_benefit_keywords = _benefit_keywords_present(
         [response_text] + choice_descriptions
     )
@@ -260,8 +268,15 @@ def test_level_up_planning_block_presentation(  # noqa: PLR0912, PLR0915
         has_benefit_keywords or has_distinct_choice_descriptions
     )
 
+    # A structured planning block is required, and visible text must include prompt/options/benefits.
     planning_block_present = (
-        text_planning_block_present or structured_planning_block_present
+        has_level_up_message
+        and text_has_choice_prompt
+        and text_has_immediate_option
+        and text_has_later_option
+        and text_has_benefit_keywords
+        and text_has_continue_difference
+        and (text_planning_block_present or structured_planning_block_present)
     )
 
     # Get game state to verify level-up was detected
@@ -290,13 +305,15 @@ def test_level_up_planning_block_presentation(  # noqa: PLR0912, PLR0915
         "checks": {
             "level_up_available_in_state": level_up_available_in_state,
             "has_level_up_message": has_level_up_message,
-            "has_choice_prompt": has_choice_prompt,
-            "has_immediate_option": has_immediate_option,
-            "has_later_option": has_later_option,
+            "text_has_choice_prompt": text_has_choice_prompt,
+            "text_has_immediate_option": text_has_immediate_option,
+            "text_has_later_option": text_has_later_option,
+            "text_has_continue_difference": text_has_continue_difference,
             "text_planning_block_present": text_planning_block_present,
             "structured_planning_block_present": structured_planning_block_present,
             "has_choice_descriptions": has_choice_descriptions,
             "has_distinct_choice_descriptions": has_distinct_choice_descriptions,
+            "text_has_benefit_keywords": text_has_benefit_keywords,
             "has_benefit_keywords": has_benefit_keywords,
             "benefits_present": benefits_present,
         },
@@ -432,9 +449,13 @@ the planning block was missing from the level-up notification.
 
 ## Required Elements
 When level-up is available, response must include:
-1. "LEVEL UP AVAILABLE!" notification
-2. Choice prompt: "Would you like to level up now?"
-3. Options: "1. Level up immediately" and "2. Continue adventuring"
+1. "LEVEL UP AVAILABLE!" notification (user-facing text)
+2. Choice prompt in narrative text (e.g., "Would you like to level up now?")
+3. Narrative options explicitly visible (e.g., "Level up immediately" and "Continue adventuring")
+4. Visible benefits/differences in narrative text for BOTH options:
+   - Level up now: at least one concrete benefit keyword
+   - Continue adventuring: explicit deferral/difference (e.g., "defer benefits", "remain level")
+5. Structured planning_block with level_up_now and continue_adventuring choices
 
 ## Test Mode
 - Server: {server_url}
@@ -448,11 +469,12 @@ When level-up is available, response must include:
 5. Check response includes all 4 required planning block elements
 
 ## Validation Criteria
-Test PASSES if response contains all 4 substring matches:
-- "LEVEL UP AVAILABLE!"
-- "Would you like to level up now?"
-- "1. Level up immediately"
-- "2. Continue adventuring"
+Test PASSES if:
+- "LEVEL UP AVAILABLE!" appears in narrative text
+- Narrative contains the choice prompt and both options
+- Narrative includes benefits/differences for both options (benefit keywords + deferral/difference)
+- Structured planning_block choices exist for level_up_now and continue_adventuring
+- Level-up is detected in state (rewards_pending.level_up_available = true)
 
 Test FAILS if any element is missing.
 """
