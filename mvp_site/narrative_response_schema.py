@@ -116,12 +116,12 @@ VALID_CONFIDENCE_LEVELS = {"high", "medium", "low"}
 # Valid quality tiers for plan_quality (matches think_mode_instruction.md)
 # Maps roll ranges to quality descriptors
 VALID_QUALITY_TIERS = {
-    "Muddled",      # 1-5 (Poor)
-    "Incomplete",   # 6-10 (Below Average)
-    "Competent",    # 11-15 (Average)
-    "Sharp",        # 16-20 (Good)
-    "Brilliant",    # 21-25 (Excellent)
-    "Masterful",    # 26+ (Critical)
+    "Muddled",  # 1-5 (Poor)
+    "Incomplete",  # 6-10 (Below Average)
+    "Competent",  # 11-15 (Average)
+    "Sharp",  # 16-20 (Good)
+    "Brilliant",  # 21-25 (Excellent)
+    "Masterful",  # 26+ (Critical)
 }
 
 
@@ -327,7 +327,9 @@ class NarrativeResponse:
         self.state_updates = self._validate_state_updates(state_updates)
         self.debug_info = self._validate_debug_info(debug_info)
         self.god_mode_response = god_mode_response
-        self.directives = directives or {}  # God mode directives: {add: [...], drop: [...]}
+        self.directives = (
+            directives or {}
+        )  # God mode directives: {add: [...], drop: [...]}
 
         # New always-visible fields
         self.session_header = self._validate_string_field(
@@ -630,6 +632,61 @@ class NarrativeResponse:
                 if isinstance(analysis, dict):
                     validated_choice["analysis"] = analysis
 
+            # Optional: pros field (list of advantages)
+            if "pros" in choice_data:
+                pros = choice_data["pros"]
+                if isinstance(pros, list):
+                    validated_pros = []
+                    for item in pros:
+                        if isinstance(item, (str, int, float, bool)):
+                            validated_pros.append(
+                                item if isinstance(item, str) else str(item)
+                            )
+                        else:
+                            logging_util.warning(
+                                f"Skipping non-primitive pros item of type {type(item).__name__} "
+                                f"for choice '{choice_key}'"
+                            )
+                    validated_choice["pros"] = validated_pros
+
+            # Optional: cons field (list of disadvantages)
+            if "cons" in choice_data:
+                cons = choice_data["cons"]
+                if isinstance(cons, list):
+                    validated_cons = []
+                    for item in cons:
+                        if isinstance(item, (str, int, float, bool)):
+                            validated_cons.append(
+                                item if isinstance(item, str) else str(item)
+                            )
+                        else:
+                            logging_util.warning(
+                                f"Skipping non-primitive cons item of type {type(item).__name__} "
+                                f"for choice '{choice_key}'"
+                            )
+                    validated_choice["cons"] = validated_cons
+
+            # Optional: confidence field (high/medium/low)
+            if "confidence" in choice_data:
+                confidence = choice_data["confidence"]
+                if (
+                    isinstance(confidence, str)
+                    and confidence in VALID_CONFIDENCE_LEVELS
+                ):
+                    validated_choice["confidence"] = confidence
+                else:
+                    logging_util.warning(
+                        f"Choice '{choice_key}' has invalid confidence '{confidence}', "
+                        "defaulting to 'medium'"
+                    )
+                    validated_choice["confidence"] = "medium"
+                else:
+                    logging_util.warning(
+                        f"Choice '{choice_key}' has invalid confidence '{confidence}', "
+                        "defaulting to 'medium'"
+                    )
+                    validated_choice["confidence"] = "medium"
+
             # Only add choice if it has both text and description
             if validated_choice["text"] and validated_choice["description"]:
                 validated_choices[choice_key] = validated_choice
@@ -704,6 +761,30 @@ class NarrativeResponse:
                         else:
                             sanitized_analysis[key] = value
                     sanitized_choice["analysis"] = sanitized_analysis
+
+            # Keep pros if present (sanitize each string in list)
+            if "pros" in choice_data:
+                pros = choice_data["pros"]
+                if isinstance(pros, list):
+                    sanitized_choice["pros"] = [
+                        sanitize_string(item) if isinstance(item, str) else str(item)
+                        for item in pros
+                    ]
+
+            # Keep cons if present (sanitize each string in list)
+            if "cons" in choice_data:
+                cons = choice_data["cons"]
+                if isinstance(cons, list):
+                    sanitized_choice["cons"] = [
+                        sanitize_string(item) if isinstance(item, str) else str(item)
+                        for item in cons
+                    ]
+
+            # Keep confidence if present (already validated), sanitize defensively
+            if "confidence" in choice_data:
+                sanitized_choice["confidence"] = sanitize_string(
+                    choice_data["confidence"]
+                )
 
             sanitized_choices[choice_key] = sanitized_choice
 

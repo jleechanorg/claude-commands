@@ -340,5 +340,139 @@ class TestLLMResponse(unittest.TestCase):
         assert response.entities_mentioned == ["dragon"]
 
 
+class TestPlanningBlockProsConsPreservation(unittest.TestCase):
+    """Test that pros/cons/confidence fields are preserved in planning blocks.
+
+    Regression test for issue where user asking for 'success % chances and pros/cons'
+    in Think Mode would have these fields silently dropped during validation/sanitization.
+    """
+
+    def test_pros_cons_confidence_preserved_in_validation(self):
+        """Test that pros, cons, and confidence are preserved in planning block validation."""
+        schema = NarrativeResponse("")
+
+        # Planning block with all optional fields including pros/cons/confidence
+        raw_planning_block = {
+            "thinking": "Analyzing tactical options...",
+            "choices": {
+                "option_a": {
+                    "text": "Administrative Counter",
+                    "description": "File formal complaint against Victoro",
+                    "risk_level": "medium",
+                    "pros": ["Buys 48 hours", "Forces public scrutiny"],
+                    "cons": ["Exposes Gwent to audit", "May escalate conflict"],
+                    "confidence": "high"
+                },
+                "option_b": {
+                    "text": "Surgical Strike",
+                    "description": "Strike the crypts now while distracted",
+                    "risk_level": "high",
+                    "pros": ["Direct solution", "Element of surprise"],
+                    "cons": ["High risk of detection", "Splits party resources"],
+                    "confidence": "medium"
+                }
+            }
+        }
+
+        # Call the validation method directly
+        validated = schema._validate_planning_block_json(raw_planning_block)
+
+        # Verify pros are preserved
+        debug_info = f"validated_choices={validated.get('choices', {})}"
+        self.assertIn("pros", validated["choices"]["option_a"],
+            f"FAIL: pros missing from option_a. {debug_info}")
+        self.assertEqual(validated["choices"]["option_a"]["pros"],
+            ["Buys 48 hours", "Forces public scrutiny"],
+            f"FAIL: pros content mismatch. {debug_info}")
+
+        # Verify cons are preserved
+        self.assertIn("cons", validated["choices"]["option_a"],
+            f"FAIL: cons missing from option_a. {debug_info}")
+        self.assertEqual(validated["choices"]["option_a"]["cons"],
+            ["Exposes Gwent to audit", "May escalate conflict"],
+            f"FAIL: cons content mismatch. {debug_info}")
+
+        # Verify confidence is preserved
+        self.assertIn("confidence", validated["choices"]["option_a"],
+            f"FAIL: confidence missing from option_a. {debug_info}")
+        self.assertEqual(validated["choices"]["option_a"]["confidence"], "high",
+            f"FAIL: confidence content mismatch. {debug_info}")
+
+        # Check second option too
+        self.assertEqual(validated["choices"]["option_b"]["pros"],
+            ["Direct solution", "Element of surprise"])
+        self.assertEqual(validated["choices"]["option_b"]["cons"],
+            ["High risk of detection", "Splits party resources"])
+        self.assertEqual(validated["choices"]["option_b"]["confidence"], "medium")
+
+    def test_pros_cons_sanitized_for_xss(self):
+        """Test that pros/cons strings are sanitized against XSS attacks."""
+        schema = NarrativeResponse("")
+
+        raw_planning_block = {
+            "thinking": "Testing sanitization",
+            "choices": {
+                "test_option": {
+                    "text": "Test Option",
+                    "description": "Testing XSS sanitization",
+                    "risk_level": "low",
+                    "pros": ["Safe content", "<script>alert('xss')</script>Injected"],
+                    "cons": ["<img src=x onerror=alert('xss')>Dangerous"],
+                    "confidence": "low"
+                }
+            }
+        }
+
+        validated = schema._validate_planning_block_json(raw_planning_block)
+
+        # Script tags should be removed
+        self.assertNotIn("<script>", str(validated["choices"]["test_option"]["pros"]))
+        self.assertNotIn("<img", str(validated["choices"]["test_option"]["cons"]))
+
+        # But the non-dangerous content should remain
+        self.assertIn("Safe content", validated["choices"]["test_option"]["pros"])
+        self.assertIn("Injected", validated["choices"]["test_option"]["pros"][1])
+
+    def test_pros_cons_edge_cases_and_invalid_confidence(self):
+        """Edge cases: empty lists, invalid types, and invalid confidence values."""
+        schema = NarrativeResponse("")
+
+        raw_planning_block = {
+            "thinking": "Edge cases",
+            "choices": {
+                "edge_option": {
+                    "text": "Edge",
+                    "description": "Validate edge cases",
+                    "pros": [],
+                    "cons": ["Valid", {"bad": "dict"}, ["nested"]],
+                    "confidence": "invalid",
+                },
+                "non_list_pros": {
+                    "text": "Non list",
+                    "description": "Pros is string",
+                    "pros": "not-a-list",
+                    "cons": "not-a-list",
+                    "confidence": "high",
+                },
+            },
+        }
+
+        validated = schema._validate_planning_block_json(raw_planning_block)
+
+        edge_choice = validated["choices"]["edge_option"]
+        # Empty pros list should be preserved
+        self.assertEqual(edge_choice.get("pros"), [])
+        # Only primitive cons items should remain
+        self.assertEqual(edge_choice.get("cons"), ["Valid"])
+        # Invalid confidence should default to medium
+        self.assertEqual(edge_choice.get("confidence"), "medium")
+
+        non_list_choice = validated["choices"]["non_list_pros"]
+        # Non-list pros/cons should be dropped
+        self.assertNotIn("pros", non_list_choice)
+        self.assertNotIn("cons", non_list_choice)
+        self.assertEqual(non_list_choice.get("confidence"), "high")
+
+
 if __name__ == "__main__":
     unittest.main()
