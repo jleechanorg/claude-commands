@@ -816,36 +816,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!userInputEl || !interactionForm) return;
 
-    // Handle custom choice differently
-    if (choiceId === 'Custom' || choiceText === 'custom') {
-      // Clear the input and focus it for custom text
-      userInputEl.value = '';
-      userInputEl.focus();
-      userInputEl.placeholder = 'Type your custom action here...';
-
-      // Scroll to the input area
-      userInputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-      // Don't disable buttons for custom option
-      return;
-    }
-
-    // Handle "Return to Story" - exit think mode and switch to character mode
-    // Note: sanitizeIdentifier removes colons, so 'think:return_story' becomes 'thinkreturn_story'
-    if (choiceId === 'thinkreturn_story') {
-      const characterModeRadio = document.querySelector(
-        'input[name="interactionMode"][value="character"]',
-      );
-      if (characterModeRadio) {
-        characterModeRadio.checked = true;
-      }
-      // Clear the choice text - just switching mode, not sending a command
-      userInputEl.value = '';
-      userInputEl.focus();
-      userInputEl.placeholder = 'Now in story mode - describe your action...';
-      return;
-    }
-
     // For predefined choices, disable all buttons
     document.querySelectorAll('.choice-button').forEach((btn) => {
       btn.disabled = true;
@@ -1021,13 +991,6 @@ document.addEventListener('DOMContentLoaded', () => {
           `title="${escapedTitle}">${buttonText}</button>`;
       }
     });
-
-    // Add custom text option
-    html +=
-      `<button class="choice-button choice-button-custom" ` +
-      `data-choice-id="Custom" ` +
-      `data-choice-text="custom" ` +
-      `title="Type your own action">Custom Action</button>`;
 
     html += '</div>';
 

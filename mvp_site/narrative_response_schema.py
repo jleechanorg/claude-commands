@@ -680,12 +680,6 @@ class NarrativeResponse:
                         "defaulting to 'medium'"
                     )
                     validated_choice["confidence"] = "medium"
-                else:
-                    logging_util.warning(
-                        f"Choice '{choice_key}' has invalid confidence '{confidence}', "
-                        "defaulting to 'medium'"
-                    )
-                    validated_choice["confidence"] = "medium"
 
             # Only add choice if it has both text and description
             if validated_choice["text"] and validated_choice["description"]:
