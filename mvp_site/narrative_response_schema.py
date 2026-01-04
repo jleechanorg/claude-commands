@@ -51,6 +51,80 @@ CJK_PATTERN = re.compile(
 MAX_PLANNING_JSON_BLOCK_CHARS = 50000
 
 
+# =============================================================================
+# PLANNING BLOCK SCHEMA - Single Source of Truth
+# =============================================================================
+# This is the canonical schema for planning blocks. All validation, prompts,
+# and documentation should reference this constant.
+#
+# Two types of planning blocks use this schema:
+# - Think Mode: Explicit THINK: prefix, time frozen (microsecond only)
+# - Story Choices: Every story response, time advances normally
+#
+# The schema is the same; only time handling differs based on mode.
+# =============================================================================
+
+CHOICE_SCHEMA = {
+    "text": str,  # Display name for the choice (REQUIRED)
+    "description": str,  # What this choice entails (REQUIRED)
+    "pros": list,  # Advantages of this choice (optional, list of strings)
+    "cons": list,  # Risks/disadvantages (optional, list of strings)
+    "confidence": str,  # "high" | "medium" | "low" (optional)
+    "risk_level": str,  # "safe" | "low" | "medium" | "high" (REQUIRED)
+    "analysis": dict,  # Additional analysis data (optional)
+}
+
+PLANNING_BLOCK_SCHEMA = {
+    # Plan quality (Think Mode only - based on INT/WIS roll)
+    "plan_quality": {
+        "stat_used": str,  # "Intelligence" or "Wisdom"
+        "stat_value": int,  # Character's stat value
+        "modifier": str,  # e.g., "+2"
+        "roll_result": int,  # Dice roll result
+        "quality_tier": str,  # "Poor" | "Basic" | "Good" | "Excellent"
+        "effect": str,  # Description of quality effect
+    },
+    # Core fields
+    "thinking": str,  # Internal monologue analyzing the situation (REQUIRED for Think Mode)
+    "context": str,  # Optional context/background (optional)
+    # Situation assessment (optional - for detailed Think Mode analysis)
+    "situation_assessment": {
+        "current_state": str,  # Where you are and what's happening
+        "key_factors": list,  # List of important factors (strings)
+        "constraints": list,  # List of constraints (strings)
+        "resources_available": list,  # List of available resources (strings)
+    },
+    # Choices - the core decision points (REQUIRED)
+    "choices": {
+        # Choice keys should be snake_case, may have god: or think: prefix
+        # "<choice_key>": CHOICE_SCHEMA
+    },
+    # Analysis (optional - for detailed Think Mode analysis)
+    "analysis": {
+        "recommended_approach": str,  # Which choice key is recommended
+        "reasoning": str,  # Why this approach is recommended
+        "contingency": str,  # Backup plan if primary fails
+    },
+}
+
+# Valid risk levels for choices
+VALID_RISK_LEVELS = {"safe", "low", "medium", "high"}
+
+# Valid confidence levels for choices
+VALID_CONFIDENCE_LEVELS = {"high", "medium", "low"}
+
+# Valid quality tiers for plan_quality (matches think_mode_instruction.md)
+# Maps roll ranges to quality descriptors
+VALID_QUALITY_TIERS = {
+    "Muddled",      # 1-5 (Poor)
+    "Incomplete",   # 6-10 (Below Average)
+    "Competent",    # 11-15 (Average)
+    "Sharp",        # 16-20 (Good)
+    "Brilliant",    # 21-25 (Excellent)
+    "Masterful",    # 26+ (Critical)
+}
+
+
 def _strip_embedded_planning_json(text: str) -> str:
     """
     Strip embedded planning block JSON from narrative text.
@@ -347,13 +421,55 @@ class NarrativeResponse:
         for item in value:
             if item is not None:
                 try:
-                    validated_list.append(str(item))
+                    # Handle dice_rolls dict format from Think Mode
+                    if isinstance(item, dict) and field_name == "dice_rolls":
+                        formatted = self._format_dice_roll_object(item)
+                        validated_list.append(formatted)
+                    else:
+                        validated_list.append(str(item))
                 except Exception as e:
                     logging_util.warning(
                         f"Failed to convert {field_name} item to string: {e}"
                     )
 
         return validated_list
+
+    def _format_dice_roll_object(self, roll: dict) -> str:
+        """Format a dice roll object into a human-readable string.
+
+        Handles Think Mode dice roll format:
+        {
+            "type": "Intelligence Check (Planning)",
+            "roll": "1d20+2",
+            "result": 14,
+            "dc": null,
+            "outcome": "Good - Sharp analysis"
+        }
+
+        Returns formatted string like:
+        "Intelligence Check (Planning): 1d20+2 = 14 - Good - Sharp analysis"
+        """
+        roll_type = roll.get("type", "Roll")
+        roll_dice = roll.get("roll", "")
+        roll_result = roll.get("result", "?")
+        roll_dc = roll.get("dc")
+        roll_outcome = roll.get("outcome", "")
+
+        # Build formatted string
+        parts = [f"{roll_type}:"]
+
+        if roll_dice:
+            parts.append(f"{roll_dice} =")
+
+        parts.append(str(roll_result))
+
+        if roll_dc is not None:
+            parts.append(f"vs DC {roll_dc}")
+
+        if roll_outcome:
+            parts.append(f"- {roll_outcome}")
+
+        return " ".join(parts)
 
     def _validate_rewards_box(self, rewards_box: Any) -> dict[str, Any]:
         """Validate rewards_box structured field."""
@@ -474,8 +590,8 @@ class NarrativeResponse:
 
         validated_choices = {}
         for choice_key, choice_data in choices.items():
-            # Validate choice key format (snake_case, allowing god: prefix)
-            if not re.match(r"^(god:)?[a-zA-Z_][a-zA-Z0-9_]*$", choice_key):
+            # Validate choice key format (snake_case, allowing god:/think: prefixes)
+            if not re.match(r"^(god:|think:)?[a-zA-Z_][a-zA-Z0-9_]*$", choice_key):
                 logging_util.warning(
                     f"Choice key '{choice_key}' is not a valid identifier, skipping"
                 )
@@ -502,9 +618,9 @@ class NarrativeResponse:
                 description = str(description) if description is not None else ""
             validated_choice["description"] = description
 
-            # Optional: risk_level field
+            # Optional: risk_level field (validate against VALID_RISK_LEVELS)
             risk_level = choice_data.get("risk_level", "low")
-            if risk_level not in ["safe", "low", "medium", "high"]:
+            if risk_level not in VALID_RISK_LEVELS:
                 risk_level = "low"
             validated_choice["risk_level"] = risk_level
 
@@ -777,7 +893,11 @@ def parse_structured_response(
     def _apply_planning_fallback(
         narrative_value: str | None, planning_block: Any
     ) -> str:
-        """Use planning block thinking text when narrative is intentionally blank."""
+        """Return narrative or minimal placeholder - DO NOT inject thinking text.
+
+        The thinking text is rendered separately by the frontend via planning_block.
+        Injecting it into narrative would cause double-rendering and pollute story history.
+        """
 
         # Ensure narrative_value is a string
         if narrative_value is not None and not isinstance(narrative_value, str):
@@ -790,10 +910,13 @@ def parse_structured_response(
         if narrative_value:
             return narrative_value
 
+        # If narrative is empty but planning_block exists, return minimal placeholder
+        # The frontend will render the planning_block.thinking separately
         if planning_block and isinstance(planning_block, dict):
             thinking_text = planning_block.get("thinking", "")
             if thinking_text and str(thinking_text).strip():
-                return str(thinking_text).strip()
+                # Return minimal placeholder - thinking is rendered via planning_block
+                return "You pause to consider your options..."
 
         return narrative_value
 

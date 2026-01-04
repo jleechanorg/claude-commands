@@ -20,7 +20,7 @@ project_root = os.path.dirname(
 )
 sys.path.insert(0, project_root)
 
-from schemas.entities_simple import SceneManifest, create_from_game_state
+from mvp_site.schemas.entities_pydantic import SceneManifest, create_from_game_state
 
 from prototype.validators.narrative_sync_validator import NarrativeSyncValidator
 from scripts.test_scenarios import get_scenario

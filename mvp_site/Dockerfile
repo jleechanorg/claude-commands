@@ -16,6 +16,7 @@ COPY mvp_site/ /app/mvp_site/
 # Copy world data to be accessible by mvp_site/world_loader.py
 COPY world/ /app/mvp_site/world/
 
+
 # Ensure Python can resolve both `mvp_site` and `infrastructure` packages
 ENV PYTHONPATH=/app
 

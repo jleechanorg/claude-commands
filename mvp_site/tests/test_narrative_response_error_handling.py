@@ -239,7 +239,7 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         # Combined text shown to user should come from god_mode_response
         assert combined_text == "GM: Show this in UI"
         # The structured response should still capture planning fallback for narrative
-        assert response.narrative == "Plan-only content"
+        assert response.narrative == "You pause to consider your options..."
 
 
 if __name__ == "__main__":

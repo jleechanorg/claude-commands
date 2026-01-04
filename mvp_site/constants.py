@@ -228,9 +228,36 @@ ALLOWED_DEBUG_MODE_VALUES = [True, False]
 # Used to determine the style of user input and AI response
 MODE_CHARACTER = "character"
 MODE_GOD = "god"
+MODE_THINK = "think"  # For planning/thinking without narrative advancement
 MODE_COMBAT = "combat"
 MODE_REWARDS = "rewards"
 MODE_INFO = "info"  # For equipment/inventory/stats queries with trimmed prompts
+
+# Think mode prefix - used for input detection
+THINK_MODE_PREFIX = "THINK:"
+
+
+def is_think_mode(user_input: str, mode: str | None = None) -> bool:
+    """
+    Centralized think mode detection.
+
+    SINGLE SOURCE OF TRUTH for determining if an interaction is in Think Mode.
+    Used by: PlanningAgent.matches_input(), world_logic.py, and any other callers.
+
+    Think Mode is active when either:
+    1. The mode parameter equals MODE_THINK, OR
+    2. The user input starts with "THINK:" prefix (case-insensitive)
+
+    Args:
+        user_input: Raw user input text
+        mode: Optional mode parameter from request (e.g., "think", "character")
+
+    Returns:
+        True if think mode should be activated
+    """
+    normalized = user_input.strip().upper()
+    return mode == MODE_THINK or normalized.startswith(THINK_MODE_PREFIX)
+
 
 # --- COMBAT PHASE CONSTANTS ---
 # Canonical set of combat phases indicating combat has ended
@@ -407,6 +434,7 @@ FILENAME_CHARACTER_TEMPLATE = "character_template.md"
 FILENAME_LIVING_WORLD = "living_world_instruction.md"
 FILENAME_COMBAT_SYSTEM = "combat_system_instruction.md"
 FILENAME_REWARDS_SYSTEM = "rewards_system_instruction.md"
+FILENAME_THINK_MODE = "think_mode_instruction.md"
 
 # --- ARCHIVED FILENAMES (for reference) ---
 # These files have been archived to prompt_archive/ directory:
@@ -430,6 +458,8 @@ PROMPT_TYPE_COMBAT = "combat"
 PROMPT_TYPE_REWARDS = "rewards"
 PROMPT_TYPE_RELATIONSHIP = "relationship"
 PROMPT_TYPE_REPUTATION = "reputation"
+PROMPT_TYPE_THINK = "think"
+PROMPT_TYPE_PLANNING_PROTOCOL = "planning_protocol"
 
 
 # --- PROMPT PATHS ---
@@ -452,6 +482,8 @@ COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
 REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "rewards_system_instruction.md")
 RELATIONSHIP_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "relationship_instruction.md")
 REPUTATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "reputation_instruction.md")
+THINK_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, FILENAME_THINK_MODE)
+PLANNING_PROTOCOL_PATH = os.path.join(PROMPTS_DIR, "planning_protocol.md")
 
 # --- LIVING WORLD SETTINGS ---
 # The living world instruction is included every N turns to advance world state.

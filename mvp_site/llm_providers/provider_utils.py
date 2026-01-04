@@ -56,7 +56,7 @@ NARRATIVE_RESPONSE_SCHEMA = {
         },
         "planning_block": {
             "type": "object",
-            "description": "GM planning with thinking field and dynamic choices (snake_case keys like explore_tavern, attack_goblin, god:option_1)",
+            "description": "GM planning with thinking field and dynamic choices (snake_case keys like explore_tavern, attack_goblin, god:option_1, think:analysis)",
             "properties": {
                 "thinking": {
                     "type": "string",
@@ -492,7 +492,7 @@ def run_openai_json_first_tool_requests_flow(
     )
 
 
-def run_json_first_tool_requests_flow(
+def run_json_first_tool_requests_flow(  # noqa: PLR0911, PLR0912, PLR0915
     *,
     phase1_generate_fn: Callable[[], Any],
     extract_text_fn: Callable[[Any], str],

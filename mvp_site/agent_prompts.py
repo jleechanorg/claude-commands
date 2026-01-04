@@ -5,6 +5,7 @@ This module centralizes prompt file loading and instruction assembly so
 llm_service can focus on request/response orchestration.
 """
 
+import json
 import os
 import re
 from typing import Any
@@ -12,6 +13,13 @@ from typing import Any
 from mvp_site import constants, logging_util
 from mvp_site.file_cache import read_file_cached
 from mvp_site.game_state import GameState
+from mvp_site.narrative_response_schema import (
+    CHOICE_SCHEMA,
+    PLANNING_BLOCK_SCHEMA,
+    VALID_CONFIDENCE_LEVELS,
+    VALID_QUALITY_TIERS,
+    VALID_RISK_LEVELS,
+)
 from mvp_site.world_loader import load_world_content_for_system_instruction
 
 # NEW: Centralized map of prompt types to their file paths.
@@ -30,6 +38,8 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_REWARDS: constants.REWARDS_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_RELATIONSHIP: constants.RELATIONSHIP_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_REPUTATION: constants.REPUTATION_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_THINK: constants.THINK_MODE_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_PLANNING_PROTOCOL: constants.PLANNING_PROTOCOL_PATH,
 }
 
 # Store loaded instruction content in a dictionary for easy access
@@ -48,6 +58,68 @@ def clear_loaded_files_tracking() -> None:
 def get_loaded_instruction_files() -> list[str]:
     """Get the list of instruction files loaded in the current request."""
     return _current_request_loaded_files.copy()
+
+
+def _schema_to_json_string(schema: dict) -> str:
+    """
+    Convert a schema dict with Python types to a JSON-friendly string representation.
+
+    The schema uses Python types (str, int, list, dict) as placeholders.
+    This converts them to human-readable type names for prompts.
+    """
+
+    def convert_value(v: Any) -> Any:
+        if v is str:
+            return "string"
+        elif v is int:
+            return "integer"
+        elif v is list:
+            return "array"
+        elif v is dict:
+            return "object"
+        elif isinstance(v, dict):
+            return {k: convert_value(vv) for k, vv in v.items()}
+        elif isinstance(v, list):
+            return [convert_value(item) for item in v]
+        else:
+            return v
+
+    converted = convert_value(schema)
+    return json.dumps(converted, indent=2)
+
+
+def _inject_schema_placeholders(content: str) -> str:
+    """
+    Inject canonical schema definitions into prompt content.
+
+    Replaces placeholders with actual schema JSON from narrative_response_schema.py.
+    This ensures prompts and validation code use the same schema definitions.
+
+    Supported placeholders:
+    - {{PLANNING_BLOCK_SCHEMA}} - Full planning block structure
+    - {{CHOICE_SCHEMA}} - Choice structure within planning blocks
+    - {{VALID_RISK_LEVELS}} - Valid risk level values
+    - {{VALID_CONFIDENCE_LEVELS}} - Valid confidence level values
+    - {{VALID_QUALITY_TIERS}} - Valid quality tier values
+    """
+    if "{{" not in content:
+        return content
+
+    # Build schema JSON representations (convert Python types to strings)
+    replacements = {
+        "{{PLANNING_BLOCK_SCHEMA}}": _schema_to_json_string(PLANNING_BLOCK_SCHEMA),
+        "{{CHOICE_SCHEMA}}": _schema_to_json_string(CHOICE_SCHEMA),
+        "{{VALID_RISK_LEVELS}}": json.dumps(sorted(VALID_RISK_LEVELS)),
+        "{{VALID_CONFIDENCE_LEVELS}}": json.dumps(sorted(VALID_CONFIDENCE_LEVELS)),
+        "{{VALID_QUALITY_TIERS}}": json.dumps(sorted(VALID_QUALITY_TIERS)),
+    }
+
+    for placeholder, value in replacements.items():
+        if placeholder in content:
+            content = content.replace(placeholder, value)
+            logging_util.debug(f"Injected {placeholder} into prompt")
+
+    return content
 
 
 def _load_instruction_file(instruction_type: str) -> str:
@@ -70,6 +142,8 @@ def _load_instruction_file(instruction_type: str) -> str:
 
         try:
             content = read_file_cached(file_path).strip()
+            # Apply schema injection to replace placeholders with canonical schemas
+            content = _inject_schema_placeholders(content)
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
             logging_util.error(
@@ -261,11 +335,12 @@ class PromptBuilder:
     Instruction Hierarchy (in order of loading):
     1. Master directive (establishes authority)
     2. Game state instructions (data structure compliance)
-    3. Debug instructions (technical functionality)
-    4. Character template (conditional)
-    5. Selected prompts (narrative/mechanics)
-    6. System references (D&D SRD)
-    7. World content (conditional)
+    3. Planning protocol (canonical planning_block schema)
+    4. Debug instructions (technical functionality)
+    5. Character template (conditional)
+    6. Selected prompts (narrative/mechanics)
+    7. System references (D&D SRD)
+    8. World content (conditional)
 
     The class ensures that instructions are loaded in the correct order to
     prevent "instruction fatigue" and maintain proper AI behavior hierarchy.
@@ -282,6 +357,13 @@ class PromptBuilder:
         """
         self.game_state = game_state
 
+    def _append_game_state_with_planning(self, parts: list[str]) -> None:
+        """Append game_state plus planning_protocol in a single, centralized step."""
+        # Load game_state instruction first (highest authority after master directive)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+        # Load planning protocol immediately after game_state to anchor schema references
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_PLANNING_PROTOCOL))
+
     def build_core_system_instructions(self) -> list[str]:
         """
         Build the core system instructions that are always loaded first.
@@ -293,10 +375,8 @@ class PromptBuilder:
         # This must come before all other instructions to set the precedence rules
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
 
-        # CRITICAL: Load game_state instructions SECOND (highest authority per master directive)
-        # This prevents "instruction fatigue" and ensures data structure compliance
-        # NOTE: Entity schemas are now integrated into game_state_instruction.md for LLM optimization
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+        # Load game_state + planning protocol together (single entry point)
+        self._append_game_state_with_planning(parts)
 
         # Add debug mode instructions THIRD for technical functionality
         # The backend will strip debug content for users when debug_mode is False
@@ -318,9 +398,9 @@ class PromptBuilder:
         # Load god mode specific instruction (administrative commands)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_GOD_MODE))
 
-        # Load game state instruction for state structure reference
-        # (AI needs to know the schema to make valid state_updates)
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+        # Load game_state + planning protocol together (single entry point)
+        # God mode can still emit planning blocks for structured choices.
+        self._append_game_state_with_planning(parts)
 
         # Load D&D SRD for game rules knowledge
         # (AI needs to understand game mechanics to make proper corrections)
@@ -347,9 +427,9 @@ class PromptBuilder:
         # CRITICAL: Load master directive FIRST to establish hierarchy and authority
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
 
-        # Load game state instruction - contains Equipment Query Protocol
-        # This is the key prompt with exact item naming requirements
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+        # Load game_state + planning protocol together (single entry point)
+        # Info mode still returns planning_block per game_state_instruction.md
+        self._append_game_state_with_planning(parts)
 
         return parts
 
@@ -364,9 +444,8 @@ class PromptBuilder:
         # CRITICAL: Load master directive FIRST to establish hierarchy and authority
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
 
-        # Load game state instruction SECOND - establishes authoritative state schema
-        # (AI needs to know combat_state structure before combat rules)
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+        # Load game_state + planning protocol together (single entry point)
+        self._append_game_state_with_planning(parts)
 
         # Load combat-specific instruction (tactical combat management)
         # (References game_state schema for combat_state updates)
@@ -403,9 +482,8 @@ class PromptBuilder:
         # CRITICAL: Load master directive FIRST to establish hierarchy and authority
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
 
-        # Load game state instruction SECOND - establishes authoritative state schema
-        # (AI needs to know reward/encounter state structure)
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+        # Load game_state + planning protocol together (single entry point)
+        self._append_game_state_with_planning(parts)
 
         # Load rewards-specific instruction (XP, loot, level-up rules)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_REWARDS))
@@ -418,6 +496,35 @@ class PromptBuilder:
 
         # Add debug instructions for reward processing logging
         parts.append(_build_debug_instructions())
+
+        return parts
+
+    def build_think_mode_instructions(self) -> list[str]:
+        """
+        Build system instructions for THINK MODE.
+        Think mode is for strategic planning and tactical analysis without
+        narrative advancement. Time only advances by 1 microsecond.
+
+        Uses a focused prompt set for deep planning operations:
+        - Master directive (authority)
+        - Think mode instruction (planning behavior)
+        - Game state instruction (state structure reference)
+        - D&D SRD (game rules knowledge for informed planning)
+        """
+        parts = []
+
+        # CRITICAL: Load master directive FIRST to establish hierarchy and authority
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+        # Load think mode specific instruction (planning/thinking behavior)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_THINK))
+
+        # Load game_state + planning protocol together (single entry point)
+        self._append_game_state_with_planning(parts)
+
+        # Load D&D SRD for game rules knowledge
+        # (AI needs to understand game mechanics for strategic planning)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
 
         return parts
 

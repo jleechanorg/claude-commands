@@ -114,6 +114,32 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         choices = response_obj.planning_block.get("choices", {})
         assert all(key.startswith("god:") for key in choices)
 
+    def test_think_mode_choices_allow_think_prefix(self):
+        """Think mode choices should allow think: prefixes per schema regex."""
+        think_response = """{
+            "narrative": "",
+            "planning_block": {
+                "thinking": "Strategic options",
+                "choices": {
+                    "think:scout": {"text": "Scout", "description": "Look around"},
+                    "think:direct": {"text": "Direct", "description": "Issue commands"},
+                    "think:return_story": {"text": "Return", "description": "Resume story"}
+                }
+            },
+            "entities_mentioned": [],
+            "location_confirmed": "Unknown",
+            "state_updates": {},
+            "debug_info": {}
+        }"""
+
+        _, response_obj = parse_structured_response(think_response)
+
+        choices = response_obj.planning_block.get("choices", {})
+        assert choices, "Think mode choices should be parsed"
+        assert all(key.startswith("think:") for key in choices), (
+            f"All choices should use think: prefix, got: {list(choices)}"
+        )
+
     def test_god_mode_without_planning_block(self):
         """Test that God mode responses without choices don't require planning blocks."""
         god_response_no_choices = """{

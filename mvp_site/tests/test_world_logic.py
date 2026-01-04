@@ -1486,21 +1486,26 @@ class TestAsyncToThreadDocumentation(unittest.TestCase):
 
 class TestEnforceRewardsProcessedFlag(unittest.TestCase):
     """
-    Deterministic tests for _enforce_rewards_processed_flag SERVER_ENFORCEMENT.
+    Tests for _enforce_rewards_processed_flag.
 
-    These tests verify the server-side enforcement logic that ensures
-    rewards_processed is set correctly even when the LLM doesn't set it.
+    NOTE: This function was deprecated to a no-op stub. The LLM now handles
+    all reward state management via the ESSENTIALS protocol:
+    1. LLM sets combat_summary with xp_awarded
+    2. LLM awards XP directly via player_character_data.experience.current
+    3. LLM sets rewards_processed flag
+
+    Server-side enforcement was removed to prevent XP duplication and ensure
+    the LLM is the single source of truth for all reward processing.
+
+    These tests verify the no-op stub behavior (returns state unchanged).
     """
 
-    def test_combat_enforcement_sets_flag_when_missing(self):
+    def test_returns_state_unchanged_combat_context(self):
         """
-        SERVER_ENFORCEMENT: Combat finished with summary but no rewards_processed.
+        DEPRECATED: Function is now a no-op stub.
 
-        This deterministically exercises the code path:
-        - combat_phase in COMBAT_FINISHED_PHASES
-        - combat_summary exists
-        - rewards_processed NOT set
-        → Should set combat_state.rewards_processed = True
+        Verifies that the function returns the state unchanged without
+        modifying any rewards_processed flags. The LLM handles this.
         """
         state_dict = {
             "combat_state": {
@@ -1509,23 +1514,25 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
                     "xp_awarded": 50,
                     "enemies_defeated": ["goblin_1", "goblin_2"],
                 },
-                # rewards_processed intentionally missing/False
+                "rewards_processed": False,  # LLM should set this, not server
             }
         }
 
         result = world_logic._enforce_rewards_processed_flag(state_dict)
 
-        self.assertTrue(
+        # No-op: state returned unchanged
+        self.assertFalse(
             result["combat_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set combat_state.rewards_processed=True "
-            "when combat_phase is 'ended' and combat_summary exists",
+            "No-op stub should NOT modify state - LLM handles rewards_processed",
         )
+        # Verify identity - exact same object returned
+        self.assertIs(result, state_dict, "Should return the same state object")
 
-    def test_combat_enforcement_all_finished_phases(self):
+    def test_returns_state_unchanged_all_finished_phases(self):
         """
-        SERVER_ENFORCEMENT: All COMBAT_FINISHED_PHASES trigger enforcement.
+        DEPRECATED: Function is now a no-op stub for all phases.
 
-        Tests that enforcement works for all 8 phase values in the frozenset.
+        Tests that the no-op behavior applies to all combat phases.
         """
         from mvp_site import constants
 
@@ -1541,20 +1548,17 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
 
                 result = world_logic._enforce_rewards_processed_flag(state_dict)
 
-                self.assertTrue(
+                # No-op: state returned unchanged
+                self.assertFalse(
                     result["combat_state"]["rewards_processed"],
-                    f"SERVER_ENFORCEMENT should trigger for combat_phase='{phase}'",
+                    f"No-op stub should NOT modify state for phase='{phase}'",
                 )
 
-    def test_encounter_enforcement_sets_flag_when_missing(self):
+    def test_returns_state_unchanged_encounter_context(self):
         """
-        SERVER_ENFORCEMENT: Encounter completed with summary but no rewards_processed.
+        DEPRECATED: Function is now a no-op stub.
 
-        This deterministically exercises the code path:
-        - encounter_completed = True
-        - encounter_summary.xp_awarded exists
-        - rewards_processed NOT set
-        → Should set encounter_state.rewards_processed = True
+        Verifies encounter state is also returned unchanged.
         """
         state_dict = {
             "encounter_state": {
@@ -1563,28 +1567,25 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
                     "xp_awarded": 100,
                     "outcome": "success",
                 },
-                # rewards_processed intentionally missing/False
+                "rewards_processed": False,  # LLM should set this
             }
         }
 
         result = world_logic._enforce_rewards_processed_flag(state_dict)
 
-        self.assertTrue(
+        # No-op: encounter state unchanged
+        self.assertFalse(
             result["encounter_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set encounter_state.rewards_processed=True "
-            "when encounter_completed and xp_awarded exist",
+            "No-op stub should NOT modify encounter state",
         )
 
-    def test_encounter_enforcement_requires_encounter_completed(self):
+    def test_encounter_incomplete_unchanged(self):
         """
-        SERVER_ENFORCEMENT: encounter_completed=False should NOT trigger enforcement.
-
-        This ensures we don't prematurely mark rewards as processed before
-        the RewardsAgent has a chance to run.
+        DEPRECATED: No-op stub doesn't modify incomplete encounters either.
         """
         state_dict = {
             "encounter_state": {
-                "encounter_completed": False,  # Not completed yet
+                "encounter_completed": False,
                 "encounter_summary": {
                     "xp_awarded": 100,
                 },
@@ -1596,15 +1597,15 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
 
         self.assertFalse(
             result["encounter_state"].get("rewards_processed", False),
-            "SERVER_ENFORCEMENT should NOT trigger when encounter_completed=False",
+            "No-op stub should NOT modify incomplete encounter state",
         )
 
-    def test_xp_increase_enforcement_combat_context(self):
+    def test_returns_state_unchanged_with_original_state(self):
         """
-        SERVER_ENFORCEMENT: XP increased with combat context triggers enforcement.
+        DEPRECATED: Function ignores original_state_dict parameter.
 
-        This exercises the fallback path when LLM increases XP but doesn't
-        set rewards_processed or summary structures.
+        The original_state_dict parameter is kept for API compatibility
+        but is no longer used since the function is a no-op.
         """
         original_state = {
             "player_character_data": {
@@ -1617,11 +1618,11 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
 
         updated_state = {
             "player_character_data": {
-                "experience": {"current": 150}  # XP increased by 50
+                "experience": {"current": 150}  # XP increased
             },
             "combat_state": {
                 "combat_phase": "ended",
-                # No combat_summary, no rewards_processed
+                "rewards_processed": False,
             }
         }
 
@@ -1629,15 +1630,15 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             updated_state, original_state_dict=original_state
         )
 
-        self.assertTrue(
+        # No-op: XP comparison no longer triggers enforcement
+        self.assertFalse(
             result["combat_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set combat_state.rewards_processed=True "
-            "when XP increased and combat context exists",
+            "No-op stub should NOT set rewards_processed even with XP increase",
         )
 
-    def test_xp_increase_enforcement_encounter_context(self):
+    def test_returns_state_unchanged_encounter_with_xp_increase(self):
         """
-        SERVER_ENFORCEMENT: XP increased with encounter context triggers enforcement.
+        DEPRECATED: No-op stub ignores XP increases in encounter context.
         """
         original_state = {
             "player_character_data": {
@@ -1650,11 +1651,11 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
 
         updated_state = {
             "player_character_data": {
-                "experience": {"current": 300}  # XP increased by 100
+                "experience": {"current": 300}
             },
             "encounter_state": {
                 "encounter_completed": True,
-                # No encounter_summary with xp_awarded
+                "rewards_processed": False,
             }
         }
 
@@ -1662,23 +1663,22 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             updated_state, original_state_dict=original_state
         )
 
-        self.assertTrue(
+        self.assertFalse(
             result["encounter_state"]["rewards_processed"],
-            "SERVER_ENFORCEMENT should set encounter_state.rewards_processed=True "
-            "when XP increased and encounter context exists",
+            "No-op stub should NOT set rewards_processed for encounter XP increase",
         )
 
-    def test_no_enforcement_when_already_processed(self):
+    def test_preserves_already_processed_flag(self):
         """
-        SERVER_ENFORCEMENT: Should NOT re-enforce if already processed.
+        DEPRECATED: No-op stub preserves existing rewards_processed=True.
 
-        Ensures idempotency - calling enforcement multiple times is safe.
+        When LLM has already set rewards_processed, it remains unchanged.
         """
         state_dict = {
             "combat_state": {
                 "combat_phase": "ended",
                 "combat_summary": {"xp_awarded": 50},
-                "rewards_processed": True,  # Already set
+                "rewards_processed": True,  # Already set by LLM
             }
         }
 
@@ -1686,14 +1686,15 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
 
         self.assertTrue(
             result["combat_state"]["rewards_processed"],
-            "rewards_processed should remain True",
+            "rewards_processed=True should remain True (no-op preserves state)",
         )
 
-    def test_xp_null_handling(self):
+    def test_handles_none_experience_gracefully(self):
         """
-        SERVER_ENFORCEMENT: Handles None experience gracefully.
+        DEPRECATED: No-op stub handles None experience without crashing.
 
-        Verifies the 'or {}' pattern prevents crashes when experience is None.
+        Since the function is now a no-op, it simply returns the state
+        unchanged regardless of experience field values.
         """
         original_state = {
             "player_character_data": {
@@ -1707,21 +1708,20 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             },
             "combat_state": {
                 "combat_phase": "ended",
+                "rewards_processed": False,
             }
         }
 
-        # Should not raise an exception
-        try:
-            result = world_logic._enforce_rewards_processed_flag(
-                updated_state, original_state_dict=original_state
-            )
-            # If XP went from None/0 to 100, enforcement should trigger
-            self.assertTrue(
-                result["combat_state"].get("rewards_processed", False),
-                "Should handle None experience gracefully and detect XP increase",
-            )
-        except (TypeError, AttributeError) as e:
-            self.fail(f"Crashed on None experience: {e}")
+        # Should not raise an exception - returns state unchanged
+        result = world_logic._enforce_rewards_processed_flag(
+            updated_state, original_state_dict=original_state
+        )
+
+        # No-op: no enforcement happens
+        self.assertFalse(
+            result["combat_state"].get("rewards_processed", False),
+            "No-op stub should handle None experience and return state unchanged",
+        )
 
 
 class TestCheckAndSetLevelUpPending(unittest.TestCase):
@@ -1766,7 +1766,7 @@ class TestCheckAndSetLevelUpPending(unittest.TestCase):
         self.assertEqual(100, rewards_pending.get("gold"))
         self.assertEqual(["ring"], rewards_pending.get("items"))
         self.assertFalse(rewards_pending.get("processed"))
-        self.assertEqual("combat", rewards_pending.get("source"))
+        self.assertEqual("level_up", rewards_pending.get("source"))
 
     def test_no_level_up_when_threshold_not_crossed(self):
         original_state = {
@@ -1821,8 +1821,8 @@ class TestCheckAndSetLevelUpPending(unittest.TestCase):
         }
         updated_state = {
             "player_character_data": {
-                # Level already auto-corrected to expected level (5)
-                "level": 5,
+                # Level not yet auto-corrected to expected level (5)
+                "level": 4,
                 "experience": {"current": 6600},
             }
         }
@@ -2081,6 +2081,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
     @patch("mvp_site.world_logic.update_state_with_changes")
     @patch("mvp_site.world_logic.apply_automatic_combat_cleanup")
     @patch("mvp_site.world_logic._enforce_rewards_processed_flag")
+    @patch("mvp_site.world_logic.validate_game_state_updates")
     @patch(
         "mvp_site.world_logic._process_rewards_followup",
         new_callable=AsyncMock,
@@ -2088,6 +2089,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
     def test_preserves_original_state_for_level_up_detection(
         self,
         mock_process_rewards_followup,
+        mock_validate_updates,
         mock_enforce_rewards_processed_flag,
         mock_apply_automatic_combat_cleanup,
         mock_update_state_with_changes,
@@ -2117,7 +2119,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
         state_changes = {
             "player_character_data": {
                 "experience": {"current": 6600},
-                "level": 5,
+                # Level NOT updated here, relying on detection
             }
         }
 
@@ -2135,14 +2137,14 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
             state_dict["player_character_data"].setdefault("experience", {})[
                 "current"
             ] = changes["player_character_data"]["experience"]["current"]
-            state_dict["player_character_data"]["level"] = changes[
-                "player_character_data"
-            ]["level"]
+            # Level not updated
             return state_dict
 
         mock_update_state_with_changes.side_effect = mutate_state
         mock_apply_automatic_combat_cleanup.side_effect = lambda state, changes: state
         mock_enforce_rewards_processed_flag.side_effect = lambda state, **_: state
+        # Mock validation to return state as-is (no auto-correction)
+        mock_validate_updates.side_effect = lambda state, **_: state
 
         async def followup_side_effect(**kwargs):
             return (

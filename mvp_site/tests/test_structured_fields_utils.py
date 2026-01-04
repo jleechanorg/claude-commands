@@ -187,6 +187,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
             constants.FIELD_RESOURCES,
             constants.FIELD_DEBUG_INFO,
             constants.FIELD_GOD_MODE_RESPONSE,
+            constants.FIELD_DIRECTIVES,
         }
         assert set(result.keys()) == expected_keys
 
