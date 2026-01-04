@@ -1484,6 +1484,244 @@ class TestAsyncToThreadDocumentation(unittest.TestCase):
                 )
 
 
+class TestEnforceRewardsProcessedFlag(unittest.TestCase):
+    """
+    Tests for _enforce_rewards_processed_flag.
+
+    NOTE: This function was deprecated to a no-op stub. The LLM now handles
+    all reward state management via the ESSENTIALS protocol:
+    1. LLM sets combat_summary with xp_awarded
+    2. LLM awards XP directly via player_character_data.experience.current
+    3. LLM sets rewards_processed flag
+
+    Server-side enforcement was removed to prevent XP duplication and ensure
+    the LLM is the single source of truth for all reward processing.
+
+    These tests verify the no-op stub behavior (returns state unchanged).
+    """
+
+    def test_returns_state_unchanged_combat_context(self):
+        """
+        DEPRECATED: Function is now a no-op stub.
+
+        Verifies that the function returns the state unchanged without
+        modifying any rewards_processed flags. The LLM handles this.
+        """
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "ended",
+                "combat_summary": {
+                    "xp_awarded": 50,
+                    "enemies_defeated": ["goblin_1", "goblin_2"],
+                },
+                "rewards_processed": False,  # LLM should set this, not server
+            }
+        }
+
+        result = world_logic._enforce_rewards_processed_flag(state_dict)
+
+        # No-op: state returned unchanged
+        self.assertFalse(
+            result["combat_state"]["rewards_processed"],
+            "No-op stub should NOT modify state - LLM handles rewards_processed",
+        )
+        # Verify identity - exact same object returned
+        self.assertIs(result, state_dict, "Should return the same state object")
+
+    def test_returns_state_unchanged_all_finished_phases(self):
+        """
+        DEPRECATED: Function is now a no-op stub for all phases.
+
+        Tests that the no-op behavior applies to all combat phases.
+        """
+        from mvp_site import constants
+
+        for phase in constants.COMBAT_FINISHED_PHASES:
+            with self.subTest(phase=phase):
+                state_dict = {
+                    "combat_state": {
+                        "combat_phase": phase,
+                        "combat_summary": {"xp_awarded": 25},
+                        "rewards_processed": False,
+                    }
+                }
+
+                result = world_logic._enforce_rewards_processed_flag(state_dict)
+
+                # No-op: state returned unchanged
+                self.assertFalse(
+                    result["combat_state"]["rewards_processed"],
+                    f"No-op stub should NOT modify state for phase='{phase}'",
+                )
+
+    def test_returns_state_unchanged_encounter_context(self):
+        """
+        DEPRECATED: Function is now a no-op stub.
+
+        Verifies encounter state is also returned unchanged.
+        """
+        state_dict = {
+            "encounter_state": {
+                "encounter_completed": True,
+                "encounter_summary": {
+                    "xp_awarded": 100,
+                    "outcome": "success",
+                },
+                "rewards_processed": False,  # LLM should set this
+            }
+        }
+
+        result = world_logic._enforce_rewards_processed_flag(state_dict)
+
+        # No-op: encounter state unchanged
+        self.assertFalse(
+            result["encounter_state"]["rewards_processed"],
+            "No-op stub should NOT modify encounter state",
+        )
+
+    def test_encounter_incomplete_unchanged(self):
+        """
+        DEPRECATED: No-op stub doesn't modify incomplete encounters either.
+        """
+        state_dict = {
+            "encounter_state": {
+                "encounter_completed": False,
+                "encounter_summary": {
+                    "xp_awarded": 100,
+                },
+                "rewards_processed": False,
+            }
+        }
+
+        result = world_logic._enforce_rewards_processed_flag(state_dict)
+
+        self.assertFalse(
+            result["encounter_state"].get("rewards_processed", False),
+            "No-op stub should NOT modify incomplete encounter state",
+        )
+
+    def test_returns_state_unchanged_with_original_state(self):
+        """
+        DEPRECATED: Function ignores original_state_dict parameter.
+
+        The original_state_dict parameter is kept for API compatibility
+        but is no longer used since the function is a no-op.
+        """
+        original_state = {
+            "player_character_data": {
+                "experience": {"current": 100}
+            },
+            "combat_state": {
+                "combat_phase": "ended",
+            }
+        }
+
+        updated_state = {
+            "player_character_data": {
+                "experience": {"current": 150}  # XP increased
+            },
+            "combat_state": {
+                "combat_phase": "ended",
+                "rewards_processed": False,
+            }
+        }
+
+        result = world_logic._enforce_rewards_processed_flag(
+            updated_state, original_state_dict=original_state
+        )
+
+        # No-op: XP comparison no longer triggers enforcement
+        self.assertFalse(
+            result["combat_state"]["rewards_processed"],
+            "No-op stub should NOT set rewards_processed even with XP increase",
+        )
+
+    def test_returns_state_unchanged_encounter_with_xp_increase(self):
+        """
+        DEPRECATED: No-op stub ignores XP increases in encounter context.
+        """
+        original_state = {
+            "player_character_data": {
+                "experience": {"current": 200}
+            },
+            "encounter_state": {
+                "encounter_completed": True,
+            }
+        }
+
+        updated_state = {
+            "player_character_data": {
+                "experience": {"current": 300}
+            },
+            "encounter_state": {
+                "encounter_completed": True,
+                "rewards_processed": False,
+            }
+        }
+
+        result = world_logic._enforce_rewards_processed_flag(
+            updated_state, original_state_dict=original_state
+        )
+
+        self.assertFalse(
+            result["encounter_state"]["rewards_processed"],
+            "No-op stub should NOT set rewards_processed for encounter XP increase",
+        )
+
+    def test_preserves_already_processed_flag(self):
+        """
+        DEPRECATED: No-op stub preserves existing rewards_processed=True.
+
+        When LLM has already set rewards_processed, it remains unchanged.
+        """
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "ended",
+                "combat_summary": {"xp_awarded": 50},
+                "rewards_processed": True,  # Already set by LLM
+            }
+        }
+
+        result = world_logic._enforce_rewards_processed_flag(state_dict)
+
+        self.assertTrue(
+            result["combat_state"]["rewards_processed"],
+            "rewards_processed=True should remain True (no-op preserves state)",
+        )
+
+    def test_handles_none_experience_gracefully(self):
+        """
+        DEPRECATED: No-op stub handles None experience without crashing.
+
+        Since the function is now a no-op, it simply returns the state
+        unchanged regardless of experience field values.
+        """
+        original_state = {
+            "player_character_data": {
+                "experience": None  # Explicitly None
+            }
+        }
+
+        updated_state = {
+            "player_character_data": {
+                "experience": {"current": 100}
+            },
+            "combat_state": {
+                "combat_phase": "ended",
+                "rewards_processed": False,
+            }
+        }
+
+        # Should not raise an exception - returns state unchanged
+        result = world_logic._enforce_rewards_processed_flag(
+            updated_state, original_state_dict=original_state
+        )
+
+        # No-op: no enforcement happens
+        self.assertFalse(
+            result["combat_state"].get("rewards_processed", False),
+            "No-op stub should handle None experience and return state unchanged",
+        )
 
 
 class TestCheckAndSetLevelUpPending(unittest.TestCase):
@@ -1583,7 +1821,7 @@ class TestCheckAndSetLevelUpPending(unittest.TestCase):
         }
         updated_state = {
             "player_character_data": {
-                # Level NOT auto-corrected to expected level (5) yet
+                # Level not yet auto-corrected to expected level (5)
                 "level": 4,
                 "experience": {"current": 6600},
             }
@@ -1843,6 +2081,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
     @patch("mvp_site.world_logic.update_state_with_changes")
     @patch("mvp_site.world_logic.apply_automatic_combat_cleanup")
     @patch("mvp_site.world_logic._enforce_rewards_processed_flag")
+    @patch("mvp_site.world_logic.validate_game_state_updates")
     @patch(
         "mvp_site.world_logic._process_rewards_followup",
         new_callable=AsyncMock,
@@ -1850,6 +2089,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
     def test_preserves_original_state_for_level_up_detection(
         self,
         mock_process_rewards_followup,
+        mock_validate_updates,
         mock_enforce_rewards_processed_flag,
         mock_apply_automatic_combat_cleanup,
         mock_update_state_with_changes,
@@ -1879,8 +2119,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
         state_changes = {
             "player_character_data": {
                 "experience": {"current": 6600},
-                # Level NOT set to 5 yet, triggering detection
-                #"level": 5,
+                # Level not updated here, relying on detection
             }
         }
 
@@ -1908,6 +2147,8 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
         mock_update_state_with_changes.side_effect = mutate_state
         mock_apply_automatic_combat_cleanup.side_effect = lambda state, changes: state
         mock_enforce_rewards_processed_flag.side_effect = lambda state, **_: state
+        # Mock validation to return state as-is (no auto-correction)
+        mock_validate_updates.side_effect = lambda state, **_: state
 
         async def followup_side_effect(**kwargs):
             return (

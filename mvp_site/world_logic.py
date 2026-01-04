@@ -50,6 +50,7 @@ from mvp_site import (
     structured_fields_utils,
     world_time,
 )
+from mvp_site.agent_prompts import extract_llm_instruction_hints
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.debug_hybrid_system import clean_json_artifacts, process_story_for_display
 from mvp_site.firestore_service import (
@@ -64,7 +65,6 @@ from mvp_site.game_state import (
     validate_and_correct_state,
     xp_needed_for_level,
 )
-from mvp_site.agent_prompts import extract_llm_instruction_hints
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
 
@@ -409,6 +409,8 @@ def _enforce_rewards_processed_flag(
     Returns:
         The game state dict unchanged
     """
+    # Preserve signature compatibility while avoiding unused-argument lint warnings
+    _ = original_state_dict
     # No-op: LLM handles all reward state management via ESSENTIALS protocol
     # Removed server-side enforcement to prevent XP duplication and ensure
     # LLM is the single source of truth for all reward processing
@@ -1331,7 +1333,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # This is the most important call to run in a thread to prevent blocking
         # TEMPORAL VALIDATION LOOP: Retry if LLM generates backward time
         # EXCEPTION: GOD MODE commands can intentionally move time backward
-        is_god_mode = user_input.strip().upper().startswith("GOD MODE:")
+        normalized_input = user_input.strip().upper()
+        is_god_mode = normalized_input.startswith("GOD MODE:")
+        # Treat either the explicit mode flag or a THINK: prefix as Think Mode so
+        # manual THINK: inputs from the UI still keep time frozen.
+        # Uses centralized constants.is_think_mode() for consistent detection.
+        is_think_mode = constants.is_think_mode(user_input, mode)
         original_user_input = user_input  # Preserve for Firestore
         llm_input = user_input  # Separate variable for LLM calls
         temporal_correction_attempts = 0
@@ -1498,9 +1505,15 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Extract LLM-requested instruction hints for next turn
         # The LLM can signal it needs detailed sections (e.g., relationships, reputation)
         # via debug_info.meta.needs_detailed_instructions in its response
-        llm_debug_info = llm_response_obj.get_debug_info() if hasattr(llm_response_obj, "get_debug_info") else {}
+        llm_debug_info = (
+            llm_response_obj.get_debug_info()
+            if hasattr(llm_response_obj, "get_debug_info")
+            else {}
+        )
         # Wrap in dict as extract_llm_instruction_hints expects {"debug_info": {...}}
-        instruction_hints = extract_llm_instruction_hints({"debug_info": llm_debug_info})
+        instruction_hints = extract_llm_instruction_hints(
+            {"debug_info": llm_debug_info}
+        )
         # Always update pending_instruction_hints - either with new hints or empty list to clear
         # This ensures hints are consumed on the next turn and don't persist indefinitely
         state_changes["pending_instruction_hints"] = instruction_hints
@@ -1532,15 +1545,55 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Update game state with changes
+        # SAFETY: In Think Mode, only allow microsecond time advancement - block all other state changes
+        # This prevents LLM hallucinations from accidentally modifying HP, inventory, etc.
+        state_changes_to_apply = response.get("state_changes", {})
+        if is_think_mode:
+            # Filter to only allow world_time.microsecond updates
+            # Handle BOTH nested dict format AND dotted key format from LLM
+            allowed_changes = {}
+
+            # Format 1: Nested dict - {"world_data": {"world_time": {"microsecond": value}}}
+            if "world_data" in state_changes_to_apply:
+                world_data = state_changes_to_apply.get("world_data", {})
+                if world_data and "world_time" in world_data:
+                    world_time_changes = world_data.get("world_time", {})
+                    if world_time_changes and "microsecond" in world_time_changes:
+                        allowed_changes = {
+                            "world_data": {
+                                "world_time": {"microsecond": world_time_changes["microsecond"]}
+                            }
+                        }
+
+            # Format 2: Dotted key - {"world_data.world_time.microsecond": value}
+            dotted_key = "world_data.world_time.microsecond"
+            if dotted_key in state_changes_to_apply:
+                # Convert to nested format for consistency with update_state_with_changes
+                allowed_changes = {
+                    "world_data": {
+                        "world_time": {"microsecond": state_changes_to_apply[dotted_key]}
+                    }
+                }
+
+            state_changes_to_apply = allowed_changes
+            if response.get("state_changes", {}) != allowed_changes:
+                logging_util.info(
+                    "🧠 THINK_MODE_SAFETY: Blocked non-time state changes in Think Mode"
+                )
+
         updated_game_state_dict = update_state_with_changes(
-            current_state_as_dict, response.get("state_changes", {})
+            current_state_as_dict, state_changes_to_apply
         )
 
         # Apply automatic combat cleanup (sync defeated enemies between combat_state and npc_data)
-        # Named NPCs are preserved and marked dead for continuity, while generic enemies are deleted
-        updated_game_state_dict = apply_automatic_combat_cleanup(
-            updated_game_state_dict, response.get("state_changes", {})
-        )
+        # Named NPCs are preserved and marked dead for continuity, while generic enemies are deleted.
+        # Think Mode freezes state, so skip cleanup to avoid side effects.
+        if not is_think_mode:
+            updated_game_state_dict = apply_automatic_combat_cleanup(
+                updated_game_state_dict, response.get("state_changes", {})
+            )
+        else:
+            logging_util.info("🧠 THINK_MODE_SAFETY: Skipping combat cleanup in Think Mode")
 
         # Validate and auto-correct XP/level and time consistency
         # Use `or {}` to handle both missing and explicitly-null world_data in state_changes
@@ -1638,11 +1691,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         rewards_corrections = prevention_extras.get("rewards_corrections", [])
         system_warnings = all_corrections + rewards_corrections + post_combat_warnings
 
-        # Increment player turn counter for non-GOD mode actions
-        if not is_god_mode:
+        # Increment player turn counter for non-GOD mode actions (but keep Think Mode frozen)
+        if not is_god_mode and not is_think_mode:
             current_turn = updated_game_state_dict.get("player_turn", 0)
             updated_game_state_dict["player_turn"] = current_turn + 1
-        else:
+        elif is_god_mode:
             # GOD MODE: Process directives from LLM response
             # The GodModeAgent analyzes the user's message and returns directives
             # Format: {"directives": {"add": ["rule1", ...], "drop": ["rule2", ...]}}  # noqa: ERA001

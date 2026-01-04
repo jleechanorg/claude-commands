@@ -5,13 +5,17 @@ Uses natural language understanding to detect entity presence.
 
 import concurrent.futures
 import json
+import re
 import time
 from typing import Any
 
-import google.generativeai as genai
+from google import genai
 
 from prototype.logging_config import setup_logging, with_metrics
 from prototype.validator import BaseValidator, ValidationResult
+
+# Default Gemini model used for validation requests
+DEFAULT_MODEL = "gemini-1.5-flash"
 
 # Prompt templates for LLM validation
 VALIDATION_PROMPT_TEMPLATE = """You are a narrative analyzer for a role-playing game. Your task is to identify which characters are present or mentioned in a given narrative text.
@@ -93,24 +97,20 @@ class LLMValidator(BaseValidator):
     def _init_llm_service(self, api_key_path):
         """Initialize Gemini service from API key file."""
         try:
-            # Import here to avoid dependency if not using real API
-
             # Read API key
             with open(api_key_path) as f:
                 api_key = f.read().strip()
 
             # Configure Gemini
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel("gemini-pro")
-            self.llm_service = self.model
+            self.llm_service = genai.Client(api_key=api_key)
             self.logger.info("Gemini service initialized successfully")
 
-        except ImportError:
-            raise ImportError("google-generativeai package not installed")
-        except FileNotFoundError:
-            raise FileNotFoundError(f"API key file not found: {api_key_path}")
-        except Exception as e:
-            raise Exception(f"Failed to initialize Gemini: {e}")
+        except ImportError as err:
+            raise ImportError("google-genai package not installed") from err
+        except FileNotFoundError as err:
+            raise FileNotFoundError(f"API key file not found: {api_key_path}") from err
+        except Exception as err:
+            raise Exception(f"Failed to initialize Gemini: {err}") from err
 
     def _create_prompt(self, narrative_text: str, expected_entities: list[str]) -> str:
         """Create validation prompt for LLM."""
@@ -321,9 +321,24 @@ class LLMValidator(BaseValidator):
                     # Real API call with timeout
 
                     with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(
-                            self.llm_service.generate_content, prompt
-                        )
+                        # Determine call method based on object type
+                        if hasattr(self.llm_service, "models"):
+                            # New SDK Client
+
+                            def call_func(p: str):
+                                return self.llm_service.models.generate_content(
+                                    model=DEFAULT_MODEL, contents=p
+                                )
+                        elif hasattr(self.llm_service, "generate_content"):
+                            # Old SDK Model or Mock
+                            call_func = self.llm_service.generate_content
+                        else:
+                            # Fallback or error
+                            raise ValueError(
+                                f"Invalid LLM service object: {type(self.llm_service)}"
+                            )
+
+                        future = executor.submit(call_func, prompt)
 
                         try:
                             llm_response = future.result(timeout=self.timeout)
@@ -374,6 +389,7 @@ class LLMValidator(BaseValidator):
         """
         Validate narrative using LLM.
         """
+        _ = (location, kwargs)
         result = ValidationResult()
 
         # Create prompt

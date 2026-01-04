@@ -347,17 +347,6 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
             <h3 class="step-title">📝 Campaign Basics</h3>
             <p class="step-description">Let's start with the fundamentals of your adventure.</p>
 
-            <div class="mb-4">
-              <label for="wizard-campaign-title" class="form-label">
-                Campaign Title <span class="text-muted">(Pick anything!)</span>
-              </label>
-              <input type="text" class="form-control form-control-lg"
-                     id="wizard-campaign-title"
-                     placeholder="My Epic Adventure"
-                     required>
-              <div class="form-text">This helps you identify your campaign in the dashboard.</div>
-            </div>
-
             <!-- Campaign Type Selection -->
             <div class="mb-4">
               <label class="form-label">Campaign Type</label>
@@ -386,6 +375,17 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
                   </label>
                 </div>
               </div>
+            </div>
+
+            <div class="mb-4">
+              <label for="wizard-campaign-title" class="form-label">
+                Campaign Title <span class="text-muted">(Pick anything!)</span>
+              </label>
+              <input type="text" class="form-control form-control-lg"
+                     id="wizard-campaign-title"
+                     placeholder="My Epic Adventure"
+                     required>
+              <div class="form-text">This helps you identify your campaign in the dashboard.</div>
             </div>
 
             <!-- Character Input -->

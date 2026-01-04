@@ -50,11 +50,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
         result = _validate_and_enforce_planning_block(
             response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
+            structured_response=self.structured_response,
         )
 
         mock_logging.warning.assert_any_call(
@@ -71,11 +67,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
         result = _validate_and_enforce_planning_block(
             response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
+            structured_response=self.structured_response,
         )
 
         mock_logging.warning.assert_any_call(
@@ -91,11 +83,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
         result = _validate_and_enforce_planning_block(
             response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
+            structured_response=self.structured_response,
         )
 
         mock_logging.error.assert_any_call(
@@ -114,11 +102,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
         result = _validate_and_enforce_planning_block(
             response_text,
-            "test input",
-            self.game_state,
-            "test-model",
-            "test instruction",
-            self.structured_response,
+            structured_response=self.structured_response,
         )
 
         mock_logging.info.assert_any_call(
@@ -130,39 +114,27 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
     def test_crash_safety_with_malformed_inputs(self):
         """Test that the function doesn't crash with malformed inputs."""
-        # Test with None inputs
+        # Test with None response_text
         try:
             result = _validate_and_enforce_planning_block(
                 None,
-                "test input",
-                self.game_state,
-                "test-model",
-                "test instruction",
-                self.structured_response,
+                structured_response=self.structured_response,
             )
             # Should handle gracefully and return None or empty string
             assert result in [None, "", "None"]
         except Exception as e:
             self.fail(f"Function crashed with None response_text: {e}")
 
-        # Test with malformed game state
+        # Test with None structured_response
         try:
-            malformed_game_state = MagicMock()
-            malformed_game_state.player_character_data = None
-            malformed_game_state.current_location = None
-
             result = _validate_and_enforce_planning_block(
                 "test response",
-                "test input",
-                malformed_game_state,
-                "test-model",
-                "test instruction",
-                self.structured_response,
+                structured_response=None,
             )
             # Should handle gracefully
             assert result is not None
         except Exception as e:
-            self.fail(f"Function crashed with malformed game state: {e}")
+            self.fail(f"Function crashed with None structured_response: {e}")
 
 
 class TestPlanningBlockSchemaStructure(unittest.TestCase):

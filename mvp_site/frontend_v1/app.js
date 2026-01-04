@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let campaignToEdit = null;
   let isNavigatingToNewCampaignDirectly = false;
 
+  // Initialize Bootstrap tooltips for mode selection buttons
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tooltipTriggerList.forEach((tooltipTriggerEl) => {
+    new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
   // Helper function for scrolling
   const scrollToBottom = (element) => {
     console.log(
@@ -824,6 +830,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Handle "Return to Story" - exit think mode and switch to character mode
+    // Note: sanitizeIdentifier removes colons, so 'think:return_story' becomes 'thinkreturn_story'
+    if (choiceId === 'thinkreturn_story') {
+      const characterModeRadio = document.querySelector(
+        'input[name="interactionMode"][value="character"]',
+      );
+      if (characterModeRadio) {
+        characterModeRadio.checked = true;
+      }
+      // Clear the choice text - just switching mode, not sending a command
+      userInputEl.value = '';
+      userInputEl.focus();
+      userInputEl.placeholder = 'Now in story mode - describe your action...';
+      return;
+    }
+
     // For predefined choices, disable all buttons
     document.querySelectorAll('.choice-button').forEach((btn) => {
       btn.disabled = true;
@@ -1413,6 +1435,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       userInputEl.disabled = true;
       timerInfo.textContent = '';
+
+      // Prepend "THINK:" for think mode if not already prefixed
+      let processedInput = userInput;
+      if (mode === 'think' && !userInput.toUpperCase().startsWith('THINK:')) {
+        processedInput = `THINK:${userInput}`;
+      }
+
       appendToStory('user', userInput, mode);
       userInputEl.value = '';
       try {
@@ -1420,7 +1449,7 @@ document.addEventListener('DOMContentLoaded', () => {
           `/api/campaigns/${currentCampaignId}/interaction`,
           {
             method: 'POST',
-            body: JSON.stringify({ input: userInput, mode }),
+            body: JSON.stringify({ input: processedInput, mode }),
           },
         );
         // Use user_scene_number from backend response

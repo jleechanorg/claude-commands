@@ -173,6 +173,7 @@ class TestStoryModeAgent(unittest.TestCase):
         expected_prompts = {
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
             constants.PROMPT_TYPE_DND_SRD,
         }
         self.assertEqual(StoryModeAgent.REQUIRED_PROMPTS, frozenset(expected_prompts))
@@ -263,6 +264,7 @@ class TestGodModeAgent(unittest.TestCase):
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_GOD_MODE,
             constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
             constants.PROMPT_TYPE_DND_SRD,
             constants.PROMPT_TYPE_MECHANICS,
         }
@@ -348,6 +350,7 @@ class TestCombatAgent(unittest.TestCase):
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_COMBAT,
             constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
             constants.PROMPT_TYPE_NARRATIVE,
             constants.PROMPT_TYPE_DND_SRD,
             constants.PROMPT_TYPE_MECHANICS,
@@ -434,6 +437,7 @@ class TestRewardsAgent(unittest.TestCase):
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_REWARDS,
             constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
             constants.PROMPT_TYPE_DND_SRD,
             constants.PROMPT_TYPE_MECHANICS,
         }
@@ -930,6 +934,79 @@ class TestAgentPromptSets(unittest.TestCase):
 
         self.assertNotIn(constants.PROMPT_TYPE_COMBAT, story_all)
         self.assertNotIn(constants.PROMPT_TYPE_COMBAT, god_all)
+
+
+class TestSchemaInjection(unittest.TestCase):
+    """Tests for dynamic schema injection in prompts."""
+
+    def test_game_state_instruction_has_risk_levels_injected(self):
+        """game_state_instruction.md should have VALID_RISK_LEVELS injected."""
+        from mvp_site.agent_prompts import _load_instruction_file, _loaded_instructions_cache
+        from mvp_site.narrative_response_schema import VALID_RISK_LEVELS
+
+        # Clear cache to force fresh load
+        _loaded_instructions_cache.clear()
+
+        content = _load_instruction_file(constants.PROMPT_TYPE_GAME_STATE)
+
+        # Placeholder should be replaced
+        self.assertNotIn(
+            "{{VALID_RISK_LEVELS}}",
+            content,
+            "Placeholder was not replaced with actual values",
+        )
+
+        # Actual values should be present
+        for level in VALID_RISK_LEVELS:
+            self.assertIn(
+                f'"{level}"',
+                content,
+                f"Risk level '{level}' not found in injected content",
+            )
+
+    def test_schema_injection_replaces_all_placeholders(self):
+        """All schema placeholders should be replaced when loading prompts."""
+        from mvp_site.agent_prompts import _inject_schema_placeholders
+
+        test_content = """
+        Risk levels: {{VALID_RISK_LEVELS}}
+        Confidence: {{VALID_CONFIDENCE_LEVELS}}
+        Quality: {{VALID_QUALITY_TIERS}}
+        Choice: {{CHOICE_SCHEMA}}
+        Planning: {{PLANNING_BLOCK_SCHEMA}}
+        """
+
+        result = _inject_schema_placeholders(test_content)
+
+        # All placeholders should be replaced
+        self.assertNotIn("{{", result, "Unreplaced placeholder found")
+        self.assertNotIn("}}", result, "Unreplaced placeholder found")
+
+        # Check some expected values are present
+        self.assertIn('"high"', result)  # From VALID_RISK_LEVELS
+        self.assertIn('"string"', result)  # From schema type conversion
+
+    def test_validation_uses_same_risk_levels_as_prompt(self):
+        """Backend validation should use the same risk levels as injected into prompts."""
+        from mvp_site.agent_prompts import _loaded_instructions_cache
+        from mvp_site.narrative_response_schema import VALID_RISK_LEVELS
+        import json
+
+        # Clear cache
+        _loaded_instructions_cache.clear()
+
+        # Get the injected content
+        from mvp_site.agent_prompts import _load_instruction_file
+
+        content = _load_instruction_file(constants.PROMPT_TYPE_GAME_STATE)
+
+        # The injected risk levels should match VALID_RISK_LEVELS exactly
+        expected_json = json.dumps(sorted(VALID_RISK_LEVELS))
+        self.assertIn(
+            expected_json,
+            content,
+            f"Injected risk levels don't match VALID_RISK_LEVELS: {expected_json}",
+        )
 
 
 if __name__ == "__main__":

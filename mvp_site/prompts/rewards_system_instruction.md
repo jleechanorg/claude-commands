@@ -16,12 +16,17 @@
 When XP is awarded, you MUST include in the narrative text:
   "You earned [X] XP!" or similar explicit statement
 
-When level-up is available (rewards_pending.level_up_available=true), you MUST include:
-  **LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!
-  Would you like to level up now?
+  When level-up is available (rewards_pending.level_up_available=true), you MUST:
+  1. Include in narrative: "**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!"
+  2. Include in planning_block.choices (REQUIRED - users need buttons to click):
+     - `level_up_now`: {"text": "Level Up to Level [N]", "description": "Apply level [N] benefits immediately: +[X] HP, [list key new features]", "risk_level": "safe"}
+     - `continue_adventuring`: {"text": "Continue Adventuring", "description": "Level up later and continue the story", "risk_level": "safe"}
 
-Users cannot see state_updates or rewards_pending - they only see narrative text.
-Without visible XP/level-up text, progression is INVISIBLE to the player.
+🚨 PLANNING BLOCK REQUIRED: The planning_block choices are HOW users interact with level-up.
+Without these choices, users cannot click to level up - they only see text with no way to act.
+
+Users cannot see state_updates or rewards_pending - they only see narrative text AND planning_block buttons.
+Without visible XP/level-up text AND planning_block choices, progression is INVISIBLE to the player.
 /ESSENTIALS -->
 
 ## Overview
@@ -190,21 +195,40 @@ If no loot: use `"loot": ["None"]` and `"gold": 0`.
 2. **Computed Check (FALLBACK):** Calculate from current XP vs thresholds
    - Only if `rewards_pending` doesn't exist or `level_up_available` is false
 
-When level-up is available (from either source), offer the player level-up choices:
+When level-up is available (from either source), you MUST provide BOTH narrative AND planning_block:
 
-### Level-Up Offer
+### Level-Up Offer (BOTH REQUIRED)
+
+**1. Narrative Text (in narrative field):**
 ```
-**=================================================**
-**         LEVEL UP AVAILABLE!                     **
-**=================================================**
-** You have earned enough experience to reach      **
-** Level [N]!                                      **
-**                                                 **
-** Would you like to level up now?                 **
-** 1. Level up immediately                         **
-** 2. Continue adventuring (level up later)        **
-**=================================================**
+**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!
+
+Would you like to level up now?
 ```
+
+**2. Planning Block (REQUIRED - this is how users click to level up):**
+```json
+{
+  "planning_block": {
+    "thinking": "Level-up is available. The player can choose to level up now or continue adventuring.",
+    "choices": {
+      "level_up_now": {
+        "text": "Level Up to Level [N]",
+        "description": "Apply level [N] benefits immediately: +[X] HP, [list key new features]",
+        "risk_level": "safe"
+      },
+      "continue_adventuring": {
+        "text": "Continue Adventuring",
+        "description": "Level up later and continue the story",
+        "risk_level": "safe"
+      }
+    }
+  }
+}
+```
+
+🚨 **CRITICAL:** Without the planning_block choices, users have no way to interact with the level-up!
+The narrative text tells them level-up is available, but the planning_block buttons let them ACT on it.
 
 ### Level-Up Benefits
 When player chooses to level up, apply:

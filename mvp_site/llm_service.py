@@ -3083,12 +3083,7 @@ def _build_reprompt_request(
 
 def _validate_and_enforce_planning_block(
     response_text: str | None,
-    user_input: str,
-    game_state: GameState,
-    chosen_model: str,
-    system_instruction: str,
     structured_response: NarrativeResponse | None = None,
-    provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> str:
     """
     Validates that structured_response.planning_block exists and is valid JSON.
@@ -3100,12 +3095,7 @@ def _validate_and_enforce_planning_block(
 
     Args:
         response_text: The AI's response text (for context only)
-        user_input: The user's input (unused but kept for signature compatibility)
-        game_state: Current game state (unused but kept for signature compatibility)
-        chosen_model: Model (unused but kept for signature compatibility)
-        system_instruction: System instruction (unused but kept for signature compatibility)
         structured_response: NarrativeResponse object to check (REQUIRED)
-        provider_name: Provider name (unused but kept for signature compatibility)
 
     Returns:
         str: Response text unchanged - no modifications are made
@@ -3260,8 +3250,9 @@ def continue_story(
     if mode == constants.MODE_REWARDS:
         agent = RewardsAgent(current_game_state)
     else:
-        # The agent is selected based on the raw user input (before validation mutations)
-        agent = get_agent_for_input(raw_user_input, current_game_state)
+        # The agent is selected based on the raw user input and mode
+        # Mode parameter enables API clients to use mode="think" without THINK: prefix
+        agent = get_agent_for_input(raw_user_input, current_game_state, mode)
     is_god_mode_command: bool = isinstance(agent, GodModeAgent)
 
     # Get turn number for living world advancement from game state
@@ -3998,24 +3989,19 @@ def continue_story(
     )
 
     # Only add planning blocks if:
-    # 1. Currently in character mode
+    # 1. Currently in character or think mode
     # 2. User isn't switching to god mode
     # 3. AI response isn't in DM mode
     # 4. User didn't send a GOD MODE: command (administrative, not gameplay)
     if (
-        mode == constants.MODE_CHARACTER
+        mode in (constants.MODE_CHARACTER, constants.MODE_THINK)
         and not is_switching_to_god_mode
         and not is_dm_mode_response
         and not is_god_mode_command
     ):
         response_text = _validate_and_enforce_planning_block(
             response_text,
-            user_input,
-            current_game_state,
-            chosen_model,
-            system_instruction_final,
             structured_response=gemini_response.structured_response,
-            provider_name=provider_selection.provider,
         )
 
     # MODERNIZED: No longer recreate LLMResponse based on response_text modifications

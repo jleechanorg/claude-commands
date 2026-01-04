@@ -374,28 +374,68 @@
             ></textarea>
             <button class="btn btn-primary" type="submit">Send</button>
           </div>
-          <div class="form-check form-check-inline mt-2">
-            <input
-              class="form-check-input"
-              type="radio"
-              name="interactionMode"
-              id="char-mode"
-              value="character"
-              checked
-            />
-            <label class="form-check-label" for="char-mode"
-              >Character Mode</label
-            >
-          </div>
-          <div class="form-check form-check-inline">
-            <input
-              class="form-check-input"
-              type="radio"
-              name="interactionMode"
-              id="god-mode"
-              value="god"
-            />
-            <label class="form-check-label" for="god-mode">God Mode</label>
+          <div class="d-flex flex-wrap gap-3 mt-2 align-items-center">
+            <div class="form-check form-check-inline m-0">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="interactionMode"
+                id="char-mode"
+                value="character"
+                checked
+              />
+              <label class="form-check-label" for="char-mode">Character</label>
+              <button
+                type="button"
+                class="btn btn-link btn-sm p-0 ms-1"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Play as your character. Your input becomes their actions and dialogue. The story advances based on what you do."
+                aria-label="Character Mode info"
+              >
+                <i class="bi bi-question-circle text-muted"></i>
+              </button>
+            </div>
+            <div class="form-check form-check-inline m-0">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="interactionMode"
+                id="think-mode"
+                value="think"
+              />
+              <label class="form-check-label" for="think-mode">Think/Plan</label>
+              <button
+                type="button"
+                class="btn btn-link btn-sm p-0 ms-1"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Pause the story to think strategically. Get deep analysis of your options with pros/cons. No actions are taken - time freezes while you plan."
+                aria-label="Think Mode info"
+              >
+                <i class="bi bi-question-circle text-muted"></i>
+              </button>
+            </div>
+            <div class="form-check form-check-inline m-0">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="interactionMode"
+                id="god-mode"
+                value="god"
+              />
+              <label class="form-check-label" for="god-mode">God</label>
+              <button
+                type="button"
+                class="btn btn-link btn-sm p-0 ms-1"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Administrative control. Modify stats, spawn items, teleport, correct mistakes. The game world is paused. No story advancement."
+                aria-label="God Mode info"
+              >
+                <i class="bi bi-question-circle text-muted"></i>
+              </button>
+            </div>
           </div>
         </form>
 

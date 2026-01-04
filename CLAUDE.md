@@ -167,11 +167,11 @@ with patch('shutil.which', return_value='/usr/bin/command'):
 ```
 
 ### Testing Protocol
-**ZERO TOLERANCE:** Run ALL tests, fix ALL failures
-```bash
-./run_tests.sh            # All tests
-./run_ui_tests.sh mock    # UI tests
-```
+**ZERO TOLERANCE:** Fix ALL test failures in CI
+**LOCAL TESTING:** Don't run full test suite locally - rely on GitHub CI
+- Run only SPECIFIC tests related to your changes: `TESTING=true vpython mvp_site/tests/test_<specific>.py`
+- GitHub CI is the authoritative source for test results
+- Full local test suite is slow and unnecessary when CI runs automatically
 
 ### Import Standards
 - ❌ **FORBIDDEN**: try/except around imports (ANY context)

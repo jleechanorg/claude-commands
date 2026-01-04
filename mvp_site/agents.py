@@ -5,20 +5,23 @@ This module provides the agent architecture for handling different interaction
 modes in the game. Each agent encapsulates mode-specific logic and has a focused
 subset of system prompts.
 
-Agent Hierarchy:
+Agent Hierarchy (priority order used by get_agent_for_input):
 - BaseAgent: Abstract base class with common functionality
-- StoryModeAgent: Handles narrative storytelling (character mode)
+- GodModeAgent: Handles administrative commands (god mode)
+- PlanningAgent: Handles strategic planning (think mode)
 - InfoAgent: Handles equipment/inventory queries (trimmed prompts)
 - CombatAgent: Handles active combat encounters (combat mode)
-- GodModeAgent: Handles administrative commands (god mode)
+- RewardsAgent: Handles rewards, loot, and progression-related logic
+- StoryModeAgent: Handles narrative storytelling (character mode)
 
 Usage:
     from mvp_site.agents import (
         get_agent_for_input,
         StoryModeAgent,
+        GodModeAgent,
+        PlanningAgent,
         InfoAgent,
         CombatAgent,
-        GodModeAgent,
     )
 
     # Get appropriate agent for user input
@@ -191,6 +194,7 @@ class StoryModeAgent(BaseAgent):
         {
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Planning block schema
             constants.PROMPT_TYPE_DND_SRD,
         }
     )
@@ -351,6 +355,7 @@ class GodModeAgent(BaseAgent):
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_GOD_MODE,
             constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
             constants.PROMPT_TYPE_DND_SRD,
             constants.PROMPT_TYPE_MECHANICS,
         }
@@ -648,6 +653,125 @@ class CharacterCreationAgent(BaseAgent):
         return any(phrase in lower for phrase in CHARACTER_CREATION_DONE_PHRASES)
 
 
+class PlanningAgent(BaseAgent):
+    """
+    Agent for Think Mode (Strategic Planning) interactions.
+
+    This agent handles strategic planning and tactical analysis where the
+    character pauses to think WITHOUT advancing the narrative. Time only
+    advances by 1 microsecond to maintain temporal ordering.
+
+    PlanningAgent sits at priority 2 in agent selection: it is checked
+    immediately after GodModeAgent and before all other specialized
+    agents (Info, Combat, Rewards) and StoryModeAgent. When a user
+    explicitly enters Think Mode, this agent handles the input ahead of
+    all non-god interactions.
+
+    Responsibilities:
+    - Deep strategic analysis with multiple options
+    - Pros/cons evaluation for each approach
+    - Confidence assessment for tactical choices
+    - Internal monologue generation (character's thoughts)
+    - Microsecond-only time advancement (no narrative time)
+
+    System Prompt Hierarchy:
+    1. Master directive (establishes AI authority)
+    2. Think mode instruction (planning behavior)
+    3. Game state instructions (state structure reference)
+    4. D&D SRD (game rules knowledge)
+
+    Note: No narrative advancement - world is frozen while character thinks.
+    """
+
+    # Required prompts - always loaded for think mode
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(
+        {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_THINK,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Planning block schema (canonical)
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_DND_SRD,
+        }
+    )
+
+    # No optional prompts for think mode - it's focused on planning
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset()
+
+    MODE: str = constants.MODE_THINK
+
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+        turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
+    ) -> str:
+        """
+        Build system instructions for think mode.
+
+        Uses a focused prompt set for strategic planning:
+        - Master directive (authority)
+        - Think mode instruction (planning behavior)
+        - Game state (state structure reference)
+        - D&D SRD (game rules knowledge)
+
+        Note: selected_prompts, use_default_world, and turn_number parameters are
+        accepted to match the BaseAgent interface but are intentionally ignored
+        because think mode always uses its fixed prompt set without world lore or
+        living world advancement.
+
+        Returns:
+            Complete system instruction string for strategic planning
+        """
+        # Parameters intentionally unused - think mode uses fixed prompt set
+        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
+        del llm_requested_sections
+
+        builder = self._prompt_builder
+
+        # Build think mode instructions (fixed prompt set)
+        parts: list[str] = builder.build_think_mode_instructions()
+
+        # Finalize WITHOUT world instructions (think mode doesn't need world lore)
+        return builder.finalize_instructions(parts, use_default_world=False)
+
+    @classmethod
+    def matches_input(cls, user_input: str, mode: str | None = None) -> bool:
+        """
+        Think mode is triggered by "THINK:" prefix or explicit mode selection.
+
+        Uses constants.is_think_mode() for centralized detection logic.
+        Note: matches_input() is called during agent selection, which happens
+        AFTER the frontend has normalized the input (adding THINK: prefix when
+        mode == "think"), so the mode parameter is typically not needed here.
+
+        Args:
+            user_input: Raw user input text
+            mode: Optional mode parameter from request (rarely needed since
+                  frontend normalizes input before agent selection)
+
+        Returns:
+            True if think mode is detected via prefix or mode
+        """
+        return constants.is_think_mode(user_input, mode)
+
+    def preprocess_input(self, user_input: str) -> str:
+        """
+        Preprocess think mode input.
+
+        Preserves the "THINK:" prefix for the LLM to recognize
+        the planning command context.
+
+        Args:
+            user_input: Raw user input with "THINK:" prefix
+
+        Returns:
+            Input unchanged (LLM needs to see the THINK: prefix)
+        """
+        return user_input
+
+
 # --- INFO QUERY CLASSIFICATION ---
 # Conservative patterns: Only route to InfoAgent for CLEAR info-only queries
 
@@ -708,6 +832,7 @@ class InfoAgent(BaseAgent):
     System Prompt Hierarchy (TRIMMED for focus):
     1. Master directive (establishes AI authority)
     2. Game state instructions (contains Equipment Query Protocol)
+    3. Planning protocol (canonical planning_block schema)
 
     Note: NO narrative, mechanics, or character_template prompts.
     This reduces prompt from ~2000 lines to ~1100 lines, improving
@@ -719,6 +844,7 @@ class InfoAgent(BaseAgent):
         {
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_GAME_STATE,  # Contains Equipment Query Protocol
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
         }
     )
 
@@ -822,6 +948,7 @@ class CombatAgent(BaseAgent):
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_COMBAT,
             constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
             constants.PROMPT_TYPE_NARRATIVE,  # For DM Note protocol and cinematic style
             constants.PROMPT_TYPE_DND_SRD,
             constants.PROMPT_TYPE_MECHANICS,
@@ -952,6 +1079,7 @@ class RewardsAgent(BaseAgent):
     REQUIRED_PROMPTS: frozenset[str] = frozenset({
         constants.PROMPT_TYPE_MASTER_DIRECTIVE,
         constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
         constants.PROMPT_TYPE_REWARDS,
         constants.PROMPT_TYPE_DND_SRD,
         constants.PROMPT_TYPE_MECHANICS,
@@ -1081,7 +1209,7 @@ class RewardsAgent(BaseAgent):
 
 
 def get_agent_for_input(
-    user_input: str, game_state: "GameState | None" = None
+    user_input: str, game_state: "GameState | None" = None, mode: str | None = None
 ) -> BaseAgent:
     """
     Factory function to get the appropriate agent for user input.
@@ -1090,14 +1218,16 @@ def get_agent_for_input(
     1. GodModeAgent if input starts with "GOD MODE:" (highest priority)
     2. CharacterCreationAgent if character creation is in progress (second highest)
        - UNLESS user indicates they're done, then transitions to StoryMode
-    3. InfoAgent for pure info queries (equipment, inventory, stats)
-    4. CombatAgent if game_state.combat_state.in_combat is True
-    5. RewardsAgent if rewards are pending (combat end, encounter completion)
-    6. StoryModeAgent for all other inputs (default)
+    3. PlanningAgent if input starts with "THINK:" or mode is "think" (strategic planning)
+    4. InfoAgent for pure info queries (equipment, inventory, stats)
+    5. CombatAgent if game_state.combat_state.in_combat is True
+    6. RewardsAgent if rewards are pending (combat end, encounter completion)
+    7. StoryModeAgent for all other inputs (default)
 
     Args:
         user_input: Raw user input text
         game_state: GameState for context (passed to agent)
+        mode: Optional mode string from API client (e.g., "think", "character")
 
     Returns:
         The appropriate agent instance for handling the input
@@ -1125,6 +1255,9 @@ def get_agent_for_input(
         >>> agent = get_agent_for_input("continue", rewards_pending_state)
         >>> isinstance(agent, RewardsAgent)
         True
+        >>> agent = get_agent_for_input("THINK: what are my options?")
+        >>> isinstance(agent, PlanningAgent)
+        True
         >>> agent = get_agent_for_input("I explore the tavern.")
         >>> isinstance(agent, StoryModeAgent)
         True
@@ -1147,22 +1280,28 @@ def get_agent_for_input(
         logging_util.info("🎭 CHARACTER_CREATION_ACTIVE: Using CharacterCreationAgent")
         return CharacterCreationAgent(game_state)
 
-    # Priority 3: Info queries (equipment, inventory, stats) - trimmed prompts
+    # Priority 3: Think mode for strategic planning (higher than all non-god modes)
+    # Supports both THINK: prefix and explicit mode="think" from API clients
+    if PlanningAgent.matches_input(user_input, mode):
+        logging_util.info("🧠 THINK_MODE_DETECTED: Using PlanningAgent")
+        return PlanningAgent(game_state)
+
+    # Priority 4: Info queries (equipment, inventory, stats) - trimmed prompts
     if InfoAgent.matches_input(user_input):
         logging_util.info("📦 INFO_QUERY_DETECTED: Using InfoAgent (trimmed prompts)")
         return InfoAgent(game_state)
 
-    # Priority 4: Combat mode when in active combat
+    # Priority 5: Combat mode when in active combat
     if CombatAgent.matches_game_state(game_state):
         logging_util.info("⚔️ COMBAT_MODE_ACTIVE: Using CombatAgent")
         return CombatAgent(game_state)
 
-    # Priority 5: Rewards mode when rewards are pending
+    # Priority 6: Rewards mode when rewards are pending
     if RewardsAgent.matches_game_state(game_state):
         logging_util.info("🏆 REWARDS_MODE_ACTIVE: Using RewardsAgent")
         return RewardsAgent(game_state)
 
-    # Priority 6: Default to story mode
+    # Priority 7: Default to story mode
     return StoryModeAgent(game_state)
 
 
@@ -1172,6 +1311,7 @@ __all__ = [
     "StoryModeAgent",
     "GodModeAgent",
     "CharacterCreationAgent",
+    "PlanningAgent",
     "InfoAgent",
     "CombatAgent",
     "RewardsAgent",
