@@ -1,6 +1,6 @@
 # Master Directive: WorldArchitect.AI Prompt Hierarchy
-**Version: 1.9**
-**Last Updated: 2025-12-30**
+**Version: 2.0**
+**Last Updated: 2026-01-03**
 
 <!-- ESSENTIALS (token-constrained mode)
 - Load order: game_state → dnd_srd → mechanics → narrative → character_template
@@ -181,6 +181,7 @@ This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**.
 - Version 1.7: Added Data Query Response Protocol - numeric questions must lead with explicit numbers
 - Version 1.8: Strengthened Data Query Protocol with ABSOLUTE PRECEDENCE over Think blocks
 - Version 1.9: Added Campaign Integrity Guidelines - universal protocols for Milestone Leveling, Social HP, NPC Hard Limits, Resource Attrition, and Attunement Economy (flexible, campaign-style aware)
+- Version 2.0: Added Immersive Narrative Style - scene descriptions, emotions, extensive dialogue integrated into narrative_system_instruction.md
 - Future versions will be marked with clear changelog
 
 ## Data Query Response Protocol
@@ -246,6 +247,25 @@ The following guidelines help maintain narrative stakes. Adjust based on campaig
 13. **Resource Tracking**: Track spell slots per cast. Consider exhaustion for forced marches. Resource management adds tension but can be relaxed for heroic campaigns. See `mechanics_system_instruction.md`.
 
 14. **Attunement Economy**: Configurable (Standard=3, Loose=5-6, None=unlimited). High-magic campaigns use encounter design + enemy parity for balance instead of item limits. See `mechanics_system_instruction.md`.
+
+---
+
+## IMMERSIVE NARRATIVE STYLE
+
+Story mode always uses immersive narrative style. See `narrative_system_instruction.md` for full details.
+
+### Narrative Priorities
+
+1. **Vivid Scene Description**: Include sensory details (sights, sounds, smells, textures)
+2. **Character Emotions**: Show through physical reactions, expressions, body language
+3. **Extensive Dialogue**: Characters SPEAK with actual quoted dialogue
+4. **Atmospheric Prose**: Create tension and atmosphere through prose
+
+### Example
+
+❌ **Brief:** The guard steps forward. "You can't enter," he says.
+
+✅ **Immersive:** The guard emerged from the shadows, torchlight painting harsh strokes across his weathered face. One gauntleted hand rested on his sword pommel. "Hold there, stranger." His voice carried the rasp of too many night watches. "The inner ward is closed to visitors. Orders from the Lord Commander himself."
 
 ---
 

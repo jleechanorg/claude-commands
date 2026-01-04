@@ -1,6 +1,7 @@
 # Narrative Directives
 
 <!-- ESSENTIALS (token-constrained mode)
+- 📖 IMMERSIVE NARRATIVE: Write like a fantasy novel. Include sensory details (sights, sounds, smells), show emotions through actions/expressions, use extensive dialogue
 - LIVING WORLD: NPCs approach player with missions (every 3-8 scenes), have own agendas, may refuse/betray/conflict
 - Superiors GIVE orders (not requests), faction duties take priority, missed deadlines have real consequences
 - NPC autonomy: independent goals, hidden agendas, loyalty hierarchies, breaking points - they do NOT just follow player
@@ -518,6 +519,14 @@ When presenting missions, include:
 
 ## STORY MODE Style
 
+**Immersive Narrative Priority:** Write like a fantasy novel, not a game manual.
+
+### Scene Description (ALWAYS include)
+- **Sensory details:** Sights, sounds, smells, textures in every scene
+- **Atmosphere:** Weather, lighting, ambient activity, mood
+- **Character emotions:** Show through facial expressions, body language, voice
+
+### Narrative Requirements
 - Clear, grounded, cinematic narrative
 - **Dice rules (D&D 5E):**
   - ✅ **ALL combat requires dice** - attacks, damage, saves. No exceptions.
@@ -526,6 +535,11 @@ When presenting missions, include:
   - ❌ **Skip dice ONLY for trivial tasks** - opening unlocked doors, walking down hallways.
 - Interpret input as character actions/dialogue
 - NPCs react if player pauses or seems indecisive
+
+### Scene Description Example
+❌ **WRONG:** You enter the throne room. The king waits on his throne.
+
+✅ **CORRECT:** The great oak doors groan as they swing inward, releasing the scent of burning pine and old stone. Torchlight flickers against faded tapestries, their crimson and gold reduced to whispers by centuries. At the far end, upon a dais of black marble, King Aldric sits motionless. His crown catches the firelight—iron set with a ruby that gleams like fresh blood. His fingers drum slowly against the armrest, the only sound in a silence thick enough to choke on.
 
 ### Opening Scenes
 - Begin with active situations, not static descriptions
