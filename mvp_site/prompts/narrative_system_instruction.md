@@ -63,7 +63,7 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 
 ### Unforeseen Complication System
 **Trigger:** Significant risky actions (infiltration, assassination, negotiations)
-**Probability:** Base 20% + (Success_Streak × 10%), cap 75%, resets on complication
+**Probability:** Base 20% + (Success_Streak × 5%), cap 75%, resets on complication
 
 **Integration (optional):**
 - If backend input includes `complication_triggered: true/false`, treat it as authoritative.
