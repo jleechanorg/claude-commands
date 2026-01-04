@@ -235,6 +235,7 @@ MODE_COMBAT = "combat"
 MODE_REWARDS = "rewards"
 MODE_INFO = "info"  # For equipment/inventory/stats queries with trimmed prompts
 MODE_CHARACTER_CREATION = "character_creation"  # For focused character creation flow
+MODE_CAMPAIGN_UPGRADE = "campaign_upgrade"  # For divine/multiverse ascension ceremonies
 
 # Mode prefixes - used for input detection
 THINK_MODE_PREFIX = "THINK:"
@@ -287,7 +288,6 @@ def is_think_mode(user_input: str, mode: str | None = None) -> bool:
     # Type validation per coding guidelines - use isinstance() checks
     normalized_mode = mode.lower() if isinstance(mode, str) else None
     return normalized_mode == MODE_THINK or normalized.startswith(THINK_MODE_PREFIX)
-
 
 # --- COMBAT PHASE CONSTANTS ---
 # Canonical set of combat phases indicating combat has ended
@@ -368,6 +368,17 @@ DND_ATTRIBUTE_CODES = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
 
 # Default attribute system for new campaigns
 DEFAULT_ATTRIBUTE_SYSTEM = ATTRIBUTE_SYSTEM_DND
+
+# --- CAMPAIGN TIER CONSTANTS ---
+# Used to track campaign progression for divine/multiverse upgrades
+CAMPAIGN_TIER_MORTAL = "mortal"  # Standard D&D 5e gameplay
+CAMPAIGN_TIER_DIVINE = "divine"  # Divine Leverage system (god tier)
+CAMPAIGN_TIER_SOVEREIGN = "sovereign"  # Sovereign Protocol (multiverse tier)
+
+# Thresholds for campaign upgrades
+DIVINE_UPGRADE_LEVEL_THRESHOLD = 25  # Level at which divine upgrade becomes available
+DIVINE_POTENTIAL_THRESHOLD = 100  # divine_potential value to trigger upgrade
+UNIVERSE_CONTROL_THRESHOLD = 70  # universe_control value to trigger multiverse upgrade
 
 
 # Helper functions for attribute system validation
@@ -495,6 +506,12 @@ PROMPT_TYPE_REPUTATION = "reputation"
 PROMPT_TYPE_CHARACTER_CREATION = "character_creation"
 PROMPT_TYPE_THINK = "think"
 PROMPT_TYPE_PLANNING_PROTOCOL = "planning_protocol"
+# Divine Leverage (god tier) prompt types
+PROMPT_TYPE_DIVINE_ASCENSION = "divine_ascension"
+PROMPT_TYPE_DIVINE_SYSTEM = "divine_system"
+# Sovereign Protocol (multiverse tier) prompt types
+PROMPT_TYPE_SOVEREIGN_ASCENSION = "sovereign_ascension"
+PROMPT_TYPE_SOVEREIGN_SYSTEM = "sovereign_system"
 
 
 # --- PROMPT PATHS ---
@@ -525,6 +542,14 @@ CHARACTER_CREATION_INSTRUCTION_PATH = os.path.join(
 )
 THINK_MODE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, FILENAME_THINK_MODE)
 PLANNING_PROTOCOL_PATH = os.path.join(PROMPTS_DIR, "planning_protocol.md")
+# Divine Leverage prompt paths
+DIVINE_PROMPTS_DIR = os.path.join(PROMPTS_DIR, "divine")
+DIVINE_ASCENSION_PATH = os.path.join(DIVINE_PROMPTS_DIR, "divine_ascension_ceremony.md")
+DIVINE_SYSTEM_PATH = os.path.join(DIVINE_PROMPTS_DIR, "divine_leverage_system.md")
+# Sovereign Protocol prompt paths
+MULTIVERSE_PROMPTS_DIR = os.path.join(PROMPTS_DIR, "multiverse")
+SOVEREIGN_ASCENSION_PATH = os.path.join(MULTIVERSE_PROMPTS_DIR, "sovereign_ascension_ceremony.md")
+SOVEREIGN_SYSTEM_PATH = os.path.join(MULTIVERSE_PROMPTS_DIR, "sovereign_system.md")
 
 # --- LIVING WORLD SETTINGS ---
 # The living world instruction is included every N turns to advance world state.

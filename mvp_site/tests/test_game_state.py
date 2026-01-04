@@ -172,6 +172,11 @@ class TestGameState(unittest.TestCase):
             "attribute_system": "D&D",
             "arc_milestones": {},
             "active_constraints": [],
+            "campaign_tier": "mortal",
+            "divine_potential": 0,
+            "universe_control": 0,
+            "divine_upgrade_available": False,
+            "multiverse_upgrade_available": False,
         }
 
         # Test that timestamp is recent
@@ -206,6 +211,11 @@ class TestGameState(unittest.TestCase):
             "attribute_system": "D&D",
             "arc_milestones": {},
             "active_constraints": [],
+            "campaign_tier": "mortal",
+            "divine_potential": 0,
+            "universe_control": 0,
+            "divine_upgrade_available": False,
+            "multiverse_upgrade_available": False,
         }
         assert gs.last_state_update_timestamp == custom_time
         assert gs.extra_field == "extra_value"
@@ -350,6 +360,11 @@ class TestGameState(unittest.TestCase):
                 "attribute_system": "D&D",
                 "arc_milestones": {},
                 "active_constraints": [],
+                "campaign_tier": "mortal",
+                "divine_potential": 0,
+                "universe_control": 0,
+                "divine_upgrade_available": False,
+                "multiverse_upgrade_available": False,
             },
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,

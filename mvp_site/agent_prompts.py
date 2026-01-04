@@ -58,6 +58,12 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_CHARACTER_CREATION: constants.CHARACTER_CREATION_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_THINK: constants.THINK_MODE_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_PLANNING_PROTOCOL: constants.PLANNING_PROTOCOL_PATH,
+    # Divine Leverage (god tier) prompts
+    constants.PROMPT_TYPE_DIVINE_ASCENSION: constants.DIVINE_ASCENSION_PATH,
+    constants.PROMPT_TYPE_DIVINE_SYSTEM: constants.DIVINE_SYSTEM_PATH,
+    # Sovereign Protocol (multiverse tier) prompts
+    constants.PROMPT_TYPE_SOVEREIGN_ASCENSION: constants.SOVEREIGN_ASCENSION_PATH,
+    constants.PROMPT_TYPE_SOVEREIGN_SYSTEM: constants.SOVEREIGN_SYSTEM_PATH,
 }
 
 # Store loaded instruction content in a dictionary for easy access

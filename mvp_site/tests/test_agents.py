@@ -78,6 +78,8 @@ def create_mock_game_state(
         "class": character_class,
     }
 
+    # Ensure campaign upgrade is not triggered in tests
+    mock_state.is_campaign_upgrade_available.return_value = False
     return mock_state
 
 
@@ -101,6 +103,9 @@ def create_rewards_game_state(
     # Mock attributes for CharacterCreationAgent checks (character creation completed)
     mock_state.custom_campaign_state = {"character_creation_completed": True}
     mock_state.player_character_data = {"name": "Test Character", "class": "Fighter"}
+
+    # Ensure campaign upgrade is not triggered in tests
+    mock_state.is_campaign_upgrade_available.return_value = False
 
     return mock_state
 
@@ -141,6 +146,9 @@ def create_character_creation_game_state(
     }
 
     mock_state.rewards_pending = {"level_up_available": level_up_available}
+
+    # Ensure campaign upgrade is not triggered in tests
+    mock_state.is_campaign_upgrade_available.return_value = False
 
     return mock_state
 

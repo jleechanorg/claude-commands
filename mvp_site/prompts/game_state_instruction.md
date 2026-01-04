@@ -1046,3 +1046,458 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 **(Arc milestone tracking and completion rules are documented in `game_state_examples.md`)**
 
 **(Combat session tracking and temporal consistency rules are documented in `game_state_examples.md`)**
+
+**Canonical Schema (example):**
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "arc_milestones": {
+        "primary_arc": {
+          "status": "in_progress",
+          "phase": "infiltration",
+          "progress": 30,
+          "updated_at": "2025-12-24T18:00:00Z"
+        }
+      }
+    }
+  }
+}
+```
+
+**Completion Example:**
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "arc_milestones": {
+        "primary_arc": {
+          "status": "completed",
+          "phase": "escape_success",
+          "completed_at": "2025-12-24T18:05:00Z",
+          "progress": 100
+        }
+      }
+    }
+  }
+}
+```
+
+**Rules:**
+- Always use a dict for arc entries (never a string like `"COMPLETED"`).
+- Use UTC ISO timestamps; prefer `world_data.timestamp_iso` if available.
+- Only create additional arc keys if the user or system explicitly defines multiple distinct arcs.
+
+### Campaign Progression Tracking (Divine/Multiverse Upgrades)
+
+**Purpose:** Track player progression toward divine (god-tier) and multiverse (sovereign) campaign upgrades.
+
+**Location:** `custom_campaign_state`
+
+**Fields to Track:**
+- `divine_potential` (0-100): Progress toward divine ascension. Increment when player:
+  - Touches divine artifacts (+5-10)
+  - Defeats divine/demonic entities (+10-20)
+  - Receives blessings or curses from gods (+15-25)
+  - Performs miraculous feats beyond mortal capability (+5-15)
+  - Reaches narrative milestones indicating divine attention (+10-30)
+  - At 100: Divine upgrade becomes available
+
+- `universe_control` (0-100): Progress toward multiversal dominion. Increment when player:
+  - Controls entire kingdoms or empires (+5-15)
+  - Defeats world-ending threats (+10-20)
+  - Gains absolute power over fundamental forces (+15-25)
+  - Manipulates reality on cosmic scale (+20-30)
+  - Absorbs other divine entities' power (+15-25)
+  - At 70+: Multiverse upgrade becomes available
+
+- `divine_upgrade_available` (boolean): Set to `true` when divine potential >= 100 or level >= 25 or narrative milestone reached
+- `multiverse_upgrade_available` (boolean): Set to `true` when universe_control >= 70 or narrative milestone reached
+
+**Update Example:**
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "divine_potential": 45,
+      "universe_control": 0
+    }
+  }
+}
+```
+
+**Narrative Milestone Trigger Example:**
+When the player explicitly becomes a god or achieves cosmic dominion:
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "divine_upgrade_available": true
+    }
+  }
+}
+```
+
+**Rules:**
+- Increment gradually based on narrative events - don't jump to 100 suddenly
+- Always explain in narrative why divine/cosmic power is growing
+- The upgrade ceremony triggers automatically when conditions are met
+- After upgrade, `campaign_tier` changes to "divine" or "sovereign"
+
+### Combat State Session Tracking (Complements Enemy HP Tracking Above)
+
+**CRITICAL:** When combat begins or ends, update `combat_state` with session tracking fields. This works WITH the Enemy HP Tracking schema above - combine both when managing combat state:
+
+```json
+{
+  "combat_state": {
+    "in_combat": true,
+    "combat_session_id": "combat_<timestamp>_<4char_location>",
+    "combat_phase": "active",
+    "current_round": 1,
+    "combat_start_timestamp": "ISO-8601",
+    "combat_trigger": "Description of what started combat",
+    "initiative_order": [
+      {"name": "pc_kira_001", "initiative": 18, "type": "pc"},
+      {"name": "npc_goblin_boss_001", "initiative": 15, "type": "enemy"},
+      {"name": "npc_wolf_001", "initiative": 12, "type": "ally"}
+    ],
+    "combatants": {
+      "pc_kira_001": {"hp_current": 35, "hp_max": 35, "status": [], "type": "pc"},
+      "npc_goblin_boss_001": {"hp_current": 45, "hp_max": 45, "status": [], "type": "enemy"},
+      "npc_wolf_001": {"hp_current": 11, "hp_max": 11, "status": [], "type": "ally"}
+    }
+  }
+}
+```
+
+**CRITICAL: String-ID-Keyed Schema**
+- `initiative_order[].name` MUST exactly match keys in `combatants` dict
+- Use `string_id` format: `pc_<name>_###` for PCs, `npc_<type>_###` for NPCs/enemies
+- Example: `pc_kira_001`, `npc_goblin_001`, `npc_troll_boss_001`
+- Server cleanup removes defeated enemies by matching string_id to combatant keys
+
+**Combat Phase Values:**
+| Phase | Description |
+|-------|-------------|
+| `initiating` | Rolling initiative, combat starting |
+| `active` | Combat rounds in progress |
+| `ended` | Combat complete, XP/loot awarded, return to story mode |
+| `fled` | Party fled combat |
+
+**Combat Session ID Format:** `combat_<unix_timestamp>_<4char_location_hash>`
+- Example: `combat_1703001234_dung` (combat in dungeon)
+- Used for tracking combat instances and logging
+
+**🚨 MANDATORY: Combat Start Detection**
+When transitioning INTO combat (setting `in_combat: true`), you MUST:
+1. Generate a unique `combat_session_id`
+2. Set `combat_phase` to `"initiating"` then `"active"`
+3. Set `combat_trigger` describing what started the encounter
+4. Roll initiative for all combatants
+
+**🚨 MANDATORY: Combat End Detection**
+When transitioning OUT of combat (setting `in_combat: false`), you MUST:
+1. Set `combat_phase` to `"ended"`
+2. Award XP for all defeated enemies
+3. Distribute loot from defeated enemies
+4. Update resource consumption (spell slots, HP, etc.)
+5. Display clear rewards summary to player
+
+**Separation Example:**
+```json
+{
+  "narrative": "Kira deflects the goblin's blow and drives her blade home. The creature crumples.",
+  "planning_block": {
+    "choices": {
+      "loot_body": {
+        "text": "Search the Goblin",
+        "description": "Search the goblin",
+        "risk_level": "low"
+      },
+      "press_on": {
+        "text": "Continue Deeper",
+        "description": "Continue deeper",
+        "risk_level": "medium"
+      },
+      "check_for_traps": {
+        "text": "Check for Traps",
+        "description": "Scan the path ahead for hidden dangers",
+        "risk_level": "low"
+      }
+    }
+  },
+  "state_updates": {
+    "combat_state": {
+      "combatants": {
+        "npc_goblin_001": { "hp_current": 0, "status": ["dead"], "type": "enemy" }
+      }
+    }
+  }
+}
+```
+*Narrative = prose. Planning = choices. State = facts.*
+
+### State Recovery (GOD_MODE_SET)
+
+**When to use:** If state severely out of sync (HP mismatch, missing items, wrong location, contradictory NPC status).
+
+**Protocol:**
+1. Halt story narration immediately
+2. List specific discrepancies found (e.g., "HP shows 45 but should be 75")
+3. Present recovery block for user to copy/paste:
+
+```
+GOD_MODE_SET:
+player_character_data.hp_current = 75
+player_character_data.inventory.sunstone_amulet = {"name": "Sunstone Amulet"}
+world_data.npcs.man_tibbet.current_status = __DELETE__
+```
+
+**Rules:**
+- Deltas only (never output entire state)
+- Valid JSON literals: strings in `"quotes"`, numbers unquoted, `true`/`false`, `__DELETE__`
+- One change per line, dot-separated paths
+- Explain to user they must paste this block to resync
+
+## World Time
+
+**Calendar:** Forgotten Realms = Harptos (1492 DR), Modern = Gregorian, Custom = specify
+
+**world_time object:** `{year, month, day, hour, minute, second, microsecond, time_of_day}`
+
+**Time-of-Day Mapping:** 0-4: Deep Night | 5-6: Dawn | 7-11: Morning | 12-13: Midday | 14-17: Afternoon | 18-19: Evening | 20-23: Night
+
+**CRITICAL:** Always update BOTH hour AND time_of_day together.
+
+**Travel/Rest Time Costs:**
+- Combat: 6 seconds/round | Short Rest: 1 hour | Long Rest: 8 hours
+- Road travel: 3 mph walk, 6 mph mounted | Wilderness: 2 mph walk, 4 mph mounted
+- Difficult terrain: half speed | Investigation: 10-30 min/scene
+
+## 🚨 TEMPORAL CONSISTENCY PROTOCOL (MANDATORY)
+
+**CRITICAL: Time MUST always move FORWARD. Backward time travel is FORBIDDEN unless explicitly authorized via GOD MODE.**
+
+### Core Rule: Time-Forward-Only
+
+Every response that updates `world_time` MUST result in a timestamp that is **strictly greater than** the previous timestamp. This prevents:
+- Accidental time loops
+- Duplicate timestamps across turns
+- Narrative inconsistency from time jumps backward
+
+### Time Increment Guidelines
+
+**1. Think/Plan Actions (TIME FROZEN - No Narrative Advancement):**
+
+🚨 **CRITICAL: During thinking blocks, the world is FROZEN. Time does NOT pass narratively.**
+
+When player uses think/plan/consider/strategize/options keywords and you generate a Deep Think Planning Block:
+- **Narrative time does NOT advance** - the world is paused
+- Increment `microsecond` field by +1 **for technical uniqueness only**
+- This +1 microsecond is a database artifact, NOT story time
+- Do NOT increment seconds, minutes, or hours
+- **NPCs remain exactly where they were** - they do not move, speak, or react
+- **Environmental conditions remain static** - no events occur
+- **The player is deliberating outside of narrative time** - like pausing a video game
+
+**Example:** If a player says "Think about my options" while a priestess is corking a vial, the priestess is still corking that same vial when they finish thinking. She has not walked away, finished her task, or done anything else during the think block.
+
+**2. Story-Advancing Actions:**
+| Action Type | Time Increment |
+|-------------|----------------|
+| Think/plan action | +1 microsecond (NO narrative time—world frozen) |
+| Brief dialogue exchange | +1-5 minutes |
+| Combat round (D&D) | +6 seconds |
+| Short rest | +1 hour |
+| Long rest | +8 hours |
+| Travel | Calculate from distance/speed |
+| Quick action (look around, check item) | +10-30 seconds |
+| Scene transition | +5-15 minutes |
+
+If you omit `world_time`, the engine will keep the existing timeline unchanged. Always provide `world_data.timestamp_iso` so the session header and backward-time checks reflect your intended calendar and era.
+
+### Updated World Time Object (with Microseconds)
+
+```json
+{
+  "world_time": {
+    "year": 1492,
+    "month": "Mirtul",
+    "day": 10,
+    "hour": 14,
+    "minute": 30,
+    "second": 25,
+    "microsecond": 0,
+    "time_of_day": "Afternoon"
+  }
+}
+```
+
+**New Field:**
+- `microsecond`: (integer 0-999999) Technical field for database uniqueness during think blocks. **This is NOT narrative time**—it exists purely to ensure each response has a distinct timestamp. When incrementing microseconds during a think block, the world remains frozen; only the technical timestamp changes.
+
+### 🚨 MANDATORY TIME FIELDS (ALL REQUIRED)
+
+**CRITICAL: When updating world_time, ALL fields must be present. Partial updates are INVALID.**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `year` | integer | **YES** | The year (e.g., 1492, 3641) |
+| `month` | string/integer | **YES** | Month name or number (e.g., "Mirtul", 5) |
+| `day` | integer | **YES** | Day of month (1-31) |
+| `hour` | integer | **YES** | Hour (0-23) |
+| `minute` | integer | **YES** | Minute (0-59) |
+| `second` | integer | **YES** | Second (0-59) |
+| `microsecond` | integer | **YES** | Microsecond (0-999999) |
+| `time_of_day` | string | **YES** | Period name (Dawn/Morning/Midday/etc.) |
+
+**❌ INVALID (missing year/month/day):**
+```json
+{"world_time": {"hour": 8, "minute": 15, "time_of_day": "Morning"}}
+```
+
+**✅ VALID (all fields present):**
+```json
+{"world_time": {"year": 3641, "month": "Mirtul", "day": 20, "hour": 8, "minute": 15, "second": 0, "microsecond": 0, "time_of_day": "Morning"}}
+```
+
+**RULE: Copy all time fields from the current state, then modify only what changes.** Never generate partial time objects.
+
+### Backward Time Travel (GOD MODE ONLY)
+
+Time can ONLY move backward when:
+1. User input explicitly starts with "GOD MODE:"
+2. AND the god mode command explicitly requests time manipulation (e.g., "GOD MODE: Reset to Mirtul 10 evening", "GOD MODE: Flashback to...")
+
+**Example God Mode Time Reset:**
+```json
+{
+  "god_mode_response": "Time reset to Mirtul 10, Evening as requested.",
+  "state_updates": {
+    "world_data": {
+      "world_time": {
+        "year": 1492,
+        "month": "Mirtul",
+        "day": 10,
+        "hour": 19,
+        "minute": 0,
+        "second": 0,
+        "microsecond": 0,
+        "time_of_day": "Evening"
+      }
+    }
+  }
+}
+```
+
+### Validation Rule
+
+Before outputting any `state_updates` containing `world_time`, mentally verify:
+1. Is the new timestamp > previous timestamp? ✅ Proceed
+2. Is the new timestamp ≤ previous timestamp?
+   - Is this a GOD MODE time manipulation request? ✅ Proceed with warning in god_mode_response
+   - Is this normal gameplay? ❌ **HALT** - Do not output backward time. Increment forward instead.
+
+**FORBIDDEN (unless GOD MODE):**
+- Setting time to an earlier date/hour/minute than current state
+- Replaying scenes at their original timestamp
+- "Resuming" from an earlier point without god mode authorization
+
+## Core Memory Log
+
+Long-term narrative memory. Append significant events to `custom_campaign_state.core_memories`:
+```json
+{"custom_campaign_state": {"core_memories": {"append": "Event summary here"}}}
+```
+
+**Include (MUST log):**
+- Major plot events, mission completions, pivotal twists
+- Level ups with summary of gains
+- Major power-ups, transformations, significant resource changes
+- Key NPC status changes (capture, death, allegiance shifts)
+- Unforeseen Complications triggered
+- Time skips with duration and focus
+- DM Note retcons/corrections
+
+**Exclude:** Think blocks, routine dice rolls, minor transactions, temporary scene details
+
+## Custom Campaign State
+
+- `attribute_system`: "dnd" (legacy "destiny" values are deprecated; migrate to D&D 6-attribute system)
+- `active_missions`: **ALWAYS a LIST** of `{mission_id, title, status, objective}`
+- `core_memories`: **ALWAYS a LIST** of strings (use `{"append": "..."}` to add)
+- `reputation`: **REQUIRED** - Public/Private reputation tracking (see below)
+
+### 📢 Reputation Schema (REQUIRED)
+
+**Track in `custom_campaign_state.reputation`:**
+```json
+"reputation": {
+  "public": {
+    "score": 0,
+    "titles": [],
+    "known_deeds": [],
+    "rumors": [],
+    "notoriety_level": "unknown"
+  },
+  "private": {
+    "faction_string_id": {
+      "score": 0,
+      "standing": "neutral",
+      "known_deeds": [],
+      "secret_knowledge": [],
+      "trust_override": null
+    }
+  }
+}
+```
+
+**Public Reputation:**
+- `score`: -100 to +100 (infamous to legendary)
+- `notoriety_level`: "infamous" | "notorious" | "disreputable" | "unknown" | "known" | "respected" | "famous" | "legendary"
+- `titles`: Array of earned titles/epithets
+- `known_deeds`: Array of publicly witnessed actions
+- `rumors`: Array of current gossip (true or false)
+
+**Private Reputation (per faction):**
+- `score`: -10 to +10 (enemy to champion)
+- `standing`: "enemy" | "hostile" | "unfriendly" | "neutral" | "friendly" | "trusted" | "ally" | "champion"
+- `known_deeds`: Actions this faction knows about
+- `secret_knowledge`: What faction knows that isn't public
+- `trust_override`: If set, overrides NPC relationship trust_level for this faction's members
+
+**🚨 PRIORITY HIERARCHY:** Private trust_override (if set) > Private relationship > Private reputation > Public reputation > Default
+- If `trust_override` is set for a faction, it overrides `trust_level` for that faction's members
+- Direct experience trumps hearsay when no override is set
+
+**⚠️ For behavior modifiers and update triggers, request:** `debug_info.meta.needs_detailed_instructions: ["reputation"]`
+
+### ❌ INVALID FORMAT WARNING
+**Never use dictionary format for `active_missions`:**
+```json
+// WRONG - will cause errors:
+{"active_missions": {"main_quest": {"title": "...", "status": "..."}}}
+
+// CORRECT - must be array:
+{"active_missions": [{"mission_id": "main_quest", "title": "...", "status": "accepted", "objective": "..."}]}
+```
+
+## Time Pressure System
+
+**time_sensitive_events:** DICT keyed by event_id → `{description, deadline, consequences, urgency_level, status, warnings_given, related_npcs}`
+**time_pressure_warnings:** `{subtle_given, clear_given, urgent_given, last_warning_day}` (track escalation to prevent duplicate warnings)
+**npc_agendas:** DICT keyed by npc_id → `{current_goal, progress_percentage, next_milestone, blocking_factors, completed_milestones}`
+**world_resources:** DICT keyed by resource_id → `{current_amount, max_amount, depletion_rate, depletion_unit, critical_level, consequence, last_updated_day}` (depletion_unit: "per_day", "per_hour", "per_patient_per_day")
+
+## Data Schema Rules
+
+1. `active_missions` = LIST of mission objects (never dict)
+2. `core_memories` = LIST of strings (use append syntax)
+3. `npc_data` = DICT keyed by name, update specific fields only (delete with `"__DELETE__"`)
+4. `combat_state` = use `combatants` not `enemies`, track `hp_max` accurately per CR
+5. `combat_state.combatants[].hp_max` = **MUST match CR-appropriate values** (see combat_system_instruction.md)
+
+**CRITICAL:** Never replace top-level objects - update nested fields only.
+
+**🚨 COMBAT HP INTEGRITY:** Enemies with stated CR MUST have HP in the expected range. CR 12 = 221+ HP. No exceptions without narrative justification (pre-existing wounds, environmental damage, etc.).

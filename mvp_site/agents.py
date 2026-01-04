@@ -523,6 +523,19 @@ class StoryModeAgent(BaseAgent):
         # Add system reference instructions (D&D SRD)
         builder.add_system_reference_instructions(parts)
 
+        # Add campaign tier-specific prompts (Divine Leverage / Sovereign Protocol)
+        # These are optional prompts that activate based on campaign_tier
+        if self.game_state is not None:
+            campaign_tier = self.game_state.get_campaign_tier()
+            from mvp_site.agent_prompts import _load_instruction_file
+
+            if campaign_tier == constants.CAMPAIGN_TIER_DIVINE:
+                parts.append(_load_instruction_file(constants.PROMPT_TYPE_DIVINE_SYSTEM))
+                logging_util.debug("📿 DIVINE_TIER: Including Divine Leverage system prompt")
+            elif campaign_tier == constants.CAMPAIGN_TIER_SOVEREIGN:
+                parts.append(_load_instruction_file(constants.PROMPT_TYPE_SOVEREIGN_SYSTEM))
+                logging_util.debug("🌌 SOVEREIGN_TIER: Including Sovereign Protocol system prompt")
+
         # Add continuation-specific reminders for story continuation
         if include_continuation_reminder:
             parts.append(builder.build_continuation_reminder())
@@ -1365,6 +1378,112 @@ class RewardsAgent(FixedPromptAgent):
         return False
 
 
+class CampaignUpgradeAgent(BaseAgent):
+    """
+    Agent for handling campaign tier upgrades (divine/multiverse ascension ceremonies).
+
+    This agent handles the one-time upgrade ceremonies when a player transitions:
+    - Normal (mortal) → Divine (Divine Leverage system)
+    - Divine or Normal → Sovereign (Multiversal campaign)
+
+    After the ceremony completes, the StoryModeAgent handles ongoing gameplay
+    with the new tier's mechanics via optional prompts.
+
+    Priority: Just below GodModeAgent (highest priority after admin commands).
+    """
+
+    MODE = constants.MODE_CAMPAIGN_UPGRADE
+
+    # Required prompts always loaded for upgrade ceremonies
+    REQUIRED_PROMPTS = frozenset(
+        {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_MECHANICS,
+            constants.PROMPT_TYPE_DND_SRD,
+        }
+    )
+
+    # No optional prompts - ceremony prompts are selected dynamically
+    OPTIONAL_PROMPTS = frozenset()
+
+    def __init__(self, game_state: "GameState | None" = None) -> None:
+        """Initialize the CampaignUpgradeAgent with game state."""
+        super().__init__(game_state)
+        self._upgrade_type: str | None = None
+        if game_state:
+            self._upgrade_type = game_state.get_pending_upgrade_type()
+
+    def build_system_instructions(self) -> list[str]:
+        """
+        Build system instructions for campaign upgrade ceremony.
+
+        Returns prompts appropriate for the pending upgrade type
+        (divine ascension or multiverse ascension).
+        """
+        from mvp_site.agent_prompts import PromptBuilder, _load_instruction_file
+
+        builder = PromptBuilder(self.game_state)
+
+        # Start with core instructions
+        parts = builder.build_core_system_instructions()
+
+        # Add the appropriate ascension ceremony prompt
+        if self._upgrade_type == "multiverse":
+            parts.append(
+                _load_instruction_file(constants.PROMPT_TYPE_SOVEREIGN_ASCENSION)
+            )
+            logging_util.info(
+                "🌌 CAMPAIGN_UPGRADE: Loading Sovereign ascension ceremony"
+            )
+        elif self._upgrade_type == "divine":
+            parts.append(
+                _load_instruction_file(constants.PROMPT_TYPE_DIVINE_ASCENSION)
+            )
+            logging_util.info(
+                "✨ CAMPAIGN_UPGRADE: Loading Divine ascension ceremony"
+            )
+
+        # Add mechanics reference for stat conversion
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+
+        return parts
+
+    @classmethod
+    def matches_game_state(cls, game_state: "GameState | None") -> bool:
+        """
+        Check if a campaign upgrade is available based on game state.
+
+        Returns True if:
+        - Divine upgrade available (mortal tier, divine_potential >= 100 or level >= 25)
+        - Multiverse upgrade available (any tier, universe_control >= 70)
+
+        Args:
+            game_state: Current game state to check
+
+        Returns:
+            True if an upgrade ceremony should be triggered
+        """
+        if game_state is None:
+            return False
+
+        return game_state.is_campaign_upgrade_available()
+
+    @classmethod
+    def matches_input(cls, _user_input: str) -> bool:
+        """
+        Campaign upgrade is NOT triggered by input - only by game state.
+
+        Args:
+            _user_input: Raw user input text (unused)
+
+        Returns:
+            Always False - use matches_game_state instead
+        """
+        return False
+
+
 def get_agent_for_input(
     user_input: str,
     game_state: GameState | None = None,
@@ -1374,7 +1493,7 @@ def get_agent_for_input(
     Factory function to get the appropriate agent for user input.
 
     Primary routing is handled by the Semantic Intent Classifier.
-    Safety overrides (God Mode) are checked first.
+    Safety overrides (God Mode) and state-based checks (CharacterCreation, CampaignUpgrade) are checked first.
 
     Priority:
     1. GodModeAgent (Manual override)
@@ -1420,6 +1539,12 @@ def get_agent_for_input(
     if PlanningAgent.matches_input(user_input, mode):
         logging_util.info("🧠 THINK_MODE_DETECTED: Using PlanningAgent (Explicit Override)")
         return PlanningAgent(game_state)
+
+    # 4.5. State-based: Campaign upgrade ceremonies (divine/multiverse ascension)
+    # This check happens BEFORE semantic classification since it's state-based
+    if CampaignUpgradeAgent.matches_game_state(game_state):
+        logging_util.info("⬆️ CAMPAIGN_UPGRADE_AVAILABLE: Using CampaignUpgradeAgent")
+        return CampaignUpgradeAgent(game_state)
 
     # 5. Semantic Intent Classification (PRIMARY BRAIN)
     intent_mode = constants.MODE_CHARACTER
@@ -1481,6 +1606,19 @@ def get_agent_for_input(
             )
         return CharacterCreationAgent(game_state)
 
+    if intent_mode == constants.MODE_CAMPAIGN_UPGRADE:
+        # Route to CampaignUpgradeAgent based on semantic intent
+        # Agent can handle upgrade ceremonies and guide players toward ascension
+        if CampaignUpgradeAgent.matches_game_state(game_state):
+            logging_util.info(
+                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE: ({confidence:.2f}) -> CampaignUpgradeAgent (upgrade available)"
+            )
+        else:
+            logging_util.info(
+                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE: ({confidence:.2f}) -> CampaignUpgradeAgent (guiding toward ascension)"
+            )
+        return CampaignUpgradeAgent(game_state)
+
     # 6. API Explicit Mode (UI forced fallback)
     if mode:
         # Normalize mode to lowercase for case-insensitive comparison (consistent with Priority 1 and 4)
@@ -1513,6 +1651,13 @@ def get_agent_for_input(
             else:
                 logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CharacterCreationAgent (initiating level-up/recreation)")
             return CharacterCreationAgent(game_state)
+        elif normalized_mode == constants.MODE_CAMPAIGN_UPGRADE:
+            # Route to CampaignUpgradeAgent - can handle upgrade ceremonies and guide toward ascension
+            if CampaignUpgradeAgent.matches_game_state(game_state):
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CampaignUpgradeAgent (upgrade available)")
+            else:
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CampaignUpgradeAgent (guiding toward ascension)")
+            return CampaignUpgradeAgent(game_state)
         # MODE_CHARACTER falls through to default StoryModeAgent
 
     # 7. Default Fallback (always returns StoryModeAgent if no other agent matched)
@@ -1531,6 +1676,7 @@ ALL_AGENT_CLASSES: tuple[type[BaseAgent], ...] = (
     StoryModeAgent,
     GodModeAgent,
     CharacterCreationAgent,
+    CampaignUpgradeAgent,
     PlanningAgent,
     InfoAgent,
     CombatAgent,
@@ -1560,6 +1706,7 @@ __all__ = [
     "StoryModeAgent",
     "GodModeAgent",
     "CharacterCreationAgent",
+    "CampaignUpgradeAgent",
     "PlanningAgent",
     "InfoAgent",
     "CombatAgent",

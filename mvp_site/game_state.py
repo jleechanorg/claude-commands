@@ -292,6 +292,22 @@ class GameState:
                 constants.DEFAULT_ATTRIBUTE_SYSTEM
             )
 
+        # Campaign tier progression (mortal → divine → sovereign)
+        if "campaign_tier" not in self.custom_campaign_state:
+            self.custom_campaign_state["campaign_tier"] = (
+                constants.CAMPAIGN_TIER_MORTAL
+            )
+
+        # Divine/multiverse progression tracking
+        if "divine_potential" not in self.custom_campaign_state:
+            self.custom_campaign_state["divine_potential"] = 0
+        if "universe_control" not in self.custom_campaign_state:
+            self.custom_campaign_state["universe_control"] = 0
+        if "divine_upgrade_available" not in self.custom_campaign_state:
+            self.custom_campaign_state["divine_upgrade_available"] = False
+        if "multiverse_upgrade_available" not in self.custom_campaign_state:
+            self.custom_campaign_state["multiverse_upgrade_available"] = False
+
         self.combat_state = kwargs.get("combat_state", {"in_combat": False})
         # Normalize combat_state to handle LLM-generated malformed data
         self._normalize_combat_state()
@@ -1724,6 +1740,113 @@ class GameState:
             lines.append(f"{i}. {directive}")
 
         return "\n".join(lines)
+
+    # =========================================================================
+    # Campaign Upgrade Detection (Divine/Multiverse Tiers)
+    # =========================================================================
+
+    def get_campaign_tier(self) -> str:
+        """Get the current campaign tier (mortal, divine, or sovereign)."""
+        return self.custom_campaign_state.get(
+            "campaign_tier", constants.CAMPAIGN_TIER_MORTAL
+        )
+
+    def is_divine_upgrade_available(self) -> bool:
+        """
+        Check if divine upgrade (mortal → divine) is available.
+
+        Triggers:
+        - divine_potential >= 100
+        - Level >= 25
+        - divine_upgrade_available flag set by narrative milestone
+        """
+        if self.get_campaign_tier() != constants.CAMPAIGN_TIER_MORTAL:
+            return False
+
+        # Check explicit flag (set by narrative milestone)
+        if self.custom_campaign_state.get("divine_upgrade_available", False):
+            return True
+
+        # Check divine potential threshold
+        divine_potential = self.custom_campaign_state.get("divine_potential", 0)
+        if divine_potential >= constants.DIVINE_POTENTIAL_THRESHOLD:
+            return True
+
+        # Check level threshold
+        experience = self.player_character_data.get("experience", {})
+        level = experience.get("level", 1) if isinstance(experience, dict) else 1
+        if level >= constants.DIVINE_UPGRADE_LEVEL_THRESHOLD:
+            return True
+
+        return False
+
+    def is_multiverse_upgrade_available(self) -> bool:
+        """
+        Check if multiverse upgrade (any tier → sovereign) is available.
+
+        Triggers:
+        - universe_control >= 70
+        - multiverse_upgrade_available flag set by narrative milestone
+        """
+        if self.get_campaign_tier() == constants.CAMPAIGN_TIER_SOVEREIGN:
+            return False
+
+        # Check explicit flag (set by narrative milestone)
+        if self.custom_campaign_state.get("multiverse_upgrade_available", False):
+            return True
+
+        # Check universe control threshold
+        universe_control = self.custom_campaign_state.get("universe_control", 0)
+        if universe_control >= constants.UNIVERSE_CONTROL_THRESHOLD:
+            return True
+
+        return False
+
+    def is_campaign_upgrade_available(self) -> bool:
+        """Check if any campaign upgrade is currently available."""
+        return self.is_divine_upgrade_available() or self.is_multiverse_upgrade_available()
+
+    def get_pending_upgrade_type(self) -> str | None:
+        """
+        Get the type of upgrade that's currently available.
+
+        Returns:
+            "divine" if divine upgrade is available
+            "multiverse" if multiverse upgrade is available
+            None if no upgrade is available
+        """
+        # Multiverse takes priority (can upgrade from any tier)
+        if self.is_multiverse_upgrade_available():
+            return "multiverse"
+        if self.is_divine_upgrade_available():
+            return "divine"
+        return None
+
+    def get_highest_stat_modifier(self) -> int:
+        """
+        Get the highest ability score modifier for GP calculation.
+
+        Used for converting stats to God Power in divine/sovereign tiers.
+        """
+        attributes = self.player_character_data.get("attributes", {})
+        if not isinstance(attributes, dict):
+            return 0
+
+        highest_modifier = 0
+        for attr_name, attr_value in attributes.items():
+            if isinstance(attr_value, dict):
+                # Handle {"score": 18, "modifier": 4} format
+                modifier = attr_value.get("modifier", 0)
+            elif isinstance(attr_value, int):
+                # Handle direct score value - calculate modifier
+                modifier = (attr_value - 10) // 2
+            else:
+                continue
+
+            if isinstance(modifier, int) and modifier > highest_modifier:
+                highest_modifier = modifier
+
+        return highest_modifier
 
     # =========================================================================
     # Post-Combat Reward Detection
