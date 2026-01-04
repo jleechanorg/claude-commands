@@ -309,6 +309,22 @@ Base 20% + (Success_Streak × 10%), capped at 75%
 - Occur without narrative justification
 - Negate successful planning completely
 
+## Sanctuary Mode
+
+After completing a **major arc or questline**, grant the player ~1 week (21 turns) without life-ending events.
+
+**Track in state_updates:** `custom_campaign_state.sanctuary_mode: { active: true, expires_turn: <current + 21>, arc: "<name>" }`
+
+**During sanctuary, DO NOT generate:**
+- Lethal ambushes, assassination attempts, or major faction attacks on the player
+- Life-threatening complications from the Unforeseen Complications system
+
+**Sanctuary ALLOWS:** Companion conversations, planning, shopping, training, peaceful exploration, minor (non-lethal) complications.
+
+**Sanctuary BREAKS if player initiates:** Attacks on major factions, declarations of war, assassination attempts, stronghold raids. Defensive combat does NOT break sanctuary.
+
+**Notify player:** On activation ("*A sense of calm settles over the realm...*"), expiration, or breaking.
+
 ## Output Requirements
 
 ### Mandatory State Updates
