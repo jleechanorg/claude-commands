@@ -241,7 +241,7 @@ Living world turns are ideal moments for complications to emerge from off-screen
 
 **Probability Formula:**
 ```
-Base 20% + (Success_Streak × 5%), capped at 75%
+Base 20% + (Success_Streak × 10%), capped at 75%
 ```
 
 **Success_Streak Tracking:**
