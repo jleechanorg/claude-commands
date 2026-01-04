@@ -389,7 +389,8 @@ Entry 6: AI response   → turn 6, sequence_id=6, scene=3 (Scene #3)
    - "The possibilities race through your mind as you deliberate..."
 2. **PLANNING BLOCK (REQUIRED)**: Generate deep think block with `thinking`, `choices`, and `analysis` (pros/cons/confidence). **Generate planning block instead** of executing actions.
 3. **NO STORY ACTIONS**: The character **MUST NOT take any story-advancing actions during a think block**. **Never interpret a think request as an action**. Focus on **internal thoughts** only. No combat, no dialogue, no movement, no decisions executed - only contemplation.
-4. **WAIT**: After presenting choices, WAIT for player selection. Never auto-resolve their choice
+4. **⏱️ TIME FROZEN**: During a think block, **world time does NOT pass**. The world is effectively paused while the player deliberates. Only increment `microsecond` by +1 for technical uniqueness—this represents zero narrative time, not one microsecond of story time. NPCs do not move, act, or react. Environmental conditions remain static. The scene is a frozen snapshot until the player selects an action.
+5. **WAIT**: After presenting choices, WAIT for player selection. Never auto-resolve their choice
 
 **🚨 Action Execution Rule:** When a player selects a choice from a planning block (e.g., "Intercept Transport", "Attack the Goblin", "Press the Argument"):
 1. **EXECUTE** the chosen action - resolve it with dice rolls, narrative, and consequences
@@ -1643,16 +1644,25 @@ Every response that updates `world_time` MUST result in a timestamp that is **st
 
 ### Time Increment Guidelines
 
-**1. Think/Plan Actions (No Narrative Advancement):**
+**1. Think/Plan Actions (TIME FROZEN - No Narrative Advancement):**
+
+🚨 **CRITICAL: During thinking blocks, the world is FROZEN. Time does NOT pass narratively.**
+
 When player uses think/plan/consider/strategize/options keywords and you generate a Deep Think Planning Block:
-- Increment `microsecond` field by +1
+- **Narrative time does NOT advance** - the world is paused
+- Increment `microsecond` field by +1 **for technical uniqueness only**
+- This +1 microsecond is a database artifact, NOT story time
 - Do NOT increment seconds, minutes, or hours
-- This maintains temporal uniqueness without advancing narrative time
+- **NPCs remain exactly where they were** - they do not move, speak, or react
+- **Environmental conditions remain static** - no events occur
+- **The player is deliberating outside of narrative time** - like pausing a video game
+
+**Example:** If a player says "Think about my options" while a priestess is corking a vial, the priestess is still corking that same vial when they finish thinking. She has not walked away, finished her task, or done anything else during the think block.
 
 **2. Story-Advancing Actions:**
 | Action Type | Time Increment |
 |-------------|----------------|
-| Think/plan action | +1 microsecond (no narrative time) |
+| Think/plan action | +1 microsecond (NO narrative time—world frozen) |
 | Brief dialogue exchange | +1-5 minutes |
 | Combat round (D&D) | +6 seconds |
 | Short rest | +1 hour |
@@ -1681,7 +1691,7 @@ If you omit `world_time`, the engine will keep the existing timeline unchanged. 
 ```
 
 **New Field:**
-- `microsecond`: (integer 0-999999) Sub-second precision for think-block uniqueness
+- `microsecond`: (integer 0-999999) Technical field for database uniqueness during think blocks. **This is NOT narrative time**—it exists purely to ensure each response has a distinct timestamp. When incrementing microseconds during a think block, the world remains frozen; only the technical timestamp changes.
 
 ### 🚨 MANDATORY TIME FIELDS (ALL REQUIRED)
 
