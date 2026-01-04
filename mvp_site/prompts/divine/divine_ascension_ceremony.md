@@ -1,6 +1,6 @@
-# Divine Ascension Ceremony
+# Divine Ascension Ceremony (The Divine Deception Protocol)
 
-**Purpose:** Guide the transition from normal D&D 5e campaign to the Divine Leverage system.
+**Purpose:** Guide the transition from normal D&D 5e campaign to the Divine Leverage system. Initialize the player as a hidden god operating under a multi-layered deception protocol.
 
 ## Trigger Conditions
 
@@ -22,12 +22,32 @@ Present the player with the recognition of their divine potential:
 
 You have reached the threshold of divinity. Your deeds, your power, and your very essence have attracted the attention of forces beyond the Material Plane.
 
+But divinity is a dangerous gift. The Pantheon does not welcome newcomers. Mystra watches the Weave for anomalies. Helm guards against unauthorized power. Ao enforces the cosmic order.
+
 You stand at a crossroads:
 - Continue as a mortal, powerful beyond measure but still bound by the laws of flesh and time
-- Embrace your nascent divinity and enter the game of gods
+- Embrace your nascent divinity and enter the game of gods—but you must play it in disguise
 ```
 
-### Phase 2: Domain Selection
+### Phase 2: The Deception Protocol Explanation
+
+Before proceeding, explain the core mechanic:
+
+```
+[THE DIVINE DECEPTION PROTOCOL]
+
+To survive as a nascent deity, you must master the art of concealment. You will maintain multiple "faces" to hide your true power:
+
+**Layer 0 - The Mask:** Your mortal identity. To the world, you remain [CHARACTER NAME], a powerful but finite adventurer. Physics applies. You can be wounded, you tire, you hunger. Using divine power in this layer risks detection.
+
+**Layer 1 - The Persona (Unlocked at Tier 2):** A fabricated deity identity with its own portfolio, church, and myth. Other gods will see this persona as a legitimate, if minor, member of the Pantheon.
+
+**Layer 2 - The Source:** Your true self. Cosmic. Infinite. Terrifying. This is never revealed unless you choose to "Drop the Mask."
+
+The Central Tension: Every use of divine power while wearing the Mortal Mask creates "Divine Dissonance"—a disturbance in reality that the Pantheon can detect. Manage your Dissonance, or be discovered.
+```
+
+### Phase 3: Domain Selection
 
 Analyze the campaign history to suggest a divine domain based on:
 1. Most frequently used abilities/spells
@@ -46,7 +66,7 @@ Based on your journey, these domains resonate with your essence:
 4. **Custom Domain**: Define your own sphere of influence
 ```
 
-### Phase 3: Domain Truth Selection
+### Phase 4: Domain Truth Selection
 
 After domain selection, guide creation of the first Domain Truth:
 
@@ -61,24 +81,33 @@ Suggested Truths for [DOMAIN]:
 Or define your own: What law of reality bends to your will?
 ```
 
-### Phase 4: Mask Identity Confirmation
+### Phase 5: Mask Identity Confirmation
 
 Confirm the mortal identity that will serve as the player's "cover":
 
 ```
-[ESTABLISHING THE MASK]
+[ESTABLISHING THE MASK - LAYER 0]
 
-Even gods must sometimes walk among mortals. Your divine essence can be contained within a mortal shell - your Mask.
+Your current identity as [CHARACTER NAME] becomes your primary deception layer.
 
-Your current identity as [CHARACTER NAME] will serve as your Layer 0 - The Mask.
-- The world knows you as: [Current role/reputation]
-- Your mortal weaknesses: [Physical limitations that apply in Mask]
-- Your cover story: [How you explain your abilities]
+**Public Identity:**
+- Name: [Character Name]
+- Occupation: [Current role/reputation]
+- Known Abilities: [Class features that mortals have witnessed]
 
-When operating in your Mask, physics applies. You hunger, you tire, you can be wounded. But you always have the choice to shed the Mask and reveal your true nature... at a cost.
+**The Mask's Limitations:**
+When operating as Layer 0, you are subject to mortal physics:
+- You have HP, AC, and spell slots as normal
+- You can be wounded, poisoned, charmed
+- Death is possible (though you can spend DPP to survive, at a cost)
+
+**The Mask's Protection:**
+Using divine power while in the Mask is HIGH RISK. Any metric mismatch (dealing impossible damage) or probability violation (surviving the unsurvivable) generates massive Divine Dissonance.
+
+Your cover story for unusual abilities: [Suggest based on character - artifact, patron blessing, destiny, etc.]
 ```
 
-### Phase 5: Stat Conversion
+### Phase 6: Stat Conversion
 
 Convert D&D 5e stats to Divine Leverage system:
 
@@ -102,50 +131,64 @@ Your mortal capabilities have been transmuted into divine currency:
 - **Essence:** 0
 
 Your Safe Limit for Divine Leverage is +5 (Tier 1).
-Any leverage beyond this risks attracting attention...
+Exceeding this limit generates Dissonance: (Leverage - 5) × 2% per point.
 ```
 
-### Phase 6: Clock Initialization
+### Phase 7: Dissonance System Initialization
 
-Initialize the detection clocks:
+Initialize the detection system:
 
 ```
-[DETECTION SYSTEMS INITIALIZED]
+[DIVINE DISSONANCE SYSTEM - INITIALIZED]
 
-PUBLIC SUSPICION: [==========] 0%
-> Status: DORMANT - The world knows nothing yet
+DISSONANCE: [░░░░░░░░░░] 0%
+  > Status: SAFE - The Pantheon knows nothing
+  > Active Observers: None
 
 APEX ATTENTION: [Hidden]
-> Vibe: The air feels... Still
+  > Vibe: The air feels... Still
 
-Your ascension was quiet. For now. But every use of divine power risks discovery.
+Your ascension was quiet. For now. But every divine act in mortal form risks discovery:
+
+| Action | Risk |
+|--------|------|
+| Using Divine Leverage within Safe Limit | Low (+0-5%) |
+| Exceeding Safe Limit | Moderate (formula applies) |
+| Dealing impossible damage as mortal | High (+15-25%) |
+| Surviving lethal blow via DPP | High (+10-15%) |
+| Using power near another god's avatar | Severe (+20-30%) |
+
+Reduce Dissonance by:
+- Spending Mitigation Tokens (-10% each)
+- Passing time without divine acts
+- Completing Narrative Echoes
 ```
 
-### Phase 7: Divine HUD Activation
+### Phase 8: Divine HUD Activation
 
 Display the first Divine HUD:
 
 ```
 [DIVINE HUD v11.0 - ACTIVATED]
 =========================================
-IDENTITY: [Name] | MASK: [Occupation]
+IDENTITY: [Name] | MASK: Layer 0 (Mortal)
 TIER: 1 | SAFE LIMIT: +5 | DOMAIN: [Domain]
 ACTIVE TRUTH: "[First Domain Truth]"
 -----------------------------------------
 RESOURCES:
 [DPP]: 5/5   [TOKENS]: 3/3   [ESSENCE]: 0
 -----------------------------------------
-CLOCKS:
-[PUBLIC SUSPICION]: [==========] 0%
-  > STATUS: Dormant
-[APEX ATTENTION]:   [Hidden]
+DISSONANCE: [░░░░░░░░░░] 0%
+  > STATUS: Safe
+  > ACTIVE OBSERVERS: None
+APEX ATTENTION: [Hidden]
   > VIBE: The air feels... Still
 =========================================
 
 [CEREMONY COMPLETE]
 
 You have ascended to Tier 1: Divine Mortal.
-The game has changed. Play wisely.
+You are a god hiding in plain sight. Play wisely.
 ```
 
 ## State Updates for Ascension
@@ -162,7 +205,7 @@ Apply these state changes upon completion:
         "mitigation_tokens": 3,
         "max_mitigation_tokens": 3,
         "essence": 0,
-        "public_suspicion": 0,
+        "divine_dissonance": 0,
         "apex_attention": 0,
         "domain": "[Selected Domain]",
         "domain_truths": ["[First Truth]"],
