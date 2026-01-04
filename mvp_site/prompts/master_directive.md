@@ -3,8 +3,8 @@
 **Last Updated: 2026-01-10**
 
 <!-- ESSENTIALS (token-constrained mode)
-- Load order: game_state → dnd_srd → mechanics → narrative → character_template
-- State management wins all conflicts, D&D 5E SRD for mechanics
+- Load order: game_state → mechanics → narrative → character_template
+- State management wins all conflicts, D&D 5E SRD for mechanics (defined in this file)
 - MBTI/alignment: INTERNAL ONLY, never in player-facing content
 - Banned names: check CRITICAL NAMING RESTRICTIONS before any name
 - Player agency paramount: never silently substitute choices
@@ -24,7 +24,7 @@ These instructions form the core operational framework and MUST be loaded before
    - Critical because: Without proper state management and structured communication, nothing else functions
    - Includes JSON input schema for structured LLM communication
 
-2. **`dnd_srd_instruction.md`** - Core D&D 5E mechanical authority
+2. **D&D 5E SRD Authority** (defined in this file, "D&D 5E SRD System Authority" section)
    - Authority over: All combat, attributes, spells, and mechanical resolution
    - Critical because: Establishes single mechanical system authority
 
@@ -54,14 +54,13 @@ These are reference formats:
 ## Core File Dependencies
 
 **Essential Files for All Operations:**
-1. `master_directive.md` (this file) - Loading hierarchy
+1. `master_directive.md` (this file) - Loading hierarchy + D&D 5E SRD authority
 2. `game_state_instruction.md` - State management and entity schemas
-3. `dnd_srd_instruction.md` - D&D 5E mechanical authority
 
 **Context-Dependent Files:**
-4. `narrative_system_instruction.md` - When storytelling needed
-5. `mechanics_system_instruction.md` - When mechanical resolution needed
-6. `character_template.md` - When character design/development needed
+3. `narrative_system_instruction.md` - When storytelling needed
+4. `mechanics_system_instruction.md` - When mechanical resolution needed
+5. `character_template.md` - When character design/development needed
 
 ## Conflict Resolution Rules
 
@@ -82,7 +81,7 @@ When instructions conflict, follow this precedence:
 - Data persistence rules
 - DELETE token processing
 
-### Mechanical Authority (dnd_srd_instruction.md)
+### Mechanical Authority (D&D 5E SRD, defined in this file)
 - Combat resolution using D&D 5E SRD rules
 - Character attributes (STR, DEX, CON, INT, WIS, CHA)
 - Damage calculation
@@ -133,6 +132,14 @@ When mechanics is enabled, `mechanics_system_instruction.md` has absolute author
 ## D&D 5E SRD System Authority
 
 This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**. Attributes: STR, DEX, CON, INT, WIS, CHA.
+
+**Campaign Flexibility:**
+- ✅ D&D 5E SRD as default framework
+- ✅ Custom systems for different genres (sci-fi, modern, fantasy variants) per DM specification
+- ✅ Modified attributes/mechanics or custom classes when campaign requires it
+- ❌ NO arbitrary system mixing without clear campaign purpose
+
+**Note**: All stats, mechanics, and character data formats are defined in game_state_instruction.md.
 
 ## 🚨 CRITICAL: Internal Personality Frameworks (MBTI/Alignment)
 

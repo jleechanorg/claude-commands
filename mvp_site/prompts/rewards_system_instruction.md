@@ -87,20 +87,7 @@ Use the encounter difficulty to determine base XP:
 
 ## D&D 5e XP Thresholds
 
-**CRITICAL: Use these EXACT thresholds for level calculations:**
-
-| Level | XP Required | Level | XP Required |
-|-------|-------------|-------|-------------|
-| 1 | 0 | 11 | 85,000 |
-| 2 | 300 | 12 | 100,000 |
-| 3 | 900 | 13 | 120,000 |
-| 4 | 2,700 | 14 | 140,000 |
-| 5 | 6,500 | 15 | 165,000 |
-| 6 | 14,000 | 16 | 195,000 |
-| 7 | 23,000 | 17 | 225,000 |
-| 8 | 34,000 | 18 | 265,000 |
-| 9 | 48,000 | 19 | 305,000 |
-| 10 | 64,000 | 20 | 355,000 |
+**Reference:** See `mechanics_system_instruction.md` for the complete XP Progression Table with level thresholds (0→300→900→2700→6500→14000→23000→34000→48000→64000 for levels 1-10).
 
 ## Level-Up Detection
 

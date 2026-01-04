@@ -1,26 +1,8 @@
-# 🔗 Relationship Mechanics
+# 🔗 Relationship Mechanics (Detailed)
 
 **CRITICAL: Relationships are ACTIVE game mechanics, not passive flavor text.**
 
-## Relationship Tracking Protocol
-
-**Every significant NPC MUST have a `relationships` object in state:**
-```json
-"npc_data": {
-  "Theron Blackwood": {
-    "string_id": "npc_theron_001",
-    "relationships": {
-      "player": {
-        "trust_level": 3,
-        "disposition": "friendly",
-        "history": ["saved his life in the goblin cave", "shared a drink at the tavern"],
-        "debts": ["owes player a favor"],
-        "grievances": []
-      }
-    }
-  }
-}
-```
+**Schema:** See `game_state_instruction.md` → "Relationships Object" for the JSON structure (trust_level, disposition, history, debts, grievances).
 
 ## Trust Level Scale (-10 to +10)
 
