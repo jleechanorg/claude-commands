@@ -1242,7 +1242,11 @@ LLM: [Checks resources.wild_shape.current = 0]
 ### Resource Recovery
 
 **Short Rest (1hr):** Spend Hit Dice for HP, Warlock slots refresh, Fighter (Second Wind/Action Surge), Monk Ki
-**Long Rest (8hr):** All HP, half Hit Dice, all spell slots, most features, exhaustion -1, death saves reset
+**Long Rest (8hr):** All HP, half Hit Dice, all spell slots, most features, exhaustion -1, death saves reset. Update `resources.last_long_rest_world_time` with current world_time.
+
+### Rest Recommendations
+
+Suggest rest when: 18+ hours awake, low HP/resources, exhaustion 1+, evening hours, or safe location reached. Do not suggest during combat, immediate danger, or time-critical urgency.
 
 ### Class Resources (in `resources.class_features`)
 

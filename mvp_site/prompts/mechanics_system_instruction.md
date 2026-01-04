@@ -555,9 +555,21 @@ Resources: HD: [used]/[max] | Spells: L1 [used]/[max], L2 [used]/[max], ... | [C
 | Travel > 8 hours/day | Each character makes a CON save (DC 10 + 1 per hour over 8) or gains 1 exhaustion |
 | Speed March (double pace) — HOUSE RULE | Automatic 1 exhaustion level after 4 hours of continuous double-pace travel (non-standard; PHB uses CON saves per hour beyond 8 hours) |
 | HOUSE RULE: Combat after forced march | Disadvantage on attacks/saves until short rest |
-| Going without a Long Rest for 24+ hours (Xanathar's optional) | CON save DC 10 (+5 per 24 hours beyond first) or gain 1 exhaustion - ONLY if CONTINUING to stay awake |
 
-**🚨 Long Rest = Resting, NOT staying awake.** Never roll exhaustion saves during a long rest. Long rest **reduces** exhaustion by 1.
+### Sleep Deprivation (Xanathar's Guide Rule)
+
+Track `last_long_rest_world_time` in resources. At each 24-hour threshold without long rest, Con save or gain 1 exhaustion:
+
+| Hours | DC |
+|-------|-----|
+| 24 | 10 |
+| 48 | 15 |
+| 72 | 20 |
+| +24 | +5 |
+
+At 18+ hours: describe growing weariness. Long rest removes 1 exhaustion level.
+
+**🚨 Long Rest = Resting, NOT staying awake.** Never roll exhaustion saves during a long rest.
 
 ### Exhaustion Effects (STRICTLY ENFORCED)
 
@@ -590,7 +602,8 @@ Include in every `state_updates` after resource usage:
         "second_wind": {"used": 0, "max": 1}
       },
       "hit_dice": {"used": 2, "max": 8},
-      "exhaustion_level": 0
+      "exhaustion_level": 0,
+      "last_long_rest_world_time": {"year": 1492, "month": 5, "day": 14, "hour": 6, "minute": 0}
     }
   }
 }
