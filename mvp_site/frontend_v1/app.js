@@ -43,17 +43,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Global function for equipment button - sends "list my equipment" to backend
-  window.sendEquipmentQuery = async function () {
+  // Shared helper for character info queries (equipment, stats, spells)
+  // Uses dedicated API endpoints for fast, deterministic responses
+  const sendCharacterInfoQuery = async (endpoint, summaryKey, errorMsg) => {
     if (!currentCampaignId) {
-      console.warn('No campaign loaded - cannot send equipment query');
+      console.warn(`No campaign loaded - cannot fetch ${endpoint}`);
       return;
     }
 
     const userInputEl = document.getElementById('user-input');
     const localSpinner = document.getElementById('loading-spinner');
     const timerInfo = document.getElementById('timer-info');
-    const equipmentQuery = 'list my equipment';
 
     // Show spinner and disable input
     if (localSpinner) localSpinner.style.display = 'block';
@@ -64,31 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userInputEl) userInputEl.disabled = true;
     if (timerInfo) timerInfo.textContent = '';
 
-    // Show user message in chat
-    appendToStory('user', equipmentQuery, 'character');
-
     try {
       const { data, duration } = await fetchApi(
-        `/api/campaigns/${currentCampaignId}/interaction`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ input: equipmentQuery, mode: 'character' }),
-        },
+        `/api/campaigns/${currentCampaignId}/${endpoint}`,
+        { method: 'GET' },
       );
-      const narrativeText =
-        data.narrative || data.response || '[Error: No response from server]';
-      appendToStory(
-        'gemini',
-        narrativeText,
-        null,
-        data.debug_mode || false,
-        data.user_scene_number,
-        data,
-      );
+
+      // Display formatted summary from dedicated endpoint
+      const summaryText = data?.[summaryKey] || `No ${endpoint} information available.`;
+      appendToStory('system', summaryText, null, false, null, null);
       if (timerInfo) timerInfo.textContent = `Response time: ${duration}s`;
     } catch (error) {
-      console.error('Equipment query failed:', error);
-      appendToStory('system', 'Sorry, an error occurred. Please try again.');
+      console.error(`${endpoint} query failed:`, error);
+      appendToStory('system', errorMsg);
     } finally {
       if (localSpinner) localSpinner.style.display = 'none';
       if (window.loadingMessages) window.loadingMessages.stop();
@@ -98,6 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
+
+  // Global functions for quick action buttons - use dedicated API endpoints
+  window.sendEquipmentQuery = () =>
+    sendCharacterInfoQuery('equipment', 'equipment_summary', 'Sorry, an error occurred fetching equipment.');
+
+  window.sendStatsQuery = () =>
+    sendCharacterInfoQuery('stats', 'stats_summary', 'Sorry, an error occurred fetching stats.');
+
+  window.sendSpellsQuery = () =>
+    sendCharacterInfoQuery('spells', 'spells_summary', 'Sorry, an error occurred fetching spells.');
 
   const showView = (viewName) => {
     Object.values(views).forEach((v) => v && v.classList.remove('active-view'));
@@ -734,11 +732,19 @@ document.addEventListener('DOMContentLoaded', () => {
     ) {
       const escapedHeader = sanitizeHtml(fullData.session_header);
       html += `<div class="session-header">${escapedHeader}</div>`;
-      // Quick action button for equipment list
-      html += `<div class="quick-actions" style="margin: 5px 0;">
+      // Quick action buttons for equipment, stats, and spells
+      html += `<div class="quick-actions d-flex gap-2" style="margin: 5px 0;">
         <button class="btn btn-sm btn-outline-secondary equipment-btn"
                 title="List all equipped items">
-          <i class="bi bi-backpack2"></i> View Equipment
+          <i class="bi bi-backpack2"></i> Equipment
+        </button>
+        <button class="btn btn-sm btn-outline-info stats-btn"
+                title="View character stats">
+          <i class="bi bi-bar-chart"></i> Stats
+        </button>
+        <button class="btn btn-sm btn-outline-primary spells-btn"
+                title="View spells and spell slots">
+          <i class="bi bi-magic"></i> Spells
         </button>
       </div>`;
     }
@@ -798,10 +804,18 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', handleChoiceClick);
       });
 
-      // Add click handler for equipment button (CSP blocks inline onclick)
+      // Add click handlers for quick action buttons (CSP blocks inline onclick)
       const equipmentBtn = entryEl.querySelector('.equipment-btn');
       if (equipmentBtn) {
         equipmentBtn.addEventListener('click', window.sendEquipmentQuery);
+      }
+      const statsBtn = entryEl.querySelector('.stats-btn');
+      if (statsBtn) {
+        statsBtn.addEventListener('click', window.sendStatsQuery);
+      }
+      const spellsBtn = entryEl.querySelector('.spells-btn');
+      if (spellsBtn) {
+        spellsBtn.addEventListener('click', window.sendSpellsQuery);
       }
     }
   };

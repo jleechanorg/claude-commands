@@ -550,6 +550,44 @@ The server performs SHALLOW MERGE on state_updates. If you output a complete rel
 
 **Attributes:** STR (power), DEX (agility/AC), CON (HP), INT (knowledge), WIS (perception), CHA (social)
 
+### 📊 Attribute Management (Naked vs Equipped Stats)
+
+**Two attribute fields must be maintained:**
+- `base_attributes`: Naked/permanent stats (character creation + ASI + magical tomes)
+- `attributes`: Effective stats (base_attributes + equipment bonuses)
+
+**Permanent changes (update base_attributes):**
+- Character creation ability scores
+- Ability Score Improvements (ASI) at levels 4, 8, 12, 16, 19
+- Reading magical tomes (Tome of Leadership, Manual of Bodily Health, etc.)
+
+**Temporary changes (DO NOT update base_attributes):**
+- Equipment bonuses (e.g., "+2 Charisma (Max 22)" from Birthright)
+- Spell effects (e.g., Enhance Ability, Longstrider)
+- Potions and consumables
+
+**🚨 CRITICAL RULE:** When equipping/unequipping items with stat bonuses:
+1. NEVER modify `base_attributes` - these are naked stats only
+2. Update `attributes` to reflect: `base_attributes + sum(equipped item bonuses)`
+3. Respect max caps: "+2 CHA (Max 22)" means effective CHA cannot exceed 22 from this item
+
+**🔢 MATH MUST ADD UP:** Before outputting state_updates, verify:
+```
+For each stat: attributes[stat] = base_attributes[stat] + sum(equipment bonuses for stat)
+```
+If the math doesn't add up, fix it before outputting. The UI will display all three values (naked, bonuses, effective) and players will notice discrepancies.
+
+**Example:** Character with base CHA 20, wearing Birthright (+2 CHA, Max 22):
+- `base_attributes.charisma`: 20 (naked - never changes from equipment)
+- Equipment bonus: +2 (from Birthright, capped at 22)
+- `attributes.charisma`: 22 (effective = min(20 + 2, 22))
+- **Verification:** 20 + 2 = 22 ✓
+
+**Counter-example (WRONG):**
+- `base_attributes.charisma`: 22 ← WRONG: naked should be 20
+- `attributes.charisma`: 22
+- This hides the equipment bonus and breaks the math
+
 <!-- BEGIN_TOOL_REQUESTS_DICE: D&D dice tool reference stripped for code_execution -->
 **Dice Rolls (Tool-Based System):**
 - **Use `roll_dice` tool** to request dice rolls from the server (true randomness)
@@ -585,7 +623,9 @@ The server performs SHALLOW MERGE on state_updates. If you output a complete rel
  "_comment_alignment_mbti": "🚨 alignment/mbti: INTERNAL ONLY - never in narrative",
  "alignment": "", "mbti": "",
  "hp_current": 0, "hp_max": 0, "temp_hp": 0, "armor_class": 0,
+ "base_attributes": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10},
  "attributes": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10},
+ "_comment_attributes": "base_attributes = naked stats (permanent: creation + ASI + tomes). attributes = effective stats (base + equipment bonuses). Must satisfy: attributes = base_attributes + sum(equipment stat bonuses)",
  "proficiency_bonus": 2, "skills": [], "saving_throw_proficiencies": [],
  "resources": {"gold": 0, "hit_dice": {"used": 0, "total": 0}, "spell_slots": {}, "class_features": {}, "consumables": {}},
  "experience": {"current": 0, "needed_for_next_level": 300},
@@ -648,6 +688,43 @@ The server performs SHALLOW MERGE on state_updates. If you output a complete rel
   "value_gp": 50,
   "description": "A red liquid that shimmers when agitated"
 }
+```
+
+#### Spell Schema (🚨 MANDATORY: Include Level)
+**CRITICAL: ALL spells in `spells_known` MUST include their spell level for proper UI grouping.**
+
+```json
+{
+  "name": "Hypnotic Pattern",
+  "level": 3,
+  "school": "illusion",
+  "casting_time": "1 action",
+  "range": "120 feet",
+  "components": "S, M",
+  "duration": "Concentration, up to 1 minute"
+}
+```
+
+**Minimum required fields:** `name`, `level`
+
+**Example spells_known array:**
+```json
+"spells_known": [
+  {"name": "Charm Person", "level": 1},
+  {"name": "Dissonant Whispers", "level": 1},
+  {"name": "Hold Person", "level": 2},
+  {"name": "Invisibility", "level": 2},
+  {"name": "Hypnotic Pattern", "level": 3},
+  {"name": "Fear", "level": 3}
+]
+```
+
+**🔢 UI displays spells grouped by level:**
+```
+▸ Spells Known:
+  Level 1: Charm Person, Dissonant Whispers
+  Level 2: Hold Person, Invisibility
+  Level 3: Fear, Hypnotic Pattern
 ```
 
 **Common Weapon Reference (D&D 5e SRD):**
