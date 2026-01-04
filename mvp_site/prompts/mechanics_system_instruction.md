@@ -555,7 +555,9 @@ Resources: HD: [used]/[max] | Spells: L1 [used]/[max], L2 [used]/[max], ... | [C
 | Travel > 8 hours/day | Each character makes a CON save (DC 10 + 1 per hour over 8) or gains 1 exhaustion |
 | Speed March (double pace) — HOUSE RULE | Automatic 1 exhaustion level after 4 hours of continuous double-pace travel (non-standard; PHB uses CON saves per hour beyond 8 hours) |
 | HOUSE RULE: Combat after forced march | Disadvantage on attacks/saves until short rest |
-| No Long Rest for 24+ hours | 1 exhaustion level |
+| Going without a Long Rest for 24+ hours (Xanathar's optional) | CON save DC 10 (+5 per 24 hours beyond first) or gain 1 exhaustion - ONLY if CONTINUING to stay awake |
+
+**🚨 Long Rest = Resting, NOT staying awake.** Never roll exhaustion saves during a long rest. Long rest **reduces** exhaustion by 1.
 
 ### Exhaustion Effects (STRICTLY ENFORCED)
 
