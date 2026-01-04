@@ -2234,19 +2234,11 @@ async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         else:
             safe_file_path = os.path.join(temp_dir, f"{uuid.uuid4()}.{export_format}")
 
-        # Convert story context to text format
-        story_parts = []
-        for entry in story_context:
-            actor = entry.get("actor", "unknown")
-            text = entry.get("text", "")
-            mode = entry.get("mode")
-
-            if actor == "gemini":
-                label = "Game Master"
-            else:
-                label = "God Mode" if mode == "god" else "Player"
-            story_parts.append(f"{label}:\n{text}")
-        story_text = "\n\n".join(story_parts)
+        # Convert story context to text format using enhanced formatting
+        # This uses the same logic as the CLI download script for consistency
+        story_text = document_generator.get_story_text_from_context_enhanced(
+            story_context, include_scenes=True
+        )
 
         # Generate export file
         try:
