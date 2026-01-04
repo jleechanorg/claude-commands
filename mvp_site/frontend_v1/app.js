@@ -375,22 +375,21 @@ document.addEventListener('DOMContentLoaded', () => {
         : '<em>None</em>';
     html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${resourceText}</div>`;
 
-    // 4. Dice rolls (always show)
-    if (
-      fullData.dice_rolls &&
-      Array.isArray(fullData.dice_rolls) &&
-      fullData.dice_rolls.length > 0
-    ) {
-      html +=
-        '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
-      html += '<strong>🎲 Dice Rolls:</strong><ul>';
-      fullData.dice_rolls.forEach((roll) => {
-        html += `<li>${sanitizeHtml(roll)}</li>`;
-      });
-      html += '</ul></div>';
-    } else {
-      html +=
-        '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
+    // 4. Dice rolls (only show in debug mode)
+    if (debugMode) {
+      if (
+        fullData.dice_rolls &&
+        Array.isArray(fullData.dice_rolls) &&
+        fullData.dice_rolls.length > 0
+      ) {
+        html +=
+          '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+        html += '<strong>🎲 Dice Rolls:</strong><ul>';
+        fullData.dice_rolls.forEach((roll) => {
+          html += `<li>${sanitizeHtml(roll)}</li>`;
+        });
+        html += '</ul></div>';
+      }
     }
 
     // 4b. Rewards box (if XP was awarded)
