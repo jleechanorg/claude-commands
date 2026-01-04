@@ -49,10 +49,12 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Known test user emails to exclude
 TEST_USER_PATTERNS = [
-    'jleechan@gmail.com',
     'jleechantest@gmail.com',
     'jleechan+*',
 ]
+
+# Cost estimation: ~$0.07 per entry based on Gemini API billing analysis
+COST_PER_ENTRY = 0.07
 
 
 def init_firebase():
@@ -284,6 +286,7 @@ def calculate_top_users(user_campaigns, cutoff_date):
                 'total_entries': total_entries,
                 'campaigns': num_campaigns,
                 'last_activity': last_activity,
+                'estimated_cost': total_entries * COST_PER_ENTRY,
             })
 
     # Sort by total entries descending
@@ -318,10 +321,16 @@ def format_report(dau_wau_stats, top_users_week, top_users_4weeks, show_daily=Tr
     # Top Users Last Week
     lines.append("👥 Top 10 Users (Last Week):")
     lines.append("-" * 100)
+    total_entries_week = 0
+    total_cost_week = 0.0
     for i, user in enumerate(top_users_week, 1):
         last_played = format_pst(user['last_activity'])
-        lines.append(f"  {i} {user['email']} ({user['total_entries']} entries, {user['campaigns']} campaigns) - Last: {last_played}")
+        cost = user.get('estimated_cost', user['total_entries'] * COST_PER_ENTRY)
+        lines.append(f"  {i} {user['email']} ({user['total_entries']:,} entries, ${cost:.2f}) - Last: {last_played}")
+        total_entries_week += user['total_entries']
+        total_cost_week += cost
     lines.append("-" * 100)
+    lines.append(f"  💰 TOTAL: {total_entries_week:,} entries, ${total_cost_week:.2f} estimated cost")
     lines.append("")
 
     # Last 4 Weeks Stats
@@ -347,10 +356,16 @@ def format_report(dau_wau_stats, top_users_week, top_users_4weeks, show_daily=Tr
     # Top Users Last 4 Weeks
     lines.append("👥 Top 10 Users (Last 4 Weeks):")
     lines.append("-" * 100)
+    total_entries_4weeks = 0
+    total_cost_4weeks = 0.0
     for i, user in enumerate(top_users_4weeks, 1):
         last_played = format_pst(user['last_activity'])
-        lines.append(f"  {i} {user['email']} ({user['total_entries']} entries, {user['campaigns']} campaigns) - Last: {last_played}")
+        cost = user.get('estimated_cost', user['total_entries'] * COST_PER_ENTRY)
+        lines.append(f"  {i} {user['email']} ({user['total_entries']:,} entries, ${cost:.2f}) - Last: {last_played}")
+        total_entries_4weeks += user['total_entries']
+        total_cost_4weeks += cost
     lines.append("-" * 100)
+    lines.append(f"  💰 TOTAL: {total_entries_4weeks:,} entries, ${total_cost_4weeks:.2f} estimated cost")
 
     # Daily breakdown if requested
     if show_daily and four_week_stats['dau']['daily']:
