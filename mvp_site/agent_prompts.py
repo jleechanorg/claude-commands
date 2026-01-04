@@ -424,16 +424,18 @@ class PromptBuilder:
 
     def build_character_creation_instructions(self) -> list[str]:
         """
-        Build MINIMAL system instructions for CHARACTER CREATION MODE.
-        Character creation mode focuses exclusively on creating the character
-        and only starts the story when the user explicitly confirms they're done.
+        Build system instructions for CHARACTER CREATION MODE.
+        Character creation mode focuses on creating the character and handling
+        level-ups. The story only advances when the user explicitly confirms
+        they're done. TIME DOES NOT ADVANCE during this mode.
 
-        Minimal prompt set for focused character creation:
+        Prompt set for character creation and level-up:
         1. Master directive (establishes AI authority)
         2. Character creation instruction (focused creation flow)
-        3. D&D SRD (for mechanics reference - class/race options)
+        3. D&D SRD (race/class/background/level-up options)
+        4. Mechanics (detailed D&D rules for level-up choices)
 
-        No narrative, no combat, no game state instructions - keeps prompts minimal.
+        No narrative or combat prompts - keeps focus on character building.
         """
         parts = []
 
@@ -445,6 +447,9 @@ class PromptBuilder:
 
         # Load D&D SRD for mechanics reference (race/class/background options)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+
+        # Load mechanics for detailed D&D rules (level-up, spell selection, etc.)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
 
         return parts
 

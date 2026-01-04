@@ -428,9 +428,10 @@ class GodModeAgent(BaseAgent):
         return user_input
 
 
-# --- CHARACTER CREATION COMPLETION DETECTION ---
-# Phrases that indicate the user is finished with character creation
+# --- CHARACTER CREATION / LEVEL-UP COMPLETION DETECTION ---
+# Phrases that indicate the user is finished with character creation or level-up
 CHARACTER_CREATION_DONE_PHRASES = [
+    # Character creation completion
     "i'm done",
     "im done",
     "i am done",
@@ -456,43 +457,58 @@ CHARACTER_CREATION_DONE_PHRASES = [
     "character is complete",
     "done creating",
     "finished creating",
+    # Level-up completion
+    "level-up complete",
+    "levelup complete",
+    "level up complete",
+    "done leveling",
+    "finished leveling",
+    "done with level",
+    "back to adventure",
+    "continue adventure",
+    "return to game",
 ]
 
 
 class CharacterCreationAgent(BaseAgent):
     """
-    Agent for Character Creation Mode (Focused Character Building).
+    Agent for Character Creation & Level-Up Mode.
 
-    This agent handles character creation with MINIMAL system prompts,
-    focusing exclusively on building the character. The story does NOT
-    begin until the user explicitly confirms they are finished.
+    This agent handles character creation AND level-ups with focused prompts.
+    TIME DOES NOT ADVANCE during this mode - it's a "pause menu" for character
+    building. The story only resumes when the user explicitly confirms they're done.
 
     PRECEDENCE: Second highest (just below GodModeAgent).
 
     Trigger Conditions (matches_game_state returns True when):
-    1. Campaign exists but character_creation_completed is False
-    2. No story has begun (no story entries or player_character_data.name is empty)
+    1. New campaign: character_creation_completed is False
+    2. No character: player_character_data.name is empty
+    3. Level-up pending: level_up_pending flag is True
 
     Responsibilities:
-    - Guide character concept development
+    - Guide character concept development (new characters)
     - Handle race/class/background selection
     - Manage ability score assignment
     - Develop personality and backstory
+    - Process level-ups with full D&D 5e rules
+    - Handle ASI/Feat selection, new spells, class features
     - Confirm completion before transitioning to story
 
-    System Prompt Hierarchy (MINIMAL for focus):
+    System Prompt Hierarchy:
     1. Master directive (establishes AI authority)
-    2. Character creation instruction (focused creation flow)
+    2. Character creation instruction (creation + level-up flow)
     3. D&D SRD (mechanics reference for options)
+    4. Mechanics (detailed D&D rules for level-up choices)
 
-    Note: NO narrative, combat, or game state prompts - keeps focus on creation.
+    Note: NO narrative or combat prompts - time is frozen during this mode.
     """
 
-    # Minimal prompts for focused character creation
+    # Minimal prompts for focused character creation and level-up
     REQUIRED_PROMPTS: frozenset[str] = frozenset({
         constants.PROMPT_TYPE_MASTER_DIRECTIVE,
         constants.PROMPT_TYPE_CHARACTER_CREATION,
         constants.PROMPT_TYPE_DND_SRD,
+        constants.PROMPT_TYPE_MECHANICS,  # Full D&D rules for creation and level-up
     })
 
     # No optional prompts - keep it focused
@@ -536,18 +552,20 @@ class CharacterCreationAgent(BaseAgent):
     @classmethod
     def matches_game_state(cls, game_state: "GameState | None") -> bool:
         """
-        Check if character creation mode should be active based on game state.
+        Check if character creation or level-up mode should be active.
 
-        Character creation mode is active when:
+        This mode is active when:
         1. game_state exists
-        2. character_creation_completed is False (or not set)
-        3. Character doesn't have a name yet OR is explicitly in creation mode
+        2. AND one of these conditions:
+           a) character_creation_completed is False (new character)
+           b) Character doesn't have a name/class yet
+           c) level_up_pending flag is True (level-up in progress)
 
         Args:
             game_state: Current GameState object
 
         Returns:
-            True if character creation is in progress
+            True if character creation or level-up is in progress
         """
         if game_state is None:
             logging_util.debug(
@@ -555,7 +573,7 @@ class CharacterCreationAgent(BaseAgent):
             )
             return False
 
-        # Check if character creation is explicitly completed
+        # Get custom_campaign_state
         custom_state = None
         if hasattr(game_state, "custom_campaign_state"):
             custom_state = game_state.custom_campaign_state
@@ -563,6 +581,14 @@ class CharacterCreationAgent(BaseAgent):
             custom_state = game_state.get("custom_campaign_state", {})
 
         if custom_state and isinstance(custom_state, dict):
+            # Check for level-up pending (takes priority - always enter this mode)
+            if custom_state.get("level_up_pending", False):
+                logging_util.info(
+                    "🎭 CHARACTER_CREATION_CHECK: level_up_pending=True, entering level-up mode"
+                )
+                return True
+
+            # Check if character creation is explicitly completed
             if custom_state.get("character_creation_completed", False):
                 logging_util.debug(
                     "🎭 CHARACTER_CREATION_CHECK: character_creation_completed=True"

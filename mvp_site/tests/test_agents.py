@@ -108,13 +108,15 @@ def create_character_creation_game_state(
     character_creation_completed=False,
     character_name="",
     character_class="",
+    level_up_pending=False,
 ):
-    """Helper to create a mock GameState for character creation mode tests.
+    """Helper to create a mock GameState for character creation/level-up mode tests.
 
     Args:
         character_creation_completed: Whether character creation is done
         character_name: Name of the character (empty triggers creation mode)
         character_class: Class of the character (empty triggers creation mode)
+        level_up_pending: Whether a level-up is pending (triggers level-up mode)
     """
     mock_state = Mock()
     mock_state.is_in_combat.return_value = False
@@ -123,6 +125,7 @@ def create_character_creation_game_state(
 
     mock_state.custom_campaign_state = {
         "character_creation_completed": character_creation_completed,
+        "level_up_pending": level_up_pending,
     }
     mock_state.player_character_data = {
         "name": character_name,
@@ -560,11 +563,12 @@ class TestCharacterCreationAgent(unittest.TestCase):
         self.assertEqual(agent.game_state, mock_game_state)
 
     def test_character_creation_agent_required_prompts(self):
-        """CharacterCreationAgent has correct required prompts (minimal set)."""
+        """CharacterCreationAgent has correct required prompts for creation and level-up."""
         expected_prompts = {
             constants.PROMPT_TYPE_MASTER_DIRECTIVE,
             constants.PROMPT_TYPE_CHARACTER_CREATION,
             constants.PROMPT_TYPE_DND_SRD,
+            constants.PROMPT_TYPE_MECHANICS,  # Full D&D rules for level-up
         }
         self.assertEqual(CharacterCreationAgent.REQUIRED_PROMPTS, frozenset(expected_prompts))
 
@@ -616,9 +620,30 @@ class TestCharacterCreationAgent(unittest.TestCase):
         """CharacterCreationAgent does not match when game_state is None."""
         self.assertFalse(CharacterCreationAgent.matches_game_state(None))
 
+    def test_character_creation_matches_level_up_pending(self):
+        """CharacterCreationAgent matches when level_up_pending is True."""
+        mock_state = create_character_creation_game_state(
+            character_creation_completed=True,  # Creation done
+            character_name="Test Hero",
+            character_class="Fighter",
+            level_up_pending=True,  # But level-up pending
+        )
+        self.assertTrue(CharacterCreationAgent.matches_game_state(mock_state))
+
+    def test_character_creation_does_not_match_no_level_up(self):
+        """CharacterCreationAgent does not match when creation done and no level-up."""
+        mock_state = create_character_creation_game_state(
+            character_creation_completed=True,
+            character_name="Test Hero",
+            character_class="Fighter",
+            level_up_pending=False,
+        )
+        self.assertFalse(CharacterCreationAgent.matches_game_state(mock_state))
+
     def test_character_creation_matches_input_done_phrases(self):
         """CharacterCreationAgent.matches_input detects completion phrases."""
         done_phrases = [
+            # Character creation completion
             "I'm done",
             "im done",
             "start the story",
@@ -626,6 +651,10 @@ class TestCharacterCreationAgent(unittest.TestCase):
             "let's start",
             "ready to play",
             "character complete",
+            # Level-up completion
+            "level-up complete",
+            "done leveling",
+            "back to adventure",
         ]
         for phrase in done_phrases:
             self.assertTrue(
