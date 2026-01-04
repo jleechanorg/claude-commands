@@ -364,6 +364,87 @@ class PromptBuilder:
         # Load planning protocol immediately after game_state to anchor schema references
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_PLANNING_PROTOCOL))
 
+    def build_from_order(
+        self,
+        prompt_order: tuple[str, ...],
+        *,
+        include_debug: bool = False,
+    ) -> list[str]:
+        """
+        Build system instructions from an ordered tuple of prompt types.
+
+        This is the generic builder that replaces mode-specific builders.
+        It loads prompts in the exact order specified, with special handling
+        for the game_state + planning_protocol consecutive pair.
+
+        Args:
+            prompt_order: Ordered tuple of prompt types to load
+            include_debug: Whether to append debug instructions at the end
+
+        Returns:
+            List of instruction parts in the specified order
+        """
+        parts: list[str] = []
+        skip_next = False
+
+        for i, prompt_type in enumerate(prompt_order):
+            if skip_next:
+                skip_next = False
+                continue
+
+            # Special handling: game_state and planning_protocol must load together
+            if prompt_type == constants.PROMPT_TYPE_GAME_STATE:
+                # Verify next is planning_protocol (invariant from Phase 0)
+                if (
+                    i + 1 < len(prompt_order)
+                    and prompt_order[i + 1] == constants.PROMPT_TYPE_PLANNING_PROTOCOL
+                ):
+                    self._append_game_state_with_planning(parts)
+                    skip_next = True
+                else:
+                    # Fallback: load individually (shouldn't happen with valid orders)
+                    parts.append(_load_instruction_file(prompt_type))
+            elif prompt_type == constants.PROMPT_TYPE_PLANNING_PROTOCOL:
+                # Should have been handled with game_state above
+                # Load individually as fallback
+                parts.append(_load_instruction_file(prompt_type))
+            else:
+                # Standard prompt loading
+                parts.append(_load_instruction_file(prompt_type))
+
+        # Optionally append debug instructions
+        if include_debug:
+            parts.append(_build_debug_instructions())
+
+        return parts
+
+    def build_for_agent(self, agent: "BaseAgent") -> list[str]:
+        """
+        Build system instructions for a given agent using its prompt order and flags.
+
+        This is the single entry point for prompt building (Phase 3).
+        It delegates to build_from_order() with the agent's configuration.
+
+        Args:
+            agent: The agent instance to build instructions for
+
+        Returns:
+            List of instruction parts in the agent's specified order
+        """
+        # Import here to avoid circular imports
+        from mvp_site.agents import BaseAgent
+
+        if not isinstance(agent, BaseAgent):
+            raise TypeError(f"Expected BaseAgent, got {type(agent).__name__}")
+
+        prompt_order = agent.prompt_order()
+        flags = agent.builder_flags()
+
+        return self.build_from_order(
+            prompt_order,
+            include_debug=flags.get("include_debug", False),
+        )
+
     def build_core_system_instructions(self) -> list[str]:
         """
         Build the core system instructions that are always loaded first.

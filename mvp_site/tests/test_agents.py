@@ -794,5 +794,484 @@ class TestSchemaInjection(unittest.TestCase):
         )
 
 
+class TestPromptOrderInvariants(unittest.TestCase):
+    """
+    Tests for prompt order invariants (Phase 0 of prompt-builder refactor).
+
+    These tests verify that:
+    1. Each agent has an explicit REQUIRED_PROMPT_ORDER tuple
+    2. master_directive is always first
+    3. game_state and planning_protocol are always consecutive
+    """
+
+    def test_all_agents_have_required_prompt_order(self):
+        """Every agent class must define REQUIRED_PROMPT_ORDER."""
+        from mvp_site.agents import ALL_AGENT_CLASSES
+
+        for agent_cls in ALL_AGENT_CLASSES:
+            with self.subTest(agent=agent_cls.__name__):
+                self.assertTrue(
+                    hasattr(agent_cls, "REQUIRED_PROMPT_ORDER"),
+                    f"{agent_cls.__name__} missing REQUIRED_PROMPT_ORDER",
+                )
+                self.assertIsInstance(
+                    agent_cls.REQUIRED_PROMPT_ORDER,
+                    tuple,
+                    f"{agent_cls.__name__}.REQUIRED_PROMPT_ORDER must be a tuple",
+                )
+                self.assertGreater(
+                    len(agent_cls.REQUIRED_PROMPT_ORDER),
+                    0,
+                    f"{agent_cls.__name__}.REQUIRED_PROMPT_ORDER is empty",
+                )
+
+    def test_required_prompts_matches_order(self):
+        """REQUIRED_PROMPTS frozenset must match REQUIRED_PROMPT_ORDER tuple."""
+        from mvp_site.agents import ALL_AGENT_CLASSES
+
+        for agent_cls in ALL_AGENT_CLASSES:
+            with self.subTest(agent=agent_cls.__name__):
+                order_set = frozenset(agent_cls.REQUIRED_PROMPT_ORDER)
+                self.assertEqual(
+                    agent_cls.REQUIRED_PROMPTS,
+                    order_set,
+                    f"{agent_cls.__name__}: REQUIRED_PROMPTS != frozenset(REQUIRED_PROMPT_ORDER)",
+                )
+
+    def test_master_directive_is_first(self):
+        """master_directive must be the first prompt in every agent's order."""
+        from mvp_site.agents import ALL_AGENT_CLASSES, MANDATORY_FIRST_PROMPT
+
+        for agent_cls in ALL_AGENT_CLASSES:
+            with self.subTest(agent=agent_cls.__name__):
+                self.assertEqual(
+                    agent_cls.REQUIRED_PROMPT_ORDER[0],
+                    MANDATORY_FIRST_PROMPT,
+                    f"{agent_cls.__name__}: First prompt must be {MANDATORY_FIRST_PROMPT!r}, "
+                    f"got {agent_cls.REQUIRED_PROMPT_ORDER[0]!r}",
+                )
+
+    def test_game_state_and_planning_protocol_consecutive(self):
+        """game_state and planning_protocol must be consecutive in order."""
+        from mvp_site.agents import ALL_AGENT_CLASSES, GAME_STATE_PLANNING_PAIR
+
+        game_state, planning_protocol = GAME_STATE_PLANNING_PAIR
+
+        for agent_cls in ALL_AGENT_CLASSES:
+            with self.subTest(agent=agent_cls.__name__):
+                order = agent_cls.REQUIRED_PROMPT_ORDER
+
+                # Both must be present
+                self.assertIn(
+                    game_state,
+                    order,
+                    f"{agent_cls.__name__}: Missing {game_state} in order",
+                )
+                self.assertIn(
+                    planning_protocol,
+                    order,
+                    f"{agent_cls.__name__}: Missing {planning_protocol} in order",
+                )
+
+                # planning_protocol must immediately follow game_state
+                game_idx = order.index(game_state)
+                planning_idx = order.index(planning_protocol)
+                self.assertEqual(
+                    planning_idx,
+                    game_idx + 1,
+                    f"{agent_cls.__name__}: planning_protocol (at {planning_idx}) must "
+                    f"immediately follow game_state (at {game_idx})",
+                )
+
+    def test_validate_all_agent_prompt_orders_succeeds(self):
+        """validate_all_agent_prompt_orders() should return empty dict (all valid)."""
+        from mvp_site.agents import validate_all_agent_prompt_orders
+
+        errors = validate_all_agent_prompt_orders()
+        self.assertEqual(
+            errors,
+            {},
+            f"Validation errors found: {errors}",
+        )
+
+    def test_validate_prompt_order_catches_wrong_first_prompt(self):
+        """validate_prompt_order should catch when first prompt is wrong."""
+        from mvp_site.agents import validate_prompt_order
+
+        bad_order = (
+            constants.PROMPT_TYPE_DND_SRD,  # Wrong! Should be master_directive
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,
+        )
+        errors = validate_prompt_order(bad_order, "TestAgent")
+
+        self.assertEqual(len(errors), 1)
+        self.assertIn("First prompt must be", errors[0])
+
+    def test_validate_prompt_order_catches_non_consecutive_pair(self):
+        """validate_prompt_order should catch when game_state and planning_protocol aren't consecutive."""
+        from mvp_site.agents import validate_prompt_order
+
+        bad_order = (
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_DND_SRD,  # Wrong! planning_protocol should be here
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,
+        )
+        errors = validate_prompt_order(bad_order, "TestAgent")
+
+        self.assertEqual(len(errors), 1)
+        self.assertIn("planning_protocol must immediately follow game_state", errors[0])
+
+    def test_validate_prompt_order_reports_missing_required_prompts(self):
+        """Missing game_state or planning_protocol should be reported explicitly."""
+        from mvp_site.agents import validate_prompt_order
+
+        order_missing_both = (
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            "think",
+        )
+
+        errors = validate_prompt_order(order_missing_both, "TestAgent")
+
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Missing required prompt(s) in order", errors[0])
+        self.assertIn(constants.PROMPT_TYPE_GAME_STATE, errors[0])
+        self.assertIn(constants.PROMPT_TYPE_PLANNING_PROTOCOL, errors[0])
+
+    def test_validate_prompt_order_detects_duplicate_prompt_types(self):
+        """Duplicate prompt types in REQUIRED_PROMPT_ORDER should be detected with indices."""
+        from mvp_site.agents import validate_prompt_order
+
+        duplicate_order = (
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,
+        )
+
+        errors = validate_prompt_order(duplicate_order, "TestAgent")
+
+        self.assertTrue(errors)
+        self.assertIn("Duplicate prompt type", errors[0])
+
+    def test_runtime_validation_raises_on_invalid_order(self):
+        """Instantiating an agent with invalid order should raise at runtime."""
+        from mvp_site.agents import FixedPromptAgent
+
+        class BadAgent(FixedPromptAgent):
+            REQUIRED_PROMPT_ORDER = (
+                constants.PROMPT_TYPE_DND_SRD,  # Wrong: master must be first
+                constants.PROMPT_TYPE_GAME_STATE,
+                constants.PROMPT_TYPE_PLANNING_PROTOCOL,
+            )
+            REQUIRED_PROMPTS = frozenset(REQUIRED_PROMPT_ORDER)
+            MODE = "bad"
+
+        with self.assertRaises(ValueError) as ctx:
+            BadAgent()
+
+        self.assertIn("Invalid REQUIRED_PROMPT_ORDER", str(ctx.exception))
+
+    def test_validate_prompt_order_reports_missing_required_prompts(self):
+        """validate_prompt_order should explicitly report missing game_state/planning_protocol."""
+        from mvp_site.agents import validate_prompt_order
+
+        # Order missing both game_state and planning_protocol
+        bad_order = (constants.PROMPT_TYPE_MASTER_DIRECTIVE, "think")
+        errors = validate_prompt_order(bad_order, "MissingPairAgent")
+
+        # Should report both missing prompts explicitly
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(
+            any("Missing required prompt(s) in order" in e for e in errors),
+            f"Expected 'Missing required prompt(s)' error, got: {errors}",
+        )
+        error_text = " ".join(errors)
+        self.assertIn("game_state", error_text)
+        self.assertIn("planning_protocol", error_text)
+
+    def test_validate_prompt_order_detects_duplicate_prompt_types(self):
+        """validate_prompt_order should detect duplicate prompt types with indices."""
+        from mvp_site.agents import validate_prompt_order
+
+        bad_order = (
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_GAME_STATE,  # duplicate at index 2
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,
+        )
+        errors = validate_prompt_order(bad_order, "DuplicateAgent")
+
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(
+            any("Duplicate prompt type" in e for e in errors),
+            f"Expected 'Duplicate prompt type' error, got: {errors}",
+        )
+        # Verify it mentions both index positions (1 and 2)
+        error_text = " ".join(errors)
+        self.assertIn("1", error_text)
+        self.assertIn("2", error_text)
+
+
+class TestGenericPromptBuilder(unittest.TestCase):
+    """
+    Tests for the generic build_from_order() method (Phase 1).
+
+    Verifies that the generic builder produces the same output as
+    the mode-specific builders.
+    """
+
+    def test_build_from_order_matches_god_mode_builder(self):
+        """build_from_order should produce same output as build_god_mode_instructions."""
+        builder = PromptBuilder(None)
+
+        old_parts = builder.build_god_mode_instructions()
+        new_parts = builder.build_from_order(
+            GodModeAgent.REQUIRED_PROMPT_ORDER, include_debug=False
+        )
+
+        self.assertEqual(
+            len(old_parts),
+            len(new_parts),
+            f"Part count mismatch: old={len(old_parts)}, new={len(new_parts)}",
+        )
+        for i, (old, new) in enumerate(zip(old_parts, new_parts)):
+            self.assertEqual(
+                old, new, f"Part {i} mismatch between old and new builders"
+            )
+
+    def test_build_from_order_matches_info_mode_builder(self):
+        """build_from_order should produce same output as build_info_mode_instructions."""
+        from mvp_site.agents import InfoAgent
+
+        builder = PromptBuilder(None)
+
+        old_parts = builder.build_info_mode_instructions()
+        new_parts = builder.build_from_order(
+            InfoAgent.REQUIRED_PROMPT_ORDER, include_debug=False
+        )
+
+        self.assertEqual(len(old_parts), len(new_parts))
+        for i, (old, new) in enumerate(zip(old_parts, new_parts)):
+            self.assertEqual(old, new, f"Part {i} mismatch")
+
+    def test_build_from_order_with_debug_flag(self):
+        """include_debug=True should append debug instructions."""
+        from mvp_site.agents import InfoAgent
+
+        builder = PromptBuilder(None)
+
+        without_debug = builder.build_from_order(
+            InfoAgent.REQUIRED_PROMPT_ORDER, include_debug=False
+        )
+        with_debug = builder.build_from_order(
+            InfoAgent.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
+
+        self.assertEqual(
+            len(with_debug),
+            len(without_debug) + 1,
+            "include_debug=True should add exactly 1 part",
+        )
+
+    def test_build_from_order_preserves_order(self):
+        """Prompts should be loaded in the exact order specified."""
+        from mvp_site.agents import CombatAgent
+
+        builder = PromptBuilder(None)
+        parts = builder.build_from_order(
+            CombatAgent.REQUIRED_PROMPT_ORDER, include_debug=False
+        )
+
+        # Expected count: 7 prompts, but game_state+planning_protocol = 2 parts
+        # So: 7 prompts -> 7 parts
+        self.assertEqual(
+            len(parts),
+            len(CombatAgent.REQUIRED_PROMPT_ORDER),
+            "Should have one part per prompt type",
+        )
+
+
+class TestBuildForAgent(unittest.TestCase):
+    """
+    Tests for the single entry point build_for_agent() method (Phase 3).
+
+    Verifies that build_for_agent correctly uses agent's prompt_order()
+    and builder_flags() to build instructions.
+    """
+
+    def test_build_for_agent_uses_prompt_order(self):
+        """build_for_agent should use agent's prompt_order()."""
+        from mvp_site.agents import InfoAgent
+
+        agent = InfoAgent(None)
+        builder = PromptBuilder(None)
+
+        parts = builder.build_for_agent(agent)
+
+        # InfoAgent has 3 prompts, no debug
+        self.assertEqual(
+            len(parts),
+            len(InfoAgent.REQUIRED_PROMPT_ORDER),
+            "Should have one part per prompt in order",
+        )
+
+    def test_build_for_agent_respects_include_debug(self):
+        """build_for_agent should respect agent's builder_flags()['include_debug']."""
+        from mvp_site.agents import InfoAgent, CombatAgent
+
+        builder = PromptBuilder(None)
+
+        # InfoAgent has include_debug=False (default)
+        info_agent = InfoAgent(None)
+        info_parts = builder.build_for_agent(info_agent)
+        self.assertEqual(len(info_parts), len(InfoAgent.REQUIRED_PROMPT_ORDER))
+
+        # CombatAgent has include_debug=True
+        combat_agent = CombatAgent(None)
+        combat_parts = builder.build_for_agent(combat_agent)
+        self.assertEqual(
+            len(combat_parts),
+            len(CombatAgent.REQUIRED_PROMPT_ORDER) + 1,  # +1 for debug
+            "CombatAgent should include debug instructions",
+        )
+
+    def test_builder_flags_defaults(self):
+        """BaseAgent.builder_flags() should default to include_debug=False."""
+        from mvp_site.agents import InfoAgent, PlanningAgent
+
+        # InfoAgent inherits default builder_flags
+        info_agent = InfoAgent(None)
+        self.assertEqual(info_agent.builder_flags(), {"include_debug": False})
+
+        # PlanningAgent also inherits default
+        planning_agent = PlanningAgent(None)
+        self.assertEqual(planning_agent.builder_flags(), {"include_debug": False})
+
+    def test_builder_flags_overrides(self):
+        """Agents with debug should override builder_flags()."""
+        from mvp_site.agents import StoryModeAgent, CombatAgent, RewardsAgent
+
+        # These agents should include debug
+        story_agent = StoryModeAgent(None)
+        self.assertEqual(story_agent.builder_flags(), {"include_debug": True})
+
+        combat_agent = CombatAgent(None)
+        self.assertEqual(combat_agent.builder_flags(), {"include_debug": True})
+
+        rewards_agent = RewardsAgent(None)
+        self.assertEqual(rewards_agent.builder_flags(), {"include_debug": True})
+
+    def test_build_for_agent_matches_legacy_builder(self):
+        """build_for_agent should match legacy mode-specific builders."""
+        builder = PromptBuilder(None)
+
+        # Test GodModeAgent (no debug)
+        god_agent = GodModeAgent(None)
+        new_parts = builder.build_for_agent(god_agent)
+        old_parts = builder.build_god_mode_instructions()
+
+        self.assertEqual(len(new_parts), len(old_parts))
+        for i, (new, old) in enumerate(zip(new_parts, old_parts)):
+            self.assertEqual(new, old, f"GodMode part {i} mismatch")
+
+
+class TestPromptOrderDriftGuards(unittest.TestCase):
+    """
+    Drift-guard tests to ensure Story/Combat agents don't silently diverge
+    from REQUIRED_PROMPT_ORDER invariants.
+
+    These tests verify that the beginning of the prompt output matches
+    build_from_order(REQUIRED_PROMPT_ORDER), preventing silent drift
+    from the validated order over time.
+    """
+
+    def test_combat_agent_uses_build_from_order(self):
+        """CombatAgent output should match build_from_order(REQUIRED_PROMPT_ORDER)."""
+        from mvp_site.agents import CombatAgent
+
+        builder = PromptBuilder(None)
+        combat_agent = CombatAgent(None)
+
+        # Get what build_from_order produces (source of truth)
+        expected_parts = builder.build_from_order(
+            CombatAgent.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
+
+        # Get what build_for_agent produces
+        actual_parts = builder.build_for_agent(combat_agent)
+
+        # Should match exactly
+        self.assertEqual(
+            len(actual_parts),
+            len(expected_parts),
+            f"CombatAgent part count mismatch: expected {len(expected_parts)}, got {len(actual_parts)}",
+        )
+        for i, (expected, actual) in enumerate(zip(expected_parts, actual_parts)):
+            self.assertEqual(
+                expected,
+                actual,
+                f"CombatAgent part {i} drifted from REQUIRED_PROMPT_ORDER",
+            )
+
+    def test_story_mode_agent_starts_with_invariant_head(self):
+        """StoryModeAgent output should start with master → game_state+planning."""
+        from mvp_site.agents import StoryModeAgent, MANDATORY_FIRST_PROMPT, GAME_STATE_PLANNING_PAIR
+
+        story_agent = StoryModeAgent(None)
+
+        # Get the instruction parts (before finalization)
+        parts = story_agent.build_system_instruction_parts()
+
+        # Verify invariant head: must start with master_directive
+        self.assertGreater(len(parts), 0, "StoryModeAgent produced no parts")
+
+        # First part must contain master_directive content
+        self.assertIn(
+            "master",
+            parts[0].lower(),
+            f"First part should be master_directive, got: {parts[0][:100]}...",
+        )
+
+        # The game_state and planning_protocol should appear early (parts 1-2)
+        # They're loaded together via _append_game_state_with_planning
+        self.assertGreater(len(parts), 2, "StoryModeAgent needs at least 3 parts for core")
+
+        # Verify game_state appears (contains the planning block schema reference)
+        combined_early_parts = " ".join(parts[:3]).lower()
+        self.assertIn(
+            "planning_block",
+            combined_early_parts,
+            "Early parts should reference planning_block schema",
+        )
+
+    def test_combat_agent_parity_with_legacy_builder(self):
+        """CombatAgent build_from_order should match legacy build_combat_mode_instructions."""
+        from mvp_site.agents import CombatAgent
+
+        builder = PromptBuilder(None)
+
+        # Legacy builder
+        legacy_parts = builder.build_combat_mode_instructions()
+
+        # New approach via build_from_order
+        new_parts = builder.build_from_order(
+            CombatAgent.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
+
+        self.assertEqual(
+            len(legacy_parts),
+            len(new_parts),
+            f"Part count mismatch: legacy={len(legacy_parts)}, new={len(new_parts)}",
+        )
+        for i, (legacy, new) in enumerate(zip(legacy_parts, new_parts)):
+            self.assertEqual(
+                legacy,
+                new,
+                f"Combat part {i} mismatch between legacy and build_from_order",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
