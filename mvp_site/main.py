@@ -98,6 +98,7 @@ from mvp_site import (
     equipment_display,
     firestore_service,
     logging_util,
+    stats_display,
     world_logic,  # For MCP fallback logic
 )
 from mvp_site.custom_types import CampaignId, UserId
@@ -1350,6 +1351,17 @@ def create_app() -> Flask:
                             f"  • {stat_names.get(stat, stat.upper())}: {data['score']} ({data['modifier']})"
                         )
 
+            # Extract and deduplicate features/feats using shared module
+            features = safe_get("features", [])
+            unique_features = stats_display.deduplicate_features(features)
+
+            # Only add header if there are actual features after deduplication
+            if unique_features:
+                lines.append("")
+                lines.append("▸ Features & Feats:")
+                for feat in unique_features:
+                    lines.append(f"  • {feat}")
+
             return jsonify({
                 KEY_SUCCESS: True,
                 "stats_summary": "\n".join(lines),
@@ -1363,6 +1375,7 @@ def create_app() -> Flask:
                     "ac": ac_base_val,
                     "effective_ac": effective_ac,
                 },
+                "features": unique_features,
             })
 
         except Exception as e:
