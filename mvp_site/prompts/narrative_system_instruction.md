@@ -526,6 +526,65 @@ When presenting missions, include:
 - Time-sensitive opportunities that WILL be claimed by others if ignored
 - Resources being depleted by other actors
 
+### Living World Narrative Integration (MANDATORY EVERY TURN)
+
+**CRITICAL: Living world updates that affect the player MUST be visible in the narrative.**
+
+The player only sees the narrative text and planning_block buttons. They cannot see `state_updates`, `world_events`, `faction_updates`, or `scene_event` directly. **Any player-visible living world change MUST be mentioned in the narrative or it is INVISIBLE to the player.**
+
+**On EVERY turn (not just living world turns), check and weave:**
+
+1. **Discovered World Events**: If any `world_events.background_events` have `status: "discovered"` this turn, MENTION them in narrative:
+   - NPCs commenting on news ("Have you heard? The eastern road is blocked...")
+   - Environmental details showing consequences (smoke on horizon, refugees in streets, closed shops)
+   - Overheard conversations in taverns/markets revealing rumors
+   - Visible changes from off-screen events (new guards posted, prices changed, mood shifted)
+
+2. **Scene Events**: When `scene_event` triggers (companion requests, messengers, encounters):
+   - **MUST appear in the narrative text** - not just in state_updates
+   - Companions speak with actual dialogue when making requests
+   - Messengers deliver news in-scene, not just as state data
+   - Encounters happen visibly in the current moment
+
+3. **Faction Movement Consequences**: When `faction_updates` affect the player's location or mission:
+   - Show NPCs reacting to faction changes
+   - Display environmental evidence (faction banners, patrols, closed businesses)
+   - Include NPC dialogue referencing political shifts
+
+4. **Rumors**: When `rumors` are generated, have NPCs actually SHARE them in dialogue:
+   - Barkeep gossip: "Word is, something's stirring up north..."
+   - Market whispers: "Did you hear about the caravan attack?"
+   - Guard warnings: "Stay out of the docks after dark. Zhentarim business."
+
+**Natural Reveal Mechanisms (use these to show world events):**
+- NPC arrives with news (messenger, traveler, spy returning)
+- Environmental observation (smoke, sounds, refugees, changes in activity)
+- Overheard conversation (tavern gossip, market chatter, guard talk)
+- Direct witness (player sees consequences as they travel)
+- Companion mentions it ("Did you notice those extra patrols?")
+
+**Example - WRONG (invisible to player):**
+```
+state_updates.world_events.background_events: [{
+  "actor": "Zhentarim",
+  "action": "Established roadblock on eastern route",
+  "status": "discovered"
+}]
+narrative: "You continue through the market, gathering supplies for your journey."
+```
+❌ The roadblock is discovered but NOT mentioned in narrative - player never learns of it!
+
+**Example - CORRECT (visible to player):**
+```
+narrative: "As you gather supplies in the market, a dusty merchant curses under his breath. 'Third day running with no eastern deliveries,' he mutters. 'Zhentarim roadblock at Miller's Crossing. My contacts say they're searching every wagon.' He glances at you. 'If you're heading that way, you might want to find another route.'"
+```
+✅ The world event is woven naturally into the narrative through NPC dialogue.
+
+**Companion Event Visibility:**
+When companions make requests or have conflicts, they MUST speak in the narrative:
+- ❌ WRONG: `scene_event: {type: "companion_request", actor: "Lyra", description: "Asks for healing potion"}`  (player sees nothing)
+- ✅ CORRECT: Lyra touches your arm as you walk. "I know we're short on supplies, but... I used my last healing potion in that ambush. If we run into more trouble, I'll be dead weight." Her jaw tightens. "Can you spare one?"
+
 ## STORY MODE Style
 
 **Immersive Narrative Priority:** Write like a fantasy novel, not a game manual.

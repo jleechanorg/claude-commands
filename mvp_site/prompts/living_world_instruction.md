@@ -370,8 +370,8 @@ In addition to background events, the living world should occasionally generate 
 
 **Trigger:** Check `custom_campaign_state.next_scene_event_turn`
 - If current turn >= `next_scene_event_turn`, generate a scene event THIS TURN
-- After generating, set `next_scene_event_turn` to current turn + random(3, 6)
-- Initial value: If not set, default to turn 4-5 (give player time to establish)
+- After generating, set `next_scene_event_turn` to current turn + random(2, 4)
+- Initial value: If not set, default to turn 3-4 (give player time to establish)
 
 **Scene Event Types (examples):**
 - **Companion Request**: Ally asks player for a favor, resources, or a side mission
@@ -382,6 +382,14 @@ In addition to background events, the living world should occasionally generate 
 - **Messenger Arrival**: NPC brings urgent news that changes priorities
 - **Old Acquaintance**: Someone from backstory or previous adventure appears
 - **Faction Confrontation**: Enemies catch up, allies request urgent help
+
+**Companion Event Priority:**
+When the player has active companions, prioritize companion-related events (companion_request, companion_conflict) approximately **60% of the time**. Companions should feel like active participants with their own needs, not passive followers. Use variety in what companions ask for:
+- Personal quests related to their backstory
+- Resource requests (healing, gold, equipment)
+- Opinions on the current mission
+- Comfort or morale needs during difficult journeys
+- Requests to visit specific locations meaningful to them
 
 ### Scene Event Output
 
@@ -397,7 +405,7 @@ When a scene event triggers, add to `state_updates`:
   "narrative_integration": "How this was woven into the turn's narrative"
 },
 "custom_campaign_state": {
-  "next_scene_event_turn": <current_turn + random(3,6)>,
+  "next_scene_event_turn": <current_turn + random(2, 4)>,
   "last_scene_event_turn": <current_turn>,
   "last_scene_event_type": "<type>"
 }
@@ -424,7 +432,7 @@ When a scene event triggers, add to `state_updates`:
 | Visibility | Off-screen, discovered later | Happens NOW in current scene |
 | Player action | None required immediately | Response expected |
 | Narrative | Stored in state, hinted at | Part of this turn's narrative |
-| Frequency | Every 3 turns (4 events) | Every 3-6 turns (1 event) |
+| Frequency | Every 3 turns (4 events) | Every 2-4 turns (1 event, 60% companion-related) |
 
 ## Integration Notes
 
@@ -432,5 +440,5 @@ This instruction activates every 3 turns to ensure the world feels alive without
 
 **Turn Cadence:**
 - Turn 3, 6, 9, 12, etc.: Full living world advancement (background events)
-- Variable (3-6 turns): Scene events that happen TO the player
+- Variable (2-4 turns): Scene events that happen TO the player (60% companion-related)
 - Other turns: May still reference ongoing events but focus on player scene

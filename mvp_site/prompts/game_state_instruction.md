@@ -492,6 +492,14 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
 ```
 - Example (delete NPC): `"state_updates": {"npc_data": {"npc_goblin_scout_001": "__DELETE__"}}`
 
+### 📦 Equipment Slots (CANONICAL)
+
+**Valid slots:** `head`, `body`, `armor`, `cloak`, `hands`, `feet`, `neck`, `ring_1`, `ring_2`, `belt`, `shield`, `main_hand`, `off_hand`, `instrument`, `weapons` (array), `backpack` (array)
+
+**Item format:** `{"name": "Item Name", "stats": "bonuses", "equipped": true}`
+
+**❌ FORBIDDEN:** `weapon_main`→`main_hand`, `weapon_secondary`→`off_hand`, `gloves`→`hands`, `boots`→`feet`, `amulet`→`neck`
+
 ### 🚨 CRITICAL: Relationship Update Rules
 
 **NEVER replace entire relationship objects. Only update changed fields.**
@@ -640,6 +648,45 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
 ```
 
 **Backward compatibility note:** Legacy saves may store `equipment.armor` as an empty string. Treat both `null` and `""` as "not equipped" and normalize to `null` on read/write so older sessions continue to function until data migration completes.
+
+### Active Effects (🚨 ALWAYS APPLY THESE)
+
+The `active_effects` array contains **persistent buffs, spells, and effects** that are ALWAYS active on the character. These are shown in the system prompt and MUST be applied to all relevant rolls.
+
+**Format:** Array of strings describing each effect and its mechanical benefit.
+
+```json
+{
+  "active_effects": [
+    "Enhance Ability (Charisma) - Advantage on CHA checks",
+    "Haste - +2 AC, advantage on DEX saves, extra action",
+    "Greater Invisibility - Advantage on attacks, attacks against have disadvantage",
+    "Aid - +10 max HP (already included in hp_max)",
+    "Elixir of Battlemage's Power - +3 to spell attack and spell save DC",
+    "Longstrider - +10ft movement speed"
+  ]
+}
+```
+
+**When to add to `active_effects`:**
+- Player requests a buff be "always active" or "assumed on"
+- Specialist/companion casts a persistent buff
+- Elixirs or potions with long duration
+- Boons, traits, or campaign-specific bonuses
+
+**When NOT to use `active_effects`:**
+- Temporary combat effects (use `status_conditions` instead)
+- Concentration spells that might drop (unless player says "assume always on")
+- One-time effects
+
+**To add via state_updates:**
+```json
+{"player_character_data": {"active_effects": {"append": ["New Effect - mechanical description"]}}}
+```
+
+### Status Conditions (Temporary)
+
+The `status_conditions` array contains **temporary conditions** from combat or environmental effects (Poisoned, Frightened, Prone, etc.). These are typically removed after combat or rest.
 
 ### Item Schema (🚨 MANDATORY: Store Full Stats)
 

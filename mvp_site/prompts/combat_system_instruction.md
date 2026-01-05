@@ -110,10 +110,13 @@ When the player provides input during another combatant's turn:
 - [ ] `combat_phase: "ended"`
 - [ ] `combat_summary: { rounds_fought, enemies_defeated, xp_awarded, loot_distributed }`
 - [ ] Update `player_character_data.experience.current` with XP awarded
-- [ ] **CRITICAL: Update `combatants` with final HP** (defeated enemies must have `hp_current: 0`)
+- [ ] **CRITICAL: Update `combatants` with final HP/status**
+  - KILLED enemies must have `hp_current: 0`
+  - SURRENDERED enemies may have `hp_current > 0` but MUST include `status: ["surrendered"]`
 
 **FAILURE MODE:** Combat ended without combat_summary or XP = REWARDS NOT GIVEN
-**FAILURE MODE:** Enemies in `enemies_defeated` with hp_current > 0 = INCONSISTENT STATE
+**FAILURE MODE:** Enemies in `enemies_defeated` with hp_current > 0 AND status != "surrendered" = INCONSISTENT STATE
+**NOTE:** Surrendered enemies may have hp_current > 0 but MUST have status: "surrendered" to be valid
 
 **Quick Combat / Single-Turn Combat (executions, coup de grace):**
 Even instant kills require a FRESH combat session AND must follow combat end protocol:
@@ -154,6 +157,26 @@ END combat (set `in_combat: false`) when:
 - The party flees successfully
 - Combat is interrupted by major event (earthquake, divine intervention)
 - Negotiation succeeds mid-combat
+
+### 🏆 Surrendered Enemies Give Full XP
+**CRITICAL RULE:** When enemies surrender, they count as "defeated" for XP purposes and award FULL XP value as if they were killed in combat.
+
+**Rationale:** Forcing enemies to surrender through combat prowess, intimidation, or tactical superiority is a valid victory that demonstrates the player's power. The challenge was overcome - the method of resolution (death vs surrender) does not reduce the accomplishment.
+
+**Implementation:**
+- Include surrendered enemies in `combat_summary.enemies_defeated` list
+- Calculate XP using their full CR value (same as killed enemies)
+- Set `combatants.<id>.status: ["surrendered"]` for any enemy that yields while keeping their remaining HP
+- Example: If 100 goblins (CR 1/4, 50 XP each) surrender = 5,000 XP awarded
+
+**XP Display for Surrenders:**
+```
+**ENEMIES DEFEATED:**
+  • Goblin Warrior (CR 1/4) - SURRENDERED - 50 XP
+  • Goblin Warrior (CR 1/4) - SURRENDERED - 50 XP
+  • Goblin Boss (CR 1) - KILLED - 200 XP
+**TOTAL XP: 300 XP**
+```
 
 ## Combat Mode Overview
 
@@ -514,9 +537,11 @@ If the AI describes an enemy as "CR 12" or "Level 15+", that enemy MUST have HP 
 
 1. **Set in_combat to false**
 2. **Set combat_phase to "ended"**
-3. **Calculate and award XP** (per enemy CR)
+3. **Calculate and award XP** (per enemy CR) - **Include ALL enemies: killed AND surrendered give FULL XP**
 4. **Distribute loot** (roll loot tables for bosses)
 5. **Update resources** (ammunition, spell slots used, HP)
+
+**REMINDER:** Surrendered enemies count as defeated for XP. If 100 enemies surrender, award XP for 100 enemies.
 
 ### Combat End state_updates
 ```json
@@ -573,7 +598,8 @@ If the AI describes an enemy as "CR 12" or "Level 15+", that enemy MUST have HP 
 ### Reward Categories (ALL REQUIRED)
 
 1. **Experience Points**
-   - List EACH enemy with CR and XP value
+   - List EACH enemy with CR and XP value (both killed AND surrendered)
+   - **Surrendered enemies give FULL XP** - mark them as "SURRENDERED" in the display
    - Show TOTAL XP earned
    - Show current XP progress toward next level
 

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from mvp_site import constants
+from mvp_site import constants, dice_strategy
+from mvp_site.agent_prompts import build_reprompt_for_missing_fields
 from mvp_site.dice_integrity import (
     _check_dice_integrity,
     _detect_combat_in_narrative,
@@ -11,7 +12,9 @@ from mvp_site.dice_integrity import (
     _should_require_dice_rolls_for_turn,
     _validate_combat_dice_integrity,
 )
-from mvp_site.llm_service import _check_missing_required_fields
+from mvp_site.game_state import GameState
+from mvp_site.llm_request import LLMRequest
+from mvp_site.llm_service import _build_reprompt_request, _check_missing_required_fields
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
@@ -63,8 +66,6 @@ def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_require
 
 
 def test_should_require_dice_rolls_only_for_combat_actions():
-    from mvp_site.game_state import GameState
-
     gs = GameState(combat_state={"in_combat": True})
 
     assert (
@@ -105,8 +106,6 @@ def test_should_require_dice_rolls_only_for_combat_actions():
 
 def test_should_require_dice_rolls_ignores_non_combat_verbs():
     """Non-combat phrasing should not force dice requirement."""
-    from mvp_site.game_state import GameState
-
     gs = GameState(combat_state={"in_combat": False})
 
     assert (
@@ -145,8 +144,6 @@ def test_should_require_dice_rolls_ignores_non_combat_verbs():
 
 def test_should_require_dice_rolls_detects_initiative():
     """Explicit initiative should still require dice."""
-    from mvp_site.game_state import GameState
-
     gs = GameState(combat_state={"in_combat": False})
     assert (
         _should_require_dice_rolls_for_turn(
@@ -219,7 +216,7 @@ def test_detect_combat_in_narrative_no_combat():
 def test_detect_combat_in_narrative_empty():
     """Empty or None narrative should return False."""
     assert _detect_combat_in_narrative("") is False
-    assert _detect_combat_in_narrative(None) is False  # type: ignore
+    assert _detect_combat_in_narrative(None) is False  # type: ignore[arg-type]
 
 
 # =============================================================================
@@ -565,15 +562,13 @@ def test_check_missing_required_fields_no_dice_integrity_violation():
 
 
 def test_build_reprompt_includes_tool_results_when_available():
-    """RED TEST: _build_reprompt_for_missing_fields should include tool_results context.
+    """RED TEST: build_reprompt_for_missing_fields should include tool_results context.
 
     When reprompting after Phase 2 returned malformed JSON, the reprompt message
     MUST include the original tool_results so the model can reference them.
 
     Without this, the model might fabricate new dice results during reprompt.
     """
-    from mvp_site.llm_service import _build_reprompt_for_missing_fields
-
     original_response = '{"narrative": "The goblin attacks!", "dice_rolls": []}'
     missing_fields = ["dice_rolls"]
 
@@ -588,7 +583,7 @@ def test_build_reprompt_includes_tool_results_when_available():
 
     # RED: Current implementation doesn't accept tool_results parameter
     # This test documents that it SHOULD accept and include tool_results
-    reprompt = _build_reprompt_for_missing_fields(
+    reprompt = build_reprompt_for_missing_fields(
         original_response,
         missing_fields,
         tool_results=tool_results,  # This parameter doesn't exist yet
@@ -602,10 +597,7 @@ def test_build_reprompt_includes_tool_results_when_available():
 
 def test_build_reprompt_dice_integrity_code_execution_only():
     """Reprompt for code_execution strategy should not mention tool_requests."""
-    from mvp_site import dice_strategy
-    from mvp_site.llm_service import _build_reprompt_for_missing_fields
-
-    reprompt = _build_reprompt_for_missing_fields(
+    reprompt = build_reprompt_for_missing_fields(
         '{"narrative": "test"}',
         ["dice_integrity"],
         dice_roll_strategy=dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
@@ -617,9 +609,6 @@ def test_build_reprompt_dice_integrity_code_execution_only():
 
 def test_build_reprompt_request_preserves_context():
     """Reprompt request should preserve context while replacing user_action."""
-    from mvp_site.llm_request import LLMRequest
-    from mvp_site.llm_service import _build_reprompt_request
-
     base_request = LLMRequest.build_story_continuation(
         user_action="Attack the goblin",
         user_id="user-1",

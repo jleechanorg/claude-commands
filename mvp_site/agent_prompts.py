@@ -1,18 +1,27 @@
 """
 Prompt building utilities for agent-based system instructions.
 
-This module centralizes prompt file loading and instruction assembly so
-llm_service can focus on request/response orchestration.
+This module centralizes ALL prompt manipulation code for the application:
+- System instruction loading and caching
+- Continuation prompt building
+- Reprompt message construction
+- Temporal correction prompts
+- Static prompt parts generation
+- Current turn prompt formatting
+
+llm_service and world_logic delegate prompt construction here,
+focusing on request/response orchestration instead.
 """
 
 import json
 import os
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from mvp_site import constants, logging_util
+from mvp_site import constants, dice_integrity, logging_util
 from mvp_site.file_cache import read_file_cached
 from mvp_site.game_state import GameState
+from mvp_site.memory_utils import format_memories_for_prompt, select_memories_by_budget
 from mvp_site.narrative_response_schema import (
     CHOICE_SCHEMA,
     PLANNING_BLOCK_SCHEMA,
@@ -21,6 +30,13 @@ from mvp_site.narrative_response_schema import (
     VALID_RISK_LEVELS,
 )
 from mvp_site.world_loader import load_world_content_for_system_instruction
+from mvp_site.world_time import format_world_time_for_prompt
+
+if TYPE_CHECKING:
+    from mvp_site.agents import BaseAgent
+
+# Word count target for standard story continuations
+TARGET_WORD_COUNT: int = 300
 
 # NEW: Centralized map of prompt types to their file paths.
 # This is now the single source of truth for locating prompt files.
@@ -71,19 +87,21 @@ def _schema_to_json_string(schema: dict) -> str:
 
     def convert_value(v: Any) -> Any:
         if v is str:
-            return "string"
+            mapped = "string"
         elif v is int:
-            return "integer"
+            mapped = "integer"
         elif v is list:
-            return "array"
+            mapped = "array"
         elif v is dict:
-            return "object"
+            mapped = "object"
         elif isinstance(v, dict):
-            return {k: convert_value(vv) for k, vv in v.items()}
+            mapped = {k: convert_value(vv) for k, vv in v.items()}
         elif isinstance(v, list):
-            return [convert_value(item) for item in v]
+            mapped = [convert_value(item) for item in v]
         else:
-            return v
+            mapped = v
+
+        return mapped
 
     converted = convert_value(schema)
     return json.dumps(converted, indent=2)
@@ -357,6 +375,19 @@ class PromptBuilder:
                 If None, static fallback instructions will be used.
         """
         self.game_state = game_state
+        # Store last-built blocks for evidence capture
+        self._last_identity_block: str = ""
+        self._last_directives_block: str = ""
+
+    @property
+    def last_identity_block(self) -> str:
+        """Return the last-built character identity block (for evidence capture)."""
+        return self._last_identity_block
+
+    @property
+    def last_directives_block(self) -> str:
+        """Return the last-built god mode directives block (for evidence capture)."""
+        return self._last_directives_block
 
     def _append_game_state_with_planning(self, parts: list[str]) -> None:
         """Append game_state plus planning_protocol in a single, centralized step."""
@@ -881,12 +912,29 @@ class PromptBuilder:
             elif isinstance(parentage, str):
                 lines.append(f"- **Parentage**: {parentage}")
 
+        # Active Effects (buffs, conditions, persistent effects)
+        # These MUST be applied to all relevant rolls and checks
+        active_effects = pc.get("active_effects", [])
+        if active_effects and isinstance(active_effects, list):
+            lines.append("")
+            lines.append("### Active Effects (ALWAYS APPLY)")
+            lines.append(
+                "The following buffs/effects are ALWAYS active and MUST be applied "
+                "to all relevant rolls, checks, saves, and combat calculations:"
+            )
+            for effect in active_effects:
+                if isinstance(effect, str) and effect.strip():
+                    lines.append(f"  - {effect}")
+                elif isinstance(effect, dict):
+                    effect_name = effect.get("name") or effect.get("effect") or str(effect)
+                    lines.append(f"  - {effect_name}")
+
         if len(lines) == 1:
             return ""  # Only header, no actual data
 
         return "\n".join(lines)
 
-    def build_god_mode_directives_block(self) -> str:
+    def build_god_mode_directives_block(self) -> str:  # noqa: PLR0912, PLR0915
         """
         Build god mode directives block for system prompts.
 
@@ -929,9 +977,7 @@ class PromptBuilder:
                         return d.get("added", "")
                     return ""
 
-                sorted_directives = sorted(
-                    directives, key=get_added_ts, reverse=True
-                )
+                sorted_directives = sorted(directives, key=get_added_ts, reverse=True)
 
                 lines = ["## Active God Mode Directives (Newest First)"]
                 lines.append(
@@ -1159,12 +1205,14 @@ class PromptBuilder:
         # Add character identity block early (after core instructions)
         # This ensures the LLM always knows immutable character facts
         identity_block = self.build_character_identity_block()
+        self._last_identity_block = identity_block  # Store for evidence capture
         if identity_block:
             parts.insert(1, identity_block)  # Insert after first (master directive)
 
         # Add god mode directives (player-defined rules)
         # These MUST be followed by the LLM
         directives_block = self.build_god_mode_directives_block()
+        self._last_directives_block = directives_block  # Store for evidence capture
         if directives_block:
             # Insert after identity block (or after master directive if no identity)
             insert_pos = 2 if identity_block else 1
@@ -1177,3 +1225,308 @@ class PromptBuilder:
         # Debug instructions already added at the beginning in build_core_system_instructions
 
         return "\n\n".join(parts)
+
+
+# =============================================================================
+# CENTRALIZED PROMPT BUILDING FUNCTIONS
+# =============================================================================
+# These functions are centralized here from llm_service.py and world_logic.py
+# to ensure all prompt manipulation code lives in one module.
+
+
+def build_reprompt_for_missing_fields(
+    original_response_text: str,
+    missing_fields: list[str],
+    tool_results: list[dict[str, Any]] | None = None,
+    dice_roll_strategy: str | None = None,
+) -> str:
+    """Build a reprompt message to request missing fields from the LLM.
+
+    When the LLM response is missing required fields (planning_block, session_header,
+    dice_rolls, etc.), this function constructs a clear reprompt message explaining
+    what's missing and how to provide it.
+
+    Args:
+        original_response_text: The original response from the LLM
+        missing_fields: List of missing field names
+        tool_results: Optional list of tool execution results to include
+            in the reprompt. This preserves dice roll provenance when
+            reprompting after malformed JSON in Phase 2.
+        dice_roll_strategy: Strategy to determine available dice remediation
+            (code_execution only vs tool_requests only)
+
+    Returns:
+        Reprompt message asking for the missing fields
+    """
+    if not missing_fields:
+        return (
+            "Your response was evaluated for required JSON fields, but none were "
+            "identified as missing. Please ensure your response conforms to the "
+            "expected schema."
+        )
+
+    fields_str = " and ".join(missing_fields)
+
+    requested_lines: list[str] = []
+    if "planning_block" in missing_fields:
+        requested_lines.append(
+            "- planning_block: An object with 'thinking' (your GM reasoning) and 'choices' (2-4 player options, each with 'text', 'description', 'risk_level')"
+        )
+    if "session_header" in missing_fields:
+        requested_lines.append(
+            "- session_header: A brief session context string (e.g., 'Session 3: The Quest Continues')"
+        )
+    if "dice_rolls" in missing_fields:
+        requested_lines.append(
+            "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
+        )
+    if "dice_integrity" in missing_fields:
+        requested_lines.extend(
+            dice_integrity.build_dice_integrity_reprompt_lines(dice_roll_strategy)
+        )
+
+    requested_block = "\n".join(requested_lines)
+
+    # Build tool results context if available (preserves dice provenance)
+    tool_results_context = ""
+    if tool_results:
+        tool_lines: list[str] = []
+        for tr in tool_results:
+            if not isinstance(tr, dict):
+                continue
+            tool_name = tr.get("tool", "unknown")
+            result = tr.get("result", {})
+            if isinstance(result, dict):
+                total = result.get("total", result.get("result"))
+                purpose = tr.get("args", {}).get("purpose", "")
+                tool_lines.append(
+                    f"  - {tool_name}: {total}" + (f" ({purpose})" if purpose else "")
+                )
+            else:
+                tool_lines.append(f"  - {tool_name}: {result}")
+        if tool_lines:
+            tool_results_context = (
+                "\n\nIMPORTANT - Tool results from prior execution (use these EXACT values, do NOT fabricate):\n"
+                + "\n".join(tool_lines)
+                + "\n"
+            )
+
+    return (
+        f"Your response is missing the required {fields_str} field(s). "
+        f"Please provide the complete JSON response including:\n{requested_block}\n\n"
+        f"Keep the narrative and other fields from your previous response. "
+        f"{tool_results_context}"
+        f"Here is your previous response for reference:\n{original_response_text[:2000]}"
+    )
+
+
+def get_static_prompt_parts(
+    current_game_state: GameState, story_context: list[dict[str, Any]]
+) -> tuple[str, str, str]:
+    """Helper to generate the non-timeline parts of the prompt.
+
+    This builds the checkpoint block, core memories summary, and sequence ID list
+    that provide stable context for story continuation.
+
+    Args:
+        current_game_state: The current GameState object
+        story_context: List of story entries with sequence_id fields
+
+    Returns:
+        tuple: (checkpoint_block, core_memories_summary, sequence_id_list_string)
+    """
+    sequence_ids = [str(entry.get("sequence_id", "N/A")) for entry in story_context]
+    sequence_id_list_string = ", ".join(sequence_ids)
+    latest_seq_id = sequence_ids[-1] if sequence_ids else "N/A"
+
+    current_location = current_game_state.world_data.get(
+        "current_location_name", "Unknown"
+    )
+
+    pc_data: dict[str, Any] = current_game_state.player_character_data
+    # The key stats are now generated by the LLM in the [CHARACTER_RESOURCES] block.
+    active_missions: list[Any] = current_game_state.custom_campaign_state.get(
+        "active_missions", []
+    )
+    if active_missions:
+        # Handle both old style (list of strings) and new style (list of dicts)
+        mission_names = []
+        for m in active_missions:
+            if isinstance(m, dict):
+                # For dict format, try to get 'name' field, fallback to 'title' or convert to string
+                name = m.get("name") or m.get("title") or str(m)
+            else:
+                # For string format, use as-is
+                name = str(m)
+            mission_names.append(name)
+        missions_summary = "Missions: " + (
+            ", ".join(mission_names) if mission_names else "None"
+        )
+    else:
+        missions_summary = "Missions: None"
+
+    ambition: str | None = pc_data.get("core_ambition")
+    milestone: str | None = pc_data.get("next_milestone")
+    ambition_summary: str = ""
+    if ambition and milestone:
+        ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
+
+    all_core_memories: list[str] = current_game_state.custom_campaign_state.get(
+        "core_memories", []
+    )
+    # Apply token budget to prevent memory overflow
+    selected_memories = select_memories_by_budget(all_core_memories)
+    core_memories_summary: str = format_memories_for_prompt(selected_memories)
+
+    checkpoint_block: str = (
+        f"[CHECKPOINT BLOCK:]\\n"
+        f"Sequence ID: {latest_seq_id} | Location: {current_location}\\n"
+        f"{missions_summary}\\n"
+        f"{ambition_summary}"
+    )
+
+    return checkpoint_block, core_memories_summary, sequence_id_list_string
+
+
+def get_current_turn_prompt(user_input: str, mode: str) -> str:
+    """Helper to generate the text for the user's current action.
+
+    This formats the user's input into a proper prompt based on the current mode
+    (character mode vs god mode) and detects think/plan commands.
+
+    Args:
+        user_input: The user's raw input text
+        mode: Either "character" or "god" to determine prompt formatting
+
+    Returns:
+        str: Formatted prompt text for the current turn
+    """
+    if mode == constants.MODE_CHARACTER:
+        # Check if user is requesting planning/thinking
+        # Note: Thinking detection simplified to avoid hardcoded keyword lists
+        user_input_lower = user_input.lower()
+        is_think_command = "think" in user_input_lower or "plan" in user_input_lower
+
+        if is_think_command:
+            # Emphasize planning for think commands (planning block handled separately in JSON)
+            prompt_template = (
+                "Main character: {user_input}. Generate the character's internal thoughts and strategic analysis. "
+                "NARRATIVE: Write the character's inner thoughts and contemplation as narrative text. "
+                "PLANNING: Generate detailed analysis in the planning block with pros/cons for each option. "
+                "DO NOT take any physical actions or advance the scene. Focus on mental deliberation only. "
+                "CRITICAL: Each choice in the planning block MUST include an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string."
+            )
+        else:
+            # Standard story continuation (planning block handled separately in JSON)
+            prompt_template = (
+                "Main character: {user_input}. Continue the story in about {word_count} words and "
+                "add details for narrative, descriptions of scenes, character dialog, character emotions."
+            )
+        return prompt_template.format(
+            user_input=user_input, word_count=TARGET_WORD_COUNT
+        )
+    # god mode (and any non-character mode)
+    return f"GOD MODE: {user_input}"
+
+
+def build_temporal_correction_prompt(
+    original_user_input: str,
+    old_time: dict[str, Any],
+    new_time: dict[str, Any],
+    old_location: str | None,
+    new_location: str | None,
+) -> str:
+    """Build correction prompt when temporal violation detected.
+
+    This prompts the LLM to regenerate the ENTIRE response with correct context
+    when the story timeline has gone backward (which shouldn't happen).
+
+    Args:
+        original_user_input: The original user action that triggered the response
+        old_time: The correct current time state (dict with year, month, day, etc.)
+        new_time: The invalid time from LLM response that went backward
+        old_location: The correct current location
+        new_location: The invalid location from LLM response
+
+    Returns:
+        str: Formatted correction prompt explaining the violation and how to fix it
+    """
+    old_time_str = format_world_time_for_prompt(old_time)
+    new_time_str = format_world_time_for_prompt(new_time)
+    old_loc = old_location or "Unknown location"
+    new_loc = new_location or "Unknown location"
+
+    return f"""⚠️ TEMPORAL VIOLATION - FULL REGENERATION REQUIRED
+
+Your previous response was REJECTED because time went BACKWARD:
+- CORRECT current state: {old_time_str} at {old_loc}
+- YOUR invalid output: {new_time_str} at {new_loc}
+
+🚨 CRITICAL ERROR: You appear to have lost track of the story timeline.
+
+## ROOT CAUSE ANALYSIS
+You likely focused on OLDER entries in the TIMELINE LOG instead of the MOST RECENT ones.
+This caused you to generate a response for a scene that already happened in the past.
+
+## MANDATORY CORRECTION INSTRUCTIONS
+
+1. **FOCUS ON THE LATEST ENTRIES**: Look at the LAST 2-3 entries in the TIMELINE LOG.
+   These represent where the story CURRENTLY is, not where it was earlier.
+
+2. **IDENTIFY THE CURRENT SCENE**: The player is currently at:
+   - Time: {old_time_str}
+   - Location: {old_loc}
+   - This is where you must CONTINUE from.
+
+3. **GENERATE THE NEXT ENTRY**: Your response must continue the story forward.
+   - Time MUST be AFTER {old_time_str} (move forward, even if just by minutes)
+   - Location should logically follow from {old_loc}
+   - Do NOT jump back to earlier scenes or locations
+
+4. **IGNORE YOUR PREVIOUS ATTEMPT**: Your output of "{new_time_str} at {new_loc}" was WRONG.
+   Do not use that as a reference.
+
+## PLAYER ACTION TO RESPOND TO:
+{original_user_input}
+
+Generate a NEW response that is the NEXT logical entry in the timeline, continuing from the CURRENT state."""
+
+
+def build_temporal_warning_message(
+    temporal_correction_attempts: int,
+    max_attempts: int = 3,
+) -> str | None:
+    """Build user-facing temporal warning text based on attempts taken.
+
+    When temporal corrections are needed, this generates an appropriate
+    warning message to inform the user about timeline consistency issues.
+
+    Args:
+        temporal_correction_attempts: Number of correction attempts made
+        max_attempts: Maximum correction attempts allowed (default 3)
+
+    Returns:
+        Warning message string or None if no warning needed
+    """
+    if temporal_correction_attempts <= 0:
+        return None
+
+    # Always surface a warning once at least one correction was attempted.
+    # When max_attempts is 0 (corrections disabled), we still emit a warning
+    # and treat the effective max as at least one attempt so the message
+    # doesn't silently disappear.
+    effective_max_attempts = max(1, max_attempts)
+
+    if temporal_correction_attempts > effective_max_attempts:
+        return (
+            f"⚠️ TEMPORAL CORRECTION EXCEEDED: The AI repeatedly generated responses that jumped "
+            f"backward in time. After {temporal_correction_attempts} failed correction attempts "
+            f"(configured max {max_attempts}), the system accepted the response "
+            f"to avoid infinite loops. Timeline consistency may be compromised."
+        )
+
+    return (
+        f"⚠️ TEMPORAL CORRECTION: The AI initially generated a response that jumped "
+        f"backward in time. {temporal_correction_attempts} correction(s) were required "
+        f"to fix the timeline continuity."
+    )

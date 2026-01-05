@@ -708,6 +708,42 @@ class TestGetAgentForInput(unittest.TestCase):
                 agent, GodModeAgent, f"Should return GodModeAgent for: {user_input}"
             )
 
+    def test_get_agent_returns_god_mode_for_mode_parameter(self):
+        """get_agent_for_input returns GodModeAgent when mode='god' even without prefix.
+
+        This is critical for UI-based god mode switching where the mode is passed
+        as a parameter rather than requiring "GOD MODE:" prefix in user text.
+        """
+        # These inputs do NOT have the "GOD MODE:" prefix but should still
+        # route to GodModeAgent when mode="god" is passed from the UI
+        test_inputs = [
+            "stop ignoring me",
+            "what are my army numbers?",
+            "fix this state",
+            "regular text without prefix",
+        ]
+        for user_input in test_inputs:
+            agent = get_agent_for_input(user_input, mode="god")
+            self.assertIsInstance(
+                agent,
+                GodModeAgent,
+                f"Should return GodModeAgent for mode='god' with input: {user_input}",
+            )
+
+    def test_get_agent_god_mode_case_insensitive(self):
+        """get_agent_for_input handles mode parameter case-insensitively.
+
+        Users or clients may send 'God', 'GOD', 'god', etc. All should work.
+        """
+        mode_variations = ["god", "God", "GOD", "gOd", "goD"]
+        for mode in mode_variations:
+            agent = get_agent_for_input("set HP to 100", mode=mode)
+            self.assertIsInstance(
+                agent,
+                GodModeAgent,
+                f"Should return GodModeAgent for mode='{mode}' (case-insensitive)",
+            )
+
     def test_get_agent_returns_story_mode_for_regular_input(self):
         """get_agent_for_input returns StoryModeAgent for regular inputs."""
         test_inputs = [

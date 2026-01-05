@@ -23,7 +23,11 @@ MAX_BACKPACK_ITEMS_DISPLAY: int = 3
 DICE_PATTERN = r"\b\d*d\d+(?:\s*[+-]\s*\d+)?\b"
 
 # Canonical weapon slot labels used across filtering and categorization
-WEAPON_SLOTS = {"weapon", "main hand", "off hand", "mainhand", "offhand"}
+WEAPON_SLOTS = {
+    "weapon", "main hand", "off hand", "mainhand", "offhand",
+    "weapon_main", "weapon_secondary",  # Named weapon slots (raw)
+    "weapon main", "weapon secondary",  # Named weapon slots (lowercased versions after title-case transformation)
+}
 
 # Keywords that indicate user is asking about equipment/inventory
 EQUIPMENT_QUERY_KEYWORDS = [
@@ -156,7 +160,7 @@ def _categorize_equipment_slot(slot: str) -> str:  # noqa: PLR0911
         return "Gloves"
     if slot_lower in {"cloak", "back", "cape", "mantle"}:
         return "Cloak"
-    if slot_lower in {"ring", "ring1", "ring 1", "ring2", "ring 2", "rings"}:
+    if slot_lower in {"ring", "ring1", "ring 1", "ring2", "ring 2", "ring_1", "ring_2", "rings"}:
         return "Rings"
     if slot_lower in {"amulet", "neck", "necklace", "pendant"}:
         return "Amulet"
@@ -171,9 +175,13 @@ def _categorize_equipment_slot(slot: str) -> str:  # noqa: PLR0911
     if slot_lower in {"off hand", "off_hand", "offhand"}:
         return "Off-Hand"
 
-    # Weapons (main hand, weapon slots)
+    # Weapons (main hand, weapon slots, named weapon slots)
     if slot_lower in WEAPON_SLOTS:
         return "Weapons"
+
+    # Instruments (equipped instrument slot)
+    if slot_lower == "instrument":
+        return "Instruments"
 
     # Backpack goes to miscellaneous categories based on item analysis
     if slot_lower == "backpack":
@@ -569,7 +577,9 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
         # Common slots that might be directly on the equipment object
         EQUIPMENT_SLOTS = {
             "head", "body", "armor", "cloak", "neck", "hands", "feet", "ring",
+            "ring_1", "ring_2",  # Numbered ring slots
             "instrument", "main_hand", "off_hand", "mainhand", "offhand", "weapon",
+            "weapon_main", "weapon_secondary",  # Named weapon slots (staves, etc.)
             "shield", "amulet", "necklace", "belt", "boots", "gloves", "bracers"
         }
         for slot in EQUIPMENT_SLOTS:

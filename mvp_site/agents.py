@@ -562,17 +562,20 @@ class GodModeAgent(FixedPromptAgent):
     # Uses FixedPromptAgent.build_system_instructions() - no del patterns needed
 
     @classmethod
-    def matches_input(cls, user_input: str) -> bool:
+    def matches_input(cls, user_input: str, mode: str | None = None) -> bool:
         """
-        God mode is triggered by "GOD MODE:" prefix.
+        God mode is triggered by "GOD MODE:" prefix OR mode="god" parameter.
+
+        Uses constants.is_god_mode() for centralized detection logic.
 
         Args:
             user_input: Raw user input text
+            mode: Optional mode parameter from request (e.g., "god", "character")
 
         Returns:
-            True if the input starts with "GOD MODE:" (case-insensitive)
+            True if god mode should be activated (via prefix or mode param)
         """
-        return user_input.strip().upper().startswith("GOD MODE:")
+        return constants.is_god_mode(user_input, mode)
 
     def preprocess_input(self, user_input: str) -> str:
         """
@@ -1297,7 +1300,7 @@ def get_agent_for_input(
     Factory function to get the appropriate agent for user input.
 
     Determines which agent should handle the input based on mode detection:
-    1. GodModeAgent if input starts with "GOD MODE:" (highest priority)
+    1. GodModeAgent if input starts with "GOD MODE:" OR mode="god" (highest priority)
     2. CharacterCreationAgent if character creation is in progress (second highest)
        - UNLESS user indicates they're done, then transitions to StoryMode
     3. PlanningAgent if input starts with "THINK:" or mode is "think" (strategic planning)
@@ -1345,7 +1348,8 @@ def get_agent_for_input(
         True
     """
     # Priority 1: GOD MODE always takes precedence (administrative override)
-    if GodModeAgent.matches_input(user_input):
+    # Uses centralized constants.is_god_mode() via GodModeAgent.matches_input()
+    if GodModeAgent.matches_input(user_input, mode):
         logging_util.info("🔮 GOD_MODE_DETECTED: Using GodModeAgent")
         return GodModeAgent(game_state)
 

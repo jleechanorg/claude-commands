@@ -2233,5 +2233,200 @@ class TestLevelUpInjection(unittest.TestCase):
         self.assertIn("defer", injected.lower())
 
 
+class TestGodModeParameterIntegration(unittest.TestCase):
+    """
+    Integration tests for god mode via mode parameter (not just text prefix).
+
+    These tests verify that mode='god' from the UI is handled the same as
+    typing "GOD MODE:" prefix. This requires integration with world_logic.py
+    to verify downstream behaviors like player turn handling.
+
+    Bug reference: WA-hd1 - world_logic.py ignores mode='god' parameter
+    """
+
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.structured_fields_utils")
+    def test_god_mode_via_mode_param_does_not_increment_player_turn(
+        self,
+        mock_structured_utils,
+        mock_settings,
+        mock_prepare,
+        mock_gemini,
+        mock_add_story,
+        mock_update_state,
+        mock_get_campaign,
+        mock_get_campaign_state,
+    ):
+        """
+        🔴 RED PHASE: mode='god' should NOT increment player_turn.
+
+        When the UI sends mode='god' (without "GOD MODE:" prefix in text),
+        world_logic.py should treat it as god mode and NOT increment player_turn.
+
+        This test FAILS without the fix because world_logic.py:1501 only checks
+        text prefix, not mode parameter.
+        """
+        initial_player_turn = 5
+
+        # Mock game state with initial player turn
+        mock_game_state = Mock()
+        mock_game_state.player_turn = initial_player_turn
+        mock_game_state.debug_mode = False
+        mock_game_state.to_dict.return_value = {
+            "player_turn": initial_player_turn,
+            "player_character_data": {
+                "name": "Thorin",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            "world_data": {
+                "world_time": {
+                    "year": 1492,
+                    "month": "Mirtul",
+                    "day": 10,
+                    "hour": 14,
+                }
+            },
+        }
+
+        mock_get_campaign_state.return_value = {}
+        mock_get_campaign.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            [],  # story context
+        )
+        # _prepare_game_state returns tuple: (game_state, state_was_cleaned, entries_cleaned)
+        mock_prepare.return_value = (mock_game_state, False, 0)
+        mock_settings.return_value = {"debug_mode": False}
+        mock_structured_utils.extract_structured_fields.return_value = {}
+
+        # Mock LLM response - must include agent_mode as single source of truth
+        mock_gemini_response = Mock()
+        mock_gemini_response.narrative_text = "HP set to 100."
+        mock_gemini_response.get_state_updates.return_value = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini_response.get_location_confirmed.return_value = None
+        mock_gemini_response.get_narrative_text.return_value = "HP set to 100."
+        mock_gemini_response.resources = ""
+        mock_gemini_response.processing_metadata = {}
+        # agent_mode is the single source of truth - set by agent selection in llm_service
+        mock_gemini_response.agent_mode = "god"  # constants.MODE_GOD
+        mock_gemini.return_value = mock_gemini_response
+
+        # Request with mode='god' but NO "GOD MODE:" prefix in text
+        request_data = {
+            "user_id": "test-user-god-mode-param",
+            "campaign_id": "test-campaign-god-mode-param",
+            "user_input": "set my HP to 100",  # NO "GOD MODE:" prefix!
+            "mode": "god",  # This should trigger god mode behavior
+        }
+
+        result = asyncio.run(world_logic.process_action_unified(request_data))
+
+        # Verify success
+        self.assertTrue(
+            result.get("success"),
+            f"Expected success, got error: {result.get('error')}",
+        )
+
+        # CRITICAL ASSERTION: player_turn should NOT be incremented in god mode
+        # If is_god_mode is correctly detected from mode param, turn stays at 5
+        # If is_god_mode is missed, turn would be incremented to 6
+        updated_state = mock_update_state.call_args[0][2]
+        actual_player_turn = updated_state.get("player_turn", -1)
+
+        self.assertEqual(
+            initial_player_turn,
+            actual_player_turn,
+            f"God mode (via mode param) should NOT increment player_turn. "
+            f"Expected {initial_player_turn}, got {actual_player_turn}. "
+            f"This indicates world_logic.py is ignoring mode='god' parameter "
+            f"and only checking for 'GOD MODE:' text prefix.",
+        )
+
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.structured_fields_utils")
+    def test_god_mode_return_to_story_without_prefix_uses_character_mode(
+        self,
+        mock_structured_utils,
+        mock_settings,
+        mock_prepare,
+        mock_gemini,
+        mock_add_story,
+        mock_update_state,
+        mock_get_campaign,
+        mock_get_campaign_state,
+    ):
+        """Return-to-story should work without prefix when mode='god' is set."""
+        mock_game_state = Mock()
+        mock_game_state.player_turn = 5
+        mock_game_state.debug_mode = False
+        mock_game_state.to_dict.return_value = {
+            "player_turn": 5,
+            "player_character_data": {
+                "name": "Thorin",
+                "hp_current": 50,
+                "hp_max": 50,
+            },
+            "world_data": {
+                "world_time": {
+                    "year": 1492,
+                    "month": "Mirtul",
+                    "day": 10,
+                    "hour": 14,
+                }
+            },
+        }
+
+        mock_get_campaign_state.return_value = {}
+        mock_get_campaign.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            [],
+        )
+        mock_prepare.return_value = (mock_game_state, False, 0)
+        mock_settings.return_value = {"debug_mode": False}
+        mock_structured_utils.extract_structured_fields.return_value = {}
+
+        mock_gemini_response = Mock()
+        mock_gemini_response.narrative_text = "Returning to story."
+        mock_gemini_response.get_state_updates.return_value = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini_response.get_location_confirmed.return_value = None
+        mock_gemini_response.get_narrative_text.return_value = "Returning to story."
+        mock_gemini_response.resources = ""
+        mock_gemini_response.processing_metadata = {}
+        mock_gemini_response.agent_mode = world_logic.constants.MODE_CHARACTER
+        mock_gemini.return_value = mock_gemini_response
+
+        request_data = {
+            "user_id": "test-user-god-mode-return",
+            "campaign_id": "test-campaign-god-mode-return",
+            "user_input": "return to story",
+            "mode": "god",
+        }
+
+        result = asyncio.run(world_logic.process_action_unified(request_data))
+
+        self.assertTrue(
+            result.get("success"),
+            f"Expected success, got error: {result.get('error')}",
+        )
+        self.assertTrue(mock_gemini.called, "LLM should be called")
+        call_args = mock_gemini.call_args[0]
+        self.assertEqual("Return to story.", call_args[0])
+        self.assertEqual(world_logic.constants.MODE_CHARACTER, call_args[1])
+
+
 if __name__ == "__main__":
     unittest.main()
