@@ -2982,6 +2982,7 @@ def _build_reprompt_request(
         entity_tracking=base_request.entity_tracking,
         selected_prompts=list(base_request.selected_prompts),
         use_default_world=base_request.use_default_world,
+        system_corrections=list(base_request.system_corrections),
     )
 
 
@@ -3439,6 +3440,15 @@ def continue_story(
         for entry in truncated_story_context
     ]
 
+    # Extract pending system_corrections from game_state (one-time read and clear)
+    # These are discrepancies detected in the previous turn that the LLM must fix
+    pending_system_corrections = game_state_for_llm.pop("pending_system_corrections", [])
+    if pending_system_corrections:
+        logging_util.warning(
+            f"🔧 Injecting {len(pending_system_corrections)} system_corrections into LLM request: "
+            f"{pending_system_corrections}"
+        )
+
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
@@ -3455,6 +3465,7 @@ def continue_story(
         entity_tracking=entity_tracking_data,
         selected_prompts=selected_prompts or [],
         use_default_world=use_default_world,
+        system_corrections=pending_system_corrections,
     )
 
     # DEBUG: Log full LLMRequest payload size breakdown

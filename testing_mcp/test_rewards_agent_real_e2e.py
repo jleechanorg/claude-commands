@@ -8,13 +8,26 @@ This test creates a REAL campaign and validates that RewardsAgent:
 3. Displays proper rewards summary with XP/loot
 4. Checks for level-up availability
 5. Sets rewards_processed: true to prevent duplicates
-6. Smoothly transitions back to story mode with continue options
+6. Is PURELY MECHANICAL - no narrative, no time advance, no story choices
 
 What this test PROVES:
 - RewardsAgent activates when rewards are pending from any source
 - Rewards display includes XP, loot, and level-up status
 - State is properly updated after reward processing
-- Smooth UX flow: rewards shown first, then continue options
+- RewardsAgent is mechanical: only rewards, level-up choices allowed
+
+DESIGN PRINCIPLE:
+RewardsAgent is purely mechanical - it only handles:
+- XP calculation and display
+- Loot distribution
+- Level-up detection and offers
+- Setting rewards_processed=true
+
+RewardsAgent does NOT:
+- Advance time or game clock
+- Generate narrative beyond rewards summary
+- Provide story continuation choices (only level-up choices allowed)
+StoryModeAgent handles narrative continuation after RewardsAgent completes.
 
 Run locally:
     BASE_URL=http://localhost:8001 python testing_mcp/test_rewards_agent_real_e2e.py
@@ -474,19 +487,53 @@ def check_rewards_indicators(
 
 
 def check_continue_options(response_data: dict) -> dict:
-    """Check if response includes continue/choice options."""
+    """Check if response includes choices and validate mechanical-only behavior.
+
+    RewardsAgent should be PURELY MECHANICAL:
+    - Level-up choices are ALLOWED (level_up_now, continue_adventuring)
+    - Story continuation choices are NOT ALLOWED (continue_story, rest, explore)
+
+    Returns dict with analysis of what choices are present.
+    """
     planning_block = response_data.get("planning_block", {})
     choices = planning_block.get("choices", {})
+
+    # Level-up choices are allowed (exact match to avoid false positives)
+    level_up_choices = ["level_up_now", "level_up", "continue_adventuring"]
+    # Story continuation choices are NOT allowed in RewardsAgent
+    # Note: Use exact match to avoid "continue" matching "continue_adventuring"
+    story_choices = ["continue_story", "continue", "rest", "explore", "continue_adventure"]
+
+    choice_keys_lower = [k.lower() for k in choices.keys()] if choices else []
+
+    # First identify level-up choices (exact match)
+    has_level_up_choices = any(
+        ck in level_up_choices for ck in choice_keys_lower
+    )
+
+    # Story choices: check if any key is a story choice but NOT a level-up choice
+    # This prevents "continue_adventuring" from matching "continue" substring
+    has_story_choices = any(
+        ck in story_choices or (
+            any(sc in ck for sc in story_choices) and ck not in level_up_choices
+        )
+        for ck in choice_keys_lower
+    )
 
     return {
         "has_planning_block": bool(planning_block),
         "has_choices": bool(choices),
         "choice_count": len(choices),
         "choice_keys": list(choices.keys()) if choices else [],
+        # Legacy field for compatibility
         "has_continue_option": any(
             "continue" in k.lower() or "adventure" in k.lower()
             for k in choices.keys()
         ) if choices else False,
+        # NEW: Mechanical-only validation
+        "has_level_up_choices": has_level_up_choices,
+        "has_story_choices": has_story_choices,
+        "is_mechanical_only": not has_story_choices,  # True = correct behavior
     }
 
 
@@ -772,7 +819,10 @@ def main():
     log(f"  Player XP: {rewards_validation.get('player_xp_current')}")
     log(f"  Rewards indicators: {rewards_check['narrative_indicator_count']}/3")
     log(f"  XP before end: {xp_before_end_combat} -> after: {xp_after_end_combat}")
-    log(f"  Has continue options: {continue_check['has_choices']}")
+    log(f"  Has choices: {continue_check['has_choices']}")
+    log(f"  Is mechanical-only: {continue_check['is_mechanical_only']} (no story choices)")
+    if continue_check.get('has_story_choices'):
+        log(f"  ⚠️ WARNING: Story choices found (should be level-up only): {continue_check['choice_keys']}")
     if combat_end_issues:
         log(f"  ISSUES: {', '.join(combat_end_issues)}")
 

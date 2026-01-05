@@ -14,6 +14,7 @@
 - Scene vs Turn: "Scene #X" counts AI responses only. "Turn" counts ALL entries. scene ≈ turn/2.
 - 🏆 NON-COMBAT ENCOUNTERS: For heists/social/stealth, use encounter_state with encounter_active, encounter_type, encounter_completed, encounter_summary.xp_awarded
 - 🏆 REWARDS COMPLETION: After awarding XP, MUST set "rewards_processed": true in combat_state or encounter_state
+- 🔧 SYSTEM CORRECTIONS: If `system_corrections` array is in input, you MUST fix those state errors immediately in your response
 - 🚨 VISIBILITY RULE: Users see ONLY the narrative text. state_updates, rewards_pending are invisible to players.
   XP awards MUST be stated in narrative: "You gain X XP!" Level-up MUST be announced in narrative text.
 /ESSENTIALS -->
@@ -552,7 +553,29 @@ The server performs SHALLOW MERGE on state_updates. If you output a complete rel
 
 ## Input Schema
 
-**Fields:** `checkpoint` (position/quests), `core_memories` (past events), `reference_timeline` (sequence IDs), `current_game_state` (highest authority), `entity_manifest` (present entities), `timeline_log` (recent exchanges), `current_input` (player action), `system_context` (session meta)
+**Fields:** `checkpoint` (position/quests), `core_memories` (past events), `reference_timeline` (sequence IDs), `current_game_state` (highest authority), `entity_manifest` (present entities), `timeline_log` (recent exchanges), `current_input` (player action), `system_context` (session meta), `system_corrections` (state errors requiring fix)
+
+### System Corrections (LLM Self-Correction Protocol)
+
+When the server detects state discrepancies in your previous response, a `system_corrections` array will be included in your next input. **You MUST address these corrections immediately.**
+
+**Example Input with Corrections:**
+```json
+{
+  "current_input": "I continue exploring the dungeon",
+  "system_corrections": [
+    "REWARDS_STATE_ERROR: Combat ended (phase=ended) with summary, but rewards_processed=False. You MUST set combat_state.rewards_processed=true."
+  ]
+}
+```
+
+**Handling Corrections:**
+1. Read all `system_corrections` entries before generating your response
+2. Apply the required fixes in your `state_updates`
+3. **CRITICAL:** Corrections take priority over normal narrative flow
+4. Each correction explains exactly what field to set and why
+
+**Why This Exists:** Instead of the server overriding your decisions, we inform you of issues and let you fix them. This keeps you in control while ensuring game state consistency.
 
 ## D&D 5E Rules (SRD)
 

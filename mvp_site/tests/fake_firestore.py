@@ -1,8 +1,13 @@
 """
 Fake Firestore implementation for testing.
 Returns real data structures instead of Mock objects to avoid JSON serialization issues.
+
+IMPORTANT: This implementation makes deep copies of data to simulate real Firestore behavior.
+Real Firestore stores data on the server, so in-memory modifications to the original dict
+do NOT affect the stored data. This fake must behave the same way.
 """
 
+import copy
 import datetime
 
 
@@ -16,8 +21,13 @@ class FakeFirestoreDocument:
         self._collections = {}
 
     def set(self, data):
-        """Simulate setting document data."""
-        self._data = data
+        """Simulate setting document data.
+
+        Makes a deep copy to simulate real Firestore behavior where stored data
+        is independent of the original dict. This is critical for catching bugs
+        where code modifies a dict after persisting it.
+        """
+        self._data = copy.deepcopy(data)
 
     def update(self, data):
         """Simulate updating document data with nested field support."""

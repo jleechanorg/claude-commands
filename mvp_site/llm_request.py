@@ -69,6 +69,10 @@ class LLMRequest:
     selected_prompts: list[str] = field(default_factory=list)
     sequence_ids: list[str] = field(default_factory=list)
 
+    # System corrections from previous turn (LLM self-correction protocol)
+    # These are discrepancies detected by the server that the LLM must fix
+    system_corrections: list[str] = field(default_factory=list)
+
     # Story generation specific fields
     character_prompt: str | None = None
     generate_companions: bool = False
@@ -207,6 +211,11 @@ class LLMRequest:
                 json_data["generate_companions"] = self.generate_companions
                 json_data["world_data"] = self.world_data
 
+            # Add system corrections if present (LLM self-correction protocol)
+            # Only include if non-empty to avoid noise in prompt
+            if self.system_corrections:
+                json_data["system_corrections"] = self.system_corrections
+
             # Validate payload size
             self._validate_payload_size(json_data)
 
@@ -248,6 +257,7 @@ class LLMRequest:
         entity_tracking: dict[str, Any] | None = None,
         selected_prompts: list[str] | None = None,
         use_default_world: bool = False,
+        system_corrections: list[str] | None = None,
     ) -> "LLMRequest":
         """
         Build a LLMRequest for story continuation.
@@ -264,6 +274,7 @@ class LLMRequest:
             entity_tracking: Entity tracking data
             selected_prompts: Selected prompt types
             use_default_world: Whether to use default world content
+            system_corrections: Discrepancies from previous turn that LLM must fix
 
         Returns:
             LLMRequest configured for story continuation
@@ -292,6 +303,7 @@ class LLMRequest:
             entity_tracking=entity_tracking or {},
             selected_prompts=selected_prompts or [],
             use_default_world=use_default_world,
+            system_corrections=system_corrections or [],
         )
 
     @classmethod
