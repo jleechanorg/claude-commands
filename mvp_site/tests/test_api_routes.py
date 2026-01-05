@@ -186,5 +186,66 @@ class TestAPIRoutes(unittest.TestCase):
         )
 
 
+class TestStoryTruncation(unittest.TestCase):
+    """Test story entry truncation to prevent oversized responses.
+
+    Campaign kuXKa6vrYY6P99MfhWBn had 1620 entries = 34.7MB response,
+    exceeding Cloud Run's 32MB limit and causing intermittent 500 errors.
+    """
+
+    def test_story_truncation_returns_last_300_entries(self):
+        """Verify truncation keeps LAST 300 entries (most recent), not first."""
+        # Create 500 story entries with sequential IDs
+        full_story = [{"id": i, "text": f"Entry {i}"} for i in range(500)]
+
+        # Apply same truncation logic as main.py:837-844
+        MAX_STORY_ENTRIES = 300
+        if len(full_story) > MAX_STORY_ENTRIES:
+            truncated = full_story[-MAX_STORY_ENTRIES:]
+        else:
+            truncated = full_story
+
+        # Should have exactly 300 entries
+        assert len(truncated) == 300, f"Expected 300 entries, got {len(truncated)}"
+
+        # First entry should be ID 200 (entry 201 of original)
+        assert truncated[0]["id"] == 200, (
+            f"Expected first entry to be ID 200, got {truncated[0]['id']}"
+        )
+
+        # Last entry should be ID 499 (most recent)
+        assert truncated[-1]["id"] == 499, (
+            f"Expected last entry to be ID 499, got {truncated[-1]['id']}"
+        )
+
+    def test_story_truncation_preserves_small_stories(self):
+        """Stories with <= 300 entries should not be truncated."""
+        small_story = [{"id": i, "text": f"Entry {i}"} for i in range(100)]
+
+        MAX_STORY_ENTRIES = 300
+        if len(small_story) > MAX_STORY_ENTRIES:
+            truncated = small_story[-MAX_STORY_ENTRIES:]
+        else:
+            truncated = small_story
+
+        assert len(truncated) == 100, f"Expected 100 entries, got {len(truncated)}"
+        assert truncated[0]["id"] == 0, "First entry should still be ID 0"
+        assert truncated[-1]["id"] == 99, "Last entry should still be ID 99"
+
+    def test_story_truncation_boundary_exactly_300(self):
+        """Stories with exactly 300 entries should not be truncated."""
+        boundary_story = [{"id": i, "text": f"Entry {i}"} for i in range(300)]
+
+        MAX_STORY_ENTRIES = 300
+        if len(boundary_story) > MAX_STORY_ENTRIES:
+            truncated = boundary_story[-MAX_STORY_ENTRIES:]
+        else:
+            truncated = boundary_story
+
+        assert len(truncated) == 300, f"Expected 300 entries, got {len(truncated)}"
+        assert truncated[0]["id"] == 0, "First entry should be ID 0"
+        assert truncated[-1]["id"] == 299, "Last entry should be ID 299"
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -834,6 +834,15 @@ def create_app() -> Flask:
                 # Strip debug fields when debug mode is off
                 processed_story = world_logic._strip_game_state_fields(story or [])
 
+            # Limit story entries to last 300 to prevent response size exceeding Cloud Run limits
+            # Campaign kuXKa6vrYY6P99MfhWBn had 1620 entries = 34.7MB response (limit is 32MB)
+            MAX_STORY_ENTRIES = 300
+            if len(processed_story) > MAX_STORY_ENTRIES:
+                logging_util.info(
+                    f"📉 STORY_LIMIT: Trimming {len(processed_story)} entries to last {MAX_STORY_ENTRIES}"
+                )
+                processed_story = processed_story[-MAX_STORY_ENTRIES:]
+
             result = {
                 "success": True,
                 "campaign": campaign_data,
