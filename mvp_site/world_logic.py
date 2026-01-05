@@ -1517,7 +1517,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # EXCEPTION: GOD MODE commands can intentionally move time backward
         #
         # NOTE: is_god_mode and is_think_mode are determined by agent selection inside
-        # llm_service.continue_story(). The LLMResponse returns agent_mode as the single
+        # llm_service.continue_story. The LLMResponse returns agent_mode as the single
         # source of truth. We set these AFTER the LLM call based on llm_response_obj.agent_mode.
         llm_input = user_input  # Separate variable for LLM calls
         temporal_correction_attempts = 0
