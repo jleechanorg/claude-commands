@@ -21,8 +21,8 @@ if tests_dir not in sys.path:
 
 from fake_firestore import FakeFirestoreClient
 
-# Set TESTING environment variable
-os.environ["TESTING"] = "true"
+# Set TESTING_AUTH_BYPASS environment variable
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
 # Add the parent directory to the path to import main
@@ -59,7 +59,7 @@ class TestFieldFormatValidation(unittest.TestCase):
         correct field format that main.py translation layer expects.
         """
         # Skip integration test in CI environment
-        if os.environ.get("TESTING") == "true":
+        if os.environ.get("TESTING_AUTH_BYPASS") == "true":
             self.skipTest("Integration test skipped in TESTING environment")
             return
 

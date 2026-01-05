@@ -37,7 +37,7 @@ for test_file in $integration_tests; do
     echo "Running $test_file..."
     total_tests=$((total_tests + 1))
 
-    if TESTING=true python -m unittest "${test_file%%.py}" 2>/dev/null; then
+    if TESTING_AUTH_BYPASS=true python -m unittest "${test_file%%.py}" 2>/dev/null; then
         echo "✅ $test_file passed"
     else
         echo "❌ $test_file failed"

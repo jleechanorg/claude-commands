@@ -63,10 +63,10 @@ fake_doc.set({"name": "test"})
 
 ```bash
 # Run all E2E tests (from project root)
-TESTING=true python3 mvp_site/tests/test_end2end/run_end2end_tests.py
+TESTING_AUTH_BYPASS=true python3 mvp_site/tests/test_end2end/run_end2end_tests.py
 
 # Run a specific E2E test
-TESTING=true python3 -m pytest mvp_site/tests/test_end2end/test_create_campaign_end2end.py -v
+TESTING_AUTH_BYPASS=true python3 -m pytest mvp_site/tests/test_end2end/test_create_campaign_end2end.py -v
 
 # Use slash commands
 /teste                    # Mock mode - fast

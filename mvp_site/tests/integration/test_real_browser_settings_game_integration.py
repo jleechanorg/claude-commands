@@ -73,7 +73,7 @@ class RealBrowserSettingsGameTest:
         return (
             os.getenv("CI") == "true"
             or os.getenv("GITHUB_ACTIONS") == "true"
-            or os.getenv("TESTING") == "true"
+            or os.getenv("TESTING_AUTH_BYPASS") == "true"
         )
 
     def wait_for_server(self, max_retries=5):

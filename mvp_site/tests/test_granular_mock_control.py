@@ -18,7 +18,7 @@ class TestMCPEnvironmentControl(unittest.TestCase):
     def setUp(self):
         """Save original environment."""
         self.original_env = {}
-        for key in ["USE_MOCKS", "USE_MOCK_FIREBASE", "USE_MOCK_GEMINI", "TESTING"]:
+        for key in ["USE_MOCKS", "USE_MOCK_FIREBASE", "USE_MOCK_GEMINI", "TESTING_AUTH_BYPASS"]:
             self.original_env[key] = os.environ.get(key)
 
     def tearDown(self):
@@ -32,27 +32,27 @@ class TestMCPEnvironmentControl(unittest.TestCase):
     def test_mcp_testing_environment_configured(self):
         """Test that MCP testing environment is properly configured."""
         # In MCP architecture, environment variables control behavior
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ["USE_MOCKS"] = "true"
 
         app = create_app()
         assert app is not None, "App should be created successfully in MCP architecture"
 
         # Verify environment variables are accessible
-        assert os.environ.get("TESTING") == "true"
+        assert os.environ.get("TESTING_AUTH_BYPASS") == "true"
         assert os.environ.get("USE_MOCKS") == "true"
 
     def test_mcp_production_environment_configured(self):
         """Test that MCP production environment can be configured."""
         # Set production-like environment
-        os.environ["TESTING"] = "false"
+        os.environ["TESTING_AUTH_BYPASS"] = "false"
         os.environ.pop("USE_MOCKS", None)  # Remove mocking in production
 
         app = create_app()
         assert app is not None, "App should be created successfully in production mode"
 
         # Verify environment configuration
-        assert os.environ.get("TESTING") == "false"
+        assert os.environ.get("TESTING_AUTH_BYPASS") == "false"
         assert os.environ.get("USE_MOCKS") != "true"
 
     def test_mcp_client_handles_environment_gracefully(self):
@@ -82,14 +82,14 @@ class TestMCPEnvironmentControl(unittest.TestCase):
         """Test that MCP architecture respects environment variables."""
         # Test different combinations of environment variables
         test_cases = [
-            {"TESTING": "true", "USE_MOCKS": "true"},
-            {"TESTING": "true", "USE_MOCKS": "false"},
-            {"TESTING": "false"},
+            {"TESTING_AUTH_BYPASS": "true", "USE_MOCKS": "true"},
+            {"TESTING_AUTH_BYPASS": "true", "USE_MOCKS": "false"},
+            {"TESTING_AUTH_BYPASS": "false"},
         ]
 
         for env_vars in test_cases:
             # Clear relevant environment variables
-            for key in ["TESTING", "USE_MOCKS"]:
+            for key in ["TESTING_AUTH_BYPASS", "USE_MOCKS"]:
                 os.environ.pop(key, None)
 
             # Set test environment

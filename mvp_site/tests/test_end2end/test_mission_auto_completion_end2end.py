@@ -22,8 +22,8 @@ import os
 import unittest
 from unittest.mock import patch
 
-# Ensure TESTING is set before importing app modules
-os.environ.setdefault("TESTING", "true")
+# Ensure TESTING_AUTH_BYPASS is set before importing app modules
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
 from mvp_site import main
@@ -36,7 +36,7 @@ class TestMissionAutoCompletionEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client and auth."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
         self.app = main.create_app()

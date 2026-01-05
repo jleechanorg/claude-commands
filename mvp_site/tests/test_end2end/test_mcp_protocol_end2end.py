@@ -4,10 +4,10 @@ Tests the complete MCP protocol flow: Flask → MCPClient → world_logic → re
 Only mocks external services (Firestore DB and Gemini API) at the lowest level.
 """
 
-# Set TESTING environment variable BEFORE any other imports
+# Set TESTING_AUTH_BYPASS environment variable BEFORE any other imports
 import os
 
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
 import json  # noqa: E402

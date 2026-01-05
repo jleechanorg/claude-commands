@@ -445,7 +445,7 @@ class MCPClient:
                     }
                 # For unknown tools in testing, return a generic success response
                 # instead of failing with 503 to prevent test cascade failures
-                if os.getenv("TESTING") == "true":
+                if os.getenv("TESTING_AUTH_BYPASS") == "true":
                     return {"success": True, "result": f"Mock response for {tool_name}"}
                 raise MCPClientError("Service temporarily unavailable", error_code=503)
 

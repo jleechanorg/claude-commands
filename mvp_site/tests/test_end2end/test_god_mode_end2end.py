@@ -24,7 +24,7 @@ class TestGodModeEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 
@@ -463,7 +463,7 @@ class TestGodModePromptSelection(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     def test_god_mode_detection_with_prefix(self):
         """Test that GOD MODE: prefix is correctly detected."""

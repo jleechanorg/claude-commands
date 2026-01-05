@@ -16,8 +16,8 @@ import sys
 import unittest
 from pathlib import Path
 
-# Ensure TESTING is set before importing app modules
-os.environ.setdefault("TESTING", "true")
+# Ensure TESTING_AUTH_BYPASS is set before importing app modules
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 
 # Allow direct invocation without requiring PYTHONPATH
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

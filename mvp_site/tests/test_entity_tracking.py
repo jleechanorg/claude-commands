@@ -655,7 +655,7 @@ class TestEntityTracking(unittest.TestCase):
 
 if __name__ == "__main__":
     # Set testing environment
-    os.environ["TESTING"] = "true"
+    os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     print("🧪 Testing Entity Tracking Production Implementation")
     print("=" * 60)

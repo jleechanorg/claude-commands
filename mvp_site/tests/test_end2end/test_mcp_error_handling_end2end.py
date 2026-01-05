@@ -10,8 +10,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
-# Set TESTING environment variable
-os.environ["TESTING"] = "true"
+# Set TESTING_AUTH_BYPASS environment variable
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
 # Add the parent directory to the path to import main

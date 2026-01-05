@@ -31,8 +31,8 @@ import os
 import unittest
 from unittest.mock import patch
 
-# Ensure TESTING is set before importing app modules
-os.environ.setdefault("TESTING", "true")
+# Ensure TESTING_AUTH_BYPASS is set before importing app modules
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 
@@ -51,7 +51,7 @@ class TestRewardsDiscrepancyDetectionEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 
@@ -357,7 +357,7 @@ class TestMultiTurnCorrectionInjection(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 
@@ -578,7 +578,7 @@ class TestCombatModeCorrectionsPersistedEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 
@@ -761,7 +761,7 @@ class TestLLMSetCorrectionsPreservedEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 

@@ -22,7 +22,7 @@ from mvp_site.debug_hybrid_system import convert_json_escape_sequences
 from mvp_site.prompt_utils import _convert_and_format_field
 
 # Set test environment before any imports
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 
@@ -106,7 +106,7 @@ class TestUnifiedAPIStructure(unittest.TestCase):
     def setUp(self):
         """Set up test environment and mock all external dependencies"""
         # Set environment variables for testing
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ["USE_MOCKS"] = "true"
 
         # Clear any cached modules to prevent Firebase initialization errors

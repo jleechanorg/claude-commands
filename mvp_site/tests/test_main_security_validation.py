@@ -28,7 +28,7 @@ from tests.fake_services import FakeServiceManager
 with FakeServiceManager() as fake_services:
     pass  # Fakes library handles firebase_admin setup
 
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 
 class TestSQLInjectionPrevention(unittest.TestCase):

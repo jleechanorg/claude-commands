@@ -26,7 +26,7 @@ def run_single_sariel_test() -> dict[str, Any]:
         "-c",
         "source /home/jleechan/projects/worldarchitect.ai/venv/bin/activate && "
         "cd mvp_site && "
-        "TESTING=true python3 -m unittest tests.test_sariel_campaign_integration.TestSarielCampaignIntegration.test_sariel_campaign_replay -v",
+        "TESTING_AUTH_BYPASS=true python3 -m unittest tests.test_sariel_campaign_integration.TestSarielCampaignIntegration.test_sariel_campaign_replay -v",
     ]
 
     start_time = time.time()

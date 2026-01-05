@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import requests
 
 # Set test environment for CI compatibility
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 # Add parent directory to path for imports
@@ -323,7 +323,7 @@ def run_red_green_test():
 
 if __name__ == "__main__":
     # Set testing environment
-    os.environ["TESTING"] = "true"
+    os.environ["TESTING_AUTH_BYPASS"] = "true"
     os.environ["USE_MOCKS"] = "true"
 
     # Use unittest.main() for CI compatibility

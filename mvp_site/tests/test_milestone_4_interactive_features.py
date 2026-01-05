@@ -22,7 +22,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up test class"""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         print("🧪 Testing Milestone 4: Interactive Features")
         print("=" * 60)
 

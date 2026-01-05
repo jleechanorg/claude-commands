@@ -748,7 +748,7 @@ def run_server():
     # Set up logging first
     logging_util.info("🔧 DEBUG: MCP server environment check:")
     logging_util.info(
-        "  TESTING environment variable no longer affects production behavior"
+        "  TESTING_AUTH_BYPASS environment variable no longer affects production behavior"
     )
     logging_util.info(
         f"  MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE', 'UNSET')}"

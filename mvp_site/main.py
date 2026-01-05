@@ -113,9 +113,9 @@ from mvp_site.mcp_client import MCPClientError, handle_mcp_errors
 # --- CONSTANTS ---
 # API Configuration
 cors_allow_headers = ["Content-Type", "Authorization", "X-Forwarded-For"]
-TESTING_MODE = os.getenv("TESTING") == "true"
-if TESTING_MODE:
-    # These headers are only honored in TESTING mode; do not enable in production.
+TESTING_AUTH_BYPASS_MODE = os.getenv("TESTING_AUTH_BYPASS") == "true"
+if TESTING_AUTH_BYPASS_MODE:
+    # These headers are only honored in TESTING_AUTH_BYPASS mode; do not enable in production.
     cors_allow_headers.extend(["X-Test-Bypass-Auth", "X-Test-User-ID"])
 
 CORS_RESOURCES = {
@@ -133,7 +133,7 @@ CORS_RESOURCES = {
 ALLOW_TEST_AUTH_BYPASS = (
     os.getenv(
         "ALLOW_TEST_AUTH_BYPASS",
-        "true" if TESTING_MODE else "false",
+        "true" if TESTING_AUTH_BYPASS_MODE else "false",
     ).lower()
     == "true"
 )
@@ -590,9 +590,9 @@ def create_app() -> Flask:
     def check_token(f):
         @wraps(f)
         def wrap(*args: Any, **kwargs: Any) -> Response:
-            # Allow automated test flows to bypass Firebase verification (TESTING mode only)
+            # Allow automated test flows to bypass Firebase verification (TESTING_AUTH_BYPASS mode only)
             if (
-                TESTING_MODE
+                TESTING_AUTH_BYPASS_MODE
                 and ALLOW_TEST_AUTH_BYPASS
                 and request.headers.get(HEADER_TEST_BYPASS, "").lower() == "true"
             ):
@@ -600,11 +600,11 @@ def create_app() -> Flask:
                     HEADER_TEST_USER_ID, "test-user-123"
                 )
                 logging_util.info(
-                    "TESTING auth bypass activated for user_id=%s", kwargs["user_id"]
+                    "TESTING_AUTH_BYPASS auth bypass activated for user_id=%s", kwargs["user_id"]
                 )
                 return f(*args, **kwargs)
 
-            # Authentication uses real Firebase; bypass is only available in TESTING mode
+            # Authentication uses real Firebase; bypass is only available in TESTING_AUTH_BYPASS mode
             if not request.headers.get(HEADER_AUTH):
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:

@@ -260,7 +260,7 @@ def test_all_ui_elements_debug_mode():
 if __name__ == "__main__":
     print("Starting UI Elements Debug Mode Verification Test")
     print(
-        "Make sure server is running with: TESTING=true PORT=8081 python main.py serve"
+        "Make sure server is running with: TESTING_AUTH_BYPASS=true PORT=8081 python main.py serve"
     )
     print("-" * 60)
     test_all_ui_elements_debug_mode()

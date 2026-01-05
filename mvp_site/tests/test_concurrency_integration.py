@@ -26,7 +26,7 @@ import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("ALLOW_TEST_AUTH_BYPASS", "true")
-os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 
 from mvp_site.main import create_app
 

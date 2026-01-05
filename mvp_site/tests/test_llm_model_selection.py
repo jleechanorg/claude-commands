@@ -21,7 +21,7 @@ class TestGeminiModelSelection(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         # Ensure we're in test mode
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ["MOCK_SERVICES_MODE"] = "false"  # Test real model selection logic
 
     def tearDown(self):
@@ -41,7 +41,7 @@ class TestGeminiModelSelection(unittest.TestCase):
         _select_provider_and_model() for API calls.
 
         NOTE: We patch _select_provider_and_model directly because in test mode
-        (TESTING=true), the function has a guard that returns the default model.
+        (TESTING_AUTH_BYPASS=true), the function has a guard that returns the default model.
         This patch simulates what would happen when a user has preferences set.
         """
         # Arrange: Simulate user has selected Gemini 3 Pro Preview
@@ -106,7 +106,7 @@ class TestGeminiModelSelection(unittest.TestCase):
         _select_provider_and_model() for API calls.
 
         NOTE: We patch _select_provider_and_model directly because in test mode
-        (TESTING=true), the function has a guard that returns the default model.
+        (TESTING_AUTH_BYPASS=true), the function has a guard that returns the default model.
         This patch simulates what would happen when a user has preferences set.
         """
         # Arrange: Simulate user has selected Gemini 3 Pro Preview

@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 class TestGeminiNativeToolsFlow(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test")
 
     def test_native_tools_runs_phase2_when_function_calls_present(self):

@@ -10,7 +10,7 @@ import os
 import sys
 
 # Force mock/test modes for all tests
-os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("USE_MOCKS", "true")
 os.environ.setdefault("MOCK_SERVICES_MODE", "true")
 os.environ.setdefault("WORLDAI_DEV_MODE", "true")

@@ -38,7 +38,7 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Set testing environment
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 # Test core framework imports
 try:

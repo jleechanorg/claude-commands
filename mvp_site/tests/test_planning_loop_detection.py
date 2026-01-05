@@ -19,8 +19,8 @@ import os
 import sys
 import unittest
 
-# Set TESTING environment variable
-os.environ["TESTING"] = "true"
+# Set TESTING_AUTH_BYPASS environment variable
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 # Add project root to path for imports (parent of mvp_site)
 sys.path.insert(

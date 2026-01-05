@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 # Set environment variables for MCP testing
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 # Add the mvp_site directory to the path

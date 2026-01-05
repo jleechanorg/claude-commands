@@ -47,7 +47,7 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
         self.is_ci = bool(
             os.environ.get("CI")
             or os.environ.get("GITHUB_ACTIONS")
-            or os.environ.get("TESTING")
+            or os.environ.get("TESTING_AUTH_BYPASS")
         )
 
         # Check if server is running (skip in CI)

@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Set testing environment
 os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 import pytest
 

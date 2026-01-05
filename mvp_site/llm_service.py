@@ -2398,7 +2398,7 @@ MOCK_INITIAL_STORY_NO_COMPANIONS = """{
 def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     """Select the configured LLM provider and model for a user.
 
-    In test/mock mode (MOCK_SERVICES_MODE=true, FORCE_TEST_MODEL=true, or TESTING=true),
+    In test/mock mode (MOCK_SERVICES_MODE=true, FORCE_TEST_MODEL=true, or TESTING_AUTH_BYPASS=true),
     always returns default Gemini provider to avoid hitting real OpenRouter/Cerebras APIs.
     """
     # DIAGNOSTIC: Log entry with all relevant env vars
@@ -2406,16 +2406,16 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
         f"🔍 PROVIDER_SELECTION_START: user_id={user_id}, "
         f"MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE')}, "
         f"FORCE_TEST_MODEL={os.environ.get('FORCE_TEST_MODEL')}, "
-        f"TESTING={os.environ.get('TESTING')}"
+        f"TESTING_AUTH_BYPASS={os.environ.get('TESTING_AUTH_BYPASS')}"
     )
 
     # Test mode guard: avoid hitting real providers during CI/test runs
-    # TESTING=true is the primary test mode flag - it MUST force Gemini to prevent
+    # TESTING_AUTH_BYPASS=true is the primary test mode flag - it MUST force Gemini to prevent
     # tests from hitting real OpenRouter/Cerebras APIs and incurring costs
     force_test_model = (
         os.environ.get("MOCK_SERVICES_MODE") == "true"
         or os.environ.get("FORCE_TEST_MODEL") == "true"
-        or os.environ.get("TESTING") == "true"
+        or os.environ.get("TESTING_AUTH_BYPASS") == "true"
     )
     if force_test_model:
         logging_util.info(

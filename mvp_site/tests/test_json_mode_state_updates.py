@@ -22,7 +22,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         logging_util.basicConfig(level=logging_util.INFO)
 
     def test_json_response_with_state_updates(self):

@@ -37,17 +37,17 @@ def validate_deployment_config() -> bool:
     explicit dev mode acknowledgment.
 
     Returns:
-        True if in dev mode (WORLDAI_DEV_MODE=true or TESTING=true), False if in production mode.
+        True if in dev mode (WORLDAI_DEV_MODE=true or TESTING_AUTH_BYPASS=true), False if in production mode.
 
     Raises:
         ValueError: If WORLDAI_GOOGLE_APPLICATION_CREDENTIALS is set without
-                    WORLDAI_DEV_MODE=true (and not in TESTING mode).
+                    WORLDAI_DEV_MODE=true (and not in TESTING_AUTH_BYPASS mode).
 
     Note:
-        TESTING=true unconditionally bypasses all validation and returns True,
+        TESTING_AUTH_BYPASS=true unconditionally bypasses all validation and returns True,
         allowing for hermetic test environments.
     """
-    testing_mode = os.getenv("TESTING", "").lower() == "true"
+    testing_mode = os.getenv("TESTING_AUTH_BYPASS", "").lower() == "true"
     if testing_mode:
         return True
 
@@ -70,9 +70,9 @@ def get_clock_skew_seconds() -> int:
         720 seconds (12 minutes) - hardcoded value that works for all environments.
         This compensates for local clock being ahead of Google's servers.
     """
-    # In TESTING mode, skip validation to allow hermetic tests
+    # In TESTING_AUTH_BYPASS mode, skip validation to allow hermetic tests
     # (validation may fail if env vars are set from local dev environment)
-    testing_mode = os.getenv("TESTING", "").lower() == "true"
+    testing_mode = os.getenv("TESTING_AUTH_BYPASS", "").lower() == "true"
     if not testing_mode:
         validate_deployment_config()
 

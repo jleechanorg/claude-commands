@@ -9,7 +9,7 @@ import sys
 import unittest
 
 # Set environment variables for MCP testing
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 # Add parent directory to path for imports
