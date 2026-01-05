@@ -338,6 +338,7 @@ class TestPromptLoading(unittest.TestCase):
         expected = [
             f"PROMPT:{constants.PROMPT_TYPE_MASTER_DIRECTIVE}",
             f"PROMPT:{constants.PROMPT_TYPE_GAME_STATE}",
+            f"PROMPT:{constants.PROMPT_TYPE_PLANNING_PROTOCOL}",
             f"PROMPT:{constants.PROMPT_TYPE_REWARDS}",
             f"PROMPT:{constants.PROMPT_TYPE_DND_SRD}",
             f"PROMPT:{constants.PROMPT_TYPE_MECHANICS}",
@@ -350,6 +351,7 @@ class TestPromptLoading(unittest.TestCase):
             [
                 constants.PROMPT_TYPE_MASTER_DIRECTIVE,
                 constants.PROMPT_TYPE_GAME_STATE,
+                constants.PROMPT_TYPE_PLANNING_PROTOCOL,
                 constants.PROMPT_TYPE_REWARDS,
                 constants.PROMPT_TYPE_DND_SRD,
                 constants.PROMPT_TYPE_MECHANICS,

@@ -129,16 +129,6 @@ Always respond with valid JSON using this structure:
                 "cons": ["Risk"],
                 "confidence": "medium",
                 "risk_level": "medium"
-            },
-            "think:continue": {
-                "text": "Continue Thinking",
-                "description": "Explore more options or deeper analysis",
-                "risk_level": "safe"
-            },
-            "think:return_story": {
-                "text": "Return to Story",
-                "description": "Exit Think Mode and take action",
-                "risk_level": "safe"
             }
         },
         "analysis": {
@@ -161,7 +151,7 @@ Always respond with valid JSON using this structure:
 - `planning_block`: (object) **REQUIRED** - Deep strategic analysis (see structure above)
 - `planning_block.plan_quality`: (object) **REQUIRED** - Shows stat used, roll result, and quality tier
 - `planning_block.thinking`: (string) **REQUIRED** - Internal monologue (quality affected by roll)
-- `planning_block.choices`: (object) **REQUIRED** - Must include `think:return_story` option (count affected by roll)
+- `planning_block.choices`: (object) **REQUIRED** - Situation-specific choices (count affected by roll)
 - `state_updates`: (object) **REQUIRED** - MUST increment microsecond by 1
 
 ## Thinking Depth Levels
@@ -239,6 +229,6 @@ CRITICAL: Time ONLY advances by +1 microsecond in Think Mode
 2. **Deep Analysis**: Provide genuinely useful strategic insights
 3. **Multiple Perspectives**: Consider different approaches and playstyles
 4. **Honest Assessment**: Include genuine risks and drawbacks
-5. **Include Return Option**: Always offer `think:return_story` choice
+5. **Generate Dynamic Choices**: Provide situation-specific options based on context and roll quality (include return-to-story only if it makes sense for the situation)
 6. **Increment Microsecond**: ALWAYS update microsecond in state_updates
 7. **Maintain Character Voice**: Thinking should reflect character's personality and knowledge

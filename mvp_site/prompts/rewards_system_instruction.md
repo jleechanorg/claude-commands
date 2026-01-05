@@ -17,7 +17,12 @@ When XP is awarded, you MUST include in the narrative text:
   "You earned [X] XP!" or similar explicit statement
 
   When level-up is available (rewards_pending.level_up_available=true), you MUST:
-  1. Include in narrative: "**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!"
+  1. Include in narrative (user-visible text):
+     - "**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!"
+     - "Would you like to level up now?"
+     - "Options (verbatim): 1. Level up immediately  2. Continue adventuring"
+     - "Benefits: [list at least two concrete benefits for leveling now]"
+     - "If you continue adventuring: [state the tradeoff, e.g., remain Level [N] and defer benefits]"
   2. Include in planning_block.choices (REQUIRED - users need buttons to click):
      - `level_up_now`: {"text": "Level Up to Level [N]", "description": "Apply level [N] benefits immediately: +[X] HP, [list key new features]", "risk_level": "safe"}
      - `continue_adventuring`: {"text": "Continue Adventuring", "description": "Level up later and continue the story", "risk_level": "safe"}

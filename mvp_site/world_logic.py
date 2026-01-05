@@ -479,9 +479,12 @@ def _check_and_set_level_up_pending(
     original_player_data = original_state_dict.get("player_character_data") or {}
     original_xp = _extract_xp_robust(original_player_data)
 
-    # Get stored level from CURRENT state (after GOD_MODE or other updates)
-    # This ensures that if level is explicitly set (e.g., via GOD_MODE), we use that value
-    stored_level = coerce_int(player_data.get("level"), 1)
+    # Get stored level from ORIGINAL state (before validation auto-correction)
+    # This ensures we detect level-ups even when validation already corrected the level
+    # in the current state. Falls back to current state's level if original not available.
+    original_level = coerce_int(original_player_data.get("level"), None)
+    current_level = coerce_int(player_data.get("level"), 1)
+    stored_level = original_level if original_level is not None else current_level
 
     # Calculate what level SHOULD be based on XP
     expected_level = level_from_xp(current_xp)
@@ -737,6 +740,207 @@ async def _process_rewards_followup(
             )
 
     return updated_game_state_dict, llm_response_obj, prevention_extras
+
+
+def _inject_levelup_choices_if_needed(
+    planning_block: dict[str, Any] | str | None,
+    game_state_dict: dict[str, Any],
+) -> dict[str, Any] | None:
+    """
+    Server-side enforcement of level-up choices in planning_block.
+
+    When rewards_pending.level_up_available=true, the LLM SHOULD include
+    level_up_now and continue_adventuring choices. However, the LLM sometimes
+    prioritizes narrative/tactical choices, especially during active gameplay.
+
+    This function ensures users ALWAYS have clickable level-up buttons when
+    level-up is available, preventing the "text shown but no buttons" failure mode.
+
+    Args:
+        planning_block: The planning_block from LLM response (dict, JSON string, or None)
+        game_state_dict: Current game state dict to check for level_up_available
+
+    Returns:
+        The planning_block dict with level-up choices injected if needed,
+        or None if input was None and no injection needed.
+    """
+    # Check if level-up is available
+    rewards_pending = game_state_dict.get("rewards_pending") or {}
+    if not rewards_pending.get("level_up_available"):
+        # No level-up available - return as-is
+        if isinstance(planning_block, str):
+            try:
+                return json.loads(planning_block) if planning_block.strip() else None
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return planning_block
+
+    # Level-up is available - ensure choices are present
+    new_level = rewards_pending.get("new_level", "?")
+    player_data = game_state_dict.get("player_character_data") or {}
+    player_class = player_data.get("class", "Character")
+
+    # Parse planning_block if it's a string
+    if isinstance(planning_block, str):
+        try:
+            planning_block = json.loads(planning_block) if planning_block.strip() else {}
+        except (json.JSONDecodeError, TypeError):
+            planning_block = {}
+    elif planning_block is None:
+        planning_block = {}
+
+    # Ensure choices dict exists
+    if "choices" not in planning_block or not isinstance(planning_block.get("choices"), dict):
+        planning_block["choices"] = {}
+
+    choices = planning_block["choices"]
+
+    # Check if level-up choices are already present (exact IDs required by protocol)
+    has_level_up_now = "level_up_now" in choices
+    has_continue_adventuring = "continue_adventuring" in choices
+
+    if has_level_up_now and has_continue_adventuring:
+        # Already has the required choices - no injection needed
+        return planning_block
+
+    # Inject missing level-up choices
+    logging_util.info(
+        f"📈 SERVER_LEVELUP_INJECTION: Injecting level-up choices for level {new_level} "
+        f"(had level_up_now={has_level_up_now}, continue_adventuring={has_continue_adventuring})"
+    )
+
+    if not has_level_up_now:
+        choices["level_up_now"] = {
+            "text": f"Level Up to Level {new_level}",
+            "description": f"Apply level {new_level} {player_class} benefits immediately",
+            "risk_level": "safe",
+        }
+
+    if not has_continue_adventuring:
+        choices["continue_adventuring"] = {
+            "text": "Continue Adventuring",
+            "description": "Level up later and continue the story",
+            "risk_level": "safe",
+        }
+
+    # Add thinking if not present
+    if "thinking" not in planning_block:
+        planning_block["thinking"] = (
+            f"Level-up to {new_level} is available. "
+            "The player can level up now or continue adventuring."
+        )
+
+    return planning_block
+
+
+def _inject_levelup_narrative_if_needed(
+    narrative: str | None,
+    planning_block: dict[str, Any] | None,
+    game_state_dict: dict[str, Any],
+) -> str:
+    """
+    Ensure level-up prompt/options/benefits are visible in narrative text.
+
+    This prevents the "choices only in planning_block" failure mode where the
+    UI might not render structured choices, leaving the player unaware of the
+    available level-up and its benefits.
+    """
+    narrative_text = narrative or ""
+    rewards_pending = game_state_dict.get("rewards_pending") or {}
+    if not rewards_pending.get("level_up_available"):
+        return narrative_text
+
+    new_level = rewards_pending.get("new_level", "?")
+    player_data = game_state_dict.get("player_character_data") or {}
+    current_level = player_data.get("level", "?")
+    lower = narrative_text.lower()
+
+    banner_present = "level up available!" in lower
+    prompt_present = "would you like to level up" in lower
+    immediate_present = (
+        "level up immediately" in lower
+        or "level up now" in lower
+        or "level up to level" in lower
+    )
+    later_present = (
+        "continue adventuring" in lower
+        or "continue your journey" in lower
+        or "continue the adventure" in lower
+    )
+    continue_difference_present = (
+        ("continue" in lower or "continuing" in lower)
+        and (
+            "defer" in lower
+            or "later" in lower
+            or "remain level" in lower
+            or "stay level" in lower
+        )
+    )
+    benefit_keywords = (
+        "gain",
+        "unlock",
+        "bonus",
+        "increase",
+        "extra",
+        "improve",
+        "add",
+        "advantage",
+        "feature",
+        "proficiency",
+        "hp",
+        "hit points",
+    )
+    benefits_present = any(k in lower for k in benefit_keywords)
+
+    if (
+        banner_present
+        and prompt_present
+        and immediate_present
+        and later_present
+        and benefits_present
+        and continue_difference_present
+    ):
+        return narrative_text
+
+    lines: list[str] = []
+    if not banner_present:
+        lines.append(
+            f"**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level {new_level}!"
+        )
+
+    if not benefits_present:
+        benefit_text = None
+        if isinstance(planning_block, dict):
+            choices = planning_block.get("choices", {})
+            if isinstance(choices, dict):
+                level_up_choice = choices.get("level_up_now", {})
+                if isinstance(level_up_choice, dict):
+                    description = level_up_choice.get("description")
+                    if isinstance(description, str) and description.strip():
+                        benefit_text = description.strip()
+        if not benefit_text:
+            benefit_text = (
+                "Gain new class features, increased proficiency, and more HP."
+            )
+        lines.append(f"Benefits: {benefit_text}")
+
+    if not prompt_present:
+        lines.append("Would you like to level up now?")
+
+    if not (immediate_present and later_present):
+        lines.append("Options: 1. Level up immediately  2. Continue adventuring")
+
+    if not continue_difference_present:
+        lines.append(
+            f"If you continue adventuring, you remain Level {current_level} and defer these benefits until you choose to level up."
+        )
+
+    if not lines:
+        return narrative_text
+
+    separator = "\n\n" if narrative_text.strip() else ""
+    injected_block = "\n".join(lines)
+    return f"{narrative_text}{separator}{injected_block}"
 
 
 def validate_game_state_updates(
@@ -1271,6 +1475,31 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     Returns:
         Dictionary with success/error status and story response
     """
+    def _is_god_mode_return_to_story(text: str) -> bool:
+        if not isinstance(text, str):
+            return False
+        stripped = text.strip()
+        if not stripped.upper().startswith("GOD MODE:"):
+            return False
+        remainder = stripped[len("GOD MODE:") :].strip().lower()
+        remainder = remainder.rstrip(".! ")
+        tokens = [t for t in remainder.split() if t]
+        if not tokens:
+            return False
+        # Allow polite suffixes like "please"/"now" but prevent matching unrelated commands.
+        suffix_ok = {"please", "now"}
+        if tokens[:3] == ["return", "to", "story"]:
+            return all(t in suffix_ok for t in tokens[3:])
+        if tokens[:4] == ["return", "to", "story", "mode"]:
+            return all(t in suffix_ok for t in tokens[4:])
+        if tokens[:3] == ["exit", "god", "mode"]:
+            return all(t in suffix_ok for t in tokens[3:])
+        if tokens[:3] == ["return", "to", "game"]:
+            return all(t in suffix_ok for t in tokens[3:])
+        if tokens[:2] == ["resume", "story"]:
+            return all(t in suffix_ok for t in tokens[2:])
+        return False
+
     campaign_id = request_data.get("campaign_id")
     logging_util.set_campaign_id(campaign_id)
     try:
@@ -1286,6 +1515,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             return {KEY_ERROR: "Campaign ID is required"}
         if user_input is None:
             return {KEY_ERROR: "User input is required"}
+
+        # Preserve raw input for Firestore + temporal correction prompts
+        original_user_input = user_input
+
+        # If this is a GOD MODE return command, treat as story mode transition.
+        if _is_god_mode_return_to_story(user_input):
+            user_input = "Return to story."
+            mode = constants.MODE_CHARACTER
 
         # Load and prepare game state (blocking I/O - run in thread)
         current_game_state, was_cleaned, num_cleaned = await asyncio.to_thread(
@@ -1339,7 +1576,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # manual THINK: inputs from the UI still keep time frozen.
         # Uses centralized constants.is_think_mode() for consistent detection.
         is_think_mode = constants.is_think_mode(user_input, mode)
-        original_user_input = user_input  # Preserve for Firestore
         llm_input = user_input  # Separate variable for LLM calls
         temporal_correction_attempts = 0
         llm_response_obj = None
@@ -1815,6 +2051,25 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
         structured_fields.update(prevention_extras)
 
+        # Persist server-side level-up injections so stored story entries
+        # reflect the same narrative/choices delivered to the user.
+        if not is_god_mode:
+            injected_planning_block = _inject_levelup_choices_if_needed(
+                structured_fields.get("planning_block"),
+                updated_game_state_dict,
+            )
+            if injected_planning_block is not None:
+                structured_fields["planning_block"] = injected_planning_block
+
+            injected_narrative = _inject_levelup_narrative_if_needed(
+                ai_response_text,
+                structured_fields.get("planning_block"),
+                updated_game_state_dict,
+            )
+            if injected_narrative != ai_response_text:
+                ai_response_text = injected_narrative
+                llm_response_obj.narrative_text = injected_narrative
+
         # Annotate THIS TURN's world_events (from LLM response) with turn/scene numbers
         # NOTE: We annotate structured_fields directly, NOT game_state.world_events
         # game_state.world_events is CUMULATIVE (contains all historical events)
@@ -1942,6 +2197,32 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             ):
                 unified_response["god_mode_response"] = (
                     structured_response.god_mode_response
+                )
+
+        # SERVER-SIDE LEVEL-UP CHOICE INJECTION
+        # When level_up_available=true, ensure planning_block has required choices
+        # This prevents the "text shown but no buttons" failure mode where users
+        # see "LEVEL UP AVAILABLE!" but have no way to click to level up.
+        # Skip injection in GOD MODE responses (god: choices required there).
+        if not unified_response.get("god_mode_response"):
+            injected_planning_block = _inject_levelup_choices_if_needed(
+                unified_response.get("planning_block"),
+                updated_game_state_dict,
+            )
+            if injected_planning_block is not None:
+                unified_response["planning_block"] = injected_planning_block
+
+            # SERVER-SIDE LEVEL-UP NARRATIVE INJECTION
+            injected_narrative = _inject_levelup_narrative_if_needed(
+                unified_response.get("narrative"),
+                unified_response.get("planning_block"),
+                updated_game_state_dict,
+            )
+            if injected_narrative != unified_response.get("narrative"):
+                unified_response["narrative"] = injected_narrative
+                unified_response["response"] = injected_narrative
+                unified_response["story"] = process_story_for_display(
+                    [{"text": injected_narrative}], debug_mode
                 )
 
         capture_evidence = os.getenv("CAPTURE_EVIDENCE", "").lower() == "true"
@@ -2234,19 +2515,11 @@ async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         else:
             safe_file_path = os.path.join(temp_dir, f"{uuid.uuid4()}.{export_format}")
 
-        # Convert story context to text format
-        story_parts = []
-        for entry in story_context:
-            actor = entry.get("actor", "unknown")
-            text = entry.get("text", "")
-            mode = entry.get("mode")
-
-            if actor == "gemini":
-                label = "Game Master"
-            else:
-                label = "God Mode" if mode == "god" else "Player"
-            story_parts.append(f"{label}:\n{text}")
-        story_text = "\n\n".join(story_parts)
+        # Convert story context to text format using enhanced formatting
+        # This uses the same logic as the CLI download script for consistency
+        story_text = document_generator.get_story_text_from_context_enhanced(
+            story_context, include_scenes=True
+        )
 
         # Generate export file
         try:

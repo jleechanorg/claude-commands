@@ -1702,6 +1702,15 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             }
         }
 
+        result = world_logic._enforce_rewards_processed_flag(state_dict)
+
+        self.assertTrue(result["combat_state"]["rewards_processed"])
+
+    def test_handles_none_experience_gracefully(self):
+        """No-op: Should not crash on None experience."""
+        original_state = {
+            "player_character_data": {"experience": None}
+        }
         updated_state = {
             "player_character_data": {
                 "experience": {"current": 100}
@@ -1766,6 +1775,7 @@ class TestCheckAndSetLevelUpPending(unittest.TestCase):
         self.assertEqual(100, rewards_pending.get("gold"))
         self.assertEqual(["ring"], rewards_pending.get("items"))
         self.assertFalse(rewards_pending.get("processed"))
+        # Source changes to "level_up" when level-up is detected (not preserved from original)
         self.assertEqual("level_up", rewards_pending.get("source"))
 
     def test_no_level_up_when_threshold_not_crossed(self):
@@ -2174,6 +2184,53 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
         self.assertTrue(rewards_pending.get("level_up_available"))
         self.assertEqual(5, rewards_pending.get("new_level"))
         self.assertFalse(rewards_pending.get("processed", False))
+
+
+class TestLevelUpInjection(unittest.TestCase):
+    """Tests for server-side level-up injection fallbacks."""
+
+    def test_inject_levelup_choices_adds_missing_buttons(self):
+        game_state = {
+            "player_character_data": {"level": 4, "class": "Fighter"},
+            "rewards_pending": {"level_up_available": True, "new_level": 5},
+        }
+        planning_block = {"thinking": "Test", "choices": {}}
+
+        injected = world_logic._inject_levelup_choices_if_needed(
+            planning_block, game_state
+        )
+
+        self.assertIsInstance(injected, dict)
+        choices = injected.get("choices", {})
+        self.assertIn("level_up_now", choices)
+        self.assertIn("continue_adventuring", choices)
+
+    def test_inject_levelup_narrative_adds_prompt_and_differences(self):
+        game_state = {
+            "player_character_data": {"level": 4, "class": "Fighter"},
+            "rewards_pending": {"level_up_available": True, "new_level": 5},
+        }
+        planning_block = {
+            "choices": {
+                "level_up_now": {
+                    "description": "Apply level 5 benefits immediately: Extra Attack, +1 Proficiency, and more HP."
+                },
+                "continue_adventuring": {
+                    "description": "Level up later and continue the story."
+                },
+            }
+        }
+        narrative = "You pause to reflect on your progress."
+
+        injected = world_logic._inject_levelup_narrative_if_needed(
+            narrative, planning_block, game_state
+        )
+
+        self.assertIn("LEVEL UP AVAILABLE!", injected)
+        self.assertIn("Would you like to level up now?", injected)
+        self.assertIn("Options: 1. Level up immediately  2. Continue adventuring", injected)
+        self.assertIn("Benefits:", injected)
+        self.assertIn("defer", injected.lower())
 
 
 if __name__ == "__main__":

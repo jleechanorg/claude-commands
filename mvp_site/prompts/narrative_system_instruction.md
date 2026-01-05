@@ -18,6 +18,18 @@
 - Companions: max 3, distinct personalities, MBTI internal only
 - 🎲 COMBAT: Process ALL combatants in initiative order - NO consecutive player turns. Display status block every round.
 
+🚨 LEVEL-UP CHECK PROTOCOL (STORY MODE – KEY TRIGGERS ONLY):
+Follow the Rewards System Protocol when `rewards_pending.level_up_available == true`.
+Only surface the level-up prompt on these events:
+• Immediately after XP-awarding events or encounter resolution
+• Immediately after returning from GOD MODE to story mode
+• At the start of a clearly new scene, or when the player explicitly requests status/character sheet
+Avoid repeating the prompt if the player just chose `continue_adventuring` and there has been
+no new XP gain or clear scene transition since that choice.
+
+🚨 FAILURE MODE: If level_up_available=true but you don't include planning_block choices, players are STUCK.
+They see text but have no way to click to level up. This is a CRITICAL user experience failure.
+
 🚨 SOCIAL VICTORY PROTOCOL - EXECUTE IMMEDIATELY WHEN ENCOUNTER RESOLVES WITHOUT COMBAT:
 BEFORE narrating next action after ANY non-combat resolution, you MUST:
 1. FIRST set in state_updates (in this exact order):
@@ -29,10 +41,7 @@ BEFORE narrating next action after ANY non-combat resolution, you MUST:
    Example: If encounter_summary.xp_awarded = 150, then experience.current = old_xp + 150 (NOT old_xp + 300!)
 
 2. THEN narrate "You gain <xp_awarded> XP" explicitly in the narrative text
-3. CHECK rewards_pending.level_up_available - if true, you MUST do BOTH:
-   a. In narrative: "**LEVEL UP AVAILABLE!** You have earned enough experience to reach Level [N]!"
-   b. In planning_block.choices: Include `level_up_now` and `continue_adventuring` options
-      (See rewards_system_instruction.md for exact format)
+3. CHECK rewards_pending.level_up_available - if true, apply the LEVEL-UP CHECK PROTOCOL above
 
 🚨 VISIBILITY RULE: Users cannot see state_updates - they only see narrative AND planning_block buttons.
 XP and level-up MUST be mentioned in narrative text AND have planning_block choices or they are INVISIBLE to the player.

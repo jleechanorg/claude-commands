@@ -43,17 +43,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Global function for equipment button - sends "list my equipment" to backend
-  window.sendEquipmentQuery = async function () {
+  // Shared helper for character info queries (equipment, stats, spells)
+  // Uses dedicated API endpoints for fast, deterministic responses
+  const sendCharacterInfoQuery = async (endpoint, summaryKey, errorMsg) => {
     if (!currentCampaignId) {
-      console.warn('No campaign loaded - cannot send equipment query');
+      console.warn(`No campaign loaded - cannot fetch ${endpoint}`);
       return;
     }
 
     const userInputEl = document.getElementById('user-input');
     const localSpinner = document.getElementById('loading-spinner');
     const timerInfo = document.getElementById('timer-info');
-    const equipmentQuery = 'list my equipment';
 
     // Show spinner and disable input
     if (localSpinner) localSpinner.style.display = 'block';
@@ -64,31 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userInputEl) userInputEl.disabled = true;
     if (timerInfo) timerInfo.textContent = '';
 
-    // Show user message in chat
-    appendToStory('user', equipmentQuery, 'character');
-
     try {
       const { data, duration } = await fetchApi(
-        `/api/campaigns/${currentCampaignId}/interaction`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ input: equipmentQuery, mode: 'character' }),
-        },
+        `/api/campaigns/${currentCampaignId}/${endpoint}`,
+        { method: 'GET' },
       );
-      const narrativeText =
-        data.narrative || data.response || '[Error: No response from server]';
-      appendToStory(
-        'gemini',
-        narrativeText,
-        null,
-        data.debug_mode || false,
-        data.user_scene_number,
-        data,
-      );
+
+      // Display formatted summary from dedicated endpoint
+      const summaryText = data?.[summaryKey] || `No ${endpoint} information available.`;
+      appendToStory('system', summaryText, null, false, null, null);
       if (timerInfo) timerInfo.textContent = `Response time: ${duration}s`;
     } catch (error) {
-      console.error('Equipment query failed:', error);
-      appendToStory('system', 'Sorry, an error occurred. Please try again.');
+      console.error(`${endpoint} query failed:`, error);
+      appendToStory('system', errorMsg);
     } finally {
       if (localSpinner) localSpinner.style.display = 'none';
       if (window.loadingMessages) window.loadingMessages.stop();
@@ -98,6 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
+
+  // Global functions for quick action buttons - use dedicated API endpoints
+  window.sendEquipmentQuery = () =>
+    sendCharacterInfoQuery('equipment', 'equipment_summary', 'Sorry, an error occurred fetching equipment.');
+
+  window.sendStatsQuery = () =>
+    sendCharacterInfoQuery('stats', 'stats_summary', 'Sorry, an error occurred fetching stats.');
+
+  window.sendSpellsQuery = () =>
+    sendCharacterInfoQuery('spells', 'spells_summary', 'Sorry, an error occurred fetching spells.');
 
   const showView = (viewName) => {
     Object.values(views).forEach((v) => v && v.classList.remove('active-view'));
@@ -377,22 +375,21 @@ document.addEventListener('DOMContentLoaded', () => {
         : '<em>None</em>';
     html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${resourceText}</div>`;
 
-    // 4. Dice rolls (always show)
-    if (
-      fullData.dice_rolls &&
-      Array.isArray(fullData.dice_rolls) &&
-      fullData.dice_rolls.length > 0
-    ) {
-      html +=
-        '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
-      html += '<strong>🎲 Dice Rolls:</strong><ul>';
-      fullData.dice_rolls.forEach((roll) => {
-        html += `<li>${sanitizeHtml(roll)}</li>`;
-      });
-      html += '</ul></div>';
-    } else {
-      html +=
-        '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
+    // 4. Dice rolls (only show in debug mode)
+    if (debugMode) {
+      if (
+        fullData.dice_rolls &&
+        Array.isArray(fullData.dice_rolls) &&
+        fullData.dice_rolls.length > 0
+      ) {
+        html +=
+          '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+        html += '<strong>🎲 Dice Rolls:</strong><ul>';
+        fullData.dice_rolls.forEach((roll) => {
+          html += `<li>${sanitizeHtml(roll)}</li>`;
+        });
+        html += '</ul></div>';
+      }
     }
 
     // 4b. Rewards box (if XP was awarded)
@@ -734,11 +731,19 @@ document.addEventListener('DOMContentLoaded', () => {
     ) {
       const escapedHeader = sanitizeHtml(fullData.session_header);
       html += `<div class="session-header">${escapedHeader}</div>`;
-      // Quick action button for equipment list
-      html += `<div class="quick-actions" style="margin: 5px 0;">
+      // Quick action buttons for equipment, stats, and spells
+      html += `<div class="quick-actions d-flex gap-2" style="margin: 5px 0;">
         <button class="btn btn-sm btn-outline-secondary equipment-btn"
                 title="List all equipped items">
-          <i class="bi bi-backpack2"></i> View Equipment
+          <i class="bi bi-backpack2"></i> Equipment
+        </button>
+        <button class="btn btn-sm btn-outline-info stats-btn"
+                title="View character stats">
+          <i class="bi bi-bar-chart"></i> Stats
+        </button>
+        <button class="btn btn-sm btn-outline-primary spells-btn"
+                title="View spells and spell slots">
+          <i class="bi bi-magic"></i> Spells
         </button>
       </div>`;
     }
@@ -798,10 +803,18 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', handleChoiceClick);
       });
 
-      // Add click handler for equipment button (CSP blocks inline onclick)
+      // Add click handlers for quick action buttons (CSP blocks inline onclick)
       const equipmentBtn = entryEl.querySelector('.equipment-btn');
       if (equipmentBtn) {
         equipmentBtn.addEventListener('click', window.sendEquipmentQuery);
+      }
+      const statsBtn = entryEl.querySelector('.stats-btn');
+      if (statsBtn) {
+        statsBtn.addEventListener('click', window.sendStatsQuery);
+      }
+      const spellsBtn = entryEl.querySelector('.spells-btn');
+      if (spellsBtn) {
+        spellsBtn.addEventListener('click', window.sendSpellsQuery);
       }
     }
   };
@@ -815,36 +828,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const interactionForm = document.getElementById('interaction-form');
 
     if (!userInputEl || !interactionForm) return;
-
-    // Handle custom choice differently
-    if (choiceId === 'Custom' || choiceText === 'custom') {
-      // Clear the input and focus it for custom text
-      userInputEl.value = '';
-      userInputEl.focus();
-      userInputEl.placeholder = 'Type your custom action here...';
-
-      // Scroll to the input area
-      userInputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-      // Don't disable buttons for custom option
-      return;
-    }
-
-    // Handle "Return to Story" - exit think mode and switch to character mode
-    // Note: sanitizeIdentifier removes colons, so 'think:return_story' becomes 'thinkreturn_story'
-    if (choiceId === 'thinkreturn_story') {
-      const characterModeRadio = document.querySelector(
-        'input[name="interactionMode"][value="character"]',
-      );
-      if (characterModeRadio) {
-        characterModeRadio.checked = true;
-      }
-      // Clear the choice text - just switching mode, not sending a command
-      userInputEl.value = '';
-      userInputEl.focus();
-      userInputEl.placeholder = 'Now in story mode - describe your action...';
-      return;
-    }
 
     // For predefined choices, disable all buttons
     document.querySelectorAll('.choice-button').forEach((btn) => {
@@ -1021,13 +1004,6 @@ document.addEventListener('DOMContentLoaded', () => {
           `title="${escapedTitle}">${buttonText}</button>`;
       }
     });
-
-    // Add custom text option
-    html +=
-      `<button class="choice-button choice-button-custom" ` +
-      `data-choice-id="Custom" ` +
-      `data-choice-text="custom" ` +
-      `title="Type your own action">Custom Action</button>`;
 
     html += '</div>';
 

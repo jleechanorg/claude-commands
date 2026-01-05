@@ -49,6 +49,87 @@ if TYPE_CHECKING:
     from mvp_site.game_state import GameState
 
 
+# ============================================================================
+# PROMPT ORDER INVARIANTS
+# ============================================================================
+# These invariants ensure consistent prompt loading order across all agents.
+# The LLM processes prompts in order, so the head order establishes authority.
+
+# Mandatory head order invariants:
+# 1. master_directive MUST be first (establishes authority)
+# 2. game_state and planning_protocol MUST be consecutive (anchors schema)
+#    - Mode-specific prompts (god_mode, think) may appear between master_directive
+#      and the game_state→planning_protocol pair, but not between those two elements
+
+MANDATORY_FIRST_PROMPT = constants.PROMPT_TYPE_MASTER_DIRECTIVE
+GAME_STATE_PLANNING_PAIR = (
+    constants.PROMPT_TYPE_GAME_STATE,
+    constants.PROMPT_TYPE_PLANNING_PROTOCOL,
+)
+
+
+def validate_prompt_order(
+    order: tuple[str, ...], agent_name: str = "unknown"
+) -> list[str]:
+    """
+    Validate that prompt order satisfies head invariants.
+
+    Invariants checked:
+    1. master_directive is first (index 0)
+    2. game_state and planning_protocol are consecutive (game_state → planning_protocol)
+
+    Args:
+        order: Ordered tuple of prompt types
+        agent_name: Agent name for error messages
+
+    Returns:
+        List of validation errors (empty if valid)
+    """
+    errors: list[str] = []
+
+    if not order:
+        errors.append(f"{agent_name}: REQUIRED_PROMPT_ORDER is empty")
+        return errors
+
+    # Invariant 0b: duplicates not allowed (catch early, with indices)
+    seen: dict[str, int] = {}
+    for idx, prompt in enumerate(order):
+        if prompt in seen:
+            errors.append(
+                f"{agent_name}: Duplicate prompt type in REQUIRED_PROMPT_ORDER: "
+                f"{prompt!r} at indices {seen[prompt]} and {idx}"
+            )
+        else:
+            seen[prompt] = idx
+
+    # Invariant 1: master_directive must be first
+    if order[0] != MANDATORY_FIRST_PROMPT:
+        errors.append(
+            f"{agent_name}: First prompt must be {MANDATORY_FIRST_PROMPT!r}, "
+            f"got {order[0]!r}"
+        )
+
+    # Invariant 2: game_state and planning_protocol must both exist and be consecutive
+    req_gs, req_pp = GAME_STATE_PLANNING_PAIR
+    missing_prompts = [p for p in (req_gs, req_pp) if p not in order]
+    if missing_prompts:
+        missing_list = ", ".join(repr(p) for p in missing_prompts)
+        errors.append(
+            f"{agent_name}: Missing required prompt(s) in order: {missing_list}"
+        )
+        return errors  # Can't check adjacency if members are missing
+
+    gs_idx = order.index(req_gs)
+    pp_idx = order.index(req_pp)
+    if pp_idx != gs_idx + 1:
+        errors.append(
+            f"{agent_name}: planning_protocol must immediately follow game_state. "
+            f"game_state at index {gs_idx}, planning_protocol at {pp_idx}"
+        )
+
+    return errors
+
+
 class BaseAgent(ABC):
     """
     Abstract base class for all agents in the system.
@@ -63,15 +144,21 @@ class BaseAgent(ABC):
     allowing it to specialize in its task without prompt overload.
 
     Attributes:
-        REQUIRED_PROMPTS: Prompts that are always loaded for this agent
+        REQUIRED_PROMPT_ORDER: Ordered tuple of prompts always loaded (explicit order)
+        REQUIRED_PROMPTS: Prompts that are always loaded for this agent (set view)
         OPTIONAL_PROMPTS: Prompts that may be conditionally loaded
         MODE: The mode identifier for this agent
     """
 
     # Class-level prompt definitions - override in subclasses
+    # REQUIRED_PROMPT_ORDER: Explicit ordered tuple (source of truth for order)
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = ()
+    # REQUIRED_PROMPTS: Set view for membership testing (derived from order)
     REQUIRED_PROMPTS: frozenset[str] = frozenset()
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
     MODE: str = ""
+    # Cache to avoid re-validating prompt order on every instantiation
+    _prompt_order_validated: bool = False
 
     def __init__(self, game_state: "GameState | None" = None) -> None:
         """
@@ -81,6 +168,7 @@ class BaseAgent(ABC):
             game_state: GameState object for dynamic instruction generation.
                         If None, static fallback instructions will be used.
         """
+        self._ensure_prompt_order_valid()
         self.game_state = game_state
         self._prompt_builder = PromptBuilder(game_state)
 
@@ -160,8 +248,109 @@ class BaseAgent(ABC):
         """Get the union of required and optional prompts for this agent."""
         return self.REQUIRED_PROMPTS | self.OPTIONAL_PROMPTS
 
+    @classmethod
+    def validate_prompt_order(cls) -> list[str]:
+        """
+        Validate this agent's REQUIRED_PROMPT_ORDER against head invariants.
+
+        Returns:
+            List of validation errors (empty if valid)
+        """
+        return validate_prompt_order(cls.REQUIRED_PROMPT_ORDER, cls.__name__)
+
+    @classmethod
+    def _ensure_prompt_order_valid(cls) -> None:
+        """
+        Runtime validation hook for prompt order invariants.
+
+        Raises:
+            ValueError if REQUIRED_PROMPT_ORDER violates invariants.
+        """
+        if cls._prompt_order_validated:
+            return
+
+        errors = cls.validate_prompt_order()
+        if errors:
+            logging_util.error(
+                "Invalid REQUIRED_PROMPT_ORDER for %s: %s", cls.__name__, errors
+            )
+            raise ValueError(
+                f"Invalid REQUIRED_PROMPT_ORDER for {cls.__name__}: "
+                + "; ".join(errors)
+            )
+
+        cls._prompt_order_validated = True
+
+    def prompt_order(self) -> tuple[str, ...]:
+        """
+        Return the ordered prompt types for this agent.
+
+        Override in subclasses if dynamic ordering is needed.
+        Default returns the class-level REQUIRED_PROMPT_ORDER.
+
+        Returns:
+            Ordered tuple of prompt type constants
+        """
+        return self.REQUIRED_PROMPT_ORDER
+
+    def builder_flags(self) -> dict[str, bool]:
+        """
+        Return builder configuration flags for this agent.
+
+        Override in subclasses to customize builder behavior.
+        Default: no debug instructions.
+
+        Returns:
+            Dict with builder flags (include_debug, etc.)
+        """
+        return {"include_debug": False}
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(mode={self.MODE}, required={len(self.REQUIRED_PROMPTS)}, optional={len(self.OPTIONAL_PROMPTS)})"
+
+
+class FixedPromptAgent(BaseAgent):
+    """
+    Base class for agents with a fixed prompt set.
+
+    Provides a default build_system_instructions() that uses build_for_agent(),
+    eliminating the need for `del unused_params` patterns in subclasses.
+
+    Subclasses only need to:
+    - Define REQUIRED_PROMPT_ORDER (inherited from BaseAgent)
+    - Override builder_flags() if they need debug instructions
+    - Override finalize_with_world() if they need world content
+
+    This simplifies agents that don't use selected_prompts, turn_number,
+    or other dynamic parameters.
+    """
+
+    # Whether this agent should include world content in finalized instructions
+    INCLUDE_WORLD_CONTENT: bool = False
+
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+        turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
+    ) -> str:
+        """
+        Build system instructions using the fixed prompt set.
+
+        This default implementation ignores dynamic parameters and builds
+        instructions using the agent's REQUIRED_PROMPT_ORDER and builder_flags().
+
+        Subclasses can override if they need dynamic behavior.
+        """
+        # Use build_for_agent for consistent instruction building
+        parts = self._prompt_builder.build_for_agent(self)
+
+        # Finalize with world content based on class setting
+        return self._prompt_builder.finalize_instructions(
+            parts, use_default_world=self.INCLUDE_WORLD_CONTENT
+        )
 
 
 class StoryModeAgent(BaseAgent):
@@ -189,15 +378,15 @@ class StoryModeAgent(BaseAgent):
     7. World content (conditional)
     """
 
-    # Required prompts - always loaded for story mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset(
-        {
-            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-            constants.PROMPT_TYPE_GAME_STATE,
-            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Planning block schema
-            constants.PROMPT_TYPE_DND_SRD,
-        }
+    # Required prompts - ordered tuple (source of truth for loading order)
+    # Order: master → game_state → planning_protocol → dnd_srd
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Planning block schema
+        constants.PROMPT_TYPE_DND_SRD,
     )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # Optional prompts - loaded based on campaign settings
     OPTIONAL_PROMPTS: frozenset[str] = frozenset(
@@ -309,6 +498,10 @@ class StoryModeAgent(BaseAgent):
 
         return parts
 
+    def builder_flags(self) -> dict[str, bool]:
+        """Story mode includes debug instructions."""
+        return {"include_debug": True}
+
     @classmethod
     def matches_input(cls, user_input: str) -> bool:
         """
@@ -323,7 +516,7 @@ class StoryModeAgent(BaseAgent):
         return not user_input.strip().upper().startswith("GOD MODE:")
 
 
-class GodModeAgent(BaseAgent):
+class GodModeAgent(FixedPromptAgent):
     """
     Agent for God Mode (Administrative) interactions.
 
@@ -349,60 +542,24 @@ class GodModeAgent(BaseAgent):
     Note: No narrative instructions - god mode doesn't tell stories.
     """
 
-    # Required prompts - always loaded for god mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset(
-        {
-            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-            constants.PROMPT_TYPE_GOD_MODE,
-            constants.PROMPT_TYPE_GAME_STATE,
-            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
-            constants.PROMPT_TYPE_DND_SRD,
-            constants.PROMPT_TYPE_MECHANICS,
-        }
+    # Required prompts - ordered tuple (source of truth for loading order)
+    # Order: master → god_mode → game_state → planning_protocol → dnd_srd → mechanics
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_GOD_MODE,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
+        constants.PROMPT_TYPE_DND_SRD,
+        constants.PROMPT_TYPE_MECHANICS,
     )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # No optional prompts for god mode - it's focused on administration
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
 
     MODE: str = constants.MODE_GOD
 
-    def build_system_instructions(
-        self,
-        selected_prompts: list[str] | None = None,
-        use_default_world: bool = False,
-        include_continuation_reminder: bool = True,
-        turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
-    ) -> str:
-        """
-        Build system instructions for god mode.
-
-        Uses a focused prompt set for administrative operations:
-        - Master directive (authority)
-        - God mode instruction (administrative behavior)
-        - Game state (state structure reference)
-        - D&D SRD (game rules knowledge)
-        - Mechanics (detailed game rules)
-
-        Note: selected_prompts, use_default_world, and turn_number parameters are
-        accepted to match the BaseAgent interface but are intentionally ignored
-        because god mode always uses its fixed prompt set without world lore or
-        living world advancement.
-
-        Returns:
-            Complete system instruction string for administrative commands
-        """
-        # Parameters intentionally unused - god mode uses fixed prompt set
-        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
-        del llm_requested_sections
-
-        builder = self._prompt_builder
-
-        # Build god mode instructions (fixed prompt set)
-        parts: list[str] = builder.build_god_mode_instructions()
-
-        # Finalize WITHOUT world instructions (god mode doesn't need world lore)
-        return builder.finalize_instructions(parts, use_default_world=False)
+    # Uses FixedPromptAgent.build_system_instructions() - no del patterns needed
 
     @classmethod
     def matches_input(cls, user_input: str) -> bool:
@@ -509,17 +666,36 @@ class CharacterCreationAgent(BaseAgent):
     """
 
     # Minimal prompts for focused character creation and level-up
-    REQUIRED_PROMPTS: frozenset[str] = frozenset({
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
         constants.PROMPT_TYPE_MASTER_DIRECTIVE,
         constants.PROMPT_TYPE_CHARACTER_CREATION,
         constants.PROMPT_TYPE_DND_SRD,
         constants.PROMPT_TYPE_MECHANICS,  # Full D&D rules for creation and level-up
-    })
+    )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # No optional prompts - keep it focused
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
 
     MODE: str = constants.MODE_CHARACTER_CREATION
+
+    @classmethod
+    def validate_prompt_order(cls) -> list[str]:
+        """
+        Override validation to allow missing game_state/planning_protocol.
+        Character creation uses a minimal prompt set.
+        """
+        errors = []
+        if not cls.REQUIRED_PROMPT_ORDER:
+            errors.append(f"{cls.__name__}: REQUIRED_PROMPT_ORDER is empty")
+            return errors
+
+        if cls.REQUIRED_PROMPT_ORDER[0] != constants.PROMPT_TYPE_MASTER_DIRECTIVE:
+            errors.append(
+                f"{cls.__name__}: First prompt must be {constants.PROMPT_TYPE_MASTER_DIRECTIVE!r}"
+            )
+
+        return errors
 
     def build_system_instructions(
         self,
@@ -653,7 +829,7 @@ class CharacterCreationAgent(BaseAgent):
         return any(phrase in lower for phrase in CHARACTER_CREATION_DONE_PHRASES)
 
 
-class PlanningAgent(BaseAgent):
+class PlanningAgent(FixedPromptAgent):
     """
     Agent for Think Mode (Strategic Planning) interactions.
 
@@ -683,58 +859,23 @@ class PlanningAgent(BaseAgent):
     Note: No narrative advancement - world is frozen while character thinks.
     """
 
-    # Required prompts - always loaded for think mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset(
-        {
-            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-            constants.PROMPT_TYPE_THINK,
-            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Planning block schema (canonical)
-            constants.PROMPT_TYPE_GAME_STATE,
-            constants.PROMPT_TYPE_DND_SRD,
-        }
+    # Required prompts - ordered tuple (source of truth for loading order)
+    # Order: master → think → game_state → planning_protocol → dnd_srd
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_THINK,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Planning block schema (canonical)
+        constants.PROMPT_TYPE_DND_SRD,
     )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # No optional prompts for think mode - it's focused on planning
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
 
     MODE: str = constants.MODE_THINK
 
-    def build_system_instructions(
-        self,
-        selected_prompts: list[str] | None = None,
-        use_default_world: bool = False,
-        include_continuation_reminder: bool = True,
-        turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
-    ) -> str:
-        """
-        Build system instructions for think mode.
-
-        Uses a focused prompt set for strategic planning:
-        - Master directive (authority)
-        - Think mode instruction (planning behavior)
-        - Game state (state structure reference)
-        - D&D SRD (game rules knowledge)
-
-        Note: selected_prompts, use_default_world, and turn_number parameters are
-        accepted to match the BaseAgent interface but are intentionally ignored
-        because think mode always uses its fixed prompt set without world lore or
-        living world advancement.
-
-        Returns:
-            Complete system instruction string for strategic planning
-        """
-        # Parameters intentionally unused - think mode uses fixed prompt set
-        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
-        del llm_requested_sections
-
-        builder = self._prompt_builder
-
-        # Build think mode instructions (fixed prompt set)
-        parts: list[str] = builder.build_think_mode_instructions()
-
-        # Finalize WITHOUT world instructions (think mode doesn't need world lore)
-        return builder.finalize_instructions(parts, use_default_world=False)
+    # Uses FixedPromptAgent.build_system_instructions() - no del patterns needed
 
     @classmethod
     def matches_input(cls, user_input: str, mode: str | None = None) -> bool:
@@ -815,7 +956,7 @@ STORY_ACTION_VERBS = [
 ]
 
 
-class InfoAgent(BaseAgent):
+class InfoAgent(FixedPromptAgent):
     """
     Agent for Information Queries (Equipment, Inventory, Stats).
 
@@ -839,53 +980,22 @@ class InfoAgent(BaseAgent):
     LLM focus on the Equipment Query Protocol.
     """
 
-    # TRIMMED prompts - only essentials for info queries
-    REQUIRED_PROMPTS: frozenset[str] = frozenset(
-        {
-            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-            constants.PROMPT_TYPE_GAME_STATE,  # Contains Equipment Query Protocol
-            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
-        }
+    # Required prompts - ordered tuple (TRIMMED for focus)
+    # Order: master → game_state → planning_protocol
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_GAME_STATE,  # Contains Equipment Query Protocol
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
     )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # No optional prompts - keep it focused
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
 
     MODE: str = constants.MODE_INFO
 
-    def build_system_instructions(
-        self,
-        selected_prompts: list[str] | None = None,
-        use_default_world: bool = False,
-        include_continuation_reminder: bool = True,
-        turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
-    ) -> str:
-        """
-        Build TRIMMED system instructions for info queries.
-
-        Uses minimal prompt set to maximize LLM focus on Equipment Query Protocol:
-        - Master directive (authority)
-        - Game state instruction (contains Equipment Query Protocol)
-        - Current game state (for context)
-
-        Note: selected_prompts and turn_number are intentionally ignored -
-        info mode uses fixed set without living world advancement.
-
-        Returns:
-            Trimmed system instruction string for information queries
-        """
-        # Parameters intentionally unused - info mode uses fixed prompt set
-        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
-        del llm_requested_sections
-
-        builder = self._prompt_builder
-
-        # Build info mode instructions (trimmed prompt set)
-        parts: list[str] = builder.build_info_mode_instructions()
-
-        # Finalize WITHOUT world lore (info mode doesn't need it)
-        return builder.finalize_instructions(parts, use_default_world=False)
+    # Info mode doesn't need world lore - keep focused on equipment/inventory
+    INCLUDE_WORLD_CONTENT: bool = False
 
     @classmethod
     def matches_input(cls, user_input: str) -> bool:
@@ -942,18 +1052,18 @@ class CombatAgent(BaseAgent):
     Note: Combat mode automatically transitions back to story mode when combat ends.
     """
 
-    # Required prompts - always loaded for combat mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset(
-        {
-            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-            constants.PROMPT_TYPE_COMBAT,
-            constants.PROMPT_TYPE_GAME_STATE,
-            constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
-            constants.PROMPT_TYPE_NARRATIVE,  # For DM Note protocol and cinematic style
-            constants.PROMPT_TYPE_DND_SRD,
-            constants.PROMPT_TYPE_MECHANICS,
-        }
+    # Required prompts - ordered tuple (source of truth for loading order)
+    # Order: master → game_state → planning_protocol → combat → narrative → dnd_srd → mechanics
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
+        constants.PROMPT_TYPE_COMBAT,
+        constants.PROMPT_TYPE_NARRATIVE,  # For DM Note protocol and cinematic style
+        constants.PROMPT_TYPE_DND_SRD,
+        constants.PROMPT_TYPE_MECHANICS,
     )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # No optional prompts for combat mode - it's focused on tactical combat
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
@@ -971,13 +1081,8 @@ class CombatAgent(BaseAgent):
         """
         Build system instructions for combat mode.
 
-        Uses a focused prompt set for tactical combat operations:
-        - Master directive (authority)
-        - Combat system instruction (tactical rules, dice, rewards)
-        - Game state (combat_state structure)
-        - D&D SRD (combat rules)
-        - Mechanics (detailed combat mechanics)
-        - Debug instructions (combat logging)
+        Uses build_from_order() with REQUIRED_PROMPT_ORDER to enforce invariants,
+        then finalizes with optional world content for combat in specific locations.
 
         Note: selected_prompts and turn_number parameters are accepted for
         interface consistency but combat mode uses its fixed combat-focused
@@ -992,11 +1097,18 @@ class CombatAgent(BaseAgent):
 
         builder = self._prompt_builder
 
-        # Build combat mode instructions (fixed prompt set)
-        parts: list[str] = builder.build_combat_mode_instructions()
+        # Use build_from_order() with REQUIRED_PROMPT_ORDER to enforce invariants
+        # This ensures prompts are loaded in the validated order with debug included
+        parts: list[str] = builder.build_from_order(
+            self.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
 
         # Finalize with optional world instructions (for combat in specific locations)
         return builder.finalize_instructions(parts, use_default_world=use_default_world)
+
+    def builder_flags(self) -> dict[str, bool]:
+        """Combat mode includes debug instructions for combat logging."""
+        return {"include_debug": True}
 
     @classmethod
     def matches_game_state(cls, game_state: "GameState | None") -> bool:
@@ -1043,7 +1155,7 @@ class CombatAgent(BaseAgent):
         return False
 
 
-class RewardsAgent(BaseAgent):
+class RewardsAgent(FixedPromptAgent):
     """
     Agent for Rewards Mode (XP, Loot, Level-Up Processing).
 
@@ -1075,59 +1187,29 @@ class RewardsAgent(BaseAgent):
     Note: After rewards are processed, this agent transitions back to story mode.
     """
 
-    # Required prompts - always loaded for rewards mode
-    REQUIRED_PROMPTS: frozenset[str] = frozenset({
+    # Required prompts - ordered tuple (source of truth for loading order)
+    # Order: master → game_state → planning_protocol → rewards → dnd_srd → mechanics
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
         constants.PROMPT_TYPE_MASTER_DIRECTIVE,
         constants.PROMPT_TYPE_GAME_STATE,
         constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
         constants.PROMPT_TYPE_REWARDS,
         constants.PROMPT_TYPE_DND_SRD,
         constants.PROMPT_TYPE_MECHANICS,
-    })
+    )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # No optional prompts for rewards mode - focused on reward processing
     OPTIONAL_PROMPTS: frozenset[str] = frozenset()
 
     MODE: str = constants.MODE_REWARDS
 
-    def build_system_instructions(
-        self,
-        selected_prompts: list[str] | None = None,
-        use_default_world: bool = False,
-        include_continuation_reminder: bool = True,
-        turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
-    ) -> str:
-        """
-        Build system instructions for rewards mode.
+    # Rewards mode doesn't need world lore - focused on reward processing
+    INCLUDE_WORLD_CONTENT: bool = False
 
-        Uses a focused prompt set for reward processing:
-        - Master directive (authority)
-        - Rewards system instruction (XP/loot/level-up rules)
-        - Game state (state structure reference)
-        - D&D SRD (XP thresholds, level rules)
-        - Mechanics (detailed level-up mechanics)
-
-        Args:
-            selected_prompts: List of prompt types to include
-            use_default_world: Whether to use default world background
-            include_continuation_reminder: Whether to include continuation reminder
-            turn_number: Current turn number
-            llm_requested_sections: Sections requested by LLM (compatibility parameter, unused)
-
-        Returns:
-            Complete system instruction string for rewards processing
-        """
-        # Parameters intentionally unused - rewards mode uses fixed prompt set
-        del selected_prompts, include_continuation_reminder, use_default_world, turn_number, llm_requested_sections
-
-        builder = self._prompt_builder
-
-        # Build rewards mode instructions (fixed prompt set)
-        parts: list[str] = builder.build_rewards_mode_instructions()
-
-        # Finalize without world instructions (rewards don't need world lore)
-        return builder.finalize_instructions(parts, use_default_world=False)
+    def builder_flags(self) -> dict[str, bool]:
+        """Rewards mode includes debug instructions for reward processing logging."""
+        return {"include_debug": True}
 
     @classmethod
     def matches_game_state(cls, game_state: "GameState | None") -> bool:
@@ -1305,6 +1387,36 @@ def get_agent_for_input(
     return StoryModeAgent(game_state)
 
 
+# ============================================================================
+# ALL AGENT CLASSES (for validation)
+# ============================================================================
+ALL_AGENT_CLASSES: tuple[type[BaseAgent], ...] = (
+    StoryModeAgent,
+    GodModeAgent,
+    CharacterCreationAgent,
+    PlanningAgent,
+    InfoAgent,
+    CombatAgent,
+    RewardsAgent,
+)
+
+
+def validate_all_agent_prompt_orders() -> dict[str, list[str]]:
+    """
+    Validate prompt order invariants for all agent classes.
+
+    Returns:
+        Dict mapping agent class names to their validation errors.
+        Empty dict means all agents are valid.
+    """
+    errors = {}
+    for agent_cls in ALL_AGENT_CLASSES:
+        agent_errors = agent_cls.validate_prompt_order()
+        if agent_errors:
+            errors[agent_cls.__name__] = agent_errors
+    return errors
+
+
 # Export all public classes and functions
 __all__ = [
     "BaseAgent",
@@ -1316,4 +1428,9 @@ __all__ = [
     "CombatAgent",
     "RewardsAgent",
     "get_agent_for_input",
+    "validate_prompt_order",
+    "validate_all_agent_prompt_orders",
+    "ALL_AGENT_CLASSES",
+    "MANDATORY_FIRST_PROMPT",
+    "GAME_STATE_PLANNING_PAIR",
 ]

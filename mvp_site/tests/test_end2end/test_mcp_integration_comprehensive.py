@@ -12,6 +12,7 @@ This supplements the existing Flask-only end2end tests with true MCP server inte
 import os
 
 os.environ["TESTING"] = "true"
+os.environ["MOCK_SERVICES_MODE"] = "true"
 
 import asyncio  # noqa: E402
 import json  # noqa: E402

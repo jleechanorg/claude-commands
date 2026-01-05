@@ -2,8 +2,11 @@
 """
 Download Campaign Script - Export campaigns to local files.
 
-This script reuses the existing export logic from world_logic.py and
-document_generator.py to download campaigns from Firestore to local files.
+This script uses the shared export logic from document_generator.py
+to download campaigns from Firestore to local files. The formatting
+logic (scene numbers, session headers, choice detection) is centralized
+in document_generator.get_story_text_from_context_enhanced() and shared
+with the web UI export button for consistency.
 
 Usage:
     # Download by email (looks up UID automatically)
@@ -25,7 +28,6 @@ Prerequisites:
 """
 
 import argparse
-import html
 import os
 import sys
 
@@ -63,145 +65,6 @@ def find_user_by_email(email: str) -> str | None:
         return user_record.uid
     except auth.UserNotFoundError:
         return None
-
-
-def _normalize_text(text: str) -> str:
-    """Normalize text for comparison by handling HTML entities and whitespace."""
-    # Decode HTML entities (&#x27; -> ', &amp; -> &, etc.)
-    normalized = html.unescape(text)
-    # Normalize whitespace
-    normalized = " ".join(normalized.split())
-    return normalized
-
-
-def get_choice_type(
-    user_text: str, recent_planning_blocks: list[dict | None]
-) -> tuple[str, str | None]:
-    """
-    Determine if user action was a planning choice or freeform.
-
-    Args:
-        user_text: The user's action text
-        recent_planning_blocks: List of recent AI response planning_blocks (most recent first)
-
-    Returns:
-        Tuple of (choice_type, choice_key) where choice_type is 'freeform' or 'choice'
-    """
-    if not recent_planning_blocks:
-        return ("freeform", None)
-
-    # Normalize user text for comparison
-    user_normalized = _normalize_text(user_text)
-
-    # Extract title from user text (before " - " if present)
-    user_title = user_normalized.split(" - ")[0].strip() if " - " in user_normalized else None
-
-    # Check each recent planning block (most recent first)
-    for planning_block in recent_planning_blocks:
-        if not planning_block:
-            continue
-
-        choices = planning_block.get("choices", {})
-        if not choices:
-            continue
-
-        # Check if user text matches any choice in this planning block
-        for key, choice in choices.items():
-            if isinstance(choice, dict):
-                choice_text = choice.get("text", "")
-                if not choice_text:
-                    continue
-
-                choice_normalized = _normalize_text(choice_text)
-
-                # Method 1: Direct startswith match
-                if user_normalized.startswith(choice_normalized):
-                    return ("choice", key)
-
-                # Method 2: Choice text starts with user's title (for short choice texts)
-                if user_title and choice_normalized.startswith(user_title):
-                    return ("choice", key)
-
-                # Method 3: User's title matches choice text exactly
-                if user_title and user_title.lower() == choice_normalized.lower():
-                    return ("choice", key)
-
-                # Method 4: Extract title from choice text and compare
-                choice_title = choice_normalized.split(" - ")[0].strip() if " - " in choice_normalized else choice_normalized
-                if user_title and user_title.lower() == choice_title.lower():
-                    return ("choice", key)
-
-    return ("freeform", None)
-
-
-def format_story_entry(
-    entry: dict, include_scene: bool = True, recent_planning_blocks: list[dict | None] | None = None
-) -> str:
-    """
-    Format a single story entry with scene numbers, session headers, resources, and dice rolls.
-
-    Args:
-        entry: Story entry dictionary from Firestore
-        include_scene: Whether to include scene number header
-        recent_planning_blocks: List of recent AI response planning_blocks (for user entries)
-
-    Returns:
-        Formatted string for the entry
-    """
-    actor = entry.get("actor", "unknown")
-    text = entry.get("text", "")
-    mode = entry.get("mode")
-    scene_num = entry.get("user_scene_number")
-    session_header = entry.get("session_header", "")
-    resources = entry.get("resources", "")
-    dice_rolls = entry.get("dice_rolls", [])
-
-    parts = []
-
-    # Add scene header for AI responses
-    if actor == "gemini" and scene_num and include_scene:
-        parts.append(f"{'=' * 60}")
-        parts.append(f"SCENE {scene_num}")
-        parts.append(f"{'=' * 60}")
-
-    # Add session header if present (contains timestamp, location, status)
-    if session_header:
-        # Clean up the session header (remove [SESSION_HEADER] prefix if present)
-        clean_header = session_header.replace("[SESSION_HEADER]", "").strip()
-        if clean_header:
-            parts.append(f"[{clean_header}]")
-
-    # Add resources if present
-    if resources:
-        parts.append(f"Resources: {resources}")
-
-    # Add dice rolls if present
-    if dice_rolls:
-        parts.append("Dice Rolls:")
-        for roll in dice_rolls:
-            parts.append(f"  - {roll}")
-
-    # Add blank line after metadata if we have any
-    if session_header or resources or dice_rolls:
-        parts.append("")
-
-    # Add actor label with choice type for player actions
-    if actor == "gemini":
-        label = "Game Master"
-    elif mode == "god":
-        label = "God Mode"
-    else:
-        # Determine if this was a planning choice or freeform
-        choice_type, choice_key = get_choice_type(text, recent_planning_blocks or [])
-        if choice_type == "choice" and choice_key:
-            label = f"Player (choice: {choice_key})"
-        else:
-            label = "Player (freeform)"
-
-    parts.append(f"{label}:")
-    parts.append(text)
-
-    return "\n".join(parts)
 
 
 def export_campaign(
@@ -244,33 +107,11 @@ def export_campaign(
 
     campaign_title = campaign_data.get("title", "Untitled Campaign")
 
-    # Convert story context to text format with scene numbers and session headers
-    story_parts = []
-    # Track last 10 planning blocks to search for choice matches
-    recent_planning_blocks: list[dict | None] = []
-    MAX_PLANNING_BLOCKS = 10
-
-    for entry in story_context:
-        # Skip malformed entries
-        if not isinstance(entry, dict):
-            continue
-        # Pass recent planning blocks for user entries to determine choice type
-        formatted = format_story_entry(
-            entry, include_scene=include_scenes, recent_planning_blocks=recent_planning_blocks
-        )
-        story_parts.append(formatted)
-
-        # Track planning blocks from AI responses (keep last 10)
-        if entry.get("actor") == "gemini":
-            planning_block = entry.get("planning_block")
-            if planning_block:
-                # Insert at beginning (most recent first)
-                recent_planning_blocks.insert(0, planning_block)
-                # Keep only last N
-                if len(recent_planning_blocks) > MAX_PLANNING_BLOCKS:
-                    recent_planning_blocks.pop()
-
-    story_text = "\n\n".join(story_parts)
+    # Convert story context to text format using shared enhanced formatting
+    # This uses the same logic as the web UI for consistency
+    story_text = document_generator.get_story_text_from_context_enhanced(
+        story_context, include_scenes=include_scenes
+    )
 
     # Create safe filename
     safe_title = "".join(c if c.isalnum() or c in " -_" else "_" for c in campaign_title)

@@ -30,7 +30,7 @@ The canonical schema is defined in `narrative_response_schema.py` as `PLANNING_B
 | `plan_quality` | REQUIRED (INT/WIS roll) | Not used |
 | `thinking` | REQUIRED (deep analysis) | Optional |
 | `situation_assessment` | REQUIRED | Optional |
-| `choices` | REQUIRED (include `think:return_story`) | REQUIRED |
+| `choices` | REQUIRED (situation-specific; include return-to-story only when appropriate) | REQUIRED |
 | `analysis` | REQUIRED | Optional |
 
 ---
@@ -42,12 +42,14 @@ Choice keys must follow these conventions:
 - **Allowed prefixes**: `god:`, `think:`
 - **Pattern**: `^(god:|think:)?[a-zA-Z_][a-zA-Z0-9_]*$`
 
-### Special Choice Keys
+### Contextual Choice Keys
+
+Use these prefixes only when the situation calls for them:
 
 | Key | Purpose |
 |-----|---------|
-| `think:continue` | Stay in Think Mode for deeper analysis |
-| `think:return_story` | Exit Think Mode, return to story |
+| `think:continue` | Optional: stay in Think Mode for deeper analysis |
+| `think:return_story` | Optional: include only when the situation calls for exiting Think Mode and resuming the story; omit otherwise |
 | `god:*` | God Mode actions (DM commands) |
 
 ---

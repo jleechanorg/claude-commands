@@ -100,8 +100,13 @@ class TestCategorizeEquipmentSlot(unittest.TestCase):
 
     def test_weapon_slots(self):
         """Should categorize weapon slots correctly."""
-        for slot in ["weapon", "main hand", "off hand"]:
+        for slot in ["weapon", "main hand"]:
             self.assertEqual(_categorize_equipment_slot(slot), "Weapons")
+
+    def test_offhand_slots(self):
+        """Should categorize off-hand slots separately (shields, focuses)."""
+        for slot in ["off hand", "off_hand", "offhand"]:
+            self.assertEqual(_categorize_equipment_slot(slot), "Off-Hand")
 
     def test_backpack_slot(self):
         """Should categorize backpack slot."""

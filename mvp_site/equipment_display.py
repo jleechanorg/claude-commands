@@ -98,10 +98,13 @@ def _filter_equipment_for_summary(  # noqa: PLR0912
             if is_backpack_slot(slot):
                 continue
 
-            # Keep defensive off-hand gear (e.g., shields) but exclude weapons
+            # Keep off-hand items (shields, focuses, torches, etc.) but exclude main-hand weapons
             name = item.get("name", "")
             stats = item.get("stats", "")
-            if is_weapon_slot(slot) and not is_shield_item(name, stats):
+            slot_lower = slot.lower().strip()
+            # Always show off_hand/offhand items (shields, focuses, etc.)
+            is_offhand = slot_lower in {"off hand", "off_hand", "offhand"}
+            if is_weapon_slot(slot) and not is_offhand and not is_shield_item(name, stats):
                 continue
 
             filtered.append(item)
@@ -159,8 +162,16 @@ def _categorize_equipment_slot(slot: str) -> str:  # noqa: PLR0911
         return "Amulet"
     if slot_lower in {"belt", "waist"}:
         return "Belt"
+    if slot_lower in {"shield", "buckler"}:
+        return "Shield"
+    if slot_lower in {"bracers", "wrists", "wrist"}:
+        return "Bracers"
 
-    # Weapons
+    # Off-hand (non-weapon items like focuses, torches, holy symbols)
+    if slot_lower in {"off hand", "off_hand", "offhand"}:
+        return "Off-Hand"
+
+    # Weapons (main hand, weapon slots)
     if slot_lower in WEAPON_SLOTS:
         return "Weapons"
 
@@ -370,9 +381,13 @@ def _build_equipment_summary(items: list[dict[str, str]], label: str) -> str:  #
     categorized: dict[str, list[str]] = {}
 
     for item in items:
-        name = item.get("name", "").strip()
-        stats = item.get("stats", "").strip()
-        slot = item.get("slot", "").strip()
+        # Defensive coercion: ensure all values are strings before .strip()
+        name_raw = item.get("name", "")
+        stats_raw = item.get("stats", "")
+        slot_raw = item.get("slot", "")
+        name = str(name_raw).strip() if name_raw else ""
+        stats = str(stats_raw).strip() if stats_raw else ""
+        slot = str(slot_raw).strip() if slot_raw else ""
 
         if not name:
             continue
@@ -412,6 +427,16 @@ def _build_equipment_summary(items: list[dict[str, str]], label: str) -> str:  #
                 lines.append(f"  • {item_str}")
 
     return "\n".join(lines)
+
+
+def build_equipment_summary(items: list[dict[str, str]], label: str) -> str:
+    """Public wrapper for building equipment summaries.
+
+    Delegates to the internal helper to avoid exposing the private name to
+    callers while keeping the existing formatting logic intact.
+    """
+
+    return _build_equipment_summary(items, label)
 
 
 def ensure_equipment_summary_in_narrative(
@@ -478,23 +503,47 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
             else {}
         )
         if isinstance(pc_data, dict):
-            equipment = pc_data.get("equipment", {})
+            # Check both 'equipment' and 'inventory' keys (game state uses 'inventory')
+            equipment = pc_data.get("equipment") or pc_data.get("inventory") or {}
         else:
-            equipment = getattr(pc_data, "equipment", {}) if pc_data else {}
+            equipment = getattr(pc_data, "equipment", None) or getattr(pc_data, "inventory", None) or {}
             if hasattr(equipment, "to_dict"):
                 equipment = equipment.to_dict()
 
-        def resolve_item(item_ref: str) -> tuple[str, str]:
+        def resolve_item(item_ref: Any) -> tuple[str, str]:
             """Resolve an item reference to (name, stats).
 
             If item_ref is a string ID in item_registry, use registry data.
             Otherwise, parse as inline "Name (stats)" format.
             """
-            if item_ref in item_registry:
+            if isinstance(item_ref, dict):
+                item_id = (
+                    item_ref.get("item_id")
+                    or item_ref.get("id")
+                    or item_ref.get("itemId")
+                    or item_ref.get("key")
+                )
+                if item_id and item_id in item_registry:
+                    item_data = item_registry[item_id]
+                    name = item_data.get("name", item_id)
+                    stats = item_data.get("stats", "")
+                    # Convert list stats to comma-separated string
+                    if isinstance(stats, list):
+                        stats = ", ".join(str(s) for s in stats if s is not None)
+                    return str(name), "" if stats is None else str(stats)
+                name = item_ref.get("name") or item_ref.get("title") or item_id or "Unknown Item"
+                stats = item_ref.get("stats") or item_ref.get("properties") or ""
+                if isinstance(stats, list):
+                    stats = ", ".join(str(entry) for entry in stats if entry is not None)
+                return str(name), "" if stats is None else str(stats)
+            if isinstance(item_ref, str) and item_ref in item_registry:
                 item_data = item_registry[item_ref]
                 name = item_data.get("name", item_ref)
                 stats = item_data.get("stats", "")
-                return name, stats
+                # Convert list stats to comma-separated string
+                if isinstance(stats, list):
+                    stats = ", ".join(str(s) for s in stats if s is not None)
+                return str(name), "" if stats is None else str(stats)
             # Legacy: parse inline format "Item Name (stats)"
             if "(" in str(item_ref):
                 parts = str(item_ref).split("(", 1)
@@ -505,7 +554,53 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
 
         # Extract equipped items (what player is actually wearing/wielding)
         # This includes armor slots, accessories, AND equipped weapons (main_hand, off_hand)
-        equipped = equipment.get("equipped", {})
+        #
+        # Support two formats:
+        # 1. Nested: equipment = {"equipped": {"head": ..., "body": ...}}
+        # 2. Flat: equipment = {"head": {...}, "body": {...}, "weapons": [...]}
+        # Defensive guard: ensure equipment is a dict before calling .get()
+        if not isinstance(equipment, dict):
+            equipment = {}
+        # Copy to avoid mutating game state
+        equipped_raw = equipment.get("equipped", {})
+        equipped = dict(equipped_raw) if isinstance(equipped_raw, dict) else {}
+
+        # Also check for flat format where slots are directly on equipment dict
+        # Common slots that might be directly on the equipment object
+        EQUIPMENT_SLOTS = {
+            "head", "body", "armor", "cloak", "neck", "hands", "feet", "ring",
+            "instrument", "main_hand", "off_hand", "mainhand", "offhand", "weapon",
+            "shield", "amulet", "necklace", "belt", "boots", "gloves", "bracers"
+        }
+        for slot in EQUIPMENT_SLOTS:
+            if slot in equipment and slot not in equipped:
+                item_data = equipment[slot]
+                # Check equipped flag for ANY dict item (default True if not specified)
+                if isinstance(item_data, dict) and not item_data.get("equipped", True):
+                    # Item explicitly marked as unequipped - skip it
+                    continue
+                if isinstance(item_data, dict) and item_data.get("name"):
+                    # Flat format: slot contains full item dict with name
+                    name = item_data.get("name", "Unknown")
+                    stats_raw = item_data.get("stats", "")
+                    # Coerce stats to string (may be list/dict in some data models)
+                    if isinstance(stats_raw, list):
+                        stats = ", ".join(str(s) for s in stats_raw if s is not None)
+                    elif isinstance(stats_raw, dict):
+                        stats = ", ".join(f"{k}: {v}" for k, v in stats_raw.items())
+                    else:
+                        stats = str(stats_raw) if stats_raw else ""
+                    equipment_list.append(
+                        {
+                            "slot": slot.replace("_", " ").title(),
+                            "name": name,
+                            "stats": stats,
+                        }
+                    )
+                elif item_data:
+                    # Legacy string format or item_id reference (already passed equipped check above)
+                    equipped[slot] = item_data
+
         for slot, item_ref in equipped.items():
             if item_ref:
                 name, stats = resolve_item(item_ref)
@@ -530,6 +625,11 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
                 name = weapon_ref.get("name", "Unknown Weapon")
                 damage = weapon_ref.get("damage", "")
                 properties = weapon_ref.get("properties", "")
+                # Handle properties as list or string (with type coercion for safety)
+                if isinstance(properties, list):
+                    properties = ", ".join(
+                        str(p) for p in properties if p is not None
+                    )
                 stats = " ".join(part for part in [damage, properties] if part).strip()
             else:
                 name, stats = resolve_item(str(weapon_ref))

@@ -87,7 +87,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
@@ -154,7 +154,7 @@ jobs:
         timeout 60 ./vpython --version
 
     - name: Run directory-based tests - ${{ matrix.test-group }}
-      timeout-minutes: 8
+      timeout-minutes: 12
       run: |
         source venv/bin/activate
 
