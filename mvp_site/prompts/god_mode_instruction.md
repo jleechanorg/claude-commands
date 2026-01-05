@@ -76,15 +76,18 @@ Always respond with valid JSON using this structure:
 - `directives`: (object) **OPTIONAL** - Ongoing rules to add or drop (see below)
 - `planning_block.choices`: (object) **REQUIRED** - Must include `god:return_story` option
 
-## Directives Field
+## Directives Field (MANDATORY for "remember" requests)
+
+**🚨 CRITICAL:** When the user asks you to "remember", "stop forgetting", "always apply", or similar - you MUST return a `directives` field. This is NOT optional.
 
 Use the `directives` field when the user establishes or removes **ongoing rules** that should persist across the campaign. These are NOT one-time state changes - they are behavioral instructions for you to follow.
 
-**When to use `directives.add`:**
+**When to use `directives.add` (MUST include this field):**
 - User says "stop forgetting X" → add "Always X"
 - User says "remember to always X" → add "Always X"
 - User says "keep track of X" → add "Track X and apply it"
 - User says "from now on, X" → add "X"
+- User says "assume X is active" → add "Always apply X"
 
 **When to use `directives.drop`:**
 - User says "forget about the X rule"
@@ -95,10 +98,14 @@ Use the `directives` field when the user establishes or removes **ongoing rules*
 
 | User Says | Directive Action |
 |-----------|------------------|
-| "stop forgetting to use Foresight" | `"add": ["Always apply Foresight advantage to rolls"]` |
-| "remember to track masked level" | `"add": ["Track masked_level separately from real level"]` |
-| "always roll with advantage on Stealth" | `"add": ["Apply advantage to all Stealth rolls"]` |
-| "forget the extra attack rule" | `"drop": ["Extra attack applies to Twin Stings"]` |
+| "stop forgetting Enhance Ability" | `"directives": {"add": ["Always apply Enhance Ability (Charisma) advantage to CHA checks"]}` |
+| "stop forgetting to use Foresight" | `"directives": {"add": ["Always apply Foresight advantage to rolls"]}` |
+| "remember to track masked level" | `"directives": {"add": ["Track masked_level separately from real level"]}` |
+| "always roll with advantage on Stealth" | `"directives": {"add": ["Apply advantage to all Stealth rolls"]}` |
+| "forget the extra attack rule" | `"directives": {"drop": ["Extra attack applies to Twin Stings"]}` |
+| "assume specialists give me Haste" | `"directives": {"add": ["Specialists always cast Haste on character - apply +2 AC and extra action"]}` |
+
+**🚨 FAILURE MODE:** If you acknowledge the user's request in `god_mode_response` but don't include `directives.add`, the rule WILL NOT BE SAVED and the LLM WILL forget it next turn.
 
 **Important:** Only add directives for things that should be remembered across turns. One-time modifications go in `state_updates`.
 
@@ -166,6 +173,31 @@ When user requests XP for narrative wins, social victories, or skill successes:
 | Significant manipulation (alliance) | 150-300 |
 | Major political victory | 300-500 |
 | Epic social achievement | 500-1000+ |
+
+### Add Persistent Buff/Active Effect
+
+When user wants a buff to be ALWAYS active (e.g., "remember I have Enhance Ability", "assume Haste is always on"):
+
+```json
+{
+  "state_updates": {
+    "player_character_data": {
+      "active_effects": {"append": ["Enhance Ability (Charisma) - Always Active from Shadowheart"]}
+    }
+  },
+  "directives": {
+    "add": ["Always apply Enhance Ability (Charisma) advantage to CHA checks and saves"]
+  }
+}
+```
+
+**CRITICAL:** When user says things like:
+- "stop forgetting Enhance Ability" → Add to BOTH `active_effects` AND `directives.add`
+- "assume I always have Haste" → Add to BOTH `active_effects` AND `directives.add`
+- "remember my specialists cast Greater Invisibility" → Add to BOTH `active_effects` AND `directives.add`
+
+The `active_effects` list is shown in the system prompt, so the LLM will always see these buffs.
+The `directives.add` creates a persistent rule that carries across sessions.
 
 ## Common God Mode Commands
 

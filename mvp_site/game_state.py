@@ -1616,6 +1616,23 @@ class GameState:
             elif isinstance(parentage, str):
                 lines.append(f"- **Parentage**: {parentage}")
 
+        # Active Effects (buffs, conditions, persistent effects)
+        # These MUST be applied to all relevant rolls and checks
+        active_effects = pc.get("active_effects", [])
+        if active_effects and isinstance(active_effects, list):
+            lines.append("")
+            lines.append("### Active Effects (ALWAYS APPLY)")
+            lines.append(
+                "The following buffs/effects are ALWAYS active and MUST be applied "
+                "to all relevant rolls, checks, saves, and combat calculations:"
+            )
+            for effect in active_effects:
+                if isinstance(effect, str) and effect.strip():
+                    lines.append(f"  - {effect}")
+                elif isinstance(effect, dict):
+                    effect_name = effect.get("name") or effect.get("effect") or str(effect)
+                    lines.append(f"  - {effect_name}")
+
         if len(lines) == 1:
             return ""  # Only header, no actual data
 

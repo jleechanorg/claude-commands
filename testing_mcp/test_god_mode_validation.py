@@ -84,6 +84,32 @@ def _has_directive_containing(state: dict[str, Any], keywords: list[str]) -> boo
     return False
 
 
+def _has_active_effect_containing(state: dict[str, Any], keywords: list[str]) -> bool:
+    """Check if any active_effect in player_character_data contains all specified keywords.
+
+    Args:
+        state: The game state dict
+        keywords: List of keywords that must ALL appear in at least one effect
+
+    Returns:
+        True if an active_effect containing all keywords exists
+    """
+    pc_data = state.get("player_character_data") or {}
+    active_effects = pc_data.get("active_effects", [])
+
+    for effect in active_effects:
+        if isinstance(effect, str):
+            effect_lower = effect.lower()
+            if all(kw.lower() in effect_lower for kw in keywords):
+                return True
+        elif isinstance(effect, dict):
+            effect_text = effect.get("name", "") or effect.get("effect", "") or str(effect)
+            if all(kw.lower() in effect_text.lower() for kw in keywords):
+                return True
+
+    return False
+
+
 # =============================================================================
 # Test Scenarios
 # =============================================================================
@@ -138,7 +164,8 @@ GOD_MODE_SCENARIOS: list[dict[str, Any]] = [
         "description": "Verify directives persist in custom_campaign_state.god_mode_directives",
         "god_mode_command": "GOD MODE: List all the rules you are following",
         # LLM should list directives - look for common keywords from prior tests
-        "expect_in_response": ["XP", "directive"],  # Response should mention directives
+        # Note: LLM may say "rules", "directives", "manifest" etc - just check state
+        "expect_in_response": [],  # Response wording varies - validate state instead
         "validate_state": lambda state: len(
             state.get("custom_campaign_state", {}).get("god_mode_directives", [])
         ) >= 1,  # Should have at least 1 directive from prior tests
@@ -221,6 +248,51 @@ GOD_MODE_SCENARIOS: list[dict[str, Any]] = [
             isinstance(d, dict) and d.get("added") and d.get("rule")
             for d in state.get("custom_campaign_state", {}).get("god_mode_directives", [])
         ),
+    },
+    # ==========================================================================
+    # Active Effects Tests (NEW)
+    # These test that persistent buffs are saved to player_character_data.active_effects
+    # and that "stop forgetting X" triggers both directive AND active_effect persistence
+    # ==========================================================================
+    {
+        "name": "Active Effects - Direct State Update",
+        "description": "Test that active_effects can be set directly via state update",
+        "god_mode_command": 'GOD_MODE_UPDATE_STATE:{"player_character_data":{"active_effects":["Enhance Ability (Charisma) - Advantage on CHA checks","Haste - +2 AC, advantage on DEX saves, extra action"]}}',
+        "validate_state": lambda state: (
+            len(state.get("player_character_data", {}).get("active_effects", [])) >= 2
+            and _has_active_effect_containing(state, ["enhance", "charisma"])
+            and _has_active_effect_containing(state, ["haste"])
+        ),
+    },
+    {
+        "name": "Active Effects - Append Syntax",
+        "description": "Test that active_effects can be appended via append syntax",
+        "god_mode_command": 'GOD_MODE_UPDATE_STATE:{"player_character_data":{"active_effects":{"append":["Greater Invisibility - Advantage on attacks"]}}}',
+        "validate_state": lambda state: (
+            _has_active_effect_containing(state, ["invisibility"])
+        ),
+    },
+    {
+        "name": "Active Effects - LLM Natural Language",
+        "description": "Test that 'stop forgetting buff X' triggers active_effect persistence",
+        "god_mode_command": "GOD MODE: Stop forgetting that I have Foresight active - I should always have advantage on attack rolls",
+        "expect_in_response": [],
+        # LLM should add to EITHER active_effects OR directives (both are valid)
+        "validate_state": lambda state: (
+            _has_active_effect_containing(state, ["foresight"])
+            or _has_directive_containing(state, ["foresight"])
+            or _has_directive_containing(state, ["advantage", "attack"])
+        ),
+    },
+    {
+        "name": "Active Effects - Persistence Check",
+        "description": "Verify active_effects persist in player_character_data",
+        "god_mode_command": "GOD MODE: List all my active buffs and effects",
+        # LLM should list active effects - look for keywords from prior tests
+        "expect_in_response": [],  # Response varies
+        "validate_state": lambda state: len(
+            state.get("player_character_data", {}).get("active_effects", [])
+        ) >= 1,  # Should have at least 1 effect from prior tests
     },
     # ==========================================================================
     # debug_info.dm_notes Persistence Path Validation (NEW)

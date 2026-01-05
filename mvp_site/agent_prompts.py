@@ -374,6 +374,19 @@ class PromptBuilder:
                 If None, static fallback instructions will be used.
         """
         self.game_state = game_state
+        # Store last-built blocks for evidence capture
+        self._last_identity_block: str = ""
+        self._last_directives_block: str = ""
+
+    @property
+    def last_identity_block(self) -> str:
+        """Return the last-built character identity block (for evidence capture)."""
+        return self._last_identity_block
+
+    @property
+    def last_directives_block(self) -> str:
+        """Return the last-built god mode directives block (for evidence capture)."""
+        return self._last_directives_block
 
     def _append_game_state_with_planning(self, parts: list[str]) -> None:
         """Append game_state plus planning_protocol in a single, centralized step."""
@@ -867,6 +880,23 @@ class PromptBuilder:
             elif isinstance(parentage, str):
                 lines.append(f"- **Parentage**: {parentage}")
 
+        # Active Effects (buffs, conditions, persistent effects)
+        # These MUST be applied to all relevant rolls and checks
+        active_effects = pc.get("active_effects", [])
+        if active_effects and isinstance(active_effects, list):
+            lines.append("")
+            lines.append("### Active Effects (ALWAYS APPLY)")
+            lines.append(
+                "The following buffs/effects are ALWAYS active and MUST be applied "
+                "to all relevant rolls, checks, saves, and combat calculations:"
+            )
+            for effect in active_effects:
+                if isinstance(effect, str) and effect.strip():
+                    lines.append(f"  - {effect}")
+                elif isinstance(effect, dict):
+                    effect_name = effect.get("name") or effect.get("effect") or str(effect)
+                    lines.append(f"  - {effect_name}")
+
         if len(lines) == 1:
             return ""  # Only header, no actual data
 
@@ -1143,12 +1173,14 @@ class PromptBuilder:
         # Add character identity block early (after core instructions)
         # This ensures the LLM always knows immutable character facts
         identity_block = self.build_character_identity_block()
+        self._last_identity_block = identity_block  # Store for evidence capture
         if identity_block:
             parts.insert(1, identity_block)  # Insert after first (master directive)
 
         # Add god mode directives (player-defined rules)
         # These MUST be followed by the LLM
         directives_block = self.build_god_mode_directives_block()
+        self._last_directives_block = directives_block  # Store for evidence capture
         if directives_block:
             # Insert after identity block (or after master directive if no identity)
             insert_pos = 2 if identity_block else 1

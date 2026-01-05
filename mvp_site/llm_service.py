@@ -3794,6 +3794,13 @@ def continue_story(
         # Always capture system instruction for debugging and evidence
         max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
         debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        # Capture identity block and directives block for explicit evidence
+        if hasattr(agent, "prompt_builder"):
+            pb = agent.prompt_builder
+            if pb.last_identity_block:
+                debug_info["character_identity_block"] = pb.last_identity_block
+            if pb.last_directives_block:
+                debug_info["god_mode_directives_block"] = pb.last_directives_block
         if capture_raw:
             # Capture raw LLM request payload (user prompt contents) per evidence-standards.md
             raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
