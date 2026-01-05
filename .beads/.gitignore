@@ -4,6 +4,11 @@
 *.db-wal
 *.db-shm
 
+# Git merge conflict metadata (rerere artifacts)
+beads.base.*
+beads.left.*
+beads.right.*
+
 # Daemon runtime files
 daemon.lock
 daemon.log

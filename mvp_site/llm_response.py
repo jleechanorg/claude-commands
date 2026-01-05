@@ -28,6 +28,7 @@ class LLMResponse:
         processing_metadata: dict[str, Any] | None = None,
         provider: str = "gemini",
         model: str = "gemini-3-pro-preview",
+        agent_mode: str | None = None,
     ):
         """
         Initialize LLMResponse.
@@ -39,6 +40,9 @@ class LLMResponse:
             processing_metadata: Additional metadata about response processing
             provider: LLM provider name (default: "gemini")
             model: Model identifier
+            agent_mode: The mode of the agent that generated this response
+                        (e.g., "god", "think", "character"). Single source of truth
+                        for mode detection - set by agent selection in llm_service.
         """
         self.narrative_text = narrative_text
         self.structured_response = structured_response
@@ -46,6 +50,7 @@ class LLMResponse:
         self.processing_metadata = processing_metadata or {}
         self.provider = provider
         self.model = model
+        self.agent_mode = agent_mode
         self._raw_narrative_text = narrative_text
 
         # Detect old tags if not already done
@@ -379,6 +384,7 @@ class LLMResponse:
         model: str = "gemini-3-pro-preview",
         provider: str = "gemini",
         processing_metadata: dict[str, Any] | None = None,
+        agent_mode: str | None = None,
     ) -> "LLMResponse":
         """
         Create a LLMResponse from raw Gemini API response.
@@ -405,6 +411,7 @@ class LLMResponse:
                 narrative_text,
                 provider=provider,
                 processing_metadata=processing_metadata,
+                agent_mode=agent_mode,
             )
 
         # Otherwise fall back to legacy mode
@@ -413,6 +420,7 @@ class LLMResponse:
             model,
             provider=provider,
             processing_metadata=processing_metadata,
+            agent_mode=agent_mode,
         )
 
     @classmethod
@@ -424,6 +432,7 @@ class LLMResponse:
         *,
         provider: str = "gemini",
         processing_metadata: dict[str, Any] | None = None,
+        agent_mode: str | None = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from structured JSON response.
@@ -435,6 +444,7 @@ class LLMResponse:
             structured_response: Parsed NarrativeResponse object
             model: Model name used for generation
             combined_narrative_text: The combined narrative text (including god_mode_response if present)
+            agent_mode: The mode of the agent that generated this response (e.g., "god", "think")
 
         Returns:
             LLMResponse with clean narrative and structured data
@@ -467,6 +477,7 @@ class LLMResponse:
             structured_response=structured_response,
             debug_tags_present=debug_tags,
             processing_metadata=processing_metadata,
+            agent_mode=agent_mode,
         )
 
     @classmethod
@@ -478,6 +489,7 @@ class LLMResponse:
         *,
         provider: str = "gemini",
         processing_metadata: dict[str, Any] | None = None,
+        agent_mode: str | None = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from plain text (legacy support).
@@ -488,6 +500,7 @@ class LLMResponse:
             narrative_text: Raw narrative text (may contain debug tags)
             model: Model name used for generation
             structured_response: Optional structured response object
+            agent_mode: The mode of the agent that generated this response (e.g., "god", "think")
 
         Returns:
             LLMResponse with debug content stripped from narrative
@@ -501,4 +514,5 @@ class LLMResponse:
             structured_response=structured_response,
             debug_tags_present=cls._detect_debug_tags_static(narrative_text),
             processing_metadata=processing_metadata,
+            agent_mode=agent_mode,
         )

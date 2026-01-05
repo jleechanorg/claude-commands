@@ -233,8 +233,33 @@ MODE_COMBAT = "combat"
 MODE_REWARDS = "rewards"
 MODE_INFO = "info"  # For equipment/inventory/stats queries with trimmed prompts
 
-# Think mode prefix - used for input detection
+# Mode prefixes - used for input detection
 THINK_MODE_PREFIX = "THINK:"
+GOD_MODE_PREFIX = "GOD MODE:"
+
+
+def is_god_mode(user_input: str, mode: str | None = None) -> bool:
+    """
+    Centralized god mode detection.
+
+    SINGLE SOURCE OF TRUTH for determining if an interaction is in God Mode.
+    Used by: GodModeAgent.matches_input(), world_logic.py, and any other callers.
+
+    God Mode is active when either:
+    1. The mode parameter equals MODE_GOD (case-insensitive), OR
+    2. The user input starts with "GOD MODE:" prefix (case-insensitive)
+
+    Args:
+        user_input: Raw user input text
+        mode: Optional mode parameter from request (e.g., "god", "character")
+
+    Returns:
+        True if god mode should be activated
+    """
+    normalized_input = user_input.strip().upper()
+    # Type validation per coding guidelines - use isinstance() checks
+    normalized_mode = mode.lower() if isinstance(mode, str) else None
+    return normalized_mode == MODE_GOD or normalized_input.startswith(GOD_MODE_PREFIX)
 
 
 def is_think_mode(user_input: str, mode: str | None = None) -> bool:
@@ -256,7 +281,9 @@ def is_think_mode(user_input: str, mode: str | None = None) -> bool:
         True if think mode should be activated
     """
     normalized = user_input.strip().upper()
-    return mode == MODE_THINK or normalized.startswith(THINK_MODE_PREFIX)
+    # Type validation per coding guidelines - use isinstance() checks
+    normalized_mode = mode.lower() if isinstance(mode, str) else None
+    return normalized_mode == MODE_THINK or normalized.startswith(THINK_MODE_PREFIX)
 
 
 # --- COMBAT PHASE CONSTANTS ---

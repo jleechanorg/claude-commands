@@ -3859,6 +3859,7 @@ def continue_story(
             )
 
     # Create LLMResponse with proper debug content separation
+    # Include agent_mode as single source of truth for mode detection in world_logic.py
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
         gemini_response = LLMResponse.create_from_structured_response(
@@ -3866,6 +3867,7 @@ def continue_story(
             chosen_model,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
+            agent_mode=agent.MODE,
         )
     else:
         # Fallback to legacy mode for non-JSON responses
@@ -3874,6 +3876,7 @@ def continue_story(
             chosen_model,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
+            agent_mode=agent.MODE,
         )
 
     if dice_retry_llm_call:

@@ -370,6 +370,93 @@ class TestGodModeEnd2End(unittest.TestCase):
         # Verify game_state is returned with updates
         assert "game_state" in data, "game_state should be in response"
 
+    @patch("mvp_site.firestore_service.get_db")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
+    def test_god_mode_via_mode_parameter_without_prefix(
+        self, mock_gemini_generate, mock_get_db
+    ):
+        """Test that mode='god' parameter triggers GodModeAgent even without text prefix.
+
+        This is critical for UI-based god mode switching where users don't need to
+        type "GOD MODE:" prefix - they just switch modes in the UI.
+
+        The mode parameter should be honored just like the text prefix.
+        Without this fix, requests with mode='god' but no "GOD MODE:" prefix
+        would incorrectly route to StoryModeAgent.
+        """
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_get_db.return_value = fake_firestore
+
+        campaign_id = "test_campaign_god_mode_param"
+        self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
+
+        # Mock Gemini provider to return god mode response
+        mock_gemini_generate.return_value = FakeLLMResponse(
+            json.dumps(self.mock_god_mode_response_data)
+        )
+
+        # Make request with mode='god' but NO "GOD MODE:" prefix in text
+        # This simulates user typing in god mode UI without the prefix
+        response = self.client.post(
+            f"/api/campaigns/{campaign_id}/interaction",
+            data=json.dumps({
+                "input": "set my HP to 100",  # NO "GOD MODE:" prefix!
+                "mode": "god",  # Mode parameter should trigger GodModeAgent
+            }),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        # Verify response succeeded
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
+
+        # Verify god_mode_response is in the response (stronger validation)
+        data = json.loads(response.data)
+        assert "god_mode_response" in data, (
+            f"Response should contain god_mode_response field. Keys: {data.keys()}"
+        )
+
+        # Verify Gemini was called
+        assert mock_gemini_generate.call_count >= 1, "LLM should be called"
+
+        # Get the system instruction passed to the LLM
+        call_args = mock_gemini_generate.call_args
+
+        # Check that god_mode_instruction content is present (administrative focus)
+        # and that narrative_system_instruction is NOT present
+        if call_args and len(call_args) > 0:
+            # Look through all arguments for system instruction content
+            all_args_str = str(call_args)
+
+            # God mode should have "Administrative interface" or "pause menu" language
+            has_god_mode_prompt = (
+                "Administrative interface" in all_args_str
+                or "pause menu" in all_args_str
+                or "god_mode_response" in all_args_str
+            )
+
+            # God mode should NOT have narrative generation language
+            has_narrative_prompt = (
+                "Master Game Weaver" in all_args_str
+                or "Subtlety and realism over theatrical drama" in all_args_str
+            )
+
+            # We expect god mode prompts, not narrative prompts
+            # This verifies mode='god' parameter works like "GOD MODE:" prefix
+            assert has_god_mode_prompt, (
+                "mode='god' should load god_mode prompts with 'Administrative interface' "
+                f"or 'pause menu'. all_args (first 500 chars): {all_args_str[:500]}"
+            )
+            assert not has_narrative_prompt, (
+                "mode='god' should NOT load narrative prompts. "
+                "This indicates StoryModeAgent was used instead of GodModeAgent."
+            )
+
 
 class TestGodModePromptSelection(unittest.TestCase):
     """Unit tests for GOD MODE prompt selection logic."""

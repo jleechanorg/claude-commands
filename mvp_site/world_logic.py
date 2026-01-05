@@ -1402,13 +1402,30 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     Returns:
         Dictionary with success/error status and story response
     """
-    def _is_god_mode_return_to_story(text: str) -> bool:
+    def _is_god_mode_return_to_story(text: str, mode: str | None = None) -> bool:
+        """Check if text is a return-to-story command from god mode.
+
+        Works with both:
+        1. "GOD MODE: return to story" prefix (any mode)
+        2. "return to story" without prefix (when mode='god')
+        """
         if not isinstance(text, str):
             return False
         stripped = text.strip()
-        if not stripped.upper().startswith("GOD MODE:"):
+
+        # Check if we have the GOD MODE: prefix
+        has_prefix = stripped.upper().startswith("GOD MODE:")
+
+        # If we have the prefix, extract remainder; otherwise use full text
+        if has_prefix:
+            remainder = stripped[len("GOD MODE:") :].strip().lower()
+        elif mode and mode.lower() == constants.MODE_GOD:
+            # No prefix but we're in god mode via parameter - check full text
+            remainder = stripped.lower()
+        else:
+            # No prefix and not in god mode - not a return command
             return False
-        remainder = stripped[len("GOD MODE:") :].strip().lower()
+
         remainder = remainder.rstrip(".! ")
         tokens = [t for t in remainder.split() if t]
         if not tokens:
@@ -1447,7 +1464,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         original_user_input = user_input
 
         # If this is a GOD MODE return command, treat as story mode transition.
-        if _is_god_mode_return_to_story(user_input):
+        # Supports both "GOD MODE: return to story" prefix and plain "return to story" when mode='god'
+        if _is_god_mode_return_to_story(user_input, mode):
             user_input = "Return to story."
             mode = constants.MODE_CHARACTER
 
@@ -1497,12 +1515,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # This is the most important call to run in a thread to prevent blocking
         # TEMPORAL VALIDATION LOOP: Retry if LLM generates backward time
         # EXCEPTION: GOD MODE commands can intentionally move time backward
-        normalized_input = user_input.strip().upper()
-        is_god_mode = normalized_input.startswith("GOD MODE:")
-        # Treat either the explicit mode flag or a THINK: prefix as Think Mode so
-        # manual THINK: inputs from the UI still keep time frozen.
-        # Uses centralized constants.is_think_mode() for consistent detection.
-        is_think_mode = constants.is_think_mode(user_input, mode)
+        #
+        # NOTE: is_god_mode and is_think_mode are determined by agent selection inside
+        # llm_service.continue_story(). The LLMResponse returns agent_mode as the single
+        # source of truth. We set these AFTER the LLM call based on llm_response_obj.agent_mode.
         llm_input = user_input  # Separate variable for LLM calls
         temporal_correction_attempts = 0
         llm_response_obj = None
@@ -1524,6 +1540,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 logging_util.error(f"LLM request failed during story continuation: {e}")
                 status_code = getattr(e, "status_code", None) or 422
                 return create_error_response(str(e), status_code)
+
+            # Get mode from LLM response - agent selection is the single source of truth
+            # This replaces duplicate is_god_mode/is_think_mode detection
+            is_god_mode = llm_response_obj.agent_mode == constants.MODE_GOD
+            is_think_mode = llm_response_obj.agent_mode == constants.MODE_THINK
 
             # Check for temporal violation (time going backward)
             # EXCEPTION: Skip validation for GOD MODE (backward time is intentional)
