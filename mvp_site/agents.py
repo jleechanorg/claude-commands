@@ -40,6 +40,7 @@ Each agent has:
 """
 
 from abc import ABC, abstractmethod
+import re
 from typing import TYPE_CHECKING
 
 from mvp_site import constants, logging_util
@@ -764,20 +765,31 @@ class CharacterCreationAgent(BaseAgent):
         elif isinstance(game_state, dict):
             custom_state = game_state.get("custom_campaign_state", {})
 
-        if custom_state and isinstance(custom_state, dict):
-            # Check for level-up pending (takes priority - always enter this mode)
-            if custom_state.get("level_up_pending", False):
-                logging_util.info(
-                    "🎭 CHARACTER_CREATION_CHECK: level_up_pending=True, entering level-up mode"
-                )
-                return True
+        level_up_pending = False
+        if isinstance(custom_state, dict):
+            level_up_pending = custom_state.get("level_up_pending", False)
 
-            # Check if character creation is explicitly completed
-            if custom_state.get("character_creation_completed", False):
-                logging_util.debug(
-                    "🎭 CHARACTER_CREATION_CHECK: character_creation_completed=True"
-                )
-                return False
+        if not level_up_pending:
+            rewards_pending = None
+            if hasattr(game_state, "rewards_pending"):
+                rewards_pending = game_state.rewards_pending
+            elif isinstance(game_state, dict):
+                rewards_pending = game_state.get("rewards_pending", {})
+
+            if isinstance(rewards_pending, dict):
+                level_up_pending = rewards_pending.get("level_up_available", False)
+
+        if level_up_pending:
+            logging_util.info(
+                "🎭 CHARACTER_CREATION_CHECK: level_up_pending/available=True, entering level-up mode"
+            )
+            return True
+
+        if isinstance(custom_state, dict) and custom_state.get("character_creation_completed", False):
+            logging_util.debug(
+                "🎭 CHARACTER_CREATION_CHECK: character_creation_completed=True"
+            )
+            return False
 
         # Check if character has a name (indicates creation may be done)
         pc_data = None
@@ -794,9 +806,19 @@ class CharacterCreationAgent(BaseAgent):
 
             if char_name and char_class:
                 # Character has name and class - check if explicitly in creation mode
-                in_creation_mode = custom_state.get(
-                    "character_creation_in_progress", False
-                ) if custom_state else False
+                in_creation_mode = False
+                if isinstance(custom_state, dict):
+                    in_creation_mode = custom_state.get(
+                        "character_creation_in_progress", False
+                    )
+
+                    if (
+                        not in_creation_mode
+                        and isinstance(custom_state.get("character_creation"), dict)
+                    ):
+                        in_creation_mode = custom_state["character_creation"].get(
+                            "in_progress", False
+                        )
 
                 if not in_creation_mode:
                     logging_util.debug(
@@ -829,7 +851,30 @@ class CharacterCreationAgent(BaseAgent):
             True if user indicates they're done with character creation
         """
         lower = user_input.lower().strip()
-        return any(phrase in lower for phrase in CHARACTER_CREATION_DONE_PHRASES)
+
+        if re.search(r"\bnot\s+(?:yet\s+)?(?:done|finished|ready)\b", lower):
+            return False
+        if re.search(r"\bdo(?:n't| not|nt)\s+start\b", lower):
+            return False
+
+        patterns = [
+            r"\bi'?m\s+done\b",
+            r"\bi'?m\s+finished\b",
+            r"\bi\s+am\s+done\b",
+            r"\bi\s+am\s+finished\b",
+            r"\bstart\s+(?:the\s+)?(?:story|adventure)\b",
+            r"\bbegin\s+(?:the\s+)?(?:story|adventure)\b",
+            r"\blet'?s\s+(?:start|begin)\b",
+            r"\bready\s+to\s+play\b",
+            r"\bi'?m\s+ready\b",
+            r"\bthat'?s\s+everything\b",
+            r"\bcharacter\s+(?:is\s+)?complete\b",
+            r"\b(?:done|finished)\s+(?:creating|leveling)\b",
+            r"\blevel-?up\s+complete\b",
+            r"\b(?:back\s+to|continue)\s+adventure\b",
+        ]
+
+        return any(re.search(pattern, lower) for pattern in patterns)
 
 
 class PlanningAgent(FixedPromptAgent):

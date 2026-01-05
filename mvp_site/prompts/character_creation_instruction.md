@@ -220,6 +220,29 @@ Until you see these phrases, STAY in this mode.
 }
 ```
 
+### Managing Creation & Level-Up State
+
+- While guiding creation or level-up, keep the session in this mode by setting:
+
+```json
+"state_updates": {
+    "custom_campaign_state": {
+        "character_creation_in_progress": true
+    }
+}
+```
+
+- When the user explicitly finishes and the character has at least a **name** and a **class**, clear the in-progress flag and mark completion:
+
+```json
+"state_updates": {
+    "custom_campaign_state": {
+        "character_creation_in_progress": false,
+        "character_creation_completed": true
+    }
+}
+```
+
 ## Completion Response
 
 When user confirms they're done:
@@ -241,4 +264,4 @@ When user confirms they're done:
 }
 ```
 
-The `character_creation_complete: true` flag signals transition to Story Mode.
+The `character_creation_complete: true` flag records completion for downstream processing. Transition to Story Mode is triggered when the user says they are done (e.g., "I'm done", "start the story"), not by this flag.
