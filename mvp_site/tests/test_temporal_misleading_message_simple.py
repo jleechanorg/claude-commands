@@ -6,10 +6,8 @@ Tests the specific code block (world_logic.py:809-819) directly without full int
 
 import unittest
 
-from mvp_site.world_logic import (
-    MAX_TEMPORAL_CORRECTION_ATTEMPTS,
-    _build_temporal_warning_message,
-)
+from mvp_site.agent_prompts import build_temporal_warning_message
+from mvp_site.world_logic import MAX_TEMPORAL_CORRECTION_ATTEMPTS
 
 
 class TestTemporalMisleadingMessageSimple(unittest.TestCase):
@@ -38,7 +36,9 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
         # Simulate the scenario: temporal correction exceeded max attempts
         temporal_correction_attempts = 3  # EXCEEDED (gave up)
 
-        temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
+        temporal_warning = build_temporal_warning_message(
+            temporal_correction_attempts, max_attempts=MAX_TEMPORAL_CORRECTION_ATTEMPTS
+        )
 
         # ASSERTION: Verify fix is working correctly
         # When temporal_correction_attempts > MAX, message should mention "exceeded"
@@ -78,7 +78,9 @@ class TestTemporalMisleadingMessageSimple(unittest.TestCase):
         """
         temporal_correction_attempts = 1  # SUCCESS (within limits)
 
-        temporal_warning = _build_temporal_warning_message(temporal_correction_attempts)
+        temporal_warning = build_temporal_warning_message(
+            temporal_correction_attempts, max_attempts=MAX_TEMPORAL_CORRECTION_ATTEMPTS
+        )
 
         # When corrections succeed (attempts <= MAX), saying "fix" is correct
         self.assertIsNotNone(

@@ -92,8 +92,11 @@ from mvp_site.equipment_display import (
     ensure_equipment_summary_in_narrative,
 )
 from mvp_site.agent_prompts import (
+    build_reprompt_for_missing_fields,
     clear_loaded_files_tracking,
+    get_current_turn_prompt,
     get_loaded_instruction_files,
+    get_static_prompt_parts,
 )
 from mvp_site.agents import (
     BaseAgent,
@@ -121,7 +124,7 @@ from mvp_site.llm_providers import (
 )
 from mvp_site.llm_request import LLMRequest, LLMRequestError
 from mvp_site.llm_response import LLMResponse
-from mvp_site.memory_utils import format_memories_for_prompt, select_memories_by_budget
+# Memory utilities now imported via agent_prompts (centralized prompt manipulation)
 
 # Removed old json_input_schema import - now using LLMRequest for structured JSON
 from mvp_site.narrative_response_schema import (
@@ -243,7 +246,7 @@ MAX_OUTPUT_TOKENS: int = (
     50000  # Conservative output token limit below Gemini 2.5 Flash max (65,535)
 )
 TEMPERATURE: float = 0.9
-TARGET_WORD_COUNT: int = 300
+# TARGET_WORD_COUNT moved to agent_prompts.py for centralized prompt manipulation
 # Add a safety margin for JSON responses to prevent mid-response cutoffs
 
 # Default planning block generation has been REMOVED
@@ -1119,32 +1122,6 @@ def _build_timeline_log(story_context: list[dict[str, Any]]) -> str:
         )
 
     return "\n\n".join(timeline_log_parts)
-
-
-def _build_continuation_prompt(
-    checkpoint_block: str,
-    core_memories_summary: str,
-    sequence_id_list_string: str,
-    serialized_game_state: str,
-    entity_tracking_instruction: str,
-    timeline_log_string: str,
-    current_prompt_text: str,
-) -> str:
-    """
-    Build the full continuation prompt.
-
-    Returns:
-        str: Complete prompt for continuation
-    """
-    return (
-        f"{checkpoint_block}\\n\\n"
-        f"{core_memories_summary}"
-        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
-        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
-        f"{entity_tracking_instruction}"
-        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
-        f"YOUR TURN:\\n{current_prompt_text}"
-    )
 
 
 def _select_model_for_continuation(_user_input_count: int) -> str:
@@ -2988,79 +2965,6 @@ def _check_missing_required_fields(
     return missing
 
 
-def _build_reprompt_for_missing_fields(
-    original_response_text: str,
-    missing_fields: list[str],
-    tool_results: list[dict] | None = None,
-    dice_roll_strategy: str | None = None,
-) -> str:
-    """Build a reprompt message to request missing fields.
-
-    Args:
-        original_response_text: The original response from the LLM
-        missing_fields: List of missing field names
-        tool_results: Optional list of tool execution results to include
-            in the reprompt. This preserves dice roll provenance when
-            reprompting after malformed JSON in Phase 2.
-        dice_roll_strategy: Strategy to determine available dice remediation
-            (code_execution only vs tool_requests only)
-
-    Returns:
-        Reprompt message asking for the missing fields
-    """
-    fields_str = " and ".join(missing_fields)
-
-    requested_lines: list[str] = []
-    if "planning_block" in missing_fields:
-        requested_lines.append(
-            "- planning_block: An object with 'thinking' (your GM reasoning) and 'choices' (2-4 player options, each with 'text', 'description', 'risk_level')"
-        )
-    if "session_header" in missing_fields:
-        requested_lines.append(
-            "- session_header: A brief session context string (e.g., 'Session 3: The Quest Continues')"
-        )
-    if "dice_rolls" in missing_fields:
-        requested_lines.append(
-            "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
-        )
-    if "dice_integrity" in missing_fields:
-        requested_lines.extend(
-            dice_integrity.build_dice_integrity_reprompt_lines(dice_roll_strategy)
-        )
-
-    requested_block = "\n".join(requested_lines)
-
-    # Build tool results context if available (preserves dice provenance)
-    tool_results_context = ""
-    if tool_results:
-        tool_lines = []
-        for tr in tool_results:
-            tool_name = tr.get("tool", "unknown")
-            result = tr.get("result", {})
-            if isinstance(result, dict):
-                total = result.get("total", result.get("result"))
-                purpose = tr.get("args", {}).get("purpose", "")
-                tool_lines.append(
-                    f"  - {tool_name}: {total}" + (f" ({purpose})" if purpose else "")
-                )
-            else:
-                tool_lines.append(f"  - {tool_name}: {result}")
-        if tool_lines:
-            tool_results_context = (
-                "\n\nIMPORTANT - Tool results from prior execution (use these EXACT values, do NOT fabricate):\n"
-                + "\n".join(tool_lines)
-                + "\n"
-            )
-
-    return (
-        f"Your response is missing the required {fields_str} field(s). "
-        f"Please provide the complete JSON response including:\n{requested_block}\n\n"
-        f"Keep the narrative and other fields from your previous response. "
-        f"{tool_results_context}"
-        f"Here is your previous response for reference:\n{original_response_text[:2000]}"
-    )
-
-
 def _build_reprompt_request(
     base_request: LLMRequest,
     reprompt_message: str,
@@ -3303,7 +3207,7 @@ def continue_story(
 
     # Temporarily generate other prompt parts to measure them.
     # We will generate them again *after* truncation with the final context.
-    temp_checkpoint_block, temp_core_memories, temp_seq_ids = _get_static_prompt_parts(
+    temp_checkpoint_block, temp_core_memories, temp_seq_ids = get_static_prompt_parts(
         current_game_state, []
     )
 
@@ -3377,7 +3281,7 @@ def continue_story(
 
     # Now that we have the final, truncated context, we can generate the real prompt parts.
     checkpoint_block, core_memories_summary, sequence_id_list_string = (
-        _get_static_prompt_parts(current_game_state, truncated_story_context)
+        get_static_prompt_parts(current_game_state, truncated_story_context)
     )
 
     # --- ENTITY TRACKING: Create scene manifest for entity tracking ---
@@ -3420,7 +3324,7 @@ def continue_story(
         entity_specific_instructions = entity_instructions
 
     # Create the final prompt for the current user turn (User's preferred method)
-    current_prompt_text: str = _get_current_turn_prompt(user_input, mode)
+    current_prompt_text: str = get_current_turn_prompt(user_input, mode)
 
     # EQUIPMENT CONTEXT INJECTION: When user asks about equipment/items,
     # inject explicit equipment list so LLM has clear context (not buried in JSON)
@@ -3707,7 +3611,7 @@ def continue_story(
         for attempt in range(1, MAX_MISSING_FIELD_REPROMPT_ATTEMPTS + 1):
             # Build reprompt message with tool_results from original response
             # This preserves dice provenance so the model can reference real results
-            reprompt_message = _build_reprompt_for_missing_fields(
+            reprompt_message = build_reprompt_for_missing_fields(
                 raw_response_text,
                 missing_fields,
                 tool_results=getattr(api_response, "_tool_results", None),
@@ -4046,63 +3950,6 @@ def continue_story(
     return gemini_response
 
 
-def _get_static_prompt_parts(
-    current_game_state: GameState, story_context: list[dict[str, Any]]
-) -> tuple[str, str, str]:
-    """Helper to generate the non-timeline parts of the prompt."""
-    sequence_ids = [str(entry.get("sequence_id", "N/A")) for entry in story_context]
-    sequence_id_list_string = ", ".join(sequence_ids)
-    latest_seq_id = sequence_ids[-1] if sequence_ids else "N/A"
-
-    current_location = current_game_state.world_data.get(
-        "current_location_name", "Unknown"
-    )
-
-    pc_data: dict[str, Any] = current_game_state.player_character_data
-    # The key stats are now generated by the LLM in the [CHARACTER_RESOURCES] block.
-    active_missions: list[Any] = current_game_state.custom_campaign_state.get(
-        "active_missions", []
-    )
-    if active_missions:
-        # Handle both old style (list of strings) and new style (list of dicts)
-        mission_names = []
-        for m in active_missions:
-            if isinstance(m, dict):
-                # For dict format, try to get 'name' field, fallback to 'title' or convert to string
-                name = m.get("name") or m.get("title") or str(m)
-            else:
-                # For string format, use as-is
-                name = str(m)
-            mission_names.append(name)
-        missions_summary = "Missions: " + (
-            ", ".join(mission_names) if mission_names else "None"
-        )
-    else:
-        missions_summary = "Missions: None"
-
-    ambition: str | None = pc_data.get("core_ambition")
-    milestone: str | None = pc_data.get("next_milestone")
-    ambition_summary: str = ""
-    if ambition and milestone:
-        ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
-
-    all_core_memories: list[str] = current_game_state.custom_campaign_state.get(
-        "core_memories", []
-    )
-    # Apply token budget to prevent memory overflow
-    selected_memories = select_memories_by_budget(all_core_memories)
-    core_memories_summary: str = format_memories_for_prompt(selected_memories)
-
-    checkpoint_block: str = (
-        f"[CHECKPOINT BLOCK:]\\n"
-        f"Sequence ID: {latest_seq_id} | Location: {current_location}\\n"
-        f"{missions_summary}\\n"
-        f"{ambition_summary}"
-    )
-
-    return checkpoint_block, core_memories_summary, sequence_id_list_string
-
-
 def _extract_multiple_think_commands(user_input: str) -> list[str]:
     """
     Extract multiple 'Main Character: think' commands from user input.
@@ -4118,42 +3965,6 @@ def _extract_multiple_think_commands(user_input: str) -> list[str]:
         return matches
     # No multiple commands found, return original input
     return [user_input]
-
-
-def _get_current_turn_prompt(user_input: str, mode: str) -> str:
-    """Helper to generate the text for the user's current action."""
-    if mode == "character":
-        # Check if user is requesting planning/thinking
-        # Note: Thinking detection simplified to avoid hardcoded keyword lists
-        user_input_lower = user_input.lower()
-        is_think_command = "think" in user_input_lower or "plan" in user_input_lower
-
-        # Check for multiple "Main Character: think" patterns using regex
-        think_pattern = r"Main Character:\s*think[^\n]*"
-        think_matches = re.findall(think_pattern, user_input, re.IGNORECASE)
-        len(think_matches)
-
-        if is_think_command:
-            # Emphasize planning for think commands (planning block handled separately in JSON)
-            prompt_template = (
-                "Main character: {user_input}. Generate the character's internal thoughts and strategic analysis. "
-                "NARRATIVE: Write the character's inner thoughts and contemplation as narrative text. "
-                "PLANNING: Generate detailed analysis in the planning block with pros/cons for each option. "
-                "DO NOT take any physical actions or advance the scene. Focus on mental deliberation only. "
-                "CRITICAL: Each choice in the planning block MUST include an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string."
-            )
-        else:
-            # Standard story continuation (planning block handled separately in JSON)
-            prompt_template = (
-                "Main character: {user_input}. Continue the story in about {word_count} words and "
-                "add details for narrative, descriptions of scenes, character dialog, character emotions."
-            )
-        return prompt_template.format(
-            user_input=user_input, word_count=TARGET_WORD_COUNT
-        )
-    # god mode
-    prompt_template = "GOD MODE: {user_input}"
-    return prompt_template.format(user_input=user_input)
 
 
 def _validate_companion_generation(gemini_response: LLMResponse) -> None:

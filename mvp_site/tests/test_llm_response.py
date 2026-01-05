@@ -223,11 +223,11 @@ class TestLLMResponse(unittest.TestCase):
     @patch("mvp_site.llm_service._validate_and_enforce_planning_block")
     @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
     @patch("mvp_site.llm_service.estimate_tokens", return_value=0)
-    @patch("mvp_site.llm_service._get_current_turn_prompt", return_value="prompt")
+    @patch("mvp_site.llm_service.get_current_turn_prompt", return_value="prompt")
     @patch("mvp_site.llm_service._build_timeline_log", return_value="")
     @patch("mvp_site.llm_service._prepare_entity_tracking", return_value=("", [], ""))
     @patch("mvp_site.llm_service._truncate_context", return_value=[])
-    @patch("mvp_site.llm_service._get_static_prompt_parts")
+    @patch("mvp_site.llm_service.get_static_prompt_parts")
     @patch("mvp_site.agents.PromptBuilder")
     @patch("mvp_site.llm_service.get_client")
     @patch("mvp_site.llm_service._get_text_from_response")
@@ -264,9 +264,8 @@ class TestLLMResponse(unittest.TestCase):
         mock_static_parts.return_value = ("checkpoint", [], [])
 
         builder_instance = Mock()
-        builder_instance.build_god_mode_instructions.return_value = [
-            "god mode instructions"
-        ]
+        # GodModeAgent now uses FixedPromptAgent which calls build_for_agent
+        builder_instance.build_for_agent.return_value = ["god mode instructions"]
         builder_instance.finalize_instructions.return_value = "final instructions"
         mock_prompt_builder.return_value = builder_instance
 
@@ -294,7 +293,8 @@ class TestLLMResponse(unittest.TestCase):
             current_game_state=game_state,
         )
 
-        builder_instance.build_god_mode_instructions.assert_called_once()
+        # GodModeAgent uses FixedPromptAgent which calls build_for_agent
+        builder_instance.build_for_agent.assert_called_once()
         builder_instance.build_core_system_instructions.assert_not_called()
         mock_validate_planning_block.assert_not_called()
         self.assertIsNotNone(result.structured_response)

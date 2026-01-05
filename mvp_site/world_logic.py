@@ -50,7 +50,6 @@ from mvp_site import (
     structured_fields_utils,
     world_time,
 )
-from mvp_site.agent_prompts import extract_llm_instruction_hints
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.debug_hybrid_system import clean_json_artifacts, process_story_for_display
 from mvp_site.firestore_service import (
@@ -64,6 +63,11 @@ from mvp_site.game_state import (
     level_from_xp,
     validate_and_correct_state,
     xp_needed_for_level,
+)
+from mvp_site.agent_prompts import (
+    build_temporal_correction_prompt,
+    build_temporal_warning_message,
+    extract_llm_instruction_hints,
 )
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
@@ -235,85 +239,8 @@ def annotate_world_events_with_turn_scene(
     return game_state_dict
 
 
-def _build_temporal_correction_prompt(
-    original_user_input: str,
-    old_time: dict[str, Any],
-    new_time: dict[str, Any],
-    old_location: str | None,
-    new_location: str | None,
-) -> str:
-    """Build correction prompt when temporal violation detected.
-
-    This prompts the LLM to regenerate the ENTIRE response with correct context.
-    """
-    old_time_str = _format_world_time_for_prompt(old_time)
-    new_time_str = _format_world_time_for_prompt(new_time)
-    old_loc = old_location or "Unknown location"
-    new_loc = new_location or "Unknown location"
-
-    return f"""⚠️ TEMPORAL VIOLATION - FULL REGENERATION REQUIRED
-
-Your previous response was REJECTED because time went BACKWARD:
-- CORRECT current state: {old_time_str} at {old_loc}
-- YOUR invalid output: {new_time_str} at {new_loc}
-
-🚨 CRITICAL ERROR: You appear to have lost track of the story timeline.
-
-## ROOT CAUSE ANALYSIS
-You likely focused on OLDER entries in the TIMELINE LOG instead of the MOST RECENT ones.
-This caused you to generate a response for a scene that already happened in the past.
-
-## MANDATORY CORRECTION INSTRUCTIONS
-
-1. **FOCUS ON THE LATEST ENTRIES**: Look at the LAST 2-3 entries in the TIMELINE LOG.
-   These represent where the story CURRENTLY is, not where it was earlier.
-
-2. **IDENTIFY THE CURRENT SCENE**: The player is currently at:
-   - Time: {old_time_str}
-   - Location: {old_loc}
-   - This is where you must CONTINUE from.
-
-3. **GENERATE THE NEXT ENTRY**: Your response must continue the story forward.
-   - Time MUST be AFTER {old_time_str} (move forward, even if just by minutes)
-   - Location should logically follow from {old_loc}
-   - Do NOT jump back to earlier scenes or locations
-
-4. **IGNORE YOUR PREVIOUS ATTEMPT**: Your output of "{new_time_str} at {new_loc}" was WRONG.
-   Do not use that as a reference.
-
-## PLAYER ACTION TO RESPOND TO:
-{original_user_input}
-
-Generate a NEW response that is the NEXT logical entry in the timeline, continuing from the CURRENT state."""
-
-
-def _build_temporal_warning_message(
-    temporal_correction_attempts: int,
-) -> str | None:
-    """Build user-facing temporal warning text based on attempts taken."""
-
-    if temporal_correction_attempts <= 0:
-        return None
-
-    # Always surface a warning once at least one correction was attempted.
-    # When MAX_TEMPORAL_CORRECTION_ATTEMPTS is 0 (corrections disabled), we still
-    # emit a warning and treat the effective max as at least one attempt so the
-    # message doesn't silently disappear.
-    effective_max_attempts = max(1, MAX_TEMPORAL_CORRECTION_ATTEMPTS)
-
-    if temporal_correction_attempts > effective_max_attempts:
-        return (
-            f"⚠️ TEMPORAL CORRECTION EXCEEDED: The AI repeatedly generated responses that jumped "
-            f"backward in time. After {temporal_correction_attempts} failed correction attempts "
-            f"(configured max {MAX_TEMPORAL_CORRECTION_ATTEMPTS}), the system accepted the response "
-            f"to avoid infinite loops. Timeline consistency may be compromised."
-        )
-
-    return (
-        f"⚠️ TEMPORAL CORRECTION: The AI initially generated a response that jumped "
-        f"backward in time. {temporal_correction_attempts} correction(s) were required "
-        f"to fix the timeline continuity."
-    )
+# Temporal correction prompts centralized in agent_prompts.py
+# Use build_temporal_correction_prompt() and build_temporal_warning_message()
 
 
 def truncate_game_state_for_logging(
@@ -1651,7 +1578,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             )
 
             # Build correction prompt for next LLM call (does NOT overwrite user_input)
-            llm_input = _build_temporal_correction_prompt(
+            llm_input = build_temporal_correction_prompt(
                 original_user_input,
                 old_world_time,
                 new_world_time,
@@ -1721,8 +1648,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Add temporal correction warning if corrections were needed (legacy path when retries enabled)
         elif temporal_correction_attempts > 0:
-            temporal_warning = _build_temporal_warning_message(
-                temporal_correction_attempts
+            temporal_warning = build_temporal_warning_message(
+                temporal_correction_attempts,
+                max_attempts=MAX_TEMPORAL_CORRECTION_ATTEMPTS,
             )
             if temporal_correction_attempts > MAX_TEMPORAL_CORRECTION_ATTEMPTS:
                 logging_util.warning(
