@@ -84,13 +84,6 @@ from firebase_admin import auth as firebase_auth
 from google.genai import types
 
 from mvp_site import constants, dice, dice_integrity, dice_strategy, logging_util
-from mvp_site.equipment_display import (
-    EQUIPMENT_QUERY_KEYWORDS,
-    is_equipment_query,
-    classify_equipment_query,
-    extract_equipment_display,
-    ensure_equipment_summary_in_narrative,
-)
 from mvp_site.agent_prompts import (
     build_reprompt_for_missing_fields,
     clear_loaded_files_tracking,
@@ -113,6 +106,11 @@ from mvp_site.entity_instructions import EntityInstructionGenerator
 from mvp_site.entity_preloader import EntityPreloader
 from mvp_site.entity_tracking import create_from_game_state
 from mvp_site.entity_validator import EntityValidator
+from mvp_site.equipment_display import (
+    ensure_equipment_summary_in_narrative,
+    extract_equipment_display,
+    is_equipment_query,
+)
 from mvp_site.file_cache import read_file_cached
 from mvp_site.firestore_service import get_user_settings
 from mvp_site.game_state import GameState
@@ -124,8 +122,8 @@ from mvp_site.llm_providers import (
 )
 from mvp_site.llm_request import LLMRequest, LLMRequestError
 from mvp_site.llm_response import LLMResponse
-# Memory utilities now imported via agent_prompts (centralized prompt manipulation)
 
+# Memory utilities now imported via agent_prompts (centralized prompt manipulation)
 # Removed old json_input_schema import - now using LLMRequest for structured JSON
 from mvp_site.narrative_response_schema import (
     NarrativeResponse,
@@ -2742,25 +2740,17 @@ def get_initial_story(
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", model_to_use)
         # Capture which instruction files were loaded (lightweight evidence)
+        # NOTE: We only store filenames and char count, NOT full text (saves ~36KB/entry)
         debug_info["system_instruction_files"] = get_loaded_instruction_files()
         debug_info["system_instruction_char_count"] = len(system_instruction_final)
-        # Always capture system instruction for debugging and evidence
-        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
-        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
+        # Log raw data instead of storing (avoids 30MB+ bloat in large campaigns)
         if capture_raw:
-            # Capture raw LLM request payload (user prompt contents) per evidence-standards.md
-            raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
-            try:
-                request_payload = gemini_request.to_dict() if hasattr(gemini_request, "to_dict") else str(gemini_request)
-                if isinstance(request_payload, dict):
-                    request_str = json.dumps(request_payload, default=str)[:raw_limit]
-                else:
-                    request_str = str(request_payload)[:raw_limit]
-                debug_info["raw_request_payload"] = request_str
-            except Exception:
-                debug_info["raw_request_payload"] = f"[capture failed: {type(gemini_request).__name__}]"
-            if "raw_response_text" in processing_metadata:
-                debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+            _log_raw_llm_data(
+                system_instruction_final=system_instruction_final,
+                gemini_request=gemini_request,
+                raw_response_text=raw_response_text,
+                raw_limit=raw_limit,
+            )
         if code_execution_evidence:
             # Persist server-verified evidence (do not rely on model self-reporting).
             debug_info.update(code_execution_evidence)
@@ -2894,7 +2884,49 @@ def _log_api_response_safely(
         end_content = response_str[-half_length:]
         logging_util.info(
             f"🔍 API_RESPONSE_DEBUG ({context}): Content: {start_content}...[{len(response_str) - max_length} chars omitted]...{end_content}"
+    )
+
+
+def _log_raw_llm_data(
+    system_instruction_final: str,
+    gemini_request: LLMRequest,
+    raw_response_text: str,
+    raw_limit: int,
+) -> None:
+    """Log raw LLM inputs/outputs with previews and length caps."""
+
+    instruction_preview = system_instruction_final[:2000]
+    instruction_suffix = "..." if len(system_instruction_final) > len(instruction_preview) else ""
+    logging_util.debug(
+        f"📝 SYSTEM_INSTRUCTION ({len(system_instruction_final)} chars): "
+        f"{instruction_preview}{instruction_suffix}"
+    )
+
+    try:
+        request_payload = (
+            gemini_request.to_json() if hasattr(gemini_request, "to_json") else str(gemini_request)
         )
+        request_str_full = (
+            json.dumps(request_payload, default=str)
+            if isinstance(request_payload, dict)
+            else str(request_payload)
+        )
+        request_length = len(request_str_full)
+        request_preview = request_str_full[:raw_limit][:2000]
+        request_suffix = "..." if len(request_str_full) > len(request_preview) else ""
+        logging_util.debug(
+            f"📤 RAW_REQUEST ({request_length} chars; logged up to {raw_limit}): "
+            f"{request_preview}{request_suffix}"
+        )
+    except Exception as e:
+        logging_util.debug(f"📤 RAW_REQUEST capture failed: {e}")
+
+    response_preview = raw_response_text[:raw_limit][:2000]
+    response_suffix = "..." if len(raw_response_text) > len(response_preview) else ""
+    logging_util.debug(
+        f"📥 RAW_RESPONSE ({len(raw_response_text)} chars; logged up to {raw_limit}): "
+        f"{response_preview}{response_suffix}"
+    )
 
 
 def _check_missing_required_fields(
@@ -3800,32 +3832,24 @@ def continue_story(
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", chosen_model)
         # Capture which instruction files were loaded (lightweight evidence)
+        # NOTE: We only store filenames and char count, NOT full text (saves ~36KB/entry)
         debug_info["system_instruction_files"] = get_loaded_instruction_files()
         debug_info["system_instruction_char_count"] = len(system_instruction_final)
-        # Always capture system instruction for debugging and evidence
-        max_chars = int(os.getenv("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "8000"))
-        debug_info["system_instruction_text"] = system_instruction_final[:max_chars]
-        # Capture identity block and directives block for explicit evidence
+        # Capture identity block and directives block for explicit evidence (small, keep these)
         if hasattr(agent, "prompt_builder"):
             pb = agent.prompt_builder
             if pb.last_identity_block:
                 debug_info["character_identity_block"] = pb.last_identity_block
             if pb.last_directives_block:
                 debug_info["god_mode_directives_block"] = pb.last_directives_block
+        # Log raw data instead of storing (avoids 30MB+ bloat in large campaigns)
         if capture_raw:
-            # Capture raw LLM request payload (user prompt contents) per evidence-standards.md
-            raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
-            try:
-                request_payload = gemini_request.to_dict() if hasattr(gemini_request, "to_dict") else str(gemini_request)
-                if isinstance(request_payload, dict):
-                    request_str = json.dumps(request_payload, default=str)[:raw_limit]
-                else:
-                    request_str = str(request_payload)[:raw_limit]
-                debug_info["raw_request_payload"] = request_str
-            except Exception:
-                debug_info["raw_request_payload"] = f"[capture failed: {type(gemini_request).__name__}]"
-            if "raw_response_text" in processing_metadata:
-                debug_info["raw_response_text"] = processing_metadata["raw_response_text"]
+            _log_raw_llm_data(
+                system_instruction_final=system_instruction_final,
+                gemini_request=gemini_request,
+                raw_response_text=raw_response_text,
+                raw_limit=raw_limit,
+            )
         if code_execution_evidence:
             debug_info.update(code_execution_evidence)
             _log_fabricated_dice_if_detected(
@@ -3938,7 +3962,7 @@ def continue_story(
     logging_util.debug(f"🔍 EQUIPMENT_QUERY_CHECK: user_input={user_input[:80]}...")
     if is_equipment_query(user_input):
         logging_util.info(
-            f"📦 EQUIPMENT_QUERY_DETECTED: Extracting equipment from game_state"
+            "📦 EQUIPMENT_QUERY_DETECTED: Extracting equipment from game_state"
         )
         equipment_display = extract_equipment_display(current_game_state)
         logging_util.info(f"📦 EQUIPMENT_EXTRACTED: {len(equipment_display)} items")
@@ -3955,7 +3979,7 @@ def continue_story(
                 min_item_mentions=2,
             )
     else:
-        logging_util.debug(f"🔍 EQUIPMENT_QUERY_SKIP: Not an equipment query")
+        logging_util.debug("🔍 EQUIPMENT_QUERY_SKIP: Not an equipment query")
 
     # Log LLMResponse creation - INFO level for production visibility
     logging_util.info(
