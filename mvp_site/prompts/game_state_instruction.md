@@ -492,6 +492,14 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
 ```
 - Example (delete NPC): `"state_updates": {"npc_data": {"npc_goblin_scout_001": "__DELETE__"}}`
 
+### 📦 Equipment Slots (CANONICAL)
+
+**Valid slots:** `head`, `body`, `armor`, `cloak`, `hands`, `feet`, `neck`, `ring_1`, `ring_2`, `belt`, `shield`, `main_hand`, `off_hand`, `instrument`, `weapons` (array), `backpack` (array)
+
+**Item format:** `{"name": "Item Name", "stats": "bonuses", "equipped": true}`
+
+**❌ FORBIDDEN:** `weapon_main`→`main_hand`, `weapon_secondary`→`off_hand`, `gloves`→`hands`, `boots`→`feet`, `amulet`→`neck`
+
 ### 🚨 CRITICAL: Relationship Update Rules
 
 **NEVER replace entire relationship objects. Only update changed fields.**
