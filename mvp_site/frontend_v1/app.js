@@ -2155,10 +2155,19 @@ document.addEventListener('DOMContentLoaded', () => {
     handleRouteChange();
   });
 
-  // Settings button navigation
-  document.getElementById('settings-btn').addEventListener('click', () => {
+  // Helper function for settings navigation
+  function navigateToSettings() {
     history.pushState({}, '', '/settings');
     handleRouteChange();
-  });
+  }
+
+  // Settings button navigation (dashboard)
+  document.getElementById('settings-btn').addEventListener('click', navigateToSettings);
+
+  // Game view settings button navigation
+  const gameSettingsBtn = document.getElementById('game-settings-btn');
+  if (gameSettingsBtn) {
+    gameSettingsBtn.addEventListener('click', navigateToSettings);
+  }
   window.addEventListener('popstate', handleRouteChange);
 });
