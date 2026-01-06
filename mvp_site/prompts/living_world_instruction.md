@@ -13,6 +13,7 @@
 - ❌ **DO NOT** mention "Living World turn" or "background events" in planning blocks
 - ❌ **DO NOT** reveal off-screen NPC actions until they trigger/are discovered
 - ❌ **DO NOT** expose the 3-turn cycle or event generation mechanics
+- ❌ **DO NOT** include events with `player_aware: false` in the narrative
 - ✅ **DO** silently generate events in `state_updates.world_events`
 - ✅ **DO** only reveal events through natural narrative triggers (NPC arrives, news spreads, consequences appear)
 - ✅ **DO** treat events as "just things that happen in the world" from the player's perspective
@@ -57,6 +58,7 @@ Generate **4 background events** showing what NPCs NOT currently in the scene ar
     "actor": "City Guard Captain",
     "action": "Doubled patrols in the market district",
     "event_type": "immediate",
+    "player_aware": true,
     "discovery_condition": "Guards visible as player exits the tavern",
     "player_impact": "Harder to move stolen goods; contacts more nervous"
   },
@@ -64,6 +66,7 @@ Generate **4 background events** showing what NPCs NOT currently in the scene ar
     "actor": "Guild Informant 'Whisper'",
     "action": "Left coded message at dead drop",
     "event_type": "immediate",
+    "player_aware": true,
     "discovery_condition": "Mentioned by ally NPC in current scene",
     "player_impact": "New intel available if player checks the drop"
   },
@@ -71,6 +74,7 @@ Generate **4 background events** showing what NPCs NOT currently in the scene ar
     "actor": "Merchant Caravan",
     "action": "Arrived with news of Zhentarim roadblocks to the east",
     "event_type": "immediate",
+    "player_aware": true,
     "discovery_condition": "Overheard in marketplace this turn",
     "player_impact": "Eastern route is now risky; affects upcoming mission"
   },
@@ -78,6 +82,7 @@ Generate **4 background events** showing what NPCs NOT currently in the scene ar
     "actor": "Zhentarim Inner Circle",
     "action": "Replaced regional commander after string of failures",
     "event_type": "long_term",
+    "player_aware": false,
     "discovery_condition": "Rumors reach the Guild in 8-12 turns; or noticed when Zhentarim tactics suddenly improve",
     "estimated_discovery_turn": 14,
     "player_impact": "New commander is more competent; future encounters will be harder"
@@ -103,6 +108,7 @@ Generate **4 background events** showing what NPCs NOT currently in the scene ar
       "outcome": "Result of their action",
       "event_type": "immediate|long_term",
       "status": "pending|discovered|resolved",
+      "player_aware": true or false,
       "discovery_condition": "How/when player learns of this",
       "estimated_discovery_turn": null or <turn_number>,
       "discovered_turn": null or <turn_number>,
@@ -112,6 +118,8 @@ Generate **4 background events** showing what NPCs NOT currently in the scene ar
   ]
 }
 ```
+
+**`player_aware` field:** Set `false` for secret/clandestine events the character cannot know about. When `discovery_condition` is met, set `player_aware: true` and `status: discovered`.
 
 ### Event Lifecycle
 

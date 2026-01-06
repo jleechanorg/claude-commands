@@ -1000,6 +1000,7 @@ class EntityTrackingInstruction:
                             "outcome": "bridge supports weakened, travel slowed",
                             "event_type": "immediate",
                             "status": "pending",  # pending|discovered|resolved
+                            "player_aware": True,  # player can observe bridge damage
                             "discovery_condition": "locals report repairs needed; player notices delays",
                             "player_impact": "harder to move troops north next turn",
                         },
@@ -1010,9 +1011,21 @@ class EntityTrackingInstruction:
                             "outcome": "ghostly lights seen, wards destabilizing",
                             "event_type": "immediate",
                             "status": "discovered",  # player learned of this
+                            "player_aware": True,  # player heard rumors
                             "discovered_turn": 4,  # when player learned
                             "discovery_condition": "rumors from ferrymen or scouting the marsh",
                             "player_impact": "increases undead activity near routes east of the marsh",
+                        },
+                        {
+                            "actor": "Lord Vance",
+                            "action": "hired assassins to eliminate rival merchant",
+                            "location": "Capital City, private estate",
+                            "outcome": "contract signed, assassins en route",
+                            "event_type": "long_term",
+                            "status": "pending",
+                            "player_aware": False,  # secret meeting, player cannot know
+                            "discovery_condition": "merchant found dead or assassins intercepted",
+                            "player_impact": "may affect trade relations if player involved with either party",
                         },
                     ],
                     # Actual turn number when these background events were generated.
