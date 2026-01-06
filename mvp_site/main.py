@@ -2080,6 +2080,9 @@ def create_app() -> Flask:
                     "theme",
                     "auto_save",
                     "debug_mode",
+                    "spicy_mode",
+                    "pre_spicy_model",
+                    "pre_spicy_provider",
                 }
                 if not data or not any(key in valid_settings_keys for key in data):
                     return jsonify({KEY_ERROR: "Invalid settings data"}), 400
@@ -2138,6 +2141,21 @@ def create_app() -> Flask:
         except Exception as e:
             logging_util.error(f"Settings API error: {str(e)}")
             return jsonify({"error": "Internal server error", "success": False}), 500
+
+    @app.route("/api/constants/models", methods=["GET"])
+    @limiter.limit(settings_rate_limit)
+    @check_token
+    def get_model_constants(user_id: UserId) -> Response:
+        """Expose model defaults to keep frontend aligned with backend constants."""
+
+        return jsonify(
+            {
+                "SPICY_MODEL": constants.SPICY_OPENROUTER_MODEL,
+                "DEFAULT_GEMINI_MODEL": constants.DEFAULT_GEMINI_MODEL,
+                "DEFAULT_OPENROUTER_MODEL": constants.DEFAULT_OPENROUTER_MODEL,
+                "DEFAULT_CEREBRAS_MODEL": constants.DEFAULT_CEREBRAS_MODEL,
+            }
+        )
 
     # --- Frontend Serving ---
     @app.route("/", defaults={"path": ""})

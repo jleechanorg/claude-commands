@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Bootstrap tooltips for mode selection buttons
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
   tooltipTriggerList.forEach((tooltipTriggerEl) => {
-    new bootstrap.Tooltip(tooltipTriggerEl);
+    bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
   });
 
   // Helper function for scrolling
@@ -1252,6 +1252,9 @@ document.addEventListener('DOMContentLoaded', () => {
       showView('game');
       document.getElementById('shareStoryBtn').style.display = 'block';
       document.getElementById('downloadStoryBtn').style.display = 'block';
+
+      // Dispatch campaignLoaded event to trigger spicy mode state load
+      window.dispatchEvent(new CustomEvent('campaignLoaded'));
     } catch (error) {
       console.error('Failed to resume campaign:', error);
       history.pushState({}, '', '/');
@@ -1732,6 +1735,227 @@ document.addEventListener('DOMContentLoaded', () => {
   document
     .getElementById('download-docx-btn')
     ?.addEventListener('click', () => downloadFile('docx'));
+
+  // Spicy Mode Toggle Handler
+  let SPICY_MODEL = window.APP_MODELS?.SPICY_MODEL || 'x-ai/grok-4.1-fast';
+  let DEFAULT_GEMINI_MODEL =
+    window.APP_MODELS?.DEFAULT_GEMINI_MODEL || 'gemini-3-flash-preview';
+  let DEFAULT_OPENROUTER_MODEL =
+    window.APP_MODELS?.DEFAULT_OPENROUTER_MODEL || 'meta-llama/llama-3.1-70b-instruct';
+  let DEFAULT_CEREBRAS_MODEL =
+    window.APP_MODELS?.DEFAULT_CEREBRAS_MODEL || 'zai-glm-4.6';
+
+  const modelConstantsPromise = loadModelConstants();
+
+  async function loadModelConstants() {
+    try {
+      const { data } = await fetchApi('/api/constants/models', { method: 'GET' });
+      if (data?.SPICY_MODEL) {
+        SPICY_MODEL = data.SPICY_MODEL;
+      }
+      if (data?.DEFAULT_GEMINI_MODEL) {
+        DEFAULT_GEMINI_MODEL = data.DEFAULT_GEMINI_MODEL;
+      }
+      if (data?.DEFAULT_OPENROUTER_MODEL) {
+        DEFAULT_OPENROUTER_MODEL = data.DEFAULT_OPENROUTER_MODEL;
+      }
+      if (data?.DEFAULT_CEREBRAS_MODEL) {
+        DEFAULT_CEREBRAS_MODEL = data.DEFAULT_CEREBRAS_MODEL;
+      }
+    } catch (error) {
+      console.warn('Failed to load model constants from backend; using defaults', error);
+    }
+  }
+
+  /**
+   * Show a toast notification for spicy mode changes
+   */
+  function showSpicyModeToast(enabled, modelName) {
+    // Remove any existing toast
+    const existingToast = document.getElementById('spicy-mode-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+
+    // Create toast container if it doesn't exist - centered on screen
+    let toastContainer = document.querySelector('.spicy-toast-container');
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.className = 'spicy-toast-container position-fixed top-50 start-50 translate-middle p-3';
+      toastContainer.style.zIndex = '1100';
+      document.body.appendChild(toastContainer);
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.id = 'spicy-mode-toast';
+    toast.className = 'toast show';
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+      <div class="toast-header ${enabled ? 'bg-success text-white' : 'bg-secondary text-white'}">
+        <strong class="me-auto">${enabled ? '🌶️ Spicy Mode Enabled' : '❄️ Spicy Mode Off'}</strong>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+      <div class="toast-body">
+        ${enabled ? 'Switched to Grok AI for uncensored content.' : 'Restored previous model.'}<br>
+        <small class="text-muted">Now using: ${modelName}</small>
+      </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Add close button handler
+    toast.querySelector('.btn-close').addEventListener('click', () => {
+      toast.remove();
+    });
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 4000);
+  }
+
+  /**
+   * Handle spicy mode toggle
+   */
+  async function handleSpicyModeToggle(enabled) {
+    try {
+      await modelConstantsPromise;
+
+      if (enabled) {
+        // First, get current settings to store the pre-spicy model
+        const settingsResponse = await fetchApi('/api/settings', { method: 'GET' });
+        const currentSettings = settingsResponse.data || {};
+
+        // Determine current provider and model to save for restoration later
+        const currentProvider = currentSettings.llm_provider || 'gemini';
+        let currentModel;
+        if (currentProvider === 'openrouter') {
+          currentModel = currentSettings.openrouter_model || DEFAULT_OPENROUTER_MODEL;
+        } else if (currentProvider === 'cerebras') {
+          currentModel = currentSettings.cerebras_model || DEFAULT_CEREBRAS_MODEL;
+        } else {
+          currentModel = currentSettings.gemini_model || DEFAULT_GEMINI_MODEL;
+        }
+
+        // Save spicy mode settings with the model to restore later
+        await fetchApi('/api/settings', {
+          method: 'POST',
+          body: JSON.stringify({
+            spicy_mode: true,
+            pre_spicy_model: currentModel,
+            pre_spicy_provider: currentProvider,
+            llm_provider: 'openrouter',
+            openrouter_model: SPICY_MODEL,
+          }),
+        });
+
+        const spicyDisplayName = SPICY_MODEL.split('/').pop() || SPICY_MODEL;
+        showSpicyModeToast(true, spicyDisplayName);
+      } else {
+        // Get the saved pre-spicy model
+        const settingsResponse = await fetchApi('/api/settings', { method: 'GET' });
+        const currentSettings = settingsResponse.data || {};
+
+        const restoreModel =
+          currentSettings.pre_spicy_model ||
+          (currentSettings.pre_spicy_provider === 'openrouter'
+            ? DEFAULT_OPENROUTER_MODEL
+            : currentSettings.pre_spicy_provider === 'cerebras'
+              ? DEFAULT_CEREBRAS_MODEL
+              : DEFAULT_GEMINI_MODEL);
+        const restoreProvider = currentSettings.pre_spicy_provider || 'gemini';
+
+        // Prepare settings to restore
+        const restoreSettings = {
+          spicy_mode: false,
+          llm_provider: restoreProvider,
+        };
+
+        // Set the appropriate model based on provider
+        if (restoreProvider === 'openrouter') {
+          restoreSettings.openrouter_model = restoreModel;
+        } else if (restoreProvider === 'cerebras') {
+          restoreSettings.cerebras_model = restoreModel;
+        } else {
+          restoreSettings.gemini_model = restoreModel;
+        }
+
+        await fetchApi('/api/settings', {
+          method: 'POST',
+          body: JSON.stringify(restoreSettings),
+        });
+
+        // Format display name for toast based on the actual model
+        const displayName = restoreModel.split('/').pop() || restoreModel;
+
+        showSpicyModeToast(false, displayName);
+      }
+    } catch (error) {
+      console.error('Failed to toggle spicy mode:', error);
+      // Revert the checkbox state on error
+      const spicySwitch = document.getElementById('spicyModeSwitch');
+      if (spicySwitch) {
+        spicySwitch.checked = !enabled;
+      }
+      alert('Failed to update spicy mode. Please try again.');
+    }
+  }
+
+  /**
+   * Load spicy mode state from settings
+   */
+  async function loadSpicyModeState() {
+    try {
+      const { data } = await fetchApi('/api/settings', { method: 'GET' });
+      const spicySwitch = document.getElementById('spicyModeSwitch');
+      if (spicySwitch && data) {
+        spicySwitch.checked = data.spicy_mode === true;
+      }
+    } catch (error) {
+      console.error('Failed to load spicy mode state:', error);
+    }
+  }
+
+  // Attach spicy mode toggle handler
+  const spicyModeSwitch = document.getElementById('spicyModeSwitch');
+  let spicyToggleInProgress = false;
+  if (spicyModeSwitch) {
+    spicyModeSwitch.addEventListener('change', async (e) => {
+      if (spicyToggleInProgress) {
+        e.preventDefault();
+        e.target.checked = !e.target.checked;
+        return;
+      }
+
+      spicyToggleInProgress = true;
+      spicyModeSwitch.disabled = true;
+
+      try {
+        await handleSpicyModeToggle(e.target.checked);
+        await loadSpicyModeState();
+      } finally {
+        spicyToggleInProgress = false;
+        spicyModeSwitch.disabled = false;
+      }
+    });
+  }
+
+  // Load spicy mode state when campaign view is shown and ensure tooltips are active
+  window.addEventListener('campaignLoaded', () => {
+    loadSpicyModeState();
+
+    // Initialize tooltips in the now-visible game view (e.g., spicy info button)
+    const gameViewTooltips = document
+      .getElementById('game-view')
+      ?.querySelectorAll('[data-bs-toggle="tooltip"]');
+    gameViewTooltips?.forEach((tooltipTriggerEl) => {
+      bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
+    });
+  });
 
   // Theme integration
   window.addEventListener('themeChanged', (e) => {
