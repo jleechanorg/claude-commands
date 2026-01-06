@@ -140,6 +140,8 @@ def capture_provenance(
         "TESTING",
         "MOCK_SERVICES_MODE",
         "GOOGLE_APPLICATION_CREDENTIALS",
+        "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS",  # WorldAI-specific credentials
+        "FIRESTORE_EMULATOR_HOST",  # Emulator vs real Firestore indicator
         "PORT",
         "FIREBASE_PROJECT_ID",
         "GEMINI_API_KEY",  # Masked
@@ -149,8 +151,13 @@ def capture_provenance(
     for var in env_vars_to_capture:
         # Prefer server_env_overrides (explicit server config) over os.environ (test runner)
         value = overrides.get(var) if var in overrides else os.environ.get(var)
-        if value and ("KEY" in var or "CREDENTIALS" in var):
-            env_vars[var] = f"[SET - {len(value)} chars]"  # Mask sensitive values
+        if value and "KEY" in var:
+            # Fully mask API keys
+            env_vars[var] = f"[SET - {len(value)} chars]"
+        elif value and "CREDENTIALS" in var:
+            # For credential files, show filename only (not full path) for evidence traceability
+            import pathlib
+            env_vars[var] = f"[SET - file:{pathlib.Path(value).name}]"
         else:
             env_vars[var] = value
 

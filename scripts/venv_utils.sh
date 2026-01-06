@@ -71,6 +71,16 @@ setup_venv() {
             fi
         fi
 
+        # Install genesis requirements if they exist
+        if [ -f "$PROJECT_ROOT/genesis/requirements.txt" ]; then
+            print_info "Installing genesis requirements..."
+            if pip install -r "$PROJECT_ROOT/genesis/requirements.txt" --quiet; then
+                print_success "Genesis requirements installed successfully"
+            else
+                print_error "Failed to install some Genesis requirements, but continuing..."
+            fi
+        fi
+
         return 0
     else
         print_error "Failed to create virtual environment"

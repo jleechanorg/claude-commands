@@ -8,7 +8,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import uvicorn
-from app.tenant_middleware import (
+from genesis.app.tenant_middleware import (
     TenantMiddleware,
     create_tenant_database_dependency,
     create_tenant_schema,

@@ -3,6 +3,7 @@ Test API routes functionality in MCP architecture.
 Tests API endpoints through MCP API gateway pattern.
 """
 
+import datetime
 import json
 import os
 import sys
@@ -26,7 +27,9 @@ sys.path.insert(
     ),
 )
 
+import firestore_service
 from main import create_app
+from mvp_site.tests.fake_firestore import FakeFirestoreClient
 
 
 class TestAPIRoutes(unittest.TestCase):
@@ -186,65 +189,160 @@ class TestAPIRoutes(unittest.TestCase):
         )
 
 
-class TestStoryTruncation(unittest.TestCase):
-    """Test story entry truncation to prevent oversized responses.
+class TestStoryPagination(unittest.TestCase):
+    """Integration-style tests for story pagination service."""
 
-    Campaign kuXKa6vrYY6P99MfhWBn had 1620 entries = 34.7MB response,
-    exceeding Cloud Run's 32MB limit and causing intermittent 500 errors.
-    """
+    def setUp(self):
+        self.fake_db = FakeFirestoreClient()
+        self.original_get_db = firestore_service.get_db
+        firestore_service.get_db = lambda: self.fake_db
+        self.user_id = "user"
+        self.campaign_id = "campaign"
 
-    def test_story_truncation_returns_last_300_entries(self):
-        """Verify truncation keeps LAST 300 entries (most recent), not first."""
-        # Create 500 story entries with sequential IDs
-        full_story = [{"id": i, "text": f"Entry {i}"} for i in range(500)]
+    def tearDown(self):
+        firestore_service.get_db = self.original_get_db
 
-        # Apply same truncation logic as main.py:837-844
-        MAX_STORY_ENTRIES = 300
-        if len(full_story) > MAX_STORY_ENTRIES:
-            truncated = full_story[-MAX_STORY_ENTRIES:]
-        else:
-            truncated = full_story
+    def _seed_story_entries(self, entries):
+        story_collection = (
+            self.fake_db.collection("users")
+            .document(self.user_id)
+            .collection("campaigns")
+            .document(self.campaign_id)
+            .collection("story")
+        )
+        for entry in entries:
+            doc = story_collection.document(entry["id"])
+            doc.set(
+                {
+                    "timestamp": datetime.datetime.fromisoformat(entry["timestamp"]),
+                    "actor": entry.get("actor", "gemini"),
+                    "text": entry.get("text", ""),
+                    "mode": entry.get("mode"),
+                    "user_scene_number": entry.get("user_scene_number"),
+                }
+            )
 
-        # Should have exactly 300 entries
-        assert len(truncated) == 300, f"Expected 300 entries, got {len(truncated)}"
+    def test_shared_timestamp_cursor_returns_remaining_entries(self):
+        """Pagination should not drop entries that share the cursor timestamp."""
 
-        # First entry should be ID 200 (entry 201 of original)
-        assert truncated[0]["id"] == 200, (
-            f"Expected first entry to be ID 200, got {truncated[0]['id']}"
+        entries = [
+            {"id": "a", "timestamp": "2024-01-01T00:00:00+00:00", "text": "1"},
+            {"id": "b", "timestamp": "2024-01-02T00:00:00+00:00", "text": "2"},
+            {"id": "c", "timestamp": "2024-01-02T00:00:00+00:00", "text": "3"},
+            {"id": "d", "timestamp": "2024-01-03T00:00:00+00:00", "text": "4"},
+        ]
+        self._seed_story_entries(entries)
+
+        first_page = firestore_service.get_story_paginated(
+            self.user_id, self.campaign_id, limit=3
         )
 
-        # Last entry should be ID 499 (most recent)
-        assert truncated[-1]["id"] == 499, (
-            f"Expected last entry to be ID 499, got {truncated[-1]['id']}"
+        assert first_page["has_older"] is True
+        assert first_page["oldest_timestamp"] == "2024-01-02T00:00:00+00:00"
+        assert first_page["oldest_id"] == "b"
+
+        second_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=3,
+            before_timestamp=first_page["oldest_timestamp"],
+            before_id=first_page["oldest_id"],
         )
 
-    def test_story_truncation_preserves_small_stories(self):
-        """Stories with <= 300 entries should not be truncated."""
-        small_story = [{"id": i, "text": f"Entry {i}"} for i in range(100)]
+        assert second_page["has_older"] is False
+        assert second_page["fetched_count"] == 1
+        assert second_page["entries"][0]["id"] == "a"
 
-        MAX_STORY_ENTRIES = 300
-        if len(small_story) > MAX_STORY_ENTRIES:
-            truncated = small_story[-MAX_STORY_ENTRIES:]
-        else:
-            truncated = small_story
+    def test_invalid_cursor_raises(self):
+        """Invalid timestamp should surface as a validation error."""
 
-        assert len(truncated) == 100, f"Expected 100 entries, got {len(truncated)}"
-        assert truncated[0]["id"] == 0, "First entry should still be ID 0"
-        assert truncated[-1]["id"] == 99, "Last entry should still be ID 99"
+        with self.assertRaises(ValueError):
+            firestore_service.get_story_paginated(
+                self.user_id,
+                self.campaign_id,
+                limit=3,
+                before_timestamp="not-a-timestamp",
+            )
 
-    def test_story_truncation_boundary_exactly_300(self):
-        """Stories with exactly 300 entries should not be truncated."""
-        boundary_story = [{"id": i, "text": f"Entry {i}"} for i in range(300)]
+    def test_has_older_based_on_page_overflow(self):
+        """has_older should reflect presence of an extra entry beyond the limit."""
 
-        MAX_STORY_ENTRIES = 300
-        if len(boundary_story) > MAX_STORY_ENTRIES:
-            truncated = boundary_story[-MAX_STORY_ENTRIES:]
-        else:
-            truncated = boundary_story
+        entries = [
+            {"id": "1", "timestamp": "2024-01-01T00:00:00+00:00"},
+            {"id": "2", "timestamp": "2024-01-02T00:00:00+00:00"},
+            {"id": "3", "timestamp": "2024-01-03T00:00:00+00:00"},
+            {"id": "4", "timestamp": "2024-01-04T00:00:00+00:00"},
+        ]
+        self._seed_story_entries(entries)
 
-        assert len(truncated) == 300, f"Expected 300 entries, got {len(truncated)}"
-        assert truncated[0]["id"] == 0, "First entry should be ID 0"
-        assert truncated[-1]["id"] == 299, "Last entry should be ID 299"
+        first_page = firestore_service.get_story_paginated(
+            self.user_id, self.campaign_id, limit=2
+        )
+        assert first_page["has_older"] is True
+
+        second_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=2,
+            before_timestamp=first_page["oldest_timestamp"],
+            before_id=first_page["oldest_id"],
+        )
+        assert second_page["has_older"] is False
+
+    def test_sequence_and_scene_numbers_across_pages(self):
+        """sequence_id and user_scene_number should remain absolute across pages."""
+
+        entries = [
+            {"id": "1", "timestamp": "2024-01-01T00:00:00+00:00", "actor": "user"},
+            {"id": "2", "timestamp": "2024-01-02T00:00:00+00:00", "actor": "gemini"},
+            {"id": "3", "timestamp": "2024-01-03T00:00:00+00:00", "actor": "user"},
+            {"id": "4", "timestamp": "2024-01-04T00:00:00+00:00", "actor": "gemini"},
+            {"id": "5", "timestamp": "2024-01-05T00:00:00+00:00", "actor": "user"},
+            {"id": "6", "timestamp": "2024-01-06T00:00:00+00:00", "actor": "gemini"},
+        ]
+        self._seed_story_entries(entries)
+
+        # First page (newest two entries: 5, 6)
+        first_page = firestore_service.get_story_paginated(
+            self.user_id, self.campaign_id, limit=2
+        )
+        assert [e["sequence_id"] for e in first_page["entries"]] == [5, 6]
+        assert [e.get("user_scene_number") for e in first_page["entries"]] == [
+            None,
+            3,
+        ]
+
+        # Second page (entries 3, 4) with offsets from first page
+        second_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=2,
+            before_timestamp=first_page["oldest_timestamp"],
+            before_id=first_page["oldest_id"],
+            newer_count=2,
+            newer_gemini_count=1,
+        )
+        assert [e["sequence_id"] for e in second_page["entries"]] == [3, 4]
+        assert [e.get("user_scene_number") for e in second_page["entries"]] == [
+            None,
+            2,
+        ]
+
+        # Final page (entries 1, 2) with accumulated offsets
+        third_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=2,
+            before_timestamp=second_page["oldest_timestamp"],
+            before_id=second_page["oldest_id"],
+            newer_count=4,
+            newer_gemini_count=2,
+        )
+        assert [e["sequence_id"] for e in third_page["entries"]] == [1, 2]
+        assert [e.get("user_scene_number") for e in third_page["entries"]] == [
+            None,
+            1,
+        ]
 
 
 if __name__ == "__main__":

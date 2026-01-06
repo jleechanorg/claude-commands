@@ -699,6 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
     debugMode = false,
     sequenceId = null,
     fullData = null,
+    options = {},
   ) => {
     const storyContainer = document.getElementById('story-content');
     const entryEl = document.createElement('div');
@@ -794,7 +795,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     entryEl.innerHTML = html;
-    storyContainer.appendChild(entryEl);
+
+    const beforeNode = options.prepend
+      ? storyContainer.querySelector('.story-entry')
+      : null;
+    if (beforeNode) {
+      storyContainer.insertBefore(entryEl, beforeNode);
+    } else {
+      storyContainer.appendChild(entryEl);
+    }
 
     // Add click handlers to any choice buttons we just added
     if (actor === 'gemini') {
@@ -1140,10 +1149,132 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Pagination state for story loading
+  let storyPagination = {
+    campaignId: null,
+    oldestTimestamp: null,
+    oldestId: null,
+    hasOlder: false,
+    totalCount: 0,
+    loadedCount: 0,
+    loadedGeminiCount: 0,
+    debugMode: false,
+    isLoading: false,
+  };
+
+  // Load older story entries
+  let loadOlderStoryEntries = async () => {
+    if (storyPagination.isLoading || !storyPagination.hasOlder) return;
+
+    storyPagination.isLoading = true;
+    const loadBtn = document.getElementById('load-older-btn');
+    if (loadBtn) {
+      loadBtn.disabled = true;
+      loadBtn.innerHTML =
+        '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+    }
+
+    try {
+      const params = new URLSearchParams({
+        limit: '100',
+        before: storyPagination.oldestTimestamp,
+        before_id: storyPagination.oldestId || '',
+        newer_count: storyPagination.loadedCount.toString(),
+        newer_gemini_count: storyPagination.loadedGeminiCount.toString(),
+      });
+      const { data } = await fetchApi(
+        `/api/campaigns/${storyPagination.campaignId}/story?${params}`,
+      );
+
+      const storyContainer = document.getElementById('story-content');
+      const debugMode = storyPagination.debugMode;
+
+      // Prepend older entries at the top (they come in chronological order)
+      let newGeminiCount = 0;
+      for (let i = (data.story?.length || 0) - 1; i >= 0; i -= 1) {
+        const entry = data.story[i];
+        if (entry?.actor === 'gemini') {
+          newGeminiCount += 1;
+        }
+        appendToStory(
+          entry.actor,
+          entry.text,
+          entry.mode,
+          debugMode,
+          entry.user_scene_number,
+          entry,
+          { prepend: true },
+        );
+      }
+
+      // Update pagination state
+      storyPagination.hasOlder = data.pagination?.has_older || false;
+      storyPagination.oldestTimestamp =
+        data.pagination?.oldest_timestamp || storyPagination.oldestTimestamp;
+      storyPagination.oldestId =
+        data.pagination?.oldest_id || storyPagination.oldestId;
+      storyPagination.loadedCount += data.story.length;
+      storyPagination.loadedGeminiCount += newGeminiCount;
+
+      // Update or hide the load button
+      updateLoadOlderButton();
+
+      console.log(
+        `Loaded ${data.story.length} older entries. Has more: ${storyPagination.hasOlder}`,
+      );
+    } catch (error) {
+      console.error('Failed to load older entries:', error);
+      alert('Failed to load older entries. Please try again.');
+    } finally {
+      storyPagination.isLoading = false;
+      if (loadBtn) {
+        loadBtn.disabled = false;
+        loadBtn.innerHTML = '⬆️ Load older entries';
+      }
+    }
+  };
+
+  // Update the "load older" button visibility
+  let updateLoadOlderButton = () => {
+    let loadBtn = document.getElementById('load-older-btn');
+    const storyContainer = document.getElementById('story-content');
+
+    if (!storyContainer) return;
+
+    if (storyPagination.hasOlder) {
+      if (!loadBtn) {
+        loadBtn = document.createElement('button');
+        loadBtn.id = 'load-older-btn';
+        loadBtn.className = 'btn btn-outline-secondary btn-sm w-100 mb-3';
+        loadBtn.innerHTML = '⬆️ Load older entries';
+        loadBtn.onclick = loadOlderStoryEntries;
+        storyContainer.insertBefore(loadBtn, storyContainer.firstChild);
+      }
+      const remaining = Math.max(
+        storyPagination.totalCount - storyPagination.loadedCount,
+        0,
+      );
+      loadBtn.innerHTML = `⬆️ Load older entries (${remaining} more)`;
+      loadBtn.style.display = 'block';
+    } else if (loadBtn) {
+      loadBtn.remove();
+    }
+  };
+
   let resumeCampaign = async (campaignId, retryCount = 0) => {
     showSpinner('loading');
     try {
-      const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
+      // Mobile detection for slim mode (reduces ~21KB/entry to ~1KB)
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                       window.innerWidth < 768;
+      const storyLimit = isMobile ? 100 : 300;  // Lower limit for mobile
+      const slimMode = isMobile;  // Strip structured fields on mobile
+
+      const params = new URLSearchParams();
+      params.set('story_limit', storyLimit);
+      if (slimMode) params.set('slim', 'true');
+
+      const { data } = await fetchApi(`/api/campaigns/${campaignId}?${params}`);
       const gameTitleElement = document.getElementById('game-title');
       gameTitleElement.innerText = data.campaign.title;
 
@@ -1171,6 +1302,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const storyContainer = document.getElementById('story-content');
       storyContainer.innerHTML = '';
 
+      // Initialize pagination state from response
+      storyPagination = {
+        campaignId: campaignId,
+        oldestTimestamp: data.story_pagination?.oldest_timestamp || null,
+        oldestId: data.story_pagination?.oldest_id || null,
+        hasOlder: data.story_pagination?.has_older || false,
+        totalCount: data.story_pagination?.total_count || data.story?.length || 0,
+        loadedCount: data.story?.length || 0,
+        loadedGeminiCount: (data.story || []).filter(
+          (entry) => entry.actor === 'gemini',
+        ).length,
+        debugMode: data.game_state?.debug_mode || false,
+        isLoading: false,
+      };
+
       // Validate story data
       if (!data.story || !Array.isArray(data.story)) {
         console.error('Invalid or missing story data:', data);
@@ -1188,9 +1334,13 @@ document.addEventListener('DOMContentLoaded', () => {
         debugIndicator.style.display = debugMode ? 'block' : 'none';
       }
 
+      // Add "load older" button if there are older entries
+      updateLoadOlderButton();
+
       // Render story with debug mode awareness and structured fields
       console.log(
-        `Loading campaign ${campaignId} - Story entries: ${data.story.length}, Debug mode: ${debugMode}`,
+        `Loading campaign ${campaignId} - Story entries: ${data.story.length}/${storyPagination.totalCount}, ` +
+          `Debug mode: ${debugMode}, Has older: ${storyPagination.hasOlder}`,
       );
 
       // Display all story entries
@@ -1205,11 +1355,12 @@ document.addEventListener('DOMContentLoaded', () => {
           debugMode,
           entry.user_scene_number,
           entry,
+          { prepend: false },
         );
       });
 
       console.log(
-        `Displayed ${visibleEntries} story entries out of ${data.story.length} total`,
+        `Displayed ${visibleEntries} story entries out of ${data.story.length} fetched (${storyPagination.totalCount} total)`,
       );
 
       // Check for empty story display

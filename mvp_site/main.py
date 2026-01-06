@@ -795,23 +795,33 @@ def create_app() -> Flask:
         user_id: UserId, campaign_id: CampaignId
     ) -> Response | tuple[Response, int]:
         try:
+            # Parse pagination params from query string
+            story_limit = request.args.get("story_limit", 300, type=int)
+            story_limit = min(max(story_limit, 10), 500)  # Clamp between 10-500
+            # slim mode strips story entries to essentials for mobile (reduces ~21KB/entry to ~1KB)
+            slim_mode = request.args.get("slim", "false").lower() == "true"
+
             logging_util.info(
-                f"🎮 LOADING GAME PAGE: user={user_id}, campaign={campaign_id}"
+                f"🎮 LOADING GAME PAGE: user={user_id}, campaign={campaign_id}, "
+                f"story_limit={story_limit}, slim={slim_mode}"
             )
 
-            data = {
-                "user_id": user_id,
-                "campaign_id": campaign_id,
-                "include_story": True,  # Include story processing for frontend compatibility
-            }
-
-            # Direct service calls with run_in_executor for parallel request handling
-            # Using run_blocking_io prevents blocking calls from serializing the event loop
-            campaign_data, story = await run_blocking_io(
-                firestore_service.get_campaign_by_id, user_id, campaign_id
+            # OPTIMIZED: Fetch campaign metadata and paginated story separately
+            # This avoids loading all 30MB+ of story into memory for large campaigns
+            campaign_data = await run_blocking_io(
+                firestore_service.get_campaign_metadata, user_id, campaign_id
             )
             if not campaign_data:
                 return jsonify({"error": "Campaign not found"}), 404
+
+            # Get paginated story (only last N entries, fetched at query level)
+            story_result = await run_blocking_io(
+                firestore_service.get_story_paginated,
+                user_id,
+                campaign_id,
+                limit=story_limit,
+            )
+            story = story_result.get("entries", [])
 
             # Get user settings for debug mode (parallel-safe)
             user_settings = (
@@ -834,68 +844,69 @@ def create_app() -> Flask:
                 # Strip debug fields when debug mode is off
                 processed_story = world_logic._strip_game_state_fields(story or [])
 
-            # Limit story entries to last 300 to prevent response size exceeding Cloud Run limits
-            # Campaign kuXKa6vrYY6P99MfhWBn had 1620 entries = 34.7MB response (limit is 32MB)
-            MAX_STORY_ENTRIES = 300
-            if len(processed_story) > MAX_STORY_ENTRIES:
-                logging_util.info(
-                    f"📉 STORY_LIMIT: Trimming {len(processed_story)} entries to last {MAX_STORY_ENTRIES}"
-                )
-                processed_story = processed_story[-MAX_STORY_ENTRIES:]
+            # Slim mode: strip to essentials for mobile (reduces ~21KB/entry to ~1KB)
+            # Keeps only: text, actor, timestamp, mode, sequence_id, user_scene_number
+            if slim_mode:
+                essential_fields = {
+                    "text",
+                    "actor",
+                    "timestamp",
+                    "mode",
+                    "sequence_id",
+                    "user_scene_number",
+                }
+                processed_story = [
+                    {k: v for k, v in entry.items() if k in essential_fields}
+                    for entry in processed_story
+                ]
 
-            result = {
-                "success": True,
-                "campaign": campaign_data,
-                "story": processed_story,
-                "game_state": game_state.to_dict() if game_state else {},
-            }
+            # Debug logging with size diagnostics to identify bloat
+            total_story_size = sum(len(json.dumps(e, default=str)) for e in processed_story)
+            avg_entry_size = total_story_size // len(processed_story) if processed_story else 0
+            logging_util.info(
+                f"Campaign {campaign_id} story: {len(processed_story)} entries, "
+                f"total={total_story_size/1024:.1f}KB, avg={avg_entry_size/1024:.1f}KB/entry"
+            )
+            # Log size breakdown for first 3 AI entries to identify bloat sources
+            for i, entry in enumerate(processed_story[:3]):
+                if entry.get("actor") == constants.ACTOR_GEMINI:
+                    size_breakdown = {
+                        k: len(json.dumps(v, default=str))
+                        for k, v in entry.items()
+                        if k not in ["actor", "mode", "timestamp"]
+                    }
+                    top_fields = sorted(size_breakdown.items(), key=lambda x: -x[1])[:5]
+                    logging_util.info(
+                        f"Entry {i} size breakdown (top 5): "
+                        + ", ".join(f"{k}={v/1024:.1f}KB" for k, v in top_fields)
+                    )
 
-            if not result.get(KEY_SUCCESS):
-                return safe_jsonify(result), result.get("status_code", 404)
-
-            # Debug logging for structured fields (maintain existing logging)
-            if "story" in result:
-                processed_story = result["story"]
-                logging_util.info(
-                    f"Campaign {campaign_id} story entries: {len(processed_story)}"
-                )
-                for i, entry in enumerate(processed_story[:3]):  # Log first 3 entries
-                    if entry.get("actor") == constants.ACTOR_GEMINI:
-                        fields = [
-                            k
-                            for k in entry
-                            if k not in ["text", "actor", "mode", "timestamp", "part"]
-                        ]
-                        logging_util.info(f"Entry {i} structured fields: {fields}")
-                        if "god_mode_response" in entry:
-                            logging_util.info(
-                                f"  god_mode_response: {entry['god_mode_response'][:50]}..."
-                            )
-                        if "resources" in entry:
-                            logging_util.info(f"  resources: {entry['resources']}")
-                        if "dice_rolls" in entry:
-                            logging_util.info(f"  dice_rolls: {entry['dice_rolls']}")
-
-            # Map to original response format for frontend compatibility
+            # Map to original response format with pagination metadata
             response_data = {
-                KEY_CAMPAIGN: result.get("campaign"),
-                KEY_STORY: result.get("story", []),
-                "game_state": result.get("game_state", {}),
+                KEY_CAMPAIGN: campaign_data,
+                KEY_STORY: processed_story,
+                "game_state": game_state.to_dict() if game_state else {},
+                # Pagination metadata for frontend "load older" functionality
+                "story_pagination": {
+                    "total_count": story_result.get("total_count", len(processed_story)),
+                    "fetched_count": story_result.get("fetched_count", len(processed_story)),
+                    "has_older": story_result.get("has_older", False),
+                    "oldest_timestamp": story_result.get("oldest_timestamp"),
+                    "oldest_id": story_result.get("oldest_id"),
+                    "slim_mode": slim_mode,  # True if story entries stripped for mobile
+                },
             }
 
-            # Enhanced debug logging for campaign data
-            campaign_data = result.get("campaign", {})
+            # Enhanced debug logging
             logging_util.info(f"🎯 BACKEND RESPONSE for campaign {campaign_id}:")
             logging_util.info(
                 f"  Campaign Title: '{campaign_data.get('title', 'NO_TITLE')}'"
             )
+            logging_util.info(f"  Story entries: {len(processed_story)}")
             logging_util.info(
-                f"  Campaign Keys: {list(campaign_data.keys()) if campaign_data else 'EMPTY'}"
+                f"  Pagination: {story_result.get('fetched_count')}/{story_result.get('total_count')} "
+                f"(has_older={story_result.get('has_older')}, slim={slim_mode})"
             )
-            logging_util.info(f"  Story entries: {len(result.get('story', []))}")
-            logging_util.info(f"  Response data keys: {list(response_data.keys())}")
-            # Trim campaign object for logs - just show keys, not full narrative
-            logging_util.info(f"  Campaign has {len(str(campaign_data))} chars")
 
             return jsonify(response_data)
         except MCPClientError as e:
@@ -907,6 +918,104 @@ def create_app() -> Flask:
                 {
                     KEY_SUCCESS: False,
                     KEY_ERROR: "Failed to retrieve campaign",
+                }
+            ), 500
+
+    @app.route("/api/campaigns/<campaign_id>/story", methods=["GET"])
+    @limiter.limit(campaign_rate_limit)
+    @check_token
+    @async_route
+    async def get_story_paginated(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
+        """
+        Paginated story endpoint for loading older entries.
+
+        Query params:
+            limit: Number of entries to return (default 100, max 500)
+            before: ISO timestamp to fetch entries before (for pagination)
+
+        Returns:
+            {
+                story: [...entries...],
+                pagination: {total_count, fetched_count, has_older, oldest_timestamp}
+            }
+        """
+        try:
+            limit = request.args.get("limit", 100, type=int)
+            limit = min(max(limit, 1), 500)  # Clamp between 1-500
+            before_timestamp = request.args.get("before")
+            before_id = request.args.get("before_id")
+            newer_count = max(request.args.get("newer_count", 0, type=int) or 0, 0)
+            newer_gemini_count = max(
+                request.args.get("newer_gemini_count", 0, type=int) or 0,
+                0,
+            )
+
+            if before_timestamp:
+                try:
+                    datetime.datetime.fromisoformat(before_timestamp.replace("Z", "+00:00"))
+                except (ValueError, TypeError):
+                    return jsonify({KEY_ERROR: "Invalid 'before' timestamp; expected ISO-8601 string"}), 400
+
+            # Ensure campaign exists (mirror GET /api/campaigns/<id>)
+            campaign_meta = await run_blocking_io(
+                firestore_service.get_campaign_metadata, user_id, campaign_id
+            )
+            if not campaign_meta:
+                return jsonify({KEY_SUCCESS: False, KEY_ERROR: "Campaign not found"}), 404
+
+            logging_util.info(
+                f"📖 STORY PAGINATION: campaign={campaign_id}, limit={limit}, "
+                f"before={before_timestamp}"
+            )
+
+            # Get paginated story entries
+            story_result = await run_blocking_io(
+                firestore_service.get_story_paginated,
+                user_id,
+                campaign_id,
+                limit=limit,
+                before_timestamp=before_timestamp,
+                before_id=before_id,
+                newer_count=newer_count,
+                newer_gemini_count=newer_gemini_count,
+            )
+            story = story_result.get("entries", [])
+
+            # Get user settings for debug mode
+            user_settings = (
+                await run_blocking_io(firestore_service.get_user_settings, user_id)
+                or {}
+            )
+            debug_mode = bool(user_settings.get("debug_mode", False))
+
+            # Process story entries based on debug mode
+            if not debug_mode:
+                story = world_logic._strip_game_state_fields(story)
+
+            response_data = {
+                KEY_STORY: story,
+                "pagination": {
+                    "total_count": story_result.get("total_count", len(story)),
+                    "fetched_count": story_result.get("fetched_count", len(story)),
+                    "has_older": story_result.get("has_older", False),
+                    "oldest_timestamp": story_result.get("oldest_timestamp"),
+                    "oldest_id": story_result.get("oldest_id"),
+                },
+            }
+
+            return jsonify(response_data)
+        except ValueError as e:
+            logging_util.warning(f"Get story paginated validation error: {e}")
+            return jsonify({KEY_ERROR: str(e)}), 400
+        except Exception as e:
+            logging_util.error(f"Get story paginated error: {e}")
+            logging_util.error(traceback.format_exc())
+            return jsonify(
+                {
+                    KEY_SUCCESS: False,
+                    KEY_ERROR: "Failed to retrieve story entries",
                 }
             ), 500
 
