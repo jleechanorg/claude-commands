@@ -79,16 +79,11 @@ Valid values for `confidence`: {{VALID_CONFIDENCE_LEVELS}}
 
 Valid values: {{VALID_QUALITY_TIERS}}
 
-Based on INT or WIS check:
+**See `think_mode_instruction.md` for complete DC scaling and quality tier rules.**
 
-| Roll | Quality Tier | Effect |
-|------|--------------|--------|
-| 1-5 | Muddled | Miss obvious options, overlook key risks |
-| 6-10 | Incomplete | Miss 1-2 good options, analysis has gaps |
-| 11-15 | Competent | Standard analysis, most options covered |
-| 16-20 | Sharp | Thorough analysis, spot non-obvious options |
-| 21-25 | Brilliant | Exceptional insight, creative options |
-| 26+ | Masterful | Perfect clarity, optimal strategies |
+Summary: Roll INT/WIS check vs DC (DC 2-20 for typical play, scales higher for epic scope). Quality tier determined by margin:
+- **Success**: Competent (meet DC) → Sharp (+5) → Brilliant (+10) → Masterful (+15)
+- **Failure**: Incomplete (-1 to -4) → Muddled (-5 to -9) → Confused (-10+)
 
 ---
 
@@ -122,10 +117,54 @@ The planning_block is a SEPARATE JSON field:
 
 ---
 
+## Plan Freeze Mechanic (Think Mode Only)
+
+When a planning check **FAILS**, the character cannot re-think the same topic until a cooldown period passes.
+
+### Freeze Duration by DC (Scales with Scope)
+
+| Original DC | Freeze Duration |
+|-------------|-----------------|
+| DC 2-8 | 1 hour |
+| DC 9-12 | 2 hours |
+| DC 13-16 | 4 hours |
+| DC 17-20 | 8 hours |
+| DC 21+ | 24 hours |
+
+**Note**: Freeze durations are in **game time**.
+
+### Freeze Tracking in State
+
+On failed planning check, add to `state_updates.frozen_plans`:
+
+```json
+"frozen_plans": {
+    "<plan_topic_key>": {
+        "failed_at": "<current_world_time>",
+        "freeze_until": "<world_time + freeze_duration>",
+        "original_dc": 14,
+        "freeze_hours": 4,
+        "description": "planning the warehouse ambush"
+    }
+}
+```
+
+### Freeze Rules
+
+1. **On Failure**: Record frozen plan in state_updates
+2. **On Re-attempt**: Check if topic is frozen; if so, reject with remaining time and skip re-rolling
+3. **Different Topics**: Always allowed - freeze is topic-specific; use distinct topic keys
+4. **Early Break**: Lift freeze when significant new information arrives, a materially different approach is taken (new topic key), relevant assistance is provided, or an orchestrator override/`gm_override` is explicitly set
+
+---
+
 ## Validation
 
 The validation code in `narrative_response_schema.py`:
 - Validates against `VALID_RISK_LEVELS`
 - Validates against `VALID_CONFIDENCE_LEVELS`
+- Validates against `VALID_QUALITY_TIERS`
+- Validates `plan_quality` DC/margin/success consistency and coerces invalid inputs
+- `frozen_plans` is enforced by the LLM via prompts (timestamps/DC-derived durations are constrained in prompts, not Python code)
 - Sanitizes HTML/script content for security
 - Requires both `text` and `description` for each choice

@@ -1589,6 +1589,14 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 
 **🚨 RELATIONSHIP UPDATES ARE MANDATORY:** After any significant NPC interaction, update that NPC's `relationships.player.trust_level` and relevant arrays. For trust change amounts and trigger tables, request `debug_info.meta.needs_detailed_instructions: ["relationships"]`.
 
+### frozen_plans (Think Mode Only)
+
+**Purpose:** Tracks planning topics that failed and are temporarily "frozen" (character's mind is stuck).
+
+**Location:** `state_updates.frozen_plans` — See `think_mode_instruction.md` for full Plan Freeze mechanic.
+
+**Story Mode behavior:** If `frozen_plans` exists in state, do NOT modify it. Only Think Mode manages this field.
+
 ### Arc Milestones (Narrative Arc Tracking)
 
 **Purpose:** Track major story arcs so the system can enforce completed arcs and prevent regressions.

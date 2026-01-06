@@ -89,6 +89,10 @@ def _schema_to_json_string(schema: dict) -> str:
             mapped = "string"
         elif v is int:
             mapped = "integer"
+        elif v is bool:
+            mapped = "boolean"
+        elif v is float:
+            mapped = "number"
         elif v is list:
             mapped = "array"
         elif v is dict:

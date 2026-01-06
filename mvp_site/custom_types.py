@@ -7,7 +7,7 @@ protocol definitions for better type safety.
 """
 
 from datetime import datetime
-from typing import Any, Literal, Protocol, TypedDict, Union
+from typing import Any, Literal, Protocol, TypedDict
 
 
 # Firebase/Firestore data structures
@@ -27,7 +27,7 @@ class CampaignData(TypedDict, total=False):
     session_count: int
 
 
-class StateUpdate(TypedDict):
+class StateUpdate(TypedDict, total=False):
     """Type definition for state update objects."""
 
     type: str
@@ -96,10 +96,10 @@ UserId = str
 CampaignId = str
 EntityId = str
 SessionId = str
-Timestamp = Union[datetime, float, int]
+Timestamp = datetime | float | int
 
 # JSON-compatible types
-JsonValue = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
+JsonValue = str | int | float | bool | None | dict[str, Any] | list[Any]
 JsonDict = dict[str, JsonValue]
 
 
@@ -142,4 +142,4 @@ VALID_CAMPAIGN_STATES = Literal["active", "paused", "completed", "archived"]
 VALID_LOG_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Helper type for nullable fields
-Nullable = Union[Any, None]
+Nullable = Any | None
