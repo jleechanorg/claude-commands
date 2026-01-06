@@ -798,12 +798,10 @@ def create_app() -> Flask:
             # Parse pagination params from query string
             story_limit = request.args.get("story_limit", 300, type=int)
             story_limit = min(max(story_limit, 10), 500)  # Clamp between 10-500
-            # slim mode strips story entries to essentials for mobile (reduces ~21KB/entry to ~1KB)
-            slim_mode = request.args.get("slim", "false").lower() == "true"
 
             logging_util.info(
                 f"🎮 LOADING GAME PAGE: user={user_id}, campaign={campaign_id}, "
-                f"story_limit={story_limit}, slim={slim_mode}"
+                f"story_limit={story_limit}"
             )
 
             # OPTIMIZED: Fetch campaign metadata and paginated story separately
@@ -844,22 +842,6 @@ def create_app() -> Flask:
                 # Strip debug fields when debug mode is off
                 processed_story = world_logic._strip_game_state_fields(story or [])
 
-            # Slim mode: strip to essentials for mobile (reduces ~21KB/entry to ~1KB)
-            # Keeps only: text, actor, timestamp, mode, sequence_id, user_scene_number
-            if slim_mode:
-                essential_fields = {
-                    "text",
-                    "actor",
-                    "timestamp",
-                    "mode",
-                    "sequence_id",
-                    "user_scene_number",
-                }
-                processed_story = [
-                    {k: v for k, v in entry.items() if k in essential_fields}
-                    for entry in processed_story
-                ]
-
             # Debug logging with size diagnostics to identify bloat
             total_story_size = sum(len(json.dumps(e, default=str)) for e in processed_story)
             avg_entry_size = total_story_size // len(processed_story) if processed_story else 0
@@ -893,7 +875,6 @@ def create_app() -> Flask:
                     "has_older": story_result.get("has_older", False),
                     "oldest_timestamp": story_result.get("oldest_timestamp"),
                     "oldest_id": story_result.get("oldest_id"),
-                    "slim_mode": slim_mode,  # True if story entries stripped for mobile
                 },
             }
 
@@ -905,7 +886,7 @@ def create_app() -> Flask:
             logging_util.info(f"  Story entries: {len(processed_story)}")
             logging_util.info(
                 f"  Pagination: {story_result.get('fetched_count')}/{story_result.get('total_count')} "
-                f"(has_older={story_result.get('has_older')}, slim={slim_mode})"
+                f"(has_older={story_result.get('has_older')})"
             )
 
             return jsonify(response_data)

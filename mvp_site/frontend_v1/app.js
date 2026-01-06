@@ -1264,15 +1264,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let resumeCampaign = async (campaignId, retryCount = 0) => {
     showSpinner('loading');
     try {
-      // Mobile detection for slim mode (reduces ~21KB/entry to ~1KB)
+      // Mobile gets lower story limit to reduce payload size
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
                        window.innerWidth < 768;
-      const storyLimit = isMobile ? 100 : 300;  // Lower limit for mobile
-      const slimMode = isMobile;  // Strip structured fields on mobile
+      const storyLimit = isMobile ? 100 : 300;
 
       const params = new URLSearchParams();
       params.set('story_limit', storyLimit);
-      if (slimMode) params.set('slim', 'true');
 
       const { data } = await fetchApi(`/api/campaigns/${campaignId}?${params}`);
       const gameTitleElement = document.getElementById('game-title');
