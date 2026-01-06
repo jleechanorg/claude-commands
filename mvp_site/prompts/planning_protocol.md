@@ -75,6 +75,87 @@ Valid values for `confidence`: {{VALID_CONFIDENCE_LEVELS}}
 
 ---
 
+## Mechanical Impact (Plan Quality → DC)
+
+**Planning is NOT just flavor.** Plan quality and choice selection directly affect operation DCs.
+
+### How It Works
+
+When a player executes a choice from a planning block, the DC is adjusted:
+
+| Factor | DC Modifier |
+|--------|-------------|
+| Chose `recommended_approach` | **-2** |
+| Chose `high` risk option | **+2** |
+| Planning tier `Brilliant`/`Masterful` | **-1** |
+| Planning tier `Confused` | **+2** |
+| Confidence `low` on chosen approach | **+1** |
+
+### Why This Matters
+
+- **Smart planning is rewarded**: Choosing the recommended approach gives a mechanical advantage
+- **Risk has consequences**: High-risk choices are genuinely harder to execute
+- **INT/WIS matters for execution**: A brilliant plan (high INT/WIS roll) makes operations easier
+- **Failed planning hurts**: A confused analysis creates real obstacles
+
+### Example Flow
+
+1. Player enters Think Mode: "How do I sneak past the guards?"
+2. **Planning check:** Character rolls INT 22 vs planning DC 12 → **Brilliant** tier (margin = 22 - 12 = +10)
+3. Planning block presents options with `risk_level` and `confidence`
+4. Player selects the `recommended_approach` (timing patrol rotations)
+5. **Execution check:** Base execution DC 15 - 2 (recommended) - 1 (brilliant) = **DC 12**
+
+*Note: Planning DC and execution DC are separate. The planning check determines quality tier; the execution DC is set by the situation and then adjusted by modifiers.*
+
+### Caps
+
+- Maximum adjustment: ±4 DC
+- Minimum DC: 5 (trivial tasks don't need rolls)
+- Maximum DC: 30 (impossible is impossible)
+
+### Risk/Reward Balance
+
+**High-risk options have higher DCs but better rewards on success - XP, loot, AND narrative.**
+
+| Risk Level | DC Effect | XP | Loot | Narrative |
+|------------|-----------|-----|------|-----------|
+| `safe`/`low` | +0 | ×1.0 | Standard | Standard outcome |
+| `medium` | +0 | ×1.25 | +10% gold | Minor bonus |
+| `high` | **+2** | **×1.5** | **+25% gold, bonus item** | **Superior outcome** |
+
+*`safe` = no meaningful downside; `low` = minor stakes. Both share mechanical modifiers but differ narratively.*
+
+#### Planning Quality Reward Bonuses
+
+| Tier | XP | Loot |
+|------|-----|------|
+| `Masterful` | ×1.25 | Rare item chance |
+| `Brilliant` | ×1.1 | Uncommon item chance |
+| Others | ×1.0 | Standard |
+
+**Stack Example:** High-risk (×1.5) × Masterful (×1.25) = **×1.875 XP**
+
+#### High-Risk Rewards Include:
+- **More information** (interrogation vs killing)
+- **Better positioning** (infiltrate vs sneak past)
+- **Bonus loot** (claim artifact vs destroy it)
+- **Story branches** (ally vs enemy)
+- **Reputation gains** (bold success impresses NPCs)
+
+#### Example Pairs
+
+| Safe (easier) | Risky (harder but better) |
+|--------------|---------------------------|
+| Kill the guard | Capture for interrogation |
+| Pick one lock | Disable whole alarm system |
+| Flee the dragon | Negotiate an alliance |
+| Destroy the artifact | Claim its power |
+
+This creates meaningful choice: safe = reliable, risky = potentially superior outcome.
+
+---
+
 ## Quality Tiers (Think Mode)
 
 Valid values: {{VALID_QUALITY_TIERS}}

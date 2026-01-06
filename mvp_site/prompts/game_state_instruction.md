@@ -219,6 +219,27 @@ Every response MUST be valid JSON with this exact structure:
   - **Phase 1:** Include `tool_requests` with placeholder narrative like "Awaiting dice results..."
   - **Phase 2:** Server gives you results - write final narrative using those exact numbers.
 <!-- END_TOOL_REQUESTS_DICE -->
+
+<!-- BEGIN_PLAN_QUALITY_DC_ADJUSTMENT -->
+## Plan Quality → DC Adjustment
+
+**See Planning Protocol for full details.** Summary:
+
+| Factor | DC Modifier |
+|--------|-------------|
+| Chose `recommended_approach` | -2 |
+| Chose `high` risk option | +2 |
+| `Brilliant`/`Masterful` planning | -1 |
+| `Confused` planning | +2 |
+| `low` confidence choice | +1 |
+
+**Caps:** ±4 max, floor 5, ceiling 30
+
+**dc_reasoning format:** `"base DC 15 (alert guard); recommended (-2); brilliant (-1) = DC 12"`
+
+**Risk rewards:** `high` risk success → ×1.5 XP, +25% gold, bonus item chance, superior narrative outcome.
+<!-- END_PLAN_QUALITY_DC_ADJUSTMENT -->
+
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `rewards_box`: (object) **REQUIRED when xp_awarded > 0**. Include whenever rewards are processed (combat, heist, social, quest). Without this, users cannot see their rewards!
   - `source`: (string) combat | encounter | quest | milestone
