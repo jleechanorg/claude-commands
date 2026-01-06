@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import unittest
+import re
 
 # Add parent directory to path for imports
 sys.path.insert(
@@ -175,6 +176,29 @@ class TestAnimationSystem(unittest.TestCase):
                 f"Should include error handling pattern {pattern}"
             )
 
+
+
+    def test_index_theme_implementation(self):
+        """Verify index.html has the correct theme implementation"""
+        with open(self.index_html_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            
+        # Check for ABSENCE of default theme attribute on html tag (to avoid FOIT)
+        # Should just be <html lang="en">
+        html_pattern = r"""<html[^>]*\sdata-theme=["']light["'][^>]*>"""
+        self.assertFalse(re.search(html_pattern, content), 
+                      "index.html should NOT have hardcoded data-theme='light' on the html tag")
+        
+        # Check for the inline script with fallback
+        expected_script_part = "document.documentElement.setAttribute('data-theme', 'light');"
+        assert expected_script_part in content, (
+            "index.html should contain the inline theme loader script with light theme fallback"
+        )
+        
+        # Check for fallback to system preference
+        assert "(prefers-color-scheme: dark)" in content, (
+            "index.html should check for system dark mode preference"
+        )
 
 class TestAnimationIntegration(unittest.TestCase):
     """Integration tests for animation system with existing app"""

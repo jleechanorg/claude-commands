@@ -2,6 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Set theme before CSS loads to prevent flash of wrong theme
+      (function() {
+        var saved = localStorage.getItem('preferred-theme');
+        if (saved && ['light', 'dark', 'fantasy', 'cyberpunk'].includes(saved)) {
+          document.documentElement.setAttribute('data-theme', saved);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WorldAI</title>
     <link
