@@ -106,7 +106,7 @@ Always respond with valid JSON using this structure:
             "quality_tier": "Good",
             "effect": "Thorough analysis with accurate risk assessment"
         },
-        "thinking": "Deep internal monologue analyzing the situation...",
+        "thinking": "The soul coin operation has exceeded all projections—1,604 monthly is a flood that could drown Avernus in obligation. But obligation cuts both ways. Zariel's hunger for souls is matched only by her pride; she will not admit dependence on a mortal. I must frame any request for additional resources as HER investment opportunity, not my petition.\n\nThe Erinyes... those 500 additional wings would secure the southern corridor, but at what political cost? The Pit Fiends already resent my meteoric rise; giving me elite strike teams could ignite a backlash.\n\nStill, numbers matter. If I ask for more, I need to present it as expanding her reach, not inflating my ego.",
         "situation_assessment": {
             "current_state": "Where you are and what's happening",
             "key_factors": ["Factor 1", "Factor 2", "Factor 3"],
@@ -150,9 +150,48 @@ Always respond with valid JSON using this structure:
 - `dice_rolls`: (array) **REQUIRED** - The INT or WIS check for plan quality
 - `planning_block`: (object) **REQUIRED** - Deep strategic analysis (see structure above)
 - `planning_block.plan_quality`: (object) **REQUIRED** - Shows stat used, roll result, and quality tier
-- `planning_block.thinking`: (string) **REQUIRED** - Internal monologue (quality affected by roll)
+- `planning_block.thinking`: (string) **REQUIRED** - Internal monologue scaled to complexity: simple questions get 1-2 paragraphs, complex strategic decisions get 3-5+ paragraphs. LLM decides depth based on question weight. (see "Depth Guidelines" below)
 - `planning_block.choices`: (object) **REQUIRED** - Situation-specific choices (count affected by roll)
 - `state_updates`: (object) **REQUIRED** - MUST increment microsecond by 1
+
+## The `thinking` Field: Depth Guidelines
+
+**The `thinking` field is the HEART of Think Mode.** This field demonstrates the character's mental process. **The LLM decides depth based on question complexity** - not every question warrants a dissertation, but major strategic decisions deserve thorough analysis.
+
+### Depth Scaling (LLM Decides)
+
+Scale thinking depth to match the question's weight and complexity. Use these four elements as **building blocks**, including more for complex questions:
+
+| Question Complexity | Recommended Depth | Example Questions |
+|---------------------|-------------------|-------------------|
+| Simple/Tactical | 1-2 paragraphs | "Should I go left or right?", "Quick option check" |
+| Moderate | 2-3 paragraphs | "How do I approach this NPC?", "What's my combat priority?" |
+| Complex/Strategic | 3-5 paragraphs | "Plan the heist", "How do I leverage this alliance?" |
+| Major Life Decision | 4-5+ paragraphs | "Should I accept Zariel's pact?", "What's my endgame?" |
+
+### Building Blocks (Include as Needed)
+
+1. **Immediate Observations** (Paragraph 1): What does the character notice about the current situation? Sensory details, tactical environment, who's present, what resources are at hand.
+
+2. **Strategic Analysis** (Paragraphs 2-3): The core reasoning. What are the power dynamics? Who has leverage? What are the hidden costs and benefits? Connect current situation to broader goals.
+
+3. **Emotional/Personal Layer** (Paragraphs 3-4): What does the character FEEL about this? Past experiences that inform their judgment? Biases they're aware of? Relationships that complicate the decision?
+
+4. **Synthesis & Insight** (Paragraphs 4-5): Pulling it together. What does the character realize through this analysis? What non-obvious conclusion emerges?
+
+### Example of GOOD Thinking (Complex Strategic Question)
+
+```
+"thinking": "The numbers are staggering—1,604 soul coins monthly, each one a crystallized eternity of suffering transmuted into infernal currency. The Utopia clinics have become factories of refined grief, and Zariel's coffers overflow with my tribute. But I've learned something in these dealings: an Archduke of Avernus never admits satisfaction. She will always want MORE, yet paradoxically, she cannot demand it without acknowledging how dependent her war machine has become on my operation.\n\nThis is leverage. Dangerous leverage, but leverage nonetheless. The 10% of her legions currently under my command represents roughly 12,000 devils—a force that would make most Prime Material kingdoms tremble. But Zariel commands millions. What I need is not more raw numbers but ELITE forces. The Erinyes are her surgical instruments, her face of temptation made manifest. 500 additional Erinyes would let me establish presence in every major Sword Coast city simultaneously.\n\nI feel the weight of the Heir in my arms, their nebular eyes a constant reminder of what I've become. Part of me—the part that still remembers simpler performances in taverns—recoils at the industrial scale of what I've built. But that part grows quieter with each passing month. The Static-Veil holds. The operation sustains itself. And the Gwent name will echo through eternity.\n\nZariel will grant the Erinyes. Not because I ask, but because I will frame it as an INVESTMENT in her interests. The Luiren and Athkatla nodes represent souls she cannot currently harvest—souls that would otherwise slip to rival archdevils or worse, to celestial redemption. I am not requesting resources; I am offering her market expansion."
+```
+
+### Example of BAD Thinking (HOLLOW - Avoid This)
+
+```
+"thinking": "I should leverage my success with Zariel. The soul coins are good. I need to think about next steps."
+```
+
+This is hollow regardless of paragraph count. It restates the obvious without analysis. Even a 1-paragraph response should have actual insight: "Zariel craves souls but despises appearing dependent—frame any request as HER opportunity, not my need."
 
 ## Thinking Depth Levels
 
