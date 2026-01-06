@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from .mcp_client import MCPClient
@@ -56,6 +57,7 @@ def process_action(
     campaign_id: str,
     user_input: str,
     mode: str = "character",
+    include_raw_llm_payloads: bool | None = None,
 ) -> dict[str, Any]:
     """Process a player action in a campaign.
 
@@ -66,18 +68,26 @@ def process_action(
         user_input: Player action text.
         mode: Interaction mode (default: "character").
 
+    Notes:
+        include_raw_llm_payloads defaults to TESTING_MCP_INCLUDE_RAW_LLM=true.
+
     Returns:
         Response dict from server.
     """
-    return client.tools_call(
-        "process_action",
-        {
-            "user_id": user_id,
-            "campaign_id": campaign_id,
-            "user_input": user_input,
-            "mode": mode,
-        },
-    )
+    if include_raw_llm_payloads is None:
+        include_raw_llm_payloads = (
+            os.getenv("TESTING_MCP_INCLUDE_RAW_LLM", "true").lower() == "true"
+        )
+
+    payload = {
+        "user_id": user_id,
+        "campaign_id": campaign_id,
+        "user_input": user_input,
+        "mode": mode,
+    }
+    if include_raw_llm_payloads:
+        payload["include_raw_llm_payloads"] = True
+    return client.tools_call("process_action", payload)
 
 
 def get_campaign_state(

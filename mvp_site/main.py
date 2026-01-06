@@ -1802,6 +1802,9 @@ def create_app() -> Flask:
                 f"DEBUG: user_input = {user_input} (KEY_USER_INPUT='{KEY_USER_INPUT}')"
             )
             mode = data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
+            include_raw_llm_payloads = bool(
+                data.get("include_raw_llm_payloads", False)
+            )
 
             # Validate user_input is provided (None only, empty strings are allowed)
             if user_input is None:
@@ -1819,6 +1822,7 @@ def create_app() -> Flask:
                     "campaign_id": campaign_id,
                     "user_input": user_input,
                     "mode": mode,
+                    "include_raw_llm_payloads": include_raw_llm_payloads,
                 }
                 result = await get_mcp_client().call_tool(
                     "process_action", request_data

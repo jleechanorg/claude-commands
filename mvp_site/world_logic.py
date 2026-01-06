@@ -1528,6 +1528,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         user_id = request_data.get("user_id")
         user_input = request_data.get("user_input")
         mode = request_data.get("mode", constants.MODE_CHARACTER)
+        include_raw_llm_payloads = bool(
+            request_data.get("include_raw_llm_payloads", False)
+        )
 
         # Validate required fields
         if not user_id:
@@ -1612,6 +1615,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     selected_prompts,
                     use_default_world,
                     user_id,  # Pass user_id to enable user model preference selection
+                    include_raw_llm_payloads,
                 )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during story continuation: {e}")
@@ -2195,7 +2199,18 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "sequence_id": sequence_id,
             "user_scene_number": user_scene_number,  # Scene number for current AI response: count of existing Gemini responses + 1
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
+            # agent_mode: single source of truth for which agent was selected
+            "agent_mode": getattr(llm_response_obj, "agent_mode", None),
         }
+
+        if include_raw_llm_payloads:
+            metadata = getattr(llm_response_obj, "processing_metadata", {}) or {}
+            if "raw_request_payload" in metadata:
+                unified_response["raw_request_payload"] = metadata[
+                    "raw_request_payload"
+                ]
+            if "raw_response_text" in metadata:
+                unified_response["raw_response_text"] = metadata["raw_response_text"]
 
         # Include state fields only when debug mode is enabled (shows MORE info)
         if debug_mode:

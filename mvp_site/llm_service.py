@@ -2897,7 +2897,7 @@ def _log_raw_llm_data(
 
     instruction_preview = system_instruction_final[:2000]
     instruction_suffix = "..." if len(system_instruction_final) > len(instruction_preview) else ""
-    logging_util.debug(
+    logging_util.info(
         f"📝 SYSTEM_INSTRUCTION ({len(system_instruction_final)} chars): "
         f"{instruction_preview}{instruction_suffix}"
     )
@@ -2912,18 +2912,18 @@ def _log_raw_llm_data(
             else str(request_payload)
         )
         request_length = len(request_str_full)
-        request_preview = request_str_full[:raw_limit][:2000]
+        request_preview = request_str_full[:raw_limit]
         request_suffix = "..." if len(request_str_full) > len(request_preview) else ""
-        logging_util.debug(
+        logging_util.info(
             f"📤 RAW_REQUEST ({request_length} chars; logged up to {raw_limit}): "
             f"{request_preview}{request_suffix}"
         )
     except Exception as e:
-        logging_util.debug(f"📤 RAW_REQUEST capture failed: {e}")
+        logging_util.info(f"📤 RAW_REQUEST capture failed: {e}")
 
-    response_preview = raw_response_text[:raw_limit][:2000]
+    response_preview = raw_response_text[:raw_limit]
     response_suffix = "..." if len(raw_response_text) > len(response_preview) else ""
-    logging_util.debug(
+    logging_util.info(
         f"📥 RAW_RESPONSE ({len(raw_response_text)} chars; logged up to {raw_limit}): "
         f"{response_preview}{response_suffix}"
     )
@@ -3102,6 +3102,7 @@ def continue_story(
     selected_prompts: list[str] | None = None,
     use_default_world: bool = False,
     user_id: UserId | None = None,
+    include_raw_llm_payloads: bool = False,
 ) -> LLMResponse:
     """
     Continues the story by calling the Gemini API with the current context and game state.
@@ -3816,9 +3817,20 @@ def continue_story(
         "llm_provider": provider_selection.provider,
         "llm_model": chosen_model,
     }
+    raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
     if capture_raw:
-        raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
         processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
+    if include_raw_llm_payloads:
+        # Return raw payloads to callers without persisting them to Firestore.
+        # Store request as dict for easy inspection; response is capped by raw_limit.
+        try:
+            processing_metadata["raw_request_payload"] = gemini_request.to_json()
+        except Exception as e:
+            logging_util.warning(
+                f"RAW_REQUEST capture failed (include_raw_llm_payloads): {e}"
+            )
+        if "raw_response_text" not in processing_metadata:
+            processing_metadata["raw_response_text"] = raw_response_text[:raw_limit]
     processing_metadata.update(
         dice_integrity.build_dice_processing_metadata(
             api_response=final_api_response,

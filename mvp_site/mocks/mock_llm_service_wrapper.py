@@ -163,6 +163,8 @@ def continue_story(
     current_game_state,
     selected_prompts=None,
     use_default_world=False,
+    user_id=None,
+    include_raw_llm_payloads=False,
 ):
     """
     Mock continue_story function that returns predefined content.
