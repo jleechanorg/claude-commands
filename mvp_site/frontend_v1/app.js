@@ -1133,14 +1133,14 @@ document.addEventListener('DOMContentLoaded', () => {
         : '[No prompt]';
 
       campaignEl.innerHTML = `
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1 campaign-title-link">${campaign.title}</h5>
-                    <div>
+                <div class="d-flex flex-column flex-sm-row w-100 justify-content-sm-between align-items-sm-center campaign-list-header">
+                    <h5 class="mb-2 mb-sm-0 campaign-title-link text-break">${campaign.title}</h5>
+                    <div class="d-flex align-items-center flex-shrink-0 campaign-list-actions mt-1 mt-sm-0">
                         ${!isOffline ? '<button class="btn btn-sm btn-outline-primary edit-campaign-btn me-2">Edit</button>' : ''}
-                        <small class="text-muted">Last played: ${lastPlayed}</small>
+                        <small class="text-muted text-nowrap">Last played: ${lastPlayed}</small>
                     </div>
                 </div>
-                <p class="mb-1 campaign-title-link">${initialPrompt}</p>`;
+                <p class="mb-1 mt-2 campaign-title-link">${initialPrompt}</p>`;
 
       campaignEl.dataset.campaignId = campaign.id;
       campaignEl.dataset.campaignTitle = campaign.title;
