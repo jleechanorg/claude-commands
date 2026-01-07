@@ -340,6 +340,16 @@ def test_level_up_activation_and_flow():
     debug_info = result.get("debug_info", {})
     log(f"God Mode response received")
 
+    # Verify rewards_pending was set by server
+    game_state = result.get("game_state", {})
+    rewards_pending = game_state.get("rewards_pending", {})
+    level_up_available = rewards_pending.get("level_up_available", False)
+
+    if level_up_available:
+        log(f"✅ Server set level_up_available=True (new_level={rewards_pending.get('new_level')})")
+    else:
+        log(f"⚠️ WARNING: level_up_available NOT set by server. rewards_pending={rewards_pending}")
+
     # Step 4: Next turn should activate CharacterCreationAgent (level_up_available=True)
     log("Step 4: Checking if level-up activates CharacterCreationAgent")
     response = send_interaction(
@@ -358,8 +368,22 @@ def test_level_up_activation_and_flow():
     # Verify CharacterCreationAgent activated for level-up
     char_creation_active = any("character_creation" in f for f in system_instruction_files)
 
+    # Check BOTH level_up flags as per agents.py:800-818
+    game_state = result.get("game_state", {})
+    custom_state = game_state.get("custom_campaign_state", {})
+    level_up_pending = custom_state.get("level_up_pending", False)
+
+    rewards_pending = game_state.get("rewards_pending", {})
+    level_up_available = rewards_pending.get("level_up_available", False)
+
+    log(f"Flags: level_up_pending={level_up_pending}, level_up_available={level_up_available}")
+
     if char_creation_active:
         log("✅ CharacterCreationAgent activated for level-up")
+        if level_up_pending or level_up_available:
+            log(f"✅ Correct flags set (level_up_pending={level_up_pending} OR level_up_available={level_up_available})")
+        else:
+            log("⚠️ WARNING: CharacterCreationAgent active but NEITHER flag set (unexpected)")
     else:
         log(f"⚠️ WARNING: CharacterCreationAgent NOT activated. System files: {system_instruction_files}")
         log("⚠️ This may indicate level_up_available was not set by server")
@@ -381,11 +405,11 @@ def test_level_up_activation_and_flow():
     system_instruction_files = debug_info.get("system_instruction_files", [])
     log(f"System files: {system_instruction_files}")
 
-    # Level-up turn 2: Ability score or feat
-    log("Level-up turn 2/3: Ability score improvement")
+    # Level-up turn 2: Continue level-up process
+    log("Level-up turn 2/3: Accept Action Surge class feature")
     response = send_interaction(
         campaign_id,
-        "I'll increase my Strength by 1 and Constitution by 1"
+        "I'll take Action Surge as my Level 2 Fighter feature"
     )
 
     result = response.get("result", {})
