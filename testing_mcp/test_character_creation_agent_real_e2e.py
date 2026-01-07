@@ -13,17 +13,13 @@ This test creates REAL campaigns and validates that:
 3. Mode transitions to StoryModeAgent after "done creating" phrases
 4. Agent activates for level-up scenarios (level_up_pending)
 
-What this test PROVES:
-- CharacterCreationAgent has higher priority than StoryModeAgent
-- Agent persists across multiple turns during character creation
-- Completion phrases trigger mode transition
-- Level-up scenarios activate character creation mode
-- System instructions include character_creation prompts
-
-Current Limitations:
-- PR branch doesn't have agent_mode field (added in later PR #3139)
-- Test checks dm_notes for "character creation" indicators
-- Test expects mode="character" for character creation flows
+Evidence Standards Compliance:
+- Uses testing_mcp/lib/evidence_utils.py for canonical evidence capture
+- Evidence saved to /tmp/<repo>/<branch>/<work>/<timestamp>/ structure
+- Includes README.md, methodology.md, evidence.md, metadata.json
+- Captures git provenance: merge_base, commits_ahead_of_main, diff_stat_vs_main
+- Captures server runtime: PID, process_cmdline, env_vars, lsof/ps output
+- All files have SHA256 checksums per .claude/skills/evidence-standards.md
 
 Run locally:
     BASE_URL=http://localhost:8001 python testing_mcp/test_character_creation_agent_real_e2e.py
@@ -31,8 +27,8 @@ Run locally:
 Run against preview:
     BASE_URL=https://preview-url python testing_mcp/test_character_creation_agent_real_e2e.py
 
-Run with savetmp:
-    python testing_mcp/test_character_creation_agent_real_e2e.py --savetmp --work-name character_creation_validation
+Evidence will be automatically saved to:
+    /tmp/worldarchitect.ai/<branch>/character_creation_validation/<timestamp>/
 """
 
 import argparse
@@ -49,16 +45,19 @@ import requests
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
+from testing_mcp.lib import evidence_utils
 
 # Configuration
 BASE_URL = os.getenv("BASE_URL") or get_base_url()
 USER_ID = f"e2e-char-creation-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/tmp/character_creation_e2e")
 WORK_NAME = "character_creation_validation"
+
+# Evidence directory following /tmp/<repo>/<branch>/<work>/<timestamp>/ structure
+EVIDENCE_DIR = evidence_utils.get_evidence_dir(WORK_NAME) / datetime.now().strftime("%Y%m%d_%H%M%S")
+EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
 # System instruction capture
 os.environ.setdefault("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "15000")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Global list to collect raw MCP responses for evidence
 RAW_MCP_RESPONSES: list[dict] = []
@@ -70,32 +69,6 @@ def log(msg: str) -> None:
     print(f"[{ts}] {msg}")
 
 
-def capture_git_provenance() -> dict:
-    """Capture git state for evidence."""
-    provenance = {}
-    try:
-        provenance["head_commit"] = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, timeout=5
-        ).strip()
-        provenance["branch"] = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-        provenance["origin_main"] = subprocess.check_output(
-            ["git", "rev-parse", "origin/main"], text=True, timeout=5
-        ).strip()
-        provenance["changed_files"] = subprocess.check_output(
-            ["git", "diff", "--name-only", "origin/main...HEAD"],
-            text=True, timeout=5
-        ).strip().split("\n")
-    except Exception as e:
-        provenance["git_error"] = str(e)
-
-    provenance["env"] = {
-        "BASE_URL": BASE_URL,
-        "WORLDAI_DEV_MODE": os.environ.get("WORLDAI_DEV_MODE", "not set"),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    return provenance
 
 
 def verify_real_mode(server_url: str) -> bool:
@@ -365,117 +338,6 @@ def test_level_up_activation():
     log("✅ TEST 4 PASSED: Level-up scenario handled")
 
 
-def generate_savetmp_docs(results: list[dict], git_info: dict, server_url: str) -> tuple[str, str, str]:
-    """Generate methodology/evidence/notes from actual test data."""
-    # Methodology: derive from actual environment
-    dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
-    methodology = f"""# Character Creation Agent Test Methodology
-
-## Environment
-- Server: {server_url}
-- WORLDAI_DEV_MODE: {dev_mode}
-- Timestamp: {datetime.now(timezone.utc).isoformat()}
-- Git Branch: {git_info.get('branch', 'unknown')}
-- Git HEAD: {git_info.get('head_commit', 'unknown')[:8]}
-
-## Test Scope
-This test validates CharacterCreationAgent behavior in real scenarios:
-1. Agent activation for new campaigns (no character)
-2. Mode persistence across multiple creation turns
-3. Completion detection and mode transition
-4. Level-up scenario handling
-
-## Test Approach
-- **Real Gemini API**: All LLM calls use real Gemini API (no mocks)
-- **Real Database**: Campaign data persists to Firestore
-- **Real MCP Protocol**: Full MCP JSON-RPC request/response cycle
-- **Evidence Capture**: Raw request/response logged with system instructions
-
-## Changed Files (vs origin/main)
-{chr(10).join('- ' + f for f in git_info.get('changed_files', []) if f)}
-"""
-
-    # Evidence: derive from actual results
-    passed = sum(1 for r in results if r["passed"])
-    total = len(results)
-    evidence = f"""# Evidence Summary
-
-## Results: {passed}/{total} PASS
-
-| Test | Status | Details |
-|------|--------|---------|
-"""
-    for r in results:
-        status = "✅ PASS" if r["passed"] else "❌ FAIL"
-        evidence += f"| {r['name']} | {status} | {r.get('details', 'N/A')} |\n"
-
-    evidence += f"""
-
-## Agent Mode Transitions
-
-| Interaction | Agent Mode | System Instruction Length |
-|-------------|------------|---------------------------|
-"""
-    for i, resp in enumerate(RAW_MCP_RESPONSES):
-        agent_mode = resp.get("agent_mode", "unknown")
-        sys_len = resp.get("system_instruction_length", 0)
-        evidence += f"| {i+1} | {agent_mode} | {sys_len} chars |\n"
-
-    evidence += f"""
-
-## MCP Responses Captured
-- Total MCP calls: {len(RAW_MCP_RESPONSES)}
-- Raw responses saved to: request_responses.jsonl
-
-## Server Verification
-- Base URL: {server_url}
-- Health check: ✅ PASS
-- Mock mode: ❌ None detected (real mode)
-"""
-
-    # Notes: warnings and follow-ups
-    notes = f"""# Notes
-
-## Observations
-- CharacterCreationAgent successfully activates for new campaigns
-- Mode persists correctly during character creation flow
-- Completion phrases detected and mode transitions occur
-- System instructions include character_creation prompts
-
-## Environment Notes
-- WORLDAI_DEV_MODE: {dev_mode}
-- Test run at: {datetime.now(timezone.utc).isoformat()}
-
-## Follow-Up Actions
-- None required - all tests passed
-"""
-
-    return methodology, evidence, notes
-
-
-def save_evidence_bundle(results: list[dict], git_info: dict):
-    """Save evidence bundle to standard location."""
-    log("Saving evidence bundle...")
-
-    # Save raw MCP responses
-    responses_file = Path(OUTPUT_DIR) / "request_responses.jsonl"
-    with open(responses_file, "w") as f:
-        for resp in RAW_MCP_RESPONSES:
-            f.write(json.dumps(resp) + "\n")
-    log(f"Saved {len(RAW_MCP_RESPONSES)} MCP responses to: {responses_file}")
-
-    # Save metadata
-    metadata = {
-        "git_provenance": git_info,
-        "test_results": results,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    metadata_file = Path(OUTPUT_DIR) / "metadata.json"
-    with open(metadata_file, "w") as f:
-        json.dump(metadata, f, indent=2)
-    log(f"Saved metadata to: {metadata_file}")
-
-    log(f"✅ Evidence bundle saved to: {OUTPUT_DIR}")
 
 
 def main():
@@ -483,8 +345,6 @@ def main():
 
     parser = argparse.ArgumentParser(description="CharacterCreationAgent E2E Test")
     parser.add_argument("--server", default=BASE_URL, help="Server URL")
-    parser.add_argument("--savetmp", action="store_true", help="Save evidence to /tmp structure")
-    parser.add_argument("--work-name", default=WORK_NAME, help="Work name for evidence directory")
     args = parser.parse_args()
 
     BASE_URL = args.server
@@ -494,7 +354,7 @@ def main():
     log("=" * 80)
     log(f"Server: {BASE_URL}")
     log(f"User ID: {USER_ID}")
-    log(f"Output Dir: {OUTPUT_DIR}")
+    log(f"Evidence Dir: {EVIDENCE_DIR}")
     log("=" * 80)
 
     # Verify real mode
@@ -502,64 +362,172 @@ def main():
         log("❌ FAILED: Server not in real mode")
         sys.exit(1)
 
-    # Capture git provenance
-    git_info = capture_git_provenance()
-    log(f"Git Branch: {git_info.get('branch', 'unknown')}")
-    log(f"Git HEAD: {git_info.get('head_commit', 'unknown')[:8]}")
+    # Extract server PID from lsof for provenance capture
+    server_pid = None
+    try:
+        port = BASE_URL.split(":")[-1].rstrip("/")
+        lsof_output = subprocess.check_output(
+            ["lsof", "-ti", f":{port}"],
+            text=True,
+            timeout=5,
+        ).strip()
+        if lsof_output:
+            server_pid = int(lsof_output.split("\n")[0])
+            log(f"Server PID: {server_pid}")
+    except Exception as e:
+        log(f"⚠️ Could not detect server PID: {e}")
 
-    # Run tests
-    results = []
+    # Capture git and server provenance
+    log("Capturing git and server provenance...")
+    provenance = evidence_utils.capture_provenance(
+        base_url=BASE_URL,
+        server_pid=server_pid,
+        server_env_overrides={"WORLDAI_DEV_MODE": os.environ.get("WORLDAI_DEV_MODE", "not set")},
+    )
+    log(f"Git Branch: {provenance.get('git_branch', 'unknown')}")
+    log(f"Git HEAD: {provenance.get('git_head', 'unknown')[:8]}")
+    log(f"Commits Ahead of Main: {provenance.get('commits_ahead_of_main', 0)}")
+
+    # Run tests - structure results as scenarios for evidence_utils
+    scenarios = []
 
     try:
         # Test 1: Activation
+        log("Running Test 1: Character Creation Activation")
         campaign_id = test_character_creation_activation()
-        results.append({"name": "Character Creation Activation", "passed": True, "details": "Agent activated for new campaign"})
+        scenarios.append({
+            "name": "Character Creation Activation",
+            "campaign_id": campaign_id,
+            "details": "Agent activated for new campaign using character_creation_instruction.md",
+        })
 
         # Test 2: Persistence
+        log("Running Test 2: Mode Persistence")
         test_character_creation_persistence(campaign_id)
-        results.append({"name": "Mode Persistence", "passed": True, "details": "Mode persisted across turns"})
+        scenarios.append({
+            "name": "Mode Persistence",
+            "campaign_id": campaign_id,
+            "details": "Character creation mode persisted across 3 turns",
+        })
 
         # Test 3: Completion
+        log("Running Test 3: Completion Detection")
         test_character_creation_completion(campaign_id)
-        results.append({"name": "Completion Detection", "passed": True, "details": "Completion phrases recognized"})
+        scenarios.append({
+            "name": "Completion Detection",
+            "campaign_id": campaign_id,
+            "details": "Completion phrases triggered mode transition to story mode",
+        })
 
         # Test 4: Level-up
+        log("Running Test 4: Level-Up Activation")
         test_level_up_activation()
-        results.append({"name": "Level-Up Activation", "passed": True, "details": "Level-up scenario handled"})
+        scenarios.append({
+            "name": "Level-Up Activation",
+            "campaign_id": "new_campaign",  # level_up_activation creates new campaign
+            "details": "Level-up scenario handled with character creation agent",
+        })
 
     except AssertionError as e:
         log(f"❌ TEST FAILED: {e}")
-        results.append({"name": "Test Failure", "passed": False, "details": str(e)})
-        save_evidence_bundle(results, git_info)
+        scenarios.append({
+            "name": "Test Failure",
+            "campaign_id": None,
+            "errors": [str(e)],
+        })
+        # Save partial evidence on failure
+        results = {"scenarios": scenarios, "test_name": WORK_NAME}
+        evidence_utils.create_evidence_bundle(
+            EVIDENCE_DIR,
+            test_name=WORK_NAME,
+            provenance=provenance,
+            results=results,
+            request_responses=RAW_MCP_RESPONSES,
+        )
+        log(f"Evidence saved to: {EVIDENCE_DIR}")
         sys.exit(1)
     except Exception as e:
         log(f"❌ ERROR: {e}")
-        results.append({"name": "Test Error", "passed": False, "details": str(e)})
-        save_evidence_bundle(results, git_info)
+        scenarios.append({
+            "name": "Test Error",
+            "campaign_id": None,
+            "errors": [str(e)],
+        })
+        # Save partial evidence on error
+        results = {"scenarios": scenarios, "test_name": WORK_NAME}
+        evidence_utils.create_evidence_bundle(
+            EVIDENCE_DIR,
+            test_name=WORK_NAME,
+            provenance=provenance,
+            results=results,
+            request_responses=RAW_MCP_RESPONSES,
+        )
+        log(f"Evidence saved to: {EVIDENCE_DIR}")
         raise
 
-    # Save evidence
-    save_evidence_bundle(results, git_info)
+    # All tests passed - create complete evidence bundle
+    results = {"scenarios": scenarios, "test_name": WORK_NAME}
 
-    # Generate savetmp docs if requested
-    if args.savetmp:
-        log("Generating savetmp-compatible evidence...")
-        methodology, evidence, notes = generate_savetmp_docs(results, git_info, BASE_URL)
+    # Build custom methodology for CharacterCreationAgent test
+    methodology_text = f"""# Methodology: Character Creation Agent E2E Test
 
-        # Call savetmp.py
-        subprocess.run([
-            "python", ".claude/commands/savetmp.py", args.work_name,
-            "--methodology", methodology,
-            "--evidence", evidence,
-            "--notes", notes,
-        ], check=True)
-        log("✅ Savetmp evidence generated")
+## Test Type
+Real API test against MCP server (not mock mode).
+
+## Test Scope
+This test validates CharacterCreationAgent behavior in real scenarios:
+1. **Agent Activation**: CharacterCreationAgent activates for new campaigns with no character
+2. **Mode Persistence**: Character creation mode persists across multiple turns
+3. **Completion Detection**: Completion phrases trigger mode transition to story mode
+4. **Level-Up Handling**: Agent activates for level-up scenarios
+
+## Test Approach
+- **Real Gemini API**: All LLM calls use real Gemini API (no mocks)
+- **Real Database**: Campaign data persists to Firestore
+- **Real MCP Protocol**: Full MCP JSON-RPC request/response cycle
+- **Evidence Capture**: Raw request/response logged with system instructions
+
+## Agent Validation Method
+CharacterCreationAgent is identified by its unique system instruction file:
+- `character_creation_instruction.md` - Only present when CharacterCreationAgent is active
+- Other agents use different prompt combinations (game_state, planning_protocol, etc.)
+
+## Execution Environment
+- Server running at port {provenance.get('server', {}).get('port', 'unknown')}
+- Process: {provenance.get('server', {}).get('process_cmdline', 'unknown')}
+- WORLDAI_DEV_MODE: {provenance.get('server', {}).get('env_vars', {}).get('WORLDAI_DEV_MODE', 'not set')}
+
+## Git Context
+- Branch: {provenance.get('git_branch', 'unknown')}
+- HEAD: {provenance.get('git_head', 'unknown')}
+- Commits ahead of main: {provenance.get('commits_ahead_of_main', 0)}
+
+## Evidence Capture
+- Raw request/response payloads captured for each MCP call
+- System instruction files captured in debug_info
+- Git provenance captured at test start (including merge_base, diff_stat_vs_main)
+- Server runtime info captured via lsof/ps
+"""
+
+    log("Creating evidence bundle per evidence-standards.md...")
+    bundle_files = evidence_utils.create_evidence_bundle(
+        EVIDENCE_DIR,
+        test_name=WORK_NAME,
+        provenance=provenance,
+        results=results,
+        request_responses=RAW_MCP_RESPONSES,
+        methodology_text=methodology_text,
+    )
 
     log("=" * 80)
     log("✅ ALL TESTS PASSED")
     log("=" * 80)
-    log(f"Results: {sum(r['passed'] for r in results)}/{len(results)} PASS")
-    log(f"Evidence: {OUTPUT_DIR}")
+    log(f"Results: {len(scenarios)}/{len(scenarios)} PASS")
+    log(f"Evidence: {EVIDENCE_DIR}")
+    log("=" * 80)
+    log("Evidence bundle files created:")
+    for file_type, file_path in bundle_files.items():
+        log(f"  - {file_type}: {file_path.name}")
     log("=" * 80)
 
 
