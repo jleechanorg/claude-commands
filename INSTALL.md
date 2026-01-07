@@ -79,19 +79,21 @@ For platforms that support remote instruction fetching:
 Many commands require GitHub CLI. If not installed:
 
 ```bash
-# Download and extract latest gh CLI binary to /tmp
-# Visit https://github.com/cli/cli/releases for the latest version
-GH_VERSION="2.65.0"
-curl -sL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" | tar -xz -C /tmp
+# Download and extract gh CLI binary to /tmp
+curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp
 
 # Verify installation
-"/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" --version
+/tmp/gh_2.40.1_linux_amd64/bin/gh --version
 
-# Verify authentication (ensure GITHUB_TOKEN is set)
-"/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" auth status
+# Authenticate using existing GitHub token (ensure GITHUB_TOKEN is set)
+# The gh CLI automatically uses GITHUB_TOKEN environment variable
+printf '%s\n' "$GITHUB_TOKEN" | /tmp/gh_2.40.1_linux_amd64/bin/gh auth login --with-token
+
+# Verify authentication status
+/tmp/gh_2.40.1_linux_amd64/bin/gh auth status
 
 # Set up alias for convenience
-export GH_CLI="/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh"
+export GH_CLI="/tmp/gh_2.40.1_linux_amd64/bin/gh"
 ```
 
 ## Post-Installation
@@ -131,7 +133,6 @@ export GH_CLI="/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh"
    ```bash
    export GITHUB_TOKEN="your_github_token"
    ```
-   **Security Note**: Keep your token secure and use a token with minimal required scopes (e.g., `repo`, `read:org`). Never commit tokens to version control.
 
 3. **Set up Memory MCP** (optional, for enhanced /learn and /think):
    - Follow instructions in `.claude/commands/MEMORY_INTEGRATION.md`
@@ -166,7 +167,7 @@ After installation, verify the system is working:
 
 1. Verify GitHub token is set: `echo $GITHUB_TOKEN`
 2. Check gh CLI authentication: `gh auth status`
-3. If not authenticated, run: `gh auth login` (or see https://cli.github.com/manual/gh_auth_login)
+3. If not authenticated, run: `gh auth login` (see https://cli.github.com/manual/gh_auth_login for details)
 4. Ensure network connectivity to GitHub
 
 ### Orchestration not working
@@ -207,9 +208,9 @@ rm -rf /path/to/your/project/.claude/commands/
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/jleechanorg/claude-commands/issues)
-- **Documentation**: See `.claude/commands/README.md`
-- **Examples**: See `.claude/commands/*-examples.md`
+- **Issues**: https://github.com/jleechanorg/claude-commands/issues
+- **Documentation**: See `.claude/commands/README.md` in your project after installation
+- **Examples**: See `.claude/commands/examples.md` in your project after installation
 
 ## License
 
