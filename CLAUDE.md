@@ -173,6 +173,21 @@ with patch('shutil.which', return_value='/usr/bin/command'):
 - GitHub CI is the authoritative source for test results
 - Full local test suite is slow and unnecessary when CI runs automatically
 
+### Test Infrastructure (MANDATORY)
+**⚠️ ALWAYS use `testing_mcp/lib/` utilities - NEVER reimplement test infrastructure**
+- **Evidence capture:** Use `testing_mcp/lib/evidence_utils.py` (NOT custom capture code)
+  - `evidence_utils.capture_provenance(base_url, server_pid)` - Git + server provenance
+  - `evidence_utils.create_evidence_bundle(...)` - Standards-compliant evidence bundle
+  - Follows `.claude/skills/evidence-standards.md` requirements automatically
+- **Check `testing_mcp/lib/` BEFORE writing:**
+  - Evidence capture utilities
+  - MCP client helpers
+  - Server management functions
+  - Test isolation patterns
+- **Benefits:** Canonical provenance fields, SHA256 checksums, README/methodology/evidence structure, zero maintenance burden
+
+**Anti-Pattern:** Writing custom `capture_git_provenance()`, `save_evidence_bundle()`, or similar functions that duplicate `testing_mcp/lib/` functionality.
+
 ### Import Standards
 - ❌ **FORBIDDEN**: try/except around imports (ANY context)
 - ❌ **FORBIDDEN**: inline imports inside functions
