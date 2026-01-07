@@ -1,0 +1,28 @@
+{
+  "name": "claude-commands",
+  "description": "LLM Capital Efficiency Framework: 145+ production-tested slash commands for autonomous development workflows, PR automation, and multi-agent orchestration",
+  "version": "1.0.0",
+  "author": {
+    "name": "WorldArchitect.AI Team",
+    "email": "jleechan@worldarchitect.ai"
+  },
+  "homepage": "https://github.com/jleechanorg/claude-commands",
+  "repository": "https://github.com/jleechanorg/claude-commands",
+  "license": "MIT",
+  "keywords": [
+    "workflow-automation",
+    "pr-automation",
+    "orchestration",
+    "tdd",
+    "debugging",
+    "copilot",
+    "ci-cd",
+    "git-automation",
+    "testing",
+    "deployment",
+    "code-review",
+    "architecture",
+    "llm-orchestration",
+    "capital-efficiency"
+  ]
+}
