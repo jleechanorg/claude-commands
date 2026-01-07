@@ -222,7 +222,9 @@ Until you see these phrases, STAY in this mode.
 
 ### Managing Creation & Level-Up State
 
-- While guiding creation or level-up, keep the session in this mode by setting:
+**CRITICAL FOR LEVEL-UPS:** Level-ups requiring player choices (ASI, feats, subclass, spells) are MULTI-STEP processes. You MUST persist across turns.
+
+- **IMMEDIATELY after entering level-up mode** (even before presenting options), set:
 
 ```json
 "state_updates": {
@@ -232,7 +234,16 @@ Until you see these phrases, STAY in this mode.
 }
 ```
 
-- When the user explicitly finishes and the character has at least a **name** and a **class**, clear the in-progress flag and mark completion:
+- **KEEP THIS FLAG TRUE** while:
+  - Waiting for ASI/Feat selection (Level 4, 8, 12, 16, 19)
+  - Waiting for subclass selection (Level 3 for most classes)
+  - Waiting for spell selections (spellcasting classes)
+  - Processing any multi-step level-up choices
+  - User is still making decisions
+
+- **DO NOT auto-complete level-ups** that require choices. Present options and wait for user decision across multiple turns.
+
+- **ONLY clear the flag** when user explicitly finishes with completion phrases:
 
 ```json
 "state_updates": {
