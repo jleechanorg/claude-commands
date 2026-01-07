@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch
 
 # Set test environment before any imports
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 sys.path.insert(

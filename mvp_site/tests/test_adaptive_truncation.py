@@ -30,7 +30,7 @@ class TestAdaptiveTruncation(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         self.mock_game_state = MagicMock(spec=GameState)
         self.mock_game_state.custom_campaign_state = {}
         self.mock_game_state.world_data = {}
@@ -156,7 +156,7 @@ class TestPercentageBasedTruncation(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     def test_calculate_percentage_based_turns(self):
         """Percentage-based calculation should allocate 25% start / 60% end."""
@@ -223,7 +223,7 @@ class TestMiddleCompaction(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     def test_compact_middle_turns_extracts_key_events(self):
         """Middle compaction should extract sentences with important keywords."""
@@ -357,7 +357,7 @@ class TestTruncationBudgetGuarantees(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         self.mock_game_state = MagicMock(spec=GameState)
         self.mock_game_state.custom_campaign_state = {}
         self.mock_game_state.world_data = {}
@@ -463,7 +463,7 @@ class TestImprovedSentenceSplitting(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     def test_split_handles_abbreviations(self):
         """Sentence splitting should NOT break on abbreviations like Dr., Mr."""
@@ -502,7 +502,7 @@ class TestImportanceDetection(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     def test_detects_dice_rolls(self):
         """Should detect dice roll patterns (d20, 2d6, rolls a 15)."""
@@ -556,7 +556,7 @@ class TestFallbackSampling(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     def test_fallback_preserves_content(self):
         """When no keywords match, should sample evenly instead of losing content."""

@@ -316,7 +316,7 @@ def test_ui_elements_with_api_campaign():
 if __name__ == "__main__":
     print("UI Elements Verification Test - Using API to create campaign")
     print(
-        "Make sure server is running with: TESTING=true PORT=8081 python main.py serve"
+        "Make sure server is running with: TESTING_AUTH_BYPASS=true PORT=8081 python main.py serve"
     )
     print("-" * 60)
     test_ui_elements_with_api_campaign()

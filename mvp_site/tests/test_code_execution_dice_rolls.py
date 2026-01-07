@@ -30,8 +30,8 @@ from mvp_site.llm_providers.cerebras_provider import (
 )
 from mvp_site.llm_providers.openrouter_provider import OpenRouterResponse
 
-# Set TESTING environment variable
-os.environ["TESTING"] = "true"
+# Set TESTING_AUTH_BYPASS environment variable
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 # Add parent directory to path for imports
 sys.path.insert(

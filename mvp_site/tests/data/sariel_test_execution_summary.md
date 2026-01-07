@@ -77,7 +77,7 @@ When run with a valid API key, the test would:
 The test infrastructure is complete and ready to run. It requires:
 - A valid Gemini API key (set via GEMINI_API_KEY environment variable)
 - Running from the project virtual environment
-- Command: `TESTING=true vpython mvp_site/test_sariel_campaign_integration.py`
+- Command: `TESTING_AUTH_BYPASS=true vpython mvp_site/test_sariel_campaign_integration.py`
 
 ## Expected Output
 

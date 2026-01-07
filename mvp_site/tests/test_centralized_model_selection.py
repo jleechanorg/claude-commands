@@ -53,7 +53,7 @@ class TestCentralizedModelSelection(unittest.TestCase):
             patch.dict(
                 os.environ,
                 {
-                    "TESTING": "false",
+                    "TESTING_AUTH_BYPASS": "false",
                     "MOCK_SERVICES_MODE": "false",
                     "FORCE_TEST_MODEL": "false",
                 },
@@ -83,7 +83,7 @@ class TestCentralizedModelSelection(unittest.TestCase):
             patch.dict(
                 os.environ,
                 {
-                    "TESTING": "false",
+                    "TESTING_AUTH_BYPASS": "false",
                     "MOCK_SERVICES_MODE": "false",
                     "FORCE_TEST_MODEL": "false",
                 },

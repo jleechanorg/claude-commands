@@ -11,10 +11,10 @@ Browser tests cannot set custom HTTP headers like API tests can. Instead, WorldA
 ### 1. Server Setup
 Start the server with testing mode enabled:
 ```bash
-TESTING=true PORT=8081 python main.py serve
+TESTING_AUTH_BYPASS=true PORT=8081 python main.py serve
 ```
 
-The `TESTING=true` environment variable enables the test bypass in the backend.
+The `TESTING_AUTH_BYPASS=true` environment variable enables the test bypass in the backend.
 
 ### 2. Browser Navigation
 Navigate to the app with test mode parameters:
@@ -128,7 +128,7 @@ The helper navigates through all 5 steps:
 
 ## Security Notes
 
-- Test mode ONLY works when server is started with `TESTING=true`
+- Test mode ONLY works when server is started with `TESTING_AUTH_BYPASS=true`
 - In production, the URL parameters are ignored
 - The backend still validates the test bypass header
 - This ensures test mode cannot be accidentally enabled in production
@@ -136,7 +136,7 @@ The helper navigates through all 5 steps:
 ## Common Issues
 
 1. **Still seeing sign-in page?**
-   - Check server was started with `TESTING=true`
+   - Check server was started with `TESTING_AUTH_BYPASS=true`
    - Verify URL has `?test_mode=true`
    - Check browser console for errors
 

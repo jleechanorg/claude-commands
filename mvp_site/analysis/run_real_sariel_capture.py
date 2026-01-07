@@ -170,7 +170,7 @@ if __name__ == "__main__":
             cwd=main_project_path,
             capture_output=True,
             text=True,
-            env={**os.environ, "TESTING": "true"},
+            env={**os.environ, "TESTING_AUTH_BYPASS": "true"},
             check=False,
         )
 

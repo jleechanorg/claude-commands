@@ -90,6 +90,7 @@ and runtime configs share the same number; do not lower any single layer without
 2. Keep imports at module scope and avoid inline imports per project standards.
 3. Run the concurrency integration tests before opening a PR.
 4. Document any new environment variables or rate-limit changes in this README.
+5. For GitHub Actions hardening steps, see [.github/ACTIONS_SECURITY.md](.github/ACTIONS_SECURITY.md).
 
 ## Support
 If you encounter issues authenticating or running the parallel tests, check that

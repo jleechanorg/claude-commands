@@ -13,7 +13,7 @@ import sys
 import unittest
 
 # Set environment for testing
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 # Direct calls are now the default - no need to set SKIP_MCP_HTTP
 

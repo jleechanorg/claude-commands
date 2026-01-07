@@ -396,7 +396,7 @@ class TestThinkBlockStateManagement(unittest.TestCase):
 def run_think_block_tests():
     """Run all think block protocol tests"""
     # Set testing environment variable for faster AI models
-    os.environ["TESTING"] = "true"
+    os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     # Create test suite
     test_suite = unittest.TestSuite()

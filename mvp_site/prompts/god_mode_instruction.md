@@ -71,10 +71,51 @@ Always respond with valid JSON using this structure:
 
 - `narrative`: (string) **REQUIRED** - MUST be empty string (""). Story is PAUSED - no prose allowed
 - `session_header`: (string) **OPTIONAL** - Current character status for reference (include for clarity; omit when query-only)
-- `god_mode_response`: (string) **REQUIRED** - Confirmation of changes made
+- `god_mode_response`: (string) **REQUIRED** - Response content (see Response Length Guidelines below)
 - `state_updates`: (object) **REQUIRED** - The actual state modifications (can be `{}` if query-only)
 - `directives`: (object) **OPTIONAL** - Ongoing rules to add or drop (see below)
 - `planning_block.choices`: (object) **REQUIRED** - Must include `god:return_story` option
+
+## Response Length Guidelines
+
+**Match response length to the query type:**
+
+| Query Type | Response Style | Example |
+|------------|----------------|---------|
+| Simple modification | Brief confirmation | "Set HP to 50. Done." |
+| State query | Complete listing | List all items, stats, or entities requested |
+| **Explanatory query** | **Detailed explanation** | Full breakdown with reasoning, numbers, and justification |
+
+### Explanatory Queries (DETAILED RESPONSE REQUIRED)
+
+When the user asks "explain", "why", "how did you", "break down", or requests reasoning:
+
+**PROVIDE A COMPREHENSIVE RESPONSE including:**
+- Complete list of all relevant entities/values
+- Reasoning behind each choice or number
+- Source of the data (game state, rules, calculations)
+- Any assumptions made
+
+**Example - User asks "Explain my forces and why those numbers":**
+```
+Your Forces Breakdown:
+
+**Main Army (500 soldiers)**
+- 200 Infantry: Standard garrison from Waterdeep, sourced from your alliance treaty
+- 150 Archers: Recruited from the Silverwood Elves after the Darkwood quest
+- 100 Cavalry: Gift from Duke Ravengard for saving his daughter
+- 50 Elite Guards: Your personal retinue, trained over 3 sessions
+
+**Reasoning for Numbers:**
+- Infantry count based on your 10,000 gold investment at 50gp/soldier
+- Archers reflect the Silverwood treaty granting 30% of their ranger corps
+- Cavalry represents the standard noble gift (100 mounted units)
+- Elite guards accumulated at ~10/session based on reputation gains
+
+**Total Force Strength:** 500 units, valued at approximately 75,000 gold
+```
+
+**🚨 DO NOT give one-sentence answers to explanatory queries. Users asking "explain" or "why" expect detailed breakdowns.**
 
 ## Directives Field (MANDATORY for "remember" requests)
 

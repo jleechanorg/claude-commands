@@ -45,13 +45,22 @@ from mvp_site.game_state import GameState
 from mvp_site.numeric_field_converter import NumericFieldConverter
 from mvp_site.serialization import json_default_serializer, json_serial
 
+try:  # pragma: no cover - import guard
+    from google.cloud.firestore_v1.aggregation import (
+        AggregationQuery as _AggregationQuery,
+    )
+
+    AGGREGATION_QUERY = _AggregationQuery
+except (ImportError, AttributeError):
+    AGGREGATION_QUERY = None
+
+AGGREGATION_QUERY_AVAILABLE = AGGREGATION_QUERY is not None
+
 __all__ = ["json_default_serializer", "json_serial"]
 
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20
-DELETE_TOKEN: str = (
-    "__DELETE__"  # Token used to mark fields for deletion in state updates
-)
+DELETE_TOKEN: str = "__DELETE__"  # noqa: S105 Token used to mark fields for deletion in state updates
 
 UTC = datetime.UTC
 
@@ -193,7 +202,7 @@ def reset_mock_firestore() -> None:
     This clears all data from the in-memory Firestore client and resets
     the singleton instance. Should only be called in test environments.
     """
-    global _mock_client_singleton
+    global _mock_client_singleton  # noqa: PLW0602
     if _mock_client_singleton is not None:
         _mock_client_singleton.reset()
         logging_util.info("Mock Firestore singleton reset")
@@ -495,7 +504,10 @@ def update_state_with_changes(
 
     # Auto-initialize completed_missions if active_missions exists but completed_missions doesn't
     # Fix for older campaigns that predate the completed_missions field
-    if "active_missions" in state_to_update and "completed_missions" not in state_to_update:
+    if (
+        "active_missions" in state_to_update
+        and "completed_missions" not in state_to_update
+    ):
         logging_util.info(
             "Auto-initializing completed_missions field for older campaign"
         )
@@ -646,7 +658,7 @@ def _normalize_dotted_keys_in_place(d: dict[str, Any]) -> dict[str, Any]:
     dotted paths for additional fields.
     """
     # Find all dotted keys
-    dotted_keys = [k for k in d.keys() if "." in k]
+    dotted_keys = [k for k in d if "." in k]
 
     for dotted_key in dotted_keys:
         parts = dotted_key.split(".")
@@ -660,8 +672,7 @@ def _normalize_dotted_keys_in_place(d: dict[str, Any]) -> dict[str, Any]:
             elif not isinstance(current[part], dict):
                 # Can't merge into non-dict - skip this key
                 logging_util.warning(
-                    f"Cannot merge dotted key '{dotted_key}': "
-                    f"'{part}' is not a dict"
+                    f"Cannot merge dotted key '{dotted_key}': '{part}' is not a dict"
                 )
                 break
             current = current[part]
@@ -687,7 +698,7 @@ def get_db() -> firestore.Client:
     In MOCK_SERVICES_MODE, returns a singleton in-memory client to persist state
     across tool calls within the same MCP server session.
     """
-    global _mock_client_singleton
+    global _mock_client_singleton  # noqa: PLW0603
 
     if os.getenv("MOCK_SERVICES_MODE", "").lower() == "true":
         if _mock_client_singleton is None:
@@ -918,6 +929,266 @@ def get_campaign_by_id(
         # If it's already a string, leave it as is
 
     return campaign_doc.to_dict(), all_story_entries
+
+
+@log_exceptions
+def get_campaign_metadata(
+    user_id: UserId, campaign_id: CampaignId
+) -> dict[str, Any] | None:
+    """Get campaign metadata without loading story entries (fast, lightweight)."""
+    db = get_db()
+    campaign_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("campaigns")
+        .document(campaign_id)
+    )
+    campaign_doc = campaign_ref.get()
+    if not campaign_doc.exists:
+        return None
+    return campaign_doc.to_dict()
+
+
+@log_exceptions
+def get_story_count(user_id: UserId, campaign_id: CampaignId) -> int:
+    """Get total story entry count for a campaign (efficient count query)."""
+    db = get_db()
+    story_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("campaigns")
+        .document(campaign_id)
+        .collection("story")
+    )
+    # Use aggregation query for efficient counting without loading documents
+    if not AGGREGATION_QUERY_AVAILABLE:
+        return sum(1 for _ in story_ref.stream())
+
+    try:
+        agg_query = AGGREGATION_QUERY(story_ref)
+        agg_query = agg_query.count(alias="total")
+        results = agg_query.get()
+    except Exception:
+        # Fallback: aggregation failed at runtime (e.g., unsupported server/version)
+        return sum(1 for _ in story_ref.stream())
+
+    for aggregation_result in results:
+        total = aggregation_result.get("total")
+        if hasattr(total, "value"):
+            total = total.value
+        try:
+            return int(total)
+        except (TypeError, ValueError):
+            return 0
+    return 0
+
+
+@log_exceptions
+def get_story_paginated(
+    user_id: UserId,
+    campaign_id: CampaignId,
+    limit: int = 300,
+    before_timestamp: str | None = None,
+    before_id: str | None = None,
+    newer_count: int = 0,
+    newer_gemini_count: int = 0,
+) -> dict[str, Any]:
+    """
+    Fetch story entries with pagination, optimized to avoid loading all entries into memory.
+
+    Entries are stored with a ``timestamp`` field. Pagination is implemented as
+    "load older": given an optional ``before_timestamp``/``before_id`` cursor,
+    this function returns up to ``limit`` entries whose timestamps are earlier
+    than that cursor (or the newest entries if no cursor is provided), ordered
+    from oldest to newest within the returned batch.
+
+    Args:
+        user_id: User ID
+        campaign_id: Campaign ID
+        limit: Maximum number of entries to return (default 300)
+        before_timestamp: ISO timestamp to fetch entries before (for "load older"
+            pagination). Only entries with ``timestamp`` strictly earlier than
+            this value are returned.
+        before_id: Optional document ID to disambiguate cursors when multiple
+            entries share the same timestamp.
+        newer_count: Number of newer entries already fetched (for absolute
+            sequence_id calculation across pages).
+        newer_gemini_count: Number of newer Gemini entries already fetched (for
+            absolute user_scene_number calculation across pages).
+
+    Returns:
+        dict with:
+        - entries: List of story entries (oldest to newest within the fetched batch)
+        - total_count: Total number of story entries in the campaign
+        - has_older: Boolean indicating if there may be older entries available
+            before this batch. This is computed by fetching ``limit + 1`` entries
+            and trimming to ``limit``; it is ``True`` when an extra entry exists
+            beyond the requested page size.
+        - oldest_timestamp: Timestamp of oldest entry in this batch (use as the
+            ``before_timestamp`` value for the next pagination call)
+        - oldest_id: Document ID of the oldest entry in this batch (use with the
+            cursor to avoid dropping entries that share timestamps)
+    """
+    db = get_db()
+    campaign_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("campaigns")
+        .document(campaign_id)
+    )
+
+    # Get total count for pagination metadata
+    total_count = get_story_count(user_id, campaign_id)
+    total_gemini_count = 0
+    try:
+        # Count Gemini responses separately for accurate user_scene_number values
+        gemini_ref = campaign_ref.collection("story").where("actor", "==", "gemini")
+
+        if AGGREGATION_QUERY_AVAILABLE:
+            try:
+                agg_query = AGGREGATION_QUERY(gemini_ref)
+                agg_query = agg_query.count(alias="total")
+                results = agg_query.get()
+                for aggregation_result in results:
+                    total = aggregation_result.get("total")
+                    if hasattr(total, "value"):
+                        total = total.value
+                    total_gemini_count = int(total or 0)
+                    break
+            except Exception:
+                total_gemini_count = sum(1 for _ in gemini_ref.stream())
+        else:
+            total_gemini_count = sum(1 for _ in gemini_ref.stream())
+    except Exception:
+        # Best-effort: keep zero if counting fails
+        total_gemini_count = 0
+
+    # Build query: order by timestamp DESCENDING with document ID tie-breaker
+    story_ref = campaign_ref.collection("story").order_by(
+        "timestamp", direction=firestore.Query.DESCENDING
+    )
+    try:
+        story_ref = story_ref.order_by(
+            firestore.FieldPath.document_id(),
+            direction=firestore.Query.DESCENDING,
+        )
+    except Exception:
+        story_ref = story_ref.order_by("__name__", direction=firestore.Query.DESCENDING)
+
+    tie_docs: list[Any] = []
+
+    # If paginating (loading older entries), capture older and same-timestamp entries
+    if before_timestamp:
+        try:
+            cursor_ts = datetime.datetime.fromisoformat(
+                before_timestamp.replace("Z", "+00:00")
+            )
+        except (ValueError, TypeError) as e:
+            logging_util.warning(f"Invalid before_timestamp '{before_timestamp}': {e}")
+            raise ValueError(f"Invalid before_timestamp: {before_timestamp}") from None
+
+        story_ref = story_ref.where("timestamp", "<", cursor_ts)
+
+        if before_id:
+            try:
+                tie_query = (
+                    campaign_ref.collection("story")
+                    .where("timestamp", "==", cursor_ts)
+                    .order_by("__name__", direction=firestore.Query.DESCENDING)
+                )
+                tie_docs = [doc for doc in tie_query.stream() if doc.id < before_id]
+            except Exception:
+                tie_docs = []
+
+    # Apply limit + 1 to detect if more entries exist
+    story_docs = list(story_ref.limit(limit + 1).stream())
+    story_docs.extend(tie_docs)
+
+    # Deduplicate by document ID and sort newest -> oldest for slicing
+    deduped_docs: list[Any] = []
+    seen_ids: set[str] = set()
+    for doc in story_docs:
+        if doc.id in seen_ids:
+            continue
+        seen_ids.add(doc.id)
+        deduped_docs.append(doc)
+
+    deduped_docs.sort(
+        key=lambda d: (
+            d.to_dict().get("timestamp"),
+            d.id,
+        ),
+        reverse=True,
+    )
+
+    has_older = len(deduped_docs) > limit
+    story_docs = deduped_docs[:limit]
+
+    # Convert to list and add IDs
+    entries: list[dict[str, Any]] = []
+    for doc in story_docs:
+        entry = doc.to_dict() or {}
+        entry.setdefault("id", doc.id)
+        ts = entry.get("timestamp")
+        if hasattr(ts, "isoformat"):
+            entry["timestamp"] = ts.isoformat()
+        entries.append(entry)
+
+    # Ensure chronological order (oldest to newest)
+    def _ts_key(entry: dict[str, Any]) -> datetime.datetime:
+        ts_val = entry.get("timestamp")
+        if isinstance(ts_val, str):
+            try:
+                return datetime.datetime.fromisoformat(ts_val.replace("Z", "+00:00"))
+            except Exception:
+                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+        if hasattr(ts_val, "isoformat"):
+            return ts_val
+        return datetime.datetime.fromtimestamp(0, datetime.UTC)
+
+    entries.sort(key=lambda e: (_ts_key(e), e.get("id") or ""))
+
+    oldest_timestamp = entries[0].get("timestamp") if entries else None
+    oldest_id = entries[0].get("id") if entries else None
+
+    # Derive sequence_id and user_scene_number without loading the full story
+    start_sequence = (
+        total_count - max(newer_count, 0) - len(entries) + 1 if entries else 0
+    )
+    start_sequence = max(start_sequence, 1) if entries else 0
+
+    batch_gemini_count = sum(
+        1
+        for entry in entries
+        if isinstance(entry.get("actor"), str)
+        and entry.get("actor", "").lower() == "gemini"
+    )
+    gemini_base = max(total_gemini_count - newer_gemini_count - batch_gemini_count, 0)
+    gemini_counter = gemini_base
+
+    for idx, entry in enumerate(entries):
+        entry["sequence_id"] = start_sequence + idx
+
+        actor_value = entry.get("actor")
+        if isinstance(actor_value, str) and actor_value.lower() == "gemini":
+            gemini_counter += 1
+            entry["user_scene_number"] = gemini_counter
+        else:
+            entry["user_scene_number"] = None
+
+    logging_util.info(
+        f"📖 PAGINATED STORY: user={user_id}, campaign={campaign_id}, "
+        f"fetched={len(entries)}, total={total_count}, has_older={has_older}"
+    )
+
+    return {
+        "entries": entries,
+        "total_count": total_count,
+        "has_older": has_older,
+        "oldest_timestamp": oldest_timestamp,
+        "oldest_id": oldest_id,
+        "fetched_count": len(entries),
+    }
 
 
 @log_exceptions

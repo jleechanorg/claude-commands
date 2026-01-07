@@ -17,8 +17,8 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-# Set TESTING environment variable
-os.environ["TESTING"] = "true"
+# Set TESTING_AUTH_BYPASS environment variable
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 # NOTE: GEMINI_API_KEY is mocked in individual tests - no hardcoded keys
 
 # Add the parent directory to the path

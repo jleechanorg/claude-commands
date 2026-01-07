@@ -3,7 +3,7 @@ import sys
 from unittest.mock import patch
 
 # Set test environment before any imports
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 # Add parent directory to path for imports

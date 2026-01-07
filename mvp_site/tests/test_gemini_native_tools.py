@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 class TestGeminiNativeTools(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test")
 
     @patch("mvp_site.llm_providers.gemini_provider.get_client")

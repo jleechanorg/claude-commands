@@ -22,7 +22,7 @@ class TestContextTooLargeHandling(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ["MOCK_SERVICES_MODE"] = "false"
 
     def tearDown(self):
@@ -101,7 +101,7 @@ class TestDefaultProviderFallback(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     @patch.dict(os.environ, {"GEMINI_API_KEY": ""}, clear=False)
     @patch("mvp_site.llm_service.cerebras_provider")

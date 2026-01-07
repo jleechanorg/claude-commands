@@ -19,7 +19,7 @@ GOOGLE_GENAI_AVAILABLE = True
 PYDANTIC_AVAILABLE = True
 
 # Set test environment variables before importing modules
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 

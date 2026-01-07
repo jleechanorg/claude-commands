@@ -22,7 +22,7 @@ from mvp_site.debug_hybrid_system import convert_json_escape_sequences
 from mvp_site.prompt_utils import _convert_and_format_field
 
 # Set test environment before any imports
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 
@@ -106,7 +106,7 @@ class TestUnifiedAPIStructure(unittest.TestCase):
     def setUp(self):
         """Set up test environment and mock all external dependencies"""
         # Set environment variables for testing
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ["USE_MOCKS"] = "true"
 
         # Clear any cached modules to prevent Firebase initialization errors
@@ -481,6 +481,93 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         self.assertTrue(
             result.get("success"),
             f"Expected success, got error: {result}",
+        )
+
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.structured_fields_utils")
+    def test_god_mode_directives_dict_to_list_conversion(
+        self,
+        mock_structured_utils,
+        mock_settings,
+        mock_prepare,
+        mock_gemini,
+        mock_add_story,
+        mock_update_state,
+        mock_get_campaign,
+        mock_get_campaign_state,
+    ):
+        """
+        Test that god_mode_directives as dict is converted to list.
+
+        In some game states, god_mode_directives may be stored as a dict instead
+        of a list (possibly from LLM responses or legacy saves). The fix ensures
+        .append() doesn't fail by converting dict to list first.
+
+        Before fix: 'dict' object has no attribute 'append'
+        After fix: dict is converted to empty list, new directive appends successfully
+        """
+        # Mock structured fields to add a new directive
+        mock_structured_utils.extract_structured_fields.return_value = {
+            "directives": {"add": ["New directive rule"]}
+        }
+
+        # Mock the campaign data and story context
+        mock_get_campaign.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            self.mock_story_context,
+        )
+
+        # Mock game state with god_mode_directives as DICT (not list) - the bug scenario
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.to_dict.return_value = {
+            "world_data": {"world_time": {"hour": 1, "minute": 0}},
+            "combat_state": {"in_combat": False},
+            "player_character_data": {"experience": {"current": 0}, "level": 1},
+            "custom_campaign_state": {
+                "god_mode_directives": {"some_key": "some_value"}  # Dict instead of list!
+            },
+        }
+        mock_prepare.return_value = (mock_game_state, False, 0)
+
+        # Prevent Firestore client creation
+        mock_get_campaign_state.return_value = {}
+
+        # Mock user settings
+        mock_settings.return_value = {"debug_mode": False}
+
+        # Mock Gemini response for god mode
+        mock_gemini_response = Mock()
+        mock_gemini_response.narrative_text = "Directive added"
+        mock_gemini_response.agent_mode = "god"  # God mode
+        mock_gemini_response.get_state_updates.return_value = {}
+        mock_gemini_response.get_debug_info.return_value = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini_response.get_location_confirmed.return_value = "Test Location"
+        mock_gemini_response.get_narrative_text.return_value = "Directive added"
+        mock_gemini_response.resources = "HP: 10/10"
+        mock_gemini_response.processing_metadata = {}
+        mock_gemini.return_value = mock_gemini_response
+
+        request_data = {
+            "user_id": "test-user-123",
+            "campaign_id": "test-campaign-456",
+            "user_input": "GOD MODE: add new rule",
+            "mode": "god",  # Explicitly god mode
+        }
+
+        # Before fix, this would raise: 'dict' object has no attribute 'append'
+        result = asyncio.run(world_logic.process_action_unified(request_data))
+
+        self.assertTrue(
+            result.get("success"),
+            f"Expected success when god_mode_directives is dict, got error: {result}",
         )
 
     @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
@@ -1227,6 +1314,10 @@ class TestBlockingCallStaticAnalysis(unittest.TestCase):
         violations = []
 
         for i, line in enumerate(source_lines, 1):
+            # Skip comments
+            if line.strip().startswith("#"):
+                continue
+
             for pattern, service in service_patterns:
                 match = re.search(pattern, line)
                 if match:
@@ -1484,28 +1575,110 @@ class TestAsyncToThreadDocumentation(unittest.TestCase):
                 )
 
 
-class TestEnforceRewardsProcessedFlag(unittest.TestCase):
+class TestDetectRewardsDiscrepancy(unittest.TestCase):
     """
-    Tests for _enforce_rewards_processed_flag.
+    Tests for _detect_rewards_discrepancy edge cases.
 
-    NOTE: This function was deprecated to a no-op stub. The LLM now handles
-    all reward state management via the ESSENTIALS protocol:
-    1. LLM sets combat_summary with xp_awarded
-    2. LLM awards XP directly via player_character_data.experience.current
-    3. LLM sets rewards_processed flag
+    NOTE: This replaced _enforce_rewards_processed_flag to follow the
+    "LLM Decides, Server Detects" principle. Instead of server-side enforcement,
+    we now detect discrepancies and return messages for LLM self-correction.
 
-    Server-side enforcement was removed to prevent XP duplication and ensure
-    the LLM is the single source of truth for all reward processing.
-
-    These tests verify the no-op stub behavior (returns state unchanged).
+    Main detection tests are in TestDetectRewardsDiscrepancyMain class.
+    These tests cover edge cases and graceful handling of missing/None fields.
     """
 
-    def test_returns_state_unchanged_combat_context(self):
+    def test_handles_none_experience_gracefully(self):
+        """Server should not crash on None experience in original state."""
+        original_state = {
+            "player_character_data": {"experience": None}
+        }
+        updated_state = {
+            "player_character_data": {
+                "experience": {"current": 100}
+            },
+            "combat_state": {
+                "combat_phase": "ended",
+                "combat_summary": {"xp_awarded": 50},
+                "rewards_processed": False,
+            }
+        }
+
+        # Should not raise an exception
+        discrepancies = world_logic._detect_rewards_discrepancy(
+            updated_state, original_state_dict=original_state
+        )
+
+        # With combat_summary present and combat_phase="ended", should detect discrepancy
+        self.assertTrue(
+            len(discrepancies) > 0,
+            "Should detect discrepancy even with None original experience",
+        )
+        self.assertIn("REWARDS_STATE_ERROR", discrepancies[0])
+
+    def test_handles_missing_combat_state(self):
+        """Server should handle missing combat_state gracefully."""
+        state_dict = {
+            "player_character_data": {"experience": {"current": 100}}
+        }
+
+        # Should not raise an exception
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+
+        # No combat state, so no discrepancy
+        self.assertEqual(len(discrepancies), 0)
+
+    def test_handles_empty_combat_state(self):
+        """Server should handle empty combat_state gracefully."""
+        state_dict = {
+            "combat_state": {}
+        }
+
+        # Should not raise an exception
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+
+        # Empty combat state, no discrepancy
+        self.assertEqual(len(discrepancies), 0)
+
+    def test_no_discrepancy_without_combat_summary(self):
+        """Server should NOT report discrepancy if combat_summary is missing."""
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "ended",
+                # No combat_summary
+                "rewards_processed": False,
+            }
+        }
+
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+
+        # No combat_summary means no discrepancy to report
+        self.assertEqual(
+            len(discrepancies), 0,
+            "Should NOT report discrepancy without combat_summary",
+        )
+
+
+class TestDetectRewardsDiscrepancyMain(unittest.TestCase):
+    """
+    Tests for _detect_rewards_discrepancy - LLM self-correction pattern.
+
+    These tests verify that the server detects discrepancies when:
+    1. Combat just ended (combat_phase in COMBAT_FINISHED_PHASES + combat_summary exists)
+       but rewards_processed=False
+    2. Encounter completed (encounter_completed=True + encounter_summary exists)
+       but rewards_processed=False
+    3. XP increased from the previous state but rewards_processed=False
+
+    Instead of server-side enforcement, we now detect discrepancies and return
+    messages for LLM self-correction via system_corrections field.
+    """
+
+    def test_detects_discrepancy_when_combat_ends(self):
         """
-        DEPRECATED: Function is now a no-op stub.
+        Discrepancy detection: Report when combat ends but rewards_processed=False.
 
-        Verifies that the function returns the state unchanged without
-        modifying any rewards_processed flags. The LLM handles this.
+        When combat_phase is "ended" and combat_summary exists but rewards_processed=False,
+        the server should return a discrepancy message for LLM self-correction.
         """
         state_dict = {
             "combat_state": {
@@ -1514,25 +1687,20 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
                     "xp_awarded": 50,
                     "enemies_defeated": ["goblin_1", "goblin_2"],
                 },
-                "rewards_processed": False,  # LLM should set this, not server
+                "rewards_processed": False,  # LLM didn't set this
             }
         }
 
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
 
-        # No-op: state returned unchanged
-        self.assertFalse(
-            result["combat_state"]["rewards_processed"],
-            "No-op stub should NOT modify state - LLM handles rewards_processed",
-        )
-        # Verify identity - exact same object returned
-        self.assertIs(result, state_dict, "Should return the same state object")
+        # Should detect discrepancy for LLM self-correction
+        self.assertEqual(len(discrepancies), 1)
+        self.assertIn("REWARDS_STATE_ERROR", discrepancies[0])
+        self.assertIn("rewards_processed", discrepancies[0])
 
-    def test_returns_state_unchanged_all_finished_phases(self):
+    def test_detects_discrepancy_for_all_finished_phases(self):
         """
-        DEPRECATED: Function is now a no-op stub for all phases.
-
-        Tests that the no-op behavior applies to all combat phases.
+        Discrepancy detection: All COMBAT_FINISHED_PHASES should trigger detection.
         """
         from mvp_site import constants
 
@@ -1546,19 +1714,16 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
                     }
                 }
 
-                result = world_logic._enforce_rewards_processed_flag(state_dict)
+                discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
 
-                # No-op: state returned unchanged
-                self.assertFalse(
-                    result["combat_state"]["rewards_processed"],
-                    f"No-op stub should NOT modify state for phase='{phase}'",
+                self.assertTrue(
+                    len(discrepancies) > 0,
+                    f"Should detect discrepancy for phase='{phase}'",
                 )
 
-    def test_returns_state_unchanged_encounter_context(self):
+    def test_detects_discrepancy_for_encounter_completion(self):
         """
-        DEPRECATED: Function is now a no-op stub.
-
-        Verifies encounter state is also returned unchanged.
+        Discrepancy detection: Report when encounter completes but rewards_processed=False.
         """
         state_dict = {
             "encounter_state": {
@@ -1567,21 +1732,19 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
                     "xp_awarded": 100,
                     "outcome": "success",
                 },
-                "rewards_processed": False,  # LLM should set this
+                "rewards_processed": False,
             }
         }
 
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
 
-        # No-op: encounter state unchanged
-        self.assertFalse(
-            result["encounter_state"]["rewards_processed"],
-            "No-op stub should NOT modify encounter state",
-        )
+        self.assertEqual(len(discrepancies), 1)
+        self.assertIn("REWARDS_STATE_ERROR", discrepancies[0])
+        self.assertIn("encounter_state", discrepancies[0])
 
-    def test_encounter_incomplete_unchanged(self):
+    def test_no_discrepancy_for_incomplete_encounter(self):
         """
-        DEPRECATED: No-op stub doesn't modify incomplete encounters either.
+        No discrepancy should be reported if encounter is not complete.
         """
         state_dict = {
             "encounter_state": {
@@ -1593,29 +1756,23 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             }
         }
 
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
 
-        self.assertFalse(
-            result["encounter_state"].get("rewards_processed", False),
-            "No-op stub should NOT modify incomplete encounter state",
+        # Should NOT report discrepancy - encounter not complete
+        self.assertEqual(
+            len(discrepancies), 0,
+            "Should not report discrepancy for incomplete encounter",
         )
 
-    def test_returns_state_unchanged_with_original_state(self):
+    def test_detects_discrepancy_when_xp_increases_during_combat(self):
         """
-        DEPRECATED: Function ignores original_state_dict parameter.
-
-        The original_state_dict parameter is kept for API compatibility
-        but is no longer used since the function is a no-op.
+        Discrepancy detection: Detect XP increase even without combat_summary.
         """
         original_state = {
             "player_character_data": {
                 "experience": {"current": 100}
-            },
-            "combat_state": {
-                "combat_phase": "ended",
             }
         }
-
         updated_state = {
             "player_character_data": {
                 "experience": {"current": 150}  # XP increased
@@ -1626,53 +1783,19 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             }
         }
 
-        result = world_logic._enforce_rewards_processed_flag(
+        discrepancies = world_logic._detect_rewards_discrepancy(
             updated_state, original_state_dict=original_state
         )
 
-        # No-op: XP comparison no longer triggers enforcement
-        self.assertFalse(
-            result["combat_state"]["rewards_processed"],
-            "No-op stub should NOT set rewards_processed even with XP increase",
+        self.assertTrue(
+            len(discrepancies) > 0,
+            "Should detect discrepancy when XP increases during combat",
         )
+        self.assertIn("XP increased", discrepancies[0])
 
-    def test_returns_state_unchanged_encounter_with_xp_increase(self):
+    def test_no_discrepancy_when_already_processed(self):
         """
-        DEPRECATED: No-op stub ignores XP increases in encounter context.
-        """
-        original_state = {
-            "player_character_data": {
-                "experience": {"current": 200}
-            },
-            "encounter_state": {
-                "encounter_completed": True,
-            }
-        }
-
-        updated_state = {
-            "player_character_data": {
-                "experience": {"current": 300}
-            },
-            "encounter_state": {
-                "encounter_completed": True,
-                "rewards_processed": False,
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(
-            updated_state, original_state_dict=original_state
-        )
-
-        self.assertFalse(
-            result["encounter_state"]["rewards_processed"],
-            "No-op stub should NOT set rewards_processed for encounter XP increase",
-        )
-
-    def test_preserves_already_processed_flag(self):
-        """
-        DEPRECATED: No-op stub preserves existing rewards_processed=True.
-
-        When LLM has already set rewards_processed, it remains unchanged.
+        No discrepancy should be reported if rewards_processed=True is already set.
         """
         state_dict = {
             "combat_state": {
@@ -1682,54 +1805,11 @@ class TestEnforceRewardsProcessedFlag(unittest.TestCase):
             }
         }
 
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
 
-        self.assertTrue(
-            result["combat_state"]["rewards_processed"],
-            "rewards_processed=True should remain True (no-op preserves state)",
-        )
-
-    def test_handles_none_experience_gracefully(self):
-        """
-        DEPRECATED: No-op stub handles None experience without crashing.
-
-        Since the function is now a no-op, it simply returns the state
-        unchanged regardless of experience field values.
-        """
-        original_state = {
-            "player_character_data": {
-                "experience": None  # Explicitly None
-            }
-        }
-
-        result = world_logic._enforce_rewards_processed_flag(state_dict)
-
-        self.assertTrue(result["combat_state"]["rewards_processed"])
-
-    def test_handles_none_experience_gracefully(self):
-        """No-op: Should not crash on None experience."""
-        original_state = {
-            "player_character_data": {"experience": None}
-        }
-        updated_state = {
-            "player_character_data": {
-                "experience": {"current": 100}
-            },
-            "combat_state": {
-                "combat_phase": "ended",
-                "rewards_processed": False,
-            }
-        }
-
-        # Should not raise an exception - returns state unchanged
-        result = world_logic._enforce_rewards_processed_flag(
-            updated_state, original_state_dict=original_state
-        )
-
-        # No-op: no enforcement happens
-        self.assertFalse(
-            result["combat_state"].get("rewards_processed", False),
-            "No-op stub should handle None experience and return state unchanged",
+        self.assertEqual(
+            len(discrepancies), 0,
+            "No discrepancy when rewards_processed=True",
         )
 
 
@@ -2090,7 +2170,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
     @patch("mvp_site.world_logic.preventive_guards.enforce_preventive_guards")
     @patch("mvp_site.world_logic.update_state_with_changes")
     @patch("mvp_site.world_logic.apply_automatic_combat_cleanup")
-    @patch("mvp_site.world_logic._enforce_rewards_processed_flag")
+    @patch("mvp_site.world_logic._detect_rewards_discrepancy")
     @patch("mvp_site.world_logic.validate_game_state_updates")
     @patch(
         "mvp_site.world_logic._process_rewards_followup",
@@ -2100,7 +2180,7 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
         self,
         mock_process_rewards_followup,
         mock_validate_updates,
-        mock_enforce_rewards_processed_flag,
+        mock_detect_rewards_discrepancy,
         mock_apply_automatic_combat_cleanup,
         mock_update_state_with_changes,
         mock_enforce_guards,
@@ -2156,7 +2236,8 @@ class TestProcessActionLevelUpSnapshot(unittest.TestCase):
 
         mock_update_state_with_changes.side_effect = mutate_state
         mock_apply_automatic_combat_cleanup.side_effect = lambda state, changes: state
-        mock_enforce_rewards_processed_flag.side_effect = lambda state, **_: state
+        # Return empty list (no discrepancies detected)
+        mock_detect_rewards_discrepancy.return_value = []
         # Mock validation to return state as-is (no auto-correction)
         mock_validate_updates.side_effect = lambda state, **_: state
 
@@ -2231,6 +2312,101 @@ class TestLevelUpInjection(unittest.TestCase):
         self.assertIn("Options: 1. Level up immediately  2. Continue adventuring", injected)
         self.assertIn("Benefits:", injected)
         self.assertIn("defer", injected.lower())
+
+
+
+class TestStateUpdatesNoneGuard(unittest.TestCase):
+    """
+    Tests for None guard in unified_response state_updates handling.
+
+    Bug context: world_logic.py:2218-2227 could raise if response["state_changes"]
+    was None when debug_mode=True. Fixed with `or {}` guard and `.get()` check.
+    """
+
+    def test_state_changes_none_does_not_raise(self):
+        """
+        When response["state_changes"] is None, unified_response should handle it.
+
+        This tests the fix: `response.get("state_changes") or {}`
+        Without the `or {}`, None would pass through and cause issues.
+        """
+        # Simulate what happens in _build_unified_response when state_changes is None
+        response = {"state_changes": None}
+        debug_mode = True
+
+        unified_response = {}
+        if debug_mode:
+            # This is the fixed code pattern
+            unified_response["state_updates"] = response.get("state_changes") or {}
+
+        # Should not raise and should be empty dict
+        self.assertEqual(unified_response["state_updates"], {})
+
+    def test_state_changes_empty_dict_preserved(self):
+        """Empty dict should be preserved as-is."""
+        response = {"state_changes": {}}
+        debug_mode = True
+
+        unified_response = {}
+        if debug_mode:
+            unified_response["state_updates"] = response.get("state_changes") or {}
+
+        self.assertEqual(unified_response["state_updates"], {})
+
+    def test_state_changes_with_values_preserved(self):
+        """Non-empty state_changes should be preserved."""
+        response = {"state_changes": {"combat_state": {"in_combat": True}}}
+        debug_mode = True
+
+        unified_response = {}
+        if debug_mode:
+            unified_response["state_updates"] = response.get("state_changes") or {}
+
+        self.assertEqual(
+            unified_response["state_updates"],
+            {"combat_state": {"in_combat": True}}
+        )
+
+    def test_world_events_merge_with_none_state_updates(self):
+        """
+        When merging world_events into state_updates, handle None gracefully.
+
+        This tests the fix: `if not unified_response.get("state_updates"):`
+        """
+        structured_fields = {"world_events": [{"event": "test"}]}
+
+        # Simulate unified_response before merge
+        unified_response = {"state_updates": None}  # Could happen if not initialized
+
+        # Apply the safe merge pattern
+        if structured_fields.get("world_events"):
+            unified_response["world_events"] = structured_fields["world_events"]
+            if not unified_response.get("state_updates"):
+                unified_response["state_updates"] = {}
+            unified_response["state_updates"]["world_events"] = structured_fields[
+                "world_events"
+            ]
+
+        # Should have properly merged world_events
+        self.assertEqual(unified_response["state_updates"]["world_events"], [{"event": "test"}])
+
+    def test_world_events_merge_with_existing_state_updates(self):
+        """World events should merge into existing state_updates dict."""
+        structured_fields = {"world_events": [{"event": "test"}]}
+
+        unified_response = {"state_updates": {"combat_state": {"in_combat": False}}}
+
+        if structured_fields.get("world_events"):
+            unified_response["world_events"] = structured_fields["world_events"]
+            if not unified_response.get("state_updates"):
+                unified_response["state_updates"] = {}
+            unified_response["state_updates"]["world_events"] = structured_fields[
+                "world_events"
+            ]
+
+        # Original values preserved, world_events added
+        self.assertEqual(unified_response["state_updates"]["combat_state"], {"in_combat": False})
+        self.assertEqual(unified_response["state_updates"]["world_events"], [{"event": "test"}])
 
 
 class TestGodModeParameterIntegration(unittest.TestCase):

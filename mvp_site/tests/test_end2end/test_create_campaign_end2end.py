@@ -12,8 +12,8 @@ import unittest
 import unittest.mock
 from unittest.mock import patch
 
-# Ensure TESTING is set before importing app modules (world_logic applies clock-skew patch at import time).
-os.environ.setdefault("TESTING", "true")
+# Ensure TESTING_AUTH_BYPASS is set before importing app modules (world_logic applies clock-skew patch at import time).
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
 from mvp_site import main
@@ -25,7 +25,7 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
         self.app = main.create_app()

@@ -314,34 +314,102 @@ def _has_rewards_context(
     return False
 
 
-def _enforce_rewards_processed_flag(
+def _detect_rewards_discrepancy(
     state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
-) -> dict[str, Any]:
+) -> list[str]:
     """
-    DEPRECATED: Server-side enforcement removed - LLM now reliably sets combat_summary and XP.
+    Detect rewards state discrepancies for LLM self-correction.
 
-    This function is a no-op stub kept for compatibility. The LLM now follows ESSENTIALS
-    protocol to:
-    1. Set combat_summary with xp_awarded
-    2. Award XP directly via player_character_data.experience.current
-    3. Set rewards_processed flag
+    Instead of server-side enforcement (which undermines LLM decision-making),
+    this function detects discrepancies and returns correction messages that
+    will be injected into the next LLM prompt via `system_corrections`.
 
-    All reward state management is done by the LLM via state_updates. No server-side
-    enforcement or XP awarding occurs.
+    This follows the "LLM Decides, Server Detects" principle - we inform the LLM
+    of issues and let it fix them in the next inference.
+
+    Detects discrepancies when:
+    1. Combat just ended (combat_phase in COMBAT_FINISHED_PHASES and combat_summary exists)
+       but rewards_processed=False
+    2. Encounter completed (encounter_completed=True and encounter_summary exists)
+       but rewards_processed=False
+    3. XP increased from the previous state but rewards_processed=False
 
     Args:
-        state_dict: The game state dict (passed through unchanged)
-        original_state_dict: Unused (kept for compatibility)
+        state_dict: The game state dict after updates are applied
+        original_state_dict: Optional original state before the update (for XP comparison)
 
     Returns:
-        The game state dict unchanged
+        List of discrepancy messages to inject into next prompt's system_corrections
     """
-    # Preserve signature compatibility while avoiding unused-argument lint warnings
-    _ = original_state_dict
-    # No-op: LLM handles all reward state management via ESSENTIALS protocol
-    # Removed server-side enforcement to prevent XP duplication and ensure
-    # LLM is the single source of truth for all reward processing
-    return state_dict
+    discrepancies: list[str] = []
+    combat_state = state_dict.get("combat_state", {}) or {}
+    encounter_state = state_dict.get("encounter_state", {}) or {}
+
+    # Check 1: Combat just ended with summary but rewards_processed=False
+    combat_phase = combat_state.get("combat_phase", "")
+    combat_summary = combat_state.get("combat_summary")
+    combat_rewards_processed = combat_state.get("rewards_processed", False)
+
+    if (
+        combat_phase in constants.COMBAT_FINISHED_PHASES
+        and combat_summary
+        and not combat_rewards_processed
+    ):
+        logging_util.warning(
+            "🏆 REWARDS_DISCREPANCY: combat_phase=%s, combat_summary exists, "
+            "but rewards_processed=False",
+            combat_phase,
+        )
+        discrepancies.append(
+            f"REWARDS_STATE_ERROR: Combat ended (phase={combat_phase}) with summary, "
+            "but rewards_processed=False. You MUST set combat_state.rewards_processed=true."
+        )
+
+    # Check 2: Encounter completed with summary but rewards_processed=False
+    encounter_completed = encounter_state.get("encounter_completed", False)
+    encounter_summary = encounter_state.get("encounter_summary")
+    encounter_rewards_processed = encounter_state.get("rewards_processed", False)
+
+    if (
+        encounter_completed
+        and encounter_summary
+        and not encounter_rewards_processed
+    ):
+        logging_util.warning(
+            "🏆 REWARDS_DISCREPANCY: encounter_completed=True, encounter_summary exists, "
+            "but rewards_processed=False"
+        )
+        discrepancies.append(
+            "REWARDS_STATE_ERROR: Encounter completed with summary, "
+            "but rewards_processed=False. You MUST set encounter_state.rewards_processed=true."
+        )
+
+    # Check 3: XP increased during combat but rewards_processed=False
+    if original_state_dict and not combat_rewards_processed:
+        player_data = state_dict.get("player_character_data") or {}
+        original_player_data = original_state_dict.get("player_character_data") or {}
+
+        current_xp = _extract_xp_robust(player_data)
+        original_xp = _extract_xp_robust(original_player_data)
+
+        if (
+            current_xp > original_xp
+            and combat_phase in constants.COMBAT_FINISHED_PHASES
+        ):
+            logging_util.warning(
+                "🏆 REWARDS_DISCREPANCY: XP increased (%d -> %d) during combat_phase=%s, "
+                "but rewards_processed=False",
+                original_xp,
+                current_xp,
+                combat_phase,
+            )
+            discrepancies.append(
+                f"REWARDS_STATE_ERROR: XP increased ({original_xp} -> {current_xp}) during "
+                f"combat_phase={combat_phase}, but rewards_processed=False. "
+                "You MUST set combat_state.rewards_processed=true."
+            )
+
+    return discrepancies
 
 
 def _extract_xp_robust(player_data: dict[str, Any]) -> int:
@@ -607,10 +675,15 @@ async def _process_rewards_followup(
             new_time=rewards_new_world_time,
             original_time=original_world_time,
         )
-        updated_game_state_dict = _enforce_rewards_processed_flag(
+        # Detect rewards discrepancies (will be injected into next prompt)
+        rewards_discrepancies = _detect_rewards_discrepancy(
             updated_game_state_dict,
             original_state_dict=original_state_as_dict,
         )
+        if rewards_discrepancies:
+            prevention_extras.setdefault("system_corrections", []).extend(
+                rewards_discrepancies
+            )
         # Check for level-up after rewards processing
         updated_game_state_dict = _check_and_set_level_up_pending(
             updated_game_state_dict,
@@ -627,11 +700,15 @@ async def _process_rewards_followup(
                 rewards_corrections
             )
     else:
-        # Rewards already applied; avoid double-awarding state changes.
-        updated_game_state_dict = _enforce_rewards_processed_flag(
+        # Rewards already applied; detect any discrepancies for next prompt
+        rewards_discrepancies = _detect_rewards_discrepancy(
             updated_game_state_dict,
             original_state_dict=original_state_as_dict,
         )
+        if rewards_discrepancies:
+            prevention_extras.setdefault("system_corrections", []).extend(
+                rewards_discrepancies
+            )
         # Check for level-up in case XP was awarded in this follow-up
         updated_game_state_dict = _check_and_set_level_up_pending(
             updated_game_state_dict,
@@ -1451,6 +1528,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         user_id = request_data.get("user_id")
         user_input = request_data.get("user_input")
         mode = request_data.get("mode", constants.MODE_CHARACTER)
+        include_raw_llm_payloads = bool(
+            request_data.get("include_raw_llm_payloads", False)
+        )
 
         # Validate required fields
         if not user_id:
@@ -1535,6 +1615,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     selected_prompts,
                     use_default_world,
                     user_id,  # Pass user_id to enable user model preference selection
+                    include_raw_llm_payloads,
                 )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during story continuation: {e}")
@@ -1729,6 +1810,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             original_state_for_level_check.get("combat_state", {})
         )
 
+        # Clear old pending_system_corrections BEFORE merge
+        # These were already consumed by llm_service (sent to LLM in this turn)
+        # Any NEW corrections from the LLM's state_updates will be preserved by the merge
+        current_state_as_dict.pop("pending_system_corrections", None)
+
         # Update game state with changes
         # SAFETY: In Think Mode, only allow microsecond time advancement - block all other state changes
         # This prevents LLM hallucinations from accidentally modifying HP, inventory, etc.
@@ -1785,18 +1871,22 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         new_world_time = (
             response.get("state_changes", {}).get("world_data") or {}
         ).get("world_time")
-        # SERVER-SIDE ENFORCEMENT: Apply for any mode that can award XP/rewards
-        # This ensures rewards_processed is set when combat ends, encounters complete, etc.
-        # Pass original state for XP comparison (detects XP increases even without summary structures)
+        # DISCREPANCY DETECTION: Detect rewards state errors for LLM self-correction
+        # Instead of server-side enforcement, we inform the LLM of issues via system_corrections
+        # The LLM will fix them in the next inference (LLM Decides, Server Detects principle)
         if mode in (
             constants.MODE_REWARDS,
             constants.MODE_COMBAT,
             constants.MODE_CHARACTER,
         ):
-            updated_game_state_dict = _enforce_rewards_processed_flag(
+            rewards_discrepancies = _detect_rewards_discrepancy(
                 updated_game_state_dict,
                 original_state_dict=original_state_for_level_check,
             )
+            if rewards_discrepancies:
+                prevention_extras.setdefault("system_corrections", []).extend(
+                    rewards_discrepancies
+                )
 
         # SERVER-SIDE LEVEL-UP DETECTION: Check for level-up in ALL modes where
         # original_state_dict is available for XP comparison. This ensures
@@ -1918,6 +2008,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             ccs = updated_game_state_dict.setdefault("custom_campaign_state", {}) or {}
             directives_list = ccs.setdefault("god_mode_directives", [])
 
+            # Ensure god_mode_directives is a list (handle legacy dict format)
+            if not isinstance(directives_list, list):
+                logging_util.warning(
+                    f"god_mode_directives was {type(directives_list).__name__}, converting to list"
+                )
+                directives_list = []
+                ccs["god_mode_directives"] = directives_list
+
             # Process directives to drop (remove matching rules)
             if directives_to_drop:
                 drop_lower = [d.strip().lower() for d in directives_to_drop if d]
@@ -1970,6 +2068,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         updated_game_state_dict = annotate_world_events_with_turn_scene(
             updated_game_state_dict, player_turn
         )
+
+        # NOTE: pending_system_corrections are cleared BEFORE merge (around line 1791)
+        # This preserves any corrections the LLM added in state_updates while clearing
+        # old corrections that were already sent to the LLM in this turn.
 
         # Update in Firestore (blocking I/O - run in thread)
         await asyncio.to_thread(
@@ -2105,11 +2207,32 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "sequence_id": sequence_id,
             "user_scene_number": user_scene_number,  # Scene number for current AI response: count of existing Gemini responses + 1
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
+            # agent_mode: single source of truth for which agent was selected
+            "agent_mode": getattr(llm_response_obj, "agent_mode", None),
         }
+
+        if include_raw_llm_payloads:
+            metadata = getattr(llm_response_obj, "processing_metadata", {}) or {}
+            if "raw_request_payload" in metadata:
+                unified_response["raw_request_payload"] = metadata[
+                    "raw_request_payload"
+                ]
+            if "raw_response_text" in metadata:
+                unified_response["raw_response_text"] = metadata["raw_response_text"]
 
         # Include state fields only when debug mode is enabled (shows MORE info)
         if debug_mode:
-            unified_response["state_updates"] = response.get("state_changes", {})
+            unified_response["state_updates"] = response.get("state_changes") or {}
+            # CRITICAL: Also include world_events from structured_fields for living world UI
+            # world_events is stored in structured_fields but not in response.state_changes
+            if structured_fields.get("world_events"):
+                unified_response["world_events"] = structured_fields["world_events"]
+                # Also merge into state_updates for frontend compatibility
+                if not unified_response.get("state_updates"):
+                    unified_response["state_updates"] = {}
+                unified_response["state_updates"]["world_events"] = structured_fields[
+                    "world_events"
+                ]
 
         # Add structured response fields if available
         if structured_response:
@@ -2225,6 +2348,33 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 "temporal_correction_attempts", 0
             )
 
+        # Add system corrections for LLM self-correction in next inference
+        # These are injected into the next prompt via system_corrections field
+        if prevention_extras.get("system_corrections"):
+            unified_response["system_corrections"] = prevention_extras[
+                "system_corrections"
+            ]
+            for correction in prevention_extras["system_corrections"]:
+                logging_util.warning(f"SYSTEM CORRECTION QUEUED: {correction}")
+
+            # CRITICAL: Persist system_corrections to game_state for next turn
+            # The llm_service will read and pop 'pending_system_corrections' from game_state
+            # This ensures the LLM receives the corrections in its next request
+            # Extend existing corrections (don't overwrite) to handle edge cases
+            existing_corrections = updated_game_state_dict.get(
+                "pending_system_corrections", []
+            )
+            new_corrections = prevention_extras["system_corrections"]
+            # Deduplicate while preserving order
+            all_corrections = existing_corrections + [
+                c for c in new_corrections if c not in existing_corrections
+            ]
+            updated_game_state_dict["pending_system_corrections"] = all_corrections
+            logging_util.info(
+                f"📋 Persisted {len(all_corrections)} system_corrections "
+                f"(+{len(new_corrections)} new) to game_state.pending_system_corrections"
+            )
+
         # Add system warnings from validation corrections and post-combat checks
         if system_warnings:
             unified_response["system_warnings"] = system_warnings
@@ -2246,6 +2396,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             # Include state fields only when debug mode is enabled (shows MORE info)
             if debug_mode:
                 unified_response["state_updates"] = merged_state_changes
+                # Re-merge world_events if present (may have been added earlier but overwritten)
+                if structured_fields.get("world_events"):
+                    unified_response["state_updates"]["world_events"] = structured_fields[
+                        "world_events"
+                    ]
 
             # Also update the game state dict that was already saved
             final_game_state_dict = update_state_with_changes(
@@ -2261,6 +2416,22 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 final_game_state_dict,
             )
             unified_response["game_state"] = final_game_state_dict
+
+        elif updated_game_state_dict.get("pending_system_corrections"):
+            # BUG FIX: For non-CHARACTER modes (e.g., combat), we must persist
+            # pending_system_corrections so they're available in the next turn.
+            # The first persist (earlier in this function) happens BEFORE corrections
+            # are detected, so we need this second persist to save them.
+            logging_util.info(
+                f"📋 Persisting pending_system_corrections for mode={mode} "
+                f"(count={len(updated_game_state_dict['pending_system_corrections'])})"
+            )
+            await asyncio.to_thread(
+                firestore_service.update_campaign_game_state,
+                user_id,
+                campaign_id,
+                updated_game_state_dict,
+            )
 
         return unified_response
 

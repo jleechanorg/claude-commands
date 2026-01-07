@@ -11,7 +11,7 @@ import shutil
 import tempfile
 
 # Set testing environment
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 from mvp_site.game_state import GameState
 

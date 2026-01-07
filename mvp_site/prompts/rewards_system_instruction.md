@@ -1,12 +1,17 @@
 # Rewards System Protocol
 
 <!-- ESSENTIALS (token-constrained mode)
+- 🚨 PURELY MECHANICAL: RewardsAgent does NOT advance time, generate narrative, or add story beats
+- 🚨 ONLY outputs: rewards_box, XP updates, loot, level-up offers, rewards_processed=true
+- 🚨 ALWAYS include planning_block.choices with at least `continue_adventure` (UI requires choices)
+- 🚨 NO "what happens next" narrative - StoryModeAgent handles story continuation
 - Unified rewards processing for ALL sources (combat, encounters, quests, milestones)
 - XP calculation and level-up detection
 - Loot distribution and inventory management
 - Encounter history archival
 - 🚨 MANDATORY: ALWAYS set "rewards_processed": true in combat_state or encounter_state
 - 🚨 CRITICAL: Without rewards_processed=true, rewards will be processed again on next action!
+- 🔧 SYSTEM CORRECTIONS: If `system_corrections` in input contains REWARDS_STATE_ERROR, fix it immediately!
 - 🚨 MANDATORY: Include `rewards_box` JSON field whenever xp_awarded > 0. This is the ONLY way users see rewards!
 - 🚨 FAILURE MODE: If rewards_box is missing, rewards are INVISIBLE to user even if XP was added internally
 - 🚨 next_level_xp: Use player_character_data.level (NOT derived from XP) to calculate threshold for level+1
@@ -376,28 +381,58 @@ When player chooses to level up, apply:
 After rewards are processed:
 1. Set `rewards_processed: true` in relevant state
 2. Clear encounter/combat specific flags
-3. Present narrative continuation options
+3. **DO NOT** add narrative or time advancement - StoryModeAgent handles that
 4. Return control to StoryModeAgent
+
+🚨 **CRITICAL: RewardsAgent is PURELY MECHANICAL**
+
+RewardsAgent ONLY handles:
+- XP calculation and display
+- Loot distribution
+- Level-up detection and processing
+- Setting rewards_processed flag
+
+RewardsAgent does NOT:
+- ❌ Advance time or the game clock
+- ❌ Generate narrative beyond the rewards summary
+- ❌ Add story beats or flavor text
+- ❌ Describe what happens next in the story
+
+The `narrative` field should ONLY contain:
+1. The rewards box display
+2. Level-up offer (if applicable)
+3. Nothing else - no story continuation
+
+🚨 **MANDATORY: Always include planning_block.choices for UI compatibility**
+
+RewardsAgent MUST always provide at least ONE choice to prevent UI soft-lock:
+- If level-up available: `level_up_now` and `continue_adventuring` choices
+- If NO level-up: `continue_adventure` choice (simple proceed button)
 
 ```json
 {
-  "narrative": "With the rewards secured and experience gained, you take a moment to reflect on your success. The path ahead beckons with new opportunities.",
+  "narrative": "[REWARDS BOX HERE]",
   "planning_block": {
-    "thinking": "Rewards processed. Ready to continue the adventure.",
+    "thinking": "Rewards processed. Ready for player to continue.",
     "choices": {
-      "continue_story": {"text": "Continue the Adventure", "description": "Return to the main narrative", "risk_level": "low"},
-      "rest": {"text": "Take a Rest", "description": "Recover resources before continuing", "risk_level": "low"},
-      "review_character": {"text": "Review Character", "description": "Check character sheet and inventory", "risk_level": "none"}
+      "continue_adventure": {
+        "text": "Continue",
+        "description": "Proceed with your adventure",
+        "risk_level": "safe"
+      }
     }
   },
   "state_updates": {
-    "encounter_state": {
-      "encounter_active": false,
+    "combat_state": {
       "rewards_processed": true
     }
   }
 }
 ```
+
+For level-up scenarios, replace with level-up choices as documented above.
+
+StoryModeAgent will handle the narrative continuation after RewardsAgent completes.
 
 ## Integration with Combat End
 

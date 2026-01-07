@@ -31,9 +31,9 @@ class TestClockSkewDeploymentValidation:
         }
 
         with patch.dict(os.environ, env_vars, clear=False):
-            # Remove WORLDAI_DEV_MODE and TESTING if they exist
+            # Remove WORLDAI_DEV_MODE and TESTING_AUTH_BYPASS if they exist
             os.environ.pop("WORLDAI_DEV_MODE", None)
-            os.environ.pop("TESTING", None)
+            os.environ.pop("TESTING_AUTH_BYPASS", None)
 
             with pytest.raises(
                 ValueError,
@@ -54,7 +54,7 @@ class TestClockSkewDeploymentValidation:
         }
 
         with patch.dict(os.environ, env_vars, clear=False):
-            os.environ.pop("TESTING", None)
+            os.environ.pop("TESTING_AUTH_BYPASS", None)
             # Should not raise - dev mode explicitly acknowledged
             result = validate_deployment_config()
             assert result is True  # Returns True for dev mode
@@ -69,7 +69,7 @@ class TestClockSkewDeploymentValidation:
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS", None)
             os.environ.pop("WORLDAI_DEV_MODE", None)
-            os.environ.pop("TESTING", None)
+            os.environ.pop("TESTING_AUTH_BYPASS", None)
 
             # Should not raise - production mode
             result = validate_deployment_config()
@@ -87,7 +87,7 @@ class TestClockSkewDeploymentValidation:
 
         with patch.dict(os.environ, env_vars, clear=False):
             os.environ.pop("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS", None)
-            os.environ.pop("TESTING", None)
+            os.environ.pop("TESTING_AUTH_BYPASS", None)
 
             # Should not raise
             result = validate_deployment_config()
@@ -112,11 +112,11 @@ class TestClockSkewDeploymentValidation:
 
     def test_clock_skew_in_testing_mode(self):
         """
-        Clock skew returns 720 even in testing mode (TESTING=true).
+        Clock skew returns 720 even in testing mode (TESTING_AUTH_BYPASS=true).
         """
         from mvp_site.clock_skew_credentials import get_clock_skew_seconds
 
-        env_vars = {"TESTING": "true"}
+        env_vars = {"TESTING_AUTH_BYPASS": "true"}
 
         with patch.dict(os.environ, env_vars, clear=False):
             os.environ.pop("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS", None)
@@ -134,7 +134,7 @@ class TestClockSkewDeploymentValidation:
         env_vars = {"WORLDAI_DEV_MODE": "true"}
 
         with patch.dict(os.environ, env_vars, clear=False):
-            os.environ.pop("TESTING", None)
+            os.environ.pop("TESTING_AUTH_BYPASS", None)
 
             skew = get_clock_skew_seconds()
             assert skew == 720

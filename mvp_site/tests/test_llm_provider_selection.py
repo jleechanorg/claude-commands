@@ -7,7 +7,7 @@ from mvp_site import constants, llm_service
 
 @pytest.fixture(autouse=True)
 def clear_testing_env(monkeypatch):
-    monkeypatch.delenv("TESTING", raising=False)
+    monkeypatch.delenv("TESTING_AUTH_BYPASS", raising=False)
     monkeypatch.delenv("MOCK_SERVICES_MODE", raising=False)
 
 
@@ -102,8 +102,8 @@ def test_mock_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
 
 
 def test_testing_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
-    """TESTING=true should bypass user prefs and return defaults."""
-    monkeypatch.setenv("TESTING", "true")
+    """TESTING_AUTH_BYPASS=true should bypass user prefs and return defaults."""
+    monkeypatch.setenv("TESTING_AUTH_BYPASS", "true")
     monkeypatch.setattr(
         llm_service,
         "get_user_settings",

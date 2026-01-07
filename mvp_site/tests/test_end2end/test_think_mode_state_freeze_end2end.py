@@ -18,8 +18,8 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-# Ensure TESTING is set before importing app modules
-os.environ.setdefault("TESTING", "true")
+# Ensure TESTING_AUTH_BYPASS is set before importing app modules
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
 from mvp_site.world_logic import apply_automatic_combat_cleanup
@@ -30,7 +30,7 @@ class TestThinkModeStateFreezeEndToEnd(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures with combat state containing defeated enemies."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
         # Game state with a defeated enemy (HP <= 0)
         self.game_state_with_defeated_enemy = {
@@ -138,7 +138,7 @@ class TestThinkModeIntegrationWithCleanup(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
 
         self.base_game_state = {
             "game_state": {

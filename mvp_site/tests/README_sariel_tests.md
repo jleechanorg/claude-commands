@@ -23,13 +23,13 @@ The Sariel test suite was consolidated from 7 redundant test files into 3 focuse
 **Usage**:
 ```bash
 # Quick test (3 interactions)
-TESTING=true vpython -m unittest tests.test_sariel_consolidated
+TESTING_AUTH_BYPASS=true vpython -m unittest tests.test_sariel_consolidated
 
 # Full test with debug
-SARIEL_FULL_TEST=true SARIEL_DEBUG_PROMPTS=true TESTING=true vpython -m unittest tests.test_sariel_consolidated
+SARIEL_FULL_TEST=true SARIEL_DEBUG_PROMPTS=true TESTING_AUTH_BYPASS=true vpython -m unittest tests.test_sariel_consolidated
 
 # Multiple replays
-SARIEL_REPLAYS=10 TESTING=true vpython -m unittest tests.test_sariel_consolidated
+SARIEL_REPLAYS=10 TESTING_AUTH_BYPASS=true vpython -m unittest tests.test_sariel_consolidated
 ```
 
 ### 2. `test_sariel_production_methods.py`

@@ -84,11 +84,11 @@ Testing targets 95%+ code coverage with systematic validation:
 ### Local Testing (Recommended Patterns)
 ```bash
 # Run all tests from project root
-TESTING=true vpython mvp_site/tests/test_integration.py
+TESTING_AUTH_BYPASS=true vpython mvp_site/tests/test_integration.py
 
 # Run specific test categories
-TESTING=true vpython mvp_site/tests/test_security.py
-TESTING=true vpython mvp_site/tests/test_models.py
+TESTING_AUTH_BYPASS=true vpython mvp_site/tests/test_security.py
+TESTING_AUTH_BYPASS=true vpython mvp_site/tests/test_models.py
 
 # Run with coverage reporting
 ./run_tests.sh --coverage
@@ -145,7 +145,7 @@ Every test must exist in exactly ONE of these states:
 |-------|----------|---------|
 | **RUN** | Test executes with real or mocked dependencies | Normal test execution |
 | **FAIL LOUDLY** | Test raises clear error explaining why it cannot run | `pytest.fail("Requires /special/path - see README")` |
-| **MOCK** | Test uses mock/fake services when `TESTING=true` | `FakeFirestore`, `FakeLLMResponse` |
+| **MOCK** | Test uses mock/fake services when `TESTING_AUTH_BYPASS=true` | `FakeFirestore`, `FakeLLMResponse` |
 
 ### Forbidden Patterns
 
@@ -181,9 +181,9 @@ def test_gemini_live_integration():
     # This test is visibly skipped with clear reason
     ...
 
-# ✅ CORRECT: Mock when TESTING=true
+# ✅ CORRECT: Mock when TESTING_AUTH_BYPASS=true
 def test_database_operation():
-    # TESTING=true enables mock mode automatically
+    # TESTING_AUTH_BYPASS=true enables mock mode automatically
     with fake_firestore_context():
         result = db_service.query(...)
         assert result is not None
@@ -199,7 +199,7 @@ def test_requires_special_setup():
 1. **Test collection must NEVER fail** due to missing environment variables
 2. All imports must be guarded or use conditional imports within test functions
 3. Use `pytest.importorskip()` for optional dependencies
-4. `TESTING=true` must enable mock mode for all external services
+4. `TESTING_AUTH_BYPASS=true` must enable mock mode for all external services
 
 ### Enforcement (policy)
 

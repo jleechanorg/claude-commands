@@ -3,13 +3,14 @@ Test API routes functionality in MCP architecture.
 Tests API endpoints through MCP API gateway pattern.
 """
 
+import datetime
 import json
 import os
 import sys
 import unittest
 
 # Set environment variables for MCP testing
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
 
 # Add parent directory to path for imports
@@ -26,7 +27,9 @@ sys.path.insert(
     ),
 )
 
+import firestore_service
 from main import create_app
+from mvp_site.tests.fake_firestore import FakeFirestoreClient
 
 
 class TestAPIRoutes(unittest.TestCase):
@@ -184,6 +187,162 @@ class TestAPIRoutes(unittest.TestCase):
         assert response.status_code in [200, 401, 404], (
             f"Expected 200/401/404 for CORS campaigns list, got {response.status_code}"
         )
+
+
+class TestStoryPagination(unittest.TestCase):
+    """Integration-style tests for story pagination service."""
+
+    def setUp(self):
+        self.fake_db = FakeFirestoreClient()
+        self.original_get_db = firestore_service.get_db
+        firestore_service.get_db = lambda: self.fake_db
+        self.user_id = "user"
+        self.campaign_id = "campaign"
+
+    def tearDown(self):
+        firestore_service.get_db = self.original_get_db
+
+    def _seed_story_entries(self, entries):
+        story_collection = (
+            self.fake_db.collection("users")
+            .document(self.user_id)
+            .collection("campaigns")
+            .document(self.campaign_id)
+            .collection("story")
+        )
+        for entry in entries:
+            doc = story_collection.document(entry["id"])
+            doc.set(
+                {
+                    "timestamp": datetime.datetime.fromisoformat(entry["timestamp"]),
+                    "actor": entry.get("actor", "gemini"),
+                    "text": entry.get("text", ""),
+                    "mode": entry.get("mode"),
+                    "user_scene_number": entry.get("user_scene_number"),
+                }
+            )
+
+    def test_shared_timestamp_cursor_returns_remaining_entries(self):
+        """Pagination should not drop entries that share the cursor timestamp."""
+
+        entries = [
+            {"id": "a", "timestamp": "2024-01-01T00:00:00+00:00", "text": "1"},
+            {"id": "b", "timestamp": "2024-01-02T00:00:00+00:00", "text": "2"},
+            {"id": "c", "timestamp": "2024-01-02T00:00:00+00:00", "text": "3"},
+            {"id": "d", "timestamp": "2024-01-03T00:00:00+00:00", "text": "4"},
+        ]
+        self._seed_story_entries(entries)
+
+        first_page = firestore_service.get_story_paginated(
+            self.user_id, self.campaign_id, limit=3
+        )
+
+        assert first_page["has_older"] is True
+        assert first_page["oldest_timestamp"] == "2024-01-02T00:00:00+00:00"
+        assert first_page["oldest_id"] == "b"
+
+        second_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=3,
+            before_timestamp=first_page["oldest_timestamp"],
+            before_id=first_page["oldest_id"],
+        )
+
+        assert second_page["has_older"] is False
+        assert second_page["fetched_count"] == 1
+        assert second_page["entries"][0]["id"] == "a"
+
+    def test_invalid_cursor_raises(self):
+        """Invalid timestamp should surface as a validation error."""
+
+        with self.assertRaises(ValueError):
+            firestore_service.get_story_paginated(
+                self.user_id,
+                self.campaign_id,
+                limit=3,
+                before_timestamp="not-a-timestamp",
+            )
+
+    def test_has_older_based_on_page_overflow(self):
+        """has_older should reflect presence of an extra entry beyond the limit."""
+
+        entries = [
+            {"id": "1", "timestamp": "2024-01-01T00:00:00+00:00"},
+            {"id": "2", "timestamp": "2024-01-02T00:00:00+00:00"},
+            {"id": "3", "timestamp": "2024-01-03T00:00:00+00:00"},
+            {"id": "4", "timestamp": "2024-01-04T00:00:00+00:00"},
+        ]
+        self._seed_story_entries(entries)
+
+        first_page = firestore_service.get_story_paginated(
+            self.user_id, self.campaign_id, limit=2
+        )
+        assert first_page["has_older"] is True
+
+        second_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=2,
+            before_timestamp=first_page["oldest_timestamp"],
+            before_id=first_page["oldest_id"],
+        )
+        assert second_page["has_older"] is False
+
+    def test_sequence_and_scene_numbers_across_pages(self):
+        """sequence_id and user_scene_number should remain absolute across pages."""
+
+        entries = [
+            {"id": "1", "timestamp": "2024-01-01T00:00:00+00:00", "actor": "user"},
+            {"id": "2", "timestamp": "2024-01-02T00:00:00+00:00", "actor": "gemini"},
+            {"id": "3", "timestamp": "2024-01-03T00:00:00+00:00", "actor": "user"},
+            {"id": "4", "timestamp": "2024-01-04T00:00:00+00:00", "actor": "gemini"},
+            {"id": "5", "timestamp": "2024-01-05T00:00:00+00:00", "actor": "user"},
+            {"id": "6", "timestamp": "2024-01-06T00:00:00+00:00", "actor": "gemini"},
+        ]
+        self._seed_story_entries(entries)
+
+        # First page (newest two entries: 5, 6)
+        first_page = firestore_service.get_story_paginated(
+            self.user_id, self.campaign_id, limit=2
+        )
+        assert [e["sequence_id"] for e in first_page["entries"]] == [5, 6]
+        assert [e.get("user_scene_number") for e in first_page["entries"]] == [
+            None,
+            3,
+        ]
+
+        # Second page (entries 3, 4) with offsets from first page
+        second_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=2,
+            before_timestamp=first_page["oldest_timestamp"],
+            before_id=first_page["oldest_id"],
+            newer_count=2,
+            newer_gemini_count=1,
+        )
+        assert [e["sequence_id"] for e in second_page["entries"]] == [3, 4]
+        assert [e.get("user_scene_number") for e in second_page["entries"]] == [
+            None,
+            2,
+        ]
+
+        # Final page (entries 1, 2) with accumulated offsets
+        third_page = firestore_service.get_story_paginated(
+            self.user_id,
+            self.campaign_id,
+            limit=2,
+            before_timestamp=second_page["oldest_timestamp"],
+            before_id=second_page["oldest_id"],
+            newer_count=4,
+            newer_gemini_count=2,
+        )
+        assert [e["sequence_id"] for e in third_page["entries"]] == [1, 2]
+        assert [e.get("user_scene_number") for e in third_page["entries"]] == [
+            None,
+            1,
+        ]
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ This supplements the existing Flask-only end2end tests with true MCP server inte
 # Set environment variables for MCP testing BEFORE any other imports
 import os
 
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["MOCK_SERVICES_MODE"] = "true"
 
 import asyncio  # noqa: E402

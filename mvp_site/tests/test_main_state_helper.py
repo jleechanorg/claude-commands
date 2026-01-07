@@ -22,7 +22,7 @@ from mvp_site.tests.fake_services import FakeServiceManager
 from mvp_site.world_logic import format_game_state_updates
 
 # Configure test environment and initialize fakes
-os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("USE_MOCKS", "true")
 with FakeServiceManager():
     pass  # FakeServiceManager configures firebase_admin mocks

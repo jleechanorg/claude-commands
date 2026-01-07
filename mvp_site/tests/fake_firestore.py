@@ -1,9 +1,16 @@
 """
 Fake Firestore implementation for testing.
 Returns real data structures instead of Mock objects to avoid JSON serialization issues.
+
+IMPORTANT: This implementation makes deep copies of data to simulate real Firestore behavior.
+Real Firestore stores data on the server, so in-memory modifications to the original dict
+do NOT affect the stored data. This fake must behave the same way.
 """
 
+import copy
 import datetime
+import json
+import operator
 
 
 class FakeFirestoreDocument:
@@ -16,8 +23,13 @@ class FakeFirestoreDocument:
         self._collections = {}
 
     def set(self, data):
-        """Simulate setting document data."""
-        self._data = data
+        """Simulate setting document data.
+
+        Makes a deep copy to simulate real Firestore behavior where stored data
+        is independent of the original dict. This is critical for catching bugs
+        where code modifies a dict after persisting it.
+        """
+        self._data = copy.deepcopy(data)
 
     def update(self, data):
         """Simulate updating document data with nested field support."""
@@ -59,6 +71,168 @@ class FakeFirestoreDocument:
         return self._collections[name]
 
 
+class FakeQuery:
+    """Fake Firestore query object."""
+
+    def __init__(self, docs, order_by=None, limit=None, filters=None, start_after=None):
+        self._docs = list(docs)
+        self._order_by = order_by or []
+        self._limit = limit
+        self._filters = filters or []
+        self._start_after = start_after
+
+    def order_by(self, field, direction=None):
+        new_order = list(self._order_by) + [(field, direction)]
+        return FakeQuery(
+            self._docs,
+            order_by=new_order,
+            limit=self._limit,
+            filters=self._filters,
+            start_after=self._start_after,
+        )
+
+    def limit(self, count):
+        return FakeQuery(
+            self._docs,
+            order_by=self._order_by,
+            limit=count,
+            filters=self._filters,
+            start_after=self._start_after,
+        )
+
+    def where(self, field, op, value):
+        filters = self._filters + [(field, op, value)]
+        return FakeQuery(
+            self._docs,
+            order_by=self._order_by,
+            limit=self._limit,
+            filters=filters,
+            start_after=self._start_after,
+        )
+
+    def start_after(self, *values):
+        return FakeQuery(
+            self._docs,
+            order_by=self._order_by,
+            limit=self._limit,
+            filters=self._filters,
+            start_after=values,
+        )
+
+    def _get_value(self, doc, field):
+        data = doc.to_dict()
+        if field in data:
+            return data[field]
+        field_name = str(field)
+        if field_name == "__name__" or field_name.endswith("DOCUMENT_ID"):
+            return getattr(doc, "id", None)
+        return None
+
+    def stream(self):
+        """Stream query results."""
+        results = list(self._docs)
+
+        # Apply filters
+        for field, op, value in self._filters:
+            # Handle datetime comparisons properly
+            # If value is string and looks like ISO, convert to datetime for comparison if doc value is datetime
+            
+            # Simple helper for comparisons
+            def compare(doc_val, target_val, op_func):
+                if doc_val is None: return False
+                
+                # Type conversion if needed
+                d_v = doc_val
+                t_v = target_val
+                
+                if hasattr(d_v, 'timestamp') and isinstance(t_v, str):
+                    try:
+                        t_v = datetime.datetime.fromisoformat(t_v.replace("Z", "+00:00"))
+                    except:
+                        pass
+                
+                try:
+                    return op_func(d_v, t_v)
+                except:
+                    return False
+
+            ops = {
+                "<": operator.lt,
+                "<=": operator.le,
+                ">": operator.gt,
+                ">=": operator.ge,
+                "==": operator.eq,
+                "!=": operator.ne
+            }
+            
+            op_func = ops.get(op)
+            if op_func:
+                results = [d for d in results if compare(self._get_value(d, field), value, op_func)]
+
+        # Apply sort
+        if self._order_by:
+            # Assume all directions are the same for simplicity
+            direction = self._order_by[0][1]
+            reverse = False
+            if direction is not None:
+                dir_str = str(direction).upper()
+                reverse = dir_str.endswith("DESCENDING")
+
+            def get_key(d):
+                key_parts = []
+                for field, _ in self._order_by:
+                    val = self._get_value(d, field)
+                    if val is None:
+                        val = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+                    key_parts.append(val)
+                return tuple(key_parts)
+
+            try:
+                results.sort(key=get_key, reverse=reverse)
+            except Exception:
+                pass  # Best effort
+
+        # Apply start_after cursor
+        if self._start_after and self._order_by:
+            cursor = []
+            for v in self._start_after:
+                if hasattr(v, "id"):
+                    cursor.append(getattr(v, "id"))
+                else:
+                    cursor.append(v)
+
+            def cmp(a, b):
+                if isinstance(a, datetime.datetime) and isinstance(b, datetime.datetime):
+                    return (a > b) - (a < b)
+                return (str(a) > str(b)) - (str(a) < str(b))
+
+            def is_after(key_vals, cursor_vals, reverse_flag):
+                for a, b in zip(key_vals, cursor_vals):
+                    comparison = cmp(a, b)
+                    if comparison == 0:
+                        continue
+                    return comparison < 0 if reverse_flag else comparison > 0
+                return False
+
+            filtered = []
+            for doc in results:
+                key = []
+                for field, _ in self._order_by:
+                    key_val = self._get_value(doc, field)
+                    if hasattr(key_val, "id"):
+                        key_val = key_val.id
+                    key.append(key_val)
+                if is_after(key, cursor, reverse):
+                    filtered.append(doc)
+            results = filtered
+
+        # Apply limit
+        if self._limit is not None:
+            results = results[: self._limit]
+
+        return results
+
+
 class FakeFirestoreCollection:
     """Fake Firestore collection that behaves like the real thing."""
 
@@ -97,8 +271,15 @@ class FakeFirestoreCollection:
 
     def order_by(self, field, direction=None):
         """Mock order_by for queries."""
-        # Return self to allow chaining
-        return self
+        return FakeQuery(self._docs.values(), order_by=[(field, direction)])
+
+    def limit(self, count):
+        """Mock limit for queries."""
+        return FakeQuery(self._docs.values(), limit=count)
+
+    def where(self, field, op, value):
+        """Mock where for queries."""
+        return FakeQuery(self._docs.values(), filters=[(field, op, value)])
 
 
 class FakeFirestoreClient:
@@ -136,8 +317,6 @@ class FakeLLMResponse:
         self.text = text
         self.narrative_text = text
         # Parse JSON if it looks like JSON for state updates
-        import json
-
         try:
             data = json.loads(text)
             # Create a mock structured response for get_state_updates()

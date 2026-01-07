@@ -93,7 +93,7 @@ FIREBASE_CONFIG = {
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    TESTING = os.getenv('TESTING', 'False').lower() == 'true'
+    TESTING_AUTH_BYPASS = os.getenv('TESTING_AUTH_BYPASS', 'False').lower() == 'true'
 ```
 
 ### Logging Configuration
@@ -115,7 +115,7 @@ LOGGING_CONFIG = {
 ### Optional Environment Variables
 - `FLASK_DEBUG` - Enable debug mode (default: False)
 - `LOG_LEVEL` - Logging level (default: INFO)
-- `TESTING` - Enable testing mode (default: False)
+- `TESTING_AUTH_BYPASS` - Enable testing mode (default: False)
 
 ## Quality Assurance
 

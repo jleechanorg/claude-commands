@@ -26,7 +26,7 @@ class TestEntityTrackingBudgetEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 

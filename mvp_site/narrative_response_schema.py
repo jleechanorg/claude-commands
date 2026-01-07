@@ -75,13 +75,18 @@ CHOICE_SCHEMA = {
 }
 
 PLANNING_BLOCK_SCHEMA = {
-    # Plan quality (Think Mode only - based on INT/WIS roll)
+    # Plan quality (Think Mode only - based on INT/WIS roll vs DC)
     "plan_quality": {
         "stat_used": str,  # "Intelligence" or "Wisdom"
         "stat_value": int,  # Character's stat value
         "modifier": str,  # e.g., "+2"
-        "roll_result": int,  # Dice roll result
-        "quality_tier": str,  # "Poor" | "Basic" | "Good" | "Excellent"
+        "roll_result": int,  # Dice roll result (1d20 + modifier)
+        "dc": int,  # Difficulty Class for this planning check
+        "dc_category": str,  # DC category name (e.g., "Complicated Planning")
+        "dc_reasoning": str,  # Why this DC was chosen
+        "success": bool,  # Whether roll >= DC
+        "margin": int,  # How much above/below DC (positive = success)
+        "quality_tier": str,  # "Confused" | "Muddled" | "Incomplete" | "Competent" | "Sharp" | "Brilliant" | "Masterful"
         "effect": str,  # Description of quality effect
     },
     # Core fields
@@ -114,15 +119,69 @@ VALID_RISK_LEVELS = {"safe", "low", "medium", "high"}
 VALID_CONFIDENCE_LEVELS = {"high", "medium", "low"}
 
 # Valid quality tiers for plan_quality (matches think_mode_instruction.md)
-# Maps roll ranges to quality descriptors
+# Now based on success/failure margin vs DC (not absolute roll values)
 VALID_QUALITY_TIERS = {
-    "Muddled",  # 1-5 (Poor)
-    "Incomplete",  # 6-10 (Below Average)
-    "Competent",  # 11-15 (Average)
-    "Sharp",  # 16-20 (Good)
-    "Brilliant",  # 21-25 (Excellent)
-    "Masterful",  # 26+ (Critical)
+    # FAILURE tiers (roll < DC)
+    "Confused",  # Failed by 10+ (severe failure - dangerously wrong conclusions)
+    "Muddled",  # Failed by 5-9 (significant failure)
+    "Incomplete",  # Failed by 1-4 (minor failure)
+    # SUCCESS tiers (roll >= DC)
+    "Competent",  # Meet or beat DC by up to 4 (basic success)
+    "Sharp",  # Beat DC by 5-9 (solid success)
+    "Brilliant",  # Beat DC by 10-14 (excellent success)
+    "Masterful",  # Beat DC by 15+ (critical success)
 }
+
+def _derive_quality_tier(success: bool, margin: int) -> str:
+    """Derive a quality tier from success flag and margin using documented bands."""
+
+    if success:
+        if margin >= 15:
+            return "Masterful"
+        if margin >= 10:
+            return "Brilliant"
+        if margin >= 5:
+            return "Sharp"
+        return "Competent"
+
+    failure_margin = abs(margin)
+    if failure_margin >= 10:
+        return "Confused"
+    if failure_margin >= 5:
+        return "Muddled"
+    return "Incomplete"
+
+
+def _coerce_bool(value: Any) -> bool | None:
+    """Best-effort conversion of arbitrary values to bool, returning None when unclear."""
+
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"true", "yes", "1"}:
+            return True
+        if lowered in {"false", "no", "0"}:
+            return False
+    return None
+
+
+def _freeze_duration_hours_from_dc(original_dc: int) -> int:
+    """Map a DC value to its freeze duration in hours (game time)."""
+
+    if original_dc >= 21:
+        return 24
+    if original_dc >= 17:
+        return 8
+    if original_dc >= 13:
+        return 4
+    if original_dc >= 9:
+        return 2
+    if original_dc >= 6:
+        return 1
+    return 1
 
 
 def _strip_embedded_planning_json(text: str) -> str:
@@ -365,7 +424,12 @@ class NarrativeResponse:
         return [str(entity).strip() for entity in entities if str(entity).strip()]
 
     def _validate_state_updates(self, state_updates: Any) -> dict[str, Any]:
-        """Validate and clean state updates"""
+        """Validate and clean state updates.
+
+        Note: frozen_plans is LLM-enforced via prompts, not Python-validated.
+        The LLM tracks freeze state and enforces re-think cooldowns based on
+        the rules in think_mode_instruction.md and planning_protocol.md.
+        """
         if state_updates is None:
             return {}
 
@@ -375,7 +439,9 @@ class NarrativeResponse:
             )
             return {}
 
-        return state_updates
+        # Pass through state_updates with minimal validation
+        # frozen_plans enforcement is handled by LLM prompts, not Python code
+        return dict(state_updates)
 
     def _validate_debug_info(self, debug_info: Any) -> dict[str, Any]:
         """Validate and clean debug info"""
@@ -584,6 +650,86 @@ class NarrativeResponse:
             context = str(context) if context is not None else ""
         validated["context"] = context
 
+        # Validate plan_quality object (Think Mode only)
+        plan_quality = planning_block.get("plan_quality")
+        if plan_quality is not None and isinstance(plan_quality, dict):
+            validated_pq: dict[str, Any] = {}
+
+            # String fields
+            for field in [
+                "stat_used",
+                "modifier",
+                "dc_category",
+                "dc_reasoning",
+                "effect",
+            ]:
+                val = plan_quality.get(field, "")
+                validated_pq[field] = str(val) if val is not None else ""
+
+            # Integer fields
+            for field in ["stat_value", "roll_result", "dc", "margin"]:
+                val = plan_quality.get(field)
+                if isinstance(val, int):
+                    validated_pq[field] = val
+                elif val is not None:
+                    try:
+                        validated_pq[field] = int(val)
+                    except (ValueError, TypeError):
+                        validated_pq[field] = 0
+                else:
+                    validated_pq[field] = 0
+
+            expected_margin = validated_pq.get("roll_result", 0) - validated_pq.get(
+                "dc", 0
+            )
+            actual_margin = validated_pq.get("margin", 0)
+            if actual_margin != expected_margin:
+                logging_util.warning(
+                    f"plan_quality margin inconsistency: margin={actual_margin} but roll_result-dc={expected_margin}"
+                )
+                validated_pq["margin"] = expected_margin
+
+            # Boolean field
+            provided_success = _coerce_bool(plan_quality.get("success"))
+            derived_success = validated_pq.get("roll_result", 0) >= validated_pq.get(
+                "dc", 0
+            )
+            if provided_success is not None:
+                if provided_success != derived_success:
+                    logging_util.warning(
+                        f"plan_quality success inconsistency: success={provided_success} but "
+                        f"roll_result({validated_pq.get('roll_result', 0)}) >= dc({validated_pq.get('dc', 0)}) is {derived_success}"
+                    )
+            else:
+                logging_util.warning(
+                    "plan_quality.success missing or invalid; deriving success from roll_result vs dc"
+                )
+            validated_pq["success"] = derived_success
+
+            derived_quality_tier = _derive_quality_tier(
+                validated_pq["success"], validated_pq.get("margin", 0)
+            )
+            quality_tier = plan_quality.get("quality_tier", "")
+            if quality_tier in VALID_QUALITY_TIERS:
+                if quality_tier != derived_quality_tier:
+                    logging_util.warning(
+                        "plan_quality quality_tier '%s' inconsistent with margin %s (expected '%s')",
+                        quality_tier,
+                        validated_pq.get("margin", 0),
+                        derived_quality_tier,
+                    )
+                    validated_pq["quality_tier"] = derived_quality_tier
+                else:
+                    validated_pq["quality_tier"] = quality_tier
+            else:
+                validated_pq["quality_tier"] = derived_quality_tier
+                if quality_tier:
+                    logging_util.warning(
+                        f"Invalid quality_tier '{quality_tier}', defaulting to '{derived_quality_tier}'"
+                    )
+
+            validated["plan_quality"] = validated_pq
+
         # Validate choices object
         choices = planning_block.get("choices", {})
         if not isinstance(choices, dict):
@@ -729,6 +875,18 @@ class NarrativeResponse:
         if "context" in planning_block:
             sanitized["context"] = sanitize_string(planning_block["context"])
 
+        # Preserve plan_quality but sanitize string subfields
+        if "plan_quality" in planning_block and isinstance(
+            planning_block.get("plan_quality"), dict
+        ):
+            sanitized_pq: dict[str, Any] = {}
+            for key, value in planning_block["plan_quality"].items():
+                if isinstance(value, str):
+                    sanitized_pq[key] = sanitize_string(value)
+                else:
+                    sanitized_pq[key] = value
+            sanitized["plan_quality"] = sanitized_pq
+
         # Sanitize choices
         sanitized_choices = {}
         for choice_key, choice_data in planning_block.get("choices", {}).items():
@@ -842,6 +1000,7 @@ class EntityTrackingInstruction:
                             "outcome": "bridge supports weakened, travel slowed",
                             "event_type": "immediate",
                             "status": "pending",  # pending|discovered|resolved
+                            "player_aware": True,  # player can observe bridge damage
                             "discovery_condition": "locals report repairs needed; player notices delays",
                             "player_impact": "harder to move troops north next turn",
                         },
@@ -852,9 +1011,21 @@ class EntityTrackingInstruction:
                             "outcome": "ghostly lights seen, wards destabilizing",
                             "event_type": "immediate",
                             "status": "discovered",  # player learned of this
+                            "player_aware": True,  # player heard rumors
                             "discovered_turn": 4,  # when player learned
                             "discovery_condition": "rumors from ferrymen or scouting the marsh",
                             "player_impact": "increases undead activity near routes east of the marsh",
+                        },
+                        {
+                            "actor": "Lord Vance",
+                            "action": "hired assassins to eliminate rival merchant",
+                            "location": "Capital City, private estate",
+                            "outcome": "contract signed, assassins en route",
+                            "event_type": "long_term",
+                            "status": "pending",
+                            "player_aware": False,  # secret meeting, player cannot know
+                            "discovery_condition": "merchant found dead or assassins intercepted",
+                            "player_impact": "may affect trade relations if player involved with either party",
                         },
                     ],
                     # Actual turn number when these background events were generated.

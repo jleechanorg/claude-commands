@@ -17,7 +17,11 @@ sys.path.insert(
 from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import (
     CJK_PATTERN,
+    VALID_QUALITY_TIERS,
     NarrativeResponse,
+    _coerce_bool,
+    _derive_quality_tier,
+    _freeze_duration_hours_from_dc,
     parse_structured_response,
 )
 
@@ -343,6 +347,288 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         assert "夜晚" not in cleaned_text
         assert cleaned_text == structured.narrative
         assert cleaned_text.startswith("The hero")
+
+
+class TestDeriveQualityTier(unittest.TestCase):
+    """Test the _derive_quality_tier() helper function."""
+
+    def test_success_masterful_margin_15_plus(self):
+        """Margin >= 15 with success should return Masterful."""
+        assert _derive_quality_tier(True, 15) == "Masterful"
+        assert _derive_quality_tier(True, 20) == "Masterful"
+
+    def test_success_brilliant_margin_10_to_14(self):
+        """Margin 10-14 with success should return Brilliant."""
+        assert _derive_quality_tier(True, 10) == "Brilliant"
+        assert _derive_quality_tier(True, 14) == "Brilliant"
+
+    def test_success_sharp_margin_5_to_9(self):
+        """Margin 5-9 with success should return Sharp."""
+        assert _derive_quality_tier(True, 5) == "Sharp"
+        assert _derive_quality_tier(True, 9) == "Sharp"
+
+    def test_success_competent_margin_0_to_4(self):
+        """Margin 0-4 with success should return Competent."""
+        assert _derive_quality_tier(True, 0) == "Competent"
+        assert _derive_quality_tier(True, 4) == "Competent"
+
+    def test_failure_incomplete_margin_minus_1_to_4(self):
+        """Failure by 1-4 should return Incomplete."""
+        assert _derive_quality_tier(False, -1) == "Incomplete"
+        assert _derive_quality_tier(False, -4) == "Incomplete"
+
+    def test_failure_muddled_margin_minus_5_to_9(self):
+        """Failure by 5-9 should return Muddled."""
+        assert _derive_quality_tier(False, -5) == "Muddled"
+        assert _derive_quality_tier(False, -9) == "Muddled"
+
+    def test_failure_confused_margin_minus_10_plus(self):
+        """Failure by 10+ should return Confused."""
+        assert _derive_quality_tier(False, -10) == "Confused"
+        assert _derive_quality_tier(False, -15) == "Confused"
+
+    def test_all_tiers_in_valid_set(self):
+        """All returned tiers should be in VALID_QUALITY_TIERS."""
+        test_cases = [
+            (True, 15),
+            (True, 10),
+            (True, 5),
+            (True, 0),
+            (False, -1),
+            (False, -5),
+            (False, -10),
+        ]
+        for success, margin in test_cases:
+            tier = _derive_quality_tier(success, margin)
+            assert tier in VALID_QUALITY_TIERS, (
+                f"Tier '{tier}' not in VALID_QUALITY_TIERS"
+            )
+
+
+class TestCoerceBool(unittest.TestCase):
+    """Test the _coerce_bool() helper function."""
+
+    def test_bool_passthrough(self):
+        """Boolean values should pass through unchanged."""
+        assert _coerce_bool(True) is True
+        assert _coerce_bool(False) is False
+
+    def test_int_coercion(self):
+        """Integers should coerce to bool (0=False, nonzero=True)."""
+        assert _coerce_bool(0) is False
+        assert _coerce_bool(1) is True
+        assert _coerce_bool(42) is True
+
+    def test_string_true_variants(self):
+        """String 'true', 'yes', '1' should coerce to True."""
+        assert _coerce_bool("true") is True
+        assert _coerce_bool("True") is True
+        assert _coerce_bool("TRUE") is True
+        assert _coerce_bool("yes") is True
+        assert _coerce_bool("1") is True
+
+    def test_string_false_variants(self):
+        """String 'false', 'no', '0' should coerce to False."""
+        assert _coerce_bool("false") is False
+        assert _coerce_bool("False") is False
+        assert _coerce_bool("no") is False
+        assert _coerce_bool("0") is False
+
+    def test_unrecognized_string_returns_none(self):
+        """Unrecognized strings should return None."""
+        assert _coerce_bool("maybe") is None
+        assert _coerce_bool("unknown") is None
+        assert _coerce_bool("") is None
+
+    def test_none_input_returns_none(self):
+        """None input should return None."""
+        assert _coerce_bool(None) is None
+
+
+class TestPlanQualityValidation(unittest.TestCase):
+    """Test plan_quality validation in NarrativeResponse."""
+
+    def test_valid_plan_quality_passes_through(self):
+        """Valid plan_quality with consistent values should pass through."""
+        planning_block = {
+            "thinking": "Analyzing the situation...",
+            "plan_quality": {
+                "stat_used": "Intelligence",
+                "stat_value": 14,
+                "modifier": "+2",
+                "roll_result": 18,
+                "dc": 12,
+                "dc_category": "Complicated Planning",
+                "dc_reasoning": "Multi-step tactical plan",
+                "success": True,
+                "margin": 6,  # 18 - 12 = 6
+                "quality_tier": "Sharp",  # margin 5-9
+                "effect": "Clear analysis with good options",
+            },
+            "choices": {
+                "option_a": {
+                    "text": "Option A",
+                    "description": "First option",
+                    "risk_level": "low",
+                },
+            },
+        }
+        response = NarrativeResponse(
+            narrative="You consider your options...",
+            planning_block=planning_block,
+        )
+        pq = response.planning_block.get("plan_quality", {})
+        assert pq["success"] is True
+        assert pq["margin"] == 6
+        assert pq["quality_tier"] == "Sharp"
+
+    def test_margin_auto_corrected_if_inconsistent(self):
+        """Margin should be auto-corrected if it doesn't match roll_result - dc."""
+        planning_block = {
+            "thinking": "Analysis...",
+            "plan_quality": {
+                "stat_used": "Wisdom",
+                "stat_value": 12,
+                "modifier": "+1",
+                "roll_result": 15,
+                "dc": 10,
+                "dc_category": "Easy",
+                "dc_reasoning": "Simple check",
+                "success": True,
+                "margin": 999,  # Wrong! Should be 15 - 10 = 5
+                "quality_tier": "Sharp",
+                "effect": "Good outcome",
+            },
+            "choices": {
+                "continue": {
+                    "text": "Continue",
+                    "description": "Proceed",
+                    "risk_level": "safe",
+                },
+            },
+        }
+        response = NarrativeResponse(
+            narrative="You think...",
+            planning_block=planning_block,
+        )
+        pq = response.planning_block.get("plan_quality", {})
+        # Margin should be corrected to 5 (15 - 10)
+        assert pq["margin"] == 5
+
+    def test_success_derived_from_roll_vs_dc(self):
+        """Success should be derived from roll_result >= dc, not from LLM's claim."""
+        planning_block = {
+            "thinking": "Hmm...",
+            "plan_quality": {
+                "stat_used": "Intelligence",
+                "stat_value": 10,
+                "modifier": "+0",
+                "roll_result": 8,
+                "dc": 12,
+                "dc_category": "Moderate",
+                "dc_reasoning": "Standard difficulty",
+                "success": True,  # Wrong! 8 < 12 should be failure
+                "margin": -4,
+                "quality_tier": "Incomplete",
+                "effect": "Partial understanding",
+            },
+            "choices": {
+                "retry": {
+                    "text": "Try again",
+                    "description": "Attempt once more",
+                    "risk_level": "low",
+                },
+            },
+        }
+        response = NarrativeResponse(
+            narrative="You struggle to think clearly...",
+            planning_block=planning_block,
+        )
+        pq = response.planning_block.get("plan_quality", {})
+        # Success should be corrected to False (8 < 12)
+        assert pq["success"] is False
+
+    def test_invalid_quality_tier_replaced_with_derived(self):
+        """Invalid quality_tier should be replaced with derived value."""
+        planning_block = {
+            "thinking": "Deep thought...",
+            "plan_quality": {
+                "stat_used": "Intelligence",
+                "stat_value": 16,
+                "modifier": "+3",
+                "roll_result": 20,
+                "dc": 10,
+                "dc_category": "Easy",
+                "dc_reasoning": "Simple",
+                "success": True,
+                "margin": 10,
+                "quality_tier": "NotARealTier",  # Invalid!
+                "effect": "Great result",
+            },
+            "choices": {
+                "act": {
+                    "text": "Act",
+                    "description": "Take action",
+                    "risk_level": "safe",
+                },
+            },
+        }
+        response = NarrativeResponse(
+            narrative="Brilliant insight!",
+            planning_block=planning_block,
+        )
+        pq = response.planning_block.get("plan_quality", {})
+        # Should be derived as Brilliant (margin 10-14)
+        assert pq["quality_tier"] == "Brilliant"
+        assert pq["quality_tier"] in VALID_QUALITY_TIERS
+
+    def test_quality_tier_corrected_when_inconsistent(self):
+        """Valid but inconsistent quality_tier should be auto-corrected to derived value."""
+
+        planning_block = {
+            "thinking": "Deep thought...",
+            "plan_quality": {
+                "stat_used": "Intelligence",
+                "stat_value": 16,
+                "modifier": "+3",
+                "roll_result": 12,
+                "dc": 10,
+                "dc_category": "Easy",
+                "dc_reasoning": "Simple",
+                "success": True,
+                "margin": 2,
+                "quality_tier": "Masterful",  # Valid but inconsistent; margin 2 should be Competent
+                "effect": "Great result",
+            },
+            "choices": {
+                "act": {
+                    "text": "Act",
+                    "description": "Take action",
+                    "risk_level": "safe",
+                },
+            },
+        }
+
+        response = NarrativeResponse(
+            narrative="Solid insight!",
+            planning_block=planning_block,
+        )
+        pq = response.planning_block.get("plan_quality", {})
+        # Should be corrected to Competent (margin 0-4 success)
+        assert pq["quality_tier"] == "Competent"
+        assert pq["quality_tier"] in VALID_QUALITY_TIERS
+
+
+class TestFreezeDurations(unittest.TestCase):
+    """Test DC-to-freeze duration mapping helper."""
+
+    def test_dc_to_freeze_hours_mapping(self):
+        assert _freeze_duration_hours_from_dc(3) == 1
+        assert _freeze_duration_hours_from_dc(7) == 1
+        assert _freeze_duration_hours_from_dc(10) == 2
+        assert _freeze_duration_hours_from_dc(14) == 4
+        assert _freeze_duration_hours_from_dc(18) == 8
+        assert _freeze_duration_hours_from_dc(25) == 24
 
 
 if __name__ == "__main__":

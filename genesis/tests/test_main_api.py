@@ -9,13 +9,15 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 # Import the FastAPI app and models
-from main import (
+from genesis.main import (
     Base,
     Customer,
     Order,
     OrderItem,
     Product,
     app,
+    get_db,
+    get_tenant_db,
 )
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -36,9 +38,8 @@ def override_get_db():
 
 
 # Override the database dependency
-from main import get_db
-
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_tenant_db] = override_get_db
 
 
 class TestEcommerceAPI(unittest.TestCase):

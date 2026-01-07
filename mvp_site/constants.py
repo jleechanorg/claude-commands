@@ -106,6 +106,7 @@ MODELS_WITH_CODE_EXECUTION: set[str] = {
 # OpenRouter model selection tuned for narrative-heavy D&D play
 # Official docs: https://openrouter.ai/docs
 DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
+SPICY_OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
 ALLOWED_OPENROUTER_MODELS = [
     # meta-llama/llama-3.1-70b-instruct: 128K context, native function calling,
     # parallel tool calls, zero-shot/few-shot tool use, multilingual (8 languages).
@@ -130,7 +131,7 @@ ALLOWED_OPENROUTER_MODELS = [
     # Search, MCP tools. Multi-turn RL training across full context window.
     # Reasoning mode toggleable. $0.20/$0.05 per M input, $0.50/M output.
     # Source: https://x.ai/news/grok-4-1-fast
-    "x-ai/grok-4.1-fast",
+    SPICY_OPENROUTER_MODEL,
 ]
 
 # Cerebras direct provider defaults

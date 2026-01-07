@@ -15,8 +15,8 @@ from __future__ import annotations
 import os
 import unittest
 
-# Ensure TESTING is set before importing app modules
-os.environ.setdefault("TESTING", "true")
+# Ensure TESTING_AUTH_BYPASS is set before importing app modules
+os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
 from mvp_site import constants
@@ -29,7 +29,7 @@ class TestPlanningProtocolInAllModes(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        os.environ["TESTING"] = "true"
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
         # Create a minimal game state for agent instantiation
         self.game_state = GameState(
             player_character_data={

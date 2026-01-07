@@ -14,6 +14,7 @@
 - Scene vs Turn: "Scene #X" counts AI responses only. "Turn" counts ALL entries. scene ≈ turn/2.
 - 🏆 NON-COMBAT ENCOUNTERS: For heists/social/stealth, use encounter_state with encounter_active, encounter_type, encounter_completed, encounter_summary.xp_awarded
 - 🏆 REWARDS COMPLETION: After awarding XP, MUST set "rewards_processed": true in combat_state or encounter_state
+- 🔧 SYSTEM CORRECTIONS: If `system_corrections` array is in input, you MUST fix those state errors immediately in your response
 - 🚨 VISIBILITY RULE: Users see ONLY the narrative text. state_updates, rewards_pending are invisible to players.
   XP awards MUST be stated in narrative: "You gain X XP!" Level-up MUST be announced in narrative text.
 /ESSENTIALS -->
@@ -218,6 +219,27 @@ Every response MUST be valid JSON with this exact structure:
   - **Phase 1:** Include `tool_requests` with placeholder narrative like "Awaiting dice results..."
   - **Phase 2:** Server gives you results - write final narrative using those exact numbers.
 <!-- END_TOOL_REQUESTS_DICE -->
+
+<!-- BEGIN_PLAN_QUALITY_DC_ADJUSTMENT -->
+## Plan Quality → DC Adjustment
+
+**See Planning Protocol for full details.** Summary:
+
+| Factor | DC Modifier |
+|--------|-------------|
+| Chose `recommended_approach` | -2 |
+| Chose `high` risk option | +2 |
+| `Brilliant`/`Masterful` planning | -1 |
+| `Confused` planning | +2 |
+| `low` confidence choice | +1 |
+
+**Caps:** ±4 max, floor 5, ceiling 30
+
+**dc_reasoning format:** `"base DC 15 (alert guard); recommended (-2); brilliant (-1) = DC 12"`
+
+**Risk rewards:** `high` risk success → ×1.5 XP, +25% gold, bonus item chance, superior narrative outcome.
+<!-- END_PLAN_QUALITY_DC_ADJUSTMENT -->
+
 - `resources`: (string) "remaining/total" format, Level 1 half-casters show "No Spells Yet (Level 2+)"
 - `rewards_box`: (object) **REQUIRED when xp_awarded > 0**. Include whenever rewards are processed (combat, heist, social, quest). Without this, users cannot see their rewards!
   - `source`: (string) combat | encounter | quest | milestone
@@ -552,7 +574,29 @@ The server performs SHALLOW MERGE on state_updates. If you output a complete rel
 
 ## Input Schema
 
-**Fields:** `checkpoint` (position/quests), `core_memories` (past events), `reference_timeline` (sequence IDs), `current_game_state` (highest authority), `entity_manifest` (present entities), `timeline_log` (recent exchanges), `current_input` (player action), `system_context` (session meta)
+**Fields:** `checkpoint` (position/quests), `core_memories` (past events), `reference_timeline` (sequence IDs), `current_game_state` (highest authority), `entity_manifest` (present entities), `timeline_log` (recent exchanges), `current_input` (player action), `system_context` (session meta), `system_corrections` (state errors requiring fix)
+
+### System Corrections (LLM Self-Correction Protocol)
+
+When the server detects state discrepancies in your previous response, a `system_corrections` array will be included in your next input. **You MUST address these corrections immediately.**
+
+**Example Input with Corrections:**
+```json
+{
+  "current_input": "I continue exploring the dungeon",
+  "system_corrections": [
+    "REWARDS_STATE_ERROR: Combat ended (phase=ended) with summary, but rewards_processed=False. You MUST set combat_state.rewards_processed=true."
+  ]
+}
+```
+
+**Handling Corrections:**
+1. Read all `system_corrections` entries before generating your response
+2. Apply the required fixes in your `state_updates`
+3. **CRITICAL:** Corrections take priority over normal narrative flow
+4. Each correction explains exactly what field to set and why
+
+**Why This Exists:** Instead of the server overriding your decisions, we inform you of issues and let you fix them. This keeps you in control while ensuring game state consistency.
 
 ## D&D 5E Rules (SRD)
 
@@ -1565,6 +1609,14 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 **Don't Track:** Feelings, descriptions, temporary scene details (narrative content)
 
 **🚨 RELATIONSHIP UPDATES ARE MANDATORY:** After any significant NPC interaction, update that NPC's `relationships.player.trust_level` and relevant arrays. For trust change amounts and trigger tables, request `debug_info.meta.needs_detailed_instructions: ["relationships"]`.
+
+### frozen_plans (Think Mode Only)
+
+**Purpose:** Tracks planning topics that failed and are temporarily "frozen" (character's mind is stuck).
+
+**Location:** `state_updates.frozen_plans` — See `think_mode_instruction.md` for full Plan Freeze mechanic.
+
+**Story Mode behavior:** If `frozen_plans` exists in state, do NOT modify it. Only Think Mode manages this field.
 
 ### Arc Milestones (Narrative Arc Tracking)
 

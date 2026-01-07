@@ -146,7 +146,7 @@ app = create_app()
 - `USE_MOCK_SERVICES` - Enable mock services globally
 - `MOCK_FIRESTORE` - Enable only Firestore mocks
 - `MOCK_GEMINI` - Enable only Gemini mocks
-- `TESTING` - Automatic mock enablement in test mode
+- `TESTING_AUTH_BYPASS` - Automatic mock enablement in test mode
 
 ### Configuration Options
 ```python

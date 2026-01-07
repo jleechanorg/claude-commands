@@ -57,7 +57,7 @@ class FakeServiceManager:
     def setup_environment(self):
         """Set up test environment variables."""
         test_env = {
-            "TESTING": "true",
+            "TESTING_AUTH_BYPASS": "true",
             "GEMINI_API_KEY": "fake-api-key",
             "FIREBASE_CREDENTIALS": "fake-credentials",
         }

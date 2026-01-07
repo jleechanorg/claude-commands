@@ -488,7 +488,7 @@ def run_tdd_test_suite():
 
 if __name__ == "__main__":
     # Set testing environment
-    os.environ["TESTING"] = "true"
+    os.environ["TESTING_AUTH_BYPASS"] = "true"
 
     success = run_tdd_test_suite()
     sys.exit(0 if success else 1)

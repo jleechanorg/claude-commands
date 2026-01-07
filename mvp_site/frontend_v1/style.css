@@ -252,36 +252,56 @@ a.navbar-brand:hover {
 /* ========== CAMPAIGN LIST STYLING ========== */
 
 /* Ensure consistent campaign list layout between local and production */
-.list-group-item .d-flex {
+.list-group-item[data-campaign-id] .campaign-list-header {
   flex-wrap: nowrap !important;
   align-items: center !important;
 }
 
-.list-group-item .d-flex > div:last-child {
+.list-group-item[data-campaign-id] .campaign-list-header .campaign-list-actions {
   display: flex !important;
   align-items: center !important;
   flex-shrink: 0 !important;
   white-space: nowrap !important;
 }
 
-.list-group-item .edit-campaign-btn {
+.list-group-item[data-campaign-id] .edit-campaign-btn {
   margin-right: 0.5rem !important;
   flex-shrink: 0 !important;
 }
 
-.list-group-item .text-muted {
+.list-group-item[data-campaign-id] .text-muted {
   font-size: 0.875rem !important;
   flex-shrink: 0 !important;
   white-space: nowrap !important;
 }
 
 /* Ensure campaign title doesn't overflow */
-.list-group-item h5.mb-1 {
+.list-group-item[data-campaign-id] .campaign-list-header .campaign-title-link {
   flex: 1 1 auto !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
   margin-right: 1rem !important;
+}
+
+@media (max-width: 575.98px) {
+  .list-group-item[data-campaign-id] .campaign-list-header {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+  }
+
+  .list-group-item[data-campaign-id] .campaign-list-header .campaign-list-actions {
+    width: 100%;
+    justify-content: flex-start;
+    white-space: normal !important;
+  }
+
+  .list-group-item[data-campaign-id] .campaign-list-header .campaign-title-link {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    margin-right: 0 !important;
+  }
 }
 
 /* ========== STRUCTURED FIELDS STYLING ========== */

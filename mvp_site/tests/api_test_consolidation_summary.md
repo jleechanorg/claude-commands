@@ -34,16 +34,16 @@
 ### test_sariel_consolidated.py
 ```bash
 # Basic test (3 interactions)
-TESTING=true vpython tests/test_sariel_consolidated.py
+TESTING_AUTH_BYPASS=true vpython tests/test_sariel_consolidated.py
 
 # Full test (10 interactions)
-SARIEL_FULL_TEST=true TESTING=true vpython tests/test_sariel_consolidated.py
+SARIEL_FULL_TEST=true TESTING_AUTH_BYPASS=true vpython tests/test_sariel_consolidated.py
 
 # Debug prompts
-SARIEL_DEBUG_PROMPTS=true TESTING=true vpython tests/test_sariel_consolidated.py
+SARIEL_DEBUG_PROMPTS=true TESTING_AUTH_BYPASS=true vpython tests/test_sariel_consolidated.py
 
 # Multiple replays
-SARIEL_REPLAYS=5 TESTING=true vpython tests/test_sariel_consolidated.py
+SARIEL_REPLAYS=5 TESTING_AUTH_BYPASS=true vpython tests/test_sariel_consolidated.py
 ```
 
 ## Other Real API Tests Still Active

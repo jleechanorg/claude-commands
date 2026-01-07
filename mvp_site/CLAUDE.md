@@ -14,10 +14,10 @@ This file exists for backward compatibility and directory-specific notes for the
 ### Running Tests
 ```bash
 # From project root (preferred):
-TESTING=true vpython mvp_site/tests/test_integration.py
+TESTING_AUTH_BYPASS=true vpython mvp_site/tests/test_integration.py
 
 # If in mvp_site directory:
-cd .. && TESTING=true vpython mvp_site/tests/test_integration.py
+cd .. && TESTING_AUTH_BYPASS=true vpython mvp_site/tests/test_integration.py
 ```
 
 ### Claude Code Navigation Best Practices

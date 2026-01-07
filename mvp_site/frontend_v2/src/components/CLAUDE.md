@@ -58,6 +58,6 @@ npm test src/components/
 
 ## Quick Reference
 - **Complete Protocols**: See [../../../../CLAUDE.md](../../../../CLAUDE.md)
-- **Test Execution**: `TESTING=true vpython mvp_site/tests/test_frontend.py` from project root
+- **Test Execution**: `TESTING_AUTH_BYPASS=true vpython mvp_site/tests/test_frontend.py` from project root
 - **All Tests**: `../../../../run_tests.sh` (run from project root; CI simulation by default)
 - **Component Documentation**: See individual component files for props and usage

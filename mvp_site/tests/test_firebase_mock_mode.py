@@ -27,13 +27,13 @@ class TestFirebaseMockMode(unittest.TestCase):
         Test that main.py initializes Firebase regardless of MOCK_SERVICES_MODE (testing mode removed).
         """
         # Save original environment
-        original_testing = os.environ.get("TESTING")
+        original_testing = os.environ.get("TESTING_AUTH_BYPASS")
         original_mock = os.environ.get("MOCK_SERVICES_MODE")
 
         try:
             # Set up CI-like environment
-            if "TESTING" in os.environ:
-                del os.environ["TESTING"]
+            if "TESTING_AUTH_BYPASS" in os.environ:
+                del os.environ["TESTING_AUTH_BYPASS"]
             os.environ["MOCK_SERVICES_MODE"] = "true"
 
             # Mock firebase_admin to control init path
@@ -94,9 +94,9 @@ class TestFirebaseMockMode(unittest.TestCase):
         finally:
             # Restore environment
             if original_testing is not None:
-                os.environ["TESTING"] = original_testing
-            elif "TESTING" in os.environ:
-                del os.environ["TESTING"]
+                os.environ["TESTING_AUTH_BYPASS"] = original_testing
+            elif "TESTING_AUTH_BYPASS" in os.environ:
+                del os.environ["TESTING_AUTH_BYPASS"]
 
             if original_mock is not None:
                 os.environ["MOCK_SERVICES_MODE"] = original_mock
@@ -112,13 +112,13 @@ class TestFirebaseMockMode(unittest.TestCase):
         Test that world_logic.py initializes Firebase regardless of MOCK_SERVICES_MODE (testing mode removed).
         """
         # Save original environment
-        original_testing = os.environ.get("TESTING")
+        original_testing = os.environ.get("TESTING_AUTH_BYPASS")
         original_mock = os.environ.get("MOCK_SERVICES_MODE")
 
         try:
             # Set up CI-like environment
-            if "TESTING" in os.environ:
-                del os.environ["TESTING"]
+            if "TESTING_AUTH_BYPASS" in os.environ:
+                del os.environ["TESTING_AUTH_BYPASS"]
             os.environ["MOCK_SERVICES_MODE"] = "true"
 
             # Mock firebase_admin to control init path
@@ -186,9 +186,9 @@ class TestFirebaseMockMode(unittest.TestCase):
         finally:
             # Restore environment
             if original_testing is not None:
-                os.environ["TESTING"] = original_testing
-            elif "TESTING" in os.environ:
-                del os.environ["TESTING"]
+                os.environ["TESTING_AUTH_BYPASS"] = original_testing
+            elif "TESTING_AUTH_BYPASS" in os.environ:
+                del os.environ["TESTING_AUTH_BYPASS"]
 
             if original_mock is not None:
                 os.environ["MOCK_SERVICES_MODE"] = original_mock
@@ -203,7 +203,7 @@ class TestFirebaseMockMode(unittest.TestCase):
 if __name__ == "__main__":
     print("🟢 GREEN PHASE: Testing MOCK_SERVICES_MODE support...")
     print(
-        f"Environment: TESTING={os.environ.get('TESTING', 'NOT SET')}, "
+        f"Environment: TESTING_AUTH_BYPASS={os.environ.get('TESTING_AUTH_BYPASS', 'NOT SET')}, "
         f"MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE', 'NOT SET')}"
     )
 

@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
 
@@ -110,10 +110,10 @@ class TestLLMProviderSettingsEndToEnd(unittest.TestCase):
         assert final_payload["gemini_model"] == constants.DEFAULT_GEMINI_MODEL
 
 
-class TestTESTINGEnvForcesMockMode(unittest.TestCase):
-    """REGRESSION TEST: Verify TESTING=true forces test model selection.
+class TestTESTING_AUTH_BYPASSEnvForcesMockMode(unittest.TestCase):
+    """REGRESSION TEST: Verify TESTING_AUTH_BYPASS=true forces test model selection.
 
-    This test catches a regression where TESTING=true was removed from the
+    This test catches a regression where TESTING_AUTH_BYPASS=true was removed from the
     force_test_model check in _select_provider_and_model(), causing tests
     to hit real LLM APIs when MOCK_SERVICES_MODE is not explicitly set.
 
@@ -121,7 +121,7 @@ class TestTESTINGEnvForcesMockMode(unittest.TestCase):
     """
 
     def test_testing_env_forces_gemini_test_model(self):
-        """When TESTING=true, _select_provider_and_model must return Gemini test model.
+        """When TESTING_AUTH_BYPASS=true, _select_provider_and_model must return Gemini test model.
 
         This prevents tests from hitting real OpenRouter/Cerebras APIs even when
         a user has those providers configured in Firestore.
@@ -130,49 +130,49 @@ class TestTESTINGEnvForcesMockMode(unittest.TestCase):
         from llm_service import _select_provider_and_model
 
         # Save original env state
-        original_testing = os.environ.get("TESTING")
+        original_testing = os.environ.get("TESTING_AUTH_BYPASS")
         original_mock = os.environ.get("MOCK_SERVICES_MODE")
         original_force = os.environ.get("FORCE_TEST_MODEL")
 
         try:
-            # Set ONLY TESTING=true (not MOCK_SERVICES_MODE or FORCE_TEST_MODEL)
-            os.environ["TESTING"] = "true"
-            # Explicitly UNSET the other flags to isolate TESTING behavior
+            # Set ONLY TESTING_AUTH_BYPASS=true (not MOCK_SERVICES_MODE or FORCE_TEST_MODEL)
+            os.environ["TESTING_AUTH_BYPASS"] = "true"
+            # Explicitly UNSET the other flags to isolate TESTING_AUTH_BYPASS behavior
             os.environ.pop("MOCK_SERVICES_MODE", None)
             os.environ.pop("FORCE_TEST_MODEL", None)
 
-            # Even with a user who has OpenRouter configured, TESTING=true
+            # Even with a user who has OpenRouter configured, TESTING_AUTH_BYPASS=true
             # should force Gemini to avoid hitting real APIs
             result = _select_provider_and_model(user_id=None)
 
             # Must return Gemini (default provider) in test mode
             assert result.provider == "gemini", (
-                f"REGRESSION: TESTING=true should force Gemini provider, got '{result.provider}'. "
-                "Check _select_provider_and_model() includes TESTING check in force_test_model."
+                f"REGRESSION: TESTING_AUTH_BYPASS=true should force Gemini provider, got '{result.provider}'. "
+                "Check _select_provider_and_model() includes TESTING_AUTH_BYPASS check in force_test_model."
             )
         finally:
             # Restore original env state
             if original_testing is not None:
-                os.environ["TESTING"] = original_testing
+                os.environ["TESTING_AUTH_BYPASS"] = original_testing
             else:
-                os.environ.pop("TESTING", None)
+                os.environ.pop("TESTING_AUTH_BYPASS", None)
             if original_mock is not None:
                 os.environ["MOCK_SERVICES_MODE"] = original_mock
             if original_force is not None:
                 os.environ["FORCE_TEST_MODEL"] = original_force
 
     def test_testing_env_prevents_openrouter_selection(self):
-        """TESTING=true must override user's OpenRouter preference to prevent real API calls."""
+        """TESTING_AUTH_BYPASS=true must override user's OpenRouter preference to prevent real API calls."""
         from llm_service import _select_provider_and_model
 
         # Save original env state
-        original_testing = os.environ.get("TESTING")
+        original_testing = os.environ.get("TESTING_AUTH_BYPASS")
         original_mock = os.environ.get("MOCK_SERVICES_MODE")
         original_force = os.environ.get("FORCE_TEST_MODEL")
 
         try:
-            # Set ONLY TESTING=true
-            os.environ["TESTING"] = "true"
+            # Set ONLY TESTING_AUTH_BYPASS=true
+            os.environ["TESTING_AUTH_BYPASS"] = "true"
             os.environ.pop("MOCK_SERVICES_MODE", None)
             os.environ.pop("FORCE_TEST_MODEL", None)
 
@@ -188,17 +188,17 @@ class TestTESTINGEnvForcesMockMode(unittest.TestCase):
 
                 result = _select_provider_and_model(user_id=fake_user_id)
 
-                # TESTING=true must OVERRIDE user preference to Gemini
+                # TESTING_AUTH_BYPASS=true must OVERRIDE user preference to Gemini
                 assert result.provider == "gemini", (
-                    f"REGRESSION: TESTING=true should force Gemini even with OpenRouter user preference, "
+                    f"REGRESSION: TESTING_AUTH_BYPASS=true should force Gemini even with OpenRouter user preference, "
                     f"got '{result.provider}'. Real API calls will occur in tests!"
                 )
         finally:
             # Restore original env state
             if original_testing is not None:
-                os.environ["TESTING"] = original_testing
+                os.environ["TESTING_AUTH_BYPASS"] = original_testing
             else:
-                os.environ.pop("TESTING", None)
+                os.environ.pop("TESTING_AUTH_BYPASS", None)
             if original_mock is not None:
                 os.environ["MOCK_SERVICES_MODE"] = original_mock
             if original_force is not None:

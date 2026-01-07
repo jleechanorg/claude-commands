@@ -2,6 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Set theme before CSS loads to prevent flash of wrong theme
+      (function() {
+        var saved = localStorage.getItem('preferred-theme');
+        if (saved && ['light', 'dark', 'fantasy', 'cyberpunk'].includes(saved)) {
+          document.documentElement.setAttribute('data-theme', saved);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WorldAI</title>
     <link
@@ -338,6 +351,14 @@
           <h2 id="game-title"></h2>
           <div class="d-flex align-items-center gap-2">
             <div id="debug-indicator">🔍 Debug Mode Active</div>
+            <button
+              id="game-settings-btn"
+              class="btn btn-secondary"
+              title="Settings"
+              aria-label="Settings"
+            >
+              <i class="bi bi-gear"></i>
+            </button>
             <button id="back-to-dashboard" class="btn btn-secondary">
               Back to Dashboard
             </button>
@@ -345,7 +366,32 @@
         </div>
 
         <!-- Download/Share Buttons - Moved to top per TASK-137 -->
-        <div class="d-flex justify-content-end mb-3 gap-2">
+        <div class="d-flex justify-content-end mb-3 align-items-center gap-2">
+          <!-- Spicy Mode Toggle -->
+          <div class="d-flex align-items-center gap-1">
+            <div class="form-check form-switch m-0">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="spicyModeSwitch"
+              />
+              <label class="form-check-label" for="spicyModeSwitch">
+                🌶️ Spicy
+              </label>
+            </div>
+            <button
+              type="button"
+              class="btn btn-link btn-sm p-0"
+              data-bs-toggle="tooltip"
+              data-bs-placement="top"
+              title="Enables Grok AI for uncensored content including detailed adult scenes. Slower but no content restrictions. Your previous model will be restored when disabled."
+              aria-label="Spicy Mode info"
+            >
+              <i class="bi bi-question-circle text-muted"></i>
+            </button>
+          </div>
+          <!-- Download/Share Buttons -->
           <button
             id="downloadStoryBtn"
             class="btn btn-sm btn-secondary"

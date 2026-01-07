@@ -101,6 +101,8 @@ class CodexGitHubMentionsAutomation:
         user_data_dir: Optional[str] = None,
         debug: bool = False,
         all_tasks: bool = False,
+        archive_mode: bool = False,
+        archive_limit: int = 5,
     ):
         """
         Initialize the automation.
@@ -111,6 +113,8 @@ class CodexGitHubMentionsAutomation:
             task_limit: Maximum number of tasks to process (default: 50, None = all GitHub Mention tasks)
             user_data_dir: Chrome profile directory for persistent login (default: ~/.chrome-codex-automation)
             debug: Enable debug mode (screenshots, HTML dump, keep browser open)
+            archive_mode: If True, archive completed tasks instead of updating PRs
+            archive_limit: Maximum number of tasks to archive (default: 5)
         """
         self.cdp_url = cdp_url
         self.headless = headless
@@ -118,6 +122,8 @@ class CodexGitHubMentionsAutomation:
         self.user_data_dir = user_data_dir or str(Path.home() / ".chrome-codex-automation")
         self.debug = debug
         self.all_tasks = all_tasks
+        self.archive_mode = archive_mode
+        self.archive_limit = archive_limit
         self.playwright: Optional[Playwright] = None
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
@@ -550,6 +556,161 @@ class CodexGitHubMentionsAutomation:
                 print(f"  ⚠️ Failed to navigate back to Codex after update: {nav_err}")
             return True
 
+    async def archive_completed_task(self, task_link: Dict[str, str]) -> Optional[str]:
+        """
+        Archive a task that shows 'View PR' instead of 'Update branch'.
+
+        Args:
+            task_link: Mapping containing href and text preview for the task
+
+        Returns:
+            The task URL if archived successfully, None otherwise
+        """
+        href = task_link.get("href", "")
+        task_text_raw = task_link.get("text", "")
+        task_text = (task_text_raw or "").strip()[:80] or "(no text)"
+
+        target_url = href if href.startswith("http") else f"https://chatgpt.com{href}"
+
+        for attempt in range(2):
+            if not await self._ensure_page():
+                print("  ❌ No active browser page available to archive task")
+                if attempt == 0:
+                    continue
+                return None
+
+            try:
+                print(f"   Navigating to task: {task_text}")
+                await self.page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+                await asyncio.sleep(3)
+
+                # Check if this task has "View PR" (completed) instead of "Update branch"
+                view_pr_locator = self.page.locator('a:has-text("View PR"), button:has-text("View PR")')
+                update_branch_locator = self.page.locator('button:has-text("Update branch")')
+
+                if await update_branch_locator.count() > 0:
+                    print("  ⏭️  Task has 'Update branch' - not completed, skipping archive")
+                    return None
+
+                if await view_pr_locator.count() == 0:
+                    print("  ⚠️  Neither 'View PR' nor 'Update branch' found - skipping")
+                    return None
+
+                print("  📋 Task shows 'View PR' - eligible for archive")
+
+                # Look for archive button - try multiple selectors
+                archive_selectors = [
+                    'button:has-text("Archive")',
+                    'button[aria-label*="archive" i]',
+                    '[data-testid="archive-button"]',
+                    'button:has-text("Mark as done")',
+                    'button:has-text("Complete")',
+                ]
+
+                archived = False
+                for selector in archive_selectors:
+                    archive_locator = self.page.locator(selector)
+                    if await archive_locator.count() > 0:
+                        await archive_locator.first.click()
+                        print(f"  ✅ Clicked archive button (selector: {selector})")
+                        archived = True
+                        await asyncio.sleep(2)
+                        break
+
+                if not archived:
+                    # Try clicking a menu/kebab button first to reveal archive option
+                    menu_selectors = [
+                        'button[aria-label*="menu" i]',
+                        'button[aria-label*="more" i]',
+                        '[data-testid="task-menu"]',
+                        'button:has-text("⋮")',
+                        'button:has-text("...")',
+                    ]
+                    for menu_sel in menu_selectors:
+                        menu_locator = self.page.locator(menu_sel)
+                        if await menu_locator.count() > 0:
+                            await menu_locator.first.click()
+                            await asyncio.sleep(1)
+                            # Now try archive selectors again
+                            for selector in archive_selectors:
+                                archive_locator = self.page.locator(selector)
+                                if await archive_locator.count() > 0:
+                                    await archive_locator.first.click()
+                                    print(f"  ✅ Clicked archive from menu (selector: {selector})")
+                                    archived = True
+                                    await asyncio.sleep(2)
+                                    break
+                            if archived:
+                                break
+
+                if not archived:
+                    print("  ⚠️  Could not find archive button")
+                    return None
+
+                return target_url
+
+            except Exception as e:
+                error_text = str(e)
+                print(f"  ❌ Failed to archive task: {e}")
+                if "Target page, context or browser has been closed" in error_text and attempt == 0:
+                    print("  🔄 Page was closed; reopening a new tab and retrying...")
+                    continue
+                return None
+
+            finally:
+                try:
+                    await self.page.goto("https://chatgpt.com/codex", wait_until="domcontentloaded", timeout=30000)
+                    await asyncio.sleep(3)
+                except Exception as nav_err:
+                    print(f"  ⚠️ Failed to navigate back to Codex after archive: {nav_err}")
+
+        return None
+
+    async def archive_completed_github_mentions(self, limit: int = 5) -> List[str]:
+        """
+        Find GitHub mention tasks with 'View PR' and archive them.
+
+        Args:
+            limit: Maximum number of tasks to archive
+
+        Returns:
+            List of archived task URLs
+        """
+        tasks = await self.find_github_mention_tasks()
+
+        if not tasks:
+            print("\n🎯 No GitHub mention tasks to check for archiving")
+            logger.info("No tasks found for archiving")
+            return []
+
+        print(f"\n🗄️  Checking {len(tasks)} task(s) for archiving (limit: {limit})...")
+        archived_urls: List[str] = []
+
+        for i, task in enumerate(tasks, 1):
+            if len(archived_urls) >= limit:
+                print(f"\n✅ Reached archive limit of {limit}")
+                break
+
+            print(f"\n📝 Task {i}/{len(tasks)}:")
+
+            try:
+                raw_text = task.get("text", "") if isinstance(task, dict) else ""
+                task_text = (raw_text or "").strip()
+                preview = task_text[:100] + "..." if len(task_text) > 100 else (task_text or "(no text)")
+                print(f"   {preview}")
+            except Exception as text_error:
+                print(f"   (Could not extract task text: {text_error})")
+
+            url = await self.archive_completed_task(task)
+            if url:
+                archived_urls.append(url)
+
+            await asyncio.sleep(1)
+
+        print(f"\n✅ Archived {len(archived_urls)}/{len(tasks)} task(s)")
+        logger.info(f"Archived {len(archived_urls)} tasks")
+        return archived_urls
+
     async def process_all_github_mentions(self):
         """Find all GitHub mention tasks and update their PRs."""
         tasks = await self.find_github_mention_tasks()
@@ -608,13 +769,23 @@ class CodexGitHubMentionsAutomation:
             else:
                 await self.navigate_to_codex()
 
-            # Step 4: Process all GitHub mention tasks
-            count = await self.process_all_github_mentions()
-
-            print("\n" + "=" * 60)
-            print(f"✅ Automation complete! Processed {count} task(s)")
-            logger.info(f"Automation completed successfully - processed {count} task(s)")
-            return True
+            # Step 4: Process tasks (archive or update mode)
+            if self.archive_mode:
+                archived_urls = await self.archive_completed_github_mentions(limit=self.archive_limit)
+                print("\n" + "=" * 60)
+                print(f"✅ Archive complete! Archived {len(archived_urls)} task(s)")
+                if archived_urls:
+                    print("\n📋 Archived task URLs:")
+                    for url in archived_urls:
+                        print(f"   - {url}")
+                logger.info(f"Archive completed - archived {len(archived_urls)} task(s)")
+                return True
+            else:
+                count = await self.process_all_github_mentions()
+                print("\n" + "=" * 60)
+                print(f"✅ Automation complete! Processed {count} task(s)")
+                logger.info(f"Automation completed successfully - processed {count} task(s)")
+                return True
 
         except KeyboardInterrupt:
             print("\n⚠️  Automation interrupted by user")
@@ -732,6 +903,19 @@ Examples:
         help="Debug mode: take screenshots, save HTML, keep browser open"
     )
 
+    parser.add_argument(
+        "--archive",
+        action="store_true",
+        help="Archive completed tasks (tasks showing 'View PR' instead of 'Update branch')"
+    )
+
+    parser.add_argument(
+        "--archive-limit",
+        type=int,
+        default=5,
+        help="Maximum number of tasks to archive (default: 5)"
+    )
+
     args = parser.parse_args()
 
     if args.verbose:
@@ -750,6 +934,8 @@ Examples:
         user_data_dir=args.profile_dir,
         debug=args.debug,
         all_tasks=args.all_tasks,
+        archive_mode=args.archive,
+        archive_limit=args.archive_limit,
     )
 
     try:

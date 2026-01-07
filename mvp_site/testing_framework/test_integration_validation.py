@@ -15,7 +15,7 @@ from testing_framework.integration_utils import get_test_mode_info
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Set testing environment
-os.environ["TESTING"] = "true"
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 # Test imports
 from testing_framework.fixtures import BaseTestCase, get_test_client_for_mode

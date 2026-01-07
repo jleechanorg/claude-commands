@@ -5,14 +5,23 @@ This module provides the agent architecture for handling different interaction
 modes in the game. Each agent encapsulates mode-specific logic and has a focused
 subset of system prompts.
 
-Agent Hierarchy (priority order used by get_agent_for_input):
+Class Hierarchy:
 - BaseAgent: Abstract base class with common functionality
-- GodModeAgent: Handles administrative commands (god mode)
-- PlanningAgent: Handles strategic planning (think mode)
-- InfoAgent: Handles equipment/inventory queries (trimmed prompts)
-- CombatAgent: Handles active combat encounters (combat mode)
-- RewardsAgent: Handles rewards, loot, and progression-related logic
-- StoryModeAgent: Handles narrative storytelling (character mode)
+  - FixedPromptAgent: Base for agents with fixed prompt sets
+    - GodModeAgent: Handles administrative commands (god mode)
+    - PlanningAgent: Handles strategic planning (think mode)
+    - InfoAgent: Handles equipment/inventory queries (trimmed prompts)
+    - RewardsAgent: Handles rewards, loot, and progression-related logic
+  - StoryModeAgent: Handles narrative storytelling with living world (character mode)
+  - CombatAgent: Handles active combat encounters (combat mode)
+
+Agent Selection Priority (used by get_agent_for_input):
+1. GodModeAgent: Administrative commands (highest priority)
+2. PlanningAgent: Strategic planning (think mode)
+3. InfoAgent: Equipment/inventory queries
+4. CombatAgent: Active combat encounters
+5. RewardsAgent: Reward processing after combat/encounters
+6. StoryModeAgent: Default narrative storytelling
 
 Usage:
     from mvp_site.agents import (
@@ -400,6 +409,32 @@ class StoryModeAgent(BaseAgent):
 
     MODE: str = constants.MODE_CHARACTER
 
+    def _add_living_world_instruction(
+        self, parts: list[str], turn_number: int
+    ) -> None:
+        """
+        Add living world instruction to the prompt parts if it's a living world turn.
+
+        Living world updates happen every N turns (default: 3) to advance world
+        state for characters, factions, and events not in the current scene.
+
+        Only StoryModeAgent triggers living world - other agents (CombatAgent,
+        RewardsAgent, etc.) do NOT advance the living world.
+
+        Args:
+            parts: List of instruction parts to append to
+            turn_number: Current turn number (living world triggers when turn % 3 == 0)
+        """
+        if turn_number > 0:
+            living_world_instruction = self._prompt_builder.build_living_world_instruction(
+                turn_number
+            )
+            if living_world_instruction:
+                parts.append(living_world_instruction)
+                logging_util.info(
+                    f"🌍 LIVING_WORLD: Added instruction for turn {turn_number}"
+                )
+
     def build_system_instructions(
         self,
         selected_prompts: list[str] | None = None,
@@ -491,11 +526,8 @@ class StoryModeAgent(BaseAgent):
             parts.append(builder.build_continuation_reminder())
 
         # Add living world instruction every N turns (default: 3)
-        # This advances world state for off-screen characters, factions, and events
-        if turn_number > 0:
-            living_world_instruction = builder.build_living_world_instruction(turn_number)
-            if living_world_instruction:
-                parts.append(living_world_instruction)
+        # Only StoryModeAgent triggers living world updates
+        self._add_living_world_instruction(parts, turn_number)
 
         return parts
 
@@ -1048,7 +1080,7 @@ class InfoAgent(FixedPromptAgent):
     @classmethod
     def matches_input(cls, user_input: str) -> bool:
         """
-        Conservative detection: Only match CLEAR info-only queries.
+        Conservative detection: Only route to InfoAgent for CLEAR info-only queries.
 
         Route to InfoAgent only when:
         1. Input matches an info query pattern (show/list/check)
@@ -1132,16 +1164,21 @@ class CombatAgent(BaseAgent):
         Uses build_from_order() with REQUIRED_PROMPT_ORDER to enforce invariants,
         then finalizes with optional world content for combat in specific locations.
 
-        Note: selected_prompts and turn_number parameters are accepted for
-        interface consistency but combat mode uses its fixed combat-focused
-        prompt set without living world advancement.
+        Note: Living world is NOT included during combat to keep focus on tactics.
+
+        Args:
+            selected_prompts: Unused - combat uses fixed prompt set
+            use_default_world: Whether to include world content
+            include_continuation_reminder: Unused - combat uses fixed prompt set
+            turn_number: Unused - living world disabled for combat
+            llm_requested_sections: Unused - combat uses fixed prompt set
 
         Returns:
             Complete system instruction string for combat encounters
         """
         # Parameters intentionally unused - combat mode uses fixed prompt set
-        del selected_prompts, include_continuation_reminder, turn_number
-        del llm_requested_sections
+        del selected_prompts, include_continuation_reminder
+        del llm_requested_sections, turn_number
 
         builder = self._prompt_builder
 
