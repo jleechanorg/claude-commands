@@ -2008,6 +2008,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             ccs = updated_game_state_dict.setdefault("custom_campaign_state", {}) or {}
             directives_list = ccs.setdefault("god_mode_directives", [])
 
+            # Ensure god_mode_directives is a list (handle legacy dict format)
+            if not isinstance(directives_list, list):
+                logging_util.warning(
+                    f"god_mode_directives was {type(directives_list).__name__}, converting to list"
+                )
+                directives_list = []
+                ccs["god_mode_directives"] = directives_list
+
             # Process directives to drop (remove matching rules)
             if directives_to_drop:
                 drop_lower = [d.strip().lower() for d in directives_to_drop if d]

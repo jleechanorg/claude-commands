@@ -491,6 +491,93 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     @patch("mvp_site.world_logic._prepare_game_state")
     @patch("mvp_site.world_logic.get_user_settings")
     @patch("mvp_site.world_logic.structured_fields_utils")
+    def test_god_mode_directives_dict_to_list_conversion(
+        self,
+        mock_structured_utils,
+        mock_settings,
+        mock_prepare,
+        mock_gemini,
+        mock_add_story,
+        mock_update_state,
+        mock_get_campaign,
+        mock_get_campaign_state,
+    ):
+        """
+        Test that god_mode_directives as dict is converted to list.
+
+        In some game states, god_mode_directives may be stored as a dict instead
+        of a list (possibly from LLM responses or legacy saves). The fix ensures
+        .append() doesn't fail by converting dict to list first.
+
+        Before fix: 'dict' object has no attribute 'append'
+        After fix: dict is converted to empty list, new directive appends successfully
+        """
+        # Mock structured fields to add a new directive
+        mock_structured_utils.extract_structured_fields.return_value = {
+            "directives": {"add": ["New directive rule"]}
+        }
+
+        # Mock the campaign data and story context
+        mock_get_campaign.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            self.mock_story_context,
+        )
+
+        # Mock game state with god_mode_directives as DICT (not list) - the bug scenario
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.to_dict.return_value = {
+            "world_data": {"world_time": {"hour": 1, "minute": 0}},
+            "combat_state": {"in_combat": False},
+            "player_character_data": {"experience": {"current": 0}, "level": 1},
+            "custom_campaign_state": {
+                "god_mode_directives": {"some_key": "some_value"}  # Dict instead of list!
+            },
+        }
+        mock_prepare.return_value = (mock_game_state, False, 0)
+
+        # Prevent Firestore client creation
+        mock_get_campaign_state.return_value = {}
+
+        # Mock user settings
+        mock_settings.return_value = {"debug_mode": False}
+
+        # Mock Gemini response for god mode
+        mock_gemini_response = Mock()
+        mock_gemini_response.narrative_text = "Directive added"
+        mock_gemini_response.agent_mode = "god"  # God mode
+        mock_gemini_response.get_state_updates.return_value = {}
+        mock_gemini_response.get_debug_info.return_value = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini_response.get_location_confirmed.return_value = "Test Location"
+        mock_gemini_response.get_narrative_text.return_value = "Directive added"
+        mock_gemini_response.resources = "HP: 10/10"
+        mock_gemini_response.processing_metadata = {}
+        mock_gemini.return_value = mock_gemini_response
+
+        request_data = {
+            "user_id": "test-user-123",
+            "campaign_id": "test-campaign-456",
+            "user_input": "GOD MODE: add new rule",
+            "mode": "god",  # Explicitly god mode
+        }
+
+        # Before fix, this would raise: 'dict' object has no attribute 'append'
+        result = asyncio.run(world_logic.process_action_unified(request_data))
+
+        self.assertTrue(
+            result.get("success"),
+            f"Expected success when god_mode_directives is dict, got error: {result}",
+        )
+
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.get_campaign_by_id")
+    @patch("mvp_site.world_logic.firestore_service.update_campaign_game_state")
+    @patch("mvp_site.world_logic.firestore_service.add_story_entry")
+    @patch("mvp_site.world_logic.llm_service.continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state")
+    @patch("mvp_site.world_logic.get_user_settings")
+    @patch("mvp_site.world_logic.structured_fields_utils")
     def test_user_scene_number_field_red_phase(
         self,
         mock_structured_utils,
