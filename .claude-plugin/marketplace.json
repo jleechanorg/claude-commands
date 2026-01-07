@@ -3,7 +3,7 @@
   "description": "Official marketplace for Claude Commands - LLM Capital Efficiency Framework with 145+ production-tested workflow automation commands",
   "owner": {
     "name": "jleechan",
-    "email": "jleechan@worldarchitect.ai"
+    "email": "team@worldarchitect.ai"
   },
   "plugins": [
     {
@@ -13,7 +13,7 @@
       "source": "./",
       "author": {
         "name": "WorldArchitect.AI Team",
-        "email": "jleechan@worldarchitect.ai"
+        "email": "team@worldarchitect.ai"
       }
     }
   ]

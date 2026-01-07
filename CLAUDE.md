@@ -553,9 +553,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - **Benefits**: Eliminates "forgot to push" syndrome while maintaining workflow transparency
 
 10. 🚨 **GITHUB CLI (gh) INSTALLATION**: ⚠️ MANDATORY for GitHub operations
-   - **Primary Tool**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
-   - **Fallback**: `gh` CLI when MCP fails or unavailable
-   - **Installation Method** (Container/Restricted Environments):
+- **Primary Tool**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
+- **Fallback**: `gh` CLI when MCP fails or unavailable
+- **Installation Method** (Container/Restricted Environments):
      ```bash
      # Download and extract gh CLI binary to /tmp
      curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp
@@ -563,7 +563,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
      # Verify installation
      /tmp/gh_2.40.1_linux_amd64/bin/gh --version
 
-     # Authenticate using existing GitHub token
+     # Verify authentication (ensure GITHUB_TOKEN is set)
      /tmp/gh_2.40.1_linux_amd64/bin/gh auth status
 
      # Set up alias for convenience
@@ -573,10 +573,10 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
      $GH_CLI pr create --title "Feature" --body "Description"
      $GH_CLI issue create --title "Bug" --body "Details"
      ```
-   - **Why This Works**: GitHub releases not blocked by container security (unlike cloud provider binaries)
-   - **Benefits**: Direct binary extraction to /tmp avoids permission issues, no package manager required
-   - **Authentication**: Fully functional with existing GITHUB_TOKEN environment variable
-   - **Note**: Container blocks binary downloads from cloud provider domains for multi-tenant security, but trusts package registries (npm, PyPI) and GitHub releases
+- **Why This Works**: GitHub releases not blocked by container security (unlike cloud provider binaries)
+- **Benefits**: Direct binary extraction to /tmp avoids permission issues, no package manager required
+- **Authentication**: Fully functional with existing GITHUB_TOKEN environment variable
+- **Note**: Container blocks binary downloads from cloud provider domains for multi-tenant security, but trusts package registries (npm, PyPI) and GitHub releases
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 
