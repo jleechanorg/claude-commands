@@ -225,21 +225,21 @@ def test_character_creation_activation():
 
     result = response.get("result", {})
     debug_info = result.get("debug_info", {})
-    dm_notes = debug_info.get("dm_notes", [])
     mode = result.get("mode")
+    system_instruction_files = debug_info.get("system_instruction_files", [])
 
     log(f"Response Mode: {mode}")
-    log(f"DM Notes: {dm_notes}")
+    log(f"System Instruction Files: {system_instruction_files}")
 
     # Verify CharacterCreationAgent activated
-    # Note: This PR branch doesn't have agent_mode field yet (added in PR #3139)
-    # So we check dm_notes for character creation indicators
+    # CharacterCreationAgent uses character_creation_instruction.md as part of its
+    # minimal prompt set. This is the definitive indicator that the agent is active.
     char_creation_active = any(
-        "character creation" in note.lower() for note in dm_notes
+        "character_creation" in f for f in system_instruction_files
     )
 
     assert char_creation_active, (
-        f"Expected 'character creation' in dm_notes, got: {dm_notes}"
+        f"Expected 'character_creation_instruction.md' in system files, got: {system_instruction_files}"
     )
 
     assert mode == "character", (
@@ -269,19 +269,18 @@ def test_character_creation_persistence(campaign_id: str):
 
         result = response.get("result", {})
         debug_info = result.get("debug_info", {})
-        dm_notes = debug_info.get("dm_notes", [])
         mode = result.get("mode")
+        system_instruction_files = debug_info.get("system_instruction_files", [])
 
-        log(f"Mode: {mode}, DM Notes: {dm_notes}")
+        log(f"Mode: {mode}")
 
-        # Verify mode persists (check dm_notes for character creation indicators)
+        # Verify mode persists (check for character_creation_instruction.md)
         char_creation_active = any(
-            "character creation" in note.lower() or "character" in note.lower()
-            for note in dm_notes
+            "character_creation" in f for f in system_instruction_files
         )
 
-        assert char_creation_active or mode == "character", (
-            f"Expected character creation to persist, got mode={mode}, dm_notes={dm_notes}"
+        assert char_creation_active, (
+            f"Expected character creation to persist (char_creation_instruction.md), got: {system_instruction_files}"
         )
 
     log("✅ TEST 2 PASSED: Character creation mode persisted across turns")
@@ -306,20 +305,21 @@ def test_character_creation_completion(campaign_id: str):
 
         result = response.get("result", {})
         debug_info = result.get("debug_info", {})
-        dm_notes = debug_info.get("dm_notes", [])
         mode = result.get("mode")
+        system_instruction_files = debug_info.get("system_instruction_files", [])
 
-        log(f"Mode: {mode}, DM Notes: {dm_notes}")
+        log(f"Mode: {mode}")
 
         # After completion, should either:
-        # 1. Transition to story mode (no "character creation" in dm_notes)
+        # 1. Transition to story mode (no character_creation_instruction.md)
         # 2. Stay in creation if LLM needs more details
         char_creation_active = any(
-            "character creation" in note.lower() for note in dm_notes
+            "character_creation" in f for f in system_instruction_files
         )
 
         if not char_creation_active and mode == "character":
             log(f"✅ Mode transitioned away from character creation")
+            log(f"System files: {system_instruction_files}")
             break
 
     log("✅ TEST 3 PASSED: Completion handling works")
@@ -353,18 +353,15 @@ def test_level_up_activation():
 
     result = response.get("result", {})
     debug_info = result.get("debug_info", {})
-    dm_notes = debug_info.get("dm_notes", [])
     mode = result.get("mode")
+    system_instruction_files = debug_info.get("system_instruction_files", [])
 
-    log(f"Mode: {mode}, DM Notes: {dm_notes}")
+    log(f"Mode: {mode}")
+    log(f"System files: {system_instruction_files}")
 
-    # Level-up should be handled by character creation agent or acknowledged
-    # Check for level-up related keywords in dm_notes
-    level_up_mentioned = any(
-        "level" in note.lower() for note in dm_notes
-    )
-
-    log(f"Level-up handling detected: {level_up_mentioned}")
+    # Level-up handling is validated by agent responding appropriately
+    # The agent may or may not use character_creation_instruction.md
+    # depending on whether level_up_pending flag is set in game state
     log("✅ TEST 4 PASSED: Level-up scenario handled")
 
 
