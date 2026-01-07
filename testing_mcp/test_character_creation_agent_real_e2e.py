@@ -99,7 +99,7 @@ def mcp_call(method: str, params: dict) -> dict:
     }
 
     call_timestamp = datetime.now(timezone.utc).isoformat()
-    resp = requests.post(f"{BASE_URL}/mcp", json=payload, timeout=180)
+    resp = requests.post(f"{BASE_URL}/mcp", json=payload, timeout=300)
     response_json = resp.json()
 
     # Extract system_instruction and agent_mode if present
