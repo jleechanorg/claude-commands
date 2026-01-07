@@ -167,7 +167,7 @@ After installation, verify the system is working:
 
 1. Verify GitHub token is set: `echo $GITHUB_TOKEN`
 2. Check gh CLI authentication: `gh auth status`
-3. If not authenticated, run: `gh auth login` (see https://cli.github.com/manual/gh_auth_login for details)
+3. If not authenticated, run: `gh auth login` (see [gh auth login manual](https://cli.github.com/manual/gh_auth_login) for details)
 4. Ensure network connectivity to GitHub
 
 ### Orchestration not working
@@ -208,7 +208,7 @@ rm -rf /path/to/your/project/.claude/commands/
 
 ## Support
 
-- **Issues**: https://github.com/jleechanorg/claude-commands/issues
+- **Issues**: [Issues](https://github.com/jleechanorg/claude-commands/issues)
 - **Documentation**: See `.claude/commands/README.md` in your project after installation
 - **Examples**: See `.claude/commands/examples.md` in your project after installation
 
