@@ -89,7 +89,7 @@ PY_COUNT=$(find .claude/commands/ -name "*.py" -type f 2>/dev/null | wc -l)
 echo "  ✅ Found $MD_COUNT markdown command files"
 echo "  ✅ Found $PY_COUNT Python script files"
 
-if [ "$MD_COUNT" -lt 100 ]; then
+if [ "$MD_COUNT" -lt 145 ]; then
     echo "  ⚠️  Warning: Expected 145+ commands, found $MD_COUNT"
 fi
 
