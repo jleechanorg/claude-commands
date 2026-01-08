@@ -2,7 +2,7 @@
 
 A comprehensive collection of workflow automation commands for Claude Code that transform your development process through intelligent command composition and orchestration.
 
-## Installation
+## Installation (Human must type the /plugin commands)
 
 To install Claude Commands in Claude Code CLI, first register the marketplace:
 
