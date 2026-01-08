@@ -100,6 +100,11 @@ def mcp_call(method: str, params: dict) -> dict:
 
     call_timestamp = datetime.now(timezone.utc).isoformat()
     resp = requests.post(f"{BASE_URL}/mcp", json=payload, timeout=300)
+
+    # Check status code BEFORE parsing JSON to get better error messages
+    if resp.status_code != 200:
+        raise Exception(f"MCP call failed: {resp.status_code} {resp.text}")
+
     response_json = resp.json()
 
     # Extract system_instruction and agent_mode if present
@@ -122,9 +127,6 @@ def mcp_call(method: str, params: dict) -> dict:
         "system_instruction_length": len(system_instruction_text) if system_instruction_text else 0,
         "agent_mode": agent_mode,
     })
-
-    if resp.status_code != 200:
-        raise Exception(f"MCP call failed: {resp.status_code} {resp.text}")
 
     return response_json
 

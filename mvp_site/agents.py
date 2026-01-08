@@ -626,48 +626,6 @@ class GodModeAgent(FixedPromptAgent):
         return user_input
 
 
-# --- CHARACTER CREATION / LEVEL-UP COMPLETION DETECTION ---
-# Phrases that indicate the user is finished with character creation or level-up
-CHARACTER_CREATION_DONE_PHRASES = [
-    # Character creation completion
-    "i'm done",
-    "im done",
-    "i am done",
-    "i'm finished",
-    "im finished",
-    "i am finished",
-    "start the story",
-    "begin the story",
-    "start adventure",
-    "begin adventure",
-    "start the adventure",
-    "begin the adventure",
-    "let's start",
-    "lets start",
-    "let's begin",
-    "lets begin",
-    "ready to play",
-    "i'm ready",
-    "im ready",
-    "that's everything",
-    "thats everything",
-    "character complete",
-    "character is complete",
-    "done creating",
-    "finished creating",
-    # Level-up completion
-    "level-up complete",
-    "levelup complete",
-    "level up complete",
-    "done leveling",
-    "finished leveling",
-    "done with level",
-    "back to adventure",
-    "continue adventure",
-    "return to game",
-]
-
-
 class CharacterCreationAgent(BaseAgent):
     """
     Agent for Character Creation & Level-Up Mode.
