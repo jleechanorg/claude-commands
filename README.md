@@ -2,41 +2,44 @@
 
 A comprehensive collection of workflow automation commands for Claude Code that transform your development process through intelligent command composition and orchestration.
 
-⚠️ **PROTOTYPE WIP REPOSITORY** - This is an experimental command system exported from a working development environment. Use as reference but expect adaptation needed for your specific setup.
+## Installation
 
-## 📦 Installation
+To install Claude Commands, first register the marketplace:
 
-### Quick Install (Claude Code Marketplace)
-
-```bash
-# Register the marketplace (first-time only)
+```
 /plugin marketplace add claude-commands-marketplace https://github.com/jleechanorg/claude-commands
-
-# Install the plugin
-/plugin install claude-commands@claude-commands-marketplace
-
-# Verify installation
-/help
 ```
 
-### Manual Installation
+Then install the plugin:
+
+```
+/plugin install claude-commands@claude-commands-marketplace
+```
+
+After installation, quit and restart Claude for the plugin to take effect.
+
+To verify successful installation, run `/help` to check that commands appear.
+
+### Alternative: Intelligent Self-Setup
+
+Let Claude Code analyze and set up what you need:
+
+```
+"I want to use commands from https://github.com/jleechanorg/claude-commands - analyze what's available and set up the ones useful for my project"
+```
+
+### Alternative: Manual Installation
 
 ```bash
-# Clone and copy commands to your project
 git clone https://github.com/jleechanorg/claude-commands.git
 cp -r claude-commands/.claude/commands/* ./.claude/commands/
 ```
 
-### Intelligent Self-Setup (Recommended)
+See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-specific instructions.
 
-```bash
-# Let Claude Code analyze and set up what you need
-"I want to use the commands from https://github.com/jleechanorg/claude-commands - please analyze what's available and set up the ones that would be useful for my project"
-```
+---
 
-Claude Code will analyze your project structure, recommend relevant commands, install them to `.claude/commands/`, and configure automation hooks.
-
-See [INSTALL.md](INSTALL.md) for detailed installation instructions, platform-specific setup, and troubleshooting.
+⚠️ **PROTOTYPE WIP REPOSITORY** - This is an experimental command system exported from a working development environment. Use as reference but expect adaptation needed for your specific setup.
 
 ## 🎯 What's Included
 
