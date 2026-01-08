@@ -6,20 +6,30 @@ FAILED_TESTS=0
 TOTAL_TESTS=0
 
 # Verify we're in the repository root
+ROOT_CHECK_FAILED=0
 if [ ! -f "CLAUDE.md" ] || [ ! -d ".claude/commands" ]; then
     echo "⚠️  Warning: This script should be run from the repository root"
     echo "Looking for CLAUDE.md and .claude/commands directory..."
     # Try to find project root
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
-        cd "$SCRIPT_DIR" || { echo "❌ Cannot change to script directory"; read -p "Press Enter to continue..."; return 1; }
+        if ! cd "$SCRIPT_DIR"; then
+            echo "❌ Cannot change to script directory"
+            read -p "Press Enter to continue..."
+            ROOT_CHECK_FAILED=1
+        fi
     else
         echo "❌ Cannot find repository root. Please run from project root directory."
         read -p "Press Enter to continue..."
-        return 1
+        ROOT_CHECK_FAILED=1
     fi
 fi
 
+if [ "$ROOT_CHECK_FAILED" -eq 1 ]; then
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
+    echo "Skipping remaining tests due to missing repository root."
+else
 echo "🧪 Testing Claude Commands Installation"
 echo "========================================"
 echo ""
@@ -191,6 +201,7 @@ if [ $UNREADABLE -eq 0 ]; then
 else
     echo "  ❌ Found $UNREADABLE unreadable files"
     FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 fi
 
 # Summary
