@@ -27,9 +27,9 @@ EOF < /dev/null
 **Header Generation Methods:**
 - **PREFERRED:** Use `/header` command (finds project root automatically by looking for CLAUDE.md)
 - **Manual:** Run individual commands:
-  - `git branch --show-current` - Get local branch
-  - `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote
-  - `gh pr list --head $(git branch --show-current) --json number,url` - Get PR info
+- `git branch --show-current` - Get local branch
+- `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote
+- `gh pr list --head $(git branch --show-current) --json number,url` - Get PR info
 
 **🎯 Memory Aid:** The `/header` command reduces 3 commands to 1, making compliance effortless and helping build the habit of "header last, sign off properly".
 
@@ -237,35 +237,35 @@ EOF < /dev/null
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
 8. 🚨 **Branch Protocol**: → See "Git Workflow" section
 9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
-   - ✅ When user asks "does X tool do Y?", clearly state if you're explaining or executing
-   - ❌ NEVER explain tool capabilities as if you executed them
+- ✅ When user asks "does X tool do Y?", clearly state if you're explaining or executing
+- ❌ NEVER explain tool capabilities as if you executed them
 10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push`
 11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
-   - **OPEN** = Work In Progress (WIP) - NOT completed | **MERGED** = Completed | **CLOSED** = Abandoned
-   - ✅ ONLY mark completed when PR state = "MERGED"
+- **OPEN** = Work In Progress (WIP) - NOT completed | **MERGED** = Completed | **CLOSED** = Abandoned
+- ✅ ONLY mark completed when PR state = "MERGED"
 12. 🚨 **PLAYWRIGHT MCP DEFAULT**: ⚠️ MANDATORY - When running in Claude Code CLI:
-   - ✅ ALWAYS use Playwright MCP (@playwright/mcp) for browser automation by default
-   - ✅ ALWAYS use headless mode for browser automation (no visible browser windows), **except when debugging or developing new automation scripts, where non-headless mode is permitted for visibility**
-   - ✅ Fallback to Puppeteer MCP for Chrome-specific or stealth testing when needed
+- ✅ ALWAYS use Playwright MCP (@playwright/mcp) for browser automation by default
+- ✅ ALWAYS use headless mode for browser automation (no visible browser windows), **except when debugging or developing new automation scripts, where non-headless mode is permitted for visibility**
+- ✅ Fallback to Puppeteer MCP for Chrome-specific or stealth testing when needed
 
 🚨 **INLINE SCREENSHOTS ARE USELESS**: ⚠️ MANDATORY - Screenshot documentation requirements:
-   - ❌ NEVER rely on inline screenshots in chat - they count for NOTHING
-   - ✅ ONLY use screenshot tools that save actual files to filesystem
-   - ✅ **SCREENSHOT LOCATION**: All screenshots must be saved to `docs/` directory for proper organization and accessibility
+- ❌ NEVER rely on inline screenshots in chat - they count for NOTHING
+- ✅ ONLY use screenshot tools that save actual files to filesystem
+- ✅ **SCREENSHOT LOCATION**: All screenshots must be saved to `docs/` directory for proper organization and accessibility
 
 13. 🚨 **CONTEXT7 MCP PROACTIVE USAGE**: ⚠️ MANDATORY - When encountering API/library issues:
-   - ✅ ALWAYS use Context7 MCP for accurate API documentation when facing errors
-   - ✅ **Pattern**: Error occurs → Use `mcp__context7__resolve-library-id` → Get docs with `mcp__context7__get-library-docs`
+- ✅ ALWAYS use Context7 MCP for accurate API documentation when facing errors
+- ✅ **Pattern**: Error occurs → Use `mcp__context7__resolve-library-id` → Get docs with `mcp__context7__get-library-docs`
 
 14. 🚨 **GITHUB TOOL PRIORITY**: ⚠️ MANDATORY - Tool hierarchy for GitHub operations:
-   - ✅ **PRIMARY**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
-   - ✅ **SECONDARY**: `gh` CLI as fallback when MCP fails or unavailable
+- ✅ **PRIMARY**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
+- ✅ **SECONDARY**: `gh` CLI as fallback when MCP fails or unavailable
 
 15. 🚨 **SERENA MCP FILE OPERATIONS PRIORITY**: ⚠️ MANDATORY - Tool hierarchy for semantic file operations:
-   - ✅ **PRIMARY**: Serena MCP tools for semantic code analysis and file operations when available
-   - ✅ **SECONDARY**: Standard file tools (Read, Edit, MultiEdit) as fallback
-   - ✅ **Pattern**: Complex file operations → Use Serena for semantic understanding → Fallback to basic file tools
-   - ✅ **Use Cases**: Code analysis, symbol finding, refactoring, project understanding
+- ✅ **PRIMARY**: Serena MCP tools for semantic code analysis and file operations when available
+- ✅ **SECONDARY**: Standard file tools (Read, Edit, MultiEdit) as fallback
+- ✅ **Pattern**: Complex file operations → Use Serena for semantic understanding → Fallback to basic file tools
+- ✅ **Use Cases**: Code analysis, symbol finding, refactoring, project understanding
 
 16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
 - **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`, `/perp`, `/research`
@@ -529,28 +529,35 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 2. **Robust Scripts**: Make idempotent, work from any subdirectory
 3. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
 4. **vpython Tests**: ⚠️ "run all tests" → `./run_tests.sh` | ⚠️ Test fails → fix immediately or ask user
-   - ✅ `TESTING=true vpython $PROJECT_ROOT/test_file.py` (from root)
+- ✅ `TESTING=true vpython $PROJECT_ROOT/test_file.py` (from root)
 5. 🚨 **Test Compliance**: → See "Testing Protocol" section
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
 8. **Log Files Location**:
-   - ✅ **Server logs are in `/tmp/your-project.com/`** with branch isolation and service-specific files
-   - ✅ **Branch-specific structure**: `/tmp/your-project.com/[branch-name]/`
-   - ✅ **Service logs**: `/tmp/your-project.com/[branch]/[service-name].log`
-   - ✅ **Log commands**: `tail -f /tmp/your-project.com/[branch]/[service].log` for real-time monitoring
-   - ✅ **Search logs**: `grep -i "pattern" /tmp/your-project.com/[branch]/[service].log`
-   - ✅ **Find current log**: `git branch --show-current` then check corresponding log file
+- ✅ **Server logs are in `/tmp/your-project.com/`** with branch isolation and service-specific files
+- ✅ **Branch-specific structure**: `/tmp/your-project.com/[branch-name]/`
+- ✅ **Service logs**: `/tmp/your-project.com/[branch]/[service-name].log`
+- ✅ **Log commands**: `tail -f /tmp/your-project.com/[branch]/[service].log` for real-time monitoring
+- ✅ **Search logs**: `grep -i "pattern" /tmp/your-project.com/[branch]/[service].log`
+- ✅ **Find current log**: `git branch --show-current` then check corresponding log file
 
 9. 🚨 **SMART SYNC CHECK PROTOCOL**: ⚠️ MANDATORY - Prevent local changes not pushed to remote
-   - **Purpose**: Automatically detect and push unpushed commits after tools create changes
-   - **Script Location**: `<project-root>/scripts/sync_check.sh` (e.g. `$(git rev-parse --show-toplevel)/scripts/sync_check.sh`)
-   - **Integration**: Tools that create commits MUST call sync check at completion
-   - **Usage**: `$(git rev-parse --show-toplevel)/scripts/sync_check.sh` or source common utilities
-   - **Tools Required**: `/fixpr`, `/commentreply`, `/integrate`, any commit-creating tools
-   - **Behavior**: Detects unpushed commits → Shows commits → Auto-pushes → Confirms success
-   - **Safety**: Only pushes when unpushed commits detected, handles edge cases gracefully
-   - **Error Handling**: Graceful fallback for no upstream, detached HEAD, push failures
-   - **Benefits**: Eliminates "forgot to push" syndrome while maintaining workflow transparency
+- **Purpose**: Automatically detect and push unpushed commits after tools create changes
+- **Script Location**: `<project-root>/scripts/sync_check.sh` (e.g. `$(git rev-parse --show-toplevel)/scripts/sync_check.sh`)
+- **Integration**: Tools that create commits MUST call sync check at completion
+- **Usage**: `$(git rev-parse --show-toplevel)/scripts/sync_check.sh` or source common utilities
+- **Tools Required**: `/fixpr`, `/commentreply`, `/integrate`, any commit-creating tools
+- **Behavior**: Detects unpushed commits → Shows commits → Auto-pushes → Confirms success
+- **Safety**: Only pushes when unpushed commits detected, handles edge cases gracefully
+- **Error Handling**: Graceful fallback for no upstream, detached HEAD, push failures
+- **Benefits**: Eliminates "forgot to push" syndrome while maintaining workflow transparency
+
+10. 🚨 **GITHUB CLI (gh) INSTALLATION**: ⚠️ MANDATORY for GitHub operations
+- **Primary Tool**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
+- **Fallback**: `gh` CLI when MCP fails or unavailable
+- **Installation & Usage**: See [`.claude/skills/github-cli-reference.md`](.claude/skills/github-cli-reference.md) for detailed setup
+- **Authentication**: Uses `GITHUB_TOKEN` via `gh auth login --with-token`
+- **Benefits**: Direct binary extraction to /tmp avoids permission issues
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 
@@ -786,8 +793,8 @@ Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical pat
   2. Apply velocity: 820 lines/hour average (excludes debugging, refactoring, and code review time)
   3. Add PR overhead: 5-12 min per PR
   4. Apply parallelism: 30-45% reduction
-     - Use **30%** if tasks are highly independent and agents are experienced
-     - Use **45%** if tasks are interdependent, agents are less experienced, or integration is complex
+- Use **30%** if tasks are highly independent and agents are experienced
+- Use **45%** if tasks are interdependent, agents are less experienced, or integration is complex
   5. Add integration buffer: 10-30%
 - **Realistic multiplier**: 10-15x faster (not 20x)
 - **Avoid**: Anchoring bias from initial suggestions
