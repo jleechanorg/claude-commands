@@ -1396,8 +1396,25 @@ def get_agent_for_input(
     # Priority 2: Character Creation mode (second highest priority)
     # Check if we're in character creation AND user isn't indicating they're done
     if CharacterCreationAgent.matches_game_state(game_state):
-        # If user says they're done, transition to story mode
-        if CharacterCreationAgent.matches_input(user_input):
+        # Check if character creation has actually been in progress
+        # (i.e., not the very first turn of a new campaign)
+        char_creation_started = False
+        if game_state is not None:
+            custom_state = None
+            if hasattr(game_state, "custom_campaign_state"):
+                custom_state = game_state.custom_campaign_state
+            elif isinstance(game_state, dict):
+                custom_state = game_state.get("custom_campaign_state", {})
+
+            if isinstance(custom_state, dict):
+                # If character_creation_in_progress flag is set, creation has started
+                char_creation_started = custom_state.get(
+                    "character_creation_in_progress", False
+                )
+
+        # Only check for completion phrases if character creation has actually started
+        # This prevents "let's begin" on Turn 1 from being interpreted as "I'm done"
+        if char_creation_started and CharacterCreationAgent.matches_input(user_input):
             logging_util.info(
                 "🎭 CHARACTER_CREATION_COMPLETE: User finished, transitioning to StoryModeAgent"
             )

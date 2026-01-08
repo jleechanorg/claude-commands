@@ -131,17 +131,30 @@ def mcp_call(method: str, params: dict) -> dict:
     return response_json
 
 
-def create_campaign(name: str) -> str:
-    """Create a new campaign and return campaign_id."""
+def create_campaign(name: str, god_mode_data: str = None) -> str:
+    """Create a new campaign and return campaign_id.
+
+    Args:
+        name: Campaign title
+        god_mode_data: Optional God Mode character/world data to pre-populate
+    """
     log(f"Creating campaign: {name}")
+
+    campaign_args = {
+        "user_id": USER_ID,
+        "title": name,
+        "selected_prompts": [],
+        "use_default_world": False,
+    }
+
+    # Add God Mode data if provided (matches real user flow with templates)
+    if god_mode_data:
+        campaign_args["god_mode_data"] = god_mode_data
+        log(f"  Including God Mode data ({len(god_mode_data)} chars)")
+
     response = mcp_call("tools/call", {
         "name": "create_campaign",
-        "arguments": {
-            "user_id": USER_ID,
-            "title": name,
-            "selected_prompts": [],
-            "use_default_world": False,
-        }
+        "arguments": campaign_args
     })
 
     result = response.get("result", {})
@@ -185,17 +198,36 @@ def get_campaign_state(campaign_id: str) -> dict:
 
 
 def test_character_creation_activation():
-    """Test 1: CharacterCreationAgent activates for new campaigns."""
+    """Test 1: CharacterCreationAgent activates for new campaigns WITH GOD MODE DATA.
+
+    This matches the REAL user flow where campaigns are created from templates
+    that include pre-defined character data in God Mode.
+    """
     log("=" * 80)
-    log("TEST 1: Character Creation Activation for New Campaign")
+    log("TEST 1: Character Creation Activation with God Mode Template")
     log("=" * 80)
 
-    campaign_id = create_campaign("Test Character Creation Activation")
+    # God Mode data matching real user campaign templates
+    god_mode_data = """Character: Ser Arion val Valerion
+Class: Level 1 Paladin (Oath of the Crown)
+Stats: Str 16, Con 14, Cha 16 | HP: 12 | AC: 20
+Setting: World of Assiah, Celestial Imperium
+Background: Noble knight sworn to Empress Sariel
 
-    # Send first interaction - should activate CharacterCreationAgent
+You are a 16-year-old honorable knight on your first mission, sworn to protect
+the vast Celestial Imperium. Your loyalty is now brutally tested as you've been
+ordered to slaughter innocent refugees."""
+
+    campaign_id = create_campaign(
+        "Test Character Creation with God Mode",
+        god_mode_data=god_mode_data
+    )
+
+    # Send first interaction - should STILL activate CharacterCreationAgent
+    # even though character data exists (user should be able to customize)
     response = send_interaction(
         campaign_id,
-        "I want to create a wizard character"
+        "I want to review and customize my character"
     )
 
     result = response.get("result", {})
@@ -214,7 +246,8 @@ def test_character_creation_activation():
     )
 
     assert char_creation_active, (
-        f"Expected 'character_creation_instruction.md' in system files, got: {system_instruction_files}"
+        f"EXPECTED FAILURE (RED STATE): CharacterCreationAgent should activate even with "
+        f"God Mode character data, but got: {system_instruction_files}"
     )
 
     assert mode == "character", (
