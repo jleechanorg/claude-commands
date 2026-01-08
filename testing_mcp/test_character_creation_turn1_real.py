@@ -120,25 +120,36 @@ def test_full_god_mode_turn1(base_url: str):
     god_mode_data = MY_EPIC_ADVENTURE_GOD_MODE
 
     log("📝 Creating campaign with full God Mode data...")
-    campaign_result = mcp_call("create_campaign", {
-        "user_id": USER_ID,
-        "title": "E2E Test - My Epic Adventure",
-        "god_mode_data": god_mode_data,
-        "selectedPrompts": [],
-        "use_default_world": False,
+    campaign_response = mcp_call("tools/call", {
+        "name": "create_campaign",
+        "arguments": {
+            "user_id": USER_ID,
+            "title": "E2E Test - My Epic Adventure",
+            "god_mode_data": god_mode_data,
+            "selected_prompts": [],
+            "use_default_world": False,
+        }
     }, base_url=base_url)
+
+    campaign_result = campaign_response.get("result", {})
 
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
 
     # Turn 1 interaction - should trigger CharacterCreationAgent
     log("📝 Turn 1: User wants to create character...")
-    turn1_result = mcp_call("process_action", {
-        "user_id": USER_ID,
-        "campaign_id": campaign_id,
-        "user_input": "Let's create my character!",
-        "game_mode": "character",
+    turn1_response = mcp_call("tools/call", {
+        "name": "process_action",
+        "arguments": {
+            "user_id": USER_ID,
+            "campaign_id": campaign_id,
+            "user_input": "Let's create my character!",
+            "mode": "character",
+            "include_raw_llm_payloads": True,
+        }
     }, base_url=base_url)
+
+    turn1_result = turn1_response.get("result", {})
     
     # Validation 1: CharacterCreationAgent selected (check system_instruction_files)
     debug_info = turn1_result.get("debug_info", {})
@@ -217,25 +228,35 @@ def test_minimal_god_mode_turn1(base_url: str):
     god_mode_data = "Character: luke | Setting: star wars"
 
     log("📝 Creating campaign with minimal God Mode data...")
-    campaign_result = mcp_call("create_campaign", {
-        "user_id": USER_ID,
-        "title": "E2E Test - Star Wars Luke",
-        "god_mode_data": god_mode_data,
-        "selectedPrompts": [],
-        "use_default_world": False,
+    campaign_response = mcp_call("tools/call", {
+        "name": "create_campaign",
+        "arguments": {
+            "user_id": USER_ID,
+            "title": "E2E Test - Star Wars Luke",
+            "god_mode_data": god_mode_data,
+            "selected_prompts": [],
+            "use_default_world": False,
+        }
     }, base_url=base_url)
 
+    campaign_result = campaign_response.get("result", {})
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
 
     # Turn 1 interaction
     log("📝 Turn 1: User wants to create character...")
-    turn1_result = mcp_call("process_action", {
-        "user_id": USER_ID,
-        "campaign_id": campaign_id,
-        "user_input": "I want to create my character",
-        "game_mode": "character",
+    turn1_response = mcp_call("tools/call", {
+        "name": "process_action",
+        "arguments": {
+            "user_id": USER_ID,
+            "campaign_id": campaign_id,
+            "user_input": "I want to create my character",
+            "mode": "character",
+            "include_raw_llm_payloads": True,
+        }
     }, base_url=base_url)
+
+    turn1_result = turn1_response.get("result", {})
     
     # Same validations as Test 1
     debug_info = turn1_result.get("debug_info", {})
