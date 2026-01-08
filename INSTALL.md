@@ -87,7 +87,12 @@ curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_am
 
 # Authenticate using existing GitHub token (ensure GITHUB_TOKEN is set)
 # The gh CLI automatically uses GITHUB_TOKEN environment variable
-printf '%s\n' "$GITHUB_TOKEN" | /tmp/gh_2.40.1_linux_amd64/bin/gh auth login --with-token
+if [ -z "$GITHUB_TOKEN" ]; then
+    echo "⚠️  GITHUB_TOKEN not set. Please export it first:"
+    echo "   export GITHUB_TOKEN='your_github_token_here'"
+else
+    printf '%s\n' "$GITHUB_TOKEN" | /tmp/gh_2.40.1_linux_amd64/bin/gh auth login --with-token
+fi
 
 # Verify authentication status
 /tmp/gh_2.40.1_linux_amd64/bin/gh auth status
