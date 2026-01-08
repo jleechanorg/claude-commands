@@ -51,7 +51,7 @@ import requests
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
 from testing_mcp.lib import evidence_utils
-from testing_mcp.lib.production_templates import GOD_MODE_TEMPLATES
+from testing_mcp.lib.production_templates import MY_EPIC_ADVENTURE_GOD_MODE
 
 # Configuration
 BASE_URL = os.getenv("BASE_URL") or get_base_url()
@@ -117,7 +117,7 @@ def test_full_god_mode_turn1(base_url: str):
     log("=" * 80)
 
     # Use production "My Epic Adventure" template
-    god_mode_data = GOD_MODE_TEMPLATES["My Epic Adventure"]
+    god_mode_data = MY_EPIC_ADVENTURE_GOD_MODE
 
     log("📝 Creating campaign with full God Mode data...")
     campaign_result = mcp_call("create_campaign", {
