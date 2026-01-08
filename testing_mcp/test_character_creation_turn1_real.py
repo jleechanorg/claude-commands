@@ -301,7 +301,7 @@ def main():
     
     # Capture git provenance and server info
     log("📊 Capturing git provenance and server info...")
-    provenance = evidence_utils.capture_provenance()
+    provenance = evidence_utils.capture_provenance(base_url)
 
     # Run tests
     test1_passed = test_full_god_mode_turn1(base_url)
