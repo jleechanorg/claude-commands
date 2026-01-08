@@ -192,7 +192,7 @@ npm test src/components/test_file.js
 
 ### Requirements
 
-- Claude Code CLI (Claude for Desktop with plugin support)
+- Claude Code CLI
 - Git repository context
 - Project-specific adaptations for paths and commands
 
