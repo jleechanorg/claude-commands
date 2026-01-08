@@ -1,0 +1,20 @@
+{
+  "name": "claude-commands-marketplace",
+  "description": "Official marketplace for Claude Commands - LLM Capital Efficiency Framework with 145+ production-tested workflow automation commands",
+  "owner": {
+    "name": "jleechan",
+    "email": "team@worldarchitect.ai"
+  },
+  "plugins": [
+    {
+      "name": "claude-commands",
+      "description": "LLM Capital Efficiency Framework: 145+ production-tested slash commands for autonomous development workflows, PR automation, and multi-agent orchestration",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "WorldArchitect.AI Team",
+        "email": "team@worldarchitect.ai"
+      }
+    }
+  ]
+}

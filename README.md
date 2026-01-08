@@ -127,6 +127,38 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 
 Claude Code will intelligently analyze your project, recommend relevant commands, and configure everything automatically.
 
+## 📦 Installation
+
+### Quick Install (Claude Code Marketplace)
+
+```bash
+# Register the marketplace (first-time only)
+/plugin marketplace add claude-commands-marketplace https://github.com/jleechanorg/claude-commands
+
+# Install the plugin
+/plugin install claude-commands@claude-commands-marketplace
+
+# Verify installation
+/help
+```
+
+### Manual Installation
+
+```bash
+# Clone and copy commands to your project
+git clone https://github.com/jleechanorg/claude-commands.git
+cp -r claude-commands/.claude/commands/* ./.claude/commands/
+```
+
+### Detailed Instructions
+
+See [INSTALL.md](INSTALL.md) for:
+- Platform-specific installation (Claude Code, Codex, OpenCode)
+- GitHub CLI setup for GitHub operations
+- Post-installation configuration
+- Troubleshooting guide
+- Update and uninstall procedures
+
 ## Table of Contents
 
 1. [Command Composition Architecture](#-the-composition-architecture---how-it-actually-works)
