@@ -4,8 +4,8 @@
 This test reproduces the production bug where CharacterCreationAgent
 is skipped when users create campaigns from templates with God Mode data.
 
-RED STATE: CharacterCreationAgent skips on Turn 1 with "let's begin"
-GREEN STATE: CharacterCreationAgent activates even with God Mode template
+RED STATE: CharacterCreationAgent skips on Turn 1 with God Mode template
+GREEN STATE: CharacterCreationAgent activates with God Mode template
 """
 
 import sys
@@ -38,13 +38,13 @@ def test_red_state():
     )
     print(f"✅ Campaign created: {campaign_id}")
 
-    # User says "Let's begin!" on Turn 1 (completion phrase that triggers bug)
-    print("\n📝 User says: \"Let's begin the adventure!\" (completion phrase)")
+    # User wants to create their character on Turn 1
+    print("\n📝 User says: \"Let's create my character!\"")
     result = process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="Let's begin the adventure!",
+        user_input="Let's create my character!",
         mode="character",
     )
 
@@ -86,13 +86,13 @@ def test_green_state():
     )
     print(f"✅ Campaign created: {campaign_id}")
 
-    # User says "Let's begin!" on Turn 1 (should NOT skip CharacterCreationAgent)
-    print("\n📝 User says: \"Let's begin the adventure!\"")
+    # User wants to create their character on Turn 1 (should activate CharacterCreationAgent)
+    print("\n📝 User says: \"Let's create my character!\"")
     result = process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="Let's begin the adventure!",
+        user_input="Let's create my character!",
         mode="character",
     )
 
@@ -107,7 +107,7 @@ def test_green_state():
 
     if char_creation_active:
         print(f"\n✅ GREEN STATE CONFIRMED: CharacterCreationAgent ACTIVATED!")
-        print(f"   Bug is FIXED - agent activates even with completion phrase")
+        print(f"   Bug is FIXED - agent activates with God Mode template")
         return True
     else:
         print(f"\n❌ FAIL: CharacterCreationAgent still skipped")
