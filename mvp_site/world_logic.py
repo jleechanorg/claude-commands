@@ -1404,9 +1404,13 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         )
 
         # Create initial game state with user's debug mode preference
+        # ALWAYS start in character creation mode, even if God Mode includes character data
         initial_game_state = GameState(
             user_id=user_id,
-            custom_campaign_state={"attribute_system": attribute_system},
+            custom_campaign_state={
+                "attribute_system": attribute_system,
+                "character_creation_in_progress": True,
+            },
             debug_mode=debug_mode,
         ).to_dict()
 
