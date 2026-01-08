@@ -193,8 +193,7 @@ Say 'done' to return to your adventure!
 
 User is ONLY finished when they explicitly say:
 - "I'm done" / "I'm finished"
-- "Start the story" / "Begin the adventure"
-- "Let's start" / "Ready to play"
+- "Ready to play"
 - "Level-up complete" / "Done leveling"
 - "Character complete" / "That's everything"
 
