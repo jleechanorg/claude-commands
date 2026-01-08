@@ -20,6 +20,7 @@ requests>=2.31.0
 playwright>=1.40.0
 cachetools>=5.3.0
 beautifulsoup4>=4.12.0
+cachetools>=5.3.0
 psutil>=5.9.0
 PyJWT>=2.8.0
 ruff>=0.6.0

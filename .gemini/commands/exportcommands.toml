@@ -554,7 +554,7 @@ cp CLAUDE.md /tmp/claude_filtered.md
 # Apply content filtering
 
 sed -i 's|mvp_site/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
-sed -i 's|worldarchitect\.ai|your-project.com|g' /tmp/claude_filtered.md
+sed -i 's|worldarchitect\\.ai|your-project.com|g' /tmp/claude_filtered.md
 sed -i 's|jleechan|${USER}|g' /tmp/claude_filtered.md
 cat /tmp/claude_filtered.md >> staging/CLAUDE.md
 ```
@@ -672,10 +672,10 @@ else
 
         # Apply comprehensive content transformations
         sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/hooks/$relative_path"
-        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/hooks/$relative_path"
+        sed -i 's|worldarchitect\\.ai|your-project.com|g' "staging/hooks/$relative_path"
         sed -i 's|jleechan|${USER}|g' "staging/hooks/$relative_path"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/hooks/$relative_path"
-        sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/hooks/$relative_path"
+        sed -i 's|/home/${USER}/projects/worldarchitect\\.ai/[^/]*||g' "staging/hooks/$relative_path"
 
         # Make scripts executable and add adaptation headers
         case "$hook_name" in
@@ -683,18 +683,18 @@ else
                 chmod +x "staging/hooks/$relative_path"
                 # Add adaptation header only if file doesn't start with shebang
                 if ! head -1 "staging/hooks/$relative_path" | grep -q '^#!'; then
-                    sed -i '1i\#!/bin/bash\n# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt paths and project references for your environment\n' "staging/hooks/$relative_path"
+                    sed -i '1i\\#!/bin/bash\\n# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\\n# This hook provides core Claude Code workflow automation\\n# Adapt paths and project references for your environment\\n' "staging/hooks/$relative_path"
                 else
-                    sed -i '1a\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt paths and project references for your environment\n' "staging/hooks/$relative_path"
+                    sed -i '1a\\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\\n# This hook provides core Claude Code workflow automation\\n# Adapt paths and project references for your environment\\n' "staging/hooks/$relative_path"
                 fi
                 ;;
             *.py)
                 chmod +x "staging/hooks/$relative_path"
                 # Add adaptation note after any existing shebang
                 if head -1 "staging/hooks/$relative_path" | grep -q '^#!'; then
-                    sed -i '1a\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt imports and project references for your environment\n' "staging/hooks/$relative_path"
+                    sed -i '1a\\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\\n# This hook provides core Claude Code workflow automation\\n# Adapt imports and project references for your environment\\n' "staging/hooks/$relative_path"
                 else
-                    sed -i '1i\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt imports and project references for your environment\n' "staging/hooks/$relative_path"
+                    sed -i '1i\\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\\n# This hook provides core Claude Code workflow automation\\n# Adapt imports and project references for your environment\\n' "staging/hooks/$relative_path"
                 fi
                 ;;
         esac
@@ -763,17 +763,17 @@ else
 
         # Apply comprehensive content transformations
         sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/agents/$relative_path"
-        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/agents/$relative_path"
+        sed -i 's|worldarchitect\\.ai|your-project.com|g' "staging/agents/$relative_path"
         sed -i 's|jleechan|${USER}|g' "staging/agents/$relative_path"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/agents/$relative_path"
-        sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/agents/$relative_path"
+        sed -i 's|/home/${USER}/projects/worldarchitect\\.ai/[^/]*||g' "staging/agents/$relative_path"
 
         # Add agent configuration header for markdown files
         case "$agent_name" in
             *.md)
                 # Add adaptation header only if file doesn't start with existing header
                 if ! head -5 "staging/agents/$relative_path" | grep -q '🚨 CLAUDE CODE AGENT'; then
-                    sed -i '1i\# 🚨 CLAUDE CODE AGENT CONFIGURATION\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This agent provides specialized AI capabilities for Claude Code workflows\n# Adapt project references and configurations for your environment\n' "staging/agents/$relative_path"
+                    sed -i '1i\\# 🚨 CLAUDE CODE AGENT CONFIGURATION\\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\\n# This agent provides specialized AI capabilities for Claude Code workflows\\n# Adapt project references and configurations for your environment\\n' "staging/agents/$relative_path"
                 fi
                 ;;
         esac
@@ -814,16 +814,16 @@ for script_name in "${ROOT_SCRIPTS[@]}"; do
         cp "$script_name" "staging/infrastructure-scripts/$script_name"
 
         # Apply comprehensive content transformations
-        sed -i 's|/tmp/worldarchitect\.ai|/tmp/$PROJECT_NAME|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|/tmp/worldarchitect\\.ai|/tmp/$PROJECT_NAME|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|worldarchitect-memory-backups|$PROJECT_NAME-memory-backups|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|worldarchitect\\.ai|your-project.com|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|jleechan|$USER|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|D&D campaign management|Content management|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|Game MCP Server|Content MCP Server|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|start_game_mcp\.sh|start_content_mcp.sh|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|start_game_mcp\\.sh|start_content_mcp.sh|g' "staging/infrastructure-scripts/$script_name"
 
         # Add infrastructure script header with adaptation warning
-        sed -i '1i\#!/bin/bash\n# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This script provides development environment management patterns\n# Adapt paths, service names, and configurations for your project\n\n' "staging/infrastructure-scripts/$script_name"
+        sed -i '1i\\#!/bin/bash\\n# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT\\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\\n# This script provides development environment management patterns\\n# Adapt paths, service names, and configurations for your project\\n\\n' "staging/infrastructure-scripts/$script_name"
     else
         echo "Warning: Infrastructure script not found: $script_name"
     fi
@@ -918,7 +918,7 @@ python_script = os.path.join(project_root, '.claude', 'commands', 'exportcommand
 print("🚀 Starting export via Python implementation...")
 result = subprocess.run(['python3', python_script], capture_output=True, text=True)
 
-if result.returncode \!= 0:
+if result.returncode != 0:
     print(f"❌ Export failed: {result.stderr}")
     exit(1)
 
@@ -1055,7 +1055,7 @@ python_script = os.path.join(project_root, '.claude', 'commands', 'exportcommand
 print("🚀 Starting export via Python implementation...")
 result = subprocess.run(['python3', python_script], capture_output=True, text=True)
 
-if result.returncode \!= 0:
+if result.returncode != 0:
     print(f"❌ Export failed: {result.stderr}")
     exit(1)
 

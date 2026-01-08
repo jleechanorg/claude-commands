@@ -162,7 +162,7 @@ Based on research of `~/.claude/projects` structure:
     └── ...
 ```
 
-Note on naming: project directories are sanitized absolute paths where `/` is replaced with `-` (e.g., `/home/jleechan/projects/worldarchitect.ai` → `-home-jleechan-projects-worldarchitect-ai`). On Windows, backslashes `\` are normalized similarly.
+Note on naming: project directories are sanitized absolute paths where `/` is replaced with `-` (e.g., `/home/jleechan/projects/worldarchitect.ai` → `-home-jleechan-projects-worldarchitect-ai`). On Windows, backslashes `\\` are normalized similarly.
 
 **JSONL Format** (per conversation file):
 ```jsonl
