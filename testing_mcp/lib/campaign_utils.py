@@ -115,6 +115,46 @@ def get_campaign_state(
     return payload
 
 
+def create_campaign_with_god_mode(
+    client: MCPClient,
+    user_id: str,
+    *,
+    title: str = "MCP Test Campaign",
+    god_mode_data: str,
+) -> str:
+    """Create a campaign with God Mode data (matches real user flow with templates).
+
+    This creates campaigns exactly like production templates that include
+    pre-defined character data, world lore, and campaign setup in God Mode.
+
+    Args:
+        client: MCPClient instance.
+        user_id: User identifier.
+        title: Campaign title.
+        god_mode_data: Full God Mode content (character, setting, world history, etc.)
+
+    Returns:
+        Campaign ID string.
+
+    Raises:
+        RuntimeError: If campaign creation fails.
+    """
+    payload = client.tools_call(
+        "create_campaign",
+        {
+            "user_id": user_id,
+            "title": title,
+            "selected_prompts": [],
+            "use_default_world": False,
+            "god_mode_data": god_mode_data,
+        },
+    )
+    campaign_id = payload.get("campaign_id") or payload.get("campaignId")
+    if not isinstance(campaign_id, str) or not campaign_id:
+        raise RuntimeError(f"create_campaign returned unexpected payload: {payload}")
+    return campaign_id
+
+
 def ensure_game_state_seed(
     client: MCPClient, *, user_id: str, campaign_id: str
 ) -> bool:
