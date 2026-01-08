@@ -7,13 +7,13 @@ A comprehensive collection of workflow automation commands for Claude Code that 
 To install Claude Commands, first register the marketplace:
 
 ```
-/plugin marketplace add claude-commands-marketplace https://github.com/jleechanorg/claude-commands
+/plugin marketplace add jleechanorg/claude-commands
 ```
 
-Then install the plugin:
+Then browse available commands with `/plugin` and install:
 
 ```
-/plugin install claude-commands@claude-commands-marketplace
+/plugin install claude-commands@claude-commands
 ```
 
 After installation, quit and restart Claude for the plugin to take effect.
