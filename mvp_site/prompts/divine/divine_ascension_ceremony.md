@@ -71,7 +71,7 @@ Based on your journey, these domains resonate with your essence:
 After domain selection, guide creation of the first Domain Truth:
 
 ```
-Your domain of [DOMAIN] grants you your first Axiom - a fundamental truth that reality itself cannot deny when you are present.
+Your domain of [DOMAIN] grants you your first Domain Truth - a fundamental truth that reality itself cannot deny when you are present.
 
 Suggested Truths for [DOMAIN]:
 - "[Example truth 1]"

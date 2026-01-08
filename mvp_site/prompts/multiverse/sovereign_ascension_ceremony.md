@@ -90,7 +90,7 @@ Which allies will you elevate? You may also choose to add others from your journ
 
 Convert stats to Sovereign system:
 
-**God Power (GP):** Highest ability score modifier (from Divine or D&D stats)
+**God Power (GP):** Highest ability score modifier (from your highest attribute modifier)
 **Substrate Points (SP):** Starting at 1 SP (1,000 universes equivalent)
 
 ```

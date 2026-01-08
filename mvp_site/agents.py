@@ -1414,19 +1414,40 @@ class CampaignUpgradeAgent(BaseAgent):
         if game_state:
             self._upgrade_type = game_state.get_pending_upgrade_type()
 
-    def build_system_instructions(self) -> list[str]:
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+        turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
+    ) -> str:
         """
         Build system instructions for campaign upgrade ceremony.
 
         Returns prompts appropriate for the pending upgrade type
         (divine ascension or multiverse ascension).
+
+        Args:
+            selected_prompts: User-selected prompt types (unused - ceremony uses fixed set)
+            use_default_world: Whether to include world content (unused)
+            include_continuation_reminder: Whether to add reminders (unused)
+            turn_number: Current turn number (unused)
+            llm_requested_sections: LLM-requested sections (unused)
+
+        Returns:
+            Complete system instruction string for the upgrade ceremony
         """
-        from mvp_site.agent_prompts import PromptBuilder, _load_instruction_file
+        # Parameters intentionally unused - ceremony uses fixed prompt set
+        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
+        del llm_requested_sections
 
-        builder = PromptBuilder(self.game_state)
+        from mvp_site.agent_prompts import _load_instruction_file
 
-        # Start with core instructions
-        parts = builder.build_core_system_instructions()
+        builder = self._prompt_builder
+
+        # Start with core instructions (includes master directive, game state)
+        parts: list[str] = builder.build_core_system_instructions()
 
         # Add the appropriate ascension ceremony prompt
         if self._upgrade_type == "multiverse":
@@ -1443,12 +1464,19 @@ class CampaignUpgradeAgent(BaseAgent):
             logging_util.info(
                 "✨ CAMPAIGN_UPGRADE: Loading Divine ascension ceremony"
             )
+        else:
+            # Edge case: upgrade flagged but type not determined
+            logging_util.warning(
+                f"⚠️ CAMPAIGN_UPGRADE: Unknown upgrade type '{self._upgrade_type}', "
+                "falling back to core instructions only"
+            )
 
         # Add mechanics reference for stat conversion
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
 
-        return parts
+        # Finalize without world content (ceremony doesn't need world lore)
+        return builder.finalize_instructions(parts, use_default_world=False)
 
     @classmethod
     def matches_game_state(cls, game_state: "GameState | None") -> bool:

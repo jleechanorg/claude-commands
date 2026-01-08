@@ -1773,8 +1773,11 @@ class GameState:
             return True
 
         # Check level threshold
-        experience = self.player_character_data.get("experience", {})
-        level = experience.get("level", 1) if isinstance(experience, dict) else 1
+        # Level may be at top-level (normalized) or in experience dict
+        level = self.player_character_data.get("level", None)
+        if level is None:
+            experience = self.player_character_data.get("experience", {})
+            level = experience.get("level", 1) if isinstance(experience, dict) else 1
         if level >= constants.DIVINE_UPGRADE_LEVEL_THRESHOLD:
             return True
 
