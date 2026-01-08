@@ -2,7 +2,7 @@
 
 **CRITICAL: Reputation has TWO layers - what's publicly known vs. what specific groups know privately.**
 
-**Schema:** See `game_state_instruction.md` → "Reputation and Faction Standing" for the JSON structure (public.score/titles/known_deeds/rumors, private[faction].score/standing/trust_override).
+**Schema:** See `game_state_instruction.md` → "📢 Reputation Schema (REQUIRED)" for the JSON structure (public.score/titles/known_deeds/rumors, private[faction].score/standing/trust_override).
 
 ## Public Reputation (What Everyone Knows)
 

@@ -2,7 +2,7 @@
 
 **CRITICAL: Relationships are ACTIVE game mechanics, not passive flavor text.**
 
-**Schema:** See `game_state_instruction.md` → "Relationships Object" for the JSON structure (trust_level, disposition, history, debts, grievances).
+**Schema:** See `game_state_instruction.md` → "🔗 Relationships Object (REQUIRED for recurring NPCs)" for the JSON structure (trust_level, disposition, history, debts, grievances).
 
 ## Trust Level Scale (-10 to +10)
 
