@@ -1835,7 +1835,7 @@ class GameState:
         if not isinstance(attributes, dict):
             return 0
 
-        highest_modifier = 0
+        highest_modifier: int | None = None
         for attr_name, attr_value in attributes.items():
             if isinstance(attr_value, dict):
                 # Handle {"score": 18, "modifier": 4} format
@@ -1846,10 +1846,12 @@ class GameState:
             else:
                 continue
 
-            if isinstance(modifier, int) and modifier > highest_modifier:
-                highest_modifier = modifier
+            if isinstance(modifier, int):
+                if highest_modifier is None or modifier > highest_modifier:
+                    highest_modifier = modifier
 
-        return highest_modifier
+        # Return 0 if no valid attributes found (fallback)
+        return highest_modifier if highest_modifier is not None else 0
 
     # =========================================================================
     # Post-Combat Reward Detection

@@ -57,7 +57,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from mvp_site import constants, intent_classifier, logging_util
-from mvp_site.agent_prompts import PromptBuilder
+from mvp_site.agent_prompts import PromptBuilder, _load_instruction_file
 
 if TYPE_CHECKING:
     from mvp_site.game_state import GameState
@@ -527,7 +527,6 @@ class StoryModeAgent(BaseAgent):
         # These are optional prompts that activate based on campaign_tier
         if self.game_state is not None:
             campaign_tier = self.game_state.get_campaign_tier()
-            from mvp_site.agent_prompts import _load_instruction_file
 
             if campaign_tier == constants.CAMPAIGN_TIER_DIVINE:
                 parts.append(_load_instruction_file(constants.PROMPT_TYPE_DIVINE_SYSTEM))
@@ -1442,8 +1441,6 @@ class CampaignUpgradeAgent(BaseAgent):
         del selected_prompts, use_default_world, include_continuation_reminder, turn_number
         del llm_requested_sections
 
-        from mvp_site.agent_prompts import _load_instruction_file
-
         builder = self._prompt_builder
 
         # Start with core instructions (includes master directive, game state)
@@ -1471,9 +1468,7 @@ class CampaignUpgradeAgent(BaseAgent):
                 "falling back to core instructions only"
             )
 
-        # Add mechanics reference for stat conversion
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
+        # Note: Mechanics and D&D SRD are already included via build_core_system_instructions()
 
         # Finalize without world content (ceremony doesn't need world lore)
         return builder.finalize_instructions(parts, use_default_world=False)
