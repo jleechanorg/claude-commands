@@ -93,25 +93,42 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
 - **Shield:** +2 AC, bearing the Two Suns of the Imperium
 """
 
-        # Mock campaign creation response
+        # Mock campaign creation response (initial campaign setup)
         campaign_creation_response = FakeLLMResponse(
             json.dumps(
                 {
-                    "narrative": "SCENE 1: You stand ready for your first mission...",
-                    "entities_mentioned": ["Prefect Gratian"],
-                    "location_confirmed": "Winter-Mourn Province",
+                    "narrative": "Welcome to your adventure! Campaign created successfully.",
+                    "entities_mentioned": [],
+                    "location_confirmed": "World of Assiah",
                     "state_updates": {},
                 }
             )
         )
 
-        # Mock CharacterCreationAgent response (should be activated on Turn 1)
+        # Mock CharacterCreationAgent response for Turn 1 (GREEN state fix)
         character_creation_response = FakeLLMResponse(
             json.dumps(
                 {
-                    "narrative": "[CHARACTER CREATION] Welcome! I see you have a pre-defined character template. Let's review your character before we begin the adventure...",
-                    "entities_mentioned": [],
-                    "location_confirmed": "",
+                    "narrative": """[CHARACTER CREATION]
+
+Welcome! I see you have a pre-defined character template for Ser Arion val Valerion, a Level 1 Paladin. Let's review and finalize your character before we begin the adventure.
+
+**Your Character So Far:**
+- **Name:** Ser Arion val Valerion
+- **Age:** 16
+- **Class:** Level 1 Paladin (Oath of the Crown)
+- **Race:** (Not specified yet)
+
+**Questions to Complete Your Character:**
+
+1. **Race:** What race is Ser Arion? (Human, Elf, Dwarf, Halfling, Dragonborn, etc.)
+2. **Background:** What was Ser Arion's life before becoming a paladin? (Noble, Soldier, Acolyte, Folk Hero, etc.)
+3. **Alignment Confirmation:** You mentioned Lawful Neutral leaning - does that feel right for your character?
+4. **Personality:** What drives Ser Arion? What are his ideals, bonds, and flaws?
+
+Take your time! Once we finalize these details, we'll begin your epic adventure in the World of Assiah.""",
+                    "entities_mentioned": ["Ser Arion val Valerion"],
+                    "location_confirmed": "World of Assiah",
                     "state_updates": {
                         "custom_campaign_state": {
                             "character_creation_in_progress": True
@@ -121,11 +138,10 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
             )
         )
 
-        # Set up sequential mock responses
-        mock_gemini_request.side_effect = [
-            campaign_creation_response,  # Campaign creation
-            character_creation_response,  # Turn 1 interaction
-        ]
+        # Set up mock response for Turn 1 interaction
+        # NOTE: Campaign creation uses hardcoded mock (llm_service.py:2558), not this mock.
+        # So only Turn 1 interaction calls _call_llm_api_with_llm_request.
+        mock_gemini_request.return_value = character_creation_response
 
         # Step 1: Create campaign with full God Mode data
         campaign_data = {
@@ -244,20 +260,35 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
         campaign_creation_response = FakeLLMResponse(
             json.dumps(
                 {
-                    "narrative": "SCENE 1: The twin suns rise over Tatooine...",
-                    "entities_mentioned": ["R2-D2"],
-                    "location_confirmed": "Tatooine",
+                    "narrative": "Welcome to Star Wars! Campaign created successfully.",
+                    "entities_mentioned": [],
+                    "location_confirmed": "Star Wars Galaxy",
                     "state_updates": {},
                 }
             )
         )
 
+        # GREEN state fix: Return proper character creation narrative
         character_creation_response = FakeLLMResponse(
             json.dumps(
                 {
-                    "narrative": "[CHARACTER CREATION] Let's create your Jedi character...",
-                    "entities_mentioned": [],
-                    "location_confirmed": "",
+                    "narrative": """[CHARACTER CREATION]
+
+Welcome to your Star Wars adventure! I see you want to play as Luke. Let's create your character together.
+
+**Character Concept:** Luke in the Star Wars setting
+
+**Let's Define Your Character:**
+
+1. **Full Name:** Is your character named Luke Skywalker, or a different Luke?
+2. **Species/Race:** Human, or another Star Wars species? (Twi'lek, Wookiee, Droid, etc.)
+3. **Class/Role:** What type of character is Luke? (Jedi, Scoundrel, Soldier, Force Adept, etc.)
+4. **Background:** What's Luke's story before this adventure begins?
+5. **Alignment:** Light side, dark side, or somewhere in between?
+
+Tell me your choices and we'll build Luke's character sheet together!""",
+                    "entities_mentioned": ["Luke"],
+                    "location_confirmed": "Star Wars Galaxy",
                     "state_updates": {
                         "custom_campaign_state": {
                             "character_creation_in_progress": True
@@ -267,10 +298,9 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
             )
         )
 
-        mock_gemini_request.side_effect = [
-            campaign_creation_response,
-            character_creation_response,
-        ]
+        # Set up mock response for Turn 1 interaction
+        # NOTE: Campaign creation uses hardcoded mock, not this mock.
+        mock_gemini_request.return_value = character_creation_response
 
         # Create campaign
         campaign_data = {
