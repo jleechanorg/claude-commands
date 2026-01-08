@@ -189,6 +189,36 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
             "character_creation_in_progress flag should be True on Turn 1",
         )
 
+        # Step 4: Verify narrative content shows CHARACTER CREATION, not STORY MODE
+        narrative = turn1_data_response.get("narrative", "")
+
+        # RED TEST: These assertions should FAIL with current mock
+        # CharacterCreationAgent should return narrative with [CHARACTER CREATION] prefix
+        self.assertIn(
+            "[CHARACTER CREATION]",
+            narrative,
+            f"CharacterCreationAgent narrative should start with [CHARACTER CREATION] prefix. "
+            f"Got: {narrative[:100]}..."
+        )
+
+        # CharacterCreationAgent should ask for character details (name, race, class, background, etc.)
+        character_keywords = ["name", "race", "class", "background", "alignment"]
+        has_char_questions = any(keyword.lower() in narrative.lower() for keyword in character_keywords)
+        self.assertTrue(
+            has_char_questions,
+            f"CharacterCreationAgent should ask character creation questions (name, race, class, etc.). "
+            f"Got: {narrative[:200]}..."
+        )
+
+        # CharacterCreationAgent should NOT return story mode content
+        story_keywords = ["SCENE", "combat", "mission", "dungeon", "attack"]
+        has_story_content = any(keyword in narrative for keyword in story_keywords)
+        self.assertFalse(
+            has_story_content,
+            f"CharacterCreationAgent should NOT return story mode content (SCENE, combat, mission). "
+            f"Got: {narrative[:200]}..."
+        )
+
     @patch("mvp_site.firestore_service.get_db")
     @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
     def test_character_creation_agent_turn1_with_minimal_god_mode(
@@ -284,6 +314,33 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
             has_char_creation,
             f"CharacterCreationAgent should activate even with minimal God Mode data. "
             f"Got system files: {[f.split('/')[-1] for f in system_files]}",
+        )
+
+        # Verify narrative content shows CHARACTER CREATION, not STORY MODE
+        narrative = turn1_data.get("narrative", "")
+
+        # RED TEST: These assertions should FAIL with current mock
+        self.assertIn(
+            "[CHARACTER CREATION]",
+            narrative,
+            f"CharacterCreationAgent narrative should start with [CHARACTER CREATION] prefix. "
+            f"Got: {narrative[:100]}..."
+        )
+
+        character_keywords = ["name", "race", "class", "background", "alignment"]
+        has_char_questions = any(keyword.lower() in narrative.lower() for keyword in character_keywords)
+        self.assertTrue(
+            has_char_questions,
+            f"CharacterCreationAgent should ask character creation questions (name, race, class, etc.). "
+            f"Got: {narrative[:200]}..."
+        )
+
+        story_keywords = ["SCENE", "combat", "mission", "dungeon", "attack"]
+        has_story_content = any(keyword in narrative for keyword in story_keywords)
+        self.assertFalse(
+            has_story_content,
+            f"CharacterCreationAgent should NOT return story mode content (SCENE, combat, mission). "
+            f"Got: {narrative[:200]}..."
         )
 
 
