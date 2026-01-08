@@ -120,7 +120,7 @@ def test_full_god_mode_turn1(base_url: str):
     god_mode_data = MY_EPIC_ADVENTURE_GOD_MODE
 
     log("📝 Creating campaign with full God Mode data...")
-    campaign_response = mcp_call("tools/call", {
+    campaign_result = mcp_call("tools/call", {
         "name": "create_campaign",
         "arguments": {
             "user_id": USER_ID,
@@ -131,14 +131,12 @@ def test_full_god_mode_turn1(base_url: str):
         }
     }, base_url=base_url)
 
-    campaign_result = campaign_response.get("result", {})
-
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
 
     # Turn 1 interaction - should trigger CharacterCreationAgent
     log("📝 Turn 1: User wants to create character...")
-    turn1_response = mcp_call("tools/call", {
+    turn1_result = mcp_call("tools/call", {
         "name": "process_action",
         "arguments": {
             "user_id": USER_ID,
@@ -148,8 +146,6 @@ def test_full_god_mode_turn1(base_url: str):
             "include_raw_llm_payloads": True,
         }
     }, base_url=base_url)
-
-    turn1_result = turn1_response.get("result", {})
     
     # Validation 1: CharacterCreationAgent selected (check system_instruction_files)
     debug_info = turn1_result.get("debug_info", {})
@@ -228,7 +224,7 @@ def test_minimal_god_mode_turn1(base_url: str):
     god_mode_data = "Character: luke | Setting: star wars"
 
     log("📝 Creating campaign with minimal God Mode data...")
-    campaign_response = mcp_call("tools/call", {
+    campaign_result = mcp_call("tools/call", {
         "name": "create_campaign",
         "arguments": {
             "user_id": USER_ID,
@@ -239,13 +235,12 @@ def test_minimal_god_mode_turn1(base_url: str):
         }
     }, base_url=base_url)
 
-    campaign_result = campaign_response.get("result", {})
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
 
     # Turn 1 interaction
     log("📝 Turn 1: User wants to create character...")
-    turn1_response = mcp_call("tools/call", {
+    turn1_result = mcp_call("tools/call", {
         "name": "process_action",
         "arguments": {
             "user_id": USER_ID,
@@ -255,8 +250,6 @@ def test_minimal_god_mode_turn1(base_url: str):
             "include_raw_llm_payloads": True,
         }
     }, base_url=base_url)
-
-    turn1_result = turn1_response.get("result", {})
     
     # Same validations as Test 1
     debug_info = turn1_result.get("debug_info", {})
@@ -448,12 +441,17 @@ The fix works as expected. CharacterCreationAgent now correctly activates on Tur
     
     # Create evidence bundle
     bundle = evidence_utils.create_evidence_bundle(
-        work_name=WORK_NAME,
-        methodology=methodology,
-        evidence=evidence,
-        notes=notes,
+        evidence_dir=EVIDENCE_DIR,
+        test_name=WORK_NAME,
         provenance=provenance,
-        artifact_files=[str(mcp_log_file)],
+        results={
+            "test1_passed": test1_passed,
+            "test2_passed": test2_passed,
+            "total_tests": 2,
+            "passed_tests": sum([test1_passed, test2_passed]),
+        },
+        methodology_text=methodology,
+        request_responses=RAW_MCP_RESPONSES,
     )
     
     log(f"✅ Evidence bundle created: {bundle['evidence_dir']}")
