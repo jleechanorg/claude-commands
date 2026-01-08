@@ -87,7 +87,7 @@ Use the encounter difficulty to determine base XP:
 
 ## D&D 5e XP Thresholds
 
-**Reference:** See `mechanics_system_instruction.md` for the complete XP Progression Table with level thresholds (0→300→900→2700→6500→14000→23000→34000→48000→64000 for levels 1-10).
+**Reference:** See `mechanics_system_instruction.md` for the complete XP Progression Table with level thresholds.
 
 ## Level-Up Detection
 
