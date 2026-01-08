@@ -56,7 +56,7 @@ No changes needed - file reference is correct.
 
 **Fix Applied**:
 - Updated to: "See `.claude/commands/README.md` in your project after installation"
-- Updated to: "See `.claude/commands/examples.md` in your project after installation"
+- Updated to: "See `.claude/commands/pair-examples.md` in your project after installation"
 
 **Location**: INSTALL.md lines 211-212
 
@@ -208,12 +208,12 @@ The installation system is now production-ready with all review feedback address
 **Issue**: Bare URLs violating MD034.
 
 **Fix Applied**:
-- Converted bare URL for gh auth login to markdown link.
-- Converted bare URL for Issues to markdown link.
+- Converted bare URL for gh auth login to Markdown link.
+- Converted bare URL for Issues to Markdown link.
 
 
 ### 3. PR_COMMENT_RESPONSES.md - Bare URL
 **Issue**: Bare URL in previous response text.
 
 **Fix Applied**:
-- Converted bare URL to markdown link.
+- Converted bare URL to Markdown link.

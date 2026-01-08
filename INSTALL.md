@@ -201,7 +201,7 @@ rm -rf /path/to/your/project/.claude/commands/
 
 - **Issues**: [GitHub Issues](https://github.com/jleechanorg/claude-commands/issues)
 - **Documentation**: See `.claude/commands/README.md` in your project after installation
-- **Examples**: See `.claude/commands/examples.md` in your project after installation
+- **Examples**: See `.claude/commands/pair-examples.md` in your project after installation
 
 ## License
 
