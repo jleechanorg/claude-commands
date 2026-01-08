@@ -26,7 +26,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from orchestration.task_dispatcher import CLI_PROFILES
+from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
@@ -37,9 +37,21 @@ from .codex_config import (
     CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
 )
 from .codex_config import (
+    FIX_COMMENT_MARKER_PREFIX as SHARED_FIX_COMMENT_PREFIX,
+)
+from .codex_config import (
+    FIX_COMMENT_MARKER_SUFFIX as SHARED_FIX_COMMENT_SUFFIX,
+)
+from .codex_config import (
     build_comment_intro,
 )
-from .orchestrated_pr_runner import has_failing_checks, run_fixpr_batch
+from .orchestrated_pr_runner import (
+    chdir,
+    dispatch_agent_for_pr_with_task,
+    ensure_base_clone,
+    has_failing_checks,
+    run_fixpr_batch,
+)
 from .utils import json_manager, setup_logging
 
 
@@ -84,6 +96,8 @@ class JleechanorgPRMonitor:
 
     CODEX_COMMIT_MARKER_PREFIX = SHARED_MARKER_PREFIX
     CODEX_COMMIT_MARKER_SUFFIX = SHARED_MARKER_SUFFIX
+    FIX_COMMENT_MARKER_PREFIX = SHARED_FIX_COMMENT_PREFIX
+    FIX_COMMENT_MARKER_SUFFIX = SHARED_FIX_COMMENT_SUFFIX
     CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
     CODEX_BOT_IDENTIFIER = "codex"
     # GitHub short SHAs display with a minimum of 7 characters, while full SHAs are 40 characters.
@@ -144,7 +158,7 @@ class JleechanorgPRMonitor:
         for keyword in _codex_actor_keywords
     ]
     _codex_commit_message_pattern_str = (
-        r"\[(?:" + "|".join(_codex_actor_keywords) + r")-automation-commit\]"
+        r"\[(?:fixpr\s+)?(?:" + "|".join(_codex_actor_keywords) + r")-automation-commit\]"
     )
     _codex_commit_message_pattern = re.compile(
         _codex_commit_message_pattern_str,
@@ -831,6 +845,441 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return comment_body
 
+    def _compose_fix_comment_mentions(self) -> str:
+        mentions = [
+            token for token in (self.assistant_mentions or "").split() if token.startswith("@")
+        ]
+        lower_mentions = {token.lower() for token in mentions}
+        if "@greptile" not in lower_mentions:
+            mentions.append("@greptile")
+        return " ".join(mentions)
+
+    def _build_fix_comment_prompt_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+        agent_cli: str,
+    ) -> str:
+        cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+        commit_marker_cli = cli_chain[0] if cli_chain else "claude"
+
+        return (
+            f"FIX-COMMENT TASK (SELF-CONTAINED): Update PR #{pr_number} in {repository} "
+            f"(branch {pr_data.get('headRefName', 'unknown')}).\n"
+            "Goal: address all review comments with explicit DONE/NOT DONE replies, "
+            "fix failing tests, and resolve merge conflicts. Do NOT post a mega-instruction "
+            "comment; the monitor will post a review request after you finish.\n\n"
+            f"CLI chain: {agent_cli}. Start immediately.\n\n"
+            "Steps:\n"
+            f"1) gh pr checkout {pr_number}\n"
+            "2) Review all PR comments (gh pr view --json comments) and summarize required fixes\n"
+            "3) Apply code changes to address every comment; reply in-thread to 100% of review comments "
+            "(inline PR comments) with DONE/NOT DONE + explanation. For threaded replies to inline review comments, use "
+            f"`gh api /repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments/{{comment_id}}/replies -f body='...'`. "
+            f"For top-level PR/issue comments, use `gh pr comment {pr_number} --body-file -` (issue comments do not support threading).\n"
+            "4) Run relevant tests and fix failures\n"
+            "5) Resolve merge conflicts or rebase on base branch if needed\n"
+            f"6) git add -A && git commit -m \"[{commit_marker_cli}-automation-commit] fix PR #{pr_number} comment feedback\" && git push\n"
+            f"7) Write completion report to /tmp/orchestration_results/pr-{pr_number}_results.json "
+            "summarizing comments addressed, tests run, and remaining issues\n\n"
+            "**PR Details:**\n"
+            f"- Title: {pr_data.get('title', 'Unknown')}\n"
+            f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
+            f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})\n"
+        )
+
+    def _build_fix_comment_queued_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> str:
+        comment_body = (
+            "[AI automation] Fix-comment run queued for this PR. "
+            "A review request will follow after updates are pushed.\n\n"
+            "**PR Details:**\n"
+            f"- Title: {pr_data.get('title', 'Unknown')}\n"
+            f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
+            f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})"
+        )
+
+        return comment_body
+
+    def _build_fix_comment_review_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> str:
+        mentions = self._compose_fix_comment_mentions()
+        intro = f"{mentions} [AI automation] Fix-comment automation complete. Please review the updates."
+
+        comment_body = (
+            f"{intro}\n\n"
+            "**Review Request:**\n"
+            "Please review the latest changes, leave feedback, and flag any remaining issues. "
+            "If further fixes are needed, add explicit DONE/NOT DONE guidance.\n\n"
+            "**PR Details:**\n"
+            f"- Title: {pr_data.get('title', 'Unknown')}\n"
+            f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
+            f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})\n"
+        )
+
+        if head_sha:
+            comment_body += (
+                f"\n{self.FIX_COMMENT_MARKER_PREFIX}{head_sha}"
+                f"{self.FIX_COMMENT_MARKER_SUFFIX}"
+            )
+
+        return comment_body
+
+    def _get_fix_comment_watch_state(
+        self,
+        repo_full: str,
+        pr_number: int,
+    ) -> Tuple[Dict, Optional[str], List[Dict], List[str]]:
+        view_cmd = [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--repo",
+            repo_full,
+            "--json",
+            "title,headRefName,headRefOid,author,comments,commits",
+        ]
+        result = AutomationUtils.execute_subprocess_with_timeout(view_cmd, timeout=30, check=False)
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr or f"gh pr view failed for {repo_full}#{pr_number}")
+
+        pr_data = json.loads(result.stdout or "{}")
+        head_sha = pr_data.get("headRefOid")
+
+        comments_data = pr_data.get("comments", [])
+        if isinstance(comments_data, dict):
+            comments = comments_data.get("nodes", [])
+        elif isinstance(comments_data, list):
+            comments = comments_data
+        else:
+            comments = []
+
+        commits_data = pr_data.get("commits", [])
+        if isinstance(commits_data, dict):
+            commit_nodes = commits_data.get("nodes", [])
+        elif isinstance(commits_data, list):
+            commit_nodes = commits_data
+        else:
+            commit_nodes = []
+
+        headlines = []
+        for node in commit_nodes:
+            # Handle both nested 'commit' node structure and flat structure
+            commit_obj = node.get("commit") if isinstance(node, dict) and "commit" in node else node
+            headline = commit_obj.get("messageHeadline") if isinstance(commit_obj, dict) else None
+            if headline:
+                headlines.append(headline)
+
+        return pr_data, head_sha, comments, headlines
+
+    def _post_fix_comment_review(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        comment_body = self._build_fix_comment_review_body(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+        )
+
+        try:
+            comment_cmd = [
+                "gh",
+                "pr",
+                "comment",
+                str(pr_number),
+                "--repo",
+                repo_full,
+                "--body",
+                comment_body,
+            ]
+            AutomationUtils.execute_subprocess_with_timeout(comment_cmd, timeout=30)
+            self.logger.info(
+                "✅ Posted fix-comment review request on PR #%s (%s)",
+                pr_number,
+                repo_full,
+            )
+            return True
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to post fix-comment review request on PR #%s: %s",
+                pr_number,
+                exc,
+            )
+            return False
+
+    def _post_fix_comment_queued(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        comment_body = self._build_fix_comment_queued_body(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+        )
+
+        try:
+            queued_cmd = [
+                "gh",
+                "pr",
+                "comment",
+                str(pr_number),
+                "--repo",
+                repo_full,
+                "--body",
+                comment_body,
+            ]
+            AutomationUtils.execute_subprocess_with_timeout(queued_cmd, timeout=30)
+            self.logger.info(
+                "✅ Posted fix-comment queued notice on PR #%s (%s)",
+                pr_number,
+                repo_full,
+            )
+            return True
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to post fix-comment queued notice on PR #%s: %s",
+                pr_number,
+                exc,
+            )
+            return False
+
+    def _start_fix_comment_review_watcher(
+        self,
+        repository: str,
+        pr_number: int,
+        agent_cli: str,
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        env = os.environ.copy()
+        pythonpath_parts = [str(ROOT_DIR), str(ROOT_DIR / "automation")]
+        if env.get("PYTHONPATH"):
+            pythonpath_parts.append(env["PYTHONPATH"])
+        env["PYTHONPATH"] = ":".join(pythonpath_parts)
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor",
+            "--fix-comment-watch",
+            "--target-pr",
+            str(pr_number),
+            "--target-repo",
+            repo_full,
+            "--fixpr-agent",
+            agent_cli,
+        ]
+        try:
+            subprocess.Popen(
+                cmd,
+                cwd=str(ROOT_DIR),
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            self.logger.info(
+                "🧭 Started fix-comment review watcher for PR #%s (%s)",
+                pr_number,
+                repo_full,
+            )
+            return True
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to start fix-comment review watcher for PR #%s: %s",
+                pr_number,
+                exc,
+            )
+            return False
+
+    def run_fix_comment_review_watcher(
+        self,
+        pr_number: int,
+        repository: str,
+        agent_cli: str = "claude",
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+        commit_marker_cli = cli_chain[0] if cli_chain else "claude"
+        commit_marker = f"[{commit_marker_cli}-automation-commit]"
+        timeout_seconds = int(os.environ.get("FIX_COMMENT_WATCH_TIMEOUT", "3600"))
+        poll_interval = float(os.environ.get("FIX_COMMENT_WATCH_POLL", "30"))
+        deadline = time.time() + timeout_seconds
+
+        while time.time() < deadline:
+            try:
+                pr_data, head_sha, comments, headlines = self._get_fix_comment_watch_state(
+                    repo_full,
+                    pr_number,
+                )
+            except Exception as exc:
+                self.logger.warning(
+                    "⚠️ Fix-comment watcher failed to fetch PR state for #%s: %s",
+                    pr_number,
+                    exc,
+                )
+                time.sleep(poll_interval)
+                continue
+
+            if head_sha and self._has_fix_comment_comment_for_commit(comments, head_sha):
+                self.logger.info(
+                    "✅ Fix-comment review already posted for PR #%s",
+                    pr_number,
+                )
+                return True
+
+            if any(commit_marker in headline for headline in headlines):
+                if self._post_fix_comment_review(repo_full, pr_number, pr_data, head_sha):
+                    return True
+                return False
+
+            time.sleep(poll_interval)
+
+        self.logger.warning(
+            "⏳ Fix-comment watcher timed out for PR #%s after %ss",
+            pr_number,
+            timeout_seconds,
+        )
+        return False
+
+    def dispatch_fix_comment_agent(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        agent_cli: str = "claude",
+        model: str = None,
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        repo_name = repo_full.split("/")[-1]
+        branch = pr_data.get("headRefName", "")
+        if not branch:
+            branch = f"pr-{pr_number}"
+
+        head_sha = pr_data.get("headRefOid")
+        task_description = self._build_fix_comment_prompt_body(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+            agent_cli,
+        )
+
+        pr_payload = {
+            "repo_full": repo_full,
+            "repo": repo_name,
+            "number": pr_number,
+            "branch": branch,
+        }
+
+        try:
+            base_dir = ensure_base_clone(repo_full)
+            with chdir(base_dir):
+                dispatcher = TaskDispatcher()
+                return dispatch_agent_for_pr_with_task(
+                    dispatcher,
+                    pr_payload,
+                    task_description,
+                    agent_cli=agent_cli,
+                    model=model,
+                )
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to dispatch fix-comment agent for %s #%s: %s",
+                repo_full,
+                pr_number,
+                exc,
+            )
+            return False
+
+    def _process_pr_fix_comment(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        agent_cli: str = "claude",
+        model: str = None,
+    ) -> str:
+        repo_full = self._normalize_repository_name(repository)
+        repo_name = repo_full.split("/")[-1]
+        branch_name = pr_data.get("headRefName", "unknown")
+
+        head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
+        if head_sha and pr_data.get("headRefOid") != head_sha:
+            pr_data = {**pr_data, "headRefOid": head_sha}
+
+        # Check if we've already processed this PR with this commit
+        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - already processed commit %s",
+                pr_number,
+                head_sha[:8],
+            )
+            return "skipped"
+
+        if head_sha and self._has_fix_comment_comment_for_commit(comments, head_sha):
+            self.logger.info(
+                "♻️ Fix-comment automation already posted for commit %s on PR #%s, skipping",
+                head_sha[:8],
+                pr_number,
+            )
+            self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+            return "skipped"
+
+        if not self.dispatch_fix_comment_agent(repo_full, pr_number, pr_data, agent_cli=agent_cli, model=model):
+            return "failed"
+
+        queued_posted = self._post_fix_comment_queued(repo_full, pr_number, pr_data, head_sha)
+
+        if head_sha:
+            self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+
+        if not self._start_fix_comment_review_watcher(
+            repo_full,
+            pr_number,
+            agent_cli=agent_cli,
+        ):
+            self.logger.warning(
+                "⚠️ Failed to start review watcher for PR #%s, but agent is dispatched",
+                pr_number,
+            )
+            return "failed"
+
+        if not queued_posted:
+            self.logger.warning(
+                "⚠️ Queued comment failed for PR #%s, but agent and watcher are running",
+                pr_number,
+            )
+            return "partial"
+
+        return "posted"
+
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> Tuple[Optional[str], List[Dict]]:
         """Fetch PR comment data needed for Codex comment gating"""
         view_cmd = [
@@ -1019,6 +1468,22 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return comment_body[start_index:end_index].strip()
 
+    def _extract_fix_comment_marker(self, comment_body: str) -> Optional[str]:
+        """Extract commit marker from fix-comment automation comments."""
+        if not comment_body:
+            return None
+
+        prefix_index = comment_body.find(self.FIX_COMMENT_MARKER_PREFIX)
+        if prefix_index == -1:
+            return None
+
+        start_index = prefix_index + len(self.FIX_COMMENT_MARKER_PREFIX)
+        end_index = comment_body.find(self.FIX_COMMENT_MARKER_SUFFIX, start_index)
+        if end_index == -1:
+            return None
+
+        return comment_body[start_index:end_index].strip()
+
     def _has_codex_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
         """Determine if Codex instruction already exists for the latest commit"""
         if not head_sha:
@@ -1028,6 +1493,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             body = comment.get("body", "")
             marker_sha = self._extract_commit_marker(body)
             if marker_sha and marker_sha == head_sha:
+                return True
+
+        return False
+
+    def _has_fix_comment_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
+        """Determine if fix-comment automation already ran for the latest commit."""
+        if not head_sha:
+            return False
+
+        for comment in comments:
+            body = comment.get("body", "")
+            marker_sha = self._extract_fix_comment_marker(body)
+            if marker_sha and marker_sha == head_sha and "Fix-comment automation complete" in body:
                 return True
 
         return False
@@ -1122,7 +1600,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         count = 0
         for comment in comments:
             body = comment.get("body", "")
-            if self.CODEX_COMMIT_MARKER_PREFIX in body:
+            if self.CODEX_COMMIT_MARKER_PREFIX in body or self.FIX_COMMENT_MARKER_PREFIX in body:
                 count += 1
         return count
 
@@ -1208,7 +1686,15 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return False
 
-    def process_single_pr_by_number(self, pr_number: int, repository: str) -> bool:
+    def process_single_pr_by_number(
+        self,
+        pr_number: int,
+        repository: str,
+        *,
+        fix_comment: bool = False,
+        agent_cli: str = "claude",
+        model: str = None,
+    ) -> bool:
         """Process a specific PR by number and repository"""
         repo_full = self._normalize_repository_name(repository)
         self.logger.info(f"🎯 Processing target PR: {repo_full} #{pr_number}")
@@ -1245,9 +1731,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
                 self.logger.info(f"📝 Found PR: {pr_data['title']}")
 
-                # Post codex instruction comment
-                comment_result = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
-                success = comment_result == "posted"
+                if fix_comment:
+                    comment_result = self._process_pr_fix_comment(
+                        repo_full,
+                        pr_number,
+                        pr_data,
+                        agent_cli=agent_cli,
+                        model=model,
+                    )
+                else:
+                    # Post codex instruction comment
+                    comment_result = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
+                # Treat "skipped" same as success to avoid false failure counts
+                success = comment_result in {"posted", "skipped"}
 
                 # Record PR processing attempt with result
                 result = "success" if success else "failure"
@@ -1280,9 +1776,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.debug("Traceback: %s", traceback.format_exc())
             return False
 
-    def run_monitoring_cycle(self, single_repo=None, max_prs=10):
+    def run_monitoring_cycle(self, single_repo=None, max_prs=10, fix_comment: bool = False, agent_cli: str = "claude", model: str = None):
         """Run a complete monitoring cycle with actionable PR counting"""
-        self.logger.info("🚀 Starting jleechanorg PR monitoring cycle")
+        mode_label = "fix-comment" if fix_comment else "comment"
+        self.logger.info("🚀 Starting jleechanorg PR monitoring cycle (%s mode)", mode_label)
 
         if not self.safety_manager.can_start_global_run():
             current_runs = self.safety_manager.get_global_runs()
@@ -1367,8 +1864,17 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         self.safety_manager.global_limit,
                     )
 
-                # Post codex instruction comment directly (comment-only approach)
-                comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
+                if fix_comment:
+                    comment_result = self._process_pr_fix_comment(
+                        repo_full_name,
+                        pr_number,
+                        pr,
+                        agent_cli=agent_cli,
+                        model=model,
+                    )
+                else:
+                    # Post codex instruction comment directly (comment-only approach)
+                    comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
 
                 # Treat "skipped" (already handled/guarded) the same as a success so we don't
                 # artificially accumulate failure counts or noisy error logs.
@@ -1636,6 +2142,10 @@ def main():
                         help="Discover PRs but do not process them")
     parser.add_argument("--fixpr", action="store_true",
                         help="Run /fixpr-only orchestrated flow for conflicts/failing checks (skips drafts)")
+    parser.add_argument("--fix-comment", action="store_true",
+                        help="Run fix-comment orchestration flow to resolve PR review comments")
+    parser.add_argument("--fix-comment-watch", action="store_true",
+                        help="Watch a PR for automation commits and post review request when detected")
     parser.add_argument("--cutoff-hours", type=int, default=24,
                         help="Look-back window in hours for PR updates (default: 24)")
     parser.add_argument("--single-repo",
@@ -1652,6 +2162,12 @@ def main():
         default="claude",
         help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model to use for Claude CLI (e.g., sonnet, opus, haiku). Only applies when using claude.",
+    )
     parser.add_argument("--list-eligible", action="store_true",
                         help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
     parser.add_argument("--codex-update", action="store_true",
@@ -1664,8 +2180,20 @@ def main():
         parser.error("--target-repo is required when using --target-pr")
     if args.target_repo and not args.target_pr:
         parser.error("--target-pr is required when using --target-repo")
+    if args.fixpr and args.fix_comment:
+        parser.error("--fixpr and --fix-comment are mutually exclusive")
+    if args.fix_comment_watch and not (args.target_pr and args.target_repo):
+        parser.error("--fix-comment-watch requires --target-pr and --target-repo")
 
     monitor = JleechanorgPRMonitor()
+
+    if args.fix_comment_watch:
+        success = monitor.run_fix_comment_review_watcher(
+            args.target_pr,
+            args.target_repo,
+            agent_cli=args.fixpr_agent,
+        )
+        sys.exit(0 if success else 1)
 
     if args.codex_update:
         print("🤖 Running Codex automation (first 200 tasks)...")
@@ -1716,6 +2244,40 @@ def main():
         run_fixpr_batch(args.cutoff_hours, args.max_prs, agent_cli=args.fixpr_agent)
         return
 
+    if args.fix_comment:
+        # Handle target PR processing
+        if args.target_pr and args.target_repo:
+            print(f"🎯 Processing target PR (fix-comment): {args.target_repo} #{args.target_pr}")
+            success = monitor.process_single_pr_by_number(
+                args.target_pr,
+                args.target_repo,
+                fix_comment=True,
+                agent_cli=args.fixpr_agent,
+                model=args.model,
+            )
+            sys.exit(0 if success else 1)
+
+        if args.dry_run:
+            print("🔍 DRY RUN: Discovering PRs only")
+            prs = monitor.discover_open_prs()
+
+            if args.single_repo:
+                prs = [pr for pr in prs if pr["repository"] == args.single_repo]
+
+            print(f"📋 Found {len(prs)} open PRs:")
+            for pr in prs[:args.max_prs]:
+                print(f"  • {pr['repository']} PR #{pr['number']}: {pr['title']}")
+            return
+
+        monitor.run_monitoring_cycle(
+            single_repo=args.single_repo,
+            max_prs=args.max_prs,
+            fix_comment=True,
+            agent_cli=args.fixpr_agent,
+            model=args.model,
+        )
+        return
+
     # Handle target PR processing
     if args.target_pr and args.target_repo:
         print(f"🎯 Processing target PR: {args.target_repo} #{args.target_pr}")
@@ -1739,7 +2301,7 @@ def main():
     elif args.list_eligible:
         monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
     else:
-        monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs)
+        monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs, model=args.model)
 
 
 if __name__ == "__main__":

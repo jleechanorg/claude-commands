@@ -75,7 +75,7 @@ class TestThinkBlockProtocol(unittest.TestCase):
 
 ## Absolute Think Block Rules
 
-When user input contains keywords: "think", "plan", "consider", "strategize", "options":
+When LLM interprets user input as requesting strategic planning or contemplation:
 
 ### MUST DO:
 1. Generate ONLY character's internal thoughts and planning
@@ -172,14 +172,14 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
         ), "No think block types or modes defined"
 
     def test_invalid_input_definitions(self):
-        """Test that invalid post-think-block inputs are defined"""
-        # Just check that the prompt discusses what triggers think blocks
-        # (which implicitly defines what shouldn't continue narrative)
+        """Test that think block triggering is defined"""
+        # Check that the prompt discusses how think blocks are triggered
+        # via LLM interpretation rather than hardcoded keywords
 
-        # Check that keywords section exists
+        # Check that interpretation/intent language exists
         assert self._contains_pattern(
-            self.prompt_content, r"(keyword|trigger.*word|when.*user.*say)"
-        ), "No keyword trigger section found"
+            self.prompt_content, r"(interpret|intent|request.*planning|contemplation)"
+        ), "No LLM interpretation/intent-based trigger description found"
 
     def test_error_response_format_defined(self):
         """Test that error response format is specified"""

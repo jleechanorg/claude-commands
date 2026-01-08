@@ -25,6 +25,18 @@ class TestPRTargeting(unittest.TestCase):
         marker = monitor._extract_commit_marker(test_comment)
         self.assertEqual(marker, "abc123")
 
+    def test_fix_comment_marker_detected_for_commit(self):
+        """Fix-comment markers should be detected for commit gating."""
+        monitor = JleechanorgPRMonitor()
+        test_comment = (
+            "Queued\n"
+            f"{monitor.FIX_COMMENT_MARKER_PREFIX}abc123"
+            f"{monitor.FIX_COMMENT_MARKER_SUFFIX}"
+        )
+
+        marker = monitor._extract_fix_comment_marker(test_comment)
+        self.assertEqual(marker, "abc123")
+
     def test_intro_prose_avoids_duplicate_mentions(self):
         """Review assistants should not retain '@' prefixes in prose text."""
 
@@ -112,6 +124,87 @@ class TestPRTargeting(unittest.TestCase):
         self.assertIn("**Summary (Execution Flow):**", comment_body)
         self.assertIn("1. Review every outstanding PR comment", comment_body)
         self.assertIn("5. Perform a final self-review", comment_body)
+
+    def test_fix_comment_queued_body_excludes_marker(self):
+        """Queued fix-comment notices should not include commit markers."""
+        monitor = JleechanorgPRMonitor()
+        pr_data = {
+            "title": "Queued Fix Comment",
+            "author": {"login": "developer"},
+            "headRefName": "feature/queued",
+        }
+        head_sha = "abc123def456"
+
+        comment_body = monitor._build_fix_comment_queued_body(
+            "org/repo",
+            42,
+            pr_data,
+            head_sha,
+        )
+
+        self.assertNotIn(monitor.FIX_COMMENT_MARKER_PREFIX, comment_body)
+        self.assertNotIn(monitor.FIX_COMMENT_MARKER_SUFFIX, comment_body)
+
+    def test_fix_comment_review_body_includes_marker(self):
+        """Review requests should include the fix-comment commit marker."""
+        monitor = JleechanorgPRMonitor()
+        pr_data = {
+            "title": "Review Fix Comment",
+            "author": {"login": "developer"},
+            "headRefName": "feature/review",
+        }
+        head_sha = "deadbeef1234"
+
+        comment_body = monitor._build_fix_comment_review_body(
+            "org/repo",
+            42,
+            pr_data,
+            head_sha,
+        )
+
+        self.assertIn(monitor.FIX_COMMENT_MARKER_PREFIX, comment_body)
+        self.assertIn(monitor.FIX_COMMENT_MARKER_SUFFIX, comment_body)
+
+    def test_fix_comment_prompt_requires_threaded_replies(self):
+        """Fix-comment prompts should require threaded replies via the GitHub API."""
+        monitor = JleechanorgPRMonitor()
+        pr_data = {
+            "title": "Threaded Replies",
+            "author": {"login": "developer"},
+            "headRefName": "feature/threaded",
+        }
+
+        prompt = monitor._build_fix_comment_prompt_body(
+            "org/repo",
+            42,
+            pr_data,
+            "abc123",
+            agent_cli="gemini",
+        ).lower()
+
+        # Verify prompt includes threading guidance
+        self.assertIn("thread", prompt)
+        self.assertIn("gh api", prompt)
+        self.assertIn("review comments", prompt)
+        self.assertIn("issue comments", prompt)
+        # After fix for comment #2669657213, prompt clarifies:
+        # - Inline review comments use: /pulls/{pr_number}/comments/{comment_id}/replies
+        # - Issue comments don't support threading (top-level comments only)
+        self.assertIn("pulls/42/comments", prompt)  # Updated to match actual PR number in prompt
+        self.assertIn("do not support threading", prompt)  # Issue comments clarification
+
+    def test_fix_comment_marker_ignores_queued_comment(self):
+        """Queued notices with markers should not satisfy the fix-comment completion check."""
+        monitor = JleechanorgPRMonitor()
+        head_sha = "feedface1234"
+        comment_body = (
+            "[AI automation] Fix-comment run queued for this PR. "
+            "A review request will follow after updates are pushed.\n\n"
+            f"{monitor.FIX_COMMENT_MARKER_PREFIX}{head_sha}{monitor.FIX_COMMENT_MARKER_SUFFIX}"
+        )
+        comments = [{"body": comment_body}]
+
+        self.assertFalse(monitor._has_fix_comment_comment_for_commit(comments, head_sha))
 
 
 if __name__ == "__main__":

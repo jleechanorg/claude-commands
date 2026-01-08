@@ -103,6 +103,7 @@ class CodexGitHubMentionsAutomation:
         all_tasks: bool = False,
         archive_mode: bool = False,
         archive_limit: int = 5,
+        auto_archive: bool = True,
     ):
         """
         Initialize the automation.
@@ -113,8 +114,9 @@ class CodexGitHubMentionsAutomation:
             task_limit: Maximum number of tasks to process (default: 50, None = all GitHub Mention tasks)
             user_data_dir: Chrome profile directory for persistent login (default: ~/.chrome-codex-automation)
             debug: Enable debug mode (screenshots, HTML dump, keep browser open)
-            archive_mode: If True, archive completed tasks instead of updating PRs
+            archive_mode: If True, archive completed tasks ONLY (skip update phase)
             archive_limit: Maximum number of tasks to archive (default: 5)
+            auto_archive: If True, automatically archive after updating (default: True)
         """
         self.cdp_url = cdp_url
         self.headless = headless
@@ -124,6 +126,7 @@ class CodexGitHubMentionsAutomation:
         self.all_tasks = all_tasks
         self.archive_mode = archive_mode
         self.archive_limit = archive_limit
+        self.auto_archive = auto_archive
         self.playwright: Optional[Playwright] = None
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
@@ -769,8 +772,11 @@ class CodexGitHubMentionsAutomation:
             else:
                 await self.navigate_to_codex()
 
-            # Step 4: Process tasks (archive or update mode)
+            # Step 4: Process tasks
+            # archive_mode=True means archive ONLY (--archive flag)
+            # Otherwise: update first, then archive if auto_archive is enabled
             if self.archive_mode:
+                # Archive-only mode (backward compatible with --archive flag)
                 archived_urls = await self.archive_completed_github_mentions(limit=self.archive_limit)
                 print("\n" + "=" * 60)
                 print(f"✅ Archive complete! Archived {len(archived_urls)} task(s)")
@@ -781,10 +787,32 @@ class CodexGitHubMentionsAutomation:
                 logger.info(f"Archive completed - archived {len(archived_urls)} task(s)")
                 return True
             else:
+                # Step 4a: Update branches
                 count = await self.process_all_github_mentions()
                 print("\n" + "=" * 60)
-                print(f"✅ Automation complete! Processed {count} task(s)")
-                logger.info(f"Automation completed successfully - processed {count} task(s)")
+                print(f"✅ Update complete! Processed {count} task(s)")
+                logger.info(f"Update completed - processed {count} task(s)")
+
+                # Step 4b: Archive completed tasks (if auto_archive enabled)
+                if self.auto_archive:
+                    print("\n🗄️  Auto-archiving completed tasks...")
+                    # Re-navigate to Codex to get fresh task list after updates
+                    await self.navigate_to_codex()
+                    archived_urls = await self.archive_completed_github_mentions(limit=self.archive_limit)
+                    print(f"✅ Archived {len(archived_urls)} completed task(s)")
+                    if archived_urls:
+                        print("\n📋 Archived task URLs:")
+                        for url in archived_urls:
+                            print(f"   - {url}")
+                    logger.info(f"Auto-archive completed - archived {len(archived_urls)} task(s)")
+
+                print("\n" + "=" * 60)
+                if self.auto_archive:
+                    print("✅ Automation complete! Update and auto-archive phases finished.")
+                    logger.info("Automation completed successfully: update and auto-archive phases finished")
+                else:
+                    print("✅ Automation complete! Update phase finished (auto-archive disabled).")
+                    logger.info("Automation completed successfully: update phase finished (auto-archive disabled)")
                 return True
 
         except KeyboardInterrupt:
@@ -916,6 +944,12 @@ Examples:
         help="Maximum number of tasks to archive (default: 5)"
     )
 
+    parser.add_argument(
+        "--no-auto-archive",
+        action="store_true",
+        help="Disable automatic archiving after update (by default, update + archive run together)"
+    )
+
     args = parser.parse_args()
 
     if args.verbose:
@@ -936,6 +970,7 @@ Examples:
         all_tasks=args.all_tasks,
         archive_mode=args.archive,
         archive_limit=args.archive_limit,
+        auto_archive=not args.no_auto_archive,
     )
 
     try:

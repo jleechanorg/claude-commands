@@ -187,8 +187,15 @@ def ensure_base_clone(repo_full: str) -> Path:
             )
     # Reset base clone to main to ensure clean worktrees
     try:
-        run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        # Ensure we're on main branch (create if doesn't exist locally)
+        result = run_cmd(["git", "rev-parse", "--verify", "main"], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
+        if result.returncode != 0:
+            # Local main doesn't exist - checkout from remote tracking branch
+            run_cmd(["git", "checkout", "-B", "main", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        else:
+            # Local main exists - switch to it and reset
+            run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+            run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
         run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
     except subprocess.CalledProcessError as exc:
         stderr_msg = exc.stderr if exc.stderr else "No stderr available"
@@ -290,6 +297,58 @@ def kill_tmux_session_if_exists(name: str) -> None:
         log(f"Warning: unable to check/kill tmux session {name}: {exc}")
 
 
+def dispatch_agent_for_pr_with_task(
+    dispatcher: TaskDispatcher,
+    pr: Dict,
+    task_description: str,
+    agent_cli: str = "claude",
+    model: str = None,
+) -> bool:
+    """Dispatch an agent for a PR using a custom task description."""
+    repo_full = pr.get("repo_full")
+    repo = pr.get("repo")
+    pr_number = pr.get("number")
+    branch = pr.get("branch")
+
+    if not task_description:
+        log("Skipping PR dispatch: missing task description")
+        return False
+
+    if not all([repo_full, repo, pr_number is not None, branch]):
+        log(f"Skipping PR with missing required fields: {pr}")
+        return False
+    assert branch is not None and pr_number is not None
+
+    workspace_name = sanitize_workspace_name(branch or f"pr-{pr_number}", pr_number)
+    workspace_root = WORKSPACE_ROOT_BASE / repo
+    prepare_workspace_dir(repo, workspace_name)
+
+    cli = agent_cli.strip().lower() if isinstance(agent_cli, str) and agent_cli.strip() else "claude"
+    agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=cli)
+    success = False
+    for spec in agent_specs:
+        agent_spec = {**spec}
+        session_name = agent_spec.get("name") or workspace_name
+        kill_tmux_session_if_exists(session_name)
+        agent_spec.setdefault(
+            "workspace_config",
+            {
+                "workspace_root": str(workspace_root),
+                "workspace_name": workspace_name,
+            },
+        )
+        # Inject model parameter if provided
+        if model:
+            agent_spec["model"] = model
+        ok = dispatcher.create_dynamic_agent(agent_spec)
+        if ok:
+            log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")
+            success = True
+        else:
+            log(f"Failed to spawn agent for {repo_full}#{pr_number}")
+    return success
+
+
 def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str = "claude") -> bool:
     repo_full = pr.get("repo_full")
     repo = pr.get("repo")
@@ -318,9 +377,9 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str =
         f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"
         "4) Identify failing checks (gh pr view --json statusCheckRollup) and reproduce locally (tests/linters as needed)\n"
         "5) Apply fixes\n"
-        f'6) git add -A && git commit -m "[{commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
+        f'6) git add -A && git commit -m "[fixpr {commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
         f"7) gh pr view {pr_number} --json mergeable,mergeStateStatus,statusCheckRollup\n"
-        "8) Write completion report to /tmp/orchestration_results/pr-{pr_number}._results.json summarizing actions and test results\n\n"
+        f"8) Write completion report to /tmp/orchestration_results/pr-{pr_number}_results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
         "Do not create new PRs or branches. Skip /copilot. Use only the requested CLI chain (in order)."
     )

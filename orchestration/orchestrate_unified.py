@@ -282,6 +282,8 @@ class UnifiedOrchestration:
                     agent_spec["bead_id"] = options["bead"]
                 if options.get("validate"):
                     agent_spec["validation_command"] = options["validate"]
+                if options.get("model"):
+                    agent_spec["model"] = options["model"]
                 if options.get("no_new_pr"):
                     agent_spec["no_new_pr"] = True
                 if options.get("no_new_branch"):
@@ -312,6 +314,7 @@ class UnifiedOrchestration:
                 - mcp_agent: Pre-fill agent name for MCP Mail registration
                 - bead: Pre-fill bead ID for tracking
                 - validate: Semantic validation command to run after completion
+                - model: Model to use for Claude CLI (e.g., sonnet, opus, haiku)
                 - no_new_pr: Hard block on PR creation
                 - no_new_branch: Hard block on branch creation
         """
@@ -466,6 +469,8 @@ class UnifiedOrchestration:
                 agent_spec["bead_id"] = options["bead"]
             if options.get("validate"):
                 agent_spec["validation_command"] = options["validate"]
+            if options.get("model"):
+                agent_spec["model"] = options["model"]
             if options.get("no_new_pr"):
                 agent_spec["no_new_pr"] = True
             if options.get("no_new_branch"):
@@ -701,6 +706,14 @@ The orchestration system will:
         help="Agent CLI to use: claude, codex, gemini, cursor. Supports comma-separated chain for fallback (e.g., 'gemini,claude'). Default: gemini",
     )
 
+    # Model selection
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model to use for Claude CLI (e.g., sonnet, opus, haiku). Only applies when using claude CLI.",
+    )
+
     args = parser.parse_args()
 
     if args.agent_cli is not None:
@@ -737,6 +750,7 @@ The orchestration system will:
         # Note: CLI flag is --agent-cli; argparse exposes it as args.agent_cli.
         "agent_cli": agent_cli,
         "agent_cli_provided": agent_cli_provided,
+        "model": args.model,
     }
 
     orchestration = UnifiedOrchestration()

@@ -1395,8 +1395,14 @@ def get_static_prompt_parts(
 def get_current_turn_prompt(user_input: str, mode: str) -> str:
     """Helper to generate the text for the user's current action.
 
-    This formats the user's input into a proper prompt based on the current mode
-    (character mode vs god mode) and detects think/plan commands.
+    Uses a consistent prompt template for all character mode inputs.
+    This function does not perform keyword detection; it simply formats the
+    user's input, and the LLM interprets intent from system instructions
+    (game_state_instruction.md) to determine whether to generate standard
+    actions or Deep Think planning blocks.
+
+    This approach avoids false positives like "I plan to attack the goblin"
+    unintentionally triggering a separate think mode based on naive keyword matching.
 
     Args:
         user_input: The user's raw input text
@@ -1406,26 +1412,12 @@ def get_current_turn_prompt(user_input: str, mode: str) -> str:
         str: Formatted prompt text for the current turn
     """
     if mode == constants.MODE_CHARACTER:
-        # Check if user is requesting planning/thinking
-        # Note: Thinking detection simplified to avoid hardcoded keyword lists
-        user_input_lower = user_input.lower()
-        is_think_command = "think" in user_input_lower or "plan" in user_input_lower
-
-        if is_think_command:
-            # Emphasize planning for think commands (planning block handled separately in JSON)
-            prompt_template = (
-                "Main character: {user_input}. Generate the character's internal thoughts and strategic analysis. "
-                "NARRATIVE: Write the character's inner thoughts and contemplation as narrative text. "
-                "PLANNING: Generate detailed analysis in the planning block with pros/cons for each option. "
-                "DO NOT take any physical actions or advance the scene. Focus on mental deliberation only. "
-                "CRITICAL: Each choice in the planning block MUST include an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string."
-            )
-        else:
-            # Standard story continuation (planning block handled separately in JSON)
-            prompt_template = (
-                "Main character: {user_input}. Continue the story in about {word_count} words and "
-                "add details for narrative, descriptions of scenes, character dialog, character emotions."
-            )
+        # Standard story continuation - LLM interprets intent from system instructions
+        # Planning blocks are handled in JSON output based on LLM's understanding
+        prompt_template = (
+            "Main character: {user_input}. Continue the story in about {word_count} words and "
+            "add details for narrative, descriptions of scenes, character dialog, character emotions."
+        )
         return prompt_template.format(
             user_input=user_input, word_count=TARGET_WORD_COUNT
         )

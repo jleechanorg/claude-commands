@@ -31,6 +31,8 @@ CODEX_COMMENT_TEMPLATE = (
 
 CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
 CODEX_COMMIT_MARKER_SUFFIX = "-->"
+FIX_COMMENT_MARKER_PREFIX = "<!-- fix-comment-automation-commit:"
+FIX_COMMENT_MARKER_SUFFIX = "-->"
 
 
 def normalise_handle(assistant_handle: str | None) -> str:

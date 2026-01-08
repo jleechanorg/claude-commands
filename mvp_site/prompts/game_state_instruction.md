@@ -399,7 +399,7 @@ Entry 6: AI response   → turn 6, sequence_id=6, scene=3 (Scene #3)
 
 **Types:**
 1. **Standard** - 3-5 choices with snake_case keys. **ALL choices must be specific, concrete tactical options** - never include generic placeholders like "Other Action" or "Do something else"
-2. **Deep Think** - Triggered by "think/plan/consider/strategize" keywords, includes analysis object with pros/cons/confidence
+2. **Deep Think** - Generated when the LLM interprets user intent as requesting strategic planning or contemplation (e.g., "think about my options", "plan my approach"), includes analysis object with pros/cons/confidence
 
 **Deep Think adds:** `"analysis": {"pros": [], "cons": [], "confidence": "..."}`
 
@@ -1827,7 +1827,7 @@ Every response that updates `world_time` MUST result in a timestamp that is **st
 
 🚨 **CRITICAL: During thinking blocks, the world is FROZEN. Time does NOT pass narratively.**
 
-When player uses think/plan/consider/strategize/options keywords and you generate a Deep Think Planning Block:
+When you interpret player input as requesting strategic planning or contemplation and generate a Deep Think Planning Block:
 - **Narrative time does NOT advance** - the world is paused
 - Increment `microsecond` field by +1 **for technical uniqueness only**
 - This +1 microsecond is a database artifact, NOT story time
