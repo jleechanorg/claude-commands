@@ -858,6 +858,9 @@ class CharacterCreationAgent(BaseAgent):
             r"\bcharacter\s+(?:is\s+)?complete\b",
             r"\b(?:done|finished)\s+(?:creating|leveling)\b",
             r"\blevel-?up\s+complete\b",
+            r"\bstart\s+(?:the\s+)?(?:story|adventure)\b",
+            r"\bbegin\s+(?:the\s+)?(?:story|adventure)\b",
+            r"\blet'?s\s+start\b(?!\s+(?:with|by|choosing|selecting|making|building)\b)",
             r"\b(?:back\s+to|continue)\s+adventure\b",
         ]
 
