@@ -555,33 +555,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 10. 🚨 **GITHUB CLI (gh) INSTALLATION**: ⚠️ MANDATORY for GitHub operations
 - **Primary Tool**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
 - **Fallback**: `gh` CLI when MCP fails or unavailable
-- **Installation Method** (Container/Restricted Environments):
-     ```bash
-     # Download and extract gh CLI binary to /tmp
-     curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp
-
-     # Verify installation
-     /tmp/gh_2.40.1_linux_amd64/bin/gh --version
-
-     # Authenticate using existing GitHub token (ensure GITHUB_TOKEN is set)
-     # The gh CLI automatically uses GITHUB_TOKEN environment variable
-     # Example: export GITHUB_TOKEN="ghp_xxx"  # or rely on existing environment variable
-     printf '%s\n' "$GITHUB_TOKEN" | /tmp/gh_2.40.1_linux_amd64/bin/gh auth login --with-token
-
-     # Verify authentication status
-     /tmp/gh_2.40.1_linux_amd64/bin/gh auth status
-
-     # Set up alias for convenience
-     export GH_CLI="/tmp/gh_2.40.1_linux_amd64/bin/gh"
-
-     # Use in commands
-     $GH_CLI pr create --title "Feature" --body "Description"
-     $GH_CLI issue create --title "Bug" --body "Details"
-     ```
-- **Why This Works**: GitHub releases not blocked by container security (unlike cloud provider binaries)
-- **Benefits**: Direct binary extraction to /tmp avoids permission issues, no package manager required
-- **Authentication**: Uses GITHUB_TOKEN environment variable via `gh auth login --with-token`
-- **Note**: Container blocks binary downloads from cloud provider domains for multi-tenant security, but trusts package registries (npm, PyPI) and GitHub releases
+- **Installation & Usage**: See [`.claude/skills/github-cli-reference.md`](.claude/skills/github-cli-reference.md) for detailed setup
+- **Authentication**: Uses `GITHUB_TOKEN` via `gh auth login --with-token`
+- **Benefits**: Direct binary extraction to /tmp avoids permission issues
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 

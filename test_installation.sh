@@ -2,7 +2,7 @@
 # test_installation.sh - Local installation test script
 
 # Graceful error handling - track failures instead of exiting
-FAILED_TESTS=0
+TEST_FAILURES=0
 TOTAL_TESTS=0
 
 # Verify we're in the repository root
@@ -13,10 +13,10 @@ if [ ! -f "CLAUDE.md" ] || [ ! -d ".claude/commands" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     # FIX: Check for BOTH CLAUDE.md AND .claude/commands (Cursor bot issue)
     if [ -f "$SCRIPT_DIR/CLAUDE.md" ] && [ -d "$SCRIPT_DIR/.claude/commands" ]; then
-        cd "$SCRIPT_DIR" || { echo "❌ Cannot change to script directory"; read -p "Press Enter to continue..."; exit 1; }
+        cd "$SCRIPT_DIR" || { echo "❌ Cannot change to script directory"; if [ -t 0 ]; then read -p "Press Enter to continue..."; fi; exit 1; }
     else
         echo "❌ Cannot find repository root. Please run from project root directory."
-        read -p "Press Enter to continue..."
+        if [ -t 0 ]; then read -p "Press Enter to continue..."; fi
         exit 1
     fi
 fi
@@ -25,37 +25,43 @@ echo "🧪 Testing Claude Commands Installation"
 echo "========================================"
 echo ""
 
-# Check if python3 is available for JSON validation
-PYTHON_AVAILABLE=0
-if command -v python3 >/dev/null 2>&1; then
-    PYTHON_AVAILABLE=1
-fi
+# Helper to check JSON validity
+check_json() {
+    local file=$1
+    if command -v jq >/dev/null 2>&1; then
+        jq empty "$file" >/dev/null 2>&1
+        return $?
+    elif command -v python3 >/dev/null 2>&1;
+     then
+        python3 -m json.tool "$file" >/dev/null 2>&1
+        return $?
+    else
+        echo "  ⚠️  Skipping JSON validation (jq and python3 not available)"
+        return 0 # Skip validation if tools missing
+    fi
+}
 
 # Test 1: Validate JSON files
 echo "✓ Test 1: Validating JSON configuration files..."
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-TEST_FAILED=0
+TEST_1_FAILED=0
 
-if [ $PYTHON_AVAILABLE -eq 1 ]; then
-    if python3 -m json.tool .claude-plugin/plugin.json > /dev/null 2>&1; then
-        echo "  ✅ plugin.json is valid JSON"
-    else
-        echo "  ❌ plugin.json is invalid JSON"
-        TEST_FAILED=1
-    fi
-
-    if python3 -m json.tool .claude-plugin/marketplace.json > /dev/null 2>&1; then
-        echo "  ✅ marketplace.json is valid JSON"
-    else
-        echo "  ❌ marketplace.json is invalid JSON"
-        TEST_FAILED=1
-    fi
+if check_json ".claude-plugin/plugin.json"; then
+    echo "  ✅ plugin.json is valid JSON"
 else
-    echo "  ⚠️  Skipping JSON validation (python3 not available)"
+    echo "  ❌ plugin.json is invalid JSON"
+    TEST_1_FAILED=1
 fi
 
-if [ $TEST_FAILED -eq 1 ]; then
-    FAILED_TESTS=$((FAILED_TESTS + 1))
+if check_json ".claude-plugin/marketplace.json"; then
+    echo "  ✅ marketplace.json is valid JSON"
+else
+    echo "  ❌ marketplace.json is invalid JSON"
+    TEST_1_FAILED=1
+fi
+
+if [ $TEST_1_FAILED -eq 1 ]; then
+    TEST_FAILURES=$((TEST_FAILURES + 1))
 fi
 
 # Test 2: Check required fields in plugin.json
@@ -65,9 +71,10 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 REQUIRED_FIELDS=("name" "description" "version" "author" "repository" "license")
 MISSING_FIELDS=0
 
-if [ $PYTHON_AVAILABLE -eq 1 ]; then
+if command -v python3 >/dev/null 2>&1; then
     for field in "${REQUIRED_FIELDS[@]}"; do
-        if python3 -c "import json; data=json.load(open('.claude-plugin/plugin.json')); exit(0 if '$field' in data else 1)" 2>/dev/null; then
+        if python3 -c "import json; data=json.load(open('.claude-plugin/plugin.json')); exit(0 if '$field' in data else 1)" 2>/dev/null;
+         then
             echo "  ✅ Field '$field' exists"
         else
             echo "  ❌ Field '$field' missing"
@@ -75,7 +82,7 @@ if [ $PYTHON_AVAILABLE -eq 1 ]; then
         fi
     done
     if [ "$MISSING_FIELDS" -gt 0 ]; then
-        FAILED_TESTS=$((FAILED_TESTS + 1))
+        TEST_FAILURES=$((TEST_FAILURES + 1))
     fi
 else
     echo "  ⚠️  Skipping field validation (python3 not available)"
@@ -89,22 +96,23 @@ if [ -d ".claude/commands" ]; then
     echo "  ✅ .claude/commands/ directory exists"
 else
     echo "  ❌ .claude/commands/ directory not found"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
+    TEST_FAILURES=$((TEST_FAILURES + 1))
 fi
 
 # Test 4: Count available commands
 echo ""
 echo "✓ Test 4: Counting available commands..."
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-MD_COUNT=$(find .claude/commands/ -name "*.md" -type f 2>/dev/null | wc -l)
-PY_COUNT=$(find .claude/commands/ -name "*.py" -type f 2>/dev/null | wc -l)
+# Recursive count to match accessibility test
+MD_COUNT=$(find .claude/commands -name "*.md" -type f | wc -l)
+PY_COUNT=$(find .claude/commands -name "*.py" -type f | wc -l)
 echo "  ✅ Found $MD_COUNT markdown command files"
 echo "  ✅ Found $PY_COUNT Python script files"
 
-# FIX: Make warning actually fail if count is too low (Greptile issue)
+# Warning threshold matched to actual count (approx 150)
 if [ "$MD_COUNT" -lt 140 ]; then
-    echo "  ❌ Expected 145+ commands, found $MD_COUNT"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
+    echo "  ❌ Expected 140+ commands, found $MD_COUNT"
+    TEST_FAILURES=$((TEST_FAILURES + 1))
 fi
 
 # Test 5: Verify key commands exist
@@ -122,7 +130,7 @@ for cmd in "${KEY_COMMANDS[@]}"; do
     fi
 done
 if [ "$MISSING_COMMANDS" -gt 0 ]; then
-    FAILED_TESTS=$((FAILED_TESTS + 1))
+    TEST_FAILURES=$((TEST_FAILURES + 1))
 fi
 
 # Test 6: Check INSTALL.md exists
@@ -133,37 +141,42 @@ if [ -f "INSTALL.md" ]; then
     echo "  ✅ INSTALL.md exists"
 else
     echo "  ❌ INSTALL.md not found"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
+    TEST_FAILURES=$((TEST_FAILURES + 1))
 fi
 
 # Test 7: Verify GitHub CLI instructions in CLAUDE.md
 echo ""
 echo "✓ Test 7: Verifying GitHub CLI instructions..."
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-if grep -q "GITHUB CLI (gh) INSTALLATION" CLAUDE.md 2>/dev/null; then
+if grep -q "GITHUB CLI (gh) INSTALLATION" CLAUDE.md 2>/dev/null;
+ then
     echo "  ✅ GitHub CLI installation instructions found in CLAUDE.md"
 else
     echo "  ❌ GitHub CLI instructions missing from CLAUDE.md"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
+    TEST_FAILURES=$((TEST_FAILURES + 1))
 fi
 
-# Test 8: Simulate plugin structure check
+# Test 8: Simulating plugin structure check
 echo ""
 echo "✓ Test 8: Simulating plugin structure validation..."
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-if [ $PYTHON_AVAILABLE -eq 1 ]; then
+PLUGIN_NAME=""
+PLUGIN_VERSION=""
+
+if command -v python3 >/dev/null 2>&1;
+ then
     if PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['name'])" 2>/dev/null) && \
-       PLUGIN_VERSION=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])" 2>/dev/null); then
+       PLUGIN_VERSION=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])" 2>/dev/null);
+     then
         echo "  ✅ Plugin Name: $PLUGIN_NAME"
         echo "  ✅ Plugin Version: $PLUGIN_VERSION"
     else
         echo "  ❌ Cannot read plugin metadata"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
+        TEST_FAILURES=$((TEST_FAILURES + 1))
     fi
 else
     echo "  ⚠️  Skipping plugin metadata check (python3 not available)"
-    # Set defaults for summary
     PLUGIN_NAME="claude-commands"
     PLUGIN_VERSION="1.0.0"
 fi
@@ -173,67 +186,48 @@ echo ""
 echo "✓ Test 9: Checking marketplace configuration..."
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-if [ $PYTHON_AVAILABLE -eq 1 ]; then
-    if MARKETPLACE_PLUGIN_COUNT=$(python3 -c "import json; print(len(json.load(open('.claude-plugin/marketplace.json'))['plugins']))" 2>/dev/null); then
+if command -v python3 >/dev/null 2>&1;
+ then
+    if MARKETPLACE_PLUGIN_COUNT=$(python3 -c "import json; print(len(json.load(open('.claude-plugin/marketplace.json'))['plugins']))" 2>/dev/null);
+     then
         echo "  ✅ Marketplace contains $MARKETPLACE_PLUGIN_COUNT plugin(s)"
         if [ "$MARKETPLACE_PLUGIN_COUNT" -lt 1 ]; then
             echo "  ❌ Marketplace must contain at least 1 plugin"
-            FAILED_TESTS=$((FAILED_TESTS + 1))
+            TEST_FAILURES=$((TEST_FAILURES + 1))
         fi
     else
         echo "  ❌ Cannot read marketplace configuration"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
+        TEST_FAILURES=$((TEST_FAILURES + 1))
     fi
 else
     echo "  ⚠️  Skipping marketplace validation (python3 not available)"
 fi
 
-# Test 10: Test command file accessibility (both .md and .py files)
+# Test 10: Test command file accessibility (recursive)
 echo ""
 echo "✓ Test 10: Testing command file accessibility..."
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 UNREADABLE=0
 
-# Check .md files
-shopt -s nullglob  # Enable nullglob to handle no matches gracefully
-MD_FILES=(.claude/commands/*.md)
-if [ ${#MD_FILES[@]} -eq 0 ]; then
-    echo "  ⚠️  Warning: No .md files found in .claude/commands/"
-else
-    for cmd_file in "${MD_FILES[@]}"; do
-        if [ ! -r "$cmd_file" ]; then
-            echo "  ❌ Cannot read: $cmd_file"
-            UNREADABLE=$((UNREADABLE + 1))
-        fi
-    done
-fi
-
-# Check .py files
-PY_FILES=(.claude/commands/*.py)
-if [ ${#PY_FILES[@]} -eq 0 ]; then
-    echo "  ⚠️  Warning: No .py files found in .claude/commands/"
-else
-    for cmd_file in "${PY_FILES[@]}"; do
-        if [ ! -r "$cmd_file" ]; then
-            echo "  ❌ Cannot read: $cmd_file"
-            UNREADABLE=$((UNREADABLE + 1))
-        fi
-    done
-fi
-
-shopt -u nullglob  # Disable nullglob
+# Check all found files
+while IFS= read -r cmd_file; do
+    if [ ! -r "$cmd_file" ]; then
+        echo "  ❌ Cannot read: $cmd_file"
+        UNREADABLE=$((UNREADABLE + 1))
+    fi
+done < <(find .claude/commands -type f \( -name "*.md" -o -name "*.py" \))
 
 if [ $UNREADABLE -eq 0 ]; then
     echo "  ✅ All command files are readable (.md and .py)"
 else
     echo "  ❌ Found $UNREADABLE unreadable files"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
+    TEST_FAILURES=$((TEST_FAILURES + 1))
 fi
 
 # Summary
 echo ""
 echo "========================================"
-if [ $FAILED_TESTS -eq 0 ]; then
+if [ $TEST_FAILURES -eq 0 ]; then
     echo "✅ ALL $TOTAL_TESTS TESTS PASSED!"
     echo ""
     echo "📊 Installation Summary:"
@@ -249,10 +243,13 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "  /plugin install claude-commands@claude-commands-marketplace"
     exit 0
 else
-    echo "❌ TESTS FAILED: $FAILED_TESTS out of $TOTAL_TESTS tests failed"
+    echo "❌ TESTS FAILED: $TEST_FAILURES out of $TOTAL_TESTS tests failed"
     echo ""
     echo "Please review the errors above and fix the issues."
     echo ""
-    read -p "Press Enter to continue..."
+    # Only wait for input if running interactively
+    if [ -t 0 ]; then
+        read -p "Press Enter to continue..."
+    fi
     exit 1
 fi

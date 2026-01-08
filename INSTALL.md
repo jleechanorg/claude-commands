@@ -26,7 +26,7 @@ This guide covers installation methods for Claude Commands across different plat
    ```bash
    /help
    ```
-   You should see 145+ commands available, including:
+   You should see 151+ commands available, including:
    - `/pr` - Complete PR lifecycle automation
    - `/copilot` - Autonomous PR analysis and fixing
    - `/orch` - Multi-agent orchestration
@@ -76,29 +76,15 @@ For platforms that support remote instruction fetching:
 
 ## GitHub CLI Setup (Required for GitHub Operations)
 
-Many commands require GitHub CLI. If not installed:
+Many commands require GitHub CLI. For detailed installation and usage instructions, see:
+- **Installation Guide**: [`.claude/skills/github-cli-reference.md`](.claude/skills/github-cli-reference.md)
+- **Authentication**: Automatic via `GITHUB_TOKEN` environment variable
+- **Quick Check**: Run `~/.local/bin/gh auth status` to verify
 
+**Quick Install** (if not already installed):
 ```bash
-# Download and extract gh CLI binary to /tmp
-curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp
-
-# Verify installation
-/tmp/gh_2.40.1_linux_amd64/bin/gh --version
-
-# Authenticate using existing GitHub token (ensure GITHUB_TOKEN is set)
-# The gh CLI automatically uses GITHUB_TOKEN environment variable
-if [ -z "$GITHUB_TOKEN" ]; then
-    echo "⚠️  GITHUB_TOKEN not set. Please export it first:"
-    echo "   export GITHUB_TOKEN='your_github_token_here'"
-else
-    printf '%s\n' "$GITHUB_TOKEN" | /tmp/gh_2.40.1_linux_amd64/bin/gh auth login --with-token
-fi
-
-# Verify authentication status
-/tmp/gh_2.40.1_linux_amd64/bin/gh auth status
-
-# Set up alias for convenience
-export GH_CLI="/tmp/gh_2.40.1_linux_amd64/bin/gh"
+# See .claude/skills/github-cli-reference.md for full installation steps
+~/.local/bin/gh --version || echo "Run installation from .claude/skills/github-cli-reference.md"
 ```
 
 ## Post-Installation
@@ -213,7 +199,7 @@ rm -rf /path/to/your/project/.claude/commands/
 
 ## Support
 
-- **Issues**: [Issues](https://github.com/jleechanorg/claude-commands/issues)
+- **Issues**: [GitHub Issues](https://github.com/jleechanorg/claude-commands/issues)
 - **Documentation**: See `.claude/commands/README.md` in your project after installation
 - **Examples**: See `.claude/commands/examples.md` in your project after installation
 
