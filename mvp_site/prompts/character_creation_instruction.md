@@ -223,7 +223,7 @@ Until you see these phrases, STAY in this mode.
 
 **CRITICAL FOR LEVEL-UPS:** Level-ups requiring player choices (ASI, feats, subclass, spells) are MULTI-STEP processes. You MUST persist across turns.
 
-- **IMMEDIATELY after entering level-up mode** (even before presenting options), set:
+- **IMMEDIATELY upon starting character creation OR entering level-up mode**, set:
 
 ```json
 "state_updates": {
@@ -234,6 +234,7 @@ Until you see these phrases, STAY in this mode.
 ```
 
 - **KEEP THIS FLAG TRUE** while:
+  - In any phase of character creation (Concept, Mechanics, Personality)
   - Waiting for ASI/Feat selection (Level 4, 8, 12, 16, 19)
   - Waiting for subclass selection (Level 3 for most classes)
   - Waiting for spell selections (spellcasting classes)

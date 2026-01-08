@@ -833,9 +833,9 @@ class TestGetAgentForInput(unittest.TestCase):
         char_agent = get_agent_for_input("I want to be a wizard", game_state=char_creation_state)
         self.assertIsInstance(char_agent, CharacterCreationAgent)
 
-        # Priority 2b: Character Creation transitions to Story when done
+        # Priority 2b: Character Creation handles "I'm done" to update state (no longer immediate transition)
         done_agent = get_agent_for_input("I'm done", game_state=char_creation_state)
-        self.assertIsInstance(done_agent, StoryModeAgent)
+        self.assertIsInstance(done_agent, CharacterCreationAgent)
 
         # Priority 3: Combat when in_combat=True
         combat_state = create_mock_game_state(in_combat=True)

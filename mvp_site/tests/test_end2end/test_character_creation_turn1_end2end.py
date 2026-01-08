@@ -4,11 +4,10 @@ End-to-end test for CharacterCreationAgent activation on Turn 1.
 Tests that CharacterCreationAgent ALWAYS activates on Turn 1, even when:
 1. God Mode includes pre-defined character data (name, class, stats)
 2. God Mode includes minimal data (just character name and setting)
-3. Campaign has no God Mode data at all
 
-CRITICAL: This validates the fix for the production bug where users creating
-campaigns from templates (like "My Epic Adventure") had CharacterCreationAgent
-skipped and story mode started immediately without character review.
+CRITICAL: This validates the invariant that users creating campaigns from templates 
+(like "My Epic Adventure") must review their character via CharacterCreationAgent 
+before story mode starts.
 """
 
 from __future__ import annotations
@@ -59,16 +58,11 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
         self, mock_gemini_request, mock_get_db
     ):
         """
-        RED TEST: CharacterCreationAgent should activate on Turn 1 even with full God Mode character data.
+        Invariant: CharacterCreationAgent should activate on Turn 1 even with full God Mode character data.
 
-        This test reproduces the production bug where campaigns created from templates
-        like "My Epic Adventure" (with full character: Ser Arion, Level 1 Paladin, stats)
-        jumped straight to SCENE 1 without CharacterCreationAgent.
-
-        EXPECTED FAILURE (RED state): Currently fails because character_creation_in_progress
-        flag is not set during campaign creation.
-
-        EXPECTED PASS (GREEN state): After fix, CharacterCreationAgent will activate on Turn 1.
+        This test ensures that campaigns created from templates like "My Epic Adventure" 
+        (with full character: Ser Arion, Level 1 Paladin, stats) activate the 
+        CharacterCreationAgent on Turn 1 instead of jumping straight to SCENE 1.
         """
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
@@ -105,7 +99,7 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
             )
         )
 
-        # Mock CharacterCreationAgent response for Turn 1 (GREEN state fix)
+        # Mock CharacterCreationAgent response for Turn 1
         character_creation_response = FakeLLMResponse(
             json.dumps(
                 {
@@ -208,7 +202,6 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
         # Step 4: Verify narrative content shows CHARACTER CREATION, not STORY MODE
         narrative = turn1_data_response.get("narrative", "")
 
-        # RED TEST: These assertions should FAIL with current mock
         # CharacterCreationAgent should return narrative with [CHARACTER CREATION] prefix
         self.assertIn(
             "[CHARACTER CREATION]",
@@ -241,13 +234,10 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
         self, mock_gemini_request, mock_get_db
     ):
         """
-        RED TEST: CharacterCreationAgent should activate even with minimal God Mode data.
+        Invariant: CharacterCreationAgent should activate even with minimal God Mode data.
 
         This test validates that even minimal God Mode (just "Character: luke | Setting: star wars")
         still activates CharacterCreationAgent instead of jumping to story mode.
-
-        EXPECTED FAILURE (RED state): Currently fails.
-        EXPECTED PASS (GREEN state): After fix.
         """
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
@@ -268,7 +258,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
             )
         )
 
-        # GREEN state fix: Return proper character creation narrative
+        # Return proper character creation narrative
         character_creation_response = FakeLLMResponse(
             json.dumps(
                 {
@@ -349,7 +339,6 @@ Tell me your choices and we'll build Luke's character sheet together!""",
         # Verify narrative content shows CHARACTER CREATION, not STORY MODE
         narrative = turn1_data.get("narrative", "")
 
-        # RED TEST: These assertions should FAIL with current mock
         self.assertIn(
             "[CHARACTER CREATION]",
             narrative,

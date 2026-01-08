@@ -329,7 +329,14 @@ def main():
 
     # Start server if requested
     if args.auto_server:
-        ensure_server_running(base_url)
+        # Extract port from base_url if it's a localhost URL
+        from urllib.parse import urlparse
+        parsed = urlparse(base_url)
+        port = parsed.port if parsed.hostname in ("localhost", "127.0.0.1") else None
+        if port:
+            ensure_server_running(port)
+        else:
+            log(f"⚠️ Cannot auto-start server for non-localhost URL: {base_url}")
     
     # Capture git provenance and server info
     log("📊 Capturing git provenance and server info...")

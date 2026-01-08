@@ -30,23 +30,31 @@ def test_red_state():
 
     # Create campaign exactly like production template
     print("\n📝 Creating campaign with God Mode template (like 'My Epic Adventure')...")
-    campaign_id = create_campaign_with_god_mode(
-        client,
-        user_id,
-        title="RED State Test - My Epic Adventure",
-        god_mode_data=MY_EPIC_ADVENTURE_GOD_MODE,
-    )
+    try:
+        campaign_id = create_campaign_with_god_mode(
+            client,
+            user_id,
+            title="RED State Test - My Epic Adventure",
+            god_mode_data=MY_EPIC_ADVENTURE_GOD_MODE,
+        )
+    except Exception as e:
+        print(f"\n❌ FATAL: Campaign creation failed: {e}")
+        return False
     print(f"✅ Campaign created: {campaign_id}")
 
     # User wants to create their character on Turn 1
     print("\n📝 User says: \"Let's create my character!\"")
-    result = process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        user_input="Let's create my character!",
-        mode="character",
-    )
+    try:
+        result = process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input="Let's create my character!",
+            mode="character",
+        )
+    except Exception as e:
+        print(f"\n❌ FATAL: Process action failed: {e}")
+        return False
 
     # Check which agent activated
     debug_info = result.get("debug_info", {})
@@ -78,23 +86,31 @@ def test_green_state():
 
     # Create campaign exactly like production template
     print("\n📝 Creating campaign with God Mode template...")
-    campaign_id = create_campaign_with_god_mode(
-        client,
-        user_id,
-        title="GREEN State Test - My Epic Adventure",
-        god_mode_data=MY_EPIC_ADVENTURE_GOD_MODE,
-    )
+    try:
+        campaign_id = create_campaign_with_god_mode(
+            client,
+            user_id,
+            title="GREEN State Test - My Epic Adventure",
+            god_mode_data=MY_EPIC_ADVENTURE_GOD_MODE,
+        )
+    except Exception as e:
+        print(f"\n❌ FATAL: Campaign creation failed: {e}")
+        return False
     print(f"✅ Campaign created: {campaign_id}")
 
     # User wants to create their character on Turn 1 (should activate CharacterCreationAgent)
     print("\n📝 User says: \"Let's create my character!\"")
-    result = process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        user_input="Let's create my character!",
-        mode="character",
-    )
+    try:
+        result = process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input="Let's create my character!",
+            mode="character",
+        )
+    except Exception as e:
+        print(f"\n❌ FATAL: Process action failed: {e}")
+        return False
 
     # Check which agent activated
     debug_info = result.get("debug_info", {})

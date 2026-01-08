@@ -17,11 +17,12 @@ Class Hierarchy:
 
 Agent Selection Priority (used by get_agent_for_input):
 1. GodModeAgent: Administrative commands (highest priority)
-2. PlanningAgent: Strategic planning (think mode)
-3. InfoAgent: Equipment/inventory queries
-4. CombatAgent: Active combat encounters
-5. RewardsAgent: Reward processing after combat/encounters
-6. StoryModeAgent: Default narrative storytelling
+2. CharacterCreationAgent: Character creation & level-up (creation focus)
+3. PlanningAgent: Strategic planning (think mode)
+4. InfoAgent: Equipment/inventory queries
+5. CombatAgent: Active combat encounters
+6. RewardsAgent: Reward processing after combat/encounters
+7. StoryModeAgent: Default narrative storytelling
 
 Usage:
     from mvp_site.agents import (
@@ -748,26 +749,32 @@ class CharacterCreationAgent(BaseAgent):
             )
             return False
 
-        # Get custom_campaign_state
-        custom_state = None
+        # Get custom_campaign_state safely
+        custom_state = {}
         if hasattr(game_state, "custom_campaign_state"):
-            custom_state = game_state.custom_campaign_state
+            custom_state = game_state.custom_campaign_state or {}
         elif isinstance(game_state, dict):
-            custom_state = game_state.get("custom_campaign_state", {})
+            custom_state = game_state.get("custom_campaign_state", {}) or {}
+        
+        if not isinstance(custom_state, dict):
+            custom_state = {}
 
+        # Check for level-up pending (using correct rewards_pending location)
         level_up_pending = False
-        if isinstance(custom_state, dict):
-            level_up_pending = custom_state.get("level_up_pending", False)
-
-        if not level_up_pending:
+        
+        # Check explicit flag in custom_state (for backward compatibility/mocks)
+        if custom_state.get("level_up_pending", False):
+            level_up_pending = True
+        else:
+            # Check standard rewards_pending location
             rewards_pending = None
             if hasattr(game_state, "rewards_pending"):
                 rewards_pending = game_state.rewards_pending
             elif isinstance(game_state, dict):
                 rewards_pending = game_state.get("rewards_pending", {})
-
-            if isinstance(rewards_pending, dict):
-                level_up_pending = rewards_pending.get("level_up_available", False)
+            
+            if isinstance(rewards_pending, dict) and rewards_pending.get("level_up_available", False):
+                level_up_pending = True
 
         if level_up_pending:
             logging_util.info(
@@ -775,7 +782,7 @@ class CharacterCreationAgent(BaseAgent):
             )
             return True
 
-        if isinstance(custom_state, dict) and custom_state.get("character_creation_completed", False):
+        if custom_state.get("character_creation_completed", False):
             logging_util.debug(
                 "🎭 CHARACTER_CREATION_CHECK: character_creation_completed=True"
             )
@@ -796,19 +803,13 @@ class CharacterCreationAgent(BaseAgent):
 
             if char_name and char_class:
                 # Character has name and class - check if explicitly in creation mode
-                in_creation_mode = False
-                if isinstance(custom_state, dict):
-                    in_creation_mode = custom_state.get(
-                        "character_creation_in_progress", False
-                    )
+                in_creation_mode = custom_state.get("character_creation_in_progress", False)
 
-                    if (
-                        not in_creation_mode
-                        and isinstance(custom_state.get("character_creation"), dict)
-                    ):
-                        in_creation_mode = custom_state["character_creation"].get(
-                            "in_progress", False
-                        )
+                if not in_creation_mode:
+                    # Check nested structure
+                    char_creation_data = custom_state.get("character_creation")
+                    if isinstance(char_creation_data, dict):
+                        in_creation_mode = char_creation_data.get("in_progress", False)
 
                 if not in_creation_mode:
                     logging_util.debug(
@@ -841,10 +842,13 @@ class CharacterCreationAgent(BaseAgent):
             True if user indicates they're done with character creation
         """
         lower = user_input.lower().strip()
+        # Normalize curly apostrophes to straight apostrophes
+        lower = lower.replace('\u2019', "'")
 
         if re.search(r"\bnot\s+(?:yet\s+)?(?:done|finished|ready)\b", lower):
             return False
-        if re.search(r"\bdo(?:n't| not|nt)\s+start\b", lower):
+        # Catch "don't start" and "don't begin"
+        if re.search(r"\bdo(?:n't| not|nt)\s+(?:start|begin)\b", lower):
             return False
 
         patterns = [
@@ -853,14 +857,17 @@ class CharacterCreationAgent(BaseAgent):
             r"\bi\s+am\s+done\b",
             r"\bi\s+am\s+finished\b",
             r"\bready\s+to\s+play\b",
-            r"\bi'?m\s+ready\b",
+            # Exclude "ready to create/build/make/start"
+            r"\bi'?m\s+ready\b(?!\s+(?:to\s+(?:create|build|make|start)|for\s+(?:creation|building))\b)",
             r"\bthat'?s\s+everything\b",
             r"\bcharacter\s+(?:is\s+)?complete\b",
             r"\b(?:done|finished)\s+(?:creating|leveling)\b",
             r"\blevel-?up\s+complete\b",
             r"\bstart\s+(?:the\s+)?(?:story|adventure)\b",
             r"\bbegin\s+(?:the\s+)?(?:story|adventure)\b",
-            r"\blet'?s\s+start\b(?!\s+(?:with|by|choosing|selecting|making|building)\b)",
+            # Exclude "let's start creating/with/by..." and "let's start over/again"
+            r"\blet'?s\s+start\b(?!\s+(?:with|by|choosing|selecting|making|building|creating|over|again|fresh)\b)",
+            r"\blet'?s\s+begin\b(?!\s+(?:with|by|choosing|selecting|making|building|creating|over|again|fresh)\b)",
             r"\b(?:back\s+to|continue)\s+adventure\b",
         ]
 
@@ -1396,8 +1403,9 @@ def get_agent_for_input(
     # Priority 2: Character Creation mode (second highest priority)
     # Check if we're in character creation AND user isn't indicating they're done
     if CharacterCreationAgent.matches_game_state(game_state):
-        # Check if character creation has actually been in progress
-        # (i.e., not the very first turn of a new campaign)
+        # We are gated by custom_campaign_state["character_creation_in_progress"]
+        # which is initialized by create_campaign_unified(), so char_creation_started
+        # will often already be true on Turn 1.
         char_creation_started = False
         if game_state is not None:
             custom_state = None
@@ -1412,14 +1420,10 @@ def get_agent_for_input(
                     "character_creation_in_progress", False
                 )
 
-        # Only check for completion phrases if character creation has actually started
-        # This prevents "let's begin" on Turn 1 from being interpreted as "I'm done"
-        if char_creation_started and CharacterCreationAgent.matches_input(user_input):
-            logging_util.info(
-                "🎭 CHARACTER_CREATION_COMPLETE: User finished, transitioning to StoryModeAgent"
-            )
-            return StoryModeAgent(game_state)
-        # Otherwise, stay in character creation mode
+        # We used to check matches_input() here to transition immediately, but that
+        # prevented the CharacterCreationAgent from processing the "I'm done" message
+        # and updating the state flags. Now we stay in creation mode to let the agent
+        # handle the completion message and clear the flags.
         logging_util.info("🎭 CHARACTER_CREATION_ACTIVE: Using CharacterCreationAgent")
         return CharacterCreationAgent(game_state)
 
