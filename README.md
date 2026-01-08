@@ -4,27 +4,27 @@ A comprehensive collection of workflow automation commands for Claude Code that 
 
 ## Installation
 
-To install Claude Commands, first register the marketplace:
+To install Claude Commands in Claude Code CLI, first register the marketplace:
 
-```
+```bash
 /plugin marketplace add jleechanorg/claude-commands
 ```
 
 Then browse available commands with `/plugin` and install:
 
-```
+```bash
 /plugin install claude-commands@claude-commands
 ```
 
-After installation, quit and restart Claude for the plugin to take effect.
+After installation, restart your Claude Code CLI session for the plugin to take effect.
 
 To verify successful installation, run `/help` to check that commands appear.
 
 ### Alternative: Intelligent Self-Setup
 
-Let Claude Code analyze and set up what you need:
+Let Claude Code analyze and set up what you need by asking:
 
-```
+```text
 "I want to use commands from https://github.com/jleechanorg/claude-commands - analyze what's available and set up the ones useful for my project"
 ```
 
@@ -192,7 +192,7 @@ npm test src/components/test_file.js
 
 ### Requirements
 
-- Claude Code CLI
+- Claude Code CLI (Claude for Desktop with plugin support)
 - Git repository context
 - Project-specific adaptations for paths and commands
 
@@ -221,11 +221,11 @@ See bottom of README for complete version history.
 - Enhanced export utility with broader infrastructure coverage
 - Improved documentation for cross-project usage
 
-For complete version history, see [Version History section](#version-history-archive) below.
+For complete version history, see [Version History Archive](#version-history-archive) below.
 
 ---
 
-## Version History Archive
+## <a id="version-history-archive"></a>Version History Archive
 
 <details>
 <summary>Click to expand complete version history</summary>
