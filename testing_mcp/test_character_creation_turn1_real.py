@@ -73,8 +73,9 @@ def log(msg: str) -> None:
     sys.stdout.flush()
 
 
-def mcp_call(method: str, params: dict) -> dict:
+def mcp_call(method: str, params: dict, base_url: str = None) -> dict:
     """Make an MCP JSON-RPC call and capture raw request/response."""
+    url = base_url or BASE_URL
     call_id = f"{method}-{datetime.now().timestamp()}"
     payload = {
         "jsonrpc": "2.0",
@@ -82,10 +83,10 @@ def mcp_call(method: str, params: dict) -> dict:
         "method": method,
         "params": params,
     }
-    
+
     log(f"🔵 MCP CALL: {method}")
     response = requests.post(
-        f"{BASE_URL}/mcp",
+        f"{url}/mcp",
         json=payload,
         headers={"Content-Type": "application/json"},
         timeout=120,
@@ -109,15 +110,15 @@ def mcp_call(method: str, params: dict) -> dict:
     return result.get("result", {})
 
 
-def test_full_god_mode_turn1():
+def test_full_god_mode_turn1(base_url: str):
     """Test CharacterCreationAgent on Turn 1 with full God Mode data (Ser Arion template)."""
     log("=" * 80)
     log("TEST 1: Full God Mode Turn 1 (Ser Arion template)")
     log("=" * 80)
-    
+
     # Use production "My Epic Adventure" template
     god_mode_data = GOD_MODE_TEMPLATES["My Epic Adventure"]
-    
+
     log("📝 Creating campaign with full God Mode data...")
     campaign_result = mcp_call("create_campaign", {
         "user_id": USER_ID,
@@ -125,11 +126,11 @@ def test_full_god_mode_turn1():
         "god_mode_data": god_mode_data,
         "selectedPrompts": [],
         "use_default_world": False,
-    })
-    
+    }, base_url=base_url)
+
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
-    
+
     # Turn 1 interaction - should trigger CharacterCreationAgent
     log("📝 Turn 1: User wants to create character...")
     turn1_result = mcp_call("process_action", {
@@ -137,7 +138,7 @@ def test_full_god_mode_turn1():
         "campaign_id": campaign_id,
         "user_input": "Let's create my character!",
         "game_mode": "character",
-    })
+    }, base_url=base_url)
     
     # Validation 1: CharacterCreationAgent selected (check system_instruction_files)
     debug_info = turn1_result.get("debug_info", {})
@@ -207,14 +208,14 @@ def test_full_god_mode_turn1():
     return True
 
 
-def test_minimal_god_mode_turn1():
+def test_minimal_god_mode_turn1(base_url: str):
     """Test CharacterCreationAgent on Turn 1 with minimal God Mode data (luke | star wars)."""
     log("=" * 80)
     log("TEST 2: Minimal God Mode Turn 1 (luke | star wars)")
     log("=" * 80)
-    
+
     god_mode_data = "Character: luke | Setting: star wars"
-    
+
     log("📝 Creating campaign with minimal God Mode data...")
     campaign_result = mcp_call("create_campaign", {
         "user_id": USER_ID,
@@ -222,11 +223,11 @@ def test_minimal_god_mode_turn1():
         "god_mode_data": god_mode_data,
         "selectedPrompts": [],
         "use_default_world": False,
-    })
-    
+    }, base_url=base_url)
+
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
-    
+
     # Turn 1 interaction
     log("📝 Turn 1: User wants to create character...")
     turn1_result = mcp_call("process_action", {
@@ -234,7 +235,7 @@ def test_minimal_god_mode_turn1():
         "campaign_id": campaign_id,
         "user_input": "I want to create my character",
         "game_mode": "character",
-    })
+    }, base_url=base_url)
     
     # Same validations as Test 1
     debug_info = turn1_result.get("debug_info", {})
@@ -282,29 +283,29 @@ def test_minimal_god_mode_turn1():
 
 def main():
     parser = argparse.ArgumentParser(description="CharacterCreationAgent Turn 1 E2E Test")
-    parser.add_argument("--base-url", default=BASE_URL, help="Server base URL")
+    parser.add_argument("--base-url", help="Server base URL")
     parser.add_argument("--auto-server", action="store_true", help="Auto-start local server if needed")
     args = parser.parse_args()
-    
-    global BASE_URL
-    BASE_URL = args.base_url
+
+    # Use provided base URL or fall back to default
+    base_url = args.base_url or BASE_URL
     
     log(f"🚀 Starting CharacterCreationAgent Turn 1 E2E Test")
-    log(f"   Base URL: {BASE_URL}")
+    log(f"   Base URL: {base_url}")
     log(f"   User ID: {USER_ID}")
     log(f"   Evidence Dir: {EVIDENCE_DIR}")
-    
+
     # Start server if requested
     if args.auto_server:
-        ensure_server_running(BASE_URL)
+        ensure_server_running(base_url)
     
     # Capture git provenance and server info
     log("📊 Capturing git provenance and server info...")
     provenance = evidence_utils.capture_provenance()
-    
+
     # Run tests
-    test1_passed = test_full_god_mode_turn1()
-    test2_passed = test_minimal_god_mode_turn1()
+    test1_passed = test_full_god_mode_turn1(base_url)
+    test2_passed = test_minimal_god_mode_turn1(base_url)
     
     # Generate evidence bundle
     log("📦 Generating evidence bundle...")
@@ -315,7 +316,7 @@ def main():
 Validate that CharacterCreationAgent activates on Turn 1 for ALL campaigns, regardless of God Mode template completeness.
 
 ## Test Environment
-- **Server**: {BASE_URL}
+- **Server**: {base_url}
 - **User ID**: {USER_ID}
 - **Timestamp**: {datetime.now(timezone.utc).isoformat()}
 
@@ -347,6 +348,11 @@ Validate that CharacterCreationAgent activates on Turn 1 for ALL campaigns, rega
 """
 
     evidence = f"""# Evidence Summary
+
+## Test Configuration
+- **Server URL**: {base_url}
+- **User ID**: {USER_ID}
+- **Timestamp**: {datetime.now(timezone.utc).isoformat()}
 
 ## Test Results
 
@@ -402,6 +408,10 @@ if char_name and char_class:
 - ✅ Server runtime captured
 - ✅ All files have SHA256 checksums
 - ✅ Evidence follows /tmp/<repo>/<branch>/<work>/<timestamp>/ structure
+
+## Test Server
+- **Base URL**: {base_url}
+- **Real Mode**: REAL Gemini API calls (not mocked)
 
 ## Follow-Up
 
