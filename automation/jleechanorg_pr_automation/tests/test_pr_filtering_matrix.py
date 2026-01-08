@@ -460,6 +460,64 @@ class TestPRFilteringMatrix(unittest.TestCase):
             "Comment should remind Codex about the hidden commit marker",
         )
 
+    def test_fix_comment_review_body_includes_greptile(self):
+        """Fix-comment review body should include Greptile + standard bot mentions."""
+        pr_data = {
+            "title": "Test PR",
+            "author": {"login": "dev"},
+            "headRefName": "feature-branch",
+        }
+
+        comment_body = self.monitor._build_fix_comment_review_body(
+            "org/repo",
+            123,
+            pr_data,
+            "abc123",
+        )
+
+        self.assertIn("@greptile", comment_body)
+        self.assertIn("@codex", comment_body)
+        self.assertIn(self.monitor.FIX_COMMENT_MARKER_PREFIX, comment_body)
+
+    def test_fix_comment_prompt_requires_gh_comment_replies(self):
+        """Fix-comment prompt should require gh pr comment replies for 100% of comments."""
+        pr_data = {
+            "title": "Test PR",
+            "author": {"login": "dev"},
+            "headRefName": "feature-branch",
+        }
+
+        prompt_body = self.monitor._build_fix_comment_prompt_body(
+            "org/repo",
+            123,
+            pr_data,
+            "abc123",
+            "gemini",
+        )
+
+        self.assertIn("gh pr comment", prompt_body)
+        self.assertIn("100%", prompt_body)
+
+    def test_fix_comment_mode_dispatches_agent(self):
+        """Fix-comment processing should dispatch orchestration agent and post comments."""
+        pr_data = {
+            "title": "Test PR",
+            "author": {"login": "dev"},
+            "headRefName": "feature-branch",
+            "repositoryFullName": "org/repo",
+        }
+
+        with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc123", [])), \
+             patch.object(self.monitor, "_should_skip_pr", return_value=False), \
+             patch.object(self.monitor, "_has_fix_comment_comment_for_commit", return_value=False), \
+             patch.object(self.monitor, "dispatch_fix_comment_agent", return_value=True), \
+             patch.object(self.monitor, "_post_fix_comment_queued", return_value=True), \
+             patch.object(self.monitor, "_start_fix_comment_review_watcher", return_value=True) as mock_start:
+
+            result = self.monitor._process_pr_fix_comment("org/repo", 123, pr_data, agent_cli="gemini")
+            self.assertEqual(result, "posted")
+            mock_start.assert_called_once()
+
 
 if __name__ == "__main__":
     # RED Phase: Run tests to confirm they FAIL
