@@ -164,6 +164,13 @@ class TestAgentGameStateIntegration(unittest.TestCase):
         mock_game_state.combat_state = {"in_combat": False}
         # Explicitly mark character creation as complete to avoid CharacterCreationAgent
         mock_game_state.custom_campaign_state = {"character_creation_completed": True}
+        # Populate character data to simulate completed character creation
+        mock_game_state.player_character_data = {
+            "name": "Test Character",
+            "class": "Fighter",
+            "hp": 10,
+            "max_hp": 10
+        }
         # CombatAgent.matches_game_state() calls is_in_combat() and get_combat_state()
         mock_game_state.is_in_combat.return_value = False
         mock_game_state.get_combat_state.return_value = {"in_combat": False}

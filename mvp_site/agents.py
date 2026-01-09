@@ -1403,23 +1403,6 @@ def get_agent_for_input(
     # Priority 2: Character Creation mode (second highest priority)
     # Check if we're in character creation AND user isn't indicating they're done
     if CharacterCreationAgent.matches_game_state(game_state):
-        # We are gated by custom_campaign_state["character_creation_in_progress"]
-        # which is initialized by create_campaign_unified(), so char_creation_started
-        # will often already be true on Turn 1.
-        char_creation_started = False
-        if game_state is not None:
-            custom_state = None
-            if hasattr(game_state, "custom_campaign_state"):
-                custom_state = game_state.custom_campaign_state
-            elif isinstance(game_state, dict):
-                custom_state = game_state.get("custom_campaign_state", {})
-
-            if isinstance(custom_state, dict):
-                # If character_creation_in_progress flag is set, creation has started
-                char_creation_started = custom_state.get(
-                    "character_creation_in_progress", False
-                )
-
         # We used to check matches_input() here to transition immediately, but that
         # prevented the CharacterCreationAgent from processing the "I'm done" message
         # and updating the state flags. Now we stay in creation mode to let the agent
