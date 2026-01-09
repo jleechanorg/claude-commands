@@ -92,7 +92,7 @@ from mvp_site.agent_prompts import (
     get_static_prompt_parts,
 )
 from mvp_site.agents import (
-    BaseAgent,
+    BaseAgent,  # noqa: F401
     GodModeAgent,
     RewardsAgent,
     StoryModeAgent,
@@ -176,7 +176,6 @@ elif constants.DEFAULT_LLM_PROVIDER == constants.LLM_PROVIDER_OPENROUTER:
 else:  # Gemini (default fallback)
     DEFAULT_MODEL = constants.DEFAULT_GEMINI_MODEL
     TEST_MODEL = constants.DEFAULT_GEMINI_MODEL
-
 
 
 @dataclass(frozen=True)
@@ -2877,7 +2876,7 @@ def _log_debug_response(
         end_content = response_str[-half_length:]
         logging_util.info(
             f"🔍 API_RESPONSE_DEBUG ({context}): Content: {start_content}...[{len(response_str) - max_length} chars omitted]...{end_content}"
-    )
+        )
 
 
 def _log_raw_llm_data(
@@ -2889,7 +2888,9 @@ def _log_raw_llm_data(
     """Log raw LLM inputs/outputs with previews and length caps."""
 
     instruction_preview = system_instruction_final[:2000]
-    instruction_suffix = "..." if len(system_instruction_final) > len(instruction_preview) else ""
+    instruction_suffix = (
+        "..." if len(system_instruction_final) > len(instruction_preview) else ""
+    )
     logging_util.info(
         f"📝 SYSTEM_INSTRUCTION ({len(system_instruction_final)} chars): "
         f"{instruction_preview}{instruction_suffix}"
@@ -2897,7 +2898,9 @@ def _log_raw_llm_data(
 
     try:
         request_payload = (
-            gemini_request.to_json() if hasattr(gemini_request, "to_json") else str(gemini_request)
+            gemini_request.to_json()
+            if hasattr(gemini_request, "to_json")
+            else str(gemini_request)
         )
         request_str_full = (
             json.dumps(request_payload, default=str)
@@ -2929,6 +2932,7 @@ def _check_missing_required_fields(
     is_dm_mode: bool = False,
     require_dice_rolls: bool = False,
     dice_integrity_violation: bool = False,
+    require_social_hp_challenge: bool = False,
 ) -> list[str]:
     """Check if required fields are missing from the structured response.
 
@@ -2986,6 +2990,30 @@ def _check_missing_required_fields(
         require_dice_rolls=require_dice_rolls,
         dice_integrity_violation=dice_integrity_violation,
     )
+
+    # Social HP challenge is conditionally required when the Social HP system is active.
+    # We currently detect this by the presence of the narrative challenge box, which
+    # is already mandatory per game_state_instruction.md. This catches the common
+    # failure mode where the narrative shows the box but the JSON field is missing.
+    if require_social_hp_challenge:
+        social_hp_challenge = getattr(structured_response, "social_hp_challenge", None)
+        is_missing = True
+        if isinstance(social_hp_challenge, dict):
+            npc_name = str(social_hp_challenge.get("npc_name", "")).strip()
+            objective = str(social_hp_challenge.get("objective", "")).strip()
+            resistance = str(social_hp_challenge.get("resistance_shown", "")).strip()
+            social_hp_val = social_hp_challenge.get("social_hp")
+            social_hp_max = social_hp_challenge.get("social_hp_max")
+            is_missing = not (
+                npc_name
+                and objective
+                and resistance
+                and social_hp_val is not None
+                and isinstance(social_hp_max, (int, float))
+                and social_hp_max > 0
+            )
+        if is_missing:
+            missing.append("social_hp_challenge")
 
     return missing
 
@@ -3202,10 +3230,46 @@ def continue_story(
 
     # Read LLM-requested instruction hints from previous turn
     # These are sections the LLM requested via debug_info.meta.needs_detailed_instructions
-    pending_hints: list[str] = getattr(current_game_state, "pending_instruction_hints", []) or []
+    pending_hints: list[str] = (
+        getattr(current_game_state, "pending_instruction_hints", []) or []
+    )
     if pending_hints:
         logging_util.info(
             f"📋 DYNAMIC_PROMPTS: Loading LLM-requested sections from previous turn: {pending_hints}"
+        )
+
+    # 🚨 AUTO-INJECT SOCIAL HP REMINDER for high-tier NPCs
+    # If game state contains god_primordial, king_ancient, or level >= 15 NPCs,
+    # automatically add "social_hp" to pending_hints to reinforce the system
+    raw_npc_data = getattr(current_game_state, "npc_data", None) or {}
+    npc_data = raw_npc_data if isinstance(raw_npc_data, dict) else {}
+
+    def _safe_int(value: object, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    high_tier_npcs = []
+    if raw_npc_data and not isinstance(raw_npc_data, dict):
+        logging_util.warning(
+            f"SOCIAL_HP: npc_data is not a dict (type={type(raw_npc_data).__name__}), skipping high-tier NPC scan"
+        )
+
+    for npc_id, npc_info in npc_data.items():
+        if not isinstance(npc_info, dict):
+            continue
+        tier = (npc_info.get("tier") or "").lower()
+        level = _safe_int(npc_info.get("level"))
+        name = npc_info.get("name", npc_id)
+        # Detect high-tier NPCs that require Social HP enforcement
+        if tier in ("god_primordial", "king_ancient", "lord_general") or level >= 15:
+            high_tier_npcs.append(f"{name} (tier={tier}, level={level})")
+
+    if high_tier_npcs and "social_hp" not in pending_hints:
+        pending_hints = list(pending_hints) + ["social_hp"]
+        logging_util.info(
+            f"🚨 SOCIAL_HP: Auto-injected Social HP reminder due to high-tier NPCs: {high_tier_npcs}"
         )
 
     if is_god_mode_command:
@@ -3468,7 +3532,9 @@ def continue_story(
 
     # Extract pending system_corrections from game_state (one-time read and clear)
     # These are discrepancies detected in the previous turn that the LLM must fix
-    pending_system_corrections = game_state_for_llm.pop("pending_system_corrections", [])
+    pending_system_corrections = game_state_for_llm.pop(
+        "pending_system_corrections", []
+    )
     if pending_system_corrections:
         logging_util.warning(
             f"🔧 Injecting {len(pending_system_corrections)} system_corrections into LLM request: "
@@ -3622,6 +3688,8 @@ def continue_story(
         not dice_integrity_valid or code_exec_fabrication or narrative_dice_fabrication
     )
 
+    # Social HP enforcement is handled by agent prompts (narrative_system_instruction.md)
+    # NOT by detecting challenge boxes in narrative output
     missing_fields = _check_missing_required_fields(
         structured_response,
         mode,
@@ -3629,6 +3697,7 @@ def continue_story(
         is_dm_mode=is_dm_mode_initial,
         require_dice_rolls=require_dice_rolls,
         dice_integrity_violation=dice_integrity_violation,
+        require_social_hp_challenge=False,
     )
 
     dice_retry_llm_call = False
@@ -3740,6 +3809,7 @@ def continue_story(
                 )
 
                 # Check if reprompt was successful
+                # Social HP enforcement is handled by agent prompts, not detection
                 reprompt_missing = _check_missing_required_fields(
                     reprompt_structured,
                     mode,
@@ -3747,6 +3817,7 @@ def continue_story(
                     is_dm_mode=is_dm_mode_initial,
                     require_dice_rolls=require_dice_rolls,
                     dice_integrity_violation=reprompt_dice_violation,
+                    require_social_hp_challenge=False,
                 )
 
                 # CRITICAL: Never accept responses with dice_integrity violations
@@ -3997,6 +4068,10 @@ def continue_story(
     # - narrative_text: Clean text for display (guaranteed to be clean narrative)
     # - structured_response: Parsed JSON structure with state updates, entities, etc.
     # - processing_metadata: Additional metadata including equipment_display when relevant
+    if gemini_response.structured_response and hasattr(
+        gemini_response.structured_response, "narrative"
+    ):
+        gemini_response.structured_response.narrative = gemini_response.narrative_text
     return gemini_response
 
 

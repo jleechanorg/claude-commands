@@ -17,6 +17,7 @@ def create_campaign(
     character: str = "Aric the Fighter (STR 16)",
     setting: str = "A roadside ambush outside Phandalin",
     description: str = "Test campaign for MCP validation",
+    selected_prompts: list[str] | None = None,
 ) -> str:
     """Create a campaign and return its ID.
 
@@ -27,6 +28,7 @@ def create_campaign(
         character: Character description.
         setting: Setting description.
         description: Campaign description.
+        selected_prompts: List of prompt types to load (e.g., ["narrative", "mechanics"]).
 
     Returns:
         Campaign ID string.
@@ -34,16 +36,18 @@ def create_campaign(
     Raises:
         RuntimeError: If campaign creation fails.
     """
-    payload = client.tools_call(
-        "create_campaign",
-        {
-            "user_id": user_id,
-            "title": title,
-            "character": character,
-            "setting": setting,
-            "description": description,
-        },
-    )
+    args = {
+        "user_id": user_id,
+        "title": title,
+        "character": character,
+        "setting": setting,
+        "description": description,
+    }
+
+    if selected_prompts is not None:
+        args["selected_prompts"] = selected_prompts
+
+    payload = client.tools_call("create_campaign", args)
     campaign_id = payload.get("campaign_id") or payload.get("campaignId")
     if not isinstance(campaign_id, str) or not campaign_id:
         raise RuntimeError(f"create_campaign returned unexpected payload: {payload}")

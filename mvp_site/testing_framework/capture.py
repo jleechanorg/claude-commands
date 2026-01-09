@@ -5,9 +5,10 @@ Records API calls and responses for mock validation and analysis.
 
 import json
 import os
+import tempfile
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -17,7 +18,7 @@ class CaptureManager:
     def __init__(self, capture_dir: str | None = None):
         """Initialize capture manager with storage directory."""
         self.capture_dir = capture_dir or os.environ.get(
-            "TEST_CAPTURE_DIR", "/tmp/test_captures"
+            "TEST_CAPTURE_DIR", os.path.join(tempfile.gettempdir(), "test_captures")
         )
         self.interactions = []
         self.capture_session_id = str(int(time.time() * 1000))
@@ -33,7 +34,7 @@ class CaptureManager:
 
         interaction = {
             "id": interaction_id,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "service": service,
             "operation": operation,
             "request": self._sanitize_data(request_data),
@@ -92,14 +93,14 @@ class CaptureManager:
     def save_captures(self, filename: str | None = None) -> str:
         """Save captured interactions to file."""
         if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             filename = f"capture_{timestamp}_{self.capture_session_id}.json"
 
         filepath = os.path.join(self.capture_dir, filename)
 
         capture_data = {
             "session_id": self.capture_session_id,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "total_interactions": len(self.interactions),
             "interactions": self.interactions,
         }
@@ -410,6 +411,9 @@ def cleanup_old_captures(capture_dir: str, days_to_keep: int = 7):
 
     for filename in os.listdir(capture_dir):
         filepath = os.path.join(capture_dir, filename)
-        if os.path.isfile(filepath) and filename.startswith("capture_"):
-            if os.path.getmtime(filepath) < cutoff_time:
-                os.remove(filepath)
+        if (
+            os.path.isfile(filepath)
+            and filename.startswith("capture_")
+            and os.path.getmtime(filepath) < cutoff_time
+        ):
+            os.remove(filepath)

@@ -65,6 +65,54 @@ def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_require
     assert "dice_rolls" not in missing
 
 
+def test_check_missing_required_fields_requires_social_hp_challenge_when_requested():
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=_valid_planning_block(),
+        session_header="h",
+        # social_hp_challenge omitted → validates to {}
+    )
+
+    missing = _check_missing_required_fields(
+        resp,
+        constants.MODE_CHARACTER,
+        require_social_hp_challenge=True,
+    )
+    assert "social_hp_challenge" in missing
+
+
+def test_check_missing_required_fields_accepts_valid_social_hp_challenge_when_requested():
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=_valid_planning_block(),
+        session_header="h",
+        social_hp_challenge={
+            "npc_id": "npc_1",
+            "npc_name": "Lord Commander Valerius",
+            "npc_tier": "king",
+            "objective": "Secure emergency passage",
+            "request_severity": "favor",
+            "social_hp": 24,
+            "social_hp_max": 24,
+            "successes": 0,
+            "successes_needed": 5,
+            "status": "RESISTING",
+            "resistance_shown": "The gate remains shut.",
+            "skill_used": "Persuasion",
+            "roll_result": 8,
+            "roll_dc": 20,
+            "social_hp_damage": 0,
+        },
+    )
+
+    missing = _check_missing_required_fields(
+        resp,
+        constants.MODE_CHARACTER,
+        require_social_hp_challenge=True,
+    )
+    assert "social_hp_challenge" not in missing
+
+
 def test_should_require_dice_rolls_only_for_combat_actions():
     gs = GameState(combat_state={"in_combat": True})
 

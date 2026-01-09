@@ -250,6 +250,32 @@ Every response MUST be valid JSON with this exact structure:
   - `level_up_available`: (boolean)
   - `loot`: (array of strings; use ["None"] if no loot)
   - `gold`: (number; 0 if none)
+- `social_hp_challenge`: (object) **REQUIRED when Social HP system is active** (persuading ANY significant NPC regardless of tier - commoners, merchants, nobles, lords, kings, gods). This MUST be a structured JSON field, not embedded in narrative text.
+  - `npc_id`: (string) NPC identifier for state linking (optional)
+  - `npc_name`: (string) **REQUIRED** - The NPC being persuaded
+  - `npc_tier`: (string) **REQUIRED** - NPC tier from npc_data.tier: commoner | merchant | guard | noble | knight | lord | general | king | ancient | god | primordial (or combined like "god_primordial", "noble_knight")
+  - `objective`: (string) **REQUIRED** - What player wants to achieve
+  - `request_severity`: (string) **REQUIRED** information | favor | submission
+  - `social_hp`: (number) **REQUIRED** - Current Social HP remaining
+  - `social_hp_max`: (number) **REQUIRED** - Set based on npc_tier: commoner=1-2, merchant/guard=2-3, noble/knight=3-5, lord/general=5-8, king/ancient=8-12, god/primordial=15+
+  - `successes`: (number) Current successes achieved
+  - `successes_needed`: (number) Required successes to win (always 5)
+  - `status`: (string) RESISTING | WAVERING | YIELDING | SURRENDERED
+  - `resistance_shown`: (string) **REQUIRED** resistance indicator text (verbal or physical)
+  - `skill_used`: (string) Persuasion | Deception | Intimidation | Insight
+  - `roll_result`: (number) This turn's roll result
+  - `roll_dc`: (number) DC for the skill check
+  - `social_hp_damage`: (number) Damage dealt this turn (0-2 based on success margin)
+  - Progress formula: `successes = social_hp_max - social_hp_current` (cap at 5)
+  - **🚨 DUAL REQUIREMENT (BOTH MANDATORY FOR EVERY INTERACTION):**
+    1. **JSON Field**: Populate ALL required social_hp_challenge fields listed above
+    2. **Narrative Box**: Include [SOCIAL SKILL CHALLENGE: {npc_name}] box in narrative text
+    - **EVERY Social HP interaction** MUST include BOTH (not just the first interaction)
+    - **Continuation scenarios** with same NPC still require full box format
+    - **NO inference** - even if shown in previous turn, show box again in current turn
+    - Players see the box (narrative), server tracks data (JSON)
+    - BOTH must exist for ALL tiers (commoner through god) in EVERY response
+    - Missing either one fails validation
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
   - The engine converts this into structured `world_time` for temporal enforcement and session headers.
@@ -597,6 +623,20 @@ When the server detects state discrepancies in your previous response, a `system
 4. Each correction explains exactly what field to set and why
 
 **Why This Exists:** Instead of the server overriding your decisions, we inform you of issues and let you fix them. This keeps you in control while ensuring game state consistency.
+
+### NPC Data Input Structure
+
+When `npc_data` is present in your input, each NPC entry contains:
+- `string_id`: (string) Unique NPC identifier (e.g., "npc_sariel_001")
+- `name`: (string) NPC display name
+- `tier`: (string) Social HP tier - commoner | merchant | guard | noble | knight | lord | general | king | ancient | god | primordial (or combined like "god_primordial")
+- `role`: (string) NPC role/title (e.g., "Empress", "Captain", "Innkeeper")
+- `level`: (number) NPC level (if applicable)
+- `relationships.player.trust_level`: (number) -10 to +10 trust with player
+- `relationships.player.disposition`: (string) hostile | antagonistic | neutral | friendly | allied
+- Additional fields: hp, armor_class, status, etc. (see entity schemas)
+
+**Social HP Usage:** When initiating Social HP challenges, extract `tier` from `npc_data` and include it in your `social_hp_challenge` output as `npc_tier`.
 
 ## D&D 5E Rules (SRD)
 

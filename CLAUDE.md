@@ -39,6 +39,53 @@ When resuming from prior sessions or inheriting TODOs:
 - Ask: Does this make the LLM smarter or dumber?
 - Challenge assumptions from summaries - they may contain bad ideas
 
+### JSON Schema Over Text Instructions
+**Prefer structured data contracts over prose when communicating with LLMs:**
+
+**✅ CORRECT: Define behavior via JSON schema**
+- Document expected output structure in schema files (e.g., `game_state_instruction.md`)
+- LLM sees WHAT fields to populate, not HOW to write content
+- Server validates structure post-generation
+- Example: `social_hp_challenge` object with required fields (npc_name, objective, social_hp, etc.)
+
+**❌ WRONG: Pre-written templates or fill-in-the-blank formats**
+- Giving LLM: "Write: [SOCIAL SKILL CHALLENGE: {npc_name}]\nObjective: {objective}\nHP: {hp}/{max}"
+- This is a template, not a schema - reduces LLM autonomy
+- LLM should decide narrative format based on context
+
+**The Balance:**
+- **Schema**: Tells LLM what data structures exist and their fields
+- **Examples**: Shows good output patterns (reference, not prescription)
+- **Templates**: Pre-written fill-in-the-blank text (avoid - constrains LLM creativity)
+
+**🚨 CRITICAL: Document BOTH Input and Output Schemas**
+When adding LLM-driven features:
+1. **Input Schema**: Document what data the LLM receives (e.g., `npc_data.tier`, `npc_data.role`)
+2. **Output Schema**: Document what data the LLM must return (e.g., `social_hp_challenge.npc_tier`)
+3. **Link them explicitly**: Show how to extract input data for output fields
+
+**Common Mistake**: Documenting only OUTPUT schema while assuming LLM "just knows" what INPUT fields are available.
+
+**Example from Social HP PR:**
+- ❌ BEFORE: OUTPUT schema listed `social_hp_max` but didn't document where tier comes from
+- ✅ AFTER: INPUT section documents `npc_data.tier`, OUTPUT schema says "extract from npc_data.tier"
+
+**Implementation Pattern:**
+1. Define JSON INPUT schema (what LLM receives)
+2. Define JSON OUTPUT schema (what LLM returns)
+3. Show narrative examples demonstrating good patterns
+4. Let LLM generate both JSON data AND narrative freely
+5. Server validates JSON structure and cross-validates with narrative
+6. Log warnings for mismatches, optionally retry with validation feedback
+
+**Why This Matters:**
+- Prevents "where does this data come from?" confusion
+- LLM knows what fields are available to read
+- LLM knows what fields are expected in output
+- Allows proper data flow from input through LLM to output
+- Preserves LLM decision-making autonomy while ensuring data consistency
+- Follows "LLM Decides, Server Executes" principle
+
 ## File Protocols
 
 ### New File Creation - Extreme Anti-Creation Bias

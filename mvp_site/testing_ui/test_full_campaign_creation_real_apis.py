@@ -15,17 +15,18 @@ This test costs money (Gemini API calls) but validates the core product.
 
 import os
 import sys
+import tempfile
 
 from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def test_complete_campaign_creation_real_apis():
+def test_complete_campaign_creation_real_apis():  # noqa: PLR0915
     """Complete end-to-end campaign creation with real APIs."""
 
     # Create screenshots directory
-    screenshots_dir = "/tmp/worldarchitectai/browser"
+    screenshots_dir = os.path.join(tempfile.gettempdir(), "worldarchitectai", "browser")
     os.makedirs(screenshots_dir, exist_ok=True)
 
     print("\n" + "=" * 70)
@@ -212,7 +213,9 @@ def test_complete_campaign_creation_real_apis():
                 ):
                     print("✓ Found game view despite timeout - continuing...")
                 else:
-                    raise Exception("Campaign creation failed - not on game view")
+                    raise Exception(
+                        "Campaign creation failed - not on game view"
+                    ) from None
 
             # Step 4: Verify we're in chat interface
             print("\n💬 Step 4: Verifying chat interface...")

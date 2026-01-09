@@ -17,8 +17,8 @@ project_root = os.path.dirname(
 )
 sys.path.insert(0, project_root)
 
-from mvp_site.testing_framework.capture_analysis import CaptureAnalyzer
-from mvp_site.testing_framework.factory import get_service_provider
+from mvp_site.testing_framework.capture_analysis import CaptureAnalyzer  # noqa: E402
+from mvp_site.testing_framework.factory import get_service_provider  # noqa: E402
 
 
 def demo_capture_mode():
@@ -27,10 +27,11 @@ def demo_capture_mode():
 
     # Set up environment for capture mode
     os.environ["TEST_MODE"] = "capture"
-    os.environ["TEST_CAPTURE_DIR"] = "/tmp/test_captures_demo"
+    display_path = os.path.join(tempfile.gettempdir(), "test_captures_demo")
+    os.environ["TEST_CAPTURE_DIR"] = display_path
 
     # Ensure capture directory exists
-    os.makedirs("/tmp/test_captures_demo", exist_ok=True)
+    os.makedirs(display_path, exist_ok=True)
 
     print("1. Getting service provider in capture mode...")
     try:
@@ -66,10 +67,6 @@ def demo_capture_mode():
             # This would be captured if real services were configured
             firestore.collection("test_collection")
             print("   - Created collection reference")
-
-            # This would make a real API call and be captured
-            # docs = collection.get()
-            # print(f"   - Retrieved {len(docs)} documents")
 
         except Exception as e:
             print(f"   - Service operation failed (expected without real config): {e}")

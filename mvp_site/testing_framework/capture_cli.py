@@ -7,7 +7,8 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+import tempfile
+from datetime import UTC, datetime
 
 from capture import cleanup_old_captures
 
@@ -16,7 +17,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-from capture_analysis import CaptureAnalyzer, create_mock_baseline
+from capture_analysis import CaptureAnalyzer, create_mock_baseline  # noqa: E402
 
 
 def analyze_command(args):
@@ -126,7 +127,7 @@ def list_command(args):
     print("-" * 70)
 
     for filename, size, mtime in capture_files:
-        mod_time = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+        mod_time = datetime.fromtimestamp(mtime, tz=UTC).strftime("%Y-%m-%d %H:%M")
         print(f"{filename:<40} {size:<10.1f} {mod_time}")
 
 
@@ -139,7 +140,9 @@ def main():
     # Global options
     parser.add_argument(
         "--capture-dir",
-        default=os.environ.get("TEST_CAPTURE_DIR", "/tmp/test_captures"),
+        default=os.environ.get(
+            "TEST_CAPTURE_DIR", os.path.join(tempfile.gettempdir(), "test_captures")
+        ),
         help="Directory containing capture files",
     )
 

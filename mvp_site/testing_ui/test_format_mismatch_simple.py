@@ -9,6 +9,7 @@ Playwright MCP usage instead of direct playwright imports for testing_ui/ direct
 
 import os
 import sys
+import tempfile
 
 # Use Playwright MCP instead of direct playwright import per coding guidelines
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,13 +25,13 @@ def test_format_mismatch():
     print("\n🔴 RED TEST: Field Format Mismatch")
     print("Expected: Should FAIL due to empty narrative from field mismatch")
 
-    screenshots_dir = "/tmp/worldarchitectai/red_green_simple"
+    screenshots_dir = os.path.join(
+        tempfile.gettempdir(), "worldarchitectai", "red_green_simple"
+    )
     os.makedirs(screenshots_dir, exist_ok=True)
 
     # Using Playwright MCP functions for browser automation
     # Available functions: browser_navigate, browser_click, browser_type, browser_take_screenshot
-    # Note: Implementation moved to use Playwright MCP in /testui command
-    # - mcp__playwright-mcp__browser_snapshot()
 
     print("⚠️ Test converted to use Playwright MCP - implementation pending")
     print("✓ Test structure updated per coding guidelines")

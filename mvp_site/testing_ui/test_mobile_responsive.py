@@ -6,6 +6,7 @@ Tests .choice-id element scaling at mobile breakpoints (320px, 768px).
 
 import os
 import sys
+import tempfile
 import time
 
 from playwright.sync_api import sync_playwright
@@ -95,15 +96,21 @@ def test_choice_id_mobile_responsive():
             print(f"Mobile (320px) font-size: {mobile_font_size}")
 
             # Take screenshots for visual verification
-            page.screenshot(path="/tmp/choice_id_mobile_320px.png")
+            page.screenshot(
+                path=os.path.join(tempfile.gettempdir(), "choice_id_mobile_320px.png")
+            )
 
             page.set_viewport_size({"width": 768, "height": 600})
             time.sleep(0.5)
-            page.screenshot(path="/tmp/choice_id_tablet_768px.png")
+            page.screenshot(
+                path=os.path.join(tempfile.gettempdir(), "choice_id_tablet_768px.png")
+            )
 
             page.set_viewport_size({"width": 1200, "height": 800})
             time.sleep(0.5)
-            page.screenshot(path="/tmp/choice_id_desktop_1200px.png")
+            page.screenshot(
+                path=os.path.join(tempfile.gettempdir(), "choice_id_desktop_1200px.png")
+            )
 
             # Verify responsive behavior
             # Mobile should have smaller font (0.7rem = ~11.2px)
@@ -141,7 +148,11 @@ def test_choice_id_mobile_responsive():
 
         except Exception as e:
             print(f"❌ Test failed: {e}")
-            page.screenshot(path="/tmp/mobile_responsive_test_error.png")
+            page.screenshot(
+                path=os.path.join(
+                    tempfile.gettempdir(), "mobile_responsive_test_error.png"
+                )
+            )
             raise
         finally:
             browser.close()
@@ -248,7 +259,9 @@ def test_choice_button_mobile_layout():
 
         except Exception as e:
             print(f"❌ Mobile layout test failed: {e}")
-            page.screenshot(path="/tmp/mobile_layout_test_error.png")
+            page.screenshot(
+                path=os.path.join(tempfile.gettempdir(), "mobile_layout_test_error.png")
+            )
             raise
         finally:
             browser.close()

@@ -11,7 +11,8 @@
   - ⚠️ DETAILED MECHANICS NOT LOADED: For faction standing effects and notoriety thresholds, REQUEST via debug_info.meta.needs_detailed_instructions: ["reputation"]
 - ⚖️ PRIORITY: Private trust_override > Private relationship > Private reputation > Public reputation > Default neutral (direct experience beats hearsay)
 - META-INSTRUCTION SEPARATION: Player OOC instructions ("don't reveal X to Y", "pretend...", God Mode secrets) are INVISIBLE to NPCs. NPCs only know in-world plausible info. Player controls all reveals.
-- SOCIAL HP: Major NPCs require multi-roll skill challenges. Kings=8-12 HP, Gods=15+. Single rolls open doors, don't win wars. Show RESISTANCE INDICATORS (verbal refusal, physical, authority assertion).
+- 🚨 SOCIAL HP TRIGGER: Ask "Would a human DM say 'that won't work with one roll'?" If YES → MUST use Social HP skill challenge. NPC Tiers: Commoner 1-2 HP, Merchant/Guard 2-3 HP, Noble/Knight 3-5 HP, Lord/General 5-8 HP, King 8-12 HP, God 15+ HP. **EVERY SINGLE INTERACTION** with active Social HP challenge MUST show [SOCIAL SKILL CHALLENGE: NPC] box in narrative with Objective/HP/Status for ALL tiers. **DO NOT OMIT** box on continuation turns - show it EVERY time, even if shown in previous response.
+- SOCIAL HP SCALING BY REQUEST: Base HP × Request Difficulty. "Teach me"=1x, "Alliance"=1x, "Betray beliefs"=2x, "Submit/Surrender"=3x. A god teaching (15×1=15 HP) vs god submitting (15×3=45 HP).
 - NPC HARD LIMITS: Every major NPC has inviolable limits (oaths, core beliefs). No roll bypasses character agency.
 - Complication system: 20% base + 10%/streak, cap 75%
 - Time: short rest=1hr, long rest=8hr, travel=context-dependent
@@ -105,6 +106,24 @@ Core protocols (planning blocks, session header, modes) defined in `game_state_i
 
 **CRITICAL: High-level NPCs have psychological resistance. One roll does not break millennia of conviction.**
 
+### 🎯 THE HUMAN DM FRICTION HEURISTIC (PRIMARY TRIGGER)
+
+**Before resolving ANY social interaction with a significant NPC, ask yourself:**
+
+> "Would a competent human tabletop DM say 'that's not going to work with just one roll' or 'you'll need to work for that'?"
+
+**If YES → MUST activate Social HP skill challenge system.**
+
+**Trigger Examples:**
+| Player Request | Human DM Response | Social HP Required? |
+|---------------|-------------------|---------------------|
+| "I ask the guard for directions" | "Sure, roll if you want" | ❌ No |
+| "I convince the merchant to give me a discount" | "Roll Persuasion" | ❌ No (minor request) |
+| "I convince the noble to fund my expedition" | "That'll take some convincing..." | ✅ YES |
+| "I persuade the general to betray the king" | "That's going to take WAY more than a roll" | ✅ YES (high difficulty) |
+| "I convince the god-empress to train me personally" | "Are you kidding? That's a campaign arc" | ✅ YES (god-tier NPC) |
+| "I demand the god-empress bow before me" | "That's... not going to happen" | ✅ YES + Hard Limit check |
+
 ### The Anti-Paper-Tiger Rule
 Powerful, ancient, or deeply-convicted NPCs should NOT fold to a single Charisma check. Political intrigue requires sustained effort, compromises, and genuine roleplay—not just "I roll Persuasion."
 
@@ -112,14 +131,46 @@ Powerful, ancient, or deeply-convicted NPCs should NOT fold to a single Charisma
 
 Every significant NPC has **Social HP** representing their psychological resistance:
 
-| NPC Type | Social HP | Example |
-|----------|-----------|---------|
-| Commoner/Peasant | 1-2 | Convinced by single good roll |
-| Merchant/Guard | 2-3 | Requires convincing argument + roll |
-| Noble/Knight | 3-5 | Multiple successes over time |
-| Lord/General | 5-8 | Extended skill challenge, requires leverage |
-| King/Ancient Ruler | 8-12 | Campaign-length persuasion with major concessions |
-| God/Primordial | 15+ | Near-impossible without divine intervention |
+| NPC Type | Social HP | Behavior | Narrative Box Required? |
+|----------|-----------|----------|------------------------|
+| Commoner/Peasant | 1-2 | May yield faster but STILL uses Social HP tracking | ✅ YES - Show [SOCIAL SKILL CHALLENGE] |
+| Merchant/Guard | 2-3 | Requires convincing argument + roll | ✅ YES - Show [SOCIAL SKILL CHALLENGE] |
+| Noble/Knight | 3-5 | Multiple successes over time | ✅ YES - Show [SOCIAL SKILL CHALLENGE] |
+| Lord/General | 5-8 | Extended skill challenge, requires leverage | ✅ YES - Show [SOCIAL SKILL CHALLENGE] |
+| King/Ancient Ruler | 8-12 | Campaign-length persuasion with major concessions | ✅ YES - Show [SOCIAL SKILL CHALLENGE] |
+| God/Primordial | 15+ | Near-impossible without divine intervention | ✅ YES - Show [SOCIAL SKILL CHALLENGE] |
+
+**🚨 CRITICAL: Display [SOCIAL SKILL CHALLENGE: NPC Name] box on EVERY interaction (all tiers, all attempts).**
+
+### 🎚️ REQUEST DIFFICULTY SCALING (Social HP Multiplier)
+
+**Social HP is NOT static per NPC tier—it scales based on WHAT you're asking for.**
+
+The base Social HP from the table above is multiplied by request difficulty:
+
+| Request Type | Multiplier | Example |
+|--------------|------------|---------|
+| **Minor Favor** | 0.5x | "Share information", "Grant an audience" |
+| **Standard Request** | 1x | "Teach me", "Provide resources", "Form alliance" |
+| **Major Concession** | 1.5x | "Betray an ally", "Abandon a position", "Share secrets" |
+| **Core Values Violation** | 2x | "Abandon your oath", "Betray your beliefs" |
+| **Total Submission** | 3x | "Bow to me", "Surrender completely", "Become my servant" |
+
+**Calculation Examples:**
+```
+God-Empress Sariel (Base: 15 HP)
+├── "Grant me an audience" → 15 × 0.5 = 8 HP (still challenging!)
+├── "Train me personally" → 15 × 1 = 15 HP
+├── "Betray the empire for me" → 15 × 2 = 30 HP
+└── "Submit to my rule" → 15 × 3 = 45 HP (near-impossible)
+
+Lord General Gratian (Base: 6 HP)
+├── "Spare the refugees" → 6 × 1 = 6 HP
+├── "Defect to my side" → 6 × 1.5 = 9 HP
+└── "Betray your oaths" → 6 × 2 = 12 HP
+```
+
+**CRITICAL:** The same NPC should require MORE effort for bigger asks. A god agreeing to mentor you is hard; a god bowing to you is near-impossible.
 
 **DC Guidance (Social HP Integration):**
 - **Base DC by tier:** Commoner 10, Merchant/Guard 12, Noble/Knight 14, Lord/General 16, King/Ancient Ruler 18, God/Primordial 20+
@@ -178,6 +229,43 @@ Progress: 0/5 successes | Social HP: 10/10 | Status: RESISTING
 
 ❌ WRONG: NPC seems interested, engaged, or moved by first attempt
 ✅ CORRECT: NPC shows clear resistance while leaving door open for continued effort
+
+**Example - Commoner (1-2 HP) ALSO Uses Box Format:**
+```
+Innkeeper Marta stops wiping the counter and gives you a flat stare. "Free lodging?"
+she scoffs. "I've got paying customers lined up and a kitchen on fire. Words don't
+pay for firewood, traveler."
+
+[SOCIAL SKILL CHALLENGE: Innkeeper Marta]
+Objective: Free lodging for the night
+Social HP: 1/2 | Status: RESISTING
+```
+
+**Example - Merchant/Guard (2-3 HP) ALSO Uses Box Format:**
+```
+Captain Thorne leans over the gatehouse railing, his expression unchanging. "Special
+pass? Every wanderer claims urgent business. Unless you have papers from the Lord
+Commander, the only thing you're getting is a long wait."
+
+[SOCIAL SKILL CHALLENGE: Captain Thorne]
+Objective: After-hours gate pass
+Social HP: 3/3 | Status: RESISTING
+```
+
+**Example - Noble (3-5 HP) ALSO Uses Box Format:**
+```
+Lady Ashwood tilts her head, her cool gaze appraising you. "Access to the Thornhaven
+archives? They contain my family's private records, not public curiosities. You speak
+well, but I require more than eloquence before unlocking those doors."
+
+[SOCIAL SKILL CHALLENGE: Lady Ashwood]
+Objective: Access family archives
+Social HP: 5/5 | Status: RESISTING
+```
+
+🚨 **CRITICAL**: All examples above use IDENTICAL box format regardless of NPC tier. Lower-tier NPCs
+(Commoner 1-2 HP, Merchant 2-3 HP, Noble 3-5 HP) receive THE SAME formatted box as higher tiers.
+The system must be player-visible at ALL power levels.
 
 ### Social HP Recovery
 

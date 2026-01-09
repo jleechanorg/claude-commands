@@ -31,7 +31,13 @@ class LocalServer:
     proc: subprocess.Popen[bytes]
     base_url: str
     log_path: Path
+    env: dict[str, str] | None = None
     _log_file: Any | None = None
+
+    @property
+    def pid(self) -> int | None:
+        """Return the server process PID when available."""
+        return self.proc.pid if self.proc else None
 
     def stop(self) -> None:
         """Stop the local server process."""
@@ -176,5 +182,6 @@ def start_local_mcp_server(
         proc=proc,
         base_url=f"http://127.0.0.1:{port}",
         log_path=log_path,
+        env=env,
         _log_file=log_f,
     )

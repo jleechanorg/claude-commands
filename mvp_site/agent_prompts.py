@@ -214,13 +214,32 @@ SECTION_TO_PROMPT_TYPE: dict[str, str] = {
     "reputation": constants.PROMPT_TYPE_REPUTATION,
 }
 
+# 🚨 SHORT EARLY REMINDER - Prepended to system instruction for high-tier NPCs
+# Uses unique box characters to stand out from markdown and reduce attention dilution
+SOCIAL_HP_EARLY_REMINDER = """╔═══════════════════════════════════════════════════════════════╗
+║ ⚠️  HIGH-TIER NPC ACTIVE: Social HP system is MANDATORY.      ║
+║ Include `social_hp_challenge` JSON field + narrative box.     ║
+║ Single-roll success on god/king tier = FORBIDDEN.             ║
+╚═══════════════════════════════════════════════════════════════╝
+"""
+
+# 🚨 SOCIAL HP ENFORCEMENT REMINDER - Auto-injected when high-tier NPCs are present
+SOCIAL_HP_ENFORCEMENT_REMINDER = """
+🚨 HIGH-TIER NPC DETECTED - Social HP system MANDATORY.
+
+REQUEST SEVERITY scaling applies (information=1×, favor=1×, submission=3×).
+PROGRESS MECHANICS track via `request_severity` and `resistance_shown` fields.
+
+See narrative_system_instruction.md for full instructions. Must include social_hp_challenge JSON field.
+"""
+
 
 def load_detailed_sections(requested_sections: list[str]) -> str:
     """
     Load detailed instruction sections based on LLM hints from previous turn.
 
     Args:
-        requested_sections: List of section names like ["relationships", "reputation"]
+        requested_sections: List of section names like ["relationships", "reputation", "social_hp"]
 
     Returns:
         Combined detailed sections as a string
@@ -230,6 +249,14 @@ def load_detailed_sections(requested_sections: list[str]) -> str:
 
     parts = []
     for section in requested_sections:
+        # Special handling for social_hp - use inline constant instead of file
+        if section == "social_hp":
+            parts.append(SOCIAL_HP_ENFORCEMENT_REMINDER)
+            logging_util.info(
+                "🚨 SOCIAL_HP: Loaded Social HP enforcement reminder into prompt"
+            )
+            continue
+
         prompt_type = SECTION_TO_PROMPT_TYPE.get(section)
         if prompt_type:
             try:
@@ -272,7 +299,8 @@ def extract_llm_instruction_hints(llm_response: dict[str, Any]) -> list[str]:
         return []
 
     # Validate hint values (only sections currently supported by detailed loaders)
-    valid_hints = set(SECTION_TO_PROMPT_TYPE.keys())
+    # Include "social_hp" which is injected via inline constant (not file-backed).
+    valid_hints = set(SECTION_TO_PROMPT_TYPE.keys()) | {"social_hp"}
     return [h for h in hints if isinstance(h, str) and h in valid_hints]
 
 
@@ -484,6 +512,35 @@ class PromptBuilder:
         Returns a list of instruction parts.
         """
         parts = []
+
+        # 🚨 EARLY REMINDER: Check for high-tier NPCs and prepend Social HP reminder
+        # This appears BEFORE all other instructions to maximize attention
+        if self.game_state is not None:
+            npc_data = getattr(self.game_state, "npc_data", None) or {}
+            # Defensive check: ensure npc_data is actually a dict before calling .items()
+            if isinstance(npc_data, dict):
+                # Safe int conversion helper (aligned with llm_service.py implementation)
+                def _safe_int(value, default=0):
+                    try:
+                        return int(value)
+                    except (TypeError, ValueError):
+                        return default
+
+                for _npc_id, npc_info in npc_data.items():
+                    if not isinstance(npc_info, dict):
+                        continue
+                    tier = str(npc_info.get("tier", "")).lower()
+                    # Use _safe_int to handle floats, strings, None (aligned with llm_service.py)
+                    level = _safe_int(npc_info.get("level"))
+                    if (
+                        tier in ("god_primordial", "king_ancient", "lord_general")
+                        or level >= 15
+                    ):
+                        parts.append(SOCIAL_HP_EARLY_REMINDER)
+                        logging_util.info(
+                            "🚨 SOCIAL_HP: Prepended early reminder to core instructions"
+                        )
+                        break  # Only add once
 
         # CRITICAL: Load master directive FIRST to establish hierarchy and authority
         # This must come before all other instructions to set the precedence rules
@@ -833,7 +890,7 @@ class PromptBuilder:
             "After the background summary, proceed with the normal opening scene and narrative.\n\n"
         )
 
-    def build_character_identity_block(self) -> str:  # noqa: PLR0912
+    def build_character_identity_block(self) -> str:  # noqa: PLR0912, PLR0915
         """
         Build character identity block for system prompts.
 
@@ -927,7 +984,9 @@ class PromptBuilder:
                 if isinstance(effect, str) and effect.strip():
                     lines.append(f"  - {effect}")
                 elif isinstance(effect, dict):
-                    effect_name = effect.get("name") or effect.get("effect") or str(effect)
+                    effect_name = (
+                        effect.get("name") or effect.get("effect") or str(effect)
+                    )
                     lines.append(f"  - {effect_name}")
 
         if len(lines) == 1:
@@ -1280,6 +1339,10 @@ def build_reprompt_for_missing_fields(
     if "dice_rolls" in missing_fields:
         requested_lines.append(
             "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
+        )
+    if "social_hp_challenge" in missing_fields:
+        requested_lines.append(
+            "- social_hp_challenge: An object with npc_name, npc_tier, objective, request_severity, social_hp, social_hp_max, successes, successes_needed, status, resistance_shown, skill_used, roll_result, roll_dc, social_hp_damage"
         )
     if "dice_integrity" in missing_fields:
         requested_lines.extend(

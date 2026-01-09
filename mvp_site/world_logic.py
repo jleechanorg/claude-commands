@@ -318,6 +318,7 @@ def _detect_rewards_discrepancy(
     state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
 ) -> list[str]:
     """
+
     Detect rewards state discrepancies for LLM self-correction.
 
     Instead of server-side enforcement (which undermines LLM decision-making),
@@ -340,6 +341,7 @@ def _detect_rewards_discrepancy(
 
     Returns:
         List of discrepancy messages to inject into next prompt's system_corrections
+
     """
     discrepancies: list[str] = []
     combat_state = state_dict.get("combat_state", {}) or {}
@@ -2263,6 +2265,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["resources"] = structured_response.resources
             if hasattr(structured_response, "rewards_box"):
                 unified_response["rewards_box"] = structured_response.rewards_box
+            if hasattr(structured_response, "social_hp_challenge"):
+                unified_response["social_hp_challenge"] = (
+                    structured_response.social_hp_challenge
+                )
             # debug_info only in debug mode
             if debug_mode and hasattr(structured_response, "debug_info"):
                 unified_response["debug_info"] = structured_response.debug_info

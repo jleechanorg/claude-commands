@@ -28,17 +28,20 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import urllib.error
+import urllib.request
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
-def get_evidence_dir(test_name: str) -> Path:
-    """Get evidence directory following /tmp/<repo>/<branch>/<test_name> pattern.
+def get_evidence_dir(test_name: str, run_id: str | None = None) -> Path:
+    """Get evidence directory following /tmp/<repo>/<branch>/<test_name>[/<run_id>] pattern.
 
     Per evidence-standards.md, evidence should be saved in /tmp subdirectory.
 
     Args:
         test_name: Name of the test (e.g., "relationship_reputation")
+        run_id: Optional run identifier or timestamp for nested directories.
 
     Returns:
         Path to evidence directory.
@@ -55,8 +58,159 @@ def get_evidence_dir(test_name: str) -> Path:
         branch = "unknown"
 
     evidence_dir = Path("/tmp") / repo_name / branch / test_name
+    if run_id:
+        evidence_dir = evidence_dir / run_id
     evidence_dir.mkdir(parents=True, exist_ok=True)
     return evidence_dir
+
+
+def capture_git_provenance(fetch_origin: bool = True) -> dict[str, Any]:
+    """Capture git provenance for evidence bundles.
+
+    Args:
+        fetch_origin: If True, fetch origin/main before capturing.
+
+    Returns:
+        Dict with git_head, git_branch, merge_base, commits_ahead_of_main, diff_stat_vs_main,
+        origin_main, and working_directory when available.
+    """
+    provenance: dict[str, Any] = {"working_directory": str(PROJECT_ROOT)}
+    try:
+        if fetch_origin:
+            subprocess.run(
+                ["git", "fetch", "origin", "main"],
+                cwd=str(PROJECT_ROOT),
+                timeout=10,
+                capture_output=True,
+            )
+        provenance["git_head"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=5,
+        ).strip()
+        provenance["git_branch"] = subprocess.check_output(
+            ["git", "branch", "--show-current"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=5,
+        ).strip()
+        provenance["origin_main"] = subprocess.check_output(
+            ["git", "rev-parse", "origin/main"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=5,
+        ).strip()
+        provenance["merge_base"] = subprocess.check_output(
+            ["git", "merge-base", "HEAD", "origin/main"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=5,
+        ).strip()
+        provenance["commits_ahead_of_main"] = int(
+            subprocess.check_output(
+                ["git", "rev-list", "--count", "origin/main..HEAD"],
+                cwd=str(PROJECT_ROOT),
+                text=True,
+                timeout=5,
+            ).strip()
+        )
+        provenance["diff_stat_vs_main"] = subprocess.check_output(
+            ["git", "diff", "--stat", "origin/main...HEAD"],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            timeout=10,
+        ).strip()
+    except Exception as e:
+        provenance["git_error"] = str(e)
+    return provenance
+
+
+def capture_server_runtime(port: int | str) -> dict[str, Any]:
+    """Capture server runtime info (pid, command line, lsof/ps outputs) for a port."""
+    info: dict[str, Any] = {
+        "port": str(port),
+        "pid": None,
+        "process_cmdline": None,
+        "lsof_output": None,
+        "ps_output": None,
+    }
+    try:
+        lsof_output = subprocess.check_output(
+            ["lsof", "-i", f":{port}", "-P", "-n"],
+            text=True,
+            timeout=5,
+        ).strip()
+        info["lsof_output"] = lsof_output
+        # Extract first pid if present
+        pids = [
+            line.split()[1]
+            for line in lsof_output.splitlines()[1:]
+            if line.strip()
+        ]
+        if pids:
+            info["pid"] = pids[0]
+            try:
+                info["process_cmdline"] = subprocess.check_output(
+                    ["ps", "-p", str(info["pid"]), "-o", "command="],
+                    text=True,
+                    timeout=5,
+                ).strip()
+                info["ps_output"] = subprocess.check_output(
+                    ["ps", "-p", str(info["pid"]), "-o", "pid,user,etime,args"],
+                    text=True,
+                    timeout=5,
+                ).strip()
+            except Exception as e:
+                print(f"⚠️ Failed to capture ps output for PID {info['pid']}: {e}", flush=True)
+    except Exception as e:
+        print(f"⚠️ Failed to capture server runtime info: {e}", flush=True)
+    return info
+
+
+def capture_server_health(server_url: str) -> dict[str, Any]:
+    """Capture server /health response for provenance."""
+
+    health_url = f"{server_url.rstrip('/')}/health"
+    try:
+        req = urllib.request.Request(health_url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode())
+            return {
+                "url": health_url,
+                "status_code": response.status,
+                "response": data,
+                "captured_at": datetime.now(timezone.utc).isoformat(),
+            }
+    except urllib.error.HTTPError as e:
+        return {
+            "url": health_url,
+            "status_code": e.code,
+            "error": str(e),
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        return {
+            "url": health_url,
+            "error": str(e),
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+
+def capture_full_provenance(
+    port: int | str,
+    base_url: str,
+    *,
+    fetch_origin: bool = True,
+) -> dict[str, Any]:
+    """Capture full provenance including git + server + health."""
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "git": capture_git_provenance(fetch_origin=fetch_origin),
+        "server": capture_server_runtime(port),
+        "health": capture_server_health(base_url),
+        "base_url": base_url,
+    }
 
 
 def capture_provenance(
@@ -468,19 +622,56 @@ span all campaigns but each individual result is traceable to its campaign.
         if scenario.get("reputation_updates"):
             evidence_content += f"- **Reputation Updates:** Yes\n"
 
+    # Handle both nested (capture_full_provenance) and flat (capture_provenance) structures
+    git_head = 'unknown'
+    server_pid = 'unknown'
+    if isinstance(provenance, dict):
+        if "git" in provenance:
+            # Nested structure from capture_full_provenance
+            git_head = provenance.get("git", {}).get("git_head", "unknown")
+            server_pid = provenance.get("server", {}).get("pid", "unknown")
+        else:
+            # Flat structure from capture_provenance
+            git_head = provenance.get("git_head", "unknown")
+            server_pid = provenance.get("server", {}).get("pid", "unknown")
+
     evidence_content += f"""
 ## Provenance Chain
-- **Git HEAD:** `{provenance.get('git_head', 'unknown')}`
+- **Git HEAD:** `{git_head}`
 - **Test Timestamp:** `{bundle_timestamp}`
-- **Server PID:** `{provenance.get('server', {}).get('pid', 'unknown')}`
+- **Server PID:** `{server_pid}`
 """
     write_with_checksum(evidence_dir / "evidence.md", evidence_content)
     files["evidence"] = evidence_dir / "evidence.md"
 
     # 4. metadata.json - Machine-readable
+    # Evidence standards require: git_provenance, server, timestamp
+    git_provenance: dict[str, Any] = {}
+    server_runtime: dict[str, Any] | None = None
+    if isinstance(provenance, dict):
+        if "git" in provenance:
+            git_provenance = provenance.get("git") or {}
+            server_runtime = provenance.get("server")
+        else:
+            # Capture_provenance-style flat dict
+            git_keys = [
+                "git_head",
+                "git_branch",
+                "merge_base",
+                "commits_ahead_of_main",
+                "diff_stat_vs_main",
+                "origin_main",
+                "working_directory",
+            ]
+            git_provenance = {k: provenance.get(k) for k in git_keys if k in provenance}
+            server_runtime = provenance.get("server")
+
     metadata = {
         "test_name": test_name,
+        "timestamp": bundle_timestamp,
         "bundle_timestamp": bundle_timestamp,
+        "git_provenance": git_provenance,
+        "server": server_runtime,
         "provenance": provenance,
         "summary": {
             "total_scenarios": len(scenarios),

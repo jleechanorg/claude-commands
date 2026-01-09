@@ -33,7 +33,7 @@ def create_campaign_via_api():
         "debug_mode": True,  # Enable debug mode
     }
 
-    response = requests.post(url, json=data, headers=headers)
+    response = requests.post(url, json=data, headers=headers, timeout=30)
     if response.status_code == 201:
         result = response.json()
         return result.get("campaign_id")
@@ -42,7 +42,7 @@ def create_campaign_via_api():
     )
 
 
-def test_ui_elements_with_api_campaign():
+def test_ui_elements_with_api_campaign():  # noqa: PLR0912, PLR0915
     """Test UI elements using a campaign created via API."""
 
     # Create screenshots directory
@@ -73,8 +73,8 @@ def test_ui_elements_with_api_campaign():
                             print(
                                 f"   planning_block: {data['planning_block'][:100]}..."
                             )
-                except:
-                    pass
+                except Exception as e:
+                    print(f"   ignored data parse error: {e}")
 
         page.on("response", log_response)
 
@@ -173,7 +173,7 @@ def test_ui_elements_with_api_campaign():
                             timeout=60000,  # 60 seconds for AI response
                         )
                         page.wait_for_timeout(3000)  # Extra time for DOM updates
-                    except:
+                    except Exception:
                         print("⚠️  AI response timed out, checking current state...")
 
             # Get all story entries after potential action

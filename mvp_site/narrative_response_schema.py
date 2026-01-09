@@ -169,6 +169,40 @@ VALID_QUALITY_TIERS = {
     "Masterful",  # Beat DC by 15+ (critical success)
 }
 
+# =============================================================================
+# SOCIAL HP CHALLENGE SCHEMA - Explicit JSON field for social skill challenges
+# =============================================================================
+# This schema defines the structured format for Social HP tracking.
+# Previously this was embedded in narrative text and parsed via regex.
+# Now it's an explicit JSON field for reliability.
+
+SOCIAL_HP_CHALLENGE_SCHEMA = {
+    "npc_id": str,  # NPC identifier (optional, for state linking)
+    "npc_name": str,  # Display name (REQUIRED)
+    "objective": str,  # What player wants to achieve (REQUIRED)
+    "request_severity": str,  # information | favor | submission
+    "social_hp": int,  # Current Social HP remaining (REQUIRED)
+    "social_hp_max": int,  # Maximum Social HP (REQUIRED)
+    "successes": int,  # Current successes achieved
+    "successes_needed": int,  # Required successes to win
+    "status": str,  # RESISTING | WAVERING | YIELDING | SURRENDERED
+    "resistance_shown": str,  # Resistance indicator text
+    "skill_used": str,  # Persuasion | Deception | Intimidation | Insight
+    "roll_result": int,  # This turn's roll result
+    "roll_dc": int,  # DC for the skill check
+    "social_hp_damage": int,  # Damage dealt this turn (0-2)
+}
+
+# Valid Social HP status values
+VALID_SOCIAL_HP_STATUS = {"RESISTING", "WAVERING", "YIELDING", "SURRENDERED"}
+
+# Valid request severity values
+VALID_SOCIAL_HP_REQUEST_SEVERITY = {"information", "favor", "submission"}
+
+# Valid social skills
+VALID_SOCIAL_SKILLS = {"Persuasion", "Deception", "Intimidation", "Insight"}
+
+
 def _derive_quality_tier(success: bool, margin: int) -> str:
     """Derive a quality tier from success flag and margin using documented bands."""
 
@@ -436,6 +470,9 @@ class NarrativeResponse:
         self.dice_audit_events = self._validate_dice_audit_events(dice_audit_events)
         self.resources = self._validate_string_field(resources, "resources")
         self.rewards_box = self._validate_rewards_box(kwargs.pop("rewards_box", None))
+        self.social_hp_challenge = self._validate_social_hp_challenge(
+            kwargs.pop("social_hp_challenge", None)
+        )
 
         # Store any extra fields that Gemini might include (shouldn't be any now)
         self.extra_fields = kwargs
@@ -615,6 +652,100 @@ class NarrativeResponse:
 
         return validated
 
+    def _validate_social_hp_challenge(self, social_hp_challenge: Any) -> dict[str, Any]:
+        """Validate social_hp_challenge structured field for Social HP tracking."""
+        if social_hp_challenge is None:
+            return {}
+
+        if not isinstance(social_hp_challenge, dict):
+            logging_util.warning(
+                f"Invalid social_hp_challenge type: {type(social_hp_challenge).__name__}, "
+                "expected dict. Using empty dict."
+            )
+            return {}
+
+        def _coerce_int(value: Any, default: int = 0) -> int:
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        def _coerce_str(value: Any, default: str = "") -> str:
+            if value is None:
+                return default
+            return str(value).strip()
+
+        # Validate and coerce fields
+        validated: dict[str, Any] = {}
+
+        # String fields
+        validated["npc_id"] = _coerce_str(social_hp_challenge.get("npc_id", ""))
+        validated["npc_name"] = _coerce_str(social_hp_challenge.get("npc_name", ""))
+        validated["npc_tier"] = _coerce_str(social_hp_challenge.get("npc_tier", ""))
+        validated["objective"] = _coerce_str(social_hp_challenge.get("objective", ""))
+
+        request_severity = _coerce_str(
+            social_hp_challenge.get("request_severity", "information")
+        ).lower()
+        if request_severity not in VALID_SOCIAL_HP_REQUEST_SEVERITY:
+            logging_util.warning(
+                f"Invalid social_hp_challenge request_severity '{request_severity}', defaulting to information"
+            )
+            request_severity = "information"
+        validated["request_severity"] = request_severity
+
+        validated["resistance_shown"] = _coerce_str(
+            social_hp_challenge.get("resistance_shown", "")
+        )
+
+        # Integer fields - HP tracking
+        validated["social_hp"] = _coerce_int(social_hp_challenge.get("social_hp", 0))
+        validated["social_hp_max"] = _coerce_int(
+            social_hp_challenge.get("social_hp_max", 0)
+        )
+        validated["social_hp_damage"] = _coerce_int(
+            social_hp_challenge.get("social_hp_damage", 0)
+        )
+
+        # Integer fields - Progress tracking
+        validated["successes"] = _coerce_int(social_hp_challenge.get("successes", 0))
+        validated["successes_needed"] = _coerce_int(
+            social_hp_challenge.get("successes_needed", 5)
+        )
+
+        # Integer fields - Roll tracking
+        validated["roll_result"] = _coerce_int(
+            social_hp_challenge.get("roll_result", 0)
+        )
+        validated["roll_dc"] = _coerce_int(social_hp_challenge.get("roll_dc", 0))
+
+        # Status field with validation
+        status = _coerce_str(social_hp_challenge.get("status", "RESISTING")).upper()
+        if status not in VALID_SOCIAL_HP_STATUS:
+            logging_util.warning(
+                f"Invalid social_hp_challenge status '{status}', defaulting to RESISTING"
+            )
+            status = "RESISTING"
+        validated["status"] = status
+
+        # Skill field with validation
+        skill_used = _coerce_str(social_hp_challenge.get("skill_used", "Persuasion"))
+        # Normalize case for comparison
+        skill_normalized = skill_used.title()
+        if skill_normalized not in VALID_SOCIAL_SKILLS:
+            logging_util.warning(
+                f"Invalid social_hp_challenge skill_used '{skill_used}', "
+                "defaulting to Persuasion"
+            )
+            skill_normalized = "Persuasion"
+        validated["skill_used"] = skill_normalized
+
+        return validated
+
     def _validate_dice_audit_events(self, value: Any) -> list[dict[str, Any]]:
         """Validate dice_audit_events as a list of dicts.
 
@@ -667,7 +798,7 @@ class NarrativeResponse:
         self, planning_block: dict[str, Any]
     ) -> dict[str, Any]:  # noqa: PLR0912
         """Validate JSON-format planning block structure"""
-        validated = {}
+        validated: dict[str, Any] = {}
 
         # Validate thinking field
         thinking = planning_block.get("thinking", "")
@@ -767,7 +898,7 @@ class NarrativeResponse:
             logging_util.warning("Planning block choices must be a dict object")
             choices = {}
 
-        validated_choices = {}
+        validated_choices: dict[str, Any] = {}
         for choice_key, choice_data in choices.items():
             # Validate choice key format (snake_case, allowing god:/think: prefixes)
             if not re.match(r"^(god:|think:)?[a-zA-Z_][a-zA-Z0-9_]*$", choice_key):
@@ -783,7 +914,7 @@ class NarrativeResponse:
                 )
                 continue
 
-            validated_choice = {}
+            validated_choice: dict[str, Any] = {}
 
             # Required: text field
             text = choice_data.get("text", "")
@@ -884,7 +1015,7 @@ class NarrativeResponse:
     ) -> dict[str, Any]:
         """Validate planning block content - remove dangerous scripts but preserve normal text"""
 
-        def sanitize_string(value: str) -> str:
+        def sanitize_string(value: Any) -> str:
             """Remove dangerous script tags but preserve normal apostrophes and quotes"""
             if not isinstance(value, str):
                 return str(value)
@@ -905,7 +1036,7 @@ class NarrativeResponse:
 
             return cleaned
 
-        sanitized = {}
+        sanitized: dict[str, Any] = {}
 
         # Sanitize thinking
         sanitized["thinking"] = sanitize_string(planning_block.get("thinking", ""))
@@ -927,9 +1058,9 @@ class NarrativeResponse:
             sanitized["plan_quality"] = sanitized_pq
 
         # Sanitize choices
-        sanitized_choices = {}
+        sanitized_choices: dict[str, Any] = {}
         for choice_key, choice_data in planning_block.get("choices", {}).items():
-            sanitized_choice = {}
+            sanitized_choice: dict[str, Any] = {}
             sanitized_choice["text"] = sanitize_string(choice_data.get("text", ""))
             sanitized_choice["description"] = sanitize_string(
                 choice_data.get("description", "")
@@ -940,7 +1071,7 @@ class NarrativeResponse:
             if "analysis" in choice_data:
                 analysis = choice_data["analysis"]
                 if isinstance(analysis, dict):
-                    sanitized_analysis = {}
+                    sanitized_analysis: dict[str, Any] = {}
                     for key, value in analysis.items():
                         if isinstance(value, str):
                             sanitized_analysis[key] = sanitize_string(value)
@@ -1004,6 +1135,7 @@ class NarrativeResponse:
             "dice_rolls": self.dice_rolls,
             "dice_audit_events": self.dice_audit_events,
             "resources": self.resources,
+            "social_hp_challenge": self.social_hp_challenge,
         }
 
         # Include god_mode_response if present

@@ -16,6 +16,7 @@ import contextvars
 import logging
 import os
 import subprocess
+import tempfile
 import threading
 from typing import Any, Optional
 
@@ -84,7 +85,7 @@ class LoggingUtil:
         try:
             # Try to get repo name from git remote URL
             remote_url = subprocess.check_output(
-                ["git", "remote", "get-url", "origin"],
+                ["git", "remote", "get-url", "origin"],  # noqa: S607
                 cwd=LoggingUtil._get_git_cwd(),
                 text=True,
                 stderr=subprocess.DEVNULL,
@@ -116,7 +117,7 @@ class LoggingUtil:
         # Fallback: use directory name of the git root
         try:
             git_root = subprocess.check_output(
-                ["git", "rev-parse", "--show-toplevel"],
+                ["git", "rev-parse", "--show-toplevel"],  # noqa: S607
                 cwd=LoggingUtil._get_git_cwd(),
                 text=True,
                 stderr=subprocess.DEVNULL,
@@ -144,7 +145,7 @@ class LoggingUtil:
         """
         try:
             branch = subprocess.check_output(
-                ["git", "branch", "--show-current"],
+                ["git", "branch", "--show-current"],  # noqa: S607
                 cwd=LoggingUtil._get_git_cwd(),
                 text=True,
                 stderr=subprocess.DEVNULL,
@@ -176,7 +177,7 @@ class LoggingUtil:
         # Convert forward slashes to underscores for valid directory name
         safe_repo = repo.replace("/", "_")
         safe_branch = branch.replace("/", "_")
-        log_dir = f"/tmp/{safe_repo}/{safe_branch}"
+        log_dir = os.path.join(tempfile.gettempdir(), safe_repo, safe_branch)
 
         # Ensure directory exists
         os.makedirs(log_dir, exist_ok=True)
@@ -296,7 +297,7 @@ class LoggingUtil:
         logging.exception(enhanced_message, *args, **kwargs)
 
     @staticmethod
-    def basicConfig(**kwargs: Any) -> None:
+    def basicConfig(**kwargs: Any) -> None:  # noqa: N802
         """
         Configure basic logging settings.
 
@@ -306,7 +307,7 @@ class LoggingUtil:
         logging.basicConfig(**kwargs)
 
     @staticmethod
-    def getLogger(name: Optional[str] = None) -> logging.Logger:
+    def getLogger(name: Optional[str] = None) -> logging.Logger:  # noqa: N802
         """
         Get a logger instance.
 
@@ -389,12 +390,12 @@ def exception(message: str, *args: Any, **kwargs: Any) -> None:
     LoggingUtil.exception(message, *args, **kwargs)
 
 
-def basicConfig(**kwargs: Any) -> None:
+def basicConfig(**kwargs: Any) -> None:  # noqa: N802
     """Configure basic logging settings."""
     LoggingUtil.basicConfig(**kwargs)
 
 
-def getLogger(name: Optional[str] = None) -> logging.Logger:
+def getLogger(name: Optional[str] = None) -> logging.Logger:  # noqa: N802
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)
 
@@ -434,7 +435,7 @@ def setup_unified_logging(service_name: str = "app") -> str:
     Returns:
         str: Path to the log file being written to
     """
-    global _logging_initialized, _configured_service_name, _configured_log_file
+    global _logging_initialized, _configured_service_name, _configured_log_file  # noqa: PLW0603
 
     with _logging_lock:
         if _logging_initialized:

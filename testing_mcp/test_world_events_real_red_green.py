@@ -16,12 +16,20 @@ manually, not in CI. It will skip gracefully if credentials are missing.
 import json
 import os
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from testing_mcp.lib.evidence_utils import (
+    capture_git_provenance,
+    create_evidence_bundle,
+    get_evidence_dir,
+    write_with_checksum,
+)
 
 
 def _init_firebase():
@@ -91,6 +99,29 @@ def get_real_llm_output_structure(db, user_id: str, campaign_id: str) -> dict:
         }
 
     return {"error": "No nested world_events found - bug may be fixed"}
+
+
+@pytest.fixture
+def state_updates() -> dict:
+    """Provide reconstructed state_updates for pytest runs.
+
+    This test is intended for manual execution against production data.
+    Skip unless explicitly enabled and credentials are available.
+    """
+    if os.environ.get("RUN_FIRESTORE_REAL_TESTS", "").lower() != "true":
+        pytest.skip("Manual test; set RUN_FIRESTORE_REAL_TESTS=true to enable")
+
+    db, error = _init_firebase()
+    if error:
+        pytest.skip(error)
+
+    user_id = 'vnLp2G3m21PJL6kxcuAqmWSOtm73'
+    broken_campaign = 'STpjRuwjeUt97tpCl5nK'
+    real_data = get_real_llm_output_structure(db, user_id, broken_campaign)
+    if "error" in real_data:
+        pytest.skip(real_data["error"])
+
+    return real_data["reconstructed_state_updates"]
 
 
 def test_extraction_without_fix(state_updates: dict) -> dict:
@@ -176,8 +207,8 @@ def main():
         print("This test requires Firebase credentials and is meant for manual runs.")
         return 0  # Return 0 to not fail CI
 
-    # Use tempfile for output directory
-    output_dir = Path(tempfile.mkdtemp(prefix="world_events_bug_evidence_"))
+    session_stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    output_dir = get_evidence_dir("world_events_real_red_green", session_stamp)
 
     user_id = 'vnLp2G3m21PJL6kxcuAqmWSOtm73'
     broken_campaign = 'STpjRuwjeUt97tpCl5nK'
@@ -257,12 +288,77 @@ def main():
         print("Test failed")
         evidence["overall_result"] = "FAILED"
 
-    # Save evidence
-    evidence_file = output_dir / 'real_red_green_evidence.json'
-    with open(evidence_file, 'w') as f:
-        json.dump(evidence, f, indent=2, default=str)
+    # Build standardized evidence bundle
+    provenance = capture_git_provenance(fetch_origin=True)
+    scenarios = []
 
-    print(f"\nEvidence saved to: {evidence_file}")
+    red_errors = []
+    if red_result["world_events_extracted"]:
+        red_errors.append("World events extracted without fix (expected NOT extracted).")
+    scenarios.append(
+        {
+            "name": "Extraction without fix",
+            "errors": red_errors,
+            "details": red_result,
+            "campaign_id": broken_campaign,
+        }
+    )
+
+    green_errors = []
+    if not green_result["world_events_extracted"]:
+        green_errors.append("World events NOT extracted with fix (expected extracted).")
+    scenarios.append(
+        {
+            "name": "Extraction with fix",
+            "errors": green_errors,
+            "details": green_result,
+            "campaign_id": broken_campaign,
+        }
+    )
+
+    results = {
+        "test_name": "world_events_real_red_green",
+        "scenarios": scenarios,
+        "all_passed": not red_errors and not green_errors,
+    }
+
+    methodology_text = """# Methodology: World Events Real RED/GREEN
+
+## Purpose
+Validate that nested `custom_campaign_state.world_events` is correctly extracted.
+
+## Data Source
+Real Firestore production data (no mocks).
+
+## Steps
+1. Read a known campaign with nested world_events.
+2. Run extraction logic without the fix (expect NOT extracted).
+3. Run extraction logic with the fix (expect extracted).
+
+## Pass Criteria
+- RED: world_events not extracted without fix
+- GREEN: world_events extracted with fix
+"""
+
+    bundle = create_evidence_bundle(
+        output_dir,
+        test_name="world_events_real_red_green",
+        provenance=provenance,
+        results=results,
+        methodology_text=methodology_text,
+    )
+
+    # Save raw evidence as artifact
+    artifacts_dir = output_dir / "artifacts"
+    artifacts_dir.mkdir(exist_ok=True)
+    write_with_checksum(
+        artifacts_dir / "real_red_green_evidence.json",
+        json.dumps(evidence, indent=2, default=str),
+    )
+
+    print(f"\nEvidence saved to: {output_dir}")
+    for name, path in bundle.items():
+        print(f"  - {name}: {path}")
 
     return 0 if (red_passed and green_passed) else 1
 
