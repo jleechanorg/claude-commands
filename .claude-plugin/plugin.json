@@ -3,7 +3,8 @@
   "version": "0.3.0",
   "description": "Opinionated automation, governance, and quality guardrails for WorldArchitect.AI projects. Includes secondo multi-model AI feedback plugin with MCP server.",
   "author": {
-    "name": "WorldArchitect.AI maintainers"
+    "name": "WorldArchitect.AI Team",
+    "email": "team@worldarchitect.ai"
   },
   "homepage": "https://worldarchitect.ai",
   "repository": "https://github.com/jleechanorg/worldarchitect.ai.git",

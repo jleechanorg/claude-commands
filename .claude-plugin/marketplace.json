@@ -1,7 +1,8 @@
 {
   "name": "worldarchitect-suite",
   "owner": {
-    "name": "WorldArchitect.AI maintainers"
+    "name": "WorldArchitect.AI Team",
+    "email": "team@worldarchitect.ai"
   },
   "plugins": [
     {
