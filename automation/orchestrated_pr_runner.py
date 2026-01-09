@@ -161,13 +161,14 @@ def ensure_base_clone(repo_full: str) -> Path:
     if not re.match(r"^[\w.-]+/[\w.-]+$", repo_full):
         raise ValueError(f"Invalid repository format: {repo_full}")
 
+    github_host = os.environ.get('GH_HOST', 'github.com')
     repo_name = repo_full.split("/")[-1]
     base_dir = BASE_CLONE_ROOT / repo_name
     BASE_CLONE_ROOT.mkdir(parents=True, exist_ok=True)
     if not base_dir.exists():
         log(f"Cloning base repo for {repo_full} into {base_dir}")
         run_cmd(
-            ["git", "clone", f"https://github.com/{repo_full}.git", str(base_dir)],
+            ["git", "clone", f"https://{github_host}/{repo_full}.git", str(base_dir)],
             timeout=CLONE_TIMEOUT,
         )
     else:
