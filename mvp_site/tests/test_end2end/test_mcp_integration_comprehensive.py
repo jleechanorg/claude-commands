@@ -25,6 +25,7 @@ from unittest.mock import patch  # noqa: E402
 import requests  # noqa: E402
 
 import mvp_site.logging_util as log  # noqa: E402
+from mvp_site.tests.fake_llm import FakeLLMResponse  # noqa: E402
 
 # Note: This test spawns real MCP server processes for integration testing
 # It does not use USE_MOCKS since it tests actual MCP communication
@@ -62,15 +63,19 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                     str(cls.mcp_port),
                     "--host",
                     "0.0.0.0",
+                    "--http-only",
                 ],
                 cwd=repo_root,
+                env={**os.environ, "PRODUCTION_MODE": "true"},
             )
 
             # Wait for MCP server to be ready
             time.sleep(2)
 
             # Verify MCP server is running
-            response = requests.get(f"http://localhost:{cls.mcp_port}", timeout=5)
+            response = requests.get(
+                f"http://localhost:{cls.mcp_port}/health", timeout=5
+            )
             if response.status_code != 200:
                 raise Exception("MCP server not responding correctly")
 
@@ -79,6 +84,13 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 "Could not start MCP server for comprehensive tests: %s", e
             )
             log.getLogger(__name__).info("Falling back to mock-only testing")
+            if cls.mcp_process:
+                cls.mcp_process.terminate()
+                try:
+                    cls.mcp_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    cls.mcp_process.kill()
+                    cls.mcp_process.wait()
             cls.mcp_process = None
 
     @classmethod
@@ -104,6 +116,23 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
         )
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)
+
+        self._llm_patcher = patch(
+            "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution",
+            return_value=FakeLLMResponse(
+                json.dumps(
+                    {
+                        "narrative": "Mock story continuation.",
+                        "entities_mentioned": [],
+                        "location_confirmed": "Mock Location",
+                        "state_updates": {},
+                        "planning_block": {"thinking": "Mock", "choices": {}},
+                    }
+                )
+            ),
+        )
+        self._llm_patcher.start()
+        self.addCleanup(self._llm_patcher.stop)
 
         # Test headers with Authorization token
         self.test_headers = {
@@ -169,7 +198,7 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 mock_resp.status_code = 200
                 mock_get.return_value = mock_resp
                 health_response = mock_get(
-                    f"http://localhost:{self.mcp_port}", timeout=5
+                    f"http://localhost:{self.mcp_port}/health", timeout=5
                 )
                 self.assertEqual(health_response.status_code, 200)
             return
@@ -177,7 +206,7 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
         # Test direct MCP server health
         try:
             health_response = requests.get(
-                f"http://localhost:{self.mcp_port}", timeout=5
+                f"http://localhost:{self.mcp_port}/health", timeout=5
             )
             assert health_response.status_code == 200, (
                 "MCP server should respond to health checks"
@@ -298,7 +327,7 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
         # Patch asyncio.new_event_loop to track calls
         with patch("asyncio.new_event_loop", side_effect=tracked_new_event_loop):
             # Make multiple JSON-RPC calls to MCP server directly
-            mcp_url = f"http://127.0.0.1:{self.mcp_port}"
+            mcp_url = f"http://127.0.0.1:{self.mcp_port}/mcp"
             headers = {"Content-Type": "application/json"}
 
             # Multiple different types of requests to cover different code paths
@@ -355,7 +384,7 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
         try:
             # Make a malformed JSON-RPC request to trigger an error
-            mcp_url = f"http://127.0.0.1:{self.mcp_port}"
+            mcp_url = f"http://127.0.0.1:{self.mcp_port}/mcp"
             headers = {"Content-Type": "application/json"}
 
             # Send invalid JSON to trigger exception handling

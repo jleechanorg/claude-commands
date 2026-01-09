@@ -89,13 +89,13 @@ generate_technical_response() {
 
     # Analyze comment content for response type
     local response_type="general"
-    if echo "$comment_body" | grep -qi "security\|vulnerability\|injection\|xss\|csrf"; then
+    if echo "$comment_body" | grep -qi "security\\|vulnerability\\|injection\\|xss\\|csrf"; then
         response_type="security"
-    elif echo "$comment_body" | grep -qi "test\|failing\|assertion\|coverage"; then
+    elif echo "$comment_body" | grep -qi "test\\|failing\\|assertion\\|coverage"; then
         response_type="testing"
-    elif echo "$comment_body" | grep -qi "performance\|slow\|optimize\|bottleneck"; then
+    elif echo "$comment_body" | grep -qi "performance\\|slow\\|optimize\\|bottleneck"; then
         response_type="performance"
-    elif echo "$comment_body" | grep -qi "error\|exception\|crash\|bug"; then
+    elif echo "$comment_body" | grep -qi "error\\|exception\\|crash\\|bug"; then
         response_type="error"
     fi
 
@@ -314,17 +314,17 @@ if [ -n "$CHANGED_FILES" ]; then
     for file in $CHANGED_FILES; do
         if [ -f "$file" ]; then
             # Security scan
-            if grep -q "shell=True\|eval(\|exec(\|subprocess.*shell" "$file" 2>/dev/null; then
+            if grep -q "shell=True\\|eval(\\|exec(\\|subprocess.*shell" "$file" 2>/dev/null; then
                 SECURITY_ISSUES+=("$file: Potential shell injection risk")
             fi
 
             # Performance scan
-            if grep -q "\.find(\|for.*in.*range\|while True:" "$file" 2>/dev/null; then
+            if grep -q "\\.find(\\|for.*in.*range\\|while True:" "$file" 2>/dev/null; then
                 PERFORMANCE_ISSUES+=("$file: Potential performance bottleneck")
             fi
 
             # Quality scan
-            if grep -q "TODO\|FIXME\|XXX\|HACK" "$file" 2>/dev/null; then
+            if grep -q "TODO\\|FIXME\\|XXX\\|HACK" "$file" 2>/dev/null; then
                 QUALITY_ISSUES+=("$file: Contains TODO/FIXME comments")
             fi
         fi
@@ -621,7 +621,7 @@ esac
 
 if gh pr checks "$PR_NUMBER" --required-only >/dev/null 2>&1; then
     echo "🔄 Checking CI status"
-    if gh pr checks "$PR_NUMBER" --required-only | grep -q "pass\|success"; then
+    if gh pr checks "$PR_NUMBER" --required-only | grep -q "pass\\|success"; then
         echo "✅ Required CI checks passing"
         log_operation "CI checks: passing"
     else

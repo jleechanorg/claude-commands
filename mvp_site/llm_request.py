@@ -14,7 +14,7 @@ Key principles:
 
 import json
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from mvp_site import logging_util
 from mvp_site.serialization import json_default_serializer
@@ -31,7 +31,7 @@ MAX_STRING_LENGTH = 1000000
 class LLMRequestError(Exception):
     """Custom exception for LLMRequest validation and serialization errors."""
 
-    def __init__(self, message: str, status_code: int | None = 422):
+    def __init__(self, message: str, status_code: Optional[int] = 422):
         super().__init__(message)
         self.status_code = status_code
 
@@ -74,7 +74,7 @@ class LLMRequest:
     system_corrections: list[str] = field(default_factory=list)
 
     # Story generation specific fields
-    character_prompt: str | None = None
+    character_prompt: Optional[str] = None
     generate_companions: bool = False
     use_default_world: bool = False
     world_data: dict[str, Any] = field(default_factory=dict)
@@ -252,12 +252,12 @@ class LLMRequest:
         game_state: dict[str, Any],
         story_history: list[dict[str, Any]],
         checkpoint_block: str = "",
-        core_memories: list[str] | None = None,
-        sequence_ids: list[str] | None = None,
-        entity_tracking: dict[str, Any] | None = None,
-        selected_prompts: list[str] | None = None,
+        core_memories: Optional[list[str]] = None,
+        sequence_ids: Optional[list[str]] = None,
+        entity_tracking: Optional[dict[str, Any]] = None,
+        selected_prompts: Optional[list[str]] = None,
         use_default_world: bool = False,
-        system_corrections: list[str] | None = None,
+        system_corrections: Optional[list[str]] = None,
     ) -> "LLMRequest":
         """
         Build a LLMRequest for story continuation.
@@ -314,7 +314,7 @@ class LLMRequest:
         selected_prompts: list[str],
         generate_companions: bool = False,
         use_default_world: bool = False,
-        world_data: dict[str, Any] | None = None,
+        world_data: Optional[dict[str, Any]] = None,
     ) -> "LLMRequest":
         """
         Build a LLMRequest for initial story generation.

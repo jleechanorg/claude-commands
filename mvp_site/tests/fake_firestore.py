@@ -266,7 +266,7 @@ class FakeFirestoreCollection:
         doc = self.document()  # This creates a doc with auto-generated ID
         doc.set(data)
         # Return tuple like real Firestore: (timestamp, doc_ref)
-        fake_timestamp = datetime.datetime.now(datetime.UTC)
+        fake_timestamp = datetime.datetime.now(datetime.timezone.utc)
         return (fake_timestamp, doc)
 
     def order_by(self, field, direction=None):

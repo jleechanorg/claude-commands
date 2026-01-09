@@ -4,7 +4,7 @@ Gemini Response objects for clean architecture between AI service and main appli
 
 import json
 import re
-from typing import Any
+from typing import Any, Optional
 
 from mvp_site import logging_util
 from mvp_site.narrative_response_schema import (
@@ -23,12 +23,12 @@ class LLMResponse:
     def __init__(
         self,
         narrative_text: str,
-        structured_response: NarrativeResponse | None = None,
-        debug_tags_present: dict[str, bool] | None = None,
-        processing_metadata: dict[str, Any] | None = None,
+        structured_response: Optional[NarrativeResponse] = None,
+        debug_tags_present: Optional[dict[str, bool]] = None,
+        processing_metadata: Optional[dict[str, Any]] = None,
         provider: str = "gemini",
         model: str = "gemini-3-pro-preview",
-        agent_mode: str | None = None,
+        agent_mode: Optional[str] = None,
     ):
         """
         Initialize LLMResponse.
@@ -383,8 +383,8 @@ class LLMResponse:
         raw_response_text: str,
         model: str = "gemini-3-pro-preview",
         provider: str = "gemini",
-        processing_metadata: dict[str, Any] | None = None,
-        agent_mode: str | None = None,
+        processing_metadata: Optional[dict[str, Any]] = None,
+        agent_mode: Optional[str] = None,
     ) -> "LLMResponse":
         """
         Create a LLMResponse from raw Gemini API response.
@@ -428,11 +428,11 @@ class LLMResponse:
         cls,
         structured_response: NarrativeResponse,
         model: str = "gemini-3-pro-preview",
-        combined_narrative_text: str | None = None,
+        combined_narrative_text: Optional[str] = None,
         *,
         provider: str = "gemini",
-        processing_metadata: dict[str, Any] | None = None,
-        agent_mode: str | None = None,
+        processing_metadata: Optional[dict[str, Any]] = None,
+        agent_mode: Optional[str] = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from structured JSON response.
@@ -485,11 +485,11 @@ class LLMResponse:
         cls,
         narrative_text: str,
         model: str = "gemini-3-pro-preview",
-        structured_response: NarrativeResponse | None = None,
+        structured_response: Optional[NarrativeResponse] = None,
         *,
         provider: str = "gemini",
-        processing_metadata: dict[str, Any] | None = None,
-        agent_mode: str | None = None,
+        processing_metadata: Optional[dict[str, Any]] = None,
+        agent_mode: Optional[str] = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from plain text (legacy support).

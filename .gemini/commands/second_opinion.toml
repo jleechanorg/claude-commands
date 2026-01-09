@@ -84,9 +84,9 @@ TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 # If this fails, user needs to authenticate with AI Universe credentials
 if [ $? -ne 0 ]; then
   echo "❌ Authentication failed. Please run:"
-  echo "   FIREBASE_PROJECT_ID=ai-universe-b3551 \\"
-  echo "   FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \\"
-  echo "   FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc \\"
+  echo "   FIREBASE_PROJECT_ID=ai-universe-b3551 \\\\"
+  echo "   FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \\\\"
+  echo "   FIREBASE_API_KEY=AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc \\\\"
   echo "   node ~/.claude/scripts/auth-cli.mjs login"
   exit 1
 fi
@@ -206,7 +206,7 @@ jq -r '.result.content[0].text' /tmp/secondo_response.json > /tmp/secondo_parsed
 
 # Extract metrics if available
 TOKENS=$(jq -r '.result.content[0].text' /tmp/secondo_response.json | grep -o 'Total Tokens: [0-9,]*' | head -1)
-COST=$(jq -r '.result.content[0].text' /tmp/secondo_response.json | grep -o 'Total Cost: \$[0-9.]*' | head -1)
+COST=$(jq -r '.result.content[0].text' /tmp/secondo_response.json | grep -o 'Total Cost: \\$[0-9.]*' | head -1)
 ```
 
 ## Token Optimization

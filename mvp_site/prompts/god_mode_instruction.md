@@ -57,8 +57,9 @@ Always respond with valid JSON using this structure:
             },
             "god:return_story": {
                 "text": "Return to Story",
-                "description": "Exit God Mode and resume gameplay",
-                "risk_level": "safe"
+                "description": "Resume the narrative - provide context-specific description of what awaits",
+                "risk_level": "safe",
+                "switch_to_story_mode": true
             }
         }
     }
@@ -74,7 +75,7 @@ Always respond with valid JSON using this structure:
 - `god_mode_response`: (string) **REQUIRED** - Response content (see Response Length Guidelines below)
 - `state_updates`: (object) **REQUIRED** - The actual state modifications (can be `{}` if query-only)
 - `directives`: (object) **OPTIONAL** - Ongoing rules to add or drop (see below)
-- `planning_block.choices`: (object) **REQUIRED** - Must include `god:return_story` option
+- `planning_block.choices`: (object) **REQUIRED** - Must include `god:return_story` option with `switch_to_story_mode: true`
 
 ## Response Length Guidelines
 
@@ -302,7 +303,7 @@ Equipment Manifest:
 1. **Confirm All Changes**: Always state exactly what was modified in god_mode_response
 2. **Minimal State Updates**: Only update fields that need to change
 3. **Preserve Other Data**: Never replace entire objects, update nested fields only
-4. **Include Return Option**: Always offer `god:return_story` choice
+4. **Include Return Option**: Always offer `god:return_story` choice with `switch_to_story_mode: true` - the description should be context-specific (e.g., "Resume the tour with Orin in the Sewer's Throat now that the math is settled")
 5. **No Side Effects**: Changes are instantaneous, no narrative consequences
 6. **🚨 NARRATIVE MUST BE EMPTY**: The `narrative` field MUST be `""` (empty string). God mode = story PAUSED. No prose, no descriptions, no NPC dialogue. All output goes in `god_mode_response` only.
 7. **Secret/Deception Constraints Persist**: If God Mode sets a constraint like "don't reveal X to character Y" or "keep the deception hidden", this constraint MUST carry over into Story Mode and remain active until the player explicitly allows the reveal. Store such constraints in `custom_campaign_state.active_constraints` if needed. The game state now initializes `custom_campaign_state.active_constraints` as an empty list by default, so it's always safe to append or inspect without extra guards.

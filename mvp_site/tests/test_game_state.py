@@ -175,7 +175,7 @@ class TestGameState(unittest.TestCase):
         }
 
         # Test that timestamp is recent
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(datetime.timezone.utc)
         time_diff = abs((now - gs.last_state_update_timestamp).total_seconds())
         assert time_diff < 5, "Timestamp should be within 5 seconds of now"
 
@@ -184,7 +184,7 @@ class TestGameState(unittest.TestCase):
 
     def test_initialization_with_kwargs(self):
         """Test GameState initialization with provided values."""
-        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
+        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
         custom_data = {
             "game_state_version": 2,
             "player_character_data": {"name": "Hero", "level": 5},
@@ -330,7 +330,7 @@ class TestGameState(unittest.TestCase):
 
     def test_to_dict(self):
         """Test serialization to dictionary."""
-        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
+        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
         gs = GameState(
             game_state_version=3,
             player_character_data={"name": "Test"},
@@ -370,7 +370,7 @@ class TestGameState(unittest.TestCase):
 
     def test_from_dict_with_valid_data(self):
         """Test deserialization from dictionary."""
-        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
+        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
         source_dict = {
             "game_state_version": 2,
             "player_character_data": {"name": "Hero"},
@@ -416,7 +416,7 @@ class TestGameState(unittest.TestCase):
 
     def test_three_layer_nesting_all_types(self):
         """Test GameState with 3 layers of nesting and all valid Python data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
 
         complex_data = {
             "game_state_version": 1,
@@ -588,7 +588,7 @@ class TestGameState(unittest.TestCase):
 
     def test_to_dict_three_layer_nesting_all_types(self):
         """Test serialization of GameState with 3 layers of nesting and all data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
 
         gs = GameState(
             player_character_data={
@@ -627,7 +627,7 @@ class TestGameState(unittest.TestCase):
 
     def test_from_dict_three_layer_nesting_all_types(self):
         """Test deserialization from dict with 3 layers of nesting and all data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
 
         source_dict = {
             "game_state_version": 2,
@@ -992,7 +992,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
 
     def test_three_layer_nesting_all_data_types(self):
         """Test update_state_with_changes with 3 layers of nesting and all Python data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
 
         state = {
             "game_data": {
@@ -1270,7 +1270,7 @@ class TestPerformAppend(unittest.TestCase):
     def test_append_all_data_types(self):
         """Test appending various data types to a list."""
         target_list = ["string"]
-        test_datetime = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
+        test_datetime = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
 
         items_to_append = [
             42,  # int

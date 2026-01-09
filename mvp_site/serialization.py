@@ -7,7 +7,7 @@ llm_service.py, and mock_firestore_service_wrapper.py.
 All modules should import from here to ensure consistent serialization behavior.
 """
 
-from typing import Any
+from typing import Any, Optional
 
 # Lazy import to avoid circular dependency issues
 _firestore = None
@@ -103,7 +103,7 @@ def json_default_serializer(obj: Any) -> Any:
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
-def json_serial(obj: Any) -> str | None:
+def json_serial(obj: Any) -> Optional[str]:
     """
     Simple JSON serializer for basic types (backward compatibility alias).
 

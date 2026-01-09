@@ -41,32 +41,32 @@ class TestSceneNumbering(unittest.TestCase):
             {
                 "actor": "user",
                 "text": "First user input",
-                "timestamp": datetime.datetime.now(datetime.UTC),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc),
             },
             {
                 "actor": "gemini",
                 "text": "First AI response",
-                "timestamp": datetime.datetime.now(datetime.UTC),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc),
             },
             {
                 "actor": "user",
                 "text": "Second user input",
-                "timestamp": datetime.datetime.now(datetime.UTC),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc),
             },
             {
                 "actor": "Gemini",  # mixed case should still increment
                 "text": "Second AI response",
-                "timestamp": datetime.datetime.now(datetime.UTC),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc),
             },
             {
                 "actor": "user",
                 "text": "Third user input",
-                "timestamp": datetime.datetime.now(datetime.UTC),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc),
             },
             {
                 "actor": "gemini",
                 "text": "Third AI response",
-                "timestamp": datetime.datetime.now(datetime.UTC),
+                "timestamp": datetime.datetime.now(datetime.timezone.utc),
             },
         ]
 

@@ -5,7 +5,7 @@ Generates specific AI instructions requiring entity mentions and presence.
 
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from mvp_site import logging_util
 from mvp_site.entity_tracking import SceneManifest, create_from_game_state
@@ -76,8 +76,8 @@ class EntityInstructionGenerator:
         self,
         entities: list[str],
         player_references: list[str],
-        location: str | None = None,
-        story_context: str | None = None,
+        location: Optional[str] = None,
+        story_context: Optional[str] = None,
     ) -> str:
         """
         Generate comprehensive entity instructions for AI prompts.
@@ -156,8 +156,8 @@ class EntityInstructionGenerator:
         self,
         entity: str,
         player_references: list[str],
-        location: str | None,
-        story_context: str | None,
+        location: Optional[str],
+        story_context: Optional[str],
     ) -> EntityInstruction:
         """Create specific instruction for an individual entity"""
         entity.lower()
@@ -255,7 +255,7 @@ class EntityInstructionGenerator:
         except Exception:
             return False
 
-    def _is_location_owner(self, entity: str, location: str | None) -> bool:  # noqa: ARG002
+    def _is_location_owner(self, entity: str, location: Optional[str]) -> bool:  # noqa: ARG002
         """Determine if entity owns/belongs to the current location
 
         Currently disabled to avoid hardcoded location ownership patterns.
@@ -265,7 +265,7 @@ class EntityInstructionGenerator:
         # This ensures all entities are categorized based on story_critical or background logic
         return False
 
-    def _is_story_critical(self, entity: str, story_context: str | None) -> bool:
+    def _is_story_critical(self, entity: str, story_context: Optional[str]) -> bool:
         """Determine if entity is critical to current story development"""
         if not story_context:
             return False
@@ -437,7 +437,7 @@ class EntityPreloader:
         game_state: dict[str, Any],
         session_number: int,
         turn_number: int,
-        location: str | None = None,
+        location: Optional[str] = None,
     ) -> str:
         """
         Create entity pre-loading text to inject into AI prompts.

@@ -593,11 +593,11 @@ else:
 
 # 1. Scan for problematic mocking patterns
 
-grep -r "@patch.*firebase_admin\.firestore\.client" . --include="*.py" >/dev/null 2>&1
+grep -r "@patch.*firebase_admin\\.firestore\\.client" . --include="*.py" >/dev/null 2>&1
 
 # 2. Cross-reference with actual service calls
 
-grep -r "firestore_service\.get_db" . --include="*.py" >/dev/null 2>&1
+grep -r "firestore_service\\.get_db" . --include="*.py" >/dev/null 2>&1
 
 # 3. Report mismatch pattern for bulk fixing
 
@@ -612,7 +612,7 @@ grep -r "firestore_service\.get_db" . --include="*.py" >/dev/null 2>&1
 
 # 1. Scan for MagicMock usage in tests that interact with JSON APIs
 
-grep -r "MagicMock" . --include="test_*.py" -A 5 -B 5 | grep -E "(json\.|\.json|JSON)" >/dev/null 2>&1
+grep -r "MagicMock" . --include="test_*.py" -A 5 -B 5 | grep -E "(json\\.|\\.json|JSON)" >/dev/null 2>&1
 
 # 2. Look for patch decorators that don't return proper fake objects
 
@@ -638,13 +638,13 @@ Examine the collected data to understand what needs fixing:
       -e '^=+ FAILURES =+' \
       -e 'collected [0-9]+ items' \
       -e '===+ [0-9]+ (failed|errors?|x?failed|x?passed)' \
-      -e 'E\s+AssertionError' \
+      -e 'E\\s+AssertionError' \
       -e 'Traceback \(most recent call last\):' \
       -e 'ModuleNotFoundError:' \
       -e 'ImportError:' \
       -e 'NameError:' \
       -e 'TypeError:' \
-      -e '\.py[:,]?\d+(:\d+)?' \
+      -e '\\.py[:,]?\\d+(:\\d+)?' \
     -A 3 -B 3
 
   # Common patterns to identify:

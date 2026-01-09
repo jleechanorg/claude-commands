@@ -1,12 +1,14 @@
 """Token counting utilities for consistent logging across the application."""
 
+from typing import Union
+
 from mvp_site import logging_util
 
 # Token estimation constant - Gemini uses roughly 1 token per 4 characters
 CHARS_PER_TOKEN = 4
 
 
-def estimate_tokens(text: str | list[str]) -> int:
+def estimate_tokens(text: Union[str, list[str]]) -> int:
     """
     Estimate token count for text.
 

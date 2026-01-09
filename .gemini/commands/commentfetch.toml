@@ -192,13 +192,13 @@ fi
 PRINT_INLINE=false
 LIMIT=""
 
-if echo "$ARGS" | grep -qi "print\|show\|display"; then
+if echo "$ARGS" | grep -qi "print\\|show\\|display"; then
     PRINT_INLINE=true
     echo "📺 Will display comments inline"
 fi
 
-if echo "$ARGS" | grep -o '[0-9]\+' | head -2 | tail -1 | grep -q .; then
-    LIMIT=$(echo "$ARGS" | grep -o '[0-9]\+' | head -2 | tail -1)
+if echo "$ARGS" | grep -o '[0-9]\\+' | head -2 | tail -1 | grep -q .; then
+    LIMIT=$(echo "$ARGS" | grep -o '[0-9]\\+' | head -2 | tail -1)
     echo "🔢 Comment limit: $LIMIT"
 fi
 

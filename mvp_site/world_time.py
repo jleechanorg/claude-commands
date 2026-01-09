@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import datetime
 import re
-from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Optional
 
 MONTH_MAP = {
     "hammer": 1,
@@ -49,7 +49,7 @@ def _normalize_month(month_raw: Any) -> int:
     return _safe_int(month_raw)
 
 
-def world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, ...]:
+def world_time_to_comparable(world_time: Optional[dict[str, Any]]) -> tuple[int, ...]:
     """Convert world_time dict to comparable tuple (year, month, day, hour, min, sec, microsec)."""
 
     if not world_time or not isinstance(world_time, dict):
@@ -66,7 +66,7 @@ def world_time_to_comparable(world_time: dict[str, Any] | None) -> tuple[int, ..
     return (year, month, day, hour, minute, second, microsecond)
 
 
-def parse_timestamp_to_world_time(timestamp: Any) -> dict[str, int] | None:
+def parse_timestamp_to_world_time(timestamp: Any) -> Optional[dict[str, int]]:
     """Parse an ISO-like timestamp into a world_time dict.
 
     Timestamps with timezone offsets are normalized to UTC to keep temporal
@@ -83,12 +83,12 @@ def parse_timestamp_to_world_time(timestamp: Any) -> dict[str, int] | None:
     normalized = ts_string[:-1] + "+00:00" if ts_string.endswith("Z") else ts_string
 
     try:
-        parsed = datetime.fromisoformat(normalized)
+        parsed = datetime.datetime.fromisoformat(normalized)
     except (TypeError, ValueError):
         return None
 
     if parsed.tzinfo:
-        parsed = parsed.astimezone(UTC)
+        parsed = parsed.astimezone(datetime.timezone.utc)
 
     return {
         "year": parsed.year,
@@ -101,7 +101,7 @@ def parse_timestamp_to_world_time(timestamp: Any) -> dict[str, int] | None:
     }
 
 
-def extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None:
+def extract_world_time_from_response(llm_response: Any) -> Optional[dict[str, Any]]:
     """Extract world_time from LLM response state_updates."""
 
     try:
@@ -131,7 +131,7 @@ def extract_world_time_from_response(llm_response: Any) -> dict[str, Any] | None
         return None
 
 
-def _has_required_date_fields(world_time: dict[str, Any] | None) -> bool:
+def _has_required_date_fields(world_time: Optional[dict[str, Any]]) -> bool:
     """Check if world_time has all required date fields (year, month, day).
 
     When the LLM generates partial world_time (e.g., only hour/minute),
@@ -160,7 +160,7 @@ def _has_required_date_fields(world_time: dict[str, Any] | None) -> bool:
 
 
 def check_temporal_violation(
-    old_time: dict[str, Any] | None, new_time: dict[str, Any] | None
+    old_time: Optional[dict[str, Any]], new_time: Optional[dict[str, Any]]
 ) -> bool:
     """Return True if new_time moves backward compared to old_time.
 
@@ -212,7 +212,7 @@ def apply_timestamp_to_world_time(state_changes: dict[str, Any]) -> dict[str, An
     return state_changes
 
 
-def format_world_time_for_prompt(world_time: dict[str, Any] | None) -> str:
+def format_world_time_for_prompt(world_time: Optional[dict[str, Any]]) -> str:
     """Format world_time dict for human-readable prompt display."""
 
     if not world_time:

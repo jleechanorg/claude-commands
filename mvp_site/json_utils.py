@@ -6,7 +6,7 @@ This module provides both low-level utilities and high-level robust parsing for 
 
 import json
 import re
-from typing import Any
+from typing import Any, Optional
 
 from mvp_site import constants, logging_util
 
@@ -25,7 +25,7 @@ TEXT_CONTENT_PATTERN = re.compile(r':\s*"([^"]+)')
 PLANNING_BLOCK_START_PATTERN = re.compile(r'"planning_block"\s*:\s*\{')
 
 
-def extract_nested_object(text: str, field_name: str) -> str | None:
+def extract_nested_object(text: str, field_name: str) -> Optional[str]:
     """Extract a nested JSON object using bracket-aware parsing.
 
     This handles nested braces correctly, unlike simple regex patterns that
@@ -184,7 +184,7 @@ def unescape_json_string(text: str) -> str:
     return "".join(result)
 
 
-def try_parse_json(text: str) -> tuple[dict[str, Any] | None, bool]:
+def try_parse_json(text: str) -> tuple[Optional[dict[str, Any]], bool]:
     """
     Try to parse JSON text, returning (result, success).
     """
@@ -194,7 +194,7 @@ def try_parse_json(text: str) -> tuple[dict[str, Any] | None, bool]:
         return None, False
 
 
-def extract_json_boundaries(text: str) -> str | None:  # noqa: PLR0912
+def extract_json_boundaries(text: str) -> Optional[str]:  # noqa: PLR0912
     """
     Extract JSON content between first { and its matching } or [ and its matching ].
 
@@ -324,7 +324,7 @@ def complete_truncated_json(text: str) -> str:  # noqa: PLR0912
 MAX_QUOTE_TERMINATOR_LOOKAHEAD = 256
 
 
-def _scan_non_whitespace(text: str, start: int, max_distance: int) -> int | None:
+def _scan_non_whitespace(text: str, start: int, max_distance: int) -> Optional[int]:
     # Cap lookahead to avoid repeated scans across very long narrative strings.
     if start >= len(text):
         return len(text)
@@ -370,7 +370,7 @@ def _is_quote_terminator(text: str, quote_pos: int) -> bool:  # noqa: PLR0911
     return False
 
 
-def extract_field_value(text: str, field_name: str) -> str | None:
+def extract_field_value(text: str, field_name: str) -> Optional[str]:
     """
     Extract a specific field value from potentially malformed JSON.
 
@@ -452,7 +452,7 @@ class RobustJSONParser:
     """
 
     @staticmethod
-    def _normalize_to_dict(result: Any, _original_text: str) -> dict[str, Any] | None:
+    def _normalize_to_dict(result: Any, _original_text: str) -> Optional[dict[str, Any]]:
         """
         Normalize parser result to always return a dict or None.
 
@@ -492,7 +492,7 @@ class RobustJSONParser:
         return None
 
     @staticmethod
-    def parse(text: str) -> tuple[dict[str, Any] | None, bool]:  # noqa: PLR0911, PLR0912, PLR0915
+    def parse(text: str) -> tuple[Optional[dict[str, Any]], bool]:  # noqa: PLR0911, PLR0912, PLR0915
         """
         Attempts to parse JSON text with multiple fallback strategies.
 
@@ -605,7 +605,7 @@ class RobustJSONParser:
         return complete_truncated_json(text)
 
     @staticmethod
-    def _extract_fields(text: str) -> dict[str, Any] | None:
+    def _extract_fields(text: str) -> Optional[dict[str, Any]]:
         """Extract individual fields using regex"""
         result = {}
 

@@ -240,7 +240,9 @@ THINK_MODE_PREFIX = "THINK:"
 GOD_MODE_PREFIX = "GOD MODE:"
 
 
-def is_god_mode(user_input: str, mode: str | None = None) -> bool:
+from typing import Optional
+
+def is_god_mode(user_input: str, mode: Optional[str] = None) -> bool:
     """
     Centralized god mode detection.
 
@@ -264,7 +266,7 @@ def is_god_mode(user_input: str, mode: str | None = None) -> bool:
     return normalized_mode == MODE_GOD or normalized_input.startswith(GOD_MODE_PREFIX)
 
 
-def is_think_mode(user_input: str, mode: str | None = None) -> bool:
+def is_think_mode(user_input: str, mode: Optional[str] = None) -> bool:
     """
     Centralized think mode detection.
 
@@ -395,7 +397,7 @@ def uses_big_five(system):
     return False  # No current systems use Big Five
 
 
-def infer_provider_from_model(model_name: str, provider_hint: str | None = None) -> str:
+def infer_provider_from_model(model_name: str, provider_hint: Optional[str] = None) -> str:
     """Infer the LLM provider from a model name.
 
     This function automatically determines which provider should be used based on
@@ -584,7 +586,7 @@ NEUTRAL_COMBATANT_TYPES: frozenset[str] = frozenset(
 
 # Generic/enemy roles that indicate a combatant can be removed after defeat
 # NPCs with these roles (or None/empty) are considered generic enemies
-GENERIC_ENEMY_ROLES: frozenset[str | None] = frozenset(
+GENERIC_ENEMY_ROLES: frozenset[Optional[str]] = frozenset(
     {
         None,  # No role assigned
         "",  # Empty role
@@ -599,7 +601,7 @@ GENERIC_ENEMY_ROLES: frozenset[str | None] = frozenset(
 )
 
 
-def is_friendly_combatant(combatant_type: str | None) -> bool:
+def is_friendly_combatant(combatant_type: Optional[str]) -> bool:
     """Check if a combatant type indicates a friendly entity.
 
     Args:
@@ -618,7 +620,7 @@ def is_friendly_combatant(combatant_type: str | None) -> bool:
     return normalized in FRIENDLY_COMBATANT_TYPES
 
 
-def is_generic_enemy_role(role: str | None) -> bool:
+def is_generic_enemy_role(role: Optional[str]) -> bool:
     """Check if a role indicates a generic/removable enemy.
 
     Args:

@@ -24,8 +24,8 @@ SAMPLE_CAMPAIGN = {
         constants.PROMPT_TYPE_NARRATIVE,
         constants.PROMPT_TYPE_MECHANICS,
     ],
-    "created_at": datetime.datetime(2023, 6, 15, 10, 30, 0, tzinfo=datetime.UTC),
-    "last_played": datetime.datetime(2023, 6, 15, 14, 45, 0, tzinfo=datetime.UTC),
+    "created_at": datetime.datetime(2023, 6, 15, 10, 30, 0, tzinfo=datetime.timezone.utc),
+    "last_played": datetime.datetime(2023, 6, 15, 14, 45, 0, tzinfo=datetime.timezone.utc),
 }
 
 # Sample game state data
@@ -74,7 +74,7 @@ SAMPLE_GAME_STATE = {
         "last_story_mode_sequence_id": 5,
     },
     "last_state_update_timestamp": datetime.datetime(
-        2023, 6, 15, 14, 45, 0, tzinfo=datetime.UTC
+        2023, 6, 15, 14, 45, 0, tzinfo=datetime.timezone.utc
     ),
     "migration_status": "MIGRATED",
     "debug_mode": True,
@@ -87,21 +87,21 @@ SAMPLE_STORY_CONTEXT = [
         constants.KEY_TEXT: "I look around the tavern and approach the innkeeper",
         constants.KEY_MODE: constants.MODE_CHARACTER,
         "sequence_id": 1,
-        "timestamp": datetime.datetime(2023, 6, 15, 14, 30, 0, tzinfo=datetime.UTC),
+        "timestamp": datetime.datetime(2023, 6, 15, 14, 30, 0, tzinfo=datetime.timezone.utc),
     },
     {
         constants.KEY_ACTOR: constants.ACTOR_GEMINI,
         constants.KEY_TEXT: "The tavern is dimly lit by flickering candles. Gareth the innkeeper looks up from cleaning a mug, his weathered face breaking into a warm smile. 'Ah, Sir Kaelan! I've been expecting you. I hear you seek information about the Lost Crown.'",
         constants.KEY_MODE: constants.MODE_CHARACTER,
         "sequence_id": 2,
-        "timestamp": datetime.datetime(2023, 6, 15, 14, 31, 0, tzinfo=datetime.UTC),
+        "timestamp": datetime.datetime(2023, 6, 15, 14, 31, 0, tzinfo=datetime.timezone.utc),
     },
     {
         constants.KEY_ACTOR: constants.ACTOR_USER,
         constants.KEY_TEXT: "Tell me what you know about the crown",
         constants.KEY_MODE: constants.MODE_CHARACTER,
         "sequence_id": 3,
-        "timestamp": datetime.datetime(2023, 6, 15, 14, 32, 0, tzinfo=datetime.UTC),
+        "timestamp": datetime.datetime(2023, 6, 15, 14, 32, 0, tzinfo=datetime.timezone.utc),
     },
 ]
 

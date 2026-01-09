@@ -7,7 +7,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from mvp_site import logging_util
 
@@ -273,7 +273,7 @@ class EntityValidator:
         self,
         narrative_text: str,
         expected_entities: list[str],
-        location: str | None = None,
+        location: Optional[str] = None,
     ) -> ValidationResult:
         """
         Validate that expected entities are present in the narrative.
@@ -379,7 +379,7 @@ class EntityValidator:
         missing_entities: list[str],
         found_entities: list[str],
         narrative_text: str,
-        location: str | None = None,
+        location: Optional[str] = None,
     ) -> list[str]:
         """Generate specific suggestions for retry prompts"""
         suggestions: list[str] = []
@@ -416,7 +416,7 @@ class EntityValidator:
         self,
         original_prompt: str,
         validation_result: ValidationResult,
-        location: str | None = None,
+        location: Optional[str] = None,
     ) -> str:
         """Create an enhanced prompt for retry when entities are missing"""
         if not validation_result.retry_needed:
@@ -451,8 +451,8 @@ class EntityValidator:
         self,
         narrative_text: str,
         expected_entities: list[str],
-        location: str = None,
-        previous_states: dict[str, Any] = None,
+        location: Optional[str] = None,
+        previous_states: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationResult:
         """
@@ -585,8 +585,8 @@ class EntityRetryManager:
         self,
         narrative_text: str,
         expected_entities: list[str],
-        location: str | None = None,
-        retry_callback: Callable | None = None,
+        location: Optional[str] = None,
+        retry_callback: Optional[Callable] = None,
     ) -> tuple[ValidationResult, int]:
         """
         Validate entity presence with automatic retry logic.

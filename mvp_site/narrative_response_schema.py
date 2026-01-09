@@ -6,7 +6,7 @@ Based on Milestone 0.4 Combined approach implementation (without pydantic depend
 
 import json
 import re
-from typing import Any
+from typing import Any, Optional, Union
 
 from mvp_site import logging_util
 from mvp_site.json_utils import parse_llm_json_response, unescape_json_string
@@ -34,6 +34,39 @@ WHITESPACE_PATTERN = re.compile(
 # `_remove_planning_json_blocks`; regex explorations are intentionally omitted
 # to keep the implementation single-sourced.
 # Quick check just verifies both required keys exist (order-independent).
+
+# Shared boolean coercion helper so validation and sanitization use consistent
+# handling for truthy/falsey inputs.
+def _coerce_bool(value: Any, *, context: Optional[str] = None) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    coerced: bool
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "yes", "1"}:
+            coerced = True
+        elif normalized in {"false", "no", "0", ""}:
+            coerced = False
+        else:
+            # Default to False for unknown strings to avoid accidental True
+            # e.g., "unknown", "undefined", "null" should be False, not True
+            coerced = False
+            if context:
+                logging_util.warning(
+                    f"{context}: Unrecognized boolean string '{value}' coerced to False"
+                )
+    elif isinstance(value, (int, float)):
+        coerced = value != 0
+    else:
+        coerced = bool(value)
+
+    if context and not isinstance(value, str):
+        logging_util.warning(
+            f"{context} coerced boolean from {type(value).__name__} value {value!r} to {coerced}"
+        )
+
+    return coerced
 
 # Mixed language detection - CJK (Chinese/Japanese/Korean) characters
 # These can appear due to LLM training data leakage
@@ -64,6 +97,9 @@ MAX_PLANNING_JSON_BLOCK_CHARS = 50000
 # The schema is the same; only time handling differs based on mode.
 # =============================================================================
 
+# NOTE: "story mode" refers to the UI's Character (narrative) mode controlled by the
+# `char-mode` radio button. The switch flag keeps the existing name for backward
+# compatibility while documenting the mapping to Character mode.
 CHOICE_SCHEMA = {
     "text": str,  # Display name for the choice (REQUIRED)
     "description": str,  # What this choice entails (REQUIRED)
@@ -72,6 +108,7 @@ CHOICE_SCHEMA = {
     "confidence": str,  # "high" | "medium" | "low" (optional)
     "risk_level": str,  # "safe" | "low" | "medium" | "high" (REQUIRED)
     "analysis": dict,  # Additional analysis data (optional)
+    "switch_to_story_mode": bool,  # If true, selecting this choice switches UI to Character/story mode (optional)
 }
 
 PLANNING_BLOCK_SCHEMA = {
@@ -152,7 +189,7 @@ def _derive_quality_tier(success: bool, margin: int) -> str:
     return "Incomplete"
 
 
-def _coerce_bool(value: Any) -> bool | None:
+def _coerce_bool_optional(value: Any) -> Optional[bool]:
     """Best-effort conversion of arbitrary values to bool, returning None when unclear."""
 
     if isinstance(value, bool):
@@ -364,19 +401,19 @@ class NarrativeResponse:
     def __init__(
         self,
         narrative: str,
-        entities_mentioned: list[str] = None,
+        entities_mentioned: Optional[list[str]] = None,
         location_confirmed: str = "Unknown",
-        turn_summary: str = None,
-        state_updates: dict[str, Any] = None,
-        debug_info: dict[str, Any] = None,
-        god_mode_response: str = None,
-        directives: dict[str, Any] = None,  # God mode: {add: [...], drop: [...]}
-        session_header: str = None,
-        planning_block: dict[str, Any] | None = None,
-        dice_rolls: list[str] = None,
-        dice_audit_events: list[dict[str, Any]] | None = None,
-        resources: str = None,
-        **kwargs,
+        turn_summary: Optional[str] = None,
+        state_updates: Optional[dict[str, Any]] = None,
+        debug_info: Optional[dict[str, Any]] = None,
+        god_mode_response: Optional[str] = None,
+        directives: Optional[dict[str, Any]] = None,  # God mode: {add: [...], drop: [...]}
+        session_header: Optional[str] = None,
+        planning_block: Union[dict[str, Any], None] = None,
+        dice_rolls: Optional[list[str]] = None,
+        dice_audit_events: Optional[list[dict[str, Any]]] = None,
+        resources: Optional[str] = None,
+        **kwargs: Any,
     ):
         # Core required fields
         self.narrative = self._validate_narrative(narrative)
@@ -558,13 +595,6 @@ class NarrativeResponse:
             except (TypeError, ValueError):
                 return default
 
-        def _coerce_bool(value: Any) -> bool:
-            if isinstance(value, bool):
-                return value
-            if isinstance(value, str):
-                return value.strip().lower() in ("true", "yes", "1")
-            return bool(value)
-
         validated: dict[str, Any] = {
             "source": str(rewards_box.get("source", "")).strip(),
             "xp_gained": _coerce_number(rewards_box.get("xp_gained", 0)),
@@ -572,7 +602,8 @@ class NarrativeResponse:
             "next_level_xp": _coerce_number(rewards_box.get("next_level_xp", 0)),
             "progress_percent": _coerce_number(rewards_box.get("progress_percent", 0)),
             "level_up_available": _coerce_bool(
-                rewards_box.get("level_up_available", False)
+                rewards_box.get("level_up_available", False),
+                context="rewards_box.level_up_available",
             ),
             "gold": _coerce_number(rewards_box.get("gold", 0)),
         }
@@ -690,7 +721,7 @@ class NarrativeResponse:
                 validated_pq["margin"] = expected_margin
 
             # Boolean field
-            provided_success = _coerce_bool(plan_quality.get("success"))
+            provided_success = _coerce_bool_optional(plan_quality.get("success"))
             derived_success = validated_pq.get("roll_result", 0) >= validated_pq.get(
                 "dc", 0
             )
@@ -827,6 +858,14 @@ class NarrativeResponse:
                     )
                     validated_choice["confidence"] = "medium"
 
+            # Optional: switch_to_story_mode field (boolean)
+            if "switch_to_story_mode" in choice_data:
+                switch_value = choice_data["switch_to_story_mode"]
+                validated_choice["switch_to_story_mode"] = _coerce_bool(
+                    switch_value,
+                    context=f"Choice '{choice_key}' switch_to_story_mode",
+                )
+
             # Only add choice if it has both text and description
             if validated_choice["text"] and validated_choice["description"]:
                 validated_choices[choice_key] = validated_choice
@@ -936,6 +975,13 @@ class NarrativeResponse:
             if "confidence" in choice_data:
                 sanitized_choice["confidence"] = sanitize_string(
                     choice_data["confidence"]
+                )
+
+            # Keep switch_to_story_mode if present (boolean, no sanitization needed)
+            if "switch_to_story_mode" in choice_data:
+                sanitized_choice["switch_to_story_mode"] = _coerce_bool(
+                    choice_data["switch_to_story_mode"],
+                    context=f"Sanitizing choice '{choice_key}' switch_to_story_mode",
                 )
 
             sanitized_choices[choice_key] = sanitized_choice
@@ -1093,7 +1139,7 @@ ENTITY TRACKING NOTES:
 
 
 def _combine_god_mode_and_narrative(
-    god_mode_response: str, narrative: str | None
+    god_mode_response: str, narrative: Optional[str]
 ) -> str:
     """
     Helper function to handle god_mode_response and narrative fields.
@@ -1137,7 +1183,7 @@ def parse_structured_response(
     """
 
     def _apply_planning_fallback(
-        narrative_value: str | None, planning_block: Any
+        narrative_value: Optional[str], planning_block: Any
     ) -> str:
         """Return narrative or minimal placeholder - DO NOT inject thinking text.
 
@@ -1449,7 +1495,7 @@ def create_generic_json_instruction() -> str:
 
 
 def create_structured_prompt_injection(
-    manifest_text: str, expected_entities: list[str] | None
+    manifest_text: str, expected_entities: Optional[list[str]]
 ) -> str:
     """
     Create structured prompt injection for JSON response format

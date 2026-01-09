@@ -16,7 +16,7 @@ focusing on request/response orchestration instead.
 import json
 import os
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from mvp_site import constants, dice_integrity, logging_util
 from mvp_site.file_cache import read_file_cached
@@ -85,27 +85,24 @@ def _schema_to_json_string(schema: dict) -> str:
     This converts them to human-readable type names for prompts.
     """
 
-    def convert_value(v: Any) -> Any:
+    def convert_value(v: Any) -> Any:  # noqa: PLR0911
         if v is str:
-            mapped = "string"
-        elif v is int:
-            mapped = "integer"
-        elif v is bool:
-            mapped = "boolean"
-        elif v is float:
-            mapped = "number"
-        elif v is list:
-            mapped = "array"
-        elif v is dict:
-            mapped = "object"
-        elif isinstance(v, dict):
-            mapped = {k: convert_value(vv) for k, vv in v.items()}
-        elif isinstance(v, list):
-            mapped = [convert_value(item) for item in v]
-        else:
-            mapped = v
-
-        return mapped
+            return "string"
+        if v is int:
+            return "integer"
+        if v is bool:
+            return "boolean"
+        if v is float:
+            return "number"
+        if v is list:
+            return "array"
+        if v is dict:
+            return "object"
+        if isinstance(v, dict):
+            return {k: convert_value(vv) for k, vv in v.items()}
+        if isinstance(v, list):
+            return [convert_value(item) for item in v]
+        return v
 
     converted = convert_value(schema)
     return json.dumps(converted, indent=2)
@@ -369,7 +366,7 @@ class PromptBuilder:
     prevent "instruction fatigue" and maintain proper AI behavior hierarchy.
     """
 
-    def __init__(self, game_state: GameState | None = None) -> None:
+    def __init__(self, game_state: Optional[GameState] = None) -> None:
         """
         Initialize the PromptBuilder.
 
@@ -692,7 +689,7 @@ class PromptBuilder:
         self,
         parts: list[str],
         selected_prompts: list[str],
-        llm_requested_sections: list[str] | None = None,
+        llm_requested_sections: Optional[list[str]] = None,
         essentials_only: bool = False,
     ) -> None:
         """
@@ -1241,8 +1238,8 @@ class PromptBuilder:
 def build_reprompt_for_missing_fields(
     original_response_text: str,
     missing_fields: list[str],
-    tool_results: list[dict[str, Any]] | None = None,
-    dice_roll_strategy: str | None = None,
+    tool_results: Optional[list[dict[str, Any]]] = None,
+    dice_roll_strategy: Optional[str] = None,
 ) -> str:
     """Build a reprompt message to request missing fields from the LLM.
 
@@ -1369,8 +1366,8 @@ def get_static_prompt_parts(
     else:
         missions_summary = "Missions: None"
 
-    ambition: str | None = pc_data.get("core_ambition")
-    milestone: str | None = pc_data.get("next_milestone")
+    ambition: Optional[str] = pc_data.get("core_ambition")
+    milestone: Optional[str] = pc_data.get("next_milestone")
     ambition_summary: str = ""
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
@@ -1429,8 +1426,8 @@ def build_temporal_correction_prompt(
     original_user_input: str,
     old_time: dict[str, Any],
     new_time: dict[str, Any],
-    old_location: str | None,
-    new_location: str | None,
+    old_location: Optional[str],
+    new_location: Optional[str],
 ) -> str:
     """Build correction prompt when temporal violation detected.
 
@@ -1491,7 +1488,7 @@ Generate a NEW response that is the NEXT logical entry in the timeline, continui
 def build_temporal_warning_message(
     temporal_correction_attempts: int,
     max_attempts: int = 3,
-) -> str | None:
+) -> Optional[str]:
     """Build user-facing temporal warning text based on attempts taken.
 
     When temporal corrections are needed, this generates an appropriate

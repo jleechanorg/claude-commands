@@ -833,6 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const button = e.currentTarget;
     const choiceText = button.getAttribute('data-choice-text');
     const choiceId = button.getAttribute('data-choice-id');
+    const switchToStory = button.getAttribute('data-switch-to-story') === 'true';
     const userInputEl = document.getElementById('user-input');
     const interactionForm = document.getElementById('interaction-form');
 
@@ -842,6 +843,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.choice-button').forEach((btn) => {
       btn.disabled = true;
     });
+
+    // If switch_to_story_mode is true, change the interaction mode radio to character mode (story/narrative)
+    if (switchToStory) {
+      const charModeRadio = document.getElementById('char-mode');
+      if (charModeRadio) {
+        charModeRadio.checked = true;
+        // Trigger change event in case other code listens for it
+        charModeRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log('Switched to character/story mode via switch_to_story_mode flag');
+      }
+    }
 
     // Set the choice text in the input field
     userInputEl.value = choiceText;
@@ -960,6 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const safeText = sanitizeHtml(choice.text);
       const safeDescription = sanitizeHtml(choice.description);
       const riskLevel = choice.risk_level || 'low';
+      const switchToStory = choice.switch_to_story_mode === true;
 
       // Check if this is a deep think mode choice with analysis
       if (choice.analysis && typeof choice.analysis === 'object') {
@@ -996,6 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
           `<button class="choice-button ${riskClass}" ` +
           `data-choice-id="${safeKey}" ` +
           `data-choice-text="${escapedChoiceData}" ` +
+          `data-switch-to-story="${switchToStory}" ` +
           `title="${escapedTitle}" ` +
           `style="white-space: pre-wrap; text-align: left;">${buttonText}</button>`;
       } else {
@@ -1010,6 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
           `<button class="choice-button ${riskClass}" ` +
           `data-choice-id="${safeKey}" ` +
           `data-choice-text="${escapedChoiceData}" ` +
+          `data-switch-to-story="${switchToStory}" ` +
           `title="${escapedTitle}">${buttonText}</button>`;
       }
     });

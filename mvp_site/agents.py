@@ -51,7 +51,7 @@ Each agent has:
 
 from abc import ABC, abstractmethod
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from mvp_site import constants, logging_util
 from mvp_site.agent_prompts import PromptBuilder
@@ -171,7 +171,7 @@ class BaseAgent(ABC):
     # Cache to avoid re-validating prompt order on every instantiation
     _prompt_order_validated: bool = False
 
-    def __init__(self, game_state: "GameState | None" = None) -> None:
+    def __init__(self, game_state: Optional["GameState"] = None) -> None:
         """
         Initialize the agent.
 
@@ -191,11 +191,11 @@ class BaseAgent(ABC):
     @abstractmethod
     def build_system_instructions(
         self,
-        selected_prompts: list[str] | None = None,
+        selected_prompts: Optional[list[str]] = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
+        llm_requested_sections: Optional[list[str]] = None,
     ) -> str:
         """
         Build the complete system instructions for this agent.
@@ -227,7 +227,7 @@ class BaseAgent(ABC):
         return False
 
     @classmethod
-    def matches_game_state(cls, _game_state: "GameState | None") -> bool:
+    def matches_game_state(cls, _game_state: Optional["GameState"]) -> bool:
         """
         Check if this agent should handle the current game state.
 
@@ -341,11 +341,11 @@ class FixedPromptAgent(BaseAgent):
 
     def build_system_instructions(
         self,
-        selected_prompts: list[str] | None = None,
+        selected_prompts: Optional[list[str]] = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
+        llm_requested_sections: Optional[list[str]] = None,
     ) -> str:
         """
         Build system instructions using the fixed prompt set.
@@ -438,11 +438,11 @@ class StoryModeAgent(BaseAgent):
 
     def build_system_instructions(
         self,
-        selected_prompts: list[str] | None = None,
+        selected_prompts: Optional[list[str]] = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
+        llm_requested_sections: Optional[list[str]] = None,
     ) -> str:
         """
         Build system instructions for story mode.
@@ -480,10 +480,10 @@ class StoryModeAgent(BaseAgent):
 
     def build_system_instruction_parts(
         self,
-        selected_prompts: list[str] | None = None,
+        selected_prompts: Optional[list[str]] = None,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
+        llm_requested_sections: Optional[list[str]] = None,
     ) -> list[str]:
         """
         Build the ordered instruction parts for story mode before finalization.
@@ -596,7 +596,7 @@ class GodModeAgent(FixedPromptAgent):
     # Uses FixedPromptAgent.build_system_instructions() - no del patterns needed
 
     @classmethod
-    def matches_input(cls, user_input: str, mode: str | None = None) -> bool:
+    def matches_input(cls, user_input: str, mode: Optional[str] = None) -> bool:
         """
         God mode is triggered by "GOD MODE:" prefix OR mode="god" parameter.
 
@@ -923,7 +923,7 @@ class PlanningAgent(FixedPromptAgent):
     # Uses FixedPromptAgent.build_system_instructions() - no del patterns needed
 
     @classmethod
-    def matches_input(cls, user_input: str, mode: str | None = None) -> bool:
+    def matches_input(cls, user_input: str, mode: Optional[str] = None) -> bool:
         """
         Think mode is triggered by "THINK:" prefix or explicit mode selection.
 
@@ -1117,11 +1117,11 @@ class CombatAgent(BaseAgent):
 
     def build_system_instructions(
         self,
-        selected_prompts: list[str] | None = None,
+        selected_prompts: Optional[list[str]] = None,
         use_default_world: bool = False,
         include_continuation_reminder: bool = True,
         turn_number: int = 0,
-        llm_requested_sections: list[str] | None = None,
+        llm_requested_sections: Optional[list[str]] = None,
     ) -> str:
         """
         Build system instructions for combat mode.
@@ -1161,7 +1161,7 @@ class CombatAgent(BaseAgent):
         return {"include_debug": True}
 
     @classmethod
-    def matches_game_state(cls, game_state: "GameState | None") -> bool:
+    def matches_game_state(cls, game_state: Optional["GameState"]) -> bool:
         """
         Check if combat mode should be active based on game state.
 
@@ -1262,7 +1262,7 @@ class RewardsAgent(FixedPromptAgent):
         return {"include_debug": True}
 
     @classmethod
-    def matches_game_state(cls, game_state: "GameState | None") -> bool:
+    def matches_game_state(cls, game_state: Optional["GameState"]) -> bool:
         """
         Check if rewards mode should be active based on game state.
 
@@ -1341,7 +1341,9 @@ class RewardsAgent(FixedPromptAgent):
 
 
 def get_agent_for_input(
-    user_input: str, game_state: "GameState | None" = None, mode: str | None = None
+    user_input: str,
+    game_state: Optional["GameState"] = None,
+    mode: Optional[str] = None,
 ) -> BaseAgent:
     """
     Factory function to get the appropriate agent for user input.

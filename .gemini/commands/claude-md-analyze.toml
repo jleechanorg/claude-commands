@@ -135,11 +135,11 @@ head -1000  # Prevent excessive output
 
 # Count files by type with development relevance scoring
 
-find [directory] -type f | grep -E '\.(py|js|ts|jsx|tsx|java|cpp|c|h|go|rs|rb|php|cs|sql|yaml|yml|json|xml|md|rst|txt|sh|bat|ps1|dockerfile|makefile)$' | wc -l
+find [directory] -type f | grep -E '\\.(py|js|ts|jsx|tsx|java|cpp|c|h|go|rs|rb|php|cs|sql|yaml|yml|json|xml|md|rst|txt|sh|bat|ps1|dockerfile|makefile)$' | wc -l
 
 # Development file type diversity analysis
 
-find [directory] -type f -name "*.*" | sed 's/.*\.//' | sort | uniq -c | sort -nr
+find [directory] -type f -name "*.*" | sed 's/.*\\.//' | sort | uniq -c | sort -nr
 ```
 
 **File Type Classification**:

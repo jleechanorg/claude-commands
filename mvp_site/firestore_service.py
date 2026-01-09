@@ -33,7 +33,7 @@ import datetime
 import json
 import os
 import time
-from typing import Any
+from typing import Any, Optional, Union
 
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -62,7 +62,8 @@ MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20
 DELETE_TOKEN: str = "__DELETE__"  # noqa: S105 Token used to mark fields for deletion in state updates
 
-UTC = datetime.UTC
+# Compatibility shim for datetime.UTC (Python 3.11+)
+UTC = datetime.timezone.utc
 
 
 class FirestoreWriteError(RuntimeError):
@@ -138,7 +139,7 @@ class _InMemoryFirestoreCollection:
         self._docs: dict[str, _InMemoryFirestoreDocument] = {}
         self._doc_counter = 0
 
-    def document(self, doc_id: str | None = None) -> _InMemoryFirestoreDocument:
+    def document(self, doc_id: Optional[str] = None) -> _InMemoryFirestoreDocument:
         if doc_id is None:
             self._doc_counter += 1
             doc_id = f"generated-id-{self._doc_counter}"
@@ -193,7 +194,7 @@ class _InMemoryFirestoreClient:
 
 
 # Singleton instance for MOCK_SERVICES_MODE to persist state across tool calls
-_mock_client_singleton: _InMemoryFirestoreClient | None = None
+_mock_client_singleton: Optional[_InMemoryFirestoreClient] = None
 
 
 def reset_mock_firestore() -> None:
@@ -234,7 +235,7 @@ def _truncate_log_json(
 
 def _perform_append(
     target_list: list,
-    items_to_append: Any | list[Any],
+    items_to_append: Union[Any, list[Any]],
     key_name: str,
     deduplicate: bool = False,
 ) -> None:
@@ -795,7 +796,7 @@ def get_campaigns_for_user(
 @log_exceptions
 def get_campaign_by_id(
     user_id: UserId, campaign_id: CampaignId
-) -> tuple[dict[str, Any] | None, list[dict[str, Any]] | None]:
+) -> tuple[Optional[dict[str, Any]], Optional[list[dict[str, Any]]]]:
     """
     Retrieves a single campaign and its full story using a robust, single query
     and in-memory sort to handle all data types.
@@ -934,7 +935,7 @@ def get_campaign_by_id(
 @log_exceptions
 def get_campaign_metadata(
     user_id: UserId, campaign_id: CampaignId
-) -> dict[str, Any] | None:
+) -> Optional[dict[str, Any]]:
     """Get campaign metadata without loading story entries (fast, lightweight)."""
     db = get_db()
     campaign_ref = (
@@ -988,8 +989,8 @@ def get_story_paginated(
     user_id: UserId,
     campaign_id: CampaignId,
     limit: int = 300,
-    before_timestamp: str | None = None,
-    before_id: str | None = None,
+    before_timestamp: Optional[str] = None,
+    before_id: Optional[str] = None,
     newer_count: int = 0,
     newer_gemini_count: int = 0,
 ) -> dict[str, Any]:
@@ -1141,10 +1142,10 @@ def get_story_paginated(
             try:
                 return datetime.datetime.fromisoformat(ts_val.replace("Z", "+00:00"))
             except Exception:
-                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+                return datetime.datetime.fromtimestamp(0, UTC)
         if hasattr(ts_val, "isoformat"):
             return ts_val
-        return datetime.datetime.fromtimestamp(0, datetime.UTC)
+        return datetime.datetime.fromtimestamp(0, UTC)
 
     entries.sort(key=lambda e: (_ts_key(e), e.get("id") or ""))
 
@@ -1197,8 +1198,8 @@ def add_story_entry(
     campaign_id: CampaignId,
     actor: str,
     text: str,
-    mode: str | None = None,
-    structured_fields: dict[str, Any] | None = None,
+    mode: Optional[str] = None,
+    structured_fields: Optional[dict[str, Any]] = None,
 ) -> None:
     """Add a story entry to Firestore with write-then-read pattern for data integrity.
 
@@ -1310,8 +1311,8 @@ def _write_story_entry_to_firestore(
     campaign_id: CampaignId,
     actor: str,
     text: str,
-    mode: str | None = None,
-    structured_fields: dict[str, Any] | None = None,
+    mode: Optional[str] = None,
+    structured_fields: Optional[dict[str, Any]] = None,
 ) -> str:  # noqa: PLR0915
     """Internal implementation to write story entry data directly to Firestore
 
@@ -1548,9 +1549,9 @@ def create_campaign(
     initial_prompt: str,
     opening_story: str,
     initial_game_state: dict[str, Any],
-    selected_prompts: list[str] | None = None,
+    selected_prompts: Optional[list[str]] = None,
     use_default_world: bool = False,
-    opening_story_structured_fields: dict[str, Any] | None = None,
+    opening_story_structured_fields: Optional[dict[str, Any]] = None,
 ) -> CampaignId:
     db = get_db()
     campaigns_collection = (
@@ -1593,7 +1594,7 @@ def create_campaign(
 @log_exceptions
 def get_campaign_game_state(
     user_id: UserId, campaign_id: CampaignId
-) -> GameState | None:
+) -> Optional[GameState]:
     """Fetches the current game state for a given campaign."""
     db = get_db()
     game_state_ref = (
@@ -1758,7 +1759,7 @@ def update_campaign(
 
 # --- USER SETTINGS FUNCTIONS ---
 @log_exceptions
-def get_user_settings(user_id: UserId) -> dict[str, Any] | None:
+def get_user_settings(user_id: UserId) -> Optional[dict[str, Any]]:
     """Get user settings from Firestore.
 
     Args:

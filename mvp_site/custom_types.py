@@ -7,7 +7,7 @@ protocol definitions for better type safety.
 """
 
 from datetime import datetime
-from typing import Any, Literal, Protocol, TypedDict
+from typing import Any, Literal, Optional, Protocol, TypedDict, Union
 
 
 # Firebase/Firestore data structures
@@ -32,9 +32,9 @@ class StateUpdate(TypedDict, total=False):
 
     type: str
     key: str
-    value: str | int | float | bool | None
-    description: str | None
-    category: str | None
+    value: Union[str, int, float, bool, None]
+    description: Optional[str]
+    category: Optional[str]
 
 
 class EntityData(TypedDict, total=False):
@@ -43,13 +43,13 @@ class EntityData(TypedDict, total=False):
     name: str
     type: str
     description: str
-    level: int | None
-    hp: int | None
-    max_hp: int | None
-    attributes: dict[str, str | int | float]
+    level: Optional[int]
+    hp: Optional[int]
+    max_hp: Optional[int]
+    attributes: dict[str, Union[str, int, float]]
     equipment: list[str]
     spells: list[str]
-    location: str | None
+    location: Optional[str]
 
 
 class MissionData(TypedDict):
@@ -60,26 +60,26 @@ class MissionData(TypedDict):
     description: str
     status: Literal["active", "completed", "failed", "inactive"]
     objectives: list[str]
-    rewards: list[str] | None
+    rewards: Optional[list[str]]
 
 
 class ApiResponse(TypedDict):
     """Standard API response structure."""
 
     success: bool
-    message: str | None
-    data: dict[str, Any] | None
-    error: str | None
+    message: Optional[str]
+    data: Optional[dict[str, Any]]
+    error: Optional[str]
 
 
 class LLMRequest(TypedDict):
     """Type definition for Gemini API requests."""
 
     prompt: str
-    max_tokens: int | None
-    temperature: float | None
+    max_tokens: Optional[int]
+    temperature: Optional[float]
     response_mode: Literal["json", "text"]
-    model: str | None
+    model: Optional[str]
 
 
 class LLMResponse(TypedDict):
@@ -88,7 +88,7 @@ class LLMResponse(TypedDict):
     text: str
     usage: dict[str, int]
     model: str
-    finish_reason: str | None
+    finish_reason: Optional[str]
 
 
 # Type aliases
@@ -96,10 +96,10 @@ UserId = str
 CampaignId = str
 EntityId = str
 SessionId = str
-Timestamp = datetime | float | int
+Timestamp = Union[datetime, float, int]
 
 # JSON-compatible types
-JsonValue = str | int | float | bool | None | dict[str, Any] | list[Any]
+JsonValue = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
 JsonDict = dict[str, JsonValue]
 
 
@@ -109,7 +109,7 @@ class DatabaseService(Protocol):
 
     def get_campaign(
         self, user_id: UserId, campaign_id: CampaignId
-    ) -> CampaignData | None:
+    ) -> Optional[CampaignData]:
         """Retrieve a campaign by ID."""
         ...
 
@@ -142,4 +142,4 @@ VALID_CAMPAIGN_STATES = Literal["active", "paused", "completed", "archived"]
 VALID_LOG_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Helper type for nullable fields
-Nullable = Any | None
+Nullable = Optional[Any]
