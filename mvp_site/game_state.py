@@ -12,7 +12,7 @@ The LLM should focus on narrative while code handles all mathematical operations
 
 import datetime
 import json
-from typing import Any, Literal, Optional, overload
+from typing import Any, Literal, Optional, overload, Union
 
 from mvp_site import constants, logging_util
 from mvp_site import dice as dice_module
@@ -109,7 +109,7 @@ PROFICIENCY_BY_LEVEL = {
 }
 
 
-def _coerce_int(value: Any, default: int | None = 0) -> int | None:
+def _coerce_int(value: Any, default: Optional[int] = 0) -> Optional[int]:
     """
     Safely coerce value to int.
 
@@ -136,7 +136,7 @@ def _coerce_int(value: Any, default: int | None = 0) -> int | None:
     return default
 
 
-def coerce_int(value: Any, default: int | None = 0) -> int | None:
+def coerce_int(value: Any, default: Optional[int] = 0) -> Optional[int]:
     """Public wrapper around :func:`_coerce_int` for safe int coercion."""
 
     return _coerce_int(value, default)
@@ -295,7 +295,7 @@ class GameState:
         # Normalize combat_state to handle LLM-generated malformed data
         self._normalize_combat_state()
         self.last_state_update_timestamp = kwargs.get(
-            "last_state_update_timestamp", datetime.datetime.now(datetime.UTC)
+            "last_state_update_timestamp", datetime.datetime.now(datetime.timezone.utc)
         )
 
         # Player turn counter (1-indexed, excludes GOD mode commands)
@@ -525,7 +525,7 @@ class GameState:
         return data
 
     @classmethod
-    def from_dict(cls, source: dict[str, Any] | None) -> Optional["GameState"]:
+    def from_dict(cls, source: Optional[dict[str, Any]]) -> Optional["GameState"]:
         """Creates a GameState object from a dictionary (e.g., from Firestore)."""
         if not source:
             return None
@@ -590,7 +590,7 @@ class GameState:
             return {"encounter_active": False}
         return self.encounter_state
 
-    def get_rewards_pending(self) -> dict | None:
+    def get_rewards_pending(self) -> Optional[dict]:
         """
         Get rewards_pending from game state.
 
@@ -674,7 +674,7 @@ class GameState:
     # =========================================================================
 
     def mark_arc_completed(
-        self, arc_name: str, phase: str | None = None, metadata: dict | None = None
+        self, arc_name: str, phase: Optional[str] = None, metadata: Optional[dict] = None
     ) -> None:
         """
         Mark a narrative arc as completed with timestamp.
@@ -693,7 +693,7 @@ class GameState:
 
         milestone_data = {
             "status": "completed",
-            "completed_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            "completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
 
         if phase is not None:
@@ -746,7 +746,7 @@ class GameState:
             "status": "in_progress",
             "phase": phase,
             "progress": progress_value,
-            "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         self.custom_campaign_state["arc_milestones"] = milestones
 
@@ -766,7 +766,7 @@ class GameState:
             return False
         return arc_data.get("status") == "completed"
 
-    def get_arc_phase(self, arc_name: str) -> str | None:
+    def get_arc_phase(self, arc_name: str) -> Optional[str]:
         """
         Get the current phase of a narrative arc.
 
@@ -1478,7 +1478,7 @@ class GameState:
         self,
         new_time: dict[str, Any],
         strict: bool = False,
-        previous_time: dict[str, Any] | None = None,
+        previous_time: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         """
         Validate that time progression is monotonic (never goes backwards).
@@ -1524,7 +1524,7 @@ class GameState:
         return result
 
     def _time_to_minutes(
-        self, time_dict: dict[str, Any], default_day: int | None = None
+        self, time_dict: dict[str, Any], default_day: Optional[int] = None
     ) -> int:
         """Convert a time dict to total minutes for comparison."""
         fallback_day = 0 if default_day is None else _coerce_int(default_day, 0)
@@ -1661,7 +1661,7 @@ class GameState:
         if directive not in existing_texts:
             directives.append({
                 "rule": directive,
-                "added": datetime.datetime.now(datetime.UTC).isoformat(),
+                "added": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             })
             logging_util.info(f"GOD MODE DIRECTIVE ADDED: {directive}")
 
@@ -1705,7 +1705,7 @@ class GameState:
 
     def detect_post_combat_issues(
         self,
-        previous_combat_state: dict[str, Any] | None,
+        previous_combat_state: Optional[dict[str, Any]],
         state_changes: dict[str, Any],
     ) -> list[str]:
         """
@@ -1780,7 +1780,7 @@ class GameState:
 @overload
 def validate_and_correct_state(
     state_dict: dict[str, Any],
-    previous_world_time: dict[str, Any] | None = None,
+    previous_world_time: Optional[dict[str, Any]] = None,
     return_corrections: Literal[False] = False,
 ) -> dict[str, Any]: ...
 
@@ -1788,16 +1788,16 @@ def validate_and_correct_state(
 @overload
 def validate_and_correct_state(
     state_dict: dict[str, Any],
-    previous_world_time: dict[str, Any] | None = None,
+    previous_world_time: Optional[dict[str, Any]] = None,
     return_corrections: Literal[True] = ...,
 ) -> tuple[dict[str, Any], list[str]]: ...
 
 
 def validate_and_correct_state(
     state_dict: dict[str, Any],
-    previous_world_time: dict[str, Any] | None = None,
+    previous_world_time: Optional[dict[str, Any]] = None,
     return_corrections: bool = False,
-) -> dict[str, Any] | tuple[dict[str, Any], list[str]]:
+) -> Union[dict[str, Any], tuple[dict[str, Any], list[str]]]:
     """
     Validate state dict and apply corrections before persistence.
 

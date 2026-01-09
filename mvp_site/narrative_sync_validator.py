@@ -7,7 +7,7 @@ REFACTORED: Now delegates to EntityValidator for all entity presence logic.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from mvp_site import logging_util
 from mvp_site.entity_validator import EntityValidator
@@ -28,10 +28,10 @@ class EntityContext:
 
     name: str
     presence_type: EntityPresenceType
-    location: str | None = None
-    last_action: str | None = None
-    emotional_state: str | None = None
-    physical_markers: list[str] | None = None  # e.g., "bandaged ear", "trembling"
+    location: Optional[str] = None
+    last_action: Optional[str] = None
+    emotional_state: Optional[str] = None
+    physical_markers: Optional[list[str]] = None  # e.g., "bandaged ear", "trembling"
 
     def __post_init__(self):
         if self.physical_markers is None:
@@ -42,13 +42,13 @@ class EntityContext:
 class ValidationResult:
     """Result of narrative validation"""
 
-    entities_found: list[str] | None = None
-    entities_missing: list[str] | None = None
+    entities_found: Optional[list[str]] = None
+    entities_missing: Optional[list[str]] = None
     all_entities_present: bool = False
     confidence: float = 0.0
-    warnings: list[str] | None = None
-    metadata: dict[str, Any] | None = None
-    validation_details: dict[str, Any] | None = None
+    warnings: Optional[list[str]] = None
+    metadata: Optional[dict[str, Any]] = None
+    validation_details: Optional[dict[str, Any]] = None
 
     def __post_init__(self):
         if self.entities_found is None:
@@ -107,8 +107,8 @@ class NarrativeSyncValidator:
         self,
         narrative_text: str,
         expected_entities: list[str],
-        location: str = None,
-        previous_states: dict[str, EntityContext] = None,
+        location: Optional[str] = None,
+        previous_states: Optional[dict[str, EntityContext]] = None,
         **kwargs,
     ) -> ValidationResult:
         """

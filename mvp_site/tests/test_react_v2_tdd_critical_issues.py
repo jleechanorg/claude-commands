@@ -262,9 +262,9 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
                     "✅ This test validates frontend behavior independent of backend state"
                 )
 
-        except requests.ConnectionError:
-            # Connection issues don't affect hardcoding validation
-            print("⚠️ Backend not running, but hardcoding validation still applies")
+        except requests.RequestException:
+            # Connection issues or timeouts don't affect hardcoding validation
+            print("⚠️ Backend not accessible, but hardcoding validation still applies")
             print("✅ Frontend should use user input regardless of backend state")
 
     def test_clean_campaign_card_display_green(self):

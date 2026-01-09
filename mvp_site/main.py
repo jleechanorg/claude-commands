@@ -702,7 +702,7 @@ def create_app() -> Flask:
                 ):
                     response_data["error_type"] = "clock_skew"
                     response_data["server_time_ms"] = int(
-                        datetime.datetime.now(datetime.UTC).timestamp() * 1000
+                        datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000
                     )
                     response_data["hint"] = (
                         "Clock synchronization issue detected. The client and server clocks may be out of sync."
@@ -1986,7 +1986,7 @@ def create_app() -> Flask:
         This endpoint is used by the frontend to detect differences between client
         and server clocks, enabling compensation for authentication timing issues.
         """
-        current_time = datetime.datetime.now(datetime.UTC)
+        current_time = datetime.datetime.now(datetime.timezone.utc)
 
         return jsonify(
             {
@@ -2010,7 +2010,7 @@ def create_app() -> Flask:
         health_info = {
             "status": "healthy",
             "service": "worldarchitect-ai",
-            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
 
         # Include Gunicorn worker configuration if available (from environment)

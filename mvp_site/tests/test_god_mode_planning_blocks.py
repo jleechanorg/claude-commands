@@ -36,7 +36,8 @@ class TestGodModePlanningBlocks(unittest.TestCase):
                     "god:return_story": {
                         "text": "Return to Story",
                         "description": "Continue with the current narrative without implementing new plot elements",
-                        "risk_level": "safe"
+                        "risk_level": "safe",
+                        "switch_to_story_mode": "true"
                     },
                     "god:custom_direction": {
                         "text": "Custom Direction",
@@ -79,6 +80,9 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         assert "god:return_story" in choices, (
             "Must include 'god:return_story' as default choice"
         )
+        assert (
+            choices["god:return_story"].get("switch_to_story_mode") is True
+        ), "god:return_story should explicitly switch to story/character mode"
 
     def test_god_mode_choices_all_have_prefix(self):
         """Test that all God mode choices use the god: prefix."""

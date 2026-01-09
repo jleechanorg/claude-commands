@@ -20,6 +20,7 @@ from mvp_site.narrative_response_schema import (
     VALID_QUALITY_TIERS,
     NarrativeResponse,
     _coerce_bool,
+    _coerce_bool_optional,
     _derive_quality_tier,
     _freeze_duration_hours_from_dc,
     parse_structured_response,
@@ -410,39 +411,39 @@ class TestCoerceBool(unittest.TestCase):
 
     def test_bool_passthrough(self):
         """Boolean values should pass through unchanged."""
-        assert _coerce_bool(True) is True
-        assert _coerce_bool(False) is False
+        assert _coerce_bool_optional(True) is True
+        assert _coerce_bool_optional(False) is False
 
     def test_int_coercion(self):
         """Integers should coerce to bool (0=False, nonzero=True)."""
-        assert _coerce_bool(0) is False
-        assert _coerce_bool(1) is True
-        assert _coerce_bool(42) is True
+        assert _coerce_bool_optional(0) is False
+        assert _coerce_bool_optional(1) is True
+        assert _coerce_bool_optional(42) is True
 
     def test_string_true_variants(self):
         """String 'true', 'yes', '1' should coerce to True."""
-        assert _coerce_bool("true") is True
-        assert _coerce_bool("True") is True
-        assert _coerce_bool("TRUE") is True
-        assert _coerce_bool("yes") is True
-        assert _coerce_bool("1") is True
+        assert _coerce_bool_optional("true") is True
+        assert _coerce_bool_optional("True") is True
+        assert _coerce_bool_optional("TRUE") is True
+        assert _coerce_bool_optional("yes") is True
+        assert _coerce_bool_optional("1") is True
 
     def test_string_false_variants(self):
         """String 'false', 'no', '0' should coerce to False."""
-        assert _coerce_bool("false") is False
-        assert _coerce_bool("False") is False
-        assert _coerce_bool("no") is False
-        assert _coerce_bool("0") is False
+        assert _coerce_bool_optional("false") is False
+        assert _coerce_bool_optional("False") is False
+        assert _coerce_bool_optional("no") is False
+        assert _coerce_bool_optional("0") is False
 
     def test_unrecognized_string_returns_none(self):
         """Unrecognized strings should return None."""
-        assert _coerce_bool("maybe") is None
-        assert _coerce_bool("unknown") is None
-        assert _coerce_bool("") is None
+        assert _coerce_bool_optional("maybe") is None
+        assert _coerce_bool_optional("unknown") is None
+        assert _coerce_bool_optional("") is None
 
     def test_none_input_returns_none(self):
         """None input should return None."""
-        assert _coerce_bool(None) is None
+        assert _coerce_bool_optional(None) is None
 
 
 class TestPlanQualityValidation(unittest.TestCase):

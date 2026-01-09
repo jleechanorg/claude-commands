@@ -20,6 +20,57 @@ class TestPlanningBlockAnalysis(unittest.TestCase):
         """Set up test fixtures"""
         self.mock_logger = Mock()
 
+    def test_switch_to_story_mode_boolean_handling(self):
+        """switch_to_story_mode should coerce string/number values consistently."""
+        response_text = json.dumps(
+            {
+                "narrative": "Testing switch_to_story_mode coercion...",
+                "planning_block": {
+                    "thinking": "Ensuring boolean coercion works",
+                    "choices": {
+                        "choice_true_str": {
+                            "text": "True String",
+                            "description": "Should coerce to True",
+                            "risk_level": "low",
+                            "switch_to_story_mode": "true",
+                        },
+                        "choice_false_str": {
+                            "text": "False String",
+                            "description": "Should coerce to False",
+                            "risk_level": "low",
+                            "switch_to_story_mode": "false",
+                        },
+                        "choice_numeric": {
+                            "text": "Numeric Zero",
+                            "description": "Should be False",
+                            "risk_level": "low",
+                            "switch_to_story_mode": 0,
+                        },
+                        "choice_bool": {
+                            "text": "Boolean True",
+                            "description": "Should remain True",
+                            "risk_level": "low",
+                            "switch_to_story_mode": True,
+                        },
+                        "choice_missing": {
+                            "text": "No Flag",
+                            "description": "Missing flag should be absent",
+                            "risk_level": "low",
+                        },
+                    },
+                },
+            }
+        )
+
+        _, response = parse_structured_response(response_text)
+
+        choices = response.planning_block.get("choices", {})
+        assert choices["choice_true_str"]["switch_to_story_mode"] is True
+        assert choices["choice_false_str"]["switch_to_story_mode"] is False
+        assert choices["choice_numeric"]["switch_to_story_mode"] is False
+        assert choices["choice_bool"]["switch_to_story_mode"] is True
+        assert "switch_to_story_mode" not in choices["choice_missing"]
+
     def test_planning_block_with_analysis_pros_cons(self):
         """Test planning block with pros/cons analysis structure"""
         response_text = json.dumps(
