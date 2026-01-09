@@ -47,7 +47,12 @@ def _find_evidence_standards() -> str:
 
 
 def _run_git_command(args: List[str], timeout: int = 5) -> Optional[str]:
-    """Run a git command and return stripped stdout or None on failure."""
+    """Run a git command and return stripped stdout or None on failure.
+
+    Returns:
+        str: The stripped stdout (can be empty string if command succeeded but no output).
+        None: If the command failed (CalledProcessError, FileNotFoundError, TimeoutExpired).
+    """
     try:
         result = subprocess.run(
             ["git", *args],
@@ -62,7 +67,7 @@ def _run_git_command(args: List[str], timeout: int = 5) -> Optional[str]:
         subprocess.TimeoutExpired,
     ):
         return None
-    return result.stdout.strip() or None
+    return result.stdout.strip()
 
 
 def _run_git_commands_parallel(
@@ -83,12 +88,17 @@ def _run_git_commands_parallel(
 
 def _resolve_repo_info(
     skip_git: bool = False,
-    pr_mode: bool = False,
 ) -> Tuple[str, str, Optional[Dict[str, Optional[str]]]]:
     """Return (repo_name, branch_name, git_provenance) with sensible fallbacks.
 
     Git provenance follows evidence-standards.md requirements.
     If skip_git=True, returns simplified info without running git commands.
+
+    Edge Cases:
+    - origin/main missing: base_ref is None, changed_files is empty (warning printed).
+    - HEAD == origin/main: changed_files is empty (no changes).
+    - Detached HEAD: branch="detached".
+    - Shallow clones: fallback mechanics apply, might result in empty changed_files.
     """
     if skip_git:
         # Fast path: no git commands, use simple defaults
@@ -116,23 +126,36 @@ def _resolve_repo_info(
     if not branch:
         branch = "detached"
 
-    # Determine a base ref for changed files with fallbacks
-    # In PR mode, always use origin/main to capture full PR diff
-    if pr_mode:
-        base_ref = results.get("origin_main")
-    else:
-        base_ref = results.get("upstream") or results.get("origin_main")
+    # Determine a base ref for changed files
+    # Prefer origin/main to capture full branch diff, fall back to upstream for nonstandard repos
+    # This ensures changed_files shows all changes relative to main branch
+    base_ref = results.get("origin_main") or results.get("upstream")
     changed_files_output: Optional[str] = None
-    if base_ref and base_ref != results.get("head_commit"):
+
+    if not base_ref:
+        print("⚠️  No base ref found (origin/main or upstream) - changed_files will be empty", file=sys.stderr)
+    elif base_ref == results.get("head_commit"):
+        # HEAD is at base ref, no changes to report
+        changed_files_output = ""
+    else:
         # Try three-dot first (commits unique to HEAD)
         changed_files_output = _run_git_command(
             ["diff", "--name-only", f"{base_ref}...HEAD"], timeout=10
         )
-        # If empty, fall back to two-dot (all differences)
-        if not changed_files_output:
-            changed_files_output = _run_git_command(
+        # If command failed (None) or returned empty string (no changes found by 3-dot),
+        # try two-dot (all differences) just in case, though 3-dot is standard for PRs.
+        # Note: _run_git_command returns None for failures, empty string for "no changes"
+        if changed_files_output is None or changed_files_output == "":
+            two_dot_output = _run_git_command(
                 ["diff", "--name-only", f"{base_ref}..HEAD"], timeout=10
             )
+            # Use two-dot output if three-dot failed or was empty, but only if two-dot succeeded
+            if two_dot_output is not None:
+                changed_files_output = two_dot_output
+
+        # Warn if both git diff attempts failed (result is still None)
+        if changed_files_output is None:
+            print(f"⚠️  Git diff commands failed for base_ref={base_ref} - changed_files will be empty", file=sys.stderr)
 
     # Build git provenance per evidence-standards.md
     git_provenance = {
@@ -465,11 +488,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip git commands for faster execution. Uses /tmp/evidence/local/<work>/ path.",
     )
     parser.add_argument(
-        "--pr-mode",
-        action="store_true",
-        help="Use origin/main as base for changed files (captures full PR diff, not just last commit).",
-    )
-    parser.add_argument(
         "--clean-checksums",
         action="store_true",
         help="Remove existing .sha256 files from artifacts before packaging to prevent checksum layering.",
@@ -491,9 +509,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # Run git resolution (skip for speed if --skip-git, use pr_mode for full PR diff)
+    # Run git resolution (skip for speed if --skip-git)
     repo_name, branch, git_provenance = _resolve_repo_info(
-        skip_git=args.skip_git, pr_mode=args.pr_mode
+        skip_git=args.skip_git
     )
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
