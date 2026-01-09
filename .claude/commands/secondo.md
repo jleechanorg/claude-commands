@@ -8,7 +8,7 @@ description: Get multi-model second opinion (alias for /second_opinion)
 
 ❌ **NEVER** use `mcp__gemini__*`, `mcp__perplexity__*`, or `mcp__openai__*` tools directly
 ✅ **ALWAYS** route through `AI_UNIVERSE_MCP_ENDPOINT` (default: `https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp`)
-   - Override `AI_UNIVERSE_MCP_ENDPOINT` for staging/production so docs stay environment-agnostic
+  - Override `AI_UNIVERSE_MCP_ENDPOINT` for staging/production so docs stay environment-agnostic
 
 ---
 

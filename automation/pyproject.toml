@@ -18,7 +18,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -32,12 +31,11 @@ keywords = [
     "pull-request",
     "monitoring",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "requests>=2.25.0",
     "jleechanorg-orchestration>=0.1.18",
     "playwright>=1.40.0",
-    "playwright-stealth>=1.0.0",
     "aiohttp>=3.8.0",
 ]
 
@@ -78,12 +76,12 @@ jleechanorg_pr_automation = [
 [tool.black]
 line-length = 120
 target-version = [
-    "py39",
+    "py310",
 ]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py310"
 select = [
     "E",
     "F",

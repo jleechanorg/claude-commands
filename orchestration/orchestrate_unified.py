@@ -17,7 +17,6 @@ if parent_dir not in sys.path:
 import argparse
 import glob
 import json
-import logging
 import re
 import shutil
 import subprocess
@@ -28,6 +27,17 @@ from datetime import datetime, timedelta, timezone
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
+
+
+try:
+    import logging_util
+
+    LOGGER = logging_util.getLogger(__name__)
+except ImportError:  # pragma: no cover - fallback for environments without logging_util
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+    LOGGER = logging.getLogger(__name__)
 
 
 class UnifiedOrchestration:
@@ -324,8 +334,7 @@ class UnifiedOrchestration:
         # ENHANCED LOGGING: Track orchestration session
         start_time = time.time()
         session_id = int(start_time)
-        logger = logging.getLogger(__name__)
-        logger.info(
+        LOGGER.info(
             "orchestration_session_start",
             extra={
                 "session_id": session_id,
@@ -371,7 +380,7 @@ class UnifiedOrchestration:
                 print("  └─ 🚫 New PR Creation: BLOCKED")
             if display_options.get("no_new_branch"):
                 print("  └─ 🚫 New Branch Creation: BLOCKED")
-            logger.info(
+            LOGGER.info(
                 "orchestration_options",
                 extra={
                     "session_id": session_id,
@@ -408,7 +417,7 @@ class UnifiedOrchestration:
                         with open(resolved_context_path, "r", encoding="utf-8") as f:
                             context_content = f.read()
                         print(f"  └─ Context Loaded: {len(context_content)} characters")
-                except Exception as e:
+                except (OSError, UnicodeDecodeError) as e:
                     print(f"  ⚠️ Failed to load context file: {e}")
 
         print("=" * 60)
@@ -698,7 +707,10 @@ The orchestration system will:
         "--agent-cli",
         type=str,
         default=None,
-        help="Agent CLI to use: claude, codex, gemini, cursor. Supports comma-separated chain for fallback (e.g., 'gemini,claude'). Default: gemini",
+        help=(
+            "Agent CLI override to use: claude, codex, gemini, cursor. Supports comma-separated chain "
+            "for fallback (e.g., 'gemini,claude'). Default behavior keeps agent-specific CLI selections."
+        ),
     )
 
     args = parser.parse_args()
