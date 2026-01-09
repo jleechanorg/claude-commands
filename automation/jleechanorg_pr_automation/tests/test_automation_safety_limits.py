@@ -240,17 +240,19 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.assertEqual(successful_attempts, 10)
 
     # Matrix 7: Configuration Management
-    def test_limits_configurable_via_environment(self):
-        """RED: Safety limits should be configurable via environment variables"""
-        with patch.dict(os.environ, {
-            "AUTOMATION_PR_LIMIT": "3",
-            "AUTOMATION_GLOBAL_LIMIT": "25"
-        }):
-            manager = AutomationSafetyManager(self.test_dir)
+    def test_limits_configurable_via_constructor_overrides(self):
+        """Safety limits should be configurable via explicit parameters (no env vars)."""
+        manager = AutomationSafetyManager(
+            self.test_dir,
+            limits={
+                "pr_limit": 3,
+                "global_limit": 25,
+            },
+        )
 
-            # Should use custom limits
-            self.assertEqual(manager.pr_limit, 3)
-            self.assertEqual(manager.global_limit, 25)
+        # Should use custom limits
+        self.assertEqual(manager.pr_limit, 3)
+        self.assertEqual(manager.global_limit, 25)
 
     def test_default_limits_when_no_config(self):
         """RED: Should use default limits when no configuration provided"""

@@ -17,7 +17,7 @@ import tempfile
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 
 class SafeJSONManager:
@@ -182,13 +182,49 @@ def validate_email_config(config: Dict[str, str]) -> bool:
 
 
 def get_automation_limits() -> Dict[str, int]:
-    """Get automation safety limits from environment or defaults"""
-    return {
-        "pr_limit": int(os.getenv("AUTOMATION_PR_LIMIT", "10")),
-        "global_limit": int(os.getenv("AUTOMATION_GLOBAL_LIMIT", "50")),
-        "approval_hours": int(os.getenv("AUTOMATION_APPROVAL_HOURS", "24")),
-        "subprocess_timeout": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300"))
+    """Get automation safety limits from defaults with optional overrides.
+
+    Supports workflow-specific limits:
+    - pr_automation: Default PR monitoring workflow (posts codex comments)
+    - fix_comment: Fix-comment workflow (addresses review comments)
+    - codex_update: Codex update workflow (browser automation)
+    - fixpr: FixPR workflow (resolves conflicts/failing checks)
+    """
+    return get_automation_limits_with_overrides()
+
+
+def coerce_positive_int(value: Any, *, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def get_automation_limits_with_overrides(overrides: Optional[Mapping[str, Any]] = None) -> Dict[str, int]:
+    """Internal helper to keep defaults centralized and overrides explicit."""
+    defaults: Dict[str, int] = {
+        # Attempt/run limits
+        "pr_limit": 10,
+        "global_limit": 50,
+        "approval_hours": 24,
+        "subprocess_timeout": 300,
+        # Workflow-specific *comment* limits (per PR)
+        "pr_automation_limit": 10,
+        "fix_comment_limit": 10,
+        "codex_update_limit": 10,
+        "fixpr_limit": 10,
     }
+
+    if not overrides:
+        return dict(defaults)
+
+    limits = dict(defaults)
+    for key in list(defaults.keys()):
+        if key in overrides:
+            limits[key] = coerce_positive_int(overrides.get(key), default=defaults[key])
+
+    return limits
 
 
 def ensure_directory(file_path: str) -> None:

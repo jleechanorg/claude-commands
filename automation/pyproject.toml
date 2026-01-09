@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-pr-automation"
-version = "0.2.34"
+version = "0.2.39"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },
@@ -161,7 +161,7 @@ python_functions = [
     "test_*",
 ]
 addopts = [
-    "--cov=.",
+    "--cov=jleechanorg_pr_automation",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-fail-under=20",

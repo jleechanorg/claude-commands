@@ -4,6 +4,8 @@ A2A-Enhanced Task Dispatcher for Multi-Agent Orchestration
 Handles dynamic agent creation with Agent-to-Agent communication support
 """
 
+from __future__ import annotations
+
 import glob
 import json
 import os

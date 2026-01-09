@@ -33,6 +33,10 @@ CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
 CODEX_COMMIT_MARKER_SUFFIX = "-->"
 FIX_COMMENT_MARKER_PREFIX = "<!-- fix-comment-automation-commit:"
 FIX_COMMENT_MARKER_SUFFIX = "-->"
+FIX_COMMENT_RUN_MARKER_PREFIX = "<!-- fix-comment-automation-run:"
+FIX_COMMENT_RUN_MARKER_SUFFIX = "-->"
+FIXPR_MARKER_PREFIX = "<!-- fixpr-automation-run:"
+FIXPR_MARKER_SUFFIX = "-->"
 
 
 def normalise_handle(assistant_handle: str | None) -> str:

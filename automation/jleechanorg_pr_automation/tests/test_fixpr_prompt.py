@@ -43,6 +43,11 @@ class TestFixprPrompt(unittest.TestCase):
             "[fixpr codex-automation-commit] fix PR #123",
             dispatcher.task_description,
         )
+        # Verify the prompt instructs fetching ALL feedback sources (inline review comments included).
+        self.assertIn("/pulls/{pr}/comments", dispatcher.task_description)
+        self.assertIn("/pulls/{pr}/reviews", dispatcher.task_description)
+        self.assertIn("/issues/{pr}/comments", dispatcher.task_description)
+        self.assertIn("--paginate", dispatcher.task_description)
 
 
 if __name__ == "__main__":

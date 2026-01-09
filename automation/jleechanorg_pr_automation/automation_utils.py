@@ -17,11 +17,12 @@ import os
 import smtplib
 import subprocess
 import tempfile
+import time
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 try:
     import keyring
@@ -190,7 +191,11 @@ This is an automated notification from the WorldArchitect.AI automation system."
     @classmethod
     def execute_subprocess_with_timeout(cls, command: list, timeout: int = None,
                                       cwd: str = None, capture_output: bool = True,
-                                      check: bool = True) -> subprocess.CompletedProcess:
+                                      check: bool = True,
+                                      retry_attempts: int = 1,
+                                      retry_backoff_seconds: float = 1.0,
+                                      retry_backoff_multiplier: float = 2.0,
+                                      retry_on_stderr_substrings: Optional[Sequence[str]] = None) -> subprocess.CompletedProcess:
         """Execute subprocess with standardized timeout and error handling
 
         Args:
@@ -199,6 +204,10 @@ This is an automated notification from the WorldArchitect.AI automation system."
             cwd: Working directory
             capture_output: Whether to capture stdout/stderr
             check: Whether to raise CalledProcessError on non-zero exit (default True)
+            retry_attempts: Total attempts for retryable failures (default 1 = no retries)
+            retry_backoff_seconds: Initial backoff between retries
+            retry_backoff_multiplier: Backoff multiplier per attempt
+            retry_on_stderr_substrings: If provided, only retry when stderr/stdout contains one of these substrings
 
         Returns:
             CompletedProcess instance
@@ -210,18 +219,39 @@ This is an automated notification from the WorldArchitect.AI automation system."
         if timeout is None:
             timeout = cls.get_config_value("MAX_SUBPROCESS_TIMEOUT")
 
-        # Ensure shell=False for security, check parameter controls error handling
-        result = subprocess.run(
-            command,
-            timeout=timeout,
-            cwd=cwd,
-            capture_output=capture_output,
-            text=True,
-            shell=False,
-            check=check
-        )
+        try:
+            retry_attempts_int = int(retry_attempts)
+        except (TypeError, ValueError):
+            retry_attempts_int = 1
+        if retry_attempts_int < 1:
+            retry_attempts_int = 1
 
-        return result
+        attempt = 1
+        while True:
+            try:
+                # Ensure shell=False for security, check parameter controls error handling
+                return subprocess.run(
+                    command,
+                    timeout=timeout,
+                    cwd=cwd,
+                    capture_output=capture_output,
+                    text=True,
+                    shell=False,
+                    check=check,
+                )
+            except subprocess.CalledProcessError as exc:
+                if attempt >= retry_attempts_int:
+                    raise
+
+                if retry_on_stderr_substrings:
+                    stderr = (exc.stderr or "") + "\n" + (exc.stdout or "")
+                    if not any(token in stderr for token in retry_on_stderr_substrings):
+                        raise
+
+                delay = float(retry_backoff_seconds) * (float(retry_backoff_multiplier) ** (attempt - 1))
+                delay = max(0.0, min(delay, 60.0))
+                time.sleep(delay)
+                attempt += 1
 
     @classmethod
     def safe_read_json(cls, file_path: Path) -> dict:

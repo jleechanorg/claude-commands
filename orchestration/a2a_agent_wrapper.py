@@ -6,6 +6,8 @@ Enhances existing agents with A2A capabilities while preserving
 all existing tmux-based orchestration functionality.
 """
 
+from __future__ import annotations
+
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys

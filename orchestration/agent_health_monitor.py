@@ -4,6 +4,8 @@ Agent Health Monitor for Multi-Agent Orchestration System
 Monitors agent health, handles failures, and provides auto-recovery
 """
 
+from __future__ import annotations
+
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys

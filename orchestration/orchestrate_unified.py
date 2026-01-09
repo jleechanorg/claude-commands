@@ -6,6 +6,9 @@ Pure file-based A2A protocol without Redis dependencies
 
 # ruff: noqa: E402
 
+# Ensure typing annotations don't evaluate at runtime on Python 3.9.
+from __future__ import annotations
+
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys

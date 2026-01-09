@@ -7,6 +7,15 @@ __pycache__/
 
 # Security - GitHub token
 .token
+automation/crontab.backup
+
+# Local review artifacts
+analysis_report.txt
+inline_comments.json
+issue_comments.json
+reviews.json
+comments.json
+status_checks.json
 
 # Ignore Python virtual environments
 venv

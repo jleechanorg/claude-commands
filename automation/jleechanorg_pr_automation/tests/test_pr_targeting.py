@@ -143,7 +143,9 @@ class TestPRTargeting(unittest.TestCase):
         )
 
         self.assertNotIn(monitor.FIX_COMMENT_MARKER_PREFIX, comment_body)
-        self.assertNotIn(monitor.FIX_COMMENT_MARKER_SUFFIX, comment_body)
+        # Queued notices should use the dedicated run marker (not the completion commit marker).
+        self.assertIn(monitor.FIX_COMMENT_RUN_MARKER_PREFIX, comment_body)
+        self.assertIn(head_sha, comment_body)
 
     def test_fix_comment_review_body_includes_marker(self):
         """Review requests should include the fix-comment commit marker."""
@@ -191,7 +193,7 @@ class TestPRTargeting(unittest.TestCase):
         # - Inline review comments use: /pulls/{pr_number}/comments/{comment_id}/replies
         # - Issue comments don't support threading (top-level comments only)
         self.assertIn("pulls/42/comments", prompt)  # Updated to match actual PR number in prompt
-        self.assertIn("do not support threading", prompt)  # Issue comments clarification
+        self.assertIn("reply individually to each comment", prompt)  # Issue comments clarification
 
     def test_fix_comment_marker_ignores_queued_comment(self):
         """Queued notices with markers should not satisfy the fix-comment completion check."""

@@ -15,6 +15,10 @@ recursive-include . *.py
 
 # Exclude test files from distribution
 recursive-exclude tests *
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude *.egg-info *
+recursive-exclude .pytest_cache *
 recursive-exclude . __pycache__
 recursive-exclude . *.pyc
 recursive-exclude . *.pyo

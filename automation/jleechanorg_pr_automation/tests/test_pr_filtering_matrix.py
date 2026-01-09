@@ -496,7 +496,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
         )
 
         self.assertIn("gh pr comment", prompt_body)
-        self.assertIn("100%", prompt_body)
+        self.assertIn("reply to **100%** of comments INDIVIDUALLY", prompt_body)
 
     def test_fix_comment_mode_dispatches_agent(self):
         """Fix-comment processing should dispatch orchestration agent and post comments."""

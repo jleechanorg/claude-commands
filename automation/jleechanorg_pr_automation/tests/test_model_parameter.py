@@ -7,6 +7,7 @@ Validates that model parameter is correctly passed through the automation pipeli
 
 import argparse
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
@@ -152,6 +153,77 @@ class TestModelParameter(unittest.TestCase):
                         except Exception:
                             # Other exceptions are okay
                             pass
+
+    def test_fixpr_run_monitoring_cycle_threads_model(self):
+        """FixPR mode should pass --model through to _process_pr_fixpr."""
+        monitor = JleechanorgPRMonitor()
+        pr = {
+            "repository": "test/repo",
+            "repositoryFullName": "test/repo",
+            "number": 123,
+            "title": "Test PR",
+            "headRefName": "feature/test",
+        }
+
+        with patch.object(monitor, "discover_open_prs", return_value=[pr]), \
+             patch.object(monitor, "is_pr_actionable", return_value=True), \
+             patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
+             patch.object(monitor, "_process_pr_fixpr", return_value="skipped") as mock_fixpr, \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=True), \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout",
+                   return_value=SimpleNamespace(returncode=0, stdout='{\"mergeable\":\"MERGEABLE\"}')):
+
+            with patch.object(monitor, "safety_manager") as mock_safety:
+                mock_safety.can_start_global_run.return_value = True
+                mock_safety.try_process_pr.return_value = True
+                mock_safety.get_global_runs.return_value = 1
+                mock_safety.global_limit = 50
+                mock_safety.fixpr_limit = 10
+                mock_safety.pr_limit = 10
+                mock_safety.pr_automation_limit = 10
+                mock_safety.fix_comment_limit = 10
+
+                monitor.run_monitoring_cycle(
+                    max_prs=1,
+                    cutoff_hours=24,
+                    fixpr=True,
+                    agent_cli="claude",
+                    model="sonnet",
+                )
+
+            self.assertTrue(mock_fixpr.called)
+            self.assertEqual(mock_fixpr.call_args[1].get("model"), "sonnet")
+
+    def test_fixpr_process_pr_threads_model_to_dispatch(self):
+        """_process_pr_fixpr should forward model through to dispatch_agent_for_pr."""
+        monitor = JleechanorgPRMonitor()
+        pr_data = {
+            "number": 123,
+            "title": "Test PR",
+            "headRefName": "feature/test",
+            "url": "https://github.com/test/repo/pull/123",
+            "headRefOid": "abc123",
+        }
+
+        with patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
+             patch.object(monitor, "_should_skip_pr", return_value=False), \
+             patch.object(monitor, "_post_fixpr_queued", return_value=True), \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"), \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"), \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"), \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch:
+
+            monitor.safety_manager.fixpr_limit = 10
+            result = monitor._process_pr_fixpr(
+                repository="test/repo",
+                pr_number=123,
+                pr_data=pr_data,
+                agent_cli="claude",
+                model="sonnet",
+            )
+
+        self.assertEqual(result, "posted")
+        self.assertEqual(mock_dispatch.call_args[1].get("model"), "sonnet")
 
 
 if __name__ == '__main__':
