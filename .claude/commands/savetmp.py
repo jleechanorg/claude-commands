@@ -140,8 +140,8 @@ def _resolve_repo_info(
 
     if not base_ref:
         print("⚠️  No base ref found (origin/main or upstream) - changed_files will be empty", file=sys.stderr)
-    elif base_ref_sha == results.get("head_commit"):
-        # HEAD is at base ref, no changes to report
+    elif base_ref_sha and results.get("head_commit") and base_ref_sha == results.get("head_commit"):
+        # HEAD is at base ref, no changes to report (only if SHA resolution succeeded)
         changed_files_output = ""
     else:
         # Try three-dot first (commits unique to HEAD)
@@ -289,7 +289,7 @@ def _looks_like_absolute_path(value: str) -> bool:
         return False
     if value.startswith("~"):
         return True
-    if re.match(r"^[A-Za-z]:\\\\", value):
+    if re.match(r"^[A-Za-z]:\\", value):
         return True
     return Path(value).is_absolute()
 

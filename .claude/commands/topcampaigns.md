@@ -4,7 +4,7 @@ Query Firebase for the longest (most entries) campaigns within a date range.
 
 ## Usage
 
-```
+```bash
 /topcampaigns [options]
 ```
 

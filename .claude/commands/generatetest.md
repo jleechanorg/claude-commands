@@ -180,7 +180,11 @@ def save_evidence(
 """
 
     # Evidence: derive from actual results
-    passed = sum(1 for r in results if getattr(r, 'passed', False) or r.get('passed') if isinstance(r, dict) else False)
+    passed = sum(
+        1
+        for r in results
+        if getattr(r, 'passed', False) or (r.get('passed') if isinstance(r, dict) else False)
+    )
     total = len(results)
     evidence = f"""# Evidence Summary
 
