@@ -40,7 +40,7 @@ class AutomationUtils:
         "LOG_DIR": "~/Library/Logs/project-automation",
         "DATA_DIR": "~/Library/Application Support/project-automation",
         "MAX_SUBPROCESS_TIMEOUT": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300")),  # 5 minutes (configurable)
-        "EMAIL_SUBJECT_PREFIX": "[Project Automation]"
+        "EMAIL_SUBJECT_PREFIX": f"[{os.getenv('PROJECT_NAME', 'Project')} Automation]"
     }
 
     @classmethod

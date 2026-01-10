@@ -38,39 +38,16 @@ from playwright.async_api import (
     async_playwright,
 )
 
+# Add parent directory to path to import utils
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+try:
+    from jleechanorg_pr_automation.utils import setup_logging
+except ImportError:
+    # Fallback if not installed as package
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from utils import setup_logging
 
-# Set up logging to /tmp
-def setup_logging():
-    """Set up logging to /tmp directory."""
-    log_dir = Path("/tmp/automate_codex_update")
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    log_file = log_dir / "codex_automation.log"
-
-    # Create logger
-    logger = logging.getLogger("codex_automation")
-    logger.setLevel(logging.INFO)
-
-    # File handler
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(logging.INFO)
-
-    # Console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    # Formatter
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    return logger
-
-
-logger = setup_logging()
+logger = setup_logging("codex_automation", log_file="/tmp/automate_codex_update/codex_automation.log")
 
 # Storage state path for persisting authentication.
 # This file contains sensitive session data; enforce restrictive permissions.

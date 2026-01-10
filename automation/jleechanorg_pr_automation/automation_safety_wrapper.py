@@ -15,32 +15,19 @@ import sys
 from pathlib import Path
 
 from .automation_safety_manager import AutomationSafetyManager
-
-
-def setup_logging() -> logging.Logger:
-    """Set up logging for automation wrapper"""
-    log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_dir / "automation_safety.log"),
-            logging.StreamHandler()
-        ]
-    )
-    return logging.getLogger(__name__)
+from .automation_utils import AutomationUtils
+from .utils import setup_logging
 
 
 def main() -> int:
     """Main wrapper function with safety checks"""
-    logger = setup_logging()
+    # Use centralized logging with path from AutomationUtils
+    log_file = AutomationUtils.get_data_directory("logs") / "automation_safety.log"
+    logger = setup_logging(__name__, log_file=str(log_file))
     logger.info("🛡️  Starting automation safety wrapper")
 
     # Data directory for safety tracking
-    data_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
-    data_dir.mkdir(parents=True, exist_ok=True)
+    data_dir = AutomationUtils.get_data_directory()
 
     # Initialize safety manager
     manager = AutomationSafetyManager(str(data_dir))

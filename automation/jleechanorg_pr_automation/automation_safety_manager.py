@@ -27,15 +27,6 @@ REAL_DATETIME = datetime
 # Number of characters in the ISO 8601 date prefix ("YYYY-MM-DD").
 ISO_DATE_PREFIX_LENGTH = len("YYYY-MM-DD")
 
-# Optional keyring import for email functionality
-_keyring_spec = importlib.util.find_spec("keyring")
-if _keyring_spec:
-    import keyring  # type: ignore
-    HAS_KEYRING = True
-else:
-    keyring = None  # type: ignore
-    HAS_KEYRING = False
-
 # Import shared utilities
 from .utils import (
     get_automation_limits_with_overrides,
@@ -43,6 +34,7 @@ from .utils import (
     json_manager,
     setup_logging,
 )
+from .automation_utils import AutomationUtils
 
 
 class AutomationSafetyManager:
@@ -582,8 +574,8 @@ class AutomationSafetyManager:
     def _send_limit_notification(self, subject: str, message: str):
         """Send email notification for limit reached"""
         try:
-            # Try to use the more complete email notification method
-            self._send_notification(subject, message)
+            # Use centralized email notification from AutomationUtils
+            AutomationUtils.send_email_notification(subject, message)
         except Exception as e:
             # If email fails, just log it - don't break automation
             self.logger.error("Failed to send email notification: %s", e)
@@ -602,90 +594,6 @@ class AutomationSafetyManager:
             }
 
             self._write_json_file(self.approval_file, data)
-
-    def _get_smtp_credentials(self):
-        """Get SMTP credentials securely from keyring or environment fallback"""
-        username = None
-        password = None
-
-        if HAS_KEYRING:
-            try:
-                service_name = os.environ.get("AUTOMATION_KEYRING_SERVICE", "project-automation")
-                username = keyring.get_password(service_name, "smtp_username")
-                password = keyring.get_password(service_name, "smtp_password")
-            except Exception:
-                self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
-                username = None
-                password = None
-
-        if username is None:
-            username = os.environ.get("SMTP_USERNAME") or os.environ.get("EMAIL_USER")
-        if password is None:
-            password = os.environ.get("SMTP_PASSWORD") or os.environ.get("EMAIL_PASS")
-
-        return username, password
-
-    def _send_notification(self, subject: str, message: str) -> bool:
-        """Send email notification with secure credential handling"""
-        try:
-            # Load email configuration
-            smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-            smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-            username, password = self._get_smtp_credentials()
-            to_email = os.environ.get("EMAIL_TO")
-            from_email = os.environ.get("EMAIL_FROM") or username
-
-            if not (username and password and to_email and from_email):
-                self.logger.info("Email configuration incomplete - skipping notification")
-                return False
-
-            msg = MIMEMultipart()
-            msg["From"] = from_email
-            msg["To"] = to_email
-            project_name = os.environ.get("PROJECT_NAME", "Project")
-            msg["Subject"] = f"[{project_name} Automation] {subject}"
-
-            body = f"""
-{message}
-
-Time: {datetime.now().isoformat()}
-System: PR Automation Safety Manager
-
-This is an automated notification from the automation system.
-"""
-
-            msg.attach(MIMEText(body, "plain"))
-
-            # Connect and send email
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            try:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                if username and password:
-                    server.login(username, password)
-                server.send_message(msg)
-            finally:
-                server.quit()
-                self.logger.info("Email notification sent successfully: %s", subject)
-            return True
-
-        except smtplib.SMTPAuthenticationError as e:
-            self.logger.error(f"SMTP authentication failed - check credentials: {e}")
-            return False
-        except smtplib.SMTPRecipientsRefused as e:
-            self.logger.error(f"Email recipients refused: {e}")
-            return False
-        except smtplib.SMTPException as e:
-            self.logger.error(f"SMTP error sending notification: {e}")
-            return False
-        except OSError as e:
-            self.logger.error(f"Network error sending notification: {e}")
-            return False
-        except Exception as e:
-            # Log error but don't fail automation
-            self.logger.error(f"Unexpected error sending notification: {e}")
-            return False
 
     def _clear_global_runs(self):
         """Clear global runs counter (for testing)"""
@@ -727,17 +635,14 @@ This is an automated notification from the automation system.
         """Check if email configuration is available"""
         try:
             smtp_server = os.environ.get("SMTP_SERVER")
-            username, password = self._get_smtp_credentials()
+            username, password = AutomationUtils.get_smtp_credentials()
             return bool(smtp_server and username and password)
         except Exception:
             return False
 
     def send_notification(self, subject: str, message: str) -> bool:
-        """Send email notification - wrapper for _send_notification"""
-        try:
-            return self._send_notification(subject, message)
-        except Exception:
-            return False
+        """Send email notification - wrapper for AutomationUtils"""
+        return AutomationUtils.send_email_notification(subject, message)
 
     def _is_email_configured(self) -> bool:
         """Check if email configuration is complete"""
@@ -745,7 +650,7 @@ This is an automated notification from the automation system.
             smtp_server = os.environ.get("SMTP_SERVER")
             smtp_port = os.environ.get("SMTP_PORT")
             email_to = os.environ.get("EMAIL_TO")
-            username, password = self._get_smtp_credentials()
+            username, password = AutomationUtils.get_smtp_credentials()
             return bool(smtp_server and smtp_port and email_to and username and password)
         except Exception:
             return False

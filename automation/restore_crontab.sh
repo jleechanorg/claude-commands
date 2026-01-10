@@ -57,10 +57,11 @@ main() {
     fi
 
     # Create logs directory if it doesn't exist (cross-platform)
+    # Uses generic project-automation name to match AutomationUtils
     if [[ "$(uname)" == "Darwin" ]]; then
-        LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+        LOG_DIR="$HOME/Library/Logs/project-automation"
     else
-        LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/worldarchitect-automation/logs"
+        LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/project-automation/logs"
     fi
     if [[ ! -d "$LOG_DIR" ]] && [[ "$DRY_RUN" == "false" ]]; then
         echo -e "${BLUE}📁 Creating log directory: $LOG_DIR${NC}"

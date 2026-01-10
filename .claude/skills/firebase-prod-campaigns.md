@@ -28,7 +28,7 @@ doc = db.collection('users').document(uid).collection('campaigns').document('CAM
 ## Database Structure
 
 ```
-Firestore Database: worldarchitecture-ai
+Firestore Database: YOUR_FIREBASE_PROJECT_ID
 ├── campaigns/                    # ← WRONG: Only test data here (5 campaigns)
 │   └── {test_campaign_id}/
 │
@@ -174,7 +174,7 @@ export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json
 
 ### Service Account Key
 Location: `~/serviceAccountKey.json`
-Project: `worldarchitecture-ai`
+Project: `YOUR_PROJECT_ID`
 
 ## Using campaign_manager.py
 
