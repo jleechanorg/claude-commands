@@ -43,12 +43,14 @@ def capture_provenance():
 ```
 
 **Quick validation:** If your metadata.json is missing ANY of these fields, the test is incomplete:
-- `provenance.merge_base`
-- `provenance.commits_ahead_of_main`
-- `provenance.diff_stat_vs_main`
-- `provenance.server.pid`
-- `provenance.server.port`
-- `provenance.server.process_cmdline`
+- `git_provenance.merge_base`
+- `git_provenance.commits_ahead_of_main`
+- `git_provenance.diff_stat_vs_main`
+- `server.pid`
+- `server.port`
+- `server.process_cmdline`
+
+(Note: `provenance.*` shorthand in older docs refers to these specific keys within `git_provenance` or `server` sections)
 
 ## Three Evidence Rule (from CLAUDE.md)
 
@@ -458,6 +460,9 @@ Capture prompt filenames (and char count when available):
 - `debug_info.system_instruction_char_count`: Total character count of combined prompts (optional)
 
 This proves which prompts were used without the ~100KB overhead per response. The file list provides provenance while keeping evidence bundles manageable.
+
+**Full Text Capture (When Enabled):**
+When `CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS` is set > 0, the full prompt text is captured in `debug_info.system_instruction_text`. This is optional but enabled by default in some test environments (`DEFAULT_EVIDENCE_ENV`).
 
 **Evidence Mode Documentation (MANDATORY when using lightweight tracking):**
 

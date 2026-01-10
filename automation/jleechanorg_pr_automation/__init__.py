@@ -61,7 +61,7 @@ def _resolve_version() -> str:
         if version is not None:
             return version
     except Exception:
-        pass
+        pass  # Fallback to dist_version if source file not found or unreadable
 
     try:
         return dist_version("jleechanorg-pr-automation")

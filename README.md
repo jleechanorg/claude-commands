@@ -16,6 +16,7 @@ To install Claude Commands in Claude Code CLI, first register the marketplace:
 
 ```bash
 /plugin marketplace add jleechanorg/claude-commands
+# Note: If you have forked this repository, use your own username instead of jleechanorg
 ```
 
 Then browse available commands with `/plugin` and install:

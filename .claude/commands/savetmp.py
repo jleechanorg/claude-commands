@@ -130,11 +130,17 @@ def _resolve_repo_info(
     # Prefer origin/main to capture full branch diff, fall back to upstream for nonstandard repos
     # This ensures changed_files shows all changes relative to main branch
     base_ref = results.get("origin_main") or results.get("upstream")
+    
+    # Resolve base_ref to SHA if possible to allow accurate comparison with head_commit
+    base_ref_sha = None
+    if base_ref:
+        base_ref_sha = _run_git_command(["rev-parse", base_ref])
+
     changed_files_output: Optional[str] = None
 
     if not base_ref:
         print("⚠️  No base ref found (origin/main or upstream) - changed_files will be empty", file=sys.stderr)
-    elif base_ref == results.get("head_commit"):
+    elif base_ref_sha == results.get("head_commit"):
         # HEAD is at base ref, no changes to report
         changed_files_output = ""
     else:
@@ -556,18 +562,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     reserved_targets: Set[Path] = set()
     for artifact in args.artifacts:
         src_path = Path(artifact).expanduser().resolve()
-        # Clean existing checksums from source if --clean-checksums is set
-        if args.clean_checksums and src_path.exists():
-            if src_path.is_dir():
-                for sha_file in list(src_path.rglob("*.sha256")):
+        # In clean mode, never mutate the source path. We'll clean the copied artifact.
+        if args.clean_checksums and src_path.suffix == ".sha256":
+            continue  # Skip copying standalone .sha256 files
+        
+        dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
+        if dest_path:
+            if args.clean_checksums and dest_path.is_dir():
+                for sha_file in list(dest_path.rglob("*.sha256")):
                     try:
                         sha_file.unlink()
                     except OSError:
-                        pass  # Ignore if can't delete
-            elif src_path.suffix == ".sha256":
-                continue  # Skip .sha256 files entirely in clean mode
-        dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
-        if dest_path:
+                        pass
+            
             copied_artifacts.append(
                 {"source": str(src_path), "destination": str(dest_path)}
             )

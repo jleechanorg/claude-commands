@@ -13,7 +13,7 @@ Tests workflow-specific comment counting and safety limits:
 """
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 

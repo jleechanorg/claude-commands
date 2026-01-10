@@ -610,8 +610,9 @@ class AutomationSafetyManager:
 
         if HAS_KEYRING:
             try:
-                username = keyring.get_password("worldarchitect-automation", "smtp_username")
-                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+                service_name = os.environ.get("AUTOMATION_KEYRING_SERVICE", "project-automation")
+                username = keyring.get_password(service_name, "smtp_username")
+                password = keyring.get_password(service_name, "smtp_password")
             except Exception:
                 self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
                 username = None
@@ -641,7 +642,8 @@ class AutomationSafetyManager:
             msg = MIMEMultipart()
             msg["From"] = from_email
             msg["To"] = to_email
-            msg["Subject"] = f"[WorldArchitect Automation] {subject}"
+            project_name = os.environ.get("PROJECT_NAME", "Project")
+            msg["Subject"] = f"[{project_name} Automation] {subject}"
 
             body = f"""
 {message}
@@ -649,7 +651,7 @@ class AutomationSafetyManager:
 Time: {datetime.now().isoformat()}
 System: PR Automation Safety Manager
 
-This is an automated notification from the WorldArchitect.AI automation system.
+This is an automated notification from the automation system.
 """
 
             msg.attach(MIMEText(body, "plain"))

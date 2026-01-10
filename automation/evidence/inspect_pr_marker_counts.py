@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 from jleechanorg_pr_automation.utils import get_automation_limits

@@ -827,7 +827,7 @@ class JleechanorgPRMonitor:
                 "--body", comment_body
             ]
 
-            result = AutomationUtils.execute_subprocess_with_timeout(
+            AutomationUtils.execute_subprocess_with_timeout(
                 comment_cmd,
                 timeout=30,
                 retry_attempts=5,

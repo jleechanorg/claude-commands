@@ -28,7 +28,7 @@ from .constants import (
 
 A2A_AVAILABLE = True
 
-# Default Gemini model can be overridden via GEMINI_MODEL; always use gemini-3-pro-preview
+# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-pro-preview
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
@@ -1168,7 +1168,7 @@ Complete the task, then use /pr to create a new pull request."""
 
         # Sanitize model to prevent injection
         raw_model = str(model)
-        if not re.fullmatch(r"[A-Za-z0-9_.\-]+", raw_model):
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
             print(f"❌ Invalid model name requested: {raw_model!r}")
             return False
         model = raw_model

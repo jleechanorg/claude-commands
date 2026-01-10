@@ -35,7 +35,7 @@ This ensures generated tests follow current evidence standards.
 4. Generate descriptive `work_name` for evidence directory
 
 **Example Parsing:**
-```
+```text
 Input: "for this PR make sure the equipment logic works"
 → Focus: equipment logic
 → Context: current PR/branch changes
@@ -180,7 +180,7 @@ def save_evidence(
 """
 
     # Evidence: derive from actual results
-    passed = sum(1 for r in results if r.passed)
+    passed = sum(1 for r in results if getattr(r, 'passed', False) or r.get('passed') if isinstance(r, dict) else False)
     total = len(results)
     evidence = f"""# Evidence Summary
 
@@ -190,13 +190,17 @@ def save_evidence(
 |------|--------|---------|
 """
     for r in results:
-        status = "✅ PASS" if r.passed else "❌ FAIL"
-        evidence += f"| {r.name} | {status} | {r.details} |\n"
+        is_passed = getattr(r, 'passed', False) or (r.get('passed') if isinstance(r, dict) else False)
+        name = getattr(r, 'name', 'unknown') or (r.get('name') if isinstance(r, dict) else 'unknown')
+        details = getattr(r, 'details', '') or (r.get('details') if isinstance(r, dict) else '')
+        
+        status = "✅ PASS" if is_passed else "❌ FAIL"
+        evidence += f"| {name} | {status} | {details} |\n"
 
     # Notes: track warnings and follow-ups derived from actual results
     warnings = []
     follow_ups = []
-    failed_tests = [r for r in results if not r.passed]
+    failed_tests = [r for r in results if not (getattr(r, 'passed', False) or (r.get('passed') if isinstance(r, dict) else False))]
     if failed_tests:
         warnings.append(f"{len(failed_tests)} test(s) failed")
         follow_ups.append("Review failed test logs for root cause analysis")
@@ -217,10 +221,10 @@ def save_evidence(
     run_data = {
         "scenarios": [
             {
-                "name": r.name,
-                "campaign_id": getattr(r, 'campaign_id', None),
-                "passed": r.passed,
-                "errors": getattr(r, 'errors', []),
+                "name": getattr(r, 'name', 'unknown') or (r.get('name') if isinstance(r, dict) else 'unknown'),
+                "campaign_id": getattr(r, 'campaign_id', None) or (r.get('campaign_id') if isinstance(r, dict) else None),
+                "passed": getattr(r, 'passed', False) or (r.get('passed') if isinstance(r, dict) else False),
+                "errors": getattr(r, 'errors', []) or (r.get('errors') if isinstance(r, dict) else []),
             }
             for r in results
         ],
@@ -693,7 +697,7 @@ for notation in ("1d6", "1d20"):
 
 ## 🔧 PRIORITY MATRIX
 
-```
+```text
 🚨 CRITICAL: Blocks core functionality, data corruption risk
 ⚠️ HIGH: Significant degradation, wrong behavior
 📝 MEDIUM: Minor issues, cosmetic problems

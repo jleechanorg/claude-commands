@@ -8,7 +8,7 @@ Validates that model parameter is correctly passed through the automation pipeli
 import argparse
 import unittest
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 

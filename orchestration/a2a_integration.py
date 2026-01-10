@@ -19,15 +19,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-# Use project logging utility
-try:
-    import logging_util
+# Use standard logging
+import logging
 
-    logger = logging_util.getLogger(__name__)
-except ImportError:
-    # Fallback to basic logging if logging_util not available
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # A2A Communication Directory - configurable for production
 A2A_BASE_DIR = os.environ.get("A2A_BASE_DIR", "/tmp/orchestration/a2a")

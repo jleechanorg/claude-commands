@@ -10,7 +10,7 @@ from _post_fixpr_queued, matching the behavior of _process_pr_fix_comment.
 """
 
 import unittest
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 

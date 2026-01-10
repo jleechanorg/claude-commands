@@ -30,6 +30,8 @@ try:
 except ImportError:
     KEYRING_AVAILABLE = False
 
+from .utils import json_manager, setup_logging as shared_setup_logging
+
 
 class AutomationUtils:
     """Shared utilities for automation components"""
@@ -38,10 +40,10 @@ class AutomationUtils:
     DEFAULT_CONFIG = {
         "SMTP_SERVER": "smtp.gmail.com",
         "SMTP_PORT": 587,
-        "LOG_DIR": "~/Library/Logs/worldarchitect-automation",
-        "DATA_DIR": "~/Library/Application Support/worldarchitect-automation",
+        "LOG_DIR": "~/Library/Logs/project-automation",
+        "DATA_DIR": "~/Library/Application Support/project-automation",
         "MAX_SUBPROCESS_TIMEOUT": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300")),  # 5 minutes (configurable)
-        "EMAIL_SUBJECT_PREFIX": "[WorldArchitect Automation]"
+        "EMAIL_SUBJECT_PREFIX": "[Project Automation]"
     }
 
     @classmethod
@@ -61,20 +63,8 @@ class AutomationUtils:
         # Create log directory
         log_dir = Path(cls.DEFAULT_CONFIG["LOG_DIR"]).expanduser()
         log_dir.mkdir(parents=True, exist_ok=True)
-
-        # Set up logging with consistent format
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler(log_dir / log_filename),
-                logging.StreamHandler()
-            ]
-        )
-
-        logger = logging.getLogger(name)
-        logger.info(f"🛠️  Logging initialized - logs: {log_dir / log_filename}")
-        return logger
+        
+        return shared_setup_logging(name, log_file=str(log_dir / log_filename))
 
     @classmethod
     def get_config_value(cls, key: str, default: Any = None) -> Any:
@@ -109,8 +99,9 @@ class AutomationUtils:
 
         if KEYRING_AVAILABLE:
             try:
-                username = keyring.get_password("worldarchitect-automation", "smtp_username")
-                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+                service_name = os.environ.get("AUTOMATION_KEYRING_SERVICE", "project-automation")
+                username = keyring.get_password(service_name, "smtp_username")
+                password = keyring.get_password(service_name, "smtp_password")
             except Exception:
                 pass  # Fall back to environment variables
 
@@ -160,9 +151,9 @@ class AutomationUtils:
             full_message = f"""{message}
 
 Time: {datetime.now().isoformat()}
-System: WorldArchitect Automation
+System: Project Automation
 
-This is an automated notification from the WorldArchitect.AI automation system."""
+This is an automated notification from the automation system."""
 
             msg.attach(MIMEText(full_message, "plain"))
 
@@ -220,11 +211,22 @@ This is an automated notification from the WorldArchitect.AI automation system."
             timeout = cls.get_config_value("MAX_SUBPROCESS_TIMEOUT")
 
         try:
-            retry_attempts_int = int(retry_attempts)
+            retry_attempts_int = max(int(retry_attempts), 1)
         except (TypeError, ValueError):
             retry_attempts_int = 1
-        if retry_attempts_int < 1:
-            retry_attempts_int = 1
+
+        try:
+            backoff_seconds = max(float(retry_backoff_seconds), 0.0)
+        except (TypeError, ValueError):
+            backoff_seconds = 1.0
+
+        try:
+            backoff_multiplier = max(float(retry_backoff_multiplier), 1.0)
+        except (TypeError, ValueError):
+            backoff_multiplier = 2.0
+
+        if retry_on_stderr_substrings and not capture_output:
+            raise ValueError("retry_on_stderr_substrings requires capture_output=True")
 
         attempt = 1
         while True:
@@ -248,57 +250,21 @@ This is an automated notification from the WorldArchitect.AI automation system."
                     if not any(token in stderr for token in retry_on_stderr_substrings):
                         raise
 
-                delay = float(retry_backoff_seconds) * (float(retry_backoff_multiplier) ** (attempt - 1))
+                delay = backoff_seconds * (backoff_multiplier ** (attempt - 1))
                 delay = max(0.0, min(delay, 60.0))
                 time.sleep(delay)
                 attempt += 1
 
     @classmethod
     def safe_read_json(cls, file_path: Path) -> dict:
-        """Safely read JSON file with file locking"""
-        try:
-            with open(file_path) as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)  # Shared lock for reading
-                data = json.load(f)
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)  # Unlock
-                return data
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {}
+        """Safely read JSON file with file locking (delegates to json_manager)"""
+        return json_manager.read_json(str(file_path), {})
 
     @classmethod
     def safe_write_json(cls, file_path: Path, data: dict):
-        """Atomically write JSON file with file locking"""
-        # Use system temp directory for better security
-        temp_path = None
-        try:
-            # Create temporary file securely
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=".tmp",
-                delete=False
-            ) as temp_file:
-                fcntl.flock(temp_file.fileno(), fcntl.LOCK_EX)  # Exclusive lock for writing
-                json.dump(data, temp_file, indent=2)
-                temp_file.flush()
-                os.fsync(temp_file.fileno())  # Force write to disk
-                fcntl.flock(temp_file.fileno(), fcntl.LOCK_UN)  # Unlock
-                temp_path = temp_file.name
-
-            # Set restrictive permissions before moving
-            os.chmod(temp_path, 0o600)  # Owner read/write only
-
-            # Atomic rename - this operation is atomic on POSIX systems
-            os.rename(temp_path, file_path)
-            temp_path = None  # Successful, don't clean up
-
-        except (OSError, json.JSONEncodeError) as e:
-            # Clean up temp file on error
-            if temp_path and os.path.exists(temp_path):
-                try:
-                    os.unlink(temp_path)
-                except OSError:
-                    pass  # Best effort cleanup
-            raise RuntimeError(f"Failed to write JSON file {file_path}: {e}") from e
+        """Atomically write JSON file with file locking (delegates to json_manager)"""
+        if not json_manager.write_json(str(file_path), data):
+            raise RuntimeError(f"Failed to write JSON file {file_path}")
 
     @classmethod
     def get_memory_config(cls) -> Dict[str, str]:

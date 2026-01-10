@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from orchestration.task_dispatcher import TaskDispatcher
+from .automation_utils import AutomationUtils
 
 ORG = "jleechanorg"
 BASE_CLONE_ROOT = Path("/tmp/pr-orch-bases")
@@ -41,13 +42,12 @@ def run_cmd(
     check: bool = True,
     timeout: Optional[int] = None,
 ) -> subprocess.CompletedProcess:
-    return subprocess.run(
+    return AutomationUtils.execute_subprocess_with_timeout(
         cmd,
-        cwd=str(cwd) if cwd else None,
-        text=True,
-        capture_output=True,
-        check=check,
         timeout=timeout or DEFAULT_TIMEOUT,
+        cwd=str(cwd) if cwd else None,
+        check=check,
+        capture_output=True,
     )
 
 

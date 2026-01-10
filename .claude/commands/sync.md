@@ -92,6 +92,7 @@ else
     # Remote refs already fetched at start - proceed with branch operations
 
     # ALWAYS try to switch to a local branch mirroring the remote branch name
+    TARGET_BRANCH="$HEAD_BRANCH"  # Store original target before reassignment
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     SWITCHED_TO_TARGET=false  # Track if we successfully switched to target branch
 
@@ -103,9 +104,9 @@ else
             SWITCHED_TO_TARGET=true
         else
             # Branch locked in another worktree - find which one
-            # Note: git worktree list --porcelain outputs branch as refs/heads/branch-name
-            # Use substr to capture full path including spaces (everything after "worktree ")
-            WORKTREE_INFO=$(git worktree list --porcelain 2>/dev/null | awk -v br="refs/heads/$HEAD_BRANCH" '/^worktree /{path=substr($0,10)} /^branch / && $2==br {print path}' )
+            # Use grep to find the worktree path more reliably
+            WORKTREE_INFO=$(git worktree list --porcelain 2>/dev/null | grep -B1 "^branch refs/heads/$HEAD_BRANCH$" | grep "^worktree " | cut -d' ' -f2-)
+            
             if [ -z "$WORKTREE_INFO" ]; then
                 WORKTREE_INFO="unknown location"
             fi
@@ -123,6 +124,8 @@ else
                     else
                         echo "❌ Failed to create fresh local branch: $HEAD_BRANCH"
                         echo "🔄 Syncing content on current branch instead..."
+                        # Note: The following operations use git reset --hard to ensure local state matches remote,
+                        # which will discard any uncommitted changes. This is intentional for PR synchronization.
                         if ! git fetch origin "$REMOTE_BRANCH"; then
                             echo "❌ Failed to fetch origin/$REMOTE_BRANCH"
                             exit 1
@@ -213,7 +216,7 @@ else
             echo "✅ Reset to remote state successful"
         fi
     else
-        echo "⚠️ Skipping upstream tracking (fell back to $HEAD_BRANCH, not target branch)"
+        echo "⚠️ Skipping upstream tracking (fell back to $CURRENT_BRANCH, not target branch $TARGET_BRANCH)"
         echo "📍 Content synced but branch name differs from PR branch"
     fi
 fi
