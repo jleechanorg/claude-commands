@@ -654,26 +654,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // State updates are still returned by the backend for data integrity
     // but no longer displayed in the UI even in debug mode
 
-    // 10. Debug info (backend now handles debug mode filtering)
-    if (fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
+    // 10. Debug info (still gate UI strictly on debugMode)
+    const debugInfo = fullData.debug_info;
+    if (debugMode && debugInfo && typeof debugInfo === 'object' && Object.keys(debugInfo).length > 0) {
       html += '<div class="debug-info">';
       html += '<strong>🔍 Debug Info:</strong>';
 
+      // Show agent name if present
+      const agentName = debugInfo?.agent_name;
+      if (agentName) {
+        html += `<div class="agent-name"><strong>🤖 Agent:</strong> ${sanitizeHtml(agentName)}</div>`;
+      }
+
       // Show DM notes if present
       if (
-        fullData.debug_info.dm_notes &&
-        fullData.debug_info.dm_notes.length > 0
+        debugInfo.dm_notes &&
+        debugInfo.dm_notes.length > 0
       ) {
         html += '<div class="dm-notes"><strong>📝 DM Notes:</strong><ul>';
-        fullData.debug_info.dm_notes.forEach((note) => {
+        debugInfo.dm_notes.forEach((note) => {
           html += `<li>${sanitizeHtml(note)}</li>`;
         });
         html += '</ul></div>';
       }
 
       // Show state rationale if present
-      if (fullData.debug_info.state_rationale) {
-        html += `<div class="state-rationale"><strong>💭 State Rationale:</strong> ${sanitizeHtml(fullData.debug_info.state_rationale)}</div>`;
+      if (debugInfo.state_rationale) {
+        html += `<div class="state-rationale"><strong>💭 State Rationale:</strong> ${sanitizeHtml(debugInfo.state_rationale)}</div>`;
       }
 
       // Raw debug info JSON - DISABLED: too verbose (code_contains_rng, stdout, etc.)

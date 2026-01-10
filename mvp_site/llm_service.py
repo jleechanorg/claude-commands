@@ -2551,6 +2551,11 @@ def get_initial_story(
         )
 
         if structured_response:
+            # Add agent_name to debug_info for mock responses too
+            # Initial story always uses StoryModeAgent (same as non-mock path)
+            if structured_response.debug_info is None:
+                structured_response.debug_info = {}
+            structured_response.debug_info["agent_name"] = "StoryModeAgent"
             return LLMResponse.create_from_structured_response(
                 structured_response, "mock-model"
             )
@@ -2739,6 +2744,8 @@ def get_initial_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", model_to_use)
+        # Capture which agent served this request
+        debug_info["agent_name"] = agent.__class__.__name__
         # Capture which instruction files were loaded (lightweight evidence)
         # NOTE: We only store filenames and char count, NOT full text (saves ~36KB/entry)
         debug_info["system_instruction_files"] = get_loaded_instruction_files()
@@ -3937,6 +3944,8 @@ def continue_story(
         debug_info = structured_response.debug_info or {}
         debug_info.setdefault("llm_provider", provider_selection.provider)
         debug_info.setdefault("llm_model", chosen_model)
+        # Capture which agent served this request
+        debug_info["agent_name"] = agent.__class__.__name__
         # Capture which instruction files were loaded (lightweight evidence)
         # NOTE: We only store filenames and char count, NOT full text (saves ~36KB/entry)
         debug_info["system_instruction_files"] = get_loaded_instruction_files()
