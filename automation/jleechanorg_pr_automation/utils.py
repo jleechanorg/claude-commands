@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
+from .logging_utils import setup_logging  # noqa: F401
+
 
 class SafeJSONManager:
     """Thread-safe and cross-process safe JSON file operations with file locking"""
@@ -118,37 +120,6 @@ class SafeJSONManager:
 
 # Global instance for shared use
 json_manager = SafeJSONManager()
-
-
-def setup_logging(name: str, level: int = logging.INFO,
-                 log_file: Optional[str] = None) -> logging.Logger:
-    """Standardized logging setup for automation components"""
-    logger = logging.getLogger(name)
-
-    # Avoid duplicate handlers
-    if logger.handlers:
-        return logger
-
-    logger.setLevel(level)
-
-    # Create formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    # File handler if specified
-    if log_file:
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    return logger
 
 
 def get_env_config(prefix: str = "AUTOMATION_") -> Dict[str, str]:

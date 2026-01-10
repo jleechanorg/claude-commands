@@ -38,34 +38,16 @@ from playwright.async_api import (
     async_playwright,
 )
 
+from ..logging_utils import setup_logging as _setup_logging
 
-# Set up logging to /tmp
+
+# Set up logging delegated to centralized logging_utils
 def setup_logging():
-    """Set up logging to /tmp directory."""
+    """Set up logging to /tmp directory using centralized logging_utils."""
     log_dir = Path("/tmp/automate_codex_update")
-    log_dir.mkdir(parents=True, exist_ok=True)
-
     log_file = log_dir / "codex_automation.log"
 
-    # Create logger
-    logger = logging.getLogger("codex_automation")
-    logger.setLevel(logging.INFO)
-
-    # File handler
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(logging.INFO)
-
-    # Console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    # Formatter
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
+    logger = _setup_logging("codex_automation", log_file=str(log_file))
 
     return logger
 

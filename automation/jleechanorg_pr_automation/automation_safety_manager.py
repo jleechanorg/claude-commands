@@ -654,8 +654,8 @@ This is an automated notification from the WorldArchitect.AI automation system.
 
             msg.attach(MIMEText(body, "plain"))
 
-            # Connect and send email
-            server = smtplib.SMTP(smtp_server, smtp_port)
+            # Connect and send email with 30s timeout (consistent with automation_utils.py)
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
             try:
                 server.ehlo()
                 server.starttls()

@@ -24,6 +24,8 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
 
+from .logging_utils import setup_logging as _setup_logging
+
 try:
     import keyring
     KEYRING_AVAILABLE = True
@@ -46,7 +48,7 @@ class AutomationUtils:
 
     @classmethod
     def setup_logging(cls, name: str, log_filename: str = None) -> logging.Logger:
-        """Unified logging setup for all automation components
+        """Unified logging setup delegated to centralized logging_utils.
 
         Args:
             name: Logger name (typically __name__)
@@ -55,25 +57,17 @@ class AutomationUtils:
         Returns:
             Configured logger instance
         """
-        if log_filename is None:
-            log_filename = f"{name.split('.')[-1]}.log"
-
-        # Create log directory
+        # Use centralized logging with DEFAULT_CONFIG log directory
         log_dir = Path(cls.DEFAULT_CONFIG["LOG_DIR"]).expanduser()
-        log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Set up logging with consistent format
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler(log_dir / log_filename),
-                logging.StreamHandler()
-            ]
-        )
+        # If no filename specified, create one from module name
+        if log_filename is None:
+            log_file = log_dir / f"{name.split('.')[-1]}.log"
+        else:
+            log_file = log_dir / log_filename if not Path(log_filename).is_absolute() else log_filename
 
-        logger = logging.getLogger(name)
-        logger.info(f"🛠️  Logging initialized - logs: {log_dir / log_filename}")
+        logger = _setup_logging(name, log_file=str(log_file))
+        logger.info(f"🛠️  Logging initialized - logs: {log_file}")
         return logger
 
     @classmethod
