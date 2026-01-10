@@ -2,20 +2,41 @@
 # run_local_server.sh - WorldArchitect.AI Dual Server Launcher
 # Starts both Flask backend and React v2 frontend servers simultaneously
 #
-# Usage: ./run_local_server.sh [--cleanup|-c]
-#   --cleanup, -c  Show interactive server cleanup menu
-#   (default)      Keep existing servers, find available ports
+# Usage: ./run_local_server.sh [--cleanup|-c] [--force-default-port]
+#   --cleanup, -c         Show interactive server cleanup menu
+#   --force-default-port  Kill existing processes and use default ports (8081, 3002)
+#   (default)             Keep existing servers, pick random ports in range 8081-8181
 
 # Parse command line arguments
 INTERACTIVE_CLEANUP=false
-for arg in "$@"; do
-    case $arg in
+FORCE_DEFAULT_PORT=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
         --cleanup|-c)
             INTERACTIVE_CLEANUP=true
             shift
             ;;
+        --force-default-port)
+            FORCE_DEFAULT_PORT=true
+            shift
+            ;;
+        *)
+            shift
+            ;;
     esac
 done
+
+# Define cleanup function for graceful exit
+cleanup_and_exit() {
+    local exit_code=${1:-0}
+    if [ "$exit_code" -ne 0 ]; then
+        echo "${EMOJI_ERROR} Script failed with exit code $exit_code"
+    fi
+    exit "$exit_code"
+}
+
+# Trap exit signals
+trap 'cleanup_and_exit $?' EXIT
 
 # Load shared utilities
 MAIN_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -145,10 +166,14 @@ fi
 
 echo "${EMOJI_CHECK} Virtual environment active: $VIRTUAL_ENV"
 
-# Aggressive port cleanup - ensure target ports are available
-echo "${EMOJI_GEAR} Ensuring target ports are available..."
-ensure_port_free $DEFAULT_FLASK_PORT 3 2>/dev/null || true
-ensure_port_free $DEFAULT_REACT_PORT 3 2>/dev/null || true
+# Aggressive port cleanup - ensure target ports are available (only when forcing default port)
+if [ "$FORCE_DEFAULT_PORT" = true ]; then
+    echo "${EMOJI_GEAR} Ensuring target ports are available..."
+    ensure_port_free $DEFAULT_FLASK_PORT 3 2>/dev/null || true
+    ensure_port_free $DEFAULT_REACT_PORT 3 2>/dev/null || true
+else
+    echo "${EMOJI_INFO} Using random port selection - skipping port cleanup"
+fi
 
 # Hardcode WorldAI Firebase env for local runs
 CREDS_FILE="${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/serviceAccountKey.json}"
@@ -182,20 +207,97 @@ fi
 
 # Find available ports
 echo "${EMOJI_SEARCH} Finding available ports..."
-DETECTED_FLASK_PORT=$(find_available_port $DEFAULT_FLASK_PORT 10)
-if [ $? -eq 0 ] && [ -n "$DETECTED_FLASK_PORT" ]; then
-    FLASK_PORT="$DETECTED_FLASK_PORT"
-else
-    echo "${EMOJI_WARNING} Could not find available Flask port, forcing default $DEFAULT_FLASK_PORT"
+if [ "$FORCE_DEFAULT_PORT" = true ]; then
+    # Use default ports when forced - verify they are actually free first
+    
+    # Check Flask port
+    if is_port_in_use $DEFAULT_FLASK_PORT; then
+         echo "${EMOJI_WARNING} Default Flask port $DEFAULT_FLASK_PORT is in use. Attempting to free it..."
+         if ! ensure_port_free $DEFAULT_FLASK_PORT 2; then
+             echo "${EMOJI_ERROR} Could not free default Flask port $DEFAULT_FLASK_PORT. Please clean up manually."
+             exit 1
+         fi
+    fi
     FLASK_PORT="$DEFAULT_FLASK_PORT"
-fi
-
-DETECTED_REACT_PORT=$(find_available_port $DEFAULT_REACT_PORT 10)
-if [ $? -eq 0 ] && [ -n "$DETECTED_REACT_PORT" ]; then
-    REACT_PORT="$DETECTED_REACT_PORT"
-else
-    echo "${EMOJI_WARNING} Could not find available React port, forcing default $DEFAULT_REACT_PORT"
+    
+    # Check React port
+    if is_port_in_use $DEFAULT_REACT_PORT; then
+         echo "${EMOJI_WARNING} Default React port $DEFAULT_REACT_PORT is in use. Attempting to free it..."
+         if ! ensure_port_free $DEFAULT_REACT_PORT 2; then
+             echo "${EMOJI_ERROR} Could not free default React port $DEFAULT_REACT_PORT. Please clean up manually."
+             exit 1
+         fi
+    fi
     REACT_PORT="$DEFAULT_REACT_PORT"
+    
+    # Check MCP port
+    DEFAULT_MCP_PORT=${MCP_SERVER_PORT:-8001}
+    if is_port_in_use $DEFAULT_MCP_PORT; then
+        echo "${EMOJI_WARNING} Default MCP port $DEFAULT_MCP_PORT is in use. Attempting to free it..."
+        if ! ensure_port_free $DEFAULT_MCP_PORT 2; then
+             echo "${EMOJI_ERROR} Could not free default MCP port $DEFAULT_MCP_PORT. Please clean up manually."
+             exit 1
+        fi
+    fi
+    MCP_PORT="$DEFAULT_MCP_PORT"
+
+else
+    # Use random port selection (range defined in server-config.sh) with collision detection
+    echo "${EMOJI_INFO} Selecting random ports in range ${RANDOM_PORT_MIN:-8081}-${RANDOM_PORT_MAX:-8181}..."
+    
+    # 1. Select Flask Port
+    DETECTED_FLASK_PORT=$(find_random_port "${RANDOM_PORT_MIN:-8081}" "${RANDOM_PORT_MAX:-8181}" 100)
+    if [ $? -ne 0 ] || [ -z "$DETECTED_FLASK_PORT" ]; then
+        echo "${EMOJI_ERROR} Could not find available random Flask port"
+        exit 1
+    fi
+    FLASK_PORT="$DETECTED_FLASK_PORT"
+    
+    # 2. Select React Port (ensure distinct from Flask)
+    MAX_RETRIES=10
+    ATTEMPT=0
+    while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+        DETECTED_REACT_PORT=$(find_random_port "${RANDOM_PORT_MIN:-8081}" "${RANDOM_PORT_MAX:-8181}" 100)
+        if [ $? -ne 0 ] || [ -z "$DETECTED_REACT_PORT" ]; then
+            echo "${EMOJI_ERROR} Could not find available random React port"
+            exit 1
+        fi
+        
+        if [ "$DETECTED_REACT_PORT" != "$FLASK_PORT" ]; then
+            REACT_PORT="$DETECTED_REACT_PORT"
+            break
+        fi
+        
+        # Collision detected, retry
+        ((ATTEMPT++))
+    done
+    
+    if [ -z "${REACT_PORT:-}" ]; then
+        echo "${EMOJI_ERROR} Failed to find unique React port after $MAX_RETRIES attempts"
+        exit 1
+    fi
+    
+    # 3. Select MCP Port (ensure distinct from Flask and React)
+    ATTEMPT=0
+    while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+        DETECTED_MCP_PORT=$(find_random_port "${RANDOM_PORT_MIN:-8081}" "${RANDOM_PORT_MAX:-8181}" 100)
+        if [ $? -ne 0 ] || [ -z "$DETECTED_MCP_PORT" ]; then
+            echo "${EMOJI_ERROR} Could not find available random MCP port"
+            exit 1
+        fi
+        
+        if [ "$DETECTED_MCP_PORT" != "$FLASK_PORT" ] && [ "$DETECTED_MCP_PORT" != "$REACT_PORT" ]; then
+            MCP_PORT="$DETECTED_MCP_PORT"
+            break
+        fi
+         # Collision detected, retry
+        ((ATTEMPT++))
+    done
+    
+    if [ -z "${MCP_PORT:-}" ]; then
+        echo "${EMOJI_ERROR} Failed to find unique MCP port after $MAX_RETRIES attempts"
+        exit 1
+    fi
 fi
 
 export PORT=$FLASK_PORT
@@ -245,15 +347,7 @@ fi
 echo ""
 echo "${EMOJI_ROCKET} Starting MCP server in production mode..."
 
-# Find available MCP port (default 8001)
-DEFAULT_MCP_PORT=${MCP_SERVER_PORT:-8001}
-DETECTED_PORT=$(find_available_port $DEFAULT_MCP_PORT 10)
-if [ $? -eq 0 ] && [ -n "$DETECTED_PORT" ]; then
-    MCP_PORT="$DETECTED_PORT"
-else
-    echo "${EMOJI_WARNING} Could not find available port for MCP server, forcing default $DEFAULT_MCP_PORT"
-    MCP_PORT="$DEFAULT_MCP_PORT"
-fi
+
 
 if command -v gnome-terminal &> /dev/null; then
     gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && GEMINI_API_KEY='$GEMINI_API_KEY' CEREBRAS_API_KEY='$CEREBRAS_API_KEY' bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT; exec bash"

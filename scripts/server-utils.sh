@@ -49,13 +49,37 @@ find_available_port() {
             echo $port
             return 0
         fi
-        
+
         echo "${EMOJI_INFO} Port $port in use, trying $((port + 1))..." >&2
         port=$((port + 1))
         attempts=$((attempts + 1))
     done
 
     echo "${EMOJI_ERROR} ERROR: No available ports found in range $start_port-$((start_port + max_attempts - 1))" >&2
+    return 1
+}
+
+# Find random available port in a specific range
+find_random_port() {
+    local min_port=${1:-$RANDOM_PORT_MIN}
+    local max_port=${2:-$RANDOM_PORT_MAX}
+    local max_attempts=${3:-100}
+    local attempts=0
+
+    while [ $attempts -lt $max_attempts ]; do
+        # Generate random port in range
+        local port=$((min_port + RANDOM % (max_port - min_port + 1)))
+
+        if ! is_port_in_use $port; then
+            echo $port
+            return 0
+        fi
+
+        echo "${EMOJI_INFO} Port $port in use, trying another random port..." >&2
+        attempts=$((attempts + 1))
+    done
+
+    echo "${EMOJI_ERROR} ERROR: No available ports found in range $min_port-$max_port after $max_attempts attempts" >&2
     return 1
 }
 
