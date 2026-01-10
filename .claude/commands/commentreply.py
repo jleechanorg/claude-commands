@@ -20,6 +20,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+
 def run_command(
     cmd: List[str],
     description: str = "",
@@ -34,13 +35,14 @@ def run_command(
             capture_output=True,
             text=True,
             check=False,  # Don't raise on non-zero exit
-            timeout=timeout
+            timeout=timeout,
         )
         return result.returncode == 0, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
         return False, "", f"[timeout] {description or 'cmd'}: {' '.join(cmd)}"
     except Exception as e:
         return False, "", f"[failure] {description or 'cmd'}: {e}"
+
 
 def parse_arguments() -> Tuple[str, str, str]:
     """Parse command line arguments for owner, repo, and PR number"""
@@ -52,6 +54,7 @@ def parse_arguments() -> Tuple[str, str, str]:
 
     return sys.argv[1], sys.argv[2], sys.argv[3]
 
+
 def get_current_branch() -> str:
     """Get current git branch name for temp file path"""
     success, branch, _ = run_command(["git", "branch", "--show-current"])
@@ -59,9 +62,10 @@ def get_current_branch() -> str:
         # Sanitize branch name to prevent path traversal
         branch = branch.strip()
         # Remove dangerous characters that could be used for path traversal
-        safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch)
+        safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch)
         return safe_branch[:50]  # Limit length
     return "unknown"
+
 
 def load_claude_responses(branch_name: str) -> Dict:
     """
@@ -76,7 +80,7 @@ def load_claude_responses(branch_name: str) -> Dict:
         Dictionary containing responses data, empty dict if file not found
     """
     # Ensure branch_name is safe and create secure path
-    safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch_name)[:50]
+    safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch_name)[:50]
     responses_file = f"/tmp/{safe_branch}/responses.json"
 
     # Verify the path doesn't contain traversal attempts
@@ -96,12 +100,16 @@ def load_claude_responses(branch_name: str) -> Dict:
         if responses_path.exists():
             file_size = responses_path.stat().st_size
             if file_size > 10 * 1024 * 1024:  # 10MB limit
-                print(f"⚠️ SECURITY: File too large: {responses_file} ({file_size} bytes)")
+                print(
+                    f"⚠️ SECURITY: File too large: {responses_file} ({file_size} bytes)"
+                )
                 return {}
 
-        with open(responses_file, 'r') as f:
+        with open(responses_file, "r") as f:
             responses_data = json.load(f)
-        print(f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_file}")
+        print(
+            f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_file}"
+        )
         return responses_data
     except json.JSONDecodeError as e:
         print(f"❌ ERROR: Failed to parse responses JSON: {e}")
@@ -110,7 +118,10 @@ def load_claude_responses(branch_name: str) -> Dict:
         print(f"❌ ERROR: Failed to load responses file: {e}")
         return {}
 
-def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, pr_number: str) -> List[Dict]:
+
+def load_comments_with_staleness_check(
+    branch_name: str, owner: str, repo: str, pr_number: str
+) -> List[Dict]:
     """
     Load comment data with staleness detection and real-time fallback.
 
@@ -124,7 +135,7 @@ def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, 
         List of comment dictionaries (fresh or cached)
     """
     # Ensure branch_name is safe and create secure path
-    safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch_name)[:50]
+    safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch_name)[:50]
     comments_file = f"/tmp/{safe_branch}/comments.json"
 
     # Verify the path doesn't contain traversal attempts
@@ -137,33 +148,63 @@ def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, 
     # COPILOT: Always fetch fresh data - no cache for PR processing
     if os.path.exists(comments_file):
         cache_age_minutes = (time.time() - os.path.getmtime(comments_file)) / 60
-        print(f"🔄 COPILOT MODE: Ignoring {cache_age_minutes:.1f}min cache - fetching fresh comments")
+        print(
+            f"🔄 COPILOT MODE: Ignoring {cache_age_minutes:.1f}min cache - fetching fresh comments"
+        )
         fetch_fresh_comments(owner, repo, pr_number, comments_file)
     else:
         print(f"📥 NO CACHE: Fetching fresh comments for {owner}/{repo}#{pr_number}")
         fetch_fresh_comments(owner, repo, pr_number, comments_file)
 
     try:
-        with open(comments_file, 'r') as f:
+        with open(comments_file, "r") as f:
             comment_data = json.load(f)
-        return comment_data.get('comments', [])
+        return comment_data.get("comments", [])
     except Exception as e:
         print(f"❌ ERROR: Failed to load comments: {e}")
         sys.exit(1)
+
 
 def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str):
     """Fetch fresh comments using GitHub API and save to cache file"""
 
     # Fetch both review comments and issue comments
-    inline_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate", "-q", ".[]"]
-    issue_cmd = ["gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments", "--paginate", "-q", ".[]"]
-    review_body_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/reviews", "--paginate", "-q", ".[]"]
+    inline_cmd = [
+        "gh",
+        "api",
+        f"repos/{owner}/{repo}/pulls/{pr_number}/comments",
+        "--paginate",
+        "-q",
+        ".[]",
+    ]
+    issue_cmd = [
+        "gh",
+        "api",
+        f"repos/{owner}/{repo}/issues/{pr_number}/comments",
+        "--paginate",
+        "-q",
+        ".[]",
+    ]
+    review_body_cmd = [
+        "gh",
+        "api",
+        f"repos/{owner}/{repo}/pulls/{pr_number}/reviews",
+        "--paginate",
+        "-q",
+        ".[]",
+    ]
 
     print("📡 FETCHING: Fresh comment data from GitHub API...")
 
-    success_inline, inline_data, _ = run_command(inline_cmd, "fetch inline review comments", timeout=120)
-    success_issue, issue_data, _ = run_command(issue_cmd, "fetch issue comments", timeout=120)
-    success_review_bodies, review_body_data, _ = run_command(review_body_cmd, "fetch review bodies", timeout=120)
+    success_inline, inline_data, _ = run_command(
+        inline_cmd, "fetch inline review comments", timeout=120
+    )
+    success_issue, issue_data, _ = run_command(
+        issue_cmd, "fetch issue comments", timeout=120
+    )
+    success_review_bodies, review_body_data, _ = run_command(
+        review_body_cmd, "fetch review bodies", timeout=120
+    )
 
     # Require inline and issue comments (core functionality)
     # Review bodies are optional - gracefully degrade if endpoint fails
@@ -175,24 +216,36 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
         return
 
     if not success_review_bodies:
-        print("⚠️  WARNING: Review bodies fetch failed (permissions/rate-limit?) - continuing without review bodies")
+        print(
+            "⚠️  WARNING: Review bodies fetch failed (permissions/rate-limit?) - continuing without review bodies"
+        )
         review_body_data = ""  # Empty, will result in empty list
 
     # Parse and combine comments
     try:
-        inline_comments = [json.loads(line) for line in (inline_data or "").splitlines() if line.strip()]
-        issue_comments = [json.loads(line) for line in (issue_data or "").splitlines() if line.strip()]
+        inline_comments = [
+            json.loads(line)
+            for line in (inline_data or "").splitlines()
+            if line.strip()
+        ]
+        issue_comments = [
+            json.loads(line) for line in (issue_data or "").splitlines() if line.strip()
+        ]
         # Filter out reviews with empty bodies (e.g., approval reviews without comments)
-        raw_reviews = [json.loads(line) for line in (review_body_data or "").splitlines() if line.strip()]
+        raw_reviews = [
+            json.loads(line)
+            for line in (review_body_data or "").splitlines()
+            if line.strip()
+        ]
         review_body_comments = [r for r in raw_reviews if r.get("body", "").strip()]
 
         # Add type information and combine
         for comment in inline_comments:
-            comment['type'] = 'inline'
+            comment["type"] = "inline"
         for comment in issue_comments:
-            comment['type'] = 'issue'
+            comment["type"] = "issue"
         for review in review_body_comments:
-            review['type'] = 'review'
+            review["type"] = "review"
 
         all_comments = inline_comments + issue_comments + review_body_comments
 
@@ -200,11 +253,11 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
         cache_data = {
             "pr": pr_number,
             "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            "comments": all_comments
+            "comments": all_comments,
         }
 
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             json.dump(cache_data, f, indent=2)
 
         print(f"✅ CACHED: {len(all_comments)} comments saved to {output_file}")
@@ -212,6 +265,7 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
     except json.JSONDecodeError as e:
         print(f"❌ ERROR: Failed to parse fresh comment data: {e}")
         sys.exit(1)
+
 
 def validate_comment_data(comment: Dict) -> bool:
     """Validate comment data structure and content for security.
@@ -226,47 +280,50 @@ def validate_comment_data(comment: Dict) -> bool:
         return False
 
     # Required fields (user field no longer required due to author field support)
-    required_fields = ['id', 'body']
+    required_fields = ["id", "body"]
     for field in required_fields:
         if field not in comment:
             return False
 
     # Validate comment ID (must be numeric)
-    comment_id = comment.get('id')
+    comment_id = comment.get("id")
     if not isinstance(comment_id, (int, str)) or not str(comment_id).isdigit():
         return False
 
     # Validate user structure (support both user.login and author formats)
-    user = comment.get('user')
-    author = comment.get('author')
+    user = comment.get("user")
+    author = comment.get("author")
 
     # Accept either user.login structure or direct author field
-    has_valid_user = isinstance(user, dict) and 'login' in user
+    has_valid_user = isinstance(user, dict) and "login" in user
     has_valid_author = isinstance(author, str) and author.strip()
 
     if not (has_valid_user or has_valid_author):
         return False
 
     # Validate body content
-    body = comment.get('body')
+    body = comment.get("body")
     if not isinstance(body, str):
         return False
 
     # Check for potentially dangerous content patterns
     dangerous_patterns = [
-        r'<script[^>]*>.*?</script>',  # Script tags
-        r'javascript:',  # JavaScript URLs
-        r'data:text/html',  # Data URLs
-        r'vbscript:',  # VBScript
-        r'on\w+\s*=',  # Event handlers
+        r"<script[^>]*>.*?</script>",  # Script tags
+        r"javascript:",  # JavaScript URLs
+        r"data:text/html",  # Data URLs
+        r"vbscript:",  # VBScript
+        r"on\w+\s*=",  # Event handlers
     ]
 
     for pattern in dangerous_patterns:
         if re.search(pattern, body, re.IGNORECASE | re.DOTALL):
-            print(f"⚠️ SECURITY: Potentially dangerous content detected in comment #{comment_id}")
+            print(
+                f"⚠️ SECURITY: Potentially dangerous content detected in comment #{comment_id}"
+            )
             return False
 
     return True
+
 
 def sanitize_comment_content(content: str) -> str:
     """Sanitize comment content for safe processing.
@@ -289,7 +346,10 @@ def sanitize_comment_content(content: str) -> str:
 
     return sanitized
 
-def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: str) -> str:
+
+def get_response_for_comment(
+    comment: Dict, responses_data: Dict, commit_hash: str
+) -> str:
     """
     Get Claude-generated response for a specific comment.
 
@@ -316,18 +376,126 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
             return response_item.get("reply_text") or response_item.get("response", "")
 
     # CRITICAL FIX: Never post placeholder comments - return empty string to skip posting
-    print(f"⚠️ SKIP: No Claude response found for comment #{comment_id} - will not post placeholder")
+    print(
+        f"⚠️ SKIP: No Claude response found for comment #{comment_id} - will not post placeholder"
+    )
     return ""
+
 
 def get_git_commit_hash() -> str:
     """Get current git commit hash"""
     success, commit_hash, _ = run_command(["git", "rev-parse", "--short", "HEAD"])
     return commit_hash.strip() if success else "unknown"
 
+
+def dismiss_pending_reviews(
+    owner: str, repo: str, pr_number: str, actor_login: str
+) -> None:
+    """
+    Delete pending draft reviews from the current user to allow threaded replies.
+
+    GitHub blocks threaded reply attempts if there's a pending review from the same user.
+    This function deletes pending draft reviews from the current user before posting threaded replies.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        pr_number: PR number
+        actor_login: Login of the current user (to filter reviews to only delete current user's reviews)
+    """
+    print(
+        f"🔍 CHECKING: Pending reviews for {owner}/{repo}#{pr_number} (user: {actor_login})"
+    )
+
+    # Fetch all reviews for the PR
+    success, reviews_json, stderr = run_command(
+        [
+            "gh",
+            "api",
+            f"repos/{owner}/{repo}/pulls/{pr_number}/reviews",
+            "--paginate",
+            "-q",
+            ".[]",
+        ],
+        description="fetch PR reviews",
+        timeout=60,
+    )
+
+    if not success:
+        print(f"⚠️ WARNING: Failed to fetch reviews: {stderr}")
+        print("   Continuing without deleting reviews (may encounter 422 errors)")
+        return
+
+    try:
+        # Parse reviews (one JSON object per line)
+        reviews = [
+            json.loads(line)
+            for line in (reviews_json or "").splitlines()
+            if line.strip()
+        ]
+
+        # Find pending reviews from the current user only
+        pending_reviews = [
+            r
+            for r in reviews
+            if r.get("state") == "PENDING"
+            and r.get("user", {}).get("login") == actor_login
+        ]
+
+        if not pending_reviews:
+            print(
+                "✅ NO PENDING REVIEWS: No pending reviews from current user to delete"
+            )
+            return
+
+        print(
+            f"🔄 DELETING: Found {len(pending_reviews)} pending review(s) from {actor_login}"
+        )
+
+        # Delete each pending review from the current user
+        for review in pending_reviews:
+            review_id = review.get("id")
+            if not review_id:
+                continue
+
+            # Delete the pending review
+            delete_success, _, delete_stderr = run_command(
+                [
+                    "gh",
+                    "api",
+                    f"repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}",
+                    "-X",
+                    "DELETE",
+                ],
+                description=f"delete pending review #{review_id}",
+                timeout=30,
+            )
+
+            if delete_success:
+                print(f"✅ DELETED: Pending review #{review_id} from {actor_login}")
+            else:
+                print(
+                    f"⚠️ WARNING: Failed to delete review #{review_id}: {delete_stderr}"
+                )
+                print("   Continuing anyway (may encounter 422 errors for this review)")
+
+    except json.JSONDecodeError as e:
+        print(f"⚠️ WARNING: Failed to parse reviews JSON: {e}")
+        print("   Continuing without deleting reviews (may encounter 422 errors)")
+    except Exception as e:
+        print(f"⚠️ WARNING: Error while deleting reviews: {e}")
+        print("   Continuing anyway (may encounter 422 errors)")
+
+
 def detect_comment_type(comment: Dict) -> str:
     """Detect comment kind: inline (code), review (review body), or issue"""
-    html_url = (comment.get("html_url") or "")
-    if "#discussion_r" in html_url or comment.get("path") or comment.get("position") or comment.get("diff_hunk"):
+    html_url = comment.get("html_url") or ""
+    if (
+        "#discussion_r" in html_url
+        or comment.get("path")
+        or comment.get("position")
+        or comment.get("diff_hunk")
+    ):
         return "inline"
     if "#pullrequestreview-" in html_url or comment.get("pull_request_review_id"):
         return "review"
@@ -335,10 +503,13 @@ def detect_comment_type(comment: Dict) -> str:
         return "issue"
     return "inline"
 
-def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, response_text: str) -> bool:
+
+def create_threaded_reply(
+    owner: str, repo: str, pr_number: str, comment: Dict, response_text: str
+) -> bool:
     """Create a threaded reply to a PR comment using appropriate GitHub API"""
     comment_id = comment.get("id")
-    comment_type = (comment.get("type") or detect_comment_type(comment))
+    comment_type = comment.get("type") or detect_comment_type(comment)
     if comment_id is None:
         print("❌ ERROR: Missing comment id; skip reply")
         return False
@@ -347,11 +518,18 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
 
     # Issue + review-body via issue comments; inline via review API
     if comment_type in ("issue", "review"):
-        return create_issue_comment_reply(owner, repo, pr_number, comment, response_text)
+        return create_issue_comment_reply(
+            owner, repo, pr_number, comment, response_text
+        )
     else:
-        return create_review_comment_reply(owner, repo, pr_number, comment_id, response_text, comment)
+        return create_review_comment_reply(
+            owner, repo, pr_number, comment_id, response_text, comment
+        )
 
-def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment: Dict, response_text: str) -> bool:
+
+def create_issue_comment_reply(
+    owner: str, repo: str, pr_number: str, comment: Dict, response_text: str
+) -> bool:
     """Create a reply to an issue comment (general PR discussion)"""
     # SECURITY: Validate inputs
     if not validate_comment_data(comment):
@@ -365,7 +543,7 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment: D
     response_text = sanitize_comment_content(response_text)
 
     # Determine correct anchor based on comment type
-    ctype = (comment.get("type") or detect_comment_type(comment))
+    ctype = comment.get("type") or detect_comment_type(comment)
     if ctype == "review":
         anchor = f"pullrequestreview-{comment_id}"
     elif ctype in ("inline", "copilot"):
@@ -380,25 +558,33 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment: D
         f"(https://github.com/{owner}/{repo}/pull/{pr_number}#{anchor}):\n\n{response_text}"
     )
 
-    reply_data = {
-        "body": reply_text
-    }
+    reply_data = {"body": reply_text}
 
     # Use secure JSON input with temporary file to prevent shell injection
     temp_file_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
             json.dump(reply_data, temp_file)
             temp_file_path = temp_file.name
 
         # Use issues endpoint for issue comments
-        success, response_json, stderr = run_command([
-            "gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments",
-            "--method", "POST",
-            "--header", "Content-Type: application/json",
-            "--header", "Accept: application/vnd.github+json",
-            "--input", temp_file_path
-        ])
+        success, response_json, stderr = run_command(
+            [
+                "gh",
+                "api",
+                f"repos/{owner}/{repo}/issues/{pr_number}/comments",
+                "--method",
+                "POST",
+                "--header",
+                "Content-Type: application/json",
+                "--header",
+                "Accept: application/vnd.github+json",
+                "--input",
+                temp_file_path,
+            ]
+        )
 
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure JSON input: {e}")
@@ -414,18 +600,30 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment: D
             reply_id = response_data.get("id")
             reply_url = response_data.get("html_url")
 
-            print(f"✅ SUCCESS: Issue comment reply #{reply_id} created for comment #{comment_id}")
+            print(
+                f"✅ SUCCESS: Issue comment reply #{reply_id} created for comment #{comment_id}"
+            )
             print(f"🔗 URL: {reply_url}")
             return True
         except json.JSONDecodeError:
-            print(f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}")
+            print(
+                f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}"
+            )
             return True
     else:
         print(f"❌ ERROR: Failed to create issue comment reply for #{comment_id}")
         print(f"   Error: {stderr}")
         return False
 
-def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_id: int, response_text: str, comment: Dict = None) -> bool:
+
+def create_review_comment_reply(
+    owner: str,
+    repo: str,
+    pr_number: str,
+    comment_id: int,
+    response_text: str,
+    comment: Dict = None,
+) -> bool:
     """Create a threaded reply to a review comment (code-specific)"""
     print(f"🧵 POSTING: Review comment threaded reply to #{comment_id}")
 
@@ -442,25 +640,32 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
     response_text = sanitize_comment_content(response_text)
 
     # Prepare the API call data for review comment threading
-    reply_data = {
-        "body": response_text,
-        "in_reply_to": comment_id
-    }
+    reply_data = {"body": response_text, "in_reply_to": comment_id}
 
     temp_file_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
             json.dump(reply_data, temp_file)
             temp_file_path = temp_file.name
 
         # Use pulls/comments endpoint for review comment threading
-        success, response_json, stderr = run_command([
-            "gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments",
-            "--method", "POST",
-            "--header", "Content-Type: application/json",
-            "--header", "Accept: application/vnd.github+json",
-            "--input", temp_file_path
-        ])
+        success, response_json, stderr = run_command(
+            [
+                "gh",
+                "api",
+                f"repos/{owner}/{repo}/pulls/{pr_number}/comments",
+                "--method",
+                "POST",
+                "--header",
+                "Content-Type: application/json",
+                "--header",
+                "Accept: application/vnd.github+json",
+                "--input",
+                temp_file_path,
+            ]
+        )
 
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure JSON input: {e}")
@@ -476,11 +681,15 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
             reply_id = response_data.get("id")
             reply_url = response_data.get("html_url")
 
-            print(f"✅ SUCCESS: Review comment reply #{reply_id} created for comment #{comment_id}")
+            print(
+                f"✅ SUCCESS: Review comment reply #{reply_id} created for comment #{comment_id}"
+            )
             print(f"🔗 URL: {reply_url}")
             return True
         except json.JSONDecodeError:
-            print(f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}")
+            print(
+                f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}"
+            )
             return True
     else:
         if "422" in (stderr or ""):
@@ -490,39 +699,65 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
             print(f"🔍 DEBUG 422: Error summary: {sanitized_stderr}...")
 
             # Check for specific error patterns
-            if "not found" in (stderr or "").lower() or "does not exist" in (stderr or "").lower():
-                print(f"🚨 STALE COMMENT: Comment #{comment_id} no longer exists (deleted or from different PR state)")
+            if (
+                "not found" in (stderr or "").lower()
+                or "does not exist" in (stderr or "").lower()
+            ):
+                print(
+                    f"🚨 STALE COMMENT: Comment #{comment_id} no longer exists (deleted or from different PR state)"
+                )
                 print(f"↪️ SKIP: Cannot reply to non-existent comment #{comment_id}")
                 return False
 
             if comment:
                 # SECURITY: Only log safe diagnostic information
                 comment_type = detect_comment_type(comment)
-                has_path = bool(comment.get('path'))
-                has_position = bool(comment.get('position'))
-                has_diff_hunk = bool(comment.get('diff_hunk'))
+                has_path = bool(comment.get("path"))
+                has_position = bool(comment.get("position"))
+                has_diff_hunk = bool(comment.get("diff_hunk"))
                 print(f"🔍 DEBUG 422: Comment type: {comment_type}")
-                print(f"🔍 DEBUG 422: Has path: {has_path}, position: {has_position}, diff_hunk: {has_diff_hunk}")
+                print(
+                    f"🔍 DEBUG 422: Has path: {has_path}, position: {has_position}, diff_hunk: {has_diff_hunk}"
+                )
 
                 # SURGICAL FIX: Fallback to issue comment when review threading fails
-                print(f"🔄 FALLBACK: Attempting issue comment fallback for review comment #{comment_id}")
-                fallback_success = create_issue_comment_reply(owner, repo, pr_number, comment, response_text)
+                print(
+                    f"🔄 FALLBACK: Attempting issue comment fallback for review comment #{comment_id}"
+                )
+                fallback_success = create_issue_comment_reply(
+                    owner, repo, pr_number, comment, response_text
+                )
                 if fallback_success:
-                    print(f"✅ FALLBACK SUCCESS: Posted as issue comment instead of threaded review reply for #{comment_id}")
+                    print(
+                        f"✅ FALLBACK SUCCESS: Posted as issue comment instead of threaded review reply for #{comment_id}"
+                    )
                     return True
                 else:
-                    print(f"❌ FALLBACK FAILED: Both review threading and issue comment failed for #{comment_id}")
+                    print(
+                        f"❌ FALLBACK FAILED: Both review threading and issue comment failed for #{comment_id}"
+                    )
                     return False
             else:
-                print("🔍 DEBUG 422: Comment object not available for detailed analysis")
-                print(f"↪️ SKIP: GitHub returned 422 (likely stale comment or threading constraint) for #{comment_id}")
+                print(
+                    "🔍 DEBUG 422: Comment object not available for detailed analysis"
+                )
+                print(
+                    f"↪️ SKIP: GitHub returned 422 (likely stale comment or threading constraint) for #{comment_id}"
+                )
                 return False
         print(f"❌ ERROR: Failed to create review comment reply for #{comment_id}")
         print(f"   Error: {stderr}")
         return False
 
 
-def post_final_summary(owner: str, repo: str, pr_number: str, processed_count: int, success_count: int, commit_hash: str) -> bool:
+def post_final_summary(
+    owner: str,
+    repo: str,
+    pr_number: str,
+    processed_count: int,
+    success_count: int,
+    commit_hash: str,
+) -> bool:
     """Post final summary comment to main PR issue"""
 
     print(f"📝 POSTING: Final summary comment to PR #{pr_number}")
@@ -550,17 +785,26 @@ def post_final_summary(owner: str, repo: str, pr_number: str, processed_count: i
     # Use secure JSON input with temporary file to prevent shell injection
     temp_file_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
             json.dump(summary_data, temp_file)
             temp_file_path = temp_file.name
 
         # Use secure subprocess call with proper argument separation
-        success, response_json, stderr = run_command([
-            "gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments",
-            "--method", "POST",
-            "--header", "Content-Type: application/json",
-            "--input", temp_file_path
-        ])
+        success, response_json, stderr = run_command(
+            [
+                "gh",
+                "api",
+                f"repos/{owner}/{repo}/issues/{pr_number}/comments",
+                "--method",
+                "POST",
+                "--header",
+                "Content-Type: application/json",
+                "--input",
+                temp_file_path,
+            ]
+        )
 
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure summary JSON: {e}")
@@ -585,10 +829,13 @@ def post_final_summary(owner: str, repo: str, pr_number: str, processed_count: i
         print(f"   Error: {stderr}")
         return False
 
+
 def main():
     """Main execution function"""
     print("🚀 STARTING: /commentreply systematic comment processing")
-    print("🎯 PURPOSE: Process ALL PR comments with proper threading to prevent missed comment bugs")
+    print(
+        "🎯 PURPOSE: Process ALL PR comments with proper threading to prevent missed comment bugs"
+    )
 
     # Step 1: Parse command line arguments (passed from commentreply.md)
     owner, repo, pr_number = parse_arguments()
@@ -597,7 +844,9 @@ def main():
 
     # Step 2: Load comments with staleness detection and real-time fallback
     branch_name = get_current_branch()
-    all_comments = load_comments_with_staleness_check(branch_name, owner, repo, pr_number)
+    all_comments = load_comments_with_staleness_check(
+        branch_name, owner, repo, pr_number
+    )
     print(f"📁 LOADED: {len(all_comments)} comments with staleness validation")
 
     if not all_comments:
@@ -611,8 +860,7 @@ def main():
 
     # Determine current actor and limit to top-level comments
     ok_actor, actor_login, _ = run_command(
-        ["gh", "api", "user", "-q", ".login"],
-        description="current actor"
+        ["gh", "api", "user", "-q", ".login"], description="current actor"
     )
     actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
     top_level = [c for c in all_comments if not c.get("in_reply_to_id")]
@@ -627,6 +875,58 @@ def main():
     # Step 3: Load Claude-generated responses
     responses_data = load_claude_responses(branch_name)
 
+    # Step 3.5: Delete pending reviews only if we need threaded replies (inline comments)
+    # GitHub blocks threaded replies if there's a pending review from the same user
+    should_cleanup_pending = False
+    if actor_login:
+        for comment in top_level:
+            if not validate_comment_data(comment):
+                continue
+            user = comment.get("user", {})
+            author = (
+                user.get("login")
+                if isinstance(user, dict)
+                else comment.get("author", "unknown")
+            )
+            if author == actor_login:
+                continue
+            comment_id = comment.get("id")
+            replied_by_actor = any(
+                (c.get("in_reply_to_id") == comment_id)
+                and (c.get("user", {}).get("login") == actor_login)
+                for c in all_comments
+            )
+            if replied_by_actor:
+                continue
+            thread_replies = [
+                c for c in all_comments if c.get("in_reply_to_id") == comment_id
+            ]
+            if thread_replies:
+                thread_replies.sort(key=lambda x: x.get("created_at", ""))
+                last_reply_body = thread_replies[-1].get("body", "")
+                if "[AI responder]" in last_reply_body:
+                    continue
+            response_text = get_response_for_comment(
+                comment, responses_data, commit_hash
+            )
+            if not response_text:
+                continue
+            comment_type = comment.get("type") or detect_comment_type(comment)
+            if comment_type in ("issue", "review"):
+                continue
+            should_cleanup_pending = True
+            break
+
+    if should_cleanup_pending:
+        print(
+            "\n🔍 PRE-PROCESSING: Deleting pending reviews from current user to enable threaded replies"
+        )
+        dismiss_pending_reviews(owner, repo, pr_number, actor_login)
+    else:
+        print(
+            "\nℹ️ PRE-PROCESSING: No inline replies planned; skipping pending review deletion"
+        )
+
     for i, comment in enumerate(top_level, 1):
         # SECURITY: Validate each comment before processing
         if not validate_comment_data(comment):
@@ -636,11 +936,17 @@ def main():
         comment_id = comment.get("id")
         # Support both user.login and author field formats
         user = comment.get("user", {})
-        author = user.get("login") if isinstance(user, dict) else comment.get("author", "unknown")
-        body_snippet = sanitize_comment_content(comment.get("body", ""))[:50].replace("\n", " ")
+        author = (
+            user.get("login")
+            if isinstance(user, dict)
+            else comment.get("author", "unknown")
+        )
+        body_snippet = sanitize_comment_content(comment.get("body", ""))[:50].replace(
+            "\n", " "
+        )
 
         print(f"\n[{i}/{len(top_level)}] Processing comment #{comment_id} by @{author}")
-        print(f"   Content: \"{body_snippet}...\"")
+        print(f'   Content: "{body_snippet}..."')
 
         # Skip our own comments
         if author == actor_login:
@@ -650,7 +956,8 @@ def main():
 
         # Idempotency: skip if already replied by current actor
         replied_by_actor = any(
-            (c.get("in_reply_to_id") == comment_id) and (c.get("user", {}).get("login") == actor_login)
+            (c.get("in_reply_to_id") == comment_id)
+            and (c.get("user", {}).get("login") == actor_login)
             for c in all_comments
         )
         if replied_by_actor:
@@ -664,17 +971,22 @@ def main():
         if comment_type == "review":
             review_ref_pattern = f"In response to [comment #{comment_id}]"
             already_has_review_reply = any(
-                (c.get("user", {}).get("login") == actor_login) and
-                (review_ref_pattern in (c.get("body") or ""))
-                for c in all_comments if c.get("type") in ("issue", None)
+                (c.get("user", {}).get("login") == actor_login)
+                and (review_ref_pattern in (c.get("body") or ""))
+                for c in all_comments
+                if c.get("type") in ("issue", None)
             )
             if already_has_review_reply:
-                print("   ↪️ Skip: review body already has issue comment reply from current actor")
+                print(
+                    "   ↪️ Skip: review body already has issue comment reply from current actor"
+                )
                 already_replied += 1
                 continue
 
         # Skip if thread ends with [AI responder] comment indicating completion
-        thread_replies = [c for c in all_comments if c.get("in_reply_to_id") == comment_id]
+        thread_replies = [
+            c for c in all_comments if c.get("in_reply_to_id") == comment_id
+        ]
         if thread_replies:
             # Sort by created_at to find the last reply
             thread_replies.sort(key=lambda x: x.get("created_at", ""))
@@ -696,8 +1008,12 @@ def main():
 
         # SECURITY: Final validation before API call
         if len(response_text.strip()) > 65000:  # GitHub comment limit
-            print(f"   ⚠️ WARNING: Response too long for comment #{comment_id}, truncating")
-            response_text = response_text[:65000] + "\n\n[Response truncated due to length limit]"
+            print(
+                f"   ⚠️ WARNING: Response too long for comment #{comment_id}, truncating"
+            )
+            response_text = (
+                response_text[:65000] + "\n\n[Response truncated due to length limit]"
+            )
 
         # Create threaded reply
         if create_threaded_reply(owner, repo, pr_number, comment, response_text):
@@ -708,9 +1024,11 @@ def main():
     # Step 4: Coverage validation over target comments
     covered = already_replied + successful_replies
     coverage_valid = (missing_responses == 0) and (covered == total_targets)
-    print(f"\n🔍 VALIDATION: targets={total_targets} covered={covered} "
-          f"(already={already_replied}, posted={successful_replies}) "
-          f"missing={missing_responses}")
+    print(
+        f"\n🔍 VALIDATION: targets={total_targets} covered={covered} "
+        f"(already={already_replied}, posted={successful_replies}) "
+        f"missing={missing_responses}"
+    )
 
     # Fail on insufficient coverage
     if not coverage_valid:
@@ -719,7 +1037,9 @@ def main():
 
     # Step 5: Post final summary
     print("\n📝 SUMMARY: Posting final summary comment")
-    post_final_summary(owner, repo, pr_number, len(processed_comments), successful_replies, commit_hash)
+    post_final_summary(
+        owner, repo, pr_number, len(processed_comments), successful_replies, commit_hash
+    )
 
     # Step 6: Final report
     print("\n✅ COMPLETE: Comment processing finished")
@@ -733,6 +1053,7 @@ def main():
     # Note: No additional failure check needed here - coverage_valid check at line 692
     # already exits if coverage is invalid or missing_responses > 0
     print("\n🎉 SUCCESS: All comments processed with verified coverage!")
+
 
 if __name__ == "__main__":
     main()
