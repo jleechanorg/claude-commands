@@ -10,6 +10,8 @@ from importlib.metadata import PackageNotFoundError, version as dist_version
 from pathlib import Path
 from typing import Optional
 
+import logging_util
+
 from .automation_safety_manager import AutomationSafetyManager
 from .jleechanorg_pr_monitor import JleechanorgPRMonitor
 from .utils import (
@@ -24,6 +26,8 @@ from .utils import (
 _PROJECT_SECTION_RE = re.compile(r"^\s*\[project\]\s*$")
 _SECTION_RE = re.compile(r"^\s*\[[^\]]+\]\s*$")
 _VERSION_RE = re.compile(r'^\s*version\s*=\s*"([^"]+)"\s*$')
+FALLBACK_VERSION = "0.2.39"
+_logger = logging_util.getLogger(__name__)
 
 
 def _version_from_pyproject(pyproject_path: Path) -> Optional[str]:
@@ -60,15 +64,16 @@ def _resolve_version() -> str:
         version = _version_from_pyproject(pyproject_path)
         if version is not None:
             return version
-    except Exception:
-        pass  # Fallback to dist_version if source file not found or unreadable
+    except Exception as exc:
+        _logger.debug("Failed to read version from pyproject.toml: %s", exc)
 
     try:
         return dist_version("jleechanorg-pr-automation")
     except PackageNotFoundError:
-        return "0.2.39"
-    except Exception:
-        return "0.2.39"
+        return FALLBACK_VERSION
+    except Exception as exc:
+        _logger.debug("Failed to read dist metadata version: %s", exc)
+        return FALLBACK_VERSION
 
 
 __version__ = _resolve_version()

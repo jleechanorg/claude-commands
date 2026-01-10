@@ -9,7 +9,6 @@ import os
 import shutil
 import tempfile
 import unittest
-# from pathlib import Path  # Unused
 
 from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 

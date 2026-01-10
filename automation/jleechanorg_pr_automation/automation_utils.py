@@ -12,7 +12,6 @@ Consolidates common functionality used across automation components:
 
 import fcntl
 import json
-import logging
 import os
 import smtplib
 import subprocess
@@ -24,11 +23,9 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
 
-try:
-    import keyring
-    KEYRING_AVAILABLE = True
-except ImportError:
-    KEYRING_AVAILABLE = False
+import keyring
+
+KEYRING_AVAILABLE = True
 
 from .utils import json_manager, setup_logging as shared_setup_logging
 
@@ -47,7 +44,7 @@ class AutomationUtils:
     }
 
     @classmethod
-    def setup_logging(cls, name: str, log_filename: str = None) -> logging.Logger:
+    def setup_logging(cls, name: str, log_filename: str = None) -> Any:
         """Unified logging setup for all automation components
 
         Args:
@@ -261,7 +258,7 @@ This is an automated notification from the automation system."""
         return json_manager.read_json(str(file_path), {})
 
     @classmethod
-    def safe_write_json(cls, file_path: Path, data: dict):
+    def safe_write_json(cls, file_path: Path, data: dict) -> None:
         """Atomically write JSON file with file locking (delegates to json_manager)"""
         if not json_manager.write_json(str(file_path), data):
             raise RuntimeError(f"Failed to write JSON file {file_path}")
@@ -292,7 +289,7 @@ This is an automated notification from the automation system."""
 
 
 # Convenience functions for backward compatibility
-def setup_logging(name: str, log_filename: str = None) -> logging.Logger:
+def setup_logging(name: str, log_filename: str = None) -> Any:
     """Convenience function for setup_logging"""
     return AutomationUtils.setup_logging(name, log_filename)
 

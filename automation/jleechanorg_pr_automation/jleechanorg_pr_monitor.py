@@ -63,7 +63,6 @@ from .orchestrated_pr_runner import (
     dispatch_agent_for_pr_with_task,
     ensure_base_clone,
     has_failing_checks,
-    run_fixpr_batch,
 )
 from .utils import json_manager, setup_logging
 
