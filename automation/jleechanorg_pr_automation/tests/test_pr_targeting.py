@@ -14,7 +14,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_extract_commit_marker(self):
         """Commit markers can be parsed from Codex comments"""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         intro_line = build_comment_intro(
             assistant_mentions=monitor.assistant_mentions
         )
@@ -27,7 +27,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_fix_comment_marker_detected_for_commit(self):
         """Fix-comment markers should be detected for commit gating."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         test_comment = (
             "Queued\n"
             f"{monitor.FIX_COMMENT_MARKER_PREFIX}abc123"
@@ -55,7 +55,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_detect_pending_codex_commit(self):
         """Codex bot summary comments referencing head commit trigger pending detection."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         head_sha = "abcdef1234567890"
         comments = [
             {
@@ -68,7 +68,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_pending_codex_commit_detects_short_sha_references(self):
         """Cursor Bugbot short SHA references should still count as pending commits."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         full_head_sha = "c279655d00dfcab5ac1a2fd9b0f6205ce5cbba12"
         comments = [
             {
@@ -81,7 +81,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_pending_codex_commit_ignores_short_head_sha(self):
         """Short head SHAs should not match longer Codex summary hashes."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         short_head_sha = "c279655"
         comments = [
             {
@@ -94,7 +94,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_pending_codex_commit_requires_codex_author(self):
         """Pending detection ignores non-Codex authors even if commit appears in comment."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         head_sha = "abcdef1234567890"
         comments = [
             {
@@ -107,7 +107,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_codex_comment_includes_detailed_execution_flow(self):
         """Automation comment should summarize the enforced execution flow with numbered steps."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         pr_data = {
             "title": "Improve automation summary",
             "author": {"login": "developer"},
@@ -127,7 +127,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_fix_comment_queued_body_excludes_marker(self):
         """Queued fix-comment notices should not include commit markers."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         pr_data = {
             "title": "Queued Fix Comment",
             "author": {"login": "developer"},
@@ -149,7 +149,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_fix_comment_review_body_includes_marker(self):
         """Review requests should include the fix-comment commit marker."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         pr_data = {
             "title": "Review Fix Comment",
             "author": {"login": "developer"},
@@ -169,7 +169,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_fix_comment_prompt_requires_threaded_replies(self):
         """Fix-comment prompts should require threaded replies via the GitHub API."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         pr_data = {
             "title": "Threaded Replies",
             "author": {"login": "developer"},
@@ -197,7 +197,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_fix_comment_marker_ignores_queued_comment(self):
         """Queued notices with markers should not satisfy the fix-comment completion check."""
-        monitor = JleechanorgPRMonitor()
+        monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         head_sha = "feedface1234"
         comment_body = (
             "[AI automation] Fix-comment run queued for this PR. "

@@ -10,7 +10,7 @@ class TestCodexActorMatching(unittest.TestCase):
     """Validate detection of Codex-authored commits."""
 
     def setUp(self) -> None:
-        self.monitor = JleechanorgPRMonitor()
+        self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
 
     def test_detects_codex_via_actor_fields(self) -> None:
         commit_details = {

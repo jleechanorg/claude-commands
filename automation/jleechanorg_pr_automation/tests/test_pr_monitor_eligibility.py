@@ -13,7 +13,7 @@ def codex_marker(monitor: mon.JleechanorgPRMonitor, token: str) -> str:
 
 
 def test_list_actionable_prs_conflicts_and_failing(monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]) -> None:
-    monitor = mon.JleechanorgPRMonitor()
+    monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
 
     sample_prs = [
         {"repository": "repo/a", "number": 1, "title": "conflict", "mergeable": "CONFLICTING"},
@@ -41,7 +41,7 @@ class TestBotCommentDetection(unittest.TestCase):
     """Validate detection of new GitHub bot comments since last Codex automation comment."""
 
     def setUp(self) -> None:
-        self.monitor = mon.JleechanorgPRMonitor()
+        self.monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
 
     def test_identifies_new_github_actions_bot_comment(self) -> None:
         """Should detect new comment from github-actions[bot] after Codex comment."""
@@ -250,7 +250,7 @@ class TestIsGithubBotComment(unittest.TestCase):
     """Validate _is_github_bot_comment method."""
 
     def setUp(self) -> None:
-        self.monitor = mon.JleechanorgPRMonitor()
+        self.monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
 
     def test_identifies_github_actions_bot(self) -> None:
         comment = {"author": {"login": "github-actions[bot]"}}
@@ -313,7 +313,7 @@ class TestGetLastCodexAutomationCommentTime(unittest.TestCase):
     """Validate _get_last_codex_automation_comment_time method."""
 
     def setUp(self) -> None:
-        self.monitor = mon.JleechanorgPRMonitor()
+        self.monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
 
     def test_returns_latest_codex_comment_time(self) -> None:
         comments = [

@@ -173,18 +173,36 @@ def coerce_positive_int(value: Any, *, default: int) -> int:
 
 
 def get_automation_limits_with_overrides(overrides: Optional[Mapping[str, Any]] = None) -> Dict[str, int]:
-    """Internal helper to keep defaults centralized and overrides explicit."""
+    """Internal helper to keep defaults centralized and overrides explicit.
+
+    New limit structure:
+    - pr_limit: 50 total attempts across ALL workflows for a PR
+    - workflow limits: 10 attempts per workflow (counts ALL attempts, not just failures)
+    """
+    # Global PR limit: 50 total attempts across all workflows
+    pr_limit_default = 50
+    pr_limit = coerce_positive_int(os.getenv("AUTOMATION_PR_LIMIT"), default=pr_limit_default)
+
+    # Per-workflow limit: 10 attempts per workflow
+    workflow_limit_default = 10
+
     defaults: Dict[str, int] = {
-        # Attempt/run limits
-        "pr_limit": 10,
-        "global_limit": 50,
+        # Global PR limit: counts ALL attempts across ALL workflows
+        "pr_limit": pr_limit,
+        "global_limit": coerce_positive_int(os.getenv("AUTOMATION_GLOBAL_LIMIT"), default=50),
         "approval_hours": 24,
         "subprocess_timeout": 300,
-        # Workflow-specific *comment* limits (per PR)
-        "pr_automation_limit": 10,
-        "fix_comment_limit": 10,
-        "codex_update_limit": 10,
-        "fixpr_limit": 10,
+        # Workflow-specific limits: 10 attempts per workflow (counts ALL attempts)
+        "pr_automation_limit": coerce_positive_int(
+            os.getenv("AUTOMATION_PR_AUTOMATION_LIMIT"), default=workflow_limit_default
+        ),
+        "fix_comment_limit": coerce_positive_int(
+            os.getenv("AUTOMATION_FIX_COMMENT_LIMIT"), default=workflow_limit_default
+        ),
+        "codex_update_limit": coerce_positive_int(
+            os.getenv("AUTOMATION_CODEX_UPDATE_LIMIT"), default=workflow_limit_default
+        ),
+        "fixpr_limit": coerce_positive_int(os.getenv("AUTOMATION_FIXPR_LIMIT"), default=workflow_limit_default),
     }
 
     if not overrides:

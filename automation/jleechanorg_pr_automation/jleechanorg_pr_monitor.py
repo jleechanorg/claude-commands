@@ -55,6 +55,7 @@ from .codex_config import (
     FIXPR_MARKER_SUFFIX as SHARED_FIXPR_SUFFIX,
 )
 from .codex_config import (
+    build_automation_marker,
     build_comment_intro,
 )
 from .orchestrated_pr_runner import (
@@ -258,8 +259,9 @@ class JleechanorgPRMonitor:
         name = actor.get("name")
         return (login, email, name)
 
-    def __init__(self, *, safety_limits: Optional[Dict[str, int]] = None, no_act: bool = False):
+    def __init__(self, *, safety_limits: Optional[Dict[str, int]] = None, no_act: bool = False, automation_username: Optional[str] = None):
         self.logger = setup_logging(__name__)
+        self._explicit_automation_username = automation_username
 
         self.assistant_mentions = os.environ.get(
             "AI_ASSISTANT_MENTIONS",
@@ -284,6 +286,12 @@ class JleechanorgPRMonitor:
             safety_data_dir = str(default_dir)
 
         self.safety_manager = AutomationSafetyManager(safety_data_dir, limits=safety_limits)
+
+        # Resolve automation username (CLI > Env > Dynamic)
+        # Note: CLI arg is passed via __init__ if we update signature, but for now we'll handle it
+        # by checking if it was set after init or passing it in.
+        # Actually, let's update __init__ signature to accept it.
+        self.automation_username = self._resolve_automation_username()
 
         self.logger.info("🏢 Initialized jleechanorg PR monitor")
         self.logger.info(f"📁 History storage: {self.history_base_dir}")
@@ -326,6 +334,37 @@ class JleechanorgPRMonitor:
         # We processed this PR with this exact commit, skip it
         self.logger.info(f"⏭️ Skipping PR {repo_name}/{branch_name}#{pr_number} - already processed commit {current_commit[:8]}")
         return True
+
+    def _resolve_automation_username(self) -> str:
+        """Resolve the automation username from multiple sources."""
+        # 1. Explicitly passed (CLI)
+        if self._explicit_automation_username:
+            self.logger.debug(f"👤 Using explicit automation username: {self._explicit_automation_username}")
+            return self._explicit_automation_username
+
+        # 2. Environment variable
+        env_user = os.environ.get("AUTOMATION_USERNAME")
+        if env_user:
+            self.logger.debug(f"👤 Using environment automation username: {env_user}")
+            return env_user
+
+        # 3. Dynamic discovery from GitHub CLI
+        try:
+            result = AutomationUtils.execute_subprocess_with_timeout(
+                ["gh", "api", "user", "--jq", ".login"],
+                timeout=10,
+                check=False
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                user = result.stdout.strip()
+                self.logger.debug(f"👤 Discovered current GitHub user: {user}")
+                return user
+        except Exception as e:
+            self.logger.warning(f"⚠️ Failed to discover GitHub user: {e}")
+
+        # Fallback (should ideally not happen in real usage, but safe default)
+        self.logger.warning("⚠️ Could not resolve automation username, defaulting to 'unknown'")
+        return "unknown"
 
     def _record_processed_pr(self, repo_name: str, branch_name: str, pr_number: int, commit_sha: str) -> None:
         """Record that we've processed a PR with a specific commit"""
@@ -1008,22 +1047,27 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         pr_number: int,
         pr_data: Dict,
         head_sha: Optional[str],
+        agent_cli: str = "claude",
     ) -> str:
         comment_body = (
-            "[AI automation] Fix-comment run queued for this PR. "
+            f"[AI automation - {agent_cli}] Fix-comment run queued for this PR. "
             "A review request will follow after updates are pushed.\n\n"
             "**PR Details:**\n"
             f"- Title: {pr_data.get('title', 'Unknown')}\n"
             f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
             f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
-            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})\n"
+            f"- Agent: {agent_cli}"
         )
 
         # Always add marker for limit counting, even when head_sha is unavailable.
+        # Use enhanced format: workflow:agent:commit
         sha_value = head_sha or "unknown"
-        comment_body += (
-            f"\n\n{self.FIX_COMMENT_RUN_MARKER_PREFIX}{sha_value}{self.FIX_COMMENT_RUN_MARKER_SUFFIX}"
-        )
+        # Extract first CLI from chain (e.g., "gemini,codex" -> "gemini")
+        cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+        marker_cli = cli_chain[0] if cli_chain else "claude"
+        marker = build_automation_marker("fix-comment-run", marker_cli, sha_value)
+        comment_body += f"\n\n{marker}"
 
         return comment_body
 
@@ -1033,22 +1077,26 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         pr_number: int,
         pr_data: Dict,
         head_sha: Optional[str],
+        agent_cli: str = "claude",
     ) -> str:
         comment_body = (
-            "[AI automation] FixPR run queued for this PR.\n\n"
+            f"[AI automation - {agent_cli}] FixPR run queued for this PR.\n\n"
             "**PR Details:**\n"
             f"- Title: {pr_data.get('title', 'Unknown')}\n"
             f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
             f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
-            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})\n"
+            f"- Agent: {agent_cli}"
         )
 
         # Always add marker for limit counting, even when head_sha is unavailable
-        # Use 'unknown' placeholder to ensure comment is counted against workflow limit
+        # Use enhanced format: workflow:agent:commit
         sha_value = head_sha or "unknown"
-        comment_body += (
-            f"\n\n{self.FIXPR_MARKER_PREFIX}{sha_value}{self.FIXPR_MARKER_SUFFIX}"
-        )
+        # Extract first CLI from chain (e.g., "gemini,codex" -> "gemini")
+        cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+        marker_cli = cli_chain[0] if cli_chain else "claude"
+        marker = build_automation_marker("fixpr-run", marker_cli, sha_value)
+        comment_body += f"\n\n{marker}"
 
         return comment_body
 
@@ -1058,6 +1106,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         pr_number: int,
         pr_data: Dict,
         head_sha: Optional[str],
+        agent_cli: str = "claude",
     ) -> str:
         mentions = self._compose_fix_comment_mentions()
         intro = f"{mentions} [AI automation] {self.FIX_COMMENT_COMPLETION_MARKER}. Please review the updates."
@@ -1075,10 +1124,11 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         )
 
         if head_sha:
-            comment_body += (
-                f"\n{self.FIX_COMMENT_MARKER_PREFIX}{head_sha}"
-                f"{self.FIX_COMMENT_MARKER_SUFFIX}"
-            )
+            # Extract first CLI from chain (e.g., "gemini,codex" -> "gemini")
+            cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+            marker_cli = cli_chain[0] if cli_chain else "claude"
+            marker = build_automation_marker("fix-comment", marker_cli, head_sha)
+            comment_body += f"\n{marker}"
 
         return comment_body
 
@@ -1136,6 +1186,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         pr_number: int,
         pr_data: Dict,
         head_sha: Optional[str],
+        agent_cli: str = "claude",
     ) -> bool:
         repo_full = self._normalize_repository_name(repository)
         comment_body = self._build_fix_comment_review_body(
@@ -1143,6 +1194,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             pr_number,
             pr_data,
             head_sha,
+            agent_cli,
         )
 
         try:
@@ -1189,6 +1241,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         pr_number: int,
         pr_data: Dict,
         head_sha: Optional[str],
+        agent_cli: str = "claude",
     ) -> bool:
         repo_full = self._normalize_repository_name(repository)
         comment_body = self._build_fix_comment_queued_body(
@@ -1196,6 +1249,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             pr_number,
             pr_data,
             head_sha,
+            agent_cli=agent_cli,
         )
 
         try:
@@ -1242,6 +1296,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         pr_number: int,
         pr_data: Dict,
         head_sha: Optional[str],
+        agent_cli: str = "claude",
     ) -> bool:
         repo_full = self._normalize_repository_name(repository)
         comment_body = self._build_fixpr_queued_body(
@@ -1249,6 +1304,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             pr_number,
             pr_data,
             head_sha,
+            agent_cli=agent_cli,
         )
 
         try:
@@ -1374,7 +1430,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 return True
 
             if any(commit_marker in headline for headline in headlines):
-                if self._post_fix_comment_review(repo_full, pr_number, pr_data, head_sha):
+                if self._post_fix_comment_review(repo_full, pr_number, pr_data, head_sha, agent_cli):
                     return True
                 return False
 
@@ -1494,7 +1550,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not self.dispatch_fix_comment_agent(repo_full, pr_number, pr_data, agent_cli=agent_cli, model=model):
             return "failed"
 
-        queued_posted = self._post_fix_comment_queued(repo_full, pr_number, pr_data, head_sha)
+        queued_posted = self._post_fix_comment_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
 
         if head_sha:
             self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
@@ -1574,7 +1630,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
 
                 if success:
-                    queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha)
+                    queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
                     # Record processing so we don't loop
                     if head_sha:
                         self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
@@ -1787,7 +1843,11 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         return comment_body[start_index:end_index].strip()
 
     def _extract_fix_comment_marker(self, comment_body: str) -> Optional[str]:
-        """Extract commit marker from fix-comment automation comments."""
+        """Extract commit SHA from fix-comment automation comments.
+        
+        Handles both old format (SHA) and new format (SHA:cli).
+        Returns just the SHA portion for comparison.
+        """
         if not comment_body:
             return None
 
@@ -1800,7 +1860,13 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if end_index == -1:
             return None
 
-        return comment_body[start_index:end_index].strip()
+        marker_content = comment_body[start_index:end_index].strip()
+        # Handle new format: SHA:cli -> extract just SHA
+        # Also handles old format: SHA (no colon)
+        if ":" in marker_content:
+            marker_content = marker_content.split(":")[0]
+        
+        return marker_content
 
     def _has_codex_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
         """Determine if Codex instruction already exists for the latest commit"""
@@ -1965,12 +2031,20 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     count += 1
             elif workflow_type == "fix_comment":
                 # Fix-comment workflow uses dedicated markers for queued runs + completion.
+                # Only count if posted by the automation user, not bots echoing the marker
                 if self.FIX_COMMENT_RUN_MARKER_PREFIX in body or self.FIX_COMMENT_MARKER_PREFIX in body:
-                    count += 1
+                    author = self._get_comment_author_login(comment)
+                    # Only count comments from the automation user
+                    # Exclude bot replies that might echo the marker in quoted text or scripts
+                    if author == self.automation_username:
+                        count += 1
             elif workflow_type == "fixpr":
                 # FixPR workflow uses a dedicated marker in its queued comment.
+                # Only count if posted by the automation user, not bots echoing the marker
                 if self.FIXPR_MARKER_PREFIX in body:
-                    count += 1
+                    author = self._get_comment_author_login(comment)
+                    if author == self.automation_username:
+                        count += 1
             else:
                 # Fallback: count all automation comments
                 if (
@@ -2665,6 +2739,7 @@ def main():
     parser.add_argument("--pr-automation-limit", type=_positive_int_arg, default=None, help="Max PR automation comments per PR (default: 10).")
     parser.add_argument("--fix-comment-limit", type=_positive_int_arg, default=None, help="Max fix-comment comments per PR (default: 10).")
     parser.add_argument("--fixpr-limit", type=_positive_int_arg, default=None, help="Max fixpr comments per PR (default: 10).")
+    parser.add_argument("--automation-user", help="Override automation username for marker validation")
 
     args = parser.parse_args()
 
@@ -2699,7 +2774,11 @@ def main():
     if args.fixpr_limit is not None:
         safety_limits["fixpr_limit"] = args.fixpr_limit
 
-    monitor = JleechanorgPRMonitor(safety_limits=safety_limits or None, no_act=args.no_act)
+    monitor = JleechanorgPRMonitor(
+        safety_limits=safety_limits or None,
+        no_act=args.no_act,
+        automation_username=getattr(args, 'automation_user', None)
+    )
 
     if args.fix_comment_watch:
         success = monitor.run_fix_comment_review_watcher(
@@ -2851,8 +2930,6 @@ def main():
         )
     else:
         monitor.run_monitoring_cycle(
-            single_repo=args.single_repo,
-            max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             model=args.model,
         )

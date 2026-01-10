@@ -18,7 +18,7 @@ class TestModelParameter(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.monitor = JleechanorgPRMonitor()
+        self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
 
     def test_process_single_pr_accepts_model_parameter(self):
         """Test that process_single_pr_by_number accepts model parameter."""

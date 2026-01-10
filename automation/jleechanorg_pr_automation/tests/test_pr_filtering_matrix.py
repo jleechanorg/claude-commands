@@ -21,7 +21,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         self.temp_dir = tempfile.mkdtemp()
-        self.monitor = JleechanorgPRMonitor()
+        self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         self.monitor.history_storage_path = self.temp_dir
 
     def tearDown(self):

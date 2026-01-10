@@ -24,7 +24,8 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
-            self.monitor = JleechanorgPRMonitor()
+            # Initialize with explicit test username to avoid environment dependency
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
             # Mock safety manager with workflow-specific limits
             self.monitor.safety_manager.pr_automation_limit = 10
             self.monitor.safety_manager.fix_comment_limit = 5
@@ -45,10 +46,10 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
     def test_count_fix_comment_comments(self):
         """Test counting fix-comment workflow comments"""
         comments = [
-            {"body": "<!-- fix-comment-automation-commit:abc123 -->"},
-            {"body": "<!-- fix-comment-automation-commit:def456 -->"},
-            {"body": "<!-- codex-automation-commit:xyz789 -->"},  # Should NOT count
-            {"body": "Regular comment"},
+            {"body": "<!-- fix-comment-automation-commit:abc123 -->", "author": {"login": "test-automation-user"}},
+            {"body": "<!-- fix-comment-automation-commit:def456 -->", "author": {"login": "test-automation-user"}},
+            {"body": "<!-- codex-automation-commit:xyz789 -->", "author": {"login": "test-automation-user"}},  # Should NOT count
+            {"body": "Regular comment", "author": {"login": "test-automation-user"}},
         ]
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 2, "Should count only fix-comment-automation-commit comments")
@@ -56,13 +57,13 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
     def test_count_fix_comment_run_comments(self):
         """Test counting fix-comment queued run markers"""
         comments = [
-            {"body": "<!-- fix-comment-automation-run:abc123 -->"},
-            {"body": "<!-- fix-comment-automation-run:def456 -->"},
-            {"body": "<!-- codex-automation-commit:xyz789 -->"},  # Should NOT count
-            {"body": "Regular comment"},
+            {"body": "<!-- fix-comment-run-automation-commit:gemini:abc123 -->", "author": {"login": "test-automation-user"}},
+            {"body": "<!-- fix-comment-run-automation-commit:codex:def456 -->", "author": {"login": "test-automation-user"}},
+            {"body": "<!-- codex-automation-commit:xyz789 -->", "author": {"login": "test-automation-user"}},  # Should NOT count
+            {"body": "Regular comment", "author": {"login": "test-automation-user"}},
         ]
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
-        self.assertEqual(count, 2, "Should count fix-comment-automation-run comments for fix_comment workflow")
+        self.assertEqual(count, 2, "Should count fix-comment-run-automation-commit comments for fix_comment workflow")
 
     def test_count_codex_update_comments(self):
         """Test counting codex-update workflow comments (should always be 0)"""
@@ -76,14 +77,14 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
     def test_count_fixpr_comments(self):
         """Test counting fixpr workflow comments"""
         comments = [
-            {"body": "<!-- fixpr-automation-run:abc123 -->"},
-            {"body": "<!-- fixpr-automation-run:def456 -->"},
-            {"body": "<!-- codex-automation-commit:xyz789 -->"},  # Should NOT count
-            {"body": "<!-- fix-comment-automation-commit:ghi012 -->"},  # Should NOT count
-            {"body": "Regular comment"},
+            {"body": "<!-- fixpr-run-automation-commit:gemini:abc123 -->", "author": {"login": "test-automation-user"}},
+            {"body": "<!-- fixpr-run-automation-commit:codex:def456 -->", "author": {"login": "test-automation-user"}},
+            {"body": "<!-- codex-automation-commit:xyz789 -->", "author": {"login": "test-automation-user"}},  # Should NOT count
+            {"body": "<!-- fix-comment-automation-commit:ghi012 -->", "author": {"login": "test-automation-user"}},  # Should NOT count
+            {"body": "Regular comment", "author": {"login": "test-automation-user"}},
         ]
         count = self.monitor._count_workflow_comments(comments, "fixpr")
-        self.assertEqual(count, 2, "Should count only fixpr-automation-run comments for fixpr workflow")
+        self.assertEqual(count, 2, "Should count only fixpr-run-automation-commit comments for fixpr workflow")
 
     def test_workflow_specific_limit_pr_automation(self):
         """Test that PR automation workflow uses its own limit"""
@@ -102,13 +103,13 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
     def test_workflow_specific_limit_fix_comment(self):
         """Test that fix-comment workflow uses its own limit (5)"""
         comments = [
-            {"body": f"<!-- fix-comment-automation-commit:abc{i} -->"} for i in range(5)
+            {"body": f"<!-- fix-comment-automation-commit:abc{i} -->", "author": {"login": "test-automation-user"}} for i in range(5)
         ]
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         # Should be at limit (5)
         self.assertEqual(count, 5)
         # 6th comment should exceed limit
-        comments.append({"body": "<!-- fix-comment-automation-commit:abc6 -->"})
+        comments.append({"body": "<!-- fix-comment-automation-commit:abc6 -->", "author": {"login": "test-automation-user"}})
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 6)
         self.assertGreater(count, self.monitor.safety_manager.fix_comment_limit)
@@ -117,11 +118,11 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
         """Test that different workflows have independent limits"""
         # PR automation has 10 comments (at limit)
         pr_automation_comments = [
-            {"body": f"<!-- codex-automation-commit:pr{i} -->"} for i in range(10)
+            {"body": f"<!-- codex-automation-commit:pr{i} -->", "author": {"login": "test-automation-user"}} for i in range(10)
         ]
         # Fix-comment has 2 comments (under limit)
         fix_comment_comments = [
-            {"body": f"<!-- fix-comment-automation-commit:fix{i} -->"} for i in range(2)
+            {"body": f"<!-- fix-comment-automation-commit:fix{i} -->", "author": {"login": "test-automation-user"}} for i in range(2)
         ]
 
         pr_count = self.monitor._count_workflow_comments(pr_automation_comments, "pr_automation")
@@ -148,10 +149,10 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
     def test_mixed_comments_fix_comment(self):
         """Test fix-comment counting with mixed comment types"""
         comments = [
-            {"body": "<!-- fix-comment-automation-commit:abc123 -->"},  # Count
-            {"body": "<!-- codex-automation-commit:def456 -->"},  # Don't count
-            {"body": "<!-- fix-comment-automation-commit:xyz789 -->"},  # Count
-            {"body": "Regular comment"},  # Don't count
+            {"body": "<!-- fix-comment-automation-commit:abc123 -->", "author": {"login": "test-automation-user"}},  # Count
+            {"body": "<!-- codex-automation-commit:def456 -->", "author": {"login": "test-automation-user"}},  # Don't count
+            {"body": "<!-- fix-comment-automation-commit:xyz789 -->", "author": {"login": "test-automation-user"}},  # Count
+            {"body": "Regular comment", "author": {"login": "test-automation-user"}},  # Don't count
         ]
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 2, "Should count only fix-comment-automation-commit comments")
@@ -172,6 +173,29 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
         count = self.monitor._count_workflow_comments(comments, "unknown_workflow")
         # Should count all automation comments as fallback
         self.assertEqual(count, 2)
+
+    def test_count_fix_comment_ignores_impostors(self):
+        """Test that fix-comment counts ignore comments from other users"""
+        comments = [
+            # Valid marker but wrong author
+            {"body": "<!-- fix-comment-automation-commit:abc123 -->", "author": {"login": "impostor"}},
+            # Valid marker and correct author
+            {"body": "<!-- fix-comment-automation-commit:def456 -->", "author": {"login": "test-automation-user"}},
+        ]
+        count = self.monitor._count_workflow_comments(comments, "fix_comment")
+        self.assertEqual(count, 1, "Should ignore comments from impostor users")
+
+    def test_count_fixpr_ignores_impostors(self):
+        """Test that fixpr counts ignore comments from other users"""
+        comments = [
+            # Valid marker but wrong author
+            {"body": "<!-- fixpr-run-automation-commit:gemini:abc123 -->", "author": {"login": "impostor"}},
+            # Valid marker and correct author
+            {"body": "<!-- fixpr-run-automation-commit:codex:def456 -->", "author": {"login": "test-automation-user"}},
+        ]
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+        self.assertEqual(count, 1, "Should ignore comments from impostor users")
+
 
 
 if __name__ == "__main__":
