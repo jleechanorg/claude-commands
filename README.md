@@ -1,6 +1,14 @@
+---
+description: Claude Commands - Command Library Overview
+type: llm-orchestration
+execution_mode: immediate
+---
+
 # Claude Commands
 
 A comprehensive collection of workflow automation commands for Claude Code that transform your development process through intelligent command composition and orchestration.
+
+The YAML frontmatter at the top of this template provides command metadata and should remain intact for downstream tooling.
 
 ## Installation (Human must type the /plugin commands)
 
@@ -8,6 +16,7 @@ To install Claude Commands in Claude Code CLI, first register the marketplace:
 
 ```bash
 /plugin marketplace add jleechanorg/claude-commands
+# Note: If you have forked this repository, use your own username instead of jleechanorg
 ```
 
 Then browse available commands with `/plugin` and install:
@@ -53,7 +62,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 **19 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**33 Skills** providing shared knowledge references and capabilities
+**34 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
@@ -86,11 +95,11 @@ Targets current branch PR and autonomously handles analysis, fixes, testing, and
 
 ### `/cerebras` - High-Speed Code Generation
 
-Hybrid workflow using Cerebras Inference API (19.6x faster) with Claude as architect and Cerebras as builder.
+Hybrid workflow using Cerebras Inference API (up to 19.6x faster per Cerebras benchmarks) with Claude as architect and Cerebras as builder.
 
 ```bash
 /cerebras "create React component for user dashboard with TypeScript"
-# → 500ms generation time vs 10s standard
+# → Example: ~500ms generation time vs 10s standard in benchmark scenarios
 ```
 
 ### `/orch` - Multi-Agent Task Delegation
@@ -211,10 +220,10 @@ See bottom of README for complete version history.
 ### Latest Release: v1.1.0 (2025-12-30)
 
 **Export Statistics**:
-- **195 Commands**: Complete workflow orchestration system
+- **197 Commands**: Complete workflow orchestration system
 - **43 Hooks**: Claude Code automation and workflow hooks
 - **19 Scripts**: Development and automation tools
-- **33 Skills**: Shared knowledge references
+- **34 Skills**: Shared knowledge references
 
 **Recent Changes**:
 - Script allowlist expansion (12 additional development scripts)
@@ -230,32 +239,32 @@ For complete version history, see [Version History Archive](#version-history-arc
 <details>
 <summary>Click to expand complete version history</summary>
 
-### v1.1.0 (2025-12-28)
+### v1.1.0 (2025-12-30)
 - 195 Commands, 43 Hooks, 19 Scripts, 33 Skills
 - Script allowlist expansion for development tools
 - Enhanced export utility coverage
 
-### v1.1.0 (2025-12-19)
+### v1.0.9 (2025-12-19)
 - 194 Commands, 43 Hooks, 19 Scripts, 28 Skills
 - Development workflow tools integration
 - Improved script categorization
 
-### v1.1.0 (2025-12-16)
+### v1.0.8 (2025-12-16)
 - 194 Commands, 43 Hooks, 19 Scripts, 25 Skills
 - Enhanced automation patterns
 - Documentation improvements
 
-### v1.1.0 (2025-12-11)
+### v1.0.7 (2025-12-11)
 - 194 Commands, 43 Hooks, 19 Scripts, 24 Skills
 - Infrastructure deployment enhancements
 - Cross-project compatibility improvements
 
-### v1.7.0 (2025-11-22)
+### v1.0.6 (2025-11-22)
 - 191 Commands, 43 Hooks, 19 Scripts, 20 Skills
 - Testing framework enhancements
 - Command composition improvements
 
-### v1.6.0 (2025-11-15)
+### v1.0.5 (2025-11-15)
 - 186 Commands, 41 Hooks, 19 Scripts, 14 Skills
 - Multi-agent orchestration improvements
 - Performance optimizations

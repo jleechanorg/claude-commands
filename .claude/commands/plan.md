@@ -26,7 +26,7 @@ execution_mode: immediate
 **Tool Selection Hierarchy** (Context-Optimized):
 1. **Serena MCP** - Semantic analysis for efficient context usage
 2. **Targeted Reads** - Limited file reads based on context capacity
-3. **Focused Implementation** - Claude direct or /cerebras based on task size
+3. **Focused Implementation** - Claude direct based on task size
 4. **Context Preservation** - Reserve capacity for execution and validation
 
 ### Phase 2: Execution Plan Presentation
@@ -39,11 +39,11 @@ execution_mode: immediate
 **🎯 Universal Composition Strategy**:
 1. **Primary Command**: `/plan` (this command)
 2. **Composed Commands**: List of commands that will be naturally integrated
-3. **Tool Selection**: Context-aware hierarchy (Serena MCP → Read → /cerebras/Claude → Bash)
+3. **Tool Selection**: Context-aware hierarchy (Serena MCP → Read → Claude → Bash)
 
 **⚡ Implementation Approach**:
 4. **Analysis Tasks**: Minimal context consumption using Serena MCP
-5. **Generation Tasks**: /cerebras for >10 delta lines, Claude for ≤10 lines (per CLAUDE.md)
+5. **Generation Tasks**: Claude handles code generation tasks
 6. **Integration Tasks**: Efficient tool selection based on remaining context
 7. **Validation**: Context-appropriate testing depth
 
@@ -58,7 +58,7 @@ execution_mode: immediate
 
 **🚀 Execution Sequence** (Context-Optimized):
 15. **Quick Discovery**: Use Serena MCP for targeted analysis
-16. **Smart Generation**: /cerebras for large tasks, Claude for integration
+16. **Smart Generation**: Claude for code generation and integration
 17. **Efficient Validation**: Context-appropriate testing and verification
 18. **Clean Integration**: Minimal overhead for final steps
 
@@ -106,7 +106,6 @@ User must respond with "APPROVED" or specific modifications before execution beg
 - `/think` - Strategic analysis and problem solving
 - `/guidelines` - Mistake prevention and protocol compliance
 - `/context` - Continuous context monitoring
-- `/cerebras` - High-speed code generation for appropriate tasks
 - Memory MCP - Pattern recognition and preference application
 
 **Adaptive Workflow**: The planning process adapts based on:
@@ -124,8 +123,7 @@ User must respond with "APPROVED" or specific modifications before execution beg
 - ✅ **Smart Search**: Grep/Glob before reading files
 
 **High-Performance Generation** (When Appropriate):
-- ✅ **/cerebras**: For tasks >10 delta lines with clear specifications
-- ✅ **Claude Direct**: For ≤10 delta lines and integration work
+- ✅ **Claude Direct**: For code generation and integration work
 - ✅ **Universal Composition**: Natural command integration
 
 **Context Preservation**:
@@ -152,7 +150,7 @@ Phase 1 - Strategic Analysis:
 Phase 2 - Execution Plan:
 Context Status: 45% remaining → Medium complexity planning
 - Analysis: Use Serena MCP for efficient codebase understanding
-- Generation: /cerebras for new auth classes, Claude for integration
+- Generation: Claude for new auth classes and integration
 - Context preservation: Strategic tool selection
 
 Seeking approval to proceed...

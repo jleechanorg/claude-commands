@@ -38,7 +38,8 @@ else:
 
 # Import shared utilities
 from .utils import (
-    get_automation_limits,
+    get_automation_limits_with_overrides,
+    coerce_positive_int,
     json_manager,
     setup_logging,
 )
@@ -47,15 +48,23 @@ from .utils import (
 class AutomationSafetyManager:
     """Thread-safe automation safety manager with configurable limits"""
 
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: str, limits: Optional[Dict[str, int]] = None):
         self.data_dir = data_dir
         self.lock = threading.RLock()  # Use RLock to prevent deadlock
         self.logger = setup_logging(__name__)
 
-        # Get limits from shared utility
-        limits = get_automation_limits()
-        self.pr_limit = limits["pr_limit"]
-        self.global_limit = limits["global_limit"]
+        # Start from defaults (hardcoded), then apply config file, then explicit overrides.
+        merged_limits = get_automation_limits_with_overrides()
+        self.pr_limit = merged_limits["pr_limit"]
+        self.global_limit = merged_limits["global_limit"]
+        self.approval_hours = merged_limits["approval_hours"]
+        self.subprocess_timeout = merged_limits["subprocess_timeout"]
+
+        # Workflow-specific *comment* limits
+        self.pr_automation_limit = merged_limits["pr_automation_limit"]
+        self.fix_comment_limit = merged_limits["fix_comment_limit"]
+        self.codex_update_limit = merged_limits["codex_update_limit"]
+        self.fixpr_limit = merged_limits["fixpr_limit"]
 
         # File paths
         self.pr_attempts_file = os.path.join(data_dir, "pr_attempts.json")
@@ -74,6 +83,10 @@ class AutomationSafetyManager:
 
         # Load configuration from file if it exists
         self._load_config_if_exists()
+
+        # Explicit overrides always win (and are clamped to positive ints).
+        if limits:
+            self._apply_limit_overrides(limits)
 
         # Load initial state from files
         self._load_state_from_files()
@@ -112,11 +125,7 @@ class AutomationSafetyManager:
             try:
                 with open(self.config_file) as f:
                     config = json.load(f)
-                    # Update limits from config
-                    if "pr_limit" in config:
-                        self.pr_limit = config["pr_limit"]
-                    if "global_limit" in config:
-                        self.global_limit = config["global_limit"]
+                    self._apply_limit_overrides(config)
             except (FileNotFoundError, json.JSONDecodeError):
                 pass  # Use defaults
         else:
@@ -124,8 +133,34 @@ class AutomationSafetyManager:
             default_config = {
                 "global_limit": self.global_limit,
                 "pr_limit": self.pr_limit,
+                "approval_hours": self.approval_hours,
+                "subprocess_timeout": self.subprocess_timeout,
+                "pr_automation_limit": self.pr_automation_limit,
+                "fix_comment_limit": self.fix_comment_limit,
+                "codex_update_limit": self.codex_update_limit,
+                "fixpr_limit": self.fixpr_limit,
             }
             self._write_json_file(self.config_file, default_config)
+
+    def _apply_limit_overrides(self, overrides: Dict[str, object]) -> None:
+        """Apply override dict, clamping to positive ints and leaving others unchanged."""
+        defaults = get_automation_limits_with_overrides()
+        if "pr_limit" in overrides:
+            self.pr_limit = coerce_positive_int(overrides.get("pr_limit"), default=defaults["pr_limit"])
+        if "global_limit" in overrides:
+            self.global_limit = coerce_positive_int(overrides.get("global_limit"), default=defaults["global_limit"])
+        if "approval_hours" in overrides:
+            self.approval_hours = coerce_positive_int(overrides.get("approval_hours"), default=defaults["approval_hours"])
+        if "subprocess_timeout" in overrides:
+            self.subprocess_timeout = coerce_positive_int(overrides.get("subprocess_timeout"), default=defaults["subprocess_timeout"])
+        if "pr_automation_limit" in overrides:
+            self.pr_automation_limit = coerce_positive_int(overrides.get("pr_automation_limit"), default=defaults["pr_automation_limit"])
+        if "fix_comment_limit" in overrides:
+            self.fix_comment_limit = coerce_positive_int(overrides.get("fix_comment_limit"), default=defaults["fix_comment_limit"])
+        if "codex_update_limit" in overrides:
+            self.codex_update_limit = coerce_positive_int(overrides.get("codex_update_limit"), default=defaults["codex_update_limit"])
+        if "fixpr_limit" in overrides:
+            self.fixpr_limit = coerce_positive_int(overrides.get("fixpr_limit"), default=defaults["fixpr_limit"])
 
     def _load_state_from_files(self):
         """Load state from files into memory cache"""
@@ -308,7 +343,13 @@ class AutomationSafetyManager:
         return data, total_runs, is_stale
 
     def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
-        """Check if PR can be processed (under attempt limit)"""
+        """Check if PR can be processed (under failure limit).
+
+        Only counts FAILURES against the limit, not successful attempts.
+        Blocks if either:
+        1. Total failures >= pr_limit, OR
+        2. Consecutive failures >= pr_limit
+        """
         with self.lock:
             raw_data = self._read_json_file(self.pr_attempts_file)
             self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
@@ -316,8 +357,9 @@ class AutomationSafetyManager:
             pr_key = self._make_pr_key(pr_number, repo, branch)
             attempts = list(self._pr_attempts_cache.get(pr_key, []))
 
-            # Check total attempts limit first
-            if len(attempts) >= self.pr_limit:
+            # Count total failures (not total attempts - successful attempts don't count against limit)
+            total_failures = sum(1 for attempt in attempts if attempt.get("result") == "failure")
+            if total_failures >= self.pr_limit:
                 return False
 
             # Count consecutive failures from latest attempts
@@ -508,8 +550,7 @@ class AutomationSafetyManager:
                 approval_date = REAL_DATETIME.fromisoformat(approval_date_str)
             except (TypeError, ValueError):
                 return False
-            approval_hours = get_automation_limits()["approval_hours"]
-            expiry = approval_date + timedelta(hours=approval_hours)
+            expiry = approval_date + timedelta(hours=self.approval_hours)
 
             return datetime.now() < expiry
 
@@ -518,12 +559,13 @@ class AutomationSafetyManager:
         notifications_sent = []
 
         with self.lock:
-            # Check for PR limits reached
+            # Check for PR limits reached (only count failures)
             for pr_key, attempts in self._pr_attempts_cache.items():
-                if len(attempts) >= self.pr_limit:
+                total_failures = sum(1 for attempt in attempts if attempt.get("result") == "failure")
+                if total_failures >= self.pr_limit:
                     self._send_limit_notification(
-                        "PR Automation Limit Reached",
-                        f"PR {pr_key} has reached the maximum attempt limit of {self.pr_limit}."
+                        "PR Automation Failure Limit Reached",
+                        f"PR {pr_key} has reached the maximum failure limit of {self.pr_limit} failed attempts."
                     )
                     notifications_sent.append(f"PR {pr_key}")
 
@@ -568,8 +610,9 @@ class AutomationSafetyManager:
 
         if HAS_KEYRING:
             try:
-                username = keyring.get_password("worldarchitect-automation", "smtp_username")
-                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+                service_name = os.environ.get("AUTOMATION_KEYRING_SERVICE", "project-automation")
+                username = keyring.get_password(service_name, "smtp_username")
+                password = keyring.get_password(service_name, "smtp_password")
             except Exception:
                 self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
                 username = None
@@ -599,7 +642,8 @@ class AutomationSafetyManager:
             msg = MIMEMultipart()
             msg["From"] = from_email
             msg["To"] = to_email
-            msg["Subject"] = f"[WorldArchitect Automation] {subject}"
+            project_name = os.environ.get("PROJECT_NAME", "Project")
+            msg["Subject"] = f"[{project_name} Automation] {subject}"
 
             body = f"""
 {message}
@@ -607,7 +651,7 @@ class AutomationSafetyManager:
 Time: {datetime.now().isoformat()}
 System: PR Automation Safety Manager
 
-This is an automated notification from the WorldArchitect.AI automation system.
+This is an automated notification from the automation system.
 """
 
             msg.attach(MIMEText(body, "plain"))

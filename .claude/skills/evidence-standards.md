@@ -42,13 +42,15 @@ def capture_provenance():
     return provenance
 ```
 
-**Quick validation:** If your evidence.json is missing ANY of these fields, the test is incomplete:
-- `provenance.merge_base`
-- `provenance.commits_ahead_of_main`
-- `provenance.diff_stat_vs_main`
-- `provenance.server.pid`
-- `provenance.server.port`
-- `provenance.server.process_cmdline`
+**Quick validation:** If your metadata.json is missing ANY of these fields, the test is incomplete:
+- `git_provenance.merge_base`
+- `git_provenance.commits_ahead_of_main`
+- `git_provenance.diff_stat_vs_main`
+- `server.pid`
+- `server.port`
+- `server.process_cmdline`
+
+(Note: `provenance.*` shorthand in older docs refers to these specific keys within `git_provenance` or `server` sections)
 
 ## Three Evidence Rule (from CLAUDE.md)
 
@@ -70,6 +72,22 @@ Before running ANY test, answer:
 | Proving a bug is fixed in production? | MUST use real mode |
 | Development workflow validation only? | Mock mode acceptable |
 | Unit testing isolated functions? | Mock mode acceptable |
+
+### Production Mode vs Real Mode
+
+**Production mode is NOT required for valid evidence.** Local testing with real services
+(real LLM APIs, real Firebase, real dice) is sufficient to prove behavior.
+If a run artifact records `production_mode`, `production_mode: false` is acceptable
+for evidence as long as the claim is not about production configuration or prod-only behavior.
+
+| Mode | When to Use | Evidence Value |
+|------|-------------|----------------|
+| `--production-mode` | Final deployment validation | Highest (actual prod config) |
+| `--evidence` (local server) | PR validation, feature proof | **Valid** (real APIs, real data) |
+| Mock mode | Unit tests, CI speed | Invalid for behavior claims |
+
+The key requirement is **real execution** (actual API calls, actual RNG), not production
+environment. Evidence from `--start-local --evidence` is valid proof.
 
 ## Mock Mode Prohibition
 
@@ -94,23 +112,76 @@ Before running ANY test, answer:
 
 ## Evidence Collection Requirements
 
+### Canonical Evidence Bundle Files
+
+**Required files in every evidence bundle:**
+
+| File | Purpose | Required Keys |
+|------|---------|---------------|
+| `run.json` | Test results | `scenarios[*].name`, `scenarios[*].campaign_id`, `scenarios[*].errors` |
+| `metadata.json` | Git/server provenance | `git_provenance`, `server`, `timestamp` |
+| `evidence.md` | Human-readable summary | Pass/fail counts matching run.json |
+| `methodology.md` | Test methodology | Environment, steps, validation |
+| `README.md` | Package manifest | Git commit, branch, collection time |
+| `request_responses.jsonl` | Raw MCP captures | Full request/response pairs |
+
+**DEPRECATED:** `evidence.json` - use `run.json` + `metadata.json` instead.
+
+### Mandatory Scenarios Array
+
+**Every test MUST emit `results["scenarios"]`** even for single-scenario runs:
+
+```python
+# ❌ BAD - Missing scenarios array causes "Total Scenarios: 0"
+results = {"test_result": {...}}
+
+# ✅ GOOD - Always include scenarios array
+results = {
+    "scenarios": [
+        {
+            "name": "scenario_name",
+            "campaign_id": "abc123",  # Required for log traceability
+            "passed": True,
+            "errors": [],  # Always include, even if empty
+            "checks": {...}
+        }
+    ],
+    "test_result": {...}  # Optional summary
+}
+```
+
 ### Evidence Integrity (Checksums)
 
 **ALL evidence files MUST have separate checksum files:**
 
 ```bash
 # Generate checksums AFTER finalizing content
-sha256sum evidence.json > evidence.json.sha256
+sha256sum run.json > run.json.sha256
+sha256sum metadata.json > metadata.json.sha256
 
 # Verify checksums
-sha256sum -c evidence.json.sha256
+sha256sum -c run.json.sha256
 ```
 
 **Anti-pattern:** Embedding checksums inside JSON files (self-invalidating).
 
 **Checksum usability requirement:** `.sha256` files must reference the **local basename**
-(e.g., `evidence.json`), not a nested path like `artifacts/run_.../evidence.json`.
+(e.g., `run.json`), not a nested path like `artifacts/run_.../run.json`.
 This ensures `sha256sum -c` works when run from the evidence directory.
+
+**ALL evidence files require checksums, including:**
+- Individual test result files (PASS_*.json, FAIL_*.json)
+- Aggregated files (request_responses.jsonl)
+- Server logs (artifacts/server.log)
+
+```python
+def _write_checksum_for_file(filepath: Path) -> None:
+    """Generate SHA256 checksum file for an existing file."""
+    content = filepath.read_bytes()
+    sha256_hash = hashlib.sha256(content).hexdigest()
+    checksum_file = Path(str(filepath) + ".sha256")
+    checksum_file.write_text(f"{sha256_hash}  {filepath.name}\n")
+```
 
 ### Evidence Package Consistency (NEW)
 
@@ -118,12 +189,44 @@ This ensures `sha256sum -c` works when run from the evidence directory.
 name the exact run directory used for claims (e.g., `run_YYYYMMDD...`). Claims
 must be traceable to one run only.
 
+**Multi-campaign isolation:** If tests create multiple campaigns (e.g., isolated tests
+for state-sensitive scenarios), evidence.md **must** include:
+1. **Isolation Note** explaining why multiple campaigns exist
+2. **Campaign ID** for each scenario result for traceability
+3. **Claim Scoping** clarifying which campaign(s) aggregate claims reference
+
+Example isolation note in evidence.md:
+```markdown
+## ⚠️ Multi-Campaign Isolation Note
+This bundle contains **11 campaigns**: 1 shared + 10 isolated.
+Each scenario includes its `campaign_id` for traceability.
+```
+
+**Per-scenario campaign ID in run.json:** When using fresh campaigns per scenario,
+the test output **must** include `campaign_id` for each scenario entry:
+
+```json
+{
+  "scenarios": [
+    {
+      "name": "Skill Check (Stealth)",
+      "campaign_id": "zuFsywkYErTZpGBGDhDC",  // ← Required for log traceability
+      "dice_audit_events": [...],
+      "tool_results": [...]
+    }
+  ]
+}
+```
+
+This enables matching server logs (which include `campaign_id=...`) to specific
+scenario results in the evidence bundle.
+
 **Doc ↔ data alignment:** Any item lists in methodology/evidence **must** be
 derived from actual test inputs or `game_state_snapshot.json`. Hardcoded or
 handwritten lists are invalid.
 
 **Threshold capture:** If pass/fail depends on thresholds (e.g.,
-`min_narrative_items`), those values must be recorded in `evidence.json` or the
+`min_narrative_items`), those values must be recorded in `run.json` or the
 methodology so reviewers can verify the criteria.
 
 **Environment claims:** Only claim env vars that are read from the actual
@@ -136,6 +239,64 @@ must include their own evidence artifacts, otherwise omit those claims.
 avoid before/after evidence, it must include a justification. Otherwise, for
 bug-fix claims, include a pre-fix reproduction and a post-fix run.
 
+### Evidence Bundle Structure Requirements
+
+**Claim → Artifact Map:** Every evidence.md MUST include a section mapping claims to files:
+
+```markdown
+## Claim → Artifact Map
+
+| Claim | File | Key Field(s) |
+|-------|------|--------------|
+| DC set before roll (Gemini) | run.json | scenarios[].dice_audit_events[].dc_reasoning |
+| DC set before roll (Qwen) | run.json | scenarios[].tool_results[].args.dc_reasoning |
+| Executed code proof | gemini3_executed_code.log | dc = X before random.randint() |
+```
+
+**Coverage Matrix:** For multi-model or multi-scenario tests, include a summary table:
+
+```markdown
+## Coverage Matrix
+
+| Scenario | Gemini 3 | Qwen | Key Params |
+|----------|----------|------|------------|
+| Attack Roll | Pass (dc=15) | Pass (ac=13) | AC-based |
+| Skill Check | Pass (dc=13) | Pass (dc=13) | dc_reasoning required |
+| Saving Throw | Pass (dc=15) | Pass (dc=17) | dc + dc_reasoning |
+```
+
+**Raw Response Retention:** Every scenario MUST have its raw LLM output saved:
+- File pattern: `raw_{model}_{scenario}.txt`
+- Contains unparsed LLM response for provenance
+
+**Executed Code Capture (code_execution strategy):** When LLM uses code_execution:
+- Log the exact Python code at INFO level
+- Include campaign_id for traceability
+- Show dc/dc_reasoning set BEFORE random.randint()
+
+**Tool Request/Response Pairing (two-phase strategy):** When LLM uses tool calling:
+- Capture full `args` (request) and `result` (response) together
+- Temporal separation proven by: args sent → server generates roll → result returned
+
+**Traceability Metadata:** Every evidence bundle MUST include:
+- Run ID (timestamp-based: YYYYMMDD_HHMMSS)
+- Per-scenario identifiers (campaign_id)
+- Explicit statement tying log entries to scenarios
+
+**Evidence Integrity Note:** Include a section documenting:
+- Any scenarios with warnings or errors
+- Where errors are recorded (even if empty: `"errors": []`)
+- Overall pass/fail count
+
+**What is NOT Proven (Exclusion List):** Explicitly state limitations:
+
+```markdown
+## What This Evidence Does NOT Prove
+
+- Production server behavior (tested on local server)
+- Performance under load (single-request tests)
+- Edge cases not covered by scenarios (e.g., contested checks)
+```
 
 ### Git Provenance Requirements
 
@@ -276,7 +437,7 @@ Evidence MUST include:
 ### For Prompt Enforcement Claims
 
 If you claim a specific system instruction or enforcement block was included in a live LLM call:
-- Capture runtime system instruction text from the actual request (debug output or logs)
+- Capture runtime prompt filenames (`debug_info.system_instruction_files`). Record `system_instruction_char_count` when available.
 - Tie it to the same execution that produced the response (timestamp + request/response evidence)
 - Static code references alone are insufficient
 
@@ -290,15 +451,31 @@ PORT=8005 \
 python -m mvp_site.main serve
 ```
 
-The captured system instruction will appear in `debug_info.system_instruction_text` in API responses.
+When enabled, full system instruction text appears in `debug_info.system_instruction_text` (optional).
 
-**Lightweight Prompt Tracking (for high-volume tests):**
+**Prompt Tracking (default):**
 
-When full text capture is impractical (>50KB per response), use the lightweight alternative:
+Capture prompt filenames (and char count when available):
 - `debug_info.system_instruction_files`: List of prompt files loaded (e.g., `["prompts/master_directive.md", "prompts/game_state_instruction.md"]`)
-- `debug_info.system_instruction_char_count`: Total character count of combined prompts
+- `debug_info.system_instruction_char_count`: Total character count of combined prompts (optional)
 
 This proves which prompts were used without the ~100KB overhead per response. The file list provides provenance while keeping evidence bundles manageable.
+
+**Full Text Capture (When Enabled):**
+When `CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS` is set > 0, the full prompt text is captured in `debug_info.system_instruction_text`. This is optional but enabled by default in some test environments (`DEFAULT_EVIDENCE_ENV`).
+
+**Evidence Mode Documentation (MANDATORY when using lightweight tracking):**
+
+When using lightweight prompt tracking, evidence files MUST include explicit documentation:
+
+```json
+{
+  "evidence_mode": "lightweight_prompt_tracking",
+  "evidence_mode_notes": "System instruction captured as filenames + char_count (not full text). Full raw_response_text from LLM is captured. Server logs in artifacts/."
+}
+```
+
+This ensures reviewers know what capture approach was used and can assess evidence completeness accordingly.
 
 ### For Integration Claims
 
@@ -321,7 +498,6 @@ Instead, prove:
 - Feature works as specified (test results with pass/fail counts)
 - Correct prompts/code were used (`system_instruction_files` or code paths)
 - State changes correctly (game_state snapshots, database records)
-
 ### For LLM/API Behavior Claims
 
 When proving LLM or API behavior, evidence MUST capture the full request/response cycle:
@@ -329,7 +505,7 @@ When proving LLM or API behavior, evidence MUST capture the full request/respons
 **Required captures:**
 1. **Raw request payload** - The exact input sent to the API/LLM
 2. **Raw response payload** - The exact output returned, before any parsing or transformation
-3. **System instructions/prompts** - The full prompt text sent to the LLM (not just a reference to a file)
+3. **System instructions/prompts** - Prompt filenames; char count optional; full text only when explicitly requested
 4. **Timestamps** - When each request was made and response received
 
 **Why raw capture matters:**
@@ -342,19 +518,48 @@ When proving LLM or API behavior, evidence MUST capture the full request/respons
 request_responses.jsonl   # One JSON object per line, each containing:
 {
   "timestamp": "ISO8601",
-  "request": { ... full request ... },
-  "response": { ... full response ... },
-  "debug_info": {
-    "system_instruction_text": "actual prompt sent",
+  "request": { ... full MCP request ... },
+  "response": { ... full MCP response ... },
+  "response.result.debug_info": {
+    // Lightweight tracking (default):
+    "system_instruction_files": ["prompts/master_directive.md", "..."],
+    "system_instruction_char_count": 93180,
+    // Full capture (when CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS > 0):
+    "system_instruction_text": "system prompt sent to LLM",
+    // Raw LLM capture (requires CAPTURE_RAW_LLM=true):
+    "raw_request_payload": "full LLMRequest JSON sent to LLM (user action, context)",
     "raw_response_text": "LLM output before parsing"
   }
 }
 ```
 
+**Required debug_info fields for LLM claims:**
+- `system_instruction_text` - The system prompt (captured by default)
+- `raw_request_payload` - The user prompt/action sent to LLM (requires `CAPTURE_RAW_LLM=true`)
+- `raw_response_text` - Raw LLM output before parsing (requires `CAPTURE_RAW_LLM=true`)
+
 **Server configuration:**
 - Enable full request/response logging in your server
 - Set capture limits high enough to avoid truncation (e.g., 80K+ chars for LLM responses)
-- Capture system instructions at runtime, not just file references
+- Capture prompt filenames at runtime; full prompt text only when explicitly requested
+
+**Default Evidence Capture:**
+
+Raw LLM capture is **enabled by default** in the server (`$PROJECT_ROOT/llm_service.py`):
+- `CAPTURE_RAW_LLM` defaults to `"true"` - no env var required
+- Server default limit: 20,000 chars (sufficient for most use cases)
+
+For tests needing higher limits, `server_utils.DEFAULT_EVIDENCE_ENV` provides overrides:
+
+```python
+DEFAULT_EVIDENCE_ENV = {
+    "CAPTURE_RAW_LLM": "true",  # Server default, included for explicitness
+    "CAPTURE_RAW_LLM_MAX_CHARS": "50000",  # Test override (server: 20000)
+    "CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS": "120000",
+}
+```
+
+This ensures raw request/response capture works automatically without manual configuration.
 
 ### For Test Result Portability
 
@@ -570,6 +775,110 @@ if result.returncode != 0:
 # ✅ GOOD - Copies specific run only
 --artifact /path/to/all_runs/run_20251227T051227_953691
 ```
+
+## Pass Quality Classification
+
+Not all passes are equal. Track evidence quality with explicit pass types:
+
+| Pass Type | Criteria | Evidence Value |
+|-----------|----------|----------------|
+| **STRONG** | All conditions met with robust proof | Highest - conclusive |
+| **WEAK** | Core requirement proven, secondary conditions not met | Valid but with caveats |
+| **FAIL** | Core requirement not proven | Invalid |
+
+**Example implementation:**
+```python
+# Track pass strength in evidence
+strong_pass = primary_condition and secondary_condition
+weak_pass = primary_condition and not secondary_condition
+passed = primary_condition  # Core requirement
+
+result = {
+    "status": "PASS" if passed else "FAIL",
+    "pass_type": "strong" if strong_pass else ("weak" if weak_pass else "fail"),
+    ...
+}
+```
+
+**Why this matters:**
+- Weak passes prove the feature works but with less conclusive evidence
+- Reviewers can assess confidence level from pass_type
+- Follow-up tests can target "weak" areas for stronger proof
+
+## Partial State Update Handling
+
+APIs often return only changed fields. Tests MUST handle missing fields correctly:
+
+```python
+# ❌ BAD - Treats missing field as False
+still_in_combat = response.get("combat_state", {}).get("in_combat") is True
+
+# ✅ GOOD - Check field presence, use fallback logic
+combat_state = response.get("combat_state", {})
+if "in_combat" in combat_state:
+    # Explicit value - use it
+    still_in_combat = combat_state["in_combat"] is True
+elif combat_state.get("current_round") is not None:
+    # Partial update with round info - combat ongoing
+    still_in_combat = True
+else:
+    # Fall back to previous state
+    still_in_combat = previous_combat_state
+```
+
+**Common partial update scenarios:**
+- Combat state updates: may include `current_round` but omit unchanged `in_combat`
+- Character updates: may include `hp_current` but omit unchanged `level`
+- Inventory updates: may include added item but not entire inventory
+
+## Model Settings Forcing
+
+**Always set explicit model settings** to avoid PROVIDER_SELECTION_NULL_SETTINGS fallback noise:
+
+```python
+from lib.model_utils import settings_for_model, update_user_settings
+
+# ❌ BAD - Relies on server defaults, causes fallback noise in logs
+result = process_action(client, user_id=user_id, campaign_id=campaign_id, ...)
+
+# ✅ GOOD - Explicit model pinning before any actions
+DEFAULT_MODEL = "gemini-3-flash-preview"
+
+# Pin model settings at test start
+update_user_settings(
+    client,
+    user_id=user_id,
+    settings=settings_for_model(DEFAULT_MODEL),
+)
+
+# Now process actions with deterministic model selection
+result = process_action(client, user_id=user_id, campaign_id=campaign_id, ...)
+```
+
+**Why this matters:**
+- Eliminates "PROVIDER_SELECTION_NULL_SETTINGS" log noise
+- Ensures reproducible behavior across test runs
+- Makes evidence claims specific to a known model
+
+## LLM Scenario Forcing
+
+LLMs may "shortcut" scenarios by resolving them too quickly. Force extended scenarios when needed:
+
+```python
+# ❌ BAD - LLM may end combat in 1-2 actions
+SCENARIO = "Fight three bandits"
+
+# ✅ GOOD - Forces multi-round combat
+SCENARIO = """You face an Ogre Warlord (CR 5, HP 120, AC 16) and two Ogre Guards (CR 2, HP 59 each).
+This is a BOSS FIGHT - it CANNOT be resolved in fewer than 3 combat rounds.
+DO NOT end combat prematurely. All enemies have full HP and fight to the death."""
+```
+
+**Forcing techniques:**
+- High HP enemies (100+ HP for bosses)
+- Explicit round count requirements
+- "Fight to the death" instructions
+- Multiple high-CR enemies
 
 ## Anti-Patterns
 

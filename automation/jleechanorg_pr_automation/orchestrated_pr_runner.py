@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from orchestration.task_dispatcher import TaskDispatcher
+from .automation_utils import AutomationUtils
 
 ORG = "jleechanorg"
 BASE_CLONE_ROOT = Path("/tmp/pr-orch-bases")
@@ -41,13 +42,12 @@ def run_cmd(
     check: bool = True,
     timeout: Optional[int] = None,
 ) -> subprocess.CompletedProcess:
-    return subprocess.run(
+    return AutomationUtils.execute_subprocess_with_timeout(
         cmd,
-        cwd=str(cwd) if cwd else None,
-        text=True,
-        capture_output=True,
-        check=check,
         timeout=timeout or DEFAULT_TIMEOUT,
+        cwd=str(cwd) if cwd else None,
+        check=check,
+        capture_output=True,
     )
 
 
@@ -188,8 +188,15 @@ def ensure_base_clone(repo_full: str) -> Path:
             )
     # Reset base clone to main to ensure clean worktrees
     try:
-        run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        # Ensure we're on main branch (create if doesn't exist locally)
+        result = run_cmd(["git", "rev-parse", "--verify", "main"], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
+        if result.returncode != 0:
+            # Local main doesn't exist - checkout from remote tracking branch
+            run_cmd(["git", "checkout", "-B", "main", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        else:
+            # Local main exists - switch to it and reset
+            run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+            run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
         run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
     except subprocess.CalledProcessError as exc:
         stderr_msg = exc.stderr if exc.stderr else "No stderr available"
@@ -234,7 +241,11 @@ def prepare_workspace_dir(repo: str, workspace_name: str) -> Path:
                 log(f"Warning: Failed to clean worktree metadata for {target}: {exc}")
         try:
             shutil.rmtree(target)
+        except FileNotFoundError:
+            # Workspace already gone (external cleanup, reboot, etc.) - nothing to do
+            pass
         except OSError as e:
+            # Other OS errors (permissions, locks, etc.) are serious
             log(f"Failed to remove existing workspace {target}: {e}")
             raise
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -291,7 +302,70 @@ def kill_tmux_session_if_exists(name: str) -> None:
         log(f"Warning: unable to check/kill tmux session {name}: {exc}")
 
 
-def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str = "claude") -> bool:
+def dispatch_agent_for_pr_with_task(
+    dispatcher: TaskDispatcher,
+    pr: Dict,
+    task_description: str,
+    agent_cli: str = "claude",
+    model: str = None,
+) -> bool:
+    """Dispatch an agent for a PR using a custom task description."""
+    repo_full = pr.get("repo_full")
+    repo = pr.get("repo")
+    pr_number = pr.get("number")
+    branch = pr.get("branch")
+
+    if not task_description:
+        log("Skipping PR dispatch: missing task description")
+        return False
+
+    if not all([repo_full, repo, pr_number is not None, branch]):
+        log(f"Skipping PR with missing required fields: {pr}")
+        return False
+    assert branch is not None and pr_number is not None
+
+    workspace_name = sanitize_workspace_name(branch or f"pr-{pr_number}", pr_number)
+    workspace_root = WORKSPACE_ROOT_BASE / repo
+    prepare_workspace_dir(repo, workspace_name)
+
+    cli = agent_cli.strip().lower() if isinstance(agent_cli, str) and agent_cli.strip() else "claude"
+    agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=cli)
+    success = False
+    for spec in agent_specs:
+        agent_spec = {**spec}
+        session_name = agent_spec.get("name") or workspace_name
+        kill_tmux_session_if_exists(session_name)
+        agent_spec.setdefault(
+            "workspace_config",
+            {
+                "workspace_root": str(workspace_root),
+                "workspace_name": workspace_name,
+            },
+        )
+        # Inject model parameter only when Claude is in the CLI chain.
+        if model:
+            cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+            if "claude" in cli_chain:
+                raw_model = str(model).strip()
+                if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+                    log(f"❌ Invalid model name requested: {raw_model!r}")
+                    return False
+                agent_spec["model"] = raw_model
+        ok = dispatcher.create_dynamic_agent(agent_spec)
+        if ok:
+            log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")
+            success = True
+        else:
+            log(f"Failed to spawn agent for {repo_full}#{pr_number}")
+    return success
+
+
+def dispatch_agent_for_pr(
+    dispatcher: TaskDispatcher,
+    pr: Dict,
+    agent_cli: str = "claude",
+    model: Optional[str] = None,
+) -> bool:
     repo_full = pr.get("repo_full")
     repo = pr.get("repo")
     pr_number = pr.get("number")
@@ -308,20 +382,36 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str =
     cli_chain_parts = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
     commit_marker_cli = cli_chain_parts[0] if cli_chain_parts else str(agent_cli).strip().lower() or "claude"
 
+    normalized_model: Optional[str] = None
+    if model:
+        if "claude" not in cli_chain_parts:
+            log("Ignoring model override because the requested CLI chain does not include 'claude'.")
+        else:
+            raw_model = str(model).strip()
+            if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+                log(f"❌ Invalid model name requested: {raw_model!r}")
+                return False
+            normalized_model = raw_model
+
     task_description = (
         f"FIXPR TASK (SELF-CONTAINED): Update PR #{pr_number} in {repo_full} (branch {branch}). "
-        "Goal: resolve merge conflicts and failing checks. "
+        "Goal: resolve merge conflicts and failing checks. Also review and address any reviewer feedback that is blocking CI or mergeability. "
         f"CLI chain: {agent_cli}. DO NOT wait for additional input—start immediately.\n\n"
         "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
         f"1) gh pr checkout {pr_number}\n"
         "2) git status && git branch --show-current\n"
         "3) If checkout fails because the branch exists elsewhere, create worktree:\n"
         f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"
-        "4) Identify failing checks (gh pr view --json statusCheckRollup) and reproduce locally (tests/linters as needed)\n"
-        "5) Apply fixes\n"
-        f'6) git add -A && git commit -m "[{commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
-        f"7) gh pr view {pr_number} --json mergeable,mergeStateStatus,statusCheckRollup\n"
-        "8) Write completion report to /tmp/orchestration_results/pr-{pr_number}._results.json summarizing actions and test results\n\n"
+        "4) Fetch PR feedback from ALL sources (pagination-safe):\n"
+        "   - Issue comments: gh api \"/repos/{owner}/{repo}/issues/{pr}/comments\" --paginate -F per_page=100\n"
+        "   - Review summaries: gh api \"/repos/{owner}/{repo}/pulls/{pr}/reviews\" --paginate -F per_page=100\n"
+        "   - Inline review comments: gh api \"/repos/{owner}/{repo}/pulls/{pr}/comments\" --paginate -F per_page=100\n"
+        "   Ensure you cover all feedback; do not assume `gh pr view --json comments` includes inline review comments.\n"
+        "5) Identify failing checks (gh pr view --json statusCheckRollup) and reproduce locally (tests/linters as needed)\n"
+        "6) Apply fixes (prefer a deterministic branch sync strategy: merge base into branch; avoid rebases unless required by policy)\n"
+        f'7) git add -A && git commit -m "[fixpr {commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
+        f"8) gh pr view {pr_number} --json mergeable,mergeStateStatus,statusCheckRollup\n"
+        f"9) Write completion report to {workspace_root}/{workspace_name}/orchestration_results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
         "Do not create new PRs or branches. Skip /copilot. Use only the requested CLI chain (in order)."
     )
@@ -341,6 +431,8 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict, agent_cli: str =
                 "workspace_name": workspace_name,
             },
         )
+        if normalized_model:
+            agent_spec["model"] = normalized_model
         ok = dispatcher.create_dynamic_agent(agent_spec)
         if ok:
             log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")

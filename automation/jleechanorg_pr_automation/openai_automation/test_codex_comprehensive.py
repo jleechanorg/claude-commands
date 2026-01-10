@@ -216,7 +216,7 @@ class TestTaskFinding:
         await automation.find_github_mention_tasks()
 
         # Verify correct selector was used - now uses /codex/tasks/ to exclude navigation links
-        automation.page.locator.assert_called_with('a[href*="/codex/tasks/"]')
+        automation.page.locator.assert_any_call('a[href*="/codex/tasks/"]')
         print("✅ Correct selector used for None limit")
 
     @pytest.mark.asyncio
@@ -232,7 +232,7 @@ class TestTaskFinding:
         await automation.find_github_mention_tasks()
 
         # Verify correct selector was used - now uses /codex/tasks/ to exclude navigation links
-        automation.page.locator.assert_called_with('a[href*="/codex/tasks/"]')
+        automation.page.locator.assert_any_call('a[href*="/codex/tasks/"]')
         print("✅ Correct selector used for limit=50")
 
 
@@ -244,6 +244,7 @@ class TestNavigationInteraction:
         """Test successful navigation to Codex."""
         automation = CodexGitHubMentionsAutomation()
         automation.page = AsyncMock()
+        automation.page.is_closed = Mock(return_value=False)
 
         await automation.navigate_to_codex()
 
@@ -255,6 +256,7 @@ class TestNavigationInteraction:
         """Test that navigation timeout is handled gracefully."""
         automation = CodexGitHubMentionsAutomation()
         automation.page = AsyncMock()
+        automation.page.is_closed = Mock(return_value=False)
         automation.page.goto.side_effect = TimeoutError("Navigation timeout")
 
         with pytest.raises(TimeoutError):
@@ -275,8 +277,10 @@ class TestNavigationInteraction:
         # Create mock for the main locator that returns the button when .first is accessed
         mock_locator = Mock()
         mock_locator.first = mock_button
+        mock_locator.count = AsyncMock(return_value=1)
 
         automation.page = AsyncMock()
+        automation.page.is_closed = Mock(return_value=False)
         automation.page.goto = AsyncMock()
         automation.page.locator = Mock(return_value=mock_locator)
 
@@ -293,6 +297,7 @@ class TestNavigationInteraction:
         """Test finding Update branch button when present."""
         automation = CodexGitHubMentionsAutomation()
         automation.page = AsyncMock()
+        automation.page.is_closed = Mock(return_value=False)
 
         mock_first = Mock()
         mock_first.count = AsyncMock(return_value=1)
@@ -313,6 +318,7 @@ class TestNavigationInteraction:
         """Test handling when Update branch button is missing."""
         automation = CodexGitHubMentionsAutomation()
         automation.page = AsyncMock()
+        automation.page.is_closed = Mock(return_value=False)
 
         mock_locator = Mock()
         mock_locator.count = AsyncMock(return_value=0)
