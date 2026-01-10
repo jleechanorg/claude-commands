@@ -6,6 +6,8 @@ Lightweight file-based Agent-to-Agent protocol wrapper that enables
 direct agent communication while preserving existing tmux orchestration.
 """
 
+from __future__ import annotations
+
 import fcntl
 import json
 import logging

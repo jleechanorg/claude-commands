@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-orchestration"
-version = "0.1.18"
+version = "0.1.21"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },
@@ -63,6 +63,7 @@ orch = "orchestration.live_mode:main"
 
 [tool.setuptools]
 package-dir = {"orchestration" = "."}
+include-package-data = false
 packages = [
     "orchestration",
 ]
@@ -73,6 +74,7 @@ orchestration = [
     "*.txt",
     "*.yaml",
     "*.conf",
+    "*.sh",
     "config/*.yaml",
 ]
 

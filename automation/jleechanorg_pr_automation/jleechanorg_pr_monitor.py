@@ -26,7 +26,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from orchestration.task_dispatcher import CLI_PROFILES
+from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
@@ -37,9 +37,34 @@ from .codex_config import (
     CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
 )
 from .codex_config import (
+    FIX_COMMENT_MARKER_PREFIX as SHARED_FIX_COMMENT_PREFIX,
+)
+from .codex_config import (
+    FIX_COMMENT_MARKER_SUFFIX as SHARED_FIX_COMMENT_SUFFIX,
+)
+from .codex_config import (
+    FIX_COMMENT_RUN_MARKER_PREFIX as SHARED_FIX_COMMENT_RUN_PREFIX,
+)
+from .codex_config import (
+    FIX_COMMENT_RUN_MARKER_SUFFIX as SHARED_FIX_COMMENT_RUN_SUFFIX,
+)
+from .codex_config import (
+    FIXPR_MARKER_PREFIX as SHARED_FIXPR_PREFIX,
+)
+from .codex_config import (
+    FIXPR_MARKER_SUFFIX as SHARED_FIXPR_SUFFIX,
+)
+from .codex_config import (
     build_comment_intro,
 )
-from .orchestrated_pr_runner import has_failing_checks, run_fixpr_batch
+from .orchestrated_pr_runner import (
+    chdir,
+    dispatch_agent_for_pr,
+    dispatch_agent_for_pr_with_task,
+    ensure_base_clone,
+    has_failing_checks,
+    run_fixpr_batch,
+)
 from .utils import json_manager, setup_logging
 
 
@@ -69,11 +94,55 @@ def _parse_fixpr_agent_chain(value: str) -> str:
     return ",".join(ordered)
 
 
+def _positive_int_arg(value: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise argparse.ArgumentTypeError(f"Expected integer, got {value!r}") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError(f"Value must be >= 1, got {parsed}")
+    return parsed
+
+
+def _normalize_model_for_cli_chain(model: Optional[str], cli_chain: str) -> Optional[str]:
+    """Return a sanitized model value compatible with orchestration/TaskDispatcher.
+
+    - Only applies when the requested CLI chain includes 'claude'
+    - Rejects values that fail TaskDispatcher's model regex
+    """
+    if model is None:
+        return None
+
+    raw = str(model).strip()
+    if not raw:
+        return None
+
+    chain = [part.strip().lower() for part in str(cli_chain).split(",") if part.strip()]
+    if "claude" not in chain:
+        print("⚠️ Ignoring --model (only applies when using the claude CLI).", file=sys.stderr)
+        return None
+
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw):
+        raise argparse.ArgumentTypeError(
+            f"Invalid --model value {raw!r}. Allowed: letters, numbers, '.', '_', '-'."
+        )
+
+    return raw
+
+
 class JleechanorgPRMonitor:
     """Cross-organization PR monitoring with Codex automation comments"""
 
-    @staticmethod
-    def _redact_email(email: Optional[str]) -> Optional[str]:
+    def _determine_workflow_type(self, fix_comment: bool, fixpr: bool = False) -> str:
+        """Determine workflow type from execution context"""
+        if fix_comment:
+            return "fix_comment"
+        elif fixpr:
+            return "fixpr"
+        else:
+            return "pr_automation"
+
+    def _redact_email(self, email: Optional[str]) -> Optional[str]:
         """Redact email for logging while preserving domain for debugging"""
         if not email or "@" not in email:
             return email
@@ -84,8 +153,15 @@ class JleechanorgPRMonitor:
 
     CODEX_COMMIT_MARKER_PREFIX = SHARED_MARKER_PREFIX
     CODEX_COMMIT_MARKER_SUFFIX = SHARED_MARKER_SUFFIX
+    FIX_COMMENT_MARKER_PREFIX = SHARED_FIX_COMMENT_PREFIX
+    FIX_COMMENT_MARKER_SUFFIX = SHARED_FIX_COMMENT_SUFFIX
+    FIX_COMMENT_RUN_MARKER_PREFIX = SHARED_FIX_COMMENT_RUN_PREFIX
+    FIX_COMMENT_RUN_MARKER_SUFFIX = SHARED_FIX_COMMENT_RUN_SUFFIX
+    FIXPR_MARKER_PREFIX = SHARED_FIXPR_PREFIX
+    FIXPR_MARKER_SUFFIX = SHARED_FIXPR_SUFFIX
     CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
     CODEX_BOT_IDENTIFIER = "codex"
+    FIX_COMMENT_COMPLETION_MARKER = "Fix-comment automation complete"
     # GitHub short SHAs display with a minimum of 7 characters, while full SHAs are 40 characters.
     CODEX_COMMIT_SHA_LENGTH_RANGE: Tuple[int, int] = (7, 40)
     CODEX_SUMMARY_COMMIT_PATTERNS = [
@@ -144,7 +220,7 @@ class JleechanorgPRMonitor:
         for keyword in _codex_actor_keywords
     ]
     _codex_commit_message_pattern_str = (
-        r"\[(?:" + "|".join(_codex_actor_keywords) + r")-automation-commit\]"
+        r"\[(?:fixpr\s+)?(?:" + "|".join(_codex_actor_keywords) + r")-automation-commit\]"
     )
     _codex_commit_message_pattern = re.compile(
         _codex_commit_message_pattern_str,
@@ -182,7 +258,7 @@ class JleechanorgPRMonitor:
         name = actor.get("name")
         return (login, email, name)
 
-    def __init__(self):
+    def __init__(self, *, safety_limits: Optional[Dict[str, int]] = None, no_act: bool = False):
         self.logger = setup_logging(__name__)
 
         self.assistant_mentions = os.environ.get(
@@ -191,6 +267,7 @@ class JleechanorgPRMonitor:
         )
 
         self.wrapper_managed = os.environ.get("AUTOMATION_SAFETY_WRAPPER") == "1"
+        self.no_act = bool(no_act)
 
         # Processing history persisted to permanent location
         self.history_base_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation" / "pr_history"
@@ -206,7 +283,7 @@ class JleechanorgPRMonitor:
             default_dir.mkdir(parents=True, exist_ok=True)
             safety_data_dir = str(default_dir)
 
-        self.safety_manager = AutomationSafetyManager(safety_data_dir)
+        self.safety_manager = AutomationSafetyManager(safety_data_dir, limits=safety_limits)
 
         self.logger.info("🏢 Initialized jleechanorg PR monitor")
         self.logger.info(f"📁 History storage: {self.history_base_dir}")
@@ -360,7 +437,11 @@ class JleechanorgPRMonitor:
         """
         Return PRs that would be processed for fixpr (merge conflicts or failing checks).
         """
-        prs = self.discover_open_prs()
+        try:
+            prs = self.discover_open_prs(cutoff_hours=cutoff_hours)
+        except TypeError:
+            # Backwards-compatible with older stubs/mocks that don't accept cutoff_hours.
+            prs = self.discover_open_prs()
         if single_repo:
             prs = [pr for pr in prs if pr.get("repository") == single_repo]
 
@@ -372,9 +453,25 @@ class JleechanorgPRMonitor:
             if not repo or pr_number is None:
                 continue
             repo_full = f"{owner}/{repo}"
-            if pr.get("mergeable") == "CONFLICTING":
+
+            mergeable = pr.get("mergeable")
+            if mergeable is None:
+                try:
+                    result = AutomationUtils.execute_subprocess_with_timeout(
+                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                        timeout=30,
+                        check=False,
+                    )
+                    if result.returncode == 0:
+                        data = json.loads(result.stdout or "{}")
+                        mergeable = data.get("mergeable")
+                except Exception:
+                    mergeable = None
+
+            if mergeable == "CONFLICTING":
                 actionable.append({**pr, "repo_full": repo_full})
                 continue
+
             try:
                 if has_failing_checks(repo_full, pr_number):
                     actionable.append({**pr, "repo_full": repo_full})
@@ -385,7 +482,7 @@ class JleechanorgPRMonitor:
         actionable = actionable[:max_prs]
         print(f"🔎 Eligible for fixpr: {len(actionable)}")
         for pr in actionable:
-            print(f"  • {pr.get('repository')} PR #{pr.get('number')}: {pr.get('title')} (mergeable={pr.get('mergeable')})")
+            print(f"  • {pr.get('repository')} PR #{pr.get('number')}: {pr.get('title')}")
         return actionable
 
     def run_monitoring_cycle_with_actionable_count(self, target_actionable_count: int = 20) -> Dict:
@@ -455,13 +552,13 @@ class JleechanorgPRMonitor:
             self.logger.error(f"Error processing comment for PR {repo_name}#{pr_number}: {e}")
             return False
 
-    def discover_open_prs(self) -> List[Dict]:
-        """Discover open PRs updated in the last 24 hours across the organization."""
+    def discover_open_prs(self, cutoff_hours: int = 24) -> List[Dict]:
+        """Discover open PRs updated in the last specified hours across the organization."""
 
-        self.logger.info(f"🔍 Discovering open PRs in {self.organization} organization (last 24 hours)")
+        self.logger.info(f"🔍 Discovering open PRs in {self.organization} organization (last {cutoff_hours} hours)")
 
         now = datetime.utcnow()
-        one_day_ago = now - timedelta(hours=24)
+        one_day_ago = now - timedelta(hours=cutoff_hours)
         self.logger.info("📅 Filtering PRs updated since: %s UTC", one_day_ago.strftime("%Y-%m-%d %H:%M:%S"))
 
         graphql_query = """
@@ -653,6 +750,10 @@ class JleechanorgPRMonitor:
         repo_full = self._normalize_repository_name(repository)
         self.logger.info(f"💬 Requesting Codex support for {repo_full} PR #{pr_number}")
 
+        if self.no_act:
+            self.logger.info("🧪 --no-act enabled: skipping comment post for %s #%s", repo_full, pr_number)
+            return "skipped"
+
         # Extract repo name and branch from PR data
         repo_name = repo_full.split("/")[-1]
         branch_name = pr_data.get("headRefName", "unknown")
@@ -726,9 +827,21 @@ class JleechanorgPRMonitor:
                 "--body", comment_body
             ]
 
-            result = AutomationUtils.execute_subprocess_with_timeout(comment_cmd, timeout=30)
+            result = AutomationUtils.execute_subprocess_with_timeout(
+                comment_cmd,
+                timeout=30,
+                retry_attempts=5,
+                retry_backoff_seconds=1.0,
+                retry_backoff_multiplier=2.0,
+                retry_on_stderr_substrings=(
+                    "was submitted too quickly",
+                    "secondary rate limit",
+                    "API rate limit exceeded",
+                ),
+            )
 
             self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number} ({repo_full})")
+            time.sleep(2.0)
 
             # Record that we've processed this PR with this commit when available
             if head_sha:
@@ -830,6 +943,660 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
 
         return comment_body
+
+    def _compose_fix_comment_mentions(self) -> str:
+        mentions = [
+            token for token in (self.assistant_mentions or "").split() if token.startswith("@")
+        ]
+        lower_mentions = {token.lower() for token in mentions}
+        if "@greptile" not in lower_mentions:
+            mentions.append("@greptile")
+        return " ".join(mentions)
+
+    def _build_fix_comment_prompt_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+        agent_cli: str,
+    ) -> str:
+        cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+        commit_marker_cli = cli_chain[0] if cli_chain else "claude"
+
+        return (
+            f"FIX-COMMENT TASK (SELF-CONTAINED): Update PR #{pr_number} in {repository} "
+            f"(branch {pr_data.get('headRefName', 'unknown')}).\n"
+            "Goal: address all review comments with explicit action-based replies, "
+            "fix failing tests, and resolve merge conflicts.\n\n"
+            f"CLI chain: {agent_cli}. Start immediately.\n\n"
+            "Steps:\n"
+            f"1) gh pr checkout {pr_number}\n\n"
+            "2) Fetch ALL PR feedback sources (pagination-safe) using correct GitHub API endpoints:\n"
+            f"   - Issue comments: `gh api /repos/{repository}/issues/{pr_number}/comments --paginate -F per_page=100`\n"
+            f"   - Review summaries: `gh api /repos/{repository}/pulls/{pr_number}/reviews --paginate -F per_page=100`\n"
+            f"   - Inline review comments: `gh api /repos/{repository}/pulls/{pr_number}/comments --paginate -F per_page=100`\n"
+            "   ⚠️ WARNING: `gh pr view --json comments` ONLY fetches issue comments, NOT inline review comments.\n\n"
+            "3) Apply code changes to address feedback, then reply to **100%** of comments INDIVIDUALLY.\n"
+            "   Threading rules:\n"
+            "   - Inline review comments MUST use threaded replies via the GitHub API.\n"
+            "   - Issue/PR comments do not support threading (they are top-level only).\n\n"
+            "   **Response Protocol** (use ONE of these categories for EACH comment):\n"
+            "   - **FIXED**: Issue implemented with working code → include files modified, tests added, verification\n"
+            "   - **DEFERRED**: Created issue for future work → include issue URL and reason\n"
+            "   - **ACKNOWLEDGED**: Noted but not actionable → include explanation\n"
+            "   - **NOT DONE**: Cannot implement → include specific technical reason\n\n"
+            "   **Reply Methods**:\n"
+            f"   - Inline review comments: `gh api /repos/{repository}/pulls/{pr_number}/comments/{{comment_id}}/replies -f body='[Response text]'`\n"
+            f"   - Issue/PR comments: `gh pr comment {pr_number} --body '[Response text]'`\n"
+            "   - Do NOT post mega-comments consolidating multiple responses; reply individually to each comment.\n\n"
+            "4) Run tests and fix failures (block completion on critical/blocking test failures)\n\n"
+            "5) Resolve merge conflicts (prefer merge over rebase)\n\n"
+            f"6) git add -A && git commit -m \"[{commit_marker_cli}-automation-commit] fix PR #{pr_number} review feedback\" && git push\n\n"
+            f"7) Write completion report to /tmp/orchestration_results/pr-{pr_number}_results.json "
+            "with comments addressed, files modified, tests run, and remaining issues\n\n"
+            "**PR Details:**\n"
+            f"- Title: {pr_data.get('title', 'Unknown')}\n"
+            f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
+            f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})\n"
+        )
+
+    def _build_fix_comment_queued_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> str:
+        comment_body = (
+            "[AI automation] Fix-comment run queued for this PR. "
+            "A review request will follow after updates are pushed.\n\n"
+            "**PR Details:**\n"
+            f"- Title: {pr_data.get('title', 'Unknown')}\n"
+            f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
+            f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})"
+        )
+
+        # Always add marker for limit counting, even when head_sha is unavailable.
+        sha_value = head_sha or "unknown"
+        comment_body += (
+            f"\n\n{self.FIX_COMMENT_RUN_MARKER_PREFIX}{sha_value}{self.FIX_COMMENT_RUN_MARKER_SUFFIX}"
+        )
+
+        return comment_body
+
+    def _build_fixpr_queued_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> str:
+        comment_body = (
+            "[AI automation] FixPR run queued for this PR.\n\n"
+            "**PR Details:**\n"
+            f"- Title: {pr_data.get('title', 'Unknown')}\n"
+            f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
+            f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})"
+        )
+
+        # Always add marker for limit counting, even when head_sha is unavailable
+        # Use 'unknown' placeholder to ensure comment is counted against workflow limit
+        sha_value = head_sha or "unknown"
+        comment_body += (
+            f"\n\n{self.FIXPR_MARKER_PREFIX}{sha_value}{self.FIXPR_MARKER_SUFFIX}"
+        )
+
+        return comment_body
+
+    def _build_fix_comment_review_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> str:
+        mentions = self._compose_fix_comment_mentions()
+        intro = f"{mentions} [AI automation] {self.FIX_COMMENT_COMPLETION_MARKER}. Please review the updates."
+
+        comment_body = (
+            f"{intro}\n\n"
+            "**Review Request:**\n"
+            "Please review the latest changes, leave feedback, and flag any remaining issues. "
+            "If further fixes are needed, add explicit DONE/NOT DONE guidance.\n\n"
+            "**PR Details:**\n"
+            f"- Title: {pr_data.get('title', 'Unknown')}\n"
+            f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
+            f"- Branch: {pr_data.get('headRefName', 'unknown')}\n"
+            f"- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})\n"
+        )
+
+        if head_sha:
+            comment_body += (
+                f"\n{self.FIX_COMMENT_MARKER_PREFIX}{head_sha}"
+                f"{self.FIX_COMMENT_MARKER_SUFFIX}"
+            )
+
+        return comment_body
+
+    def _get_fix_comment_watch_state(
+        self,
+        repo_full: str,
+        pr_number: int,
+    ) -> Tuple[Dict, Optional[str], List[Dict], List[str]]:
+        view_cmd = [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--repo",
+            repo_full,
+            "--json",
+            "title,headRefName,headRefOid,author,comments,commits",
+        ]
+        result = AutomationUtils.execute_subprocess_with_timeout(view_cmd, timeout=30, check=False)
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr or f"gh pr view failed for {repo_full}#{pr_number}")
+
+        pr_data = json.loads(result.stdout or "{}")
+        head_sha = pr_data.get("headRefOid")
+
+        comments_data = pr_data.get("comments", [])
+        if isinstance(comments_data, dict):
+            comments = comments_data.get("nodes", [])
+        elif isinstance(comments_data, list):
+            comments = comments_data
+        else:
+            comments = []
+
+        commits_data = pr_data.get("commits", [])
+        if isinstance(commits_data, dict):
+            commit_nodes = commits_data.get("nodes", [])
+        elif isinstance(commits_data, list):
+            commit_nodes = commits_data
+        else:
+            commit_nodes = []
+
+        headlines = []
+        for node in commit_nodes:
+            # Handle both nested 'commit' node structure and flat structure
+            commit_obj = node.get("commit") if isinstance(node, dict) and "commit" in node else node
+            headline = commit_obj.get("messageHeadline") if isinstance(commit_obj, dict) else None
+            if headline:
+                headlines.append(headline)
+
+        return pr_data, head_sha, comments, headlines
+
+    def _post_fix_comment_review(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        comment_body = self._build_fix_comment_review_body(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+        )
+
+        try:
+            comment_cmd = [
+                "gh",
+                "pr",
+                "comment",
+                str(pr_number),
+                "--repo",
+                repo_full,
+                "--body",
+                comment_body,
+            ]
+            AutomationUtils.execute_subprocess_with_timeout(
+                comment_cmd,
+                timeout=30,
+                retry_attempts=5,
+                retry_backoff_seconds=1.0,
+                retry_backoff_multiplier=2.0,
+                retry_on_stderr_substrings=(
+                    "was submitted too quickly",
+                    "secondary rate limit",
+                    "API rate limit exceeded",
+                ),
+            )
+            self.logger.info(
+                "✅ Posted fix-comment review request on PR #%s (%s)",
+                pr_number,
+                repo_full,
+            )
+            time.sleep(2.0)
+            return True
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to post fix-comment review request on PR #%s: %s",
+                pr_number,
+                exc,
+            )
+            return False
+
+    def _post_fix_comment_queued(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        comment_body = self._build_fix_comment_queued_body(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+        )
+
+        try:
+            queued_cmd = [
+                "gh",
+                "pr",
+                "comment",
+                str(pr_number),
+                "--repo",
+                repo_full,
+                "--body",
+                comment_body,
+            ]
+            AutomationUtils.execute_subprocess_with_timeout(
+                queued_cmd,
+                timeout=30,
+                retry_attempts=5,
+                retry_backoff_seconds=1.0,
+                retry_backoff_multiplier=2.0,
+                retry_on_stderr_substrings=(
+                    "was submitted too quickly",
+                    "secondary rate limit",
+                    "API rate limit exceeded",
+                ),
+            )
+            self.logger.info(
+                "✅ Posted fix-comment queued notice on PR #%s (%s)",
+                pr_number,
+                repo_full,
+            )
+            time.sleep(2.0)
+            return True
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to post fix-comment queued notice on PR #%s: %s",
+                pr_number,
+                exc,
+            )
+            return False
+
+    def _post_fixpr_queued(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: Optional[str],
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        comment_body = self._build_fixpr_queued_body(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+        )
+
+        try:
+            queued_cmd = [
+                "gh",
+                "pr",
+                "comment",
+                str(pr_number),
+                "--repo",
+                repo_full,
+                "--body",
+                comment_body,
+            ]
+            AutomationUtils.execute_subprocess_with_timeout(
+                queued_cmd,
+                timeout=30,
+                retry_attempts=5,
+                retry_backoff_seconds=1.0,
+                retry_backoff_multiplier=2.0,
+                retry_on_stderr_substrings=(
+                    "was submitted too quickly",
+                    "secondary rate limit",
+                    "API rate limit exceeded",
+                ),
+            )
+            self.logger.info(
+                "✅ Posted fixpr queued notice on PR #%s (%s)",
+                pr_number,
+                repo_full,
+            )
+            time.sleep(2.0)
+            return True
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to post fixpr queued notice on PR #%s: %s",
+                pr_number,
+                exc,
+            )
+            return False
+
+    def _start_fix_comment_review_watcher(
+        self,
+        repository: str,
+        pr_number: int,
+        agent_cli: str,
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        env = os.environ.copy()
+        pythonpath_parts = [str(ROOT_DIR), str(ROOT_DIR / "automation")]
+        if env.get("PYTHONPATH"):
+            pythonpath_parts.append(env["PYTHONPATH"])
+        env["PYTHONPATH"] = ":".join(pythonpath_parts)
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor",
+            "--fix-comment-watch",
+            "--target-pr",
+            str(pr_number),
+            "--target-repo",
+            repo_full,
+            "--fixpr-agent",
+            agent_cli,
+        ]
+        try:
+            subprocess.Popen(
+                cmd,
+                cwd=str(ROOT_DIR),
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            self.logger.info(
+                "🧭 Started fix-comment review watcher for PR #%s (%s)",
+                pr_number,
+                repo_full,
+            )
+            return True
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to start fix-comment review watcher for PR #%s: %s",
+                pr_number,
+                exc,
+            )
+            return False
+
+    def run_fix_comment_review_watcher(
+        self,
+        pr_number: int,
+        repository: str,
+        agent_cli: str = "claude",
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+        commit_marker_cli = cli_chain[0] if cli_chain else "claude"
+        commit_marker = f"[{commit_marker_cli}-automation-commit]"
+        timeout_seconds = int(os.environ.get("FIX_COMMENT_WATCH_TIMEOUT", "3600"))
+        poll_interval = float(os.environ.get("FIX_COMMENT_WATCH_POLL", "30"))
+        deadline = time.time() + timeout_seconds
+
+        while time.time() < deadline:
+            try:
+                pr_data, head_sha, comments, headlines = self._get_fix_comment_watch_state(
+                    repo_full,
+                    pr_number,
+                )
+            except Exception as exc:
+                self.logger.warning(
+                    "⚠️ Fix-comment watcher failed to fetch PR state for #%s: %s",
+                    pr_number,
+                    exc,
+                )
+                time.sleep(poll_interval)
+                continue
+
+            if head_sha and self._has_fix_comment_comment_for_commit(comments, head_sha):
+                self.logger.info(
+                    "✅ Fix-comment review already posted for PR #%s",
+                    pr_number,
+                )
+                return True
+
+            if any(commit_marker in headline for headline in headlines):
+                if self._post_fix_comment_review(repo_full, pr_number, pr_data, head_sha):
+                    return True
+                return False
+
+            time.sleep(poll_interval)
+
+        self.logger.warning(
+            "⏳ Fix-comment watcher timed out for PR #%s after %ss",
+            pr_number,
+            timeout_seconds,
+        )
+        return False
+
+    def dispatch_fix_comment_agent(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        agent_cli: str = "claude",
+        model: str = None,
+    ) -> bool:
+        repo_full = self._normalize_repository_name(repository)
+        repo_name = repo_full.split("/")[-1]
+        branch = pr_data.get("headRefName", "")
+        if not branch:
+            branch = f"pr-{pr_number}"
+
+        if model and "claude" not in agent_cli.lower():
+            self.logger.warning(
+                "⚠️ Model '%s' specified but agent CLI is '%s'. Model parameter is only supported for Claude.",
+                model,
+                agent_cli,
+            )
+
+        head_sha = pr_data.get("headRefOid")
+        task_description = self._build_fix_comment_prompt_body(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+            agent_cli,
+        )
+
+        pr_payload = {
+            "repo_full": repo_full,
+            "repo": repo_name,
+            "number": pr_number,
+            "branch": branch,
+        }
+
+        try:
+            base_dir = ensure_base_clone(repo_full)
+            with chdir(base_dir):
+                dispatcher = TaskDispatcher()
+                return dispatch_agent_for_pr_with_task(
+                    dispatcher,
+                    pr_payload,
+                    task_description,
+                    agent_cli=agent_cli,
+                    model=model,
+                )
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to dispatch fix-comment agent for %s #%s: %s",
+                repo_full,
+                pr_number,
+                exc,
+            )
+            return False
+
+    def _process_pr_fix_comment(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        agent_cli: str = "claude",
+        model: str = None,
+    ) -> str:
+        repo_full = self._normalize_repository_name(repository)
+        repo_name = repo_full.split("/")[-1]
+        branch_name = pr_data.get("headRefName", "unknown")
+
+        if self.no_act:
+            self.logger.info("🧪 --no-act enabled: skipping fix-comment dispatch for %s #%s", repo_full, pr_number)
+            return "skipped"
+
+        head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
+        if head_sha and pr_data.get("headRefOid") != head_sha:
+            pr_data = {**pr_data, "headRefOid": head_sha}
+
+        # Check workflow-specific safety limits for fix-comment
+        fix_comment_count = self._count_workflow_comments(comments, "fix_comment")
+        if fix_comment_count >= self.safety_manager.fix_comment_limit:
+            self.logger.info(
+                f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fix-comment); "
+                f"{fix_comment_count}/{self.safety_manager.fix_comment_limit} fix-comment automation comments"
+            )
+            return "skipped"
+
+        # Check if we've already processed this PR with this commit
+        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - already processed commit %s",
+                pr_number,
+                head_sha[:8],
+            )
+            return "skipped"
+
+        if head_sha and self._has_fix_comment_comment_for_commit(comments, head_sha):
+            self.logger.info(
+                "♻️ Fix-comment automation already posted for commit %s on PR #%s, skipping",
+                head_sha[:8],
+                pr_number,
+            )
+            self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+            return "skipped"
+
+        if not self.dispatch_fix_comment_agent(repo_full, pr_number, pr_data, agent_cli=agent_cli, model=model):
+            return "failed"
+
+        queued_posted = self._post_fix_comment_queued(repo_full, pr_number, pr_data, head_sha)
+
+        if head_sha:
+            self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+
+        if not self._start_fix_comment_review_watcher(
+            repo_full,
+            pr_number,
+            agent_cli=agent_cli,
+        ):
+            self.logger.warning(
+                "⚠️ Failed to start review watcher for PR #%s, but agent is dispatched",
+                pr_number,
+            )
+            return "failed"
+
+        if not queued_posted:
+            self.logger.warning(
+                "⚠️ Queued comment failed for PR #%s, but agent and watcher are running",
+                pr_number,
+            )
+            return "partial"
+
+        return "posted"
+
+    def _process_pr_fixpr(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        agent_cli: str = "claude",
+        model: Optional[str] = None,
+    ) -> str:
+        repo_full = self._normalize_repository_name(repository)
+        repo_name = repo_full.split("/")[-1]
+        branch_name = pr_data.get("headRefName", "unknown")
+
+        if self.no_act:
+            self.logger.info("🧪 --no-act enabled: skipping fixpr dispatch for %s #%s", repo_full, pr_number)
+            return "skipped"
+
+        head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
+        if head_sha and pr_data.get("headRefOid") != head_sha:
+            pr_data = {**pr_data, "headRefOid": head_sha}
+
+        # Check workflow-specific safety limits for fixpr
+        fixpr_count = self._count_workflow_comments(comments, "fixpr")
+        if fixpr_count >= self.safety_manager.fixpr_limit:
+            self.logger.info(
+                f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fixpr); "
+                f"{fixpr_count}/{self.safety_manager.fixpr_limit} fixpr automation comments"
+            )
+            return "skipped"
+
+        # Check if we've already processed this PR with this commit (reusing skip logic)
+        # FixPR logic typically runs on every push unless skipped by other means.
+        # But for now, let's assume we don't want to loop infinitely on the same commit.
+        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - already processed commit %s",
+                pr_number,
+                head_sha[:8],
+            )
+            return "skipped"
+
+        # Dispatch agent for fixpr
+        try:
+            base_dir = ensure_base_clone(repo_full)
+            with chdir(base_dir):
+                dispatcher = TaskDispatcher()
+                # Prepare PR dict for dispatch_agent_for_pr
+                pr_info = {
+                    "repo_full": repo_full,
+                    "repo": repo_name,
+                    "number": pr_number,
+                    "branch": branch_name,
+                }
+                success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
+
+                if success:
+                    queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha)
+                    # Record processing so we don't loop
+                    if head_sha:
+                        self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+
+                    if not queued_posted:
+                        self.logger.warning(
+                            "⚠️ Queued comment failed for PR #%s, but agent is dispatched",
+                            pr_number,
+                        )
+                        return "partial"
+
+                    return "posted" # "posted" means action taken
+                else:
+                    return "failed"
+        except Exception as exc:
+            self.logger.error(
+                "❌ Failed to dispatch fixpr agent for %s #%s: %s",
+                repo_full,
+                pr_number,
+                exc,
+            )
+            return "failed"
 
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> Tuple[Optional[str], List[Dict]]:
         """Fetch PR comment data needed for Codex comment gating"""
@@ -1019,6 +1786,22 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return comment_body[start_index:end_index].strip()
 
+    def _extract_fix_comment_marker(self, comment_body: str) -> Optional[str]:
+        """Extract commit marker from fix-comment automation comments."""
+        if not comment_body:
+            return None
+
+        prefix_index = comment_body.find(self.FIX_COMMENT_MARKER_PREFIX)
+        if prefix_index == -1:
+            return None
+
+        start_index = prefix_index + len(self.FIX_COMMENT_MARKER_PREFIX)
+        end_index = comment_body.find(self.FIX_COMMENT_MARKER_SUFFIX, start_index)
+        if end_index == -1:
+            return None
+
+        return comment_body[start_index:end_index].strip()
+
     def _has_codex_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
         """Determine if Codex instruction already exists for the latest commit"""
         if not head_sha:
@@ -1028,6 +1811,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             body = comment.get("body", "")
             marker_sha = self._extract_commit_marker(body)
             if marker_sha and marker_sha == head_sha:
+                return True
+
+        return False
+
+    def _has_fix_comment_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
+        """Determine if fix-comment automation already ran for the latest commit."""
+        if not head_sha:
+            return False
+
+        for comment in comments:
+            body = comment.get("body", "")
+            marker_sha = self._extract_fix_comment_marker(body)
+            if marker_sha and marker_sha == head_sha and self.FIX_COMMENT_COMPLETION_MARKER in body:
                 return True
 
         return False
@@ -1100,13 +1896,22 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         return False
 
     def _get_last_codex_automation_comment_time(self, comments: List[Dict]) -> Optional[str]:
-        """Find the timestamp of the last Codex automation comment (with commit marker)."""
+        """Find the timestamp of the last automation comment (any workflow marker).
+
+        Note: Despite the method name, this checks ALL automation workflow markers
+        (codex, fix-comment, fixpr) to prevent rerun gating misfires with multiple workflows.
+        """
         last_time = None
 
         for comment in comments:
             body = comment.get("body", "")
-            # Check if this is a Codex automation comment (has our marker)
-            if self.CODEX_COMMIT_MARKER_PREFIX in body:
+            # Check if this is ANY automation comment (any workflow marker)
+            if (
+                self.CODEX_COMMIT_MARKER_PREFIX in body
+                or self.FIX_COMMENT_MARKER_PREFIX in body
+                or self.FIX_COMMENT_RUN_MARKER_PREFIX in body
+                or self.FIXPR_MARKER_PREFIX in body
+            ):
                 created_at = comment.get("createdAt") or comment.get("updatedAt")
                 if created_at and (last_time is None or created_at > last_time):
                     last_time = created_at
@@ -1122,8 +1927,59 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         count = 0
         for comment in comments:
             body = comment.get("body", "")
-            if self.CODEX_COMMIT_MARKER_PREFIX in body:
+            if self.CODEX_COMMIT_MARKER_PREFIX in body or self.FIX_COMMENT_MARKER_PREFIX in body:
                 count += 1
+        return count
+
+    def _count_workflow_comments(self, comments: List[Dict], workflow_type: str) -> int:
+        """Count automation comments for a specific workflow type.
+
+        Args:
+            comments: List of PR comments
+            workflow_type: One of 'pr_automation', 'fix_comment', 'codex_update', 'fixpr'
+
+        Returns:
+            Count of comments matching the workflow type
+
+        Note: codex_update workflow operates via browser automation (not PR comments),
+        so count is always 0. The limit is configured but unused, reserved for future
+        compatibility if codex_update ever posts PR comments.
+        """
+        # codex_update doesn't post PR comments, so always returns 0
+        # Limit is configured but unused (reserved for future compatibility)
+        if workflow_type == "codex_update":
+            return 0
+
+        count = 0
+        for comment in comments:
+            body = comment.get("body", "")
+
+            if workflow_type == "pr_automation":
+                # PR automation uses codex-automation-commit marker (but not fix-comment or fixpr)
+                if (
+                    self.CODEX_COMMIT_MARKER_PREFIX in body
+                    and self.FIX_COMMENT_MARKER_PREFIX not in body
+                    and self.FIX_COMMENT_RUN_MARKER_PREFIX not in body
+                    and self.FIXPR_MARKER_PREFIX not in body
+                ):
+                    count += 1
+            elif workflow_type == "fix_comment":
+                # Fix-comment workflow uses dedicated markers for queued runs + completion.
+                if self.FIX_COMMENT_RUN_MARKER_PREFIX in body or self.FIX_COMMENT_MARKER_PREFIX in body:
+                    count += 1
+            elif workflow_type == "fixpr":
+                # FixPR workflow uses a dedicated marker in its queued comment.
+                if self.FIXPR_MARKER_PREFIX in body:
+                    count += 1
+            else:
+                # Fallback: count all automation comments
+                if (
+                    self.CODEX_COMMIT_MARKER_PREFIX in body
+                    or self.FIX_COMMENT_MARKER_PREFIX in body
+                    or self.FIX_COMMENT_RUN_MARKER_PREFIX in body
+                    or self.FIXPR_MARKER_PREFIX in body
+                ):
+                    count += 1
         return count
 
     def _has_new_bot_comments_since_codex(self, comments: List[Dict]) -> bool:
@@ -1208,7 +2064,16 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return False
 
-    def process_single_pr_by_number(self, pr_number: int, repository: str) -> bool:
+    def process_single_pr_by_number(
+        self,
+        pr_number: int,
+        repository: str,
+        *,
+        fix_comment: bool = False,
+        fixpr: bool = False,
+        agent_cli: str = "claude",
+        model: str = None,
+    ) -> bool:
         """Process a specific PR by number and repository"""
         repo_full = self._normalize_repository_name(repository)
         self.logger.info(f"🎯 Processing target PR: {repo_full} #{pr_number}")
@@ -1219,9 +2084,41 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             return False
 
         try:
+            # Check workflow-specific safety limits
+            workflow_type = self._determine_workflow_type(fix_comment, fixpr)
+            _, comments = self._get_pr_comment_state(repo_full, pr_number)
+            automation_comment_count = self._count_workflow_comments(comments, workflow_type)
+
+            # Get workflow-specific limit
+            if workflow_type == "fix_comment":
+                workflow_limit = self.safety_manager.fix_comment_limit
+            elif workflow_type == "fixpr":
+                workflow_limit = self.safety_manager.fixpr_limit
+            elif workflow_type == "pr_automation":
+                workflow_limit = self.safety_manager.pr_automation_limit
+            else:
+                workflow_limit = self.safety_manager.pr_limit  # Fallback
+
+            if automation_comment_count >= workflow_limit:
+                self.logger.warning(
+                    f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} ({workflow_type}); "
+                    f"{automation_comment_count}/{workflow_limit} automation comments"
+                )
+                # Not an execution failure: we're intentionally skipping to avoid spamming.
+                return True
+
+            if self.no_act:
+                self.logger.info(
+                    "🧪 --no-act enabled: skipping processing for %s #%s (would run %s)",
+                    repo_full,
+                    pr_number,
+                    workflow_type,
+                )
+                return True
+
             # Check safety limits for this specific PR first
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full):
-                self.logger.warning(f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number}")
+                self.logger.warning(f"🚫 Internal safety limits exceeded for PR {repo_full} #{pr_number}")
                 return False
 
             # Only record global run AFTER confirming we can process the PR
@@ -1238,25 +2135,43 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             try:
                 # Get PR details using gh CLI
                 result = AutomationUtils.execute_subprocess_with_timeout(
-                    ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author"],
+                    ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author,headRefOid,mergeable"],
                     timeout=30
                 )
                 pr_data = json.loads(result.stdout)
 
                 self.logger.info(f"📝 Found PR: {pr_data['title']}")
 
-                # Post codex instruction comment
-                comment_result = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
-                success = comment_result == "posted"
-
-                # Record PR processing attempt with result
-                result = "success" if success else "failure"
-                self.safety_manager.record_pr_attempt(
-                    pr_number,
-                    result,
-                    repo=repo_full,
-                    branch=pr_data.get("headRefName"),
-                )
+                if fix_comment:
+                    comment_result = self._process_pr_fix_comment(
+                        repo_full,
+                        pr_number,
+                        pr_data,
+                        agent_cli=agent_cli,
+                        model=model,
+                    )
+                elif fixpr:
+                    comment_result = self._process_pr_fixpr(
+                        repo_full,
+                        pr_number,
+                        pr_data,
+                        agent_cli=agent_cli,
+                        model=model,
+                    )
+                else:
+                    # Post codex instruction comment
+                    comment_result = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
+                # Treat "skipped" as a neutral outcome: do not count it as failure,
+                # and avoid recording an unbounded stream of skipped attempts.
+                success = comment_result in {"posted", "skipped"}
+                if comment_result != "skipped":
+                    result = "success" if comment_result == "posted" else "failure"
+                    self.safety_manager.record_pr_attempt(
+                        pr_number,
+                        result,
+                        repo=repo_full,
+                        branch=pr_data.get("headRefName"),
+                    )
 
                 if success:
                     self.logger.info(f"✅ Successfully processed target PR {repo_full} #{pr_number}")
@@ -1280,9 +2195,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.debug("Traceback: %s", traceback.format_exc())
             return False
 
-    def run_monitoring_cycle(self, single_repo=None, max_prs=10):
+    def run_monitoring_cycle(self, single_repo=None, max_prs=10, cutoff_hours: int = 24, fix_comment: bool = False, fixpr: bool = False, agent_cli: str = "claude", model: str = None):
         """Run a complete monitoring cycle with actionable PR counting"""
-        self.logger.info("🚀 Starting jleechanorg PR monitoring cycle")
+        mode_label = "fix-comment" if fix_comment else ("fixpr" if fixpr else "comment")
+        self.logger.info("🚀 Starting jleechanorg PR monitoring cycle (%s mode)", mode_label)
 
         if not self.safety_manager.can_start_global_run():
             current_runs = self.safety_manager.get_global_runs()
@@ -1297,7 +2213,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         global_run_recorded = self.wrapper_managed
 
         try:
-            open_prs = self.discover_open_prs()
+            open_prs = self.discover_open_prs(cutoff_hours=cutoff_hours)
         except Exception as exc:
             self.logger.error("❌ Failed to discover PRs: %s", exc)
             self.logger.debug("Traceback: %s", traceback.format_exc())
@@ -1333,15 +2249,61 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 skipped_count += 1
                 continue
 
+            # For fixpr, perform additional eligibility check (conflicts or failing checks)
+            if fixpr:
+                # We need to fetch more details to know if it's eligible
+                # This mirrors logic in list_actionable_prs/run_fixpr_batch
+                try:
+                    # Check mergeable status first (lightweight if available in discover_open_prs? No, it's not)
+                    # We need to query it.
+                    # Let's assume we need to check failing checks too.
+                    # We can use has_failing_checks from orchestrated_pr_runner
+                    is_conflicting = False # We'd need to fetch mergeable status
+
+                    # Fetch mergeable status
+                    result = AutomationUtils.execute_subprocess_with_timeout(
+                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable"],
+                        timeout=30, check=False
+                    )
+                    if result.returncode == 0:
+                        data = json.loads(result.stdout)
+                        if data.get("mergeable") == "CONFLICTING":
+                            is_conflicting = True
+
+                    is_failing = has_failing_checks(repo_full_name, pr_number)
+
+                    if not (is_conflicting or is_failing):
+                        self.logger.debug(f"⏭️ Skipping PR #{pr_number} (fixpr) - no conflicts or failing checks")
+                        skipped_count += 1
+                        continue
+
+                except Exception as e:
+                    self.logger.warning(f"⚠️ Error checking fixpr eligibility for #{pr_number} ({type(e).__name__}): {e}")
+                    skipped_count += 1
+                    continue
+
             branch_name = pr.get("headRefName", "unknown")
 
             # Check automation comment count on GitHub (not internal attempts)
+            # Determine workflow type based on mode
+            workflow_type = self._determine_workflow_type(fix_comment, fixpr)
             _, comments = self._get_pr_comment_state(repo_full_name, pr_number)
-            automation_comment_count = self._count_codex_automation_comments(comments)
-            if automation_comment_count >= self.safety_manager.pr_limit:
+            automation_comment_count = self._count_workflow_comments(comments, workflow_type)
+
+            # Get workflow-specific limit
+            if workflow_type == "fix_comment":
+                workflow_limit = self.safety_manager.fix_comment_limit
+            elif workflow_type == "fixpr":
+                workflow_limit = self.safety_manager.fixpr_limit
+            elif workflow_type == "pr_automation":
+                workflow_limit = self.safety_manager.pr_automation_limit
+            else:
+                workflow_limit = self.safety_manager.pr_limit  # Fallback
+
+            if automation_comment_count >= workflow_limit:
                 self.logger.info(
-                    f"🚫 Safety limits exceeded for PR {repo_full_name} #{pr_number}; "
-                    f"{automation_comment_count}/{self.safety_manager.pr_limit} automation comments"
+                    f"🚫 Safety limits exceeded for PR {repo_full_name} #{pr_number} ({workflow_type}); "
+                    f"{automation_comment_count}/{workflow_limit} automation comments"
                 )
                 skipped_count += 1
                 continue
@@ -1367,21 +2329,38 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         self.safety_manager.global_limit,
                     )
 
-                # Post codex instruction comment directly (comment-only approach)
-                comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
+                if fix_comment:
+                    comment_result = self._process_pr_fix_comment(
+                        repo_full_name,
+                        pr_number,
+                        pr,
+                        agent_cli=agent_cli,
+                        model=model,
+                    )
+                elif fixpr:
+                    comment_result = self._process_pr_fixpr(
+                        repo_full_name,
+                        pr_number,
+                        pr,
+                        agent_cli=agent_cli,
+                        model=model,
+                    )
+                else:
+                    # Post codex instruction comment directly (comment-only approach)
+                    comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
 
-                # Treat "skipped" (already handled/guarded) the same as a success so we don't
-                # artificially accumulate failure counts or noisy error logs.
+                # Treat "skipped" as a neutral outcome: do not count it as failure,
+                # and avoid recording an unbounded stream of skipped attempts.
                 success = comment_result in {"posted", "skipped"}
-
-                result = "success" if success else "failure"
-                self.safety_manager.record_pr_attempt(
-                    pr_number,
-                    result,
-                    repo=repo_full_name,
-                    branch=branch_name,
-                )
-                attempt_recorded = True
+                if comment_result != "skipped":
+                    result = "success" if comment_result == "posted" else "failure"
+                    self.safety_manager.record_pr_attempt(
+                        pr_number,
+                        result,
+                        repo=repo_full_name,
+                        branch=branch_name,
+                    )
+                    attempt_recorded = True
 
                 if success:
                     # Only count as processed when we actually posted; skips should not inflate stats.
@@ -1632,10 +2611,19 @@ def main():
     """CLI interface for jleechanorg PR monitor"""
 
     parser = argparse.ArgumentParser(description="jleechanorg PR Monitor")
+    parser.add_argument(
+        "--no-act",
+        action="store_true",
+        help="Do not post comments or dispatch agents (useful for evidence/testing).",
+    )
     parser.add_argument("--dry-run", action="store_true",
                         help="Discover PRs but do not process them")
     parser.add_argument("--fixpr", action="store_true",
                         help="Run /fixpr-only orchestrated flow for conflicts/failing checks (skips drafts)")
+    parser.add_argument("--fix-comment", action="store_true",
+                        help="Run fix-comment orchestration flow to resolve PR review comments")
+    parser.add_argument("--fix-comment-watch", action="store_true",
+                        help="Watch a PR for automation commits and post review request when detected")
     parser.add_argument("--cutoff-hours", type=int, default=24,
                         help="Look-back window in hours for PR updates (default: 24)")
     parser.add_argument("--single-repo",
@@ -1652,38 +2640,100 @@ def main():
         default="claude",
         help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model to use for Claude CLI (e.g., sonnet, opus, haiku). Only applies when using claude.",
+    )
     parser.add_argument("--list-eligible", action="store_true",
                         help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
     parser.add_argument("--codex-update", action="store_true",
-                        help="Run Codex automation to update first 200 tasks via browser automation")
+                        help="Run Codex automation to update tasks via browser automation (use --codex-task-limit; default: 50)")
+    parser.add_argument(
+        "--codex-task-limit",
+        type=_positive_int_arg,
+        default=50,
+        help="Task limit for --codex-update (default: 50, max: 200).",
+    )
+
+    # Safety limits (params; no environment variables).
+    parser.add_argument("--pr-limit", type=_positive_int_arg, default=None, help="Max failed attempts per PR (default: 10).")
+    parser.add_argument("--global-limit", type=_positive_int_arg, default=None, help="Max global runs per day (default: 50).")
+    parser.add_argument("--approval-hours", type=_positive_int_arg, default=None, help="Manual approval validity in hours (default: 24).")
+    parser.add_argument("--subprocess-timeout", type=_positive_int_arg, default=None, help="Default subprocess timeout seconds (default: 300).")
+    parser.add_argument("--pr-automation-limit", type=_positive_int_arg, default=None, help="Max PR automation comments per PR (default: 10).")
+    parser.add_argument("--fix-comment-limit", type=_positive_int_arg, default=None, help="Max fix-comment comments per PR (default: 10).")
+    parser.add_argument("--fixpr-limit", type=_positive_int_arg, default=None, help="Max fixpr comments per PR (default: 10).")
 
     args = parser.parse_args()
+
+    try:
+        args.model = _normalize_model_for_cli_chain(args.model, args.fixpr_agent)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
 
     # Validate target PR arguments
     if args.target_pr and not args.target_repo:
         parser.error("--target-repo is required when using --target-pr")
     if args.target_repo and not args.target_pr:
         parser.error("--target-pr is required when using --target-repo")
+    if args.fixpr and args.fix_comment:
+        parser.error("--fixpr and --fix-comment are mutually exclusive")
+    if args.fix_comment_watch and not (args.target_pr and args.target_repo):
+        parser.error("--fix-comment-watch requires --target-pr and --target-repo")
 
-    monitor = JleechanorgPRMonitor()
+    safety_limits: Dict[str, int] = {}
+    if args.pr_limit is not None:
+        safety_limits["pr_limit"] = args.pr_limit
+    if args.global_limit is not None:
+        safety_limits["global_limit"] = args.global_limit
+    if args.approval_hours is not None:
+        safety_limits["approval_hours"] = args.approval_hours
+    if args.subprocess_timeout is not None:
+        safety_limits["subprocess_timeout"] = args.subprocess_timeout
+    if args.pr_automation_limit is not None:
+        safety_limits["pr_automation_limit"] = args.pr_automation_limit
+    if args.fix_comment_limit is not None:
+        safety_limits["fix_comment_limit"] = args.fix_comment_limit
+    if args.fixpr_limit is not None:
+        safety_limits["fixpr_limit"] = args.fixpr_limit
+
+    monitor = JleechanorgPRMonitor(safety_limits=safety_limits or None, no_act=args.no_act)
+
+    if args.fix_comment_watch:
+        success = monitor.run_fix_comment_review_watcher(
+            args.target_pr,
+            args.target_repo,
+            agent_cli=args.fixpr_agent,
+        )
+        sys.exit(0 if success else 1)
 
     if args.codex_update:
-        print("🤖 Running Codex automation (first 200 tasks)...")
+        if args.no_act:
+            print("🧪 --no-act enabled: skipping codex-update run")
+            sys.exit(0)
+
+        task_limit = min(args.codex_task_limit, 200)
+
+        print(f"🤖 Running Codex automation (first {task_limit} tasks)...")
 
         # Validate Chrome CDP is accessible before running (auto-starts if needed)
         cdp_ok, cdp_msg = ensure_chrome_cdp_accessible()
         print(cdp_msg)
         if not cdp_ok:
-            print("\n💡 TIP: Start Chrome with CDP enabled first:")
+            print("\n⚠️ Skipping Codex automation (Chrome CDP unavailable).")
+            print("💡 TIP: Start Chrome with CDP enabled first:")
             print("   ./automation/jleechanorg_pr_automation/openai_automation/start_chrome_debug.sh")
             print("   Or set CODEX_CDP_START_SCRIPT to a custom launcher path.")
-            sys.exit(1)
+            sys.exit(0)
 
         try:
             host, port = _resolve_cdp_host_port()
             # Call the codex automation module with limit
             # Use -m to run as module (works with installed package)
             # Requires Chrome with CDP enabled on port 9222
+            timeout_seconds = max(300, int(task_limit * 12))  # ~12s/task, min 5 minutes
             result = subprocess.run(
                 [
                     "python3",
@@ -1695,25 +2745,78 @@ def main():
                     "--cdp-port",
                     str(port),
                     "--limit",
-                    "200",
+                    str(task_limit),
                 ],
                 check=False, capture_output=True,
                 text=True,
-                timeout=2400  # 40 minute timeout (scaled for 200 tasks)
+                timeout=timeout_seconds
             )
             print(result.stdout)
             if result.stderr:
                 print(result.stderr, file=sys.stderr)
             sys.exit(result.returncode)
         except subprocess.TimeoutExpired:
-            print("❌ Codex automation timed out after 40 minutes")
+            print(f"❌ Codex automation timed out after {timeout_seconds // 60} minutes")
             sys.exit(1)
         except Exception as e:
             print(f"❌ Failed to run Codex automation: {e}")
             sys.exit(1)
 
     if args.fixpr:
-        run_fixpr_batch(args.cutoff_hours, args.max_prs, agent_cli=args.fixpr_agent)
+        if args.target_pr and args.target_repo:
+            print(f"🎯 Processing target PR (fixpr): {args.target_repo} #{args.target_pr}")
+            success = monitor.process_single_pr_by_number(
+                args.target_pr,
+                args.target_repo,
+                fixpr=True,
+                agent_cli=args.fixpr_agent,
+                model=args.model,
+            )
+            sys.exit(0 if success else 1)
+
+        monitor.run_monitoring_cycle(
+            single_repo=args.single_repo,
+            max_prs=args.max_prs,
+            cutoff_hours=args.cutoff_hours,
+            fixpr=True,
+            agent_cli=args.fixpr_agent,
+            model=args.model,
+        )
+        return
+
+    if args.fix_comment:
+        # Handle target PR processing
+        if args.target_pr and args.target_repo:
+            print(f"🎯 Processing target PR (fix-comment): {args.target_repo} #{args.target_pr}")
+            success = monitor.process_single_pr_by_number(
+                args.target_pr,
+                args.target_repo,
+                fix_comment=True,
+                agent_cli=args.fixpr_agent,
+                model=args.model,
+            )
+            sys.exit(0 if success else 1)
+
+        if args.dry_run:
+            print("🔍 DRY RUN: Discovering PRs only")
+            prs = monitor.discover_open_prs(cutoff_hours=args.cutoff_hours)
+
+            if args.single_repo:
+                prs = [pr for pr in prs if pr["repository"] == args.single_repo]
+
+            print(f"📋 Found {len(prs)} open PRs:")
+            for pr in prs[:args.max_prs]:
+                print(f"  • {pr['repository']} PR #{pr['number']}: {pr['title']}")
+            return
+
+        monitor.run_monitoring_cycle(
+            single_repo=args.single_repo,
+            max_prs=args.max_prs,
+            cutoff_hours=args.cutoff_hours,
+            fix_comment=True,
+            agent_cli=args.fixpr_agent,
+            model=args.model,
+        )
         return
 
     # Handle target PR processing
@@ -1724,7 +2827,7 @@ def main():
 
     if args.dry_run:
         print("🔍 DRY RUN: Discovering PRs only")
-        prs = monitor.discover_open_prs()
+        prs = monitor.discover_open_prs(cutoff_hours=args.cutoff_hours)
 
         if args.single_repo:
             prs = [pr for pr in prs if pr["repository"] == args.single_repo]
@@ -1735,11 +2838,24 @@ def main():
 
         if args.list_eligible:
             print("\n🔎 Eligible for fixpr (conflicts/failing checks):")
-            monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
+            monitor.list_actionable_prs(
+                cutoff_hours=args.cutoff_hours,
+                max_prs=args.max_prs,
+                single_repo=args.single_repo,
+            )
     elif args.list_eligible:
-        monitor.list_actionable_prs(max_prs=args.max_prs, single_repo=args.single_repo)
+        monitor.list_actionable_prs(
+            cutoff_hours=args.cutoff_hours,
+            max_prs=args.max_prs,
+            single_repo=args.single_repo,
+        )
     else:
-        monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs)
+        monitor.run_monitoring_cycle(
+            single_repo=args.single_repo,
+            max_prs=args.max_prs,
+            cutoff_hours=args.cutoff_hours,
+            model=args.model,
+        )
 
 
 if __name__ == "__main__":

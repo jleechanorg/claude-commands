@@ -53,21 +53,23 @@ get_repo_from_remote() {
     parse_repo_from_url() {
         local parsed_url="$1"
 
-        # Match HTTP/HTTPS GitHub format (supports optional userinfo): https://github.com/owner/repo.git
-        if [[ "$parsed_url" =~ https?://([^@/]+@)?github\.com/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-            local owner="${BASH_REMATCH[2]}"
-            local repo="${BASH_REMATCH[3]}"
+        # Match HTTP/HTTPS GitHub format (supports any domain, including enterprise): https://[domain]/owner/repo.git
+        if [[ "$parsed_url" =~ https?://([^@/]+@)?([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+            local domain="${BASH_REMATCH[2]}"
+            local owner="${BASH_REMATCH[3]}"
+            local repo="${BASH_REMATCH[4]}"
             repo="${repo%.git}"
-            echo "${owner}/${repo}"
+            echo "${domain}/${owner}/${repo}"
             return 0
         fi
 
-        # Match SSH format: git@github.com:owner/repo.git
-        if [[ "$parsed_url" =~ git@github\.com:([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-            local owner="${BASH_REMATCH[1]}"
-            local repo="${BASH_REMATCH[2]}"
+        # Match SSH format (supports any domain, including enterprise): git@[domain]:owner/repo.git
+        if [[ "$parsed_url" =~ git@([^:]+):([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+            local domain="${BASH_REMATCH[1]}"
+            local owner="${BASH_REMATCH[2]}"
+            local repo="${BASH_REMATCH[3]}"
             repo="${repo%.git}"
-            echo "${owner}/${repo}"
+            echo "${domain}/${owner}/${repo}"
             return 0
         fi
 

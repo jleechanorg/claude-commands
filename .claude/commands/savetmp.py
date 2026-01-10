@@ -47,7 +47,12 @@ def _find_evidence_standards() -> str:
 
 
 def _run_git_command(args: List[str], timeout: int = 5) -> Optional[str]:
-    """Run a git command and return stripped stdout or None on failure."""
+    """Run a git command and return stripped stdout or None on failure.
+
+    Returns:
+        str: The stripped stdout (can be empty string if command succeeded but no output).
+        None: If the command failed (CalledProcessError, FileNotFoundError, TimeoutExpired).
+    """
     try:
         result = subprocess.run(
             ["git", *args],
@@ -62,7 +67,7 @@ def _run_git_command(args: List[str], timeout: int = 5) -> Optional[str]:
         subprocess.TimeoutExpired,
     ):
         return None
-    return result.stdout.strip() or None
+    return result.stdout.strip()
 
 
 def _run_git_commands_parallel(
@@ -83,12 +88,17 @@ def _run_git_commands_parallel(
 
 def _resolve_repo_info(
     skip_git: bool = False,
-    pr_mode: bool = False,
 ) -> Tuple[str, str, Optional[Dict[str, Optional[str]]]]:
     """Return (repo_name, branch_name, git_provenance) with sensible fallbacks.
 
     Git provenance follows evidence-standards.md requirements.
     If skip_git=True, returns simplified info without running git commands.
+
+    Edge Cases:
+    - origin/main missing: base_ref is None, changed_files is empty (warning printed).
+    - HEAD == origin/main: changed_files is empty (no changes).
+    - Detached HEAD: branch="detached".
+    - Shallow clones: fallback mechanics apply, might result in empty changed_files.
     """
     if skip_git:
         # Fast path: no git commands, use simple defaults
@@ -116,23 +126,36 @@ def _resolve_repo_info(
     if not branch:
         branch = "detached"
 
-    # Determine a base ref for changed files with fallbacks
-    # In PR mode, always use origin/main to capture full PR diff
-    if pr_mode:
-        base_ref = results.get("origin_main")
-    else:
-        base_ref = results.get("upstream") or results.get("origin_main")
+    # Determine a base ref for changed files
+    # Prefer origin/main to capture full branch diff, fall back to upstream for nonstandard repos
+    # This ensures changed_files shows all changes relative to main branch
+    base_ref = results.get("origin_main") or results.get("upstream")
     changed_files_output: Optional[str] = None
-    if base_ref and base_ref != results.get("head_commit"):
+
+    if not base_ref:
+        print("⚠️  No base ref found (origin/main or upstream) - changed_files will be empty", file=sys.stderr)
+    elif base_ref == results.get("head_commit"):
+        # HEAD is at base ref, no changes to report
+        changed_files_output = ""
+    else:
         # Try three-dot first (commits unique to HEAD)
         changed_files_output = _run_git_command(
             ["diff", "--name-only", f"{base_ref}...HEAD"], timeout=10
         )
-        # If empty, fall back to two-dot (all differences)
-        if not changed_files_output:
-            changed_files_output = _run_git_command(
+        # If command failed (None) or returned empty string (no changes found by 3-dot),
+        # try two-dot (all differences) just in case, though 3-dot is standard for PRs.
+        # Note: _run_git_command returns None for failures, empty string for "no changes"
+        if changed_files_output is None or changed_files_output == "":
+            two_dot_output = _run_git_command(
                 ["diff", "--name-only", f"{base_ref}..HEAD"], timeout=10
             )
+            # Use two-dot output if three-dot failed or was empty, but only if two-dot succeeded
+            if two_dot_output is not None:
+                changed_files_output = two_dot_output
+
+        # Warn if both git diff attempts failed (result is still None)
+        if changed_files_output is None:
+            print(f"⚠️  Git diff commands failed for base_ref={base_ref} - changed_files will be empty", file=sys.stderr)
 
     # Build git provenance per evidence-standards.md
     git_provenance = {
@@ -251,6 +274,152 @@ def _write_artifact_checksums(
     return checksum_paths
 
 
+def _looks_like_absolute_path(value: str) -> bool:
+    if not value:
+        return False
+    if value.startswith("file://"):
+        return True
+    if "://" in value:
+        return False
+    if value.startswith("~"):
+        return True
+    if re.match(r"^[A-Za-z]:\\\\", value):
+        return True
+    return Path(value).is_absolute()
+
+
+def _collect_absolute_paths(
+    data: object,
+    current_path: str,
+    found: List[Tuple[str, str]],
+    limit: int = 50,
+) -> None:
+    if len(found) >= limit:
+        return
+    if isinstance(data, dict):
+        for key, value in data.items():
+            next_path = f"{current_path}.{key}" if current_path else str(key)
+            _collect_absolute_paths(value, next_path, found, limit)
+    elif isinstance(data, list):
+        for idx, value in enumerate(data):
+            next_path = f"{current_path}[{idx}]" if current_path else f"[{idx}]"
+            _collect_absolute_paths(value, next_path, found, limit)
+    elif isinstance(data, str):
+        if _looks_like_absolute_path(data):
+            found.append((current_path or "<root>", data))
+
+
+def _json_has_llm_claims(data: object) -> bool:
+    llm_keys = {
+        "models",
+        "raw_responses",
+        "request_responses",
+        "llm_provider",
+        "llm_model",
+        "system_instruction_text",
+        "system_instruction_files",
+        "system_instruction_char_count",
+        "raw_response_text",
+    }
+    if isinstance(data, dict):
+        for key, value in data.items():
+            key_lower = str(key).lower()
+            if key_lower in llm_keys:
+                return True
+            if key_lower == "debug_info" and isinstance(value, dict):
+                debug_keys = {
+                    "llm_provider",
+                    "llm_model",
+                    "system_instruction_text",
+                    "system_instruction_files",
+                    "system_instruction_char_count",
+                    "raw_response_text",
+                }
+                if any(k in value for k in debug_keys):
+                    return True
+            if _json_has_llm_claims(value):
+                return True
+    elif isinstance(data, list):
+        for value in data:
+            if _json_has_llm_claims(value):
+                return True
+    return False
+
+
+def _text_mentions_llm(text: str) -> bool:
+    lowered = text.lower()
+    return any(
+        token in lowered
+        for token in ("llm", "prompt", "system instruction", "model", "api behavior")
+    )
+
+
+def _validate_bundle(run_dir: Path, llm_claims: bool) -> Tuple[List[str], List[str]]:
+    errors: List[str] = []
+    warnings: List[str] = []
+    all_files = [p for p in run_dir.rglob("*") if p.is_file()]
+
+    # Missing checksums
+    missing_checksums = []
+    for file_path in all_files:
+        if file_path.suffix == ".sha256":
+            continue
+        checksum_path = Path(str(file_path) + ".sha256")
+        if not checksum_path.exists():
+            missing_checksums.append(str(file_path))
+    if missing_checksums:
+        errors.append(
+            "Missing .sha256 files:\n  " + "\n  ".join(sorted(missing_checksums))
+        )
+
+    # JSON portability checks + LLM claim detection
+    absolute_paths: List[Tuple[str, str]] = []
+    llm_detected = False
+    json_files = [p for p in all_files if p.suffix == ".json"]
+    for json_path in json_files:
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            warnings.append(f"Could not parse JSON: {json_path} ({exc})")
+            continue
+        if not llm_detected and _json_has_llm_claims(data):
+            llm_detected = True
+        _collect_absolute_paths(data, "", absolute_paths, limit=50)
+
+    if absolute_paths:
+        sample = [
+            f"{path_key} = {value}" for path_key, value in absolute_paths[:10]
+        ]
+        warnings.append(
+            "Absolute paths found in JSON (portability risk):\n  "
+            + "\n  ".join(sample)
+        )
+
+    if not llm_claims:
+        llm_claims = llm_detected
+
+    # Heuristic text scan if still undecided
+    if not llm_claims:
+        for text_file in ("methodology.md", "evidence.md", "notes.md"):
+            text_path = run_dir / text_file
+            if text_path.exists():
+                text = text_path.read_text(encoding="utf-8")
+                if _text_mentions_llm(text):
+                    llm_claims = True
+                    break
+
+    if llm_claims:
+        has_request_responses = any(
+            p.name == "request_responses.jsonl" for p in all_files
+        )
+        if not has_request_responses:
+            errors.append(
+                "LLM/API behavior claims detected but request_responses.jsonl is missing."
+            )
+
+    return errors, warnings
+
+
 def _sanitize_work_name(raw: str) -> str:
     """Return a filesystem-safe work name constrained to a single path segment."""
     cleaned = raw.strip()
@@ -319,14 +488,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip git commands for faster execution. Uses /tmp/evidence/local/<work>/ path.",
     )
     parser.add_argument(
-        "--pr-mode",
-        action="store_true",
-        help="Use origin/main as base for changed files (captures full PR diff, not just last commit).",
-    )
-    parser.add_argument(
         "--clean-checksums",
         action="store_true",
         help="Remove existing .sha256 files from artifacts before packaging to prevent checksum layering.",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate the bundle for missing checksums, portability issues, and required files.",
+    )
+    parser.add_argument(
+        "--llm-claims",
+        action="store_true",
+        help="Declare LLM/API behavior claims (requires request_responses.jsonl).",
     )
     return parser
 
@@ -335,9 +509,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # Run git resolution (skip for speed if --skip-git, use pr_mode for full PR diff)
+    # Run git resolution (skip for speed if --skip-git)
     repo_name, branch, git_provenance = _resolve_repo_info(
-        skip_git=args.skip_git, pr_mode=args.pr_mode
+        skip_git=args.skip_git
     )
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
@@ -458,6 +632,23 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Checksum for README.md
     checksum_files.append(_write_checksum(readme_path, run_dir))
 
+    validation_errors: List[str] = []
+    validation_warnings: List[str] = []
+    if args.validate:
+        validation_errors, validation_warnings = _validate_bundle(
+            run_dir, llm_claims=args.llm_claims
+        )
+
+        if validation_warnings:
+            print("⚠️  Validation warnings:")
+            for warning in validation_warnings:
+                print(f"  - {warning}")
+
+        if validation_errors:
+            print("❌ Validation errors:")
+            for error in validation_errors:
+                print(f"  - {error}")
+
     # Compact output for speed
     print(f"✅ Evidence archived → {run_dir}")
     if git_provenance:
@@ -466,6 +657,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"   Git: {str(head_commit)[:8]}")
     print(f"   Checksums: {len(checksum_files)} files")
 
+    if validation_errors:
+        return 2
     return 0
 
 
