@@ -1,42 +1,24 @@
 #!/bin/bash
 
-# Test Runner Script for WorldArchitect.ai with Intelligent Test Selection
-# Runs test_*.py files using intelligent selection by default or full suite with --full
+# Test Runner Script for WorldArchitect.ai
+# REQUIRES explicit test file names as arguments - does NOT run all tests
 # Always runs in CI simulation mode to catch environment-specific issues
 #
 # Usage:
-#   ./run_tests.sh                           # Intelligent test selection (default, CI simulation)
-#   ./run_tests.sh --full                    # Run complete test suite (CI simulation)
-#   ./run_tests.sh test_file.py              # Run single specific test file
-#   ./run_tests.sh test1.py test2.py         # Run multiple specific test files (serial execution)
-#   ./run_tests.sh --dry-run                 # Show intelligent selection without execution
-#   ./run_tests.sh --integration             # Include integration tests (works with intelligent mode)
-#   ./run_tests.sh --unit                    # Run unit tests only (excludes integration tests - default)
-#   ./run_tests.sh --parallel                # Run tests in parallel (default behavior)
-#   ./run_tests.sh --unit --parallel         # Run unit tests in parallel (explicit flags)
-#   ./run_tests.sh --coverage                # Run tests with coverage analysis
-#   ./run_tests.sh --integration --coverage  # Run unit and integration tests with coverage
-#   ./run_tests.sh --full --integration      # Full suite including integration tests
-#   ./run_tests.sh --dry-run --integration   # Preview intelligent selection with integration tests
-#   ./run_tests.sh --mcp                     # Run MCP server tests (requires MCP server running)
-#   ./run_tests.sh --exclude-integration      # Exclude integration tests (for CI optimization)
-#   ./run_tests.sh --exclude-mcp              # Exclude MCP tests (for CI optimization)
-#   ./run_tests.sh --include-end2end          # Include end2end tests specifically (for CI)
-#   ./run_tests.sh --test-dirs mvp_site,.claude # Run tests only for specified directories (comma-separated)
-#   ./run_tests.sh --test-dirs orchestration   # Run tests only for orchestration directory
-#   ./run_tests.sh --ci-exact                  # Run tests exactly like CI (direct python execution, no pytest)
+#   ./run_tests.sh test_file.py              # Run single specific test file (REQUIRED)
+#   ./run_tests.sh test1.py test2.py         # Run multiple specific test files
+#   ./run_tests.sh mvp_site/tests/test_*.py  # Run tests matching a glob pattern
+#   ./run_tests.sh --coverage test_file.py   # Run specific test with coverage analysis
+#   ./run_tests.sh --test-dirs mvp_site      # Run tests in specific directory (for CI)
+#   ./run_tests.sh --ci                      # Run all tests (CI only - blocked locally)
+#
+# NOTE: This script intentionally does NOT support running all tests locally.
+#       You MUST specify which test file(s) to run, or use --test-dirs for directories.
 #
 # CI Simulation Features:
 # - Always simulates GitHub Actions environment to catch deployment issues early
 # - Sets CI environment variables (CI=true, GITHUB_ACTIONS=true, MOCK_SERVICES_MODE=true)
 # - Uses same environment setup as actual GitHub Actions workflow
-# - Tests run with same dependencies as CI environment
-#
-# Intelligent Selection Features:
-# - Analyzes git changes vs origin/main to select relevant tests
-# - Typically reduces test execution by 60-80% for focused PRs
-# - Falls back to full suite on analysis failures or large changesets
-# - Maintains all safety features (memory monitoring, parallel execution)
 #
 # Integration tests (in test_integration/) require external dependencies like google-genai
 # and are excluded by default to ensure tests run quickly and without external dependencies.
@@ -255,138 +237,16 @@ except Exception as e:
     fi
 }
 
-# Intelligent test selection based on git changes
-intelligent_test_selection() {
-    print_status "🔍 Analyzing git changes for intelligent test selection..."
-
-    # Create temporary file for selected tests
-    local selected_tests_file="/tmp/selected_tests.txt"
-    > "$selected_tests_file"  # Clear the file
-
-    # Check if we're in a git repository and have origin/main
-    if ! git rev-parse --git-dir >/dev/null 2>&1; then
-        print_warning "Not in a git repository, falling back to full test suite"
-        return 1
-    fi
-
-    if ! git rev-parse origin/main >/dev/null 2>&1; then
-        print_warning "origin/main not found, falling back to full test suite"
-        return 1
-    fi
-
-    # Get list of changed files
-    local changed_files
-    changed_files=$(git diff --name-only origin/main..HEAD 2>/dev/null) || {
-        print_warning "Failed to get git diff, falling back to full test suite"
-        return 1
-    }
-
-    if [ -z "$changed_files" ]; then
-        print_warning "No changes detected vs origin/main, running minimal test set"
-        # For no changes, run a minimal set of core tests
-        find mvp_site -name "test_core_*.py" -o -name "test_basic_*.py" 2>/dev/null | head -5 > "$selected_tests_file"
-        if [ ! -s "$selected_tests_file" ]; then
-            # Fallback: select first few test files
-            find mvp_site -name "test_*.py" 2>/dev/null | head -3 > "$selected_tests_file"
-        fi
-    else
-        # Analyze changed files and select relevant tests
-        local test_patterns=()
-
-        # Process each changed file
-        while IFS= read -r file; do
-            if [ -z "$file" ]; then continue; fi
-
-            # Skip certain file types that don't affect tests
-            case "$file" in
-                *.md|*.txt|*.yml|*.yaml|*.json|*.gitignore|*.dockerignore)
-                    continue ;;
-            esac
-
-            # Extract base name without extension for test pattern matching
-            local base_name=$(basename "$file" | sed 's/\.[^.]*$//')
-            local dir_name=$(dirname "$file")
-
-            # Add patterns for test file discovery
-            test_patterns+=("test_${base_name}.py")
-            test_patterns+=("test_*${base_name}*.py")
-
-            # If it's a Python file, also look for tests in the same directory
-            if [[ "$file" == *.py ]]; then
-                # Add directory-specific test patterns
-                test_patterns+=("${dir_name}/test_*.py")
-
-                # Special handling for common directories
-                case "$dir_name" in
-                    mvp_site/*)
-                        test_patterns+=("mvp_site/test_*.py")
-                        test_patterns+=("mvp_site/tests/test_*.py")
-                        ;;
-                    automation/*)
-                        test_patterns+=("automation/tests/test_*.py")
-                        test_patterns+=("automation/test_*.py")
-                        ;;
-                    *api*)
-                        test_patterns+=("**/test_api*.py")
-                        test_patterns+=("**/test_*api*.py")
-                        ;;
-                    *auth*)
-                        test_patterns+=("**/test_auth*.py")
-                        test_patterns+=("**/test_*auth*.py")
-                        ;;
-                esac
-            fi
-        done <<< "$changed_files"
-
-        # Find matching test files
-        local found_count=0
-        for pattern in "${test_patterns[@]}"; do
-            # Use find with the pattern, suppressing errors
-            find "$PROJECT_ROOT" -path "*/$pattern" -type f 2>/dev/null | while read -r test_file; do
-                # Skip if file doesn't exist or is not readable
-                if [ -f "$test_file" ] && [ -r "$test_file" ]; then
-                    echo "$test_file"
-                    found_count=$((found_count + 1))
-                fi
-            done
-        done | sort -u >> "$selected_tests_file"
-
-        # Always include core critical tests
-        find mvp_site -name "test_core*.py" -o -name "test_basic*.py" -o -name "test_critical*.py" 2>/dev/null >> "$selected_tests_file"
-
-        # Remove duplicates and empty lines
-        sort -u "$selected_tests_file" | grep -v '^$' > "${selected_tests_file}.tmp" && mv "${selected_tests_file}.tmp" "$selected_tests_file"
-    fi
-
-    # Check if we found any tests
-    local test_count=$(wc -l < "$selected_tests_file" 2>/dev/null || echo "0")
-    echo "Selected $test_count tests written to $selected_tests_file"
-
-    if [ "$test_count" -eq 0 ]; then
-        print_warning "⚠️  Intelligent analysis produced no results, falling back to full suite"
-        return 1
-    elif [ "$test_count" -gt 50 ]; then
-        print_warning "⚠️  Large changeset detected ($test_count tests selected), consider using --full"
-        # Still use intelligent selection but warn about potential long runtime
-        return 0
-    else
-        print_success "✅ Intelligent selection found $test_count relevant tests"
-        return 0
-    fi
-}
-
 # Parse command line arguments
 include_integration=false
 mcp_tests=false
 enable_coverage=false
-intelligent_mode=true
-dry_run_mode=false
+ci_mode=false
 specific_test_files=()
 exclude_integration=false
 exclude_mcp=false
 include_end2end=false
 test_dirs=""
-ci_exact=true  # Default to CI-exact mode for consistency
 
 for arg in "$@"; do
     case $arg in
@@ -407,12 +267,17 @@ for arg in "$@"; do
         --coverage)
             enable_coverage=true
             ;;
-        --full|--all-tests|--no-intelligent)
-            intelligent_mode=false
-            ;;
-        --dry-run)
-            dry_run_mode=true
-            # Don't force intelligent mode - let user override with --full
+        --ci)
+            # CI mode - allows running all tests, but ONLY in actual GitHub Actions
+            if [ "$GITHUB_ACTIONS" = "true" ]; then
+                ci_mode=true
+            else
+                print_error "❌ --ci flag is only allowed in GitHub Actions CI environment"
+                print_error "   Locally, you must specify test files explicitly:"
+                print_error "   ./run_tests.sh test_file.py"
+                print_error "   ./run_tests.sh --test-dirs mvp_site"
+                exit 1
+            fi
             ;;
         --exclude-integration)
             exclude_integration=true
@@ -430,15 +295,9 @@ for arg in "$@"; do
                 exit 1
             fi
             test_dirs="$1"
-            intelligent_mode=false  # Disable intelligent mode when using directory-based testing
             ;;
         --test-dirs=*)
             test_dirs="${arg#*=}"
-            intelligent_mode=false  # Disable intelligent mode when using directory-based testing
-            ;;
-        --ci-exact)
-            ci_exact=true
-            intelligent_mode=false  # Disable intelligent mode for CI-exact execution
             ;;
         *)
             if [[ $arg == --* ]]; then
@@ -446,28 +305,44 @@ for arg in "$@"; do
             elif [[ $arg == *.py ]]; then
                 # Handle specific test files (individual or multiple)
                 specific_test_files+=("$arg")
-                intelligent_mode=false  # Disable intelligent mode when running specific files
             fi
             ;;
     esac
 done
 
+# Validate that test files or directories are specified (unless in CI mode or using --mcp/--include-end2end)
+if [ ${#specific_test_files[@]} -eq 0 ] && [ -z "$test_dirs" ] && [ "$ci_mode" = false ] && [ "$mcp_tests" = false ] && [ "$include_end2end" = false ]; then
+    print_error "❌ No test files specified!"
+    print_error ""
+    print_error "Usage: ./run_tests.sh <test_file.py> [test_file2.py ...]"
+    print_error ""
+    print_error "Examples:"
+    print_error "  ./run_tests.sh mvp_site/tests/test_app.py"
+    print_error "  ./run_tests.sh mvp_site/tests/test_*.py"
+    print_error "  ./run_tests.sh --test-dirs mvp_site"
+    print_error "  ./run_tests.sh --mcp"
+    print_error "  ./run_tests.sh --coverage mvp_site/tests/test_app.py"
+    print_error ""
+    print_error "This script requires explicit test file names to prevent"
+    print_error "accidentally running the entire test suite."
+    exit 1
+fi
+
 # Display mode information
-if [ "$ci_exact" = true ]; then
-    print_status "🔥 CI-EXACT MODE: Running tests exactly like CI (direct python execution, no pytest protection)"
-elif [ ${#specific_test_files[@]} -gt 0 ]; then
+if [ ${#specific_test_files[@]} -gt 0 ]; then
     print_status "🎯 Specific Test Mode: Running ${#specific_test_files[@]} specified test file(s)"
     for test_file in "${specific_test_files[@]}"; do
         print_status "  - $test_file"
     done
-elif [ "$intelligent_mode" = true ]; then
-    if [ "$dry_run_mode" = true ]; then
-        print_status "🧠 Intelligent Test Selection Mode (DRY RUN - no tests executed)"
-    else
-        print_status "🧠 Intelligent Test Selection Mode (use --full for complete suite)"
-    fi
-else
-    print_status "🔧 Full Test Suite Mode (all tests will be executed)"
+elif [ -n "$test_dirs" ]; then
+    print_status "📂 Directory Mode: Running tests in specified directories"
+    print_status "  - $test_dirs"
+elif [ "$mcp_tests" = true ]; then
+    print_status "🔌 MCP Test Mode: Running MCP server tests"
+elif [ "$include_end2end" = true ]; then
+    print_status "🎯 End2End Test Mode: Running end-to-end tests"
+elif [ "$ci_mode" = true ]; then
+    print_status "🔧 CI Mode: Running full test suite (GitHub Actions)"
 fi
 
 if [ "$include_integration" = true ]; then
@@ -543,29 +418,10 @@ if [ ${#specific_test_files[@]} -gt 0 ]; then
             print_warning "⚠️  Test file not found: $test_file"
         fi
     done
-elif [ "$intelligent_mode" = true ] && [ "$mcp_tests" != true ]; then
-    # Try intelligent test selection first
-    if intelligent_test_selection; then
-        # Read selected test files
-        while IFS= read -r test_file; do
-            if [ -n "$test_file" ] && [ -f "$test_file" ]; then
-                test_files+=("$test_file")
-            fi
-        done < /tmp/selected_tests.txt
-
-        # Double-check we have valid files
-        if [ ${#test_files[@]} -eq 0 ]; then
-            print_warning "⚠️  No valid test files from intelligent selection, falling back to full suite"
-            intelligent_mode=false
-        fi
-    else
-        # Intelligent selection failed, fall back to full suite
-        intelligent_mode=false
-    fi
 fi
 
-# If not using specific files or intelligent mode failed, do full discovery
-if [ ${#test_files[@]} -eq 0 ]; then
+# If using --test-dirs, --ci, --mcp, or --include-end2end mode, do full discovery
+if [ ${#test_files[@]} -eq 0 ] && ([ -n "$test_dirs" ] || [ "$ci_mode" = true ] || [ "$mcp_tests" = true ] || [ "$include_end2end" = true ]); then
     if [ "$enable_coverage" = true ]; then
         print_warning "Coverage mode: Running tests SEQUENTIALLY (not parallel) for accurate tracking"
     else
@@ -605,7 +461,8 @@ if [ ${#test_files[@]} -eq 0 ]; then
     fi
 
     # Default discovery if no test_dirs specified or no files found
-    if [ ${#test_files[@]} -eq 0 ]; then
+    # Only run full discovery if we are in CI mode - locally we should have explicit files or dirs
+    if [ ${#test_files[@]} -eq 0 ] && [ "$ci_mode" = true ]; then
         print_status "🔍 Discovering all test files (traditional mode)"
 
         # Standard test discovery - find all test_*.py files (excluding slow UI tests)
@@ -815,12 +672,6 @@ if [ ${#test_files[@]} -gt 0 ]; then
     if [ ${#test_files[@]} -gt 10 ]; then
         echo "  ... and $((${#test_files[@]} - 10)) more files"
     fi
-fi
-
-# Exit early if dry run mode
-if [ "$dry_run_mode" = true ]; then
-    print_success "🏁 Dry run complete - no tests were executed"
-    exit 0
 fi
 
 # Validate we have test files to run

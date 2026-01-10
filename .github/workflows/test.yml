@@ -187,8 +187,8 @@ jobs:
         done
 
         if [ "$TOTAL_TESTS" -eq 0 ]; then
-          echo "⚠️ No tests found in specified directories, falling back to core tests"
-          ./run_tests.sh --parallel --exclude-integration --exclude-mcp
+          echo "⚠️ No tests found in specified directories, falling back to full test suite"
+          ./run_tests.sh --ci --parallel --exclude-integration --exclude-mcp
         else
           ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp
         fi

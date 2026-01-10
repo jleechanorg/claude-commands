@@ -411,7 +411,8 @@ sudo chown -R user:group /usr /bin /sbin /lib /etc        # Makes sudo/su unusab
 
 ```bash
 TESTING=true vpython mvp_site/test_file.py  # Single test
-./run_tests.sh                               # All tests
+./run_tests.sh mvp_site/tests/test_app.py   # Run specific tests (required)
+./run_tests.sh --test-dirs mvp_site         # Run tests in directory
 /fake3                                       # Pre-commit check
 ./integrate.sh                               # New branch
 ./deploy.sh [stable]                         # Deploy
