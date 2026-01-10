@@ -14,8 +14,7 @@ import datetime
 import json
 from typing import Any, Literal, Optional, overload, Union
 
-from mvp_site import constants, logging_util
-from mvp_site import dice as dice_module
+from mvp_site import constants, dice as dice_module, logging_util
 from mvp_site.dice import DiceRollResult, execute_dice_tool
 
 # =============================================================================
@@ -109,7 +108,15 @@ PROFICIENCY_BY_LEVEL = {
 }
 
 
-def _coerce_int(value: Any, default: Optional[int] = 0) -> Optional[int]:
+@overload
+def _coerce_int(value: Any, default: int) -> int: ...
+
+
+@overload
+def _coerce_int(value: Any, default: None = ...) -> int | None: ...
+
+
+def _coerce_int(value: Any, default: int | None = 0) -> int | None:
     """
     Safely coerce value to int.
 
@@ -209,7 +216,7 @@ def xp_needed_for_level(level: int) -> int:
     return XP_THRESHOLDS[level - 1]
 
 
-def xp_to_next_level(current_xp: int, current_level: int = None) -> int:
+def xp_to_next_level(current_xp: int, current_level: int | None = None) -> int:
     """
     Calculate XP remaining to reach the next level.
 
@@ -418,7 +425,10 @@ class GameState:
 
         # Ensure consistency: Remove initiative entries that don't have a corresponding combatant
         # This prevents "orphaned" turns and invalid states where init exists but combatants don't
-        if "initiative_order" in self.combat_state and "combatants" in self.combat_state:
+        if (
+            "initiative_order" in self.combat_state
+            and "combatants" in self.combat_state
+        ):
             init_order = self.combat_state.get("initiative_order")
             combatants = self.combat_state.get("combatants")
             # Guard: Only proceed if types are correct
@@ -666,6 +676,7 @@ class GameState:
                 return True
 
         return False
+
     # =========================================================================
     # Arc Milestone Tracking Methods
     # =========================================================================
@@ -691,7 +702,7 @@ class GameState:
         """
         milestones = self.custom_campaign_state.get("arc_milestones", {})
 
-        milestone_data = {
+        milestone_data: dict[str, Any] = {
             "status": "completed",
             "completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
@@ -732,8 +743,6 @@ class GameState:
             return  # Arc already completed, don't regress
 
         progress_value = _coerce_int(progress, 0)
-        if progress_value is None:
-            progress_value = 0
         if progress_value < 0 or progress_value > 100:
             logging_util.warning(
                 "Arc progress out of range for '%s': %s. Clamping to 0-100.",
@@ -1045,7 +1054,7 @@ class GameState:
         CRITICAL: This function works regardless of in_combat status to handle
         cleanup during combat end transitions.
         """
-        defeated_enemies = []
+        defeated_enemies: list[str] = []
 
         # Check if we have any combatants to clean up
         combatants = self.combat_state.get("combatants", {})
@@ -1068,7 +1077,7 @@ class GameState:
         # Find defeated enemies (HP <= 0)
         for name, combat_data in combatants.items():
             hp_current = _coerce_int(combat_data.get("hp_current", 0), 0)
-            if hp_current <= 0:
+            if (hp_current or 0) <= 0:
                 # Check if this is an enemy (not PC, companion, or ally)
                 enemy_type_raw: Any = None
                 for init_entry in self.combat_state.get("initiative_order", []):
@@ -1425,7 +1434,9 @@ class GameState:
             # Epic levels (21+) are allowed for epic/mythic campaigns
             # Log as info, not warning - this is intentional for epic play
             result["epic_level"] = True
-            logging_util.info(f"Epic level detected: Level {provided_level} (beyond standard D&D 5e cap)")
+            logging_util.info(
+                f"Epic level detected: Level {provided_level} (beyond standard D&D 5e cap)"
+            )
 
         # Check for mismatch (skip XP validation for epic levels 21+)
         # Epic levels are set by the LLM for epic/mythic campaigns and don't follow XP table
@@ -1527,10 +1538,10 @@ class GameState:
         self, time_dict: dict[str, Any], default_day: Optional[int] = None
     ) -> int:
         """Convert a time dict to total minutes for comparison."""
-        fallback_day = 0 if default_day is None else _coerce_int(default_day, 0)
-        day = _coerce_int(time_dict.get("day", fallback_day), fallback_day)
-        hour = _coerce_int(time_dict.get("hour", 0), 0)
-        minute = _coerce_int(time_dict.get("minute", 0), 0)
+        fallback_day = 0 if default_day is None else (_coerce_int(default_day, 0) or 0)
+        day = _coerce_int(time_dict.get("day", fallback_day), fallback_day) or 0
+        hour = _coerce_int(time_dict.get("hour", 0), 0) or 0
+        minute = _coerce_int(time_dict.get("minute", 0), 0) or 0
 
         return (day * 24 * 60) + (hour * 60) + minute
 
@@ -1657,12 +1668,16 @@ class GameState:
         directives = self.custom_campaign_state["god_mode_directives"]
 
         # Check for duplicates
-        existing_texts = [d.get("rule") if isinstance(d, dict) else d for d in directives]
+        existing_texts = [
+            d.get("rule") if isinstance(d, dict) else d for d in directives
+        ]
         if directive not in existing_texts:
-            directives.append({
-                "rule": directive,
-                "added": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            })
+            directives.append(
+                {
+                    "rule": directive,
+                    "added": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                }
+            )
             logging_util.info(f"GOD MODE DIRECTIVE ADDED: {directive}")
 
     def get_god_mode_directives(self) -> list[str]:
@@ -1743,9 +1758,11 @@ class GameState:
                 xp_awarded = True
             elif "experience" in pc_changes:
                 exp_changes = pc_changes["experience"]
-                if isinstance(exp_changes, dict) and "current" in exp_changes:
-                    xp_awarded = True
-                elif isinstance(exp_changes, (int, float, str)):
+                if (
+                    isinstance(exp_changes, dict)
+                    and "current" in exp_changes
+                    or isinstance(exp_changes, (int, float, str))
+                ):
                     xp_awarded = True
 
             if not xp_awarded:
@@ -1766,7 +1783,7 @@ class GameState:
                     combat_summary = previous_combat_state.get("combat_summary")
                     if isinstance(combat_summary, dict):
                         enemies_defeated = combat_summary.get("enemies_defeated", 0)
-                        enemies_defeated_int = _coerce_int(enemies_defeated, 0)
+                        enemies_defeated_int = _coerce_int(enemies_defeated, 0) or 0
                         defeated_count = max(defeated_count, enemies_defeated_int)
                 if defeated_count > 0:
                     warnings.append(
@@ -1859,7 +1876,9 @@ def validate_and_correct_state(
             new_time, strict=False, previous_time=previous_world_time
         )
         if time_result.get("warning"):
-            corrections.append(f"Time warning: {time_result.get('message', 'time regression detected')}")
+            corrections.append(
+                f"Time warning: {time_result.get('message', 'time regression detected')}"
+            )
 
     result_state = temp_state.to_dict()
 

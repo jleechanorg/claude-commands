@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-MCP_SERVER_HOST="localhost"
+MCP_SERVER_HOST="127.0.0.1"
 MCP_SERVER_PORT="8000"
 SERVER_URL="http://${MCP_SERVER_HOST}:${MCP_SERVER_PORT}"
 SERVER_PID=""
@@ -36,6 +36,8 @@ export TESTING=${TESTING:-true}
 export FLASK_ENV=${FLASK_ENV:-testing}
 export TEST_MODE=${TEST_MODE:-mock}
 export MOCK_SERVICES_MODE=${MOCK_SERVICES_MODE:-true}
+export WORLDAI_DEV_MODE=${WORLDAI_DEV_MODE:-true}
+export GEMINI_API_KEY=${GEMINI_API_KEY:-dummy_key_for_mock_mode}
 export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH:-}"
 
 # Cleanup function

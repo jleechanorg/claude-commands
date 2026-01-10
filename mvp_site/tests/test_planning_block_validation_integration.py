@@ -1,3 +1,4 @@
+# ruff: noqa: PT009, N802
 """
 Integration tests for planning block validation and logging.
 Tests the complete flow of _validate_and_enforce_planning_block with all logging paths.
@@ -6,7 +7,7 @@ Tests the complete flow of _validate_and_enforce_planning_block with all logging
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Add the parent directory to the path to import modules
 sys.path.insert(
@@ -15,16 +16,14 @@ sys.path.insert(
 
 try:
     from mvp_site.game_state import GameState
-    from mvp_site.llm_service import (
-        NarrativeResponse,
-        _validate_and_enforce_planning_block,
-    )
+    from mvp_site.narrative_response_schema import NarrativeResponse
+    from mvp_site.response_validators import validate_and_enforce_planning_block
 
     MODULES_AVAILABLE = True
 except ImportError:
     GameState = None
     NarrativeResponse = None
-    _validate_and_enforce_planning_block = None
+    validate_and_enforce_planning_block = None
     MODULES_AVAILABLE = False
 
 
@@ -41,16 +40,15 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         self.structured_response = MagicMock(spec=NarrativeResponse)
         self.structured_response.planning_block = None
 
-    @patch("mvp_site.llm_service.logging_util", autospec=True)
-    def test_missing_planning_block_logs_warning_and_returns_response(
-        self, mock_logging
-    ):
+    def test_missing_planning_block_logs_warning_and_returns_response(self):
         """When no planning block is present, return response unchanged and log warning."""
+        mock_logging = MagicMock()
         response_text = "Normal story response without planning block"
 
-        result = _validate_and_enforce_planning_block(
+        result = validate_and_enforce_planning_block(
             response_text,
             structured_response=self.structured_response,
+            logger=mock_logging,
         )
 
         mock_logging.warning.assert_any_call(
@@ -59,15 +57,16 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
         assert result == response_text
 
-    @patch("mvp_site.llm_service.logging_util", autospec=True)
-    def test_empty_planning_block_logs_warning_and_returns_response(self, mock_logging):
+    def test_empty_planning_block_logs_warning_and_returns_response(self):
         """Existing but empty planning block logs and returns original response."""
+        mock_logging = MagicMock()
         self.structured_response.planning_block = {"thinking": "", "choices": {}}
         response_text = "Story response with empty planning block"
 
-        result = _validate_and_enforce_planning_block(
+        result = validate_and_enforce_planning_block(
             response_text,
             structured_response=self.structured_response,
+            logger=mock_logging,
         )
 
         mock_logging.warning.assert_any_call(
@@ -75,15 +74,16 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
         assert result == response_text
 
-    @patch("mvp_site.llm_service.logging_util", autospec=True)
-    def test_string_planning_block_logs_error_and_returns_response(self, mock_logging):
+    def test_string_planning_block_logs_error_and_returns_response(self):
         """String planning blocks are rejected with error log and unchanged response."""
+        mock_logging = MagicMock()
         self.structured_response.planning_block = "invalid"
         response_text = "Story response with string planning block"
 
-        result = _validate_and_enforce_planning_block(
+        result = validate_and_enforce_planning_block(
             response_text,
             structured_response=self.structured_response,
+            logger=mock_logging,
         )
 
         mock_logging.error.assert_any_call(
@@ -91,18 +91,19 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
         assert result == response_text
 
-    @patch("mvp_site.llm_service.logging_util", autospec=True)
-    def test_valid_planning_block_passes_without_additional_logging(self, mock_logging):
+    def test_valid_planning_block_passes_without_additional_logging(self):
         """Valid planning block returns early without warnings or errors."""
+        mock_logging = MagicMock()
         self.structured_response.planning_block = {
             "thinking": "Plan",
             "choices": {"Continue": "Do thing"},
         }
         response_text = "Story response with planning block"
 
-        result = _validate_and_enforce_planning_block(
+        result = validate_and_enforce_planning_block(
             response_text,
             structured_response=self.structured_response,
+            logger=mock_logging,
         )
 
         mock_logging.info.assert_any_call(
@@ -116,9 +117,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         """Test that the function doesn't crash with malformed inputs."""
         # Test with None response_text
         try:
-            result = _validate_and_enforce_planning_block(
+            result = validate_and_enforce_planning_block(
                 None,
                 structured_response=self.structured_response,
+                logger=MagicMock(),
             )
             # Should handle gracefully and return None or empty string
             assert result in [None, "", "None"]
@@ -127,9 +129,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
         # Test with None structured_response
         try:
-            result = _validate_and_enforce_planning_block(
+            result = validate_and_enforce_planning_block(
                 "test response",
                 structured_response=None,
+                logger=MagicMock(),
             )
             # Should handle gracefully
             assert result is not None

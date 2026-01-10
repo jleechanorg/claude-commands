@@ -184,7 +184,9 @@ def check_temporal_violation(
     # This happens when LLM generates partial world_time (e.g., only time portion).
     # Converting missing year/month/day to 0 would make ANY time appear "backward".
     # We check both for symmetry and clarity: cannot compare incomplete times.
-    if not _has_required_date_fields(old_time) or not _has_required_date_fields(new_time):
+    if not _has_required_date_fields(old_time) or not _has_required_date_fields(
+        new_time
+    ):
         return False
 
     old_tuple = world_time_to_comparable(old_time)

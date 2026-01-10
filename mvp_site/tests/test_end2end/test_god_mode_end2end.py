@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
@@ -92,8 +92,8 @@ class TestGodModeEnd2End(unittest.TestCase):
                         "description": "Study the other tavern guests from a discreet corner",
                         "risk_level": "low",
                     },
-                }
-            }
+                },
+            },
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
@@ -467,7 +467,6 @@ class TestGodModePromptSelection(unittest.TestCase):
 
     def test_god_mode_detection_with_prefix(self):
         """Test that GOD MODE: prefix is correctly detected."""
-        from mvp_site import llm_service
 
         # Test various god mode prefixes
         test_cases = [
@@ -504,7 +503,6 @@ class TestGodModePromptSelection(unittest.TestCase):
 
     def test_god_mode_instructions_contain_required_prompts(self):
         """Test that god mode instructions include required prompt types."""
-        from mvp_site import constants
         from mvp_site.agent_prompts import PromptBuilder
 
         builder = PromptBuilder(None)

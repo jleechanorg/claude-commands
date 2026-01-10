@@ -361,7 +361,7 @@ class TestPlanningBlockProsConsPreservation(unittest.TestCase):
                     "risk_level": "medium",
                     "pros": ["Buys 48 hours", "Forces public scrutiny"],
                     "cons": ["Exposes Gwent to audit", "May escalate conflict"],
-                    "confidence": "high"
+                    "confidence": "high",
                 },
                 "option_b": {
                     "text": "Surgical Strike",
@@ -369,9 +369,9 @@ class TestPlanningBlockProsConsPreservation(unittest.TestCase):
                     "risk_level": "high",
                     "pros": ["Direct solution", "Element of surprise"],
                     "cons": ["High risk of detection", "Splits party resources"],
-                    "confidence": "medium"
-                }
-            }
+                    "confidence": "medium",
+                },
+            },
         }
 
         # Call the validation method directly
@@ -379,30 +379,50 @@ class TestPlanningBlockProsConsPreservation(unittest.TestCase):
 
         # Verify pros are preserved
         debug_info = f"validated_choices={validated.get('choices', {})}"
-        self.assertIn("pros", validated["choices"]["option_a"],
-            f"FAIL: pros missing from option_a. {debug_info}")
-        self.assertEqual(validated["choices"]["option_a"]["pros"],
+        self.assertIn(
+            "pros",
+            validated["choices"]["option_a"],
+            f"FAIL: pros missing from option_a. {debug_info}",
+        )
+        self.assertEqual(
+            validated["choices"]["option_a"]["pros"],
             ["Buys 48 hours", "Forces public scrutiny"],
-            f"FAIL: pros content mismatch. {debug_info}")
+            f"FAIL: pros content mismatch. {debug_info}",
+        )
 
         # Verify cons are preserved
-        self.assertIn("cons", validated["choices"]["option_a"],
-            f"FAIL: cons missing from option_a. {debug_info}")
-        self.assertEqual(validated["choices"]["option_a"]["cons"],
+        self.assertIn(
+            "cons",
+            validated["choices"]["option_a"],
+            f"FAIL: cons missing from option_a. {debug_info}",
+        )
+        self.assertEqual(
+            validated["choices"]["option_a"]["cons"],
             ["Exposes Gwent to audit", "May escalate conflict"],
-            f"FAIL: cons content mismatch. {debug_info}")
+            f"FAIL: cons content mismatch. {debug_info}",
+        )
 
         # Verify confidence is preserved
-        self.assertIn("confidence", validated["choices"]["option_a"],
-            f"FAIL: confidence missing from option_a. {debug_info}")
-        self.assertEqual(validated["choices"]["option_a"]["confidence"], "high",
-            f"FAIL: confidence content mismatch. {debug_info}")
+        self.assertIn(
+            "confidence",
+            validated["choices"]["option_a"],
+            f"FAIL: confidence missing from option_a. {debug_info}",
+        )
+        self.assertEqual(
+            validated["choices"]["option_a"]["confidence"],
+            "high",
+            f"FAIL: confidence content mismatch. {debug_info}",
+        )
 
         # Check second option too
-        self.assertEqual(validated["choices"]["option_b"]["pros"],
-            ["Direct solution", "Element of surprise"])
-        self.assertEqual(validated["choices"]["option_b"]["cons"],
-            ["High risk of detection", "Splits party resources"])
+        self.assertEqual(
+            validated["choices"]["option_b"]["pros"],
+            ["Direct solution", "Element of surprise"],
+        )
+        self.assertEqual(
+            validated["choices"]["option_b"]["cons"],
+            ["High risk of detection", "Splits party resources"],
+        )
         self.assertEqual(validated["choices"]["option_b"]["confidence"], "medium")
 
     def test_pros_cons_sanitized_for_xss(self):
@@ -418,9 +438,9 @@ class TestPlanningBlockProsConsPreservation(unittest.TestCase):
                     "risk_level": "low",
                     "pros": ["Safe content", "<script>alert('xss')</script>Injected"],
                     "cons": ["<img src=x onerror=alert('xss')>Dangerous"],
-                    "confidence": "low"
+                    "confidence": "low",
                 }
-            }
+            },
         }
 
         validated = schema._validate_planning_block_json(raw_planning_block)

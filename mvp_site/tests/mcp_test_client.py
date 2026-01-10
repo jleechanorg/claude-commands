@@ -19,7 +19,7 @@ class MCPTestClient:
     """Test client for WorldArchitect.AI MCP server."""
 
     def __init__(
-        self, base_url: str = "http://localhost:8000", log_file: str | None = None
+        self, base_url: str = "http://127.0.0.1:8000", log_file: str | None = None
     ):
         """Initialize MCP test client.
 
@@ -77,7 +77,7 @@ class MCPTestClient:
 
         try:
             # Read existing log
-            with open(self.log_file, "r") as f:
+            with open(self.log_file) as f:
                 log_data = json.load(f)
 
             # Add new entry
@@ -514,7 +514,7 @@ def main():
     """Main test execution function."""
     parser = argparse.ArgumentParser(description="MCP Test Client")
     parser.add_argument(
-        "--server", default="http://localhost:8000", help="MCP server URL"
+        "--server", default="http://127.0.0.1:8000", help="MCP server URL"
     )
     parser.add_argument(
         "--test",

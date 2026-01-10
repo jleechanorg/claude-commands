@@ -333,7 +333,53 @@ lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
 
 ### Evidence Directory Structure
 
-**Canonical format:**
+**Canonical format with versioning (v1.1.0+):**
+
+```
+/tmp/<repo>/<branch>/<test_name>/
+├── iteration_001/           # First test run
+│   ├── README.md            # Package manifest with run_id, iteration
+│   ├── README.md.sha256
+│   ├── methodology.md       # Testing methodology documentation
+│   ├── methodology.md.sha256
+│   ├── evidence.md          # Evidence summary with metrics
+│   ├── evidence.md.sha256
+│   ├── notes.md             # Additional context, TODOs, follow-ups
+│   ├── notes.md.sha256
+│   ├── metadata.json        # Machine-readable: run_id, iteration, bundle_version
+│   ├── metadata.json.sha256
+│   ├── run.json             # Test results
+│   ├── run.json.sha256
+│   └── artifacts/           # Server logs, lsof, ps output
+├── iteration_002/           # Second test run (auto-incremented)
+│   └── ...
+└── latest -> iteration_002  # Symlink to most recent
+```
+
+**Versioning Fields (REQUIRED in metadata.json):**
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `bundle_version` | Evidence format version | `"1.1.0"` |
+| `run_id` | Unique identifier for this run | `"llm_guardrails_exploits-003-20260101T221620"` |
+| `iteration` | Run number within this test | `3` |
+
+**Run ID Format:** `{test_name}-{iteration:03d}-{timestamp}`
+
+Example metadata.json with versioning:
+```json
+{
+  "test_name": "llm_guardrails_exploits",
+  "run_id": "llm_guardrails_exploits-003-20260101T221620",
+  "iteration": 3,
+  "bundle_version": "1.1.0",
+  "bundle_timestamp": "2026-01-01T22:16:20.000000+00:00",
+  "provenance": { ... },
+  "summary": { ... }
+}
+```
+
+**Legacy format (still supported for backward compatibility):**
 
 ```
 /tmp/<repo>/<branch>/<work>/<timestamp>/

@@ -175,70 +175,221 @@ DEFAULT_TEST_USER = "test-user"
 # Used to infer spell level when Firestore stores spells as plain strings
 SPELL_LEVEL_LOOKUP: dict[str, int] = {
     # Cantrips (Level 0)
-    "dancing lights": 0, "light": 0, "mage hand": 0, "mending": 0,
-    "message": 0, "minor illusion": 0, "prestidigitation": 0, "vicious mockery": 0,
-    "friends": 0, "true strike": 0, "blade ward": 0, "thunderclap": 0,
+    "dancing lights": 0,
+    "light": 0,
+    "mage hand": 0,
+    "mending": 0,
+    "message": 0,
+    "minor illusion": 0,
+    "prestidigitation": 0,
+    "vicious mockery": 0,
+    "friends": 0,
+    "true strike": 0,
+    "blade ward": 0,
+    "thunderclap": 0,
     # Level 1
-    "charm person": 1, "comprehend languages": 1, "cure wounds": 1,
-    "detect magic": 1, "disguise self": 1, "dissonant whispers": 1,
-    "faerie fire": 1, "feather fall": 1, "healing word": 1, "heroism": 1,
-    "hideous laughter": 1, "tasha's hideous laughter": 1, "identify": 1,
-    "illusory script": 1, "longstrider": 1, "silent image": 1, "sleep": 1,
-    "speak with animals": 1, "thunderwave": 1, "unseen servant": 1,
-    "bane": 1, "animal friendship": 1, "armor of agathys": 1, "hex": 1,
-    "hellish rebuke": 1, "magic missile": 1, "shield": 1, "burning hands": 1,
-    "chromatic orb": 1, "command": 1, "inflict wounds": 1, "guiding bolt": 1,
-    "bless": 1, "protection from evil and good": 1, "sanctuary": 1,
+    "charm person": 1,
+    "comprehend languages": 1,
+    "cure wounds": 1,
+    "detect magic": 1,
+    "disguise self": 1,
+    "dissonant whispers": 1,
+    "faerie fire": 1,
+    "feather fall": 1,
+    "healing word": 1,
+    "heroism": 1,
+    "hideous laughter": 1,
+    "tasha's hideous laughter": 1,
+    "identify": 1,
+    "illusory script": 1,
+    "longstrider": 1,
+    "silent image": 1,
+    "sleep": 1,
+    "speak with animals": 1,
+    "thunderwave": 1,
+    "unseen servant": 1,
+    "bane": 1,
+    "animal friendship": 1,
+    "armor of agathys": 1,
+    "hex": 1,
+    "hellish rebuke": 1,
+    "magic missile": 1,
+    "shield": 1,
+    "burning hands": 1,
+    "chromatic orb": 1,
+    "command": 1,
+    "inflict wounds": 1,
+    "guiding bolt": 1,
+    "bless": 1,
+    "protection from evil and good": 1,
+    "sanctuary": 1,
     # Level 2
-    "animal messenger": 2, "blindness/deafness": 2, "calm emotions": 2,
-    "cloud of daggers": 2, "crown of madness": 2, "detect thoughts": 2,
-    "enhance ability": 2, "enthrall": 2, "heat metal": 2, "hold person": 2,
-    "invisibility": 2, "knock": 2, "lesser restoration": 2, "locate animals or plants": 2,
-    "locate object": 2, "magic mouth": 2, "phantasmal force": 2, "pyrotechnics": 2,
-    "see invisibility": 2, "shatter": 2, "silence": 2, "skywrite": 2,
-    "suggestion": 2, "warding wind": 2, "zone of truth": 2, "misty step": 2,
-    "mirror image": 2, "scorching ray": 2, "web": 2, "spiritual weapon": 2,
-    "prayer of healing": 2, "aid": 2, "darkness": 2, "darkvision": 2,
+    "animal messenger": 2,
+    "blindness/deafness": 2,
+    "calm emotions": 2,
+    "cloud of daggers": 2,
+    "crown of madness": 2,
+    "detect thoughts": 2,
+    "enhance ability": 2,
+    "enthrall": 2,
+    "heat metal": 2,
+    "hold person": 2,
+    "invisibility": 2,
+    "knock": 2,
+    "lesser restoration": 2,
+    "locate animals or plants": 2,
+    "locate object": 2,
+    "magic mouth": 2,
+    "phantasmal force": 2,
+    "pyrotechnics": 2,
+    "see invisibility": 2,
+    "shatter": 2,
+    "silence": 2,
+    "skywrite": 2,
+    "suggestion": 2,
+    "warding wind": 2,
+    "zone of truth": 2,
+    "misty step": 2,
+    "mirror image": 2,
+    "scorching ray": 2,
+    "web": 2,
+    "spiritual weapon": 2,
+    "prayer of healing": 2,
+    "aid": 2,
+    "darkness": 2,
+    "darkvision": 2,
     # Level 3
-    "bestow curse": 3, "clairvoyance": 3, "dispel magic": 3, "fear": 3,
-    "feign death": 3, "glyph of warding": 3, "hypnotic pattern": 3,
-    "leomund's tiny hut": 3, "major image": 3, "nondetection": 3,
-    "plant growth": 3, "sending": 3, "speak with dead": 3, "speak with plants": 3,
-    "stinking cloud": 3, "tongues": 3, "counterspell": 3, "fireball": 3,
-    "fly": 3, "haste": 3, "lightning bolt": 3, "slow": 3, "revivify": 3,
-    "spirit guardians": 3, "animate dead": 3, "vampiric touch": 3,
-    "mass healing word": 3, "remove curse": 3, "water breathing": 3,
+    "bestow curse": 3,
+    "clairvoyance": 3,
+    "dispel magic": 3,
+    "fear": 3,
+    "feign death": 3,
+    "glyph of warding": 3,
+    "hypnotic pattern": 3,
+    "leomund's tiny hut": 3,
+    "major image": 3,
+    "nondetection": 3,
+    "plant growth": 3,
+    "sending": 3,
+    "speak with dead": 3,
+    "speak with plants": 3,
+    "stinking cloud": 3,
+    "tongues": 3,
+    "counterspell": 3,
+    "fireball": 3,
+    "fly": 3,
+    "haste": 3,
+    "lightning bolt": 3,
+    "slow": 3,
+    "revivify": 3,
+    "spirit guardians": 3,
+    "animate dead": 3,
+    "vampiric touch": 3,
+    "mass healing word": 3,
+    "remove curse": 3,
+    "water breathing": 3,
     # Level 4
-    "compulsion": 4, "confusion": 4, "dimension door": 4, "freedom of movement": 4,
-    "greater invisibility": 4, "hallucinatory terrain": 4, "locate creature": 4,
-    "polymorph": 4, "banishment": 4, "blight": 4, "death ward": 4,
-    "fire shield": 4, "ice storm": 4, "phantasmal killer": 4, "stoneskin": 4,
-    "wall of fire": 4, "fabricate": 4, "resilient sphere": 4,
+    "compulsion": 4,
+    "confusion": 4,
+    "dimension door": 4,
+    "freedom of movement": 4,
+    "greater invisibility": 4,
+    "hallucinatory terrain": 4,
+    "locate creature": 4,
+    "polymorph": 4,
+    "banishment": 4,
+    "blight": 4,
+    "death ward": 4,
+    "fire shield": 4,
+    "ice storm": 4,
+    "phantasmal killer": 4,
+    "stoneskin": 4,
+    "wall of fire": 4,
+    "fabricate": 4,
+    "resilient sphere": 4,
     # Level 5
-    "animate objects": 5, "awaken": 5, "dominate person": 5, "dream": 5,
-    "geas": 5, "greater restoration": 5, "hold monster": 5, "legend lore": 5,
-    "mass cure wounds": 5, "mislead": 5, "modify memory": 5, "planar binding": 5,
-    "raise dead": 5, "scrying": 5, "seeming": 5, "teleportation circle": 5,
-    "cloudkill": 5, "cone of cold": 5, "dominate beast": 5, "flame strike": 5,
-    "wall of force": 5, "telekinesis": 5, "bigby's hand": 5,
+    "animate objects": 5,
+    "awaken": 5,
+    "dominate person": 5,
+    "dream": 5,
+    "geas": 5,
+    "greater restoration": 5,
+    "hold monster": 5,
+    "legend lore": 5,
+    "mass cure wounds": 5,
+    "mislead": 5,
+    "modify memory": 5,
+    "planar binding": 5,
+    "raise dead": 5,
+    "scrying": 5,
+    "seeming": 5,
+    "teleportation circle": 5,
+    "cloudkill": 5,
+    "cone of cold": 5,
+    "dominate beast": 5,
+    "flame strike": 5,
+    "wall of force": 5,
+    "telekinesis": 5,
+    "bigby's hand": 5,
     # Level 6
-    "eyebite": 6, "find the path": 6, "guards and wards": 6, "mass suggestion": 6,
-    "otto's irresistible dance": 6, "irresistible dance": 6, "programmed illusion": 6,
-    "true seeing": 6, "chain lightning": 6, "disintegrate": 6, "globe of invulnerability": 6,
-    "harm": 6, "heal": 6, "sunbeam": 6, "word of recall": 6,
+    "eyebite": 6,
+    "find the path": 6,
+    "guards and wards": 6,
+    "mass suggestion": 6,
+    "otto's irresistible dance": 6,
+    "irresistible dance": 6,
+    "programmed illusion": 6,
+    "true seeing": 6,
+    "chain lightning": 6,
+    "disintegrate": 6,
+    "globe of invulnerability": 6,
+    "harm": 6,
+    "heal": 6,
+    "sunbeam": 6,
+    "word of recall": 6,
     # Level 7
-    "etherealness": 7, "forcecage": 7, "mirage arcane": 7, "mordenkainen's magnificent mansion": 7,
-    "mordenkainen's sword": 7, "project image": 7, "regenerate": 7, "resurrection": 7,
-    "symbol": 7, "teleport": 7, "delayed blast fireball": 7, "finger of death": 7,
-    "fire storm": 7, "plane shift": 7, "prismatic spray": 7, "reverse gravity": 7,
+    "etherealness": 7,
+    "forcecage": 7,
+    "mirage arcane": 7,
+    "mordenkainen's magnificent mansion": 7,
+    "mordenkainen's sword": 7,
+    "project image": 7,
+    "regenerate": 7,
+    "resurrection": 7,
+    "symbol": 7,
+    "teleport": 7,
+    "delayed blast fireball": 7,
+    "finger of death": 7,
+    "fire storm": 7,
+    "plane shift": 7,
+    "prismatic spray": 7,
+    "reverse gravity": 7,
     # Level 8
-    "dominate monster": 8, "feeblemind": 8, "glibness": 8, "mind blank": 8,
-    "power word stun": 8, "antimagic field": 8, "clone": 8, "control weather": 8,
-    "earthquake": 8, "incendiary cloud": 8, "maze": 8, "sunburst": 8,
+    "dominate monster": 8,
+    "feeblemind": 8,
+    "glibness": 8,
+    "mind blank": 8,
+    "power word stun": 8,
+    "antimagic field": 8,
+    "clone": 8,
+    "control weather": 8,
+    "earthquake": 8,
+    "incendiary cloud": 8,
+    "maze": 8,
+    "sunburst": 8,
     # Level 9
-    "foresight": 9, "power word heal": 9, "power word kill": 9, "true polymorph": 9,
-    "wish": 9, "astral projection": 9, "gate": 9, "meteor swarm": 9,
-    "prismatic wall": 9, "shapechange": 9, "time stop": 9, "weird": 9,
+    "foresight": 9,
+    "power word heal": 9,
+    "power word kill": 9,
+    "true polymorph": 9,
+    "wish": 9,
+    "astral projection": 9,
+    "gate": 9,
+    "meteor swarm": 9,
+    "prismatic wall": 9,
+    "shapechange": 9,
+    "time stop": 9,
+    "weird": 9,
 }
 
 
@@ -1120,19 +1271,23 @@ def create_app() -> Flask:
             else:
                 summary = "You don't have any equipment yet."
 
-            return jsonify({
-                KEY_SUCCESS: True,
-                "equipment_summary": summary,
-                "equipment_list": equipment_list,
-            })
+            return jsonify(
+                {
+                    KEY_SUCCESS: True,
+                    "equipment_summary": summary,
+                    "equipment_list": equipment_list,
+                }
+            )
 
         except Exception as e:
             logging_util.error(f"Get equipment error: {e}")
             logging_util.error(traceback.format_exc())
-            return jsonify({
-                KEY_SUCCESS: False,
-                KEY_ERROR: "Failed to retrieve equipment",
-            }), 500
+            return jsonify(
+                {
+                    KEY_SUCCESS: False,
+                    KEY_ERROR: "Failed to retrieve equipment",
+                }
+            ), 500
 
     @app.route("/api/campaigns/<campaign_id>/stats", methods=["GET"])
     @limiter.limit(campaign_rate_limit)
@@ -1210,7 +1365,9 @@ def create_app() -> Flask:
                 return {}
 
             # Check for base_attributes (naked stats) first - new schema
-            base_attrs = coerce_stat_source(safe_get("base_attributes"), "base_attributes")
+            base_attrs = coerce_stat_source(
+                safe_get("base_attributes"), "base_attributes"
+            )
 
             # Check multiple possible locations for effective stats: attributes, stats, aptitudes
             aptitudes = safe_get("aptitudes") or {}
@@ -1220,7 +1377,10 @@ def create_app() -> Flask:
                 coerce_stat_source(aptitudes, "aptitudes"),
                 pc_data_dict if isinstance(pc_data_dict, dict) else {},
             ]
-            def extract_stat_value(source: dict, short_key: str, long_key: str, upper_key: str) -> Any:
+
+            def extract_stat_value(
+                source: dict, short_key: str, long_key: str, upper_key: str
+            ) -> Any:
                 """Extract stat value from a source dict, handling various formats."""
                 for key in [short_key, upper_key, long_key]:
                     if key in source:
@@ -1362,7 +1522,9 @@ def create_app() -> Flask:
 
                 for match in bonus_pattern_combined.finditer(stat_string):
                     span = match.span()
-                    if any(start < span[1] and span[0] < end for start, end in used_spans):
+                    if any(
+                        start < span[1] and span[0] < end for start, end in used_spans
+                    ):
                         continue
                     stat_name = match.group("stat") or match.group("stat_alt")
                     bonus_val = match.group("val") or match.group("val_alt")
@@ -1376,7 +1538,9 @@ def create_app() -> Flask:
                     # Check for "(Max X)" cap and respect it
                     max_cap_pattern = re.compile(r"\(Max\s*(\d+)\)", re.IGNORECASE)
                     max_cap_match = max_cap_pattern.search(stat_string)
-                    stat_max_cap = int(max_cap_match.group(1)) if max_cap_match else None
+                    stat_max_cap = (
+                        int(max_cap_match.group(1)) if max_cap_match else None
+                    )
                     try:
                         bonus_int = int(bonus_val)
                         # Apply max cap if present
@@ -1385,11 +1549,15 @@ def create_app() -> Flask:
                             # Cap the bonus so naked + bonus doesn't exceed max
                             max_bonus = max(0, stat_max_cap - naked_val)
                             bonus_int = min(bonus_int, max_bonus)
-                        equipment_bonuses[stat_key] = equipment_bonuses.get(stat_key, 0) + bonus_int
+                        equipment_bonuses[stat_key] = (
+                            equipment_bonuses.get(stat_key, 0) + bonus_int
+                        )
                         used_spans.append(span)
                     except (ValueError, TypeError):
                         logging_util.warning(
-                            "Unable to parse equipment bonus '%s' for stat '%s'", bonus_val, stat_name
+                            "Unable to parse equipment bonus '%s' for stat '%s'",
+                            bonus_val,
+                            stat_name,
                         )
 
             # Calculate effective stats (base + equipment bonuses)
@@ -1427,11 +1595,20 @@ def create_app() -> Flask:
             lines.append("")
             lines.append("▸ Naked Stats (without equipment):")
             stat_order = ["str", "dex", "con", "int", "wis", "cha"]
-            stat_names = {"str": "STR", "dex": "DEX", "con": "CON", "int": "INT", "wis": "WIS", "cha": "CHA"}
+            stat_names = {
+                "str": "STR",
+                "dex": "DEX",
+                "con": "CON",
+                "int": "INT",
+                "wis": "WIS",
+                "cha": "CHA",
+            }
             for stat in stat_order:
                 if stat in naked_with_mods:
                     data = naked_with_mods[stat]
-                    lines.append(f"  • {stat_names.get(stat, stat.upper())}: {data['score']} ({data['modifier']})")
+                    lines.append(
+                        f"  • {stat_names.get(stat, stat.upper())}: {data['score']} ({data['modifier']})"
+                    )
 
             if equipment_bonuses:
                 lines.append("")
@@ -1439,7 +1616,9 @@ def create_app() -> Flask:
                 for stat, bonus in equipment_bonuses.items():
                     if bonus:
                         bonus_sign = f"+{bonus}" if bonus > 0 else str(bonus)
-                        lines.append(f"  • {stat_names.get(stat, stat.upper())}: {bonus_sign}")
+                        lines.append(
+                            f"  • {stat_names.get(stat, stat.upper())}: {bonus_sign}"
+                        )
 
                 lines.append("")
                 lines.append("▸ Effective Stats (with equipment):")
@@ -1450,40 +1629,32 @@ def create_app() -> Flask:
                             f"  • {stat_names.get(stat, stat.upper())}: {data['score']} ({data['modifier']})"
                         )
 
-            # Extract and deduplicate features/feats using shared module
-            features = safe_get("features", [])
-            unique_features = stats_display.deduplicate_features(features)
-
-            # Only add header if there are actual features after deduplication
-            if unique_features:
-                lines.append("")
-                lines.append("▸ Features & Feats:")
-                for feat in unique_features:
-                    lines.append(f"  • {feat}")
-
-            return jsonify({
-                KEY_SUCCESS: True,
-                "stats_summary": "\n".join(lines),
-                "naked_stats": naked_with_mods,
-                "effective_stats": effective_stats,
-                "equipment_bonuses": equipment_bonuses,
-                "combat_stats": {
-                    "level": level,
-                    "hp_current": hp_current,
-                    "hp_max": hp_max,
-                    "ac": ac_base_val,
-                    "effective_ac": effective_ac,
-                },
-                "features": unique_features,
-            })
+            return jsonify(
+                {
+                    KEY_SUCCESS: True,
+                    "stats_summary": "\n".join(lines),
+                    "naked_stats": naked_with_mods,
+                    "effective_stats": effective_stats,
+                    "equipment_bonuses": equipment_bonuses,
+                    "combat_stats": {
+                        "level": level,
+                        "hp_current": hp_current,
+                        "hp_max": hp_max,
+                        "ac": ac_base_val,
+                        "effective_ac": effective_ac,
+                    },
+                }
+            )
 
         except Exception as e:
             logging_util.error(f"Get stats error: {e}")
             logging_util.error(traceback.format_exc())
-            return jsonify({
-                KEY_SUCCESS: False,
-                KEY_ERROR: "Failed to retrieve stats",
-            }), 500
+            return jsonify(
+                {
+                    KEY_SUCCESS: False,
+                    KEY_ERROR: "Failed to retrieve stats",
+                }
+            ), 500
 
     @app.route("/api/campaigns/<campaign_id>/spells", methods=["GET"])
     @limiter.limit(campaign_rate_limit)
@@ -1549,7 +1720,9 @@ def create_app() -> Flask:
                 return []
 
             cantrips = normalize_spell_list(safe_get("cantrips", []))
-            spells_known = normalize_spell_list(safe_get("spells", safe_get("spells_known", [])))
+            spells_known = normalize_spell_list(
+                safe_get("spells", safe_get("spells_known", []))
+            )
             spells_prepared = normalize_spell_list(
                 safe_get("spells_prepared", safe_get("spells_memorized", []))
             )
@@ -1576,11 +1749,7 @@ def create_app() -> Flask:
                         spell_slots[level] = {"current": remaining, "max": 0}
 
             # Also check for spell_slots_level_X format
-            pc_items = (
-                pc_data_dict.items()
-                if isinstance(pc_data_dict, dict)
-                else []
-            )
+            pc_items = pc_data_dict.items() if isinstance(pc_data_dict, dict) else []
             for key, value in pc_items:
                 if key.startswith("spell_slots_level_"):
                     level = key.replace("spell_slots_level_", "")
@@ -1622,10 +1791,17 @@ def create_app() -> Flask:
                                 used_val = 0
                                 current_val = 0
                             # Extract level number from "level_1" format
-                            level = level_key.replace("level_", "") if level_key.startswith("level_") else level_key
+                            level = (
+                                level_key.replace("level_", "")
+                                if level_key.startswith("level_")
+                                else level_key
+                            )
                             # Only add if not already populated from top-level spell_slots
                             if level not in spell_slots:
-                                spell_slots[level] = {"current": current_val, "max": max_val}
+                                spell_slots[level] = {
+                                    "current": current_val,
+                                    "max": max_val,
+                                }
             elif isinstance(resources_raw, str):
                 # Parse string format like "HD: 3/5 | Lay on Hands: 15/15"
                 parts = resources_raw.split("|")
@@ -1636,10 +1812,23 @@ def create_app() -> Flask:
 
             # Also check for common resource fields at top level
             resource_fields = [
-                "hit_dice", "hd", "lay_on_hands", "divine_sense", "channel_divinity",
-                "ki_points", "ki", "rage", "rages", "bardic_inspiration", "sorcery_points",
-                "superiority_dice", "second_wind", "action_surge", "arcane_recovery",
-                "wild_shape", "infusions"
+                "hit_dice",
+                "hd",
+                "lay_on_hands",
+                "divine_sense",
+                "channel_divinity",
+                "ki_points",
+                "ki",
+                "rage",
+                "rages",
+                "bardic_inspiration",
+                "sorcery_points",
+                "superiority_dice",
+                "second_wind",
+                "action_surge",
+                "arcane_recovery",
+                "wild_shape",
+                "infusions",
             ]
             for field in resource_fields:
                 field_value = safe_get(field)
@@ -1656,7 +1845,11 @@ def create_app() -> Flask:
                     level_val = ""
 
                 name_norm = str(name).strip().lower() if name is not None else ""
-                level_norm = str(level_val).strip().lower() if level_val not in (None, "") else ""
+                level_norm = (
+                    str(level_val).strip().lower()
+                    if level_val not in (None, "")
+                    else ""
+                )
                 return name_norm, level_norm
 
             normalized_spells_known: set[tuple[str, str]] = set()
@@ -1679,7 +1872,11 @@ def create_app() -> Flask:
                 lines.append("")
                 lines.append("▸ Cantrips (at will):")
                 for cantrip in cantrips:
-                    name = cantrip.get("name", "Unknown Cantrip") if isinstance(cantrip, dict) else str(cantrip)
+                    name = (
+                        cantrip.get("name", "Unknown Cantrip")
+                        if isinstance(cantrip, dict)
+                        else str(cantrip)
+                    )
                     lines.append(f"  • {name}")
 
             # Spell slots
@@ -1691,7 +1888,9 @@ def create_app() -> Flask:
                     key=lambda x: (0, int(x)) if str(x).isdigit() else (1, str(x)),
                 ):
                     data = spell_slots[level]
-                    max_display = data["max"] if data.get("max") not in (0, None, "") else "?"
+                    max_display = (
+                        data["max"] if data.get("max") not in (0, None, "") else "?"
+                    )
                     lines.append(f"  • Level {level}: {data['current']}/{max_display}")
 
             # Spells prepared - grouped by level
@@ -1701,7 +1900,11 @@ def create_app() -> Flask:
                 # Group spells by level
                 prepared_by_level: dict[str, list[str]] = {}
                 for spell in spells_prepared:
-                    name = spell.get("name", "Unknown Spell") if isinstance(spell, dict) else str(spell)
+                    name = (
+                        spell.get("name", "Unknown Spell")
+                        if isinstance(spell, dict)
+                        else str(spell)
+                    )
                     # Get level from dict, or look up from spell name for legacy string data
                     if isinstance(spell, dict):
                         level = spell.get("level", 0)
@@ -1712,7 +1915,9 @@ def create_app() -> Flask:
                         prepared_by_level[level_str] = []
                     prepared_by_level[level_str].append(name)
                 # Sort by level and display
-                for level_key in sorted(prepared_by_level.keys(), key=lambda x: int(x) if x.isdigit() else 0):
+                for level_key in sorted(
+                    prepared_by_level.keys(), key=lambda x: int(x) if x.isdigit() else 0
+                ):
                     spell_names = prepared_by_level[level_key]
                     if level_key == "0":
                         level_label = "Cantrips"
@@ -1727,7 +1932,11 @@ def create_app() -> Flask:
                 # Group spells by level
                 spells_by_level: dict[str, list[str]] = {}
                 for spell in spells_known:
-                    name = spell.get("name", "Unknown Spell") if isinstance(spell, dict) else str(spell)
+                    name = (
+                        spell.get("name", "Unknown Spell")
+                        if isinstance(spell, dict)
+                        else str(spell)
+                    )
                     # Get level from dict, or look up from spell name for legacy string data
                     if isinstance(spell, dict):
                         level = spell.get("level", 0)
@@ -1739,7 +1948,9 @@ def create_app() -> Flask:
                         spells_by_level[level_str] = []
                     spells_by_level[level_str].append(name)
                 # Sort by level and display
-                for level_key in sorted(spells_by_level.keys(), key=lambda x: int(x) if x.isdigit() else 0):
+                for level_key in sorted(
+                    spells_by_level.keys(), key=lambda x: int(x) if x.isdigit() else 0
+                ):
                     spell_names = spells_by_level[level_key]
                     if level_key == "0":
                         level_label = "Cantrips"
@@ -1766,23 +1977,27 @@ def create_app() -> Flask:
                 lines.append("No spells or special resources found.")
                 lines.append("(Non-spellcasting classes may not have spell slots)")
 
-            return jsonify({
-                KEY_SUCCESS: True,
-                "spells_summary": "\n".join(lines),
-                "cantrips": cantrips,
-                "spells_known": spells_known,
-                "spells_prepared": spells_prepared,
-                "spell_slots": spell_slots,
-                "class_resources": class_resources,
-            })
+            return jsonify(
+                {
+                    KEY_SUCCESS: True,
+                    "spells_summary": "\n".join(lines),
+                    "cantrips": cantrips,
+                    "spells_known": spells_known,
+                    "spells_prepared": spells_prepared,
+                    "spell_slots": spell_slots,
+                    "class_resources": class_resources,
+                }
+            )
 
         except Exception as e:
             logging_util.error(f"Get spells error: {e}")
             logging_util.error(traceback.format_exc())
-            return jsonify({
-                KEY_SUCCESS: False,
-                KEY_ERROR: "Failed to retrieve spells",
-            }), 500
+            return jsonify(
+                {
+                    KEY_SUCCESS: False,
+                    KEY_ERROR: "Failed to retrieve spells",
+                }
+            ), 500
 
     @app.route("/api/campaigns/<campaign_id>/interaction", methods=["POST"])
     @limiter.limit(

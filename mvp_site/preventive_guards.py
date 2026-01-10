@@ -25,10 +25,15 @@ def enforce_preventive_guards(
     stored structured fields.
     """
 
-    state_changes: dict[str, Any] = deepcopy(llm_response.get_state_updates())
     extras: dict[str, Any] = {}
 
     _fill_god_mode_response(mode, llm_response, extras)
+
+    metadata = getattr(llm_response, "processing_metadata", {}) or {}
+    if metadata.get("item_exploit_blocked"):
+        return {}, extras
+
+    state_changes: dict[str, Any] = deepcopy(llm_response.get_state_updates())
 
     dice_rolls = getattr(llm_response, "dice_rolls", [])
     resources = getattr(llm_response, "resources", "")

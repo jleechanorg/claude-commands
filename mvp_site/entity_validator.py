@@ -70,13 +70,13 @@ class ValidationResult:
     retry_needed: bool
     retry_suggestions: list[str]
     # Extended fields for narrative sync compatibility
-    entities_found: list[str] = None
-    entities_missing: list[str] = None
+    entities_found: list[str] | None = None
+    entities_missing: list[str] | None = None
     all_entities_present: bool = False
     confidence: float = 0.0
-    warnings: list[str] = None
-    metadata: dict[str, Any] = None
-    validation_details: dict[str, Any] = None
+    warnings: list[str] | None = None
+    metadata: dict[str, Any] | None = None
+    validation_details: dict[str, Any] | None = None
 
     def __post_init__(self):
         # Maintain backward compatibility by syncing fields
@@ -249,7 +249,7 @@ class EntityValidator:
         return transitions
 
     def create_injection_templates(
-        self, missing_entities: list[str], context: dict[str, Any] = None
+        self, missing_entities: list[str], context: dict[str, Any] | None = None
     ) -> dict[str, list[str]]:
         """Create entity injection templates (consolidated from DualPassGenerator)"""
         templates = {}

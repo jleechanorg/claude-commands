@@ -96,6 +96,10 @@ class TestNPCDeathStateEnd2End(unittest.TestCase):
                     "hp_current": 50,
                     "hp_max": 50,
                     "class": "Fighter",
+                    "equipment": {
+                        "weapons": ["sword"],
+                        "equipped": {"offhand": "shield"},
+                    },
                 },
                 "combat_state": {
                     "in_combat": True,

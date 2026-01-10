@@ -72,7 +72,7 @@ from mvp_site.agent_prompts import (
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
 
-# Initialize Firebase if not already initialized (testing mode removed)
+# Initialize Firebase if not already initialized
 # WORLDAI_* vars take precedence for WorldArchitect.AI repo-specific config
 try:
     firebase_admin.get_app()
@@ -94,8 +94,14 @@ except ValueError:
             firebase_admin.initialize_app()
         logging_util.info("Firebase initialized successfully in world_logic.py")
     except Exception as e:
-        logging_util.critical(f"Failed to initialize Firebase: {e}")
-        raise
+        # In mock mode, we don't need real Firebase credentials
+        if os.getenv("MOCK_SERVICES_MODE", "").lower() == "true":
+            logging_util.warning(
+                f"Firebase initialization failed in MOCK_SERVICES_MODE (expected if no credentials): {e}"
+            )
+        else:
+            logging_util.critical(f"Failed to initialize Firebase: {e}")
+            raise
 
 # --- Constants ---
 KEY_ERROR = "error"
@@ -789,14 +795,18 @@ def _inject_levelup_choices_if_needed(
     # Parse planning_block if it's a string
     if isinstance(planning_block, str):
         try:
-            planning_block = json.loads(planning_block) if planning_block.strip() else {}
+            planning_block = (
+                json.loads(planning_block) if planning_block.strip() else {}
+            )
         except (json.JSONDecodeError, TypeError):
             planning_block = {}
     elif planning_block is None:
         planning_block = {}
 
     # Ensure choices dict exists
-    if "choices" not in planning_block or not isinstance(planning_block.get("choices"), dict):
+    if "choices" not in planning_block or not isinstance(
+        planning_block.get("choices"), dict
+    ):
         planning_block["choices"] = {}
 
     choices = planning_block["choices"]
@@ -873,14 +883,11 @@ def _inject_levelup_narrative_if_needed(
         or "continue your journey" in lower
         or "continue the adventure" in lower
     )
-    continue_difference_present = (
-        ("continue" in lower or "continuing" in lower)
-        and (
-            "defer" in lower
-            or "later" in lower
-            or "remain level" in lower
-            or "stay level" in lower
-        )
+    continue_difference_present = ("continue" in lower or "continuing" in lower) and (
+        "defer" in lower
+        or "later" in lower
+        or "remain level" in lower
+        or "stay level" in lower
     )
     benefit_keywords = (
         "gain",
@@ -1485,6 +1492,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     Returns:
         Dictionary with success/error status and story response
     """
+
     def _is_god_mode_return_to_story(text: str, mode: str | None = None) -> bool:
         """Check if text is a return-to-story command from god mode.
 
@@ -1699,6 +1707,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         state_changes, prevention_extras = preventive_guards.enforce_preventive_guards(
             current_game_state, llm_response_obj, mode
         )
+        processing_metadata = getattr(llm_response_obj, "processing_metadata", {})
+        if not isinstance(processing_metadata, dict):
+            processing_metadata = {}
+        item_exploit_blocked = bool(
+            processing_metadata.get("item_exploit_blocked")
+        )
 
         # Allow LLMs to return a single timestamp string while we maintain the
         # structured world_time object expected by the engine.
@@ -1838,7 +1852,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     if world_time_changes and "microsecond" in world_time_changes:
                         allowed_changes = {
                             "world_data": {
-                                "world_time": {"microsecond": world_time_changes["microsecond"]}
+                                "world_time": {
+                                    "microsecond": world_time_changes["microsecond"]
+                                }
                             }
                         }
 
@@ -1848,7 +1864,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 # Convert to nested format for consistency with update_state_with_changes
                 allowed_changes = {
                     "world_data": {
-                        "world_time": {"microsecond": state_changes_to_apply[dotted_key]}
+                        "world_time": {
+                            "microsecond": state_changes_to_apply[dotted_key]
+                        }
                     }
                 }
 
@@ -1870,7 +1888,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 updated_game_state_dict, response.get("state_changes", {})
             )
         else:
-            logging_util.info("🧠 THINK_MODE_SAFETY: Skipping combat cleanup in Think Mode")
+            logging_util.info(
+                "🧠 THINK_MODE_SAFETY: Skipping combat cleanup in Think Mode"
+            )
 
         # Validate and auto-correct XP/level and time consistency
         # Use `or {}` to handle both missing and explicitly-null world_data in state_changes
@@ -2393,7 +2413,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 logging_util.warning(f"SYSTEM WARNING: {warning}")
 
         # Track story mode sequence ID for character mode
-        if mode == constants.MODE_CHARACTER:
+        if mode == constants.MODE_CHARACTER and not item_exploit_blocked:
             story_id_update = {
                 "custom_campaign_state": {"last_story_mode_sequence_id": sequence_id}
             }

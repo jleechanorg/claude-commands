@@ -447,6 +447,7 @@ class NarrativeResponse:
         dice_rolls: Optional[list[str]] = None,
         dice_audit_events: Optional[list[dict[str, Any]]] = None,
         resources: Optional[str] = None,
+        items_used: Optional[list[str]] = None,  # Audit trail: items player claims to use
         **kwargs: Any,
     ):
         # Core required fields
@@ -469,6 +470,7 @@ class NarrativeResponse:
         self.dice_rolls = self._validate_list_field(dice_rolls, "dice_rolls")
         self.dice_audit_events = self._validate_dice_audit_events(dice_audit_events)
         self.resources = self._validate_string_field(resources, "resources")
+        self.items_used = self._validate_list_field(items_used, "items_used")
         self.rewards_box = self._validate_rewards_box(kwargs.pop("rewards_box", None))
         self.social_hp_challenge = self._validate_social_hp_challenge(
             kwargs.pop("social_hp_challenge", None)
@@ -1135,6 +1137,7 @@ class NarrativeResponse:
             "dice_rolls": self.dice_rolls,
             "dice_audit_events": self.dice_audit_events,
             "resources": self.resources,
+            "items_used": self.items_used,
             "social_hp_challenge": self.social_hp_challenge,
         }
 

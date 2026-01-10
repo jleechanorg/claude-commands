@@ -750,7 +750,7 @@ def get_db() -> firestore.Client:
 
 @log_exceptions
 def get_campaigns_for_user(
-    user_id: UserId, limit: int = None, sort_by: str = "last_played"
+    user_id: UserId, limit: int | None = None, sort_by: str = "last_played"
 ) -> list[dict[str, Any]]:
     """Retrieves campaigns for a given user with optional pagination and sorting.
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from mvp_site.llm_providers.provider_utils import (
     build_tool_results_prompt,
     execute_openai_tool_calls,
@@ -165,6 +167,68 @@ def test_run_json_first_tool_requests_flow_extracts_json_boundaries_from_wrapped
 {"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}
 ```"""
         )
+
+    def extract_text(resp: Resp) -> str:
+        return resp.text
+
+    def exec_tool_requests(tool_requests):
+        return [
+            {
+                "tool": tool_requests[0]["tool"],
+                "args": tool_requests[0]["args"],
+                "result": {"total": 7},
+            }
+        ]
+
+    def format_results(_results):
+        return "- roll_dice: total=7"
+
+    def build_history(*, prompt_contents, phase1_text, tool_results_prompt):
+        return {
+            "prompt_contents": prompt_contents,
+            "phase1_text": phase1_text,
+            "tool_results_prompt": tool_results_prompt,
+        }
+
+    def phase2(history):
+        phase2_calls.append(history)
+        return Resp('{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}')
+
+    class Logger:
+        def info(self, _m): ...
+
+        def warning(self, _m): ...
+
+        def error(self, _m): ...
+
+    out = run_json_first_tool_requests_flow(
+        phase1_generate_fn=phase1,
+        extract_text_fn=extract_text,
+        prompt_contents=["hi"],
+        execute_tool_requests_fn=exec_tool_requests,
+        format_tool_results_text_fn=format_results,
+        build_history_fn=build_history,
+        phase2_generate_fn=phase2,
+        logger=Logger(),
+        no_tool_requests_log_msg="no tool requests",
+    )
+
+    assert out.text == '{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}'
+    assert len(phase2_calls) == 1
+    assert phase2_calls[0]["phase1_text"].startswith("{")
+    assert phase2_calls[0]["phase1_text"].endswith("}")
+
+
+def test_run_json_first_tool_requests_flow_handles_double_encoded_json():
+    class Resp:
+        def __init__(self, text: str):
+            self.text = text
+
+    phase2_calls: list[object] = []
+
+    def phase1():
+        inner_payload = '{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}'
+        return Resp(json.dumps(inner_payload))
 
     def extract_text(resp: Resp) -> str:
         return resp.text

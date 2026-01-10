@@ -253,14 +253,12 @@ class TestAgentBackwardCompatibility(unittest.TestCase):
         """Test that agents can still be imported from llm_service."""
         # This tests backward compatibility
         from mvp_site.llm_service import (
-            BaseAgent as LLMBaseAgent,
             GodModeAgent as LLMGodModeAgent,
             StoryModeAgent as LLMStoryModeAgent,
             get_agent_for_input as llm_get_agent,
         )
 
         # Verify they are the same classes
-        self.assertIs(LLMBaseAgent, BaseAgent)
         self.assertIs(LLMStoryModeAgent, StoryModeAgent)
         self.assertIs(LLMGodModeAgent, GodModeAgent)
         self.assertIs(llm_get_agent, get_agent_for_input)
@@ -268,7 +266,6 @@ class TestAgentBackwardCompatibility(unittest.TestCase):
     def test_import_from_agents_module(self):
         """Test that agents can be imported from agents module."""
         from mvp_site.agents import (
-            BaseAgent,
             GodModeAgent,
             StoryModeAgent,
             get_agent_for_input,

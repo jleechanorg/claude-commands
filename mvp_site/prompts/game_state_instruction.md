@@ -124,6 +124,7 @@ Every response MUST be valid JSON with this exact structure:
     "dice_rolls": [],
     "dice_audit_events": [],
     "entities_mentioned": ["Goblin Guard"],
+    "items_used": ["longsword"],
     "location_confirmed": "Dungeon Entrance",
     "state_updates": {},
     "debug_info": {"dm_notes": ["Awaiting dice result"], "state_rationale": "No changes until roll resolves"}
@@ -162,6 +163,7 @@ Every response MUST be valid JSON with this exact structure:
     "dice_audit_events": [],
     "god_mode_response": "",
     "entities_mentioned": ["Goblin Guard", "Iron Door"],
+    "items_used": [],
     "location_confirmed": "Dungeon Entrance",
     "state_updates": {},
     "debug_info": {
@@ -285,6 +287,14 @@ Every response MUST be valid JSON with this exact structure:
   - Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting).
   - Let the backend format the session header time for you—do not invent a new calendar mid-session.
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
+- `items_used`: (array) **MANDATORY AUDIT TRAIL - List ALL items mentioned in player input.** Empty array [] if none.
+  - 🚨 **CRITICAL**: You MUST list EVERY item the player mentions, claims, or references - even if you plan to reject or ignore the claim
+  - Include: weapons, potions, scrolls, magic items, tools, containers (bags, pouches), wearables (amulets, rings, armor)
+  - Include items from: "take X from Y", "use X", "drink X", "equip X", "don X", "pull out X", "reach for X"
+  - Example valid: `["potion of invisibility", "bag of holding", "ring of the hill giant"]`
+  - Example attack: `["longsword"]` or `["dagger", "torch"]`
+  - **Backend validates these against inventory** - unlisted items in narrative = exploit detection
+  - **If player mentions an item, LIST IT** - do not silently ignore item claims
 - `equipment_list`: (array, **optional**) **POPULATE WHEN player asks about equipment/inventory/gear:**
   - Each item: `{"slot": "head", "name": "Helm of Telepathy", "stats": "30ft telepathy, Detect Thoughts 1/day"}`
   - Read from `player_character_data.equipment` in game_state

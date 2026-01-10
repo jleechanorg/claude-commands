@@ -1011,7 +1011,10 @@ class TestSchemaInjection(unittest.TestCase):
 
     def test_game_state_instruction_has_risk_levels_injected(self):
         """game_state_instruction.md should have VALID_RISK_LEVELS injected."""
-        from mvp_site.agent_prompts import _load_instruction_file, _loaded_instructions_cache
+        from mvp_site.agent_prompts import (
+            _load_instruction_file,
+            _loaded_instructions_cache,
+        )
         from mvp_site.narrative_response_schema import VALID_RISK_LEVELS
 
         # Clear cache to force fresh load
@@ -1058,9 +1061,10 @@ class TestSchemaInjection(unittest.TestCase):
 
     def test_validation_uses_same_risk_levels_as_prompt(self):
         """Backend validation should use the same risk levels as injected into prompts."""
+        import json
+
         from mvp_site.agent_prompts import _loaded_instructions_cache
         from mvp_site.narrative_response_schema import VALID_RISK_LEVELS
-        import json
 
         # Clear cache
         _loaded_instructions_cache.clear()

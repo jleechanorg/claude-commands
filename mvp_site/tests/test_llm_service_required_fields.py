@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 from __future__ import annotations
 
 from unittest.mock import Mock
@@ -13,9 +14,10 @@ from mvp_site.dice_integrity import (
     _validate_combat_dice_integrity,
 )
 from mvp_site.game_state import GameState
+from mvp_site.llm_service import _build_reprompt_request
 from mvp_site.llm_request import LLMRequest
-from mvp_site.llm_service import _build_reprompt_request, _check_missing_required_fields
 from mvp_site.narrative_response_schema import NarrativeResponse
+from mvp_site.response_validators import check_missing_required_fields_story_mode as _check_missing_required_fields
 
 
 def _valid_planning_block() -> dict:

@@ -4,18 +4,21 @@ This module provides evidence capture functions that comply with
 .claude/skills/evidence-standards.md requirements.
 
 Canonical evidence structure:
-    /tmp/<repo>/<branch>/<work>/<timestamp>/
-    ├── README.md              # Package manifest with git provenance
-    ├── README.md.sha256
-    ├── methodology.md         # Testing methodology documentation
-    ├── methodology.md.sha256
-    ├── evidence.md            # Evidence summary with metrics
-    ├── evidence.md.sha256
-    ├── metadata.json          # Machine-readable: git_provenance, timestamps
-    ├── metadata.json.sha256
-    ├── request_responses.jsonl # Raw request/response payloads (LLM behavior proof)
-    ├── request_responses.jsonl.sha256
-    └── artifacts/             # Copied evidence files (test outputs, logs, etc.)
+    /tmp/<repo>/<branch>/<work>/
+    ├── iteration_001/           # First test run (auto-incremented)
+    │   ├── README.md            # Package manifest with git provenance
+    │   ├── methodology.md       # Testing methodology documentation
+    │   ├── evidence.md          # Evidence summary with metrics
+    │   ├── metadata.json        # Machine-readable: git_provenance, timestamps
+    │   ├── request_responses.jsonl # Raw request/response payloads
+    │   └── artifacts/           # Copied evidence files
+    ├── iteration_002/           # Second test run
+    └── latest -> iteration_002  # Symlink to most recent
+
+Evidence Format Version:
+    EVIDENCE_FORMAT_VERSION = "1.1.0"
+    - 1.0.0: Initial format with canonical bundle structure
+    - 1.1.0: Added versioning (bundle_version, iteration, run_id)
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -32,6 +36,66 @@ import urllib.error
 import urllib.request
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# Evidence format versioning
+EVIDENCE_FORMAT_VERSION = "1.1.0"  # Current bundle format version
+
+
+def _get_next_iteration(work_dir: Path) -> tuple[int, Path]:
+    """Get the next iteration number and path for an evidence bundle.
+
+    Scans for existing iteration_NNN directories and returns the next number.
+
+    Args:
+        work_dir: Parent directory (e.g., /tmp/repo/branch/test_name/)
+
+    Returns:
+        Tuple of (iteration_number, iteration_path).
+    """
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    # Find existing iteration directories
+    existing = []
+    for entry in work_dir.iterdir():
+        if entry.is_dir() and entry.name.startswith("iteration_"):
+            match = re.match(r"iteration_(\d+)", entry.name)
+            if match:
+                existing.append(int(match.group(1)))
+
+    next_num = max(existing) + 1 if existing else 1
+    iteration_dir = work_dir / f"iteration_{next_num:03d}"
+    iteration_dir.mkdir(parents=True, exist_ok=True)
+
+    # Update 'latest' symlink
+    latest_link = work_dir / "latest"
+    if latest_link.is_symlink():
+        latest_link.unlink()
+    elif latest_link.exists():
+        # Remove if it's a file/dir (shouldn't happen)
+        if latest_link.is_dir():
+            shutil.rmtree(latest_link)
+        else:
+            latest_link.unlink()
+    latest_link.symlink_to(iteration_dir.name)
+
+    return next_num, iteration_dir
+
+
+def _generate_run_id(test_name: str, iteration: int) -> str:
+    """Generate a unique run ID for this evidence bundle.
+
+    Format: {test_name}-{iteration:03d}-{timestamp}
+    Example: llm_guardrails_exploits-003-20260101T221620
+
+    Args:
+        test_name: Name of the test.
+        iteration: Iteration number.
+
+    Returns:
+        Unique run ID string.
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    return f"{test_name}-{iteration:03d}-{timestamp}"
 
 
 def get_evidence_dir(test_name: str, run_id: str | None = None) -> Path:
@@ -448,6 +512,7 @@ def create_evidence_bundle(
     methodology_text: str | None = None,
     server_log_path: Path | None = None,
     isolation_info: dict[str, Any] | None = None,
+    use_iteration: bool = True,
 ) -> dict[str, Path]:
     """Create a complete evidence bundle per evidence-standards.md canonical format.
 
@@ -464,8 +529,13 @@ def create_evidence_bundle(
 
     All files get .sha256 checksum files.
 
+    With use_iteration=True (default), creates versioned structure:
+        /tmp/<repo>/<branch>/<test_name>/iteration_001/
+        /tmp/<repo>/<branch>/<test_name>/iteration_002/
+        /tmp/<repo>/<branch>/<test_name>/latest -> iteration_002
+
     Args:
-        evidence_dir: Directory to create bundle in.
+        evidence_dir: Directory to create bundle in (or parent for iteration mode).
         test_name: Name of the test for documentation.
         provenance: Git and server provenance dict from capture_provenance().
         results: Test results dict to save as run.json.
@@ -475,12 +545,25 @@ def create_evidence_bundle(
         isolation_info: Optional dict describing test isolation design.
             Example: {"total_campaigns": 12, "shared_campaign": 1, "isolated_tests": 11,
                       "reason": "State-sensitive tests require fresh campaigns"}
+        use_iteration: If True, create iteration_NNN subdirectory (default: True).
 
     Returns:
         Dict mapping file types to their paths.
     """
-    evidence_dir.mkdir(parents=True, exist_ok=True)
-    artifacts_dir = evidence_dir / "artifacts"
+    # Handle iteration-based directories
+    if use_iteration:
+        iteration_num, actual_evidence_dir = _get_next_iteration(evidence_dir)
+        run_id = _generate_run_id(test_name, iteration_num)
+    else:
+        actual_evidence_dir = evidence_dir
+        actual_evidence_dir.mkdir(parents=True, exist_ok=True)
+        # Parse iteration number from directory name (e.g., "iteration_002" -> 2)
+        dir_name = actual_evidence_dir.name
+        match = re.match(r"iteration_(\d+)", dir_name)
+        iteration_num = int(match.group(1)) if match else 1
+        run_id = _generate_run_id(test_name, iteration_num)
+
+    artifacts_dir = actual_evidence_dir / "artifacts"
     artifacts_dir.mkdir(exist_ok=True)
 
     bundle_timestamp = datetime.now(timezone.utc).isoformat()
@@ -491,6 +574,9 @@ def create_evidence_bundle(
 
 ## Package Manifest
 - **Test Name:** {test_name}
+- **Run ID:** `{run_id}`
+- **Iteration:** {iteration_num}
+- **Bundle Version:** {EVIDENCE_FORMAT_VERSION}
 - **Collected At (UTC):** {bundle_timestamp}
 - **Repository:** worldarchitect.ai
 - **Branch:** {provenance.get('git_branch', 'unknown')}
@@ -523,8 +609,8 @@ def create_evidence_bundle(
 - `request_responses.jsonl` - Raw request/response payloads (if present)
 - `artifacts/` - Additional evidence files
 """
-    write_with_checksum(evidence_dir / "README.md", readme_content)
-    files["readme"] = evidence_dir / "README.md"
+    write_with_checksum(actual_evidence_dir / "README.md", readme_content)
+    files["readme"] = actual_evidence_dir / "README.md"
 
     # 2. methodology.md - Testing methodology
     if methodology_text is None:
@@ -573,13 +659,19 @@ Test scenarios validate that:
 2. State updates are returned as expected
 3. No server errors occur
 """
-    write_with_checksum(evidence_dir / "methodology.md", methodology_text)
-    files["methodology"] = evidence_dir / "methodology.md"
+    write_with_checksum(actual_evidence_dir / "methodology.md", methodology_text)
+    files["methodology"] = actual_evidence_dir / "methodology.md"
 
     # 3. evidence.md - Evidence summary
     scenarios = results.get("scenarios", [])
     passed = sum(1 for s in scenarios if not s.get("errors"))
     failed = len(scenarios) - passed
+
+    # Raw validation stats (LLM layer before post-processing)
+    summary_data = results.get("summary", {})
+    raw_passed = summary_data.get("raw_passed", 0)
+    raw_total = summary_data.get("raw_total", 0)
+    raw_pass_rate = summary_data.get("raw_pass_rate", "N/A")
 
     # Build isolation note if multi-campaign
     isolation_note = ""
@@ -598,14 +690,45 @@ specific scenarios reference ONLY that scenario's campaign. Aggregate claims (e.
 span all campaigns but each individual result is traceable to its campaign.
 """
 
+    # Build raw validation note ONLY if raw and post rates actually differ
+    raw_validation_note = ""
+    post_passed = passed
+    if raw_total > 0 and raw_passed != post_passed:
+        if raw_passed < post_passed:
+            # Post-processing rescued some raw failures
+            raw_validation_note = f"""
+## ⚠️ Raw LLM Layer Warning
+
+**Post-processing is masking raw LLM failures.**
+
+- **Raw Layer Pass Rate:** {raw_passed}/{raw_total} ({raw_pass_rate})
+- **Post-Processing Pass Rate:** {post_passed}/{len(scenarios)} ({post_passed / len(scenarios) * 100 if scenarios else 0:.1f}%)
+
+The raw LLM layer accepted some exploits that were blocked by server post-processing.
+This means guardrail success depends on post-processing, not the LLM itself.
+See `raw_warnings` in individual scenario files for details.
+"""
+        else:
+            # raw_passed > post_passed: post-processing caught issues that raw missed
+            raw_validation_note = f"""
+## ⚠️ Post-Processing Detected Additional Issues
+
+- **Raw Layer Pass Rate:** {raw_passed}/{raw_total} ({raw_pass_rate})
+- **Post-Processing Pass Rate:** {post_passed}/{len(scenarios)} ({post_passed / len(scenarios) * 100 if scenarios else 0:.1f}%)
+
+Post-processing detected issues (dm_notes, core_memories, state mutations) that
+the raw narrative validation missed. See `errors` in individual scenario files.
+"""
+
     evidence_content = f"""# Evidence Summary: {test_name}
 
 ## Test Results
 - **Total Scenarios:** {len(scenarios)}
-- **Passed:** {passed}
-- **Failed:** {failed}
-- **Pass Rate:** {passed / len(scenarios) * 100 if scenarios else 0:.1f}%
-{isolation_note}
+- **Post-Processing Passed:** {passed}
+- **Post-Processing Failed:** {failed}
+- **Post-Processing Pass Rate:** {passed / len(scenarios) * 100 if scenarios else 0:.1f}%
+- **Raw LLM Layer Passed:** {raw_passed}/{raw_total} ({raw_pass_rate})
+{raw_validation_note}{isolation_note}
 ## Scenario Results
 """
     for scenario in scenarios:
@@ -617,6 +740,11 @@ span all campaigns but each individual result is traceable to its campaign.
             evidence_content += f"- **Campaign ID:** `{scenario['campaign_id']}`\n"
         if scenario.get("errors"):
             evidence_content += f"- **Errors:** {scenario['errors']}\n"
+        # Surface raw warnings prominently
+        if scenario.get("raw_warnings"):
+            evidence_content += f"- **⚠️ Raw Warnings:** {scenario['raw_warnings']}\n"
+        if scenario.get("raw_errors"):
+            evidence_content += f"- **Raw Response Issues:** {scenario['raw_errors']}\n"
         if scenario.get("relationship_updates"):
             evidence_content += f"- **Relationship Updates:** {list(scenario['relationship_updates'].keys())}\n"
         if scenario.get("reputation_updates"):
@@ -641,10 +769,10 @@ span all campaigns but each individual result is traceable to its campaign.
 - **Test Timestamp:** `{bundle_timestamp}`
 - **Server PID:** `{server_pid}`
 """
-    write_with_checksum(evidence_dir / "evidence.md", evidence_content)
-    files["evidence"] = evidence_dir / "evidence.md"
+    write_with_checksum(actual_evidence_dir / "evidence.md", evidence_content)
+    files["evidence"] = actual_evidence_dir / "evidence.md"
 
-    # 4. metadata.json - Machine-readable
+    # 4. metadata.json - Machine-readable with versioning + evidence standards
     # Evidence standards require: git_provenance, server, timestamp
     git_provenance: dict[str, Any] = {}
     server_runtime: dict[str, Any] | None = None
@@ -668,6 +796,9 @@ span all campaigns but each individual result is traceable to its campaign.
 
     metadata = {
         "test_name": test_name,
+        "run_id": run_id,
+        "iteration": iteration_num,
+        "bundle_version": EVIDENCE_FORMAT_VERSION,
         "timestamp": bundle_timestamp,
         "bundle_timestamp": bundle_timestamp,
         "git_provenance": git_provenance,
@@ -677,22 +808,26 @@ span all campaigns but each individual result is traceable to its campaign.
             "total_scenarios": len(scenarios),
             "passed": passed,
             "failed": failed,
+            # Raw LLM layer stats (if available)
+            "raw_passed": raw_passed,
+            "raw_total": raw_total,
+            "raw_pass_rate": raw_pass_rate,
         },
     }
     write_with_checksum(
-        evidence_dir / "metadata.json",
+        actual_evidence_dir / "metadata.json",
         json.dumps(metadata, indent=2),
     )
-    files["metadata"] = evidence_dir / "metadata.json"
+    files["metadata"] = actual_evidence_dir / "metadata.json"
 
     # 5. request_responses.jsonl - Raw payloads (if provided)
     if request_responses:
-        save_request_responses(evidence_dir, request_responses)
-        files["request_responses"] = evidence_dir / "request_responses.jsonl"
+        save_request_responses(actual_evidence_dir, request_responses)
+        files["request_responses"] = actual_evidence_dir / "request_responses.jsonl"
 
     # 6. run.json - Test results
-    save_evidence(evidence_dir, results, "run.json")
-    files["results"] = evidence_dir / "run.json"
+    save_evidence(actual_evidence_dir, results, "run.json")
+    files["results"] = actual_evidence_dir / "run.json"
 
     # 7. artifacts/ - Supporting evidence files
     # Copy server log if provided
@@ -715,5 +850,15 @@ span all campaigns but each individual result is traceable to its campaign.
         ps_file = artifacts_dir / "ps_output.txt"
         write_with_checksum(ps_file, ps_output)
         files["ps_output"] = ps_file
+
+    # Add iteration metadata to returned dict
+    files["_bundle_dir"] = actual_evidence_dir
+    files["_iteration"] = Path(str(iteration_num))  # Type-compatible placeholder
+    files["_run_id"] = Path(run_id)  # Type-compatible placeholder
+
+    print(f"📦 Evidence bundle created: {actual_evidence_dir}")
+    print(f"   Run ID: {run_id}")
+    print(f"   Iteration: {iteration_num}")
+    print(f"   Bundle Version: {EVIDENCE_FORMAT_VERSION}")
 
     return files

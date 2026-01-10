@@ -54,7 +54,7 @@ try:
     google_module.genai.Client = MagicMock()
     sys.modules["google"] = google_module
     sys.modules["google.genai"] = google_module.genai
-    
+
     # Mock google.auth to prevent "google is not a package" error
     google_auth_module = MagicMock()
     sys.modules["google.auth"] = google_auth_module
@@ -2168,8 +2168,12 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         # Should NOT auto-correct level-ups
-        self.assertFalse(result.get("corrected", False), "Should NOT auto-correct level-up")
-        self.assertTrue(result.get("level_up_pending", False), "Should set level_up_pending")
+        self.assertFalse(
+            result.get("corrected", False), "Should NOT auto-correct level-up"
+        )
+        self.assertTrue(
+            result.get("level_up_pending", False), "Should set level_up_pending"
+        )
         self.assertEqual(result.get("expected_level"), 4, "Expected level should be 4")
         self.assertEqual(
             result.get("provided_level"), 1, "Provided level should be recorded as 1"
@@ -2195,8 +2199,12 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         # Should auto-correct regressions
-        self.assertTrue(result.get("corrected", False), "Should auto-correct regression")
-        self.assertFalse(result.get("level_up_pending", False), "Should NOT set level_up_pending")
+        self.assertTrue(
+            result.get("corrected", False), "Should auto-correct regression"
+        )
+        self.assertFalse(
+            result.get("level_up_pending", False), "Should NOT set level_up_pending"
+        )
         self.assertEqual(result.get("expected_level"), 2, "Expected level should be 2")
         self.assertEqual(
             result.get("provided_level"), 5, "Provided level should be recorded as 5"
@@ -2264,14 +2272,12 @@ class TestXPLevelValidation(unittest.TestCase):
         self.assertIsNone(
             result.get("clamped_level"), "Epic levels should not be clamped"
         )
-        self.assertTrue(
-            result.get("epic_level"), "Level 25 should be flagged as epic"
-        )
-        self.assertTrue(
-            result.get("valid"), "Epic levels should be valid"
-        )
+        self.assertTrue(result.get("epic_level"), "Level 25 should be flagged as epic")
+        self.assertTrue(result.get("valid"), "Epic levels should be valid")
         self.assertEqual(
-            gs.player_character_data.get("level"), 25, "Epic level should persist unchanged"
+            gs.player_character_data.get("level"),
+            25,
+            "Epic level should persist unchanged",
         )
 
     def test_validate_xp_level_missing_xp_uses_default(self):
@@ -2707,9 +2713,17 @@ class TestTypeSafetyCoercion(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         self.assertFalse(result.get("valid", True), "Mismatch should be detected")
-        self.assertTrue(result.get("corrected", False), "Level should be corrected")
+        # Fix: Level-up scenario should not auto-correct, but flag pending level-up
+        self.assertTrue(
+            result.get("level_up_pending", False), "Level-up should be pending"
+        )
+        self.assertFalse(
+            result.get("corrected", False), "Should not auto-correct on level-up"
+        )
         self.assertEqual(
-            gs.player_character_data.get("level"), 4, "Level should be corrected to 4"
+            gs.player_character_data.get("level"),
+            1,
+            "Level should NOT be auto-corrected",
         )
 
     def test_validate_xp_level_scalar_experience_missing_level(self):

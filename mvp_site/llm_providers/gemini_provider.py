@@ -15,12 +15,10 @@ from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
-from mvp_site.dice import DICE_ROLL_TOOLS, execute_dice_tool
-from mvp_site.game_state import execute_tool_requests, format_tool_results_text
+from mvp_site.dice import DICE_ROLL_TOOLS
+from mvp_site.game_state import execute_tool_requests
 from mvp_site.llm_providers import gemini_code_execution
 from mvp_site.llm_providers.provider_utils import (
-    build_tool_results_prompt,
-    run_json_first_tool_requests_flow,
     stringify_prompt_contents,
 )
 

@@ -46,6 +46,8 @@ def test_keeps_partial_world_time_unchanged():
 
 
 if __name__ == "__main__":
-    import pytest
     import sys
+
+    import pytest
+
     sys.exit(pytest.main([__file__]))

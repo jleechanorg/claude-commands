@@ -16,7 +16,7 @@ project_root = os.path.abspath(os.path.dirname(__file__))
 os.chdir(project_root)
 
 
-def run_single_sariel_test() -> dict[str, Any]:
+def run_single_sariel_test() -> dict[str, Any] | None:
     """Run a single Sariel campaign integration test and return results"""
     print("🎯 Starting Sariel campaign replay...")
 

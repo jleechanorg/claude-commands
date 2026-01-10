@@ -539,6 +539,33 @@ def run_json_first_tool_requests_flow(  # noqa: PLR0911, PLR0912, PLR0915
             logger.warning("Phase 1 response not valid JSON, returning as-is")
             return _attach_tool_execution_metadata(response_1, executed=False)
 
+    if isinstance(response_data, str):
+        inner_text = response_data.strip()
+        try:
+            response_data = json.loads(inner_text) if inner_text else {}
+            if inner_text:
+                phase1_text_for_history = inner_text
+            logger.info("Phase 1 response was JSON-encoded string; parsed inner JSON")
+        except json.JSONDecodeError:
+            extracted_inner = extract_json_boundaries(inner_text) if inner_text else None
+            if extracted_inner and extracted_inner != inner_text:
+                try:
+                    response_data = json.loads(extracted_inner)
+                    phase1_text_for_history = extracted_inner
+                    logger.info(
+                        "Phase 1 response was JSON-encoded string; extracted inner JSON boundaries successfully"
+                    )
+                except json.JSONDecodeError:
+                    logger.warning(
+                        "Phase 1 response JSON string not valid JSON, returning as-is"
+                    )
+                    return _attach_tool_execution_metadata(response_1, executed=False)
+            else:
+                logger.warning(
+                    "Phase 1 response JSON string not valid JSON, returning as-is"
+                )
+                return _attach_tool_execution_metadata(response_1, executed=False)
+
     if isinstance(response_data, list):
         tool_requests = response_data
     else:

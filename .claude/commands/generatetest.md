@@ -22,7 +22,12 @@ This ensures generated tests follow current evidence standards.
 | Output Type | Default Location | Override Flag |
 |-------------|------------------|---------------|
 | **Test files** | `testing_mcp/` | `--test-dir <path>` |
-| **Evidence** | `/tmp/<repo>/<branch>/<work>/<timestamp>/` | `--evidence-dir <path>` |
+| **Evidence** | `/tmp/<repo>/<branch>/<work>/iteration_NNN/` | `--evidence-dir <path>` |
+
+**Versioning (v1.1.0+):** Evidence bundles now use iteration-based directories:
+- Each run creates `iteration_001/`, `iteration_002/`, etc.
+- `latest` symlink points to most recent iteration
+- `metadata.json` includes `run_id`, `iteration`, `bundle_version`
 
 ## 🚨 EXECUTION WORKFLOW
 
@@ -74,10 +79,45 @@ from pathlib import Path
 SERVER_URL = "http://localhost:8082"  # Real local server
 WORK_NAME = "[work_name]"
 DEFAULT_MODEL = "gemini-3-flash-preview"  # Pin model to avoid fallback noise
+EVIDENCE_FORMAT_VERSION = "1.1.0"  # Bundle format version
 
 
-def get_evidence_dir(work_name: str, timestamp: str | None = None) -> Path:
-    """Create evidence directory following standards."""
+def get_next_iteration(work_dir: Path) -> tuple[int, Path]:
+    """Get next iteration number and create directory with 'latest' symlink."""
+    import re
+    import shutil
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    existing = []
+    for entry in work_dir.iterdir():
+        if entry.is_dir() and entry.name.startswith("iteration_"):
+            match = re.match(r"iteration_(\d+)", entry.name)
+            if match:
+                existing.append(int(match.group(1)))
+
+    next_num = max(existing) + 1 if existing else 1
+    iteration_dir = work_dir / f"iteration_{next_num:03d}"
+    iteration_dir.mkdir(parents=True, exist_ok=True)
+
+    # Update 'latest' symlink
+    latest_link = work_dir / "latest"
+    if latest_link.is_symlink():
+        latest_link.unlink()
+    elif latest_link.exists():
+        if latest_link.is_dir():
+            shutil.rmtree(latest_link)
+        else:
+            latest_link.unlink()
+    latest_link.symlink_to(iteration_dir.name)
+
+    return next_num, iteration_dir
+
+
+def get_evidence_dir(work_name: str) -> tuple[Path, int, str]:
+    """Create versioned evidence directory with iteration tracking.
+
+    Returns: (evidence_dir, iteration_num, run_id)
+    """
     try:
         repo = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"], stderr=subprocess.STDOUT
@@ -96,13 +136,14 @@ def get_evidence_dir(work_name: str, timestamp: str | None = None) -> Path:
             f"Failed to read git repository info: {output or 'unknown git error'}"
         ) from exc
 
-    if timestamp is None:
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    work_dir = Path(f"/tmp/{repo_name}/{branch}/{work_name}")
+    iteration_num, evidence_dir = get_next_iteration(work_dir)
 
-    evidence_dir = Path(f"/tmp/{repo_name}/{branch}/{work_name}/{timestamp}")
-    evidence_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    run_id = f"{work_name}-{iteration_num:03d}-{timestamp}"
+
     (evidence_dir / "artifacts").mkdir(exist_ok=True)
-    return evidence_dir
+    return evidence_dir, iteration_num, run_id
 
 
 def capture_git_provenance() -> dict:
@@ -155,10 +196,11 @@ def save_evidence(
     server_url,
     evidence_dir: Path,
     work_name: str,
-    collection_timestamp: str,
     collection_iso: str,
+    iteration_num: int,
+    run_id: str,
 ):
-    """Write evidence files directly (no external dependencies)."""
+    """Write evidence files with versioning (no external dependencies)."""
     # If copying artifacts into evidence_dir, strip any pre-existing .sha256 files
     # before generating new bundle-level checksums.
     # Methodology: derive from actual environment
@@ -237,6 +279,10 @@ def save_evidence(
         clean_git_info["changed_files"] = [f for f in changed_files if f]
 
     metadata = {
+        "test_name": work_name,
+        "run_id": run_id,
+        "iteration": iteration_num,
+        "bundle_version": EVIDENCE_FORMAT_VERSION,
         "timestamp": collection_iso,
         "git_provenance": clean_git_info,
         "server_url": server_url,
@@ -249,6 +295,9 @@ def save_evidence(
 
 - Repository: {repo_name}
 - Branch: {clean_git_info.get('branch') or 'unknown'}
+- Run ID: {run_id}
+- Iteration: {iteration_num}
+- Bundle Version: {EVIDENCE_FORMAT_VERSION}
 - Head Commit: {clean_git_info.get('head_commit') or 'unknown'}
 - Origin/Main: {clean_git_info.get('origin_main') or 'unknown'}
 - Server: {server_url}
@@ -273,21 +322,22 @@ per-file SHA256 checksums for integrity verification.
         json.dumps(metadata, indent=2)
     )
 
-    print(f"Evidence saved to: {evidence_dir}")
-    print("Reminder: update documentation files and regenerate checksums if you add or edit content.")
+    print(f"📦 Evidence bundle created: {evidence_dir}")
+    print(f"   Run ID: {run_id}")
+    print(f"   Iteration: {iteration_num}")
+    print(f"   Bundle Version: {EVIDENCE_FORMAT_VERSION}")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", default=SERVER_URL)
     parser.add_argument("--save-evidence", action="store_true",
-                        help="Save evidence to /tmp structure")
+                        help="Save evidence to /tmp structure with iteration tracking")
     parser.add_argument("--work-name", default=WORK_NAME)
     args = parser.parse_args()
 
-    # Capture a synchronized timestamp for directory naming and metadata
+    # Capture a synchronized timestamp for metadata
     collection_dt = datetime.now(timezone.utc)
-    collection_timestamp = collection_dt.strftime("%Y%m%dT%H%M%SZ")
     collection_iso = collection_dt.isoformat()
 
     # Run tests against REAL server
@@ -309,17 +359,18 @@ def main():
                 ],
             }
         try:
-            evidence_dir = get_evidence_dir(args.work_name, collection_timestamp)
+            evidence_dir, iteration_num, run_id = get_evidence_dir(args.work_name)
         except Exception as exc:
             print(
                 "Warning: failed to derive evidence directory from git context; "
                 "using fallback path"
             )
-            evidence_dir = Path(
-                f"/tmp/unknown/{args.work_name}/{collection_timestamp}"
-            )
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+            evidence_dir = Path(f"/tmp/unknown/{args.work_name}/iteration_001")
             evidence_dir.mkdir(parents=True, exist_ok=True)
             (evidence_dir / "artifacts").mkdir(exist_ok=True)
+            iteration_num = 1
+            run_id = f"{args.work_name}-001-{timestamp}"
             git_info.setdefault("errors", []).append(
                 {"stage": "get_evidence_dir", "error": str(exc)}
             )
@@ -329,8 +380,9 @@ def main():
             args.server,
             evidence_dir,
             args.work_name,
-            collection_timestamp,
             collection_iso,
+            iteration_num,
+            run_id,
         )
 
 

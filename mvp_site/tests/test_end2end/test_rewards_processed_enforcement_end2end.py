@@ -613,6 +613,11 @@ class TestCombatModeCorrectionsPersistedEnd2End(unittest.TestCase):
                     "name": "TestHero",
                     "level": 3,
                     "experience": {"current": 500},
+                    "equipment": {
+                        "equipped": {"weapon": "Sword"},
+                        "weapons": [{"name": "Sword"}],
+                        "backpack": [],
+                    },
                 },
                 "combat_state": {
                     "in_combat": True,

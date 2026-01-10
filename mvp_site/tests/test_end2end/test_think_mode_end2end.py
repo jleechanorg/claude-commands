@@ -168,9 +168,7 @@ class TestThinkModeEnd2End(unittest.TestCase):
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_think_mode_returns_planning_block(
-        self, mock_gemini_generate, mock_get_db
-    ):
+    def test_think_mode_returns_planning_block(self, mock_gemini_generate, mock_get_db):
         """
         Test that THINK MODE commands return planning_block with choices.
 
@@ -195,10 +193,12 @@ class TestThinkModeEnd2End(unittest.TestCase):
         # Make THINK MODE request (mode='think' with THINK: prefix added by frontend)
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "THINK:What are my options for entering the dungeon?",
-                "mode": "think"
-            }),
+            data=json.dumps(
+                {
+                    "input": "THINK:What are my options for entering the dungeon?",
+                    "mode": "think",
+                }
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -248,19 +248,22 @@ class TestThinkModeEnd2End(unittest.TestCase):
             "planning_block": {
                 "thinking": "Player is exploring",
                 "choices": {
-                    "explore": {"text": "Explore", "description": "Look around", "risk_level": "low"}
-                }
+                    "explore": {
+                        "text": "Explore",
+                        "description": "Look around",
+                        "risk_level": "low",
+                    }
+                },
             },
         }
-        mock_gemini_generate.return_value = FakeLLMResponse(json.dumps(char_mode_response))
+        mock_gemini_generate.return_value = FakeLLMResponse(
+            json.dumps(char_mode_response)
+        )
 
         # Make CHARACTER MODE request - this calls _enforce_rewards_processed_flag
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I enter the dungeon",
-                "mode": "character"
-            }),
+            data=json.dumps({"input": "I enter the dungeon", "mode": "character"}),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -274,9 +277,7 @@ class TestThinkModeEnd2End(unittest.TestCase):
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_think_mode_uses_planning_agent(
-        self, mock_gemini_generate, mock_get_db
-    ):
+    def test_think_mode_uses_planning_agent(self, mock_gemini_generate, mock_get_db):
         """Test that THINK MODE uses PlanningAgent with think mode prompts."""
 
         # Set up fake Firestore
@@ -294,10 +295,9 @@ class TestThinkModeEnd2End(unittest.TestCase):
         # Make THINK MODE request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "THINK:Should I attack or retreat?",
-                "mode": "think"
-            }),
+            data=json.dumps(
+                {"input": "THINK:Should I attack or retreat?", "mode": "think"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -330,8 +330,7 @@ class TestThinkModeEnd2End(unittest.TestCase):
             # Think mode should NOT have full narrative generation language
             # (though it may have some basic state info)
             has_full_narrative_prompt = (
-                "Master Game Weaver" in all_args_str
-                and "living_world" in all_args_str
+                "Master Game Weaver" in all_args_str and "living_world" in all_args_str
             )
 
             # Positive assertion: THINK mode prompts must be present
@@ -340,7 +339,9 @@ class TestThinkModeEnd2End(unittest.TestCase):
             )
 
             if has_full_narrative_prompt and not has_think_mode_prompt:
-                self.fail("THINK MODE should use think mode prompts, not full narrative")
+                self.fail(
+                    "THINK MODE should use think mode prompts, not full narrative"
+                )
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -379,10 +380,7 @@ class TestThinkModeEnd2End(unittest.TestCase):
         # Make THINK MODE request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "THINK:What should I do next?",
-                "mode": "think"
-            }),
+            data=json.dumps({"input": "THINK:What should I do next?", "mode": "think"}),
             content_type="application/json",
             headers=self.test_headers,
         )

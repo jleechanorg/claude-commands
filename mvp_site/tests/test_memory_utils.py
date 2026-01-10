@@ -28,15 +28,13 @@ class TestIsSimilarMemory:
     def test_slightly_different_is_similar(self):
         """Small differences should still match."""
         assert is_similar_memory(
-            "The party fought the dragon",
-            "The party fought the dragons"
+            "The party fought the dragon", "The party fought the dragons"
         )
 
     def test_completely_different_not_similar(self):
         """Completely different strings should not match."""
         assert not is_similar_memory(
-            "The party fought the dragon",
-            "Bob went to the store to buy milk"
+            "The party fought the dragon", "Bob went to the store to buy milk"
         )
 
     def test_custom_threshold(self):
@@ -44,10 +42,10 @@ class TestIsSimilarMemory:
         # These are ~75% similar
         mem1 = "The party explored the dungeon"
         mem2 = "The party explored the forest"
-        
+
         # Should not match at default 0.85 threshold
         assert not is_similar_memory(mem1, mem2, threshold=0.85)
-        
+
         # Should match at lower 0.7 threshold
         assert is_similar_memory(mem1, mem2, threshold=0.7)
 
@@ -110,7 +108,7 @@ class TestSelectMemoriesByBudget:
         # Create 20 memories, budget allows only ~15
         memories = [f"Memory {i}" for i in range(20)]
         result = select_memories_by_budget(memories, max_tokens=50, min_recent=10)
-        
+
         # Last 10 should always be included
         for i in range(10, 20):
             assert f"Memory {i}" in result
@@ -119,13 +117,13 @@ class TestSelectMemoriesByBudget:
         """When over budget, oldest memories are dropped first."""
         # Each memory is ~10 tokens (40 chars)
         memories = ["A" * 40 for _ in range(100)]
-        
+
         # Budget for ~20 memories (200 tokens)
         result = select_memories_by_budget(memories, max_tokens=200, min_recent=5)
-        
+
         # Should have fewer memories than original
         assert len(result) < len(memories)
-        
+
         # Should include at least min_recent
         assert len(result) >= 5
 
@@ -133,7 +131,10 @@ class TestSelectMemoriesByBudget:
         """Simulate a large campaign with 800+ memories."""
         # Create 800 memories of ~22.5 tokens each (90 chars)
         # Total: 800 * 22.5 = ~18,000 tokens
-        memories = [f"[auto] This is memory number {i} with some plot details about what happened in the story " for i in range(800)]
+        memories = [
+            f"[auto] This is memory number {i} with some plot details about what happened in the story "
+            for i in range(800)
+        ]
 
         # Apply budget of 5000 tokens (~222 memories at 22.5 tokens each)
         result = select_memories_by_budget(memories, max_tokens=5000, min_recent=10)
@@ -158,7 +159,7 @@ class TestFormatMemoriesForPrompt:
         """Memories should be formatted with header and bullets."""
         memories = ["Memory A", "Memory B"]
         result = format_memories_for_prompt(memories)
-        
+
         assert "CORE MEMORY LOG" in result
         assert "- Memory A" in result
         assert "- Memory B" in result

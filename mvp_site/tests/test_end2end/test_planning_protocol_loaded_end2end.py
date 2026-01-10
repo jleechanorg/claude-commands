@@ -67,8 +67,8 @@ class TestPlanningProtocolLoaded(unittest.TestCase):
         self.assertIn(
             expected_purpose,
             system_instructions,
-            f"planning_protocol.md purpose statement not found. "
-            f"File may not be loaded into system prompt.",
+            "planning_protocol.md purpose statement not found. "
+            "File may not be loaded into system prompt.",
         )
 
     def test_planning_agent_includes_planning_protocol(self):
@@ -108,9 +108,9 @@ class TestPlanningProtocolLoaded(unittest.TestCase):
         self.assertIn(
             unique_content,
             system_instructions,
-            f"planning_protocol.md unique content not found. "
-            f"File is in PATH_MAP but never loaded via _load_instruction_file(). "
-            f"REQUIRED_PROMPTS is declarative metadata only - it doesn't trigger loading.",
+            "planning_protocol.md unique content not found. "
+            "File is in PATH_MAP but never loaded via _load_instruction_file(). "
+            "REQUIRED_PROMPTS is declarative metadata only - it doesn't trigger loading.",
         )
 
         # Also check for the table explaining mode differences (unique to this file)
@@ -137,7 +137,7 @@ class TestPlanningProtocolLoaded(unittest.TestCase):
         self.assertIn(
             "planning_protocol.md",
             PATH_MAP[constants.PROMPT_TYPE_PLANNING_PROTOCOL],
-            f"PATH_MAP entry should point to planning_protocol.md",
+            "PATH_MAP entry should point to planning_protocol.md",
         )
 
 
