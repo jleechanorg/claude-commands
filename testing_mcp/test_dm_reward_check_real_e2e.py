@@ -68,41 +68,22 @@ import requests
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
+from testing_mcp.lib.evidence_utils import (
+    capture_provenance,
+    get_evidence_dir,
+    save_evidence,
+    save_request_responses,
+    write_with_checksum,
+)
 
 GIT_BIN = shutil.which("git") or "git"
 
-
-def get_output_dir() -> str:
-    """Get output directory following /tmp/<repo>/<branch>/<test>/<timestamp> pattern."""
-    if os.getenv("OUTPUT_DIR"):
-        return os.getenv("OUTPUT_DIR")
-
-    try:
-        repo_root = subprocess.check_output(  # noqa: S603
-            [GIT_BIN, "rev-parse", "--show-toplevel"], text=True, timeout=5
-        ).strip()
-        repo_name = Path(repo_root).name
-    except Exception:
-        repo_name = "worldarchitect.ai"
-
-    try:
-        branch = subprocess.check_output(  # noqa: S603
-            [GIT_BIN, "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-        branch = branch.replace("/", "_").replace("\\", "_")
-    except Exception:
-        branch = "unknown"
-
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    output_dir = Path("/tmp") / repo_name / branch / "dm_reward_check_e2e" / timestamp  # noqa: S108
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return str(output_dir)
 
 
 # Configuration
 BASE_URL = get_base_url()
 USER_ID = f"e2e-dm-reward-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = get_output_dir()
+OUTPUT_DIR = str(get_evidence_dir("dm_reward_check_e2e"))
 
 # Global list to collect raw MCP responses
 RAW_MCP_RESPONSES: list[dict] = []
@@ -124,32 +105,6 @@ def log(msg: str) -> None:
     ts = datetime.now(UTC).isoformat()
     print(f"[{ts}] {msg}")
 
-
-def capture_provenance() -> dict:
-    """Capture git provenance."""
-    provenance = {}
-    try:
-        provenance["git_head"] = subprocess.check_output(  # noqa: S603
-            [GIT_BIN, "rev-parse", "HEAD"], text=True, timeout=5
-        ).strip()
-        provenance["git_branch"] = subprocess.check_output(  # noqa: S603
-            [GIT_BIN, "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-        subprocess.run(  # noqa: S603
-            [GIT_BIN, "fetch", "origin", "main"],
-            timeout=10,
-            capture_output=True,
-            check=False,
-        )
-        try:
-            provenance["merge_base"] = subprocess.check_output(  # noqa: S603
-                [GIT_BIN, "merge-base", "HEAD", "origin/main"], text=True, timeout=5
-            ).strip()
-        except Exception:
-            provenance["merge_base"] = None
-    except Exception as e:
-        provenance["git_error"] = str(e)
-    return provenance
 
 
 def mcp_call(method: str, params: dict, timeout: int = 180) -> dict:
@@ -386,7 +341,7 @@ def main():  # noqa: PLR0915
         "base_url": BASE_URL,
         "user_id": USER_ID,
         "output_dir": OUTPUT_DIR,
-        "provenance": capture_provenance(),
+        "provenance": capture_provenance(BASE_URL),
         "scenarios": [],
         "summary": {},
     }
@@ -896,15 +851,10 @@ def save_results(results: dict) -> None:
     output_dir = Path(OUTPUT_DIR)
 
     # Write main results
-    evidence_file = output_dir / "evidence.json"
-    with open(evidence_file, "w") as f:
-        json.dump(results, f, indent=2)
+    save_evidence(output_dir, results, "evidence.json")
 
     # Write raw MCP responses
-    raw_mcp_file = output_dir / "raw_mcp_responses.jsonl"
-    with open(raw_mcp_file, "w") as f:
-        for entry in RAW_MCP_RESPONSES:
-            f.write(json.dumps(entry) + "\n")
+    save_request_responses(output_dir, RAW_MCP_RESPONSES)
     log(f"Raw MCP responses saved: {len(RAW_MCP_RESPONSES)} calls")
 
     # Write README
@@ -937,18 +887,7 @@ It instructs the LLM to award XP for significant accomplishments.
 If SUCCESS scenarios don't get XP, the LLM isn't applying the reward protocol.
 If FAILURE scenarios DO get XP, the LLM is giving false positives.
 """
-    readme_file = output_dir / "README.md"
-    with open(readme_file, "w") as f:
-        f.write(readme_content)
-
-    # Generate checksums
-    for filename in ["evidence.json", "raw_mcp_responses.jsonl", "README.md"]:
-        filepath = output_dir / filename
-        if filepath.exists():
-            with open(filepath, "rb") as f:
-                checksum = hashlib.sha256(f.read()).hexdigest()
-            with open(f"{filepath}.sha256", "w") as f:
-                f.write(f"{checksum}  {filename}\n")
+    write_with_checksum(output_dir / "README.md", readme_content)
 
     log(f"Results saved to: {output_dir}")
 

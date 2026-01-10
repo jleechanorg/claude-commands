@@ -37,18 +37,17 @@ import requests
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
+from testing_mcp.lib.evidence_utils import capture_provenance, get_evidence_dir
 
 # Configuration
 BASE_URL = os.getenv("BASE_URL") or get_base_url()  # Uses worktree-specific port
 USER_ID = f"e2e-combat-agent-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/tmp/combat_xp_e2e_v1")
+OUTPUT_DIR = str(get_evidence_dir("combat_agent_e2e"))
 STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
 
 # System instruction capture is always enabled in llm_service.py
 # Set max chars for longer captures
 os.environ.setdefault("CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS", "15000")
-
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Global list to collect raw MCP responses for evidence
 RAW_MCP_RESPONSES: list[dict] = []
@@ -58,26 +57,6 @@ def log(msg: str) -> None:
     """Log with timestamp."""
     ts = datetime.now(timezone.utc).isoformat()
     print(f"[{ts}] {msg}")
-
-
-def capture_provenance() -> dict:
-    """Capture git and environment provenance."""
-    provenance = {}
-    try:
-        provenance["git_head"] = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, timeout=5
-        ).strip()
-        provenance["git_branch"] = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-    except Exception as e:
-        provenance["git_error"] = str(e)
-
-    provenance["env"] = {
-        "BASE_URL": BASE_URL,
-        "STRICT_MODE": STRICT_MODE,
-    }
-    return provenance
 
 
 def mcp_call(method: str, params: dict) -> dict:
@@ -289,7 +268,7 @@ def main():
         "base_url": BASE_URL,
         "user_id": USER_ID,
         "strict_mode": STRICT_MODE,
-        "provenance": capture_provenance(),
+        "provenance": capture_provenance(BASE_URL),
         "steps": [],
         "summary": {},
     }

@@ -42,6 +42,7 @@ from lib.server_utils import (
     start_local_mcp_server,
 )
 from lib import MCPClient
+from lib.evidence_utils import get_evidence_dir, save_evidence
 
 try:
     from mvp_site.memory_utils import MEMORY_SIMILARITY_THRESHOLD, is_similar_memory
@@ -52,23 +53,6 @@ except ImportError:
     is_similar_memory = None  # type: ignore[assignment]
     MEMORY_SIMILARITY_THRESHOLD = 0.85
 
-# Evidence directory follows /generatetest spec: /tmp/<repo>/<branch>/<work>/<timestamp>/
-def get_evidence_dir() -> Path:
-    """Get evidence directory following savetmp convention."""
-    try:
-        repo_path = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"], text=True, timeout=30
-        ).strip()
-        repo = Path(repo_path).name
-        branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True, timeout=30
-        ).strip()
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        repo = "worldarchitect.ai"
-        branch = "unknown"
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return Path("/tmp") / repo / branch / "memory_budget_dedupe" / timestamp
 
 # Test scenarios that should generate core memories (dice rolls trigger memory creation)
 MEMORY_GENERATING_ACTIONS = [
@@ -79,18 +63,6 @@ MEMORY_GENERATING_ACTIONS = [
     "I search the room for treasure. Make an investigation check.",
 ]
 
-
-
-def save_evidence(filename: str, data: Any, evidence_dir: Path) -> Path:
-    """Save test evidence to file."""
-    evidence_dir.mkdir(parents=True, exist_ok=True)
-    filepath = evidence_dir / filename
-    with open(filepath, "w") as f:
-        if isinstance(data, (dict, list)):
-            json.dump(data, f, indent=2, default=str)
-        else:
-            f.write(str(data))
-    return filepath
 
 
 def test_memories_saved_to_firestore(
@@ -155,7 +127,7 @@ def test_memories_saved_to_firestore(
     else:
         print("❌ FAIL: No new memories created")
 
-    save_evidence(f"test1_memories_firestore_{datetime.now():%Y%m%d_%H%M%S}.json", result, evidence_dir)
+    save_evidence(evidence_dir, result, f"test1_memories_firestore_{datetime.now():%Y%m%d_%H%M%S}.json")
     return result
 
 
@@ -294,7 +266,7 @@ def test_deduplication_e2e(
     else:
         print("\n❌ FAIL: Duplicate memories found in Firestore")
 
-    save_evidence(f"test2_deduplication_{datetime.now():%Y%m%d_%H%M%S}.json", result, evidence_dir)
+    save_evidence(evidence_dir, result, f"test2_deduplication_{datetime.now():%Y%m%d_%H%M%S}.json")
     return result
 
 
@@ -434,7 +406,7 @@ def test_token_budget_e2e(
         if not time_reasonable:
             print(f"   - Response too slow: {elapsed:.2f}s (limit: 60s)")
 
-    save_evidence(f"test3_token_budget_{datetime.now():%Y%m%d_%H%M%S}.json", result, evidence_dir)
+    save_evidence(evidence_dir, result, f"test3_token_budget_{datetime.now():%Y%m%d_%H%M%S}.json")
     return result
 
 
@@ -442,7 +414,7 @@ def run_all_tests(server_url: str, evidence_dir: Path | None = None) -> dict[str
     """Run all memory tests, optionally reusing a supplied evidence directory."""
     # Create evidence directory following /generatetest spec
     if evidence_dir is None:
-        evidence_dir = get_evidence_dir()
+        evidence_dir = get_evidence_dir("core_memory_budget_dedupe")
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
     print("\n" + "=" * 70)
@@ -507,7 +479,7 @@ def run_all_tests(server_url: str, evidence_dir: Path | None = None) -> dict[str
     print(f"\n📁 Evidence saved to: {evidence_dir}")
 
     # Save overall results
-    save_evidence(f"all_results_{datetime.now():%Y%m%d_%H%M%S}.json", results, evidence_dir)
+    save_evidence(evidence_dir, results, f"all_results_{datetime.now():%Y%m%d_%H%M%S}.json")
 
     return results
 
@@ -534,7 +506,7 @@ def main():
     evidence_dir = Path(args.evidence_dir).resolve() if args.evidence_dir else None
 
     if args.start_local:
-        evidence_dir = evidence_dir or get_evidence_dir()
+        evidence_dir = evidence_dir or get_evidence_dir("core_memory_budget_dedupe")
         evidence_dir.mkdir(parents=True, exist_ok=True)
         port = pick_free_port()
         server = start_local_mcp_server(port, log_dir=evidence_dir)

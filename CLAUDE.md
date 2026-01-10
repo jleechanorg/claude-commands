@@ -222,18 +222,47 @@ with patch('shutil.which', return_value='/usr/bin/command'):
 
 ### Test Infrastructure (MANDATORY)
 **⚠️ ALWAYS use `testing_mcp/lib/` utilities - NEVER reimplement test infrastructure**
-- **Evidence capture:** Use `testing_mcp/lib/evidence_utils.py` (NOT custom capture code)
-  - `evidence_utils.capture_provenance(base_url, server_pid)` - Git + server provenance
-  - `evidence_utils.create_evidence_bundle(...)` - Standards-compliant evidence bundle
-  - Follows `.claude/skills/evidence-standards.md` requirements automatically
-- **Check `testing_mcp/lib/` BEFORE writing:**
-  - Evidence capture utilities
-  - MCP client helpers
-  - Server management functions
-  - Test isolation patterns
-- **Benefits:** Canonical provenance fields, SHA256 checksums, README/methodology/evidence structure, zero maintenance burden
 
-**Anti-Pattern:** Writing custom `capture_git_provenance()`, `save_evidence_bundle()`, or similar functions that duplicate `testing_mcp/lib/` functionality.
+**Available Shared Utilities:**
+- **`lib/evidence_utils.py`** - Evidence capture and storage
+  - `get_evidence_dir(test_name)` - Get `/tmp/<repo>/<branch>/<test_name>` path
+  - `capture_provenance(base_url, server_pid=None)` - Git + server provenance
+  - `save_evidence(evidence_dir, data, filename)` - Save with SHA256 checksum
+  - `write_with_checksum(path, content)` - Write file with checksum
+  - `create_evidence_bundle(evidence_dir, ...)` - Complete evidence bundle
+  - `save_request_responses(evidence_dir, pairs)` - Request/response JSONL
+- **`lib/mcp_client.py`** - MCP JSON-RPC client
+  - `MCPClient(base_url, timeout)` - Create client
+  - `client.tools_call(tool_name, args)` - Call MCP tool
+- **`lib/campaign_utils.py`** - Campaign management
+  - `create_campaign(client, user_id, ...)` - Create campaign
+  - `process_action(client, user_id, campaign_id, ...)` - Process action
+  - `get_campaign_state(client, user_id, campaign_id)` - Get state
+  - `ensure_game_state_seed(client, user_id, campaign_id)` - Seed state
+- **`lib/server_utils.py`** - Server management
+  - `start_local_mcp_server(port)` - Start test server
+  - `pick_free_port(start)` - Find available port
+  - `DEFAULT_EVIDENCE_ENV` - Environment vars for evidence capture
+- **`lib/model_utils.py`** - Model configuration
+  - `settings_for_model(model_id)` - Get model settings
+  - `update_user_settings(client, user_id, settings)` - Update settings
+- **`lib/narrative_validation.py`** - Narrative validation
+  - `validate_narrative_quality(narrative)` - Validate structure
+  - `extract_dice_notation(text)` - Extract dice rolls
+
+**Required Pattern:**
+```python
+# ✅ Import from lib modules
+from testing_mcp.lib.evidence_utils import get_evidence_dir, capture_provenance
+from testing_mcp.lib.mcp_client import MCPClient
+from testing_mcp.lib.campaign_utils import create_campaign, process_action
+
+# ❌ NEVER reimplement these functions
+```
+
+**Benefits:** Canonical provenance fields, SHA256 checksums, README/methodology/evidence structure, zero maintenance burden, automatic standards compliance per `.claude/skills/evidence-standards.md`.
+
+**Anti-Pattern:** Writing custom `capture_provenance()`, `get_evidence_dir()`, `save_evidence()`, `create_campaign()`, or any function that duplicates `testing_mcp/lib/` functionality.
 
 ### Import Standards
 - ❌ **FORBIDDEN**: try/except around imports (ANY context)

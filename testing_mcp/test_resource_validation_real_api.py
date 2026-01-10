@@ -54,7 +54,7 @@ from lib.model_utils import (
     update_user_settings,
 )
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
-from lib.evidence_utils import get_evidence_dir
+from lib.evidence_utils import get_evidence_dir, save_evidence as save_evidence_lib
 from lib import MCPClient
 
 # =============================================================================
@@ -1200,7 +1200,7 @@ def save_evidence(
     validation_errors: list[str],
     evidence_dir: Path,
 ) -> None:
-    """Save test evidence to disk."""
+    """Save test evidence to disk with checksums."""
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
@@ -1213,7 +1213,7 @@ def save_evidence(
         .replace("/", "-")
     )[:60]
 
-    evidence_file = evidence_dir / f"{timestamp}_{safe_model}_{safe_scenario}.json"
+    filename = f"{timestamp}_{safe_model}_{safe_scenario}.json"
 
     evidence = {
         "timestamp": timestamp,
@@ -1229,10 +1229,10 @@ def save_evidence(
         "debug_info": result.get("debug_info", {}),
     }
 
-    with open(evidence_file, "w") as f:
-        json.dump(evidence, f, indent=2, default=str)
+    # Use lib function to save with checksum
+    save_evidence_lib(evidence_dir, evidence, filename)
+    print(f"  📁 Evidence saved: {filename}")
 
-    print(f"  📁 Evidence saved: {evidence_file.name}")
 
 
 def run_scenario_tests(

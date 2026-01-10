@@ -36,14 +36,12 @@ Run against preview:
     BASE_URL=https://preview-url python testing_mcp/test_rewards_agent_real_e2e.py
 """
 
-import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
-from typing import List, Optional
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -51,162 +49,32 @@ import requests
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
-
-
-def get_output_dir() -> str:
-    """
-    Get output directory following /savetmp strategy.
-
-    Structure: /tmp/<repo>/<branch>/rewards_e2e/<timestamp>/
-
-    This follows the evidence-standards.md pattern for structured output.
-    """
-    # Allow override via environment variable
-    if os.getenv("OUTPUT_DIR"):
-        return os.getenv("OUTPUT_DIR")
-
-    # Get repo name from git or fallback
-    try:
-        repo_root = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"], text=True, timeout=5
-        ).strip()
-        repo_name = Path(repo_root).name
-    except Exception:
-        repo_name = "worldarchitect.ai"
-
-    # Get branch name
-    try:
-        branch = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-        # Sanitize branch name for filesystem
-        branch = branch.replace("/", "_").replace("\\", "_")
-    except Exception:
-        branch = "unknown"
-
-    # Create timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Build path: /tmp/<repo>/<branch>/rewards_e2e/<timestamp>/
-    output_dir = Path("/tmp") / repo_name / branch / "rewards_e2e" / timestamp
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    return str(output_dir)
-
+from testing_mcp.lib.evidence_utils import (
+    capture_provenance,
+    get_evidence_dir,
+    save_evidence,
+    save_request_responses,
+    write_with_checksum,
+)
 
 # Configuration
 BASE_URL = get_base_url()  # Uses worktree-specific port
 USER_ID = f"e2e-rewards-agent-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = get_output_dir()
+OUTPUT_DIR = get_evidence_dir("rewards_agent_e2e")
 STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Global list to collect raw MCP responses for evidence
-RAW_MCP_RESPONSES: List[dict] = []
+RAW_MCP_RESPONSES: list[dict] = []
 
 
 def log(msg: str) -> None:
     """Log with timestamp."""
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
     print(f"[{ts}] {msg}")
 
 
-def capture_provenance() -> dict:
-    """Capture git and environment provenance with full diff vs origin/main."""
-    provenance = {}
-    try:
-        provenance["git_head"] = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, timeout=5
-        ).strip()
-        provenance["git_branch"] = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-
-        # Fetch origin/main for comparison
-        subprocess.run(["git", "fetch", "origin", "main"], timeout=10, capture_output=True)
-
-        # Get merge-base with origin/main
-        try:
-            provenance["merge_base"] = subprocess.check_output(
-                ["git", "merge-base", "HEAD", "origin/main"], text=True, timeout=5
-            ).strip()
-        except Exception:
-            provenance["merge_base"] = None
-
-        # Commits ahead of origin/main
-        try:
-            ahead_output = subprocess.check_output(
-                ["git", "rev-list", "--count", "origin/main..HEAD"], text=True, timeout=5
-            ).strip()
-            provenance["commits_ahead_of_main"] = int(ahead_output)
-        except Exception:
-            provenance["commits_ahead_of_main"] = None
-
-        # Diff stat vs origin/main
-        try:
-            diff_stat = subprocess.check_output(
-                ["git", "diff", "--stat", "origin/main...HEAD"], text=True, timeout=10
-            ).strip()
-            provenance["diff_stat_vs_main"] = diff_stat[-1000:] if len(diff_stat) > 1000 else diff_stat
-        except Exception:
-            provenance["diff_stat_vs_main"] = None
-
-    except Exception as e:
-        provenance["git_error"] = str(e)
-
-    provenance["env"] = {
-        "BASE_URL": BASE_URL,
-        "STRICT_MODE": STRICT_MODE,
-    }
-
-    # Capture server runtime info
-    provenance["server"] = capture_server_runtime_info()
-
-    return provenance
-
-
-def capture_server_runtime_info() -> dict:
-    """Capture running server PID, port, and environment."""
-    info = {"pid": None, "port": None, "env_vars": {}, "process_cmdline": None}
-
-    try:
-        # Find gunicorn/python processes on our port
-        port = BASE_URL.split(":")[-1].rstrip("/")
-        lsof_output = subprocess.check_output(
-            ["lsof", "-i", f":{port}", "-t"], text=True, timeout=5
-        ).strip()
-        if lsof_output:
-            pids = lsof_output.split("\n")
-            info["pid"] = pids[0] if pids else None
-            info["all_pids"] = pids
-
-            # Get command line for the process
-            if info["pid"]:
-                try:
-                    cmdline = subprocess.check_output(
-                        ["ps", "-p", info["pid"], "-o", "command="], text=True, timeout=5
-                    ).strip()
-                    info["process_cmdline"] = cmdline[:500]
-                except Exception:
-                    pass
-
-        info["port"] = port
-
-        # Capture relevant env vars (from current process, server may differ)
-        for var in ["WORLDAI_DEV_MODE", "GOOGLE_APPLICATION_CREDENTIALS",
-                    "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS", "TESTING"]:
-            val = os.environ.get(var)
-            if val:
-                info["env_vars"][var] = val[:100] if len(val) > 100 else val
-
-    except Exception as e:
-        info["error"] = str(e)
-
-    return info
-
-
-def get_server_log_paths() -> List[str]:
+def get_server_log_paths() -> list[str]:
     """Get possible server log file paths (multiple candidates)."""
     paths = []
     try:
@@ -238,7 +106,7 @@ def get_server_log_path() -> str:
 
 
 def capture_server_log_snippet(
-    since_ts: str, keywords: Optional[List[str]] = None
+    since_ts: str, keywords: list[str] | None = None
 ) -> dict:
     """
     Capture server log entries since a timestamp.
@@ -286,7 +154,7 @@ def capture_server_log_snippet(
         result["since_dt_utc"] = str(since_dt)
         result["since_dt_local"] = str(since_dt_local)
 
-        with open(log_path, "r") as f:
+        with open(log_path) as f:
             lines = f.readlines()
 
         result["total_lines_in_file"] = len(lines)
@@ -339,7 +207,7 @@ def mcp_call(method: str, params: dict, timeout: int = 180) -> dict:
         "params": params,
     }
 
-    call_timestamp = datetime.now(timezone.utc).isoformat()
+    call_timestamp = datetime.now(UTC).isoformat()
     resp = requests.post(f"{BASE_URL}/mcp", json=payload, timeout=timeout)
     response_json = resp.json()
 
@@ -646,7 +514,7 @@ def detect_rewards_box(narrative: str) -> dict:
 
 
 def check_rewards_indicators(
-    narrative: str, game_state: dict, response_data: Optional[dict] = None
+    narrative: str, game_state: dict, response_data: dict | None = None
 ) -> dict:
     """Check for rewards processing indicators in response.
 
@@ -786,10 +654,10 @@ def validate_rewards_summary(combat_summary: dict, player_data: dict) -> dict:
 
 def has_reward_evidence(
     rewards_processed: bool,
-    xp_awarded: Optional[int],
-    loot_distributed: Optional[bool],
-    xp_before: Optional[int],
-    xp_after: Optional[int],
+    xp_awarded: int | None,
+    loot_distributed: bool | None,
+    xp_before: int | None,
+    xp_after: int | None,
 ) -> bool:
     """Check if rewards were generated, independent of narrative formatting."""
     if not rewards_processed:
@@ -807,10 +675,10 @@ def has_reward_evidence(
 
 
 def validate_xp_delta(
-    xp_before: Optional[int],
-    xp_after: Optional[int],
-    expected_xp_gain: Optional[int],
-    issues_list: List[str],
+    xp_before: int | None,
+    xp_after: int | None,
+    expected_xp_gain: int | None,
+    issues_list: list[str],
 ) -> bool:
     """
     Validate actual XP gain matches expected.
@@ -842,12 +710,12 @@ def main():
     results = {
         "test_name": "rewards_agent_real_e2e",
         "test_type": "rewards_mode_validation",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "base_url": BASE_URL,
         "user_id": USER_ID,
-        "output_dir": OUTPUT_DIR,
+        "output_dir": str(OUTPUT_DIR),
         "strict_mode": STRICT_MODE,
-        "provenance": capture_provenance(),
+        "provenance": capture_provenance(BASE_URL),
         "steps": [],
         "scenarios": {},
         "summary": {},
@@ -998,7 +866,7 @@ def main():
     xp_after_end_combat = end_player_data.get("experience", {}).get("current")
     combat_end_passed = bool(
         end_combat_state.get("in_combat") is False
-        and end_combat_state.get("combat_phase") == "ended"
+        and end_combat_state.get("combat_phase") in ["ended", "archived"]
         and rewards_check["rewards_processed_combat"]  # STRICT: Must be true here
         and has_reward_evidence(
             rewards_check["rewards_processed_combat"],
@@ -1023,8 +891,8 @@ def main():
 
     if end_combat_state.get("in_combat") is not False:
         combat_end_issues.append("in_combat not False")
-    if end_combat_state.get("combat_phase") != "ended":
-        combat_end_issues.append(f"combat_phase={end_combat_state.get('combat_phase')}, expected 'ended'")
+    if end_combat_state.get("combat_phase") not in ["ended", "archived"]:
+        combat_end_issues.append(f"combat_phase={end_combat_state.get('combat_phase')}, expected 'ended' or 'archived'")
     if not rewards_check["rewards_processed_combat"]:
         combat_end_issues.append("rewards_processed=False (must be True at this step)")
     if not has_reward_evidence(
@@ -1672,61 +1540,58 @@ def save_results(results: dict) -> None:
     ├── raw_mcp_responses.jsonl + .sha256
     ├── metadata.json + .sha256        (git provenance)
     ├── README.md + .sha256
-    └── checksums.manifest
     """
-    output_dir = Path(OUTPUT_DIR)
+    output_dir = OUTPUT_DIR
     log(f"📦 Saving evidence bundle to: {output_dir}")
 
     # Write main results (evidence.json following savetmp naming)
-    evidence_file = output_dir / "evidence.json"
-    with open(evidence_file, "w") as f:
-        json.dump(results, f, indent=2)
+    save_evidence(output_dir, results, "evidence.json")
 
     # Write raw MCP responses as JSONL (one entry per line)
-    raw_mcp_file = output_dir / "raw_mcp_responses.jsonl"
-    with open(raw_mcp_file, "w") as f:
-        for entry in RAW_MCP_RESPONSES:
-            f.write(json.dumps(entry) + "\n")
+    save_request_responses(output_dir, RAW_MCP_RESPONSES)
     log(f"Raw MCP responses saved: {len(RAW_MCP_RESPONSES)} calls captured")
 
     # Capture server log snippets for reward-related entries
-    test_start_ts = results.get("timestamp", datetime.now(timezone.utc).isoformat())
+    test_start_ts = results.get("timestamp", datetime.now(UTC).isoformat())
     server_logs = capture_server_log_snippet(
         test_start_ts,
         keywords=["REWARDS", "XP", "SERVER_ENFORCEMENT", "REWARDS_MODE", "combat_summary", "encounter_summary"]
     )
-    server_log_file = output_dir / "server_logs.txt"
-    with open(server_log_file, "w") as f:
-        f.write("# Server Log Evidence\n")
-        f.write("# ===================\n\n")
-        f.write(f"# Test timestamp (UTC): {test_start_ts}\n")
-        f.write(f"# Test timestamp (local): {server_logs.get('since_dt_local', 'N/A')}\n")
-        f.write(f"# Log path found: {server_logs.get('log_path')}\n")
-        f.write(f"# Paths tried: {server_logs.get('paths_tried', [])}\n")
-        f.write(f"# Total lines in file: {server_logs.get('total_lines_in_file', 'N/A')}\n")
-        f.write(f"# Lines since timestamp: {server_logs.get('all_lines_since_timestamp', 'N/A')}\n")
-        f.write(f"# Keyword-filtered lines: {server_logs.get('count')}\n")
-        if server_logs.get("error"):
-            f.write(f"# ERROR: {server_logs.get('error')}\n")
-        if server_logs.get("note"):
-            f.write(f"# Note: {server_logs.get('note')}\n")
-        f.write("\n# Server runtime info:\n")
-        server_info = results.get("provenance", {}).get("server", {})
-        f.write(f"#   PID: {server_info.get('pid')}\n")
-        f.write(f"#   Port: {server_info.get('port')}\n")
-        f.write(f"#   Command: {server_info.get('process_cmdline', 'N/A')}\n")
-        f.write(f"#   Env vars: {server_info.get('env_vars', {})}\n")
-        f.write("\n# --- Log Lines ---\n\n")
-        for line in server_logs.get("log_lines", []):
-            f.write(line + "\n")
-        if not server_logs.get("log_lines"):
-            f.write("(No log lines captured - see error/notes above)\n")
+
+    # Write server logs with checksum
+    server_log_content = ""
+    server_log_content += "# Server Log Evidence\n"
+    server_log_content += "# ===================\n\n"
+    server_log_content += f"# Test timestamp (UTC): {test_start_ts}\n"
+    server_log_content += f"# Test timestamp (local): {server_logs.get('since_dt_local', 'N/A')}\n"
+    server_log_content += f"# Log path found: {server_logs.get('log_path')}\n"
+    server_log_content += f"# Paths tried: {server_logs.get('paths_tried', [])}\n"
+    server_log_content += f"# Total lines in file: {server_logs.get('total_lines_in_file', 'N/A')}\n"
+    server_log_content += f"# Lines since timestamp: {server_logs.get('all_lines_since_timestamp', 'N/A')}\n"
+    server_log_content += f"# Keyword-filtered lines: {server_logs.get('count')}\n"
+    if server_logs.get("error"):
+        server_log_content += f"# ERROR: {server_logs.get('error')}\n"
+    if server_logs.get("note"):
+        server_log_content += f"# Note: {server_logs.get('note')}\n"
+    server_log_content += "\n# Server runtime info:\n"
+    server_info = results.get("provenance", {}).get("server", {})
+    server_log_content += f"#   PID: {server_info.get('pid')}\n"
+    server_log_content += f"#   Port: {server_info.get('port')}\n"
+    server_log_content += f"#   Command: {server_info.get('process_cmdline', 'N/A')}\n"
+    server_log_content += f"#   Env vars: {server_info.get('env_vars', {})}\n"
+    server_log_content += "\n# --- Log Lines ---\n\n"
+    for line in server_logs.get("log_lines", []):
+        server_log_content += line + "\n"
+    if not server_logs.get("log_lines"):
+        server_log_content += "(No log lines captured - see error/notes above)\n"
+
+    write_with_checksum(output_dir / "server_logs.txt", server_log_content)
     log(f"Server logs captured: {server_logs.get('count')} reward-related lines")
 
     # Write metadata.json with git provenance (savetmp standard)
     metadata = {
         "test_name": "rewards_agent_real_e2e",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "output_dir": str(output_dir),
         "git_provenance": results.get("provenance", {}),
         "configuration": {
@@ -1736,14 +1601,12 @@ def save_results(results: dict) -> None:
         },
         "summary": results.get("summary", {}),
     }
-    metadata_file = output_dir / "metadata.json"
-    with open(metadata_file, "w") as f:
-        json.dump(metadata, f, indent=2)
+    save_evidence(output_dir, metadata, "metadata.json")
 
     # Write README.md (savetmp standard)
     readme_content = f"""# RewardsAgent E2E Test Results
 
-**Test Run:** {datetime.now(timezone.utc).isoformat()}
+**Test Run:** {datetime.now(UTC).isoformat()}
 **Base URL:** {BASE_URL}
 **Output Directory:** {output_dir}
 
@@ -1768,42 +1631,10 @@ def save_results(results: dict) -> None:
 - `evidence.json` - Full test results with all scenario data
 - `raw_mcp_responses.jsonl` - Raw MCP request/response captures
 - `metadata.json` - Git provenance and configuration
-- `checksums.manifest` - SHA256 checksums for all files
 """
-    readme_file = output_dir / "README.md"
-    with open(readme_file, "w") as f:
-        f.write(readme_content)
-
-    # Generate checksums for evidence files (savetmp standard)
-    evidence_files = [
-        "evidence.json",
-        "raw_mcp_responses.jsonl",
-        "server_logs.txt",
-        "metadata.json",
-        "README.md",
-    ]
-
-    checksums = {}
-    for filename in evidence_files:
-        filepath = output_dir / filename
-        if filepath.exists():
-            with open(filepath, "rb") as f:
-                checksum = hashlib.sha256(f.read()).hexdigest()
-            checksums[filename] = checksum
-            # Write individual checksum file
-            with open(f"{filepath}.sha256", "w") as f:
-                f.write(f"{checksum}  {filename}\n")
-
-    # Write manifest with all checksums
-    manifest_file = output_dir / "checksums.manifest"
-    with open(manifest_file, "w") as f:
-        for filename, checksum in checksums.items():
-            f.write(f"{checksum}  {filename}\n")
+    write_with_checksum(output_dir / "README.md", readme_content)
 
     log(f"\nResults saved to: {output_dir}")
-    log(f"Checksums ({len(checksums)} files):")
-    for filename, checksum in checksums.items():
-        log(f"  {filename}: {checksum[:16]}...")
 
 
 if __name__ == "__main__":

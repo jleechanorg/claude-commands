@@ -44,34 +44,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
-
-
-def get_output_dir(test_name: str) -> str:
-    """Get output directory following /savetmp strategy."""
-    if os.getenv("OUTPUT_DIR"):
-        return os.getenv("OUTPUT_DIR")
-
-    try:
-        repo_root = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"], text=True, timeout=5
-        ).strip()
-        repo_name = Path(repo_root).name
-    except Exception:
-        repo_name = "worldarchitect.ai"
-
-    try:
-        branch = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-        branch = branch.replace("/", "_").replace("\\", "_")
-    except Exception:
-        branch = "unknown"
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path("/tmp") / repo_name / branch / test_name / timestamp
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    return str(output_dir)
+from testing_mcp.lib.evidence_utils import get_evidence_dir, save_evidence, save_request_responses
 
 
 def log(msg: str) -> None:
@@ -123,28 +96,8 @@ def extract_result(response: dict) -> dict:
     return result
 
 
-def save_test_results(test_name: str, results: dict, output_dir: str) -> None:
-    """Save test results following /savetmp evidence structure."""
-    output_path = Path(output_dir)
-
-    # Write main results
-    evidence_file = output_path / "evidence.json"
-    with open(evidence_file, "w") as f:
-        json.dump(results, f, indent=2)
-
-    # Write raw MCP responses as JSONL
-    raw_mcp_file = output_path / "raw_mcp_responses.jsonl"
-    with open(raw_mcp_file, "w") as f:
-        for entry in RAW_MCP_RESPONSES:
-            f.write(json.dumps(entry) + "\n")
-
-    log(f"Results saved to {output_dir}")
-    log(f"  evidence.json: {len(json.dumps(results))} bytes")
-    log(f"  raw_mcp_responses.jsonl: {len(RAW_MCP_RESPONSES)} calls")
-
-
 BASE_URL = get_base_url()
-OUTPUT_DIR = get_output_dir("combat_summary_missing")
+OUTPUT_DIR = str(get_evidence_dir("combat_summary_missing"))
 
 
 def main():
@@ -498,7 +451,9 @@ def main():
     log(f"  1. Combat End (no OOC): {'PASS' if scenario1_passed else 'FAIL'}")
     log(f"  2. Surrender (no OOC): {'PASS' if scenario2_passed else 'FAIL'}")
 
-    save_test_results("rewards_missed_repro", results, OUTPUT_DIR)
+    save_evidence(Path(OUTPUT_DIR), results, "evidence.json")
+    save_request_responses(Path(OUTPUT_DIR), RAW_MCP_RESPONSES)
+    log(f"Results saved to {OUTPUT_DIR}")
 
     if scenarios_passed == scenarios_total:
         log("\n✅ [GREEN] All scenarios passed - prompt fix is working!")

@@ -14,8 +14,107 @@ This ensures generated tests follow current evidence standards.
 
 **REAL MODE ONLY**: All generated tests use real local servers, real databases, nothing mocked.
 **EVIDENCE-FIRST**: Tests generate evidence bundles directly to `/tmp/<repo>/<branch>/<work>/<timestamp>/`.
-**SELF-CONTAINED**: Tests write evidence files directly - no external dependencies.
+**USE SHARED LIBRARIES**: ALWAYS use `testing_mcp/lib/` utilities - NEVER reimplement test infrastructure.
 **FREE-FORM INPUT**: Accept natural language like "for this PR make sure the equipment logic works".
+
+## 🔧 MANDATORY: USE SHARED LIBRARY UTILITIES
+
+**⚠️ CRITICAL RULE**: ALWAYS use functions from `testing_mcp/lib/` - NEVER reimplement them.
+
+### Available Shared Utilities
+
+| Module | Functions | Purpose |
+|--------|-----------|---------|
+| **`lib/evidence_utils.py`** | `get_evidence_dir(test_name)` | Get `/tmp/<repo>/<branch>/<test_name>` path |
+| | `capture_provenance(base_url, server_pid=None)` | Capture git + server provenance |
+| | `save_evidence(evidence_dir, data, filename)` | Save with SHA256 checksum |
+| | `write_with_checksum(path, content)` | Write file with checksum |
+| | `create_evidence_bundle(evidence_dir, ...)` | Create complete evidence bundle |
+| | `save_request_responses(evidence_dir, pairs)` | Save request/response JSONL |
+| **`lib/mcp_client.py`** | `MCPClient(base_url, timeout)` | MCP JSON-RPC client |
+| | `client.tools_call(tool_name, args)` | Call MCP tool |
+| **`lib/campaign_utils.py`** | `create_campaign(client, user_id, ...)` | Create campaign via MCP |
+| | `process_action(client, user_id, campaign_id, ...)` | Process player action |
+| | `get_campaign_state(client, user_id, campaign_id)` | Get game state |
+| | `ensure_game_state_seed(client, user_id, campaign_id)` | Seed basic game state |
+| **`lib/server_utils.py`** | `start_local_mcp_server(port)` | Start local test server |
+| | `pick_free_port(start)` | Find available port |
+| | `DEFAULT_EVIDENCE_ENV` | Environment vars for evidence capture |
+| **`lib/model_utils.py`** | `settings_for_model(model_id)` | Get model-specific settings |
+| | `update_user_settings(client, user_id, settings)` | Update user model settings |
+| **`lib/narrative_validation.py`** | `validate_narrative_quality(narrative)` | Validate narrative structure |
+| | `extract_dice_notation(text)` | Extract dice rolls from text |
+
+### Required Import Pattern
+
+```python
+#!/usr/bin/env python3
+"""Generated test - uses shared lib utilities."""
+import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# ✅ MANDATORY: Import from shared libraries
+from testing_mcp.lib.evidence_utils import (
+    capture_provenance,
+    get_evidence_dir,
+    save_evidence,
+    create_evidence_bundle,
+)
+from testing_mcp.lib.mcp_client import MCPClient
+from testing_mcp.lib.campaign_utils import create_campaign, process_action
+from testing_mcp.lib.model_utils import settings_for_model, update_user_settings
+
+# ❌ NEVER reimplement these functions in the test file
+```
+
+### What You MUST NOT Reimplement
+
+**❌ FORBIDDEN - These already exist in `lib/`:**
+- `def capture_provenance()` → Use `lib/evidence_utils.capture_provenance()`
+- `def get_evidence_dir()` → Use `lib/evidence_utils.get_evidence_dir()`
+- `def save_evidence()` → Use `lib/evidence_utils.save_evidence()`
+- `def write_with_checksum()` → Use `lib/evidence_utils.write_with_checksum()`
+- `def create_campaign()` → Use `lib/campaign_utils.create_campaign()`
+- `def process_action()` → Use `lib/campaign_utils.process_action()`
+- Custom MCP client code → Use `lib/mcp_client.MCPClient`
+
+**✅ REQUIRED Pattern:**
+```python
+# Get evidence directory
+evidence_dir = get_evidence_dir("my_test_name")
+
+# Capture provenance
+provenance = capture_provenance(base_url="http://localhost:8001")
+
+# Create campaign
+client = MCPClient(base_url)
+campaign_id = create_campaign(
+    client,
+    user_id="test-user",
+    title="Test Campaign",
+)
+
+# Process action
+response = process_action(
+    client,
+    user_id="test-user",
+    campaign_id=campaign_id,
+    user_input="I attack the goblin",
+)
+
+# Save evidence
+save_evidence(evidence_dir, test_results, "results.json")
+```
+
+**Benefits of Using Shared Libraries:**
+1. **Automatic standards compliance** - Evidence follows `.claude/skills/evidence-standards.md`
+2. **Zero maintenance burden** - Updates benefit all tests automatically
+3. **Consistent behavior** - All tests use identical evidence structure
+4. **Reduced duplication** - No need to copy/paste utility code
+5. **Single source of truth** - Centralized in `testing_mcp/lib/`
 
 ## 📁 OUTPUT LOCATIONS
 
@@ -68,322 +167,106 @@ REAL MODE ONLY - No mocks, no test mode
 Evidence standards: .claude/skills/evidence-standards.md
 """
 import argparse
-import hashlib
 import json
 import os
-import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# ✅ MANDATORY: Use shared library utilities
+from testing_mcp.lib.evidence_utils import (
+    capture_provenance,
+    create_evidence_bundle,
+    get_evidence_dir,
+    save_evidence,
+)
+from testing_mcp.lib.mcp_client import MCPClient
+from testing_mcp.lib.campaign_utils import create_campaign, process_action
+from testing_mcp.lib.model_utils import settings_for_model, update_user_settings
 
 # Test configuration
 SERVER_URL = "http://localhost:8082"  # Real local server
 WORK_NAME = "[work_name]"
 DEFAULT_MODEL = "gemini-3-flash-preview"  # Pin model to avoid fallback noise
-EVIDENCE_FORMAT_VERSION = "1.1.0"  # Bundle format version
 
 
-def get_next_iteration(work_dir: Path) -> tuple[int, Path]:
-    """Get next iteration number and create directory with 'latest' symlink."""
-    import re
-    import shutil
-    work_dir.mkdir(parents=True, exist_ok=True)
-
-    existing = []
-    for entry in work_dir.iterdir():
-        if entry.is_dir() and entry.name.startswith("iteration_"):
-            match = re.match(r"iteration_(\d+)", entry.name)
-            if match:
-                existing.append(int(match.group(1)))
-
-    next_num = max(existing) + 1 if existing else 1
-    iteration_dir = work_dir / f"iteration_{next_num:03d}"
-    iteration_dir.mkdir(parents=True, exist_ok=True)
-
-    # Update 'latest' symlink
-    latest_link = work_dir / "latest"
-    if latest_link.is_symlink():
-        latest_link.unlink()
-    elif latest_link.exists():
-        if latest_link.is_dir():
-            shutil.rmtree(latest_link)
-        else:
-            latest_link.unlink()
-    latest_link.symlink_to(iteration_dir.name)
-
-    return next_num, iteration_dir
+# ❌ REMOVED: get_next_iteration() - use lib/evidence_utils.get_evidence_dir() instead
+# ❌ REMOVED: get_evidence_dir() - use lib/evidence_utils.get_evidence_dir() instead
+# ❌ REMOVED: capture_git_provenance() - use lib/evidence_utils.capture_provenance() instead
+# ❌ REMOVED: write_with_checksum() - use lib/evidence_utils.write_with_checksum() instead
+# ❌ REMOVED: save_evidence() - use lib/evidence_utils.create_evidence_bundle() instead
 
 
-def get_evidence_dir(work_name: str) -> tuple[Path, int, str]:
-    """Create versioned evidence directory with iteration tracking.
+def run_tests(server_url: str) -> list:
+    """Run actual tests against real server - implement test logic here."""
+    client = MCPClient(server_url)
+    user_id = f"test-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
-    Returns: (evidence_dir, iteration_num, run_id)
-    """
-    try:
-        repo = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"], stderr=subprocess.STDOUT
-        ).decode().strip()
-        repo_name = os.path.basename(repo)
-        branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.STDOUT
-        ).decode().strip()
-    except FileNotFoundError as exc:
-        raise RuntimeError(
-            "Git not found in PATH. Ensure git is installed and available."
-        ) from exc
-    except subprocess.CalledProcessError as exc:
-        output = exc.output.decode().strip() if exc.output else str(exc)
-        raise RuntimeError(
-            f"Failed to read git repository info: {output or 'unknown git error'}"
-        ) from exc
-
-    work_dir = Path(f"/tmp/{repo_name}/{branch}/{work_name}")
-    iteration_num, evidence_dir = get_next_iteration(work_dir)
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    run_id = f"{work_name}-{iteration_num:03d}-{timestamp}"
-
-    (evidence_dir / "artifacts").mkdir(exist_ok=True)
-    return evidence_dir, iteration_num, run_id
-
-
-def capture_git_provenance() -> dict:
-    """Capture git state for evidence."""
-    git_info = {
-        "head_commit": None,
-        "branch": None,
-        "origin_main": None,
-        "changed_files": [],
-        "errors": [],
-    }
-
-    def _run_git(cmd):
-        try:
-            return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode().strip()
-        except FileNotFoundError as exc:
-            raise RuntimeError(
-                "Git not found in PATH. Ensure git is installed and available."
-            ) from exc
-        except subprocess.CalledProcessError as exc:
-            message = exc.output.decode().strip() if exc.output else str(exc)
-            git_info["errors"].append({"cmd": " ".join(cmd), "error": message})
-            return None
-
-    git_info["head_commit"] = _run_git(["git", "rev-parse", "HEAD"])
-    git_info["branch"] = _run_git(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    git_info["origin_main"] = _run_git(["git", "rev-parse", "origin/main"])
-
-    changed_raw = _run_git(["git", "diff", "--name-only", "origin/main...HEAD"])
-    git_info["changed_files"] = [f for f in changed_raw.split("\n") if f] if changed_raw else []
-
-    if not git_info["errors"]:
-        git_info.pop("errors")
-    return git_info
-
-
-def write_with_checksum(path: Path, content: str):
-    """Write file and generate SHA256 checksum."""
-    path.write_text(content)
-    sha256 = hashlib.sha256(content.encode()).hexdigest()
-    checksum_path = Path(str(path) + ".sha256")
-    # Intentionally use only the base filename in the checksum content to match
-    # standard `sha256sum` output format: "{sha256}  {filename}\n".
-    checksum_path.write_text(f"{sha256}  {path.name}\n")
-
-
-def save_evidence(
-    results,
-    git_info,
-    server_url,
-    evidence_dir: Path,
-    work_name: str,
-    collection_iso: str,
-    iteration_num: int,
-    run_id: str,
-):
-    """Write evidence files with versioning (no external dependencies)."""
-    # If copying artifacts into evidence_dir, strip any pre-existing .sha256 files
-    # before generating new bundle-level checksums.
-    # Methodology: derive from actual environment
-    dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
-    methodology = f"""# Test Methodology
-
-## Environment
-- Server: {server_url}
-- WORLDAI_DEV_MODE: {dev_mode}
-- Timestamp: {collection_iso}
-
-## Git Provenance
-- HEAD: {git_info.get('head_commit') or 'unknown'}
-- Branch: {git_info.get('branch') or 'unknown'}
-- origin/main: {git_info.get('origin_main') or 'unknown'}
-
-## Test Scope
-[Generated from actual test execution]
-"""
-
-    # Evidence: derive from actual results
-    passed = sum(1 for r in results if r.passed)
-    total = len(results)
-    evidence = f"""# Evidence Summary
-
-## Results: {passed}/{total} PASS
-
-| Test | Status | Details |
-|------|--------|---------|
-"""
-    for r in results:
-        status = "✅ PASS" if r.passed else "❌ FAIL"
-        evidence += f"| {r.name} | {status} | {r.details} |\n"
-
-    # Notes: track warnings and follow-ups derived from actual results
-    warnings = []
-    follow_ups = []
-    failed_tests = [r for r in results if not r.passed]
-    if failed_tests:
-        warnings.append(f"{len(failed_tests)} test(s) failed")
-        follow_ups.append("Review failed test logs for root cause analysis")
-
-    warnings_str = "\n".join(f"- {w}" for w in warnings) if warnings else "(none)"
-    followups_str = "\n".join(f"- {f}" for f in follow_ups) if follow_ups else "(none)"
-
-    notes = f"""# Notes
-
-## Warnings
-{warnings_str}
-
-## Follow-ups
-{followups_str}
-"""
-
-    # Run.json - MUST include scenarios array
-    run_data = {
-        "scenarios": [
-            {
-                "name": r.name,
-                "campaign_id": getattr(r, 'campaign_id', None),
-                "passed": r.passed,
-                "errors": getattr(r, 'errors', []),
-            }
-            for r in results
-        ],
-        "test_result": {
-            "passed": passed,
-            "total": total,
-        }
-    }
-
-    # Metadata JSON
-    clean_git_info = dict(git_info)
-    changed_files = clean_git_info.get("changed_files")
-    if isinstance(changed_files, list):
-        clean_git_info["changed_files"] = [f for f in changed_files if f]
-
-    metadata = {
-        "test_name": work_name,
-        "run_id": run_id,
-        "iteration": iteration_num,
-        "bundle_version": EVIDENCE_FORMAT_VERSION,
-        "timestamp": collection_iso,
-        "git_provenance": clean_git_info,
-        "server_url": server_url,
-        "results_summary": {"passed": passed, "total": total}
-    }
-
-    repo_name = evidence_dir.parts[2] if len(evidence_dir.parts) > 2 else "unknown repo"
-
-    readme = f"""# Evidence Package Manifest
-
-- Repository: {repo_name}
-- Branch: {clean_git_info.get('branch') or 'unknown'}
-- Run ID: {run_id}
-- Iteration: {iteration_num}
-- Bundle Version: {EVIDENCE_FORMAT_VERSION}
-- Head Commit: {clean_git_info.get('head_commit') or 'unknown'}
-- Origin/Main: {clean_git_info.get('origin_main') or 'unknown'}
-- Server: {server_url}
-- Work Name: {work_name}
-- Collected At (UTC): {collection_iso}
-
-All files in this directory were generated directly by the test run and include
-per-file SHA256 checksums for integrity verification.
-"""
-
-    # Write all files with checksums
-    write_with_checksum(evidence_dir / "README.md", readme)
-    write_with_checksum(evidence_dir / "methodology.md", methodology)
-    write_with_checksum(evidence_dir / "evidence.md", evidence)
-    write_with_checksum(evidence_dir / "notes.md", notes)
-    write_with_checksum(
-        evidence_dir / "run.json",
-        json.dumps(run_data, indent=2)
-    )
-    write_with_checksum(
-        evidence_dir / "metadata.json",
-        json.dumps(metadata, indent=2)
+    # Pin model to avoid fallback noise
+    update_user_settings(
+        client,
+        user_id=user_id,
+        settings=settings_for_model(DEFAULT_MODEL),
     )
 
-    print(f"📦 Evidence bundle created: {evidence_dir}")
-    print(f"   Run ID: {run_id}")
-    print(f"   Iteration: {iteration_num}")
-    print(f"   Bundle Version: {EVIDENCE_FORMAT_VERSION}")
+    # Test implementation - example
+    results = []
+    campaign_id = create_campaign(
+        client,
+        user_id=user_id,
+        title="Test Campaign",
+    )
+
+    response = process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input="I attack the goblin",
+    )
+
+    # Validate response and record result
+    passed = "narrative" in response and response["narrative"]
+    errors = [] if passed else ["Failed to process action"]
+    results.append({
+        "name": "basic_action",
+        "passed": passed,
+        "errors": errors,
+        "campaign_id": campaign_id,
+        "details": "Action processed successfully" if passed else "Failed to process action",
+    })
+
+    return results
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", default=SERVER_URL)
     parser.add_argument("--save-evidence", action="store_true",
-                        help="Save evidence to /tmp structure with iteration tracking")
+                        help="Save evidence to /tmp structure")
     parser.add_argument("--work-name", default=WORK_NAME)
     args = parser.parse_args()
-
-    # Capture a synchronized timestamp for metadata
-    collection_dt = datetime.now(timezone.utc)
-    collection_iso = collection_dt.isoformat()
 
     # Run tests against REAL server
     results = run_tests(args.server)
 
     if args.save_evidence:
-        # Generate evidence directly (no external dependencies)
-        try:
-            git_info = capture_git_provenance()
-        except Exception as exc:
-            print(f"Warning: failed to capture git provenance: {exc}")
-            git_info = {
-                "head_commit": None,
-                "branch": None,
-                "origin_main": None,
-                "changed_files": [],
-                "errors": [
-                    {"stage": "git_provenance_capture", "error": str(exc)}
-                ],
-            }
-        try:
-            evidence_dir, iteration_num, run_id = get_evidence_dir(args.work_name)
-        except Exception as exc:
-            print(
-                "Warning: failed to derive evidence directory from git context; "
-                "using fallback path"
-            )
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-            evidence_dir = Path(f"/tmp/unknown/{args.work_name}/iteration_001")
-            evidence_dir.mkdir(parents=True, exist_ok=True)
-            (evidence_dir / "artifacts").mkdir(exist_ok=True)
-            iteration_num = 1
-            run_id = f"{args.work_name}-001-{timestamp}"
-            git_info.setdefault("errors", []).append(
-                {"stage": "get_evidence_dir", "error": str(exc)}
-            )
-        save_evidence(
-            results,
-            git_info,
-            args.server,
-            evidence_dir,
-            args.work_name,
-            collection_iso,
-            iteration_num,
-            run_id,
+        # ✅ Use lib utilities for evidence generation
+        evidence_dir = get_evidence_dir(args.work_name)
+        provenance = capture_provenance(args.server)
+
+        # Create evidence bundle using shared lib
+        bundle_files = create_evidence_bundle(
+            evidence_dir=evidence_dir,
+            test_name=args.work_name,
+            results={"scenarios": results, "summary": {"total_scenarios": len(results)}},
+            provenance=provenance,
         )
+
+        print(f"📦 Evidence bundle created: {evidence_dir}")
+        print(f"   Files: {len(bundle_files)} with checksums")
 
 
 if __name__ == "__main__":
@@ -457,29 +340,31 @@ if __name__ == "__main__":
 
 Every generated test MUST include:
 
-### 1. Evidence Generation Function
+### 1. Evidence Generation - Use Shared Lib
 ```python
-def save_evidence(
-    results,
-    git_info,
-    server_url,
-    evidence_dir: Path,
-    work_name: str,
-    collection_timestamp: str,
-    collection_iso: str,
-):
-    """Write evidence files directly from ACTUAL test data."""
-    # ✅ Derive from os.environ, not hardcoded
-    dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
+# ❌ FORBIDDEN: Custom evidence generation
+# def save_evidence(...):
+#     """DON'T implement this - it exists in lib/evidence_utils.py"""
 
-    # ✅ Track missing data with warnings
-    missing_items = []
+# ✅ REQUIRED: Use lib utilities
+from testing_mcp.lib.evidence_utils import create_evidence_bundle
 
-    # ✅ Use correct denominators (found/total, not found/min)
-    stats_col = f"{found}/{len(total_items)} (need {min_required})"
+# Generate evidence bundle
+evidence_dir = get_evidence_dir("my_test")
+provenance = capture_provenance(server_url)
 
-    # ✅ Write with checksums
-    write_with_checksum(evidence_dir / "methodology.md", methodology)
+bundle_files = create_evidence_bundle(
+    evidence_dir=evidence_dir,
+    test_name="my_test",
+    results=test_results,
+    provenance=provenance,
+    server_url=server_url,
+)
+# Bundle automatically includes:
+# - README.md, methodology.md, evidence.md, notes.md
+# - run.json with scenarios
+# - metadata.json with git provenance
+# - SHA256 checksums for all files
 ```
 
 ### 2. CLI Arguments for Evidence
@@ -574,29 +459,36 @@ def capture_server_artifacts(evidence_dir: Path, port: int, server_pid: int | No
             pass
 ```
 
-### 7. Git Provenance Capture
+### 7. Git Provenance Capture - Use Shared Lib
 ```python
-def capture_git_provenance():
-    """Capture git state for evidence."""
-    try:
-        changed_raw = subprocess.check_output(
-            ["git", "diff", "--name-only", "origin/main...HEAD"],
-            stderr=subprocess.STDOUT,
-        ).decode()
-        changed_files = [f for f in changed_raw.split("\n") if f]
-        return {
-            "head_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.STDOUT).decode().strip(),
-            "branch": subprocess.check_output(["git", "branch", "--show-current"], stderr=subprocess.STDOUT).decode().strip(),
-            "origin_main": subprocess.check_output(["git", "rev-parse", "origin/main"], stderr=subprocess.STDOUT).decode().strip(),
-            "changed_files": changed_files,
-        }
-    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-        raise RuntimeError(f"Git provenance capture failed: {exc}") from exc
+# ❌ FORBIDDEN: Custom git provenance capture
+# def capture_git_provenance():
+#     """DON'T implement this - it exists in lib/evidence_utils.py"""
+
+# ✅ REQUIRED: Use lib utility
+from testing_mcp.lib.evidence_utils import capture_provenance
+
+# Capture git + server provenance
+provenance = capture_provenance(
+    base_url="http://localhost:8001",
+    server_pid=None,  # Optional - will auto-detect if not provided
+)
+
+# Returns:
+# {
+#     "git_head": "abc123...",
+#     "git_branch": "feature/xyz",
+#     "git_origin_main": "def456...",
+#     "changed_files": ["file1.py", "file2.py"],
+#     "server_url": "http://localhost:8001",
+#     "server_pid": 12345,
+#     "lsof_output": "...",  # What's listening on the port
+#     "ps_output": "...",     # Process info
+# }
 ```
 
-> Wrap git calls in try/except so missing remotes or detached HEADs surface clear
-> errors instead of crashing generation. Always filter empty strings from
-> `changed_files` to avoid `[""]` payloads.
+> The shared lib version handles missing remotes, detached HEADs, and filters empty
+> strings from changed_files automatically. It also captures server runtime state.
 
 ## 🚨 EVIDENCE STANDARDS COMPLIANCE
 

@@ -42,16 +42,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib import MCPClient
 from lib.campaign_utils import create_campaign, process_action, get_campaign_state
+from lib.evidence_utils import capture_provenance, get_evidence_dir
 
 # Configuration
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
 USER_ID = f"e2e-living-world-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/tmp/living_world_e2e")  # noqa: S108
+run_id = datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
+OUTPUT_DIR = str(get_evidence_dir("living_world_e2e", run_id=run_id))  # noqa: S108
 STRICT_MODE = os.getenv("STRICT_MODE", "false").lower() == "true"
 REQUIRE_STRUCTURED = os.getenv("REQUIRE_STRUCTURED", "false").lower() == "true"
 GIT_CMD = shutil.which("git") or "git"
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 ARTIFACTS_DIR = os.path.join(OUTPUT_DIR, "artifacts")
 os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 LOG_FILE = os.path.join(OUTPUT_DIR, "collection_log.txt")
@@ -107,29 +108,6 @@ def run_cmd(cmd: list[str], timeout: int = 10) -> dict:
         log(f"Command failed: {e}")
         return {"command": cmd, "error": str(e)}
 
-
-def capture_provenance() -> dict:
-    """Capture git and environment provenance."""
-    provenance: dict[str, Any] = {"commands": []}
-    toplevel = run_cmd([GIT_CMD, "rev-parse", "--show-toplevel"])
-    head = run_cmd([GIT_CMD, "rev-parse", "HEAD"])
-    branch = run_cmd([GIT_CMD, "branch", "--show-current"])
-    origin = run_cmd([GIT_CMD, "rev-parse", "origin/main"])
-    diff = run_cmd([GIT_CMD, "diff", "--name-only", "origin/main...HEAD"])
-    status = run_cmd([GIT_CMD, "status", "--porcelain"])
-    provenance["commands"].extend([toplevel, head, branch, origin, diff, status])
-    provenance["git_head"] = (head.get("stdout") or "").strip()
-    provenance["git_branch"] = (branch.get("stdout") or "").strip()
-    provenance["origin_main"] = (origin.get("stdout") or "").strip()
-    provenance["diff_files"] = (diff.get("stdout") or "").splitlines()
-    provenance["status_porcelain"] = (status.get("stdout") or "").splitlines()
-
-    provenance["env"] = {
-        "BASE_URL": BASE_URL,
-        "STRICT_MODE": STRICT_MODE,
-        "REQUIRE_STRUCTURED": REQUIRE_STRUCTURED,
-    }
-    return provenance
 
 
 def fetch_health() -> dict:
@@ -405,7 +383,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         "base_url": BASE_URL,
         "user_id": USER_ID,
         "strict_mode": STRICT_MODE,
-        "provenance": capture_provenance(),
+        "provenance": capture_provenance(BASE_URL),
         "artifacts_dir": ARTIFACTS_DIR,
         "collection_log": LOG_FILE,
         "steps": [],

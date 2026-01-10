@@ -55,6 +55,7 @@ from lib.model_utils import (
     update_user_settings,
 )
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
+from lib.evidence_utils import get_evidence_dir, save_evidence as save_evidence_lib
 
 # =============================================================================
 # CHARACTER SETUP - Military commander with known force composition
@@ -404,7 +405,7 @@ def save_evidence(
     validation_errors: list[str],
     evidence_dir: Path,
 ) -> None:
-    """Save test evidence to disk."""
+    """Save test evidence to disk with checksums."""
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
@@ -417,7 +418,7 @@ def save_evidence(
         .replace("/", "-")
     )[:60]
 
-    evidence_file = evidence_dir / f"{timestamp}_{safe_model}_{safe_scenario}.json"
+    filename = f"{timestamp}_{safe_model}_{safe_scenario}.json"
 
     evidence = {
         "timestamp": timestamp,
@@ -436,10 +437,10 @@ def save_evidence(
         "prompt_fingerprint": get_prompt_fingerprint(),
     }
 
-    with open(evidence_file, "w") as f:
-        json.dump(evidence, f, indent=2, default=str)
+    # Use lib function to save with checksum
+    save_evidence_lib(evidence_dir, evidence, filename)
+    print(f"  📁 Evidence saved: {filename}")
 
-    print(f"  📁 Evidence saved: {evidence_file.name}")
 
 
 def run_force_count_tests(
@@ -619,7 +620,7 @@ def main() -> int:  # noqa: PLR0915 - orchestration CLI naturally long
         # Setup evidence directory if requested
         evidence_dir = None
         if args.evidence:
-            evidence_dir = Path(__file__).parent / "evidence" / "force_count"
+            evidence_dir = get_evidence_dir("force_count")
             evidence_dir.mkdir(parents=True, exist_ok=True)
             print(f"📁 Evidence directory: {evidence_dir}\n")
 

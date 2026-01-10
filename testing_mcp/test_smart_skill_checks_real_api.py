@@ -38,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from lib import MCPClient
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 from lib.model_utils import DEFAULT_MODEL_MATRIX, settings_for_model, update_user_settings
-from lib.evidence_utils import get_evidence_dir
+from lib.evidence_utils import get_evidence_dir, save_evidence as save_evidence_lib
 
 # CRITICAL: These scenarios have NO combat keywords and NO explicit "Make a check" language
 # The LLM must intelligently decide a skill check is needed
@@ -213,14 +213,14 @@ def save_evidence(
     validation_errors: list[str],
     evidence_dir: Path,
 ) -> None:
-    """Save test evidence to disk."""
+    """Save test evidence to disk with checksums."""
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_model = model_id.replace("/", "-").replace(":", "-")
     safe_scenario = scenario_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
 
-    evidence_file = evidence_dir / f"{timestamp}_{safe_model}_{safe_scenario}.json"
+    filename = f"{timestamp}_{safe_model}_{safe_scenario}.json"
 
     evidence = {
         "timestamp": timestamp,
@@ -234,10 +234,10 @@ def save_evidence(
         "narrative": result.get("narrative", ""),
     }
 
-    with open(evidence_file, "w") as f:
-        json.dump(evidence, f, indent=2, default=str)
+    # Use lib function to save with checksum
+    save_evidence_lib(evidence_dir, evidence, filename)
+    print(f"  📁 Evidence saved: {filename}")
 
-    print(f"  📁 Evidence saved: {evidence_file.name}")
 
 
 def main() -> int:

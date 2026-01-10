@@ -26,14 +26,15 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import pathlib
 import re
 import shutil
 import subprocess
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
@@ -94,7 +95,7 @@ def _generate_run_id(test_name: str, iteration: int) -> str:
     Returns:
         Unique run ID string.
     """
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
     return f"{test_name}-{iteration:03d}-{timestamp}"
 
 
@@ -141,12 +142,19 @@ def capture_git_provenance(fetch_origin: bool = True) -> dict[str, Any]:
     provenance: dict[str, Any] = {"working_directory": str(PROJECT_ROOT)}
     try:
         if fetch_origin:
-            subprocess.run(
+            fetch = subprocess.run(
                 ["git", "fetch", "origin", "main"],
+                check=False,
                 cwd=str(PROJECT_ROOT),
                 timeout=10,
                 capture_output=True,
+                text=True,
             )
+            provenance["git_fetch_origin_main"] = {
+                "returncode": fetch.returncode,
+                "stdout": (fetch.stdout or "").strip() or None,
+                "stderr": (fetch.stderr or "").strip() or None,
+            }
         provenance["git_head"] = subprocess.check_output(
             ["git", "rev-parse", "HEAD"],
             cwd=str(PROJECT_ROOT),
@@ -244,20 +252,20 @@ def capture_server_health(server_url: str) -> dict[str, Any]:
                 "url": health_url,
                 "status_code": response.status,
                 "response": data,
-                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "captured_at": datetime.now(UTC).isoformat(),
             }
     except urllib.error.HTTPError as e:
         return {
             "url": health_url,
             "status_code": e.code,
             "error": str(e),
-            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "captured_at": datetime.now(UTC).isoformat(),
         }
     except Exception as e:
         return {
             "url": health_url,
             "error": str(e),
-            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "captured_at": datetime.now(UTC).isoformat(),
         }
 
 
@@ -269,7 +277,7 @@ def capture_full_provenance(
 ) -> dict[str, Any]:
     """Capture full provenance including git + server + health."""
     return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "git": capture_git_provenance(fetch_origin=fetch_origin),
         "server": capture_server_runtime(port),
         "health": capture_server_health(base_url),
@@ -308,12 +316,19 @@ def capture_provenance(
 
     # Git provenance
     try:
-        subprocess.run(
+        fetch = subprocess.run(
             ["git", "fetch", "origin", "main"],
+            check=False,
             cwd=str(PROJECT_ROOT),
             timeout=10,
             capture_output=True,
+            text=True,
         )
+        provenance["git_fetch_origin_main"] = {
+            "returncode": fetch.returncode,
+            "stdout": (fetch.stdout or "").strip() or None,
+            "stderr": (fetch.stderr or "").strip() or None,
+        }
         provenance["git_head"] = subprocess.check_output(
             ["git", "rev-parse", "HEAD"],
             cwd=str(PROJECT_ROOT),
@@ -374,7 +389,6 @@ def capture_provenance(
             env_vars[var] = f"[SET - {len(value)} chars]"
         elif value and "CREDENTIALS" in var:
             # For credential files, show filename only (not full path) for evidence traceability
-            import pathlib
             env_vars[var] = f"[SET - file:{pathlib.Path(value).name}]"
         else:
             env_vars[var] = value
@@ -419,7 +433,7 @@ def capture_provenance(
             pass
 
     # Use UTC timestamp with timezone for consistency
-    provenance["timestamp"] = datetime.now(timezone.utc).isoformat()
+    provenance["timestamp"] = datetime.now(UTC).isoformat()
 
     return provenance
 
@@ -566,7 +580,7 @@ def create_evidence_bundle(
     artifacts_dir = actual_evidence_dir / "artifacts"
     artifacts_dir.mkdir(exist_ok=True)
 
-    bundle_timestamp = datetime.now(timezone.utc).isoformat()
+    bundle_timestamp = datetime.now(UTC).isoformat()
     files: dict[str, Path] = {}
 
     # 1. README.md - Package manifest
@@ -690,6 +704,52 @@ Test scenarios validate that:
             else:
                 errors = [f"Invalid step data type: {type(step_data).__name__}"]
             scenarios.append({"name": step_name, "errors": errors})
+
+    # Normalize scenarios for evidence reporting.
+    # Canonical scenario schema is {"name": str, "errors": list[str], ...}.
+    # For backward compatibility, also accept {"passed": bool} or {"success": bool}.
+    normalized_scenarios: list[dict[str, Any]] = []
+    for scenario in scenarios:
+        if not isinstance(scenario, dict):
+            normalized_scenarios.append(
+                {
+                    "name": str(scenario),
+                    "errors": [f"Invalid scenario type: {type(scenario).__name__}"],
+                }
+            )
+            continue
+
+        if "errors" in scenario:
+            errors_val = scenario.get("errors")
+            if errors_val is None:
+                scenario["errors"] = []
+            elif not isinstance(errors_val, list):
+                scenario["errors"] = [str(errors_val)]
+        else:
+            passed_flag: bool | None = None
+            if "passed" in scenario:
+                passed_flag = bool(scenario.get("passed"))
+            elif "success" in scenario:
+                passed_flag = bool(scenario.get("success"))
+
+            if passed_flag is True:
+                scenario["errors"] = []
+            elif passed_flag is False:
+                msg = (
+                    scenario.get("details")
+                    or scenario.get("error")
+                    or scenario.get("error_message")
+                    or "Scenario failed"
+                )
+                scenario["errors"] = [msg] if isinstance(msg, str) else ["Scenario failed"]
+            else:
+                scenario["errors"] = [
+                    "Missing 'errors' and no pass/fail flag ('passed' or 'success') provided"
+                ]
+
+        normalized_scenarios.append(scenario)
+
+    scenarios = normalized_scenarios
     passed = sum(1 for s in scenarios if not s.get("errors"))
     failed = len(scenarios) - passed
 
@@ -774,7 +834,7 @@ the raw narrative validation missed. See `errors` in individual scenario files.
         if scenario.get("relationship_updates"):
             evidence_content += f"- **Relationship Updates:** {list(scenario['relationship_updates'].keys())}\n"
         if scenario.get("reputation_updates"):
-            evidence_content += f"- **Reputation Updates:** Yes\n"
+            evidence_content += "- **Reputation Updates:** Yes\n"
 
     # Handle both nested (capture_full_provenance) and flat (capture_provenance) structures
     git_head = 'unknown'

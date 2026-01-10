@@ -35,6 +35,8 @@ from lib.evidence_utils import (
     capture_server_runtime,
     capture_server_health,
     get_evidence_dir,
+    save_evidence as save_evidence_lib,
+    save_request_responses,
     write_with_checksum,
 )
 import hashlib
@@ -52,6 +54,7 @@ def _write_checksum_for_file(filepath: Path) -> None:
 _evidence_dir: Path | None = None
 _git_provenance: dict[str, Any] | None = None
 _server_info: dict[str, Any] | None = None
+_captured_requests: list[dict[str, Any]] = []
 
 
 def setup_world_time_with_god_mode(
@@ -358,11 +361,9 @@ def save_evidence(
     }
 
     # Write with checksum per evidence-standards.md
-    filepath = _evidence_dir / filename
-    write_with_checksum(filepath, json.dumps(evidence, indent=2))
+    save_evidence_lib(_evidence_dir, evidence, filename)
 
     # Also append to request_responses.jsonl for complete request/response pairs
-    jsonl_path = _evidence_dir / "request_responses.jsonl"
     jsonl_entry = {
         "timestamp": timestamp,
         "scenario": scenario,
@@ -377,8 +378,7 @@ def save_evidence(
             "god_mode_response": response.get("god_mode_response", ""),
         },
     }
-    with open(jsonl_path, "a") as f:
-        f.write(json.dumps(jsonl_entry) + "\n")
+    _captured_requests.append(jsonl_entry)
 
 
 def main() -> int:
@@ -493,12 +493,13 @@ def main() -> int:
             return 2
 
     finally:
-        # Generate checksums for evidence files before cleanup
-        if _evidence_dir:
-            jsonl_path = _evidence_dir / "request_responses.jsonl"
-            if jsonl_path.exists():
-                _write_checksum_for_file(jsonl_path)
-                print(f"📋 JSONL checksum: {jsonl_path}.sha256")
+        # Save accumulated request/response pairs
+        if _evidence_dir and _captured_requests:
+            try:
+                save_request_responses(_evidence_dir, _captured_requests)
+                print(f"📋 Captured {len(_captured_requests)} request/response pairs")
+            except Exception as exc:
+                print(f"⚠️ Failed to write request_responses.jsonl: {exc}")
 
         if local is not None:
             # Copy server logs to artifacts/ before stopping

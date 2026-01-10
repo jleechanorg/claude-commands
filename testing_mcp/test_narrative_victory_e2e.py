@@ -29,40 +29,15 @@ import requests
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
+from testing_mcp.lib.evidence_utils import capture_provenance, get_evidence_dir
 
-
-def get_output_dir() -> str:
-    """Get output directory following evidence-standards.md pattern."""
-    if os.getenv("OUTPUT_DIR"):
-        return os.getenv("OUTPUT_DIR")
-
-    try:
-        repo_root = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"], text=True, timeout=5
-        ).strip()
-        repo_name = Path(repo_root).name
-    except Exception:
-        repo_name = "worldarchitect.ai"
-
-    try:
-        branch = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip().replace("/", "_")
-    except Exception:
-        branch = "unknown"
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path("/tmp") / repo_name / branch / "narrative_victory_e2e" / timestamp
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return str(output_dir)
 
 
 # Configuration
 BASE_URL = get_base_url()  # Uses worktree-specific port
 USER_ID = f"e2e-narrative-victory-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = get_output_dir()
+OUTPUT_DIR = str(get_evidence_dir("narrative_victory_e2e"))
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Global list to collect raw MCP responses for evidence
 RAW_MCP_RESPONSES: list[dict] = []
@@ -73,29 +48,6 @@ def log(msg: str) -> None:
     ts = datetime.now(timezone.utc).isoformat()
     print(f"[{ts}] {msg}")
 
-
-def capture_provenance() -> dict:
-    """Capture git and environment provenance."""
-    provenance = {}
-    try:
-        provenance["git_head"] = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, timeout=5
-        ).strip()
-        provenance["git_branch"] = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-        # Capture diff from origin/main for evidence
-        provenance["diff_from_main"] = subprocess.check_output(
-            ["git", "diff", "--stat", "origin/main...HEAD"], text=True, timeout=10
-        ).strip()
-    except Exception as e:
-        provenance["git_error"] = str(e)
-
-    provenance["env"] = {
-        "BASE_URL": BASE_URL,
-        "USER_ID": USER_ID,
-    }
-    return provenance
 
 
 def mcp_call(method: str, params: dict, timeout: int = 180) -> dict:
@@ -155,7 +107,7 @@ def main():
         "base_url": BASE_URL,
         "user_id": USER_ID,
         "output_dir": OUTPUT_DIR,
-        "provenance": capture_provenance(),
+        "provenance": capture_provenance(BASE_URL),
         "scenarios": {},
         "summary": {},
     }

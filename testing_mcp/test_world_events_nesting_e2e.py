@@ -29,12 +29,12 @@ from typing import Any
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
+from testing_mcp.lib.evidence_utils import get_evidence_dir
 
 # Configuration - prefer local, fall back to dev
 LOCAL_URL = "http://localhost:8001"
 DEV_URL = "https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app"
-OUTPUT_DIR = Path("/tmp/world_events_nesting_e2e")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR = get_evidence_dir("world_events_nesting_e2e")
 
 
 def check_server(url: str) -> bool:

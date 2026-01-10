@@ -34,14 +34,13 @@ from pathlib import Path
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from testing_mcp.dev_server import ensure_server_running, get_base_url
+from testing_mcp.lib.evidence_utils import capture_provenance, get_evidence_dir, save_evidence
 
 # Configuration
 BASE_URL = get_base_url()  # Uses worktree-specific port
 USER_ID = f"e2e-prompted-arc-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = "/tmp/arc_milestones_prompted_e2e"
+OUTPUT_DIR = str(get_evidence_dir("arc_completion_e2e"))
 STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
-
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 def extract_arc_milestones(game_state: dict) -> dict:
@@ -59,32 +58,6 @@ def log(msg: str) -> None:
     """Log with timestamp."""
     ts = datetime.now(timezone.utc).isoformat()
     print(f"[{ts}] {msg}")
-
-
-def capture_provenance() -> dict:
-    """Capture git and environment provenance."""
-    provenance = {}
-    try:
-        provenance["git_head"] = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, timeout=5
-        ).strip()
-        provenance["git_branch"] = subprocess.check_output(
-            ["git", "branch", "--show-current"], text=True, timeout=5
-        ).strip()
-        provenance["git_status"] = subprocess.check_output(
-            ["git", "status", "-sb"], text=True, timeout=5
-        ).strip()
-        provenance["git_origin_main"] = subprocess.check_output(
-            ["git", "rev-parse", "origin/main"], text=True, timeout=5
-        ).strip()
-    except Exception as e:
-        provenance["git_error"] = str(e)
-
-    provenance["env"] = {
-        "BASE_URL": BASE_URL,
-        "STRICT_MODE": STRICT_MODE,
-    }
-    return provenance
 
 
 def normalize_arc_milestones(milestones: dict) -> dict:
@@ -157,7 +130,7 @@ def main():
         "base_url": BASE_URL,
         "user_id": USER_ID,
         "strict_mode": STRICT_MODE,
-        "provenance": capture_provenance(),
+        "provenance": capture_provenance(BASE_URL),
         "steps": [],
         "summary": {}
     }
@@ -360,21 +333,11 @@ def main():
 
 def save_results(results: dict) -> None:
     """Save results to file with checksum."""
-    import hashlib
+    evidence_file, checksum_file = save_evidence(Path(OUTPUT_DIR), results, "prompted_e2e_test.json")
 
-    output_file = os.path.join(OUTPUT_DIR, "prompted_e2e_test.json")
-    with open(output_file, "w") as f:
-        json.dump(results, f, indent=2)
-
-    # Generate checksum
-    with open(output_file, "rb") as f:
-        checksum = hashlib.sha256(f.read()).hexdigest()
-
-    checksum_file = f"{output_file}.sha256"
-    with open(checksum_file, "w") as f:
-        f.write(f"{checksum}  prompted_e2e_test.json\n")
-
-    log(f"\nResults saved to: {output_file}")
+    # Read checksum for logging
+    checksum = checksum_file.read_text().split()[0]
+    log(f"\nResults saved to: {evidence_file}")
     log(f"Checksum: {checksum}")
 
 

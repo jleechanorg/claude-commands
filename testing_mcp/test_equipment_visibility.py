@@ -24,6 +24,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -32,7 +33,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lib import MCPClient
-from lib.evidence_utils import get_evidence_dir
+from lib.evidence_utils import get_evidence_dir, write_with_checksum
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -551,14 +552,6 @@ def validate_scenario(
 # EVIDENCE FILE HELPERS
 # ============================================================================
 
-def write_with_checksum(path: Path, content: str) -> None:
-    """Write a file and create a separate checksum file."""
-    path.write_text(content)
-    checksum = hashlib.sha256(content.encode()).hexdigest()
-    checksum_path = Path(str(path) + ".sha256")
-    checksum_path.write_text(f"{checksum}  {path.name}\n")
-
-
 def save_evidence_bundle(evidence_dir: Path, bundle: EvidenceBundle) -> Path:
     """Save evidence bundle with checksums."""
     timestamp = bundle.timestamp.replace(":", "").replace("-", "").replace(".", "_")
@@ -1023,7 +1016,6 @@ def main() -> int:
 
     if args.savetmp:
         # Write temp files for savetmp input
-        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
 
