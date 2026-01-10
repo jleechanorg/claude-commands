@@ -124,10 +124,10 @@ automation-safety-cli clear
 # Required
 export GITHUB_TOKEN="your_github_token_here"
 
-# Optional - Safety Limits
-export AUTOMATION_PR_LIMIT=10          # Max attempts per PR (default: 10)
-export AUTOMATION_GLOBAL_LIMIT=50      # Max global runs (default: 50)
-export AUTOMATION_APPROVAL_HOURS=24    # Approval expiry (default: 24)
+# Safety limits (defaults shown). Override via CLI flags (not environment variables):
+# - jleechanorg-pr-monitor --pr-limit 10 --global-limit 50 --approval-hours 24
+# - jleechanorg-pr-monitor --pr-automation-limit 10 --fix-comment-limit 10 --fixpr-limit 10
+# Or persist via `automation-safety-cli` which writes `automation_safety_config.json` in the safety data dir.
 
 # Optional - Email Notifications
 export SMTP_SERVER="smtp.gmail.com"
@@ -255,7 +255,7 @@ jleechanorg-pr-monitor --fixpr --dry-run
 
 ```bash
 # Monitor and fix in one command
-jleechanorg-pr-monitor --fixpr --max-prs 5 --agent-cli claude
+jleechanorg-pr-monitor --fixpr --max-prs 5 --fixpr-agent claude
 ```
 
 ### Agent CLI Options
@@ -437,8 +437,9 @@ python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
 # Required: Chrome with remote debugging on port 9222
 # (See "Prerequisites" section above)
 
-# Optional: Customize task limit
-export CODEX_TASK_LIMIT=50  # Default: 50
+# Optional: Customize task limit (used by `jleechanorg-pr-monitor --codex-update`)
+# Default: 200 (matches the standard cron entry). Override to keep evidence/test runs fast.
+# Use: `jleechanorg-pr-monitor --codex-update --codex-task-limit 200`
 
 # Optional: Auth state file location
 # Default: ~/.chatgpt_codex_auth_state.json
@@ -607,8 +608,24 @@ Both workflows use `AutomationSafetyManager` for rate limiting:
 
 ### Dual Limits
 
-1. **Per-PR Limit**: Max 10 consecutive attempts per PR
+1. **Per-PR Limit**: Max 10 consecutive attempts per PR (internal safety)
 2. **Global Limit**: Max 50 total automation runs per day
+3. **Workflow-Specific Comment Limits**: Each workflow has its own limit for automation comments per PR (some workflows may not currently post comments, but have limits reserved for future compatibility):
+   - **PR Automation**: 10 comments (default)
+   - **Fix-Comment**: 10 comments (default)
+   - **Codex Update**: 10 comments (default; does not currently post PR comments—limit reserved for future compatibility)
+   - **FixPR**: 10 comments (default)
+
+   These limits prevent one workflow from blocking others. Configure via CLI flags:
+   - `--pr-automation-limit`
+   - `--fix-comment-limit`
+   - `--fixpr-limit`
+
+   **Note**: Workflow comment counting is marker-based:
+   - PR automation comments: `codex-automation-commit`
+   - Fix-comment queued runs: `fix-comment-automation-run` (separate from completion marker)
+   - Fix-comment completion/review requests: `fix-comment-automation-commit`
+   - FixPR queued runs: `fixpr-automation-run`
 
 ### Safety Data Storage
 
@@ -670,11 +687,6 @@ export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
 ### Optional
 
 ```bash
-# Safety limits
-export AUTOMATION_PR_LIMIT=10          # Default: 10
-export AUTOMATION_GLOBAL_LIMIT=50      # Default: 50
-export AUTOMATION_APPROVAL_HOURS=24    # Default: 24
-
 # Workspace configuration
 export PR_AUTOMATION_WORKSPACE="/custom/path"
 

@@ -12,6 +12,7 @@ Execute `.claude/commands/savetmp.py` to archive evidence following `.claude/ski
 - Git provenance capture (HEAD commit, origin/main, changed files)
 - Parallel git command execution for speed
 - Structured `/tmp/<repo>/<branch>/<work>/<timestamp>/` layout
+- Optional validation pass for checksum gaps and portability issues
 
 ## Quick Usage
 
@@ -32,6 +33,8 @@ python .claude/commands/savetmp.py "<work_name>" \
 | `--notes` / `--notes-file` | Additional notes |
 | `--artifact` | Copy file/dir to artifacts/ (repeatable) |
 | `--skip-git` | Skip git commands for faster execution |
+| `--validate` | Run post-package validation (checksums, portability, required files) |
+| `--llm-claims` | Declare LLM/API behavior claims (requires `request_responses.jsonl`) |
 
 ## Output Structure
 

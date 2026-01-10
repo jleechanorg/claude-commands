@@ -4,6 +4,8 @@ A2A-Enhanced Task Dispatcher for Multi-Agent Orchestration
 Handles dynamic agent creation with Agent-to-Agent communication support
 """
 
+from __future__ import annotations
+
 import glob
 import json
 import os
@@ -26,7 +28,7 @@ from .constants import (
 
 A2A_AVAILABLE = True
 
-# Default Gemini model can be overridden via GEMINI_MODEL; prefer gemini-3-pro-preview by default
+# Default Gemini model uses GEMINI_MODEL when set; otherwise gemini-3-pro-preview.
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
@@ -42,7 +44,7 @@ CLI_PROFILES = {
         "continue_flag": "--continue",
         "restart_env": "CLAUDE_RESTART",
         "command_template": (
-            "{binary} --model sonnet -p @{prompt_file} "
+            "{binary} --model {model} -p @{prompt_file} "
             "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
         ),
         "stdin_template": "/dev/null",
@@ -1162,6 +1164,14 @@ Complete the task, then use /pr to create a new pull request."""
         mcp_agent_name = agent_spec.get("mcp_agent_name")
         bead_id = agent_spec.get("bead_id")
         validation_command = agent_spec.get("validation_command")
+        model = agent_spec.get("model", "sonnet")  # Default to sonnet if not specified
+
+        # Sanitize model to prevent injection
+        raw_model = str(model)
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+            print(f"❌ Invalid model name requested: {raw_model!r}")
+            return False
+        model = raw_model
         no_new_pr = bool(agent_spec.get("no_new_pr"))
         no_new_branch = bool(agent_spec.get("no_new_branch"))
 
@@ -1567,6 +1577,7 @@ Agent Configuration:
                         prompt_file_path=attempt_prompt_value_raw,
                         prompt_file_quoted=attempt_prompt_value_quoted,
                         continue_flag=attempt_continue_segment,
+                        model=model,
                     )
                     .strip()
                 )

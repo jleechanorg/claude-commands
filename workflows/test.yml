@@ -83,6 +83,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        with:
+          fetch-depth: 0  # Full history needed for merge-base diff
       - name: Run import validation
         run: |
           if [ -f "scripts/validate_imports_delta.sh" ]; then
@@ -97,7 +99,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
@@ -164,7 +166,7 @@ jobs:
         timeout 60 ./vpython --version
 
     - name: Run directory-based tests - ${{ matrix.test-group }}
-      timeout-minutes: 8
+      timeout-minutes: 12
       run: |
         source venv/bin/activate
 

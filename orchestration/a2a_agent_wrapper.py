@@ -6,6 +6,8 @@ Enhances existing agents with A2A capabilities while preserving
 all existing tmux-based orchestration functionality.
 """
 
+from __future__ import annotations
+
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
@@ -18,6 +20,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
+from dataclasses import asdict
 from typing import Any
 
 # Use absolute imports with package name for __main__ compatibility
@@ -301,8 +304,6 @@ class A2AAgentWrapper:
 
     def discover_agents(self) -> list[dict[str, Any]]:
         """Discover other available agents"""
-        from dataclasses import asdict
-
         agents = self.a2a_client.discover_agents()
         return [asdict(agent) for agent in agents]
 
@@ -320,8 +321,6 @@ class A2AAgentWrapper:
 
     def get_agent_info(self) -> dict[str, Any]:
         """Get current agent information"""
-        from dataclasses import asdict
-
         return asdict(self.a2a_client.agent_info)
 
 

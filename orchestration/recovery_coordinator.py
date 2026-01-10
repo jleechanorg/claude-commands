@@ -4,6 +4,8 @@ Recovery Coordinator for Orchestration System
 Handles agent failures, implements recovery strategies, and tracks metrics
 """
 
+from __future__ import annotations
+
 import json
 import os
 import subprocess

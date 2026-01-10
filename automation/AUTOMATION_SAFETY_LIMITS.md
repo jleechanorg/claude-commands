@@ -15,6 +15,25 @@ The PR automation system has built-in safety mechanisms to prevent excessive API
 | **Processing Timeout** | 20 minutes per PR | Prevents hanging processes |
 | **Cooldown Period** | 4 hours after success | Prevents duplicate processing |
 
+### **Workflow-Specific Comment Limits**
+
+Each workflow type has its own configurable limit for automation comments per PR (some workflows may not currently post comments, but have limits reserved for future compatibility):
+
+| Workflow Type | Default Limit | CLI Flag | Description |
+|---------------|---------------|----------|-------------|
+| **PR Automation** | 10 comments | `--pr-automation-limit` | Default PR monitoring workflow (posts codex comments) |
+| **Fix-Comment** | 10 comments | `--fix-comment-limit` | Fix-comment workflow (addresses review comments) |
+| **Codex Update** | 10 comments | (reserved) | Codex update workflow (browser automation; does not currently post PR comments—limit reserved for future compatibility) |
+| **FixPR** | 10 comments | `--fixpr-limit` | FixPR workflow (resolves conflicts/failing checks) |
+
+**Note**: Defaults are hardcoded in the automation package; override via CLI flags (or via `automation-safety-cli` which writes `automation_safety_config.json` in the safety data dir).
+
+**Note**: Workflow comment counting is marker-based:
+- PR automation comments: `codex-automation-commit`
+- Fix-comment queued runs: `fix-comment-automation-run` (separate from completion marker)
+- Fix-comment completion/review requests: `fix-comment-automation-commit`
+- FixPR queued runs: `fixpr-automation-run`
+
 ### **Daily Run Calculations**
 
 **When automation is enabled**, the system runs every 30 minutes with a **50 runs per day limit**:

@@ -14,7 +14,7 @@ Feel free to use these as a starting point - Claude Code excels at helping you a
 EOF < /dev/null
 # CLAUDE.md - Primary Rules and Operating Protocol
 
-**Primary rules file for AI collaboration on WorldArchitect.AI**
+**Primary rules file for AI collaboration on this project**
 
 ## 🚨 CRITICAL: MANDATORY BRANCH HEADER PROTOCOL
 
@@ -320,8 +320,6 @@ EOF < /dev/null
 
 ## Project Overview
 
-WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
-
 **Stack**: Python 3.11/Flask/Gunicorn | Gemini API | Firebase Firestore | Vanilla JS/Bootstrap | Docker/Cloud Run
 
 **Key Docs**:
@@ -534,11 +532,11 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
 8. **Log Files Location**:
-- ✅ **Server logs are in `/tmp/your-project.com/`** with branch isolation and service-specific files
-- ✅ **Branch-specific structure**: `/tmp/your-project.com/[branch-name]/`
-- ✅ **Service logs**: `/tmp/your-project.com/[branch]/[service-name].log`
-- ✅ **Log commands**: `tail -f /tmp/your-project.com/[branch]/[service].log` for real-time monitoring
-- ✅ **Search logs**: `grep -i "pattern" /tmp/your-project.com/[branch]/[service].log`
+- ✅ **Server logs are in `/tmp/project/`** with branch isolation and service-specific files
+- ✅ **Branch-specific structure**: `/tmp/project/[branch-name]/`
+- ✅ **Service logs**: `/tmp/project/[branch]/[service-name].log`
+- ✅ **Log commands**: `tail -f /tmp/project/[branch]/[service].log` for real-time monitoring
+- ✅ **Search logs**: `grep -i "pattern" /tmp/project/[branch]/[service].log`
 - ✅ **Find current log**: `git branch --show-current` then check corresponding log file
 
 9. 🚨 **SMART SYNC CHECK PROTOCOL**: ⚠️ MANDATORY - Prevent local changes not pushed to remote

@@ -1,5 +1,7 @@
 """Regression coverage for AgentBase heartbeat handling."""
 
+from __future__ import annotations
+
 import time
 
 from orchestration.agent_system import AgentBase

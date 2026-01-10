@@ -223,12 +223,12 @@ class TestPRLimits:
         assert manager.can_process_pr(pr_key) == True
 
     def test_can_process_pr_at_limit(self, manager):
-        """Test PR processing denied when at limit"""
+        """Test PR processing denied when at failure limit"""
         pr_key = "test-repo-123"
 
-        # Process PR up to limit
+        # Record failures up to limit
         for _ in range(manager.pr_limit):
-            manager.record_pr_attempt(pr_key, "success")
+            manager.record_pr_attempt(pr_key, "failure")
 
         assert manager.can_process_pr(pr_key) == False
 
@@ -598,13 +598,13 @@ class TestIntegrationScenarios:
             assert attempts[0]["result"] == "success"
 
     def test_hitting_pr_limits(self, manager):
-        """Test behavior when hitting PR limits"""
+        """Test behavior when hitting PR failure limits"""
         pr_key = "test-repo-limit"
 
-        # Process up to limit
+        # Fail up to limit
         for i in range(manager.pr_limit):
             assert manager.can_process_pr(pr_key) == True
-            manager.record_pr_attempt(pr_key, "success")
+            manager.record_pr_attempt(pr_key, "failure")
 
         # Should now be at limit
         assert manager.can_process_pr(pr_key) == False
@@ -630,7 +630,8 @@ class TestIntegrationScenarios:
                 manager.record_pr_attempt(pr_key, result)
 
         attempts = manager.get_pr_attempt_list(pr_key)
-        assert len(attempts) <= manager.pr_limit
+        # Attempt history should remain bounded: failures + most recent non-failure
+        assert len(attempts) <= manager.pr_limit + 1
 
         # Verify results are recorded correctly
         recorded_results = [attempt["result"] for attempt in attempts]

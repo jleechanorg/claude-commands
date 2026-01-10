@@ -6,6 +6,8 @@ Monitors A2A system health, cleans up stale registrations,
 and provides system status reporting.
 """
 
+from __future__ import annotations
+
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys

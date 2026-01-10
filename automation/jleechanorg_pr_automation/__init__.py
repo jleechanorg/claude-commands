@@ -5,6 +5,13 @@ This package provides comprehensive PR monitoring and automation capabilities wi
 safety features, intelligent filtering, and cross-process synchronization.
 """
 
+import re
+from importlib.metadata import PackageNotFoundError, version as dist_version
+from pathlib import Path
+from typing import Optional
+
+import logging_util
+
 from .automation_safety_manager import AutomationSafetyManager
 from .jleechanorg_pr_monitor import JleechanorgPRMonitor
 from .utils import (
@@ -16,7 +23,60 @@ from .utils import (
     validate_email_config,
 )
 
-__version__ = "0.2.27"
+_PROJECT_SECTION_RE = re.compile(r"^\s*\[project\]\s*$")
+_SECTION_RE = re.compile(r"^\s*\[[^\]]+\]\s*$")
+_VERSION_RE = re.compile(r'^\s*version\s*=\s*"([^"]+)"\s*$')
+FALLBACK_VERSION = "0.2.39"
+_logger = logging_util.getLogger(__name__)
+
+
+def _version_from_pyproject(pyproject_path: Path) -> Optional[str]:
+    if not pyproject_path.exists():
+        return None
+
+    in_project_section = False
+    for line in pyproject_path.read_text(encoding="utf-8").splitlines():
+        if _PROJECT_SECTION_RE.match(line):
+            in_project_section = True
+            continue
+        if in_project_section and _SECTION_RE.match(line):
+            in_project_section = False
+            continue
+        if not in_project_section:
+            continue
+
+        match = _VERSION_RE.match(line)
+        if match:
+            version = match.group(1).strip()
+            return version or None
+
+    return None
+
+
+def _resolve_version() -> str:
+    # Prefer the source-tree pyproject.toml when present (avoids mismatches with any
+    # separately-installed distribution on the machine).
+    try:
+        # __file__ = automation/jleechanorg_pr_automation/__init__.py
+        # parents[0] = automation/jleechanorg_pr_automation
+        # parents[1] = automation
+        pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
+        version = _version_from_pyproject(pyproject_path)
+        if version is not None:
+            return version
+    except Exception as exc:
+        _logger.debug("Failed to read version from pyproject.toml: %s", exc)
+
+    try:
+        return dist_version("jleechanorg-pr-automation")
+    except PackageNotFoundError:
+        return FALLBACK_VERSION
+    except Exception as exc:
+        _logger.debug("Failed to read dist metadata version: %s", exc)
+        return FALLBACK_VERSION
+
+
+__version__ = _resolve_version()
 __author__ = "jleechan"
 __email__ = "jlee@jleechan.org"
 

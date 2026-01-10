@@ -109,9 +109,9 @@ launchctl list | grep jleechanorg
 # Optional: Custom workspace location
 export PR_AUTOMATION_WORKSPACE=/custom/path/to/workspaces
 
-# Safety limits (defaults shown)
-export AUTOMATION_PR_LIMIT=10       # Max attempts per PR
-export AUTOMATION_GLOBAL_LIMIT=50   # Max total runs
+# Safety limits (defaults shown) are configured via CLI flags (not env vars):
+# - jleechanorg-pr-monitor --pr-limit 10 --global-limit 50
+# - jleechanorg-pr-monitor --pr-automation-limit 10 --fix-comment-limit 10 --fixpr-limit 10
 
 # Email notifications
 export SMTP_SERVER=smtp.gmail.com
