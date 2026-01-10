@@ -19,7 +19,7 @@ CACHE_MAX_SIZE = 1000  # Maximum number of files to cache
 CACHE_TTL_SECONDS = 3600  # Cache TTL in seconds (1 hour)
 
 # Thread-safe file cache with 1-hour TTL
-_file_cache: TTLCache = TTLCache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL_SECONDS)
+_file_cache = TTLCache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL_SECONDS)
 _cache_lock = threading.Lock()
 
 # Statistics tracking

@@ -45,6 +45,7 @@ from fpdf import FPDF, XPos, YPos
 
 from mvp_site import constants, logging_util
 
+
 # --- Enhanced Story Formatting Functions ---
 # These functions provide rich formatting with scene numbers, session headers,
 # resources, dice rolls, and choice detection (shared with CLI download script)
@@ -81,9 +82,7 @@ def get_choice_type(
     user_normalized = _normalize_text(user_text)
 
     # Extract title from user text (before " - " if present)
-    user_title = (
-        user_normalized.split(" - ")[0].strip() if " - " in user_normalized else None
-    )
+    user_title = user_normalized.split(" - ")[0].strip() if " - " in user_normalized else None
 
     # Check each recent planning block (most recent first)
     for planning_block in recent_planning_blocks:
@@ -120,11 +119,7 @@ def get_choice_type(
                     return ("choice", key)
 
                 # Method 4: Extract title from choice text and compare
-                choice_title = (
-                    choice_normalized.split(" - ")[0].strip()
-                    if " - " in choice_normalized
-                    else choice_normalized
-                )
+                choice_title = choice_normalized.split(" - ")[0].strip() if " - " in choice_normalized else choice_normalized
                 if user_title and user_title.lower() == choice_title.lower():
                     return ("choice", key)
 
@@ -235,9 +230,7 @@ def get_story_text_from_context_enhanced(
 
         # Pass recent planning blocks for user entries to determine choice type
         formatted = format_story_entry(
-            entry,
-            include_scene=include_scenes,
-            recent_planning_blocks=recent_planning_blocks,
+            entry, include_scene=include_scenes, recent_planning_blocks=recent_planning_blocks
         )
         story_parts.append(formatted)
 

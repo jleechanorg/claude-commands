@@ -87,13 +87,7 @@ class TestIncompleteWorldTimeNotViolation:
     def test_year_zero_not_violation(self):
         """Year of 0 (invalid) should NOT be treated as violation."""
         old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
-        new_time_zero_year = {
-            "year": 0,
-            "month": 5,
-            "day": 12,
-            "hour": 14,
-            "minute": 15,
-        }
+        new_time_zero_year = {"year": 0, "month": 5, "day": 12, "hour": 14, "minute": 15}
 
         result = world_time.check_temporal_violation(old_time, new_time_zero_year)
 
@@ -102,13 +96,7 @@ class TestIncompleteWorldTimeNotViolation:
     def test_forward_time_with_complete_data_not_violation(self):
         """Forward time movement with complete data should NOT be violation."""
         old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
-        forward_new_time = {
-            "year": 431,
-            "month": 5,
-            "day": 12,
-            "hour": 14,
-            "minute": 15,
-        }
+        forward_new_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 15}
 
         result = world_time.check_temporal_violation(old_time, forward_new_time)
 
@@ -145,9 +133,7 @@ class TestIncompleteWorldTimeNotViolation:
             "minute": 0,
         }
 
-        result = world_time.check_temporal_violation(
-            incomplete_old_time, complete_new_time
-        )
+        result = world_time.check_temporal_violation(incomplete_old_time, complete_new_time)
 
         assert result is False, (
             "Incomplete old_time should NOT trigger temporal violation. "

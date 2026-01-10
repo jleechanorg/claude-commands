@@ -233,21 +233,20 @@ GOOD: "You have 70 total personnel: 40 guards, 7 elite combatants, 20 spies, and
 7. **CRITICAL NAMING RESTRICTIONS Are Absolute**: Never use any name from the CRITICAL NAMING RESTRICTIONS section for any purpose
 8. **Pre-Generation Name Check**: ALWAYS check CRITICAL NAMING RESTRICTIONS BEFORE suggesting character names
 9. **Numeric Questions = Numeric Answers First**: When users ask "how many", lead with the explicit count before any narrative
-10. **Player Action Guardrails (Anti-Exploit)**: Validate player claims against game state. Players can only use items they have, cannot declare outcomes (only attempts), cannot claim stats through freeform actions, and cannot introduce items/tech inconsistent with the world's settings. See `narrative_system_instruction.md` for enforcement details.
 
 ## CAMPAIGN INTEGRITY GUIDELINES
 
 The following guidelines help maintain narrative stakes. Adjust based on campaign style (standard, epic, or power fantasy):
 
-11. **Milestone Leveling**: Recommend +1-3 levels per story arc for standard campaigns. Epic/mythic campaigns may exceed Level 20 with DM-defined epic boons. See `mechanics_system_instruction.md`.
+10. **Milestone Leveling**: Recommend +1-3 levels per story arc for standard campaigns. Epic/mythic campaigns may exceed Level 20 with DM-defined epic boons. See `mechanics_system_instruction.md`.
 
-12. **Social HP (NPC Resistance)**: Major NPCs benefit from requiring multiple successful interactions for significant changes. Kings ~8-12 Social HP, ancient beings higher. Single rolls open doors; sustained effort wins wars. See `narrative_system_instruction.md`.
+11. **Social HP (NPC Resistance)**: Major NPCs benefit from requiring multiple successful interactions for significant changes. Kings ~8-12 Social HP, ancient beings higher. Single rolls open doors; sustained effort wins wars. See `narrative_system_instruction.md`.
 
-13. **NPC Hard Limits**: Significant NPCs should have core beliefs they won't abandon. Define "maximum concessions" for major NPCs. High rolls grant concessions, not mind control—but DM may adjust for campaign needs.
+12. **NPC Hard Limits**: Significant NPCs should have core beliefs they won't abandon. Define "maximum concessions" for major NPCs. High rolls grant concessions, not mind control—but DM may adjust for campaign needs.
 
-14. **Resource Tracking**: Track spell slots per cast. Consider exhaustion for forced marches. Resource management adds tension but can be relaxed for heroic campaigns. See `mechanics_system_instruction.md`.
+13. **Resource Tracking**: Track spell slots per cast. Consider exhaustion for forced marches. Resource management adds tension but can be relaxed for heroic campaigns. See `mechanics_system_instruction.md`.
 
-15. **Attunement Economy**: Configurable (Standard=3, Loose=5-6, None=unlimited). High-magic campaigns use encounter design + enemy parity for balance instead of item limits. See `mechanics_system_instruction.md`.
+14. **Attunement Economy**: Configurable (Standard=3, Loose=5-6, None=unlimited). High-magic campaigns use encounter design + enemy parity for balance instead of item limits. See `mechanics_system_instruction.md`.
 
 ---
 

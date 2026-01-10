@@ -66,10 +66,7 @@ class MCPClientError(Exception):
     """Exception raised by MCP client operations"""
 
     def __init__(
-        self,
-        message: str,
-        error_code: int | None = None,
-        data: dict[str, Any] | None = None,
+        self, message: str, error_code: int = None, data: dict[str, Any] = None
     ):
         super().__init__(message)
         self.error_code = error_code
@@ -187,7 +184,7 @@ class MCPClient:
         return str(uuid.uuid4())
 
     def _make_jsonrpc_request(
-        self, method: str, params: dict[str, Any] | None = None
+        self, method: str, params: dict[str, Any] = None
     ) -> dict[str, Any]:
         """
         Create JSON-RPC 2.0 request payload
@@ -233,9 +230,7 @@ class MCPClient:
 
         return response_data.get("result")
 
-    async def call_tool(
-        self, tool_name: str, arguments: dict[str, Any] | None = None
-    ) -> Any:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any] = None) -> Any:
         """
         Call an MCP tool on the server
 
@@ -301,7 +296,7 @@ class MCPClient:
             raise MCPClientError(f"Unexpected error: {e}") from e
 
     async def _call_tool_direct(
-        self, tool_name: str, arguments: dict[str, Any] | None = None
+        self, tool_name: str, arguments: dict[str, Any] = None
     ) -> Any:
         """
         Call MCP tool directly via world_logic.py without HTTP
@@ -593,9 +588,7 @@ class MCPClient:
         finally:
             logging_util.debug("Shared event loop stopped")
 
-    def call_tool_sync(
-        self, tool_name: str, arguments: dict[str, Any] | None = None
-    ) -> Any:
+    def call_tool_sync(self, tool_name: str, arguments: dict[str, Any] = None) -> Any:
         """
         Synchronous wrapper for call_tool - uses singleton event loop for performance
 

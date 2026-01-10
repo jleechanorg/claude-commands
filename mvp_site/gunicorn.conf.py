@@ -88,7 +88,7 @@ tmp_upload_dir = None
 
 # Debugging (set via environment variable)
 reload = os.getenv("GUNICORN_RELOAD", "False").lower() == "true"
-reload_extra_files: list[str] = []
+reload_extra_files = []
 
 # Security
 limit_request_line = 4094  # Maximum size of HTTP request line

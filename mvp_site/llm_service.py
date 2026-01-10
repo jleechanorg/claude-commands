@@ -132,14 +132,6 @@ from mvp_site.narrative_response_schema import (
     validate_entity_coverage,
 )
 from mvp_site.narrative_sync_validator import NarrativeSyncValidator
-from mvp_site.response_validators import (
-    check_llm_rejection,
-    check_missing_required_fields_story_mode,
-    comprehensive_item_validation,
-    validate_and_enforce_planning_block,
-    validate_companion_generation_response,
-    validate_entity_tracking,
-)
 from mvp_site.schemas.entities_pydantic import sanitize_entity_name_for_id
 from mvp_site.serialization import json_default_serializer
 from mvp_site.token_utils import estimate_tokens, log_with_tokens
@@ -1215,6 +1207,42 @@ def _process_structured_response(
     return response_text, structured_response
 
 
+def _validate_entity_tracking(
+    response_text: str, expected_entities: list[str], game_state: GameState
+) -> str:
+    """
+    Validate that the narrative includes all expected entities.
+
+    Args:
+        response_text: Generated narrative text
+        expected_entities: List of expected entity names
+        game_state: Current GameState object
+
+    Returns:
+        str: Response text with debug validation if in debug mode
+    """
+    validator = NarrativeSyncValidator()
+    validation_result = validator.validate(
+        narrative_text=response_text,
+        expected_entities=expected_entities,
+        location=game_state.world_data.get("current_location_name", "Unknown"),
+    )
+
+    if not validation_result.all_entities_present:
+        logging_util.warning(
+            "ENTITY_TRACKING_VALIDATION: Narrative failed entity validation"
+        )
+        logging_util.warning(f"Missing entities: {validation_result.entities_missing}")
+        if validation_result.warnings:
+            for warning in validation_result.warnings:
+                logging_util.warning(f"Validation warning: {warning}")
+
+    # Debug validation is now handled via structured_response.debug_info
+    # No longer append debug content to narrative text in JSON mode
+
+    return response_text
+
+
 def _log_token_count(
     model_name: str,
     user_prompt_contents: list[Any],
@@ -1718,29 +1746,6 @@ def _get_text_from_response(response: Any) -> str:
         f"Response did not contain valid text. Response object: {response}"
     )
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
-
-
-def _capture_raw_request_payload(
-    gemini_request: Any,
-    raw_limit: int,
-    context: str,
-) -> str:
-    """Best-effort capture of raw request payload for debugging evidence."""
-    try:
-        request_payload = (
-            gemini_request.to_dict()
-            if hasattr(gemini_request, "to_dict")
-            else str(gemini_request)
-        )
-        if isinstance(request_payload, dict):
-            return json.dumps(request_payload, default=str)[:raw_limit]
-        return str(request_payload)[:raw_limit]
-    except Exception as exc:
-        logging_util.warning(
-            f"Failed to capture raw LLM request payload ({context}): {exc}",
-            exc_info=True,
-        )
-        return f"[capture failed: {type(gemini_request).__name__}]"
 
 
 def _maybe_get_gemini_code_execution_evidence(
@@ -2740,17 +2745,12 @@ def get_initial_story(
         debug_info["system_instruction_char_count"] = len(system_instruction_final)
         # Log raw data instead of storing (avoids 30MB+ bloat in large campaigns)
         if capture_raw:
-            # Capture raw LLM request payload (user prompt contents) per evidence-standards.md
-            raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
-            debug_info["raw_request_payload"] = _capture_raw_request_payload(
+            _log_raw_llm_data(
+                system_instruction_final=system_instruction_final,
                 gemini_request=gemini_request,
+                raw_response_text=raw_response_text,
                 raw_limit=raw_limit,
-                context="initial_story",
             )
-            if "raw_response_text" in processing_metadata:
-                debug_info["raw_response_text"] = processing_metadata[
-                    "raw_response_text"
-                ]
         if code_execution_evidence:
             # Persist server-verified evidence (do not rely on model self-reporting).
             debug_info.update(code_execution_evidence)
@@ -2837,10 +2837,7 @@ def get_initial_story(
 
     # Companion validation (moved from world_logic.py for proper SRP)
     if generate_companions:
-        validate_companion_generation_response(
-            gemini_response,
-            expected_companion_count=EXPECTED_COMPANION_COUNT,
-        )
+        _validate_companion_generation(gemini_response)
 
     # Return our custom LLMResponse object (not raw API response)
     # This object contains:
@@ -2929,6 +2926,99 @@ def _log_raw_llm_data(
     )
 
 
+def _check_missing_required_fields(
+    structured_response: Optional[NarrativeResponse],
+    mode: str,
+    is_god_mode: bool = False,
+    is_dm_mode: bool = False,
+    require_dice_rolls: bool = False,
+    dice_integrity_violation: bool = False,
+    require_social_hp_challenge: bool = False,
+) -> list[str]:
+    """Check if required fields are missing from the structured response.
+
+    Required fields for story mode (character mode, not god/dm mode):
+    - planning_block: Must be a dict with 'thinking' or 'choices' content
+    - session_header: Must be a non-empty string
+    - dice_rolls: Must be non-empty when required
+    - dice_integrity: Not a field, but a validation flag for fabricated dice
+
+    Args:
+        structured_response: The parsed NarrativeResponse object
+        mode: Current game mode
+        is_god_mode: Whether this is a god mode command
+        is_dm_mode: Whether the response is in DM mode
+        require_dice_rolls: Whether dice_rolls is required for this turn
+        dice_integrity_violation: Whether dice integrity check failed (fabricated dice)
+
+    Returns:
+        List of missing field names (empty if all required fields present)
+    """
+    # Only check for story mode (character mode, not god/dm mode)
+    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
+        return []
+
+    if not structured_response:
+        return ["planning_block", "session_header"]
+
+    missing = []
+
+    # Check planning_block
+    planning_block = getattr(structured_response, "planning_block", None)
+    if not planning_block or not isinstance(planning_block, dict):
+        missing.append("planning_block")
+    else:
+        # Check if planning_block has content (with type guards to prevent runtime errors)
+        thinking_value = planning_block.get("thinking", "")
+        has_thinking = isinstance(thinking_value, str) and thinking_value.strip()
+
+        choices_value = planning_block.get("choices")
+        has_choices = isinstance(choices_value, dict) and len(choices_value) > 0
+
+        has_content = has_thinking or has_choices
+        if not has_content:
+            missing.append("planning_block")
+
+    # Check session_header
+    session_header = getattr(structured_response, "session_header", None)
+    if not session_header or not str(session_header).strip():
+        missing.append("session_header")
+
+    # Append dice-specific missing fields via helper
+    dice_integrity.add_missing_dice_fields(
+        missing,
+        structured_response=structured_response,
+        require_dice_rolls=require_dice_rolls,
+        dice_integrity_violation=dice_integrity_violation,
+    )
+
+    # Social HP challenge is conditionally required when the Social HP system is active.
+    # We currently detect this by the presence of the narrative challenge box, which
+    # is already mandatory per game_state_instruction.md. This catches the common
+    # failure mode where the narrative shows the box but the JSON field is missing.
+    if require_social_hp_challenge:
+        social_hp_challenge = getattr(structured_response, "social_hp_challenge", None)
+        is_missing = True
+        if isinstance(social_hp_challenge, dict):
+            npc_name = str(social_hp_challenge.get("npc_name", "")).strip()
+            objective = str(social_hp_challenge.get("objective", "")).strip()
+            resistance = str(social_hp_challenge.get("resistance_shown", "")).strip()
+            social_hp_val = social_hp_challenge.get("social_hp")
+            social_hp_max = social_hp_challenge.get("social_hp_max")
+            is_missing = not (
+                npc_name
+                and objective
+                and resistance
+                and social_hp_val is not None
+                and isinstance(social_hp_max, (int, float))
+                and social_hp_max > 0
+            )
+        if is_missing:
+            missing.append("social_hp_challenge")
+
+    return missing
+
+
 def _build_reprompt_request(
     base_request: LLMRequest,
     reprompt_message: str,
@@ -2948,6 +3038,81 @@ def _build_reprompt_request(
         use_default_world=base_request.use_default_world,
         system_corrections=list(base_request.system_corrections),
     )
+
+
+def _validate_and_enforce_planning_block(
+    response_text: Optional[str],
+    structured_response: Optional[NarrativeResponse] = None,
+) -> str:
+    """
+    Validates that structured_response.planning_block exists and is valid JSON.
+    The structured_response.planning_block field is the PRIMARY and AUTHORITATIVE source.
+
+    IMPORTANT: This function NO LONGER generates default/fallback planning blocks.
+    If the LLM doesn't generate a planning block, we return the response as-is
+    and let the error propagate to the UI.
+
+    Args:
+        response_text: The AI's response text (for context only)
+        structured_response: NarrativeResponse object to check (REQUIRED)
+
+    Returns:
+        str: Response text unchanged - no modifications are made
+    """
+    # Handle None response_text gracefully
+    if response_text is None:
+        logging_util.warning(
+            "🔍 VALIDATION_INPUT: Response text is None, returning empty string"
+        )
+        return ""
+
+    # Skip planning block validation if AI response indicates mode switch
+    if response_text and (
+        "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text
+    ):
+        logging_util.info(
+            "Response indicates mode switch - skipping planning block validation"
+        )
+        return response_text
+
+    # Check if response already contains a valid planning block
+    if (
+        structured_response
+        and hasattr(structured_response, "planning_block")
+        and structured_response.planning_block
+    ):
+        planning_block = structured_response.planning_block
+
+        # Only accept JSON format
+        if isinstance(planning_block, dict):
+            # JSON format - check if it has choices or thinking content
+            has_content = planning_block.get("thinking", "").strip() or (
+                planning_block.get("choices")
+                and len(planning_block.get("choices", {})) > 0
+            )
+
+            if has_content:
+                logging_util.info("✅ Planning block found in JSON structured response")
+                return response_text
+            logging_util.warning(
+                "⚠️ PLANNING_BLOCK_EMPTY: Planning block exists but has no content"
+            )
+            return response_text
+        # String format no longer supported
+        logging_util.error(
+            f"❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: Found {type(planning_block).__name__} planning block, only JSON format is allowed"
+        )
+        return response_text
+
+    # Planning block is missing - log warning but DO NOT generate defaults
+    # The LLM is responsible for generating planning blocks, not this function
+    logging_util.warning(
+        "⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block. "
+        "The LLM should have generated this - no fallback will be used."
+    )
+
+    # Return response text unchanged - no fallback content is added
+    return response_text
 
 
 @log_exceptions
@@ -3543,7 +3708,7 @@ def continue_story(
 
     # Social HP enforcement is handled by agent prompts (narrative_system_instruction.md)
     # NOT by detecting challenge boxes in narrative output
-    missing_fields = check_missing_required_fields_story_mode(
+    missing_fields = _check_missing_required_fields(
         structured_response,
         mode,
         is_god_mode=is_god_mode_command,
@@ -3675,7 +3840,7 @@ def continue_story(
 
                 # Check if reprompt was successful
                 # Social HP enforcement is handled by agent prompts, not detection
-                reprompt_missing = check_missing_required_fields_story_mode(
+                reprompt_missing = _check_missing_required_fields(
                     reprompt_structured,
                     mode,
                     is_god_mode=is_god_mode_command,
@@ -3785,17 +3950,12 @@ def continue_story(
                 debug_info["god_mode_directives_block"] = pb.last_directives_block
         # Log raw data instead of storing (avoids 30MB+ bloat in large campaigns)
         if capture_raw:
-            # Capture raw LLM request payload (user prompt contents) per evidence-standards.md
-            raw_limit = int(os.getenv("CAPTURE_RAW_LLM_MAX_CHARS", "20000"))
-            debug_info["raw_request_payload"] = _capture_raw_request_payload(
+            _log_raw_llm_data(
+                system_instruction_final=system_instruction_final,
                 gemini_request=gemini_request,
+                raw_response_text=raw_response_text,
                 raw_limit=raw_limit,
-                context="continue_story",
             )
-            if "raw_response_text" in processing_metadata:
-                debug_info["raw_response_text"] = processing_metadata[
-                    "raw_response_text"
-                ]
         if code_execution_evidence:
             debug_info.update(code_execution_evidence)
             _log_fabricated_dice_if_detected(
@@ -3869,72 +4029,7 @@ def continue_story(
     if expected_entities:
         # Use the common validation function for entity tracking validation
         # (No longer modifies response_text - validation goes to logs only)
-        validate_entity_tracking(
-            response_text,
-            expected_entities,
-            current_game_state,
-        )
-
-    # POST-PROCESSING: 3-layer item validation against player inventory
-    # Layer 1: Pre-process player input for item claims
-    # Layer 2: Check items_used (LLM audit trail) against inventory
-    # Layer 3: Scan narrative for unlisted items
-    if not is_god_mode_command:
-        items_used: list[str] = []
-        if gemini_response.structured_response:
-            raw_items_used = getattr(
-                gemini_response.structured_response, "items_used", []
-            )
-            if isinstance(raw_items_used, list):
-                candidates = raw_items_used
-            elif isinstance(raw_items_used, str):
-                candidates = [raw_items_used]
-            else:
-                candidates = []
-            for item in candidates:
-                if isinstance(item, str):
-                    cleaned = item.strip()
-                    if cleaned:
-                        items_used.append(cleaned)
-
-        # Always run comprehensive validation (catches exploits even if items_used empty)
-        is_valid, invalid_items, rejection_message = comprehensive_item_validation(
-            raw_user_input, response_text, items_used, current_game_state
-        )
-        if not is_valid:
-            logging_util.warning(
-                f"🚫 ITEM_EXPLOIT_BLOCKED (3-layer): Invalid items: {invalid_items}"
-            )
-            # Check if LLM already rejected the exploit in its narrative
-            # If so, preserve the LLM's creative rejection instead of overwriting
-            llm_already_rejected = check_llm_rejection(response_text, invalid_items)
-
-            if llm_already_rejected:
-                logging_util.info(
-                    "✅ LLM already rejected exploit - preserving LLM narrative"
-                )
-                # Still nullify state updates but keep LLM's rejection narrative
-                if gemini_response.structured_response and hasattr(
-                    gemini_response.structured_response, "state_updates"
-                ):
-                    gemini_response.structured_response.state_updates = {}
-            else:
-                # LLM didn't reject - use our rejection message
-                gemini_response.narrative_text = rejection_message
-                response_text = rejection_message
-                # Also update structured response narrative if present
-                if gemini_response.structured_response and hasattr(
-                    gemini_response.structured_response, "narrative"
-                ):
-                    gemini_response.structured_response.narrative = rejection_message
-                    # Nullify state updates when an exploit is blocked
-                    if hasattr(gemini_response.structured_response, "state_updates"):
-                        gemini_response.structured_response.state_updates = {}
-
-            gemini_response.processing_metadata["item_exploit_blocked"] = True
-            gemini_response.processing_metadata["llm_rejected"] = bool(
-                llm_already_rejected
-            )
+        _validate_entity_tracking(response_text, expected_entities, current_game_state)
 
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input
@@ -3959,7 +4054,7 @@ def continue_story(
         and not is_dm_mode_response
         and not is_god_mode_command
     ):
-        response_text = validate_and_enforce_planning_block(
+        response_text = _validate_and_enforce_planning_block(
             response_text,
             structured_response=gemini_response.structured_response,
         )
@@ -4025,6 +4120,65 @@ def _extract_multiple_think_commands(user_input: str) -> list[str]:
         return matches
     # No multiple commands found, return original input
     return [user_input]
+
+
+def _validate_companion_generation(gemini_response: LLMResponse) -> None:
+    """Validate companion generation results.
+
+    Moved from world_logic.py to maintain Single Responsibility Principle.
+    Companion validation should be near companion generation logic.
+
+    Args:
+        gemini_response: The response from Gemini to validate
+    """
+    structured_response = getattr(gemini_response, "structured_response", None)
+    if not structured_response:
+        logging_util.error(
+            "🎭 COMPANION GENERATION: ❌ No structured response received from Gemini!"
+        )
+        return
+
+    # Access companions and npc_data from extra_fields (since they're not standard schema fields)
+    extra_fields = getattr(structured_response, "extra_fields", {})
+    companions = extra_fields.get("companions", {})
+    npc_data = extra_fields.get("npc_data", {})
+
+    # Also check state_updates in case they're there
+    state_updates = getattr(structured_response, "state_updates", {}) or {}
+    if not npc_data and "npc_data" in state_updates:
+        npc_data = state_updates["npc_data"]
+    if not companions and "companions" in state_updates:
+        companions = state_updates["companions"]
+
+    # Type safety check and deduplication
+    if not isinstance(companions, dict):
+        companions = {}
+    if not isinstance(npc_data, dict):
+        npc_data = {}
+
+    # Count unique companions (avoiding double-counting)
+    companion_names = set(companions.keys())
+    allied_npcs = {
+        name
+        for name, data in npc_data.items()
+        if isinstance(data, dict) and data.get("relationship") in ["companion", "ally"]
+    }
+    # Remove any companions already counted to avoid double-counting
+    unique_allied_npcs = allied_npcs - companion_names
+
+    companion_count = len(companion_names)
+    allied_npc_count = len(unique_allied_npcs)
+    total_companions = companion_count + allied_npc_count
+
+    # Minimal logging for companion validation
+    if total_companions == 0:
+        logging_util.warning("🎭 No companions generated despite request")
+    elif total_companions < EXPECTED_COMPANION_COUNT:
+        logging_util.warning(
+            f"🎭 Only {total_companions}/{EXPECTED_COMPANION_COUNT} companions generated"
+        )
+    else:
+        logging_util.info(f"🎭 {total_companions} companions generated successfully")
 
 
 # --- Main block for rapid, direct testing ---

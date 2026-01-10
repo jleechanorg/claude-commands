@@ -18,6 +18,8 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 # Import firebase_admin (fail fast if missing)
+import firebase_admin.auth
+
 # Import functions from main at module level to avoid inline imports
 # Note: HEADER_TEST_BYPASS and HEADER_TEST_USER_ID removed with testing mode deletion
 from main import create_app

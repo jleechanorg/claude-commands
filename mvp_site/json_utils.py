@@ -607,7 +607,7 @@ class RobustJSONParser:
     @staticmethod
     def _extract_fields(text: str) -> Optional[dict[str, Any]]:
         """Extract individual fields using regex"""
-        result: dict[str, Any] = {}
+        result = {}
 
         # Extract narrative field
         narrative = extract_field_value(text, "narrative")

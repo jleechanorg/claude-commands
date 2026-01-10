@@ -63,7 +63,9 @@ class TestLivingWorldEnd2End(unittest.TestCase):
                     "background_events": [
                         {"description": "Merchants arrive from the east."}
                     ],
-                    "rumors": [{"description": "Strange lights in the forest."}],
+                    "rumors": [
+                        {"description": "Strange lights in the forest."}
+                    ],
                 }
             },
             "session_header": "Session 1: Beginning",
@@ -175,12 +177,10 @@ class TestLivingWorldEnd2End(unittest.TestCase):
         # Make GOD mode request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps(
-                {
-                    "input": "GOD MODE: Change my character name to Bob",
-                    "mode": "character",
-                }
-            ),
+            data=json.dumps({
+                "input": "GOD MODE: Change my character name to Bob",
+                "mode": "character"
+            }),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -310,6 +310,7 @@ class TestLivingWorldEnd2End(unittest.TestCase):
             f"got {game_state.get('player_turn')}"
         )
 
+
     @patch("mvp_site.firestore_service.get_db")
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
@@ -381,9 +382,7 @@ class TestLivingWorldEnd2End(unittest.TestCase):
             "planning_block": {"thinking": "New events for this turn."},
         }
 
-        mock_gemini_generate.return_value = FakeLLMResponse(
-            json.dumps(turn_11_response)
-        )
+        mock_gemini_generate.return_value = FakeLLMResponse(json.dumps(turn_11_response))
 
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
@@ -437,8 +436,7 @@ class TestLivingWorldEnd2End(unittest.TestCase):
         # The key bug was old events appearing in the API response when they shouldn't
         # The new event should be present
         new_events = [
-            e
-            for e in response_world_events.get("background_events", [])
+            e for e in response_world_events.get("background_events", [])
             if "New action happening NOW" in e.get("action", "")
         ]
         assert new_events, (

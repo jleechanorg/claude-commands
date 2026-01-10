@@ -219,16 +219,17 @@ def test_run_json_first_tool_requests_flow_extracts_json_boundaries_from_wrapped
     assert phase2_calls[0]["phase1_text"].endswith("}")
 
 
-def test_run_json_first_tool_requests_flow_handles_double_encoded_json():
+def test_run_json_first_tool_requests_flow_decodes_json_string_response():
     class Resp:
         def __init__(self, text: str):
             self.text = text
 
     phase2_calls: list[object] = []
 
+    inner = '{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}'
+
     def phase1():
-        inner_payload = '{"tool_requests":[{"tool":"roll_dice","args":{"notation":"1d20"}}]}'
-        return Resp(json.dumps(inner_payload))
+        return Resp(json.dumps(inner))
 
     def extract_text(resp: Resp) -> str:
         return resp.text
@@ -277,8 +278,7 @@ def test_run_json_first_tool_requests_flow_handles_double_encoded_json():
 
     assert out.text == '{"narrative":"ok","dice_rolls":["Roll: 1d20 = 7"]}'
     assert len(phase2_calls) == 1
-    assert phase2_calls[0]["phase1_text"].startswith("{")
-    assert phase2_calls[0]["phase1_text"].endswith("}")
+    assert phase2_calls[0]["phase1_text"] == inner
 
 
 def test_run_json_first_tool_requests_flow_retries_phase2_when_dice_rolls_missing():

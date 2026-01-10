@@ -294,18 +294,16 @@ def is_think_mode(user_input: str, mode: Optional[str] = None) -> bool:
 # Canonical set of combat phases indicating combat has ended
 # Used by RewardsAgent, world_logic enforcement, and state archival
 # IMPORTANT: This is the SINGLE SOURCE OF TRUTH - all combat phase checks must use this set
-COMBAT_FINISHED_PHASES = frozenset(
-    {
-        "ended",
-        "concluding",
-        "concluded",
-        "finished",
-        "complete",
-        "completed",
-        "resolved",
-        "victory",
-    }
-)
+COMBAT_FINISHED_PHASES = frozenset({
+    "ended",
+    "concluding",
+    "concluded",
+    "finished",
+    "complete",
+    "completed",
+    "resolved",
+    "victory",
+})
 
 # Mode switching detection phrases
 MODE_SWITCH_PHRASES = [
@@ -513,9 +511,7 @@ LIVING_WORLD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, FILENAME_LIVING_WORLD)
 COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
     PROMPTS_DIR, "combat_system_instruction.md"
 )
-REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(
-    PROMPTS_DIR, "rewards_system_instruction.md"
-)
+REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "rewards_system_instruction.md")
 RELATIONSHIP_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "relationship_instruction.md")
 REPUTATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "reputation_instruction.md")
 CHARACTER_CREATION_INSTRUCTION_PATH = os.path.join(

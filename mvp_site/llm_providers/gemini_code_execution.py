@@ -489,8 +489,7 @@ def log_code_execution_parts(
                 )
         # Add executed code to evidence dict for Firestore storage
         evidence["executed_code"] = [
-            sample.get("code", "")
-            for sample in detail.get("executable_code_samples", [])
+            sample.get("code", "") for sample in detail.get("executable_code_samples", [])
         ]
     _log_code_execution_dice_results(evidence)
     return evidence

@@ -31,10 +31,12 @@ def has_firebase_credentials():
 
 from main import create_app
 
-# Import JSON input schema components
-# Legacy json_input_schema imports removed - using LLMRequest now
 from mvp_site.game_state import GameState
 from tests.fake_firestore import FakeFirestoreClient
+
+# Import JSON input schema components
+# Legacy json_input_schema imports removed - using LLMRequest now
+from tests.fake_services import FakeServiceManager
 
 
 class TestVisitCampaignEnd2End(unittest.TestCase):

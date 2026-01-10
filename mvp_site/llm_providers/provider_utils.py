@@ -517,16 +517,43 @@ def run_json_first_tool_requests_flow(  # noqa: PLR0911, PLR0912, PLR0915
     response_text = (extract_text_fn(response_1) or "").strip()
 
     try:
-        response_data: dict[str, Any] = (
-            json.loads(response_text) if response_text else {}
-        )
+        response_data: Any = json.loads(response_text) if response_text else {}
         phase1_text_for_history = response_text
+        if isinstance(response_data, str):
+            # Some providers/models double-encode JSON (i.e., return a JSON string whose
+            # contents are themselves JSON). Attempt one extra decode so downstream logic
+            # can safely treat Phase 1 as dict/list.
+            inner_text = response_data.strip()
+            try:
+                response_data = json.loads(inner_text) if inner_text else {}
+                phase1_text_for_history = inner_text
+                logger.info(
+                    "Phase 1 response was a JSON-encoded string; decoded inner JSON successfully"
+                )
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Phase 1 response parsed to a string, but inner content was not valid JSON; returning as-is"
+                )
+                return _attach_tool_execution_metadata(response_1, executed=False)
     except json.JSONDecodeError:
         extracted = extract_json_boundaries(response_text) if response_text else None
         if extracted and extracted != response_text:
             try:
                 response_data = json.loads(extracted)
                 phase1_text_for_history = extracted
+                if isinstance(response_data, str):
+                    inner_text = response_data.strip()
+                    try:
+                        response_data = json.loads(inner_text) if inner_text else {}
+                        phase1_text_for_history = inner_text
+                        logger.info(
+                            "Extracted Phase 1 JSON was a JSON-encoded string; decoded inner JSON successfully"
+                        )
+                    except json.JSONDecodeError:
+                        logger.warning(
+                            "Extracted Phase 1 JSON parsed to a string, but inner content was not valid JSON; returning as-is"
+                        )
+                        return _attach_tool_execution_metadata(response_1, executed=False)
                 logger.info(
                     "Phase 1 response was not pure JSON; extracted JSON boundaries successfully"
                 )
@@ -539,37 +566,16 @@ def run_json_first_tool_requests_flow(  # noqa: PLR0911, PLR0912, PLR0915
             logger.warning("Phase 1 response not valid JSON, returning as-is")
             return _attach_tool_execution_metadata(response_1, executed=False)
 
-    if isinstance(response_data, str):
-        inner_text = response_data.strip()
-        try:
-            response_data = json.loads(inner_text) if inner_text else {}
-            if inner_text:
-                phase1_text_for_history = inner_text
-            logger.info("Phase 1 response was JSON-encoded string; parsed inner JSON")
-        except json.JSONDecodeError:
-            extracted_inner = extract_json_boundaries(inner_text) if inner_text else None
-            if extracted_inner and extracted_inner != inner_text:
-                try:
-                    response_data = json.loads(extracted_inner)
-                    phase1_text_for_history = extracted_inner
-                    logger.info(
-                        "Phase 1 response was JSON-encoded string; extracted inner JSON boundaries successfully"
-                    )
-                except json.JSONDecodeError:
-                    logger.warning(
-                        "Phase 1 response JSON string not valid JSON, returning as-is"
-                    )
-                    return _attach_tool_execution_metadata(response_1, executed=False)
-            else:
-                logger.warning(
-                    "Phase 1 response JSON string not valid JSON, returning as-is"
-                )
-                return _attach_tool_execution_metadata(response_1, executed=False)
-
     if isinstance(response_data, list):
         tool_requests = response_data
-    else:
+    elif isinstance(response_data, dict):
         tool_requests = response_data.get(tool_requests_key, [])
+    else:
+        logger.warning(
+            "Phase 1 JSON parsed to unexpected type %s; returning Phase 1 result",
+            type(response_data).__name__,
+        )
+        return _attach_tool_execution_metadata(response_1, executed=False)
     if not tool_requests:
         msg = (
             no_tool_requests_log_msg(response_data)

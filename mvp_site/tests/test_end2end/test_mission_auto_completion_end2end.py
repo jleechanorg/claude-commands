@@ -17,6 +17,7 @@ This test validates:
 
 from __future__ import annotations
 
+import json
 import os
 import unittest
 from unittest.mock import patch
@@ -27,6 +28,7 @@ os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
 from mvp_site import main
 from mvp_site.firestore_service import update_state_with_changes
+from mvp_site.tests.fake_firestore import FakeFirestoreClient, FakeLLMResponse
 
 
 class TestMissionAutoCompletionEnd2End(unittest.TestCase):
