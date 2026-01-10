@@ -91,42 +91,45 @@ def inject_corrections_directly(client: MCPClient, campaign_id: str) -> dict[str
         "but rewards_processed=False. You MUST set combat_state.rewards_processed=true."
     )
 
-    god_mode_input = f"""
-    Set the following game state for testing the system_corrections flow:
-
-    combat_state:
-      combat_phase: "ended"
-      in_combat: false
-      combat_summary:
-        xp_awarded: 100
-        enemies_defeated: ["goblin_warrior_001"]
-        outcome: "victory"
-      rewards_processed: false
-
-    player_character_data:
-      experience:
-        current: 600
-
-    pending_system_corrections:
-      - "{correction_msg}"
-
-    CRITICAL INSTRUCTIONS:
-    1. Set rewards_processed to FALSE
-    2. Set pending_system_corrections with the exact error message above
-    3. Do NOT advance time or add narrative
-    4. Just set these exact state values
-    """
+    state_changes = {
+        "combat_state": {
+            "combat_phase": "ended",
+            "in_combat": False,
+            "combat_summary": {
+                "xp_awarded": 100,
+                "enemies_defeated": ["goblin_warrior_001"],
+                "outcome": "victory",
+            },
+            "rewards_processed": False,
+        },
+        "player_character_data": {
+            "experience": {"current": 600},
+        },
+        "custom_campaign_state": {
+            # Mark character creation complete to ensure RewardsAgent is selected
+            # (CharacterCreationAgent has higher priority than RewardsAgent)
+            "character_creation_completed": True,
+            "character_creation_in_progress": False,  # Explicitly disable to avoid contradictory state
+            "character_creation_stage": "complete",
+        },
+        # Force the correction cycle by persisting the correction message in state.
+        "pending_system_corrections": [correction_msg],
+    }
 
     result = process_action(
         client,
         user_id=USER_ID,
         campaign_id=campaign_id,
-        user_input=god_mode_input,
-        mode="god",
+        user_input=f"GOD_MODE_UPDATE_STATE:{json.dumps(state_changes)}",
     )
 
     log("God mode injection complete")
-    return {"response": result}
+    has_error = (
+        isinstance(result, dict)
+        and "error" in result
+        and result.get("error") is not None
+    )
+    return {"success": not has_error, "response": result}
 
 
 def verify_corrections_in_state(client: MCPClient, campaign_id: str) -> dict[str, Any]:
@@ -157,6 +160,10 @@ def trigger_llm_with_corrections(client: MCPClient, campaign_id: str) -> dict[st
 
     The LLM should receive pending_system_corrections in its input and
     act on them by setting rewards_processed=True.
+
+    Note: Using neutral "continue" to avoid InfoAgent trigger (which has
+    Priority 4, higher than RewardsAgent Priority 6). InfoAgent matches
+    "check my" pattern, preventing RewardsAgent from being selected.
     """
     log("Triggering LLM call that should receive system_corrections...")
 
@@ -167,7 +174,7 @@ def trigger_llm_with_corrections(client: MCPClient, campaign_id: str) -> dict[st
         client,
         user_id=USER_ID,
         campaign_id=campaign_id,
-        user_input="I check my rewards from the battle.",
+        user_input="continue",
         mode="character",
     )
 

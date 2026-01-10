@@ -663,7 +663,33 @@ Test scenarios validate that:
     files["methodology"] = actual_evidence_dir / "methodology.md"
 
     # 3. evidence.md - Evidence summary
+    # Support both "scenarios" (list format) and "steps" (dict format)
     scenarios = results.get("scenarios", [])
+    if not scenarios and "steps" in results:
+        # Convert steps dict to scenarios list for evidence reporting
+        steps_dict = results.get("steps", {})
+        if not isinstance(steps_dict, dict):
+            steps_dict = {}
+
+        scenarios = []
+        for step_name, step_data in steps_dict.items():
+            if isinstance(step_data, dict):
+                if step_data.get("success", True):
+                    errors = []
+                else:
+                    errors_raw = step_data.get("errors")
+                    if isinstance(errors_raw, list) and errors_raw:
+                        errors = errors_raw
+                    else:
+                        msg = (
+                            step_data.get("error")
+                            or step_data.get("error_message")
+                            or "Step failed"
+                        )
+                        errors = [msg]
+            else:
+                errors = [f"Invalid step data type: {type(step_data).__name__}"]
+            scenarios.append({"name": step_name, "errors": errors})
     passed = sum(1 for s in scenarios if not s.get("errors"))
     failed = len(scenarios) - passed
 

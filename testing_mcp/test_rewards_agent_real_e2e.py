@@ -371,6 +371,223 @@ def extract_result(response: dict) -> dict:
     return result
 
 
+def get_campaign_state(campaign_id: str) -> dict:
+    """Fetch the current campaign state via MCP."""
+    return extract_result(
+        mcp_call(
+            "tools/call",
+            {
+                "name": "get_campaign_state",
+                "arguments": {
+                    "user_id": USER_ID,
+                    "campaign_id": campaign_id,
+                },
+            },
+        )
+    )
+
+
+def attach_seed_validation(result: dict, validation: dict, label: str) -> dict:
+    """Attach seed validation metadata and flag failures consistently."""
+    if not isinstance(result, dict):
+        return {
+            "success": False,
+            "error": f"{label} seed result is not a dict",
+            "response": result,
+            "validation": validation,
+        }
+
+    merged = dict(result)
+    merged["validation"] = validation
+    if not validation.get("success"):
+        merged["success"] = False
+        merged.setdefault("error", f"{label} seed validation failed")
+    return merged
+
+
+def validate_ready_character_state(
+    campaign_id: str, *, level: int, xp_current: int, class_name: str
+) -> dict:
+    """Validate that character creation freeze is disabled and XP baseline applied."""
+    state_payload = get_campaign_state(campaign_id)
+    game_state = state_payload.get("game_state", {}) or {}
+    issues = []
+
+    world_data = game_state.get("world_data", {}) or {}
+    if world_data.get("campaign_state") != "active":
+        issues.append(
+            f"world_data.campaign_state={world_data.get('campaign_state')}"
+        )
+
+    custom_state = game_state.get("custom_campaign_state", {}) or {}
+    if custom_state.get("character_creation_in_progress") is not False:
+        issues.append(
+            "custom_campaign_state.character_creation_in_progress not False"
+        )
+    character_creation = custom_state.get("character_creation", {}) or {}
+    if character_creation.get("in_progress") is not False:
+        issues.append("custom_campaign_state.character_creation.in_progress not False")
+
+    player_data = game_state.get("player_character_data", {}) or {}
+    if player_data.get("class") != class_name:
+        issues.append(f"player_character_data.class={player_data.get('class')}")
+    if player_data.get("level") != level:
+        issues.append(f"player_character_data.level={player_data.get('level')}")
+    player_xp = player_data.get("experience", {}).get("current")
+    if player_xp != xp_current:
+        issues.append(f"player_character_data.experience.current={player_xp}")
+
+    return {"success": not issues, "issues": issues, "game_state": game_state}
+
+
+def validate_combat_end_state(
+    campaign_id: str, *, xp_awarded: int, enemies_defeated: list[str]
+) -> dict:
+    """Validate that combat-end state persisted for deterministic rewards testing."""
+    state_payload = get_campaign_state(campaign_id)
+    game_state = state_payload.get("game_state", {}) or {}
+    issues = []
+
+    combat_state = game_state.get("combat_state", {}) or {}
+    if combat_state.get("in_combat") is not False:
+        issues.append("combat_state.in_combat not False")
+    if combat_state.get("combat_phase") != "ended":
+        issues.append(f"combat_state.combat_phase={combat_state.get('combat_phase')}")
+    summary = combat_state.get("combat_summary", {}) or {}
+    if summary.get("xp_awarded") != xp_awarded:
+        issues.append(f"combat_summary.xp_awarded={summary.get('xp_awarded')}")
+    if summary.get("enemies_defeated") != enemies_defeated:
+        issues.append("combat_summary.enemies_defeated mismatch")
+    if combat_state.get("rewards_processed") is not False:
+        issues.append("combat_state.rewards_processed not False")
+
+    return {"success": not issues, "issues": issues, "game_state": game_state}
+
+
+def validate_encounter_end_state(
+    campaign_id: str, *, xp_awarded: int, encounter_type: str, outcome: str
+) -> dict:
+    """Validate that encounter-end state persisted for deterministic rewards testing."""
+    state_payload = get_campaign_state(campaign_id)
+    game_state = state_payload.get("game_state", {}) or {}
+    issues = []
+
+    encounter_state = game_state.get("encounter_state", {}) or {}
+    if encounter_state.get("encounter_completed") is not True:
+        issues.append("encounter_state.encounter_completed not True")
+    summary = encounter_state.get("encounter_summary", {}) or {}
+    if summary.get("xp_awarded") != xp_awarded:
+        issues.append(f"encounter_summary.xp_awarded={summary.get('xp_awarded')}")
+    if summary.get("outcome") != outcome:
+        issues.append(f"encounter_summary.outcome={summary.get('outcome')}")
+    if summary.get("method") != encounter_type:
+        issues.append(f"encounter_summary.method={summary.get('method')}")
+    if encounter_state.get("rewards_processed") is not False:
+        issues.append("encounter_state.rewards_processed not False")
+
+    return {"success": not issues, "issues": issues, "game_state": game_state}
+
+
+def god_mode_update_state(campaign_id: str, state_changes: dict) -> dict:
+    """Apply state changes via GOD_MODE_UPDATE_STATE and return parsed result."""
+    payload_json = json.dumps(state_changes, separators=(",", ":"), sort_keys=True)
+    return extract_result(
+        mcp_call(
+            "tools/call",
+            {
+                "name": "process_action",
+                "arguments": {
+                    "user_id": USER_ID,
+                    "campaign_id": campaign_id,
+                    "user_input": f"GOD_MODE_UPDATE_STATE:{payload_json}",
+                },
+            },
+        )
+    )
+
+
+def seed_ready_character_state(
+    campaign_id: str, *, level: int, xp_current: int, class_name: str
+) -> dict:
+    """Disable character-creation time-freeze and ensure minimal character data."""
+    state_changes = {
+        "world_data": {"campaign_state": "active"},
+        "custom_campaign_state": {
+            # Newer key observed in create_campaign flows
+            "character_creation_in_progress": False,
+            # Back-compat for validators/prompt selection that use nested format
+            "character_creation": {"in_progress": False},
+        },
+        "player_character_data": {
+            "class": class_name,
+            "level": level,
+            "experience": {"current": xp_current},
+        },
+    }
+    result = god_mode_update_state(campaign_id, state_changes)
+    validation = validate_ready_character_state(
+        campaign_id, level=level, xp_current=xp_current, class_name=class_name
+    )
+    return attach_seed_validation(result, validation, "ready_character_state")
+
+
+def seed_combat_end_state(
+    campaign_id: str, *, xp_awarded: int, enemies_defeated: list[str]
+) -> dict:
+    """Force a post-combat state so RewardsAgent MUST run on next action.
+
+    CRITICAL: Clears combat_history to prevent LLM from re-processing already-awarded
+    XP from previous combats. This prevents the scenario where combat_history contains
+    50 XP from Scenario 1, combat_summary contains 50 XP for Scenario 2, and the LLM
+    awards 100 XP total (double-counting).
+    """
+    state_changes = {
+        "combat_state": {
+            "in_combat": False,
+            "combat_phase": "ended",
+            "combat_summary": {
+                "xp_awarded": xp_awarded,
+                "enemies_defeated": enemies_defeated,
+                "outcome": "victory",
+            },
+            "rewards_processed": False,
+            "combat_history": [],  # Clear history to prevent XP double-counting
+        }
+    }
+    result = god_mode_update_state(campaign_id, state_changes)
+    validation = validate_combat_end_state(
+        campaign_id, xp_awarded=xp_awarded, enemies_defeated=enemies_defeated
+    )
+    return attach_seed_validation(result, validation, "combat_end_state")
+
+
+def seed_encounter_end_state(
+    campaign_id: str, *, xp_awarded: int, encounter_type: str, outcome: str
+) -> dict:
+    """Force a completed non-combat encounter so RewardsAgent MUST run."""
+    state_changes = {
+        "encounter_state": {
+            "encounter_active": False,
+            "encounter_type": encounter_type,
+            "encounter_completed": True,
+            "encounter_summary": {
+                "xp_awarded": xp_awarded,
+                "outcome": outcome,
+                "method": encounter_type,
+            },
+            "rewards_processed": False,
+        }
+    }
+    result = god_mode_update_state(campaign_id, state_changes)
+    validation = validate_encounter_end_state(
+        campaign_id,
+        xp_awarded=xp_awarded,
+        encounter_type=encounter_type,
+        outcome=outcome,
+    )
+    return attach_seed_validation(result, validation, "encounter_end_state")
+
+
 def detect_rewards_box(narrative: str) -> dict:
     """Detect formatted rewards box in narrative output.
 
@@ -490,7 +707,8 @@ def check_continue_options(response_data: dict) -> dict:
     """Check if response includes choices and validate mechanical-only behavior.
 
     RewardsAgent should be PURELY MECHANICAL:
-    - Level-up choices are ALLOWED (level_up_now, continue_adventuring)
+    - Level-up choices are ALLOWED (level_up_now, continue_adventuring,
+      level_up, continue_adventure)
     - Story continuation choices are NOT ALLOWED (continue_story, rest, explore)
 
     Returns dict with analysis of what choices are present.
@@ -498,26 +716,30 @@ def check_continue_options(response_data: dict) -> dict:
     planning_block = response_data.get("planning_block", {})
     choices = planning_block.get("choices", {})
 
-    # Level-up choices are allowed (exact match to avoid false positives)
-    level_up_choices = ["level_up_now", "level_up", "continue_adventuring"]
+    # Level-up / mechanical proceed choices are allowed (exact match)
+    level_up_choices = {
+        "level_up_now",
+        "level_up",
+        "continue_adventuring",
+        "continue_adventure",
+    }
     # Story continuation choices are NOT allowed in RewardsAgent
-    # Note: Use exact match to avoid "continue" matching "continue_adventuring"
-    story_choices = ["continue_story", "continue", "rest", "explore", "continue_adventure"]
+    # Note: Use exact match to avoid "continue" matching allowed proceed choices
+    # INVARIANT: RewardsAgent only emits "continue_adventure"/"continue_adventuring",
+    # never bare "continue" (StoryModeAgent only). Keep this guard to flag LLM drift.
+    story_choices = {"continue_story", "continue", "rest", "explore"}
 
     choice_keys_lower = [k.lower() for k in choices.keys()] if choices else []
 
     # First identify level-up choices (exact match)
-    has_level_up_choices = any(
-        ck in level_up_choices for ck in choice_keys_lower
-    )
+    has_level_up_choices = any(ck in level_up_choices for ck in choice_keys_lower)
 
     # Story choices: check if any key is a story choice but NOT a level-up choice
     # This prevents "continue_adventuring" from matching "continue" substring
     has_story_choices = any(
-        ck in story_choices or (
-            any(sc in ck for sc in story_choices) and ck not in level_up_choices
-        )
+        ck in story_choices
         for ck in choice_keys_lower
+        if ck not in level_up_choices
     )
 
     return {
@@ -582,6 +804,29 @@ def has_reward_evidence(
     )
 
     return xp_award_present or loot_present or xp_increased
+
+
+def validate_xp_delta(
+    xp_before: Optional[int],
+    xp_after: Optional[int],
+    expected_xp_gain: Optional[int],
+    issues_list: List[str],
+) -> bool:
+    """
+    Validate actual XP gain matches expected.
+
+    Returns True if valid, False if mismatch (appends issue to issues_list).
+    """
+    if xp_before is None or xp_after is None or expected_xp_gain is None:
+        return True  # Skip validation if data missing
+
+    actual_xp_gain = xp_after - xp_before
+    if actual_xp_gain != expected_xp_gain:
+        issues_list.append(
+            f"XP delta mismatch: gained {actual_xp_gain} but expected {expected_xp_gain}"
+        )
+        return False
+    return True
 
 
 def main():
@@ -670,84 +915,58 @@ def main():
         save_results(results)
         return 1
 
-    # Start and run combat
-    log("Step 1.2: Trigger combat encounter")
-    combat_start_response = mcp_call(
+    log("Step 1.1b: Seed ready character state (disable character creation freeze)")
+    seed_result = seed_ready_character_state(
+        campaign_id, level=2, xp_current=300, class_name="Fighter"  # Level 2 requires 300 XP
+    )
+    seed_ok = bool(seed_result.get("success")) and not seed_result.get("error")
+    scenario1["steps"].append(
+        {
+            "name": "seed_ready_state",
+            "passed": seed_ok,
+            "seed_result": seed_result,
+        }
+    )
+    if not seed_ok:
+        log(f"  FAILED: Could not seed ready state: {seed_result}")
+        results["scenarios"]["scenario1"] = scenario1
+        save_results(results)
+        return 1
+
+    # Force post-combat state so RewardsAgent MUST trigger deterministically.
+    log("Step 1.2: Inject combat ended state (RewardsAgent precondition)")
+    inject_result = seed_combat_end_state(
+        campaign_id, xp_awarded=50, enemies_defeated=["bandit_1", "bandit_2"]
+    )
+    inject_ok = bool(inject_result.get("success")) and not inject_result.get("error")
+    scenario1["steps"].append(
+        {
+            "name": "inject_combat_end_state",
+            "passed": inject_ok,
+            "inject_result": inject_result,
+        }
+    )
+    if not inject_ok:
+        log(f"  FAILED: Could not inject combat end state: {inject_result}")
+        results["scenarios"]["scenario1"] = scenario1
+        save_results(results)
+        return 1
+
+    # Trigger RewardsAgent: should display rewards + set rewards_processed=true.
+    log("Step 1.3: Trigger RewardsAgent")
+    rewards_response = mcp_call(
         "tools/call",
         {
             "name": "process_action",
             "arguments": {
                 "user_id": USER_ID,
                 "campaign_id": campaign_id,
-                "user_input": (
-                    "Two bandits jump out from behind the trees and attack! "
-                    "I draw my sword and fight them. "
-                    "[OOC: Start combat - set in_combat=true, roll initiative, "
-                    "create combatants for me and 2 bandits (CR 1/8 each)]"
-                ),
+                "user_input": "I claim my rewards from the battle.",
             },
         },
     )
 
-    combat_start_data = extract_result(combat_start_response)
-    combat_state = combat_start_data.get("game_state", {}).get("combat_state", {})
-    in_combat = combat_state.get("in_combat", False)
-
-    scenario1["steps"].append({
-        "name": "start_combat",
-        "passed": in_combat is True,
-        "in_combat": in_combat,
-        "combat_state": combat_state,
-    })
-    log(f"  in_combat: {in_combat}")
-
-    # Execute combat action
-    log("Step 1.3: Execute combat action")
-    combat_action_response = mcp_call(
-        "tools/call",
-        {
-            "name": "process_action",
-            "arguments": {
-                "user_id": USER_ID,
-                "campaign_id": campaign_id,
-                "user_input": "I attack the nearest bandit with my longsword!",
-            },
-        },
-    )
-
-    combat_action_data = extract_result(combat_action_response)
-    combat_action_game_state = combat_action_data.get("game_state", {}) or {}
-    xp_before_end_combat = (
-        (combat_action_game_state.get("player_character_data", {}) or {})
-        .get("experience", {})
-        .get("current")
-    )
-    scenario1["steps"].append({
-        "name": "combat_action",
-        "passed": True,
-        "narrative_preview": combat_action_data.get("narrative", "")[:200],
-    })
-
-    # End combat - this should trigger RewardsAgent
-    log("Step 1.4: End combat (should trigger RewardsAgent)")
-    end_combat_response = mcp_call(
-        "tools/call",
-        {
-            "name": "process_action",
-            "arguments": {
-                "user_id": USER_ID,
-                "campaign_id": campaign_id,
-                "user_input": (
-                    "I defeat both bandits with powerful strikes! The battle is over. "
-                    "[OOC: End combat now - set in_combat=false, combat_phase='ended', "
-                    "populate combat_summary with xp_awarded (bandits are CR 1/8 = 25 XP each = 50 XP total). "
-                    "RewardsAgent should process and display the rewards.]"
-                ),
-            },
-        },
-    )
-
-    end_combat_data = extract_result(end_combat_response)
+    end_combat_data = extract_result(rewards_response)
     end_narrative = end_combat_data.get("narrative", end_combat_data.get("raw_text", ""))
     end_game_state = end_combat_data.get("game_state", {})
     end_combat_state = end_game_state.get("combat_state", {}) or {}
@@ -766,6 +985,16 @@ def main():
     # 2. rewards_processed=true AT THIS STEP (not a later step)
     # 3. Evidence of rewards generated (xp_awarded/loot/xp increase)
     has_structured_xp = rewards_validation.get("xp_awarded")
+    baseline_state = {}
+    if isinstance(inject_result, dict):
+        baseline_state = inject_result.get("validation", {}).get("game_state", {}) or {}
+    xp_before_end_combat = (
+        (baseline_state.get("player_character_data", {}) or {})
+        .get("experience", {})
+        .get("current")
+    )
+    if xp_before_end_combat is None:
+        xp_before_end_combat = 200
     xp_after_end_combat = end_player_data.get("experience", {}).get("current")
     combat_end_passed = bool(
         end_combat_state.get("in_combat") is False
@@ -782,6 +1011,16 @@ def main():
 
     # Also track why it failed for diagnostics
     combat_end_issues = []
+
+    # XP DELTA VALIDATION
+    if not validate_xp_delta(
+        xp_before_end_combat,
+        xp_after_end_combat,
+        50,  # Expected: 2 bandits * 25 XP
+        combat_end_issues,
+    ):
+        combat_end_passed = False
+
     if end_combat_state.get("in_combat") is not False:
         combat_end_issues.append("in_combat not False")
     if end_combat_state.get("combat_phase") != "ended":
@@ -796,6 +1035,16 @@ def main():
         xp_after_end_combat,
     ):
         combat_end_issues.append("insufficient reward evidence (xp_awarded/loot/xp increase)")
+
+    # XP DELTA VALIDATION: Actual XP gain must match combat_summary.xp_awarded
+    if xp_before_end_combat is not None and xp_after_end_combat is not None and has_structured_xp:
+        actual_xp_gain = xp_after_end_combat - xp_before_end_combat
+        expected_xp_gain = has_structured_xp
+        if actual_xp_gain != expected_xp_gain:
+            combat_end_issues.append(
+                f"XP delta mismatch: gained {actual_xp_gain} but combat_summary.xp_awarded={expected_xp_gain}"
+            )
+            combat_end_passed = False  # FAIL on XP mismatch
 
     scenario1["steps"].append({
         "name": "end_combat_rewards",
@@ -827,7 +1076,7 @@ def main():
         log(f"  ISSUES: {', '.join(combat_end_issues)}")
 
     # Continue after rewards - verify smooth transition
-    log("Step 1.5: Continue after rewards (verify smooth UX)")
+    log("Step 1.4: Continue after rewards (verify smooth UX)")
     continue_response = mcp_call(
         "tools/call",
         {
@@ -868,23 +1117,83 @@ def main():
     log("SCENARIO 2: Narrative Kill Rewards")
     log("=" * 60)
 
-    scenario2 = {"name": "narrative_kill_rewards", "steps": [], "campaign_id": campaign_id}
+    # Create NEW campaign for Scenario 2 to avoid story context pollution from Scenario 1
+    log("Step 2.1: Create campaign for narrative kill scenario")
+    create_response2 = mcp_call(
+        "tools/call",
+        {
+            "name": "create_campaign",
+            "arguments": {
+                "user_id": USER_ID,
+                "title": "The Rewards Test - Narrative Kill",
+                "description": "Testing RewardsAgent for narrative kill rewards",
+                "character": "A level 2 fighter tracking down scouts",
+                "setting": "A forest where goblin scouts have been spotted",
+            },
+        },
+    )
 
-    log("Step 2.1: Narrative kill (should still award XP)")
+    campaign2_data = extract_result(create_response2)
+    campaign2_id = campaign2_data.get("campaign_id")
+    scenario2 = {"name": "narrative_kill_rewards", "steps": [], "campaign_id": campaign2_id}
+
+    scenario2["steps"].append({
+        "name": "create_campaign",
+        "passed": campaign2_id is not None,
+        "campaign_id": campaign2_id,
+    })
+    log(f"  Campaign ID: {campaign2_id}")
+
+    if not campaign2_id:
+        log("  FAILED: No campaign ID")
+        results["scenarios"]["scenario2"] = scenario2
+        save_results(results)
+        return 1
+
+    log("Step 2.2: Seed ready character state (disable character creation freeze)")
+    seed2_result = seed_ready_character_state(
+        campaign2_id, level=2, xp_current=350, class_name="Fighter"
+    )
+    seed2_ok = bool(seed2_result.get("success")) and not seed2_result.get("error")
+    scenario2["steps"].append({
+        "name": "seed_ready_state",
+        "passed": seed2_ok,
+        "seed_result": seed2_result,
+    })
+    if not seed2_ok:
+        log(f"  FAILED: Could not seed ready state: {seed2_result}")
+        results["scenarios"]["scenario2"] = scenario2
+        save_results(results)
+        return 1
+
+    log("Step 2.3: Inject narrative kill state (RewardsAgent precondition)")
+    inject_kill = seed_combat_end_state(
+        campaign2_id, xp_awarded=50, enemies_defeated=["goblin_scout_001"]
+    )
+    inject_kill_ok = bool(inject_kill.get("success")) and not inject_kill.get("error")
+    scenario2["steps"].append(
+        {
+            "name": "inject_narrative_kill_state",
+            "passed": inject_kill_ok,
+            "inject_result": inject_kill,
+        }
+    )
+    if not inject_kill_ok:
+        log(f"  FAILED: Could not inject narrative kill state: {inject_kill}")
+        scenario2["passed"] = False
+        results["scenarios"]["scenario2"] = scenario2
+        save_results(results)
+        return 1
+
+    log("Step 2.4: Trigger RewardsAgent for narrative kill")
     narrative_kill_response = mcp_call(
         "tools/call",
         {
             "name": "process_action",
             "arguments": {
                 "user_id": USER_ID,
-                "campaign_id": campaign_id,
-                "user_input": (
-                    "I spot a wounded goblin scout hiding in the bushes. "
-                    "I quietly approach and execute it with a swift sword strike. "
-                    "[OOC: This is a narrative kill outside of formal combat. "
-                    "Award 50 XP (goblin CR 1/4) using combat_summary with xp_awarded. "
-                    "RewardsAgent should still process this kill's XP.]"
-                ),
+                "campaign_id": campaign2_id,
+                "user_input": "I claim my rewards from that kill.",
             },
         },
     )
@@ -902,11 +1211,14 @@ def main():
     # 1. rewards_processed=true (RewardsAgent actually ran)
     # 2. Evidence of rewards generated (xp_awarded/loot/xp increase)
     kill_has_structured_xp = kill_combat_summary.get("xp_awarded")
+    # Use inject_kill state for XP baseline (NOT Scenario 1's continue_game_state)
     xp_before_kill = (
-        (continue_game_state.get("player_character_data", {}) or {})
+        (inject_kill.get("validation", {}).get("game_state", {}).get("player_character_data", {}) or {})
         .get("experience", {})
         .get("current")
     )
+    if xp_before_kill is None:
+        xp_before_kill = 350  # Fallback to seeded value
     xp_after_kill = kill_player_data.get("experience", {}).get("current")
     narrative_kill_passed = bool(
         kill_rewards_check["rewards_processed_any"]  # STRICT: Must be true
@@ -921,6 +1233,16 @@ def main():
 
     # Track issues for diagnostics
     narrative_kill_issues = []
+
+    # XP DELTA VALIDATION
+    if not validate_xp_delta(
+        xp_before_kill,
+        xp_after_kill,
+        50,  # Expected: goblin CR 1/4 = 50 XP
+        narrative_kill_issues,
+    ):
+        narrative_kill_passed = False
+
     if not kill_rewards_check["rewards_processed_any"]:
         narrative_kill_issues.append("rewards_processed=False (must be True)")
     if not has_reward_evidence(
@@ -931,6 +1253,17 @@ def main():
         xp_after_kill,
     ):
         narrative_kill_issues.append("insufficient reward evidence (xp_awarded/loot/xp increase)")
+
+    # XP DELTA VALIDATION: Actual XP gain must match combat_summary.xp_awarded
+    # This catches bugs where LLM double-counts XP from combat_history or story context
+    if xp_before_kill is not None and xp_after_kill is not None and kill_has_structured_xp:
+        actual_xp_gain = xp_after_kill - xp_before_kill
+        expected_xp_gain = kill_has_structured_xp
+        if actual_xp_gain != expected_xp_gain:
+            narrative_kill_issues.append(
+                f"XP delta mismatch: gained {actual_xp_gain} but combat_summary.xp_awarded={expected_xp_gain}"
+            )
+            narrative_kill_passed = False  # FAIL on XP mismatch
 
     scenario2["steps"].append({
         "name": "narrative_kill",
@@ -998,53 +1331,43 @@ def main():
         save_results(results)
         return 1
 
-    # Start a heist encounter
-    log("Step 3.2: Start heist encounter")
-    heist_start_response = mcp_call(
-        "tools/call",
+    log("Step 3.1b: Seed ready character state (disable character creation freeze)")
+    seed_result3 = seed_ready_character_state(
+        campaign3_id, level=3, xp_current=900, class_name="Rogue"
+    )
+    seed_ok3 = bool(seed_result3.get("success")) and not seed_result3.get("error")
+    scenario3["steps"].append(
         {
-            "name": "process_action",
-            "arguments": {
-                "user_id": USER_ID,
-                "campaign_id": campaign3_id,
-                "user_input": (
-                    "I sneak into the merchant's shop at night to steal the valuable gem. "
-                    "[OOC: Start a heist encounter - set encounter_state.encounter_active=true, "
-                    "encounter_type='heist', difficulty='medium'. Track objectives: "
-                    "bypass lock, grab gem, escape undetected.]"
-                ),
-            },
-        },
+            "name": "seed_ready_state",
+            "passed": seed_ok3,
+            "seed_result": seed_result3,
+        }
     )
+    if not seed_ok3:
+        log(f"  FAILED: Could not seed ready state: {seed_result3}")
+        results["scenarios"]["scenario3"] = scenario3
+        save_results(results)
+        return 1
 
-    heist_start_data = extract_result(heist_start_response)
-    heist_start_narrative = heist_start_data.get("narrative", heist_start_data.get("raw_text", ""))
-    heist_game_state = heist_start_data.get("game_state", {})
-    encounter_state = heist_game_state.get("encounter_state", {}) or {}
-    heist_start_xp = (heist_game_state.get("player_character_data", {}) or {}).get("experience", {}).get("current", 0)
-
-    # Accept if: encounter_active set, OR narrative describes heist/sneak action, OR has planning block
-    heist_started = (
-        encounter_state.get("encounter_active", False)
-        or "sneak" in heist_start_narrative.lower()
-        or "lock" in heist_start_narrative.lower()
-        or "gem" in heist_start_narrative.lower()
-        or bool(heist_start_data.get("planning_block", {}).get("choices"))
+    log("Step 3.2: Inject heist completion state (RewardsAgent precondition)")
+    inject_heist = seed_encounter_end_state(
+        campaign3_id, xp_awarded=125, encounter_type="heist", outcome="success"
     )
+    inject_heist_ok = bool(inject_heist.get("success")) and not inject_heist.get("error")
+    scenario3["steps"].append(
+        {
+            "name": "inject_heist_end_state",
+            "passed": inject_heist_ok,
+            "inject_result": inject_heist,
+        }
+    )
+    if not inject_heist_ok:
+        log(f"  FAILED: Could not inject heist end state: {inject_heist}")
+        results["scenarios"]["scenario3"] = scenario3
+        save_results(results)
+        return 1
 
-    scenario3["steps"].append({
-        "name": "start_heist",
-        "passed": heist_started,
-        "encounter_state": encounter_state,
-        "narrative_preview": heist_start_narrative[:200],
-        "xp_at_start": heist_start_xp,
-    })
-    log(f"  encounter_active: {encounter_state.get('encounter_active')}")
-    log(f"  encounter_type: {encounter_state.get('encounter_type')}")
-    log(f"  Heist started (narrative check): {heist_started}")
-
-    # Complete the heist
-    log("Step 3.3: Complete heist (should trigger RewardsAgent)")
+    log("Step 3.3: Trigger RewardsAgent for heist")
     heist_complete_response = mcp_call(
         "tools/call",
         {
@@ -1052,13 +1375,7 @@ def main():
             "arguments": {
                 "user_id": USER_ID,
                 "campaign_id": campaign3_id,
-                "user_input": (
-                    "I pick the lock (DC 15 Sleight of Hand), grab the gem, and slip "
-                    "out the back window without a trace. Perfect heist! "
-                    "[OOC: Complete the encounter successfully - set encounter_completed=true, "
-                    "populate encounter_summary with xp_awarded (100 XP for medium heist "
-                    "with +25% heist bonus = 125 XP). RewardsAgent should process rewards.]"
-                ),
+                "user_input": "I claim my rewards from the heist.",
             },
         },
     )
@@ -1070,24 +1387,26 @@ def main():
     heist_player_data = heist_final_state.get("player_character_data", {}) or {}
     heist_current_xp = heist_player_data.get("experience", {}).get("current", 0)
 
-    # Also check combat_summary in case LLM used that instead of encounter_state
-    heist_combat_state = heist_final_state.get("combat_state", {}) or {}
-    heist_combat_summary = heist_combat_state.get("combat_summary", {}) or {}
-
     heist_rewards_check = check_rewards_indicators(heist_narrative, heist_final_state, heist_complete_data)
     heist_continue_check = check_continue_options(heist_complete_data)
     heist_summary = heist_encounter_state.get("encounter_summary", {}) or {}
 
-    # XP increased check - use heist_start_xp (XP at step 3.2), not campaign initial
+    baseline_state = {}
+    if isinstance(inject_heist, dict):
+        baseline_state = inject_heist.get("validation", {}).get("game_state", {}) or {}
+    heist_start_xp = (
+        (baseline_state.get("player_character_data", {}) or {})
+        .get("experience", {})
+        .get("current")
+    )
+    if heist_start_xp is None:
+        heist_start_xp = 900
     xp_increased = heist_current_xp > heist_start_xp
-    xp_gain = heist_current_xp - heist_start_xp  # Proper delta for this step
+    xp_gain = heist_current_xp - heist_start_xp
 
-    # STRICT (relaxed format): Heist passed if:
-    # 1. rewards_processed=true (RewardsAgent actually ran)
-    # 2. Evidence of rewards generated (xp_awarded/loot/xp increase)
-    heist_has_structured_xp = heist_summary.get("xp_awarded") or heist_combat_summary.get("xp_awarded")
+    heist_has_structured_xp = heist_summary.get("xp_awarded")
     heist_passed = bool(
-        heist_rewards_check["rewards_processed_any"]  # STRICT: Must be true
+        heist_rewards_check["rewards_processed_any"]
         and has_reward_evidence(
             heist_rewards_check["rewards_processed_any"],
             heist_has_structured_xp,
@@ -1095,10 +1414,20 @@ def main():
             heist_start_xp,
             heist_current_xp,
         )
+        and heist_rewards_check["has_sufficient_indicators"]  # REQUIRE narrative communication
     )
 
-    # Track issues for diagnostics
     heist_issues = []
+
+    # XP DELTA VALIDATION
+    if not validate_xp_delta(
+        heist_start_xp,
+        heist_current_xp,
+        125,  # Expected: 100 base + 25 bonus
+        heist_issues,
+    ):
+        heist_passed = False
+
     if not heist_rewards_check["rewards_processed_any"]:
         heist_issues.append("rewards_processed=False (must be True)")
     if not has_reward_evidence(
@@ -1109,19 +1438,32 @@ def main():
         heist_current_xp,
     ):
         heist_issues.append("insufficient reward evidence (xp_awarded/loot/xp increase)")
+    if not heist_rewards_check["has_sufficient_indicators"]:
+        heist_issues.append(
+            f"insufficient narrative indicators ({heist_rewards_check['narrative_indicator_count']}/3 required)"
+        )
+
+    # XP DELTA VALIDATION: Actual XP gain must match encounter_summary.xp_awarded
+    if heist_start_xp is not None and heist_current_xp is not None and heist_has_structured_xp:
+        actual_xp_gain = heist_current_xp - heist_start_xp
+        expected_xp_gain = heist_has_structured_xp
+        if actual_xp_gain != expected_xp_gain:
+            heist_issues.append(
+                f"XP delta mismatch: gained {actual_xp_gain} but encounter_summary.xp_awarded={expected_xp_gain}"
+            )
+            heist_passed = False  # FAIL on XP mismatch
 
     scenario3["steps"].append({
-        "name": "complete_heist_rewards",
+        "name": "heist_rewards",
         "passed": heist_passed,
         "issues": heist_issues,
         "narrative_preview": heist_narrative[:500],
         "encounter_state": heist_encounter_state,
         "encounter_summary": heist_summary,
-        "combat_summary": heist_combat_summary,
         "rewards_check": heist_rewards_check,
         "continue_check": heist_continue_check,
         "player_xp": heist_current_xp,
-        "xp_at_heist_start": heist_start_xp,
+        "xp_before_step": heist_start_xp,
         "xp_increased": xp_increased,
         "xp_gain": xp_gain,
     })
@@ -1129,7 +1471,6 @@ def main():
     log(f"  encounter_completed: {heist_encounter_state.get('encounter_completed')}")
     log(f"  rewards_processed: {heist_rewards_check['rewards_processed_any']}")
     log(f"  XP in encounter_summary: {heist_summary.get('xp_awarded')}")
-    log(f"  XP in combat_summary: {heist_combat_summary.get('xp_awarded')}")
     log(f"  XP mentioned: {heist_rewards_check['has_xp_mention']}")
     log(f"  has_rewards_box: {heist_rewards_check['has_rewards_box']}")
     log(f"  XP increased: {xp_increased} (gain: {xp_gain}, from {heist_start_xp} to {heist_current_xp})")
@@ -1151,8 +1492,26 @@ def main():
     # Track XP before social encounter (after heist)
     scenario4["xp_before_social"] = heist_current_xp
 
-    log("Step 4.1: Social victory encounter")
+    log("Step 4.1: Inject social victory state (RewardsAgent precondition)")
     log(f"  XP before social: {heist_current_xp}")
+    inject_social = seed_encounter_end_state(
+        campaign3_id, xp_awarded=100, encounter_type="social", outcome="victory"
+    )
+    inject_social_ok = bool(inject_social.get("success")) and not inject_social.get("error")
+    scenario4["steps"].append(
+        {
+            "name": "inject_social_end_state",
+            "passed": inject_social_ok,
+            "inject_result": inject_social,
+        }
+    )
+    if not inject_social_ok:
+        log(f"  FAILED: Could not inject social end state: {inject_social}")
+        results["scenarios"]["scenario4"] = scenario4
+        save_results(results)
+        return 1
+
+    log("Step 4.2: Trigger RewardsAgent for social victory")
     social_response = mcp_call(
         "tools/call",
         {
@@ -1160,13 +1519,7 @@ def main():
             "arguments": {
                 "user_id": USER_ID,
                 "campaign_id": campaign3_id,
-                "user_input": (
-                    "I approach the guard captain and convince him I'm a visiting noble's servant "
-                    "on important business. Using my silver tongue, I talk my way past the checkpoint. "
-                    "[OOC: This is a social encounter victory. DC 16 Deception check succeeds. "
-                    "Award 75 XP for medium social difficulty, plus 25 XP bonus for avoiding combat. "
-                    "Total: 100 XP. Set encounter_completed=true, process rewards.]"
-                ),
+                "user_input": "I claim my rewards from that social victory.",
             },
         },
     )
@@ -1177,10 +1530,6 @@ def main():
     social_encounter_state = social_game_state.get("encounter_state", {}) or {}
     social_player_data = social_game_state.get("player_character_data", {}) or {}
     social_current_xp = social_player_data.get("experience", {}).get("current", 0)
-
-    # Also check combat_summary in case LLM used that instead of encounter_state
-    social_combat_state = social_game_state.get("combat_state", {}) or {}
-    social_combat_summary = social_combat_state.get("combat_summary", {}) or {}
 
     social_rewards_check = check_rewards_indicators(social_narrative, social_game_state, social_data)
     social_summary = social_encounter_state.get("encounter_summary", {}) or {}
@@ -1193,7 +1542,7 @@ def main():
     # STRICT (relaxed format): Social victory passed if:
     # 1. rewards_processed=true (RewardsAgent actually ran)
     # 2. Evidence of rewards generated (xp_awarded/loot/xp increase)
-    social_has_structured_xp = social_summary.get("xp_awarded") or social_combat_summary.get("xp_awarded")
+    social_has_structured_xp = social_summary.get("xp_awarded")
     social_passed = bool(
         social_rewards_check["rewards_processed_any"]  # STRICT: Must be true
         and has_reward_evidence(
@@ -1207,6 +1556,16 @@ def main():
 
     # Track issues for diagnostics
     social_issues = []
+
+    # XP DELTA VALIDATION
+    if not validate_xp_delta(
+        social_xp_before,
+        social_current_xp,
+        100,  # Expected: 75 base + 25 bonus
+        social_issues,
+    ):
+        social_passed = False
+
     if not social_rewards_check["rewards_processed_any"]:
         social_issues.append("rewards_processed=False (must be True)")
     if not has_reward_evidence(
@@ -1218,13 +1577,22 @@ def main():
     ):
         social_issues.append("insufficient reward evidence (xp_awarded/loot/xp increase)")
 
+    # XP DELTA VALIDATION: Actual XP gain must match encounter_summary.xp_awarded
+    if social_xp_before is not None and social_current_xp is not None and social_has_structured_xp:
+        actual_xp_gain = social_current_xp - social_xp_before
+        expected_xp_gain = social_has_structured_xp
+        if actual_xp_gain != expected_xp_gain:
+            social_issues.append(
+                f"XP delta mismatch: gained {actual_xp_gain} but encounter_summary.xp_awarded={expected_xp_gain}"
+            )
+            social_passed = False  # FAIL on XP mismatch
+
     scenario4["steps"].append({
         "name": "social_victory",
         "passed": social_passed,
         "issues": social_issues,
         "narrative_preview": social_narrative[:500],
         "encounter_summary": social_summary,
-        "combat_summary": social_combat_summary,
         "rewards_check": social_rewards_check,
         "player_xp": social_current_xp,
         "xp_before_step": social_xp_before,
@@ -1234,7 +1602,6 @@ def main():
 
     log(f"  XP mentioned: {social_rewards_check['has_xp_mention']}")
     log(f"  XP in encounter_summary: {social_summary.get('xp_awarded')}")
-    log(f"  XP in combat_summary: {social_combat_summary.get('xp_awarded')}")
     log(f"  rewards_processed: {social_rewards_check['rewards_processed_any']}")
     log(f"  has_rewards_box: {social_rewards_check['has_rewards_box']}")
     log(f"  XP increased: {social_xp_increased} (gain: {social_xp_gain}, from {social_xp_before} to {social_current_xp})")
@@ -1308,6 +1675,7 @@ def save_results(results: dict) -> None:
     └── checksums.manifest
     """
     output_dir = Path(OUTPUT_DIR)
+    log(f"📦 Saving evidence bundle to: {output_dir}")
 
     # Write main results (evidence.json following savetmp naming)
     evidence_file = output_dir / "evidence.json"

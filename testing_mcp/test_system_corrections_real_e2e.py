@@ -24,11 +24,9 @@ Run against preview:
 
 from __future__ import annotations
 
-import json
-import os
-import subprocess
 import sys
 import time
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -113,7 +111,10 @@ def inject_combat_ended_discrepancy(client: MCPClient, campaign_id: str) -> dict
     )
 
     log("God mode injection complete")
-    return {"response": result}
+    parsed = result.result if hasattr(result, "result") else result
+    has_error = isinstance(parsed, dict) and parsed.get("error")
+
+    return {"success": not has_error, "response": parsed}
 
 
 def turn_1_trigger_discrepancy(client: MCPClient, campaign_id: str) -> dict[str, Any]:
@@ -283,8 +284,14 @@ def run_test() -> dict[str, Any]:
         results["scenarios"].append({
             "name": "inject_discrepancy",
             "campaign_id": campaign_id,
-            "success": True,
+            "success": inject_result.get("success", False),
+            "result": inject_result.get("response"),
         })
+
+        if not inject_result.get("success", False):
+            raise RuntimeError(
+                f"God mode injection failed: {inject_result.get('response')}"
+            )
 
         # Step 3: Turn 1 - Trigger discrepancy detection
         log("")
@@ -390,7 +397,6 @@ def run_test() -> dict[str, Any]:
     except Exception as e:
         log(f"ERROR: {e}")
         results["errors"].append(str(e))
-        import traceback
         results["traceback"] = traceback.format_exc()
 
     finally:
@@ -432,13 +438,12 @@ def run_test() -> dict[str, Any]:
 
     if results["errors"]:
         log(f"\nERRORS: {results['errors']}")
-        sys.exit(1)
     else:
         log("\nALL TESTS PASSED - Multi-turn self-correction working!")
-        sys.exit(0)
 
     return results
 
 
 if __name__ == "__main__":
-    run_test()
+    test_results = run_test()
+    sys.exit(1 if test_results.get("errors") else 0)

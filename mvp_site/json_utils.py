@@ -202,6 +202,11 @@ def extract_json_boundaries(text: str) -> Optional[str]:  # noqa: PLR0912
         Extracted JSON string if valid boundaries found, original text if incomplete,
         or None if no JSON start marker ({ or [) is found
     """
+    # Strip common LLM-generated prefixes like [Mode: STORY MODE] before JSON
+    # Match pattern: [word: text] followed by whitespace and JSON start
+    prefix_pattern = r'^\s*\[[A-Za-z]+:.*?\]\s*'
+    text = re.sub(prefix_pattern, '', text)
+
     start_match = re.search(r"[{\[]", text)
     if not start_match:
         return None

@@ -332,7 +332,9 @@ def _has_rewards_context(
 
 
 def _detect_rewards_discrepancy(
-    state_dict: dict[str, Any], original_state_dict: dict[str, Any] | None = None
+    state_dict: dict[str, Any],
+    original_state_dict: dict[str, Any] | None = None,
+    warnings_out: list[str] | None = None,
 ) -> list[str]:
     """
 
@@ -351,10 +353,12 @@ def _detect_rewards_discrepancy(
     2. Encounter completed (encounter_completed=True and encounter_summary exists)
        but rewards_processed=False
     3. XP increased from the previous state but rewards_processed=False
+    Also emits warnings when XP increases while rewards_processed=True (possible double-processing).
 
     Args:
         state_dict: The game state dict after updates are applied
         original_state_dict: Optional original state before the update (for XP comparison)
+        warnings_out: Optional list to append non-blocking warning messages
 
     Returns:
         List of discrepancy messages to inject into next prompt's system_corrections
@@ -403,32 +407,80 @@ def _detect_rewards_discrepancy(
             "but rewards_processed=False. You MUST set encounter_state.rewards_processed=true."
         )
 
-    # Check 3: XP increased during combat but rewards_processed=False
-    if original_state_dict and not combat_rewards_processed:
+    # Check 3: XP increased during combat; flag whether rewards_processed is set
+    if original_state_dict and combat_phase in constants.COMBAT_FINISHED_PHASES:
         player_data = state_dict.get("player_character_data") or {}
         original_player_data = original_state_dict.get("player_character_data") or {}
+        original_combat_state = original_state_dict.get("combat_state") or {}
+        original_combat_rewards_processed = original_combat_state.get(
+            "rewards_processed", False
+        )
 
         current_xp = _extract_xp_robust(player_data)
         original_xp = _extract_xp_robust(original_player_data)
 
-        if (
-            current_xp > original_xp
-            and combat_phase in constants.COMBAT_FINISHED_PHASES
-        ):
-            logging_util.warning(
-                "🏆 REWARDS_DISCREPANCY: XP increased (%d -> %d) during combat_phase=%s, "
-                "but rewards_processed=False",
-                original_xp,
-                current_xp,
-                combat_phase,
-            )
-            discrepancies.append(
-                f"REWARDS_STATE_ERROR: XP increased ({original_xp} -> {current_xp}) during "
-                f"combat_phase={combat_phase}, but rewards_processed=False. "
-                "You MUST set combat_state.rewards_processed=true."
-            )
+        if current_xp > original_xp:
+            if not combat_rewards_processed:
+                logging_util.warning(
+                    "🏆 REWARDS_DISCREPANCY: XP increased (%d -> %d) during combat_phase=%s, "
+                    "but rewards_processed=False",
+                    original_xp,
+                    current_xp,
+                    combat_phase,
+                )
+                discrepancies.append(
+                    f"REWARDS_STATE_ERROR: XP increased ({original_xp} -> {current_xp}) during "
+                    f"combat_phase={combat_phase}, but rewards_processed=False. "
+                    "You MUST set combat_state.rewards_processed=true."
+                )
+            elif original_combat_rewards_processed:
+                warning = (
+                    "REWARDS_STATE_WARNING: XP increased "
+                    f"({original_xp} -> {current_xp}) during combat_phase={combat_phase}, "
+                    "but rewards_processed=True. Ensure rewards are not being double-processed."
+                )
+                logging_util.warning(
+                    "🏆 REWARDS_DISCREPANCY: XP increased (%d -> %d) even though "
+                    "rewards_processed=True during combat_phase=%s; investigate potential "
+                    "double-processing",
+                    original_xp,
+                    current_xp,
+                    combat_phase,
+                )
+                if warnings_out is not None:
+                    warnings_out.append(warning)
 
     return discrepancies
+
+
+REWARD_CORRECTION_PREFIX = "REWARDS_STATE_ERROR"
+
+
+def _is_reward_correction(message: Any) -> bool:
+    """Return True for reward-related system correction strings."""
+    return isinstance(message, str) and message.startswith(REWARD_CORRECTION_PREFIX)
+
+
+def _filter_reward_corrections(corrections: list[Any] | None) -> list[str]:
+    """Filter to reward-related system correction strings."""
+    if not corrections:
+        return []
+    return [message for message in corrections if _is_reward_correction(message)]
+
+
+def _normalize_system_corrections(value: Any) -> list[str]:
+    """Coerce arbitrary pending corrections to a clean list[str] (drop non-strings)."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    if isinstance(value, list):
+        out: list[str] = []
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                out.append(item)
+        return out
+    return []
 
 
 def _extract_xp_robust(player_data: dict[str, Any]) -> int:
@@ -640,6 +692,8 @@ async def _process_rewards_followup(
     if mode == constants.MODE_REWARDS or rewards_already_in_response:
         return updated_game_state_dict, llm_response_obj, prevention_extras
 
+    rewards_warnings: list[str] = []
+
     post_update_state = GameState.from_dict(updated_game_state_dict)
     rewards_visible = _has_rewards_narrative(llm_response_obj.narrative_text)
     rewards_expected = _has_rewards_context(
@@ -698,11 +752,14 @@ async def _process_rewards_followup(
         rewards_discrepancies = _detect_rewards_discrepancy(
             updated_game_state_dict,
             original_state_dict=original_state_as_dict,
+            warnings_out=rewards_warnings,
         )
         if rewards_discrepancies:
             prevention_extras.setdefault("system_corrections", []).extend(
                 rewards_discrepancies
             )
+        if rewards_warnings:
+            prevention_extras.setdefault("system_warnings", []).extend(rewards_warnings)
         # Check for level-up after rewards processing
         updated_game_state_dict = _check_and_set_level_up_pending(
             updated_game_state_dict,
@@ -723,11 +780,14 @@ async def _process_rewards_followup(
         rewards_discrepancies = _detect_rewards_discrepancy(
             updated_game_state_dict,
             original_state_dict=original_state_as_dict,
+            warnings_out=rewards_warnings,
         )
         if rewards_discrepancies:
             prevention_extras.setdefault("system_corrections", []).extend(
                 rewards_discrepancies
             )
+        if rewards_warnings:
+            prevention_extras.setdefault("system_warnings", []).extend(rewards_warnings)
         # Check for level-up in case XP was awarded in this follow-up
         updated_game_state_dict = _check_and_set_level_up_pending(
             updated_game_state_dict,
@@ -1114,6 +1174,21 @@ def _prepare_game_state(
             combat_state["current_round"] = None
             combat_state["rewards_processed"] = False  # Reset for next combat
             cleaned_state_dict["combat_state"] = combat_state
+            # Clear reward-related pending_system_corrections - they've been consumed by the LLM
+            # which fixed the issue (evidenced by rewards_processed=True)
+            pending_corrections = _normalize_system_corrections(
+                cleaned_state_dict.get("pending_system_corrections")
+            )
+
+            remaining_corrections = [
+                message
+                for message in pending_corrections
+                if not _is_reward_correction(message)
+            ]
+            if remaining_corrections:
+                cleaned_state_dict["pending_system_corrections"] = remaining_corrections
+            else:
+                cleaned_state_dict.pop("pending_system_corrections", None)
             was_cleaned = True
 
             # Persist the cleaned state immediately so LLM sees clean context
@@ -1902,13 +1977,19 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             constants.MODE_COMBAT,
             constants.MODE_CHARACTER,
         ):
+            rewards_warnings: list[str] = []
             rewards_discrepancies = _detect_rewards_discrepancy(
                 updated_game_state_dict,
                 original_state_dict=original_state_for_level_check,
+                warnings_out=rewards_warnings,
             )
             if rewards_discrepancies:
                 prevention_extras.setdefault("system_corrections", []).extend(
                     rewards_discrepancies
+                )
+            if rewards_warnings:
+                prevention_extras.setdefault("system_warnings", []).extend(
+                    rewards_warnings
                 )
 
         # SERVER-SIDE LEVEL-UP DETECTION: Check for level-up in ALL modes where
@@ -1987,7 +2068,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Combine all system warnings (including any from rewards followup)
         rewards_corrections = prevention_extras.get("rewards_corrections", [])
-        system_warnings = all_corrections + rewards_corrections + post_combat_warnings
+        extra_warnings = prevention_extras.get("system_warnings", [])
+        system_warnings = (
+            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings
+        )
+
+        # Deduplicate warnings while preserving order
+        if system_warnings:
+            system_warnings = list(dict.fromkeys(system_warnings))
 
         # Increment player turn counter for non-GOD mode actions (but keep Think Mode frozen)
         if not is_god_mode and not is_think_mode:
@@ -2092,9 +2180,41 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             updated_game_state_dict, player_turn
         )
 
-        # NOTE: pending_system_corrections are cleared BEFORE merge (around line 1791)
-        # This preserves any corrections the LLM added in state_updates while clearing
-        # old corrections that were already sent to the LLM in this turn.
+        # Capture any pending_system_corrections set by LLM (e.g. God Mode)
+        # At this point, OLD corrections were already cleared earlier in the function
+        # right before the state merge, so any present now are NEW from LLM state_updates.
+        llm_pending_corrections_list = _normalize_system_corrections(
+            updated_game_state_dict.pop("pending_system_corrections", None)
+        )
+
+        llm_reward_corrections = _filter_reward_corrections(
+            llm_pending_corrections_list
+        )
+        llm_non_reward_corrections = [
+            correction
+            for correction in llm_pending_corrections_list
+            if not _is_reward_correction(correction)
+        ]
+
+        # Combine with validator-generated corrections (reward-related only)
+        validator_corrections_list = _normalize_system_corrections(
+            prevention_extras.get("system_corrections")
+        )
+
+        reward_corrections = llm_reward_corrections + _filter_reward_corrections(
+            validator_corrections_list
+        )
+        all_corrections = llm_non_reward_corrections + reward_corrections
+
+        if all_corrections:
+            # Deduplicate while preserving order
+            # Note: all_corrections is guaranteed to be list[str] thanks to _normalize_system_corrections
+            pending_corrections = list(dict.fromkeys(all_corrections))
+            updated_game_state_dict["pending_system_corrections"] = pending_corrections
+            logging_util.info(
+                f"📋 Persisted {len(pending_corrections)} system_corrections "
+                "to game_state.pending_system_corrections"
+            )
 
         # Update in Firestore (blocking I/O - run in thread)
         await asyncio.to_thread(
@@ -2377,30 +2497,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Add system corrections for LLM self-correction in next inference
         # These are injected into the next prompt via system_corrections field
-        if prevention_extras.get("system_corrections"):
-            unified_response["system_corrections"] = prevention_extras[
-                "system_corrections"
-            ]
-            for correction in prevention_extras["system_corrections"]:
+        # Filter to only reward-related corrections for persistence
+        reward_system_corrections = _filter_reward_corrections(
+            prevention_extras.get("system_corrections", [])
+        )
+        if reward_system_corrections:
+            # Deduplicate while preserving order (same as we do for persistence)
+            unified_response["system_corrections"] = list(
+                dict.fromkeys(reward_system_corrections)
+            )
+            for correction in unified_response["system_corrections"]:
                 logging_util.warning(f"SYSTEM CORRECTION QUEUED: {correction}")
-
-            # CRITICAL: Persist system_corrections to game_state for next turn
-            # The llm_service will read and pop 'pending_system_corrections' from game_state
-            # This ensures the LLM receives the corrections in its next request
-            # Extend existing corrections (don't overwrite) to handle edge cases
-            existing_corrections = updated_game_state_dict.get(
-                "pending_system_corrections", []
-            )
-            new_corrections = prevention_extras["system_corrections"]
-            # Deduplicate while preserving order
-            all_corrections = existing_corrections + [
-                c for c in new_corrections if c not in existing_corrections
-            ]
-            updated_game_state_dict["pending_system_corrections"] = all_corrections
-            logging_util.info(
-                f"📋 Persisted {len(all_corrections)} system_corrections "
-                f"(+{len(new_corrections)} new) to game_state.pending_system_corrections"
-            )
 
         # Add system warnings from validation corrections and post-combat checks
         if system_warnings:
@@ -2443,22 +2550,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 final_game_state_dict,
             )
             unified_response["game_state"] = final_game_state_dict
-
-        elif updated_game_state_dict.get("pending_system_corrections"):
-            # BUG FIX: For non-CHARACTER modes (e.g., combat), we must persist
-            # pending_system_corrections so they're available in the next turn.
-            # The first persist (earlier in this function) happens BEFORE corrections
-            # are detected, so we need this second persist to save them.
-            logging_util.info(
-                f"📋 Persisting pending_system_corrections for mode={mode} "
-                f"(count={len(updated_game_state_dict['pending_system_corrections'])})"
-            )
-            await asyncio.to_thread(
-                firestore_service.update_campaign_game_state,
-                user_id,
-                campaign_id,
-                updated_game_state_dict,
-            )
 
         return unified_response
 

@@ -132,6 +132,11 @@ class LLMRequest:
                 f"sequence_ids must be list, got {type(self.sequence_ids)}"
             )
 
+        if not isinstance(self.system_corrections, list):
+            raise ValidationError(
+                f"system_corrections must be list, got {type(self.system_corrections)}"
+            )
+
         if not isinstance(self.world_data, dict):
             raise ValidationError(
                 f"world_data must be dict, got {type(self.world_data)}"
@@ -154,6 +159,12 @@ class LLMRequest:
             if not isinstance(seq_id, str):
                 raise ValidationError(
                     f"sequence_ids[{i}] must be string, got {type(seq_id)}"
+                )
+
+        for i, correction in enumerate(self.system_corrections):
+            if not isinstance(correction, str):
+                raise ValidationError(
+                    f"system_corrections[{i}] must be string, got {type(correction)}"
                 )
 
     def _validate_string_lengths(self):
