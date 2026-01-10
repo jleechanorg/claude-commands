@@ -147,6 +147,7 @@ _is_code_execution_fabrication = dice_integrity._is_code_execution_fabrication
 _log_fabricated_dice_if_detected = dice_integrity._log_fabricated_dice_if_detected
 _should_require_dice_rolls_for_turn = dice_integrity._should_require_dice_rolls_for_turn
 _validate_combat_dice_integrity = dice_integrity._validate_combat_dice_integrity
+_validate_dice_integrity_always = dice_integrity._validate_dice_integrity_always
 
 # Initialize entity tracking mitigation modules
 entity_preloader = EntityPreloader()
@@ -3648,6 +3649,23 @@ def continue_story(
         is_dm_mode=is_dm_mode_initial,
     )
 
+    # ALWAYS-ON DICE INTEGRITY VALIDATION (native_two_phase only)
+    # Catches fabricated dice even when combat is NOT detected (e.g., Arcana checks,
+    # absorbing artifacts, skill checks outside combat). Any dice_rolls must have tools.
+    # NOTE: Skipped for code_execution strategy - that has its own check.
+    always_dice_valid, always_dice_reason = _validate_dice_integrity_always(
+        structured_response=structured_response,
+        api_response=api_response,
+        mode=mode,
+        is_god_mode=is_god_mode_command,
+        is_dm_mode=is_dm_mode_initial,
+        dice_roll_strategy=dice_roll_strategy,
+    )
+    # Combine with combat check - fail if EITHER fails
+    if not always_dice_valid and dice_integrity_valid:
+        dice_integrity_valid = False
+        dice_integrity_reason = always_dice_reason
+
     # CODE_EXECUTION FABRICATION CHECK (Gemini 3 Flash code_execution mode)
     # If model claims dice_rolls but didn't use code_execution, trigger reprompt
     code_exec_fabrication = False
@@ -3781,6 +3799,18 @@ def continue_story(
                     is_god_mode=is_god_mode_command,
                     is_dm_mode=is_dm_mode_initial,
                 )
+                # Also check always-on dice integrity (catches non-combat scenarios)
+                # NOTE: Skipped for code_execution strategy - that has its own check.
+                reprompt_always_valid, _ = _validate_dice_integrity_always(
+                    structured_response=reprompt_structured,
+                    api_response=reprompt_response,
+                    mode=mode,
+                    is_god_mode=is_god_mode_command,
+                    is_dm_mode=is_dm_mode_initial,
+                    dice_roll_strategy=dice_roll_strategy,
+                )
+                # Fail if either check fails
+                reprompt_dice_valid = reprompt_dice_valid and reprompt_always_valid
                 reprompt_code_exec_fabrication = False
                 if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
                     reprompt_code_exec_fabrication = _is_code_execution_fabrication(

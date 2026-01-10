@@ -221,9 +221,10 @@ class TestDiceRollTools(unittest.TestCase):
         self.assertIn("vs DC 14", result["formatted"])
         self.assertIn("Fireball", result["formatted"])
 
-    def test_skill_check_returns_error_without_dc_reasoning(self):
+    def test_skill_check_auto_fills_dc_reasoning_when_missing(self):
         """
-        Verify roll_skill_check returns error dict when dc_reasoning is missing.
+        Verify roll_skill_check auto-fills dc_reasoning when missing instead of failing.
+        This ensures dice rolls succeed so DM Reward Check can trigger on success.
         """
         result = execute_dice_tool(
             "roll_skill_check",
@@ -232,15 +233,23 @@ class TestDiceRollTools(unittest.TestCase):
                 "proficiency_bonus": 2,
                 "dc": 15,
                 "skill_name": "Stealth",
-                # Missing dc_reasoning
+                # Missing dc_reasoning - should auto-fill
             },
         )
-        self.assertIn("error", result)
-        self.assertIn("dc_reasoning is required", result["error"])
+        # Should NOT have an error
+        self.assertNotIn("error", result)
+        # Should have valid dice result
+        self.assertIn("roll", result)
+        self.assertIn("total", result)
+        self.assertIn("success", result)
+        self.assertIn("formatted", result)
+        # Auto-generated dc_reasoning should be in formatted output
+        self.assertIn("DC 15", result["formatted"])
 
-    def test_saving_throw_returns_error_without_dc_reasoning(self):
+    def test_saving_throw_auto_fills_dc_reasoning_when_missing(self):
         """
-        Verify roll_saving_throw returns error dict when dc_reasoning is missing.
+        Verify roll_saving_throw auto-fills dc_reasoning when missing instead of failing.
+        This ensures dice rolls succeed so DM Reward Check can trigger on success.
         """
         result = execute_dice_tool(
             "roll_saving_throw",
@@ -249,11 +258,18 @@ class TestDiceRollTools(unittest.TestCase):
                 "proficiency_bonus": 2,
                 "dc": 14,
                 "save_type": "DEX",
-                # Missing dc_reasoning
+                # Missing dc_reasoning - should auto-fill
             },
         )
-        self.assertIn("error", result)
-        self.assertIn("dc_reasoning is required", result["error"])
+        # Should NOT have an error
+        self.assertNotIn("error", result)
+        # Should have valid dice result
+        self.assertIn("roll", result)
+        self.assertIn("total", result)
+        self.assertIn("success", result)
+        self.assertIn("formatted", result)
+        # Auto-generated dc_reasoning should be in formatted output
+        self.assertIn("DC 14", result["formatted"])
 
 
 class TestLLMServiceToolIntegration(unittest.TestCase):

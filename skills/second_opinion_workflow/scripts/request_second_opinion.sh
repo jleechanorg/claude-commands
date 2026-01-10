@@ -100,9 +100,10 @@ export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:-ai-universe-b3551
 export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-ai-universe-b3551.firebaseapp.com}"
 export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:-AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc}"
 
-if ! TOKEN=$(node "$AUTH_CLI" token 2>&1); then
+TOKEN_OUTPUT=$(node "$AUTH_CLI" token 2>&1)
+if [ $? -ne 0 ]; then
   echo "❌ Error: Failed to get authentication token." >&2
-  echo "$TOKEN" >&2
+  echo "$TOKEN_OUTPUT" >&2
   echo "" >&2
   echo "   Please authenticate with:" >&2
   echo "   FIREBASE_PROJECT_ID=ai-universe-b3551 \\" >&2
@@ -112,8 +113,13 @@ if ! TOKEN=$(node "$AUTH_CLI" token 2>&1); then
   exit 1
 fi
 
+# Extract only the JWT token (lines starting with "eyJ")
+TOKEN=$(echo "$TOKEN_OUTPUT" | grep '^eyJ' | tail -1)
+
 if [ -z "$TOKEN" ]; then
   echo "❌ Error: Empty token returned from auth-cli.mjs" >&2
+  echo "Raw output:" >&2
+  echo "$TOKEN_OUTPUT" >&2
   exit 1
 fi
 

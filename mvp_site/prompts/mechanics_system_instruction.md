@@ -11,6 +11,7 @@
 - 🏆 NON-COMBAT KILLS: Executions, ambushes, trap kills MUST award XP + loot (same CR table)
 - 🎯 NARRATIVE EVENTS: Quests, milestones, social victories MUST display XP + rewards
 - 🎯 XP IN NARRATIVE: ALWAYS mention XP/experience gained when enemies are defeated (e.g., "You gain 450 XP")
+- 🎲 DM REWARD CHECK: If roll ≥ DC → award XP via rewards_box (Skill=50-200, Trap=100-300, Knowledge=100-500, Persuasion=100-500). If roll < DC → award 0 XP. Do NOT award "effort XP" for failed rolls.
 - MILESTONE LEVELING: Recommend +1-3 levels per arc. Epic/mythic campaigns may exceed Level 20.
 - ATTUNEMENT: Configurable (Standard=3, Loose=5-6, None=unlimited). High-magic balance via encounter design + enemy parity.
 - HIGH-MAGIC BALANCE: T1=3-4 encounters/day, T2=5-7 encounters+resource pressure, T3=elite groups+counter-buffs, T4=set-pieces+artifact-level enemies
@@ -219,7 +220,7 @@ When combat starts AND ends in the same response (e.g., one-shot kill, instant d
 **╠══════════════════════════════════════╣**
 **║ EVENT: [Description]                 ║**
 **║ XP EARNED: [Amount] XP               ║**
-**║ Current XP: X / Y (Level Z)          ║**
+**║ Current XP: [current] / [needed] (Level [N]) ║**
 **╠══════════════════════════════════════╣**
 **║ REWARDS OBTAINED:                    ║**
 **║   • [Item/Gold/Resource]             ║**
@@ -281,11 +282,81 @@ When combat starts AND ends in the same response (e.g., one-shot kill, instant d
 • Host Lieutenant's Sigil (proof of rank)
 ```
 
+### 🎲 DM Reward Check Protocol
+
+**🚨 CRITICAL:** After EVERY successful dice roll, you MUST evaluate and award XP. This is NOT optional.
+
+**Mandatory Checklist (evaluate after EVERY dice roll):**
+```
+[ ] Did the roll SUCCEED? (result ≥ DC)
+    → If NO: Award 0 XP. Do NOT award "effort XP" or "attempt XP" for failed rolls.
+    → If YES: Continue to next check.
+[ ] Does success affect game progression? (resources, story, knowledge, combat)
+[ ] Can a reward be determined from the table below?
+→ If all Yes: AWARD IMMEDIATELY via rewards_box
+```
+
+**⛔ CRITICAL NEGATIVE RULE:** Do NOT award XP for failed dice rolls. "Brave attempt" or "good effort" is NOT a reason to give XP. Only SUCCESS (roll ≥ DC) earns XP.
+**⚠️ TRIVIAL SUCCESS RULE:** If the roll succeeds but does NOT meaningfully advance the story, resources, knowledge, or combat state, award **0 XP**.
+
+**🚨 FAILURE MODE:** Dice succeeds → You narrate success → NO rewards_box → Player sees no XP
+**✅ CORRECT:** Dice succeeds → You narrate success → INCLUDE rewards_box with XP → Player sees reward
+
+**XP by Action Type (on SUCCESS):**
+
+| Action Type | XP Range | When to Award |
+|-------------|----------|---------------|
+| **Significant skill check success** | 50-200 XP | Meaningful skill checks that advance the story, resources, knowledge, or combat |
+| **Trap/ward disabled** | 100-300 XP | Successfully bypassing or disabling obstacles |
+| **Knowledge discovered** | 100-500 XP | Deciphering text, learning secrets, research success |
+| **Persuasion/diplomacy** | 100-500 XP | Successful social interaction with meaningful outcome |
+| **Power absorption** | 500-10,000 XP | Absorbing artifacts, essences, divine blessings |
+| **Territory claimed** | 1,000-5,000 XP | Conquering, claiming, or establishing strongholds |
+| **Combat victory** | CR-based | Use standard CR-to-XP table |
+
+**Additional Reward Types (combine with XP):**
+
+| Category | Examples | Reward Types |
+|----------|----------|--------------|
+| **Power gains** | Absorbing artifacts, consuming essences, divine blessings, transformations | XP + new abilities + stat boosts |
+| **Major achievements** | Conquering territory, building strongholds, creating alliances | XP + resources + followers |
+| **Clever solutions** | Bypassing encounters, creative problem-solving, outsmarting enemies | XP + Player Agency Bonus (+50%) |
+| **Risk-taking** | Dangerous gambles that pay off, heroic sacrifices, bold moves | XP + narrative rewards |
+| **Resource acquisition** | Finding treasure, looting enemies, salvaging equipment | Gold + items + materials |
+| **Knowledge gains** | Learning secrets, decoding mysteries, mastering new skills | XP + information + abilities |
+| **Relationship milestones** | Gaining loyalty, forging bonds, earning trust | Followers + faction standing + access |
+
+**Scaling Guidelines (D&D rarity-aligned, non-overlapping):**
+| Rarity (power absorption tier) | XP Range | Additional Rewards |
+|-------------------------------|----------|-------------------|
+| Common (clever trick, small gain) | 100-500 | Minor items, information |
+| Uncommon (significant achievement) | 501-2,000 | Notable items, resources |
+| Rare (campaign milestone) | 2,001-10,000 | Powerful items, abilities |
+| Legendary (world-changing) | 10,001-50,000 | Legendary items, transformations |
+| Artifact/Mythic (reality-altering, custom tier beyond 5e) | 50,001-500,000 | Mythic abilities, physical evolution. |
+*Rarity labels mirror D&D 5e magic item tiers; the Artifact/Mythic row is a custom extension for power absorption clarity.*
+
+**Power Absorption XP Scaling (no overlaps):**
+| Source Category | XP Range | Examples |
+|-----------------|----------|----------|
+| Magical/elemental source | 2,000-10,000 | Absorbing a relic's elemental core |
+| Divine/cosmic source | 25,000-100,000 | Integrating a titan's heartforge |
+| World-altering power | 100,001-500,000 | Merging with primordial architecture |
+| Entity/being essence | 2 × standard CR XP | Draining a dragon's power (e.g., CR 2 = 900 XP) |
+
+**🚨 FAILURE MODE:** Player does something epic → You narrate the result → NO rewards given → Player uses God Mode to fix
+**✅ CORRECT:** Player does something epic → You narrate the result → IMMEDIATELY display rewards (XP/items/abilities)
+
 **🚨 MANDATORY:** Always persist XP awards to `state_updates.player_character_data.experience.current`. The backend automatically:
 1. Calculates if XP crosses a level threshold
 2. Updates `level` if level-up occurs
 3. Recalculates `experience.needed_for_next_level`
 4. Validates XP-to-level consistency
+
+**🚨 ALSO PERSIST:**
+- New abilities/features from rewards to `state_updates.player_character_data.skills` (append skill names as strings, e.g., `"skills": {"append": ["Ember Sense", "Fire Resistance"]}`).
+- Stat boosts to `state_updates.player_character_data.attributes` (e.g., `{ "strength": 15 }` - use absolute value, not modifier).
+- Keep these fields synchronized with narrative descriptions to prevent lost rewards between sessions.
 
 ### XP Progression (Backend-Managed)
 

@@ -116,6 +116,19 @@ def _detect_narrative_dice_fabrication(
         if _has_dice_tool_results(tool_results):
             return False  # Dice tool results valid, dice are real
 
+        # Check if dice tools were called but returned errors (e.g., missing dc_reasoning)
+        # This is NOT fabrication - the LLM tried to use tools correctly but failed validation
+        has_tool_errors, tool_errors = _has_dice_tool_errors(tool_results)
+        if has_tool_errors:
+            logging_util.warning(
+                logging_util.with_campaign(
+                    f"🎲 DICE_TOOL_ERROR: Dice tools called but returned errors: {tool_errors}. "
+                    "This is a tool validation failure, not fabrication. Will reprompt."
+                )
+            )
+            # Still return True to trigger reprompt, but with better context
+            return True
+
         # If we get here, tool_requests_executed=True but tool_results lack dice tools
         # This is suspicious - LLM may have called a non-dice tool and fabricated dice
         # Fall through to fabrication check
@@ -170,18 +183,24 @@ def build_dice_integrity_reprompt_lines(
         ]
     if dice_roll_strategy == dice_strategy.DICE_STRATEGY_NATIVE_TWO_PHASE:
         return [
-            "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
-            "call tools to generate them. You MUST use tool_requests:\n"
-            "  * Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
-            "Do NOT write dice values directly in narrative. Regenerate using tool_requests."
+            "- DICE INTEGRITY VIOLATION: Your dice tool call failed or was not made. "
+            "You MUST use tool_requests with ALL required parameters:\n"
+            "  * roll_skill_check REQUIRES: skill_name, attribute_modifier, dc, AND dc_reasoning\n"
+            "  * roll_saving_throw REQUIRES: save_type, attribute_modifier, dc, AND dc_reasoning\n"
+            "  * dc_reasoning MUST explain WHY you chose this DC BEFORE seeing the roll\n"
+            "Example: {\"tool\": \"roll_skill_check\", \"args\": {\"skill_name\": \"perception\", "
+            "\"attribute_modifier\": 3, \"dc\": 15, \"dc_reasoning\": \"guard is alert but area is noisy\"}}\n"
+            "Do NOT write dice values directly in narrative. Regenerate using tool_requests with dc_reasoning."
         ]
     return [
-        "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
-        "execute code or call tools to generate them. Dice values are UNKNOWABLE without "
-        "execution - you cannot predict random.randint() results. You MUST either:\n"
+        "- DICE INTEGRITY VIOLATION: Your dice tool call failed or you did not execute code/tools. "
+        "Dice values are UNKNOWABLE without execution. You MUST either:\n"
         "  * Use code_execution: Execute Python code with random.randint() to generate dice\n"
-        "  * Use tool_requests: Call roll_dice/roll_attack/roll_skill_check/roll_saving_throw\n"
-        "Do NOT write dice values directly in narrative. Regenerate with ACTUAL execution."
+        "  * Use tool_requests with ALL required params:\n"
+        "    - roll_skill_check/roll_saving_throw REQUIRE dc_reasoning (explain DC choice BEFORE roll)\n"
+        "    - Example: {\"tool\": \"roll_skill_check\", \"args\": {\"skill_name\": \"perception\", "
+        "\"dc\": 15, \"dc_reasoning\": \"guard is alert\"}}\n"
+        "Do NOT write dice values directly in narrative. Regenerate with ACTUAL execution and dc_reasoning."
     ]
 
 
@@ -299,7 +318,11 @@ _DICE_TOOL_NAMES = {"roll_dice", "roll_attack", "roll_skill_check", "roll_saving
 
 
 def _has_dice_tool_results(tool_results: Any) -> bool:
-    """Check if tool_results contain any dice-related tools."""
+    """Check if tool_results contain any SUCCESSFUL dice-related tools.
+
+    Returns False if dice tools were called but returned errors (e.g., missing dc_reasoning).
+    This prevents false positive fabrication detection when tools fail validation.
+    """
     if not isinstance(tool_results, list):
         return False
 
@@ -311,9 +334,39 @@ def _has_dice_tool_results(tool_results: Any) -> bool:
         if isinstance(tool_name, str) and tool_name in _DICE_TOOL_NAMES:
             result_data = result.get("result")
             if result_data and isinstance(result_data, dict):
-                return True
+                # CRITICAL: Check for error responses - these are NOT valid dice results
+                # This happens when dice tool is called without required params (e.g., dc_reasoning)
+                if "error" in result_data:
+                    continue  # Tool call failed, not a valid dice result
+                # Valid dice result should have roll/total/formatted data
+                if any(k in result_data for k in ("roll", "total", "formatted", "rolls")):
+                    return True
 
     return False
+
+
+def _has_dice_tool_errors(tool_results: Any) -> tuple[bool, list[str]]:
+    """Check if dice tools were called but returned errors.
+
+    Returns:
+        Tuple of (has_errors, list of error messages)
+    """
+    if not isinstance(tool_results, list):
+        return False, []
+
+    errors: list[str] = []
+    for result in tool_results:
+        if not isinstance(result, dict):
+            continue
+
+        tool_name = result.get("tool") or result.get("name", "")
+        if isinstance(tool_name, str) and tool_name in _DICE_TOOL_NAMES:
+            result_data = result.get("result")
+            if result_data and isinstance(result_data, dict):
+                if "error" in result_data:
+                    errors.append(f"{tool_name}: {result_data['error']}")
+
+    return bool(errors), errors
 
 
 def _extract_dice_rolls_from_tool_results(tool_results: Any) -> list[str]:
@@ -804,4 +857,55 @@ def _validate_combat_dice_integrity(
         "tool_requests to roll them. In combat, you MUST use tool_requests (roll_dice, roll_attack, etc.) "
         "to generate dice rolls. Do NOT fabricate dice results. "
         "Regenerate your response using tool_requests for all dice rolls."
+    )
+
+
+def _validate_dice_integrity_always(
+    *,
+    structured_response: NarrativeResponse | None,
+    api_response: Any,
+    mode: str,
+    is_god_mode: bool,
+    is_dm_mode: bool,
+    dice_roll_strategy: str | None = None,
+) -> tuple[bool, str | None]:
+    """Validate dice integrity for ALL responses with dice_rolls.
+
+    This catches fabricated dice even when combat is not detected - e.g., skill checks
+    for absorbing items, Arcana checks, etc. Any response with dice_rolls must have
+    tool_requests_executed.
+
+    NOTE: This function only applies to NATIVE_TWO_PHASE strategy (tool_requests).
+    For CODE_EXECUTION strategy (Gemini 3), use _is_code_execution_fabrication instead.
+    """
+    if is_god_mode or is_dm_mode:
+        return True, None
+
+    if mode != constants.MODE_CHARACTER:
+        return True, None
+
+    # Skip for code_execution strategy - that has its own check (_is_code_execution_fabrication)
+    if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
+        return True, None
+
+    is_valid, reason = _check_dice_integrity(
+        structured_response=structured_response,
+        api_response=api_response,
+    )
+
+    if is_valid:
+        return True, None
+
+    logging_util.warning(
+        logging_util.with_campaign(
+            f"DICE_INTEGRITY_ALWAYS_VIOLATION: Response has dice_rolls but no tool execution. "
+            f"Reason: {reason}"
+        )
+    )
+
+    return False, (
+        "DICE INTEGRITY VIOLATION: Your response includes dice_rolls but you did not use "
+        "tool_requests to roll them. For ANY dice roll (combat, skill checks, saving throws), "
+        "you MUST use tool_requests (roll_skill_check, roll_saving_throw, roll_attack, etc.). "
+        "Do NOT fabricate dice results. Regenerate your response using tool_requests."
     )

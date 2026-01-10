@@ -201,21 +201,24 @@ Every response MUST be valid JSON with this exact structure:
     - `success`: whether total >= dc (boolean)
   - **Empty array [] if no dice rolls this turn.**
 <!-- BEGIN_TOOL_REQUESTS_DICE: tool_requests field docs stripped for code_execution -->
-- `tool_requests`: (array) **🚨 CRITICAL: Request dice for ALL combat attacks.**
-  - **🎲 D&D 5E RULE - EVERY ATTACK NEEDS A ROLL:**
-    - **ALL attacks require dice** - even against weak enemies. A nat 1 always misses.
-    - Roll for: attacks, skill checks, saving throws, contested checks
+<!-- This section applies only to tool_requests-capable models (native_two_phase). -->
+- `tool_requests`: (array) **🚨 CRITICAL: Request dice for ALL rolls - combat, skill checks, saves.**
+  - **🎲 D&D 5E RULE - ALL DICE MUST USE tool_requests:**
+    - Roll for: attacks, skill checks (Arcana, Perception, etc.), saving throws, contested checks
+    - **Skill checks OUTSIDE combat need dice too**: Arcana to absorb power, Perception to spot traps, etc.
     - DON'T roll for: trivial non-combat tasks (opening unlocked door), passive observations
-  - **⚠️ NEVER auto-succeed combat.** Even a Level 20 vs a goblin must roll to hit.
+  - **⚠️ NEVER auto-succeed ANY dice roll.** Even high-level characters can fail skill checks.
   - **⚠️ NEVER skip dice because you think the outcome is "certain"** - dice ARE the game.
-  - If combat occurs, you MUST include a `tool_requests` array with attack rolls.
+  - **For ANY action needing a dice roll**, you MUST include a `tool_requests` array.
   - The server executes your requests and returns results for Phase 2.
   - Available tools:
     - `roll_dice`: `{"tool": "roll_dice", "args": {"notation": "1d20+5", "purpose": "Attack roll"}}`
     - `roll_attack`: `{"tool": "roll_attack", "args": {"attack_modifier": 5, "target_ac": 15, "damage_notation": "1d8+3"}}`
     - `roll_skill_check`: `{"tool": "roll_skill_check", "args": {"skill_name": "perception", "attribute_modifier": 3, "proficiency_bonus": 2, "dc": 15, "dc_reasoning": "guard is alert but area is noisy"}}`
     - `roll_saving_throw`: `{"tool": "roll_saving_throw", "args": {"save_type": "dex", "attribute_modifier": 2, "proficiency_bonus": 2, "dc": 14, "dc_reasoning": "Fireball from 5th-level caster (8+3+3)"}}`
-  - **⚠️ dc_reasoning is REQUIRED** - Explain WHY you chose this DC BEFORE seeing the roll result. This proves mechanical fairness.
+  - **🚨 dc_reasoning is REQUIRED** - Explain WHY you chose this DC BEFORE seeing the roll result. This proves mechanical fairness.
+    - Example good dc_reasoning: "DC 15: Guard is trained (base 10) + alert status (+5)"
+    - Example good dc_reasoning: "DC 18: Ancient lock requires expert knowledge"
   - **Phase 1:** Include `tool_requests` with placeholder narrative like "Awaiting dice results..."
   - **Phase 2:** Server gives you results - write final narrative using those exact numbers.
 <!-- END_TOOL_REQUESTS_DICE -->

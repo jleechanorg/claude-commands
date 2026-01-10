@@ -25,6 +25,65 @@ print_error() {
 setup_venv() {
     local venv_path="${1:-$PROJECT_ROOT/venv}"
 
+    choose_venv_python() {
+        # Allow override for CI or local workflows.
+        if [ -n "${VENV_PYTHON:-}" ] && command -v "$VENV_PYTHON" >/dev/null 2>&1; then
+            echo "$VENV_PYTHON"
+            return 0
+        fi
+
+        # Prefer a Python >= 3.10 because some dependencies (e.g., mcp) require it.
+        local candidates=(
+            python
+            python3
+            python3.12
+            python3.11
+            python3.10
+        )
+
+        local best=""
+        local best_major=0
+        local best_minor=0
+
+        for candidate in "${candidates[@]}"; do
+            if ! command -v "$candidate" >/dev/null 2>&1; then
+                continue
+            fi
+
+            local major_minor
+            major_minor="$(
+                "$candidate" -c 'import sys; print(f"{sys.version_info[0]} {sys.version_info[1]}")' 2>/dev/null
+            )"
+            if [ -z "$major_minor" ]; then
+                continue
+            fi
+
+            local major minor
+            major="$(echo "$major_minor" | awk '{print $1}')"
+            minor="$(echo "$major_minor" | awk '{print $2}')"
+
+            # Require >= 3.10
+            if [ "$major" -lt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -lt 10 ]; }; then
+                continue
+            fi
+
+            if [ "$major" -gt "$best_major" ] || { [ "$major" -eq "$best_major" ] && [ "$minor" -gt "$best_minor" ]; }; then
+                best="$candidate"
+                best_major="$major"
+                best_minor="$minor"
+            fi
+        done
+
+        if [ -n "$best" ]; then
+            echo "$best"
+            return 0
+        fi
+
+        # Fall back to python3 (historical default) if nothing suitable is found.
+        echo "python3"
+        return 0
+    }
+
     # Check if venv exists and is valid
     if [ -d "$venv_path" ] && [ -f "$venv_path/bin/activate" ]; then
         # Venv exists, just activate it
@@ -43,7 +102,11 @@ setup_venv() {
     fi
 
     # Create new venv
-    if python3 -m venv "$venv_path"; then
+    local venv_python
+    venv_python="$(choose_venv_python)"
+    print_info "Using python interpreter for venv: $venv_python"
+
+    if "$venv_python" -m venv "$venv_path"; then
         print_success "Virtual environment created successfully"
         source "$venv_path/bin/activate"
 

@@ -749,13 +749,20 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         proficient = _coerce_bool(arguments.get("proficient"), False)
         expertise = _coerce_bool(arguments.get("expertise"), False)
         dc = _coerce_int_inner(arguments.get("dc"), 10)
+        skill_name = arguments.get("skill_name") or arguments.get("skill") or ""
         dc_reasoning = arguments.get("dc_reasoning")
         if not isinstance(dc_reasoning, str) or not dc_reasoning.strip():
-            return {
-                "error": "dc_reasoning is required and must be a non-empty string for roll_skill_check"
-            }
-        dc_reasoning = dc_reasoning.strip()
-        skill_name = arguments.get("skill_name") or arguments.get("skill") or ""
+            # Auto-generate dc_reasoning instead of failing
+            # This ensures dice rolls succeed so DM Reward Check can trigger on success
+            dc_reasoning = f"DC {dc} for {skill_name or 'skill check'}"
+            logging_util.warning(
+                logging_util.with_campaign(
+                    f"🎲 AUTO_DC_REASONING: LLM omitted dc_reasoning for roll_skill_check, "
+                    f"auto-generated: '{dc_reasoning}'"
+                )
+            )
+        else:
+            dc_reasoning = dc_reasoning.strip()
 
         result = calculate_skill_check(attr_mod, prof_bonus, proficient, expertise)
         roll = result.individual_rolls[0] if result.individual_rolls else 0
@@ -813,13 +820,25 @@ def execute_dice_tool(tool_name: str, arguments: dict) -> dict:
         prof_bonus = _coerce_int_inner(arguments.get("proficiency_bonus"), 2)
         proficient = _coerce_bool(arguments.get("proficient"), False)
         dc = _coerce_int_inner(arguments.get("dc"), 10)
+        raw_save_type = arguments.get("save_type")
+        if raw_save_type is None:
+            save_type = "SAVE"
+        else:
+            save_type_str = str(raw_save_type).strip()
+            save_type = save_type_str.upper() if save_type_str else "SAVE"
         dc_reasoning = arguments.get("dc_reasoning")
         if not isinstance(dc_reasoning, str) or not dc_reasoning.strip():
-            return {
-                "error": "dc_reasoning is required and must be a non-empty string for roll_saving_throw"
-            }
-        dc_reasoning = dc_reasoning.strip()
-        save_type = arguments.get("save_type", "").upper() or "SAVE"
+            # Auto-generate dc_reasoning instead of failing
+            # This ensures dice rolls succeed so DM Reward Check can trigger on success
+            dc_reasoning = f"DC {dc} for {save_type} saving throw"
+            logging_util.warning(
+                logging_util.with_campaign(
+                    f"🎲 AUTO_DC_REASONING: LLM omitted dc_reasoning for roll_saving_throw, "
+                    f"auto-generated: '{dc_reasoning}'"
+                )
+            )
+        else:
+            dc_reasoning = dc_reasoning.strip()
 
         result = calculate_saving_throw(attr_mod, prof_bonus, proficient)
         roll = result.individual_rolls[0] if result.individual_rolls else 0
