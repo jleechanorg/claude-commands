@@ -20,7 +20,14 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+# Import unified logging (mvp_site.logging_util)
+try:
+    from mvp_site import logging_util
+except ImportError:
+    # Fallback to standard logging if mvp_site not in path
+    import logging as logging_util  # type: ignore
 
 # Pre-compile regex for performance
 _SANITIZE_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
@@ -88,7 +95,7 @@ def _run_git_commands_parallel(
 
 def _resolve_repo_info(
     skip_git: bool = False,
-) -> Tuple[str, str, Optional[Dict[str, Optional[str]]]]:
+) -> Tuple[str, str, Optional[Dict[str, Union[Optional[str], List[str]]]]]:
     """Return (repo_name, branch_name, git_provenance) with sensible fallbacks.
 
     Git provenance follows evidence-standards.md requirements.
@@ -133,7 +140,10 @@ def _resolve_repo_info(
     changed_files_output: Optional[str] = None
 
     if not base_ref:
-        print("⚠️  No base ref found (origin/main or upstream) - changed_files will be empty", file=sys.stderr)
+        logging_util.warning(
+            "No base ref found (origin/main or upstream) - changed_files will be empty. "
+            "This may indicate a git configuration issue or detached HEAD state."
+        )
     elif base_ref == results.get("head_commit"):
         # HEAD is at base ref, no changes to report
         changed_files_output = ""
@@ -142,6 +152,16 @@ def _resolve_repo_info(
         changed_files_output = _run_git_command(
             ["diff", "--name-only", f"{base_ref}...HEAD"], timeout=10
         )
+
+        # Log the result of the three-dot diff attempt
+        if changed_files_output is None:
+            logging_util.debug(f"Three-dot diff failed for base={base_ref}, trying two-dot fallback")
+        elif changed_files_output == "":
+            logging_util.debug(f"Three-dot diff succeeded but found no changes (base={base_ref})")
+        else:
+            num_files = len(changed_files_output.strip().splitlines())
+            logging_util.debug(f"Three-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})")
+
         # If command failed (None) or returned empty string (no changes found by 3-dot),
         # try two-dot (all differences) just in case, though 3-dot is standard for PRs.
         # Note: _run_git_command returns None for failures, empty string for "no changes"
@@ -149,20 +169,33 @@ def _resolve_repo_info(
             two_dot_output = _run_git_command(
                 ["diff", "--name-only", f"{base_ref}..HEAD"], timeout=10
             )
+
+            # Log the result of the two-dot diff attempt
+            if two_dot_output is None:
+                if changed_files_output is None:
+                    logging_util.warning(
+                        f"Both git diff strategies failed for base={base_ref}. "
+                        f"Possible causes: network issues, git corruption, or invalid ref. "
+                        f"changed_files will be empty."
+                    )
+                else:
+                    logging_util.debug(f"Two-dot fallback failed, keeping 3-dot result (empty).")
+            elif two_dot_output == "":
+                logging_util.debug(f"Two-dot diff succeeded but found no changes (base={base_ref})")
+            else:
+                num_files = len(two_dot_output.strip().splitlines())
+                logging_util.debug(f"Two-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})")
+
             # Use two-dot output if three-dot failed or was empty, but only if two-dot succeeded
             if two_dot_output is not None:
                 changed_files_output = two_dot_output
-
-        # Warn if both git diff attempts failed (result is still None)
-        if changed_files_output is None:
-            print(f"⚠️  Git diff commands failed for base_ref={base_ref} - changed_files will be empty", file=sys.stderr)
 
     # Build git provenance per evidence-standards.md
     git_provenance = {
         "head_commit": results.get("head_commit"),
         "origin_main_commit": results.get("origin_main"),
         "branch": branch,
-        "changed_files": changed_files_output.split("\n")
+        "changed_files": changed_files_output.splitlines()
         if changed_files_output
         else [],
     }
@@ -175,7 +208,7 @@ def _read_optional_file(path: Optional[str]) -> Optional[str]:
         return None
     expanded = Path(path).expanduser()
     if not expanded.exists():
-        print(f"⚠️  Skipping missing file referenced at {expanded}", file=sys.stderr)
+        logging_util.warning(f"Skipping missing file referenced at {expanded}")
         return None
     return expanded.read_text(encoding="utf-8")
 
@@ -238,7 +271,7 @@ def _copy_artifact(
     src: Path, dest_dir: Path, timestamp: str, reserved: Set[Path]
 ) -> Optional[Path]:
     if not src.exists():
-        print(f"⚠️  Artifact not found: {src}", file=sys.stderr)
+        logging_util.warning(f"Artifact not found: {src}")
         return None
 
     target = _unique_target_path(dest_dir, src, timestamp, reserved)
@@ -518,7 +551,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         work_name = _sanitize_work_name(args.work_name)
     except ValueError as exc:
-        print(f"❌ Invalid work name: {exc}", file=sys.stderr)
+        logging_util.error(f"Invalid work name: {exc}")
         return 1
 
     base_dir = Path("/tmp") / repo_name / branch / work_name
