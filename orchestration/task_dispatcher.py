@@ -272,6 +272,12 @@ class TaskDispatcher:
 
             if total_count > 0:
                 print(f"📊 Found {active_count} actively working agent(s) (limit: {MAX_CONCURRENT_AGENTS})")
+                if active_count > 0:
+                    for agent in sorted(active_agents):
+                        print(f"   • {agent}")
+                    # Compute script path relative to module directory
+                    script_path = Path(__file__).resolve().parent / "stream_logs.sh"
+                    print(f"📺 View agent logs: {script_path} <agent_name>")
                 if idle_count > 0:
                     print(f"   Plus {idle_count} idle agent(s) (completed but monitoring)")
 
@@ -1765,6 +1771,9 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             # Agent will register itself when it starts using A2AAgentWrapper
 
             print(f"✅ Created {agent_name} - Focus: {agent_focus}")
+            # Compute script path relative to module directory
+            script_path = Path(__file__).resolve().parent / "stream_logs.sh"
+            print(f"📺 View logs: {script_path} {agent_name}")
             return True
 
         except Exception as e:
