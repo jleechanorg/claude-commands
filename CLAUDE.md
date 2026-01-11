@@ -326,6 +326,39 @@ MCP_SERVER_URL="https://..." MCP_TEST_MODE=real node scripts/mcp-smoke-tests.mjs
 - `GITHUB_TOKEN` env var | GitHub Actions: SHA-pinned versions only
 - ❌ FORBIDDEN: Merging any branch directly to main without a PR
 
+### PR Branch Verification (MANDATORY)
+**CRITICAL: Always verify the correct PR remote branch before working on merge conflicts or PR operations.**
+
+**❌ FORBIDDEN:**
+- Guessing or assuming PR branch names
+- Using branch names that "look like" they match the PR number
+- Working on branches without verifying they're the actual PR branch
+
+**✅ REQUIRED:**
+1. **Verify PR branch name** using one of these methods:
+   - Check PR metadata: `gh pr view <number> --json headRefName`
+   - Check commit history: `git log --oneline --all --grep="<PR-number>"` to see actual branch names
+   - Look for merge commits: `git log --oneline --all | grep -i "merge.*pr.*<number>"`
+2. **Fetch the correct remote branch**: `git fetch origin <actual-branch-name>:origin/<actual-branch-name>`
+3. **Reset to the correct branch**: `git reset --hard origin/<actual-branch-name>`
+4. **Verify before proceeding**: Check `git log --oneline -5` to confirm you're on the right branch
+
+**Example:**
+```bash
+# ❌ WRONG - Don't guess
+git fetch origin pull/3096/head:pr-3096  # Wrong assumption
+
+# ✅ CORRECT - Verify first
+gh pr view 3096 --json headRefName  # Returns: "claude/byok-settings-feature-0WgQP"
+git fetch origin claude/byok-settings-feature-0WgQP:origin/claude/byok-settings-feature-0WgQP
+git reset --hard origin/claude/byok-settings-feature-0WgQP
+```
+
+**Root Cause Prevention:**
+- Multiple branches may exist with similar names (e.g., `copilot/sub-pr-3096`, `claude/byok-settings-feature-0WgQP`)
+- PR numbers don't always match branch naming patterns
+- Always verify the actual branch name from PR metadata or commit history before proceeding
+
 ## GitHub CLI (gh) - Direct Binary Installation
 
 **CRITICAL:** If gh CLI is not installed, download the precompiled binary directly from GitHub releases.
