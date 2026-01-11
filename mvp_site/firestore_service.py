@@ -395,6 +395,211 @@ def _handle_core_memories_safeguard(
     return True
 
 
+# Critical inventory/equipment fields that must be protected from complete overwrite
+PROTECTED_INVENTORY_FIELDS = frozenset({"inventory", "equipment", "backpack", "items"})
+
+
+def _handle_inventory_safeguard(
+    state_to_update: dict[str, Any], key: str, value: Any
+) -> bool:
+    """
+    Handle safeguard for critical inventory and equipment fields.
+
+    Prevents complete overwrite of inventory-related fields (inventory, equipment,
+    backpack, items) by converting direct overwrites to safe merge operations.
+    This ensures character items are never accidentally lost or compressed.
+
+    CRITICAL: Character inventory and key secondary character equipment must NEVER
+    be forgotten or compressed, per system requirements.
+
+    Returns:
+        bool: True if handled, False otherwise
+    """
+    if key not in PROTECTED_INVENTORY_FIELDS:
+        return False
+
+    existing_value = state_to_update.get(key)
+
+    # If there's no existing value, allow the new value to be set
+    if existing_value is None:
+        return False
+
+    # If both existing and new values are dicts, we'll let dict merge handle it
+    if isinstance(existing_value, dict) and isinstance(value, dict):
+        return False
+
+    # If both are lists, perform a safe merge with deduplication instead of overwrite
+    if isinstance(existing_value, list) and isinstance(value, list):
+        logging_util.warning(
+            f"INVENTORY SAFEGUARD: Intercepted list overwrite on '{key}'. "
+            f"Existing items: {len(existing_value)}, new items: {len(value)}. "
+            "Performing safe merge with deduplication to preserve existing items."
+        )
+        # Preserve all existing items (including duplicates) and only deduplicate incoming items
+        merged = list(existing_value)
+        seen = set()
+
+        # Track existing items
+        for item in existing_value:
+            try:
+                item_key = json.dumps(item, sort_keys=True) if isinstance(item, dict) else str(item)
+            except (TypeError, ValueError):
+                item_key = str(item)
+            seen.add(item_key)
+
+        # Append only new, non-duplicate items
+        for item in value:
+            try:
+                item_key = json.dumps(item, sort_keys=True) if isinstance(item, dict) else str(item)
+            except (TypeError, ValueError):
+                # Fallback to str() for non-serializable items (datetime, custom classes, etc.)
+                item_key = str(item)
+            if item_key in seen:
+                continue
+            seen.add(item_key)
+            merged.append(item)
+        state_to_update[key] = merged
+        return True
+
+    # If existing is dict and new is something else, preserve dict structure
+    if isinstance(existing_value, dict) and not isinstance(value, dict):
+        logging_util.warning(
+            f"INVENTORY SAFEGUARD: Blocked type conversion on '{key}' from dict to {type(value).__name__}. "
+            "Preserving existing inventory structure."
+        )
+        return True  # Block the update, keeping existing value
+
+    # If existing is list and new is something else, preserve list
+    if isinstance(existing_value, list) and not isinstance(value, list):
+        logging_util.warning(
+            f"INVENTORY SAFEGUARD: Blocked type conversion on '{key}' from list to {type(value).__name__}. "
+            "Preserving existing inventory list."
+        )
+        return True  # Block the update, keeping existing value
+
+    return False
+
+
+def _handle_companion_equipment_safeguard(
+    state_to_update: dict[str, Any], key: str, value: Any
+) -> bool:
+    """
+    Handle safeguard for companion/NPC equipment and inventory data.
+
+    Key secondary characters (companions) have their equipment tracked in npc_data.
+    This safeguard ensures companion equipment is never accidentally deleted or
+    completely overwritten during state updates.
+
+    CRITICAL: Companion equipment must NEVER be forgotten or compressed.
+
+    Returns:
+        bool: True if handled, False otherwise
+    """
+    # Only handle npc_data updates
+    if key != "npc_data":
+        return False
+
+    if not isinstance(value, dict):
+        return False
+
+    existing_npcs = state_to_update.get(key, {})
+    if not isinstance(existing_npcs, dict):
+        return False
+
+    # Check each NPC being updated
+    for npc_name, npc_update in value.items():
+        if npc_update == DELETE_TOKEN:
+            # Allow explicit deletion (handled elsewhere)
+            continue
+
+        if not isinstance(npc_update, dict):
+            continue
+
+        existing_npc = existing_npcs.get(npc_name, {})
+        if not isinstance(existing_npc, dict):
+            continue
+
+        # Check if this is a companion/party member (key secondary character)
+        relationship_raw = existing_npc.get("relationship", "")
+        relationship_normalized = (
+            relationship_raw.lower() if isinstance(relationship_raw, str) else ""
+        )
+        is_companion = relationship_normalized in (
+            "companion",
+            "party_member",
+            "ally",
+            "follower",
+        )
+        is_important = existing_npc.get("is_important", False)
+
+        if not (is_companion or is_important):
+            continue
+
+        # Protect equipment fields for companions/key NPCs
+        for eq_field in ("equipment", "inventory", "items", "backpack"):
+            if eq_field not in npc_update:
+                continue
+
+            existing_eq = existing_npc.get(eq_field)
+            new_eq = npc_update[eq_field]
+
+            if existing_eq is None:
+                continue
+
+            # Allow explicit deletion token to pass through unchanged
+            if new_eq == DELETE_TOKEN:
+                continue
+
+            # Protect list-type equipment from complete overwrite
+            if isinstance(existing_eq, list) and isinstance(new_eq, list):
+                logging_util.warning(
+                    f"COMPANION EQUIPMENT SAFEGUARD: Protecting '{npc_name}' {eq_field}. "
+                    f"Merging {len(new_eq)} new items with {len(existing_eq)} existing items."
+                )
+                # Preserve all existing items and only deduplicate incoming items
+                merged = list(existing_eq)
+                seen = set()
+
+                for item in existing_eq:
+                    try:
+                        item_key = json.dumps(item, sort_keys=True) if isinstance(item, dict) else str(item)
+                    except (TypeError, ValueError):
+                        item_key = str(item)
+                    seen.add(item_key)
+
+                for item in new_eq:
+                    try:
+                        item_key = json.dumps(item, sort_keys=True) if isinstance(item, dict) else str(item)
+                    except (TypeError, ValueError):
+                        # Fallback to str() for non-serializable items (datetime, custom classes, etc.)
+                        item_key = str(item)
+                    if item_key in seen:
+                        continue
+                    seen.add(item_key)
+                    merged.append(item)
+                npc_update[eq_field] = merged
+
+            # Block list equipment from being overwritten by non-lists
+            elif isinstance(existing_eq, list) and not isinstance(new_eq, list):
+                logging_util.warning(
+                    f"COMPANION EQUIPMENT SAFEGUARD: Blocked type conversion for '{npc_name}' {eq_field} "
+                    f"from list to {type(new_eq).__name__}. Preserving existing equipment list."
+                )
+                del npc_update[eq_field]
+
+            # Protect dict-type equipment from type change
+            elif isinstance(existing_eq, dict) and not isinstance(new_eq, dict):
+                logging_util.warning(
+                    f"COMPANION EQUIPMENT SAFEGUARD: Blocked type conversion for '{npc_name}' {eq_field}. "
+                    "Preserving existing equipment structure."
+                )
+                del npc_update[eq_field]
+
+    # Let normal dict merge handle the actual update
+    # We've just modified the value dict to protect equipment
+    return False  # Return False so dict_merge still processes
+
+
 def _handle_dict_merge(state_to_update: dict[str, Any], key: str, value: Any) -> bool:
     """
     Handle dictionary merging and creation.
@@ -471,6 +676,8 @@ def update_state_with_changes(
     Key Features:
     - Explicit append syntax: {'append': [items]} for safe list operations
     - Core memories safeguard: Prevents accidental overwrite of important game history
+    - Inventory safeguard: Protects character inventory/equipment from compression
+    - Companion equipment safeguard: Protects key secondary character equipment
     - Recursive dictionary merging: Deep merge for nested objects
     - DELETE_TOKEN support: Allows removal of specific fields
     - Mission smart conversion: Handles various mission data formats
@@ -481,10 +688,17 @@ def update_state_with_changes(
     1. DELETE_TOKEN - Removes fields marked for deletion
     2. Explicit append - Safe list operations with deduplication
     3. Core memories safeguard - Protects critical game history
-    4. Mission conversion - Handles dict-to-list conversion for missions
-    5. Dictionary merging - Recursive merge for nested structures
-    6. String-to-dict preservation - Maintains existing dict structures
-    7. Simple overwrite - Default behavior for primitive values
+    4. Inventory safeguard - Protects inventory/equipment/backpack/items from overwrite
+    5. Companion equipment safeguard - Protects key secondary character equipment
+    6. Mission conversion - Handles dict-to-list conversion for missions
+    7. Dictionary merging - Recursive merge for nested structures
+    8. String-to-dict preservation - Maintains existing dict structures
+    9. Simple overwrite - Default behavior for primitive values
+
+    CRITICAL SAFEGUARDS:
+    - Character inventory must NEVER be forgotten or compressed
+    - Key secondary character (companion) equipment must NEVER be forgotten
+    - These safeguards convert overwrites to safe merge operations
 
     Args:
         state_to_update (dict): The current game state to modify
@@ -533,7 +747,15 @@ def update_state_with_changes(
         if _handle_core_memories_safeguard(state_to_update, key, value):
             continue
 
-        # Case 4: Auto-initialize completed_missions if active_missions is being updated
+        # Case 4: Inventory safeguard - protect character items from overwrite
+        if _handle_inventory_safeguard(state_to_update, key, value):
+            continue
+
+        # Case 5: Companion equipment safeguard - protect key secondary character equipment
+        # Note: This modifies value dict in-place but returns False to let dict_merge proceed
+        _handle_companion_equipment_safeguard(state_to_update, key, value)
+
+        # Case 6: Auto-initialize completed_missions if active_missions is being updated
         # CRITICAL: Must run BEFORE smart conversion (which calls continue)
         # Fix for bug where older campaigns don't have completed_missions field
         if key == "active_missions" and "completed_missions" not in state_to_update:
@@ -542,29 +764,29 @@ def update_state_with_changes(
             )
             state_to_update["completed_missions"] = []
 
-        # Case 4.5: Active missions smart conversion
+        # Case 7: Active missions smart conversion
         if key == "active_missions" and not isinstance(value, list):
             MissionHandler.handle_active_missions_conversion(
                 state_to_update, key, value
             )
             continue
 
-        # Case 4.6: Completed missions smart conversion (same as active_missions)
+        # Case 8: Completed missions smart conversion (same as active_missions)
         if key == "completed_missions" and not isinstance(value, list):
             MissionHandler.handle_active_missions_conversion(
                 state_to_update, key, value
             )
             continue
 
-        # Case 5: Dictionary operations (merge or create)
+        # Case 9: Dictionary operations (merge or create)
         if _handle_dict_merge(state_to_update, key, value):
             continue
 
-        # Case 6: String to dict updates (preserve structure)
+        # Case 10: String to dict updates (preserve structure)
         if _handle_string_to_dict_update(state_to_update, key, value):
             continue
 
-        # Case 7: Simple overwrite for everything else
+        # Case 11: Simple overwrite for everything else
         # Convert numeric fields from strings to integers
         # Note: We handle conversion here instead of in _handle_dict_merge to avoid
         # double conversion when dictionaries are recursively processed
