@@ -1,6 +1,6 @@
 ---
 description: Launch dual-agent pair programming with LLM brainstorming and background monitoring
-argument-hint: [--coder-cli <cli>] [--verifier-cli <cli>] "task description"
+argument-hint: '[--coder-cli <cli>] [--verifier-cli <cli>] "task description"'
 type: llm-orchestration
 execution_mode: llm-driven
 ---
@@ -411,14 +411,22 @@ The background monitor (`scripts/pair_monitor.py`) performs:
    - Query MCP Mail for coordination messages
    - Update bead with current status
 
-2. **Max 10 iterations per agent:**
-   - After 10 checks without progress, escalate
-   - Send timeout warnings to agents
-   - Update bead status to "blocked" if stuck
+2. **Iteration Counting with Progress Reset:**
+   - Track iterations since last status change
+   - **Reset counter to 0** when status changes (progress detected)
+   - Only increment counter when status is unchanged (stagnation)
+   - After 10 stagnant iterations, escalate to timeout
 
-3. **Coordination via MCP:**
+3. **Termination Conditions (first match wins):**
+   - **Success:** Bead status becomes `completed` → exit cleanly
+   - **Timeout:** 10 iterations without progress → send `SESSION_TIMEOUT` to both agents, update bead to `timeout`, exit
+   - **Failure:** Agent tmux session crashes → log error, update bead to `failed`, exit
+
+4. **Coordination via MCP:**
    - Beads: Track overall session state
    - MCP Mail: Facilitate agent-to-agent communication
+
+**Cross-Platform:** Works on Linux, macOS, and Windows (via WSL or Git-Bash). Python scripts use `tempfile.gettempdir()` for portable temp directories.
 
 ---
 
@@ -613,19 +621,32 @@ tmux kill-session -t ${VERIFIER_CLI}-verifier-${SESSION_ID}
 
 ## QUICK START
 
-```bash
-# Simple usage - just provide the task
-/pair "Implement user profile API endpoint"
+**Simplest invocation - defaults work out of the box:**
 
-# The command will:
-# 1. Generate task plan via brainstorm
-# 2. Launch coder agent for implementation
-# 3. Launch verifier agent for verification
-# 4. Start background monitor (1min interval, max 10 iterations)
-# 5. Coordinate via Beads + MCP Mail
+```bash
+/pair "Add JWT authentication to the API"
 ```
+
+This single command:
+1. Brainstorms the task via `/superpowers`
+2. Launches Claude coder agent (implements feature + tests)
+3. Launches Codex verifier agent (runs tests, reviews code)
+4. Starts background monitor (1min checks, 10 stagnation limit)
+5. Coordinates via MCP Mail + Beads state tracking
+
+**Custom CLI pairing:**
+
+```bash
+# Gemini implements, Claude verifies
+/pair --coder-cli gemini --verifier-cli claude "Fix pagination bug"
+
+# Same model pair (consistent style)
+/pair --coder-cli claude --verifier-cli claude "Refactor auth module"
+```
+
+**Session complete when:** Verifier sends `VERIFICATION_COMPLETE` (all tests pass).
 
 ---
 
-**Protocol Version:** 4.0 (Orchestrated Dual-Agent)
-**Last Updated:** 2026-01-09
+**Protocol Version:** 4.1 (Orchestrated Dual-Agent with Progress Reset)
+**Last Updated:** 2026-01-10
