@@ -35,6 +35,26 @@ def log(msg: str) -> None:
     print(f"{LOG_PREFIX} {msg}")
 
 
+def display_log_viewing_command(session_name: str) -> None:
+    """Display formatted log viewing commands for the given session."""
+    # Use same path resolution as task_dispatcher (relative to orchestration module)
+    try:
+        import orchestration.task_dispatcher
+        script_path = Path(orchestration.task_dispatcher.__file__).resolve().parent / "stream_logs.sh"
+    except (ImportError, AttributeError):
+        # Fallback to relative path if orchestration module not available
+        script_path = Path(__file__).resolve().parent.parent.parent / "orchestration" / "stream_logs.sh"
+
+    if script_path.exists():
+        log("")
+        log("📺 View formatted logs:")
+        log(f"   {script_path} {session_name}")
+        log("")
+        log("   Or use the shorter command:")
+        log(f"   ./orchestration/stream_logs.sh {session_name}")
+        log("")
+
+
 def run_cmd(
     cmd: List[str],
     cwd: Optional[Path] = None,
@@ -342,18 +362,16 @@ def dispatch_agent_for_pr_with_task(
                 "workspace_name": workspace_name,
             },
         )
-        # Inject model parameter only when Claude is in the CLI chain.
+        # Inject model parameter for all CLIs in the chain (Gemini, Claude, Cursor, etc.)
         if model:
-            cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
-            if "claude" in cli_chain:
-                raw_model = str(model).strip()
-                if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
-                    log(f"❌ Invalid model name requested: {raw_model!r}")
-                    return False
-                agent_spec["model"] = raw_model
+            raw_model = str(model).strip()
+            if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+                log(f"❌ Invalid model name requested: {raw_model!r}")
+                return False
         ok = dispatcher.create_dynamic_agent(agent_spec)
         if ok:
             log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")
+            display_log_viewing_command(session_name)
             success = True
         else:
             log(f"Failed to spawn agent for {repo_full}#{pr_number}")
@@ -433,6 +451,7 @@ def dispatch_agent_for_pr(
         ok = dispatcher.create_dynamic_agent(agent_spec)
         if ok:
             log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")
+            display_log_viewing_command(session_name)
             success = True
         else:
             log(f"Failed to spawn agent for {repo_full}#{pr_number}")

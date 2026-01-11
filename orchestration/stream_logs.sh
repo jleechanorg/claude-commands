@@ -18,13 +18,41 @@ main() {
     echo "System time: $(date)"
     echo ""
 
-    # Check if session exists
-    if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+    # Try to find the actual session name (tmux converts dots to underscores)
+    # Try variations: exact match, with trailing underscore, with trailing dot
+    ACTUAL_SESSION=""
+    for candidate in "$SESSION_NAME" "${SESSION_NAME}_" "${SESSION_NAME}."; do
+        if tmux has-session -t "$candidate" 2>/dev/null; then
+            ACTUAL_SESSION="$candidate"
+            break
+        fi
+    done
+
+    # If still not found, try without trailing dot/underscore
+    if [ -z "$ACTUAL_SESSION" ]; then
+        BASE_NAME="${SESSION_NAME%.}"
+        BASE_NAME="${BASE_NAME%_}"
+        for candidate in "$BASE_NAME" "${BASE_NAME}_" "${BASE_NAME}."; do
+            if tmux has-session -t "$candidate" 2>/dev/null; then
+                ACTUAL_SESSION="$candidate"
+                break
+            fi
+        done
+    fi
+
+    if [ -z "$ACTUAL_SESSION" ]; then
         echo "Error: tmux session '$SESSION_NAME' not found"
         echo ""
         echo "Available sessions:"
         tmux list-sessions 2>/dev/null || echo "No tmux sessions found"
         return 1
+    fi
+
+    # Use the actual session name found
+    SESSION_NAME="$ACTUAL_SESSION"
+    if [ "$ACTUAL_SESSION" != "$1" ]; then
+        echo "ℹ️  Using session: $ACTUAL_SESSION (resolved from: $1)"
+        echo ""
     fi
 
     # Function to extract and format meaningful content

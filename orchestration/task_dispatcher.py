@@ -28,8 +28,8 @@ from .constants import (
 
 A2A_AVAILABLE = True
 
-# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-auto
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-auto")
+# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-pro-preview (Gemini 3 Pro)
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 
@@ -1522,6 +1522,13 @@ Agent Configuration:
             prompt_file_quoted = shlex.quote(prompt_file)
 
             prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
+            
+            # Export GITHUB_TOKEN for cursor-agent authentication if available
+            github_token = os.environ.get("GITHUB_TOKEN")
+            github_token_export = ""
+            if github_token:
+                github_token_quoted = shlex.quote(github_token)
+                github_token_export = f"export GITHUB_TOKEN={github_token_quoted}"
 
             agent_name_quoted = shlex.quote(agent_name)
             agent_dir_quoted = shlex.quote(agent_dir)
@@ -1636,6 +1643,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
 
     {prompt_env_export}
+    {github_token_export}
     {attempt_env_unset_commands}
 
     {attempt_execution_line} 2>&1 | tee -a {log_file_quoted}
