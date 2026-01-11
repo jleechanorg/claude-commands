@@ -148,4 +148,26 @@ describe('Dragon Knight Campaign Description Length', function() {
     expect(description).not.toContain('null');
     expect(description).not.toContain('[object Object]');
   });
+
+  it('should handle default world checkbox state on campaign type change', async function() {
+    // Setup
+    document.body.innerHTML += `
+      <div id="campaign-wizard">
+        <input type="checkbox" id="wizard-default-world" checked />
+        <input type="text" id="wizard-description-input" />
+        <input type="text" id="wizard-character-input" />
+        <input type="text" id="wizard-setting-input" />
+      </div>
+    `;
+    
+    const checkbox = document.getElementById('wizard-default-world');
+    
+    // Test custom campaign unchecks the box
+    await campaignWizard.handleCampaignTypeChange('custom');
+    expect(checkbox.checked).toBe(false);
+    
+    // Test dragon knight re-checks the box
+    await campaignWizard.handleCampaignTypeChange('dragon-knight');
+    expect(checkbox.checked).toBe(true);
+  });
 });

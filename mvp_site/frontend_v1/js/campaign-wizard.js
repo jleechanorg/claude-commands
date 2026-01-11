@@ -575,7 +575,7 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
     document.addEventListener('input', (e) => {
       if (e.target.matches('#wizard-campaign-title')) {
         this.updatePreview('title', e.target.value);
-      } else if (e.target.matches('#wizard-campaign-prompt')) {
+      } else if (e.target.matches('#wizard-description-input')) {
         this.updatePreview('description', e.target.value);
       } else if (e.target.matches('#wizard-character-input')) {
         this.updatePreview('character', e.target.value);
@@ -685,6 +685,12 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
         settingInput.placeholder =
           'Default: World of Assiah (you can change this)';
       }
+
+      // Re-check default fantasy world for Dragon Knight (uses Assiah setting)
+      const defaultWorldCheckbox = document.getElementById('wizard-default-world');
+      if (defaultWorldCheckbox) {
+        defaultWorldCheckbox.checked = true;
+      }
     } else {
       // Show custom description for Custom Campaign
       if (dragonKnightDesc) dragonKnightDesc.style.display = 'none';
@@ -707,6 +713,12 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
         settingInput.placeholder = 'Random fantasy D&D world (auto-generate)';
       }
 
+      // Uncheck default fantasy world for custom campaigns (user wants custom world)
+      const defaultWorldCheckbox = document.getElementById('wizard-default-world');
+      if (defaultWorldCheckbox) {
+        defaultWorldCheckbox.checked = false;
+      }
+
       // Focus on character input
       if (characterInput) characterInput.focus();
     }
@@ -727,7 +739,7 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
       document.getElementById('wizard-campaign-title').value = titleInput.value;
     }
     if (promptInput?.value) {
-      document.getElementById('wizard-campaign-prompt').value =
+      document.getElementById('wizard-description-input').value =
         promptInput.value;
     }
     if (companionsInput) {
@@ -865,9 +877,6 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
     const previewOptions = document.getElementById('preview-options');
     const wizardCampaignTitle = document.getElementById(
       'wizard-campaign-title',
-    );
-    const wizardCampaignPrompt = document.getElementById(
-      'wizard-campaign-prompt',
     );
     const wizardDescriptionInput = document.getElementById(
       'wizard-description-input',
@@ -1168,7 +1177,7 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
 
     // Clear form fields
     const titleInput = document.getElementById('wizard-campaign-title');
-    const promptInput = document.getElementById('wizard-campaign-prompt');
+    const promptInput = document.getElementById('wizard-description-input');
 
     if (titleInput) titleInput.value = '';
     if (promptInput) promptInput.value = '';
