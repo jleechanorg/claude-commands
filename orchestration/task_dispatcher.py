@@ -28,8 +28,8 @@ from .constants import (
 
 A2A_AVAILABLE = True
 
-# Default Gemini model can be overridden via GEMINI_MODEL; always use gemini-3-pro-preview
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-auto
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-auto")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 
@@ -84,10 +84,10 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "GEMINI_RESTART",
-        # Stick to configured GEMINI_MODEL (default gemini-3-pro) unless overridden
+        # Model can be overridden via agent_spec["model"] (defaults to GEMINI_MODEL)
         # YOLO mode enabled to allow file access outside workspace (user directive)
         # NOTE: Prompt must come via stdin (not -p flag which is deprecated and only appends to stdin)
-        "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo",
+        "command_template": "{binary} -m {model} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,
         # Unset GEMINI_API_KEY to force OAuth authentication (higher quotas than API key)
@@ -1267,6 +1267,12 @@ Complete the task, then use /pr to create a new pull request."""
                     cli_profile = CLI_PROFILES[agent_cli]
                     cli_path = candidate_path
                     break
+
+            # Set CLI-specific default model when using the Claude default ('sonnet')
+            if model == "sonnet" and agent_cli == "gemini":
+                model = GEMINI_MODEL
+            elif model == "sonnet" and agent_cli == "cursor":
+                model = CURSOR_MODEL
 
             # Persist chain for downstream script-generation
             agent_spec["cli"] = agent_cli

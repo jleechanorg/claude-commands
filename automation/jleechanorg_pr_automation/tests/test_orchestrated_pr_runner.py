@@ -604,3 +604,94 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
         f"Config1 should contain 'worldarchitect.ai': {config1}"
     assert "ai_universe_frontend" in config2["workspace_root"], \
         f"Config2 should contain 'ai_universe_frontend': {config2}"
+
+
+def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path):
+    """Test that model parameter is accepted for all CLIs, not just claude."""
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+    
+    captured_model = None
+    
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None):
+            return [{"id": "agent-spec"}]
+        
+        def create_dynamic_agent(self, spec):
+            nonlocal captured_model
+            captured_model = spec.get("model")
+            return True
+    
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    
+    pr = {
+        "repo_full": "jleechanorg/test-repo",
+        "repo": "test-repo",
+        "number": 123,
+        "branch": "test-branch",
+    }
+    
+    # Test with gemini CLI
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="gemini",
+        model="gemini-3-auto"
+    )
+    
+    assert success, "Should succeed with gemini CLI and model parameter"
+    assert captured_model == "gemini-3-auto", f"Expected 'gemini-3-auto', got '{captured_model}'"
+    
+    # Test with codex CLI
+    captured_model = None
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="codex",
+        model="composer-1"
+    )
+    
+    assert success, "Should succeed with codex CLI and model parameter"
+    assert captured_model == "composer-1", f"Expected 'composer-1', got '{captured_model}'"
+
+
+def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
+    """Test that invalid model names are rejected."""
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+    
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None):
+            return [{"id": "agent-spec"}]
+        
+        def create_dynamic_agent(self, spec):
+            return True
+    
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    
+    pr = {
+        "repo_full": "jleechanorg/test-repo",
+        "repo": "test-repo",
+        "number": 123,
+        "branch": "test-branch",
+    }
+    
+    # Test with invalid model name (contains space)
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="gemini",
+        model="invalid model name"
+    )
+    
+    assert not success, "Should reject invalid model name with spaces"
+    
+    # Test with invalid model name (contains special characters)
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="gemini",
+        model="model@invalid"
+    )
+    
+    assert not success, "Should reject invalid model name with special characters"

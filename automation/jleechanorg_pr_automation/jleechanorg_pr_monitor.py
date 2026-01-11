@@ -105,22 +105,16 @@ def _positive_int_arg(value: str) -> int:
     return parsed
 
 
-def _normalize_model_for_cli_chain(model: Optional[str], cli_chain: str) -> Optional[str]:
+def _normalize_model(model: Optional[str]) -> Optional[str]:
     """Return a sanitized model value compatible with orchestration/TaskDispatcher.
 
-    - Only applies when the requested CLI chain includes 'claude'
-    - Rejects values that fail TaskDispatcher's model regex
+    Rejects values that fail TaskDispatcher's model regex.
     """
     if model is None:
         return None
 
     raw = str(model).strip()
     if not raw:
-        return None
-
-    chain = [part.strip().lower() for part in str(cli_chain).split(",") if part.strip()]
-    if "claude" not in chain:
-        print("⚠️ Ignoring --model (only applies when using the claude CLI).", file=sys.stderr)
         return None
 
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw):
@@ -1457,13 +1451,6 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not branch:
             branch = f"pr-{pr_number}"
 
-        if model and "claude" not in agent_cli.lower():
-            self.logger.warning(
-                "⚠️ Model '%s' specified but agent CLI is '%s'. Model parameter is only supported for Claude.",
-                model,
-                agent_cli,
-            )
-
         head_sha = pr_data.get("headRefOid")
         task_description = self._build_fix_comment_prompt_body(
             repo_full,
@@ -2718,7 +2705,7 @@ def main():
         "--model",
         type=str,
         default=None,
-        help="Model to use for Claude CLI (e.g., sonnet, opus, haiku). Only applies when using claude.",
+        help="Model to use for agent CLI. Examples: sonnet/opus/haiku (Claude), gemini-3-pro-preview/gemini-3-auto (Gemini), composer-1 (Cursor). If not specified, CLI-specific defaults are used.",
     )
     parser.add_argument("--list-eligible", action="store_true",
                         help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
@@ -2744,7 +2731,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        args.model = _normalize_model_for_cli_chain(args.model, args.fixpr_agent)
+        args.model = _normalize_model(args.model)
     except argparse.ArgumentTypeError as exc:
         parser.error(str(exc))
 

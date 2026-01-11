@@ -384,14 +384,11 @@ def dispatch_agent_for_pr(
 
     normalized_model: Optional[str] = None
     if model:
-        if "claude" not in cli_chain_parts:
-            log("Ignoring model override because the requested CLI chain does not include 'claude'.")
-        else:
-            raw_model = str(model).strip()
-            if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
-                log(f"❌ Invalid model name requested: {raw_model!r}")
-                return False
-            normalized_model = raw_model
+        raw_model = str(model).strip()
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+            log(f"❌ Invalid model name requested: {raw_model!r}")
+            return False
+        normalized_model = raw_model
 
     task_description = (
         f"FIXPR TASK (SELF-CONTAINED): Update PR #{pr_number} in {repo_full} (branch {branch}). "

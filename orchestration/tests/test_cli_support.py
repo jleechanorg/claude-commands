@@ -281,12 +281,18 @@ class TestGeminiCliSupport(unittest.TestCase):
         self.assertIn("google ai", gemini_profile["detection_keywords"])
 
     def test_gemini_uses_configured_model(self):
-        """Verify Gemini CLI is configured to use the configured GEMINI_MODEL."""
+        """Verify Gemini CLI command template uses {model} placeholder for dynamic model selection."""
         gemini_profile = CLI_PROFILES["gemini"]
         command_template = gemini_profile["command_template"]
 
-        # Must contain model flag with the configured GEMINI_MODEL
-        self.assertIn(GEMINI_MODEL, command_template)
+        # Template should use {model} placeholder, not hardcoded GEMINI_MODEL
+        # The actual model (GEMINI_MODEL or user-specified) is set at runtime
+        self.assertIn("{model}", command_template)
+        self.assertNotIn("GEMINI_MODEL", command_template)
+        
+        # Verify template can be formatted with GEMINI_MODEL
+        formatted = command_template.format(binary="/usr/bin/gemini", model=GEMINI_MODEL)
+        self.assertIn(GEMINI_MODEL, formatted)
 
     def test_auto_selects_gemini_when_only_available(self):
         """Fallback to Gemini CLI when it's the only installed CLI."""
@@ -447,7 +453,11 @@ class TestGeminiCliIntegration(unittest.TestCase):
         # Verify specific values for Gemini profile
         self.assertEqual(gemini["binary"], "gemini")
         self.assertEqual(gemini["display_name"], "Gemini")
-        self.assertIn(GEMINI_MODEL, gemini["command_template"])
+        # Command template uses {model} placeholder for dynamic model selection
+        self.assertIn("{model}", gemini["command_template"])
+        # Verify template can be formatted with GEMINI_MODEL (the default)
+        formatted = gemini["command_template"].format(binary="/usr/bin/gemini", model=GEMINI_MODEL)
+        self.assertIn(GEMINI_MODEL, formatted)
         self.assertFalse(gemini["supports_continue"])
         self.assertIsNone(gemini["conversation_dir"])
 
@@ -467,8 +477,10 @@ class TestGeminiCliIntegration(unittest.TestCase):
 
         # Test that template can be formatted with expected placeholders
         # NOTE: prompt_file is now passed via stdin_template, not command_template
+        # NOTE: model is now a required placeholder (dynamic model selection)
         test_values = {
             "binary": "/usr/bin/gemini",
+            "model": GEMINI_MODEL,  # Required placeholder for dynamic model selection
         }
 
         try:
@@ -537,11 +549,14 @@ class TestGeminiCliIntegration(unittest.TestCase):
             self.assertEqual(spec["type"], "development")
 
     def test_gemini_model_enforced_in_all_paths(self):
-        """Integration: gemini-2.5-pro model is enforced regardless of task content."""
+        """Integration: Model is set dynamically via {model} placeholder, defaults to GEMINI_MODEL."""
 
-        # Verify model cannot be overridden by task content
+        # Verify template uses {model} placeholder for dynamic model selection
         template = CLI_PROFILES["gemini"]["command_template"]
-        self.assertIn(GEMINI_MODEL, template)
+        self.assertIn("{model}", template)
+        # Verify template can be formatted with GEMINI_MODEL (the default)
+        formatted = template.format(binary="/usr/bin/gemini", model=GEMINI_MODEL)
+        self.assertIn(GEMINI_MODEL, formatted)
 
     def test_gemini_stdin_template_uses_prompt_file(self):
         """Integration: Gemini receives prompt via stdin (not deprecated -p flag)."""

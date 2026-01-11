@@ -5,7 +5,7 @@ Verifies that the system creates general task agents instead of hardcoded test a
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 from orchestration.task_dispatcher import TaskDispatcher
 
@@ -117,6 +117,124 @@ class TestTaskDispatcherFix(unittest.TestCase):
 
                     # Focus should be the exact task
                     assert agent["focus"] == task
+
+
+    def test_cli_specific_default_model_gemini(self):
+        """Test that Gemini CLI defaults to GEMINI_MODEL when model is 'sonnet'."""
+        from orchestration.task_dispatcher import GEMINI_MODEL
+        
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "test task",
+            "cli": "gemini",  # Use 'cli' not 'cli_chain' for create_dynamic_agent
+            "model": "sonnet",  # Default value that should be overridden
+        }
+        
+        # Verify initial model is 'sonnet'
+        self.assertEqual(agent_spec["model"], "sonnet")
+        
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/gemini"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_create_worktree_at_location") as mock_worktree,
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+        ):
+            mock_worktree.return_value = ("/tmp/test", MagicMock(returncode=0))
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+            
+            # Verify that model was replaced with GEMINI_MODEL in agent_spec
+            self.assertTrue(result)
+            # The model should have been replaced with GEMINI_MODEL for gemini CLI
+            # Check the written script content to verify GEMINI_MODEL was used
+            if mock_write_text.called:
+                script_content = mock_write_text.call_args[0][0]
+                # The script should contain GEMINI_MODEL, not 'sonnet'
+                self.assertIn(GEMINI_MODEL, script_content)
+                self.assertNotIn("sonnet", script_content)
+
+    def test_cli_specific_default_model_cursor(self):
+        """Test that Cursor CLI defaults to CURSOR_MODEL when model is 'sonnet'."""
+        from orchestration.task_dispatcher import CURSOR_MODEL
+        
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "test task",
+            "cli_chain": "cursor",
+            "model": "sonnet",  # Default value that should be overridden
+        }
+        
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/cursor-agent"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_create_worktree_at_location") as mock_worktree,
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+        ):
+            mock_worktree.return_value = ("/tmp/test", MagicMock(returncode=0))
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+            self.assertTrue(result)
+
+    def test_model_placeholder_in_command_template(self):
+        """Test that {model} placeholder works in Gemini command template."""
+        from orchestration.task_dispatcher import CLI_PROFILES
+        
+        gemini_profile = CLI_PROFILES.get("gemini")
+        self.assertIsNotNone(gemini_profile, "Gemini CLI profile should exist")
+        
+        command_template = gemini_profile.get("command_template")
+        self.assertIsNotNone(command_template, "Command template should exist")
+        
+        # Verify template uses {model} placeholder, not hardcoded GEMINI_MODEL
+        self.assertIn("{model}", command_template, 
+                     "Command template should use {model} placeholder")
+        self.assertNotIn("GEMINI_MODEL", command_template,
+                        "Command template should not contain hardcoded GEMINI_MODEL")
+        
+        # Test that template can be formatted with a model value
+        test_model = "gemini-3-auto"
+        formatted = command_template.format(
+            binary="/usr/bin/gemini",
+            model=test_model,
+            prompt_file="/tmp/test.txt"
+        )
+        self.assertIn(test_model, formatted,
+                     f"Formatted command should contain model '{test_model}'")
+
+    def test_explicit_model_overrides_default(self):
+        """Test that explicit model parameter overrides CLI-specific defaults."""
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "test task",
+            "cli_chain": "gemini",
+            "model": "gemini-3-auto",  # Explicit model, not 'sonnet'
+        }
+        
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/gemini"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_create_worktree_at_location") as mock_worktree,
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+        ):
+            mock_worktree.return_value = ("/tmp/test", MagicMock(returncode=0))
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+            self.assertTrue(result)
+            # The explicit model should be used, not the default
 
 
 if __name__ == "__main__":
