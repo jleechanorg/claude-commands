@@ -119,7 +119,6 @@ def _is_schema_echo(text: str) -> bool:
         if isinstance(parsed, dict) and list(parsed.keys()) == ["type"]:
             return True
     except json.JSONDecodeError:
-        # Not valid JSON, so can't be a schema echo
         pass
     return False
 
@@ -137,7 +136,6 @@ def _unwrap_nested_json(text: str) -> tuple[str, bool]:
     try:
         parsed = json.loads(text.strip())
         if isinstance(parsed, dict):
-            # Check for nested "json" key with actual content
             for key in ("json", "response", "content"):
                 if key in parsed and isinstance(parsed[key], dict):
                     inner = parsed[key]
@@ -147,7 +145,6 @@ def _unwrap_nested_json(text: str) -> tuple[str, bool]:
                         )
                         return json.dumps(inner), True
     except json.JSONDecodeError:
-        # If parsing fails, return the original text and indicate no unwrapping occurred
         pass
     return text, False
 

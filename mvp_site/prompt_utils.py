@@ -1,5 +1,5 @@
 """
-Pure utility functions for campaign prompt building and JSON escape sequence conversion.
+Pure utility functions for campaign prompt building.
 
 This module contains helper functions that are shared between world_logic.py and tests.
 Extracted to avoid import-unsafe dependencies and code duplication.
@@ -8,7 +8,6 @@ Extracted to avoid import-unsafe dependencies and code duplication.
 import random
 
 from mvp_site import logging_util
-from mvp_site.debug_hybrid_system import convert_json_escape_sequences
 
 # Random content constants (copied from world_logic.py to avoid circular dependencies)
 RANDOM_CHARACTERS = [
@@ -39,10 +38,10 @@ RANDOM_SETTINGS = [
 
 
 def _convert_and_format_field(field_value: str, field_name: str) -> str:
-    """Convert JSON escape sequences and format field for prompt.
+    """Format field for prompt.
 
     Args:
-        field_value: Raw field value that may contain JSON escape sequences
+        field_value: Raw field value
         field_name: Name of the field (Character, Setting, Description)
 
     Returns:
@@ -51,23 +50,22 @@ def _convert_and_format_field(field_value: str, field_name: str) -> str:
     if not field_value.strip():
         return ""
 
-    converted_value = convert_json_escape_sequences(field_value.strip())
-    return f"{field_name}: {converted_value}"
+    return f"{field_name}: {field_value.strip()}"
 
 
 def _build_campaign_prompt(
     character: str, setting: str, description: str, old_prompt: str | None
 ) -> str:
-    """Build campaign prompt from components with JSON escape sequence conversion.
+    """Build campaign prompt from components.
 
     Args:
-        character: Character description (may contain JSON escape sequences)
-        setting: Setting description (may contain JSON escape sequences)
-        description: Campaign description (may contain JSON escape sequences)
+        character: Character description
+        setting: Setting description
+        description: Campaign description
         old_prompt: Existing prompt to use if provided
 
     Returns:
-        Formatted campaign prompt with escape sequences converted
+        Formatted campaign prompt
     """
     if isinstance(old_prompt, str) and old_prompt.strip():
         return old_prompt.strip()

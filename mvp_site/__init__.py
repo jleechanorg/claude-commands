@@ -21,7 +21,6 @@ _ALIAS_MODULES = {
         "entity_validator",
         "llm_service",
         "memory_mcp_real",
-        "json_utils",
         "world_loader",
     ]
 }

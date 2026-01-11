@@ -16,8 +16,6 @@ import json
 from collections.abc import Callable
 from typing import Any, Protocol
 
-from mvp_site.json_utils import extract_json_boundaries
-
 
 def _attach_tool_execution_metadata(
     response: Any,
@@ -535,36 +533,9 @@ def run_json_first_tool_requests_flow(  # noqa: PLR0911, PLR0912, PLR0915
                     "Phase 1 response parsed to a string, but inner content was not valid JSON; returning as-is"
                 )
                 return _attach_tool_execution_metadata(response_1, executed=False)
-    except json.JSONDecodeError:
-        extracted = extract_json_boundaries(response_text) if response_text else None
-        if extracted and extracted != response_text:
-            try:
-                response_data = json.loads(extracted)
-                phase1_text_for_history = extracted
-                if isinstance(response_data, str):
-                    inner_text = response_data.strip()
-                    try:
-                        response_data = json.loads(inner_text) if inner_text else {}
-                        phase1_text_for_history = inner_text
-                        logger.info(
-                            "Extracted Phase 1 JSON was a JSON-encoded string; decoded inner JSON successfully"
-                        )
-                    except json.JSONDecodeError:
-                        logger.warning(
-                            "Extracted Phase 1 JSON parsed to a string, but inner content was not valid JSON; returning as-is"
-                        )
-                        return _attach_tool_execution_metadata(response_1, executed=False)
-                logger.info(
-                    "Phase 1 response was not pure JSON; extracted JSON boundaries successfully"
-                )
-            except json.JSONDecodeError:
-                logger.warning(
-                    "Phase 1 response not valid JSON (even after extraction), returning as-is"
-                )
-                return _attach_tool_execution_metadata(response_1, executed=False)
-        else:
-            logger.warning("Phase 1 response not valid JSON, returning as-is")
-            return _attach_tool_execution_metadata(response_1, executed=False)
+    except json.JSONDecodeError as e:
+        logger.warning(f"Phase 1 response not valid JSON: {e}, returning as-is")
+        return _attach_tool_execution_metadata(response_1, executed=False)
 
     if isinstance(response_data, list):
         tool_requests = response_data
@@ -621,8 +592,7 @@ def run_json_first_tool_requests_flow(  # noqa: PLR0911, PLR0912, PLR0915
 
     if executed_dice_tools:
         response2_text = (extract_text_fn(response_2) or "").strip()
-        extracted2 = extract_json_boundaries(response2_text) if response2_text else None
-        candidate2 = extracted2 if extracted2 else response2_text
+        candidate2 = response2_text
 
         # Check if Phase 2 response is valid JSON
         needs_retry = False

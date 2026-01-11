@@ -776,9 +776,7 @@ def mcp_to_http_response(mcp_result: Any, status_code: int = 200) -> Response:
         else:
             # Try to serialize complex objects
             try:
-                response_data = {
-                    "result": json.loads(json.dumps(mcp_result, default=str))
-                }
+                response_data = {"result": json.loads(json.dumps(mcp_result, default=str))}
             except (TypeError, ValueError):
                 response_data = {"result": str(mcp_result)}
 

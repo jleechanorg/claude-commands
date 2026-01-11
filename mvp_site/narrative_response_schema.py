@@ -9,7 +9,6 @@ import re
 from typing import Any, Optional, Union
 
 from mvp_site import logging_util
-from mvp_site.json_utils import parse_llm_json_response, unescape_json_string
 
 # Planning block extraction from narrative is deprecated - blocks should only come from JSON
 
@@ -17,18 +16,11 @@ from mvp_site.json_utils import parse_llm_json_response, unescape_json_string
 # A valid narrative should typically be at least ~100 characters
 MIN_NARRATIVE_LENGTH = 100
 
-# Precompiled regex patterns for better performance
+# Precompiled regex patterns for markdown code block extraction
+# NOTE: Regex-based JSON parsing and recovery have been removed per PR #3458.
+# Only markdown extraction patterns remain for extracting JSON from code blocks.
 JSON_MARKDOWN_PATTERN = re.compile(r"```json\s*\n?(.*?)\n?```", re.DOTALL)
 GENERIC_MARKDOWN_PATTERN = re.compile(r"```\s*\n?(.*?)\n?```", re.DOTALL)
-NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
-
-# JSON cleanup patterns
-JSON_STRUCTURE_PATTERN = re.compile(r"[{}\[\]]")
-JSON_KEY_QUOTES_PATTERN = re.compile(r'"([^"]+)":')
-JSON_COMMA_SEPARATOR_PATTERN = re.compile(r'",\s*"')
-WHITESPACE_PATTERN = re.compile(
-    r"[^\S\r\n]+"
-)  # Normalize spaces while preserving line breaks
 
 # Planning block detection is handled via brace matching in
 # `_remove_planning_json_blocks`; regex explorations are intentionally omitted
@@ -1305,13 +1297,20 @@ def parse_structured_response(
     response_text: str,
 ) -> tuple[str, NarrativeResponse]:  # noqa: PLR0911,PLR0912,PLR0915
     """
-    Parse structured response and check for JSON bug issues.
-    """
-    """
-    Parse structured JSON response from LLM
+    Parse structured JSON response from LLM.
+
+    NOTE: Regex-based JSON parsing and recovery have been removed per PR #3458.
+    This function now uses standard json.loads() only. Invalid or malformed JSON
+    responses will fail completely rather than attempting partial recovery.
+
+    Behavior changes:
+    - Truncated JSON responses will fail (no partial recovery)
+    - Malformed JSON will fail (no regex-based extraction)
+    - Text-wrapped JSON will fail (no boundary extraction)
+    - Only valid JSON wrapped in markdown code blocks is supported
 
     Returns:
-        tuple: (narrative_text, parsed_response_or_none)
+        tuple: (narrative_text, parsed_response)
     """
 
     def _apply_planning_fallback(
@@ -1371,22 +1370,16 @@ def parse_structured_response(
                 json_content = content
                 logging_util.info("Extracted JSON from generic code block")
 
-    # Use the robust parser on the extracted content
-    parsed_data, was_incomplete = parse_llm_json_response(json_content)
-
-    if was_incomplete:
-        narrative_len = len(parsed_data.get("narrative", "")) if parsed_data else 0
-        token_count = narrative_len // 4  # Rough estimate
-        logging_util.info(
-            f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)"
+    # Parse JSON using standard json.loads()
+    # NOTE: No recovery logic - invalid JSON fails completely (per PR #3458)
+    try:
+        parsed_data = json.loads(json_content)
+    except json.JSONDecodeError as e:
+        logging_util.error(
+            f"Failed to parse JSON response: {e}. "
+            "JSON recovery functionality has been removed - invalid JSON will fail completely."
         )
-        # Warn if narrative is suspiciously short after recovery
-        if narrative_len < MIN_NARRATIVE_LENGTH and narrative_len > 0:
-            logging_util.warning(
-                f"⚠️ SUSPICIOUSLY_SHORT_NARRATIVE: Narrative is only {narrative_len} chars "
-                f"(min expected: {MIN_NARRATIVE_LENGTH}). This may indicate truncation due to "
-                "malformed JSON with unescaped quotes. Consider reprompting."
-            )
+        parsed_data = None
 
     # Create NarrativeResponse from parsed data
 
@@ -1489,130 +1482,19 @@ def parse_structured_response(
                 fallback_response,
             )  # Return cleaned narrative from response
 
-    # Additional mitigation: Try to extract narrative from raw JSON-like text
-    # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."
-    narrative_match = NARRATIVE_PATTERN.search(response_text)
-
-    if narrative_match:
-        extracted_narrative = narrative_match.group(1)
-        # Properly unescape JSON string escapes
-        extracted_narrative = unescape_json_string(extracted_narrative)
-        logging_util.info("Extracted narrative from JSON-like text pattern")
-
-        fallback_response = NarrativeResponse(
-            narrative=extracted_narrative,
-            entities_mentioned=[],
-            location_confirmed="Unknown",
-        )
-        return fallback_response.narrative, fallback_response
-
-    # Final fallback: Clean up raw text for display
-    # Remove JSON-like structures and format for readability
-    cleaned_text = response_text
-
-    # Safer approach: Only clean if it's clearly malformed JSON
-    # Check multiple indicators to avoid corrupting valid narrative text
-    is_likely_json = (
-        "{" in cleaned_text
-        and '"' in cleaned_text
-        and (
-            cleaned_text.strip().startswith("{") or cleaned_text.strip().startswith('"')
-        )
-        and (cleaned_text.strip().endswith("}") or cleaned_text.strip().endswith('"'))
-        and cleaned_text.count('"') >= 4  # At least 2 key-value pairs
+    # JSON parsing failed - return error response
+    # NOTE: Regex-based JSON parsing and recovery have been removed per PR #3458.
+    # Invalid or malformed JSON responses will fail completely rather than attempting
+    # partial recovery. This ensures consistent behavior and avoids silent data corruption.
+    logging_util.error(
+        "Failed to parse JSON response - returning error message. "
+        "JSON recovery functionality has been removed."
     )
-
-    if is_likely_json:
-        # Apply cleanup only to confirmed JSON-like text
-        # First, try to extract just the narrative value if possible
-        if '"narrative"' in cleaned_text:
-            # Try to extract narrative value safely
-            narrative_match = NARRATIVE_PATTERN.search(cleaned_text)
-            if narrative_match:
-                cleaned_text = narrative_match.group(1)
-                # Unescape JSON string escapes
-                cleaned_text = (
-                    cleaned_text.replace("\\n", "\n")
-                    .replace('\\"', '"')
-                    .replace("\\\\", "\\")
-                )
-                logging_util.info("Extracted narrative from JSON structure")
-            else:
-                # Fallback to aggressive cleanup only as last resort
-                cleaned_text = JSON_STRUCTURE_PATTERN.sub(
-                    "", cleaned_text
-                )  # Remove braces and brackets
-                cleaned_text = JSON_KEY_QUOTES_PATTERN.sub(
-                    r"\1:", cleaned_text
-                )  # Remove quotes from keys
-                cleaned_text = JSON_COMMA_SEPARATOR_PATTERN.sub(
-                    ". ", cleaned_text
-                )  # Replace JSON comma separators
-                cleaned_text = cleaned_text.replace(
-                    "\\n", "\n"
-                )  # Convert \n to actual newlines
-                cleaned_text = cleaned_text.replace('\\"', '"')  # Unescape quotes
-                cleaned_text = cleaned_text.replace(
-                    "\\\\", "\\"
-                )  # Unescape backslashes
-                cleaned_text = WHITESPACE_PATTERN.sub(
-                    " ", cleaned_text
-                )  # Normalize spaces while preserving line breaks
-                cleaned_text = cleaned_text.strip()
-                logging_util.warning("Applied aggressive cleanup to malformed JSON")
-        else:
-            # No narrative field found, apply minimal cleanup
-            cleaned_text = (
-                cleaned_text.replace("\\n", "\n")
-                .replace('\\"', '"')
-                .replace("\\\\", "\\")
-            )
-            logging_util.warning(
-                "Applied minimal cleanup to JSON-like text without narrative field"
-            )
-
-    # Final fallback response
-
     fallback_response = NarrativeResponse(
-        narrative=cleaned_text, entities_mentioned=[], location_confirmed="Unknown"
+        narrative="Invalid JSON response received. Please try again.",
+        entities_mentioned=[],
+        location_confirmed="Unknown",
     )
-
-    # Final check for JSON artifacts in returned text
-    if '"narrative":' in cleaned_text or '"god_mode_response":' in cleaned_text:
-        # Try to extract narrative value one more time with more aggressive pattern
-        narrative_match = NARRATIVE_PATTERN.search(cleaned_text)
-        if narrative_match:
-            cleaned_text = narrative_match.group(1)
-            # Unescape JSON string escapes
-            cleaned_text = (
-                cleaned_text.replace("\\n", "\n")
-                .replace('\\"', '"')
-                .replace("\\\\", "\\")
-            )
-        else:
-            # Final aggressive cleanup
-            cleaned_text = JSON_STRUCTURE_PATTERN.sub(
-                "", cleaned_text
-            )  # Remove braces and brackets
-            cleaned_text = JSON_KEY_QUOTES_PATTERN.sub(
-                r"\1:", cleaned_text
-            )  # Remove quotes from keys
-            cleaned_text = JSON_COMMA_SEPARATOR_PATTERN.sub(
-                ". ", cleaned_text
-            )  # Replace JSON comma separators
-            cleaned_text = cleaned_text.replace(
-                "\\n", "\n"
-            )  # Convert \n to actual newlines
-            cleaned_text = cleaned_text.replace('\\"', '"')  # Unescape quotes
-            cleaned_text = cleaned_text.replace("\\\\", "\\")  # Unescape backslashes
-            cleaned_text = WHITESPACE_PATTERN.sub(" ", cleaned_text)  # Normalize spaces
-            cleaned_text = cleaned_text.strip()
-
-        # Update the fallback response with cleaned text
-        fallback_response = NarrativeResponse(
-            narrative=cleaned_text, entities_mentioned=[], location_confirmed="Unknown"
-        )
-
     return fallback_response.narrative, fallback_response
 
 
