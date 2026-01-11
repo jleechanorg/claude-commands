@@ -175,6 +175,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/PreToolUse.sh\" ] && exec \"$ROOT/.claude/hooks/PreToolUse.sh\"; fi; [ -x \"$HOME/.claude/hooks/PreToolUse.sh\" ] && exec \"$HOME/.claude/hooks/PreToolUse.sh\"; exit 0'",
+            "description": "Token optimization: Add offset/limit to Read tool, inject --minimal --unified=0 to git diff"
+          },
+          {
+            "type": "command",
             "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$ROOT/.claude/hooks/pre_command_optimize.py\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$HOME/.claude/hooks/pre_command_optimize.py\"; exit 0'",
             "description": "Optimize tool selection before command execution"
           },
@@ -262,6 +267,11 @@
       {
         "matcher": "",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/UserPromptSubmit.sh\" ] && \"$ROOT/.claude/hooks/UserPromptSubmit.sh\"; fi; [ -x \"$HOME/.claude/hooks/UserPromptSubmit.sh\" ] && \"$HOME/.claude/hooks/UserPromptSubmit.sh\"; exit 0'",
+            "description": "Session health monitoring: Warn at 500/1000/2000 message thresholds"
+          },
           {
             "type": "command",
             "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/compose-commands.sh\" ] && exec \"$ROOT/.claude/hooks/compose-commands.sh\" \"$@\"; fi; [ -x \"$HOME/.claude/hooks/compose-commands.sh\" ] && exec \"$HOME/.claude/hooks/compose-commands.sh\" \"$@\"; printf %s\\n \"$*\"; exit 0' --",
