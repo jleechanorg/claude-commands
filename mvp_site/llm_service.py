@@ -78,7 +78,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from firebase_admin import auth as firebase_auth
 from google.genai import types
@@ -92,7 +92,7 @@ from mvp_site.agent_prompts import (
     get_static_prompt_parts,
 )
 from mvp_site.agents import (
-    BaseAgent,  # noqa: F401
+    BaseAgent,
     GodModeAgent,
     RewardsAgent,
     StoryModeAgent,
@@ -601,7 +601,7 @@ def _get_safe_output_token_limit(
 
 def _calculate_prompt_and_system_tokens(
     user_prompt_contents: list[Any],
-    system_instruction_text: Optional[str],
+    system_instruction_text: str | None,
     provider_name: str,
     model_name: str,
 ) -> tuple[int, int]:
@@ -628,7 +628,7 @@ def _calculate_prompt_and_system_tokens(
         user_prompt_tokens = estimate_tokens(combined_prompt)
 
     system_tokens = 0
-    if system_instruction_text:
+    if system_instruction_text is not None:
         try:
             raw_system_tokens = gemini_provider.count_tokens(
                 model_name, [system_instruction_text]
@@ -1141,7 +1141,7 @@ def _select_model_for_continuation(_user_input_count: int) -> str:
 
 def _parse_gemini_response(
     raw_response_text: str, context: str = "general"
-) -> tuple[str, Optional[NarrativeResponse]]:
+) -> tuple[str, NarrativeResponse | None]:
     """
     Centralized JSON parsing logic for all Gemini responses.
     Handles JSON extraction, parsing, and fallback logic.
@@ -1166,7 +1166,7 @@ def _parse_gemini_response(
 
 def _process_structured_response(
     raw_response_text: str, expected_entities: list[str]
-) -> tuple[str, Optional[NarrativeResponse]]:
+) -> tuple[str, NarrativeResponse | None]:
     """
     Process structured JSON response and validate entity coverage.
 
@@ -1246,7 +1246,7 @@ def _validate_entity_tracking(
 def _log_token_count(
     model_name: str,
     user_prompt_contents: list[Any],
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> None:
     """Helper function to count and log the number of tokens being sent, with a breakdown.
@@ -1281,7 +1281,7 @@ def _log_token_count(
 def _call_llm_api_with_llm_request(
     gemini_request: LLMRequest,
     model_name: str,
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
@@ -1373,8 +1373,8 @@ def _call_llm_api_with_llm_request(
 def _call_llm_api(
     prompt_contents: list[Any],
     model_name: str,
-    current_prompt_text_for_logging: Optional[str] = None,
-    system_instruction_text: Optional[str] = None,
+    current_prompt_text_for_logging: str | None = None,
+    system_instruction_text: str | None = None,
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
@@ -1391,8 +1391,8 @@ def _call_llm_api(
         Provider-specific response object (Gemini, OpenRouter, or Cerebras)
     """
     if current_prompt_text_for_logging:
-        logging_util.info(
-            f"Calling LLM API with prompt: {str(current_prompt_text_for_logging)[:500]}..."
+        logging_util.debug(
+            f"Calling LLM API with prompt ({len(current_prompt_text_for_logging)} chars): {str(current_prompt_text_for_logging)[:100]}..."
         )
 
     # Log token estimate for prompt
@@ -1404,7 +1404,7 @@ def _call_llm_api(
             # Handle JSON data for logging purposes
             all_prompt_text.append(f"JSON({len(str(p))} chars)")
 
-    if system_instruction_text:
+    if system_instruction_text is not None:
         all_prompt_text.append(system_instruction_text)
 
     combined_text = " ".join(all_prompt_text)
@@ -1546,7 +1546,7 @@ def _call_llm_api(
 def _call_llm_api_with_json_structure(
     json_input: dict[str, Any],
     model_name: str,
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
@@ -1624,7 +1624,7 @@ def _call_llm_api_with_json_structure(
 def _call_llm_api_with_structured_json(
     json_input: dict[str, Any],
     model_name: str,
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
     provider_name: str = constants.DEFAULT_LLM_PROVIDER,
 ) -> Any:
     """
@@ -1662,10 +1662,10 @@ def _call_llm_api_with_json_schema(
     content: str,
     message_type: str,
     model_name: str,
-    user_id: Optional[str] = None,
-    game_mode: Optional[str] = None,
-    game_state: Optional[dict[str, Any]] = None,
-    system_instruction_text: Optional[str] = None,
+    user_id: str | None = None,
+    game_mode: str | None = None,
+    game_state: dict[str, Any] | None = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     LEGACY: Call Gemini API using structured JSON input schema (DEPRECATED).
@@ -1754,7 +1754,7 @@ def _maybe_get_gemini_code_execution_evidence(
     model_name: str,
     api_response: Any,
     context: str,
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Return server-verified Gemini code_execution evidence when applicable."""
     if provider_name != constants.LLM_PROVIDER_GEMINI:
         return None
@@ -2395,7 +2395,7 @@ MOCK_INITIAL_STORY_NO_COMPANIONS = """{
 }"""
 
 
-def _select_provider_and_model(user_id: Optional[UserId]) -> ProviderSelection:
+def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     """Select the configured LLM provider and model for a user.
 
     In test/mock mode (MOCK_SERVICES_MODE=true, FORCE_TEST_MODEL=true, or TESTING_AUTH_BYPASS=true),
@@ -2421,7 +2421,7 @@ def _select_provider_and_model(user_id: Optional[UserId]) -> ProviderSelection:
         logging_util.info(
             "🔍 PROVIDER_SELECTION_FORCED_TEST: Returning Gemini due to test mode flags"
         )
-        return ProviderSelection(constants.DEFAULT_LLM_PROVIDER, TEST_MODEL)
+        return ProviderSelection(constants.LLM_PROVIDER_GEMINI, constants.DEFAULT_GEMINI_MODEL)
 
     provider = constants.DEFAULT_LLM_PROVIDER
     model = DEFAULT_MODEL
@@ -2434,9 +2434,9 @@ def _select_provider_and_model(user_id: Optional[UserId]) -> ProviderSelection:
 
     try:
         user_settings = get_user_settings(user_id)
-        logging_util.info(
+        logging_util.debug(
             f"🔍 PROVIDER_SELECTION_SETTINGS: user_id={user_id}, "
-            f"settings={user_settings}"
+            f"settings_keys={list(user_settings.keys()) if user_settings else None}"
         )
         if user_settings is None:
             logging_util.warning(
@@ -2511,15 +2511,15 @@ def _select_provider_and_model(user_id: Optional[UserId]) -> ProviderSelection:
         return ProviderSelection(provider, model)
 
 
-def _select_model_for_user(user_id: Optional[UserId]) -> str:
+def _select_model_for_user(user_id: UserId | None) -> str:
     return _select_provider_and_model(user_id).model
 
 
 @log_exceptions
 def get_initial_story(
     prompt: str,
-    user_id: Optional[UserId] = None,
-    selected_prompts: Optional[list[str]] = None,
+    user_id: UserId | None = None,
+    selected_prompts: list[str] | None = None,
     generate_companions: bool = False,
     use_default_world: bool = False,
 ) -> LLMResponse:
@@ -2858,7 +2858,7 @@ def get_initial_story(
 
 
 def _log_debug_response(
-    response_text: Optional[str], context: str = "", max_length: int = 400
+    response_text: str | None, context: str = "", max_length: int = 400
 ) -> None:
     """Helper to log truncated response text for debugging."""
     if not response_text:
@@ -2934,7 +2934,7 @@ def _log_raw_llm_data(
 
 
 def _check_missing_required_fields(
-    structured_response: Optional[NarrativeResponse],
+    structured_response: NarrativeResponse | None,
     mode: str,
     is_god_mode: bool = False,
     is_dm_mode: bool = False,
@@ -3048,8 +3048,8 @@ def _build_reprompt_request(
 
 
 def _validate_and_enforce_planning_block(
-    response_text: Optional[str],
-    structured_response: Optional[NarrativeResponse] = None,
+    response_text: str | None,
+    structured_response: NarrativeResponse | None = None,
 ) -> str:
     """
     Validates that structured_response.planning_block exists and is valid JSON.
@@ -3128,9 +3128,9 @@ def continue_story(
     mode: str,
     story_context: list[dict[str, Any]],
     current_game_state: GameState,
-    selected_prompts: Optional[list[str]] = None,
+    selected_prompts: list[str] | None = None,
     use_default_world: bool = False,
-    user_id: Optional[UserId] = None,
+    user_id: UserId | None = None,
     include_raw_llm_payloads: bool = False,
 ) -> LLMResponse:
     """

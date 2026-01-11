@@ -5,8 +5,8 @@ Tests that CharacterCreationAgent ALWAYS activates on Turn 1, even when:
 1. God Mode includes pre-defined character data (name, class, stats)
 2. God Mode includes minimal data (just character name and setting)
 
-CRITICAL: This validates the invariant that users creating campaigns from templates 
-(like "My Epic Adventure") must review their character via CharacterCreationAgent 
+CRITICAL: This validates the invariant that users creating campaigns from templates
+(like "My Epic Adventure") must review their character via CharacterCreationAgent
 before story mode starts.
 """
 
@@ -60,8 +60,8 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
         """
         Invariant: CharacterCreationAgent should activate on Turn 1 even with full God Mode character data.
 
-        This test ensures that campaigns created from templates like "My Epic Adventure" 
-        (with full character: Ser Arion, Level 1 Paladin, stats) activate the 
+        This test ensures that campaigns created from templates like "My Epic Adventure"
+        (with full character: Ser Arion, Level 1 Paladin, stats) activate the
         CharacterCreationAgent on Turn 1 instead of jumping straight to SCENE 1.
         """
         # Set up fake Firestore
@@ -179,9 +179,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
         system_files = debug_info.get("system_instruction_files", [])
 
         # CharacterCreationAgent should load character_creation_instruction.md
-        has_char_creation = any(
-            "character_creation" in f for f in system_files
-        )
+        has_char_creation = any("character_creation" in f for f in system_files)
 
         self.assertTrue(
             has_char_creation,
@@ -207,16 +205,18 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
             "[CHARACTER CREATION]",
             narrative,
             f"CharacterCreationAgent narrative should start with [CHARACTER CREATION] prefix. "
-            f"Got: {narrative[:100]}..."
+            f"Got: {narrative[:100]}...",
         )
 
         # CharacterCreationAgent should ask for character details (name, race, class, background, etc.)
         character_keywords = ["name", "race", "class", "background", "alignment"]
-        has_char_questions = any(keyword.lower() in narrative.lower() for keyword in character_keywords)
+        has_char_questions = any(
+            keyword.lower() in narrative.lower() for keyword in character_keywords
+        )
         self.assertTrue(
             has_char_questions,
             f"CharacterCreationAgent should ask character creation questions (name, race, class, etc.). "
-            f"Got: {narrative[:200]}..."
+            f"Got: {narrative[:200]}...",
         )
 
         # CharacterCreationAgent should NOT return story mode content
@@ -225,7 +225,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
         self.assertFalse(
             has_story_content,
             f"CharacterCreationAgent should NOT return story mode content (SCENE, combat, mission). "
-            f"Got: {narrative[:200]}..."
+            f"Got: {narrative[:200]}...",
         )
 
     @patch("mvp_site.firestore_service.get_db")
@@ -313,11 +313,13 @@ Tell me your choices and we'll build Luke's character sheet together!""",
         # Turn 1 interaction
         turn1_response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I want to create my character",
-                "mode": "character",
-                "include_raw_llm_payloads": True,
-            }),
+            data=json.dumps(
+                {
+                    "input": "I want to create my character",
+                    "mode": "character",
+                    "include_raw_llm_payloads": True,
+                }
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
@@ -343,15 +345,17 @@ Tell me your choices and we'll build Luke's character sheet together!""",
             "[CHARACTER CREATION]",
             narrative,
             f"CharacterCreationAgent narrative should start with [CHARACTER CREATION] prefix. "
-            f"Got: {narrative[:100]}..."
+            f"Got: {narrative[:100]}...",
         )
 
         character_keywords = ["name", "race", "class", "background", "alignment"]
-        has_char_questions = any(keyword.lower() in narrative.lower() for keyword in character_keywords)
+        has_char_questions = any(
+            keyword.lower() in narrative.lower() for keyword in character_keywords
+        )
         self.assertTrue(
             has_char_questions,
             f"CharacterCreationAgent should ask character creation questions (name, race, class, etc.). "
-            f"Got: {narrative[:200]}..."
+            f"Got: {narrative[:200]}...",
         )
 
         story_keywords = ["SCENE", "combat", "mission", "dungeon", "attack"]
@@ -359,7 +363,7 @@ Tell me your choices and we'll build Luke's character sheet together!""",
         self.assertFalse(
             has_story_content,
             f"CharacterCreationAgent should NOT return story mode content (SCENE, combat, mission). "
-            f"Got: {narrative[:200]}..."
+            f"Got: {narrative[:200]}...",
         )
 
 

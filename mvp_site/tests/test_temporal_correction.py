@@ -71,9 +71,9 @@ class TestIncompleteWorldTimeNotViolation:
 
         result = world_time.check_temporal_violation(old_time, backward_new_time)
 
-        assert result is True, (
-            "Complete backward time SHOULD trigger temporal violation"
-        )
+        assert (
+            result is True
+        ), "Complete backward time SHOULD trigger temporal violation"
 
     def test_missing_year_not_violation(self):
         """Missing year (but other date fields present) should NOT be violation."""
@@ -87,7 +87,13 @@ class TestIncompleteWorldTimeNotViolation:
     def test_year_zero_not_violation(self):
         """Year of 0 (invalid) should NOT be treated as violation."""
         old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
-        new_time_zero_year = {"year": 0, "month": 5, "day": 12, "hour": 14, "minute": 15}
+        new_time_zero_year = {
+            "year": 0,
+            "month": 5,
+            "day": 12,
+            "hour": 14,
+            "minute": 15,
+        }
 
         result = world_time.check_temporal_violation(old_time, new_time_zero_year)
 
@@ -96,7 +102,13 @@ class TestIncompleteWorldTimeNotViolation:
     def test_forward_time_with_complete_data_not_violation(self):
         """Forward time movement with complete data should NOT be violation."""
         old_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 5}
-        forward_new_time = {"year": 431, "month": 5, "day": 12, "hour": 14, "minute": 15}
+        forward_new_time = {
+            "year": 431,
+            "month": 5,
+            "day": 12,
+            "hour": 14,
+            "minute": 15,
+        }
 
         result = world_time.check_temporal_violation(old_time, forward_new_time)
 
@@ -133,7 +145,9 @@ class TestIncompleteWorldTimeNotViolation:
             "minute": 0,
         }
 
-        result = world_time.check_temporal_violation(incomplete_old_time, complete_new_time)
+        result = world_time.check_temporal_violation(
+            incomplete_old_time, complete_new_time
+        )
 
         assert result is False, (
             "Incomplete old_time should NOT trigger temporal violation. "
@@ -141,7 +155,7 @@ class TestIncompleteWorldTimeNotViolation:
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_temporal_correction_preserves_original_user_input():
     """
     Verify that player input is preserved even when LLM generates backward time.
@@ -272,9 +286,9 @@ async def test_temporal_correction_preserves_original_user_input():
 
     # ASSERTIONS
     # 1. Should have saved exactly one user input (not multiple)
-    assert len(saved_user_inputs) == 1, (
-        f"Expected 1 user input saved, got {len(saved_user_inputs)}: {saved_user_inputs}"
-    )
+    assert (
+        len(saved_user_inputs) == 1
+    ), f"Expected 1 user input saved, got {len(saved_user_inputs)}: {saved_user_inputs}"
 
     # 2. The saved input must be the ORIGINAL player input
     saved_input = saved_user_inputs[0]
@@ -286,34 +300,34 @@ async def test_temporal_correction_preserves_original_user_input():
     )
 
     # 3. The saved input must NOT contain correction prompt text
-    assert "TEMPORAL VIOLATION" not in saved_input, (
-        "FAIL: Correction prompt text leaked into saved player input!"
-    )
-    assert "REGENERATION REQUIRED" not in saved_input, (
-        "FAIL: Correction prompt text leaked into saved player input!"
-    )
+    assert (
+        "TEMPORAL VIOLATION" not in saved_input
+    ), "FAIL: Correction prompt text leaked into saved player input!"
+    assert (
+        "REGENERATION REQUIRED" not in saved_input
+    ), "FAIL: Correction prompt text leaked into saved player input!"
 
     # 4. Verify LLM was called only ONCE (corrections disabled)
-    assert mock_llm.continue_story.call_count == 1, (
-        f"Expected 1 LLM call (corrections disabled), got {mock_llm.continue_story.call_count}"
-    )
+    assert (
+        mock_llm.continue_story.call_count == 1
+    ), f"Expected 1 LLM call (corrections disabled), got {mock_llm.continue_story.call_count}"
 
     # 5. Verify the single call received the ORIGINAL player input (not correction prompt)
     single_call_args = mock_llm.continue_story.call_args_list[0]
     # continue_story(user_input, mode, story_context, ...) - first positional arg is user_input
     call_input = single_call_args[0][0]
-    assert call_input == original_player_input, (
-        f"LLM should receive original player input, got: {call_input}"
-    )
+    assert (
+        call_input == original_player_input
+    ), f"LLM should receive original player input, got: {call_input}"
 
     # 6. Verify god_mode_response contains temporal anomaly warning for user
-    assert "god_mode_response" in result, (
-        "Expected god_mode_response in result when temporal violation occurs"
-    )
+    assert (
+        "god_mode_response" in result
+    ), "Expected god_mode_response in result when temporal violation occurs"
     god_mode_response = result["god_mode_response"]
-    assert "TEMPORAL ANOMALY DETECTED" in god_mode_response, (
-        f"god_mode_response should contain temporal anomaly warning, got: {god_mode_response}"
-    )
-    assert "time moved backward" in god_mode_response, (
-        "god_mode_response should explain time moved backward"
-    )
+    assert (
+        "TEMPORAL ANOMALY DETECTED" in god_mode_response
+    ), f"god_mode_response should contain temporal anomaly warning, got: {god_mode_response}"
+    assert (
+        "time moved backward" in god_mode_response
+    ), "god_mode_response should explain time moved backward"

@@ -97,9 +97,9 @@ class TestProductionParity(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # Should succeed with proper authentication headers - tighten assertion
-        assert response.status_code == 200, (
-            f"Should return success with auth headers, got {response.status_code}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Should return success with auth headers, got {response.status_code}"
 
         response_data = response.get_json()
 
@@ -119,14 +119,14 @@ class TestProductionParity(unittest.TestCase):
             )
 
         # Verify campaigns is iterable (prevents forEach error)
-        assert hasattr(campaigns, "__iter__"), (
-            "Campaigns should be iterable for forEach()"
-        )
+        assert hasattr(
+            campaigns, "__iter__"
+        ), "Campaigns should be iterable for forEach()"
 
         # Verify it's specifically a list (what forEach expects)
-        assert isinstance(campaigns, list), (
-            "Campaigns should be a list for forEach() compatibility"
-        )
+        assert isinstance(
+            campaigns, list
+        ), "Campaigns should be a list for forEach() compatibility"
 
     def test_direct_calls_mode_response_format(self):
         """Test response format when using direct calls mode (default).
@@ -141,9 +141,9 @@ class TestProductionParity(unittest.TestCase):
 
         response = direct_client.get("/api/campaigns", headers=self.test_headers)
 
-        assert response.status_code == 200, (
-            f"Direct calls mode should return success, got {response.status_code}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Direct calls mode should return success, got {response.status_code}"
 
         response_data = response.get_json()
 
@@ -152,15 +152,15 @@ class TestProductionParity(unittest.TestCase):
         # This means response_data should be the campaigns array directly,
         # or the destructuring will fail
 
-        assert isinstance(response_data, (list, dict)), (
-            "Response should be list or dict"
-        )
+        assert isinstance(
+            response_data, (list, dict)
+        ), "Response should be list or dict"
 
         if isinstance(response_data, dict):
             # If it's a dict, it should have campaigns field
-            assert "campaigns" in response_data, (
-                "Dict response should have 'campaigns' field"
-            )
+            assert (
+                "campaigns" in response_data
+            ), "Dict response should have 'campaigns' field"
             campaigns = response_data["campaigns"]
         else:
             campaigns = response_data

@@ -54,7 +54,7 @@ try:
     google_module.genai.Client = MagicMock()
     sys.modules["google"] = google_module
     sys.modules["google.genai"] = google_module.genai
-    
+
     # Mock google.auth to prevent "google is not a package" error
     google_auth_module = MagicMock()
     sys.modules["google.auth"] = google_auth_module
@@ -175,7 +175,7 @@ class TestGameState(unittest.TestCase):
         }
 
         # Test that timestamp is recent
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         time_diff = abs((now - gs.last_state_update_timestamp).total_seconds())
         assert time_diff < 5, "Timestamp should be within 5 seconds of now"
 
@@ -184,7 +184,7 @@ class TestGameState(unittest.TestCase):
 
     def test_initialization_with_kwargs(self):
         """Test GameState initialization with provided values."""
-        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
         custom_data = {
             "game_state_version": 2,
             "player_character_data": {"name": "Hero", "level": 5},
@@ -330,7 +330,7 @@ class TestGameState(unittest.TestCase):
 
     def test_to_dict(self):
         """Test serialization to dictionary."""
-        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
         gs = GameState(
             game_state_version=3,
             player_character_data={"name": "Test"},
@@ -370,7 +370,7 @@ class TestGameState(unittest.TestCase):
 
     def test_from_dict_with_valid_data(self):
         """Test deserialization from dictionary."""
-        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+        custom_time = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
         source_dict = {
             "game_state_version": 2,
             "player_character_data": {"name": "Hero"},
@@ -416,7 +416,7 @@ class TestGameState(unittest.TestCase):
 
     def test_three_layer_nesting_all_types(self):
         """Test GameState with 3 layers of nesting and all valid Python data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
 
         complex_data = {
             "game_state_version": 1,
@@ -588,7 +588,7 @@ class TestGameState(unittest.TestCase):
 
     def test_to_dict_three_layer_nesting_all_types(self):
         """Test serialization of GameState with 3 layers of nesting and all data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
 
         gs = GameState(
             player_character_data={
@@ -627,7 +627,7 @@ class TestGameState(unittest.TestCase):
 
     def test_from_dict_three_layer_nesting_all_types(self):
         """Test deserialization from dict with 3 layers of nesting and all data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
 
         source_dict = {
             "game_state_version": 2,
@@ -696,15 +696,15 @@ class TestGameState(unittest.TestCase):
 
         # RED phase assertions - these should fail without the fix
         # Verify cache attributes are NOT in the serialized data
-        assert "_manifest_cache" not in state_dict, (
-            "_manifest_cache should be excluded from serialization"
-        )
-        assert "_internal_temp" not in state_dict, (
-            "Internal attributes starting with _ should be considered for exclusion"
-        )
-        assert "_another_cache" not in state_dict, (
-            "Internal cache attributes should be excluded"
-        )
+        assert (
+            "_manifest_cache" not in state_dict
+        ), "_manifest_cache should be excluded from serialization"
+        assert (
+            "_internal_temp" not in state_dict
+        ), "Internal attributes starting with _ should be considered for exclusion"
+        assert (
+            "_another_cache" not in state_dict
+        ), "Internal cache attributes should be excluded"
 
         # GREEN phase assertions - these should always pass
         # Verify normal attributes ARE in the serialized data
@@ -992,7 +992,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
 
     def test_three_layer_nesting_all_data_types(self):
         """Test update_state_with_changes with 3 layers of nesting and all Python data types."""
-        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.UTC)
 
         state = {
             "game_data": {
@@ -1270,7 +1270,7 @@ class TestPerformAppend(unittest.TestCase):
     def test_append_all_data_types(self):
         """Test appending various data types to a list."""
         target_list = ["string"]
-        test_datetime = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+        test_datetime = datetime.datetime(2023, 1, 1, tzinfo=datetime.UTC)
 
         items_to_append = [
             42,  # int
@@ -1339,9 +1339,9 @@ class TestGameStateValidation(unittest.TestCase):
 
         # We expect to find at least one discrepancy
         assert len(discrepancies) > 0, "Should detect location discrepancy"
-        assert any("location" in d.lower() for d in discrepancies), (
-            "Should specifically mention location mismatch"
-        )
+        assert any(
+            "location" in d.lower() for d in discrepancies
+        ), "Should specifically mention location mismatch"
 
     def test_validate_checkpoint_consistency_mission_completion_fails_without_implementation(
         self,
@@ -1361,9 +1361,9 @@ class TestGameStateValidation(unittest.TestCase):
         discrepancies = gs.validate_checkpoint_consistency(narrative)
 
         # We expect to find at least one discrepancy
-        assert len(discrepancies) > 0, (
-            "Should detect completed mission still marked active"
-        )
+        assert (
+            len(discrepancies) > 0
+        ), "Should detect completed mission still marked active"
         assert any(
             "mission" in d.lower() or "quest" in d.lower() for d in discrepancies
         ), "Should specifically mention mission/quest discrepancy"
@@ -1616,12 +1616,12 @@ class TestMainStateFunctions(unittest.TestCase):
 
         mock_update_state.assert_called_once()
         _, _, updated_state = mock_update_state.call_args[0]
-        assert updated_state["player_character_data"]["stats"]["hp"] == 18, (
-            "HP should be updated via GOD_MODE_SET"
-        )
-        assert updated_state["world_data"]["current_location"]["name"] == "Oakvale", (
-            "Nested world data should be merged"
-        )
+        assert (
+            updated_state["player_character_data"]["stats"]["hp"] == 18
+        ), "HP should be updated via GOD_MODE_SET"
+        assert (
+            updated_state["world_data"]["current_location"]["name"] == "Oakvale"
+        ), "Nested world data should be merged"
 
     def test_debug_mode_command_returns_structured_state_for_ask(self):
         """GOD_ASK_STATE should return the raw game_state alongside the formatted response."""
@@ -2168,8 +2168,12 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         # Should NOT auto-correct level-ups
-        self.assertFalse(result.get("corrected", False), "Should NOT auto-correct level-up")
-        self.assertTrue(result.get("level_up_pending", False), "Should set level_up_pending")
+        self.assertFalse(
+            result.get("corrected", False), "Should NOT auto-correct level-up"
+        )
+        self.assertTrue(
+            result.get("level_up_pending", False), "Should set level_up_pending"
+        )
         self.assertEqual(result.get("expected_level"), 4, "Expected level should be 4")
         self.assertEqual(
             result.get("provided_level"), 1, "Provided level should be recorded as 1"
@@ -2195,8 +2199,12 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         # Should auto-correct regressions
-        self.assertTrue(result.get("corrected", False), "Should auto-correct regression")
-        self.assertFalse(result.get("level_up_pending", False), "Should NOT set level_up_pending")
+        self.assertTrue(
+            result.get("corrected", False), "Should auto-correct regression"
+        )
+        self.assertFalse(
+            result.get("level_up_pending", False), "Should NOT set level_up_pending"
+        )
         self.assertEqual(result.get("expected_level"), 2, "Expected level should be 2")
         self.assertEqual(
             result.get("provided_level"), 5, "Provided level should be recorded as 5"
@@ -2264,14 +2272,12 @@ class TestXPLevelValidation(unittest.TestCase):
         self.assertIsNone(
             result.get("clamped_level"), "Epic levels should not be clamped"
         )
-        self.assertTrue(
-            result.get("epic_level"), "Level 25 should be flagged as epic"
-        )
-        self.assertTrue(
-            result.get("valid"), "Epic levels should be valid"
-        )
+        self.assertTrue(result.get("epic_level"), "Level 25 should be flagged as epic")
+        self.assertTrue(result.get("valid"), "Epic levels should be valid")
         self.assertEqual(
-            gs.player_character_data.get("level"), 25, "Epic level should persist unchanged"
+            gs.player_character_data.get("level"),
+            25,
+            "Epic level should persist unchanged",
         )
 
     def test_validate_xp_level_missing_xp_uses_default(self):
@@ -2707,9 +2713,9 @@ class TestTypeSafetyCoercion(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         self.assertFalse(result.get("valid", True), "Mismatch should be detected")
-        self.assertTrue(result.get("corrected", False), "Level should be corrected")
+        self.assertTrue(result.get("level_up_pending", False), "Should detect pending level up")
         self.assertEqual(
-            gs.player_character_data.get("level"), 4, "Level should be corrected to 4"
+            gs.player_character_data.get("level"), 1, "Level should NOT be auto-corrected on level up"
         )
 
     def test_validate_xp_level_scalar_experience_missing_level(self):
@@ -2739,12 +2745,15 @@ class TestExecuteToolRequests(unittest.TestCase):
 
     def test_invalid_item_type(self):
         result = game_state_module.execute_tool_requests(["not a dict"])
-        self.assertEqual(result, [])
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0]["result"])
 
     def test_invalid_tool_name(self):
         requests = [{"tool": 123, "args": {}}, {"tool": "", "args": {}}]
         result = game_state_module.execute_tool_requests(requests)
-        self.assertEqual(result, [])
+        self.assertEqual(len(result), 2)
+        self.assertIn("error", result[0]["result"])
+        self.assertIn("error", result[1]["result"])
 
     @patch("mvp_site.game_state.execute_dice_tool")
     def test_valid_request(self, mock_execute):

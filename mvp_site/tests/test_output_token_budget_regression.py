@@ -146,7 +146,9 @@ class TestOutputTokenBudgetRegression(unittest.TestCase):
         # because we have plenty of context headroom in a 1M token model
         expected_cap = llm_service.JSON_MODE_MAX_OUTPUT_TOKENS
 
-        for i, (input_size, budget) in enumerate(zip(input_sizes, output_budgets)):
+        for i, (input_size, budget) in enumerate(
+            zip(input_sizes, output_budgets, strict=False)
+        ):
             total_input = input_size[0] + input_size[1]
             self.assertEqual(
                 budget,

@@ -63,9 +63,7 @@ class TestLivingWorldEnd2End(unittest.TestCase):
                     "background_events": [
                         {"description": "Merchants arrive from the east."}
                     ],
-                    "rumors": [
-                        {"description": "Strange lights in the forest."}
-                    ],
+                    "rumors": [{"description": "Strange lights in the forest."}],
                 }
             },
             "session_header": "Session 1: Beginning",
@@ -127,9 +125,9 @@ class TestLivingWorldEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # Verify player_turn was incremented in game state
         game_state_doc = (
@@ -177,17 +175,19 @@ class TestLivingWorldEnd2End(unittest.TestCase):
         # Make GOD mode request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "GOD MODE: Change my character name to Bob",
-                "mode": "character"
-            }),
+            data=json.dumps(
+                {
+                    "input": "GOD MODE: Change my character name to Bob",
+                    "mode": "character",
+                }
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # Verify player_turn was NOT incremented
         game_state_doc = (
@@ -240,9 +240,9 @@ class TestLivingWorldEnd2End(unittest.TestCase):
         # world_events should be in state_updates if LLM returned them
         world_events = state_updates.get("world_events")
         if world_events:
-            assert "background_events" in world_events or "rumors" in world_events, (
-                "world_events should contain background_events or rumors"
-            )
+            assert (
+                "background_events" in world_events or "rumors" in world_events
+            ), "world_events should contain background_events or rumors"
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -288,9 +288,9 @@ class TestLivingWorldEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # After the action, player_turn should now be set
         game_state_doc = (
@@ -309,7 +309,6 @@ class TestLivingWorldEnd2End(unittest.TestCase):
             f"player_turn should be 1 after first action, "
             f"got {game_state.get('player_turn')}"
         )
-
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -382,7 +381,9 @@ class TestLivingWorldEnd2End(unittest.TestCase):
             "planning_block": {"thinking": "New events for this turn."},
         }
 
-        mock_gemini_generate.return_value = FakeLLMResponse(json.dumps(turn_11_response))
+        mock_gemini_generate.return_value = FakeLLMResponse(
+            json.dumps(turn_11_response)
+        )
 
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
@@ -391,9 +392,9 @@ class TestLivingWorldEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         data = json.loads(response.data)
 
@@ -436,12 +437,13 @@ class TestLivingWorldEnd2End(unittest.TestCase):
         # The key bug was old events appearing in the API response when they shouldn't
         # The new event should be present
         new_events = [
-            e for e in response_world_events.get("background_events", [])
+            e
+            for e in response_world_events.get("background_events", [])
             if "New action happening NOW" in e.get("action", "")
         ]
-        assert new_events, (
-            f"New events should be in API response. Got: {response_world_events}"
-        )
+        assert (
+            new_events
+        ), f"New events should be in API response. Got: {response_world_events}"
 
 
 if __name__ == "__main__":

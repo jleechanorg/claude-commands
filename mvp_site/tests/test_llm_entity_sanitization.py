@@ -32,9 +32,9 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, (
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'"
-            )
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_multiple_apostrophes_and_quotes(self):
         """Test handling of multiple apostrophes and quotes"""
@@ -80,9 +80,9 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, (
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'"
-            )
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_whitespace_handling(self):
         """Test various whitespace scenarios"""
@@ -149,9 +149,9 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, (
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'"
-            )
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_integration_with_entity_id_format(self):
         """Test that sanitized names work with the entity ID format"""

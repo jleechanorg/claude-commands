@@ -18,13 +18,13 @@ import os
 import subprocess
 import tempfile
 import threading
-from typing import Any, Optional
+from typing import Any
 
 # Initialization guard to prevent duplicate handling setup
 _logging_initialized = False
 _logging_lock = threading.Lock()
-_configured_service_name: Optional[str] = None
-_configured_log_file: Optional[str] = None
+_configured_service_name: str | None = None
+_configured_log_file: str | None = None
 _default_service_name = "app"
 
 # Export logging level constants
@@ -53,7 +53,7 @@ class LoggingUtil:
     WARNING_EMOJI = "⚠️"
 
     @staticmethod
-    def _find_git_root(start_dir: str) -> Optional[str]:
+    def _find_git_root(start_dir: str) -> str | None:
         """Walk up from a start directory to locate a .git directory or file."""
         current_dir = os.path.abspath(start_dir)
         while True:
@@ -200,7 +200,7 @@ class LoggingUtil:
 
     @staticmethod
     def error(
-        message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any
+        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
     ) -> None:
         """
         Log an error message with fire and red dot emojis.
@@ -219,7 +219,7 @@ class LoggingUtil:
 
     @staticmethod
     def warning(
-        message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any
+        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
     ) -> None:
         """
         Log a warning message with warning emoji.
@@ -307,7 +307,7 @@ class LoggingUtil:
         logging.basicConfig(**kwargs)
 
     @staticmethod
-    def getLogger(name: Optional[str] = None) -> logging.Logger:  # noqa: N802
+    def getLogger(name: str | None = None) -> logging.Logger:  # noqa: N802
         """
         Get a logger instance.
 
@@ -320,17 +320,17 @@ class LoggingUtil:
         return logging.getLogger(name)
 
 
-_campaign_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+_campaign_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "campaign_id", default=None
 )
 
 
-def set_campaign_id(campaign_id: Optional[str]) -> None:
+def set_campaign_id(campaign_id: str | None) -> None:
     """Set campaign_id for log context (applies to the current context only)."""
     _campaign_id_ctx.set(campaign_id)
 
 
-def get_campaign_id() -> Optional[str]:
+def get_campaign_id() -> str | None:
     """Get current campaign_id from log context."""
     return _campaign_id_ctx.get()
 
@@ -395,7 +395,7 @@ def basicConfig(**kwargs: Any) -> None:  # noqa: N802
     LoggingUtil.basicConfig(**kwargs)
 
 
-def getLogger(name: Optional[str] = None) -> logging.Logger:  # noqa: N802
+def getLogger(name: str | None = None) -> logging.Logger:  # noqa: N802
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)
 

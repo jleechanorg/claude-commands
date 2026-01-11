@@ -19,25 +19,46 @@ def calc_modifier(score: int) -> int:
 
 # Map full stat names to abbreviations
 STAT_NAME_MAP = {
-    "strength": "str", "str": "str",
-    "dexterity": "dex", "dex": "dex",
-    "constitution": "con", "con": "con",
-    "intelligence": "int", "int": "int",
-    "wisdom": "wis", "wis": "wis",
-    "charisma": "cha", "cha": "cha",
+    "strength": "str",
+    "str": "str",
+    "dexterity": "dex",
+    "dex": "dex",
+    "constitution": "con",
+    "con": "con",
+    "intelligence": "int",
+    "int": "int",
+    "wisdom": "wis",
+    "wis": "wis",
+    "charisma": "cha",
+    "cha": "cha",
 }
 
 STAT_ORDER = ["str", "dex", "con", "int", "wis", "cha"]
 
 STAT_DISPLAY_NAMES = {
-    "str": "STR", "dex": "DEX", "con": "CON",
-    "int": "INT", "wis": "WIS", "cha": "CHA"
+    "str": "STR",
+    "dex": "DEX",
+    "con": "CON",
+    "int": "INT",
+    "wis": "WIS",
+    "cha": "CHA",
 }
 
 # Equipment slots to check for bonuses
 EQUIPMENT_SLOTS = {
-    "head", "body", "armor", "cloak", "neck", "hands", "feet",
-    "ring_1", "ring_2", "ring", "instrument", "main_hand", "off_hand"
+    "head",
+    "body",
+    "armor",
+    "cloak",
+    "neck",
+    "hands",
+    "feet",
+    "ring_1",
+    "ring_2",
+    "ring",
+    "instrument",
+    "main_hand",
+    "off_hand",
 }
 
 # Pattern matches: "+2 CHA", "CHA +2", "+2 Charisma", "Charisma +2", etc.
@@ -79,7 +100,9 @@ def extract_equipment_bonuses(pc_data: dict) -> dict[str, int]:
             # Skip unsigned AC values (base armor, not bonus)
             if stat_key == "ac" and not str(bonus_val).startswith(("+", "-")):
                 continue
-            equipment_bonuses[stat_key] = equipment_bonuses.get(stat_key, 0) + int(bonus_val)
+            equipment_bonuses[stat_key] = equipment_bonuses.get(stat_key, 0) + int(
+                bonus_val
+            )
 
     return equipment_bonuses
 
@@ -120,7 +143,12 @@ def build_stats_summary(game_state: dict) -> str:
         pc_data = vars(pc_data) if hasattr(pc_data, "__dict__") else {}
 
     # Stats can be in 'stats', 'attributes', or 'ability_scores'
-    stats = pc_data.get("stats") or pc_data.get("attributes") or pc_data.get("ability_scores") or {}
+    stats = (
+        pc_data.get("stats")
+        or pc_data.get("attributes")
+        or pc_data.get("ability_scores")
+        or {}
+    )
     normalized_stats = normalize_stats(stats)
 
     # Get equipment bonuses
@@ -151,7 +179,9 @@ def build_stats_summary(game_state: dict) -> str:
         sign = "+" if mod >= 0 else ""
 
         if bonus:
-            lines.append(f"  • {STAT_DISPLAY_NAMES[stat]}: {base_score} → {effective_score} ({sign}{mod}) [+{bonus} from gear]")
+            lines.append(
+                f"  • {STAT_DISPLAY_NAMES[stat]}: {base_score} → {effective_score} ({sign}{mod}) [+{bonus} from gear]"
+            )
         else:
             lines.append(f"  • {STAT_DISPLAY_NAMES[stat]}: {base_score} ({sign}{mod})")
 
@@ -250,7 +280,9 @@ def build_spells_summary(game_state: dict, get_spell_level_fn=None) -> str:
                 spells_by_level[level_str] = []
             spells_by_level[level_str].append(name)
         # Sort by level and display
-        for level_key in sorted(spells_by_level.keys(), key=lambda x: int(x) if x.isdigit() else 99):
+        for level_key in sorted(
+            spells_by_level.keys(), key=lambda x: int(x) if x.isdigit() else 99
+        ):
             spell_names = spells_by_level[level_key]
             if level_key == "0":
                 label = "Cantrips"

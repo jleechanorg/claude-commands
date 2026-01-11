@@ -16,7 +16,7 @@ focusing on request/response orchestration instead.
 import json
 import os
 import re
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from mvp_site import constants, dice_integrity, logging_util
 from mvp_site.file_cache import read_file_cached
@@ -394,7 +394,7 @@ class PromptBuilder:
     prevent "instruction fatigue" and maintain proper AI behavior hierarchy.
     """
 
-    def __init__(self, game_state: Optional[GameState] = None) -> None:
+    def __init__(self, game_state: GameState | None = None) -> None:
         """
         Initialize the PromptBuilder.
 
@@ -746,7 +746,7 @@ class PromptBuilder:
         self,
         parts: list[str],
         selected_prompts: list[str],
-        llm_requested_sections: Optional[list[str]] = None,
+        llm_requested_sections: list[str] | None = None,
         essentials_only: bool = False,
     ) -> None:
         """
@@ -1297,8 +1297,8 @@ class PromptBuilder:
 def build_reprompt_for_missing_fields(
     original_response_text: str,
     missing_fields: list[str],
-    tool_results: Optional[list[dict[str, Any]]] = None,
-    dice_roll_strategy: Optional[str] = None,
+    tool_results: list[dict[str, Any]] | None = None,
+    dice_roll_strategy: str | None = None,
 ) -> str:
     """Build a reprompt message to request missing fields from the LLM.
 
@@ -1429,8 +1429,8 @@ def get_static_prompt_parts(
     else:
         missions_summary = "Missions: None"
 
-    ambition: Optional[str] = pc_data.get("core_ambition")
-    milestone: Optional[str] = pc_data.get("next_milestone")
+    ambition: str | None = pc_data.get("core_ambition")
+    milestone: str | None = pc_data.get("next_milestone")
     ambition_summary: str = ""
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
@@ -1489,8 +1489,8 @@ def build_temporal_correction_prompt(
     original_user_input: str,
     old_time: dict[str, Any],
     new_time: dict[str, Any],
-    old_location: Optional[str],
-    new_location: Optional[str],
+    old_location: str | None,
+    new_location: str | None,
 ) -> str:
     """Build correction prompt when temporal violation detected.
 
@@ -1551,7 +1551,7 @@ Generate a NEW response that is the NEXT logical entry in the timeline, continui
 def build_temporal_warning_message(
     temporal_correction_attempts: int,
     max_attempts: int = 3,
-) -> Optional[str]:
+) -> str | None:
     """Build user-facing temporal warning text based on attempts taken.
 
     When temporal corrections are needed, this generates an appropriate

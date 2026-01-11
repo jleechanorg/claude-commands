@@ -47,9 +47,9 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, (
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'"
-            )
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_npc_with_apostrophe_name(self):
         """Test creating NPC with apostrophe in name (the original bug case)"""

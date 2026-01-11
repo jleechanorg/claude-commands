@@ -36,7 +36,7 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
     structured_fields: dict[str, Any] = {}
 
     sr = getattr(gemini_response_obj, "structured_response", None)
-    if sr:
+    if sr is not None:
         structured_fields = {
             constants.FIELD_SESSION_HEADER: _get_structured_attr(
                 sr, constants.FIELD_SESSION_HEADER, ""
@@ -86,7 +86,9 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
             }
 
             if filtered_state_updates:
-                structured_fields[constants.FIELD_STATE_UPDATES] = filtered_state_updates
+                structured_fields[constants.FIELD_STATE_UPDATES] = (
+                    filtered_state_updates
+                )
 
             world_events = filtered_state_updates.get("world_events")
             if world_events and isinstance(world_events, dict):

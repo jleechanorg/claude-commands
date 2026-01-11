@@ -36,7 +36,6 @@ from tests.fake_firestore import FakeFirestoreClient
 
 # Import JSON input schema components
 # Legacy json_input_schema imports removed - using LLMRequest now
-from tests.fake_services import FakeServiceManager
 
 
 class TestVisitCampaignEnd2End(unittest.TestCase):

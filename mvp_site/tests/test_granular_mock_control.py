@@ -8,17 +8,24 @@ import os
 import sys
 import unittest
 
-# Add parent directory to path
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import create_app
+from mvp_site.mcp_client import create_mcp_client
 
 
 class TestMCPEnvironmentControl(unittest.TestCase):
     def setUp(self):
         """Save original environment."""
         self.original_env = {}
-        for key in ["USE_MOCKS", "USE_MOCK_FIREBASE", "USE_MOCK_GEMINI", "TESTING_AUTH_BYPASS"]:
+        for key in [
+            "USE_MOCKS",
+            "USE_MOCK_FIREBASE",
+            "USE_MOCK_GEMINI",
+            "TESTING_AUTH_BYPASS",
+        ]:
             self.original_env[key] = os.environ.get(key)
 
     def tearDown(self):
@@ -57,8 +64,7 @@ class TestMCPEnvironmentControl(unittest.TestCase):
 
     def test_mcp_client_handles_environment_gracefully(self):
         """Test that MCP client handles different environments gracefully."""
-        from mvp_site.mcp_client import create_mcp_client
-
+        
         # Test with different environment configurations
         for use_mocks in ["true", "false", None]:
             if use_mocks is None:
@@ -69,14 +75,14 @@ class TestMCPEnvironmentControl(unittest.TestCase):
             # MCP client should handle all configurations without crashing
             try:
                 client = create_mcp_client()
-                assert client is not None, (
-                    f"Client should be created with USE_MOCKS={use_mocks}"
-                )
+                assert (
+                    client is not None
+                ), f"Client should be created with USE_MOCKS={use_mocks}"
             except Exception as e:
                 # Connection errors are acceptable in testing, but crashes are not
-                assert not isinstance(e, SyntaxError | ImportError | AttributeError), (
-                    f"Client should not crash with USE_MOCKS={use_mocks}: {e}"
-                )
+                assert not isinstance(
+                    e, SyntaxError | ImportError | AttributeError
+                ), f"Client should not crash with USE_MOCKS={use_mocks}: {e}"
 
     def test_mcp_environment_variables_respected(self):
         """Test that MCP architecture respects environment variables."""

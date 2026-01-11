@@ -77,7 +77,7 @@ class MCPTestClient:
 
         try:
             # Read existing log
-            with open(self.log_file, "r") as f:
+            with open(self.log_file) as f:
                 log_data = json.load(f)
 
             # Add new entry

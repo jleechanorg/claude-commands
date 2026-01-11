@@ -15,14 +15,10 @@ from google import genai
 from google.genai import types
 
 from mvp_site import constants, logging_util
-from mvp_site.dice import DICE_ROLL_TOOLS, execute_dice_tool
-from mvp_site.game_state import execute_tool_requests, format_tool_results_text
+from mvp_site.dice import DICE_ROLL_TOOLS
+from mvp_site.game_state import execute_tool_requests
 from mvp_site.llm_providers import gemini_code_execution
-from mvp_site.llm_providers.provider_utils import (
-    build_tool_results_prompt,
-    run_json_first_tool_requests_flow,
-    stringify_prompt_contents,
-)
+from mvp_site.llm_providers.provider_utils import stringify_prompt_contents
 
 # NOTE: Gemini response_schema is NOT used due to strict property requirements
 # Gemini requires ALL object types to have non-empty properties - no dynamic keys allowed
@@ -292,7 +288,7 @@ def _extract_function_calls(response: Any) -> list[dict[str, Any]]:
                 continue
             name = getattr(call, "name", None)
             args = getattr(call, "args", None)
-            if not name:
+            if not isinstance(name, str) or not name:
                 continue
             if isinstance(args, dict):
                 normalized_args = args
@@ -342,6 +338,13 @@ def generate_content_with_native_tools(
     if tool_requests:
         # Execute tools and build proper conversation history for Phase 2
         tool_results = execute_tool_requests(tool_requests)
+        if len(tool_results) != len(tool_requests):
+            logging_util.warning(
+                "Gemini native tool loop mismatch: tool_requests=%s tool_results=%s; "
+                "building function responses from tool_results only to avoid mispairing",
+                len(tool_requests),
+                len(tool_results),
+            )
 
         # Build Phase 2 contents preserving conversation context:
         # 1. Original user message(s)
@@ -358,11 +361,17 @@ def generate_content_with_native_tools(
 
         # Add function responses as user content with FunctionResponse parts
         function_response_parts = []
-        for tool_req, result in zip(tool_requests, tool_results):
+        for tool_result in tool_results:
+            if not isinstance(tool_result, dict):
+                continue
+            tool_name = tool_result.get("tool")
+            if not isinstance(tool_name, str) or not tool_name:
+                continue
+            inner_result = tool_result.get("result", tool_result)
             function_response_parts.append(
                 types.Part.from_function_response(
-                    name=tool_req["tool"],
-                    response={"result": result.get("result", str(result))},
+                    name=tool_name,
+                    response={"result": inner_result},
                 )
             )
         if function_response_parts:

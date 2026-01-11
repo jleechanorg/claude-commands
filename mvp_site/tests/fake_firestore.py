@@ -136,21 +136,24 @@ class FakeQuery:
         for field, op, value in self._filters:
             # Handle datetime comparisons properly
             # If value is string and looks like ISO, convert to datetime for comparison if doc value is datetime
-            
+
             # Simple helper for comparisons
             def compare(doc_val, target_val, op_func):
-                if doc_val is None: return False
-                
+                if doc_val is None:
+                    return False
+
                 # Type conversion if needed
                 d_v = doc_val
                 t_v = target_val
-                
-                if hasattr(d_v, 'timestamp') and isinstance(t_v, str):
+
+                if hasattr(d_v, "timestamp") and isinstance(t_v, str):
                     try:
-                        t_v = datetime.datetime.fromisoformat(t_v.replace("Z", "+00:00"))
+                        t_v = datetime.datetime.fromisoformat(
+                            t_v.replace("Z", "+00:00")
+                        )
                     except:
                         pass
-                
+
                 try:
                     return op_func(d_v, t_v)
                 except:
@@ -162,12 +165,16 @@ class FakeQuery:
                 ">": operator.gt,
                 ">=": operator.ge,
                 "==": operator.eq,
-                "!=": operator.ne
+                "!=": operator.ne,
             }
-            
+
             op_func = ops.get(op)
             if op_func:
-                results = [d for d in results if compare(self._get_value(d, field), value, op_func)]
+                results = [
+                    d
+                    for d in results
+                    if compare(self._get_value(d, field), value, op_func)
+                ]
 
         # Apply sort
         if self._order_by:
@@ -183,7 +190,7 @@ class FakeQuery:
                 for field, _ in self._order_by:
                     val = self._get_value(d, field)
                     if val is None:
-                        val = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+                        val = datetime.datetime.min.replace(tzinfo=datetime.UTC)
                     key_parts.append(val)
                 return tuple(key_parts)
 
@@ -197,17 +204,19 @@ class FakeQuery:
             cursor = []
             for v in self._start_after:
                 if hasattr(v, "id"):
-                    cursor.append(getattr(v, "id"))
+                    cursor.append(v.id)
                 else:
                     cursor.append(v)
 
             def cmp(a, b):
-                if isinstance(a, datetime.datetime) and isinstance(b, datetime.datetime):
+                if isinstance(a, datetime.datetime) and isinstance(
+                    b, datetime.datetime
+                ):
                     return (a > b) - (a < b)
                 return (str(a) > str(b)) - (str(a) < str(b))
 
             def is_after(key_vals, cursor_vals, reverse_flag):
-                for a, b in zip(key_vals, cursor_vals):
+                for a, b in zip(key_vals, cursor_vals, strict=False):
                     comparison = cmp(a, b)
                     if comparison == 0:
                         continue
@@ -266,7 +275,7 @@ class FakeFirestoreCollection:
         doc = self.document()  # This creates a doc with auto-generated ID
         doc.set(data)
         # Return tuple like real Firestore: (timestamp, doc_ref)
-        fake_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        fake_timestamp = datetime.datetime.now(datetime.UTC)
         return (fake_timestamp, doc)
 
     def order_by(self, field, direction=None):

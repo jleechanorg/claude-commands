@@ -6,13 +6,7 @@ This test checks behavior and structure, not exact content strings.
 
 import os
 import re
-import sys
 import unittest
-
-# Add parent directory to path
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
 
 
 class TestBannedNamePreventionBehavior(unittest.TestCase):
@@ -59,15 +53,15 @@ class TestBannedNamePreventionBehavior(unittest.TestCase):
             content = f.read()
 
         # Test behavior, not exact strings
-        assert self._contains_pre_generation_directive(content), (
-            "Master directive should contain pre-generation check behavior"
-        )
-        assert self._contains_banned_name_examples(content), (
-            "Should include examples of names to avoid"
-        )
-        assert self._contains_scope_directive(content), (
-            "Should apply to all characters in campaign"
-        )
+        assert self._contains_pre_generation_directive(
+            content
+        ), "Master directive should contain pre-generation check behavior"
+        assert self._contains_banned_name_examples(
+            content
+        ), "Should include examples of names to avoid"
+        assert self._contains_scope_directive(
+            content
+        ), "Should apply to all characters in campaign"
 
     def test_mechanics_instruction_has_prevention_behavior(self):
         """Test that mechanics instruction includes prevention for Option 2."""
@@ -83,9 +77,9 @@ class TestBannedNamePreventionBehavior(unittest.TestCase):
         has_before = "before" in content.lower()
         has_name_gen = "character name" in content.lower()
 
-        assert has_critical and has_before and has_name_gen, (
-            "Should have critical directive for name generation"
-        )
+        assert (
+            has_critical and has_before and has_name_gen
+        ), "Should have critical directive for name generation"
 
     def test_version_indicates_changes(self):
         """Test that version number reflects banned name changes."""
@@ -99,11 +93,10 @@ class TestBannedNamePreventionBehavior(unittest.TestCase):
 
         major = int(version_match.group(1))
         minor = int(version_match.group(2))
-        version = major + minor * 0.1
-
-        assert version >= 1.5, (
-            "Version should be at least 1.5 (when prevention was added)"
-        )
+        assert (major, minor) >= (
+            1,
+            5,
+        ), "Version should be at least 1.5 (when prevention was added)"
 
     def test_critical_reminders_include_naming(self):
         """Test that critical reminders section addresses naming."""

@@ -68,9 +68,9 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
             )
 
             # Verify JSON mode function was called (enforces JSON mode)
-            assert mock_json_gen.called, (
-                "generate_json_mode_content should be called to enforce JSON mode"
-            )
+            assert (
+                mock_json_gen.called
+            ), "generate_json_mode_content should be called to enforce JSON mode"
 
     def test_parse_function_removed(self):
         """Test that parse_llm_response_for_state_changes is removed"""

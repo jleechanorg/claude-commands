@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from mvp_site import main
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
@@ -92,8 +92,8 @@ class TestGodModeEnd2End(unittest.TestCase):
                         "description": "Study the other tavern guests from a discreet corner",
                         "risk_level": "low",
                     },
-                }
-            }
+                },
+            },
         }
 
     def _setup_fake_firestore_with_campaign(self, fake_firestore, campaign_id):
@@ -170,9 +170,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         # Verify god_mode_response is present in the response
@@ -212,9 +212,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify request succeeded
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # Verify Gemini was called
         assert mock_gemini_generate.call_count >= 1, "LLM should be called"
@@ -280,15 +280,15 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response - should still work due to .upper() in detection
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         # Verify god_mode_response is present
-        assert "god_mode_response" in data, (
-            "god_mode_response should be present for lowercase prefix"
-        )
+        assert (
+            "god_mode_response" in data
+        ), "god_mode_response should be present for lowercase prefix"
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -320,9 +320,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         # Verify narrative is present (story mode)
@@ -330,9 +330,9 @@ class TestGodModeEnd2End(unittest.TestCase):
 
         # god_mode_response should be empty or missing for regular input
         god_mode_resp = data.get("god_mode_response", "")
-        assert not god_mode_resp or god_mode_resp == "", (
-            "god_mode_response should be empty for regular input"
-        )
+        assert (
+            not god_mode_resp or god_mode_resp == ""
+        ), "god_mode_response should be empty for regular input"
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -362,9 +362,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         # Verify game_state is returned with updates
@@ -402,24 +402,26 @@ class TestGodModeEnd2End(unittest.TestCase):
         # This simulates user typing in god mode UI without the prefix
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "set my HP to 100",  # NO "GOD MODE:" prefix!
-                "mode": "god",  # Mode parameter should trigger GodModeAgent
-            }),
+            data=json.dumps(
+                {
+                    "input": "set my HP to 100",  # NO "GOD MODE:" prefix!
+                    "mode": "god",  # Mode parameter should trigger GodModeAgent
+                }
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify response succeeded
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # Verify god_mode_response is in the response (stronger validation)
         data = json.loads(response.data)
-        assert "god_mode_response" in data, (
-            f"Response should contain god_mode_response field. Keys: {data.keys()}"
-        )
+        assert (
+            "god_mode_response" in data
+        ), f"Response should contain god_mode_response field. Keys: {data.keys()}"
 
         # Verify Gemini was called
         assert mock_gemini_generate.call_count >= 1, "LLM should be called"
@@ -467,7 +469,6 @@ class TestGodModePromptSelection(unittest.TestCase):
 
     def test_god_mode_detection_with_prefix(self):
         """Test that GOD MODE: prefix is correctly detected."""
-        from mvp_site import llm_service
 
         # Test various god mode prefixes
         test_cases = [
@@ -482,29 +483,28 @@ class TestGodModePromptSelection(unittest.TestCase):
 
         for user_input, expected in test_cases:
             is_god_mode = user_input.strip().upper().startswith("GOD MODE:")
-            assert is_god_mode == expected, (
-                f"Failed for '{user_input}': expected {expected}, got {is_god_mode}"
-            )
+            assert (
+                is_god_mode == expected
+            ), f"Failed for '{user_input}': expected {expected}, got {is_god_mode}"
 
     def test_prompt_builder_has_god_mode_method(self):
         """Test that PromptBuilder has build_god_mode_instructions method."""
         from mvp_site.agent_prompts import PromptBuilder
 
         builder = PromptBuilder(None)
-        assert hasattr(builder, "build_god_mode_instructions"), (
-            "PromptBuilder should have build_god_mode_instructions method"
-        )
+        assert hasattr(
+            builder, "build_god_mode_instructions"
+        ), "PromptBuilder should have build_god_mode_instructions method"
 
         # Call the method and verify it returns a list
         instructions = builder.build_god_mode_instructions()
-        assert isinstance(instructions, list), (
-            "build_god_mode_instructions should return a list"
-        )
+        assert isinstance(
+            instructions, list
+        ), "build_god_mode_instructions should return a list"
         assert len(instructions) > 0, "God mode instructions should not be empty"
 
     def test_god_mode_instructions_contain_required_prompts(self):
         """Test that god mode instructions include required prompt types."""
-        from mvp_site import constants
         from mvp_site.agent_prompts import PromptBuilder
 
         builder = PromptBuilder(None)
@@ -515,9 +515,9 @@ class TestGodModePromptSelection(unittest.TestCase):
 
         # God mode should include master directive content
         # (we check for content that should be in master_directive)
-        assert len(all_instructions) > 1000, (
-            "God mode instructions should include substantial content"
-        )
+        assert (
+            len(all_instructions) > 1000
+        ), "God mode instructions should include substantial content"
 
         # God mode should include game state schema information
         assert (

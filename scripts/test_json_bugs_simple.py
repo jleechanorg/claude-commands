@@ -7,15 +7,16 @@ This script tests the two main bugs identified in PR #278:
 """
 
 import json
-import os
+from pathlib import Path
 import sys
 import traceback
 
-# Add the mvp_site directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mvp_site"))
+# Allow running this file directly (outside CI) without requiring callers to set PYTHONPATH.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from narrative_response_schema import parse_structured_response
-from json_utils import parse_llm_json_response
+from mvp_site.narrative_response_schema import parse_structured_response
 
 
 def test_state_updates_extraction():
@@ -49,20 +50,20 @@ def test_state_updates_extraction():
 
 
 def test_raw_json_parsing():
-    """Test Bug 2: Raw JSON properly parsed and cleaned"""
+    """Test Bug 2: Malformed JSON fails cleanly (no raw JSON shown)"""
     print("Testing Bug 2: Raw JSON Parsing")
 
     # Test malformed JSON
     malformed_json = '{"narrative": "You enter the tavern.", "state_updates": {'
 
-    result, was_incomplete = parse_llm_json_response(malformed_json)
+    narrative_text, parsed_response = parse_structured_response(malformed_json)
 
-    print(f"✓ Malformed JSON handled: {result}")
-    print(f"✓ Was incomplete: {was_incomplete}")
+    print(f"✓ Malformed JSON handled: {narrative_text}")
 
-    # Should have extracted something usable
-    assert "narrative" in result
-    assert "You enter the tavern." in result["narrative"]
+    # Recovery logic was intentionally removed (PR #3458); ensure we fail safely and
+    # return a user-friendly message instead of raw/truncated JSON.
+    assert narrative_text == "Invalid JSON response received. Please try again."
+    assert parsed_response.narrative == narrative_text
 
     print("✓ Bug 2 test passed: Raw JSON properly parsed\n")
 

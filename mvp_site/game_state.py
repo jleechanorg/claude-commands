@@ -10,12 +10,13 @@ Includes:
 The LLM should focus on narrative while code handles all mathematical operations.
 """
 
+from __future__ import annotations
+
 import datetime
 import json
-from typing import Any, Literal, Optional, overload, Union
+from typing import Any, Literal, overload
 
-from mvp_site import constants, logging_util
-from mvp_site import dice as dice_module
+from mvp_site import constants, dice as dice_module, logging_util
 from mvp_site.dice import DiceRollResult, execute_dice_tool
 
 # =============================================================================
@@ -109,7 +110,7 @@ PROFICIENCY_BY_LEVEL = {
 }
 
 
-def _coerce_int(value: Any, default: Optional[int] = 0) -> Optional[int]:
+def _coerce_int(value: Any, default: int | None = 0) -> int | None:
     """
     Safely coerce value to int.
 
@@ -136,7 +137,7 @@ def _coerce_int(value: Any, default: Optional[int] = 0) -> Optional[int]:
     return default
 
 
-def coerce_int(value: Any, default: Optional[int] = 0) -> Optional[int]:
+def coerce_int(value: Any, default: int | None = 0) -> int | None:
     """Public wrapper around :func:`_coerce_int` for safe int coercion."""
 
     return _coerce_int(value, default)
@@ -295,7 +296,7 @@ class GameState:
         # Normalize combat_state to handle LLM-generated malformed data
         self._normalize_combat_state()
         self.last_state_update_timestamp = kwargs.get(
-            "last_state_update_timestamp", datetime.datetime.now(datetime.timezone.utc)
+            "last_state_update_timestamp", datetime.datetime.now(datetime.UTC)
         )
 
         # Player turn counter (1-indexed, excludes GOD mode commands)
@@ -418,7 +419,10 @@ class GameState:
 
         # Ensure consistency: Remove initiative entries that don't have a corresponding combatant
         # This prevents "orphaned" turns and invalid states where init exists but combatants don't
-        if "initiative_order" in self.combat_state and "combatants" in self.combat_state:
+        if (
+            "initiative_order" in self.combat_state
+            and "combatants" in self.combat_state
+        ):
             init_order = self.combat_state.get("initiative_order")
             combatants = self.combat_state.get("combatants")
             # Guard: Only proceed if types are correct
@@ -525,7 +529,7 @@ class GameState:
         return data
 
     @classmethod
-    def from_dict(cls, source: Optional[dict[str, Any]]) -> Optional["GameState"]:
+    def from_dict(cls, source: dict[str, Any] | None) -> "GameState" | None:
         """Creates a GameState object from a dictionary (e.g., from Firestore)."""
         if not source:
             return None
@@ -590,7 +594,7 @@ class GameState:
             return {"encounter_active": False}
         return self.encounter_state
 
-    def get_rewards_pending(self) -> Optional[dict]:
+    def get_rewards_pending(self) -> dict | None:
         """
         Get rewards_pending from game state.
 
@@ -666,6 +670,7 @@ class GameState:
                 return True
 
         return False
+
     # =========================================================================
     # Arc Milestone Tracking Methods
     # =========================================================================
@@ -674,7 +679,7 @@ class GameState:
     # =========================================================================
 
     def mark_arc_completed(
-        self, arc_name: str, phase: Optional[str] = None, metadata: Optional[dict] = None
+        self, arc_name: str, phase: str | None = None, metadata: dict | None = None
     ) -> None:
         """
         Mark a narrative arc as completed with timestamp.
@@ -693,7 +698,7 @@ class GameState:
 
         milestone_data = {
             "status": "completed",
-            "completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "completed_at": datetime.datetime.now(datetime.UTC).isoformat(),
         }
 
         if phase is not None:
@@ -744,7 +749,7 @@ class GameState:
             "status": "in_progress",
             "phase": phase,
             "progress": progress_value,
-            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
         }
         self.custom_campaign_state["arc_milestones"] = milestones
 
@@ -764,7 +769,7 @@ class GameState:
             return False
         return arc_data.get("status") == "completed"
 
-    def get_arc_phase(self, arc_name: str) -> Optional[str]:
+    def get_arc_phase(self, arc_name: str) -> str | None:
         """
         Get the current phase of a narrative arc.
 
@@ -1423,7 +1428,9 @@ class GameState:
             # Epic levels (21+) are allowed for epic/mythic campaigns
             # Log as info, not warning - this is intentional for epic play
             result["epic_level"] = True
-            logging_util.info(f"Epic level detected: Level {provided_level} (beyond standard D&D 5e cap)")
+            logging_util.info(
+                f"Epic level detected: Level {provided_level} (beyond standard D&D 5e cap)"
+            )
 
         # Check for mismatch (skip XP validation for epic levels 21+)
         # Epic levels are set by the LLM for epic/mythic campaigns and don't follow XP table
@@ -1488,7 +1495,7 @@ class GameState:
         self,
         new_time: dict[str, Any],
         strict: bool = False,
-        previous_time: Optional[dict[str, Any]] = None,
+        previous_time: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Validate that time progression is monotonic (never goes backwards).
@@ -1534,7 +1541,7 @@ class GameState:
         return result
 
     def _time_to_minutes(
-        self, time_dict: dict[str, Any], default_day: Optional[int] = None
+        self, time_dict: dict[str, Any], default_day: int | None = None
     ) -> int:
         """Convert a time dict to total minutes for comparison."""
         fallback_day = 0 if default_day is None else _coerce_int(default_day, 0)
@@ -1640,7 +1647,9 @@ class GameState:
                 if isinstance(effect, str) and effect.strip():
                     lines.append(f"  - {effect}")
                 elif isinstance(effect, dict):
-                    effect_name = effect.get("name") or effect.get("effect") or str(effect)
+                    effect_name = (
+                        effect.get("name") or effect.get("effect") or str(effect)
+                    )
                     lines.append(f"  - {effect_name}")
 
         if len(lines) == 1:
@@ -1667,12 +1676,16 @@ class GameState:
         directives = self.custom_campaign_state["god_mode_directives"]
 
         # Check for duplicates
-        existing_texts = [d.get("rule") if isinstance(d, dict) else d for d in directives]
+        existing_texts = [
+            d.get("rule") if isinstance(d, dict) else d for d in directives
+        ]
         if directive not in existing_texts:
-            directives.append({
-                "rule": directive,
-                "added": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            })
+            directives.append(
+                {
+                    "rule": directive,
+                    "added": datetime.datetime.now(datetime.UTC).isoformat(),
+                }
+            )
             logging_util.info(f"GOD MODE DIRECTIVE ADDED: {directive}")
 
     def get_god_mode_directives(self) -> list[str]:
@@ -1715,7 +1728,7 @@ class GameState:
 
     def detect_post_combat_issues(
         self,
-        previous_combat_state: Optional[dict[str, Any]],
+        previous_combat_state: dict[str, Any] | None,
         state_changes: dict[str, Any],
     ) -> list[str]:
         """
@@ -1753,9 +1766,11 @@ class GameState:
                 xp_awarded = True
             elif "experience" in pc_changes:
                 exp_changes = pc_changes["experience"]
-                if isinstance(exp_changes, dict) and "current" in exp_changes:
-                    xp_awarded = True
-                elif isinstance(exp_changes, (int, float, str)):
+                if (
+                    isinstance(exp_changes, dict)
+                    and "current" in exp_changes
+                    or isinstance(exp_changes, (int, float, str))
+                ):
                     xp_awarded = True
 
             if not xp_awarded:
@@ -1790,7 +1805,7 @@ class GameState:
 @overload
 def validate_and_correct_state(
     state_dict: dict[str, Any],
-    previous_world_time: Optional[dict[str, Any]] = None,
+    previous_world_time: dict[str, Any] | None = None,
     return_corrections: Literal[False] = False,
 ) -> dict[str, Any]: ...
 
@@ -1798,16 +1813,16 @@ def validate_and_correct_state(
 @overload
 def validate_and_correct_state(
     state_dict: dict[str, Any],
-    previous_world_time: Optional[dict[str, Any]] = None,
+    previous_world_time: dict[str, Any] | None = None,
     return_corrections: Literal[True] = ...,
 ) -> tuple[dict[str, Any], list[str]]: ...
 
 
 def validate_and_correct_state(
     state_dict: dict[str, Any],
-    previous_world_time: Optional[dict[str, Any]] = None,
+    previous_world_time: dict[str, Any] | None = None,
     return_corrections: bool = False,
-) -> Union[dict[str, Any], tuple[dict[str, Any], list[str]]]:
+) -> dict[str, Any] | tuple[dict[str, Any], list[str]]:
     """
     Validate state dict and apply corrections before persistence.
 
@@ -1869,7 +1884,9 @@ def validate_and_correct_state(
             new_time, strict=False, previous_time=previous_world_time
         )
         if time_result.get("warning"):
-            corrections.append(f"Time warning: {time_result.get('message', 'time regression detected')}")
+            corrections.append(
+                f"Time warning: {time_result.get('message', 'time regression detected')}"
+            )
 
     result_state = temp_state.to_dict()
 
@@ -2036,6 +2053,13 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
     for request in tool_requests:
         if not isinstance(request, dict):
             logging_util.error(f"Tool request must be dict, got {type(request)}")
+            results.append(
+                {
+                    "tool": "unknown",
+                    "args": {},
+                    "result": {"error": f"Invalid request type: {type(request)}"},
+                }
+            )
             continue
 
         tool_name = request.get("tool")
@@ -2045,6 +2069,13 @@ def execute_tool_requests(tool_requests: list[dict]) -> list[dict]:
         if not isinstance(tool_name, str) or not tool_name:
             logging_util.error(
                 f"Invalid tool name type or empty: {tool_name} ({type(tool_name)})"
+            )
+            results.append(
+                {
+                    "tool": str(tool_name),
+                    "args": args if isinstance(args, dict) else {},
+                    "result": {"error": "Invalid tool name"},
+                }
             )
             continue
 

@@ -144,9 +144,9 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         # If successful, should contain campaign_id or success indicator
         if response.status_code in [200, 201]:
             # Success case - verify MCP returned proper creation response
-            assert "campaign_id" in response_data or "success" in response_data, (
-                f"Expected campaign_id or success in response: {response_data}"
-            )
+            assert (
+                "campaign_id" in response_data or "success" in response_data
+            ), f"Expected campaign_id or success in response: {response_data}"
 
     @unittest.skipUnless(HAS_GENAI, "google-genai package not available")
     @patch("firestore_service.get_db")

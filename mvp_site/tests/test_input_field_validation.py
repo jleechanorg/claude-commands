@@ -40,15 +40,15 @@ class TestInputFieldTranslation(unittest.TestCase):
         frontend_request = {"input": "I explore the testing area.", "mode": "character"}
 
         # Verify main.py expects "input" field (for frontend compatibility)
-        assert MAIN_KEY_USER_INPUT == "input", (
-            "main.py should expect 'input' field from frontend"
-        )
+        assert (
+            MAIN_KEY_USER_INPUT == "input"
+        ), "main.py should expect 'input' field from frontend"
 
         # Test field extraction
         user_input = frontend_request.get(MAIN_KEY_USER_INPUT)
-        assert user_input == "I explore the testing area.", (
-            "main.py should correctly extract user input from frontend"
-        )
+        assert (
+            user_input == "I explore the testing area."
+        ), "main.py should correctly extract user input from frontend"
 
         print("✅ Frontend → main.py: 'input' field extraction works correctly")
 
@@ -71,12 +71,12 @@ class TestInputFieldTranslation(unittest.TestCase):
         }
 
         # Verify the translation happened correctly
-        assert "user_input" in mcp_request, (
-            "MCP request should contain 'user_input' field"
-        )
-        assert mcp_request["user_input"] == "I explore the testing area.", (
-            "MCP request should have correct user input value"
-        )
+        assert (
+            "user_input" in mcp_request
+        ), "MCP request should contain 'user_input' field"
+        assert (
+            mcp_request["user_input"] == "I explore the testing area."
+        ), "MCP request should have correct user input value"
 
         print("✅ main.py → MCP: 'user_input' field translation works correctly")
 
@@ -85,9 +85,9 @@ class TestInputFieldTranslation(unittest.TestCase):
         Test that world_logic.py correctly expects 'user_input' field from MCP.
         """
         # Verify world_logic.py expects "user_input" field (for MCP protocol)
-        assert MCP_KEY_USER_INPUT == "user_input", (
-            "world_logic.py should expect 'user_input' field from MCP"
-        )
+        assert (
+            MCP_KEY_USER_INPUT == "user_input"
+        ), "world_logic.py should expect 'user_input' field from MCP"
 
         # Simulate MCP request data
         mcp_request = {
@@ -99,9 +99,9 @@ class TestInputFieldTranslation(unittest.TestCase):
 
         # Test field extraction
         user_input = mcp_request.get(MCP_KEY_USER_INPUT)
-        assert user_input == "I explore the testing area.", (
-            "world_logic.py should correctly extract user input from MCP"
-        )
+        assert (
+            user_input == "I explore the testing area."
+        ), "world_logic.py should correctly extract user input from MCP"
 
         print("✅ MCP → world_logic.py: 'user_input' field extraction works correctly")
 
@@ -135,18 +135,18 @@ class TestInputFieldTranslation(unittest.TestCase):
 
         # Step 4: world_logic.py extracts with its KEY_USER_INPUT
         user_input_final = mcp_request.get(MCP_KEY_USER_INPUT)
-        assert MCP_KEY_USER_INPUT == "user_input", (
-            "world_logic.py should use 'user_input' key"
-        )
+        assert (
+            MCP_KEY_USER_INPUT == "user_input"
+        ), "world_logic.py should use 'user_input' key"
         assert user_input_final == "I test the complete flow."
         print(
             f"   world_logic.py extracts: {MCP_KEY_USER_INPUT} = '{user_input_final}'"
         )
 
         # Final validation
-        assert user_input_extracted == user_input_final, (
-            "User input should be preserved through the translation"
-        )
+        assert (
+            user_input_extracted == user_input_final
+        ), "User input should be preserved through the translation"
 
         print("✅ End-to-end input field translation: WORKING CORRECTLY")
         print("✅ Translation layer correctly converts 'input' → 'user_input'")
@@ -172,9 +172,9 @@ class TestInputFieldTranslation(unittest.TestCase):
             "input": "Test message"  # Wrong - should be "user_input"
         }
         extracted_mcp_wrong = mcp_request_wrong.get(MCP_KEY_USER_INPUT)
-        assert extracted_mcp_wrong is None, (
-            "Wrong field name should result in None for MCP"
-        )
+        assert (
+            extracted_mcp_wrong is None
+        ), "Wrong field name should result in None for MCP"
         print("🔴 If main.py sent 'input' to MCP: None extracted by world_logic.py")
 
         print("🔴 RED TESTS CONFIRM: Field name mismatches would cause None extraction")

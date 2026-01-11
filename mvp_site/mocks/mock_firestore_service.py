@@ -181,8 +181,8 @@ class MockFirestoreClient:
             "user_id": user_id,
             "prompt": prompt,
             "selected_prompts": selected_prompts,
-            "created_at": datetime.datetime.now(datetime.timezone.utc),
-            "last_played": datetime.datetime.now(datetime.timezone.utc),
+            "created_at": datetime.datetime.now(datetime.UTC),
+            "last_played": datetime.datetime.now(datetime.UTC),
         }
 
         # Store campaign
@@ -200,7 +200,7 @@ class MockFirestoreClient:
                 constants.KEY_TEXT: opening_story,
                 constants.KEY_MODE: constants.MODE_CHARACTER,
                 "sequence_id": 1,
-                "timestamp": datetime.datetime.now(datetime.timezone.utc),
+                "timestamp": datetime.datetime.now(datetime.UTC),
             }
         ]
 
@@ -230,7 +230,7 @@ class MockFirestoreClient:
             constants.KEY_TEXT: text,
             constants.KEY_MODE: mode or constants.MODE_CHARACTER,
             "sequence_id": next_seq_id,
-            "timestamp": datetime.datetime.now(datetime.timezone.utc),
+            "timestamp": datetime.datetime.now(datetime.UTC),
         }
 
         # Add structured fields if provided
@@ -256,7 +256,7 @@ class MockFirestoreClient:
         campaign = self.campaigns.get(user_id, {}).get(campaign_id)
         if campaign:
             campaign["title"] = new_title
-            campaign["last_played"] = datetime.datetime.now(datetime.timezone.utc)
+            campaign["last_played"] = datetime.datetime.now(datetime.UTC)
 
     def update_campaign(self, user_id: str, campaign_id: str, updates: dict[str, Any]):
         """Update a campaign with arbitrary updates."""
@@ -266,7 +266,7 @@ class MockFirestoreClient:
         campaign = self.campaigns.get(user_id, {}).get(campaign_id)
         if campaign:
             campaign.update(updates)
-            campaign["last_played"] = datetime.datetime.now(datetime.timezone.utc)
+            campaign["last_played"] = datetime.datetime.now(datetime.UTC)
             return True
         return False
 

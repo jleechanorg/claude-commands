@@ -30,9 +30,9 @@ class TestServerInfrastructure(unittest.TestCase):
         self.test_branch = "test-infrastructure-branch"
 
         # Ensure testserver script exists
-        assert os.path.exists(self.testserver_script), (
-            f"testserver.sh not found at {self.testserver_script}"
-        )
+        assert os.path.exists(
+            self.testserver_script
+        ), f"testserver.sh not found at {self.testserver_script}"
 
     def test_testserver_help_command(self):
         """Test that /testserver help displays usage information."""
@@ -248,9 +248,9 @@ class TestServerInfrastructure(unittest.TestCase):
 
         if os.path.exists(integrate_script):
             # Test that integrate script exists and is executable
-            assert os.access(integrate_script, os.X_OK), (
-                "integrate.sh should be executable"
-            )
+            assert os.access(
+                integrate_script, os.X_OK
+            ), "integrate.sh should be executable"
 
         # Test testserver.sh help mentions integration
         try:

@@ -95,14 +95,14 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
             data = response.get_json()
 
             # CRITICAL: Response must be an array directly
-            assert isinstance(data, list), (
-                f"API must return array directly for backward compatibility. Got: {type(data)}"
-            )
+            assert isinstance(
+                data, list
+            ), f"API must return array directly for backward compatibility. Got: {type(data)}"
 
             # Verify it's not wrapped in an object
-            assert not isinstance(data, dict), (
-                "API must NOT return object wrapper for backward compatibility"
-            )
+            assert not isinstance(
+                data, dict
+            ), "API must NOT return object wrapper for backward compatibility"
 
             # If we have campaigns, verify structure
             if data:

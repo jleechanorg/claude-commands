@@ -354,9 +354,9 @@ class TestDebugModeEnd2End(unittest.TestCase):
             )
             assert response.status_code == 200  # Auth stubbed, should succeed
             campaign_data = json.loads(response.data)
-            assert campaign_data["game_state"]["debug_mode"], (
-                f"Campaign debug mode inconsistent on request {i + 1}"
-            )
+            assert campaign_data["game_state"][
+                "debug_mode"
+            ], f"Campaign debug mode inconsistent on request {i + 1}"
 
     def test_json_input_validation_in_debug_context(self):
         """Test JSON input validation in debug mode context."""
@@ -515,35 +515,35 @@ class TestDebugModeEnd2End(unittest.TestCase):
         latest_entry = gemini_entries[-1]  # Get the latest entry we just added
 
         # CRITICAL: Fields that should be STRIPPED when debug mode is OFF
-        assert "entities_mentioned" not in latest_entry, (
-            "entities_mentioned should be stripped when debug mode is OFF"
-        )
-        assert "entities" not in latest_entry, (
-            "entities should be stripped when debug mode is OFF"
-        )
-        assert "state_updates" not in latest_entry, (
-            "state_updates should be stripped when debug mode is OFF"
-        )
-        assert "debug_info" not in latest_entry, (
-            "debug_info should be stripped when debug mode is OFF"
-        )
+        assert (
+            "entities_mentioned" not in latest_entry
+        ), "entities_mentioned should be stripped when debug mode is OFF"
+        assert (
+            "entities" not in latest_entry
+        ), "entities should be stripped when debug mode is OFF"
+        assert (
+            "state_updates" not in latest_entry
+        ), "state_updates should be stripped when debug mode is OFF"
+        assert (
+            "debug_info" not in latest_entry
+        ), "debug_info should be stripped when debug mode is OFF"
 
         # CRITICAL: Fields that should REMAIN when debug mode is OFF
-        assert "resources" in latest_entry, (
-            "resources should remain when debug mode is OFF"
-        )
-        assert "dice_rolls" in latest_entry, (
-            "dice_rolls should remain when debug mode is OFF"
-        )
-        assert "location_confirmed" in latest_entry, (
-            "location_confirmed should remain when debug mode is OFF"
-        )
-        assert "planning_block" in latest_entry, (
-            "planning_block should remain when debug mode is OFF"
-        )
-        assert "god_mode_response" in latest_entry, (
-            "god_mode_response should remain when debug mode is OFF"
-        )
+        assert (
+            "resources" in latest_entry
+        ), "resources should remain when debug mode is OFF"
+        assert (
+            "dice_rolls" in latest_entry
+        ), "dice_rolls should remain when debug mode is OFF"
+        assert (
+            "location_confirmed" in latest_entry
+        ), "location_confirmed should remain when debug mode is OFF"
+        assert (
+            "planning_block" in latest_entry
+        ), "planning_block should remain when debug mode is OFF"
+        assert (
+            "god_mode_response" in latest_entry
+        ), "god_mode_response should remain when debug mode is OFF"
 
         # Verify the content of remaining fields
         assert latest_entry["resources"] == "Lost 1 healing potion"
@@ -580,24 +580,24 @@ class TestDebugModeEnd2End(unittest.TestCase):
         latest_entry = gemini_entries[-1]
 
         # With debug mode ON, ALL fields should be present
-        assert "entities_mentioned" in latest_entry, (
-            "entities_mentioned should be present when debug mode is ON"
-        )
-        assert "entities" in latest_entry, (
-            "entities should be present when debug mode is ON"
-        )
-        assert "state_updates" in latest_entry, (
-            "state_updates should be present when debug mode is ON"
-        )
-        assert "debug_info" in latest_entry, (
-            "debug_info should be present when debug mode is ON"
-        )
-        assert "resources" in latest_entry, (
-            "resources should be present when debug mode is ON"
-        )
-        assert "dice_rolls" in latest_entry, (
-            "dice_rolls should be present when debug mode is ON"
-        )
+        assert (
+            "entities_mentioned" in latest_entry
+        ), "entities_mentioned should be present when debug mode is ON"
+        assert (
+            "entities" in latest_entry
+        ), "entities should be present when debug mode is ON"
+        assert (
+            "state_updates" in latest_entry
+        ), "state_updates should be present when debug mode is ON"
+        assert (
+            "debug_info" in latest_entry
+        ), "debug_info should be present when debug mode is ON"
+        assert (
+            "resources" in latest_entry
+        ), "resources should be present when debug mode is ON"
+        assert (
+            "dice_rolls" in latest_entry
+        ), "dice_rolls should be present when debug mode is ON"
 
         # Verify the content of game state fields that should only appear in debug mode
         assert latest_entry["entities_mentioned"] == ["Dragon", "Knight", "Castle"]
@@ -687,30 +687,30 @@ class TestDebugModeEnd2End(unittest.TestCase):
         # CRITICAL: State fields behavior with corrected debug logic
         # Note: state_changes removed as part of cleanup - only state_updates used now
         # state_updates only present when debug_mode=True (since debug_mode=False here)
-        assert "state_updates" not in unified_response, (
-            "state_updates should NOT be present when debug_mode=False"
-        )
+        assert (
+            "state_updates" not in unified_response
+        ), "state_updates should NOT be present when debug_mode=False"
         # entities_mentioned and debug_info still follow original debug logic
-        assert "entities_mentioned" not in unified_response, (
-            "entities_mentioned should be stripped when debug_mode=False"
-        )
-        assert "debug_info" not in unified_response, (
-            "debug_info should be stripped when debug_mode=False"
-        )
+        assert (
+            "entities_mentioned" not in unified_response
+        ), "entities_mentioned should be stripped when debug_mode=False"
+        assert (
+            "debug_info" not in unified_response
+        ), "debug_info should be stripped when debug_mode=False"
 
         # These fields should REMAIN when debug_mode=False
-        assert "location_confirmed" in unified_response, (
-            "location_confirmed should remain when debug_mode=False"
-        )
-        assert "planning_block" in unified_response, (
-            "planning_block should remain when debug_mode=False"
-        )
-        assert "dice_rolls" in unified_response, (
-            "dice_rolls should remain when debug_mode=False"
-        )
-        assert "resources" in unified_response, (
-            "resources should remain when debug_mode=False"
-        )
+        assert (
+            "location_confirmed" in unified_response
+        ), "location_confirmed should remain when debug_mode=False"
+        assert (
+            "planning_block" in unified_response
+        ), "planning_block should remain when debug_mode=False"
+        assert (
+            "dice_rolls" in unified_response
+        ), "dice_rolls should remain when debug_mode=False"
+        assert (
+            "resources" in unified_response
+        ), "resources should remain when debug_mode=False"
 
         # Test debug_mode=True HIDES state fields (security-focused debug behavior)
         debug_mode = True
@@ -750,19 +750,19 @@ class TestDebugModeEnd2End(unittest.TestCase):
                 ]
 
         # CRITICAL: State fields should be present when debug_mode=True (standard debug behavior)
-        assert "state_changes" in unified_response_debug_on, (
-            "state_changes should always be present for compatibility"
-        )
-        assert "state_updates" in unified_response_debug_on, (
-            "state_updates should be present when debug_mode=True (standard debug behavior)"
-        )
+        assert (
+            "state_changes" in unified_response_debug_on
+        ), "state_changes should always be present for compatibility"
+        assert (
+            "state_updates" in unified_response_debug_on
+        ), "state_updates should be present when debug_mode=True (standard debug behavior)"
         # entities_mentioned and debug_info still follow original debug logic
-        assert "entities_mentioned" in unified_response_debug_on, (
-            "entities_mentioned should be included when debug_mode=True"
-        )
-        assert "debug_info" in unified_response_debug_on, (
-            "debug_info should be included when debug_mode=True"
-        )
+        assert (
+            "entities_mentioned" in unified_response_debug_on
+        ), "entities_mentioned should be included when debug_mode=True"
+        assert (
+            "debug_info" in unified_response_debug_on
+        ), "debug_info should be included when debug_mode=True"
 
         # Verify the content is correct for non-state debug fields
         assert unified_response_debug_on["entities_mentioned"] == [
@@ -809,12 +809,12 @@ class TestDebugModeEnd2End(unittest.TestCase):
                 unified_response["state_updates"] = merged_state_changes
 
         # CRITICAL: state_updates should NOT be added in character mode when debug_mode=False
-        assert "state_updates" not in unified_response, (
-            "state_updates should NOT be added in character mode when debug_mode=False"
-        )
-        assert "state_changes" in unified_response, (
-            "state_changes should always be present for internal tracking"
-        )
+        assert (
+            "state_updates" not in unified_response
+        ), "state_updates should NOT be added in character mode when debug_mode=False"
+        assert (
+            "state_changes" in unified_response
+        ), "state_changes should always be present for internal tracking"
 
         # Verify that the sequence ID was still tracked internally
         assert (
@@ -841,12 +841,12 @@ class TestDebugModeEnd2End(unittest.TestCase):
             if debug_mode:
                 unified_response_debug_on["state_updates"] = merged_state_changes
 
-        assert "state_updates" in unified_response_debug_on, (
-            "state_updates should be present in character mode when debug_mode=True (standard debug behavior)"
-        )
-        assert "state_changes" in unified_response_debug_on, (
-            "state_changes should always be present for internal state tracking"
-        )
+        assert (
+            "state_updates" in unified_response_debug_on
+        ), "state_updates should be present in character mode when debug_mode=True (standard debug behavior)"
+        assert (
+            "state_changes" in unified_response_debug_on
+        ), "state_changes should always be present for internal state tracking"
 
     def test_pr1150_debug_mode_standard_behavior(self):
         """
@@ -877,12 +877,12 @@ class TestDebugModeEnd2End(unittest.TestCase):
             unified_response["state_updates"] = mock_response.get("state_changes", {})
 
         # Validate standard debug behavior - these fields SHOULD be present when debug_mode=True
-        assert "state_changes" in unified_response, (
-            "state_changes should always be in API response for compatibility"
-        )
-        assert "state_updates" in unified_response, (
-            "state_updates should be in API response when debug_mode=True (standard debug behavior)"
-        )
+        assert (
+            "state_changes" in unified_response
+        ), "state_changes should always be in API response for compatibility"
+        assert (
+            "state_updates" in unified_response
+        ), "state_updates should be in API response when debug_mode=True (standard debug behavior)"
 
         # Test Case 2: debug_mode=False should NOT include debug-only information
         debug_mode = False
@@ -900,12 +900,12 @@ class TestDebugModeEnd2End(unittest.TestCase):
             )
 
         # Validate normal operation - state_changes always present, state_updates only in debug
-        assert "state_changes" in unified_response_normal, (
-            "state_changes should always be in API response for compatibility"
-        )
-        assert "state_updates" not in unified_response_normal, (
-            "state_updates should NOT be in API response when debug_mode=False (debug-only field)"
-        )
+        assert (
+            "state_changes" in unified_response_normal
+        ), "state_changes should always be in API response for compatibility"
+        assert (
+            "state_updates" not in unified_response_normal
+        ), "state_updates should NOT be in API response when debug_mode=False (debug-only field)"
 
     def test_pr1150_character_mode_sequence_tracking_debug_respect(self):
         """
@@ -941,9 +941,9 @@ class TestDebugModeEnd2End(unittest.TestCase):
                 unified_response["state_updates"] = merged_state_changes
 
         # CRITICAL TEST: When debug_mode=True, state_updates SHOULD be added (standard debug)
-        assert "state_updates" in unified_response, (
-            "state_updates should be added in character mode when debug_mode=True (standard debug behavior)"
-        )
+        assert (
+            "state_updates" in unified_response
+        ), "state_updates should be added in character mode when debug_mode=True (standard debug behavior)"
 
         # state_changes should be updated with sequence info
         assert (

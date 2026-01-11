@@ -8,20 +8,12 @@ import sys
 
 # Add parent directory to path for imports
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-try:
-    from mvp_site import constants
-    from mvp_site.entity_tracking import create_from_game_state
-    from mvp_site.game_state import GameState
-
-    MODULES_AVAILABLE = True
-except ImportError:
-    constants = None
-    create_from_game_state = None
-    GameState = None
-    MODULES_AVAILABLE = False
+from mvp_site import constants
+from mvp_site.entity_tracking import create_from_game_state
+from mvp_site.game_state import GameState
 
 
 def run_pr_change_tests():
@@ -32,16 +24,16 @@ def run_pr_change_tests():
     try:
         # Test 1: Default to constants.DEFAULT_DEBUG_MODE
         gs = GameState()
-        assert gs.debug_mode == constants.DEFAULT_DEBUG_MODE, (
-            f"Expected debug_mode={constants.DEFAULT_DEBUG_MODE} by default, got {gs.debug_mode}"
-        )
+        assert (
+            gs.debug_mode == constants.DEFAULT_DEBUG_MODE
+        ), f"Expected debug_mode={constants.DEFAULT_DEBUG_MODE} by default, got {gs.debug_mode}"
         print(f"✓ GameState defaults to debug_mode={constants.DEFAULT_DEBUG_MODE}")
 
         # Test 2: Can be set to False
         gs = GameState(debug_mode=False)
-        assert gs.debug_mode == False, (
-            f"Expected debug_mode=False when set, got {gs.debug_mode}"
-        )
+        assert (
+            gs.debug_mode == False
+        ), f"Expected debug_mode=False when set, got {gs.debug_mode}"
         print("✓ GameState can be set to debug_mode=False")
 
         # Test 3: Serialization includes debug_mode
@@ -51,16 +43,16 @@ def run_pr_change_tests():
 
         # Test 4: Deserialization preserves debug_mode
         gs2 = GameState.from_dict({"debug_mode": True})
-        assert gs2.debug_mode == True, (
-            f"Expected debug_mode=True from dict, got {gs2.debug_mode}"
-        )
+        assert (
+            gs2.debug_mode == True
+        ), f"Expected debug_mode=True from dict, got {gs2.debug_mode}"
         print("✓ debug_mode is preserved in deserialization")
 
         # Test 5: Deserialization defaults to constants.DEFAULT_DEBUG_MODE when missing
         gs3 = GameState.from_dict({"game_state_version": 1})
-        assert gs3.debug_mode == constants.DEFAULT_DEBUG_MODE, (
-            f"Expected debug_mode={constants.DEFAULT_DEBUG_MODE} when missing from dict, got {gs3.debug_mode}"
-        )
+        assert (
+            gs3.debug_mode == constants.DEFAULT_DEBUG_MODE
+        ), f"Expected debug_mode={constants.DEFAULT_DEBUG_MODE} when missing from dict, got {gs3.debug_mode}"
         print(
             f"✓ debug_mode defaults to {constants.DEFAULT_DEBUG_MODE} when missing from deserialization"
         )
@@ -74,17 +66,17 @@ def run_pr_change_tests():
     try:
         # PROMPT_TYPE_ENTITY_SCHEMA was integrated into game_state_instruction.md
         # So we check that it's no longer a separate constant
-        assert not hasattr(constants, "PROMPT_TYPE_ENTITY_SCHEMA"), (
-            "PROMPT_TYPE_ENTITY_SCHEMA should be removed (integrated into game_state)"
-        )
+        assert not hasattr(
+            constants, "PROMPT_TYPE_ENTITY_SCHEMA"
+        ), "PROMPT_TYPE_ENTITY_SCHEMA should be removed (integrated into game_state)"
 
         # Verify that PROMPT_TYPE_GAME_STATE exists instead
-        assert hasattr(constants, "PROMPT_TYPE_GAME_STATE"), (
-            "Missing PROMPT_TYPE_GAME_STATE constant"
-        )
-        assert constants.PROMPT_TYPE_GAME_STATE == "game_state", (
-            f"Wrong value: {constants.PROMPT_TYPE_GAME_STATE}"
-        )
+        assert hasattr(
+            constants, "PROMPT_TYPE_GAME_STATE"
+        ), "Missing PROMPT_TYPE_GAME_STATE constant"
+        assert (
+            constants.PROMPT_TYPE_GAME_STATE == "game_state"
+        ), f"Wrong value: {constants.PROMPT_TYPE_GAME_STATE}"
         print(
             "✓ Entity schema has been properly integrated into game_state instructions"
         )
@@ -132,22 +124,22 @@ def run_pr_change_tests():
 
         # Check PC ID format
         pc = manifest.player_characters[0]
-        assert pc.entity_id.startswith("pc_"), (
-            f"PC ID should start with 'pc_', got {pc.entity_id}"
-        )
-        assert "_" in pc.entity_id[3:], (
-            f"PC ID should have underscores, got {pc.entity_id}"
-        )
+        assert pc.entity_id.startswith(
+            "pc_"
+        ), f"PC ID should start with 'pc_', got {pc.entity_id}"
+        assert (
+            "_" in pc.entity_id[3:]
+        ), f"PC ID should have underscores, got {pc.entity_id}"
         print(f"✓ PC entity ID format correct: {pc.entity_id}")
 
         # Check NPC ID format
         npc = manifest.npcs[0]
-        assert npc.entity_id.startswith("npc_"), (
-            f"NPC ID should start with 'npc_', got {npc.entity_id}"
-        )
-        assert "_" in npc.entity_id[4:], (
-            f"NPC ID should have underscores, got {npc.entity_id}"
-        )
+        assert npc.entity_id.startswith(
+            "npc_"
+        ), f"NPC ID should start with 'npc_', got {npc.entity_id}"
+        assert (
+            "_" in npc.entity_id[4:]
+        ), f"NPC ID should have underscores, got {npc.entity_id}"
         print(f"✓ NPC entity ID format correct: {npc.entity_id}")
 
     except Exception as e:

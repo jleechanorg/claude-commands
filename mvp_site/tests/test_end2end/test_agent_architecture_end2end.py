@@ -20,12 +20,7 @@ import unittest
 from unittest.mock import patch
 
 from mvp_site import constants, main
-from mvp_site.agents import (
-    BaseAgent,
-    GodModeAgent,
-    StoryModeAgent,
-    get_agent_for_input,
-)
+from mvp_site.agents import GodModeAgent, StoryModeAgent, get_agent_for_input
 from mvp_site.tests.fake_firestore import FakeFirestoreClient
 from mvp_site.tests.fake_llm import FakeLLMResponse
 

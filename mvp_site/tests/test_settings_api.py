@@ -63,9 +63,9 @@ class TestSettingsAPI(unittest.TestCase):
         # Test with auth headers - should not crash
         response = self.client.get("/settings", headers=self.headers)
         # In MCP architecture, may return various status codes depending on server state
-        assert response.status_code == 200, (
-            "Settings page should return successfully with test headers"
-        )
+        assert (
+            response.status_code == 200
+        ), "Settings page should return successfully with test headers"
 
         # If successful, should return HTML
         if response.status_code == 200:
@@ -76,9 +76,9 @@ class TestSettingsAPI(unittest.TestCase):
         response = self.client.get("/api/settings", headers=self.headers)
 
         # Should handle request gracefully in MCP architecture
-        assert response.status_code == 200, (
-            "Settings API should return successfully with test headers"
-        )
+        assert (
+            response.status_code == 200
+        ), "Settings API should return successfully with test headers"
 
         # Response should be valid JSON if successful
         if response.status_code == 200:
@@ -99,9 +99,9 @@ class TestSettingsAPI(unittest.TestCase):
         )
 
         # Should handle request gracefully in MCP architecture
-        assert response.status_code == 200, (
-            "Settings update should return successfully with valid data and test headers"
-        )
+        assert (
+            response.status_code == 200
+        ), "Settings update should return successfully with valid data and test headers"
 
         # Response should be valid JSON
         try:
@@ -145,17 +145,17 @@ class TestSettingsAPI(unittest.TestCase):
         no_auth_response = self.client.get("/api/settings")
 
         # Should either require auth (401) or handle gracefully (500)
-        assert no_auth_response.status_code == 401, (
-            "Should require authentication without test headers"
-        )
+        assert (
+            no_auth_response.status_code == 401
+        ), "Should require authentication without test headers"
 
         # Test with auth headers
         auth_response = self.client.get("/api/settings", headers=self.headers)
 
         # Should not return 401 when auth headers are provided
-        assert auth_response.status_code != 401, (
-            "Should not return 401 when auth headers provided"
-        )
+        assert (
+            auth_response.status_code != 401
+        ), "Should not return 401 when auth headers provided"
 
 
 if __name__ == "__main__":

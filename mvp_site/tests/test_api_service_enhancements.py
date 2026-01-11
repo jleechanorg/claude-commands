@@ -22,7 +22,7 @@ except ImportError as e:
     IMPORT_ERROR = str(e)
 
 
-@pytest.fixture
+@pytest.fixture()
 def client():
     """Flask test client fixture for real app testing"""
     if not HAS_MAIN_APP:

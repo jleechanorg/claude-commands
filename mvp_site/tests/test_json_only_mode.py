@@ -42,9 +42,9 @@ class TestJSONOnlyMode(unittest.TestCase):
             llm_service.continue_story("test prompt", "story", [], test_game_state)
 
             # Verify generate_json_mode_content was called (enforces JSON mode)
-            assert mock_json_gen.called, (
-                "generate_json_mode_content should be called for JSON mode"
-            )
+            assert (
+                mock_json_gen.called
+            ), "generate_json_mode_content should be called for JSON mode"
 
     def test_main_py_no_fallback_parsing(self):
         """Test that main.py doesn't have fallback regex parsing"""
@@ -108,9 +108,9 @@ class TestJSONOnlyMode(unittest.TestCase):
                 pass  # Some might fail due to mocking, we just need the call args
 
             # Check that JSON mode function was called
-            assert mock_json_gen.called, (
-                "continue_story should use JSON mode via generate_json_mode_content"
-            )
+            assert (
+                mock_json_gen.called
+            ), "continue_story should use JSON mode via generate_json_mode_content"
 
     def test_robust_json_parser_is_only_fallback(self):
         """Test that robust JSON parser is the only fallback for malformed JSON"""

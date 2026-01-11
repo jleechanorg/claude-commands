@@ -6,7 +6,7 @@ Based on Milestone 0.4 Combined approach implementation (without pydantic depend
 
 import json
 import re
-from typing import Any, Optional, Union
+from typing import Any
 
 from mvp_site import logging_util
 
@@ -27,9 +27,10 @@ GENERIC_MARKDOWN_PATTERN = re.compile(r"```\s*\n?(.*?)\n?```", re.DOTALL)
 # to keep the implementation single-sourced.
 # Quick check just verifies both required keys exist (order-independent).
 
+
 # Shared boolean coercion helper so validation and sanitization use consistent
 # handling for truthy/falsey inputs.
-def _coerce_bool(value: Any, *, context: Optional[str] = None) -> bool:
+def _coerce_bool(value: Any, *, context: str | None = None) -> bool:
     if isinstance(value, bool):
         return value
 
@@ -59,6 +60,7 @@ def _coerce_bool(value: Any, *, context: Optional[str] = None) -> bool:
         )
 
     return coerced
+
 
 # Mixed language detection - CJK (Chinese/Japanese/Korean) characters
 # These can appear due to LLM training data leakage
@@ -215,7 +217,7 @@ def _derive_quality_tier(success: bool, margin: int) -> str:
     return "Incomplete"
 
 
-def _coerce_bool_optional(value: Any) -> Optional[bool]:
+def _coerce_bool_optional(value: Any) -> bool | None:
     """Best-effort conversion of arbitrary values to bool, returning None when unclear."""
 
     if isinstance(value, bool):
@@ -427,18 +429,18 @@ class NarrativeResponse:
     def __init__(
         self,
         narrative: str,
-        entities_mentioned: Optional[list[str]] = None,
+        entities_mentioned: list[str] | None = None,
         location_confirmed: str = "Unknown",
-        turn_summary: Optional[str] = None,
-        state_updates: Optional[dict[str, Any]] = None,
-        debug_info: Optional[dict[str, Any]] = None,
-        god_mode_response: Optional[str] = None,
-        directives: Optional[dict[str, Any]] = None,  # God mode: {add: [...], drop: [...]}
-        session_header: Optional[str] = None,
-        planning_block: Union[dict[str, Any], None] = None,
-        dice_rolls: Optional[list[str]] = None,
-        dice_audit_events: Optional[list[dict[str, Any]]] = None,
-        resources: Optional[str] = None,
+        turn_summary: str | None = None,
+        state_updates: dict[str, Any] | None = None,
+        debug_info: dict[str, Any] | None = None,
+        god_mode_response: str | None = None,
+        directives: dict[str, Any] | None = None,  # God mode: {add: [...], drop: [...]}
+        session_header: str | None = None,
+        planning_block: dict[str, Any] | None = None,
+        dice_rolls: list[str] | None = None,
+        dice_audit_events: list[dict[str, Any]] | None = None,
+        resources: str | None = None,
         **kwargs: Any,
     ):
         # Core required fields
@@ -1263,7 +1265,7 @@ ENTITY TRACKING NOTES:
 
 
 def _combine_god_mode_and_narrative(
-    god_mode_response: str, narrative: Optional[str]
+    god_mode_response: str, narrative: str | None
 ) -> str:
     """
     Helper function to handle god_mode_response and narrative fields.
@@ -1314,7 +1316,7 @@ def parse_structured_response(
     """
 
     def _apply_planning_fallback(
-        narrative_value: Optional[str], planning_block: Any
+        narrative_value: str | None, planning_block: Any
     ) -> str:
         """Return narrative or minimal placeholder - DO NOT inject thinking text.
 
@@ -1509,7 +1511,7 @@ def create_generic_json_instruction() -> str:
 
 
 def create_structured_prompt_injection(
-    manifest_text: str, expected_entities: Optional[list[str]]
+    manifest_text: str, expected_entities: list[str] | None
 ) -> str:
     """
     Create structured prompt injection for JSON response format

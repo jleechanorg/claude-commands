@@ -111,9 +111,7 @@ class TestRewardsAgentMechanicalEnd2End(unittest.TestCase):
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_rewards_agent_no_time_advancement(
-        self, mock_gemini_generate, mock_get_db
-    ):
+    def test_rewards_agent_no_time_advancement(self, mock_gemini_generate, mock_get_db):
         """
         Test that RewardsAgent does NOT advance game time.
 
@@ -196,9 +194,9 @@ class TestRewardsAgentMechanicalEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # Verify time was NOT advanced
         final_state = (
@@ -219,7 +217,7 @@ class TestRewardsAgentMechanicalEnd2End(unittest.TestCase):
             final_time,
             f"RewardsAgent should NOT advance time. "
             f"Initial: {initial_time}, Final: {final_time}. "
-            f"Time advancement is StoryModeAgent's responsibility."
+            f"Time advancement is StoryModeAgent's responsibility.",
         )
 
     @patch("mvp_site.firestore_service.get_db")
@@ -281,17 +279,15 @@ class TestRewardsAgentMechanicalEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         response_json = json.loads(response.data)
 
         # Verify rewards_box is present
         self.assertIn(
-            "rewards_box",
-            response_json,
-            "RewardsAgent must output rewards_box"
+            "rewards_box", response_json, "RewardsAgent must output rewards_box"
         )
 
         # Verify no story continuation choices in planning_block
@@ -304,7 +300,7 @@ class TestRewardsAgentMechanicalEnd2End(unittest.TestCase):
             present_story_choices,
             [],
             f"RewardsAgent should NOT output story choices. "
-            f"Found: {present_story_choices}. StoryModeAgent handles that."
+            f"Found: {present_story_choices}. StoryModeAgent handles that.",
         )
 
     @patch("mvp_site.firestore_service.get_db")
@@ -372,9 +368,9 @@ class TestRewardsAgentMechanicalEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         response_json = json.loads(response.data)
         planning_block = response_json.get("planning_block", {})
@@ -401,7 +397,7 @@ class TestRewardsAgentMechanicalEnd2End(unittest.TestCase):
         combat_state = final_state.get("combat_state", {})
         self.assertTrue(
             combat_state.get("rewards_processed", False),
-            "rewards_processed should be True after RewardsAgent completes"
+            "rewards_processed should be True after RewardsAgent completes",
         )
 
 

@@ -123,9 +123,9 @@ class TestJSONCleanupSafety(unittest.TestCase):
         ]
 
         for case in json_cases:
-            assert contains_json_artifacts(case), (
-                f"Should detect JSON artifacts in: {case[:50]}..."
-            )
+            assert contains_json_artifacts(
+                case
+            ), f"Should detect JSON artifacts in: {case[:50]}..."
 
         # Test cases that should NOT be detected as JSON artifacts
         normal_cases = [
@@ -136,9 +136,9 @@ class TestJSONCleanupSafety(unittest.TestCase):
         ]
 
         for case in normal_cases:
-            assert not contains_json_artifacts(case), (
-                f"Should NOT detect JSON artifacts in: {case}"
-            )
+            assert not contains_json_artifacts(
+                case
+            ), f"Should NOT detect JSON artifacts in: {case}"
 
     def test_dragon_knight_description_cleaning(self):
         """Test cleaning of the Dragon Knight campaign description with JSON escapes."""
@@ -160,9 +160,9 @@ class TestJSONCleanupSafety(unittest.TestCase):
         # Verify the cleaning worked
         assert "\\n" not in cleaned, "Should not contain literal \\n characters"
         assert "\n" in cleaned, "Should contain actual newlines"
-        assert "Description: # Campaign summary" in cleaned, (
-            "Content should be preserved"
-        )
+        assert (
+            "Description: # Campaign summary" in cleaned
+        ), "Content should be preserved"
         assert "Silent Peace" in cleaned, "Should contain the phrase 'Silent Peace'"
 
     def test_json_structure_cleaning(self):
@@ -187,9 +187,9 @@ class TestJSONCleanupSafety(unittest.TestCase):
         )
         cleaned = clean_json_artifacts(json_with_god_mode)
 
-        assert cleaned == "This is GM content with special instructions.", (
-            f"Expected god_mode_response extraction, got: {cleaned}"
-        )
+        assert (
+            cleaned == "This is GM content with special instructions."
+        ), f"Expected god_mode_response extraction, got: {cleaned}"
 
     def test_normal_description_preservation(self):
         """Test that normal descriptions are preserved."""
@@ -200,9 +200,9 @@ class TestJSONCleanupSafety(unittest.TestCase):
 
         cleaned = clean_json_artifacts(normal_description)
 
-        assert cleaned == normal_description, (
-            f"Normal description was modified: {cleaned}"
-        )
+        assert (
+            cleaned == normal_description
+        ), f"Normal description was modified: {cleaned}"
 
     def test_story_entry_json_cleaning(self):
         """Test that story entries are properly processed to remove JSON artifacts."""
@@ -218,9 +218,9 @@ class TestJSONCleanupSafety(unittest.TestCase):
         )
 
         expected_text = "You stand at the crossroads, unsure which path to take."
-        assert processed["text"] == expected_text, (
-            f"Expected clean text, got: {processed['text']}"
-        )
+        assert (
+            processed["text"] == expected_text
+        ), f"Expected clean text, got: {processed['text']}"
 
         # Test user entry (should not be processed)
         user_entry = {

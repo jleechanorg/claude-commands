@@ -24,9 +24,15 @@ DICE_PATTERN = r"\b\d*d\d+(?:\s*[+-]\s*\d+)?\b"
 
 # Canonical weapon slot labels used across filtering and categorization
 WEAPON_SLOTS = {
-    "weapon", "main hand", "off hand", "mainhand", "offhand",
-    "weapon_main", "weapon_secondary",  # Named weapon slots (raw)
-    "weapon main", "weapon secondary",  # Named weapon slots (lowercased versions after title-case transformation)
+    "weapon",
+    "main hand",
+    "off hand",
+    "mainhand",
+    "offhand",
+    "weapon_main",
+    "weapon_secondary",  # Named weapon slots (raw)
+    "weapon main",
+    "weapon secondary",  # Named weapon slots (lowercased versions after title-case transformation)
 }
 
 # Keywords that indicate user is asking about equipment/inventory
@@ -108,7 +114,11 @@ def _filter_equipment_for_summary(  # noqa: PLR0912
             slot_lower = slot.lower().strip()
             # Always show off_hand/offhand items (shields, focuses, etc.)
             is_offhand = slot_lower in {"off hand", "off_hand", "offhand"}
-            if is_weapon_slot(slot) and not is_offhand and not is_shield_item(name, stats):
+            if (
+                is_weapon_slot(slot)
+                and not is_offhand
+                and not is_shield_item(name, stats)
+            ):
                 continue
 
             filtered.append(item)
@@ -160,7 +170,16 @@ def _categorize_equipment_slot(slot: str) -> str:  # noqa: PLR0911
         return "Gloves"
     if slot_lower in {"cloak", "back", "cape", "mantle"}:
         return "Cloak"
-    if slot_lower in {"ring", "ring1", "ring 1", "ring2", "ring 2", "ring_1", "ring_2", "rings"}:
+    if slot_lower in {
+        "ring",
+        "ring1",
+        "ring 1",
+        "ring2",
+        "ring 2",
+        "ring_1",
+        "ring_2",
+        "rings",
+    }:
         return "Rings"
     if slot_lower in {"amulet", "neck", "necklace", "pendant"}:
         return "Amulet"
@@ -514,7 +533,11 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
             # Check both 'equipment' and 'inventory' keys (game state uses 'inventory')
             equipment = pc_data.get("equipment") or pc_data.get("inventory") or {}
         else:
-            equipment = getattr(pc_data, "equipment", None) or getattr(pc_data, "inventory", None) or {}
+            equipment = (
+                getattr(pc_data, "equipment", None)
+                or getattr(pc_data, "inventory", None)
+                or {}
+            )
             if hasattr(equipment, "to_dict"):
                 equipment = equipment.to_dict()
 
@@ -539,10 +562,17 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
                     if isinstance(stats, list):
                         stats = ", ".join(str(s) for s in stats if s is not None)
                     return str(name), "" if stats is None else str(stats)
-                name = item_ref.get("name") or item_ref.get("title") or item_id or "Unknown Item"
+                name = (
+                    item_ref.get("name")
+                    or item_ref.get("title")
+                    or item_id
+                    or "Unknown Item"
+                )
                 stats = item_ref.get("stats") or item_ref.get("properties") or ""
                 if isinstance(stats, list):
-                    stats = ", ".join(str(entry) for entry in stats if entry is not None)
+                    stats = ", ".join(
+                        str(entry) for entry in stats if entry is not None
+                    )
                 return str(name), "" if stats is None else str(stats)
             if isinstance(item_ref, str) and item_ref in item_registry:
                 item_data = item_registry[item_ref]
@@ -576,11 +606,31 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
         # Also check for flat format where slots are directly on equipment dict
         # Common slots that might be directly on the equipment object
         EQUIPMENT_SLOTS = {
-            "head", "body", "armor", "cloak", "neck", "hands", "feet", "ring",
-            "ring_1", "ring_2",  # Numbered ring slots
-            "instrument", "main_hand", "off_hand", "mainhand", "offhand", "weapon",
-            "weapon_main", "weapon_secondary",  # Named weapon slots (staves, etc.)
-            "shield", "amulet", "necklace", "belt", "boots", "gloves", "bracers"
+            "head",
+            "body",
+            "armor",
+            "cloak",
+            "neck",
+            "hands",
+            "feet",
+            "ring",
+            "ring_1",
+            "ring_2",  # Numbered ring slots
+            "instrument",
+            "main_hand",
+            "off_hand",
+            "mainhand",
+            "offhand",
+            "weapon",
+            "weapon_main",
+            "weapon_secondary",  # Named weapon slots (staves, etc.)
+            "shield",
+            "amulet",
+            "necklace",
+            "belt",
+            "boots",
+            "gloves",
+            "bracers",
         }
         for slot in EQUIPMENT_SLOTS:
             if slot in equipment and slot not in equipped:
@@ -637,9 +687,7 @@ def extract_equipment_display(game_state: Any) -> list[dict[str, str]]:  # noqa:
                 properties = weapon_ref.get("properties", "")
                 # Handle properties as list or string (with type coercion for safety)
                 if isinstance(properties, list):
-                    properties = ", ".join(
-                        str(p) for p in properties if p is not None
-                    )
+                    properties = ", ".join(str(p) for p in properties if p is not None)
                 stats = " ".join(part for part in [damage, properties] if part).strip()
             else:
                 name, stats = resolve_item(str(weapon_ref))

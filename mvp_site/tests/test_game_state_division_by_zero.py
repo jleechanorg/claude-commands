@@ -87,9 +87,9 @@ class TestGameStateDivisionByZero(unittest.TestCase):
             if "unconscious" in discrepancy and "20/20" in discrepancy:
                 unconscious_discrepancy_found = True
                 break
-        assert unconscious_discrepancy_found, (
-            f"Expected unconsciousness discrepancy not found in: {discrepancies}"
-        )
+        assert (
+            unconscious_discrepancy_found
+        ), f"Expected unconsciousness discrepancy not found in: {discrepancies}"
 
     def test_validate_with_partial_character_data(self):
         """Test validation with incomplete character data (only hp_current)."""

@@ -24,12 +24,7 @@ project_root = os.path.dirname(
 sys.path.insert(0, project_root)
 
 from mvp_site import constants
-from mvp_site.agents import (
-    BaseAgent,
-    GodModeAgent,
-    StoryModeAgent,
-    get_agent_for_input,
-)
+from mvp_site.agents import BaseAgent, GodModeAgent, StoryModeAgent, get_agent_for_input
 
 
 class TestAgentModeDetectionIntegration(unittest.TestCase):
@@ -169,7 +164,7 @@ class TestAgentGameStateIntegration(unittest.TestCase):
             "name": "Test Character",
             "class": "Fighter",
             "hp": 10,
-            "max_hp": 10
+            "max_hp": 10,
         }
         # CombatAgent.matches_game_state() calls is_in_combat() and get_combat_state()
         mock_game_state.is_in_combat.return_value = False

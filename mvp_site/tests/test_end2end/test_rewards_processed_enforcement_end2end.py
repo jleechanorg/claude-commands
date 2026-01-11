@@ -181,9 +181,9 @@ class TestRewardsDiscrepancyDetectionEnd2End(unittest.TestCase):
         )
 
         # Verify response is successful
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # Parse response
         response_data = json.loads(response.data)
@@ -200,7 +200,7 @@ class TestRewardsDiscrepancyDetectionEnd2End(unittest.TestCase):
             .get("combat_state", {})
             .get("rewards_processed", False),
             "Server should either detect discrepancy (system_corrections) or "
-            "state should have rewards_processed=True (if RewardsAgent followup fixed it)"
+            "state should have rewards_processed=True (if RewardsAgent followup fixed it)",
         )
 
     @patch("mvp_site.firestore_service.get_db")
@@ -260,9 +260,9 @@ class TestRewardsDiscrepancyDetectionEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # Parse response
         response_data = json.loads(response.data)
@@ -335,9 +335,9 @@ class TestRewardsDiscrepancyDetectionEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
 
         # The test passing means RewardsAgent.matches_game_state() returned False
         # (because rewards_processed=True) and StoryModeAgent was used instead
@@ -450,15 +450,17 @@ class TestMultiTurnCorrectionInjection(unittest.TestCase):
         try:
             # Capture the call args
             mock_gemini_generate.return_value = FakeLLMResponse(
-                json.dumps({
-                    "narrative": "You check your rewards. [Fixing the state as instructed]",
-                    "planning_block": {"thinking": "System correction received."},
-                    "state_updates": {
-                        "combat_state": {
-                            "rewards_processed": True,  # LLM fixes the issue
+                json.dumps(
+                    {
+                        "narrative": "You check your rewards. [Fixing the state as instructed]",
+                        "planning_block": {"thinking": "System correction received."},
+                        "state_updates": {
+                            "combat_state": {
+                                "rewards_processed": True,  # LLM fixes the issue
+                            },
                         },
-                    },
-                })
+                    }
+                )
             )
 
             # Make the API request (Turn N+1)
@@ -471,7 +473,8 @@ class TestMultiTurnCorrectionInjection(unittest.TestCase):
 
             # Verify response is successful
             self.assertEqual(
-                response.status_code, 200,
+                response.status_code,
+                200,
                 f"Expected 200, got {response.status_code}: {response.data}",
             )
 
@@ -521,7 +524,7 @@ class TestSystemCorrectionsInPrompt(unittest.TestCase):
             f"game_state_instruction.md not found at {prompt_path}",
         )
 
-        with open(prompt_path, "r") as f:
+        with open(prompt_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for system_corrections documentation
@@ -543,14 +546,16 @@ class TestSystemCorrectionsInPrompt(unittest.TestCase):
         # Get the path relative to this test file
         test_dir = os.path.dirname(os.path.abspath(__file__))
         mvp_site_dir = os.path.dirname(os.path.dirname(test_dir))
-        prompt_path = os.path.join(mvp_site_dir, "prompts", "rewards_system_instruction.md")
+        prompt_path = os.path.join(
+            mvp_site_dir, "prompts", "rewards_system_instruction.md"
+        )
 
         self.assertTrue(
             os.path.exists(prompt_path),
             f"rewards_system_instruction.md not found at {prompt_path}",
         )
 
-        with open(prompt_path, "r") as f:
+        with open(prompt_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for system_corrections mention
@@ -676,10 +681,11 @@ class TestCombatModeCorrectionsPersistedEnd2End(unittest.TestCase):
         )
 
         # Import world_logic to call directly
-        from mvp_site import world_logic
-
         # Call process_action_unified in COMBAT mode
         import asyncio
+
+        from mvp_site import world_logic
+
         result = asyncio.run(
             world_logic.process_action_unified(
                 {
@@ -693,13 +699,15 @@ class TestCombatModeCorrectionsPersistedEnd2End(unittest.TestCase):
 
         # Verify the call succeeded
         self.assertNotIn(
-            "error", result,
+            "error",
+            result,
             f"process_action_unified failed: {result.get('error')}",
         )
 
         # CRITICAL CHECK: Verify system_corrections detected in response
         self.assertIn(
-            "system_corrections", result,
+            "system_corrections",
+            result,
             "Server should detect rewards discrepancy and return system_corrections",
         )
         self.assertTrue(
@@ -709,18 +717,23 @@ class TestCombatModeCorrectionsPersistedEnd2End(unittest.TestCase):
 
         # CRITICAL CHECK: Verify corrections were PERSISTED to Firestore
         # This is the bug - for combat mode, the corrections are NOT persisted
-        final_game_state = fake_firestore.collection("users").document(
-            self.test_user_id
-        ).collection("campaigns").document(self.campaign_id).collection(
-            "game_states"
-        ).document("current_state").get()
+        final_game_state = (
+            fake_firestore.collection("users")
+            .document(self.test_user_id)
+            .collection("campaigns")
+            .document(self.campaign_id)
+            .collection("game_states")
+            .document("current_state")
+            .get()
+        )
 
         final_state_data = final_game_state.to_dict() if final_game_state.exists else {}
 
         # THIS ASSERTION SHOULD FAIL with current implementation
         # because combat mode doesn't have a second Firestore persist
         self.assertIn(
-            "pending_system_corrections", final_state_data,
+            "pending_system_corrections",
+            final_state_data,
             "PERSISTENCE BUG: pending_system_corrections not persisted for combat mode! "
             "Corrections detected during combat won't be available in next turn's prompt. "
             f"Final state keys: {list(final_state_data.keys())}",
@@ -854,10 +867,11 @@ class TestLLMSetCorrectionsPreservedEnd2End(unittest.TestCase):
         )
 
         # Import world_logic to call directly
-        from mvp_site import world_logic
-
         # Call process_action_unified in GOD mode (like the test scenario)
         import asyncio
+
+        from mvp_site import world_logic
+
         result = asyncio.run(
             world_logic.process_action_unified(
                 {
@@ -871,18 +885,23 @@ class TestLLMSetCorrectionsPreservedEnd2End(unittest.TestCase):
 
         # Verify the call succeeded
         self.assertNotIn(
-            "error", result,
+            "error",
+            result,
             f"process_action_unified failed: {result.get('error')}",
         )
 
         # CRITICAL CHECK: Verify corrections were PERSISTED to Firestore
         # Before fix: This would FAIL because corrections were popped after merge
         # After fix: This should PASS because corrections are preserved
-        final_game_state = fake_firestore.collection("users").document(
-            self.test_user_id
-        ).collection("campaigns").document(self.campaign_id).collection(
-            "game_states"
-        ).document("current_state").get()
+        final_game_state = (
+            fake_firestore.collection("users")
+            .document(self.test_user_id)
+            .collection("campaigns")
+            .document(self.campaign_id)
+            .collection("game_states")
+            .document("current_state")
+            .get()
+        )
 
         final_state_data = final_game_state.to_dict() if final_game_state.exists else {}
 
@@ -894,7 +913,8 @@ class TestLLMSetCorrectionsPreservedEnd2End(unittest.TestCase):
 
         # THIS ASSERTION verifies the fix
         self.assertIn(
-            "pending_system_corrections", final_state_data,
+            "pending_system_corrections",
+            final_state_data,
             f"LLM-set pending_system_corrections should be persisted to Firestore! "
             f"Before fix, corrections were popped at line 2036 after merge. "
             f"{debug_info}",

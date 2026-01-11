@@ -181,15 +181,15 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
             debug_mode_false_response["debug_info"] = mock_debug_info
 
         # ASSERTIONS for debug_mode=False
-        assert "state_updates" not in debug_mode_false_response, (
-            "state_updates should be excluded when debug_mode=False"
-        )
-        assert "entities_mentioned" not in debug_mode_false_response, (
-            "entities_mentioned should be excluded when debug_mode=False"
-        )
-        assert "debug_info" not in debug_mode_false_response, (
-            "debug_info should be excluded when debug_mode=False"
-        )
+        assert (
+            "state_updates" not in debug_mode_false_response
+        ), "state_updates should be excluded when debug_mode=False"
+        assert (
+            "entities_mentioned" not in debug_mode_false_response
+        ), "entities_mentioned should be excluded when debug_mode=False"
+        assert (
+            "debug_info" not in debug_mode_false_response
+        ), "debug_info should be excluded when debug_mode=False"
 
         # Test debug_mode=True includes debug fields
         debug_mode_true_response = {
@@ -206,15 +206,15 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
             debug_mode_true_response["debug_info"] = mock_debug_info
 
         # ASSERTIONS for debug_mode=True
-        assert "state_updates" in debug_mode_true_response, (
-            "state_updates should be included when debug_mode=True"
-        )
-        assert "entities_mentioned" in debug_mode_true_response, (
-            "entities_mentioned should be included when debug_mode=True"
-        )
-        assert "debug_info" in debug_mode_true_response, (
-            "debug_info should be included when debug_mode=True"
-        )
+        assert (
+            "state_updates" in debug_mode_true_response
+        ), "state_updates should be included when debug_mode=True"
+        assert (
+            "entities_mentioned" in debug_mode_true_response
+        ), "entities_mentioned should be included when debug_mode=True"
+        assert (
+            "debug_info" in debug_mode_true_response
+        ), "debug_info should be included when debug_mode=True"
 
         # Verify content is correct
         assert debug_mode_true_response["state_updates"] == {"hp": 8}
@@ -283,29 +283,29 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
                 unified_response["debug_info"] = mock_structured_response.debug_info
 
         # CRITICAL ASSERTIONS: Debug fields should be ABSENT when debug_mode=False
-        assert "state_updates" not in unified_response, (
-            "state_updates should NOT be in response when debug_mode=False"
-        )
-        assert "entities_mentioned" not in unified_response, (
-            "entities_mentioned should NOT be in response when debug_mode=False"
-        )
-        assert "debug_info" not in unified_response, (
-            "debug_info should NOT be in response when debug_mode=False"
-        )
+        assert (
+            "state_updates" not in unified_response
+        ), "state_updates should NOT be in response when debug_mode=False"
+        assert (
+            "entities_mentioned" not in unified_response
+        ), "entities_mentioned should NOT be in response when debug_mode=False"
+        assert (
+            "debug_info" not in unified_response
+        ), "debug_info should NOT be in response when debug_mode=False"
 
         # These should REMAIN
-        assert "location_confirmed" in unified_response, (
-            "location_confirmed should remain when debug_mode=False"
-        )
-        assert "planning_block" in unified_response, (
-            "planning_block should remain when debug_mode=False"
-        )
-        assert "dice_rolls" in unified_response, (
-            "dice_rolls should remain when debug_mode=False"
-        )
-        assert "resources" in unified_response, (
-            "resources should remain when debug_mode=False"
-        )
+        assert (
+            "location_confirmed" in unified_response
+        ), "location_confirmed should remain when debug_mode=False"
+        assert (
+            "planning_block" in unified_response
+        ), "planning_block should remain when debug_mode=False"
+        assert (
+            "dice_rolls" in unified_response
+        ), "dice_rolls should remain when debug_mode=False"
+        assert (
+            "resources" in unified_response
+        ), "resources should remain when debug_mode=False"
 
         # Now test debug_mode=True includes debug fields
         debug_mode = True
@@ -337,15 +337,15 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
                 )
 
         # CRITICAL ASSERTIONS: Debug fields should be PRESENT when debug_mode=True
-        assert "state_updates" in unified_response_debug_on, (
-            "state_updates should be in response when debug_mode=True"
-        )
-        assert "entities_mentioned" in unified_response_debug_on, (
-            "entities_mentioned should be in response when debug_mode=True"
-        )
-        assert "debug_info" in unified_response_debug_on, (
-            "debug_info should be in response when debug_mode=True"
-        )
+        assert (
+            "state_updates" in unified_response_debug_on
+        ), "state_updates should be in response when debug_mode=True"
+        assert (
+            "entities_mentioned" in unified_response_debug_on
+        ), "entities_mentioned should be in response when debug_mode=True"
+        assert (
+            "debug_info" in unified_response_debug_on
+        ), "debug_info should be in response when debug_mode=True"
 
         # Verify content
         assert unified_response_debug_on["state_updates"] == {"hp": 8}
@@ -376,9 +376,9 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
                 unified_response["state_updates"] = merged_state_changes
 
         # CRITICAL: state_updates should NOT be added even in character mode when debug_mode=False
-        assert "state_updates" not in unified_response, (
-            "state_updates should NOT be added in character mode when debug_mode=False"
-        )
+        assert (
+            "state_updates" not in unified_response
+        ), "state_updates should NOT be added in character mode when debug_mode=False"
 
         # Test that it works with debug_mode=True
         debug_mode = True
@@ -389,9 +389,9 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
             if debug_mode:
                 unified_response_debug_on["state_updates"] = merged_state_changes
 
-        assert "state_updates" in unified_response_debug_on, (
-            "state_updates should be added in character mode when debug_mode=True"
-        )
+        assert (
+            "state_updates" in unified_response_debug_on
+        ), "state_updates should be added in character mode when debug_mode=True"
 
 
 if __name__ == "__main__":

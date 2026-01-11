@@ -240,9 +240,7 @@ THINK_MODE_PREFIX = "THINK:"
 GOD_MODE_PREFIX = "GOD MODE:"
 
 
-from typing import Optional
-
-def is_god_mode(user_input: str, mode: Optional[str] = None) -> bool:
+def is_god_mode(user_input: str, mode: str | None = None) -> bool:
     """
     Centralized god mode detection.
 
@@ -266,7 +264,7 @@ def is_god_mode(user_input: str, mode: Optional[str] = None) -> bool:
     return normalized_mode == MODE_GOD or normalized_input.startswith(GOD_MODE_PREFIX)
 
 
-def is_think_mode(user_input: str, mode: Optional[str] = None) -> bool:
+def is_think_mode(user_input: str, mode: str | None = None) -> bool:
     """
     Centralized think mode detection.
 
@@ -294,16 +292,18 @@ def is_think_mode(user_input: str, mode: Optional[str] = None) -> bool:
 # Canonical set of combat phases indicating combat has ended
 # Used by RewardsAgent, world_logic enforcement, and state archival
 # IMPORTANT: This is the SINGLE SOURCE OF TRUTH - all combat phase checks must use this set
-COMBAT_FINISHED_PHASES = frozenset({
-    "ended",
-    "concluding",
-    "concluded",
-    "finished",
-    "complete",
-    "completed",
-    "resolved",
-    "victory",
-})
+COMBAT_FINISHED_PHASES = frozenset(
+    {
+        "ended",
+        "concluding",
+        "concluded",
+        "finished",
+        "complete",
+        "completed",
+        "resolved",
+        "victory",
+    }
+)
 
 # Mode switching detection phrases
 MODE_SWITCH_PHRASES = [
@@ -397,7 +397,7 @@ def uses_big_five(system):
     return False  # No current systems use Big Five
 
 
-def infer_provider_from_model(model_name: str, provider_hint: Optional[str] = None) -> str:
+def infer_provider_from_model(model_name: str, provider_hint: str | None = None) -> str:
     """Infer the LLM provider from a model name.
 
     This function automatically determines which provider should be used based on
@@ -511,7 +511,9 @@ LIVING_WORLD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, FILENAME_LIVING_WORLD)
 COMBAT_SYSTEM_INSTRUCTION_PATH = os.path.join(
     PROMPTS_DIR, "combat_system_instruction.md"
 )
-REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "rewards_system_instruction.md")
+REWARDS_SYSTEM_INSTRUCTION_PATH = os.path.join(
+    PROMPTS_DIR, "rewards_system_instruction.md"
+)
 RELATIONSHIP_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "relationship_instruction.md")
 REPUTATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "reputation_instruction.md")
 CHARACTER_CREATION_INSTRUCTION_PATH = os.path.join(
@@ -586,7 +588,7 @@ NEUTRAL_COMBATANT_TYPES: frozenset[str] = frozenset(
 
 # Generic/enemy roles that indicate a combatant can be removed after defeat
 # NPCs with these roles (or None/empty) are considered generic enemies
-GENERIC_ENEMY_ROLES: frozenset[Optional[str]] = frozenset(
+GENERIC_ENEMY_ROLES: frozenset[str | None] = frozenset(
     {
         None,  # No role assigned
         "",  # Empty role
@@ -601,7 +603,7 @@ GENERIC_ENEMY_ROLES: frozenset[Optional[str]] = frozenset(
 )
 
 
-def is_friendly_combatant(combatant_type: Optional[str]) -> bool:
+def is_friendly_combatant(combatant_type: str | None) -> bool:
     """Check if a combatant type indicates a friendly entity.
 
     Args:
@@ -620,7 +622,7 @@ def is_friendly_combatant(combatant_type: Optional[str]) -> bool:
     return normalized in FRIENDLY_COMBATANT_TYPES
 
 
-def is_generic_enemy_role(role: Optional[str]) -> bool:
+def is_generic_enemy_role(role: str | None) -> bool:
     """Check if a role indicates a generic/removable enemy.
 
     Args:

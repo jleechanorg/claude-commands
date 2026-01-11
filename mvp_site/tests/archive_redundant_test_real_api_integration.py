@@ -20,6 +20,7 @@ os.environ["USE_MOCKS"] = "true"
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
 class RealAPIIntegrationTest(unittest.TestCase):
     """Test real API integration between React V2 and Flask backend"""
 
@@ -54,9 +55,9 @@ class RealAPIIntegrationTest(unittest.TestCase):
             mock_response = mock_api_service.createCampaign(self.test_campaign_data)
 
             # This should no longer return the hardcoded mock ID
-            assert mock_response.get("campaign", {}).get("id") != "campaign-12345", (
-                "FAIL: Mock service still returning hardcoded campaign-12345"
-            )
+            assert (
+                mock_response.get("campaign", {}).get("id") != "campaign-12345"
+            ), "FAIL: Mock service still returning hardcoded campaign-12345"
 
             print("✅ Confirmed: Mock mode no longer returns hardcoded IDs")
         except ImportError:

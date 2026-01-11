@@ -65,14 +65,14 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             content = f.read()
 
         # This should FAIL - hardcoded names exist
-        assert "Ser Arion" not in content, (
-            "❌ HARDCODED CHARACTER: 'Ser Arion' found in CampaignCreationV2.tsx"
-        )
+        assert (
+            "Ser Arion" not in content
+        ), "❌ HARDCODED CHARACTER: 'Ser Arion' found in CampaignCreationV2.tsx"
 
         # Also check for other hardcoded character references
-        assert "Knight of the Silver Blade" not in content, (
-            "❌ HARDCODED CHARACTER: 'Knight of the Silver Blade' found in CampaignCreationV2.tsx"
-        )
+        assert (
+            "Knight of the Silver Blade" not in content
+        ), "❌ HARDCODED CHARACTER: 'Knight of the Silver Blade' found in CampaignCreationV2.tsx"
 
         print("✅ No hardcoded character names found in React components")
 
@@ -94,18 +94,18 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
         # This should PASS now - specific text clutter should be removed
         # Check for the actual clutter pattern that was removed, not just "intermediate" which is in code
-        assert 'span className="capitalize">{difficulty}</span>' not in content, (
-            "❌ TEXT CLUTTER: Difficulty display clutter found in CampaignList.tsx"
-        )
+        assert (
+            'span className="capitalize">{difficulty}</span>' not in content
+        ), "❌ TEXT CLUTTER: Difficulty display clutter found in CampaignList.tsx"
 
-        assert "• fantasy" not in content.lower(), (
-            "❌ TEXT CLUTTER: '• fantasy' text found in CampaignList.tsx"
-        )
+        assert (
+            "• fantasy" not in content.lower()
+        ), "❌ TEXT CLUTTER: '• fantasy' text found in CampaignList.tsx"
 
         # Verify the clean "Adventure Ready" replacement is present
-        assert "Adventure Ready" in content, (
-            "✅ Clean 'Adventure Ready' text should be present"
-        )
+        assert (
+            "Adventure Ready" in content
+        ), "✅ Clean 'Adventure Ready' text should be present"
 
         print("✅ No 'intermediate • fantasy' text clutter found")
 
@@ -126,14 +126,14 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             content = f.read()
 
         # This should FAIL - route not configured
-        assert "/campaign/:id" in content, (
-            "❌ MISSING ROUTE: /campaign/:id route not found in AppWithRouter.tsx"
-        )
+        assert (
+            "/campaign/:id" in content
+        ), "❌ MISSING ROUTE: /campaign/:id route not found in AppWithRouter.tsx"
 
         # Check that route has proper component
-        assert "CampaignPage" in content, (
-            "❌ MISSING COMPONENT: CampaignPage not found in routes"
-        )
+        assert (
+            "CampaignPage" in content
+        ), "❌ MISSING COMPONENT: CampaignPage not found in routes"
 
         print("✅ Campaign ID routing properly configured")
 
@@ -154,9 +154,9 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             content = f.read()
 
         # This should PASS - settings button exists in CampaignList
-        assert "Settings" in content, (
-            "❌ MISSING FEATURE: Settings button not found in CampaignList.tsx"
-        )
+        assert (
+            "Settings" in content
+        ), "❌ MISSING FEATURE: Settings button not found in CampaignList.tsx"
 
         # Check for settings icon or text
         settings_indicators = ["Settings", "settings", "⚙", "gear", "cog"]
@@ -164,9 +164,9 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             indicator in content for indicator in settings_indicators
         )
 
-        assert has_settings_indicator, (
-            "❌ MISSING FEATURE: No settings indicator found in CampaignList.tsx"
-        )
+        assert (
+            has_settings_indicator
+        ), "❌ MISSING FEATURE: No settings indicator found in CampaignList.tsx"
 
         print("✅ Settings button found in campaigns page")
 
@@ -205,9 +205,9 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
                     break
 
         # This should FAIL - sign out not implemented
-        assert sign_out_found, (
-            "❌ MISSING FEATURE: Sign-out functionality not found in any component"
-        )
+        assert (
+            sign_out_found
+        ), "❌ MISSING FEATURE: Sign-out functionality not found in any component"
 
         print("✅ Sign-out functionality found")
 
@@ -287,16 +287,16 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             content = f.read()
 
         # Verify clean display without clutter
-        assert "Adventure Ready" in content, (
-            "✅ Campaign cards show clean 'Adventure Ready' text"
-        )
+        assert (
+            "Adventure Ready" in content
+        ), "✅ Campaign cards show clean 'Adventure Ready' text"
 
         # Verify component shows meaningful campaign information
         meaningful_fields = ["title", "prompt"]
         for field in meaningful_fields:
-            assert field in content.lower(), (
-                f"✅ Campaign cards should display {field} information"
-            )
+            assert (
+                field in content.lower()
+            ), f"✅ Campaign cards should display {field} information"
 
         # This test passes when we have meaningful content without clutter
         print("✅ Campaign cards display user-meaningful information")
@@ -345,9 +345,9 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
                     )
 
         # Also check for the specific error-causing dependency array
-        assert ", mode]" not in content, (
-            "❌ INFINITE RENDER LOOP: useEffect dependency on 'mode' causes infinite re-renders"
-        )
+        assert (
+            ", mode]" not in content
+        ), "❌ INFINITE RENDER LOOP: useEffect dependency on 'mode' causes infinite re-renders"
 
         print("✅ GamePlayView has no infinite render loop patterns")
 
@@ -373,9 +373,9 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
         # This prevents infinite loops when mode changes via UI
 
         # Look for the corrected useEffect pattern
-        assert ", [campaignId]" in content, (
-            "✅ Initial content useEffect should only depend on campaignId, not mode"
-        )
+        assert (
+            ", [campaignId]" in content
+        ), "✅ Initial content useEffect should only depend on campaignId, not mode"
 
         # Mode should be passed as a parameter to API calls, not a dependency
         # This validates the fix prevents cascading re-renders
@@ -420,9 +420,9 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             )
 
             # Verify each character name is NOT hardcoded
-            assert scenario["character"] != "Ser Arion", (
-                f"✅ Custom character {scenario['character']} should not be replaced by hardcoded 'Ser Arion'"
-            )
+            assert (
+                scenario["character"] != "Ser Arion"
+            ), f"✅ Custom character {scenario['character']} should not be replaced by hardcoded 'Ser Arion'"
 
         print("✅ All test scenarios use custom character names, no hardcoding")
         print("✅ Integration workflow preserves user input throughout the process")

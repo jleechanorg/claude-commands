@@ -39,9 +39,9 @@ class TestNarrativeFieldClean(unittest.TestCase):
                 found_patterns.append(pattern)
 
         # We expect to find some patterns in this bad example
-        assert len(found_patterns) > 0, (
-            "Should detect debug tags in bad narrative example"
-        )
+        assert (
+            len(found_patterns) > 0
+        ), "Should detect debug tags in bad narrative example"
 
     def test_clean_narrative_passes(self):
         """Test that clean narrative passes validation."""
@@ -58,9 +58,9 @@ class TestNarrativeFieldClean(unittest.TestCase):
         # Check narrative is clean
         narrative = good_response.get("narrative", "")
         for pattern in self.FORBIDDEN_PATTERNS:
-            assert re.search(pattern, narrative) is None, (
-                f"Narrative field should not contain: {pattern}"
-            )
+            assert (
+                re.search(pattern, narrative) is None
+            ), f"Narrative field should not contain: {pattern}"
 
     def test_state_updates_in_correct_field(self):
         """Test that state updates are in state_updates field, not narrative."""

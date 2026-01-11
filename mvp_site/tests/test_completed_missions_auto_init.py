@@ -10,7 +10,6 @@ Bug Context:
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
 
 from mvp_site.firestore_service import update_state_with_changes
 
@@ -201,8 +200,11 @@ class TestCompletedMissionsAutoInit(unittest.TestCase):
 
         # CRITICAL: completed_missions must be auto-initialized
         # even though active_missions went through smart conversion
-        self.assertIn("completed_missions", result,
-                     "Auto-init must work even with dict active_missions (smart conversion)")
+        self.assertIn(
+            "completed_missions",
+            result,
+            "Auto-init must work even with dict active_missions (smart conversion)",
+        )
         self.assertIsInstance(result["completed_missions"], list)
         self.assertEqual(result["completed_missions"], [])
 

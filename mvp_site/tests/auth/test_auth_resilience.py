@@ -45,17 +45,17 @@ class AuthResilienceTest(unittest.TestCase):
         api_js_content = api_js_file.read_text()
 
         # 🔴 RED: Check that auto-retry logic exists
-        assert "retryCount" in api_js_content, (
-            "FAIL: No retry count parameter found - auto-retry not implemented"
-        )
+        assert (
+            "retryCount" in api_js_content
+        ), "FAIL: No retry count parameter found - auto-retry not implemented"
 
-        assert "Token used too early" in api_js_content, (
-            "FAIL: No clock skew detection found"
-        )
+        assert (
+            "Token used too early" in api_js_content
+        ), "FAIL: No clock skew detection found"
 
-        assert "isClockSkewError" in api_js_content, (
-            "FAIL: No clock skew error detection logic found"
-        )
+        assert (
+            "isClockSkewError" in api_js_content
+        ), "FAIL: No clock skew error detection logic found"
 
         assert "forceRefresh" in api_js_content, "FAIL: No token refresh forcing found"
 
@@ -64,17 +64,17 @@ class AuthResilienceTest(unittest.TestCase):
             "response.status === 401" in api_js_content
             and "retryCount < 2" in api_js_content
         )
-        assert retry_pattern_found, (
-            "FAIL: No 401 retry logic found - won't auto-recover from auth failures"
-        )
+        assert (
+            retry_pattern_found
+        ), "FAIL: No 401 retry logic found - won't auto-recover from auth failures"
 
         # 🔴 RED: Check that recursive retry call exists
         recursive_retry_found = (
             "fetchApi(path, options, retryCount + 1)" in api_js_content
         )
-        assert recursive_retry_found, (
-            "FAIL: No recursive retry call found - won't actually retry"
-        )
+        assert (
+            recursive_retry_found
+        ), "FAIL: No recursive retry call found - won't actually retry"
 
         print("✅ Auto-retry mechanism implementation found")
 
@@ -113,24 +113,24 @@ class AuthResilienceTest(unittest.TestCase):
         app_js_content = app_js_file.read_text()
 
         # 🔴 RED: Check for specific error message improvements
-        assert "Authentication timing issue detected" in app_js_content, (
-            "FAIL: No user-friendly clock skew message found"
-        )
+        assert (
+            "Authentication timing issue detected" in app_js_content
+        ), "FAIL: No user-friendly clock skew message found"
 
-        assert "Would you like to try again?" in app_js_content, (
-            "FAIL: No retry option offered to user"
-        )
+        assert (
+            "Would you like to try again?" in app_js_content
+        ), "FAIL: No retry option offered to user"
 
         assert "showRetryOption" in app_js_content, "FAIL: No retry option logic found"
 
         # 🔴 RED: Check for different error categories
-        assert "Network connection issue" in app_js_content, (
-            "FAIL: No network error categorization found"
-        )
+        assert (
+            "Network connection issue" in app_js_content
+        ), "FAIL: No network error categorization found"
 
-        assert "Authentication issue" in app_js_content, (
-            "FAIL: No auth error categorization found"
-        )
+        assert (
+            "Authentication issue" in app_js_content
+        ), "FAIL: No auth error categorization found"
 
         print("✅ User-friendly error messaging implementation found")
 
@@ -144,22 +144,22 @@ class AuthResilienceTest(unittest.TestCase):
         app_js_content = app_js_file.read_text()
 
         # 🔴 RED: Check for localStorage caching implementation
-        assert "localStorage.setItem('cachedCampaigns'" in app_js_content, (
-            "FAIL: No campaign caching found"
-        )
+        assert (
+            "localStorage.setItem('cachedCampaigns'" in app_js_content
+        ), "FAIL: No campaign caching found"
 
-        assert "localStorage.getItem('cachedCampaigns')" in app_js_content, (
-            "FAIL: No cached campaign retrieval found"
-        )
+        assert (
+            "localStorage.getItem('cachedCampaigns')" in app_js_content
+        ), "FAIL: No cached campaign retrieval found"
 
-        assert "Offline Mode:" in app_js_content, (
-            "FAIL: No offline mode user notification found"
-        )
+        assert (
+            "Offline Mode:" in app_js_content
+        ), "FAIL: No offline mode user notification found"
 
         # 🔴 RED: Check for cache fallback logic
-        assert "cachedCampaigns" in app_js_content, (
-            "FAIL: No cache fallback implementation found"
-        )
+        assert (
+            "cachedCampaigns" in app_js_content
+        ), "FAIL: No cache fallback implementation found"
 
         print("✅ Offline campaign caching implementation found")
 
@@ -173,26 +173,26 @@ class AuthResilienceTest(unittest.TestCase):
         api_js_content = api_js_file.read_text()
 
         # 🔴 RED: Check for connection monitoring
-        assert "navigator.onLine" in api_js_content, (
-            "FAIL: No online status monitoring found"
-        )
+        assert (
+            "navigator.onLine" in api_js_content
+        ), "FAIL: No online status monitoring found"
 
-        assert "connectionStatus" in api_js_content, (
-            "FAIL: No connection status tracking found"
-        )
+        assert (
+            "connectionStatus" in api_js_content
+        ), "FAIL: No connection status tracking found"
 
-        assert "getConnectionStatus" in api_js_content, (
-            "FAIL: No connection status getter function found"
-        )
+        assert (
+            "getConnectionStatus" in api_js_content
+        ), "FAIL: No connection status getter function found"
 
         # 🔴 RED: Check for network event listeners
-        assert "addEventListener('online'" in api_js_content, (
-            "FAIL: No online event listener found"
-        )
+        assert (
+            "addEventListener('online'" in api_js_content
+        ), "FAIL: No online event listener found"
 
-        assert "addEventListener('offline'" in api_js_content, (
-            "FAIL: No offline event listener found"
-        )
+        assert (
+            "addEventListener('offline'" in api_js_content
+        ), "FAIL: No offline event listener found"
 
         print("✅ Connection status monitoring implementation found")
 

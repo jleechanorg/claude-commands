@@ -27,6 +27,7 @@ for path in (PROJECT_ROOT, MVP_SITE_ROOT):
 
 
 from main import create_app  # noqa: E402
+
 from mvp_site import constants  # noqa: E402
 from tests.fake_firestore import FakeFirestoreClient  # noqa: E402
 
@@ -92,16 +93,16 @@ class TestSpicyModeEndToEnd(unittest.TestCase):
         verify_settings = json.loads(verify_resp.data)
 
         assert verify_settings["spicy_mode"] is True, "spicy_mode should be True"
-        assert verify_settings["llm_provider"] == "openrouter", (
-            "Provider should be openrouter"
-        )
-        assert verify_settings["openrouter_model"] == SPICY_MODEL, (
-            f"Model should be {SPICY_MODEL}, got {verify_settings.get('openrouter_model')}"
-        )
+        assert (
+            verify_settings["llm_provider"] == "openrouter"
+        ), "Provider should be openrouter"
+        assert (
+            verify_settings["openrouter_model"] == SPICY_MODEL
+        ), f"Model should be {SPICY_MODEL}, got {verify_settings.get('openrouter_model')}"
         assert "pre_spicy_model" in verify_settings, "pre_spicy_model should be saved"
-        assert "pre_spicy_provider" in verify_settings, (
-            "pre_spicy_provider should be saved"
-        )
+        assert (
+            "pre_spicy_provider" in verify_settings
+        ), "pre_spicy_provider should be saved"
 
     def test_disable_spicy_mode_restores_previous_model(self):
         """Disabling spicy mode should restore the previous model and provider."""
@@ -139,12 +140,12 @@ class TestSpicyModeEndToEnd(unittest.TestCase):
         final_settings = json.loads(final_resp.data)
 
         assert final_settings["spicy_mode"] is False, "spicy_mode should be False"
-        assert final_settings["llm_provider"] == "gemini", (
-            "Provider should be restored to gemini"
-        )
-        assert final_settings["gemini_model"] == DEFAULT_GEMINI_MODEL, (
-            f"Model should be restored to {DEFAULT_GEMINI_MODEL}"
-        )
+        assert (
+            final_settings["llm_provider"] == "gemini"
+        ), "Provider should be restored to gemini"
+        assert (
+            final_settings["gemini_model"] == DEFAULT_GEMINI_MODEL
+        ), f"Model should be restored to {DEFAULT_GEMINI_MODEL}"
 
     def test_spicy_mode_preserves_openrouter_user_preference(self):
         """If user was already on OpenRouter, disabling spicy should restore that."""

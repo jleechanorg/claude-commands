@@ -48,13 +48,14 @@ class TestJsonSchemaSupport:
         # Should use json_schema (not legacy json_object) with strict:false
         # strict:false allows dynamic choice keys in planning_block
         response_format = captured["json"]["response_format"]
-        assert response_format["type"] == "json_schema", (
+        assert response_format.get("type") == "json_schema", (
             f"Expected json_schema but got {response_format.get('type')}"
         )
-        assert "json_schema" in response_format, "Missing json_schema field"
-        assert response_format["json_schema"].get("strict") is False, (
-            "json_schema must have strict:false to allow dynamic choice keys"
-        )
+        json_schema = response_format.get("json_schema")
+        assert isinstance(json_schema, dict), "Missing json_schema field"
+        assert (
+            json_schema.get("strict") is False
+        ), "json_schema must have strict:false to allow dynamic choice keys"
 
     def test_json_schema_has_narrative_response_structure(self, monkeypatch):
         """Verify json_schema includes NarrativeResponse fields."""
@@ -83,21 +84,21 @@ class TestJsonSchemaSupport:
 
         # Must have core NarrativeResponse fields
         assert "narrative" in properties, "Schema must include 'narrative' field"
-        assert "planning_block" in properties, (
-            "Schema must include 'planning_block' field"
-        )
+        assert (
+            "planning_block" in properties
+        ), "Schema must include 'planning_block' field"
         assert properties["planning_block"].get("type") == "object"
-        assert "entities_mentioned" in properties, (
-            "Schema must include 'entities_mentioned' field"
-        )
-        assert "state_updates" in properties, (
-            "Schema must include 'state_updates' field"
-        )
+        assert (
+            "entities_mentioned" in properties
+        ), "Schema must include 'entities_mentioned' field"
+        assert (
+            "state_updates" in properties
+        ), "Schema must include 'state_updates' field"
         assert "turn_summary" in properties, "Schema must include 'turn_summary' field"
         assert "debug_info" in properties, "Schema must include 'debug_info' field"
-        assert "god_mode_response" in properties, (
-            "Schema must include 'god_mode_response' field"
-        )
+        assert (
+            "god_mode_response" in properties
+        ), "Schema must include 'god_mode_response' field"
 
     def test_detects_schema_echo_response(self, monkeypatch):
         """Detect when API returns schema config instead of content."""
@@ -157,9 +158,9 @@ class TestJsonSchemaSupport:
             "narrative": "unwrapped content",
             "entities_mentioned": [],
         }, f"Expected unwrapped structure but got {parsed}"
-        assert "type" not in parsed, (
-            "Unwrapped response should not contain 'type' field"
-        )
+        assert (
+            "type" not in parsed
+        ), "Unwrapped response should not contain 'type' field"
 
     @pytest.mark.parametrize(
         "model_name",
@@ -192,7 +193,7 @@ class TestJsonSchemaSupport:
         )
 
         response_format = captured["json"]["response_format"]
-        assert response_format["type"] == "json_schema", (
+        assert response_format.get("type") == "json_schema", (
             f"Model {model_name} should use json_schema"
         )
 

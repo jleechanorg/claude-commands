@@ -72,14 +72,14 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         # Verify all God mode choices have "god:" prefix
         choices = response_obj.planning_block.get("choices", {})
         for choice_key in choices:
-            assert choice_key.startswith("god:"), (
-                f"Choice key '{choice_key}' must start with 'god:' prefix"
-            )
+            assert choice_key.startswith(
+                "god:"
+            ), f"Choice key '{choice_key}' must start with 'god:' prefix"
 
         # Verify mandatory "god:return_story" choice exists
-        assert "god:return_story" in choices, (
-            "Must include 'god:return_story' as default choice"
-        )
+        assert (
+            "god:return_story" in choices
+        ), "Must include 'god:return_story' as default choice"
         assert (
             choices["god:return_story"].get("switch_to_story_mode") is True
         ), "god:return_story should explicitly switch to story/character mode"
@@ -140,9 +140,9 @@ class TestGodModePlanningBlocks(unittest.TestCase):
 
         choices = response_obj.planning_block.get("choices", {})
         assert choices, "Think mode choices should be parsed"
-        assert all(key.startswith("think:") for key in choices), (
-            f"All choices should use think: prefix, got: {list(choices)}"
-        )
+        assert all(
+            key.startswith("think:") for key in choices
+        ), f"All choices should use think: prefix, got: {list(choices)}"
 
     def test_god_mode_without_planning_block(self):
         """Test that God mode responses without choices don't require planning blocks."""

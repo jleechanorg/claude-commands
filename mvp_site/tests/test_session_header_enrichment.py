@@ -5,7 +5,7 @@ import types
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def world_logic_module():
     modules_to_clear = ["mvp_site.world_logic"]
     backup_modules = {name: sys.modules.get(name) for name in modules_to_clear}

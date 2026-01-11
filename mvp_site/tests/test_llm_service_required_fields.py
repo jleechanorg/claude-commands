@@ -638,9 +638,9 @@ def test_build_reprompt_includes_tool_results_when_available():
     )
 
     # The reprompt should mention the tool results
-    assert "17" in reprompt or "tool" in reprompt.lower(), (
-        "Reprompt MUST include tool_results context to prevent dice fabrication"
-    )
+    assert (
+        "17" in reprompt or "tool" in reprompt.lower()
+    ), "Reprompt MUST include tool_results context to prevent dice fabrication"
 
 
 def test_build_reprompt_dice_integrity_code_execution_only():

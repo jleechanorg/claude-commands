@@ -17,7 +17,7 @@ from .service_provider import TestServiceProvider
 # ============================================================================
 
 
-@pytest.fixture
+@pytest.fixture()
 def service_provider() -> Generator[TestServiceProvider, None, None]:
     """Provide appropriate service provider based on TEST_MODE.
 
@@ -33,31 +33,31 @@ def service_provider() -> Generator[TestServiceProvider, None, None]:
         provider.cleanup()
 
 
-@pytest.fixture
+@pytest.fixture()
 def firestore_client(service_provider: TestServiceProvider):
     """Provide Firestore client (mock or real) based on TEST_MODE."""
     return service_provider.get_firestore()
 
 
-@pytest.fixture
+@pytest.fixture()
 def gemini_client(service_provider: TestServiceProvider):
     """Provide Gemini client (mock or real) based on TEST_MODE."""
     return service_provider.get_gemini()
 
 
-@pytest.fixture
+@pytest.fixture()
 def auth_service(service_provider: TestServiceProvider):
     """Provide auth service (mock or real) based on TEST_MODE."""
     return service_provider.get_auth()
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_mode() -> str:
     """Get current test mode from environment."""
     return os.getenv("TEST_MODE", "mock")
 
 
-@pytest.fixture
+@pytest.fixture()
 def is_real_service(service_provider: TestServiceProvider) -> bool:
     """Check if using real services."""
     return service_provider.is_real_service

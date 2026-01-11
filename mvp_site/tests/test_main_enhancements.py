@@ -13,7 +13,7 @@ HAS_MAIN_APP = True
 IMPORT_ERROR = None
 
 
-@pytest.fixture
+@pytest.fixture()
 def client():
     """Flask test client fixture with proper error handling"""
     app.config["TESTING"] = True
@@ -52,9 +52,9 @@ def test_time_endpoint_exists(client):
         "timestamp",
     ]
     present_keys = [k for k in time_keys if k in data]
-    assert present_keys, (
-        f"Missing expected time keys in response. Expected one of: {time_keys}"
-    )
+    assert (
+        present_keys
+    ), f"Missing expected time keys in response. Expected one of: {time_keys}"
 
     # Validate at least one key has a valid time value
     for key in present_keys:
@@ -277,9 +277,9 @@ def test_mcp_http_boolean_logic_matrix():
             # Simulate when flag is provided with specific value
             skip_mcp_http = not mcp_http_val if mcp_http_val is not None else True
 
-        assert skip_mcp_http == expected_skip, (
-            f"Failed for mcp_http={mcp_http_val}, is_none={is_none}"
-        )
+        assert (
+            skip_mcp_http == expected_skip
+        ), f"Failed for mcp_http={mcp_http_val}, is_none={is_none}"
 
 
 @patch("mvp_site.main.create_app")

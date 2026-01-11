@@ -4,11 +4,17 @@ Test UI display of structured fields using proper test mode.
 This test uses the ?test_mode=true URL parameter to bypass authentication.
 """
 
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Manual browser test - requires localhost:8081/8082 and local UI setup"
+)
+
 import os
 import sys
 import time
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -172,7 +178,7 @@ def test_mobile_responsive_choice_id_sizing():
             try:
                 page.wait_for_selector(".choice-id", timeout=20000)
                 print("✓ Planning blocks with choice-id elements found")
-            except:
+            except PlaywrightTimeoutError:
                 print("⚠️ No choice-id elements found, may need to interact with story")
                 # Try to continue story to trigger planning blocks
                 if page.locator("button:has-text('Continue')").count() > 0:
@@ -313,9 +319,9 @@ def test_campaign_wizard_functionality():
 
                 # Test campaign title input
                 title_input = page.locator("#wizard-campaign-title")
-                assert title_input.is_visible(), (
-                    "Campaign title input should be visible"
-                )
+                assert (
+                    title_input.is_visible()
+                ), "Campaign title input should be visible"
                 title_input.fill("Wizard Test Campaign")
                 print("✓ Campaign title filled")
 
@@ -323,9 +329,9 @@ def test_campaign_wizard_functionality():
                 dragon_knight_radio = page.locator("#wizard-dragon-knight-campaign")
                 custom_radio = page.locator("#wizard-customCampaign")
 
-                assert dragon_knight_radio.is_checked(), (
-                    "Dragon Knight should be selected by default"
-                )
+                assert (
+                    dragon_knight_radio.is_checked()
+                ), "Dragon Knight should be selected by default"
                 print("✓ Dragon Knight campaign type is default")
 
                 # Test character input field
@@ -338,9 +344,9 @@ def test_campaign_wizard_functionality():
 
                 # Test the key field mentioned in scratchpad: wizard-setting-input
                 setting_input = page.locator("#wizard-setting-input")
-                assert setting_input.is_visible(), (
-                    "Setting input (wizard-setting-input) should be visible"
-                )
+                assert (
+                    setting_input.is_visible()
+                ), "Setting input (wizard-setting-input) should be visible"
 
                 # Check auto-generation placeholder
                 setting_placeholder = setting_input.get_attribute("placeholder")

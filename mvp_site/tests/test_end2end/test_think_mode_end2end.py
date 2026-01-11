@@ -168,9 +168,7 @@ class TestThinkModeEnd2End(unittest.TestCase):
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_think_mode_returns_planning_block(
-        self, mock_gemini_generate, mock_get_db
-    ):
+    def test_think_mode_returns_planning_block(self, mock_gemini_generate, mock_get_db):
         """
         Test that THINK MODE commands return planning_block with choices.
 
@@ -195,18 +193,20 @@ class TestThinkModeEnd2End(unittest.TestCase):
         # Make THINK MODE request (mode='think' with THINK: prefix added by frontend)
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "THINK:What are my options for entering the dungeon?",
-                "mode": "think"
-            }),
+            data=json.dumps(
+                {
+                    "input": "THINK:What are my options for entering the dungeon?",
+                    "mode": "think",
+                }
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify response
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
         data = json.loads(response.data)
 
         # Verify planning_block is present in the response
@@ -248,35 +248,36 @@ class TestThinkModeEnd2End(unittest.TestCase):
             "planning_block": {
                 "thinking": "Player is exploring",
                 "choices": {
-                    "explore": {"text": "Explore", "description": "Look around", "risk_level": "low"}
-                }
+                    "explore": {
+                        "text": "Explore",
+                        "description": "Look around",
+                        "risk_level": "low",
+                    }
+                },
             },
         }
-        mock_gemini_generate.return_value = FakeLLMResponse(json.dumps(char_mode_response))
+        mock_gemini_generate.return_value = FakeLLMResponse(
+            json.dumps(char_mode_response)
+        )
 
         # Make CHARACTER MODE request - this calls _enforce_rewards_processed_flag
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "I enter the dungeon",
-                "mode": "character"
-            }),
+            data=json.dumps({"input": "I enter the dungeon", "mode": "character"}),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # This is the key assertion - if the bug exists, we get 400 error
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_think_mode_uses_planning_agent(
-        self, mock_gemini_generate, mock_get_db
-    ):
+    def test_think_mode_uses_planning_agent(self, mock_gemini_generate, mock_get_db):
         """Test that THINK MODE uses PlanningAgent with think mode prompts."""
 
         # Set up fake Firestore
@@ -294,18 +295,17 @@ class TestThinkModeEnd2End(unittest.TestCase):
         # Make THINK MODE request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "THINK:Should I attack or retreat?",
-                "mode": "think"
-            }),
+            data=json.dumps(
+                {"input": "THINK:Should I attack or retreat?", "mode": "think"}
+            ),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify request succeeded
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
 
         # Verify Gemini was called
         assert mock_gemini_generate.call_count >= 1, "LLM should be called"
@@ -330,17 +330,18 @@ class TestThinkModeEnd2End(unittest.TestCase):
             # Think mode should NOT have full narrative generation language
             # (though it may have some basic state info)
             has_full_narrative_prompt = (
-                "Master Game Weaver" in all_args_str
-                and "living_world" in all_args_str
+                "Master Game Weaver" in all_args_str and "living_world" in all_args_str
             )
 
             # Positive assertion: THINK mode prompts must be present
-            assert has_think_mode_prompt, (
-                f"THINK MODE prompt not found in call args: {all_args_str[:500]}"
-            )
+            assert (
+                has_think_mode_prompt
+            ), f"THINK MODE prompt not found in call args: {all_args_str[:500]}"
 
-            if has_full_narrative_prompt and not has_think_mode_prompt:
-                self.fail("THINK MODE should use think mode prompts, not full narrative")
+            # Negative assertion: THINK mode should avoid full narrative system prompt
+            assert (
+                not has_full_narrative_prompt
+            ), f"Full narrative prompt found in THINK mode call args: {all_args_str[:500]}"
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -379,24 +380,21 @@ class TestThinkModeEnd2End(unittest.TestCase):
         # Make THINK MODE request
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
-            data=json.dumps({
-                "input": "THINK:What should I do next?",
-                "mode": "think"
-            }),
+            data=json.dumps({"input": "THINK:What should I do next?", "mode": "think"}),
             content_type="application/json",
             headers=self.test_headers,
         )
 
         # Verify request succeeded
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data.decode('utf-8')}"
 
         # Verify player_turn was NOT incremented (think mode freezes time)
         final_state = game_state_ref.get().to_dict()
-        assert final_state.get("player_turn") == 5, (
-            f"player_turn should stay at 5 in Think Mode, got {final_state.get('player_turn')}"
-        )
+        assert (
+            final_state.get("player_turn") == 5
+        ), f"player_turn should stay at 5 in Think Mode, got {final_state.get('player_turn')}"
 
 
 if __name__ == "__main__":

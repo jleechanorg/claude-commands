@@ -126,34 +126,34 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         # Verify the fix is working
 
         # The defeated enemy should be completely removed from combat
-        assert "Orc Warrior" not in final_state_dict["combat_state"]["combatants"], (
-            "Defeated enemy should be removed from combatants after HP=0 update"
-        )
+        assert (
+            "Orc Warrior" not in final_state_dict["combat_state"]["combatants"]
+        ), "Defeated enemy should be removed from combatants after HP=0 update"
 
         # The defeated enemy should be removed from initiative order
         initiative_names = [
             entry["name"]
             for entry in final_state_dict["combat_state"]["initiative_order"]
         ]
-        assert "Orc Warrior" not in initiative_names, (
-            "Defeated enemy should be removed from initiative order"
-        )
+        assert (
+            "Orc Warrior" not in initiative_names
+        ), "Defeated enemy should be removed from initiative order"
 
         # The defeated enemy should be removed from NPC data
-        assert "Orc Warrior" not in final_state_dict["npc_data"], (
-            "Defeated enemy should be removed from NPC data"
-        )
+        assert (
+            "Orc Warrior" not in final_state_dict["npc_data"]
+        ), "Defeated enemy should be removed from NPC data"
 
         # Living entities should remain
-        assert "Hero" in final_state_dict["combat_state"]["combatants"], (
-            "Hero should remain in combat"
-        )
-        assert "Goblin" in final_state_dict["combat_state"]["combatants"], (
-            "Living enemy should remain in combat"
-        )
-        assert "Merchant" in final_state_dict["npc_data"], (
-            "Non-combat NPC should remain in NPC data"
-        )
+        assert (
+            "Hero" in final_state_dict["combat_state"]["combatants"]
+        ), "Hero should remain in combat"
+        assert (
+            "Goblin" in final_state_dict["combat_state"]["combatants"]
+        ), "Living enemy should remain in combat"
+        assert (
+            "Merchant" in final_state_dict["npc_data"]
+        ), "Non-combat NPC should remain in NPC data"
 
     def test_combat_end_with_pre_defeated_enemies(self):
         """
@@ -231,26 +231,26 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         # Verify expectations
 
         # Combat should be properly ended
-        assert not final_state_dict["combat_state"]["in_combat"], (
-            "Combat should be ended"
-        )
+        assert not final_state_dict["combat_state"][
+            "in_combat"
+        ], "Combat should be ended"
 
         # The pre-defeated enemy should be cleaned up when combat ends
-        assert "Dead Orc" not in final_state_dict["combat_state"]["combatants"], (
-            "Pre-defeated enemies should be cleaned up when combat ends"
-        )
+        assert (
+            "Dead Orc" not in final_state_dict["combat_state"]["combatants"]
+        ), "Pre-defeated enemies should be cleaned up when combat ends"
 
-        assert "Dead Orc" not in final_state_dict["npc_data"], (
-            "Pre-defeated enemies should be removed from NPC data"
-        )
+        assert (
+            "Dead Orc" not in final_state_dict["npc_data"]
+        ), "Pre-defeated enemies should be removed from NPC data"
 
         # Living entities should remain
-        assert "Player" in final_state_dict["combat_state"]["combatants"], (
-            "Player should remain"
-        )
-        assert "Living Wolf" in final_state_dict["combat_state"]["combatants"], (
-            "Living companion should remain"
-        )
+        assert (
+            "Player" in final_state_dict["combat_state"]["combatants"]
+        ), "Player should remain"
+        assert (
+            "Living Wolf" in final_state_dict["combat_state"]["combatants"]
+        ), "Living companion should remain"
 
     def test_multiple_enemies_defeated_same_turn(self):
         """
@@ -342,30 +342,30 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         # Verify cleanup worked correctly
 
         # Both goblins should be removed
-        assert "Goblin A" not in final_state_dict["combat_state"]["combatants"], (
-            "First defeated enemy should be removed"
-        )
-        assert "Goblin B" not in final_state_dict["combat_state"]["combatants"], (
-            "Second defeated enemy should be removed"
-        )
+        assert (
+            "Goblin A" not in final_state_dict["combat_state"]["combatants"]
+        ), "First defeated enemy should be removed"
+        assert (
+            "Goblin B" not in final_state_dict["combat_state"]["combatants"]
+        ), "Second defeated enemy should be removed"
 
-        assert "Goblin A" not in final_state_dict["npc_data"], (
-            "First defeated enemy should be removed from NPCs"
-        )
-        assert "Goblin B" not in final_state_dict["npc_data"], (
-            "Second defeated enemy should be removed from NPCs"
-        )
+        assert (
+            "Goblin A" not in final_state_dict["npc_data"]
+        ), "First defeated enemy should be removed from NPCs"
+        assert (
+            "Goblin B" not in final_state_dict["npc_data"]
+        ), "Second defeated enemy should be removed from NPCs"
 
         # Survivors should remain
-        assert "Wizard" in final_state_dict["combat_state"]["combatants"], (
-            "PC should remain"
-        )
-        assert "Orc Chief" in final_state_dict["combat_state"]["combatants"], (
-            "Wounded but living enemy should remain"
-        )
-        assert "Village Elder" in final_state_dict["npc_data"], (
-            "Non-combat NPC should remain"
-        )
+        assert (
+            "Wizard" in final_state_dict["combat_state"]["combatants"]
+        ), "PC should remain"
+        assert (
+            "Orc Chief" in final_state_dict["combat_state"]["combatants"]
+        ), "Wounded but living enemy should remain"
+        assert (
+            "Village Elder" in final_state_dict["npc_data"]
+        ), "Non-combat NPC should remain"
 
         # Verify wounded enemy has correct HP
         assert (
@@ -437,13 +437,13 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
 
         # Even though we didn't explicitly change combatants, the cleanup should still
         # notice the defeated enemy and remove it
-        assert "Troll" not in final_state_dict["combat_state"]["combatants"], (
-            "Pre-defeated enemies should be cleaned up even without explicit combatant changes"
-        )
+        assert (
+            "Troll" not in final_state_dict["combat_state"]["combatants"]
+        ), "Pre-defeated enemies should be cleaned up even without explicit combatant changes"
 
-        assert "Troll" not in final_state_dict["npc_data"], (
-            "Pre-defeated enemies should be removed from NPCs"
-        )
+        assert (
+            "Troll" not in final_state_dict["npc_data"]
+        ), "Pre-defeated enemies should be removed from NPCs"
 
         # Turn progression should work normally
         assert final_state_dict["combat_state"]["current_turn_index"] == 1

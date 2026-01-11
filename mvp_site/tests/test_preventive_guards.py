@@ -6,7 +6,7 @@ from mvp_site.llm_response import LLMResponse
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
-@pytest.fixture
+@pytest.fixture()
 def base_game_state():
     state = GameState(user_id="user-123")
     # Seed time data so we can verify preservation

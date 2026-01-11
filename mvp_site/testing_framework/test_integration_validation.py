@@ -86,9 +86,9 @@ class TestFrameworkIntegration(BaseTestCase):
                 # Real Gemini - should get actual response
                 assert response is not None, "Should get real response from Gemini"
                 # Real responses typically have text content
-                assert hasattr(response, "text") or hasattr(response, "content"), (
-                    "Response should have text content"
-                )
+                assert hasattr(response, "text") or hasattr(
+                    response, "content"
+                ), "Response should have text content"
                 print("✅ Real Gemini operations working")
             else:
                 # Mock Gemini - should get mock response
@@ -211,9 +211,9 @@ class TestResourceManagement(BaseTestCase):
         # Store test-specific data
         if hasattr(self, "_previous_test_id"):
             # This is not the first test method
-            assert test_id != self._previous_test_id, (
-                "Should get fresh provider instance"
-            )
+            assert (
+                test_id != self._previous_test_id
+            ), "Should get fresh provider instance"
 
         self._previous_test_id = test_id
         print("✅ Test isolation working")

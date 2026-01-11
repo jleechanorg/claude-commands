@@ -173,7 +173,9 @@ class TestCaptureRawEnvVariable(unittest.TestCase):
         try:
             os.environ["CAPTURE_RAW_LLM"] = "false"
             capture_raw = os.getenv("CAPTURE_RAW_LLM", "true").lower() == "true"
-            self.assertFalse(capture_raw, "CAPTURE_RAW_LLM=false should disable capture")
+            self.assertFalse(
+                capture_raw, "CAPTURE_RAW_LLM=false should disable capture"
+            )
         finally:
             if original is not None:
                 os.environ["CAPTURE_RAW_LLM"] = original

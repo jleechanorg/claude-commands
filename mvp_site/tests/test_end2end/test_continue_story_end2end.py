@@ -127,9 +127,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # Verify response - with auth stubbed, should get 200
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         # Verify story data structure
@@ -145,9 +145,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         assert found_narrative, "Expected narrative not found in response"
 
         # Verify Gemini (default provider) was called at least once
-        assert mock_gemini_generate.call_count >= 1, (
-            "Gemini native two-phase provider should be invoked as the default"
-        )
+        assert (
+            mock_gemini_generate.call_count >= 1
+        ), "Gemini native two-phase provider should be invoked as the default"
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -252,21 +252,21 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
 
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         god_mode_response = data.get("god_mode_response", "")
-        assert "TEMPORAL ANOMALY DETECTED" in god_mode_response, (
-            f"Expected temporal anomaly warning, got: {god_mode_response}"
-        )
-        assert "Dice Retry Notice" in god_mode_response, (
-            "Expected dice retry notice to appear under temporal anomaly warning"
-        )
-        assert mock_gemini_generate.call_count == 2, (
-            "Reprompt should trigger a second LLM call for dice retry"
-        )
+        assert (
+            "TEMPORAL ANOMALY DETECTED" in god_mode_response
+        ), f"Expected temporal anomaly warning, got: {god_mode_response}"
+        assert (
+            "Dice Retry Notice" in god_mode_response
+        ), "Expected dice retry notice to appear under temporal anomaly warning"
+        assert (
+            mock_gemini_generate.call_count == 2
+        ), "Reprompt should trigger a second LLM call for dice retry"
 
     @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):

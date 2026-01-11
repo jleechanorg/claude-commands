@@ -78,9 +78,9 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
         if response.status_code == 200:
             data = response.get_json()
             # Must be array directly for backward compatibility
-            assert isinstance(data, list), (
-                "GET /api/campaigns must return array directly"
-            )
+            assert isinstance(
+                data, list
+            ), "GET /api/campaigns must return array directly"
 
     def test_campaign_by_id_format(self):
         """Test GET /api/campaigns/<id> returns expected object format.
@@ -322,9 +322,9 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
                     assert True, f"{endpoint} is backward compatible"
                 else:
                     # These endpoints still use new format but frontend handles it
-                    assert True, (
-                        f"{endpoint} uses new format but frontend is compatible"
-                    )
+                    assert (
+                        True
+                    ), f"{endpoint} uses new format but frontend is compatible"
 
     def tearDown(self):
         """Clean up Firebase mocks."""

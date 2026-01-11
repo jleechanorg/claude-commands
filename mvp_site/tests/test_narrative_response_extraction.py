@@ -19,7 +19,6 @@ from mvp_site.narrative_response_schema import (
     CJK_PATTERN,
     VALID_QUALITY_TIERS,
     NarrativeResponse,
-    _coerce_bool,
     _coerce_bool_optional,
     _derive_quality_tier,
     _freeze_duration_hours_from_dc,
@@ -401,9 +400,9 @@ class TestDeriveQualityTier(unittest.TestCase):
         ]
         for success, margin in test_cases:
             tier = _derive_quality_tier(success, margin)
-            assert tier in VALID_QUALITY_TIERS, (
-                f"Tier '{tier}' not in VALID_QUALITY_TIERS"
-            )
+            assert (
+                tier in VALID_QUALITY_TIERS
+            ), f"Tier '{tier}' not in VALID_QUALITY_TIERS"
 
 
 class TestCoerceBool(unittest.TestCase):

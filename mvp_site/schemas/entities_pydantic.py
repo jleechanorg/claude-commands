@@ -6,7 +6,7 @@ Uses sequence ID format: {type}_{name}_{sequence}
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -81,7 +81,7 @@ class CombatDisposition(Enum):
     NEUTRAL = "neutral"  # Bystanders, non-combatants
 
     @classmethod
-    def from_type_string(cls, type_str: Optional[str]) -> "CombatDisposition":
+    def from_type_string(cls, type_str: str | None) -> "CombatDisposition":
         """Convert a legacy type string to CombatDisposition.
 
         Args:
@@ -219,7 +219,7 @@ class Location(BaseModel):
     entity_type: EntityType = Field(default=EntityType.LOCATION)
     display_name: str
     aliases: list[str] = Field(default_factory=list)
-    description: Optional[str] = None
+    description: str | None = None
     connected_locations: list[str] = Field(default_factory=list)
     entities_present: list[str] = Field(default_factory=list)
     environmental_effects: list[str] = Field(default_factory=list)
@@ -237,22 +237,22 @@ class Character(BaseModel):
     aliases: list[str] = Field(default_factory=list)
 
     # CRITICAL: Narrative consistency fields (from entities_simple.py)
-    gender: Optional[str] = Field(
+    gender: str | None = Field(
         None, description="Gender for narrative consistency (required for NPCs)"
     )
-    age: Optional[int] = Field(
+    age: int | None = Field(
         None, ge=0, le=50000, description="Age in years for narrative consistency"
     )
 
     # D&D fundamentals (from game_state_instruction.md)
-    mbti: Optional[str] = Field(
+    mbti: str | None = Field(
         None, description="MBTI personality type for consistent roleplay"
     )
-    alignment: Optional[str] = Field(None, description="D&D alignment (Lawful Good, etc.)")
-    class_name: Optional[str] = Field(
+    alignment: str | None = Field(None, description="D&D alignment (Lawful Good, etc.)")
+    class_name: str | None = Field(
         None, description="Character class (Fighter, Wizard, etc.)"
     )
-    background: Optional[str] = Field(
+    background: str | None = Field(
         None, description="Character background (Soldier, Noble, etc.)"
     )
 
@@ -393,7 +393,7 @@ class PlayerCharacter(Character):
     """Player character specific model"""
 
     entity_type: EntityType = Field(default=EntityType.PLAYER_CHARACTER)
-    player_name: Optional[str] = None
+    player_name: str | None = None
     experience: dict[str, int] = Field(
         default_factory=lambda: {"current": 0, "to_next_level": 300}
     )
@@ -405,9 +405,9 @@ class NPC(Character):
     """NPC specific model"""
 
     entity_type: EntityType = Field(default=EntityType.NPC)
-    faction: Optional[str] = None
-    role: Optional[str] = None
-    attitude_to_party: Optional[str] = Field(default="neutral")
+    faction: str | None = None
+    role: str | None = None
+    attitude_to_party: str | None = Field(default="neutral")
 
 
 class CombatState(BaseModel):
@@ -416,7 +416,7 @@ class CombatState(BaseModel):
     in_combat: bool = Field(default=False)
     round_number: int = Field(ge=0, default=0)
     turn_order: list[str] = Field(default_factory=list)
-    active_combatant: Optional[str] = None
+    active_combatant: str | None = None
     participants: list[str] = Field(default_factory=list)
 
     @field_validator("participants")
@@ -448,14 +448,14 @@ class SceneManifest(BaseModel):
     # Entity tracking helpers
     present_entities: list[str] = Field(default_factory=list)
     mentioned_entities: list[str] = Field(default_factory=list)
-    focus_entity: Optional[str] = None
+    focus_entity: str | None = None
 
     # Combat
-    combat_state: Optional[CombatState] = None
+    combat_state: CombatState | None = None
 
     # Environmental
-    time_of_day: Optional[str] = None
-    weather: Optional[str] = None
+    time_of_day: str | None = None
+    weather: str | None = None
     special_conditions: list[str] = Field(default_factory=list)
 
     @field_validator("present_entities")

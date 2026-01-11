@@ -125,9 +125,10 @@ class TestContextTruncation(unittest.TestCase):
         # If we have more than 1 entry, last should preserve recent context
         if len(truncated_context) > 1:
             last_entry = truncated_context[-1]
-            assert last_entry["actor"] in ("user", "gemini"), (
-                "Last entry is story content"
-            )
+            assert last_entry["actor"] in (
+                "user",
+                "gemini",
+            ), "Last entry is story content"
 
         print("--- Test Finished Successfully ---")
 

@@ -42,12 +42,8 @@ class TestGeminiNativeToolsFlow(unittest.TestCase):
 
         with (
             patch.object(gemini_provider, "get_client") as mock_get_client,
-            patch.object(
-                gemini_provider, "execute_tool_requests"
-            ) as mock_exec,
-            patch.object(
-                gemini_provider, "generate_json_mode_content"
-            ) as mock_json,
+            patch.object(gemini_provider, "execute_tool_requests") as mock_exec,
+            patch.object(gemini_provider, "generate_json_mode_content") as mock_json,
         ):
             mock_client = MagicMock()
             mock_client.models.generate_content.return_value = phase1_response
@@ -92,12 +88,8 @@ class TestGeminiNativeToolsFlow(unittest.TestCase):
 
         with (
             patch.object(gemini_provider, "get_client") as mock_get_client,
-            patch.object(
-                gemini_provider, "execute_tool_requests"
-            ) as mock_exec,
-            patch.object(
-                gemini_provider, "generate_json_mode_content"
-            ) as mock_json,
+            patch.object(gemini_provider, "execute_tool_requests") as mock_exec,
+            patch.object(gemini_provider, "generate_json_mode_content") as mock_json,
         ):
             mock_client = MagicMock()
             mock_client.models.generate_content.return_value = phase1_response

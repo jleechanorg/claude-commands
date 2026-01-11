@@ -125,9 +125,8 @@ def create_character_creation_game_state(
     mock_state.get_combat_state.return_value = {"in_combat": False}
     mock_state.combat_state = {"in_combat": False}
 
-    in_progress = (
-        not character_creation_completed
-        and (not character_name or not character_class)
+    in_progress = not character_creation_completed and (
+        not character_name or not character_class
     )
 
     mock_state.custom_campaign_state = {
@@ -584,7 +583,9 @@ class TestCharacterCreationAgent(unittest.TestCase):
             constants.PROMPT_TYPE_DND_SRD,
             constants.PROMPT_TYPE_MECHANICS,  # Full D&D rules for level-up
         }
-        self.assertEqual(CharacterCreationAgent.REQUIRED_PROMPTS, frozenset(expected_prompts))
+        self.assertEqual(
+            CharacterCreationAgent.REQUIRED_PROMPTS, frozenset(expected_prompts)
+        )
 
     def test_character_creation_agent_no_optional_prompts(self):
         """CharacterCreationAgent has no optional prompts (minimal focused mode)."""
@@ -826,11 +827,15 @@ class TestGetAgentForInput(unittest.TestCase):
         """Verify agent priority: GOD MODE > CharacterCreation > Combat > Rewards > Story."""
         # Priority 1: GOD MODE always wins (even during character creation)
         char_creation_state = create_character_creation_game_state()
-        god_agent = get_agent_for_input("GOD MODE: test", game_state=char_creation_state)
+        god_agent = get_agent_for_input(
+            "GOD MODE: test", game_state=char_creation_state
+        )
         self.assertIsInstance(god_agent, GodModeAgent)
 
         # Priority 2: Character Creation when character not complete
-        char_agent = get_agent_for_input("I want to be a wizard", game_state=char_creation_state)
+        char_agent = get_agent_for_input(
+            "I want to be a wizard", game_state=char_creation_state
+        )
         self.assertIsInstance(char_agent, CharacterCreationAgent)
 
         # Priority 2b: Character Creation handles "I'm done" to update state (no longer immediate transition)
@@ -1011,7 +1016,10 @@ class TestSchemaInjection(unittest.TestCase):
 
     def test_game_state_instruction_has_risk_levels_injected(self):
         """game_state_instruction.md should have VALID_RISK_LEVELS injected."""
-        from mvp_site.agent_prompts import _load_instruction_file, _loaded_instructions_cache
+        from mvp_site.agent_prompts import (
+            _load_instruction_file,
+            _loaded_instructions_cache,
+        )
         from mvp_site.narrative_response_schema import VALID_RISK_LEVELS
 
         # Clear cache to force fresh load
@@ -1058,9 +1066,10 @@ class TestSchemaInjection(unittest.TestCase):
 
     def test_validation_uses_same_risk_levels_as_prompt(self):
         """Backend validation should use the same risk levels as injected into prompts."""
+        import json
+
         from mvp_site.agent_prompts import _loaded_instructions_cache
         from mvp_site.narrative_response_schema import VALID_RISK_LEVELS
-        import json
 
         # Clear cache
         _loaded_instructions_cache.clear()
@@ -1325,7 +1334,7 @@ class TestGenericPromptBuilder(unittest.TestCase):
             len(new_parts),
             f"Part count mismatch: old={len(old_parts)}, new={len(new_parts)}",
         )
-        for i, (old, new) in enumerate(zip(old_parts, new_parts)):
+        for i, (old, new) in enumerate(zip(old_parts, new_parts, strict=False)):
             self.assertEqual(
                 old, new, f"Part {i} mismatch between old and new builders"
             )
@@ -1342,7 +1351,7 @@ class TestGenericPromptBuilder(unittest.TestCase):
         )
 
         self.assertEqual(len(old_parts), len(new_parts))
-        for i, (old, new) in enumerate(zip(old_parts, new_parts)):
+        for i, (old, new) in enumerate(zip(old_parts, new_parts, strict=False)):
             self.assertEqual(old, new, f"Part {i} mismatch")
 
     def test_build_from_order_with_debug_flag(self):
@@ -1408,7 +1417,7 @@ class TestBuildForAgent(unittest.TestCase):
 
     def test_build_for_agent_respects_include_debug(self):
         """build_for_agent should respect agent's builder_flags()['include_debug']."""
-        from mvp_site.agents import InfoAgent, CombatAgent
+        from mvp_site.agents import CombatAgent, InfoAgent
 
         builder = PromptBuilder(None)
 
@@ -1440,7 +1449,7 @@ class TestBuildForAgent(unittest.TestCase):
 
     def test_builder_flags_overrides(self):
         """Agents with debug should override builder_flags()."""
-        from mvp_site.agents import StoryModeAgent, CombatAgent, RewardsAgent
+        from mvp_site.agents import CombatAgent, RewardsAgent, StoryModeAgent
 
         # These agents should include debug
         story_agent = StoryModeAgent(None)
@@ -1462,7 +1471,7 @@ class TestBuildForAgent(unittest.TestCase):
         old_parts = builder.build_god_mode_instructions()
 
         self.assertEqual(len(new_parts), len(old_parts))
-        for i, (new, old) in enumerate(zip(new_parts, old_parts)):
+        for i, (new, old) in enumerate(zip(new_parts, old_parts, strict=False)):
             self.assertEqual(new, old, f"GodMode part {i} mismatch")
 
 
@@ -1497,7 +1506,9 @@ class TestPromptOrderDriftGuards(unittest.TestCase):
             len(expected_parts),
             f"CombatAgent part count mismatch: expected {len(expected_parts)}, got {len(actual_parts)}",
         )
-        for i, (expected, actual) in enumerate(zip(expected_parts, actual_parts)):
+        for i, (expected, actual) in enumerate(
+            zip(expected_parts, actual_parts, strict=False)
+        ):
             self.assertEqual(
                 expected,
                 actual,
@@ -1506,7 +1517,7 @@ class TestPromptOrderDriftGuards(unittest.TestCase):
 
     def test_story_mode_agent_starts_with_invariant_head(self):
         """StoryModeAgent output should start with master → game_state+planning."""
-        from mvp_site.agents import StoryModeAgent, MANDATORY_FIRST_PROMPT, GAME_STATE_PLANNING_PAIR
+        from mvp_site.agents import StoryModeAgent
 
         story_agent = StoryModeAgent(None)
 
@@ -1525,7 +1536,9 @@ class TestPromptOrderDriftGuards(unittest.TestCase):
 
         # The game_state and planning_protocol should appear early (parts 1-2)
         # They're loaded together via _append_game_state_with_planning
-        self.assertGreater(len(parts), 2, "StoryModeAgent needs at least 3 parts for core")
+        self.assertGreater(
+            len(parts), 2, "StoryModeAgent needs at least 3 parts for core"
+        )
 
         # Verify game_state appears (contains the planning block schema reference)
         combined_early_parts = " ".join(parts[:3]).lower()
@@ -1554,7 +1567,7 @@ class TestPromptOrderDriftGuards(unittest.TestCase):
             len(new_parts),
             f"Part count mismatch: legacy={len(legacy_parts)}, new={len(new_parts)}",
         )
-        for i, (legacy, new) in enumerate(zip(legacy_parts, new_parts)):
+        for i, (legacy, new) in enumerate(zip(legacy_parts, new_parts, strict=False)):
             self.assertEqual(
                 legacy,
                 new,

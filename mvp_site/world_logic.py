@@ -50,6 +50,11 @@ from mvp_site import (
     structured_fields_utils,
     world_time,
 )
+from mvp_site.agent_prompts import (
+    build_temporal_correction_prompt,
+    build_temporal_warning_message,
+    extract_llm_instruction_hints,
+)
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import (
     _truncate_log_json,
@@ -65,11 +70,6 @@ from mvp_site.game_state import (
     level_from_xp,
     validate_and_correct_state,
     xp_needed_for_level,
-)
-from mvp_site.agent_prompts import (
-    build_temporal_correction_prompt,
-    build_temporal_warning_message,
-    extract_llm_instruction_hints,
 )
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
@@ -395,11 +395,7 @@ def _detect_rewards_discrepancy(
     encounter_summary = encounter_state.get("encounter_summary")
     encounter_rewards_processed = encounter_state.get("rewards_processed", False)
 
-    if (
-        encounter_completed
-        and encounter_summary
-        and not encounter_rewards_processed
-    ):
+    if encounter_completed and encounter_summary and not encounter_rewards_processed:
         logging_util.warning(
             "🏆 REWARDS_DISCREPANCY: encounter_completed=True, encounter_summary exists, "
             "but rewards_processed=False"
@@ -868,14 +864,18 @@ def _inject_levelup_choices_if_needed(
     # Parse planning_block if it's a string
     if isinstance(planning_block, str):
         try:
-            planning_block = json.loads(planning_block) if planning_block.strip() else {}
+            planning_block = (
+                json.loads(planning_block) if planning_block.strip() else {}
+            )
         except (json.JSONDecodeError, TypeError):
             planning_block = {}
     elif planning_block is None:
         planning_block = {}
 
     # Ensure choices dict exists
-    if "choices" not in planning_block or not isinstance(planning_block.get("choices"), dict):
+    if "choices" not in planning_block or not isinstance(
+        planning_block.get("choices"), dict
+    ):
         planning_block["choices"] = {}
 
     choices = planning_block["choices"]
@@ -952,14 +952,11 @@ def _inject_levelup_narrative_if_needed(
         or "continue your journey" in lower
         or "continue the adventure" in lower
     )
-    continue_difference_present = (
-        ("continue" in lower or "continuing" in lower)
-        and (
-            "defer" in lower
-            or "later" in lower
-            or "remain level" in lower
-            or "stay level" in lower
-        )
+    continue_difference_present = ("continue" in lower or "continuing" in lower) and (
+        "defer" in lower
+        or "later" in lower
+        or "remain level" in lower
+        or "stay level" in lower
     )
     benefit_keywords = (
         "gain",
@@ -1579,6 +1576,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
     Returns:
         Dictionary with success/error status and story response
     """
+
     def _is_god_mode_return_to_story(text: str, mode: str | None = None) -> bool:
         """Check if text is a return-to-story command from god mode.
 
@@ -1932,7 +1930,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     if world_time_changes and "microsecond" in world_time_changes:
                         allowed_changes = {
                             "world_data": {
-                                "world_time": {"microsecond": world_time_changes["microsecond"]}
+                                "world_time": {
+                                    "microsecond": world_time_changes["microsecond"]
+                                }
                             }
                         }
 
@@ -1942,7 +1942,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 # Convert to nested format for consistency with update_state_with_changes
                 allowed_changes = {
                     "world_data": {
-                        "world_time": {"microsecond": state_changes_to_apply[dotted_key]}
+                        "world_time": {
+                            "microsecond": state_changes_to_apply[dotted_key]
+                        }
                     }
                 }
 
@@ -1964,7 +1966,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 updated_game_state_dict, response.get("state_changes", {})
             )
         else:
-            logging_util.info("🧠 THINK_MODE_SAFETY: Skipping combat cleanup in Think Mode")
+            logging_util.info(
+                "🧠 THINK_MODE_SAFETY: Skipping combat cleanup in Think Mode"
+            )
 
         # Validate and auto-correct XP/level and time consistency
         # Use `or {}` to handle both missing and explicitly-null world_data in state_changes
@@ -2534,9 +2538,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["state_updates"] = merged_state_changes
                 # Re-merge world_events if present (may have been added earlier but overwritten)
                 if structured_fields.get("world_events"):
-                    unified_response["state_updates"]["world_events"] = structured_fields[
-                        "world_events"
-                    ]
+                    unified_response["state_updates"]["world_events"] = (
+                        structured_fields["world_events"]
+                    )
 
             # Also update the game state dict that was already saved
             final_game_state_dict = update_state_with_changes(

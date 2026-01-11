@@ -208,9 +208,9 @@ class TestFileCache(unittest.TestCase):
 
         # Try to invalidate a file that wasn't cached
         result_not_cached = invalidate_file(self.test_file_path)
-        assert not result_not_cached, (
-            "invalidate_file should return False when file wasn't cached"
-        )
+        assert (
+            not result_not_cached
+        ), "invalidate_file should return False when file wasn't cached"
 
         # Verify invalidating nonexistent file doesn't crash
         nonexistent_file = os.path.join(self.temp_dir, "nonexistent.txt")

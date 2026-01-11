@@ -857,12 +857,12 @@ class V1VsV2CampaignComparisonTest(unittest.TestCase):
                 print(f"❌ {version.upper()} Lady Elara failed: {e}")
 
         # GREEN PHASE: Both should succeed with proper data flow
-        assert results.get("v1", False), (
-            "V1 should display 'Lady Elara' in game content"
-        )
-        assert results.get("v2", False), (
-            "V2 should display 'Lady Elara' in game content"
-        )
+        assert results.get(
+            "v1", False
+        ), "V1 should display 'Lady Elara' in game content"
+        assert results.get(
+            "v2", False
+        ), "V2 should display 'Lady Elara' in game content"
 
         print("✅ GREEN PHASE: Both systems properly handle custom character data flow")
 

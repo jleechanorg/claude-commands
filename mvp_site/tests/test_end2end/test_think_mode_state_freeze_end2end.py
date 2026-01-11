@@ -16,7 +16,7 @@ from __future__ import annotations
 import copy
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Ensure TESTING_AUTH_BYPASS is set before importing app modules
 os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
@@ -174,7 +174,9 @@ class TestThinkModeIntegrationWithCleanup(unittest.TestCase):
         # Simulate the think mode state filtering (lines 1551-1578 in world_logic.py)
         state_changes = {
             "world_data": {"world_time": {"microsecond": 501}},
-            "game_state": {"npc_data": {"Orc": {"status": "dead"}}},  # Should be blocked
+            "game_state": {
+                "npc_data": {"Orc": {"status": "dead"}}
+            },  # Should be blocked
         }
 
         if is_think_mode:

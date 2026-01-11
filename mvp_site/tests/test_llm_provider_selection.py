@@ -79,7 +79,7 @@ def test_force_test_model_env(monkeypatch):
     selection = llm_service._select_provider_and_model("user-1")
 
     assert selection.provider == constants.DEFAULT_LLM_PROVIDER
-    assert selection.model == llm_service.TEST_MODEL
+    assert selection.model == llm_service.DEFAULT_MODEL
 
 
 def test_mock_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
@@ -98,7 +98,7 @@ def test_mock_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
 
     # Should return defaults despite user having openrouter configured
     assert selection.provider == constants.DEFAULT_LLM_PROVIDER
-    assert selection.model == llm_service.TEST_MODEL
+    assert selection.model == llm_service.DEFAULT_MODEL
 
 
 def test_testing_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
@@ -117,7 +117,7 @@ def test_testing_mode_returns_defaults_ignoring_user_prefs(monkeypatch):
 
     # Should return defaults despite user having cerebras configured
     assert selection.provider == constants.DEFAULT_LLM_PROVIDER
-    assert selection.model == llm_service.TEST_MODEL
+    assert selection.model == llm_service.DEFAULT_MODEL
 
 
 def test_allowlisted_user_gets_gemini_3(monkeypatch):
@@ -134,7 +134,7 @@ def test_allowlisted_user_gets_gemini_3(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == constants.LLM_PROVIDER_GEMINI
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
     assert selection.model == constants.GEMINI_PREMIUM_MODEL
 
 
@@ -152,8 +152,8 @@ def test_non_allowlisted_user_falls_back(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == constants.LLM_PROVIDER_GEMINI
-    assert selection.model == constants.DEFAULT_GEMINI_MODEL
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
+    assert selection.model == llm_service.DEFAULT_MODEL
 
 
 def test_firebase_error_falls_back(monkeypatch):
@@ -172,8 +172,8 @@ def test_firebase_error_falls_back(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == constants.LLM_PROVIDER_GEMINI
-    assert selection.model == constants.DEFAULT_GEMINI_MODEL
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
+    assert selection.model == llm_service.DEFAULT_MODEL
 
 
 def test_legacy_gemini_models_are_mapped(monkeypatch):
@@ -187,8 +187,8 @@ def test_legacy_gemini_models_are_mapped(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == constants.LLM_PROVIDER_GEMINI
-    assert selection.model == constants.DEFAULT_GEMINI_MODEL
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
+    assert selection.model == llm_service.DEFAULT_MODEL
 
 
 def test_invalid_gemini_model_defaults(monkeypatch):
@@ -200,5 +200,5 @@ def test_invalid_gemini_model_defaults(monkeypatch):
 
     selection = llm_service._select_provider_and_model("user-1")
 
-    assert selection.provider == constants.LLM_PROVIDER_GEMINI
-    assert selection.model == constants.DEFAULT_GEMINI_MODEL
+    assert selection.provider == constants.DEFAULT_LLM_PROVIDER
+    assert selection.model == llm_service.DEFAULT_MODEL

@@ -151,9 +151,9 @@ The family has been completely broken. Choose your approach.""",
         )
 
         # Verify response is successful
-        assert response.status_code == 200, (
-            f"Expected 200, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Expected 200, got {response.status_code}: {response.data}"
         data = json.loads(response.data)
 
         # Verify story data structure
@@ -165,15 +165,15 @@ The family has been completely broken. Choose your approach.""",
         all_narrative_text = " ".join(entry.get("text", "") for entry in data["story"])
 
         # THE CRITICAL ASSERTIONS - raw JSON should NOT appear in narrative
-        assert '"thinking":' not in all_narrative_text, (
-            f"BUG: Raw JSON key 'thinking' should not appear in narrative. Got: {all_narrative_text[:500]}"
-        )
-        assert '"choices":' not in all_narrative_text, (
-            f"BUG: Raw JSON key 'choices' should not appear in narrative. Got: {all_narrative_text[:500]}"
-        )
-        assert '"magical_oaths_binding":' not in all_narrative_text, (
-            f"BUG: Raw JSON choice key should not appear in narrative. Got: {all_narrative_text[:500]}"
-        )
+        assert (
+            '"thinking":' not in all_narrative_text
+        ), f"BUG: Raw JSON key 'thinking' should not appear in narrative. Got: {all_narrative_text[:500]}"
+        assert (
+            '"choices":' not in all_narrative_text
+        ), f"BUG: Raw JSON key 'choices' should not appear in narrative. Got: {all_narrative_text[:500]}"
+        assert (
+            '"magical_oaths_binding":' not in all_narrative_text
+        ), f"BUG: Raw JSON choice key should not appear in narrative. Got: {all_narrative_text[:500]}"
 
         # Verify context is still present (non-JSON parts)
         assert (
@@ -238,12 +238,12 @@ The family has been completely broken. Choose your approach.""",
             for e in data["story"]
             if e.get("text", "").strip().startswith("{")
         ]
-        assert len(json_start_entries) == 0, (
-            f"BUG: Narrative entries should not start with JSON brace. Got: {json_start_entries}"
-        )
-        assert '"thinking":' not in all_narrative_text, (
-            f"BUG: Raw JSON should not appear. Got: {all_narrative_text[:200]}"
-        )
+        assert (
+            len(json_start_entries) == 0
+        ), f"BUG: Narrative entries should not start with JSON brace. Got: {json_start_entries}"
+        assert (
+            '"thinking":' not in all_narrative_text
+        ), f"BUG: Raw JSON should not appear. Got: {all_narrative_text[:200]}"
 
         # Should preserve the surrounding narrative text
         assert (
@@ -302,12 +302,12 @@ The family has been completely broken. Choose your approach.""",
         all_narrative_text = " ".join(entry.get("text", "") for entry in data["story"])
 
         # Clean narrative should be preserved (somewhere in story entries)
-        assert "adventurer walks into the tavern" in all_narrative_text, (
-            f"Clean narrative should be preserved. Got: {all_narrative_text}"
-        )
-        assert "warm fire crackles" in all_narrative_text, (
-            f"Full narrative content should be preserved. Got: {all_narrative_text}"
-        )
+        assert (
+            "adventurer walks into the tavern" in all_narrative_text
+        ), f"Clean narrative should be preserved. Got: {all_narrative_text}"
+        assert (
+            "warm fire crackles" in all_narrative_text
+        ), f"Full narrative content should be preserved. Got: {all_narrative_text}"
 
 
 class TestEmbeddedJsonRealWorldScenario(unittest.TestCase):
@@ -447,15 +447,15 @@ The family has been completely broken. Choose your approach.""",
         all_narrative_text = " ".join(entry.get("text", "") for entry in data["story"])
 
         # CRITICAL: The raw JSON should NOT appear
-        assert '{\n    "thinking":' not in all_narrative_text, (
-            f"BUG NOT FIXED: Raw embedded JSON block found in narrative!\n\nNarrative:\n{all_narrative_text[:1000]}"
-        )
-        assert '"choices": {' not in all_narrative_text, (
-            f"BUG NOT FIXED: Raw JSON choices found in narrative!\n\nNarrative:\n{all_narrative_text[:1000]}"
-        )
-        assert '"magical_oaths_binding":' not in all_narrative_text, (
-            f"BUG NOT FIXED: Raw JSON choice key found!\n\nNarrative:\n{all_narrative_text[:1000]}"
-        )
+        assert (
+            '{\n    "thinking":' not in all_narrative_text
+        ), f"BUG NOT FIXED: Raw embedded JSON block found in narrative!\n\nNarrative:\n{all_narrative_text[:1000]}"
+        assert (
+            '"choices": {' not in all_narrative_text
+        ), f"BUG NOT FIXED: Raw JSON choices found in narrative!\n\nNarrative:\n{all_narrative_text[:1000]}"
+        assert (
+            '"magical_oaths_binding":' not in all_narrative_text
+        ), f"BUG NOT FIXED: Raw JSON choice key found!\n\nNarrative:\n{all_narrative_text[:1000]}"
 
         # Context should be preserved
         assert (

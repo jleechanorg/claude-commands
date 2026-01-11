@@ -25,13 +25,13 @@ from unittest.mock import patch  # noqa: E402
 import requests  # noqa: E402
 
 import mvp_site.logging_util as log  # noqa: E402
-from mvp_site.tests.fake_llm import FakeLLMResponse  # noqa: E402
 
 # Note: This test spawns real MCP server processes for integration testing
 # It does not use USE_MOCKS since it tests actual MCP communication
 # Package imports (no sys.path manipulation needed)
 from mvp_site.main import create_app  # noqa: E402
 from mvp_site.mcp_client import MCPClient  # noqa: E402
+from mvp_site.tests.fake_llm import FakeLLMResponse  # noqa: E402
 
 
 class TestMCPIntegrationComprehensive(unittest.TestCase):
@@ -208,9 +208,9 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             health_response = requests.get(
                 f"http://localhost:{self.mcp_port}/health", timeout=5
             )
-            assert health_response.status_code == 200, (
-                "MCP server should respond to health checks"
-            )
+            assert (
+                health_response.status_code == 200
+            ), "MCP server should respond to health checks"
         except Exception as e:
             self.fail(f"MCP server direct communication failed: {e}")
 

@@ -5,10 +5,10 @@ Tests for CSS animations, JavaScript helpers, and performance
 """
 
 import os
+import re
 import sys
 import tempfile
 import unittest
-import re
 
 # Add parent directory to path for imports
 sys.path.insert(
@@ -34,9 +34,9 @@ class TestAnimationSystem(unittest.TestCase):
 
     def test_animation_css_exists_and_valid(self):
         """Test that animation CSS file exists and contains expected animations"""
-        assert os.path.exists(self.animation_css_path), (
-            "animations.css file should exist"
-        )
+        assert os.path.exists(
+            self.animation_css_path
+        ), "animations.css file should exist"
 
         with open(self.animation_css_path) as f:
             css_content = f.read()
@@ -58,15 +58,15 @@ class TestAnimationSystem(unittest.TestCase):
             assert animation in css_content, f"CSS should contain {animation}"
 
         # Test for accessibility support
-        assert "@media (prefers-reduced-motion: reduce)" in css_content, (
-            "Should include reduced motion support"
-        )
+        assert (
+            "@media (prefers-reduced-motion: reduce)" in css_content
+        ), "Should include reduced motion support"
 
     def test_animation_js_exists_and_valid(self):
         """Test that animation JavaScript file exists and is valid"""
-        assert os.path.exists(self.animation_js_path), (
-            "animation-helpers.js file should exist"
-        )
+        assert os.path.exists(
+            self.animation_js_path
+        ), "animation-helpers.js file should exist"
 
         with open(self.animation_js_path) as f:
             js_content = f.read()
@@ -92,12 +92,12 @@ class TestAnimationSystem(unittest.TestCase):
             html_content = f.read()
 
         # Test for animation file inclusions
-        assert 'href="/frontend_v1/styles/animations.css"' in html_content, (
-            "Should include animations.css"
-        )
-        assert 'src="/frontend_v1/js/animation-helpers.js"' in html_content, (
-            "Should include animation-helpers.js"
-        )
+        assert (
+            'href="/frontend_v1/styles/animations.css"' in html_content
+        ), "Should include animations.css"
+        assert (
+            'src="/frontend_v1/js/animation-helpers.js"' in html_content
+        ), "Should include animation-helpers.js"
 
     def test_animation_css_syntax_validation(self):
         """Test CSS syntax is valid (basic validation)"""
@@ -151,12 +151,12 @@ class TestAnimationSystem(unittest.TestCase):
             css_content = f.read()
 
         # Accessibility checks
-        assert "prefers-reduced-motion" in css_content, (
-            "Should respect user motion preferences"
-        )
-        assert "animation-duration: 0.01ms" in css_content, (
-            "Should disable animations for reduced motion"
-        )
+        assert (
+            "prefers-reduced-motion" in css_content
+        ), "Should respect user motion preferences"
+        assert (
+            "animation-duration: 0.01ms" in css_content
+        ), "Should disable animations for reduced motion"
 
     def test_javascript_error_handling(self):
         """Test that JavaScript has proper error handling patterns"""
@@ -172,33 +172,36 @@ class TestAnimationSystem(unittest.TestCase):
         ]
 
         for pattern in error_handling:
-            assert pattern in js_content, (
-                f"Should include error handling pattern {pattern}"
-            )
-
-
+            assert (
+                pattern in js_content
+            ), f"Should include error handling pattern {pattern}"
 
     def test_index_theme_implementation(self):
         """Verify index.html has the correct theme implementation"""
-        with open(self.index_html_path, "r", encoding="utf-8") as f:
+        with open(self.index_html_path, encoding="utf-8") as f:
             content = f.read()
-            
+
         # Check for ABSENCE of default theme attribute on html tag (to avoid FOIT)
         # Should just be <html lang="en">
         html_pattern = r"""<html[^>]*\sdata-theme=["']light["'][^>]*>"""
-        self.assertFalse(re.search(html_pattern, content), 
-                      "index.html should NOT have hardcoded data-theme='light' on the html tag")
-        
+        self.assertFalse(
+            re.search(html_pattern, content),
+            "index.html should NOT have hardcoded data-theme='light' on the html tag",
+        )
+
         # Check for the inline script with fallback
-        expected_script_part = "document.documentElement.setAttribute('data-theme', 'light');"
-        assert expected_script_part in content, (
-            "index.html should contain the inline theme loader script with light theme fallback"
+        expected_script_part = (
+            "document.documentElement.setAttribute('data-theme', 'light');"
         )
-        
+        assert (
+            expected_script_part in content
+        ), "index.html should contain the inline theme loader script with light theme fallback"
+
         # Check for fallback to system preference
-        assert "(prefers-color-scheme: dark)" in content, (
-            "index.html should check for system dark mode preference"
-        )
+        assert (
+            "(prefers-color-scheme: dark)" in content
+        ), "index.html should check for system dark mode preference"
+
 
 class TestAnimationIntegration(unittest.TestCase):
     """Integration tests for animation system with existing app"""
@@ -232,9 +235,9 @@ class TestAnimationIntegration(unittest.TestCase):
         # Test for compatibility patterns
         # Animation system should enhance, not replace
         if "showView" in app_content:
-            assert "originalShowView" in animation_content, (
-                "Should preserve original showView function"
-            )
+            assert (
+                "originalShowView" in animation_content
+            ), "Should preserve original showView function"
 
         # Should not conflict with existing global variables
         if "window." in app_content:
@@ -257,12 +260,12 @@ class TestAnimationIntegration(unittest.TestCase):
         app_js_pos = html_content.find('src="/frontend_v1/app.js"')
 
         # Animation helpers should load before app.js but after theme-manager
-        assert theme_manager_pos < animation_helpers_pos, (
-            "theme-manager.js should load before animation-helpers.js"
-        )
-        assert animation_helpers_pos < app_js_pos, (
-            "animation-helpers.js should load before app.js"
-        )
+        assert (
+            theme_manager_pos < animation_helpers_pos
+        ), "theme-manager.js should load before animation-helpers.js"
+        assert (
+            animation_helpers_pos < app_js_pos
+        ), "animation-helpers.js should load before app.js"
 
 
 class TestAnimationPerformance(unittest.TestCase):
@@ -280,9 +283,9 @@ class TestAnimationPerformance(unittest.TestCase):
         if os.path.exists(animation_css_path):
             file_size = os.path.getsize(animation_css_path)
             # Should be under 50KB for performance
-            assert file_size < 50 * 1024, (
-                f"animations.css should be under 50KB, got {file_size} bytes"
-            )
+            assert (
+                file_size < 50 * 1024
+            ), f"animations.css should be under 50KB, got {file_size} bytes"
 
     def test_javascript_file_size(self):
         """Test that JavaScript file size is reasonable"""
@@ -296,9 +299,9 @@ class TestAnimationPerformance(unittest.TestCase):
         if os.path.exists(animation_js_path):
             file_size = os.path.getsize(animation_js_path)
             # Should be under 30KB for performance
-            assert file_size < 30 * 1024, (
-                f"animation-helpers.js should be under 30KB, got {file_size} bytes"
-            )
+            assert (
+                file_size < 30 * 1024
+            ), f"animation-helpers.js should be under 30KB, got {file_size} bytes"
 
     def test_css_selector_efficiency(self):
         """Test that CSS selectors are efficient"""
@@ -319,9 +322,9 @@ class TestAnimationPerformance(unittest.TestCase):
         ]
 
         for pattern in inefficient_patterns:
-            assert pattern not in css_content, (
-                f"Should avoid inefficient selector pattern: {pattern}"
-            )
+            assert (
+                pattern not in css_content
+            ), f"Should avoid inefficient selector pattern: {pattern}"
 
 
 class TestAnimationFunctionality(unittest.TestCase):

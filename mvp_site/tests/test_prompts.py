@@ -12,10 +12,7 @@ sys.path.insert(
 import pytest
 
 from mvp_site import agent_prompts, constants, logging_util
-from mvp_site.agent_prompts import (
-    _load_instruction_file,
-    _loaded_instructions_cache,
-)
+from mvp_site.agent_prompts import _load_instruction_file, _loaded_instructions_cache
 
 
 class TestPromptLoading(unittest.TestCase):
@@ -89,14 +86,14 @@ class TestPromptLoading(unittest.TestCase):
 
         # 3. Compare the sets
         unregistered_files = disk_files - service_files
-        assert len(unregistered_files) == 0, (
-            f"Found .md files in prompts/ dir not registered in agent_prompts.path_map: {unregistered_files}"
-        )
+        assert (
+            len(unregistered_files) == 0
+        ), f"Found .md files in prompts/ dir not registered in agent_prompts.path_map: {unregistered_files}"
 
         missing_files = service_files - disk_files
-        assert len(missing_files) == 0, (
-            f"Found files in agent_prompts.path_map that do not exist in prompts/: {missing_files}"
-        )
+        assert (
+            len(missing_files) == 0
+        ), f"Found files in agent_prompts.path_map that do not exist in prompts/: {missing_files}"
 
     def test_all_registered_prompts_are_actually_used(self):
         """
@@ -166,9 +163,9 @@ class TestPromptLoading(unittest.TestCase):
                 unused_prompts.add(prompt_type)
 
         # This test should pass now that we're looking for the right patterns
-        assert len(unused_prompts) == 0, (
-            f"Found prompt types registered in PATH_MAP but not used in codebase: {unused_prompts}"
-        )
+        assert (
+            len(unused_prompts) == 0
+        ), f"Found prompt types registered in PATH_MAP but not used in codebase: {unused_prompts}"
 
         # Also verify that prompt types are actually called via _load_instruction_file
         # This is a more specific check for actual loading via constants
@@ -255,9 +252,9 @@ class TestPromptLoading(unittest.TestCase):
         not_loaded_always = always_loaded_prompts - used_in_loading
 
         # All always-loaded prompts should be found
-        assert len(not_loaded_always) == 0, (
-            f"Found always-loaded prompt types that are never loaded: {not_loaded_always}"
-        )
+        assert (
+            len(not_loaded_always) == 0
+        ), f"Found always-loaded prompt types that are never loaded: {not_loaded_always}"
 
         # Conditional prompts should be loaded when conditions are met
         conditional_prompts - used_in_loading
@@ -310,9 +307,9 @@ class TestPromptLoading(unittest.TestCase):
                         continue
 
         unreferenced_conditionals = conditional_prompts - conditional_referenced
-        assert len(unreferenced_conditionals) == 0, (
-            f"Found conditional prompt types that are not referenced in conditional logic: {unreferenced_conditionals}"
-        )
+        assert (
+            len(unreferenced_conditionals) == 0
+        ), f"Found conditional prompt types that are not referenced in conditional logic: {unreferenced_conditionals}"
 
         print(
             f"✓ Always-loaded prompts: {len(always_loaded_prompts - not_loaded_always)}/{len(always_loaded_prompts)} verified"

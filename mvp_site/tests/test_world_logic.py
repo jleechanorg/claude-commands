@@ -17,8 +17,8 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from mvp_site import world_logic
-from mvp_site.game_state import GameState
 from mvp_site.debug_hybrid_system import convert_json_escape_sequences
+from mvp_site.game_state import GameState
 from mvp_site.prompt_utils import _convert_and_format_field
 
 # Set test environment before any imports
@@ -531,7 +531,9 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
             "combat_state": {"in_combat": False},
             "player_character_data": {"experience": {"current": 0}, "level": 1},
             "custom_campaign_state": {
-                "god_mode_directives": {"some_key": "some_value"}  # Dict instead of list!
+                "god_mode_directives": {
+                    "some_key": "some_value"
+                }  # Dict instead of list!
             },
         }
         mock_prepare.return_value = (mock_game_state, False, 0)
@@ -1589,18 +1591,14 @@ class TestDetectRewardsDiscrepancy(unittest.TestCase):
 
     def test_handles_none_experience_gracefully(self):
         """Server should not crash on None experience in original state."""
-        original_state = {
-            "player_character_data": {"experience": None}
-        }
+        original_state = {"player_character_data": {"experience": None}}
         updated_state = {
-            "player_character_data": {
-                "experience": {"current": 100}
-            },
+            "player_character_data": {"experience": {"current": 100}},
             "combat_state": {
                 "combat_phase": "ended",
                 "combat_summary": {"xp_awarded": 50},
                 "rewards_processed": False,
-            }
+            },
         }
 
         # Should not raise an exception
@@ -1617,9 +1615,7 @@ class TestDetectRewardsDiscrepancy(unittest.TestCase):
 
     def test_handles_missing_combat_state(self):
         """Server should handle missing combat_state gracefully."""
-        state_dict = {
-            "player_character_data": {"experience": {"current": 100}}
-        }
+        state_dict = {"player_character_data": {"experience": {"current": 100}}}
 
         # Should not raise an exception
         discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
@@ -1629,9 +1625,7 @@ class TestDetectRewardsDiscrepancy(unittest.TestCase):
 
     def test_handles_empty_combat_state(self):
         """Server should handle empty combat_state gracefully."""
-        state_dict = {
-            "combat_state": {}
-        }
+        state_dict = {"combat_state": {}}
 
         # Should not raise an exception
         discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
@@ -1653,7 +1647,8 @@ class TestDetectRewardsDiscrepancy(unittest.TestCase):
 
         # No combat_summary means no discrepancy to report
         self.assertEqual(
-            len(discrepancies), 0,
+            len(discrepancies),
+            0,
             "Should NOT report discrepancy without combat_summary",
         )
 
@@ -1760,7 +1755,8 @@ class TestDetectRewardsDiscrepancyMain(unittest.TestCase):
 
         # Should NOT report discrepancy - encounter not complete
         self.assertEqual(
-            len(discrepancies), 0,
+            len(discrepancies),
+            0,
             "Should not report discrepancy for incomplete encounter",
         )
 
@@ -1768,11 +1764,7 @@ class TestDetectRewardsDiscrepancyMain(unittest.TestCase):
         """
         Discrepancy detection: Detect XP increase even without combat_summary.
         """
-        original_state = {
-            "player_character_data": {
-                "experience": {"current": 100}
-            }
-        }
+        original_state = {"player_character_data": {"experience": {"current": 100}}}
         updated_state = {
             "player_character_data": {
                 "experience": {"current": 150}  # XP increased
@@ -1780,7 +1772,7 @@ class TestDetectRewardsDiscrepancyMain(unittest.TestCase):
             "combat_state": {
                 "combat_phase": "ended",
                 "rewards_processed": False,
-            }
+            },
         }
 
         discrepancies = world_logic._detect_rewards_discrepancy(
@@ -1808,7 +1800,8 @@ class TestDetectRewardsDiscrepancyMain(unittest.TestCase):
         discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
 
         self.assertEqual(
-            len(discrepancies), 0,
+            len(discrepancies),
+            0,
             "No discrepancy when rewards_processed=True",
         )
 
@@ -2069,8 +2062,7 @@ class TestGodModeLevelUpDetection(unittest.TestCase):
         game_state.world_data = {}
 
         user_input = (
-            "GOD_MODE_SET:\n"
-            "player_character_data.experience.current = 6600\n"
+            "GOD_MODE_SET:\n" "player_character_data.experience.current = 6600\n"
         )
 
         with patch(
@@ -2089,7 +2081,6 @@ class TestGodModeLevelUpDetection(unittest.TestCase):
         self.assertEqual(5, rewards_pending.get("new_level"))
         self.assertFalse(rewards_pending.get("processed", False))
 
-
     def test_god_mode_update_state_triggers_level_up_pending(self):
         current_game_state = GameState()
         current_game_state.player_character_data = {
@@ -2099,16 +2090,19 @@ class TestGodModeLevelUpDetection(unittest.TestCase):
         current_game_state.world_data = {}
 
         user_input = (
-            "GOD_MODE_UPDATE_STATE:{\"player_character_data\": {"
-            "\"experience\": {\"current\": 6600}}}"
+            'GOD_MODE_UPDATE_STATE:{"player_character_data": {'
+            '"experience": {"current": 6600}}}'
         )
 
-        with patch(
-            "mvp_site.world_logic.firestore_service.get_campaign_game_state",
-            return_value=current_game_state,
-        ) as mock_get_state, patch(
-            "mvp_site.world_logic.firestore_service.update_campaign_game_state"
-        ) as mock_update_state:
+        with (
+            patch(
+                "mvp_site.world_logic.firestore_service.get_campaign_game_state",
+                return_value=current_game_state,
+            ) as mock_get_state,
+            patch(
+                "mvp_site.world_logic.firestore_service.update_campaign_game_state"
+            ) as mock_update_state,
+        ):
             response = world_logic._handle_update_state_command(
                 user_input, "user-2", "campaign-2"
             )
@@ -2132,18 +2126,22 @@ class TestGodModeLevelUpDetection(unittest.TestCase):
         current_game_state.world_data = {}
 
         user_input = (
-            "GOD_MODE_UPDATE_STATE:{\"player_character_data\": {"
-            "\"experience\": {\"current\": 6600}}}"
+            'GOD_MODE_UPDATE_STATE:{"player_character_data": {'
+            '"experience": {"current": 6600}}}'
         )
 
-        with patch(
-            "mvp_site.world_logic.firestore_service.get_campaign_game_state",
-            return_value=current_game_state,
-        ) as mock_get_state, patch(
-            "mvp_site.world_logic.firestore_service.update_campaign_game_state",
-        ) as mock_update_state, patch.object(
-            GameState, "detect_post_combat_issues", autospec=True
-        ) as mock_detect_warnings:
+        with (
+            patch(
+                "mvp_site.world_logic.firestore_service.get_campaign_game_state",
+                return_value=current_game_state,
+            ) as mock_get_state,
+            patch(
+                "mvp_site.world_logic.firestore_service.update_campaign_game_state",
+            ) as mock_update_state,
+            patch.object(
+                GameState, "detect_post_combat_issues", autospec=True
+            ) as mock_detect_warnings,
+        ):
             response = world_logic._handle_update_state_command(
                 user_input, "user-3", "campaign-3"
             )
@@ -2309,10 +2307,11 @@ class TestLevelUpInjection(unittest.TestCase):
 
         self.assertIn("LEVEL UP AVAILABLE!", injected)
         self.assertIn("Would you like to level up now?", injected)
-        self.assertIn("Options: 1. Level up immediately  2. Continue adventuring", injected)
+        self.assertIn(
+            "Options: 1. Level up immediately  2. Continue adventuring", injected
+        )
         self.assertIn("Benefits:", injected)
         self.assertIn("defer", injected.lower())
-
 
 
 class TestStateUpdatesNoneGuard(unittest.TestCase):
@@ -2363,8 +2362,7 @@ class TestStateUpdatesNoneGuard(unittest.TestCase):
             unified_response["state_updates"] = response.get("state_changes") or {}
 
         self.assertEqual(
-            unified_response["state_updates"],
-            {"combat_state": {"in_combat": True}}
+            unified_response["state_updates"], {"combat_state": {"in_combat": True}}
         )
 
     def test_world_events_merge_with_none_state_updates(self):
@@ -2388,7 +2386,9 @@ class TestStateUpdatesNoneGuard(unittest.TestCase):
             ]
 
         # Should have properly merged world_events
-        self.assertEqual(unified_response["state_updates"]["world_events"], [{"event": "test"}])
+        self.assertEqual(
+            unified_response["state_updates"]["world_events"], [{"event": "test"}]
+        )
 
     def test_world_events_merge_with_existing_state_updates(self):
         """World events should merge into existing state_updates dict."""
@@ -2405,8 +2405,12 @@ class TestStateUpdatesNoneGuard(unittest.TestCase):
             ]
 
         # Original values preserved, world_events added
-        self.assertEqual(unified_response["state_updates"]["combat_state"], {"in_combat": False})
-        self.assertEqual(unified_response["state_updates"]["world_events"], [{"event": "test"}])
+        self.assertEqual(
+            unified_response["state_updates"]["combat_state"], {"in_combat": False}
+        )
+        self.assertEqual(
+            unified_response["state_updates"]["world_events"], [{"event": "test"}]
+        )
 
 
 class TestGodModeParameterIntegration(unittest.TestCase):

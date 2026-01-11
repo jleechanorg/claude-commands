@@ -19,7 +19,6 @@ import unittest
 os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
-from mvp_site import constants
 from mvp_site.agents import CombatAgent, InfoAgent, RewardsAgent
 from mvp_site.game_state import GameState
 
@@ -66,8 +65,8 @@ class TestPlanningProtocolInAllModes(unittest.TestCase):
         self.assertIn(
             expected_purpose,
             system_instructions,
-            f"planning_protocol.md purpose statement not found in CombatAgent. "
-            f"The canonical planning block schema is missing from combat mode.",
+            "planning_protocol.md purpose statement not found in CombatAgent. "
+            "The canonical planning block schema is missing from combat mode.",
         )
 
     def test_rewards_agent_includes_planning_protocol(self):
