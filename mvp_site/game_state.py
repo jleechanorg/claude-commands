@@ -1767,17 +1767,25 @@ class GameState:
         if self.custom_campaign_state.get("divine_upgrade_available", False):
             return True
 
-        # Check divine potential threshold
-        divine_potential = self.custom_campaign_state.get("divine_potential", 0)
+        # Check divine potential threshold (coerce to int to handle string values)
+        divine_potential_raw = self.custom_campaign_state.get("divine_potential", 0)
+        try:
+            divine_potential = int(divine_potential_raw) if divine_potential_raw else 0
+        except (ValueError, TypeError):
+            divine_potential = 0
         if divine_potential >= constants.DIVINE_POTENTIAL_THRESHOLD:
             return True
 
-        # Check level threshold
+        # Check level threshold (coerce to int to handle string values)
         # Level may be at top-level (normalized) or in experience dict
-        level = self.player_character_data.get("level", None)
-        if level is None:
+        level_raw = self.player_character_data.get("level", None)
+        if level_raw is None:
             experience = self.player_character_data.get("experience", {})
-            level = experience.get("level", 1) if isinstance(experience, dict) else 1
+            level_raw = experience.get("level", 1) if isinstance(experience, dict) else 1
+        try:
+            level = int(level_raw) if level_raw else 1
+        except (ValueError, TypeError):
+            level = 1
         if level >= constants.DIVINE_UPGRADE_LEVEL_THRESHOLD:
             return True
 
@@ -1798,8 +1806,12 @@ class GameState:
         if self.custom_campaign_state.get("multiverse_upgrade_available", False):
             return True
 
-        # Check universe control threshold
-        universe_control = self.custom_campaign_state.get("universe_control", 0)
+        # Check universe control threshold (coerce to int to handle string values)
+        universe_control_raw = self.custom_campaign_state.get("universe_control", 0)
+        try:
+            universe_control = int(universe_control_raw) if universe_control_raw else 0
+        except (ValueError, TypeError):
+            universe_control = 0
         if universe_control >= constants.UNIVERSE_CONTROL_THRESHOLD:
             return True
 
@@ -1839,7 +1851,14 @@ class GameState:
         for attr_name, attr_value in attributes.items():
             if isinstance(attr_value, dict):
                 # Handle {"score": 18, "modifier": 4} format
-                modifier = attr_value.get("modifier", 0)
+                # If modifier key is missing, calculate from score
+                if "modifier" in attr_value:
+                    modifier = attr_value.get("modifier", 0)
+                elif "score" in attr_value:
+                    score = attr_value.get("score", 10)
+                    modifier = (score - 10) // 2 if isinstance(score, int) else 0
+                else:
+                    continue
             elif isinstance(attr_value, int):
                 # Handle direct score value - calculate modifier
                 modifier = (attr_value - 10) // 2

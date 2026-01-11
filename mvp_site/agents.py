@@ -1393,18 +1393,19 @@ class CampaignUpgradeAgent(BaseAgent):
 
     MODE = constants.MODE_CAMPAIGN_UPGRADE
 
-    # Required prompts always loaded for upgrade ceremonies
-    REQUIRED_PROMPTS = frozenset(
-        {
-            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
-            constants.PROMPT_TYPE_GAME_STATE,
-            constants.PROMPT_TYPE_MECHANICS,
-            constants.PROMPT_TYPE_DND_SRD,
-        }
+    # Required prompts - ordered tuple (source of truth for loading order)
+    # Order: master → game_state → planning_protocol → dnd_srd → mechanics
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
+        constants.PROMPT_TYPE_DND_SRD,
+        constants.PROMPT_TYPE_MECHANICS,
     )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
     # No optional prompts - ceremony prompts are selected dynamically
-    OPTIONAL_PROMPTS = frozenset()
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset()
 
     def __init__(self, game_state: "GameState | None" = None) -> None:
         """Initialize the CampaignUpgradeAgent with game state."""
