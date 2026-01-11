@@ -947,6 +947,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Show DM notes if present
       if (
         debugInfo.dm_notes &&
+        Array.isArray(debugInfo.dm_notes) &&
         debugInfo.dm_notes.length > 0
       ) {
         html += '<div class="dm-notes"><strong>📝 DM Notes:</strong><ul>';

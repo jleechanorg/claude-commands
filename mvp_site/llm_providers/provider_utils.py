@@ -16,6 +16,8 @@ import json
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from mvp_site.narrative_response_schema import _log_json_parse_error
+
 
 def _attach_tool_execution_metadata(
     response: Any,
@@ -534,7 +536,13 @@ def run_json_first_tool_requests_flow(  # noqa: PLR0911, PLR0912, PLR0915
                 )
                 return _attach_tool_execution_metadata(response_1, executed=False)
     except json.JSONDecodeError as e:
-        logger.warning(f"Phase 1 response not valid JSON: {e}, returning as-is")
+        # Log the malformed JSON content for debugging
+        _log_json_parse_error(
+            e,
+            response_text,
+            logger_func=logger.warning,
+            base_message_prefix="Phase 1 response not valid JSON",
+        )
         return _attach_tool_execution_metadata(response_1, executed=False)
 
     if isinstance(response_data, list):

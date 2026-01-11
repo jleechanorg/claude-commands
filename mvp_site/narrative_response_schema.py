@@ -5,7 +5,9 @@ Based on Milestone 0.4 Combined approach implementation (without pydantic depend
 """
 
 import copy
+import hashlib
 import json
+import os
 import re
 from typing import Any
 
@@ -27,6 +29,78 @@ GENERIC_MARKDOWN_PATTERN = re.compile(r"```\s*\n?(.*?)\n?```", re.DOTALL)
 # `_remove_planning_json_blocks`; regex explorations are intentionally omitted
 # to keep the implementation single-sourced.
 # Quick check just verifies both required keys exist (order-independent).
+
+
+def _log_json_parse_error(
+    error: json.JSONDecodeError,
+    json_content: str,
+    logger_func: Any = logging_util.error,
+    *,
+    include_recovery_message: bool = False,
+    base_message_prefix: str = "Failed to parse JSON response",
+) -> None:
+    """
+    Log JSON parsing errors with security-conscious content handling.
+
+    By default, logs a hash of the content to avoid leaking sensitive data.
+    Full content logging is only enabled when LOG_JSON_ERRORS_FULL env var is set.
+
+    Args:
+        error: The JSONDecodeError exception
+        json_content: The malformed JSON content
+        logger_func: Logger function to use (default: logging_util.error)
+        include_recovery_message: Whether to include recovery message (default: False)
+        base_message_prefix: Custom prefix for the error message (default: "Failed to parse JSON response")
+    """
+    error_pos = getattr(error, "pos", None)
+    log_full_content = os.getenv("LOG_JSON_ERRORS_FULL", "false").lower() == "true"
+
+    # Compute content hash for safe logging
+    content_hash = hashlib.sha256(json_content.encode("utf-8")).hexdigest()[:16]
+
+    # Build error message
+    base_msg = f"{base_message_prefix}: {error}"
+
+    if error_pos is not None:
+        # Show context around error position (if full logging enabled)
+        start = max(0, error_pos - 500)
+        end = min(len(json_content), error_pos + 500)
+        context = json_content[start:end] if log_full_content else None
+
+        if log_full_content and context:
+            logger_func(
+                f"{base_msg} "
+                f"Error at position {error_pos}. "
+                f"JSON context (chars {start}-{end}): {context[:1000]} "
+                f"[Content hash: {content_hash}]"
+            )
+        else:
+            logger_func(
+                f"{base_msg} "
+                f"Error at position {error_pos}. "
+                f"Content hash: {content_hash} "
+                f"(Set LOG_JSON_ERRORS_FULL=true to log full content)"
+            )
+    else:
+        # No position available - log hash or truncated content
+        if log_full_content:
+            logger_func(
+                f"{base_msg} "
+                f"Full JSON content (first 2000 chars): {json_content[:2000]} "
+                f"[Content hash: {content_hash}]"
+            )
+        else:
+            logger_func(
+                f"{base_msg} "
+                f"Content hash: {content_hash} "
+                f"(Set LOG_JSON_ERRORS_FULL=true to log full content)"
+            )
+
+    # Log recovery message if requested
+    if include_recovery_message:
+        logger_func(
+            "JSON recovery functionality has been removed - invalid JSON will fail completely."
+        )
 
 
 # Shared boolean coercion helper so validation and sanitization use consistent
@@ -1431,10 +1505,8 @@ def parse_structured_response(
     try:
         parsed_data = json.loads(json_content)
     except json.JSONDecodeError as e:
-        logging_util.error(
-            f"Failed to parse JSON response: {e}. "
-            "JSON recovery functionality has been removed - invalid JSON will fail completely."
-        )
+        # Log the malformed JSON content for debugging
+        _log_json_parse_error(e, json_content, include_recovery_message=True)
         parsed_data = None
 
     # Create NarrativeResponse from parsed data
