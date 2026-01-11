@@ -29,6 +29,7 @@ class LLMResponse:
         provider: str = "gemini",
         model: str = "gemini-3-pro-preview",
         agent_mode: str | None = None,
+        raw_response_text: str | None = None,
     ):
         """
         Initialize LLMResponse.
@@ -43,6 +44,7 @@ class LLMResponse:
             agent_mode: The mode of the agent that generated this response
                         (e.g., "god", "think", "character"). Single source of truth
                         for mode detection - set by agent selection in llm_service.
+            raw_response_text: The full raw response text from the LLM (for debugging)
         """
         self.narrative_text = narrative_text
         self.structured_response = structured_response
@@ -52,6 +54,7 @@ class LLMResponse:
         self.model = model
         self.agent_mode = agent_mode
         self._raw_narrative_text = narrative_text
+        self.raw_response_text = raw_response_text
 
         # Detect old tags if not already done
         if debug_tags_present is None:
@@ -130,7 +133,7 @@ class LLMResponse:
             "state_updates_proposed": [
                 r"\[STATE_UPDATES_PROPOSED\]",
                 r"\[END_STATE_UPDATES_PROPOSED\]",
-                r"S?TATE_UPDATES_PROPOSED\]",  # Malformed variants
+                r"\[S?TATE_UPDATES_PROPOSED\]",  # Malformed variants
             ],
             "debug_blocks": [
                 r"\[DEBUG_START\]",
@@ -253,9 +256,17 @@ class LLMResponse:
 
     def get_debug_info(self) -> dict[str, Any]:
         """Get debug info from structured response."""
+        info = {}
         if self.structured_response and hasattr(self.structured_response, "debug_info"):
-            return self.structured_response.debug_info or {}
-        return {}
+            # Create a copy to avoid mutating the original debug_info dict
+            original_debug_info = self.structured_response.debug_info or {}
+            info = dict(original_debug_info)
+
+        # Inject raw response text if available (critical for test harness validation)
+        if self.raw_response_text:
+            info["raw_response_text"] = self.raw_response_text
+
+        return info
 
     @staticmethod
     def _strip_debug_content(text: str) -> str:
@@ -289,7 +300,7 @@ class LLMResponse:
         )
         # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
         return re.sub(
-            r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
+            r"\[S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
             "",
             processed_text,
         )
@@ -317,7 +328,7 @@ class LLMResponse:
         )
         # Also handle malformed blocks where the opening characters might be missing
         return re.sub(
-            r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
+            r"\[S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
             "",
             processed_text,
         )
@@ -333,7 +344,7 @@ class LLMResponse:
 
         # Remove embedded JSON objects (malformed responses)
         text = re.sub(
-            r'\{[^}]*"session_header"[^}]*\}[^"]*"[^"]*"', "", text, flags=re.DOTALL
+            r"""\{[^}]*"session_header"[^}]*\}[^"']"[^"']*\"""", "", text, flags=re.DOTALL
         )
 
         # Remove [DEBUG_START]...[DEBUG_END] blocks
@@ -412,6 +423,7 @@ class LLMResponse:
                 provider=provider,
                 processing_metadata=processing_metadata,
                 agent_mode=agent_mode,
+                raw_response_text=raw_response_text,
             )
 
         # Otherwise fall back to legacy mode
@@ -421,6 +433,7 @@ class LLMResponse:
             provider=provider,
             processing_metadata=processing_metadata,
             agent_mode=agent_mode,
+            raw_response_text=raw_response_text,
         )
 
     @classmethod
@@ -433,6 +446,7 @@ class LLMResponse:
         provider: str = "gemini",
         processing_metadata: dict[str, Any] | None = None,
         agent_mode: str | None = None,
+        raw_response_text: str | None = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from structured JSON response.
@@ -445,6 +459,7 @@ class LLMResponse:
             model: Model name used for generation
             combined_narrative_text: The combined narrative text (including god_mode_response if present)
             agent_mode: The mode of the agent that generated this response (e.g., "god", "think")
+            raw_response_text: The full raw response text from the LLM
 
         Returns:
             LLMResponse with clean narrative and structured data
@@ -478,6 +493,7 @@ class LLMResponse:
             debug_tags_present=debug_tags,
             processing_metadata=processing_metadata,
             agent_mode=agent_mode,
+            raw_response_text=raw_response_text,
         )
 
     @classmethod
@@ -490,6 +506,7 @@ class LLMResponse:
         provider: str = "gemini",
         processing_metadata: dict[str, Any] | None = None,
         agent_mode: str | None = None,
+        raw_response_text: str | None = None,
     ) -> "LLMResponse":
         """
         Create LLMResponse from plain text (legacy support).
@@ -501,6 +518,7 @@ class LLMResponse:
             model: Model name used for generation
             structured_response: Optional structured response object
             agent_mode: The mode of the agent that generated this response (e.g., "god", "think")
+            raw_response_text: The full raw response text from the LLM
 
         Returns:
             LLMResponse with debug content stripped from narrative
@@ -515,4 +533,5 @@ class LLMResponse:
             debug_tags_present=cls._detect_debug_tags_static(narrative_text),
             processing_metadata=processing_metadata,
             agent_mode=agent_mode,
+            raw_response_text=raw_response_text,
         )

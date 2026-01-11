@@ -279,6 +279,50 @@ Every response MUST be valid JSON with this exact structure:
     - Players see the box (narrative), server tracks data (JSON)
     - BOTH must exist for ALL tiers (commoner through god) in EVERY response
     - Missing either one fails validation
+- `outcome_resolution`: (object) **REQUIRED when player input declares CURRENT-ACTION outcomes** (e.g., "The king agrees", "It kills the guard", "I find the treasure"). Documents reinterpretation and mechanical resolution for audit trail.
+
+  **Scope:** Only triggers on present-tense outcome declarations for current actions. Does NOT trigger for:
+  - Past-tense references to already-resolved events ("I remember the king agreed last week")
+  - Hypothetical questions ("What if the king agreed?")
+  - Intent statements with modal verbs ("I want to kill the dragon")
+  
+  **When to include:** When player input declares an immediate outcome (present-tense) that needs mechanical resolution.
+  - `trigger`: (string) **REQUIRED** - Type of outcome declared: `"combat"` | `"social"` | `"exploration"` | `"other"`
+  - `player_intent`: (string) **REQUIRED** - What the player was trying to accomplish (interpreted from outcome declaration)
+  - `original_input`: (string) **REQUIRED** - The exact player input that declared an outcome
+  - `resolution_type`: (string) **REQUIRED** - How it was resolved: `"attack_roll"` | `"skill_check"` | `"saving_throw"` | `"investigation"` | `"other"`
+  - `mechanics`: (object) **REQUIRED** - Mechanical resolution details
+    - `skill`: (string, optional) Skill name if skill check (e.g., `"Persuasion"`, `"Investigation"`)
+    - `dc`: (number, optional) Difficulty Class if applicable
+    - `roll`: (string, optional) Dice notation used (e.g., `"1d20+5"`)
+    - `total`: (number, optional) Final roll total
+    - `outcome`: (string) **REQUIRED** - Result: `"success"` | `"failure"` | `"partial"` | `"pending"`
+    - `damage`: (number, optional) Damage dealt if combat
+    - `attack_hit`: (boolean, optional) Whether attack hit if combat
+  - `audit_flags`: (array of strings) **REQUIRED** - Flags for audit trail
+    - Always include `"player_declared_outcome"` when you reinterpreted player input
+    - Additional flags: `"intent_statement"` (if player used modal like "I want to"), `"hypothetical"` (if player asked conditional question)
+  - `narrative_outcome`: (string, optional) Brief description of what actually happened based on mechanics
+  - **Example:**
+  ```json
+  {
+    "outcome_resolution": {
+      "trigger": "social",
+      "player_intent": "Convince king to help us",
+      "original_input": "The king agrees to help us",
+      "resolution_type": "skill_check",
+      "mechanics": {
+        "skill": "Persuasion",
+        "dc": 18,
+        "roll": "1d20+5",
+        "total": 17,
+        "outcome": "failure"
+      },
+      "audit_flags": ["player_declared_outcome"],
+      "narrative_outcome": "King remains skeptical despite your argument"
+    }
+  }
+  ```
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
   - The engine converts this into structured `world_time` for temporal enforcement and session headers.

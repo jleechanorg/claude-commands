@@ -143,8 +143,8 @@ class TestLLMResponse(unittest.TestCase):
         plain_response = self.sample_narrative
         response = LLMResponse.create(plain_response)
 
-        # Should extract the narrative
-        assert response.narrative_text == self.sample_narrative
+        # Should return error message as recovery is disabled
+        assert "Invalid JSON response received" in response.narrative_text
 
         # Should have a structured response (even if empty)
         assert response.structured_response is not None
@@ -153,7 +153,8 @@ class TestLLMResponse(unittest.TestCase):
         assert response.state_updates == {}
         assert response.entities_mentioned == []
         assert response.location_confirmed == "Unknown"  # Default value
-        assert response.debug_info == {}
+        # debug_info should contain raw_response_text
+        assert response.debug_info.get("raw_response_text") == plain_response
 
     @patch("mvp_site.llm_service._call_llm_api")
     @patch("mvp_site.llm_service._get_text_from_response")

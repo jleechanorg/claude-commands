@@ -4,6 +4,7 @@ Simplified structured narrative generation schemas
 Based on Milestone 0.4 Combined approach implementation (without pydantic dependency)
 """
 
+import copy
 import json
 import re
 from typing import Any
@@ -467,6 +468,9 @@ class NarrativeResponse:
         self.social_hp_challenge = self._validate_social_hp_challenge(
             kwargs.pop("social_hp_challenge", None)
         )
+        self.outcome_resolution = self._validate_outcome_resolution(
+            kwargs.pop("outcome_resolution", None)
+        )
 
         # Store any extra fields that Gemini might include (shouldn't be any now)
         self.extra_fields = kwargs
@@ -738,6 +742,55 @@ class NarrativeResponse:
             skill_normalized = "Persuasion"
         validated["skill_used"] = skill_normalized
 
+        return validated
+
+    def _validate_outcome_resolution(self, outcome_resolution: Any) -> dict[str, Any]:
+        """Validate outcome_resolution structured field for audit trail."""
+        if outcome_resolution is None:
+            return {}
+
+        if not isinstance(outcome_resolution, dict):
+            logging_util.warning(
+                f"Invalid outcome_resolution type: {type(outcome_resolution).__name__}, "
+                "expected dict. Using empty dict."
+            )
+            return {}
+
+        # Use deep copy to avoid mutating nested structures (e.g., mechanics dict)
+        # Schema is defined in game_state_instruction.md
+        # Required fields: trigger, player_intent, original_input, resolution_type, mechanics, audit_flags
+        validated = copy.deepcopy(outcome_resolution)
+        
+        # Validate required fields exist (warn but don't fail - downstream code may handle gracefully)
+        required_fields = ["trigger", "player_intent", "original_input", "resolution_type", "mechanics", "audit_flags"]
+        missing_fields = [field for field in required_fields if field not in validated]
+        if missing_fields:
+            logging_util.warning(
+                f"outcome_resolution missing required fields: {missing_fields}. "
+                "Schema defined in game_state_instruction.md"
+            )
+        
+        # Ensure audit_flags is a list (coerce non-list values, but preserve None/empty as empty list)
+        if "audit_flags" in validated:
+            if validated["audit_flags"] is None:
+                validated["audit_flags"] = []
+            elif not isinstance(validated["audit_flags"], list):
+                # Coerce single values to list, but filter out falsy non-None values (0, "", False)
+                if validated["audit_flags"]:
+                    validated["audit_flags"] = [validated["audit_flags"]]
+                else:
+                    validated["audit_flags"] = []
+        
+        # Validate mechanics is a dict if present
+        if "mechanics" in validated and validated["mechanics"] is not None:
+            if not isinstance(validated["mechanics"], dict):
+                logging_util.warning(
+                    f"outcome_resolution.mechanics must be a dict, got {type(validated['mechanics']).__name__}"
+                )
+                validated["mechanics"] = {}
+            elif "outcome" not in validated["mechanics"]:
+                logging_util.warning("outcome_resolution.mechanics missing required 'outcome' field")
+        
         return validated
 
     def _validate_dice_audit_events(self, value: Any) -> list[dict[str, Any]]:
@@ -1130,6 +1183,7 @@ class NarrativeResponse:
             "dice_audit_events": self.dice_audit_events,
             "resources": self.resources,
             "social_hp_challenge": self.social_hp_challenge,
+            "outcome_resolution": self.outcome_resolution,
         }
 
         # Include god_mode_response if present
@@ -1386,75 +1440,84 @@ def parse_structured_response(
     # Create NarrativeResponse from parsed data
 
     if parsed_data:
-        try:
-            # Planning blocks should only come from JSON field, not extracted from narrative
-            narrative = parsed_data.get("narrative", "")
-            planning_block = parsed_data.get("planning_block", "")
+        # Ensure parsed_data is a dict, not a list (e.g., dice roll results)
+        if not isinstance(parsed_data, dict):
+            logging_util.error(
+                f"Invalid JSON response format: expected dict, got {type(parsed_data).__name__}. "
+                f"Response may be a list (e.g., dice roll result) instead of a structured response."
+            )
+            parsed_data = None
+        
+        if parsed_data:
+            try:
+                # Planning blocks should only come from JSON field, not extracted from narrative
+                narrative = parsed_data.get("narrative", "")
+                planning_block = parsed_data.get("planning_block", "")
 
-            validated_response = NarrativeResponse(**parsed_data)
-            # If god_mode_response is present, return both god mode response and narrative
-            if (
-                hasattr(validated_response, "god_mode_response")
-                and validated_response.god_mode_response
-            ):
-                combined_response = _combine_god_mode_and_narrative(
-                    validated_response.god_mode_response, validated_response.narrative
-                )
+                validated_response = NarrativeResponse(**parsed_data)
+                # If god_mode_response is present, return both god mode response and narrative
+                if (
+                    hasattr(validated_response, "god_mode_response")
+                    and validated_response.god_mode_response
+                ):
+                    combined_response = _combine_god_mode_and_narrative(
+                        validated_response.god_mode_response, validated_response.narrative
+                    )
+                    validated_response.narrative = _apply_planning_fallback(
+                        validated_response.narrative, validated_response.planning_block
+                    )
+                    return combined_response, validated_response
+
                 validated_response.narrative = _apply_planning_fallback(
                     validated_response.narrative, validated_response.planning_block
                 )
-                return combined_response, validated_response
+                return validated_response.narrative, validated_response
 
-            validated_response.narrative = _apply_planning_fallback(
-                validated_response.narrative, validated_response.planning_block
-            )
-            return validated_response.narrative, validated_response
+            except (ValueError, TypeError):
+                # NarrativeResponse creation failed
+                # Check for god_mode_response first
+                god_mode_response = parsed_data.get("god_mode_response")
+                if god_mode_response:
+                    # For god mode, combine god_mode_response with narrative if both exist
+                    narrative = parsed_data.get("narrative")
+                    # Handle null narrative
+                    if narrative is None:
+                        narrative = ""
+                    entities_value = parsed_data.get("entities_mentioned", [])
+                    if not isinstance(entities_value, list):
+                        entities_value = []
 
-        except (ValueError, TypeError):
-            # NarrativeResponse creation failed
-            # Check for god_mode_response first
-            god_mode_response = parsed_data.get("god_mode_response")
-            if god_mode_response:
-                # For god mode, combine god_mode_response with narrative if both exist
+                    fallback_narrative = _apply_planning_fallback(
+                        narrative, parsed_data.get("planning_block")
+                    )
+
+                    known_fields = {
+                        "narrative": fallback_narrative,
+                        "god_mode_response": god_mode_response,
+                        "entities_mentioned": entities_value,
+                        "location_confirmed": parsed_data.get("location_confirmed")
+                        or "Unknown",
+                        "state_updates": parsed_data.get("state_updates", {}),
+                        "debug_info": parsed_data.get("debug_info", {}),
+                    }
+                    # Pass any other fields as kwargs
+                    extra_fields = {
+                        k: v for k, v in parsed_data.items() if k not in known_fields
+                    }
+                    fallback_response = NarrativeResponse(**known_fields, **extra_fields)
+                    combined_response = _combine_god_mode_and_narrative(
+                        god_mode_response, fallback_response.narrative
+                    )
+                    return combined_response, fallback_response
+
+                # Return the narrative if we at least got that
                 narrative = parsed_data.get("narrative")
-                # Handle null narrative
+                # Handle null or missing narrative - use empty string instead of raw JSON
                 if narrative is None:
                     narrative = ""
-                entities_value = parsed_data.get("entities_mentioned", [])
-                if not isinstance(entities_value, list):
-                    entities_value = []
 
-                fallback_narrative = _apply_planning_fallback(
-                    narrative, parsed_data.get("planning_block")
-                )
-
-                known_fields = {
-                    "narrative": fallback_narrative,
-                    "god_mode_response": god_mode_response,
-                    "entities_mentioned": entities_value,
-                    "location_confirmed": parsed_data.get("location_confirmed")
-                    or "Unknown",
-                    "state_updates": parsed_data.get("state_updates", {}),
-                    "debug_info": parsed_data.get("debug_info", {}),
-                }
-                # Pass any other fields as kwargs
-                extra_fields = {
-                    k: v for k, v in parsed_data.items() if k not in known_fields
-                }
-                fallback_response = NarrativeResponse(**known_fields, **extra_fields)
-                combined_response = _combine_god_mode_and_narrative(
-                    god_mode_response, fallback_response.narrative
-                )
-                return combined_response, fallback_response
-
-            # Return the narrative if we at least got that
-            narrative = parsed_data.get("narrative")
-            # Handle null or missing narrative - use empty string instead of raw JSON
-            if narrative is None:
-                narrative = ""
-
-            # Planning blocks should only come from JSON field
-            planning_block = parsed_data.get("planning_block", "")
+                # Planning blocks should only come from JSON field
+                planning_block = parsed_data.get("planning_block", "")
 
             fallback_narrative = _apply_planning_fallback(narrative, planning_block)
 

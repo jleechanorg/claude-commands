@@ -2810,6 +2810,7 @@ def get_initial_story(
             model_to_use,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
+            raw_response_text=raw_response_text,
         )
     else:
         # Fallback to legacy mode for non-JSON responses
@@ -2818,6 +2819,7 @@ def get_initial_story(
             model_to_use,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
+            raw_response_text=raw_response_text,
         )
 
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
@@ -4018,6 +4020,7 @@ def continue_story(
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
             agent_mode=agent.MODE,
+            raw_response_text=raw_response_text,
         )
     else:
         # Fallback to legacy mode for non-JSON responses
@@ -4027,6 +4030,7 @@ def continue_story(
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
             agent_mode=agent.MODE,
+            raw_response_text=raw_response_text,
         )
 
     if dice_retry_llm_call:

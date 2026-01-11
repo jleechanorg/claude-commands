@@ -2,6 +2,22 @@
 
 ## Active Development Tasks
 
+### 🎯 HANDOFF-LLM_GUARDRAILS_VALIDATION (Priority: HIGH) 🟡
+**Status**: 🟡 IN PROGRESS - 84.4% pass rate (5 Qwen failures remaining)
+**Handoff Document**: `roadmap/scratchpad_handoff_llm_guardrails_validation.md`
+**Branch**: `claude/test-and-fix-system-prompt-RiZyM`
+**PR Reference**: #2902 https://github.com/jleechanorg/worldarchitect.ai/pull/2902
+
+**Objective**: Prevent LLM exploit attempts (item spawning, god-mode actions, stat manipulation, narrative hijacking, anachronistic items) in WorldArchitect.AI D&D game.
+
+**Current Result**: 27/32 pass (84.4%) - **Gemini: 16/16 (100%)**, **Qwen: 11/16 (68.8%)**
+
+**Implementation**: Added "The Tabletop DM Test" universal guardrail principle to system prompt + fixed validation logic (context window 160→400 chars, added implicit rejection phrases).
+
+**Remaining Work**: Fix 5 Qwen failures (2 stat manipulation, 3 anachronistic items)
+
+**Evidence**: Run `python testing_mcp/test_llm_guardrails_exploits.py --evidence` (see `roadmap/scratchpad_handoff_llm_guardrails_validation.md` for setup).
+
 ### 🚨 HANDOFF-DELETE-TESTING-MODE (Priority: HIGH) 🟢
 **Status**: READY FOR HANDOFF
 **Handoff Document**: `roadmap/scratchpad_handoff_delete_testing_mode.md`
@@ -112,4 +128,4 @@ Major architectural change from string-based to structured JSON requests for Gem
 
 ---
 
-*Last Updated: 2025-01-14*
+*Last Updated: 2026-01-09*

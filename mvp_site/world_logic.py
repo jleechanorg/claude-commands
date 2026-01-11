@@ -2412,6 +2412,10 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["social_hp_challenge"] = (
                     structured_response.social_hp_challenge
                 )
+            if hasattr(structured_response, "outcome_resolution"):
+                unified_response["outcome_resolution"] = (
+                    structured_response.outcome_resolution
+                )
             # debug_info only in debug mode
             if debug_mode and hasattr(structured_response, "debug_info"):
                 unified_response["debug_info"] = structured_response.debug_info

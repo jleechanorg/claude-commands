@@ -44,9 +44,8 @@ class TestJSONCleanupSafety(unittest.TestCase):
 
         narrative, parsed = parse_structured_response(response)
 
-        # Should preserve the original text since it's not JSON
-        assert narrative == response
-        assert parsed.entities_mentioned == []
+        # Should return error message as recovery is disabled
+        assert "Invalid JSON response received" in narrative
 
     def test_partial_json_with_narrative_extraction(self):
         """Test extraction of narrative from partial JSON"""
@@ -57,10 +56,8 @@ class TestJSONCleanupSafety(unittest.TestCase):
 
         narrative, parsed = parse_structured_response(response)
 
-        # Should extract the narrative cleanly
-        assert narrative == "The dragon breathes fire!"
-        # Entities might be empty due to incomplete JSON
-        assert isinstance(parsed.entities_mentioned, list)
+        # Should return error message as recovery is disabled
+        assert "Invalid JSON response received" in narrative
 
     def test_json_without_quotes_cleanup(self):
         """Test cleanup of JSON-like text without proper quotes"""
@@ -71,9 +68,8 @@ class TestJSONCleanupSafety(unittest.TestCase):
 
         narrative, parsed = parse_structured_response(response)
 
-        # Should extract or clean up to readable text
-        assert "The adventure begins" in narrative
-        assert "{" not in narrative  # JSON syntax should be removed
+        # Should return error message as recovery is disabled
+        assert "Invalid JSON response received" in narrative
 
     def test_nested_json_in_narrative(self):
         """Test that valid JSON with nested structures in narrative works"""
@@ -97,8 +93,8 @@ class TestJSONCleanupSafety(unittest.TestCase):
 
         narrative, parsed = parse_structured_response(response)
 
-        # Should extract narrative even from broken JSON
-        assert narrative == "Hello world"
+        # Should return error message as recovery is disabled
+        assert "Invalid JSON response received" in narrative
 
     def test_minimal_cleanup_for_json_without_narrative(self):
         """Test minimal cleanup when JSON-like but no narrative field"""

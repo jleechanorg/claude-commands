@@ -227,6 +227,14 @@ def ensure_game_state_seed(
         state_changes["npc_data"] = dict(npc_data)
         state_changes["npc_data"]["npc_goblin_001"] = seeded_goblin
 
+    # CRITICAL: Mark character creation as complete so StoryAgent is used
+    # instead of CharacterCreationAgent. This ensures narrative_system_instruction.md
+    # is loaded with its guardrails (outcome declaration rejection, etc.)
+    state_changes["custom_campaign_state"] = {
+        "character_creation_in_progress": False,
+        "character_creation_completed": True,
+    }
+
     god_mode_payload = f"GOD_MODE_UPDATE_STATE:{json.dumps(state_changes)}"
     result = process_action(
         client,
