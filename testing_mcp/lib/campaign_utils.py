@@ -95,7 +95,7 @@ def process_action(
 
 
 def get_campaign_state(
-    client: MCPClient, *, user_id: str, campaign_id: str
+    client: MCPClient, *, user_id: str, campaign_id: str, include_story: bool = False
 ) -> dict[str, Any]:
     """Get current campaign state.
 
@@ -103,6 +103,7 @@ def get_campaign_state(
         client: MCPClient instance.
         user_id: User identifier.
         campaign_id: Campaign identifier.
+        include_story: Whether to include story entries (default: False).
 
     Returns:
         Campaign state dict.
@@ -112,7 +113,7 @@ def get_campaign_state(
     """
     payload = client.tools_call(
         "get_campaign_state",
-        {"user_id": user_id, "campaign_id": campaign_id},
+        {"user_id": user_id, "campaign_id": campaign_id, "include_story": include_story},
     )
     if payload.get("error"):
         raise RuntimeError(f"get_campaign_state error: {payload['error']}")

@@ -679,11 +679,11 @@ class PromptBuilder:
 
         Prompt set for character creation and level-up:
         1. Master directive (establishes AI authority)
-        2. Character creation instruction (focused creation flow)
+        2. Character creation instruction (focused creation flow with level-up rules)
         3. D&D SRD (race/class/background/level-up options)
         4. Mechanics (detailed D&D rules for level-up choices)
 
-        No narrative or combat prompts - keeps focus on character building.
+        No narrative or combat prompts - time is frozen during this mode.
         """
         parts = []
 
@@ -691,12 +691,13 @@ class PromptBuilder:
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
 
         # Load character creation instruction (the focused creation flow)
+        # Contains level-up tables, XP thresholds, multiclassing prerequisites
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_CREATION))
 
         # Load D&D SRD for mechanics reference (race/class/background options)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
 
-        # Load mechanics for detailed D&D rules (level-up, spell selection, etc.)
+        # Load mechanics for detailed D&D rules (level-up, spells, feats, etc.)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
 
         return parts

@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from mvp_site.constants import FRIENDLY_COMBATANT_TYPES, NEUTRAL_COMBATANT_TYPES
 
@@ -199,17 +199,16 @@ class HealthStatus(BaseModel):
         return DefensiveNumericConverter.convert_value("temp_hp", v)
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_hp_not_exceed_max(cls, model: "HealthStatus") -> "HealthStatus":
+    def validate_hp_not_exceed_max(self) -> "HealthStatus":
         """Clamp HP to hp_max if it exceeds after defensive conversion.
 
         When defensive conversion reduces hp_max (e.g., "unknown" → 1), we clamp
         hp to the new hp_max rather than raising an error, since the user didn't
         explicitly provide conflicting valid integers.
         """
-        if model.hp_max > 0 and model.hp > model.hp_max:
-            model.hp = model.hp_max
-        return model
+        if self.hp_max > 0 and self.hp > self.hp_max:
+            self.hp = self.hp_max
+        return self
 
 
 class Location(BaseModel):
@@ -224,8 +223,7 @@ class Location(BaseModel):
     entities_present: list[str] = Field(default_factory=list)
     environmental_effects: list[str] = Field(default_factory=list)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class Character(BaseModel):
@@ -385,8 +383,7 @@ class Character(BaseModel):
             )
         return self
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class PlayerCharacter(Character):
@@ -442,7 +439,7 @@ class SceneManifest(BaseModel):
     current_location: Location
 
     # Entities
-    player_characters: list[PlayerCharacter] = Field(min_items=1)
+    player_characters: list[PlayerCharacter] = Field(min_length=1)
     npcs: list[NPC] = Field(default_factory=list)
 
     # Entity tracking helpers

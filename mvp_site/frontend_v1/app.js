@@ -644,13 +644,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 3. Resources (always show)
-    const resourceText =
-      fullData.resources !== undefined &&
-      fullData.resources !== null &&
-      fullData.resources !== 'undefined' &&
-      fullData.resources !== ''
-        ? sanitizeHtml(fullData.resources)
-        : '<em>None</em>';
+    // Handle both string and object types (object should be converted to string)
+    let resourceText = '<em>None</em>';
+    if (fullData.resources !== undefined && fullData.resources !== null && fullData.resources !== 'undefined' && fullData.resources !== '') {
+      if (typeof fullData.resources === 'string') {
+        resourceText = sanitizeHtml(fullData.resources);
+      } else if (typeof fullData.resources === 'object') {
+        // Convert object to string representation (e.g., world_resources.last_note)
+        if (fullData.resources.last_note) {
+          resourceText = sanitizeHtml(fullData.resources.last_note);
+        } else {
+          // Fallback: stringify the object (shouldn't happen in normal flow)
+          resourceText = sanitizeHtml(JSON.stringify(fullData.resources));
+        }
+      }
+    }
     html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${resourceText}</div>`;
 
     // 4. Dice rolls (only show in debug mode)
@@ -1889,7 +1897,12 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         // Use user_scene_number from backend response
         // Use 'narrative' field if available (per schema), fall back to 'response' for compatibility
-        const narrativeText = data.narrative || data.response || '[Error: No response from server]';
+        // Handle empty strings as missing (defensive check)
+        let narrativeText = data.narrative || data.response || '[Error: No response from server]';
+        if (!narrativeText || narrativeText.trim() === '') {
+          narrativeText = '[Error: Empty narrative from server]';
+          console.error('⚠️ Empty narrative received:', { narrative: data.narrative, response: data.response, fullData: data });
+        }
         appendToStory(
           'gemini',
           narrativeText,

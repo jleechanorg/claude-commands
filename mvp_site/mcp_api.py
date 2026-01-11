@@ -84,6 +84,23 @@ async def handle_list_tools() -> list[Tool]:
                         "items": {"type": "string"},
                         "description": "Custom options (companions, defaultWorld)",
                     },
+                    "god_mode": {
+                        "type": "object",
+                        "description": "God Mode template with pre-populated character data",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "setting": {"type": "string"},
+                            "character": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "race": {"type": "string"},
+                                    "class": {"type": "string"},
+                                    "level": {"type": "integer"},
+                                },
+                            },
+                        },
+                    },
                 },
                 "required": ["user_id", "title"],
             },

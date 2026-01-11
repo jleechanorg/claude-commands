@@ -456,7 +456,11 @@ def save_evidence(
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
     evidence_file = evidence_dir / filename
-    evidence_file.write_text(json.dumps(data, indent=2))
+    # Use default=str to handle datetime/object serialization, encoding for consistency
+    evidence_file.write_text(
+        json.dumps(data, indent=2, default=str),
+        encoding="utf-8",
+    )
 
     # Generate checksum per evidence-standards.md
     checksum_file = evidence_dir / f"{filename}.sha256"
@@ -489,6 +493,105 @@ def write_with_checksum(filepath: Path, content: str) -> str:
     checksum_file.write_text(f"{sha256_hash}  {filepath.name}\n")
 
     return sha256_hash
+
+
+def download_test_campaigns(
+    results: dict[str, Any],
+    user_id: str | None = None,
+) -> Path | None:
+    """Download all test campaigns to ~/Downloads/test_campaign/.
+
+    Extracts campaign_ids from results and downloads them using the
+    download_campaign.py script from scripts/.
+
+    Args:
+        results: Test results dict containing scenarios with campaign_ids.
+        user_id: Firebase user ID. If None, extracts from first scenario.
+
+    Returns:
+        Path to download directory or None if no campaigns downloaded.
+    """
+    # Extract campaign IDs from scenarios
+    scenarios = results.get("scenarios", [])
+    campaign_ids = []
+    for scenario in scenarios:
+        cid = scenario.get("campaign_id")
+        if cid and cid not in campaign_ids:
+            campaign_ids.append(cid)
+
+    if not campaign_ids:
+        print("No campaign IDs found in results, skipping download")
+        return None
+
+    # Get user_id from first scenario if not provided
+    if not user_id and scenarios:
+        # Extract user_id from first scenario's metadata if available
+        first_scenario = scenarios[0]
+        user_id = first_scenario.get("user_id")
+
+    if not user_id:
+        print("⚠️  No user_id found, skipping campaign download")
+        return None
+
+    # Prepare download directory
+    download_dir = Path.home() / "Downloads" / "test_campaign"
+    download_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download each campaign
+    print(f"\n📥 Downloading {len(campaign_ids)} test campaigns...")
+    success_count = 0
+
+    for campaign_id in campaign_ids:
+        try:
+            # Run download_campaign.py script
+            cmd = [
+                "python",
+                str(PROJECT_ROOT / "scripts" / "download_campaign.py"),
+                "--uid",
+                user_id,
+                "--campaign-id",
+                campaign_id,
+                "--output-dir",
+                str(download_dir),
+                "--format",
+                "txt",
+            ]
+
+            # Prepare environment variables
+            env = os.environ.copy()
+            env["WORLDAI_DEV_MODE"] = "true"
+
+            # Copy Firebase credentials if available
+            if "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS" not in env:
+                if "GOOGLE_APPLICATION_CREDENTIALS" in env:
+                    env["WORLDAI_GOOGLE_APPLICATION_CREDENTIALS"] = env["GOOGLE_APPLICATION_CREDENTIALS"]
+
+            result = subprocess.run(
+                cmd,
+                cwd=PROJECT_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+
+            if result.returncode == 0:
+                print(f"  ✅ Downloaded campaign {campaign_id[:8]}...")
+                success_count += 1
+            else:
+                print(f"  ❌ Failed to download {campaign_id[:8]}: {result.stderr[:100]}")
+
+        except subprocess.TimeoutExpired:
+            print(f"  ❌ Timeout downloading {campaign_id[:8]}")
+        except Exception as e:
+            print(f"  ❌ Error downloading {campaign_id[:8]}: {e}")
+
+    if success_count > 0:
+        print(f"📦 Downloaded {success_count}/{len(campaign_ids)} campaigns to:")
+        print(f"   {download_dir}")
+        return download_dir
+
+    return None
 
 
 def save_request_responses(
@@ -946,5 +1049,10 @@ the raw narrative validation missed. See `errors` in individual scenario files.
     print(f"   Run ID: {run_id}")
     print(f"   Iteration: {iteration_num}")
     print(f"   Bundle Version: {EVIDENCE_FORMAT_VERSION}")
+
+    # Download test campaigns for inspection
+    campaign_dir = download_test_campaigns(results)
+    if campaign_dir:
+        files["_campaign_dir"] = campaign_dir
 
     return files

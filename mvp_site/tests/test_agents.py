@@ -673,7 +673,7 @@ class TestCharacterCreationAgent(unittest.TestCase):
             "im done",
             "start the story",
             "begin the adventure",
-            "let's start",
+            "let's play",
             "ready to play",
             "character complete",
             # Level-up completion
@@ -838,9 +838,19 @@ class TestGetAgentForInput(unittest.TestCase):
         )
         self.assertIsInstance(char_agent, CharacterCreationAgent)
 
-        # Priority 2b: Character Creation handles "I'm done" to update state (no longer immediate transition)
+        # Priority 2b: Completion phrases transition out of character creation
         done_agent = get_agent_for_input("I'm done", game_state=char_creation_state)
-        self.assertIsInstance(done_agent, CharacterCreationAgent)
+        self.assertIsInstance(done_agent, StoryModeAgent)
+        self.assertFalse(
+            char_creation_state.custom_campaign_state.get(
+                "character_creation_in_progress", True
+            )
+        )
+        self.assertTrue(
+            char_creation_state.custom_campaign_state.get(
+                "character_creation_completed", False
+            )
+        )
 
         # Priority 3: Combat when in_combat=True
         combat_state = create_mock_game_state(in_combat=True)

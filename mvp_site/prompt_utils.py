@@ -50,7 +50,9 @@ def _convert_and_format_field(field_value: str, field_name: str) -> str:
     if not field_value.strip():
         return ""
 
-    return f"{field_name}: {field_value.strip()}"
+    # Convert literal escape sequences to actual characters
+    converted_value = field_value.replace("\\n", "\n").replace("\\t", "\t")
+    return f"{field_name}: {converted_value.strip()}"
 
 
 def _build_campaign_prompt(

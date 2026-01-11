@@ -14,6 +14,10 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 # Server logs go to /tmp per evidence-standards.md
 DEFAULT_LOG_DIR = Path("/tmp/mcp_server_logs")
 
+# Default MCP server port and URL for testing
+DEFAULT_MCP_PORT = 8081
+DEFAULT_MCP_BASE_URL = f"http://localhost:{DEFAULT_MCP_PORT}"
+
 # Evidence capture settings per evidence-standards.md
 # Note: CAPTURE_RAW_LLM defaults to true in the server (llm_service.py)
 # These overrides are for tests that need custom limits

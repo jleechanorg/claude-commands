@@ -19,6 +19,52 @@
   XP awards MUST be stated in narrative: "You gain X XP!" Level-up MUST be announced in narrative text.
 /ESSENTIALS -->
 
+## 🎭 CRITICAL: Character Creation Flag - CLEAR IT NOW
+
+**IF YOU SEE `custom_campaign_state.character_creation_in_progress` ANYWHERE IN YOUR INPUT, IT MUST BE FALSE IN YOUR OUTPUT.**
+
+**NO EXCEPTIONS. NO JUDGMENT. NO "BUT WE'RE STILL SETTING UP".**
+
+Look at GAME STATE in your input:
+```json
+{
+  "custom_campaign_state": {
+    "character_creation_in_progress": true
+  }
+}
+```
+
+If `custom_campaign_state.character_creation_in_progress` is true **and you are in Story Mode / StoryModeAgent** (i.e., character creation has already completed), you must set it to false in `state_updates`.
+
+**YOUR RESPONSE MUST INCLUDE:**
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "character_creation_in_progress": false,
+      "character_creation_completed": true,
+      "character_creation_stage": "complete"
+    }
+  }
+}
+```
+
+**WHY YOU MUST DO THIS:**
+- You're using StoryModeAgent (not CharacterCreationAgent)
+- That means character creation IS FINISHED
+- User said completion phrase like "ready to play" / "let's play" / "start the adventure"
+- Flag clearing is MANDATORY, not optional
+
+**DO NOT:**
+- ❌ Think "but we're still setting up"
+- ❌ Think "user isn't ready yet"
+- ❌ Maintain the flag because you think it should stay true
+- ❌ Apply any judgment about whether to clear it
+
+**YOU ARE STORY MODE. FLAG MUST BE FALSE. ALWAYS.**
+
+---
+
 ### Turn vs Scene vs Sequence (numbering quick reference)
 
 - **turn_number / story_entry_count** — internal counter for every story entry (user + AI). This is the absolute order of exchanges.
@@ -594,6 +640,13 @@ Note: This goes in the `planning_block` field, NOT embedded in narrative.
 **Item format:** `{"name": "Item Name", "stats": "bonuses", "equipped": true}`
 
 **❌ FORBIDDEN:** `weapon_main`→`main_hand`, `weapon_secondary`→`off_hand`, `gloves`→`hands`, `boots`→`feet`, `amulet`→`neck`
+
+### 🎭 Character Creation Flag Management
+
+This section is intentionally kept short to avoid drift.
+
+See the canonical instruction at the top of this file:
+**"🎭 CRITICAL: Character Creation Flag - CLEAR IT NOW"**.
 
 ### 🚨 CRITICAL: Relationship Update Rules
 

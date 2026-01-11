@@ -36,6 +36,8 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client and mocks."""
+        # Disable MOCK_SERVICES_MODE to allow patching generate_json_mode_content
+        os.environ["MOCK_SERVICES_MODE"] = "false"
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()

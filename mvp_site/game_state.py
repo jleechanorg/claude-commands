@@ -1463,15 +1463,18 @@ class GameState:
                     )
                     result["level_up_pending"] = True
                 else:
-                    result["corrected"] = True
+                    # Do NOT set "corrected" flag when no actual correction happens
+                    # Only set level_up_pending to indicate LLM should handle the level-up
+                    result["level_up_pending"] = True  # Ensure test detects level up
                     logging_util.warning(
-                        f"XP validation: {message} - auto-correcting level mismatch (legacy XP schema)"
+                        f"XP validation: {message} - flagging level up mismatch (legacy XP schema, LLM will handle)"
                     )
-                    if hasattr(self, "player_character_data") and isinstance(
-                        self.player_character_data, dict
-                    ):
-                        self.player_character_data["level"] = expected_level
-                        result["corrected_level"] = expected_level
+                    # Do NOT auto-correct level upwards - let the user/LLM process the level up
+                    # if hasattr(self, "player_character_data") and isinstance(
+                    #     self.player_character_data, dict
+                    # ):
+                    #     self.player_character_data["level"] = expected_level
+                    #     result["corrected_level"] = expected_level
             else:
                 # Level regression/mismatch: stored level is HIGHER than XP indicates
                 # This is a data integrity issue - auto-correct it

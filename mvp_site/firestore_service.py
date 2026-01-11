@@ -713,7 +713,7 @@ def update_state_with_changes(
         result = update_state_with_changes(current_state, changes)
         # Result: {"health": 80, "items": ["sword", "potion"]}
     """
-    logging_util.info(
+    logging_util.debug(
         f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}"
     )
 
@@ -797,7 +797,7 @@ def update_state_with_changes(
             # For simple values, use convert_value
             converted_value = NumericFieldConverter.convert_value(key, value)
         state_to_update[key] = converted_value
-    logging_util.info("--- update_state_with_changes: finished ---")
+    logging_util.debug("--- update_state_with_changes: finished ---")
     return state_to_update
 
 

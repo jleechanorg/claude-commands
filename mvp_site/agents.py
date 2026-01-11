@@ -701,14 +701,15 @@ class CharacterCreationAgent(BaseAgent):
         llm_requested_sections: list[str] | None = None,
     ) -> str:
         """
-        Build MINIMAL system instructions for character creation mode.
+        Build system instructions for character creation mode.
 
-        Uses a focused prompt set for character building:
+        Uses a focused prompt set for character building and level-up:
         - Master directive (authority)
         - Character creation instruction (focused creation flow)
         - D&D SRD (mechanics reference)
+        - Mechanics (detailed D&D rules for choices)
 
-        No narrative, no combat, no game state - keeps prompts minimal.
+        No narrative, no combat, no world lore, no game state - keeps prompts focused.
 
         Returns:
             Minimal system instruction string for character creation
@@ -719,7 +720,7 @@ class CharacterCreationAgent(BaseAgent):
 
         builder = self._prompt_builder
 
-        # Build character creation instructions (minimal prompt set)
+        # Build character creation instructions (focused prompt set)
         parts: list[str] = builder.build_character_creation_instructions()
 
         # Finalize WITHOUT world lore (character creation doesn't need it)
@@ -844,11 +845,32 @@ class CharacterCreationAgent(BaseAgent):
         lower = user_input.lower().strip()
         # Normalize curly apostrophes to straight apostrophes
         lower = lower.replace("\u2019", "'")
+        
+        logging_util.debug(f"Matches Input Check: '{lower}'")
 
         if re.search(r"\bnot\s+(?:yet\s+)?(?:done|finished|ready)\b", lower):
+            logging_util.debug("Matches Input: False (Negative match)")
             return False
         # Catch "don't start" and "don't begin"
         if re.search(r"\bdo(?:n't| not|nt)\s+(?:start|begin)\b", lower):
+            logging_util.debug("Matches Input: False (Negative match)")
+            return False
+        
+        # Check for valid completion patterns first (before exclusions)
+        # These patterns indicate clear intent to complete character creation
+        completion_patterns = [
+            r"\bstart\s+(?:the\s+)?(?:story|adventure)\b",
+            r"\bbegin\s+(?:the\s+)?(?:story|adventure)\b",
+            r"\bstart\s+(?:the\s+)?game\b",
+            r"\bbegin\s+(?:the\s+)?game\b",
+        ]
+        # If input contains a valid completion pattern, allow it even if it also contains "ready to start"
+        has_completion_pattern = any(re.search(p, lower) for p in completion_patterns)
+        
+        # Explicitly exclude ambiguous "ready to start" ONLY if it's not part of a valid completion phrase
+        # Examples: "I'm ready to start" (ambiguous) vs "I'm ready to start the adventure" (clear intent)
+        if not has_completion_pattern and "ready to start" in lower:
+            logging_util.debug("Matches Input: False (Ambiguous 'ready to start' without completion phrase)")
             return False
 
         patterns = [
@@ -857,21 +879,21 @@ class CharacterCreationAgent(BaseAgent):
             r"\bi\s+am\s+done\b",
             r"\bi\s+am\s+finished\b",
             r"\bready\s+to\s+play\b",
-            # Exclude "ready to create/build/make/start"
-            r"\bi'?m\s+ready\b(?!\s+(?:to\s+(?:create|build|make|start)|for\s+(?:creation|building))\b)",
             r"\bthat'?s\s+everything\b",
             r"\bcharacter\s+(?:is\s+)?complete\b",
             r"\b(?:done|finished)\s+(?:creating|leveling)\b",
             r"\blevel-?up\s+complete\b",
-            r"\bstart\s+(?:the\s+)?(?:story|adventure)\b",
-            r"\bbegin\s+(?:the\s+)?(?:story|adventure)\b",
-            # Exclude "let's start creating/with/by..." and "let's start over/again"
-            r"\blet'?s\s+start\b(?!\s+(?:with|by|choosing|selecting|making|building|creating|over|again|fresh)\b)",
-            r"\blet'?s\s+begin\b(?!\s+(?:with|by|choosing|selecting|making|building|creating|over|again|fresh)\b)",
+            r"\blet'?s\s+play\b",
             r"\b(?:back\s+to|continue)\s+adventure\b",
-        ]
+            # Additional robustness for natural language
+            r"\blooks\s+perfect\b",
+            r"\bperfect!?\s+(?:let'?s|i'?m)\b",
+        ] + completion_patterns  # Include completion patterns in main pattern list
 
-        return any(re.search(pattern, lower) for pattern in patterns)
+        result = any(re.search(pattern, lower) for pattern in patterns)
+        if result:
+            logging_util.debug(f"Matches Input: True (Matched pattern)")
+        return result
 
 
 class PlanningAgent(FixedPromptAgent):
@@ -1405,12 +1427,52 @@ def get_agent_for_input(
         return GodModeAgent(game_state)
 
     # Priority 2: Character Creation mode (second highest priority)
-    # Check if we're in character creation AND user isn't indicating they're done
+    # FIRST check if user is indicating they're done with character creation
+    # This check happens BEFORE CharacterCreationAgent.matches_game_state to avoid
+    # the agent being selected when the user wants to exit character creation mode
+    if game_state is not None:
+        custom_state = None
+        if hasattr(game_state, "custom_campaign_state"):
+            custom_state = game_state.custom_campaign_state
+        elif isinstance(game_state, dict):
+            custom_state = game_state.get("custom_campaign_state", {})
+
+        if isinstance(custom_state, dict):
+            char_creation_started = custom_state.get("character_creation_in_progress", False)
+
+            # Get turn number (handle both GameState objects and dicts, default to 0)
+            turn_number = 0
+            if hasattr(game_state, "player_turn"):
+                turn_number = game_state.player_turn
+            elif isinstance(game_state, dict):
+                turn_number = game_state.get("player_turn", 0)
+
+            # Ensure turn_number is an integer (handles Mock objects in tests)
+            try:
+                turn_number = int(turn_number or 0)
+            except (TypeError, ValueError):
+                turn_number = 0
+
+            # Check if user is done with character creation (explicit completion phrases)
+            if char_creation_started and CharacterCreationAgent.matches_input(user_input):
+                logging_util.info(
+                    "🎭 CHARACTER_CREATION_COMPLETE: User finished, transitioning to StoryModeAgent"
+                )
+                # CRITICAL: Clear the flag BEFORE checking matches_game_state
+                # This prevents CharacterCreationAgent from being selected
+                custom_state["character_creation_in_progress"] = False
+                custom_state["character_creation_completed"] = True
+                custom_state["character_creation_stage"] = "complete"
+                logging_util.info(
+                    "✅ CHARACTER_CREATION_FLAG_CLEARED: Set in_progress=False, completed=True, stage=complete"
+                )
+                logging_util.info(
+                    f"🎭 CHARACTER_CREATION_TURN_INFO: player_turn={turn_number}"
+                )
+                return StoryModeAgent(game_state)
+
+    # Now check if we should use CharacterCreationAgent (flag should be False if user just completed)
     if CharacterCreationAgent.matches_game_state(game_state):
-        # We used to check matches_input() here to transition immediately, but that
-        # prevented the CharacterCreationAgent from processing the "I'm done" message
-        # and updating the state flags. Now we stay in creation mode to let the agent
-        # handle the completion message and clear the flags.
         logging_util.info("🎭 CHARACTER_CREATION_ACTIVE: Using CharacterCreationAgent")
         return CharacterCreationAgent(game_state)
 

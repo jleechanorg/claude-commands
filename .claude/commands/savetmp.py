@@ -95,17 +95,16 @@ def _run_git_commands_parallel(
 
 def _resolve_repo_info(
     skip_git: bool = False,
+    pr_mode: bool = False,
 ) -> Tuple[str, str, Optional[Dict[str, Union[Optional[str], List[str]]]]]:
     """Return (repo_name, branch_name, git_provenance) with sensible fallbacks.
 
-    Git provenance follows evidence-standards.md requirements.
-    If skip_git=True, returns simplified info without running git commands.
+    Args:
+        skip_git: If True, skip git commands and return minimal info.
+        pr_mode: If True, force using origin/main as base ref.
 
-    Edge Cases:
-    - origin/main missing: base_ref is None, changed_files is empty (warning printed).
-    - HEAD == origin/main: changed_files is empty (no changes).
-    - Detached HEAD: branch="detached".
-    - Shallow clones: fallback mechanics apply, might result in empty changed_files.
+    Returns:
+        Tuple of (repo_name, branch_name, git_provenance)
     """
     if skip_git:
         # Fast path: no git commands, use simple defaults
@@ -130,13 +129,28 @@ def _resolve_repo_info(
     else:
         repo_name = Path.cwd().name
 
-    if not branch:
+    if not branch or branch == "HEAD":
         branch = "detached"
 
-    # Determine a base ref for changed files
-    # Prefer origin/main to capture full branch diff, fall back to upstream for nonstandard repos
-    # This ensures changed_files shows all changes relative to main branch
-    base_ref = results.get("origin_main") or results.get("upstream")
+    # Determine a base ref for changed files with fallbacks.
+    #
+    # Auto-detect PR branches conservatively:
+    # - Branch is not main/master
+    # - Branch has an upstream tracking ref that matches the local branch name
+    #
+    # This avoids treating purely-local scratch branches as PRs while still producing
+    # a useful diff base for pushed branches.
+    upstream_ref = results.get("upstream") or ""
+    tracks_remote_branch = bool(branch) and bool(upstream_ref) and upstream_ref.endswith(
+        f"/{branch}"
+    )
+    is_pr_branch = bool(branch) and branch not in ("main", "master") and tracks_remote_branch
+
+    # In PR mode (explicit or auto-detected), always use origin/main to capture full PR diff
+    if pr_mode or is_pr_branch:
+        base_ref = results.get("origin_main")
+    else:
+        base_ref = results.get("upstream") or results.get("origin_main")
     changed_files_output: Optional[str] = None
 
     if not base_ref:
@@ -521,6 +535,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip git commands for faster execution. Uses /tmp/evidence/local/<work>/ path.",
     )
     parser.add_argument(
+        "--pr-mode",
+        action="store_true",
+        help="Force PR diff mode (use origin/main as base ref for changed_files).",
+    )
+    parser.add_argument(
         "--clean-checksums",
         action="store_true",
         help="Remove existing .sha256 files from artifacts before packaging to prevent checksum layering.",
@@ -544,7 +563,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Run git resolution (skip for speed if --skip-git)
     repo_name, branch, git_provenance = _resolve_repo_info(
-        skip_git=args.skip_git
+        skip_git=args.skip_git,
+        pr_mode=args.pr_mode,
     )
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 

@@ -86,6 +86,17 @@ When adding LLM-driven features:
 - Preserves LLM decision-making autonomy while ensuring data consistency
 - Follows "LLM Decides, Server Executes" principle
 
+### LLM Prompt Engineering
+**CRITICAL**: When LLMs ignore instructions, it's usually the prompt's fault, not the LLM's.
+
+**Quick fixes:**
+- Use UNCONDITIONAL language ("MUST BE FALSE. ALWAYS." not "if true, clear it")
+- Place critical instructions in top 50 lines
+- Document INPUT/OUTPUT schemas explicitly
+- Cut prompt bloat (>1500 lines = compliance drops)
+
+**See `.claude/skills/llm-prompt-engineering.md` for complete guidelines.**
+
 ## File Protocols
 
 ### New File Creation - Extreme Anti-Creation Bias

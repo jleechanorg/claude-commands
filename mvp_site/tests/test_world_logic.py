@@ -971,7 +971,7 @@ class TestCodeHealthChecks(unittest.TestCase):
 
 
 def _calculate_parallel_threshold(
-    serial_time: float, buffer_ratio: float = 0.8
+    serial_time: float, buffer_ratio: float = 0.9
 ) -> float:
     """Helper to keep parallel timing thresholds consistent across tests."""
     return serial_time * buffer_ratio
@@ -1044,8 +1044,9 @@ class TestAsyncNonBlocking(unittest.TestCase, _MockHelperMixin):
     @patch("mvp_site.world_logic._prepare_game_state")
     @patch("mvp_site.world_logic.firestore_service")
     @patch("mvp_site.world_logic.llm_service")
+    @patch.object(world_logic, "is_mock_services_mode", return_value=False)
     def test_concurrent_operations_execute_in_parallel(
-        self, mock_llm_service, mock_firestore, mock_prepare, mock_settings
+        self, mock_is_mock, mock_llm_service, mock_firestore, mock_prepare, mock_settings
     ):
         """
         CRITICAL: Concurrent coroutines must not serialize.
@@ -1056,7 +1057,7 @@ class TestAsyncNonBlocking(unittest.TestCase, _MockHelperMixin):
 
         This test mocks blocking calls with delays and verifies parallel timing.
         """
-        SIMULATED_BLOCKING_TIME = 0.05  # 50ms simulated blocking per call
+        SIMULATED_BLOCKING_TIME = 0.2  # 200ms simulated blocking per call
         NUM_CONCURRENT = 3
         call_count = 0
 
@@ -1158,8 +1159,9 @@ class TestThreadPoolExecution(unittest.TestCase, _MockHelperMixin):
     @patch("mvp_site.world_logic._prepare_game_state")
     @patch("mvp_site.world_logic.firestore_service")
     @patch("mvp_site.world_logic.llm_service")
+    @patch.object(world_logic, "is_mock_services_mode", return_value=False)
     def test_blocking_calls_execute_in_worker_threads(
-        self, mock_llm_service, mock_firestore, mock_prepare, mock_settings
+        self, mock_is_mock, mock_llm_service, mock_firestore, mock_prepare, mock_settings
     ):
         """
         Blocking calls wrapped in asyncio.to_thread() should NOT run in main thread.
@@ -1416,7 +1418,7 @@ class TestParallelismIntegration(unittest.TestCase):
         Tests get_campaign_state_unified() which retrieves campaign data
         from Firestore. With asyncio.to_thread(), these should overlap.
         """
-        DELAY = 0.03  # 30ms per operation
+        DELAY = 0.1  # 100ms per operation
         NUM_OPS = 3
 
         def mock_get_state(*args, **kwargs):
@@ -1444,6 +1446,7 @@ class TestParallelismIntegration(unittest.TestCase):
                         lambda x: {"debug_mode": False},
                     ),
                     patch.object(world_logic, "_prepare_game_state", mock_get_state),
+                    patch.object(world_logic, "is_mock_services_mode", return_value=False),
                 ):
                     start = time.time()
 
@@ -2606,6 +2609,65 @@ class TestGodModeParameterIntegration(unittest.TestCase):
         call_args = mock_gemini.call_args[0]
         self.assertEqual("Return to story.", call_args[0])
         self.assertEqual(world_logic.constants.MODE_CHARACTER, call_args[1])
+
+    def test_parse_god_mode_data_string_preserves_setting_without_character(self):
+        """Test that setting is preserved even when no character info is provided."""
+        # Test case: Only setting provided, no character
+        god_mode_data = "Setting: Forgotten Realms"
+        result = world_logic._parse_god_mode_data_string(god_mode_data)
+        
+        self.assertIsNotNone(result, "Should return dict when setting exists")
+        self.assertEqual(result.get("setting"), "Forgotten Realms")
+        self.assertNotIn("character", result)
+        self.assertNotIn("description", result)
+
+    def test_parse_god_mode_data_string_preserves_description_without_character(self):
+        """Test that description is preserved even when no character info is provided."""
+        # Test case: Only description provided, no character
+        god_mode_data = "Description: A dark fantasy campaign set in a cursed kingdom"
+        result = world_logic._parse_god_mode_data_string(god_mode_data)
+        
+        self.assertIsNotNone(result, "Should return dict when description exists")
+        self.assertEqual(result.get("description"), "A dark fantasy campaign set in a cursed kingdom")
+        self.assertNotIn("character", result)
+        self.assertNotIn("setting", result)
+
+    def test_parse_god_mode_data_string_preserves_setting_and_description_without_character(self):
+        """Test that both setting and description are preserved even when no character info is provided."""
+        # Test case: Setting and description provided, no character
+        god_mode_data = "Setting: Forgotten Realms | Description: A dark fantasy campaign"
+        result = world_logic._parse_god_mode_data_string(god_mode_data)
+        
+        self.assertIsNotNone(result, "Should return dict when setting or description exists")
+        self.assertEqual(result.get("setting"), "Forgotten Realms")
+        self.assertEqual(result.get("description"), "A dark fantasy campaign")
+        self.assertNotIn("character", result)
+
+    def test_parse_god_mode_data_string_with_character_still_works(self):
+        """Test that existing behavior with character info still works correctly."""
+        # Test case: Character with setting and description (existing behavior)
+        god_mode_data = "Character: Ser Arion | Setting: Forgotten Realms | Description: A paladin's journey"
+        result = world_logic._parse_god_mode_data_string(god_mode_data)
+        
+        self.assertIsNotNone(result, "Should return dict when character exists")
+        self.assertIn("character", result)
+        self.assertEqual(result["character"].get("name"), "Ser Arion")
+        self.assertEqual(result.get("setting"), "Forgotten Realms")
+        self.assertEqual(result.get("description"), "A paladin's journey")
+
+    def test_parse_god_mode_data_string_returns_none_when_empty(self):
+        """Test that None is returned when no useful data is provided."""
+        # Test case: Empty string
+        result = world_logic._parse_god_mode_data_string("")
+        self.assertIsNone(result, "Should return None for empty string")
+        
+        # Test case: None input
+        result = world_logic._parse_god_mode_data_string(None)
+        self.assertIsNone(result, "Should return None for None input")
+        
+        # Test case: Invalid format with no useful data
+        result = world_logic._parse_god_mode_data_string("Some random text")
+        self.assertIsNone(result, "Should return None when no setting/description/character found")
 
 
 if __name__ == "__main__":

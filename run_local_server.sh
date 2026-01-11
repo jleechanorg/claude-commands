@@ -309,28 +309,78 @@ echo ""
 echo "${EMOJI_ROCKET} Starting Flask backend on port $FLASK_PORT..."
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="Flask Backend" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=false PORT=$FLASK_PORT python -m mvp_site.main serve || (echo 'Flask exited with status $?'; read -p 'Press enter to close'); exec bash"
+    gnome-terminal --tab --title="Flask Backend" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH=\"$PROJECT_ROOT:${PYTHONPATH:-}\" TESTING=false PORT=$FLASK_PORT python -m mvp_site.main serve || (echo \"Flask exited with status \$?\"; read -p 'Press enter to close'); exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "Flask Backend" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH='$PROJECT_ROOT':${PYTHONPATH:-} TESTING=false PORT=$FLASK_PORT python -m mvp_site.main serve; echo 'Flask exited with status $?'; read -p 'Press enter to close'" &
+    xterm -title "Flask Backend" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && PYTHONPATH=\"$PROJECT_ROOT:${PYTHONPATH:-}\" TESTING=false PORT=$FLASK_PORT python -m mvp_site.main serve; echo \"Flask exited with status \$?\"; read -p 'Press enter to close'" &
 else
-    # Fallback: run in background
+    # Fallback: run in background with proper process group management
     echo "${EMOJI_INFO} Running Flask in background (no terminal emulator found)"
-    # Check if venv is still active in subshell, if not reactivate it
-    (
-        cd "$PROJECT_ROOT" || exit 1
-        if [ -z "$VIRTUAL_ENV" ] && [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
-            # shellcheck disable=SC1091
-            source "$PROJECT_ROOT/venv/bin/activate"
-        fi
-        GEMINI_API_KEY="$GEMINI_API_KEY" \
-        CEREBRAS_API_KEY="$CEREBRAS_API_KEY" \
-        PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}" \
-        TESTING=false \
-        PORT=$FLASK_PORT \
-        python -m mvp_site.main serve
-    ) &
-    FLASK_PID=$!
+    # Create log directory for Flask output
+    REPO_NAME="$(basename "$PROJECT_ROOT")"
+    BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+    SAFE_BRANCH_NAME="${BRANCH_NAME//\//_}"
+    FLASK_LOG_DIR="/tmp/${REPO_NAME}/${SAFE_BRANCH_NAME}"
+    mkdir -p "$FLASK_LOG_DIR"
+    FLASK_LOG_FILE="$FLASK_LOG_DIR/flask_backend.log"
+
+    # Create PID file for accurate process tracking
+    FLASK_PID_FILE=$(mktemp)
+
+    # Use setsid on Linux or nohup on macOS to detach from controlling terminal
+    # This ensures Flask reloader works properly in background mode
+    if command -v setsid >/dev/null 2>&1; then
+        # Linux: use setsid for proper session management
+        # We run python in background within the subshell to capture its PID
+        setsid bash -c "
+            cd '$PROJECT_ROOT' || exit 1
+            if [ -f '$PROJECT_ROOT/venv/bin/activate' ]; then
+                source '$PROJECT_ROOT/venv/bin/activate'
+            fi
+            export GEMINI_API_KEY='$GEMINI_API_KEY'
+            export CEREBRAS_API_KEY='$CEREBRAS_API_KEY'
+            export OPENROUTER_API_KEY='${OPENROUTER_API_KEY:-}'
+            export GOOGLE_APPLICATION_CREDENTIALS='$GOOGLE_APPLICATION_CREDENTIALS'
+            export FIREBASE_PROJECT_ID='$FIREBASE_PROJECT_ID'
+            export WORLDAI_DEV_MODE='${WORLDAI_DEV_MODE:-true}'
+            export PYTHONPATH=\"$PROJECT_ROOT:${PYTHONPATH:-}\"
+            export TESTING=false
+            export PORT=$FLASK_PORT
+            python -m mvp_site.main serve >> '$FLASK_LOG_FILE' 2>&1 &
+            echo \$! > '$FLASK_PID_FILE'
+            wait
+        " &
+        # Wait briefly for PID file to be populated
+        sleep 1
+        FLASK_PID=$(cat "$FLASK_PID_FILE")
+        rm -f "$FLASK_PID_FILE"
+    else
+        # macOS: use nohup with bash -c for correct PID tracking
+        # We run python in background within the subshell to capture its PID
+        nohup bash -c "
+            cd '$PROJECT_ROOT' || exit 1
+            if [ -f '$PROJECT_ROOT/venv/bin/activate' ]; then
+                source '$PROJECT_ROOT/venv/bin/activate'
+            fi
+            export GEMINI_API_KEY=\"$GEMINI_API_KEY\"
+            export CEREBRAS_API_KEY=\"$CEREBRAS_API_KEY\"
+            export OPENROUTER_API_KEY=\"${OPENROUTER_API_KEY:-}\"
+            export GOOGLE_APPLICATION_CREDENTIALS=\"$GOOGLE_APPLICATION_CREDENTIALS\"
+            export FIREBASE_PROJECT_ID=\"$FIREBASE_PROJECT_ID\"
+            export WORLDAI_DEV_MODE=\"${WORLDAI_DEV_MODE:-true}\"
+            export PYTHONPATH=\"$PROJECT_ROOT:${PYTHONPATH:-}\"
+            export TESTING=false
+            export PORT=$FLASK_PORT
+            python -m mvp_site.main serve >> '$FLASK_LOG_FILE' 2>&1 &
+            echo \$! > '$FLASK_PID_FILE'
+            wait
+        " >/dev/null 2>&1 &
+        # Wait briefly for PID file to be populated
+        sleep 1
+        FLASK_PID=$(cat "$FLASK_PID_FILE")
+        rm -f "$FLASK_PID_FILE"
+    fi
     echo "${EMOJI_INFO} Flask backend started in background (PID: $FLASK_PID)"
+    echo "${EMOJI_INFO} Flask logs: $FLASK_LOG_FILE"
 fi
 
 # Give Flask time to start
@@ -350,14 +400,12 @@ echo "${EMOJI_ROCKET} Starting MCP server in production mode..."
 
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && GEMINI_API_KEY='$GEMINI_API_KEY' CEREBRAS_API_KEY='$CEREBRAS_API_KEY' bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT; exec bash"
+    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT; exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && GEMINI_API_KEY='$GEMINI_API_KEY' CEREBRAS_API_KEY='$CEREBRAS_API_KEY' bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT" &
+    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT" &
 else
     # Fallback: run in background with dual transport (stdio + HTTP) using named pipe
     echo "${EMOJI_INFO} Running MCP server in background (no terminal emulator found)"
-    GEMINI_API_KEY="$GEMINI_API_KEY" \
-    CEREBRAS_API_KEY="$CEREBRAS_API_KEY" \
     "$PROJECT_ROOT/scripts/mcp_dual_background.sh" --host 127.0.0.1 --port $MCP_PORT &
     MCP_PID=$!
     echo "${EMOJI_INFO} MCP server started in background (PID: $MCP_PID, Port: $MCP_PORT)"

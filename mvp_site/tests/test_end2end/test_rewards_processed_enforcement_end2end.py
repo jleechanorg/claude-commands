@@ -32,7 +32,7 @@ import unittest
 from unittest.mock import patch
 
 # Ensure TESTING_AUTH_BYPASS is set before importing app modules
-os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
+os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
 
@@ -54,6 +54,8 @@ class TestRewardsDiscrepancyDetectionEnd2End(unittest.TestCase):
         os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
+        # Disable MOCK_SERVICES_MODE to allow patching generate_json_mode_content
+        os.environ["MOCK_SERVICES_MODE"] = "false"
 
         self.app = main.create_app()
         self.app.config["TESTING"] = True
@@ -357,9 +359,10 @@ class TestMultiTurnCorrectionInjection(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
+        # Disable MOCK_SERVICES_MODE to allow patching generate_json_mode_content
+        os.environ["MOCK_SERVICES_MODE"] = "false"
 
         self.app = main.create_app()
         self.app.config["TESTING"] = True
@@ -583,9 +586,10 @@ class TestCombatModeCorrectionsPersistedEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
+        # Disable MOCK_SERVICES_MODE to allow patching generate_json_mode_content
+        os.environ["MOCK_SERVICES_MODE"] = "false"
 
         self.test_user_id = "test-user-combat-persistence"
         self.campaign_id = "combat_persistence_test"
@@ -774,9 +778,10 @@ class TestLLMSetCorrectionsPreservedEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
+        # Disable MOCK_SERVICES_MODE to allow patching generate_json_mode_content
+        os.environ["MOCK_SERVICES_MODE"] = "false"
 
         self.test_user_id = "test-user-llm-corrections"
         self.campaign_id = "llm_corrections_test"

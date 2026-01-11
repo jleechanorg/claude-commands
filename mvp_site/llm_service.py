@@ -93,6 +93,7 @@ from mvp_site.agent_prompts import (
 )
 from mvp_site.agents import (
     BaseAgent,
+    CharacterCreationAgent,
     GodModeAgent,
     RewardsAgent,
     StoryModeAgent,
@@ -1133,7 +1134,7 @@ def _select_model_for_continuation(_user_input_count: int) -> str:
         str: Model name to use
     """
     # Use test model in mock services mode for faster/cheaper testing
-    mock_mode = os.environ.get("MOCK_SERVICES_MODE") == "true"
+    mock_mode = os.environ.get("MOCK_SERVICES_MODE", "").lower() == "true"
     if mock_mode:
         return TEST_MODEL
     return DEFAULT_MODEL
@@ -1390,6 +1391,35 @@ def _call_llm_api(
     Returns:
         Provider-specific response object (Gemini, OpenRouter, or Cerebras)
     """
+    if os.environ.get("MOCK_SERVICES_MODE", "").lower() == "true":
+        logging_util.info("MOCK_SERVICES_MODE enabled - returning mock LLM response")
+
+        class MockResponse:
+            def __init__(self):
+                self.text = json.dumps({
+                    "narrative": "This is a mock narrative generated in Mock Mode. The game continues.",
+                    "session_header": "Scene #Mock",
+                    "planning_block": {
+                        "thinking": "Mock mode active. No real inference performed.",
+                        "choices": {
+                            "mock_choice": {
+                                "description": "Continue in mock mode",
+                                "risk": "none"
+                            }
+                        }
+                    },
+                    "debug_info": {"agent_mode": "mock"},
+                    "world_data": {"world_time": "0000-01-01T00:00:00Z"},
+                    "player_character_data": {"name": "Mock Player"},
+                    "state_updates": {}
+                })
+                self.parts = []
+                self.candidates = []
+                self._tool_results = []
+                self._tool_requests_executed = False
+
+        return MockResponse()
+
     if current_prompt_text_for_logging:
         logging_util.debug(
             f"Calling LLM API with prompt ({len(current_prompt_text_for_logging)} chars): {str(current_prompt_text_for_logging)[:100]}..."
@@ -2413,9 +2443,9 @@ def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     # TESTING_AUTH_BYPASS=true is the primary test mode flag - it MUST force Gemini to prevent
     # tests from hitting real OpenRouter/Cerebras APIs and incurring costs
     force_test_model = (
-        os.environ.get("MOCK_SERVICES_MODE") == "true"
-        or os.environ.get("FORCE_TEST_MODEL") == "true"
-        or os.environ.get("TESTING_AUTH_BYPASS") == "true"
+        os.environ.get("MOCK_SERVICES_MODE", "").lower() == "true"
+        or os.environ.get("FORCE_TEST_MODEL", "").lower() == "true"
+        or os.environ.get("TESTING_AUTH_BYPASS", "").lower() == "true"
     )
     if force_test_model:
         logging_util.info(
@@ -2522,6 +2552,7 @@ def get_initial_story(
     selected_prompts: list[str] | None = None,
     generate_companions: bool = False,
     use_default_world: bool = False,
+    use_character_creation_agent: bool = False,
 ) -> LLMResponse:
     """
     Generates the initial story part, including character, narrative, and mechanics instructions.
@@ -2535,9 +2566,59 @@ def get_initial_story(
     clear_loaded_files_tracking()
 
     # Check for mock mode and return mock response immediately
-    mock_mode = os.environ.get("MOCK_SERVICES_MODE") == "true"
+    mock_mode = os.environ.get("MOCK_SERVICES_MODE", "").lower() == "true"
     if mock_mode:
         logging_util.info("Using mock mode - returning mock initial story response")
+        
+        # If CharacterCreationAgent should be used, return character creation narrative
+        if use_character_creation_agent:
+            logging_util.info("Mock mode: Using CharacterCreationAgent for character review")
+            # Return character creation narrative for God Mode campaigns with character data
+            character_creation_narrative = """[CHARACTER CREATION]
+
+Welcome! I see you have a pre-defined character template. Let's review and finalize your character before we begin the adventure.
+
+**Your Character So Far:**
+- **Name:** (From template)
+- **Class:** (From template)
+- **Level:** (From template)
+
+**Questions to Complete Your Character:**
+
+1. **Race:** What race is your character? (Human, Elf, Dwarf, Halfling, Dragonborn, etc.)
+2. **Background:** What was your character's life before this adventure? (Noble, Soldier, Acolyte, Folk Hero, etc.)
+3. **Alignment:** What alignment best fits your character?
+4. **Personality:** What drives your character? What are their ideals, bonds, and flaws?
+
+Take your time! Once we finalize these details, we'll begin your epic adventure."""
+            
+            # Parse as structured response
+            narrative_text, structured_response = parse_structured_response(
+                json.dumps({
+                    "narrative": character_creation_narrative,
+                    "entities_mentioned": [],
+                    "location_confirmed": "",
+                    "state_updates": {
+                        "custom_campaign_state": {
+                            "character_creation_in_progress": True
+                        }
+                    },
+                })
+            )
+            
+            if structured_response:
+                if structured_response.debug_info is None:
+                    structured_response.debug_info = {}
+                structured_response.debug_info["agent_name"] = "CharacterCreationAgent"
+                return LLMResponse.create_from_structured_response(
+                    structured_response, "mock-model"
+                )
+            return LLMResponse.create_legacy(
+                character_creation_narrative,
+                "mock-model",
+            )
+        
+        # Regular story mode
         if generate_companions:
             logging_util.info("Mock mode: Generating companions as requested")
             mock_response_text = MOCK_INITIAL_STORY_WITH_COMPANIONS
@@ -2570,28 +2651,44 @@ def get_initial_story(
             "No specific system prompts selected for initial story. Using none."
         )
 
-    # Use StoryModeAgent to construct system instructions
-    # Initial story always uses story mode (never god mode)
-    agent = StoryModeAgent(game_state=None)  # No game state yet for initial story
-    builder = agent.prompt_builder
+    # Select agent based on use_character_creation_agent flag
+    # For God Mode campaigns with character data, use CharacterCreationAgent
+    # For regular campaigns, use StoryModeAgent
+    if use_character_creation_agent:
+        agent = CharacterCreationAgent(game_state=None)  # No game state yet for initial story
+        logging_util.info("Using CharacterCreationAgent for initial story (God Mode with character)")
+    else:
+        agent = StoryModeAgent(game_state=None)  # No game state yet for initial story
+        logging_util.info("Using StoryModeAgent for initial story (regular campaign)")
+    
+    # Build system instructions based on agent type
+    if use_character_creation_agent:
+        # CharacterCreationAgent builds instructions directly (no build_system_instruction_parts)
+        system_instruction_final = agent.build_system_instructions(
+            selected_prompts=selected_prompts,
+            use_default_world=use_default_world,
+            include_continuation_reminder=False,
+        )
+    else:
+        builder = agent.prompt_builder
 
-    # Start from agent’s standard story-mode stack (without continuation reminders)
-    system_instruction_parts = agent.build_system_instruction_parts(
-        selected_prompts=selected_prompts,
-        include_continuation_reminder=False,
-    )
+        # Start from agent’s standard story-mode stack (without continuation reminders)
+        system_instruction_parts = agent.build_system_instruction_parts(
+            selected_prompts=selected_prompts,
+            include_continuation_reminder=False,
+        )
 
-    # Initial story specific: Add companion generation instruction if requested
-    if generate_companions:
-        system_instruction_parts.append(builder.build_companion_instruction())
+        # Initial story specific: Add companion generation instruction if requested
+        if generate_companions:
+            system_instruction_parts.append(builder.build_companion_instruction())
 
-    # Initial story specific: Add background summary instruction
-    system_instruction_parts.append(builder.build_background_summary_instruction())
+        # Initial story specific: Add background summary instruction
+        system_instruction_parts.append(builder.build_background_summary_instruction())
 
-    # Finalize with world content (world lore must remain last in the hierarchy)
-    system_instruction_final = builder.finalize_instructions(
-        system_instruction_parts, use_default_world
-    )
+        # Finalize with world content (world lore must remain last in the hierarchy)
+        system_instruction_final = builder.finalize_instructions(
+            system_instruction_parts, use_default_world
+        )
 
     # Add clear indication when using default world setting
     if use_default_world:
@@ -2651,27 +2748,29 @@ def get_initial_story(
             entity_manifest_text, expected_entities
         )
 
-    # Build enhanced prompt with entity tracking
-    enhanced_prompt: str = prompt
-    if (
-        entity_preload_text
-        or entity_specific_instructions
-        or entity_tracking_instruction
-    ):
-        enhanced_prompt = (
-            f"{entity_preload_text}"
-            f"{entity_specific_instructions}"
-            f"{entity_tracking_instruction}"
-            f"\nUSER REQUEST:\n{prompt}"
-        )
-        logging_util.info(
-            f"Added entity tracking to initial story. Expected entities: {expected_entities}"
-        )
+    # Build enhanced prompt with entity tracking (only for regular story mode)
+    # For character creation mode, enhanced_prompt is already set above
+    if not use_character_creation_agent:
+        enhanced_prompt: str = prompt
+        if (
+            entity_preload_text
+            or entity_specific_instructions
+            or entity_tracking_instruction
+        ):
+            enhanced_prompt = (
+                f"{entity_preload_text}"
+                f"{entity_specific_instructions}"
+                f"{entity_tracking_instruction}"
+                f"\nUSER REQUEST:\n{prompt}"
+            )
+            logging_util.info(
+                f"Added entity tracking to initial story. Expected entities: {expected_entities}"
+            )
 
-    # Add character creation reminder if mechanics is enabled
-    if selected_prompts and constants.PROMPT_TYPE_MECHANICS in selected_prompts:
-        enhanced_prompt = constants.CHARACTER_DESIGN_REMINDER + "\n\n" + enhanced_prompt
-        logging_util.info("Added character creation reminder to initial story prompt")
+        # Add character creation reminder if mechanics is enabled (only for regular story mode)
+        if selected_prompts and constants.PROMPT_TYPE_MECHANICS in selected_prompts:
+            enhanced_prompt = constants.CHARACTER_DESIGN_REMINDER + "\n\n" + enhanced_prompt
+            logging_util.info("Added character creation reminder to initial story prompt")
 
     # --- MODEL SELECTION ---
     # Use centralized helper for consistent model selection across all story generation
@@ -2689,8 +2788,10 @@ def get_initial_story(
     world_data = {}  # Could be extracted from builder if needed
 
     # Build LLMRequest with structured data
+    # Use enhanced_prompt if set (for character creation mode), otherwise use prompt
+    prompt_to_use = enhanced_prompt if 'enhanced_prompt' in locals() and enhanced_prompt else prompt
     gemini_request = LLMRequest.build_initial_story(
-        character_prompt=prompt,
+        character_prompt=prompt_to_use,
         user_id=str(user_id),
         selected_prompts=selected_prompts or [],
         generate_companions=generate_companions,
@@ -4043,6 +4144,47 @@ def continue_story(
         # Use the common validation function for entity tracking validation
         # (No longer modifies response_text - validation goes to logs only)
         _validate_entity_tracking(response_text, expected_entities, current_game_state)
+
+    # POST-PROCESSING: 3-layer item validation against player inventory
+    # Layer 1: Pre-process player input for item claims
+    # Layer 2: Check items_used (LLM audit trail) against inventory
+    # Layer 3: Scan narrative for unlisted items
+    if not is_god_mode_command:
+        items_used: list[str] = []
+        if gemini_response.structured_response:
+            raw_items_used = getattr(
+                gemini_response.structured_response, "items_used", []
+            )
+            if isinstance(raw_items_used, list):
+                candidates = raw_items_used
+            elif isinstance(raw_items_used, str):
+                candidates = [raw_items_used]
+            else:
+                candidates = []
+            for item in candidates:
+                if isinstance(item, str):
+                    cleaned = item.strip()
+                    if cleaned:
+                        items_used.append(cleaned)
+
+        # Skip item validation during character creation (CHAR-w8m fix)
+        # Character creation agent may reference items before inventory is initialized
+        custom_state = getattr(current_game_state, "custom_campaign_state", {})
+        if isinstance(custom_state, dict):
+            char_creation_active = custom_state.get("character_creation_in_progress", False)
+        else:
+            char_creation_active = getattr(custom_state, "character_creation_in_progress", False)
+
+        if char_creation_active:
+            logging_util.debug(
+                "⏭️ Skipping item validation - character creation in progress"
+            )
+        # TODO: Item validation is currently disabled (comprehensive_item_validation function missing).
+        # When item validation is restored, implement 3-layer validation:
+        # 1. Pre-process player input for item claims
+        # 2. Check items_used (LLM audit trail) against inventory
+        # 3. Scan narrative for unlisted items
+        # Then uncomment validation logic to block exploits and update processing_metadata.
 
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input

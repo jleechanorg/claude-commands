@@ -134,6 +134,67 @@ def test_full_god_mode_turn1(base_url: str):
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
 
+    # NEW: Check Scene 1 (opening story) immediately after campaign creation
+    log("📝 Checking Scene 1 (opening story) for placeholder bug...")
+    state_result = mcp_call("tools/call", {
+        "name": "get_campaign_state",
+        "arguments": {
+            "user_id": USER_ID,
+            "campaign_id": campaign_id,
+            "include_story": True,  # Required to get story entries
+        }
+    }, base_url=base_url)
+    
+    # Extract Scene 1 from story entries
+    story_entries = state_result.get("story", [])
+    scene1_text = ""
+    scene1_entry = None
+    
+    # Find Scene 1 (first agent/gemini narrative entry)
+    for entry in story_entries:
+        if isinstance(entry, dict):
+            actor = entry.get("actor", "")
+            text = entry.get("text", "")
+            user_scene_number = entry.get("user_scene_number")
+            
+            if actor in ("gemini", "agent", "system") and text:
+                if user_scene_number == 1 or (not scene1_text and not user_scene_number):
+                    scene1_text = text
+                    scene1_entry = entry
+                    if user_scene_number == 1:
+                        break
+        elif isinstance(entry, str) and not scene1_text:
+            scene1_text = entry
+            break
+    
+    # Fallback: check campaign metadata
+    if not scene1_text:
+        scene1_text = state_result.get("opening_story", "") or state_result.get("initial_story", "") or ""
+    
+    log(f"🔍 Scene 1 length: {len(scene1_text)} chars")
+    log(f"🔍 Scene 1 preview: {scene1_text[:200]}...")
+    
+    # Check for placeholder bug
+    placeholder_text = "[Character Creation Mode - Story begins after character is complete]"
+    has_placeholder = placeholder_text in scene1_text
+    
+    if has_placeholder:
+        log(f"❌ SCENE 1 BUG REPRODUCED: Contains placeholder '{placeholder_text}'")
+        log(f"   This means god_mode_data (string) was not parsed correctly")
+        log(f"   Full Scene 1: {scene1_text}")
+        # Don't fail the test yet - continue to check Turn 1 behavior
+    else:
+        log(f"✅ Scene 1: No placeholder found")
+        
+        # Check if Scene 1 has character creation content
+        has_char_creation = "[CHARACTER CREATION" in scene1_text or "character creation" in scene1_text.lower()
+        is_substantial = len(scene1_text) > 100
+        
+        if has_char_creation or is_substantial:
+            log(f"✅ Scene 1: Contains character creation narrative")
+        else:
+            log(f"⚠️ WARNING: Scene 1 is short ({len(scene1_text)} chars) and doesn't contain character creation markers")
+
     # Turn 1 interaction - should trigger CharacterCreationAgent
     log("📝 Turn 1: User wants to create character...")
     turn1_result = mcp_call("tools/call", {
@@ -247,6 +308,43 @@ def test_minimal_god_mode_turn1(base_url: str):
 
     campaign_id = campaign_result.get("campaign_id")
     log(f"✅ Campaign created: {campaign_id}")
+
+    # NEW: Check Scene 1 (opening story) immediately after campaign creation
+    log("📝 Checking Scene 1 (opening story) for placeholder bug...")
+    state_result = mcp_call("tools/call", {
+        "name": "get_campaign_state",
+        "arguments": {
+            "user_id": USER_ID,
+            "campaign_id": campaign_id,
+            "include_story": True,  # Required to get story entries
+        }
+    }, base_url=base_url)
+    
+    # Extract Scene 1 from story entries
+    story_entries = state_result.get("story", [])
+    scene1_text = ""
+    
+    for entry in story_entries:
+        if isinstance(entry, dict):
+            actor = entry.get("actor", "")
+            text = entry.get("text", "")
+            if actor in ("gemini", "agent", "system") and text:
+                scene1_text = text
+                break
+        elif isinstance(entry, str):
+            scene1_text = entry
+            break
+    
+    if not scene1_text:
+        scene1_text = state_result.get("opening_story", "") or state_result.get("initial_story", "") or ""
+    
+    placeholder_text = "[Character Creation Mode - Story begins after character is complete]"
+    has_placeholder = placeholder_text in scene1_text
+    
+    if has_placeholder:
+        log(f"❌ SCENE 1 BUG: Contains placeholder")
+    else:
+        log(f"✅ Scene 1: No placeholder (length: {len(scene1_text)} chars)")
 
     # Turn 1 interaction
     log("📝 Turn 1: User wants to create character...")

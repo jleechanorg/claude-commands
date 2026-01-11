@@ -26,9 +26,10 @@ class TestContinueStoryEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        os.environ["TESTING_AUTH_BYPASS"] = "true"
         os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
         os.environ.setdefault("CEREBRAS_API_KEY", "test-cerebras-key")
+        # Disable MOCK_SERVICES_MODE to allow patching generate_json_mode_content
+        os.environ["MOCK_SERVICES_MODE"] = "false"
 
         self.app = main.create_app()
         self.app.config["TESTING"] = True

@@ -87,6 +87,20 @@ _MOCK_SERVICES_MODE = os.getenv("MOCK_SERVICES_MODE", "").strip().lower() in {
 _TEST_MODE = os.getenv("TEST_MODE", "mock").strip().lower()
 _ALLOW_MISSING_FIREBASE = _MOCK_SERVICES_MODE or _TEST_MODE == "mock"
 
+
+def is_mock_services_mode() -> bool:
+    """Check if mock services mode is enabled.
+
+    Evaluated at runtime to support dynamic environment changes in tests.
+    """
+    return os.getenv("MOCK_SERVICES_MODE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
+
 try:
     firebase_admin.get_app()
 except ValueError:
@@ -1214,6 +1228,98 @@ def _prepare_game_state(
     return current_game_state, was_cleaned, num_cleaned
 
 
+def _prepare_game_state_with_user_settings(
+    user_id: UserId, campaign_id: CampaignId
+) -> tuple[GameState, bool, int, dict[str, Any] | None]:
+    """
+    Prepare game state and fetch user settings in the same worker thread.
+
+    This reduces thread scheduling overhead in hot paths that already need to
+    load game state, while keeping all blocking calls off the event loop.
+    """
+    current_game_state, was_cleaned, num_cleaned = _prepare_game_state(
+        user_id, campaign_id
+    )
+    user_settings = get_user_settings(user_id)
+    if not isinstance(user_settings, dict):
+        user_settings = None
+    return current_game_state, was_cleaned, num_cleaned, user_settings
+
+
+def _persist_turn_to_firestore(
+    user_id: UserId,
+    campaign_id: CampaignId,
+    *,
+    mode: str,
+    user_input: str,
+    ai_response_text: str,
+    structured_fields: dict[str, Any],
+    updated_game_state_dict: dict[str, Any],
+) -> None:
+    """
+    Persist a completed turn (state + story entries) in a single worker thread.
+
+    This reduces asyncio.to_thread() scheduling overhead in hot paths while
+    keeping all Firestore I/O off the event loop.
+    """
+    firestore_service.update_campaign_game_state(
+        user_id, campaign_id, updated_game_state_dict
+    )
+    firestore_service.add_story_entry(
+        user_id,
+        campaign_id,
+        constants.ACTOR_USER,
+        user_input,
+        mode,
+    )
+    firestore_service.add_story_entry(
+        user_id,
+        campaign_id,
+        constants.ACTOR_GEMINI,
+        ai_response_text,
+        None,  # mode
+        structured_fields,  # structured_fields
+    )
+
+
+def _update_campaign_game_state(
+    user_id: UserId, campaign_id: CampaignId, state_dict: dict[str, Any]
+) -> None:
+    firestore_service.update_campaign_game_state(user_id, campaign_id, state_dict)
+
+
+def _load_campaign_and_continue_story(
+    user_id: UserId,
+    campaign_id: CampaignId,
+    *,
+    llm_input: str,
+    mode: str,
+    current_game_state: GameState,
+    include_raw_llm_payloads: bool,
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]], Any]:
+    """Fetch campaign data/story context and run continue_story in one thread."""
+    campaign_data, story_context = firestore_service.get_campaign_by_id(
+        user_id, campaign_id
+    )
+    if not campaign_data:
+        return None, [], None
+
+    story_context = story_context or []
+    selected_prompts = campaign_data.get("selected_prompts", [])
+    use_default_world = campaign_data.get("use_default_world", False)
+    llm_response_obj = llm_service.continue_story(
+        llm_input,
+        mode,
+        story_context,
+        current_game_state,
+        selected_prompts,
+        use_default_world,
+        user_id,
+        include_raw_llm_payloads,
+    )
+    return campaign_data, story_context, llm_response_obj
+
+
 def _cleanup_legacy_state(
     state_dict: dict[str, Any],
 ) -> tuple[dict[str, Any], bool, int]:
@@ -1382,6 +1488,148 @@ def _build_campaign_prompt(
     return _build_campaign_prompt_impl(character, setting, description, old_prompt)
 
 
+def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
+    """
+    Parse god_mode_data string format into god_mode dict format.
+    
+    String format: "Character: X | Setting: Y | Description: Z"
+    Dict format: {"character": {...}, "setting": "...", "description": "..."}
+    
+    Args:
+        god_mode_data: String in format "Character: X | Setting: Y | Description: Z"
+    
+    Returns:
+        Dict with god_mode structure, or None if parsing fails
+    """
+    if not god_mode_data or not isinstance(god_mode_data, str):
+        return None
+    
+    try:
+        # Split by " | " to get Character, Setting, Description parts
+        parts = [p.strip() for p in god_mode_data.split(" | ")]
+        
+        parsed = {}
+        character_str = ""
+        setting_str = ""
+        description_str = ""
+        
+        for part in parts:
+            if part.startswith("Character:"):
+                character_str = part.replace("Character:", "").strip()
+            elif part.startswith("Setting:"):
+                setting_str = part.replace("Setting:", "").strip()
+            elif part.startswith("Description:"):
+                description_str = part.replace("Description:", "").strip()
+        
+        # If description contains the full text, use it
+        if description_str:
+            parsed["description"] = description_str
+        
+        if setting_str:
+            parsed["setting"] = setting_str
+        
+        # Extract character info from character_str and description
+        # Look for character details in the description (name, class, level, stats, etc.)
+        character_dict = {}
+        
+        # Extract character name from character_str (first part before any additional info)
+        if character_str:
+            # Character string might be just "Ser Arion" or "Ser Arion val Valerion"
+            character_dict["name"] = character_str.split(",")[0].strip()
+        
+        # Parse description for character details
+        # The description contains markdown-formatted character info
+        description_lower = description_str.lower() if description_str else ""
+        full_text = god_mode_data.lower()
+        
+        # Extract name from **Name:** pattern (more reliable than character_str)
+        name_match = re.search(r"\*\*name:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE)
+        if name_match:
+            character_dict["name"] = name_match.group(1).strip()
+        elif character_str:
+            character_dict["name"] = character_str.split(",")[0].strip()
+        
+        # Extract class (look for "Level X Class" or "**Class:** Level X Class" pattern)
+        class_match = re.search(r"\*\*class:\*\*\s*level\s+(\d+)\s+(\w+)", full_text, re.IGNORECASE)
+        if not class_match:
+            class_match = re.search(r"level\s+(\d+)\s+(\w+)", full_text, re.IGNORECASE)
+        if class_match:
+            character_dict["level"] = int(class_match.group(1))
+            # Extract class name (might have parenthetical like "Paladin (Oath of the Crown)")
+            class_name = class_match.group(2).strip()
+            # Remove parenthetical if present
+            class_name = re.sub(r"\s*\([^)]+\)", "", class_name)
+            character_dict["class"] = class_name.capitalize()
+        
+        # Extract race if mentioned
+        race_match = re.search(r"\*\*race:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE)
+        if not race_match:
+            race_match = re.search(r"race[:\s]+(\w+)", full_text, re.IGNORECASE)
+        if race_match:
+            race_name = race_match.group(1).strip()
+            # Remove markdown formatting
+            race_name = re.sub(r"\*\*", "", race_name)
+            character_dict["race"] = race_name.capitalize()
+        
+        # Extract background if mentioned
+        background_match = re.search(r"\*\*background:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE)
+        if background_match:
+            bg_name = background_match.group(1).strip()
+            # Remove markdown formatting
+            bg_name = re.sub(r"\*\*", "", bg_name)
+            character_dict["background"] = bg_name
+        
+        # Extract stats if mentioned (Str X, Con Y, Cha Z pattern)
+        # Look for "**Stats:** Str X, Con Y, Cha Z" or "Stats: Str X, Con Y, Cha Z"
+        stats_match = re.search(r"\*\*stats?:\*\*\s*(?:str|strength)\s+(\d+)[,\s|]+(?:con|constitution)\s+(\d+)[,\s|]+(?:cha|charisma)\s+(\d+)", full_text, re.IGNORECASE)
+        if not stats_match:
+            stats_match = re.search(r"stats?[:\s]+(?:str|strength)\s+(\d+)[,\s|]+(?:con|constitution)\s+(\d+)[,\s|]+(?:cha|charisma)\s+(\d+)", full_text, re.IGNORECASE)
+        if stats_match:
+            character_dict["base_attributes"] = {
+                "strength": int(stats_match.group(1)),
+                "constitution": int(stats_match.group(2)),
+                "charisma": int(stats_match.group(3)),
+            }
+            character_dict["attributes"] = character_dict["base_attributes"].copy()
+        
+        # Extract HP if mentioned
+        hp_match = re.search(r"\*\*hp:\*\*\s*(\d+)", full_text, re.IGNORECASE)
+        if not hp_match:
+            hp_match = re.search(r"hp[:\s]+(\d+)", full_text, re.IGNORECASE)
+        if hp_match:
+            hp_value = int(hp_match.group(1))
+            character_dict["hp_max"] = hp_value
+            character_dict["hp_current"] = hp_value
+        
+        # Extract AC if mentioned
+        ac_match = re.search(r"\*\*ac:\*\*\s*(\d+)", full_text, re.IGNORECASE)
+        if not ac_match:
+            ac_match = re.search(r"ac[:\s]+(\d+)", full_text, re.IGNORECASE)
+        if ac_match:
+            character_dict["ac"] = int(ac_match.group(1))
+        
+        # Only create god_mode dict if we found character info
+        if character_dict:
+            parsed["character"] = character_dict
+            return parsed
+        
+        # If no character info found but we have character string, create minimal character
+        if character_str:
+            parsed["character"] = {"name": character_str}
+            return parsed
+        
+        # Return parsed dict if we have setting or description, even without character
+        # This prevents user-provided campaign settings from being lost
+        if parsed.get("setting") or parsed.get("description"):
+            return parsed
+        
+        return None
+        
+    except Exception as e:
+        logging_util.warning(f"Failed to parse god_mode_data string: {e}")
+        return None
+
+
 def _handle_debug_mode_command(
     user_input: str,
     current_game_state: GameState,
@@ -1472,18 +1720,78 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         old_prompt = request_data.get("prompt", "")
         selected_prompts = request_data.get("selected_prompts", [])
         custom_options = request_data.get("custom_options", [])
+        god_mode = request_data.get("god_mode", None)
+        god_mode_data = request_data.get("god_mode_data", None)
 
+        # Parse god_mode_data (string format) into god_mode (dict format) if needed
+        # Real users send god_mode_data as string: "Character: X | Setting: Y | Description: Z"
+        # Code expects god_mode as dict: {"character": {...}, "setting": "...", "description": "..."}
+        if not god_mode and god_mode_data and isinstance(god_mode_data, str):
+            logging_util.info("Parsing god_mode_data string format into god_mode dict")
+            god_mode = _parse_god_mode_data_string(god_mode_data)
+            if god_mode:
+                logging_util.info(f"Parsed god_mode_data: character={god_mode.get('character', {}).get('name', 'Unknown')}")
+                # Extract character/setting/description from parsed god_mode for prompt building
+                if not character and god_mode.get("character", {}).get("name"):
+                    character = god_mode["character"]["name"]
+                if not setting and god_mode.get("setting"):
+                    setting = god_mode["setting"]
+                if not description and god_mode.get("description"):
+                    description = god_mode["description"]
+        
         # Validate required fields
         if not user_id:
             return {KEY_ERROR: "User ID is required"}
         if not title:
             return {KEY_ERROR: "Title is required"}
 
-        # Build campaign prompt
+        # Build campaign prompt (may generate random values if character/setting are empty)
         try:
             prompt = _build_campaign_prompt(character, setting, description, old_prompt)
         except ValueError as e:
             return {KEY_ERROR: str(e)}
+
+        # CRITICAL FIX: Extract character/setting from prompt if they were randomly generated
+        # When user leaves fields blank, _build_campaign_prompt generates random values
+        # We need to extract those values to build god_mode
+        if not character or not setting:
+            # Parse prompt to extract character/setting (format: "Character: X | Setting: Y")
+            import re
+            char_match = re.search(r"Character:\s*([^|]+)", prompt)
+            setting_match = re.search(r"Setting:\s*([^|]+)", prompt)
+            if char_match:
+                character = char_match.group(1).strip()
+                logging_util.info(f"Extracted character from prompt: {character}")
+            if setting_match:
+                setting = setting_match.group(1).strip()
+                logging_util.info(f"Extracted setting from prompt: {setting}")
+
+        # ALSO: Build god_mode dict from separate character/setting/description fields (frontend format)
+        # Frontend sends character/setting/description as separate fields, not god_mode_data string
+        # This also handles randomly generated values from _build_campaign_prompt
+        if not god_mode and (character or setting or description):
+            logging_util.info("Building god_mode dict from separate character/setting/description fields")
+            god_mode = {}
+            if setting:
+                god_mode["setting"] = setting
+            if description:
+                god_mode["description"] = description
+            if character:
+                # Build minimal character dict - LLM will interpret the string
+                # We just need god_mode["character"] to be a dict so is_god_mode_with_character is True
+                character_dict = {}
+                if isinstance(character, str):
+                    # Store the full character string - LLM will interpret it
+                    # This could be "Ser Arion", "A devout cleric...", "Level 1 Fighter", etc.
+                    character_dict["name"] = character.strip()
+                    # If description exists, combine it (LLM sees full context)
+                    if description:
+                        character_dict["description"] = description.strip()
+                elif isinstance(character, dict):
+                    character_dict = character
+                if character_dict:
+                    god_mode["character"] = character_dict
+                    logging_util.info(f"Built god_mode from separate fields: character={character_dict.get('name', 'Unknown')}")
 
         # Always use D&D system
         attribute_system = constants.ATTRIBUTE_SYSTEM_DND
@@ -1498,38 +1806,194 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 
         # Create initial game state with user's debug mode preference
         # ALWAYS start in character creation mode, even if God Mode includes character data
+        # Extract God Mode character template if provided
+        player_character_data = {}
+        character_creation_stage = "concept"  # Default stage
+
+        # Initialize entity tracking with player character if provided
+        entity_tracking = {}
+        if god_mode and isinstance(god_mode, dict):
+            god_mode_character = god_mode.get("character")
+            if god_mode_character and isinstance(god_mode_character, dict):
+                # Populate player_character_data with template fields
+                player_character_data = god_mode_character.copy()
+                # Set stage to "review" since character data is pre-populated
+                character_creation_stage = "review"
+                player_name = player_character_data.get("name")
+                logging_util.info(
+                    f"God Mode character template detected: {player_name or 'Unknown'}"
+                )
+
+                # CHAR-9ss fix: Initialize starting equipment based on class/background
+                # Use (get() or "") to handle None values that bypass default
+                character_class = (player_character_data.get("class") or "").lower()
+                background = (player_character_data.get("background") or "").lower()
+
+                # Basic starting equipment by class (D&D 5e SRD)
+                class_equipment = {
+                    "wizard": [
+                        "Spellbook",
+                        "Component pouch",
+                        "Quarterstaff",
+                        "Scholar's pack"
+                    ],
+                    "fighter": [
+                        "Chain mail",
+                        "Longsword",
+                        "Shield",
+                        "Dungeoneer's pack",
+                        "Javelin (2)"
+                    ],
+                    "rogue": [
+                        "Leather armor",
+                        "Shortsword (2)",
+                        "Dagger",
+                        "Thieves' tools",
+                        "Burglar's pack"
+                    ],
+                    "cleric": [
+                        "Chain mail",
+                        "Mace",
+                        "Shield",
+                        "Holy symbol",
+                        "Priest's pack"
+                    ],
+                }
+
+                # Get starting equipment for this class
+                equipment = []
+                for class_name, items in class_equipment.items():
+                    if class_name in character_class:
+                        equipment.extend(items)
+                        break
+
+                # Add background-specific items
+                if "sage" in background:
+                    equipment.extend(["Ink (1 ounce bottle)", "Quill", "Small knife", "Letter from dead colleague"])
+                elif "soldier" in background:
+                    equipment.extend(["Insignia of rank", "Trophy from fallen enemy", "Dice set"])
+                elif "criminal" in background:
+                    equipment.extend(["Crowbar", "Dark common clothes", "Pouch (15gp)"])
+
+                # Add basic adventuring gear
+                equipment.extend([
+                    "Backpack",
+                    "Bedroll",
+                    "Mess kit",
+                    "Tinderbox",
+                    "Torch (10)",
+                    "Rations (10 days)",
+                    "Waterskin",
+                    "Rope (50 feet)",
+                    "Coin pouch (10gp)"
+                ])
+
+                # Initialize inventory in player_character_data
+                if equipment and "inventory" not in player_character_data:
+                    player_character_data["inventory"] = equipment
+                    logging_util.info(
+                        f"✅ Initialized {len(equipment)} starting items for {character_class}"
+                    )
+
+                # Add player character to active_entities for entity tracking
+                if player_name:
+                    entity_tracking = {
+                        "active_entities": [player_name],
+                        "present_entities": []
+                    }
+                    logging_util.info(
+                        f"✅ Added '{player_name}' to active_entities (God Mode character)"
+                    )
+
         initial_game_state = GameState(
             user_id=user_id,
             custom_campaign_state={
                 "attribute_system": attribute_system,
                 "character_creation_in_progress": True,
+                "character_creation_stage": character_creation_stage,
             },
+            player_character_data=player_character_data,
+            entity_tracking=entity_tracking,
             debug_mode=debug_mode,
         ).to_dict()
 
         generate_companions = "companions" in custom_options
         use_default_world = "defaultWorld" in custom_options
 
-        # Generate opening story using LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
-        try:
-            opening_story_response = await asyncio.to_thread(
-                llm_service.get_initial_story,
-                prompt,
-                user_id,
-                selected_prompts,
-                generate_companions,
-                use_default_world,
-            )
-        except llm_service.LLMRequestError as e:
-            logging_util.error(f"LLM request failed during campaign creation: {e}")
-            status_code = getattr(e, "status_code", None) or 422
-            return create_error_response(str(e), status_code)
-
-        # Extract structured fields
-        opening_story_structured_fields = _ensure_session_header_resources(
-            structured_fields_utils.extract_structured_fields(opening_story_response),
-            initial_game_state,
+        # CRITICAL UX FIX: For God Mode campaigns with pre-populated characters,
+        # generate character creation narrative IMMEDIATELY so user can review.
+        # Only skip for empty character creation (user will build from scratch).
+        is_god_mode_with_character = (
+            god_mode
+            and isinstance(god_mode, dict)
+            and god_mode.get("character")
+            and isinstance(god_mode.get("character"), dict)
         )
+
+        # DEBUG LOGGING: Track why placeholder might be shown
+        logging_util.info(f"🔍 CHARACTER CREATION DECISION:")
+        logging_util.info(f"  character_creation_in_progress: {initial_game_state['custom_campaign_state']['character_creation_in_progress']}")
+        logging_util.info(f"  god_mode exists: {god_mode is not None}")
+        logging_util.info(f"  god_mode type: {type(god_mode)}")
+        logging_util.info(f"  god_mode value: {god_mode}")
+        if god_mode:
+            logging_util.info(f"  god_mode.get('character'): {god_mode.get('character')}")
+            logging_util.info(f"  character is dict: {isinstance(god_mode.get('character'), dict) if god_mode.get('character') else False}")
+        logging_util.info(f"  is_god_mode_with_character: {is_god_mode_with_character}")
+
+        if initial_game_state["custom_campaign_state"]["character_creation_in_progress"] and not is_god_mode_with_character:
+            # Empty character creation - skip opening story, let user build character in Turn 1
+            logging_util.info(
+                "Skipping opening story generation - empty character creation mode active"
+            )
+            opening_story_text = "[Character Creation Mode - Story begins after character is complete]"
+            # Keep Firestore structured field payload shape consistent, even when
+            # we skip opening story generation.
+            opening_story_structured_fields = {
+                constants.FIELD_SESSION_HEADER: "",
+                constants.FIELD_PLANNING_BLOCK: {},
+                constants.FIELD_DICE_ROLLS: [],
+                constants.FIELD_DICE_AUDIT_EVENTS: [],
+                constants.FIELD_RESOURCES: {},
+                constants.FIELD_DEBUG_INFO: {},
+                constants.FIELD_GOD_MODE_RESPONSE: "",
+                constants.FIELD_DIRECTIVES: {},
+            }
+        else:
+            # Generate opening story using LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
+            # For God Mode campaigns with character data, use CharacterCreationAgent
+            # For regular campaigns, use StoryModeAgent
+            try:
+                opening_story_response = await asyncio.to_thread(
+                    llm_service.get_initial_story,
+                    prompt,
+                    user_id,
+                    selected_prompts,
+                    generate_companions,
+                    use_default_world,
+                    use_character_creation_agent=is_god_mode_with_character,  # Use CharacterCreationAgent for God Mode with character
+                )
+            except llm_service.LLMRequestError as e:
+                logging_util.error(f"LLM request failed during campaign creation: {e}")
+                status_code = getattr(e, "status_code", None) or 422
+                return create_error_response(str(e), status_code)
+
+            opening_story_text = opening_story_response.narrative_text
+
+            # Extract structured fields
+            fields = structured_fields_utils.extract_structured_fields(opening_story_response)
+            
+            # Ensure planning_block is a dict (prevent string "empty" values from extraction)
+            if constants.FIELD_PLANNING_BLOCK in fields:
+                if not isinstance(fields[constants.FIELD_PLANNING_BLOCK], dict):
+                    fields[constants.FIELD_PLANNING_BLOCK] = {}
+            else:
+                fields[constants.FIELD_PLANNING_BLOCK] = {}
+
+            opening_story_structured_fields = _ensure_session_header_resources(
+                fields,
+                initial_game_state,
+            )
 
         # Create campaign in Firestore (blocking I/O - run in thread)
         campaign_id = await asyncio.to_thread(
@@ -1537,7 +2001,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             user_id,
             title,
             prompt,
-            opening_story_response.narrative_text,
+            opening_story_text,
             initial_game_state,
             selected_prompts,
             use_default_world,
@@ -1548,7 +2012,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             KEY_SUCCESS: True,
             KEY_CAMPAIGN_ID: campaign_id,
             "title": title,
-            "opening_story": opening_story_response.narrative_text,
+            "opening_story": opening_story_text,
             "game_state": initial_game_state,
             "attribute_system": attribute_system,
         }
@@ -1647,39 +2111,52 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             user_input = "Return to story."
             mode = constants.MODE_CHARACTER
 
-        # Load and prepare game state (blocking I/O - run in thread)
-        current_game_state, was_cleaned, num_cleaned = await asyncio.to_thread(
-            _prepare_game_state, user_id, campaign_id
-        )
-
-        # Apply user settings to game state (blocking I/O - run in thread)
-        user_settings = await asyncio.to_thread(get_user_settings, user_id)
+        # Load and prepare game state + user settings.
+        #
+        # In mock services mode, Firestore is in-memory and non-blocking, so
+        # running directly avoids thread scheduling overhead that can make
+        # concurrency tests flaky.
+        if is_mock_services_mode():
+            (
+                current_game_state,
+                was_cleaned,
+                num_cleaned,
+                user_settings,
+            ) = _prepare_game_state_with_user_settings(user_id, campaign_id)
+        else:
+            (
+                current_game_state,
+                was_cleaned,
+                num_cleaned,
+                user_settings,
+            ) = await asyncio.to_thread(
+                _prepare_game_state_with_user_settings, user_id, campaign_id
+            )
         if user_settings and "debug_mode" in user_settings:
             current_game_state.debug_mode = user_settings["debug_mode"]
 
-        # Handle debug mode commands (may contain blocking I/O)
-        debug_response = await asyncio.to_thread(
-            _handle_debug_mode_command,
-            user_input,
-            current_game_state,
-            user_id,
-            campaign_id,
-        )
-        if debug_response:
-            return debug_response
+        # Handle debug mode commands (only when applicable; avoids unnecessary
+        # thread scheduling overhead for normal gameplay).
+        user_input_stripped = user_input.strip()
+        if (
+            user_input_stripped == "GOD_ASK_STATE"
+            or user_input_stripped.startswith("GOD_MODE_SET:")
+            or user_input_stripped.startswith("GOD_MODE_UPDATE_STATE:")
+        ):
+            debug_response = await asyncio.to_thread(
+                _handle_debug_mode_command,
+                user_input,
+                current_game_state,
+                user_id,
+                campaign_id,
+            )
+            if debug_response:
+                return debug_response
 
-        # Get story context for Gemini (blocking I/O - run in thread)
-        campaign_data, story_context = await asyncio.to_thread(
-            firestore_service.get_campaign_by_id, user_id, campaign_id
-        )
-        if not campaign_data:
-            return {KEY_ERROR: "Campaign not found", "status_code": 404}
-
-        story_context = story_context or []
-
-        # Get campaign settings
-        selected_prompts = campaign_data.get("selected_prompts", [])
-        use_default_world = campaign_data.get("use_default_world", False)
+        campaign_data: dict[str, Any] | None = None
+        story_context: list[dict[str, Any]] = []
+        selected_prompts: list[str] = []
+        use_default_world = False
 
         # Extract current world_time and location for temporal validation
         # CRITICAL: world_data can be None or non-dict in existing saves - normalize to {} first
@@ -1704,17 +2181,39 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             try:
-                llm_response_obj = await asyncio.to_thread(
-                    llm_service.continue_story,
-                    llm_input,  # Use llm_input, NOT user_input
-                    mode,
-                    story_context,
-                    current_game_state,
-                    selected_prompts,
-                    use_default_world,
-                    user_id,  # Pass user_id to enable user model preference selection
-                    include_raw_llm_payloads,
-                )
+                if campaign_data is None:
+                    (
+                        campaign_data,
+                        story_context,
+                        llm_response_obj,
+                    ) = await asyncio.to_thread(
+                        _load_campaign_and_continue_story,
+                        user_id,
+                        campaign_id,
+                        llm_input=llm_input,
+                        mode=mode,
+                        current_game_state=current_game_state,
+                        include_raw_llm_payloads=include_raw_llm_payloads,
+                    )
+                    if not campaign_data or llm_response_obj is None:
+                        return {
+                            KEY_ERROR: "Campaign not found",
+                            "status_code": 404,
+                        }
+                    selected_prompts = campaign_data.get("selected_prompts", [])
+                    use_default_world = campaign_data.get("use_default_world", False)
+                else:
+                    llm_response_obj = await asyncio.to_thread(
+                        llm_service.continue_story,
+                        llm_input,  # Use llm_input, NOT user_input
+                        mode,
+                        story_context,
+                        current_game_state,
+                        selected_prompts,
+                        use_default_world,
+                        user_id,  # Pass user_id to enable user model preference selection
+                        include_raw_llm_payloads,
+                    )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during story continuation: {e}")
                 status_code = getattr(e, "status_code", None) or 422
@@ -1869,21 +2368,18 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Extract LLM-requested instruction hints for next turn
         # The LLM can signal it needs detailed sections (e.g., relationships, reputation)
         # via debug_info.meta.needs_detailed_instructions in its response
-        llm_debug_info = (
-            llm_response_obj.get_debug_info()
-            if hasattr(llm_response_obj, "get_debug_info")
-            else {}
-        )
+        get_debug_info = getattr(llm_response_obj, "get_debug_info", None)
+        llm_debug_info = get_debug_info() if callable(get_debug_info) else {}
+        if not isinstance(llm_debug_info, dict):
+            llm_debug_info = {}
         # Wrap in dict as extract_llm_instruction_hints expects {"debug_info": {...}}
         instruction_hints = extract_llm_instruction_hints(
             {"debug_info": llm_debug_info}
         )
-        # Always update pending_instruction_hints - either with new hints or empty list to clear
-        # This ensures hints are consumed on the next turn and don't persist indefinitely
-        state_changes["pending_instruction_hints"] = instruction_hints
-        if instruction_hints:
+        pending_instruction_hints = instruction_hints
+        if pending_instruction_hints:
             logging_util.info(
-                f"📋 DYNAMIC_PROMPTS: LLM requested detailed sections for next turn: {instruction_hints}"
+                f"📋 DYNAMIC_PROMPTS: LLM requested detailed sections for next turn: {pending_instruction_hints}"
             )
 
         response = {
@@ -1912,6 +2408,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # These were already consumed by llm_service (sent to LLM in this turn)
         # Any NEW corrections from the LLM's state_updates will be preserved by the merge
         current_state_as_dict.pop("pending_system_corrections", None)
+
+        # Only include pending_instruction_hints in state_changes when we have new
+        # hints to store OR when we need to clear existing hints from prior turns.
+        if pending_instruction_hints or original_state_for_level_check.get(
+            "pending_instruction_hints"
+        ):
+            state_changes["pending_instruction_hints"] = pending_instruction_hints
 
         # Update game state with changes
         # SAFETY: In Think Mode, only allow microsecond time advancement - block all other state changes
@@ -1954,9 +2457,68 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     "🧠 THINK_MODE_SAFETY: Blocked non-time state changes in Think Mode"
                 )
 
-        updated_game_state_dict = update_state_with_changes(
-            current_state_as_dict, state_changes_to_apply
+        if state_changes_to_apply:
+            updated_game_state_dict = update_state_with_changes(
+                current_state_as_dict, state_changes_to_apply
+            )
+        else:
+            updated_game_state_dict = current_state_as_dict
+
+        # Track player character in active_entities once name is known, to support
+        # entity validation and reduce hallucinations in subsequent turns.
+        current_custom_state = current_state_as_dict.get("custom_campaign_state") or {}
+        if not isinstance(current_custom_state, dict):
+            current_custom_state = {}
+
+        custom_state = updated_game_state_dict.get("custom_campaign_state") or {}
+        if not isinstance(custom_state, dict):
+            custom_state = {}
+
+        was_creating = current_custom_state.get("character_creation_in_progress", False)
+        stage = custom_state.get("character_creation_stage")
+        is_completed = bool(custom_state.get("character_creation_completed")) or (
+            stage == "complete"
         )
+        flag_cleared = not bool(custom_state.get("character_creation_in_progress", True))
+
+        logging_util.debug(
+            f"🔍 Entity tracking check: was_creating={was_creating}, is_completed={is_completed}, flag_cleared={flag_cleared}"
+        )
+
+        player_data = updated_game_state_dict.get("player_character_data") or {}
+        if not isinstance(player_data, dict):
+            player_data = {}
+
+        player_name = player_data.get("name")
+        should_track_player = False
+        if was_creating and flag_cleared and is_completed:
+            # Character creation just completed.
+            should_track_player = True
+        elif was_creating and stage in ("review", "level_up", "complete"):
+            # God Mode templates and later phases have stable character identity.
+            should_track_player = True
+        elif (not was_creating) and player_name:
+            # Story mode or other modes: ensure player is tracked if present.
+            should_track_player = True
+
+        if should_track_player:
+            if player_name:
+                entity_tracking = updated_game_state_dict.get("entity_tracking")
+                if not isinstance(entity_tracking, dict):
+                    entity_tracking = {}
+                    updated_game_state_dict["entity_tracking"] = entity_tracking
+
+                active_entities = entity_tracking.get("active_entities")
+                if not isinstance(active_entities, list):
+                    active_entities = []
+                    entity_tracking["active_entities"] = active_entities
+
+                # Add player character if not already present
+                if player_name not in active_entities:
+                    active_entities.append(player_name)
+                    logging_util.info(
+                        f"✅ Added player character '{player_name}' to active_entities"
+                    )
 
         # Apply automatic combat cleanup (sync defeated enemies between combat_state and npc_data)
         # Named NPCs are preserved and marked dead for continuity, while generic enemies are deleted.
@@ -2222,25 +2784,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 "to game_state.pending_system_corrections"
             )
 
-        # Update in Firestore (blocking I/O - run in thread)
-        await asyncio.to_thread(
-            firestore_service.update_campaign_game_state,
-            user_id,
-            campaign_id,
-            updated_game_state_dict,
-        )
-
-        # Save story entries to Firestore (blocking I/O - run in thread)
-        # First save the user input
-        await asyncio.to_thread(
-            firestore_service.add_story_entry,
-            user_id,
-            campaign_id,
-            constants.ACTOR_USER,
-            user_input,
-            mode,
-        )
-
         # Then save the AI response with structured fields if available
         ai_response_text = llm_response_obj.narrative_text
 
@@ -2292,15 +2835,28 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             if "state_updates" in structured_fields:
                 structured_fields["state_updates"]["world_events"] = llm_world_events
 
-        await asyncio.to_thread(
-            firestore_service.add_story_entry,
-            user_id,
-            campaign_id,
-            constants.ACTOR_GEMINI,
-            ai_response_text,
-            None,  # mode
-            structured_fields,  # structured_fields
-        )
+        # Persist state + story entries.
+        if is_mock_services_mode():
+            _persist_turn_to_firestore(
+                user_id,
+                campaign_id,
+                mode=mode,
+                user_input=user_input,
+                ai_response_text=ai_response_text,
+                structured_fields=structured_fields,
+                updated_game_state_dict=updated_game_state_dict,
+            )
+        else:
+            await asyncio.to_thread(
+                _persist_turn_to_firestore,
+                user_id,
+                campaign_id,
+                mode=mode,
+                user_input=user_input,
+                ai_response_text=ai_response_text,
+                structured_fields=structured_fields,
+                updated_game_state_dict=updated_game_state_dict,
+            )
 
         # Get debug mode for narrative text processing
         debug_mode = (
@@ -2310,10 +2866,25 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         )
 
         # Extract narrative text with proper debug mode handling
-        if hasattr(llm_response_obj, "get_narrative_text"):
-            final_narrative = llm_response_obj.get_narrative_text(debug_mode=debug_mode)
+        get_narrative_text = getattr(llm_response_obj, "get_narrative_text", None)
+        if callable(get_narrative_text):
+            final_narrative = get_narrative_text(debug_mode=debug_mode)
+            if not isinstance(final_narrative, str):
+                final_narrative = llm_response_obj.narrative_text
         else:
             final_narrative = llm_response_obj.narrative_text
+
+        # Defensive check: ensure narrative is never None or empty
+        if not final_narrative or not isinstance(final_narrative, str):
+            logging_util.warning(
+                f"⚠️ EMPTY_NARRATIVE in process_action_unified: narrative_text={final_narrative}, "
+                f"type={type(final_narrative)}, has_structured_response={llm_response_obj.structured_response is not None}"
+            )
+            # Fallback to structured response narrative if available
+            if llm_response_obj.structured_response and hasattr(llm_response_obj.structured_response, "narrative"):
+                final_narrative = llm_response_obj.structured_response.narrative or "[Error: Empty narrative from LLM]"
+            else:
+                final_narrative = "[Error: Empty narrative from LLM]"
 
         # Note: With "text" field fix, empty narratives should now be properly handled
         # by the translation layer without needing fallback messages
@@ -2522,12 +3093,21 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Add system warnings from validation corrections and post-combat checks
         if system_warnings:
             unified_response["system_warnings"] = system_warnings
-            # Log warnings for visibility
             for warning in system_warnings:
                 logging_util.warning(f"SYSTEM WARNING: {warning}")
 
-        # Track story mode sequence ID for character mode
-        if mode == constants.MODE_CHARACTER:
+        # Track story mode sequence ID for character mode.
+        #
+        # NOTE: Skip in MOCK_SERVICES_MODE to keep tight concurrency tests stable
+        # (mock Firestore is in-memory and this field isn't needed for those tests).
+        # Read item_exploit_blocked from processing_metadata if item validation detected an exploit
+        metadata = getattr(llm_response_obj, "processing_metadata", {}) or {}
+        item_exploit_blocked = metadata.get("item_exploit_blocked", False)
+        if (
+            mode == constants.MODE_CHARACTER
+            and not item_exploit_blocked
+            and not is_mock_services_mode()
+        ):
             story_id_update = {
                 "custom_campaign_state": {"last_story_mode_sequence_id": sequence_id}
             }
@@ -2551,14 +3131,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 updated_game_state_dict, story_id_update
             )
             # Validate the final state before persisting
-            final_game_state_dict = validate_game_state_updates(final_game_state_dict)
-            # Blocking I/O - run in thread
+            final_game_state_dict = validate_game_state_updates(
+                final_game_state_dict
+            )
+
             await asyncio.to_thread(
-                firestore_service.update_campaign_game_state,
+                _update_campaign_game_state,
                 user_id,
                 campaign_id,
                 final_game_state_dict,
             )
+
             unified_response["game_state"] = final_game_state_dict
 
         return unified_response
@@ -2601,9 +3184,19 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
         if not campaign_id:
             return {KEY_ERROR: "Campaign ID is required"}
 
-        # Get campaign metadata and story (blocking I/O - run in thread)
-        campaign_data, story = await asyncio.to_thread(
-            firestore_service.get_campaign_by_id, user_id, campaign_id
+        # Fetch campaign metadata/story and game state concurrently (blocking I/O).
+        (campaign_data, story), (
+            game_state,
+            was_cleaned,
+            num_cleaned,
+            user_settings,
+        ) = await asyncio.gather(
+            asyncio.to_thread(
+                firestore_service.get_campaign_by_id, user_id, campaign_id
+            ),
+            asyncio.to_thread(
+                _prepare_game_state_with_user_settings, user_id, campaign_id
+            ),
         )
         if not campaign_data:
             return {KEY_ERROR: "Campaign not found", "status_code": 404}
@@ -2624,15 +3217,12 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
             ):
                 campaign_data[field] = clean_json_artifacts(campaign_data[field])
 
-        # Get game state and apply user settings (blocking I/O - run in thread)
-        game_state, was_cleaned, num_cleaned = await asyncio.to_thread(
-            _prepare_game_state, user_id, campaign_id
-        )
         game_state_dict = game_state.to_dict()
 
         # Get debug mode from user settings and apply to game state (blocking I/O)
-        user_settings = await asyncio.to_thread(get_user_settings, user_id)
-        debug_mode = user_settings.get("debug_mode", False) if user_settings else False
+        debug_mode = (
+            user_settings.get("debug_mode", False) if user_settings else False
+        )
         game_state_dict["debug_mode"] = debug_mode
 
         result = {
@@ -3083,7 +3673,7 @@ def apply_automatic_combat_cleanup(
     # Check if we have combatants data to potentially clean up
     combatants = temp_game_state.combat_state.get("combatants", {})
     if not combatants:
-        logging_util.info("COMBAT CLEANUP CHECK: No combatants found, skipping cleanup")
+        logging_util.debug("COMBAT CLEANUP CHECK: No combatants found, skipping cleanup")
         return updated_state_dict
 
     # CRITICAL FIX: Always attempt cleanup if combatants exist
@@ -3091,7 +3681,7 @@ def apply_automatic_combat_cleanup(
     # 1. Combat ongoing with new defeats
     # 2. Combat ending with pre-existing defeats
     # 3. State updates without explicit combat_state changes but with defeated enemies
-    logging_util.info(
+    logging_util.debug(
         f"COMBAT CLEANUP CHECK: Found {len(combatants)} combatants, scanning for defeated enemies..."
     )
 
