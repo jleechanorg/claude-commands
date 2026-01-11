@@ -1,3 +1,5 @@
+/* global bootstrap, fetchApi, UIUtils, firebase, loadSettings, saveSettings, toggleProviderSections, InlineEditor */
+
 document.addEventListener('DOMContentLoaded', () => {
   // Check for test mode
   const urlParams = new URLSearchParams(window.location.search);
@@ -45,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Shared helper for character info queries (equipment, stats, spells)
   // Uses dedicated API endpoints for fast, deterministic responses
-  const sendCharacterInfoQuery = async (endpoint, summaryKey, errorMsg) => {
+  const handleInfoQuery = async ({ endpoint, builder, summaryKey, errorMsg }) => {
     if (!currentCampaignId) {
       console.warn(`No campaign loaded - cannot fetch ${endpoint}`);
       return;
@@ -70,9 +72,11 @@ document.addEventListener('DOMContentLoaded', () => {
         { method: 'GET' },
       );
 
-      // Display formatted summary from dedicated endpoint
-      const summaryText = data?.[summaryKey] || `No ${endpoint} information available.`;
-      appendToStory('system', summaryText, null, false, null, null);
+      const html = builder ? builder(data) : null;
+      const fallbackText = data?.[summaryKey] || `No ${endpoint} information available.`;
+      appendToStory('system', html || fallbackText, null, false, null, null, {
+        isHtml: Boolean(html),
+      });
       if (timerInfo) timerInfo.textContent = `Response time: ${duration}s`;
     } catch (error) {
       console.error(`${endpoint} query failed:`, error);
@@ -89,13 +93,287 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Global functions for quick action buttons - use dedicated API endpoints
   window.sendEquipmentQuery = () =>
-    sendCharacterInfoQuery('equipment', 'equipment_summary', 'Sorry, an error occurred fetching equipment.');
+    handleInfoQuery({
+      endpoint: 'equipment',
+      builder: buildEquipmentHTML,
+      summaryKey: 'equipment_summary',
+      errorMsg: 'Sorry, an error occurred fetching equipment.',
+    });
 
+  // Stats display with BG3-style HTML tables
   window.sendStatsQuery = () =>
-    sendCharacterInfoQuery('stats', 'stats_summary', 'Sorry, an error occurred fetching stats.');
+    handleInfoQuery({
+      endpoint: 'stats',
+      builder: buildStatsHTML,
+      summaryKey: 'stats_summary',
+      errorMsg: 'Sorry, an error occurred fetching stats.',
+    });
 
   window.sendSpellsQuery = () =>
-    sendCharacterInfoQuery('spells', 'spells_summary', 'Sorry, an error occurred fetching spells.');
+    handleInfoQuery({
+      endpoint: 'spells',
+      builder: buildSpellsHTML,
+      summaryKey: 'spells_summary',
+      errorMsg: 'Sorry, an error occurred fetching spells.',
+    });
+
+  const renderInfoTable = ({ headers = [], rows = [], compact = false, extraClass = '' }) => {
+    const tableClass = `info-table ${compact ? 'compact-table' : ''} ${extraClass}`.trim();
+    let table = `<table class="${tableClass}">`;
+    if (headers.length) {
+      table += `<thead><tr>${headers.map((h) => `<th>${sanitizeHtml(h)}</th>`).join('')}</tr></thead>`;
+    }
+    table += '<tbody>';
+    rows.forEach((row) => {
+      table += `<tr>${row.map((cell) => {
+        const safe = sanitizeHtml(String(cell ?? '—'));
+        return `<td>${safe}</td>`;
+      }).join('')}</tr>`;
+    });
+    table += '</tbody></table>';
+    return table;
+  };
+
+  // Build neutral, game-chat friendly stats UI using structured JSON
+  const buildStatsHTML = (data) => {
+    if (!data || !data.success) {
+      return data?.stats_summary || 'No stats available.';
+    }
+
+    const combat = data.combat_stats || {};
+    const effective = data.effective_stats || {};
+    const naked = data.naked_stats || {};
+    const features = data.features || [];
+    const spellStats = combat.spell_stats;
+    const savingThrows = combat.saving_throws || [];
+
+    const fmtMod = (mod) => {
+      const n = parseInt(mod, 10);
+      if (Number.isNaN(n)) return '+0';
+      return n >= 0 ? `+${n}` : `${n}`;
+    };
+
+    const getStat = (stats, key) => {
+      const s = stats[key];
+      if (!s) return { score: 10, modifier: '+0' };
+      return { score: s.score ?? 10, modifier: s.modifier ?? '+0' };
+    };
+
+    let html = '<div class="stats-panel info-card">';
+    html += '<div class="stats-header info-header">';
+    html += `<span class="stat-badge info-badge">Level ${combat.level || '?'}</span>`;
+    html += `<span class="stat-badge info-badge">HP ${combat.hp_current || 0}/${combat.hp_max || 0}</span>`;
+    html += `<span class="stat-badge info-badge">AC ${combat.ac || 10}${combat.effective_ac && combat.effective_ac !== combat.ac ? ` → ${combat.effective_ac}` : ''}</span>`;
+    html += `<span class="stat-badge info-badge">Initiative ${fmtMod(combat.initiative)}</span>`;
+    if (combat.speed) {
+      const speedText = /\bft\b/i.test(String(combat.speed))
+        ? String(combat.speed)
+        : `${combat.speed} ft`;
+      html += `<span class="stat-badge info-badge">Speed ${speedText}</span>`;
+    }
+    html += `<span class="stat-badge info-badge">Prof ${fmtMod(combat.proficiency_bonus)}</span>`;
+    html += '</div>';
+
+    if (spellStats) {
+      html += '<div class="stats-spellcasting info-subrow">';
+      html += `<span class="stat-badge spell info-badge">Spell DC ${spellStats.spell_save_dc}</span>`;
+      html += `<span class="stat-badge spell info-badge">Spell Attack ${fmtMod(spellStats.spell_attack_bonus)}</span>`;
+      html += `<span class="stat-badge spell info-badge">${spellStats.spellcasting_ability}</span>`;
+      html += '</div>';
+    }
+
+    html += '<div class="info-section-title">Ability Scores</div>';
+    const abilityRows = ['str', 'dex', 'con', 'int', 'wis', 'cha'].map((stat) => {
+      const eff = getStat(effective, stat);
+      const base = getStat(naked, stat);
+      const bonus = data.equipment_bonuses?.[stat];
+      return [
+        stat.toUpperCase(),
+        base.score,
+        bonus ? `${base.score} → ${eff.score}` : eff.score,
+        fmtMod(eff.modifier),
+        bonus ? fmtMod(bonus) : '—',
+      ];
+    });
+    html += renderInfoTable({
+      headers: ['Stat', 'Base', 'Effective', 'Mod', 'Bonus'],
+      rows: abilityRows,
+      compact: true,
+    });
+
+    if (savingThrows.length) {
+      html += '<div class="info-section-title">Saving Throws</div>';
+      const saveRows = savingThrows.map((save) => {
+        const label = save?.stat?.toUpperCase?.() || '';
+        const proficient = save?.proficient ? '●' : '○';
+        return [label, fmtMod(save?.bonus || 0), proficient];
+      });
+      html += renderInfoTable({ headers: ['Save', 'Bonus', 'Prof'], rows: saveRows, compact: true });
+    }
+
+    if (features.length > 0) {
+      const safeFeatures = features.filter(f => f).map(f => sanitizeHtml(f)).join(', ');
+      html += `<div class="features-section info-block"><strong>Features:</strong> ${safeFeatures}</div>`;
+    }
+
+    if (data.stats_summary) {
+      const summary = data.stats_summary;
+      const sections = ['▸ Skills:', '▸ Passives:', '▸ Weapons:'];
+      let extraContent = '';
+      // Fallback: parse summary sections by markers until backend provides structured JSON.
+      sections.forEach((section) => {
+        const idx = summary.indexOf(section);
+        if (idx >= 0) {
+          const nextIdx = summary.indexOf('▸', idx + 1);
+          const sectionContent = nextIdx > 0 ? summary.slice(idx, nextIdx) : summary.slice(idx);
+          extraContent += `<pre class="stats-section">${sanitizeHtml(sectionContent.trim())}</pre>`;
+        }
+      });
+      if (extraContent) html += extraContent;
+    }
+
+    html += '</div>';
+    return html;
+  };
+
+  const buildEquipmentHTML = (data) => {
+    if (!data || !data.success) {
+      return data?.equipment_summary || 'No equipment available.';
+    }
+
+    const equipmentList = Array.isArray(data.equipment_list) ? data.equipment_list : [];
+    let html = '<div class="stats-panel info-card">';
+    html += '<div class="stats-header info-header">';
+    html += '<span class="stat-badge info-badge">Equipment</span>';
+    html += `<span class="info-subtext">${equipmentList.length || 0} items</span>`;
+    html += '</div>';
+
+    if (equipmentList.length) {
+      const equipmentRows = equipmentList.map((item) => {
+        if (!item || typeof item !== 'object') {
+          return ['—', 'Unknown item', '—'];
+        }
+        const slot = item.slot || item.category || '—';
+        const name = item.name || item.item || 'Unknown item';
+        const details = item.stats || item.description || item.effects || '';
+        return [slot, name, details || '—'];
+      });
+      html += renderInfoTable({ headers: ['Slot', 'Item', 'Details'], rows: equipmentRows, compact: true });
+    } else {
+      html += '<div class="info-subtext">No equipment found.</div>';
+    }
+
+    if (data.equipment_summary) {
+      html += `<pre class="stats-section">${sanitizeHtml(data.equipment_summary)}</pre>`;
+    }
+
+    html += '</div>';
+    return html;
+  };
+
+  const buildSpellsHTML = (data) => {
+    if (!data || !data.success) {
+      return data?.spells_summary || 'No spells available.';
+    }
+
+    const spellSlots = data.spell_slots || {};
+    const cantrips = Array.isArray(data.cantrips) ? data.cantrips : [];
+    const spellsPrepared = Array.isArray(data.spells_prepared) ? data.spells_prepared : [];
+    const spellsKnown = Array.isArray(data.spells_known) ? data.spells_known : [];
+    const classResources = data.class_resources || {};
+
+    const normalizeSpell = (spell) => {
+      if (typeof spell === 'string') {
+        return { name: spell, level: null };
+      }
+      if (spell && typeof spell === 'object') {
+        return { name: spell.name || 'Unknown Spell', level: spell.level ?? null };
+      }
+      return { name: 'Unknown Spell', level: null };
+    };
+
+    const groupSpells = (spells) => {
+      return spells.reduce((acc, raw) => {
+        const { name, level } = normalizeSpell(raw);
+        const key = level === null || level === undefined || level === '' ? '?' : level;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(name);
+        return acc;
+      }, {});
+    };
+
+    const renderSpellGroup = (label, spells) => {
+      if (!spells.length) return '';
+      const grouped = groupSpells(spells);
+      let section = `<div class="info-section-title">${label}</div>`;
+      const rows = Object.keys(grouped)
+        .sort((a, b) => {
+          const toNum = (val) => (String(val).match(/^\d+$/) ? parseInt(val, 10) : 99);
+          return toNum(a) - toNum(b);
+        })
+        .map((level) => {
+          const names = grouped[level].sort();
+          const labelText = level === '0' ? 'Cantrip' : level === '?' ? '—' : `Level ${level}`;
+          return [labelText, names.join(', ')];
+        });
+      section += renderInfoTable({ headers: ['Level', 'Spells'], rows, compact: true });
+      return section;
+    };
+
+    let html = '<div class="stats-panel info-card">';
+    html += '<div class="stats-header info-header">';
+    html += '<span class="stat-badge info-badge">Spells & Resources</span>';
+    if (Object.keys(spellSlots).length) {
+      html += `<span class="info-subtext">Slots: ${Object.keys(spellSlots).length}</span>`;
+    }
+    html += '</div>';
+
+    if (Object.keys(spellSlots).length) {
+      html += '<div class="info-section-title">Spell Slots</div>';
+      const slotRows = Object.keys(spellSlots)
+        .sort((a, b) => {
+          const toNum = (val) => (String(val).match(/^\d+$/) ? parseInt(val, 10) : 99);
+          return toNum(a) - toNum(b);
+        })
+        .map((level) => {
+          const slot = spellSlots[level] || {};
+          return [level, slot.current ?? '?', slot.max ?? '?'];
+        });
+      html += renderInfoTable({ headers: ['Level', 'Available', 'Max'], rows: slotRows, compact: true });
+    }
+
+    if (cantrips.length) {
+      html += '<div class="info-section-title">Cantrips</div>';
+      html += `<div class="info-block">${cantrips.map((c) => sanitizeHtml(normalizeSpell(c).name)).join(', ')}</div>`;
+    }
+
+    html += renderSpellGroup('Spells Prepared', spellsPrepared);
+    if (spellsKnown.length && spellsPrepared.length) {
+      html += renderSpellGroup('Spells Known', spellsKnown);
+    } else if (spellsKnown.length && !spellsPrepared.length) {
+      html += renderSpellGroup('Spells', spellsKnown);
+    }
+
+    if (classResources && Object.keys(classResources).length) {
+      html += '<div class="info-section-title">Class Resources</div>';
+      const resourceRows = Object.entries(classResources).map(([name, value]) => {
+        if (value && typeof value === 'object') {
+          const current = value.current ?? value.remaining ?? '?';
+          const max = value.max ?? value.total ?? '?';
+          return [name.replace(/_/g, ' '), `${current}/${max}`];
+        }
+        return [name.replace(/_/g, ' '), value ?? '—'];
+      });
+      html += renderInfoTable({ headers: ['Resource', 'Value'], rows: resourceRows, compact: true });
+    }
+
+    if (data.spells_summary) {
+      html += `<pre class="stats-section">${sanitizeHtml(data.spells_summary)}</pre>`;
+    }
+
+    html += '</div>';
+    return html;
+  };
 
   const showView = (viewName) => {
     Object.values(views).forEach((v) => v && v.classList.remove('active-view'));
@@ -794,7 +1072,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 6. Main narrative
-    html += `<p><strong>${label}:</strong> ${processedText}</p>`;
+    const renderAsHtml = actor === 'system' && options?.isHtml;
+    if (renderAsHtml) {
+      html += `<div><strong>${label}:</strong></div>`;
+      html += `<div>${processedText}</div>`;
+    } else {
+      html += `<p><strong>${label}:</strong> ${processedText}</p>`;
+    }
 
     // 7-10. Structured fields after narrative (planning block, entities, state updates, debug info)
     if (actor === 'gemini' && fullData) {

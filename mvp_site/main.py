@@ -1456,127 +1456,14 @@ def create_app() -> Flask:
             item_registry = getattr(game_state, "item_registry", {}) or {}
             # Check both 'equipment' and 'inventory' keys (game state uses 'inventory')
             equipment = safe_get("equipment") or safe_get("inventory") or {}
-            equipped_items: dict[str, Any] = {}
-            if isinstance(equipment, dict):
-                equipped_raw = equipment.get("equipped") or {}
-                if isinstance(equipped_raw, dict):
-                    equipped_items.update(equipped_raw)
-
-                # Also check flat equipment format where slots live at top level
-                equipment_slots = {
-                    "head",
-                    "body",
-                    "armor",
-                    "cloak",
-                    "neck",
-                    "hands",
-                    "feet",
-                    "ring",
-                    "instrument",
-                    "main_hand",
-                    "off_hand",
-                    "mainhand",
-                    "offhand",
-                    "weapon",
-                    "shield",
-                    "amulet",
-                    "necklace",
-                    "belt",
-                    "boots",
-                    "gloves",
-                    "bracers",
-                }
-                for slot in equipment_slots:
-                    if slot in equipment and slot not in equipped_items:
-                        item_data = equipment[slot]
-                        # Skip items explicitly marked as unequipped
-                        if isinstance(item_data, dict) and not item_data.get(
-                            "equipped", True
-                        ):
-                            continue
-                        equipped_items[slot] = item_data
-
-            # Calculate equipment bonuses
-            equipment_bonuses = {}
-            bonus_pattern_combined = re.compile(
-                r"(?:(?P<val>[+-]?\d+)\s*(?P<stat>STR|DEX|CON|INT|WIS|CHA|AC))|"
-                r"(?:(?P<stat_alt>STR|DEX|CON|INT|WIS|CHA|AC)\s*(?P<val_alt>[+-]?\d+))",
-                re.IGNORECASE,
+            equipment_bonuses = stats_display.extract_equipment_bonuses(
+                {
+                    "equipment": equipment if isinstance(equipment, dict) else {},
+                    "item_registry": item_registry,
+                },
+                base_stats=naked_with_mods,
+                item_registry=item_registry,
             )
-
-            for slot, item_ref in equipped_items.items():
-                if not item_ref:
-                    continue
-
-                stat_string: str | None = None
-                if isinstance(item_ref, str):
-                    if item_ref in item_registry:
-                        item_data = item_registry[item_ref]
-                        item_stats = item_data.get("stats", "")
-                        if isinstance(item_stats, str):
-                            stat_string = item_stats
-                    if stat_string is None:
-                        # Legacy inline equipment format like "Helm (+2 AC)"
-                        stat_string = item_ref
-                elif isinstance(item_ref, dict):
-                    inline_stats = item_ref.get("stats")
-                    if isinstance(inline_stats, str):
-                        stat_string = inline_stats
-                    else:
-                        inline_name = item_ref.get("name")
-                        if isinstance(inline_name, str):
-                            stat_string = inline_name
-
-                if not stat_string:
-                    continue
-
-                used_spans: list[tuple[int, int]] = []
-
-                # Check for "(Max X)" cap patterns in the stat string
-                max_cap_pattern = re.compile(r"\(Max\s*(\d+)\)", re.IGNORECASE)
-                max_cap_match = max_cap_pattern.search(stat_string)
-                stat_max_cap = int(max_cap_match.group(1)) if max_cap_match else None
-
-                for match in bonus_pattern_combined.finditer(stat_string):
-                    span = match.span()
-                    if any(
-                        start < span[1] and span[0] < end for start, end in used_spans
-                    ):
-                        continue
-                    stat_name = match.group("stat") or match.group("stat_alt")
-                    bonus_val = match.group("val") or match.group("val_alt")
-                    if not stat_name or bonus_val is None:
-                        continue
-                    stat_key = stat_name.lower()
-                    # Ignore base AC values like "AC 15" to avoid double-counting armor.
-                    # Only apply explicit signed AC bonuses (e.g., "+2 AC" or "AC +2").
-                    if stat_key == "ac" and not str(bonus_val).startswith(("+", "-")):
-                        continue
-                    # Check for "(Max X)" cap and respect it
-                    max_cap_pattern = re.compile(r"\(Max\s*(\d+)\)", re.IGNORECASE)
-                    max_cap_match = max_cap_pattern.search(stat_string)
-                    stat_max_cap = (
-                        int(max_cap_match.group(1)) if max_cap_match else None
-                    )
-                    try:
-                        bonus_int = int(bonus_val)
-                        # Apply max cap if present
-                        if stat_max_cap is not None and stat_key in naked_stats:
-                            naked_val = int(naked_stats.get(stat_key, 0))
-                            # Cap the bonus so naked + bonus doesn't exceed max
-                            max_bonus = max(0, stat_max_cap - naked_val)
-                            bonus_int = min(bonus_int, max_bonus)
-                        equipment_bonuses[stat_key] = (
-                            equipment_bonuses.get(stat_key, 0) + bonus_int
-                        )
-                        used_spans.append(span)
-                    except (ValueError, TypeError):
-                        logging_util.warning(
-                            "Unable to parse equipment bonus '%s' for stat '%s'",
-                            bonus_val,
-                            stat_name,
-                        )
-
             # Calculate effective stats (base + equipment bonuses)
             effective_stats = {}
             for stat, data in naked_with_mods.items():
@@ -1602,64 +1489,61 @@ def create_app() -> Flask:
             ac_bonus = equipment_bonuses.get("ac", 0)
             effective_ac = ac_base_val + ac_bonus
 
-            # Build formatted summary
-            lines = ["━━━ Character Stats ━━━"]
-            ac_display = f"AC: {ac_base_val}"
-            if ac_bonus:
-                ac_display += f" (effective: {effective_ac})"
-
-            lines.append(f"Level {level} | HP: {hp_current}/{hp_max} | {ac_display}")
-            lines.append("")
-            lines.append("▸ Naked Stats (without equipment):")
-            stat_order = ["str", "dex", "con", "int", "wis", "cha"]
-            stat_names = {
-                "str": "STR",
-                "dex": "DEX",
-                "con": "CON",
-                "int": "INT",
-                "wis": "WIS",
-                "cha": "CHA",
+            # Build formatted summary using shared stats_display module
+            # This includes BG3-style combat stats: proficiency, initiative, spell DC, spell attack, weapon stats
+            game_state_dict = {
+                "item_registry": item_registry,
+                "player_character_data": {
+                    **pc_data_dict,
+                    "stats": {
+                        stat: data["score"] for stat, data in naked_with_mods.items()
+                    },
+                    "level": level,
+                    "hp_current": hp_current,
+                    "hp_max": hp_max,
+                    "armor_class": ac_base_val,
+                    "equipment": equipment if isinstance(equipment, dict) else {},
+                },
             }
-            for stat in stat_order:
-                if stat in naked_with_mods:
-                    data = naked_with_mods[stat]
-                    lines.append(
-                        f"  • {stat_names.get(stat, stat.upper())}: {data['score']} ({data['modifier']})"
-                    )
+            stats_summary = stats_display.build_stats_summary(game_state_dict)
 
-            if equipment_bonuses:
-                lines.append("")
-                lines.append("▸ Equipment Bonuses:")
-                for stat, bonus in equipment_bonuses.items():
-                    if bonus:
-                        bonus_sign = f"+{bonus}" if bonus > 0 else str(bonus)
-                        lines.append(
-                            f"  • {stat_names.get(stat, stat.upper())}: {bonus_sign}"
-                        )
-
-                lines.append("")
-                lines.append("▸ Effective Stats (with equipment):")
-                for stat in stat_order:
-                    if stat in effective_stats:
-                        data = effective_stats[stat]
-                        lines.append(
-                            f"  • {stat_names.get(stat, stat.upper())}: {data['score']} ({data['modifier']})"
-                        )
-
+            # Extract and deduplicate features/feats using shared module
             features = safe_get("features", [])
-            if not isinstance(features, list):
-                features = []
+            unique_features = stats_display.deduplicate_features(features)
 
-            if features:
-                lines.append("")
-                lines.append("▸ Features & Feats:")
-                for feat in features:
-                    lines.append(f"  • {feat}")
+            # Calculate combat stats for JSON response
+            proficiency_bonus = stats_display.get_proficiency_bonus(level)
+            dex_mod = stats_display.calc_modifier(effective_stats.get("dex", {}).get("score", 10))
+            class_name = safe_get("class_name", safe_get("class", ""))
+            spellcasting_ability = stats_display.get_spellcasting_ability(class_name)
+
+            # Spell stats (if spellcaster)
+            spell_stats = None
+            if spellcasting_ability:
+                spell_mod = stats_display.calc_modifier(
+                    effective_stats.get(spellcasting_ability, {}).get("score", 10)
+                )
+                spell_stats = {
+                    "spellcasting_ability": spellcasting_ability.upper(),
+                    "spell_save_dc": 8 + proficiency_bonus + spell_mod,
+                    "spell_attack_bonus": proficiency_bonus + spell_mod,
+                }
+
+            # Saving throws (structured)
+            effective_scores = {
+                stat: data.get("score", 10) for stat, data in effective_stats.items()
+            }
+            explicit_saves = safe_get("saving_throw_proficiencies", [])
+            saving_throws = stats_display.compute_saving_throws(
+                class_name, effective_scores, proficiency_bonus, explicit_saves
+            )
+
+            speed_val = safe_get("speed", safe_get("movement_speed"))
 
             return jsonify(
                 {
                     KEY_SUCCESS: True,
-                    "stats_summary": "\n".join(lines),
+                    "stats_summary": stats_summary,
                     "naked_stats": naked_with_mods,
                     "effective_stats": effective_stats,
                     "equipment_bonuses": equipment_bonuses,
@@ -1669,8 +1553,13 @@ def create_app() -> Flask:
                         "hp_max": hp_max,
                         "ac": ac_base_val,
                         "effective_ac": effective_ac,
+                        "proficiency_bonus": proficiency_bonus,
+                        "initiative": dex_mod,
+                        "speed": speed_val,
+                        "spell_stats": spell_stats,
+                        "saving_throws": saving_throws,
                     },
-                    "features": features,
+                    "features": unique_features,
                 }
             )
 

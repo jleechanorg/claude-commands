@@ -555,3 +555,172 @@ pre {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ============================================
+   Neutral Character Info Cards (stats/equipment/spells)
+   ============================================ */
+.stats-panel,
+.info-card {
+  background: #2c3036;
+  border: 1px solid #3a3f46;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+  color: #e8eaed;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.stats-header,
+.info-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.stat-badge,
+.info-badge {
+  background: #343a40;
+  border: 1px solid #4a5059;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f1f3f5;
+}
+
+.stat-badge.spell,
+.info-badge.spell {
+  background: #31394a;
+  border-color: #46516a;
+  color: #c8d9ff;
+}
+
+.info-subtext {
+  color: #9aa0a6;
+  font-size: 0.85rem;
+}
+
+.stats-spellcasting,
+.info-subrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.stats-table,
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.stats-table th,
+.stats-table td,
+.info-table th,
+.info-table td {
+  padding: 8px;
+  border-bottom: 1px solid #3c4148;
+  color: #e8eaed;
+  text-align: left;
+}
+
+.info-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stats-table th,
+.info-table th {
+  background: #373c44;
+  color: #cfd3da;
+  font-size: 0.82rem;
+  letter-spacing: 0.3px;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 6px 8px;
+}
+
+.features-section,
+.info-block {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #3c4148;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-size: 0.9rem;
+  color: #e8eaed;
+}
+
+.info-section-title {
+  font-weight: 700;
+  margin: 6px 0 4px;
+  color: #f1f3f5;
+  letter-spacing: 0.3px;
+}
+
+.stats-section {
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid #3c4148;
+  border-radius: 6px;
+  padding: 10px;
+  margin: 10px 0;
+  font-size: 0.85rem;
+  color: #cdd1d8;
+}
+
+/* Light theme overrides for stats panel */
+[data-bs-theme='light'] .stats-panel,
+[data-bs-theme='light'] .info-card {
+  background: #f4f5f6;
+  border-color: #d0d4da;
+  color: #1f2328;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme='light'] .stat-badge,
+[data-bs-theme='light'] .info-badge {
+  background: #e8eaed;
+  border-color: #d0d4da;
+  color: #202428;
+}
+
+[data-bs-theme='light'] .stat-badge.spell,
+[data-bs-theme='light'] .info-badge.spell {
+  background: #e6ebf7;
+  border-color: #c7d2ec;
+  color: #2f3b68;
+}
+
+[data-bs-theme='light'] .stats-table th,
+[data-bs-theme='light'] .info-table th {
+  background: #e8eaed;
+  color: #2b2f34;
+}
+
+[data-bs-theme='light'] .stats-table td,
+[data-bs-theme='light'] .info-table td {
+  color: #1f2328;
+  border-color: #d7dbe1;
+}
+
+[data-bs-theme='light'] .info-subtext {
+  color: #4d5156;
+}
+
+[data-bs-theme='light'] .features-section,
+[data-bs-theme='light'] .info-block {
+  background: #edf0f5;
+  border-color: #d0d4da;
+  color: #1f2328;
+}
+
+[data-bs-theme='light'] .stats-section {
+  background: #f1f2f4;
+  border-color: #d4d7dc;
+  color: #2b2f34;
+}
