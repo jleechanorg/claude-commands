@@ -311,19 +311,70 @@ Base 20% + (Success_Streak × 10%), capped at 75%
 
 ## Sanctuary Mode
 
-After completing a **major arc or questline**, grant the player ~1 week (21 turns) without life-ending events.
+After completing a mission or arc, grant the player sanctuary (protection from life-ending events) scaled to the achievement.
 
-**Track in state_updates:** `custom_campaign_state.sanctuary_mode: { active: true, expires_turn: <current + 21>, arc: "<name>" }`
+### Duration by Arc Scale
 
-**During sanctuary, DO NOT generate:**
-- Lethal ambushes, assassination attempts, or major faction attacks on the player
-- Life-threatening complications from the Unforeseen Complications system
+| Arc Scale | Duration | Turns | Examples |
+|-----------|----------|-------|----------|
+| **Medium mission** | ~2-3 days | 7 | Side quest completion, minor faction victory, dungeon cleared |
+| **Major arc** | ~1 week | 21 | Quest chain finale, story chapter end, major faction defeated |
+| **Epic campaign arc** | ~2 weeks | 42 | Campaign climax, world-changing event, BBEG defeated |
 
-**Sanctuary ALLOWS:** Companion conversations, planning, shopping, training, peaceful exploration, minor (non-lethal) complications.
+### Input: Check Sanctuary Status
 
-**Sanctuary BREAKS if player initiates:** Attacks on major factions, declarations of war, assassination attempts, stronghold raids. Defensive combat does NOT break sanctuary.
+Read from `custom_campaign_state.sanctuary_mode`:
+```json
+{
+  "active": true,
+  "expires_turn": 45,
+  "activated_turn": 24,
+  "arc": "Defeat the Iron Legion",
+  "scale": "major"
+}
+```
+If `active: true` AND `current_turn < expires_turn`, sanctuary is in effect.
 
-**Notify player:** On activation ("*A sense of calm settles over the realm...*"), expiration, or breaking.
+### Output: Activate Sanctuary
+
+When completing a mission/arc, write to `state_updates.custom_campaign_state.sanctuary_mode`:
+```json
+{
+  "sanctuary_mode": {
+    "active": true,
+    "activated_turn": <current_turn>,
+    "expires_turn": <current_turn + duration>,
+    "arc": "<completed arc name>",
+    "scale": "medium|major|epic"
+  }
+}
+```
+
+### Output: Break Sanctuary
+
+If player initiates major aggression, write:
+```json
+{
+  "sanctuary_mode": {
+    "active": false,
+    "broken": true,
+    "broken_turn": <current_turn>,
+    "broken_reason": "<what player did>"
+  }
+}
+```
+
+### Sanctuary Rules
+
+**DO NOT generate during sanctuary:**
+- Lethal ambushes, assassination attempts, major faction attacks
+- Life-threatening complications from Unforeseen Complications system
+
+**ALLOWED during sanctuary:** Companion conversations, planning, shopping, training, peaceful exploration, minor (non-lethal) complications.
+
+**BREAKS if player initiates:** Attacks on major factions, declarations of war, assassination attempts, stronghold raids. Defensive combat does NOT break sanctuary.
+
+**Notify player:** On activation (*"A sense of calm settles over the realm..."*), expiration, or breaking.
 
 ## Output Requirements
 
