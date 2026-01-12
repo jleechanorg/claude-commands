@@ -190,7 +190,7 @@ class TestPRTargeting(unittest.TestCase):
         self.assertIn("review comments", prompt)
         self.assertIn("issue comments", prompt)
         # After fix for comment #2669657213, prompt clarifies:
-        # - Inline review comments use: /pulls/{pr_number}/comments/{comment_id}/replies
+        # - Inline review comments use: /pulls/{pr_number}/comments with -F in_reply_to={comment_id}
         # - Issue comments don't support threading (top-level comments only)
         self.assertIn("pulls/42/comments", prompt)  # Updated to match actual PR number in prompt
         self.assertIn("reply individually to each comment", prompt)  # Issue comments clarification

@@ -778,6 +778,78 @@ class JleechanorgPRMonitor:
 
         return None
 
+    def _cleanup_pending_reviews(self, repo_full: str, pr_number: int) -> None:
+        """Delete any pending reviews for the current automation user to prevent review clutter.
+
+        This is a safety measure to clean up pending reviews that may have been left behind
+        by agents that use MCP tools (create_pending_pull_request_review) without submitting.
+        """
+        try:
+            # Extract owner and repo from repo_full
+            parts = repo_full.split("/")
+            if len(parts) != 2:
+                self.logger.warning(f"Cannot parse repo_full '{repo_full}' for pending review cleanup")
+                return
+
+            owner, repo = parts
+
+            # Fetch all reviews for the PR
+            reviews_cmd = [
+                "gh", "api",
+                f"repos/{owner}/{repo}/pulls/{pr_number}/reviews",
+                "--paginate", "-q", ".[]",
+            ]
+            result = AutomationUtils.execute_subprocess_with_timeout(
+                reviews_cmd, timeout=30, check=False
+            )
+
+            if result.returncode != 0:
+                self.logger.debug(f"Could not fetch reviews for pending cleanup: {result.stderr}")
+                return
+
+            # Parse reviews and find pending ones from automation user
+            pending_deleted = 0
+            for line in (result.stdout or "").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    review = json.loads(line)
+                    if review.get("state") == "PENDING":
+                        user_info = review.get("user")
+                        if isinstance(user_info, dict):
+                            review_user = user_info.get("login", "")
+                        else:
+                            review_user = ""
+                        if review_user == self.automation_username:
+                            review_id = review.get("id")
+                            if review_id:
+                                delete_cmd = [
+                                    "gh", "api",
+                                    f"repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}",
+                                    "-X", "DELETE",
+                                ]
+                                delete_result = AutomationUtils.execute_subprocess_with_timeout(
+                                    delete_cmd, timeout=30, check=False
+                                )
+                                if delete_result.returncode == 0:
+                                    self.logger.info(
+                                        f"🧹 Deleted pending review #{review_id} from {review_user} on PR #{pr_number}"
+                                    )
+                                    pending_deleted += 1
+                                else:
+                                    self.logger.debug(
+                                        f"Could not delete pending review #{review_id}: {delete_result.stderr}"
+                                    )
+                except json.JSONDecodeError:
+                    continue
+
+            if pending_deleted > 0:
+                self.logger.info(f"✅ Cleaned up {pending_deleted} pending review(s) on PR #{pr_number}")
+
+        except Exception as exc:
+            self.logger.debug(f"Pending review cleanup failed for PR #{pr_number}: {exc}")
+            # Non-fatal - continue with the workflow
+
     def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: Dict) -> str:
         """Post codex instruction comment to PR"""
         repo_full = self._normalize_repository_name(repository)
@@ -1003,6 +1075,16 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             "Goal: address all review comments with explicit action-based replies, "
             "fix failing tests, and resolve merge conflicts.\n\n"
             f"CLI chain: {agent_cli}. Start immediately.\n\n"
+            "⚠️ CRITICAL - REVIEW COMMENT REPLY API (MUST READ):\n"
+            "   To reply to inline review comments WITHOUT starting a pending review, use ONLY:\n"
+            f"   `gh api /repos/{repository}/pulls/{pr_number}/comments -f body='...' -F in_reply_to={{comment_id}}`\n"
+            "   This `/comments` endpoint with `in_reply_to` parameter creates a threaded reply WITHOUT starting a review.\n"
+            "   ⚠️ IMPORTANT: Use `-f` for body (string) and `-F` for in_reply_to (numeric comment ID).\n\n"
+            "   ❌ NEVER USE these (they create pending reviews that clutter the PR):\n"
+            "   - `create_pending_pull_request_review` MCP tool\n"
+            "   - `add_comment_to_pending_review` MCP tool\n"
+            "   - `POST /repos/.../pulls/.../reviews` endpoint\n"
+            "   - Any GitHub review workflow that requires 'submit'\n\n"
             "Steps:\n"
             f"1) gh pr checkout {pr_number}\n\n"
             "2) Fetch ALL PR feedback sources (pagination-safe) using correct GitHub API endpoints:\n"
@@ -1019,9 +1101,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             "   - **DEFERRED**: Created issue for future work → include issue URL and reason\n"
             "   - **ACKNOWLEDGED**: Noted but not actionable → include explanation\n"
             "   - **NOT DONE**: Cannot implement → include specific technical reason\n\n"
-            "   **Reply Methods**:\n"
-            f"   - Inline review comments: `gh api /repos/{repository}/pulls/{pr_number}/comments/{{comment_id}}/replies -f body='[Response text]'`\n"
-            f"   - Issue/PR comments: `gh pr comment {pr_number} --body '[Response text]'`\n"
+            "   **Reply Methods (ONLY use these - no pending reviews!):**\n"
+            f"   - Inline review comments: `gh api /repos/{repository}/pulls/{pr_number}/comments -f body='[Response]' -F in_reply_to={{comment_id}}`\n"
+            f"   - Issue/PR comments: `gh pr comment {pr_number} --body '[Response]'`\n"
             "   - Do NOT post mega-comments consolidating multiple responses; reply individually to each comment.\n\n"
             "4) Run tests and fix failures (block completion on critical/blocking test failures)\n\n"
             "5) Resolve merge conflicts (prefer merge over rebase)\n\n"
@@ -1534,6 +1616,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
             return "skipped"
 
+        # Cleanup any pending reviews left behind by previous automation runs
+        self._cleanup_pending_reviews(repo_full, pr_number)
+
         if not self.dispatch_fix_comment_agent(repo_full, pr_number, pr_data, agent_cli=agent_cli, model=model):
             return "failed"
 
@@ -1601,6 +1686,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 head_sha[:8],
             )
             return "skipped"
+
+        # Cleanup any pending reviews left behind by previous automation runs
+        self._cleanup_pending_reviews(repo_full, pr_number)
 
         # Dispatch agent for fixpr
         try:
