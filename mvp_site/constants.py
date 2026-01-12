@@ -28,7 +28,8 @@ ALLOWED_LLM_PROVIDERS = [
 # Gemini defaults - using 3-flash-preview for best value ($0.50/M input, $3/M output)
 # Gemini 3 Flash: 3x faster than 2.5 Pro, Pro-grade reasoning, 78% SWE-bench Verified
 # Gemini 3 Pro is expensive ($2-4/M input, $12-18/M output) and reserved for premium users only
-DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
+# Can be overridden via WORLDAI_DEFAULT_GEMINI_MODEL env var for testing
+DEFAULT_GEMINI_MODEL = os.getenv("WORLDAI_DEFAULT_GEMINI_MODEL", "gemini-3-flash-preview")
 
 # Premium model for allowlisted users only (expensive: $2-4/M input, $12-18/M output)
 GEMINI_PREMIUM_MODEL = "gemini-3-pro-preview"
