@@ -21,6 +21,7 @@ Usage:
 
 import argparse
 import asyncio
+import json
 import logging
 import sys
 import time
@@ -28,6 +29,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Set
+from urllib.parse import urlparse
 
 from playwright.async_api import (
     Browser,
@@ -283,6 +285,149 @@ class CodexGitHubMentionsAutomation:
 
             return True
         except PlaywrightTimeoutError:
+            # If not logged in, try to restore from auth state file first (even in CDP mode)
+            if AUTH_STATE_PATH.exists():
+                print(f"🔄 Not logged in. Attempting to restore auth state from {AUTH_STATE_PATH}...")
+                try:
+                    _ensure_auth_state_permissions(AUTH_STATE_PATH)
+                    state_content = AUTH_STATE_PATH.read_text()
+                    state_data = json.loads(state_content)
+                    
+                    cookies = state_data.get("cookies")
+                    if isinstance(cookies, list):
+                        valid_cookies = []
+                        # Required fields for Playwright add_cookies
+                        # Must have name, value AND (url OR (domain AND path))
+                        required_fields = {"name", "value"}
+                        domain_fields = {"domain", "path"}
+                        
+                        for cookie in cookies:
+                            if not isinstance(cookie, dict):
+                                logger.warning("Skipping non-dict cookie entry")
+                                continue
+                            
+                            # Check basic fields
+                            if not required_fields.issubset(cookie.keys()):
+                                cookie_name = cookie.get("name", "<unknown>")
+                                logger.warning(
+                                    "Skipping malformed cookie '%s' missing required fields %s",
+                                    cookie_name,
+                                    required_fields,
+                                )
+                                continue
+                                
+                            # Check domain/path vs url constraint
+                            has_url = "url" in cookie
+                            has_domain_and_path = domain_fields.issubset(cookie.keys())
+                            
+                            if not (has_url or has_domain_and_path):
+                                cookie_name = cookie.get("name", "<unknown>")
+                                logger.warning(
+                                    "Skipping cookie '%s' missing either 'url' or both 'domain' and 'path'",
+                                    cookie_name,
+                                )
+                                continue
+                                
+                            valid_cookies.append(cookie)
+                        
+                        if valid_cookies:
+                            await self.context.add_cookies(valid_cookies)
+                            print("✅ Injected cookies from auth state file")
+                            logger.info(
+                                "Injected %d cookies from auth state file %s",
+                                len(valid_cookies),
+                                AUTH_STATE_PATH,
+                            )
+                            
+                            # Restore localStorage from origins
+                            origins = state_data.get("origins", [])
+                            if origins:
+                                try:
+                                    current_url = self.page.url
+                                    current_parsed = urlparse(current_url)
+                                    injected_origins = 0
+                                    
+                                    for origin_data in origins:
+                                        origin = origin_data.get("origin")
+                                        if not origin:
+                                            continue
+                                            
+                                        # Use exact origin matching (scheme + netloc)
+                                        origin_parsed = urlparse(origin)
+                                        origin_matches = (
+                                            current_parsed.scheme == origin_parsed.scheme
+                                            and current_parsed.netloc == origin_parsed.netloc
+                                        )
+                                        
+                                        if origin_matches:
+                                            logger.info(f"Restoring localStorage for origin {origin}")
+                                            storage_items = origin_data.get("localStorage", [])
+                                            items_injected = 0
+                                            if storage_items:
+                                                for item in storage_items:
+                                                    key = item.get("name")
+                                                    value = item.get("value")
+                                                    # Allow empty strings as valid values (use None check)
+                                                    if key is not None and value is not None:
+                                                        await self.page.evaluate(
+                                                            f"window.localStorage.setItem({json.dumps(key)}, {json.dumps(value)})"
+                                                        )
+                                                        items_injected += 1
+                                            if items_injected > 0:
+                                                injected_origins += 1
+                                    
+                                    if injected_origins > 0:
+                                        print(f"✅ Injected localStorage for {injected_origins} origin(s)")
+                                        logger.info(f"Injected localStorage for {injected_origins} origin(s)")
+                                except Exception as storage_err:
+                                    logger.warning(f"Failed to restore localStorage: {storage_err}")
+                                    print(f"⚠️  Failed to restore localStorage: {storage_err}")
+
+                            # Refresh page to apply cookies and storage
+                            await self.page.reload(wait_until="domcontentloaded")
+                            await asyncio.sleep(3)
+                            
+                            # Check login again
+                            try:
+                                await self.page.wait_for_selector(
+                                    'button[aria-label*="User"], [data-testid="profile-button"]',
+                                    timeout=5000,
+                                )
+                                print("✅ Successfully restored session from auth state")
+                                return True
+                            except PlaywrightTimeoutError:
+                                print("⚠️  Session restore failed - cookies might be expired")
+                        else:
+                            print("⚠️  No valid cookies found in auth state file")
+                            logger.warning(
+                                "No valid cookies found in auth state file %s; skipping cookie injection",
+                                AUTH_STATE_PATH,
+                            )
+                    else:
+                        if "cookies" not in state_data:
+                            print("⚠️  No 'cookies' key found in auth state file")
+                            logger.warning(
+                                "Auth state file %s has no 'cookies' key",
+                                AUTH_STATE_PATH,
+                            )
+                        elif cookies is None:
+                            print("⚠️  Cookies are null in auth state file")
+                            logger.warning(
+                                "Auth state file %s has null 'cookies' value",
+                                AUTH_STATE_PATH,
+                            )
+                        else:
+                            print("⚠️  Invalid cookies format in auth state file (expected list)")
+                            logger.warning(
+                                "Invalid cookies format in auth state file %s: expected list, got %s",
+                                AUTH_STATE_PATH,
+                                type(cookies).__name__,
+                            )
+
+                except Exception as restore_err:
+                    logger.exception("Failed to restore auth state from %s", AUTH_STATE_PATH)
+                    print(f"⚠️  Failed to restore auth state: {restore_err!r}")
+
             try:
                 await self.page.wait_for_selector(
                     'text="Log in", button:has-text("Log in")',
