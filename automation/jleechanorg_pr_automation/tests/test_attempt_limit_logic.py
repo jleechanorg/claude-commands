@@ -10,6 +10,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
@@ -30,11 +31,13 @@ class TestAttemptLimitLogic(unittest.TestCase):
 
     def test_all_attempts_count_against_limit(self):
         """All attempts (success + failure) count against pr_limit"""
-        # Create 50 successful attempts (exactly at pr_limit=50 default)
+        # Create 50 successful attempts with TODAY's date (exactly at pr_limit=50 default)
+        # Use valid ISO timestamps (hours 0-23, wrap using modulo)
+        today = datetime.now(timezone.utc).date().isoformat()
         pr_attempts = {
             "r=test/repo||p=123||b=main": [
-                {"result": "success", "timestamp": f"2026-01-{i:02d}T12:00:00"}
-                for i in range(1, 51)
+                {"result": "success", "timestamp": f"{today}T{i % 24:02d}:{(i // 24) % 60:02d}:00Z"}
+                for i in range(0, 50)
             ]
         }
 
@@ -48,11 +51,13 @@ class TestAttemptLimitLogic(unittest.TestCase):
 
     def test_failure_limit_blocks_processing(self):
         """50 failures should block processing (pr_limit=50)"""
-        # Create 50 failed attempts (exactly at limit)
+        # Create 50 failed attempts with TODAY's date (exactly at limit)
+        # Use valid ISO timestamps (hours 0-23, wrap using modulo)
+        today = datetime.now(timezone.utc).date().isoformat()
         pr_attempts = {
             "r=test/repo||p=456||b=main": [
-                {"result": "failure", "timestamp": f"2026-01-{i:02d}T12:00:00"}
-                for i in range(1, 51)
+                {"result": "failure", "timestamp": f"{today}T{i % 24:02d}:{(i // 24) % 60:02d}:00Z"}
+                for i in range(0, 50)
             ]
         }
 
@@ -66,14 +71,16 @@ class TestAttemptLimitLogic(unittest.TestCase):
 
     def test_mixed_attempts_count_all(self):
         """Mixed success/failure attempts all count toward limit"""
-        # Create 50 total attempts: 30 successes + 20 failures
+        # Create 50 total attempts: 30 successes + 20 failures with TODAY's date
+        # Use valid ISO timestamps (hours 0-23, use minutes to differentiate)
+        today = datetime.now(timezone.utc).date().isoformat()
         pr_attempts = {
             "r=test/repo||p=789||b=main": [
-                {"result": "success", "timestamp": f"2026-01-{i:02d}T12:00:00"}
-                for i in range(1, 31)
+                {"result": "success", "timestamp": f"{today}T{i % 24:02d}:{(i // 24) % 60:02d}:00Z"}
+                for i in range(0, 30)
             ] + [
-                {"result": "failure", "timestamp": f"2026-01-{i:02d}T13:00:00"}
-                for i in range(31, 51)
+                {"result": "failure", "timestamp": f"{today}T{i % 24:02d}:{(i // 24) % 60:02d}:00Z"}
+                for i in range(30, 50)
             ]
         }
 
@@ -87,14 +94,16 @@ class TestAttemptLimitLogic(unittest.TestCase):
 
     def test_under_limit_allows_processing(self):
         """Under the limit (49 attempts) should allow processing"""
-        # Create 49 attempts (1 under limit)
+        # Create 49 attempts (1 under limit) with TODAY's date
+        # Use valid ISO timestamps (hours 0-23, use minutes to differentiate)
+        today = datetime.now(timezone.utc).date().isoformat()
         pr_attempts = {
             "r=test/repo||p=999||b=main": [
-                {"result": "success", "timestamp": f"2026-01-{i:02d}T12:00:00"}
-                for i in range(1, 30)
+                {"result": "success", "timestamp": f"{today}T{i % 24:02d}:{(i // 24) % 60:02d}:00Z"}
+                for i in range(0, 29)
             ] + [
-                {"result": "failure", "timestamp": f"2026-01-{i:02d}T13:00:00"}
-                for i in range(30, 50)
+                {"result": "failure", "timestamp": f"{today}T{i % 24:02d}:{(i // 24) % 60:02d}:00Z"}
+                for i in range(29, 49)
             ]
         }
 

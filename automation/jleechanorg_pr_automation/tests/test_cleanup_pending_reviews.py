@@ -8,12 +8,17 @@ Tests ensure:
 """
 
 import json
+import os
+import shutil
+import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from automation.jleechanorg_pr_automation import orchestrated_pr_runner as runner
+from jleechanorg_pr_automation import orchestrated_pr_runner as runner
+from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
 
@@ -22,7 +27,7 @@ class TestCleanupPendingReviews(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment"""
-        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager"):
             self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
             self.monitor.logger = Mock()
 
@@ -60,7 +65,7 @@ class TestCleanupPendingReviews(unittest.TestCase):
                     stdout="\n".join(json.dumps(r) for r in reviews_response),
                     stderr="",
                 )
-            elif "DELETE" in cmd:
+            if "DELETE" in cmd:
                 # Delete review command
                 delete_calls.append(cmd)
                 return SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -100,7 +105,7 @@ class TestCleanupPendingReviews(unittest.TestCase):
                     stdout="\n".join(json.dumps(r) for r in reviews_response),
                     stderr="",
                 )
-            elif "DELETE" in cmd:
+            if "DELETE" in cmd:
                 delete_calls.append(cmd)
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
@@ -187,7 +192,7 @@ class TestCleanupPendingReviews(unittest.TestCase):
                     stdout="\n".join(json.dumps(r) for r in reviews_response),
                     stderr="",
                 )
-            elif "DELETE" in cmd:
+            if "DELETE" in cmd:
                 delete_calls.append(cmd)
                 return SimpleNamespace(returncode=0, stdout="", stderr="")
             return SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -230,7 +235,7 @@ class TestCleanupPendingReviews(unittest.TestCase):
                     stdout="\n".join(json.dumps(r) for r in reviews_response),
                     stderr="",
                 )
-            elif "DELETE" in cmd:
+            if "DELETE" in cmd:
                 delete_calls.append(cmd)
                 return SimpleNamespace(returncode=0, stdout="", stderr="")
             return SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -253,7 +258,7 @@ class TestPromptAPIEndpoint(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment"""
-        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager"):
             self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
 
     def test_fix_comment_prompt_contains_correct_endpoint(self):
@@ -314,6 +319,231 @@ class TestPromptAPIEndpoint(unittest.TestCase):
 
         # Should NOT contain incorrect endpoint
         assert "/comments/{comment_id}/replies" not in prompt, "Prompt should NOT contain incorrect /replies endpoint"
+
+
+class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
+    """Test that cleanup runs before eligibility checks in run_monitoring_cycle"""
+
+    def setUp(self):
+        """Set up test environment"""
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager"):
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
+            self.monitor.logger = Mock()
+
+    def test_cleanup_runs_before_eligibility_checks(self):
+        """Test that cleanup is called before eligibility checks in run_monitoring_cycle"""
+        repo_full = "owner/repo"
+        pr_number = 123
+        pr = {
+            "number": pr_number,
+            "repository": "repo",
+            "repositoryFullName": repo_full,
+            "headRefName": "feature/branch",
+            "state": "open",
+        }
+
+        # Setup order tracking mock
+        manager = Mock()
+        manager.attach_mock(self.monitor, "monitor")
+        
+        # We want to verify that _cleanup_pending_reviews is called before is_pr_actionable
+        # in run_monitoring_cycle loop.
+        
+        with patch.object(self.monitor, "discover_open_prs", return_value=[pr]):
+            with patch.object(self.monitor, "is_pr_actionable", return_value=False) as mock_actionable:
+                with patch.object(self.monitor, "_cleanup_pending_reviews") as mock_cleanup:
+                    # Run monitoring cycle in fixpr mode (which triggers cleanup)
+                    self.monitor.run_monitoring_cycle(fixpr=True)
+                    
+                    # Verify cleanup was called
+                    mock_cleanup.assert_called_once_with(repo_full, pr_number)
+                    # Verify actionable check was called
+                    mock_actionable.assert_called_once()
+                    
+                    # Verify order using call_args_list or similar if needed, 
+                    # but since we mocked both we can check their call order if we patch them on same object
+                    
+        # Verification of order via a shared mock object
+        # Re-run with shared mock to verify order
+        with patch.object(self.monitor, "discover_open_prs", return_value=[pr]):
+            with patch.object(self.monitor, "is_pr_actionable", return_value=False) as mock_actionable:
+                with patch.object(self.monitor, "_cleanup_pending_reviews") as mock_cleanup:
+                    # Shared mock to track call order
+                    order_mock = Mock()
+                    
+                    # Define side_effect functions that track calls AND return correct values
+                    def cleanup_side_effect(*args, **kwargs):
+                        order_mock.cleanup()
+                        return None  # _cleanup_pending_reviews returns None
+                    
+                    def actionable_side_effect(*args, **kwargs):
+                        order_mock.actionable()
+                        return False  # is_pr_actionable should return False for this test
+                    
+                    mock_cleanup.side_effect = cleanup_side_effect
+                    mock_actionable.side_effect = actionable_side_effect
+                    
+                    self.monitor.run_monitoring_cycle(fixpr=True)
+                    
+                    # Check order: cleanup should be before actionable
+                    calls = [call[0] for call in order_mock.method_calls]
+                    self.assertIn("cleanup", calls)
+                    self.assertIn("actionable", calls)
+                    self.assertLess(calls.index("cleanup"), calls.index("actionable"))
+                    
+                    # Verify is_pr_actionable returned False (PR should be skipped)
+                    self.assertFalse(mock_actionable.return_value if not mock_actionable.called else mock_actionable.side_effect())
+
+
+class TestDailyCooldownFiltering(unittest.TestCase):
+    """Test daily cooldown filtering for attempts and comments"""
+
+    def setUp(self):
+        """Set up test environment"""
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager"):
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
+            self.monitor.logger = Mock()
+
+    def test_count_workflow_comments_filters_by_date(self):
+        """Test that _count_workflow_comments only counts today's comments"""
+        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
+        today = datetime.now(timezone.utc).date().isoformat()
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+
+        # Create comments with different dates
+        comments = [
+            {
+                "author": {"login": "test-automation-user"},
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR",
+                "createdAt": f"{today}T10:00:00Z",
+            },
+            {
+                "author": {"login": "test-automation-user"},
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR yesterday",
+                "createdAt": f"{yesterday}T10:00:00Z",
+            },
+            {
+                "author": {"login": "test-automation-user"},
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR today",
+                "createdAt": f"{today}T15:00:00Z",
+            },
+        ]
+
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+
+        # Should only count today's comments (2), not yesterday's (1)
+        self.assertEqual(count, 2, f"Expected 2 today's comments, got {count}")
+
+    def test_count_workflow_comments_handles_utc_timezone(self):
+        """Test that _count_workflow_comments handles UTC timestamps correctly"""
+        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
+        today_utc = datetime.now(timezone.utc).date().isoformat()
+        yesterday_utc = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+
+        # Create comments with UTC timestamps
+        comments = [
+            {
+                "author": {"login": "test-automation-user"},
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR UTC today",
+                "createdAt": f"{today_utc}T23:59:59Z",
+            },
+            {
+                "author": {"login": "test-automation-user"},
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR UTC yesterday",
+                "createdAt": f"{yesterday_utc}T00:00:00Z",
+            },
+        ]
+
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+
+        # Should only count today's UTC comment (1), not yesterday's
+        self.assertEqual(count, 1, f"Expected 1 today's UTC comment, got {count}")
+
+    def test_count_workflow_comments_handles_missing_timestamp(self):
+        """Test that _count_workflow_comments handles comments without timestamps"""
+        comments = [
+            {
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR no timestamp",
+                # No createdAt or updatedAt
+            },
+        ]
+
+        # Should not count if no timestamp is present (cannot verify if from today)
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+        self.assertEqual(count, 0)
+
+
+class TestDailyCooldownAttempts(unittest.TestCase):
+    """Test daily cooldown filtering for PR attempts in AutomationSafetyManager"""
+
+    def setUp(self):
+        """Set up test environment"""
+        self.temp_dir = tempfile.mkdtemp()
+        self.safety_manager = AutomationSafetyManager(data_dir=self.temp_dir)
+
+    def tearDown(self):
+        """Clean up test environment"""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_can_process_pr_filters_by_date(self):
+        """Test that can_process_pr only counts today's attempts"""
+
+        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
+        today = datetime.now(timezone.utc).date().isoformat()
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+
+        # Create attempts with different dates (match production format: ISO with timezone)
+        attempts_data = {
+            "r=owner/repo||p=123||b=feature/branch": [
+                {"result": "success", "timestamp": f"{today}T10:00:00+00:00"},
+                {"result": "failure", "timestamp": f"{yesterday}T10:00:00+00:00"},
+                {"result": "success", "timestamp": f"{today}T15:00:00+00:00"},
+            ]
+        }
+
+        # Write attempts to file
+        attempts_file = os.path.join(self.temp_dir, "pr_attempts.json")
+        with open(attempts_file, "w") as f:
+            json.dump(attempts_data, f)
+
+        # Test with limit of 2 (should allow since only 2 today's attempts)
+        self.safety_manager.pr_limit = 2
+        can_process = self.safety_manager.can_process_pr(123, repo="owner/repo", branch="feature/branch")
+
+        # Should allow processing (2 today's attempts < limit of 2... wait, that's equal, so should be False)
+        # Actually, the check is `total_attempts < effective_limit`, so 2 < 2 is False
+        self.assertFalse(can_process, "Should not allow processing when today's attempts equal limit")
+
+        # Test with limit of 3 (should allow since only 2 today's attempts)
+        self.safety_manager.pr_limit = 3
+        can_process = self.safety_manager.can_process_pr(123, repo="owner/repo", branch="feature/branch")
+        self.assertTrue(can_process, "Should allow processing when today's attempts < limit")
+
+    def test_get_pr_attempts_filters_by_date(self):
+        """Test that get_pr_attempts only counts today's attempts"""
+
+        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
+        today = datetime.now(timezone.utc).date().isoformat()
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+
+        # Create attempts with different dates (match production format: ISO with timezone)
+        attempts_data = {
+            "r=owner/repo||p=123||b=feature/branch": [
+                {"result": "success", "timestamp": f"{today}T10:00:00+00:00"},
+                {"result": "failure", "timestamp": f"{yesterday}T10:00:00+00:00"},
+                {"result": "success", "timestamp": f"{today}T15:00:00+00:00"},
+            ]
+        }
+
+        # Write attempts to file
+        attempts_file = os.path.join(self.temp_dir, "pr_attempts.json")
+        with open(attempts_file, "w") as f:
+            json.dump(attempts_data, f)
+
+        count = self.safety_manager.get_pr_attempts(123, repo="owner/repo", branch="feature/branch")
+
+        # Should only count today's attempts (2), not yesterday's (1)
+        self.assertEqual(count, 2, f"Expected 2 today's attempts, got {count}")
 
 
 if __name__ == "__main__":

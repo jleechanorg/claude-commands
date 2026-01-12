@@ -189,7 +189,7 @@ def get_automation_limits_with_overrides(overrides: Optional[Mapping[str, Any]] 
     defaults: Dict[str, int] = {
         # Global PR limit: counts ALL attempts across ALL workflows
         "pr_limit": pr_limit,
-        "global_limit": coerce_positive_int(os.getenv("AUTOMATION_GLOBAL_LIMIT"), default=50),
+        "global_limit": coerce_positive_int(os.getenv("AUTOMATION_GLOBAL_LIMIT"), default=100),
         "approval_hours": 24,
         "subprocess_timeout": 300,
         # Workflow-specific limits: 10 attempts per workflow (counts ALL attempts)

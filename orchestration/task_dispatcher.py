@@ -1677,14 +1677,22 @@ fi
 """
 
             # Enhanced bash command with error handling and logging
+            # Ensure PATH includes common CLI locations for tmux sessions
+            path_setup = """
+# Ensure PATH includes common CLI binary locations
+export PATH="$HOME/.local/bin:$HOME/.nvm/versions/node/$(nvm version 2>/dev/null || echo 'v20.19.4')/bin:$PATH"
+"""
             bash_cmd = f"""
 # Signal handler to log interruptions
 trap 'echo "[$(date)] Agent interrupted with signal SIGINT" | tee -a {log_file_quoted}; exit 130' SIGINT
 trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_quoted}; exit 143' SIGTERM
 
+{path_setup}
+
 echo "[$(date)] Starting agent {agent_name_quoted}" | tee -a {log_file_quoted}
 echo "[$(date)] Working directory: {agent_dir_quoted}" | tee -a {log_file_quoted}
 echo "[$(date)] CLI chain: {cli_chain_str}" | tee -a {log_file_quoted}
+echo "[$(date)] PATH: $PATH" | tee -a {log_file_quoted}
 
 RESULT_WRITTEN=0
 RESULT_STATUS="failed"

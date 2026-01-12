@@ -272,9 +272,9 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         """RED: Should use default limits when no configuration provided"""
         manager = AutomationSafetyManager(self.test_dir)
 
-        # Should use defaults (pr_limit updated to 50)
+        # Should use defaults (pr_limit updated to 50, global_limit to 100)
         self.assertEqual(manager.pr_limit, 50)
-        self.assertEqual(manager.global_limit, 50)
+        self.assertEqual(manager.global_limit, 100)
 
     # Matrix 8: Daily Reset Functionality (50 runs per day)
     def test_daily_reset_first_run_of_day(self):
@@ -403,7 +403,11 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         """RED: This property will fail - no AutomationSafetyManager exists yet"""
         # This will fail until we implement the class in GREEN phase
         if not hasattr(self, "_automation_manager"):
-            self._automation_manager = AutomationSafetyManager(self.test_dir)
+            # Use custom limits to match test expectations (global_limit=50, pr_limit=50)
+            self._automation_manager = AutomationSafetyManager(
+                self.test_dir,
+                limits={"global_limit": 50, "pr_limit": 50}
+            )
         return self._automation_manager
 
 

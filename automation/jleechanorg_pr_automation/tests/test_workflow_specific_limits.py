@@ -13,6 +13,7 @@ Tests workflow-specific comment counting and safety limits:
 """
 
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
@@ -31,6 +32,14 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             self.monitor.safety_manager.fix_comment_limit = 5
             self.monitor.safety_manager.codex_update_limit = 10
             self.monitor.safety_manager.fixpr_limit = 10
+            self.today = datetime.now(timezone.utc).isoformat()
+
+    def _add_timestamps(self, comments):
+        """Add today's timestamp to comments if missing"""
+        for comment in comments:
+            if "createdAt" not in comment and "updatedAt" not in comment:
+                comment["createdAt"] = self.today
+        return comments
 
     def test_count_pr_automation_comments(self):
         """Test counting PR automation comments (codex marker, not fix-comment)"""
@@ -40,6 +49,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             {"body": "<!-- fix-comment-automation-commit:xyz789 -->"},  # Should NOT count
             {"body": "Regular comment"},
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "pr_automation")
         self.assertEqual(count, 2, "Should count only codex-automation-commit comments without fix-comment marker")
 
@@ -51,6 +61,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             {"body": "<!-- codex-automation-commit:xyz789 -->", "author": {"login": "test-automation-user"}},  # Should NOT count
             {"body": "Regular comment", "author": {"login": "test-automation-user"}},
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 2, "Should count only fix-comment-automation-commit comments")
 
@@ -62,6 +73,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             {"body": "<!-- codex-automation-commit:xyz789 -->", "author": {"login": "test-automation-user"}},  # Should NOT count
             {"body": "Regular comment", "author": {"login": "test-automation-user"}},
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 2, "Should count fix-comment-run-automation-commit comments for fix_comment workflow")
 
@@ -83,6 +95,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             {"body": "<!-- fix-comment-automation-commit:ghi012 -->", "author": {"login": "test-automation-user"}},  # Should NOT count
             {"body": "Regular comment", "author": {"login": "test-automation-user"}},
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "fixpr")
         self.assertEqual(count, 2, "Should count only fixpr-run-automation-commit comments for fixpr workflow")
 
@@ -91,11 +104,12 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
         comments = [
             {"body": f"<!-- codex-automation-commit:abc{i} -->"} for i in range(10)
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "pr_automation")
         # Should be at limit (10), not blocked yet
         self.assertEqual(count, 10)
         # 11th comment should exceed limit
-        comments.append({"body": "<!-- codex-automation-commit:abc11 -->"})
+        comments.append({"body": "<!-- codex-automation-commit:abc11 -->", "createdAt": self.today})
         count = self.monitor._count_workflow_comments(comments, "pr_automation")
         self.assertEqual(count, 11)
         self.assertGreater(count, self.monitor.safety_manager.pr_automation_limit)
@@ -105,11 +119,12 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
         comments = [
             {"body": f"<!-- fix-comment-automation-commit:abc{i} -->", "author": {"login": "test-automation-user"}} for i in range(5)
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         # Should be at limit (5)
         self.assertEqual(count, 5)
         # 6th comment should exceed limit
-        comments.append({"body": "<!-- fix-comment-automation-commit:abc6 -->", "author": {"login": "test-automation-user"}})
+        comments.append({"body": "<!-- fix-comment-automation-commit:abc6 -->", "author": {"login": "test-automation-user"}, "createdAt": self.today})
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 6)
         self.assertGreater(count, self.monitor.safety_manager.fix_comment_limit)
@@ -124,6 +139,9 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
         fix_comment_comments = [
             {"body": f"<!-- fix-comment-automation-commit:fix{i} -->", "author": {"login": "test-automation-user"}} for i in range(2)
         ]
+
+        pr_automation_comments = self._add_timestamps(pr_automation_comments)
+        fix_comment_comments = self._add_timestamps(fix_comment_comments)
 
         pr_count = self.monitor._count_workflow_comments(pr_automation_comments, "pr_automation")
         fix_count = self.monitor._count_workflow_comments(fix_comment_comments, "fix_comment")
@@ -143,6 +161,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             {"body": "<!-- codex-automation-commit:ghi012 -->"},  # Count
             {"body": "Regular comment"},  # Don't count
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "pr_automation")
         self.assertEqual(count, 3, "Should count only codex comments without fix-comment marker")
 
@@ -154,6 +173,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             {"body": "<!-- fix-comment-automation-commit:xyz789 -->", "author": {"login": "test-automation-user"}},  # Count
             {"body": "Regular comment", "author": {"login": "test-automation-user"}},  # Don't count
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 2, "Should count only fix-comment-automation-commit comments")
 
@@ -170,6 +190,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             {"body": "<!-- codex-automation-commit:abc123 -->"},
             {"body": "<!-- fix-comment-automation-commit:def456 -->"},
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "unknown_workflow")
         # Should count all automation comments as fallback
         self.assertEqual(count, 2)
@@ -182,6 +203,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             # Valid marker and correct author
             {"body": "<!-- fix-comment-automation-commit:def456 -->", "author": {"login": "test-automation-user"}},
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "fix_comment")
         self.assertEqual(count, 1, "Should ignore comments from impostor users")
 
@@ -193,6 +215,7 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
             # Valid marker and correct author
             {"body": "<!-- fixpr-run-automation-commit:codex:def456 -->", "author": {"login": "test-automation-user"}},
         ]
+        comments = self._add_timestamps(comments)
         count = self.monitor._count_workflow_comments(comments, "fixpr")
         self.assertEqual(count, 1, "Should ignore comments from impostor users")
 

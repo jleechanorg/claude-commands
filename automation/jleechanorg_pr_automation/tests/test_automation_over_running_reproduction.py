@@ -23,7 +23,8 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         self.test_dir = tempfile.mkdtemp()
-        self.manager = AutomationSafetyManager(self.test_dir)
+        # Use global_limit=50 to match test expectations (2x = 100)
+        self.manager = AutomationSafetyManager(self.test_dir, limits={"global_limit": 50})
 
     def tearDown(self):
         """Clean up test environment"""

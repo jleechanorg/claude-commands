@@ -37,7 +37,7 @@ keywords = [
     "terminal",
     "interactive",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = []
 
 [project.license]
@@ -81,12 +81,12 @@ orchestration = [
 [tool.black]
 line-length = 120
 target-version = [
-    "py39",
+    "py311",
 ]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = [

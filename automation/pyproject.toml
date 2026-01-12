@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-pr-automation"
-version = "0.2.46"
+version = "0.2.51"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },
@@ -32,7 +32,7 @@ keywords = [
     "pull-request",
     "monitoring",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "requests>=2.25.0",
     "jleechanorg-orchestration>=0.1.18",
@@ -79,12 +79,12 @@ jleechanorg_pr_automation = [
 [tool.black]
 line-length = 120
 target-version = [
-    "py39",
+    "py311",
 ]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py311"
 select = [
     "E",
     "F",

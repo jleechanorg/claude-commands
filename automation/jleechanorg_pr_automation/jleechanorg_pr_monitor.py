@@ -18,7 +18,7 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -590,7 +590,7 @@ class JleechanorgPRMonitor:
 
         self.logger.info(f"🔍 Discovering open PRs in {self.organization} organization (last {cutoff_hours} hours)")
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         one_day_ago = now - timedelta(hours=cutoff_hours)
         self.logger.info("📅 Filtering PRs updated since: %s UTC", one_day_ago.strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -659,7 +659,10 @@ class JleechanorgPRMonitor:
                     continue
 
                 try:
-                    updated_time = datetime.fromisoformat(updated_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                    # Parse ISO format and ensure timezone-aware (UTC)
+                    updated_time = datetime.fromisoformat(updated_str.replace("Z", "+00:00"))
+                    if updated_time.tzinfo is None:
+                        updated_time = updated_time.replace(tzinfo=timezone.utc)
                 except ValueError:
                     self.logger.debug(
                         "⚠️ Invalid date format for PR %s: %s", node.get("number"), updated_str
@@ -981,7 +984,7 @@ class JleechanorgPRMonitor:
                 "--json", "statusCheckRollup"
             ], timeout=30)
 
-            pr_status = json.loads(result.stdout)
+            pr_status = json.loads(result.stdout or "{}")
             status_checks = pr_status.get("statusCheckRollup", [])
 
             # If no status checks are configured, assume tests are failing
@@ -1075,16 +1078,26 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             "Goal: address all review comments with explicit action-based replies, "
             "fix failing tests, and resolve merge conflicts.\n\n"
             f"CLI chain: {agent_cli}. Start immediately.\n\n"
-            "⚠️ CRITICAL - REVIEW COMMENT REPLY API (MUST READ):\n"
-            "   To reply to inline review comments WITHOUT starting a pending review, use ONLY:\n"
+            "🚨 CRITICAL - PREVENT PENDING REVIEWS (MANDATORY - READ FIRST):\n"
+            "   ⚠️ YOU MUST NEVER CREATE A PENDING REVIEW. Pending reviews clutter PRs and break automation.\n"
+            "   ⚠️ IF YOU CREATE A PENDING REVIEW, THE AUTOMATION WILL FAIL AND YOU WILL BE BLOCKED.\n\n"
+            "   ✅ CORRECT METHOD - Reply to inline review comments (ONLY USE THIS):\n"
             f"   `gh api /repos/{repository}/pulls/{pr_number}/comments -f body='...' -F in_reply_to={{comment_id}}`\n"
-            "   This `/comments` endpoint with `in_reply_to` parameter creates a threaded reply WITHOUT starting a review.\n"
-            "   ⚠️ IMPORTANT: Use `-f` for body (string) and `-F` for in_reply_to (numeric comment ID).\n\n"
-            "   ❌ NEVER USE these (they create pending reviews that clutter the PR):\n"
-            "   - `create_pending_pull_request_review` MCP tool\n"
-            "   - `add_comment_to_pending_review` MCP tool\n"
-            "   - `POST /repos/.../pulls/.../reviews` endpoint\n"
-            "   - Any GitHub review workflow that requires 'submit'\n\n"
+            "   This `/comments` endpoint with `in_reply_to` creates a threaded reply WITHOUT starting a review.\n"
+            "   ⚠️ Use `-f` for body (string) and `-F` for in_reply_to (numeric comment ID).\n\n"
+            "   ✅ CORRECT METHOD - General PR comments (not line-specific):\n"
+            f"   `gh pr comment {pr_number} --body '...'` or `gh api /repos/{repository}/issues/{pr_number}/comments -f body='...'`\n\n"
+            "   ❌ FORBIDDEN - These ALWAYS create pending reviews (NEVER USE):\n"
+            "   - `create_pending_pull_request_review` MCP tool (FORBIDDEN - creates pending review)\n"
+            "   - `add_comment_to_pending_review` MCP tool (FORBIDDEN - adds to pending review)\n"
+            "   - `POST /repos/.../pulls/.../reviews` endpoint (FORBIDDEN - creates pending review if event missing)\n"
+            "   - Any GitHub review workflow that requires 'submit' (FORBIDDEN - creates pending review)\n\n"
+            "   ✅ ALLOWED - Verification and Cleanup:\n"
+            "   - `GET /repos/.../pulls/.../reviews` (ALLOWED - used to check for pending reviews)\n"
+            "   - `DELETE /repos/.../pulls/.../reviews/{review_id}` (ALLOWED - used to clean up pending reviews)\n\n"
+            "   ⚠️ VERIFICATION: After replying, verify NO pending review was created:\n"
+            f"   `gh api /repos/{repository}/pulls/{pr_number}/reviews --jq '.[] | select(.state==\"PENDING\")'`\n"
+            "   If any pending reviews exist from your user, DELETE THEM IMMEDIATELY.\n\n"
             "Steps:\n"
             f"1) gh pr checkout {pr_number}\n\n"
             "2) Fetch ALL PR feedback sources (pagination-safe) using correct GitHub API endpoints:\n"
@@ -1676,16 +1689,45 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return "skipped"
 
-        # Check if we've already processed this PR with this commit (reusing skip logic)
-        # FixPR logic typically runs on every push unless skipped by other means.
-        # But for now, let's assume we don't want to loop infinitely on the same commit.
-        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            self.logger.info(
-                "⏭️ Skipping PR #%s - already processed commit %s",
-                pr_number,
-                head_sha[:8],
+        # Check for conflicts or failing checks BEFORE skip check
+        # If PR has issues, reprocess even if commit was already processed
+        is_conflicting = False
+        is_failing = False
+        
+        try:
+            # Fetch mergeable status
+            result = AutomationUtils.execute_subprocess_with_timeout(
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                timeout=30, check=False
             )
-            return "skipped"
+            if result.returncode == 0:
+                data = json.loads(result.stdout or "{}")
+                if data.get("mergeable") == "CONFLICTING":
+                    is_conflicting = True
+            
+            # Check for failing checks
+            is_failing = has_failing_checks(repo_full, pr_number)
+        except Exception as e:
+            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            # Continue with skip check if status check fails
+
+        # Only skip if PR has no issues (no conflicts, no failing checks)
+        # If PR has conflicts or failing checks, reprocess even if commit was already processed
+        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+            if not (is_conflicting or is_failing):
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - already processed commit %s (no conflicts or failing checks)",
+                    pr_number,
+                    head_sha[:8],
+                )
+                return "skipped"
+            else:
+                self.logger.info(
+                    "🔄 Reprocessing PR #%s (commit %s) - has conflicts or failing checks",
+                    pr_number,
+                    head_sha[:8],
+                )
+                # Continue processing despite skip check
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
@@ -2075,12 +2117,14 @@ Use your judgment to fix comments from everyone or explain why it should not be 
     def _count_workflow_comments(self, comments: List[Dict], workflow_type: str) -> int:
         """Count automation comments for a specific workflow type.
 
+        NEW BEHAVIOR: Counts comments from TODAY only (daily cooldown, resets at midnight).
+
         Args:
             comments: List of PR comments
             workflow_type: One of 'pr_automation', 'fix_comment', 'codex_update', 'fixpr'
 
         Returns:
-            Count of comments matching the workflow type
+            Count of comments matching the workflow type from today
 
         Note: codex_update workflow operates via browser automation (not PR comments),
         so count is always 0. The limit is configured but unused, reserved for future
@@ -2091,8 +2135,23 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if workflow_type == "codex_update":
             return 0
 
+        # Filter to today's comments only (daily cooldown)
+        # GitHub timestamps are UTC, so compare against UTC date only
+        today_utc = datetime.now(timezone.utc).date().isoformat()
         count = 0
         for comment in comments:
+            # Check if comment is from today (daily cooldown)
+            # GitHub API returns ISO 8601 timestamps (UTC), extract date portion
+            created_at = comment.get("createdAt") or comment.get("updatedAt")
+            if not created_at:
+                continue  # Skip comments without timestamps (cannot verify if from today)
+
+            # Extract date from ISO timestamp (e.g., "2026-01-12T07:34:23Z" -> "2026-01-12")
+            comment_date = created_at.split("T")[0] if "T" in created_at else created_at[:10]
+            # Match if comment date matches UTC today (GitHub timestamps are always UTC)
+            if comment_date != today_utc:
+                continue  # Skip comments from previous days
+
             body = comment.get("body", "")
 
             if workflow_type == "pr_automation":
@@ -2227,10 +2286,17 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         repo_full = self._normalize_repository_name(repository)
         self.logger.info(f"🎯 Processing target PR: {repo_full} #{pr_number}")
 
-        # Check global automation limits
-        if not self.safety_manager.can_start_global_run():
+        # Check global automation limits (fixpr uses per-PR limits only)
+        # Note: fixpr workflow bypasses global limit check - it uses per-PR fixpr_limit instead
+        # This allows fixpr to process PRs independently based on per-PR comment counts
+        if not fixpr and not self.safety_manager.can_start_global_run():
             self.logger.warning("🚫 Global automation limit reached - cannot process target PR")
             return False
+
+        # Cleanup pending reviews BEFORE all eligibility checks (ensures cleanup even if PR is skipped)
+        # Run cleanup for workflows that might create pending reviews (fixpr, fix_comment)
+        if fixpr or fix_comment:
+            self._cleanup_pending_reviews(repo_full, pr_number)
 
         try:
             # Check workflow-specific safety limits
@@ -2271,7 +2337,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 return False
 
             # Only record global run AFTER confirming we can process the PR
-            if not self.wrapper_managed:
+            if not self.wrapper_managed and not fixpr:
                 self.safety_manager.record_global_run()
                 current_runs = self.safety_manager.get_global_runs()
                 self.logger.info(
@@ -2287,7 +2353,11 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author,headRefOid,mergeable"],
                     timeout=30
                 )
-                pr_data = json.loads(result.stdout)
+                pr_data = json.loads(result.stdout or "{}")
+
+                if not pr_data or "title" not in pr_data:
+                    self.logger.error(f"❌ Failed to fetch PR data for #{pr_number} - empty or invalid response")
+                    return False
 
                 self.logger.info(f"📝 Found PR: {pr_data['title']}")
 
@@ -2349,7 +2419,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         mode_label = "fix-comment" if fix_comment else ("fixpr" if fixpr else "comment")
         self.logger.info("🚀 Starting jleechanorg PR monitoring cycle (%s mode)", mode_label)
 
-        if not self.safety_manager.can_start_global_run():
+        # FixPR workflow uses per-PR limits only, not global limit
+        # Other workflows (fix-comment, pr_automation) still check global limit
+        if not fixpr and not self.safety_manager.can_start_global_run():
             current_runs = self.safety_manager.get_global_runs()
             self.logger.warning(
                 "🚫 Global automation limit reached %s/%s",
@@ -2393,6 +2465,12 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             pr_number = pr["number"]
 
+            # Cleanup pending reviews BEFORE any eligibility checks
+            # This ensures cleanup runs even if PR is skipped for any reason
+            # Run cleanup for workflows that might create pending reviews (fixpr, fix_comment)
+            if fixpr or fix_comment:
+                self._cleanup_pending_reviews(repo_full_name, pr_number)
+
             # Check if this PR is actionable (skip if not)
             if not self.is_pr_actionable(pr):
                 skipped_count += 1
@@ -2415,7 +2493,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         timeout=30, check=False
                     )
                     if result.returncode == 0:
-                        data = json.loads(result.stdout)
+                        data = json.loads(result.stdout or "{}")
                         if data.get("mergeable") == "CONFLICTING":
                             is_conflicting = True
 
@@ -2464,11 +2542,11 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 skipped_count += 1
                 continue
 
-            self.logger.info(f"🎯 Processing PR: {repo_full_name} #{pr_number} - {pr['title']}")
+            self.logger.info(f"🎯 Processing PR: {repo_full_name} #{pr_number} - {pr.get('title', 'unknown')}")
 
             attempt_recorded = False
             try:
-                if not global_run_recorded:
+                if not global_run_recorded and not fixpr:
                     self.safety_manager.record_global_run()
                     global_run_recorded = True
                     current_runs = self.safety_manager.get_global_runs()
@@ -2960,7 +3038,7 @@ def main():
 
             print(f"📋 Found {len(prs)} open PRs:")
             for pr in prs[:args.max_prs]:
-                print(f"  • {pr['repository']} PR #{pr['number']}: {pr['title']}")
+                print(f"  • {pr['repository']} PR #{pr['number']}: {pr.get('title', 'unknown')}")
             return
 
         monitor.run_monitoring_cycle(
@@ -2988,7 +3066,7 @@ def main():
 
         print(f"📋 Found {len(prs)} open PRs:")
         for pr in prs[:args.max_prs]:
-            print(f"  • {pr['repository']} PR #{pr['number']}: {pr['title']}")
+            print(f"  • {pr['repository']} PR #{pr['number']}: {pr.get('title', 'unknown')}")
 
         if args.list_eligible:
             print("\n🔎 Eligible for fixpr (conflicts/failing checks):")

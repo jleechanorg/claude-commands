@@ -17,7 +17,7 @@ import os
 import smtplib
 import sys
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Dict, Optional, Union
@@ -354,11 +354,11 @@ class AutomationSafetyManager:
     def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit).
 
-        NEW BEHAVIOR: Counts ALL attempts (success + failure) against the limit.
+        NEW BEHAVIOR: Counts attempts from TODAY only (daily cooldown, resets at midnight).
         Supports per-PR limit overrides (0 = unlimited).
 
         Blocks if:
-        1. Total attempts >= effective_pr_limit (respects overrides)
+        1. Today's attempts >= effective_pr_limit (respects overrides)
         """
         with self.lock:
             raw_data = self._read_json_file(self.pr_attempts_file)
@@ -370,8 +370,17 @@ class AutomationSafetyManager:
             # Get effective limit (checks for per-PR override)
             effective_limit = self._get_effective_pr_limit(pr_number, repo, branch)
 
-            # Count ALL attempts (not just failures)
-            total_attempts = len(attempts)
+            # Filter attempts to TODAY only (daily cooldown)
+            # Timestamps are stored in UTC, so compare against UTC date only
+            today_utc = datetime.now(timezone.utc).date().isoformat()
+            
+            today_attempts = [
+                attempt for attempt in attempts
+                if isinstance(attempt, dict) and attempt.get("timestamp", "").startswith(today_utc)
+            ]
+
+            # Count TODAY's attempts only
+            total_attempts = len(today_attempts)
 
             # Check against effective limit
             return total_attempts < effective_limit
@@ -409,15 +418,27 @@ class AutomationSafetyManager:
                 self._write_json_file(self.inflight_file, self._pr_inflight_cache)
 
     def get_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
-        """Get count of ALL attempts (success + failure) for a specific PR.
+        """Get count of attempts for a specific PR.
 
-        NEW BEHAVIOR: Counts ALL attempts, not just consecutive failures.
+        NEW BEHAVIOR: Counts attempts from TODAY only (daily cooldown).
         """
         with self.lock:
+            raw_data = self._read_json_file(self.pr_attempts_file)
+            self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
             pr_key = self._make_pr_key(pr_number, repo, branch)
             attempts = list(self._pr_attempts_cache.get(pr_key, []))
-            # Return total count of ALL attempts
-            return len(attempts)
+            
+            # Filter to today's attempts only (daily cooldown)
+            # Timestamps are stored in UTC, so compare against UTC date only
+            today_utc = datetime.now(timezone.utc).date().isoformat()
+            
+            today_attempts = [
+                attempt for attempt in attempts
+                if isinstance(attempt, dict) and attempt.get("timestamp", "").startswith(today_utc)
+            ]
+            
+            # Return count of TODAY's attempts
+            return len(today_attempts)
 
     def get_pr_attempt_list(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get list of attempts for a specific PR (for detailed analysis)"""
@@ -436,7 +457,7 @@ class AutomationSafetyManager:
             # Create attempt record
             attempt_record = {
                 "result": result,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "pr_number": pr_number,
                 "repo": repo,
                 "branch": branch

@@ -135,7 +135,7 @@ def export_campaign(
 
 def list_campaigns(user_id: str) -> list[dict]:
     """List all campaigns for a user."""
-    campaigns, _ = firestore_service.get_campaigns_for_user(user_id)
+    campaigns, _, _ = firestore_service.get_campaigns_for_user(user_id)
     return campaigns
 
 
