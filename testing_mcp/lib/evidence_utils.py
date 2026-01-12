@@ -822,19 +822,30 @@ Test scenarios validate that:
             )
             continue
 
+        # Check for pass/fail flags first (even if errors exist, they might be placeholder)
+        passed_flag: bool | None = None
+        if "passed" in scenario:
+            passed_flag = bool(scenario.get("passed"))
+        elif "success" in scenario:
+            passed_flag = bool(scenario.get("success"))
+        elif "validation_passed" in scenario:
+            # Backward compatibility: support validation_passed field
+            passed_flag = bool(scenario.get("validation_passed"))
+
         if "errors" in scenario:
             errors_val = scenario.get("errors")
             if errors_val is None:
                 scenario["errors"] = []
             elif not isinstance(errors_val, list):
                 scenario["errors"] = [str(errors_val)]
+            # If we found a pass flag and errors exist, check if errors are just placeholder
+            elif passed_flag is True:
+                # Clear placeholder errors if scenario actually passed
+                placeholder_msg = "Missing 'errors' and no pass/fail flag"
+                if errors_val and len(errors_val) == 1 and placeholder_msg in errors_val[0]:
+                    scenario["errors"] = []
         else:
-            passed_flag: bool | None = None
-            if "passed" in scenario:
-                passed_flag = bool(scenario.get("passed"))
-            elif "success" in scenario:
-                passed_flag = bool(scenario.get("success"))
-
+            # No errors field - determine from pass/fail flags
             if passed_flag is True:
                 scenario["errors"] = []
             elif passed_flag is False:
@@ -847,7 +858,7 @@ Test scenarios validate that:
                 scenario["errors"] = [msg] if isinstance(msg, str) else ["Scenario failed"]
             else:
                 scenario["errors"] = [
-                    "Missing 'errors' and no pass/fail flag ('passed' or 'success') provided"
+                    "Missing 'errors' and no pass/fail flag ('passed', 'success', or 'validation_passed') provided"
                 ]
 
         normalized_scenarios.append(scenario)
@@ -922,7 +933,9 @@ the raw narrative validation missed. See `errors` in individual scenario files.
 """
     for scenario in scenarios:
         status = "✅ PASS" if not scenario.get("errors") else "❌ FAIL"
-        evidence_content += f"\n### {scenario.get('name', 'Unknown')}\n"
+        # Support both 'name' and 'scenario_name' fields for backward compatibility
+        scenario_name = scenario.get('name') or scenario.get('scenario_name', 'Unknown')
+        evidence_content += f"\n### {scenario_name}\n"
         evidence_content += f"- **Status:** {status}\n"
         # Add campaign_id for traceability
         if scenario.get("campaign_id"):

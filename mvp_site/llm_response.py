@@ -7,6 +7,10 @@ import re
 from typing import Any
 
 from mvp_site import logging_util
+from mvp_site.action_resolution_utils import (
+    get_action_resolution,
+    get_outcome_resolution,
+)
 from mvp_site.narrative_response_schema import (
     NarrativeResponse,
     parse_structured_response,
@@ -112,6 +116,16 @@ class LLMResponse:
         if self.structured_response and hasattr(self.structured_response, "resources"):
             return self.structured_response.resources or ""
         return ""
+
+    @property
+    def action_resolution(self) -> dict[str, Any]:
+        """Get action resolution from structured response (backward compat with outcome_resolution)."""
+        return get_action_resolution(self.structured_response)
+
+    @property
+    def outcome_resolution(self) -> dict[str, Any]:
+        """Backwards compatibility property for outcome_resolution."""
+        return get_outcome_resolution(self.structured_response)
 
     def _detect_old_tags(self) -> dict[str, list[str]]:
         """

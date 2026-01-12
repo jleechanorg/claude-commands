@@ -66,6 +66,22 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
                 sr, constants.FIELD_DIRECTIVES, {}
             ),
         }
+        
+        # Extract action_resolution and outcome_resolution for audit trail persistence
+        # Use the helper functions from action_resolution_utils to ensure consistent extraction
+        # Always include action_resolution and outcome_resolution for audit trail persistence
+        # Even if empty, these fields should be present in Firestore for consistency
+        # The helper functions return empty dict {} if not present, which is fine to persist
+        from mvp_site.action_resolution_utils import (
+            get_action_resolution,
+            get_outcome_resolution,
+        )
+        
+        action_resolution = get_action_resolution(sr)
+        structured_fields["action_resolution"] = action_resolution  # Always include, even if {}
+        
+        outcome_resolution = get_outcome_resolution(sr)
+        structured_fields["outcome_resolution"] = outcome_resolution  # Always include, even if {}
 
         # Store a filtered subset of state_updates needed for Living World UI
         # This keeps storage small while still surfacing relevant debug data

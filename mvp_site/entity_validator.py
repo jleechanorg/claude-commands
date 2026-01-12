@@ -184,7 +184,9 @@ class EntityValidator:
             "absent_reference", []
         )
         for pattern in compiled_absent_patterns:
-            pattern_str = pattern.pattern.replace(r"(\w+)", entity_lower)
+            # Escape the entity string to handle special characters like () safely
+            safe_entity = re.escape(entity_lower)
+            pattern_str = pattern.pattern.replace(r"(\w+)", safe_entity)
             if re.search(pattern_str, narrative_lower, re.IGNORECASE):
                 return EntityPresenceType.MENTIONED_ABSENT
 

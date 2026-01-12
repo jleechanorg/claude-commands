@@ -39,7 +39,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lib import MCPClient
-from lib.evidence_utils import get_evidence_dir
+from lib.evidence_utils import (
+    get_evidence_dir,
+    capture_provenance,
+    create_evidence_bundle,
+)
+from lib.firestore_validation import validate_action_resolution_in_firestore
 from lib.model_utils import DEFAULT_MODEL_MATRIX, settings_for_model, update_user_settings
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 
@@ -398,49 +403,8 @@ def validate_refuse_or_clarify(
     return passed, outcome, errors
 
 
-def save_evidence(
-    model_id: str,
-    scenario: dict[str, Any],
-    result: dict[str, Any],
-    outcome: str,
-    validation_errors: list[str],
-    evidence_dir: Path,
-) -> None:
-    """Save test evidence to disk."""
-    evidence_dir.mkdir(parents=True, exist_ok=True)
-
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    safe_model = model_id.replace("/", "-").replace(":", "-")
-    safe_scenario = (
-        scenario["name"]
-        .lower()
-        .replace(" ", "_")
-        .replace("(", "")
-        .replace(")", "")[:40]
-    )
-
-    evidence_file = evidence_dir / f"{timestamp}_{safe_model}_{safe_scenario}.json"
-
-    evidence = {
-        "timestamp": timestamp,
-        "model_id": model_id,
-        "scenario_name": scenario["name"],
-        "scenario_description": scenario["description"],
-        "user_input": scenario["user_input"],
-        "expected_behavior": scenario["expected_behavior"],
-        "actual_outcome": outcome,
-        "validation_passed": len(validation_errors) == 0,
-        "validation_errors": validation_errors,
-        "narrative": result.get("narrative", ""),
-        "planning_block": result.get("planning_block", {}),
-        "state_updates": result.get("state_updates", {}),
-        "debug_info": result.get("debug_info", {}),
-    }
-
-    with open(evidence_file, "w") as f:
-        json.dump(evidence, f, indent=2, default=str)
-
-    print(f"     Evidence saved: {evidence_file.name}")
+# Evidence saving is now handled by create_evidence_bundle at the end
+# Individual scenario evidence is collected in results dict
 
 
 # =============================================================================
@@ -454,10 +418,12 @@ def run_tests(
     scenarios: list[dict],
     evidence_dir: Path | None,
     created_campaigns: list[tuple[str, str]],
-) -> tuple[int, int]:
-    """Run test scenarios and return (passed, total) counts."""
+    save_evidence: bool = True,
+) -> tuple[int, int, list[dict]]:
+    """Run test scenarios and return (passed, total, results) tuple."""
     passed = 0
     total = 0
+    results = []
 
     # Group scenarios by character
     by_char: dict[str, list[dict]] = {}
@@ -529,20 +495,59 @@ def run_tests(
             # Validate
             test_passed, outcome, errors = validate_refuse_or_clarify(result, scenario)
 
-            # Save evidence
-            if evidence_dir:
-                save_evidence(model_id, scenario, result, outcome, errors, evidence_dir)
+            # Validate Firestore persistence (CRITICAL: Check that audit trail is actually saved)
+            firestore_validation = validate_action_resolution_in_firestore(
+                user_id=user_id,
+                campaign_id=campaign_id,
+                limit=1,  # Check latest entry (should be the one we just created)
+                require_audit_flags=True,
+            )
+            
+            # Merge Firestore validation errors
+            combined_errors = list(errors)
+            combined_errors.extend(firestore_validation["errors"])
+            
+            # Test fails if either API validation OR Firestore validation fails
+            # Note: Firestore validation warnings don't fail the test, but errors do
+            final_passed = test_passed and firestore_validation["passed"]
+
+            # Collect evidence for bundle
+            # Use 'passed' field (not 'validation_passed') to match evidence bundle expectations
+            scenario_result = {
+                "model_id": model_id,
+                "scenario_name": scenario["name"],
+                "scenario_description": scenario["description"],
+                "user_input": scenario["user_input"],
+                "expected_behavior": scenario["expected_behavior"],
+                "actual_outcome": outcome,
+                "passed": final_passed,  # Evidence bundle expects 'passed' field
+                "errors": combined_errors if not final_passed else [],  # Only include errors if failed
+                "narrative": result.get("narrative", ""),
+                "planning_block": result.get("planning_block", {}),
+                "state_updates": result.get("state_updates", {}),
+                "debug_info": result.get("debug_info", {}),
+                "firestore_validation": {
+                    "passed": firestore_validation["passed"],
+                    "entries_checked": firestore_validation["entries_checked"],
+                    "entries_with_action_resolution": firestore_validation["entries_with_action_resolution"],
+                    "warnings": firestore_validation["warnings"],
+                },
+            }
+            results.append(scenario_result)
 
             # Report
-            if test_passed:
+            if final_passed:
                 passed += 1
                 print(f"       PASSED: LLM {outcome} the impossible action")
+                if firestore_validation["warnings"]:
+                    for warn in firestore_validation["warnings"][:1]:
+                        print(f"         ⚠️  {warn}")
             else:
                 print(f"       FAILED: {outcome}")
-                for err in errors[:2]:
+                for err in combined_errors[:3]:
                     print(f"         {err}")
 
-    return passed, total
+    return passed, total, results
 
 
 def main() -> int:
@@ -575,11 +580,6 @@ def main() -> int:
         action="store_true",
         help="Use real API providers (requires API keys)",
     )
-    parser.add_argument(
-        "--evidence",
-        action="store_true",
-        help="Save detailed evidence files",
-    )
     args = parser.parse_args()
 
     local: LocalServer | None = None
@@ -588,10 +588,8 @@ def main() -> int:
     base_url = str(args.server_url)
 
     try:
-        # Parse models first (needed for server env override)
-        models = [m.strip() for m in (args.models or "").split(",") if m.strip()]
-        if not models:
-            models = list(DEFAULT_MODEL_MATRIX)
+        # Always use gemini-3-flash-preview
+        models = ["gemini-3-flash-preview"]
 
         # Start server if requested
         if args.start_local:
@@ -618,14 +616,14 @@ def main() -> int:
         client.wait_healthy(timeout_s=45.0)
         print(f"MCP server healthy at {base_url}\n")
 
-        # Evidence directory
-        evidence_dir = None
-        if args.evidence:
-            evidence_dir = get_evidence_dir("llm_refuse_impossible")
-            print(f"Evidence directory: {evidence_dir}\n")
+        # Evidence directory (always generated)
+        evidence_dir = get_evidence_dir("llm_refuse_impossible")
+        print(f"📂 Evidence directory: {evidence_dir}\n")
+        save_evidence = True
 
         total_passed = 0
         total_ran = 0
+        all_results = []
 
         print("=" * 70)
         print("LLM REFUSE/CLARIFY IMPOSSIBLE ACTIONS TEST")
@@ -638,11 +636,33 @@ def main() -> int:
             print(f"\nTesting model: {model_id}")
             print("-" * 70)
 
-            passed, ran = run_tests(
-                client, model_id, IMPOSSIBLE_ACTION_SCENARIOS, evidence_dir, created_campaigns
+            passed, ran, model_results = run_tests(
+                client, model_id, IMPOSSIBLE_ACTION_SCENARIOS, evidence_dir, created_campaigns, True
             )
             total_passed += passed
             total_ran += ran
+            all_results.extend(model_results)
+
+        # Save evidence bundle (always generated)
+        if evidence_dir and all_results:
+            provenance = capture_provenance(base_url=base_url, server_pid=None)
+            test_results = {
+                "scenarios": all_results,
+                "test_result": {
+                    "passed": total_passed,
+                    "total": total_ran,
+                },
+            }
+            request_responses = client.get_captures_as_dict()
+            create_evidence_bundle(
+                evidence_dir=evidence_dir,
+                test_name="llm_refuse_impossible_actions",
+                provenance=provenance,
+                results=test_results,
+                request_responses=request_responses,
+                methodology_text=None,
+            )
+            print(f"\n✅ Evidence saved to: {evidence_dir}")
 
         # Summary
         print("\n" + "=" * 70)

@@ -325,50 +325,62 @@ Every response MUST be valid JSON with this exact structure:
     - Players see the box (narrative), server tracks data (JSON)
     - BOTH must exist for ALL tiers (commoner through god) in EVERY response
     - Missing either one fails validation
-- `outcome_resolution`: (object) **REQUIRED when player input declares CURRENT-ACTION outcomes** (e.g., "The king agrees", "It kills the guard", "I find the treasure"). Documents reinterpretation and mechanical resolution for audit trail.
+- `action_resolution`: (object) **REQUIRED for ALL player actions** - Documents how every action was resolved mechanically for complete audit trail. This field is MANDATORY whether players declare outcomes or make normal attempts.
 
-  **Scope:** Only triggers on present-tense outcome declarations for current actions. Does NOT trigger for:
+  **When REQUIRED:**
+  - **Outcome declarations** (e.g., "The king agrees", "It kills the guard", "I find the treasure") - MUST include with `reinterpreted: true` and `audit_flags: ["player_declared_outcome"]`
+  - **Normal attempts** (e.g., "I try to attack", "I attempt to persuade", "I search the room") - MUST include with `reinterpreted: false` and appropriate mechanics
+  
+  **Does NOT trigger for:**
   - Past-tense references to already-resolved events ("I remember the king agreed last week")
   - Hypothetical questions ("What if the king agreed?")
   - Intent statements with modal verbs ("I want to kill the dragon")
+  - Pure narrative responses without player actions
   
-  **When to include:** When player input declares an immediate outcome (present-tense) that needs mechanical resolution.
-  - `trigger`: (string) **REQUIRED** - Type of outcome declared: `"combat"` | `"social"` | `"exploration"` | `"other"`
-  - `player_intent`: (string) **REQUIRED** - What the player was trying to accomplish (interpreted from outcome declaration)
-  - `original_input`: (string) **REQUIRED** - The exact player input that declared an outcome
-  - `resolution_type`: (string) **REQUIRED** - How it was resolved: `"attack_roll"` | `"skill_check"` | `"saving_throw"` | `"investigation"` | `"other"`
-  - `mechanics`: (object) **REQUIRED** - Mechanical resolution details
-    - `skill`: (string, optional) Skill name if skill check (e.g., `"Persuasion"`, `"Investigation"`)
-    - `dc`: (number, optional) Difficulty Class if applicable
-    - `roll`: (string, optional) Dice notation used (e.g., `"1d20+5"`)
-    - `total`: (number, optional) Final roll total
-    - `outcome`: (string) **REQUIRED** - Result: `"success"` | `"failure"` | `"partial"` | `"pending"`
-    - `damage`: (number, optional) Damage dealt if combat
-    - `attack_hit`: (boolean, optional) Whether attack hit if combat
-  - `audit_flags`: (array of strings) **REQUIRED** - Flags for audit trail
+  **Why MANDATORY:** Every player action needs mechanical resolution documentation for audit trail, analytics, and game integrity. This ensures we can answer "How was this action resolved?" for any turn.
+  
+  **Fields:**
+  - `player_input`: (string, optional) The exact player input that triggered this resolution
+  - `interpreted_as`: (string, optional) What the action was interpreted as (e.g., `"melee_attack"`, `"persuasion_attempt"`, `"investigation"`)
+  - `reinterpreted`: (boolean) **REQUIRED** - `true` if player input was reinterpreted (e.g., "The king agrees" → persuasion attempt), `false` for normal actions
+  - `mechanics`: (object, optional) - Mechanical resolution details
+    - `type`: (string, optional) Type of mechanics: `"attack_roll"` | `"skill_check"` | `"saving_throw"` | `"investigation"` | `"other"`
+    - `rolls`: (array, optional) Array of roll objects with `purpose`, `notation`, `result`, `dc`, `success`, etc.
+    - `audit_events`: (array, optional) Detailed audit trail events
+    - Legacy fields still supported: `skill`, `dc`, `roll`, `total`, `outcome`, `damage`, `attack_hit`
+  - `audit_flags`: (array of strings) **REQUIRED** - Flags for audit trail (defaults to empty array)
     - Always include `"player_declared_outcome"` when you reinterpreted player input
-    - Additional flags: `"intent_statement"` (if player used modal like "I want to"), `"hypothetical"` (if player asked conditional question)
+    - Additional flags: `"intent_statement"`, `"hypothetical"`, `"normalized_from_legacy"`
   - `narrative_outcome`: (string, optional) Brief description of what actually happened based on mechanics
-  - **Example:**
+  
+  **Example:**
   ```json
   {
-    "outcome_resolution": {
-      "trigger": "social",
-      "player_intent": "Convince king to help us",
-      "original_input": "The king agrees to help us",
-      "resolution_type": "skill_check",
+    "action_resolution": {
+      "player_input": "The king agrees to help us",
+      "interpreted_as": "persuasion_attempt",
+      "reinterpreted": true,
       "mechanics": {
-        "skill": "Persuasion",
-        "dc": 18,
-        "roll": "1d20+5",
-        "total": 17,
-        "outcome": "failure"
+        "type": "skill_check",
+        "rolls": [
+          {
+            "purpose": "persuasion",
+            "notation": "1d20+5",
+            "result": 17,
+            "dc": 18,
+            "success": false
+          }
+        ]
       },
       "audit_flags": ["player_declared_outcome"],
       "narrative_outcome": "King remains skeptical despite your argument"
     }
   }
   ```
+
+  **DEPRECATED FIELDS** (still accepted, will be removed in future cleanup PR):
+  - `dice_rolls`: Use `action_resolution.mechanics.rolls` instead. **Note:** For complete responses during the transitional period, include both `action_resolution` (required) and legacy `dice_rolls`/`dice_audit_events` (optional but recommended for backward compatibility). These fields are still validated and serialized by the backend.
+  - `dice_audit_events`: Use `action_resolution.mechanics.audit_events` instead. **Note:** See `dice_rolls` note above.
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
   - The engine converts this into structured `world_time` for temporal enforcement and session headers.

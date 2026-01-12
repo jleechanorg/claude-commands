@@ -542,11 +542,43 @@ class NarrativeResponse:
         self.social_hp_challenge = self._validate_social_hp_challenge(
             kwargs.pop("social_hp_challenge", None)
         )
-        self.outcome_resolution = self._validate_outcome_resolution(
-            kwargs.pop("outcome_resolution", None)
+        
+        # Action Resolution & Backward Compatibility
+        # ------------------------------------------
+        # We accept both action_resolution (new) and outcome_resolution (legacy).
+
+        action_resolution = kwargs.pop("action_resolution", None)
+        outcome_resolution = kwargs.pop("outcome_resolution", None)
+
+        # Track if either field is explicitly provided for normalization logic
+        # This ensures get_unified_action_resolution() returns the validated data
+        # even when only outcome_resolution (legacy) is provided
+        self._action_resolution_provided = (
+            action_resolution is not None or outcome_resolution is not None
         )
 
-        # Store any extra fields that Gemini might include (shouldn't be any now)
+        # Determine which resolution to use (action_resolution takes precedence)
+        if action_resolution is not None:
+            resolution = action_resolution
+        elif outcome_resolution is not None:
+            logging_util.warning(
+                "Legacy 'outcome_resolution' field received. Mapping to 'action_resolution'. "
+                "Please update prompts to use 'action_resolution'."
+            )
+            resolution = outcome_resolution
+        else:
+            # Neither field provided - this will trigger a warning in _validate_action_resolution
+            # Per system prompts, action_resolution is MANDATORY for all player actions
+            resolution = None
+
+        self.action_resolution = self._validate_action_resolution(resolution)
+
+        # Store outcome_resolution for backward compatibility in to_dict()
+        # Always use the validated version (self.action_resolution) to ensure consistency
+        # This ensures both fields have the same validated, normalized data structure
+        self.outcome_resolution = self.action_resolution
+
+        # Store any extra fields that Gemini might include
         self.extra_fields = kwargs
 
     def _validate_narrative(self, narrative: str) -> str:
@@ -818,54 +850,74 @@ class NarrativeResponse:
 
         return validated
 
-    def _validate_outcome_resolution(self, outcome_resolution: Any) -> dict[str, Any]:
-        """Validate outcome_resolution structured field for audit trail."""
-        if outcome_resolution is None:
+    def _validate_action_resolution(self, action_resolution: Any) -> dict[str, Any]:
+        """Validate action_resolution structured field for audit trail.
+        
+        This field is MANDATORY for all player actions per system prompts.
+        
+        Hybrid enforcement:
+        - Current (transition period): Warning when missing, returns {} fallback
+        - Future (strict mode): Set ENFORCE_ACTION_RESOLUTION_STRICT=true to raise ValueError
+        
+        This allows gradual migration: warnings now, strict enforcement later.
+        """
+        if action_resolution is None:
+            # Check for strict enforcement mode (future: enable after transition period)
+            strict_mode = os.getenv("ENFORCE_ACTION_RESOLUTION_STRICT", "false").lower() == "true"
+            
+            if strict_mode:
+                raise ValueError(
+                    "action_resolution is REQUIRED for all player actions per system prompts. "
+                    "LLM must include action_resolution with reinterpreted flag and mechanics. "
+                    "Missing action_resolution violates audit trail requirements."
+                )
+            else:
+                # Transition period: Warning only, allow {} fallback
+                logging_util.warning(
+                    "action_resolution is missing from LLM response. "
+                    "This field is REQUIRED for all player actions per system prompts. "
+                    "LLM should include action_resolution with reinterpreted flag and mechanics. "
+                    "Using empty dict as fallback. "
+                    "Future: Set ENFORCE_ACTION_RESOLUTION_STRICT=true for strict enforcement."
+                )
             return {}
 
-        if not isinstance(outcome_resolution, dict):
+        if not isinstance(action_resolution, dict):
             logging_util.warning(
-                f"Invalid outcome_resolution type: {type(outcome_resolution).__name__}, "
+                f"Invalid action_resolution type: {type(action_resolution).__name__}, "
                 "expected dict. Using empty dict."
             )
             return {}
 
         # Use deep copy to avoid mutating nested structures (e.g., mechanics dict)
-        # Schema is defined in game_state_instruction.md
-        # Required fields: trigger, player_intent, original_input, resolution_type, mechanics, audit_flags
-        validated = copy.deepcopy(outcome_resolution)
+        validated = copy.deepcopy(action_resolution)
         
-        # Validate required fields exist (warn but don't fail - downstream code may handle gracefully)
-        required_fields = ["trigger", "player_intent", "original_input", "resolution_type", "mechanics", "audit_flags"]
-        missing_fields = [field for field in required_fields if field not in validated]
-        if missing_fields:
-            logging_util.warning(
-                f"outcome_resolution missing required fields: {missing_fields}. "
-                "Schema defined in game_state_instruction.md"
-            )
+        # Ensure reinterpreted field defaults to False if not provided
+        if "reinterpreted" not in validated:
+            validated["reinterpreted"] = False
         
         # Ensure audit_flags is a list (coerce non-list values, but preserve None/empty as empty list)
-        if "audit_flags" in validated:
-            if validated["audit_flags"] is None:
+        if "audit_flags" not in validated:
+            validated["audit_flags"] = []
+        elif validated["audit_flags"] is None:
+            validated["audit_flags"] = []
+        elif not isinstance(validated["audit_flags"], list):
+            # Coerce single values to list, but filter out falsy non-None values (0, "", False)
+            if validated["audit_flags"]:
+                validated["audit_flags"] = [validated["audit_flags"]]
+            else:
                 validated["audit_flags"] = []
-            elif not isinstance(validated["audit_flags"], list):
-                # Coerce single values to list, but filter out falsy non-None values (0, "", False)
-                if validated["audit_flags"]:
-                    validated["audit_flags"] = [validated["audit_flags"]]
-                else:
-                    validated["audit_flags"] = []
         
         # Validate mechanics is a dict if present
         if "mechanics" in validated and validated["mechanics"] is not None:
             if not isinstance(validated["mechanics"], dict):
                 logging_util.warning(
-                    f"outcome_resolution.mechanics must be a dict, got {type(validated['mechanics']).__name__}"
+                    f"action_resolution.mechanics must be a dict, got {type(validated['mechanics']).__name__}"
                 )
                 validated["mechanics"] = {}
-            elif "outcome" not in validated["mechanics"]:
-                logging_util.warning("outcome_resolution.mechanics missing required 'outcome' field")
         
         return validated
+
 
     def _validate_dice_audit_events(self, value: Any) -> list[dict[str, Any]]:
         """Validate dice_audit_events as a list of dicts.
@@ -1242,6 +1294,35 @@ class NarrativeResponse:
 
         return sanitized
 
+    def get_unified_action_resolution(self) -> dict[str, Any]:
+        """Get action resolution, normalizing from legacy if needed.
+        
+        Returns action_resolution if explicitly provided (including empty dict {}), otherwise normalizes from legacy fields
+        (dice_rolls, dice_audit_events) if available.
+        """
+        # If action_resolution was explicitly provided (even if empty), use it
+        # Otherwise, normalize from legacy fields if available
+        if self._action_resolution_provided:
+            return self.action_resolution
+        return self._normalize_legacy_to_action_resolution()
+
+    def _normalize_legacy_to_action_resolution(self) -> dict[str, Any]:
+        """Convert dice_rolls + dice_audit_events to action_resolution format."""
+        # Normalize if either dice_rolls or dice_audit_events exist
+        if not self.dice_rolls and not self.dice_audit_events:
+            return {}
+        
+        return {
+            "player_input": None,  # Unknown from legacy
+            "interpreted_as": "action",
+            "reinterpreted": False,
+            "mechanics": {
+                "rolls": [{"display": r} for r in self.dice_rolls] if self.dice_rolls else [],
+                "audit_events": self.dice_audit_events or [],
+            },
+            "audit_flags": ["normalized_from_legacy"],
+        }
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary"""
         result = {
@@ -1257,6 +1338,7 @@ class NarrativeResponse:
             "dice_audit_events": self.dice_audit_events,
             "resources": self.resources,
             "social_hp_challenge": self.social_hp_challenge,
+            "action_resolution": self.action_resolution,
             "outcome_resolution": self.outcome_resolution,
         }
 

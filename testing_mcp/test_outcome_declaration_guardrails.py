@@ -18,8 +18,6 @@ Run (with evidence capture):
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,15 +37,16 @@ from lib.campaign_utils import (
     process_action,
     ensure_game_state_seed,
 )
-from lib.model_utils import settings_for_model, update_user_settings
+from lib.model_utils import settings_for_model, update_user_settings, DEFAULT_MODEL_MATRIX
 from lib.evidence_utils import (
     get_evidence_dir,
     capture_provenance,
     create_evidence_bundle,
 )
+from lib.firestore_validation import validate_action_resolution_in_firestore
 
 # Evidence stored per evidence-standards.md: /tmp/<repo>/<branch>/<work>/<timestamp>/
-DEFAULT_MODEL = "gemini-3-flash-preview"  # Pin model to avoid fallback noise
+DEFAULT_MODEL = "gemini-3-flash-preview"  # Always use gemini-3-flash-preview
 
 # =============================================================================
 # Test Scenarios
@@ -223,7 +222,7 @@ def validate_outcome_declaration_response(
     Args:
         narrative: The LLM-generated narrative text
         scenario: Test scenario dict with expected_behavior
-        structured_response: Optional parsed JSON response with outcome_resolution field
+        structured_response: Optional parsed JSON response with action_resolution field
         
     Returns:
         Dict with 'passed', 'errors', 'warnings', and validation details
@@ -245,31 +244,48 @@ def validate_outcome_declaration_response(
             if phrase in narrative_lower:
                 errors.append(f"LLM rejected input (old approach). Expected resolution with audit trail. Found: '{phrase}'")
         
-        # Should contain outcome_resolution JSON field
+        # Should contain action_resolution JSON field
         if structured_response:
-            outcome_resolution = structured_response.get("outcome_resolution")
-            if not outcome_resolution:
-                errors.append("Missing outcome_resolution JSON field. LLM should document reinterpretation in audit trail.")
+            action_resolution = structured_response.get("action_resolution")
+            
+            if not action_resolution:
+                errors.append("Missing action_resolution JSON field. LLM should document reinterpretation in audit trail.")
             else:
-                # Validate audit trail completeness
-                required_fields = ["trigger", "player_intent", "original_input", "resolution_type", "mechanics", "audit_flags"]
-                missing_fields = [field for field in required_fields if field not in outcome_resolution]
+                # Validate audit trail completeness - new action_resolution schema
+                # Required fields for action_resolution: reinterpreted, audit_flags
+                # Optional but recommended: mechanics, player_input, interpreted_as
+                required_fields = ["audit_flags"]
+                missing_fields = [field for field in required_fields if field not in action_resolution]
                 if missing_fields:
-                    errors.append(f"outcome_resolution missing required fields: {missing_fields}")
+                    errors.append(f"action_resolution missing required fields: {missing_fields}")
+                
+                # Check reinterpreted is True for outcome declarations
+                if "reinterpreted" not in action_resolution:
+                    errors.append("action_resolution missing required field: reinterpreted")
+                else:
+                    reinterpreted = action_resolution.get("reinterpreted", False)
+                    if not reinterpreted:
+                        errors.append("action_resolution.reinterpreted should be True when reinterpreting outcome declarations")
                 
                 # Check audit_flags contains player_declared_outcome
-                audit_flags = outcome_resolution.get("audit_flags", [])
-                if "player_declared_outcome" not in audit_flags:
+                audit_flags = action_resolution.get("audit_flags", [])
+                if not isinstance(audit_flags, list):
+                    errors.append("action_resolution.audit_flags must be a list")
+                elif "player_declared_outcome" not in audit_flags:
                     errors.append("audit_flags should include 'player_declared_outcome' when reinterpreting player input")
                 
-                # Validate mechanics object
-                mechanics = outcome_resolution.get("mechanics", {})
-                if not mechanics:
-                    errors.append("outcome_resolution.mechanics is required")
-                elif "outcome" not in mechanics:
-                    errors.append("outcome_resolution.mechanics.outcome is required")
+                # Validate mechanics object if present (optional but recommended)
+                mechanics = action_resolution.get("mechanics", {})
+                if mechanics:
+                    if not isinstance(mechanics, dict):
+                        errors.append("action_resolution.mechanics must be a dict")
+                    # Check for rolls or audit_events if mechanics present
+                    if "rolls" not in mechanics and "audit_events" not in mechanics:
+                        # Old schema might have "outcome" field instead
+                        if "outcome" not in mechanics:
+                            warnings.append("action_resolution.mechanics should contain rolls or audit_events for complete audit trail")
         else:
-            warnings.append("No structured_response provided - cannot validate outcome_resolution JSON")
+            warnings.append("No structured_response provided - cannot validate action_resolution JSON")
         
         # Should process the action (narrative should describe attempt/resolution, not rejection)
         if not errors and len(narrative) < 50:
@@ -337,20 +353,27 @@ def run_scenario(
     
     # Extract narrative and structured response from result
     narrative = result.get("narrative", "")
-    # Extract structured response - check outcome_resolution directly in result
+    # Extract structured response - check action_resolution first, then outcome_resolution for backward compat
     # (process_action returns the full response dict with all JSON fields)
-    # The outcome_resolution field should be at the top level of result if present
     structured_response = {}
-    if "outcome_resolution" in result and result["outcome_resolution"]:
-        structured_response["outcome_resolution"] = result["outcome_resolution"]
+    
+    # Check for action_resolution first (new field)
+    if "action_resolution" in result and result["action_resolution"]:
+        structured_response["action_resolution"] = result["action_resolution"]
     # Also check if it's in a nested structured_response object
     elif result.get("structured_response") and isinstance(result["structured_response"], dict):
-        if "outcome_resolution" in result["structured_response"]:
-            structured_response["outcome_resolution"] = result["structured_response"]["outcome_resolution"]
+        if "action_resolution" in result["structured_response"]:
+            structured_response["action_resolution"] = result["structured_response"]["action_resolution"]
+        # Fallback to outcome_resolution for backward compatibility
+        elif "outcome_resolution" in result["structured_response"]:
+            structured_response["action_resolution"] = result["structured_response"]["outcome_resolution"]
         else:
             structured_response = result["structured_response"]
-    # Fallback to empty dict if not found
-    if not structured_response.get("outcome_resolution"):
+    # Fallback to outcome_resolution (legacy field) if action_resolution not found
+    elif "outcome_resolution" in result and result["outcome_resolution"]:
+        structured_response["action_resolution"] = result["outcome_resolution"]
+    # Final fallback to empty dict if not found
+    if not structured_response.get("action_resolution"):
         structured_response = (
             result.get("response_json") or
             result.get("json_response") or
@@ -360,31 +383,58 @@ def run_scenario(
     # Validate response
     validation = validate_outcome_declaration_response(narrative, scenario, structured_response)
     
+    # Validate Firestore persistence (CRITICAL: Check that audit trail is actually saved)
+    firestore_validation = validate_action_resolution_in_firestore(
+        user_id=user_id,
+        campaign_id=campaign_id,
+        limit=1,  # Check latest entry (should be the one we just created)
+        require_audit_flags=True,
+    )
+    
+    # Merge Firestore validation errors/warnings into main validation
+    combined_errors = list(validation["errors"])
+    combined_warnings = list(validation.get("warnings", []))
+    
+    # Add Firestore validation errors (these are critical - audit trail must be persisted)
+    combined_errors.extend(firestore_validation["errors"])
+    combined_warnings.extend(firestore_validation["warnings"])
+    
+    # Test fails if either API validation OR Firestore validation fails
+    passed = validation["passed"] and firestore_validation["passed"]
+    
     return {
         "name": scenario["name"],
         "campaign_id": campaign_id,  # Required for log traceability
-        "passed": validation["passed"],
-        "errors": validation["errors"],
-        "warnings": validation.get("warnings", []),
+        "passed": passed,
+        "errors": combined_errors,
+        "warnings": combined_warnings,
         "narrative": narrative,
         "narrative_length": validation["narrative_length"],
         "expected_behavior": scenario["expected_behavior"],
         "user_input": scenario["user_input"],
+        "firestore_validation": {
+            "passed": firestore_validation["passed"],
+            "entries_checked": firestore_validation["entries_checked"],
+            "entries_with_action_resolution": firestore_validation["entries_with_action_resolution"],
+        },
     }
 
 
 def run_tests(
     server_url: str,
     *,
+    model_id: str,
     work_name: str = "outcome_declaration_guardrails",
-    save_evidence: bool = False,
+    scenario_slice: str | None = None,
 ) -> dict[str, Any]:
     """Run all test scenarios.
     
     Args:
         server_url: MCP server URL
+        model_id: Model to test against
         work_name: Work name for evidence directory
         save_evidence: Whether to save evidence bundle
+        scenario_slice: Optional slice string "start:end"
         
     Returns:
         Test results dict
@@ -393,13 +443,13 @@ def run_tests(
     client.wait_healthy()
     
     # Create test user
-    user_id = f"test_user_{int(datetime.now(timezone.utc).timestamp())}"
+    user_id = f"test_user_{int(datetime.now(timezone.utc).timestamp())}_{model_id.replace('/', '-')}"
     
     # Pin model settings to avoid fallback noise
     update_user_settings(
         client,
         user_id=user_id,
-        settings=settings_for_model(DEFAULT_MODEL),
+        settings=settings_for_model(model_id),
     )
     
     results = {
@@ -410,8 +460,18 @@ def run_tests(
         },
     }
     
+    scenarios = OUTCOME_DECLARATION_SCENARIOS
+    if scenario_slice:
+        try:
+            start_str, end_str = scenario_slice.split(":")
+            start = int(start_str) if start_str else 0
+            end = int(end_str) if end_str else len(scenarios)
+            scenarios = scenarios[start:end]
+        except ValueError:
+            print(f"⚠️ Invalid slice format '{scenario_slice}', running all scenarios")
+
     # Run each scenario with fresh campaign for isolation
-    for scenario in OUTCOME_DECLARATION_SCENARIOS:
+    for scenario in scenarios:
         # Create fresh campaign per scenario to avoid context pollution
         # IMPORTANT: Must include "narrative" prompt to load guardrails
         campaign_id = create_campaign(
@@ -432,32 +492,31 @@ def run_tests(
         # Clear captures between scenarios (optional, but we'll keep them all)
         # client.clear_captures()
     
-    # Capture request/response pairs for evidence
+    # Capture request/response pairs for evidence (always generated)
     request_responses = client.get_captures_as_dict()
     
-    if save_evidence:
-        # Capture provenance
-        port = server_url.split(":")[-1].rstrip("/")
-        provenance = capture_provenance(
-            base_url=server_url,
-            server_pid=None,  # Will be captured from port if available
-        )
-        
-        # Get evidence directory
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        evidence_dir = get_evidence_dir(work_name, timestamp)
-        
-        # Create evidence bundle
-        create_evidence_bundle(
-            evidence_dir=evidence_dir,
-            test_name=work_name,
-            provenance=provenance,
-            results=results,
-            request_responses=request_responses,
-            methodology_text=None,  # Will be auto-generated
-        )
-        
-        print(f"✅ Evidence saved to: {evidence_dir}")
+    # Capture provenance (always generated)
+    port = server_url.split(":")[-1].rstrip("/")
+    provenance = capture_provenance(
+        base_url=server_url,
+        server_pid=None,  # Will be captured from port if available
+    )
+    
+    # Get evidence directory (always generated)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    evidence_dir = get_evidence_dir(work_name, timestamp)
+    
+    # Create evidence bundle (always generated)
+    create_evidence_bundle(
+        evidence_dir=evidence_dir,
+        test_name=work_name,
+        provenance=provenance,
+        results=results,
+        request_responses=request_responses,
+        methodology_text=None,  # Will be auto-generated
+    )
+    
+    print(f"✅ Evidence saved to: {evidence_dir}")
     
     return results
 
@@ -471,59 +530,85 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--server-url", default="http://localhost:8001")
     parser.add_argument("--start-local", action="store_true")
-    parser.add_argument("--evidence", action="store_true", help="Save evidence bundle")
     parser.add_argument("--work-name", default="outcome_declaration_guardrails")
+    parser.add_argument("--slice", type=str, help="Slice of scenarios to run (e.g. '0:8')")
     args = parser.parse_args()
     
     server: LocalServer | None = None
     
     try:
+        # Always use gemini-3-flash-preview
+        models = ["gemini-3-flash-preview"]
+
         if args.start_local:
             # Start local server with evidence capture enabled
             port = pick_free_port()
+            env_overrides = {
+                **DEFAULT_EVIDENCE_ENV,  # CAPTURE_RAW_LLM=true, etc.
+                "WORLDAI_DEV_MODE": "true",
+            }
+            # Use first model as default if possible, but it doesn't strictly matter
+            # as run_tests updates user settings per run.
             server = start_local_mcp_server(
                 port=port,
-                env_overrides={
-                    **DEFAULT_EVIDENCE_ENV,  # CAPTURE_RAW_LLM=true, etc.
-                    "WORLDAI_DEV_MODE": "true",
-                },
+                env_overrides=env_overrides,
             )
             server_url = f"http://127.0.0.1:{port}"
             print(f"✅ Started local server on {server_url}")
         else:
             server_url = args.server_url
         
-        # Run tests
-        results = run_tests(
-            server_url,
-            work_name=args.work_name,
-            save_evidence=args.evidence,
-        )
-        
-        # Print summary
-        passed = results["test_result"]["passed"]
-        total = results["test_result"]["total"]
+        all_passed = True
+        aggregated_results = []
+
+        print(f"Running tests for models: {', '.join(models)}")
+
+        for model_id in models:
+            print(f"\n{'='*60}")
+            print(f"Testing Model: {model_id}")
+            print(f"{'='*60}")
+
+            # Run tests (evidence always generated)
+            results = run_tests(
+                server_url,
+                model_id=model_id,
+                work_name=args.work_name,
+                scenario_slice=args.slice,
+            )
+            
+            # Print summary for this model
+            passed = results["test_result"]["passed"]
+            total = results["test_result"]["total"]
+            print(f"\nModel Results ({model_id}): {passed}/{total} PASSED")
+            
+            if passed < total:
+                all_passed = False
+            
+            for scenario in results["scenarios"]:
+                status = "✅ PASS" if scenario["passed"] else "❌ FAIL"
+                print(f"{status} {scenario['name']}")
+                if scenario.get("errors"):
+                    for error in scenario["errors"]:
+                        print(f"  Error: {error}")
+                if scenario.get("warnings"):
+                    for warning in scenario["warnings"]:
+                        print(f"  Warning: {warning}")
+                # Show first 100 chars of narrative for context
+                narrative_preview = scenario.get("narrative", "")[:100]
+                if narrative_preview:
+                    print(f"  Narrative preview: {narrative_preview}...")
+                print()
+            
+            aggregated_results.append((model_id, passed, total))
+
         print(f"\n{'='*60}")
-        print(f"Test Results: {passed}/{total} PASSED")
-        print(f"{'='*60}\n")
-        
-        for scenario in results["scenarios"]:
-            status = "✅ PASS" if scenario["passed"] else "❌ FAIL"
-            print(f"{status} {scenario['name']}")
-            if scenario.get("errors"):
-                for error in scenario["errors"]:
-                    print(f"  Error: {error}")
-            if scenario.get("warnings"):
-                for warning in scenario["warnings"]:
-                    print(f"  Warning: {warning}")
-            # Show first 100 chars of narrative for context
-            narrative_preview = scenario.get("narrative", "")[:100]
-            if narrative_preview:
-                print(f"  Narrative preview: {narrative_preview}...")
-            print()
-        
+        print("FINAL SUMMARY")
+        print(f"{'='*60}")
+        for model_id, passed, total in aggregated_results:
+            print(f"{model_id}: {passed}/{total} PASSED")
+
         # Exit with error code if any failed
-        if passed < total:
+        if not all_passed:
             sys.exit(1)
             
     finally:

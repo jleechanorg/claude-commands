@@ -42,6 +42,10 @@ from .narrative_validation import (
     validate_directive_compliance,
 )
 from .game_constants import XP_GAIN_PATTERNS, XP_THRESHOLDS
+from .firestore_validation import (
+    validate_action_resolution_in_firestore,
+    validate_story_entry_fields,
+)
 
 __all__ = [
     # MCP client
@@ -78,4 +82,7 @@ __all__ = [
     # Game constants
     "XP_THRESHOLDS",
     "XP_GAIN_PATTERNS",
+    # Firestore validation utilities
+    "validate_action_resolution_in_firestore",
+    "validate_story_entry_fields",
 ]
