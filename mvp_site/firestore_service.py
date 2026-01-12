@@ -166,6 +166,14 @@ class _InMemoryFirestoreCollection:
     def order_by(self, *_args: Any, **_kwargs: Any) -> "_InMemoryFirestoreCollection":
         return self
 
+    def limit(self, limit: int) -> "_InMemoryFirestoreCollection":
+        """Mock limit method."""
+        return self
+
+    def start_after(self, doc: Any) -> "_InMemoryFirestoreCollection":
+        """Mock start_after method."""
+        return self
+
 
 class _InMemoryFirestoreClient:
     def __init__(self) -> None:
@@ -972,17 +980,22 @@ def get_db() -> firestore.Client:
 
 @log_exceptions
 def get_campaigns_for_user(
-    user_id: UserId, limit: int = None, sort_by: str = "last_played"
-) -> list[dict[str, Any]]:
-    """Retrieves campaigns for a given user with optional pagination and sorting.
+    user_id: UserId,
+    limit: int = 50,
+    sort_by: str = "last_played",
+    start_after: dict[str, Any] | None = None,
+    include_total_count: bool = False
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None, int | None]:
+    """Retrieves campaigns for a given user with pagination and sorting.
 
     Args:
         user_id: Firebase user ID
-        limit: Optional maximum number of campaigns to return
+        limit: Maximum number of campaigns to return (default: 50)
         sort_by: Sort field ('created_at' or 'last_played'), defaults to 'last_played'
+        start_after: Cursor for pagination - dict with 'timestamp' and 'id' keys
 
     Returns:
-        List of campaign dictionaries
+        Tuple of (campaign_list, next_cursor) where next_cursor is None if no more results
     """
     db = get_db()
     campaigns_ref = db.collection("users").document(user_id).collection("campaigns")
@@ -992,14 +1005,111 @@ def get_campaigns_for_user(
         sort_by = "last_played"  # Default sort field
     campaigns_query = campaigns_ref.order_by(sort_by, direction="DESCENDING")
 
-    # Apply limit if specified
-    if limit is not None:
-        campaigns_query = campaigns_query.limit(limit)
+    # Apply cursor-based pagination if provided
+    # Note: Firestore's start_after requires a document snapshot, but we can simulate
+    # cursor-based pagination by fetching the cursor document first, then using start_after
+    applied_cursor = False
+    if start_after:
+        doc_id = start_after.get("id")
+        if doc_id:
+            try:
+                # Get the cursor document to use as start_after reference
+                cursor_doc_ref = campaigns_ref.document(doc_id)
+                cursor_doc = cursor_doc_ref.get()
+                if cursor_doc.exists:
+                    campaigns_query = campaigns_query.start_after(cursor_doc)
+                    applied_cursor = True
+            except Exception as e:
+                logging_util.warning(f"Error using cursor for pagination: {e}")
+
+        # Fall back to timestamp-based filtering if cursor doc lookup failed or doc doesn't exist
+        if not applied_cursor:
+            sort_field_value = start_after.get("timestamp")
+            if sort_field_value:
+                if isinstance(sort_field_value, str):
+                    try:
+                        sort_field_value = datetime.datetime.fromisoformat(sort_field_value.replace("Z", "+00:00"))
+                    except Exception:
+                        logging_util.warning(f"Invalid timestamp in cursor: {sort_field_value}")
+                        sort_field_value = None
+
+                if sort_field_value:
+                    # Firestore requires range filters to be on the same field as the first order_by
+                    # Since we already have order_by(sort_by, "DESCENDING"), this is valid
+                    campaigns_query = campaigns_query.where(sort_by, "<=", sort_field_value)
+                    applied_cursor = True
+
+    # Apply limit (request one extra to check if there are more)
+    # If limit is None, use default of 50
+    effective_limit = limit if limit is not None else 50
+    campaigns_query = campaigns_query.limit(effective_limit + 1)
 
     campaign_list: list[dict[str, Any]] = []
-    for campaign in campaigns_query.stream():
-        campaign_data = campaign.to_dict()
-        campaign_data["id"] = campaign.id
+    next_cursor: dict[str, Any] | None = None
+
+    docs = list(campaigns_query.stream())
+
+    # Check if we have more results
+    has_more = len(docs) > effective_limit
+    if has_more:
+        docs = docs[:effective_limit]  # Take only the requested limit
+        # Create cursor from the last document
+        last_doc = docs[-1]
+        last_data = last_doc.to_dict()
+        sort_value = last_data.get(sort_by)
+
+        # Use ISO format for timestamp if it's a datetime object
+        if sort_value and hasattr(sort_value, "isoformat"):
+            sort_value = sort_value.isoformat()
+
+        # next_cursor must be provided if has_more is True to allow fetching next page
+        next_cursor = {
+            "timestamp": sort_value,
+            "id": last_doc.id,
+        }
+
+    # Get total count if requested (only on first page for efficiency)
+    total_count = None
+    if include_total_count and start_after is None:
+        try:
+            # Use Firestore count aggregation query (more efficient than streaming all docs)
+            # This only counts documents without reading their contents
+            # campaigns_ref is already defined above as the collection reference
+            if AGGREGATION_QUERY is not None:
+                agg_query = AGGREGATION_QUERY(campaigns_ref)
+                agg_query = agg_query.count(alias="total")
+                result = agg_query.get()
+                
+                # Extract count from aggregation result
+                for aggregation_result in result:
+                    total_count = aggregation_result.get("total")
+                    break
+            else:
+                raise AttributeError("AGGREGATION_QUERY not available")
+        except (NameError, AttributeError, Exception) as e:
+            # Fallback: if count aggregation not available or fails, try streaming (expensive)
+            logging_util.warning(f"Count aggregation not available, using stream fallback: {e}")
+            try:
+                # This is expensive but works as fallback
+                # Use campaigns_ref which is already the collection reference
+                total_count = len(list(campaigns_ref.stream()))
+            except Exception as fallback_error:
+                logging_util.warning(f"Failed to get total campaign count: {fallback_error}")
+                total_count = None
+
+    # Sanity check: If we have more results than limit, but total_count says we don't,
+    # then total_count is clearly wrong (likely count aggregation ignored documents or limit issue).
+    # In this case, we should invalidate total_count rather than showing a confusing "50 of 50" state.
+    if has_more and total_count is not None and total_count <= effective_limit:
+        logging_util.warning(
+            f"Total count contradiction detected: has_more=True but total_count={total_count} <= limit={effective_limit}. "
+            "Invalidating total_count to prevent UI confusion."
+        )
+        total_count = None
+
+    for campaign_doc in docs:
+        campaign_data = campaign_doc.to_dict()
+        campaign_data["id"] = campaign_doc.id
 
         # Safely get and format timestamps
         created_at = campaign_data.get("created_at")
@@ -1012,7 +1122,7 @@ def get_campaigns_for_user(
 
         campaign_list.append(campaign_data)
 
-    return campaign_list
+    return (campaign_list, next_cursor, total_count)
 
 
 @log_exceptions

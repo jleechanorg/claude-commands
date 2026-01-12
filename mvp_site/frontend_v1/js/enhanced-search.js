@@ -231,12 +231,20 @@ class EnhancedSearch {
     const campaignList = document.getElementById('campaign-list');
     if (!campaignList) return;
 
-    // Watch for changes to campaign list
-    const observer = new MutationObserver(() => {
-      this.refreshCampaignData();
-    });
+    // Clean up existing observer if it exists
+    if (this.campaignListObserver) {
+      this.campaignListObserver.disconnect();
+    }
 
-    observer.observe(campaignList, {
+    // Watch for changes to campaign list
+    // Use debounce to avoid running too frequently during rapid DOM changes
+    const debouncedRefresh = this.debounce(() => {
+      this.refreshCampaignData();
+    }, 300);
+
+    this.campaignListObserver = new MutationObserver(debouncedRefresh);
+
+    this.campaignListObserver.observe(campaignList, {
       childList: true,
       subtree: true,
     });
@@ -247,7 +255,17 @@ class EnhancedSearch {
     if (!campaignList) return;
 
     // Extract campaign data from DOM
-    this.campaigns = Array.from(campaignList.children).map((item) => {
+    const campaignElements = Array.from(campaignList.children).filter(
+      (item) => item.dataset.campaignId // Only process actual campaign items, not alerts or other elements
+    );
+
+    // If no campaigns found, don't proceed (might be still loading or empty)
+    if (campaignElements.length === 0) {
+      // Don't hide anything if we can't find campaigns - they might still be loading
+      return;
+    }
+
+    this.campaigns = campaignElements.map((item) => {
       const titleElement = item.querySelector('h5, .campaign-title');
       const lastPlayedElement = item.querySelector(
         '.text-muted, .campaign-meta',
@@ -262,7 +280,10 @@ class EnhancedSearch {
       };
     });
 
-    this.applyFilters();
+    // Only apply filters if we have campaigns
+    if (this.campaigns.length > 0) {
+      this.applyFilters();
+    }
   }
 
   parseDateFromElement(element) {
@@ -308,7 +329,7 @@ class EnhancedSearch {
 
   applyFilters() {
     if (!this.campaigns.length) {
-      this.refreshCampaignData();
+      // If no campaigns data yet, don't hide anything, might still be loading
       return;
     }
 
@@ -362,6 +383,11 @@ class EnhancedSearch {
     const campaignList = document.getElementById('campaign-list');
     if (!campaignList) return;
 
+    // Safety check: don't hide anything if we don't have campaigns data yet
+    if (!this.campaigns.length) {
+      return;
+    }
+
     // Hide all campaigns first
     this.campaigns.forEach((campaign) => {
       campaign.element.style.display = 'none';
@@ -407,9 +433,30 @@ class EnhancedSearch {
   updateStats() {
     const resultsCount = document.getElementById('results-count');
     const totalCount = document.getElementById('total-count');
+    const campaignList = document.getElementById('campaign-list');
 
     if (resultsCount) resultsCount.textContent = this.filteredCampaigns.length;
-    if (totalCount) totalCount.textContent = this.campaigns.length;
+
+    if (totalCount) {
+      // Check if we have a server-side total provided by app.js (via dataset)
+      const serverTotal = campaignList && campaignList.dataset.totalCount
+        ? parseInt(campaignList.dataset.totalCount, 10)
+        : null;
+
+      // Only use server total if no filters are active (otherwise we are showing a subset of loaded items)
+      // Note: If we are filtering, we can only verify against loaded items, so we keep existing behavior.
+      const hasActiveFilters =
+        this.currentFilters.search ||
+        this.currentFilters.theme ||
+        this.currentFilters.status;
+
+      if (!hasActiveFilters && serverTotal !== null && !isNaN(serverTotal)) {
+        totalCount.textContent = serverTotal;
+      } else {
+        // Fallback to DOM count
+        totalCount.textContent = this.campaigns.length;
+      }
+    }
   }
 
   updateFilterTags() {

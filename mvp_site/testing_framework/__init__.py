@@ -10,14 +10,9 @@ from .factory import (
     reset_global_provider,
     set_service_provider,
 )
+from .mock_provider import MockServiceProvider
 from .real_provider import RealServiceProvider
 from .service_provider import TestServiceProvider
-
-# Try to import the full mock provider, fall back to simple one
-try:
-    from .mock_provider import MockServiceProvider
-except ImportError:
-    from .simple_mock_provider import SimpleMockServiceProvider as MockServiceProvider
 
 
 __all__ = [

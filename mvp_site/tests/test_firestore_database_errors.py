@@ -48,7 +48,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
 
         # Test that connection timeout raises exception (current behavior)
         with pytest.raises(Exception) as context:
-            firestore_service.get_campaigns_for_user(self.test_user_id)
+            firestore_service.get_campaigns_for_user(self.test_user_id)[0]
 
         # Should raise timeout exception
         assert "timeout" in str(context.value).lower()
@@ -64,7 +64,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
 
         # Test connection error handling (current behavior: raises exception)
         with pytest.raises(Exception) as context:
-            firestore_service.get_campaigns_for_user(self.test_user_id)
+            firestore_service.get_campaigns_for_user(self.test_user_id)[0]
 
         # Should raise connection exception
         assert "connection" in str(context.value).lower()
@@ -80,7 +80,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
 
         # Test auth error handling (current behavior: raises exception)
         with pytest.raises(Exception) as context:
-            firestore_service.get_campaigns_for_user(self.test_user_id)
+            firestore_service.get_campaigns_for_user(self.test_user_id)[0]
 
         # Should raise auth exception
         assert "token" in str(context.value).lower()
@@ -163,10 +163,12 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_collection.where.side_effect = query_error
 
         # Test invalid query handling
-        result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        campaigns, cursor, total_count = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle query error gracefully
-        assert result == []
+        assert campaigns == []
+        assert cursor is None
+        assert total_count is None
 
     @patch("firestore_service.get_db")
     def test_query_timeout_with_retry(self, mock_get_db):
@@ -180,10 +182,12 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_collection.get.side_effect = timeout_error
 
         # Test query timeout handling
-        result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        campaigns, cursor, total_count = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle timeout gracefully
-        assert result == []
+        assert campaigns == []
+        assert cursor is None
+        assert total_count is None
 
     @patch("firestore_service.get_db")
     def test_query_size_limit_exceeded(self, mock_get_db):
@@ -197,10 +201,12 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_collection.stream.side_effect = size_error
 
         # Test size limit handling
-        result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        campaigns, cursor, total_count = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle size limit gracefully
-        assert result == []
+        assert campaigns == []
+        assert cursor is None
+        assert total_count is None
 
     @patch("firestore_service.get_db")
     def test_collection_not_found_error(self, mock_get_db):
@@ -213,7 +219,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
 
         # Test collection not found handling (current behavior: raises exception)
         with pytest.raises(Exception) as context:
-            firestore_service.get_campaigns_for_user(self.test_user_id)
+            firestore_service.get_campaigns_for_user(self.test_user_id)[0]
 
         # Should raise not found exception
         assert "not found" in str(context.value).lower()
@@ -297,10 +303,12 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.collection.return_value = mock_collection
 
         # Test permission handling
-        result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        campaigns, cursor, total_count = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle permission error gracefully
-        assert result == []
+        assert campaigns == []
+        assert cursor is None
+        assert total_count is None
 
     @patch("firestore_service.get_db")
     def test_batch_operation_partial_failure(self, mock_get_db):

@@ -102,7 +102,7 @@ class CampaignManager:
         print(f"📝 Looking for campaigns named: '{campaign_name}'")
 
         # Get all campaigns for the user
-        all_campaigns = firestore_service.get_campaigns_for_user(user_id)
+        all_campaigns, _, _ = firestore_service.get_campaigns_for_user(user_id)
         print(f"📊 Found {len(all_campaigns)} total campaigns for user")
 
         # Filter campaigns with exact name match
@@ -132,7 +132,7 @@ class CampaignManager:
         print(f"🛡️ Max count limit: {max_count}")
 
         # Get all campaigns for the user
-        all_campaigns = firestore_service.get_campaigns_for_user(user_id)
+        all_campaigns, _, _ = firestore_service.get_campaigns_for_user(user_id)
         print(f"📊 Total campaigns for user: {len(all_campaigns)}")
 
         # Filter campaigns with EXACT name match (case-sensitive)

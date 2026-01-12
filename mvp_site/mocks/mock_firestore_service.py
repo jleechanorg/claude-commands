@@ -112,13 +112,13 @@ class MockFirestoreClient:
         # Log for debugging
         # Browser test campaign added for user
 
-    def get_campaigns_for_user(self, user_id: str) -> list[dict[str, Any]]:
+    def get_campaigns_for_user(self, user_id: str) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
         """Get all campaigns for a user."""
         self.operation_count += 1
         self.last_operation = f"get_campaigns_for_user({user_id})"
 
         user_campaigns = self.campaigns.get(user_id, {})
-        return list(user_campaigns.values())
+        return list(user_campaigns.values()), None, 0
 
     def get_campaign_by_id(self, user_id: str, campaign_id: str) -> tuple:
         """Get campaign and story context by ID."""

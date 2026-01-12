@@ -22,14 +22,17 @@ class FakeFirestoreDocument:
         self._parent_path = parent_path
         self._collections = {}
 
-    def set(self, data):
+    def set(self, data, merge=False):
         """Simulate setting document data.
 
         Makes a deep copy to simulate real Firestore behavior where stored data
         is independent of the original dict. This is critical for catching bugs
         where code modifies a dict after persisting it.
         """
-        self._data = copy.deepcopy(data)
+        if merge:
+            self.update(data)
+        else:
+            self._data = copy.deepcopy(data)
 
     def update(self, data):
         """Simulate updating document data with nested field support."""

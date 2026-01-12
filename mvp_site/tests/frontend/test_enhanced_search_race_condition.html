@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Search Race Condition Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .test-pass {
+      background: #1e3a1e;
+      border-left: 4px solid #4caf50;
+    }
+    .test-fail {
+      background: #3a1e1e;
+      border-left: 4px solid #f44336;
+    }
+    .test-info {
+      background: #1e1e3a;
+      border-left: 4px solid #2196f3;
+    }
+    #campaign-list {
+      margin: 20px 0;
+      padding: 10px;
+      background: #2d2d2d;
+      border-radius: 4px;
+    }
+    .list-group-item {
+      padding: 10px;
+      margin: 5px 0;
+      background: #3d3d3d;
+      border-radius: 4px;
+    }
+    .list-group-item[style*="display: none"] {
+      opacity: 0.3;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      background: #007acc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005a9e;
+    }
+    #test-output {
+      margin-top: 20px;
+      padding: 10px;
+      background: #2d2d2d;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Enhanced Search Race Condition Test</h1>
+    <p>This test reproduces the race condition bug where campaigns are hidden when enhanced-search processes them before they're fully rendered.</p>
+    <p><strong>Expected:</strong> Test should PASS with the fix, FAIL if fix is reverted.</p>
+
+    <div id="dashboard-view">
+      <div id="campaign-list" class="list-group"></div>
+    </div>
+
+    <button onclick="runTests()">Run Tests</button>
+    <button onclick="clearTests()">Clear</button>
+
+    <div id="test-output"></div>
+  </div>
+
+  <!-- Load enhanced-search.js (the actual implementation) -->
+  <script src="/frontend_v1/js/interface-manager.js"></script>
+  <script src="/frontend_v1/js/enhanced-search.js"></script>
+
+  <!-- Load the test -->
+  <script>
+    // Test implementation (same as .js file but adapted for browser)
+    class EnhancedSearchRaceConditionTest {
+      constructor() {
+        this.testResults = [];
+        this.passCount = 0;
+        this.failCount = 0;
+        this.outputEl = document.getElementById('test-output');
+      }
+
+      log(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = type === 'pass' ? '✅' : type === 'fail' ? '❌' : 'ℹ️';
+        const logEntry = `[${timestamp}] ${prefix} ${message}`;
+        console.log(logEntry);
+        
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `test-result test-${type}`;
+        resultDiv.textContent = logEntry;
+        this.outputEl.appendChild(resultDiv);
+        this.outputEl.scrollTop = this.outputEl.scrollHeight;
+      }
+
+      assert(condition, message) {
+        if (condition) {
+          this.log(`PASS: ${message}`, 'pass');
+          this.passCount++;
+          return true;
+        } else {
+          this.log(`FAIL: ${message}`, 'fail');
+          this.failCount++;
+          return false;
+        }
+      }
+
+      createCampaignElement(campaignId, title, lastPlayed) {
+        const campaignEl = document.createElement('div');
+        campaignEl.className = 'list-group-item list-group-item-action';
+        campaignEl.dataset.campaignId = campaignId;
+        campaignEl.dataset.campaignTitle = title;
+
+        const lastPlayedStr = lastPlayed
+          ? new Date(lastPlayed).toLocaleString()
+          : 'N/A';
+
+        campaignEl.innerHTML = `
+          <div class="d-flex flex-column flex-sm-row w-100 justify-content-sm-between align-items-sm-center campaign-list-header">
+            <h5 class="mb-2 mb-sm-0 campaign-title-link text-break">${title}</h5>
+            <div class="d-flex align-items-center flex-shrink-0 campaign-list-actions mt-1 mt-sm-0">
+              <button class="btn btn-sm btn-outline-primary edit-campaign-btn me-2">Edit</button>
+              <small class="text-muted text-nowrap">Last played: ${lastPlayedStr}</small>
+            </div>
+          </div>
+          <p class="mb-1 mt-2 campaign-title-link">Campaign description for ${title}</p>
+        `;
+
+        return campaignEl;
+      }
+
+      async testRaceConditionRapidDOMUpdates() {
+        this.log('📝 Test 1: Race condition with rapid DOM updates', 'info');
+
+        const campaignList = document.getElementById('campaign-list');
+        campaignList.innerHTML = ''; // Clear
+
+        // Wait for enhanced-search to initialize (interface-manager needs to load first)
+        // Mobile devices are slower, so we need longer waits
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Get the actual enhanced-search instance
+        const enhancedSearch = window.enhancedSearch;
+        if (!enhancedSearch) {
+          this.log('⚠️ Enhanced search not initialized, waiting longer...', 'info');
+          // Try waiting more for interface-manager to initialize (mobile needs more time)
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          if (!window.enhancedSearch) {
+            this.assert(false, 'Enhanced search not initialized after waiting 3 seconds');
+            return;
+          }
+        }
+
+        // Simulate rapid campaign additions
+        const campaigns = [
+          { id: 'campaign1', title: 'Campaign 1', lastPlayed: '2026-01-11T10:00:00Z' },
+          { id: 'campaign2', title: 'Campaign 2', lastPlayed: '2026-01-11T11:00:00Z' },
+          { id: 'campaign3', title: 'Campaign 3', lastPlayed: '2026-01-11T12:00:00Z' },
+        ];
+
+        // Add campaigns rapidly (simulating renderCampaignListUI)
+        campaigns.forEach((campaign, index) => {
+          const campaignEl = this.createCampaignElement(
+            campaign.id,
+            campaign.title,
+            campaign.lastPlayed
+          );
+          campaignList.appendChild(campaignEl);
+        });
+
+        // Wait for debounce and processing (enhanced-search has 200ms debounce + 100ms delay)
+        // Mobile devices are slower, so increase timeout significantly
+        // 200ms debounce + 100ms delay + 500ms mobile buffer = ~800ms minimum
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Check if campaigns are visible
+        const visibleCampaigns = Array.from(campaignList.children).filter(
+          (el) => el.dataset.campaignId && 
+                  el.style.display !== 'none' && 
+                  window.getComputedStyle(el).display !== 'none'
+        );
+
+        this.assert(
+          visibleCampaigns.length === campaigns.length,
+          `All ${campaigns.length} campaigns should be visible, but ${visibleCampaigns.length} are visible`
+        );
+
+        // Verify each campaign is visible
+        campaigns.forEach((campaign) => {
+          const campaignEl = campaignList.querySelector(`[data-campaign-id="${campaign.id}"]`);
+          const isVisible = campaignEl && 
+                          campaignEl.style.display !== 'none' && 
+                          window.getComputedStyle(campaignEl).display !== 'none';
+          this.assert(
+            isVisible,
+            `Campaign "${campaign.title}" should be visible`
+          );
+        });
+      }
+
+      async testEmptyCampaignList() {
+        this.log('📝 Test 2: Empty campaign list should not trigger hiding', 'info');
+
+        const campaignList = document.getElementById('campaign-list');
+        campaignList.innerHTML = '';
+
+        // Wait for enhanced-search to be ready (mobile needs more time)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Add an alert (non-campaign element)
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-info';
+        alert.textContent = 'Loading campaigns...';
+        campaignList.appendChild(alert);
+
+        // Wait for processing (mobile devices are slower)
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Check that alert is still visible
+        const alertVisible = alert.style.display !== 'none' && 
+                            window.getComputedStyle(alert).display !== 'none';
+        this.assert(
+          alertVisible,
+          'Alert should remain visible when no campaigns are present'
+        );
+      }
+
+      async testMultipleRapidMutations() {
+        this.log('📝 Test 3: Multiple rapid mutations (worst case scenario)', 'info');
+
+        const campaignList = document.getElementById('campaign-list');
+        campaignList.innerHTML = '';
+
+        // Wait for enhanced-search to be ready
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Simulate very rapid additions (10 campaigns)
+        const campaigns = Array.from({ length: 10 }, (_, i) => ({
+          id: `campaign${i + 1}`,
+          title: `Campaign ${i + 1}`,
+          lastPlayed: `2026-01-11T${10 + i}:00:00Z`,
+        }));
+
+        // Add all campaigns rapidly
+        campaigns.forEach((campaign) => {
+          const campaignEl = this.createCampaignElement(
+            campaign.id,
+            campaign.title,
+            campaign.lastPlayed
+          );
+          campaignList.appendChild(campaignEl);
+        });
+
+        // Wait for debounce and processing (mobile devices need longer for 10 campaigns)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // All campaigns should be visible
+        const visibleCampaigns = Array.from(campaignList.children).filter(
+          (el) => el.dataset.campaignId && 
+                  el.style.display !== 'none' && 
+                  window.getComputedStyle(el).display !== 'none'
+        );
+
+        this.assert(
+          visibleCampaigns.length === campaigns.length,
+          `All ${campaigns.length} campaigns should be visible after rapid mutations, but ${visibleCampaigns.length} are visible`
+        );
+      }
+
+      async runTests() {
+        this.log('🚀 Starting Enhanced Search Race Condition Tests', 'info');
+        this.log('='.repeat(80), 'info');
+        this.passCount = 0;
+        this.failCount = 0;
+        this.outputEl.innerHTML = '';
+
+        try {
+          await this.testRaceConditionRapidDOMUpdates();
+          await this.testEmptyCampaignList();
+          await this.testMultipleRapidMutations();
+        } catch (error) {
+          this.log(`ERROR: ${error.message}`, 'fail');
+          this.failCount++;
+          console.error(error);
+        }
+
+        // Summary
+        this.log('='.repeat(80), 'info');
+        const total = this.passCount + this.failCount;
+        this.log(`Test Summary: ${this.passCount}/${total} passed`, 'info');
+
+        if (this.failCount > 0) {
+          this.log(
+            `❌ ${this.failCount} tests failed - Race condition bug may be present!`,
+            'fail'
+          );
+        } else {
+          this.log('✅ All tests passed! Race condition is fixed.', 'pass');
+        }
+      }
+    }
+
+    // Global test instance
+    window.testRunner = new EnhancedSearchRaceConditionTest();
+
+    function runTests() {
+      window.testRunner.runTests();
+    }
+
+    function clearTests() {
+      document.getElementById('test-output').innerHTML = '';
+      document.getElementById('campaign-list').innerHTML = '';
+    }
+
+    // Auto-run on load after ensuring everything is initialized
+    window.addEventListener('DOMContentLoaded', () => {
+      // Wait for interface-manager and enhanced-search to initialize
+      // Mobile devices need more time, so check more frequently and wait longer
+      const checkReady = setInterval(() => {
+        if (window.interfaceManager && window.enhancedSearch) {
+          clearInterval(checkReady);
+          setTimeout(() => {
+            window.testRunner.log('✅ Enhanced search initialized, ready to test', 'info');
+          }, 1000);
+        }
+      }, 200);
+
+      // Timeout after 10 seconds (mobile needs more time)
+      setTimeout(() => {
+        clearInterval(checkReady);
+        if (!window.enhancedSearch) {
+          window.testRunner.log('⚠️ Enhanced search not initialized after 10 seconds. Click "Run Tests" manually.', 'info');
+        }
+      }, 10000);
+    });
+  </script>
+</body>
+</html>

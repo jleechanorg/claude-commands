@@ -70,6 +70,7 @@ from firebase_admin import auth, credentials
 from flask import (
     Flask,
     Response,
+    abort,
     jsonify,
     redirect,
     render_template,
@@ -93,13 +94,13 @@ from infrastructure.executor_config import (
 from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
 
 # Firestore service imports
-from mvp_site import world_logic  # For MCP fallback logic
 from mvp_site import (
     constants,
     equipment_display,
     firestore_service,
     logging_util,
     stats_display,
+    world_logic,  # For MCP fallback logic
 )
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
@@ -897,6 +898,9 @@ def create_app() -> Flask:
                     return jsonify(
                         {"error": "Invalid limit parameter. Must be a number."}
                     ), 400
+            else:
+                # Default limit of 50 for pagination
+                limit = 50
 
             sort_by = request.args.get("sort_by")
             # Whitelist allowed sort fields for security
@@ -908,18 +912,49 @@ def create_app() -> Flask:
                     }
                 ), 400
 
+            # Get pagination cursor
+            start_after = None
+            if request.args.get("start_after_timestamp") and request.args.get("start_after_id"):
+                start_after = {
+                    "timestamp": request.args.get("start_after_timestamp"),
+                    "id": request.args.get("start_after_id"),
+                }
+
             data = {
                 "user_id": user_id,
                 "limit": limit,
                 "sort_by": sort_by,
+                "start_after": start_after,
             }
             result = await get_mcp_client().call_tool("get_campaigns_list", data)
 
+            # Determine if we should return paginated format or legacy array
+            # If start_after is provided, it's definitely a paginated request
+            # If paginate=true is provided, it's an explicit opt-in
+            is_paginated_request = (
+                request.args.get("start_after_timestamp") is not None or
+                request.args.get("start_after_id") is not None or
+                request.args.get("paginate") == "true"
+            )
+
             # Maintain backward compatibility: return campaigns array directly
             # Legacy format: [campaigns...]
-            # New MCP format: {"campaigns": [...], "success": true}
+            # New MCP format: {"campaigns": [...], "success": true, "has_more": bool, "next_cursor": {...}}
             if isinstance(result, dict) and "campaigns" in result:
-                # Return legacy format for backward compatibility
+                if is_paginated_request:
+                    # Return format with pagination info
+                    response_data = {
+                        "campaigns": result["campaigns"],
+                    }
+                    # Include pagination metadata if available
+                    if "has_more" in result:
+                        response_data["has_more"] = result["has_more"]
+                    if "next_cursor" in result:
+                        response_data["next_cursor"] = result["next_cursor"]
+                    if "total_count" in result:
+                        response_data["total_count"] = result["total_count"]
+                    return jsonify(response_data)
+                # Return legacy format (array directly) for backward compatibility
                 return jsonify(result["campaigns"])
 
             # Fallback if format is unexpected

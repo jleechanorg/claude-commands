@@ -56,14 +56,12 @@ from mvp_site.agent_prompts import (
     extract_llm_instruction_hints,
 )
 from mvp_site.custom_types import CampaignId, UserId
+from mvp_site.debug_hybrid_system import clean_json_artifacts, process_story_for_display
 from mvp_site.firestore_service import (
     _truncate_log_json,
     get_user_settings,
     update_state_with_changes,
 )
-from mvp_site.debug_hybrid_system import clean_json_artifacts, process_story_for_display
-
-
 from mvp_site.game_state import (
     GameState,
     coerce_int,
@@ -1503,16 +1501,16 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
     """
     if not god_mode_data or not isinstance(god_mode_data, str):
         return None
-    
+
     try:
         # Split by " | " to get Character, Setting, Description parts
         parts = [p.strip() for p in god_mode_data.split(" | ")]
-        
+
         parsed = {}
         character_str = ""
         setting_str = ""
         description_str = ""
-        
+
         for part in parts:
             if part.startswith("Character:"):
                 character_str = part.replace("Character:", "").strip()
@@ -1520,35 +1518,35 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
                 setting_str = part.replace("Setting:", "").strip()
             elif part.startswith("Description:"):
                 description_str = part.replace("Description:", "").strip()
-        
+
         # If description contains the full text, use it
         if description_str:
             parsed["description"] = description_str
-        
+
         if setting_str:
             parsed["setting"] = setting_str
-        
+
         # Extract character info from character_str and description
         # Look for character details in the description (name, class, level, stats, etc.)
         character_dict = {}
-        
+
         # Extract character name from character_str (first part before any additional info)
         if character_str:
             # Character string might be just "Ser Arion" or "Ser Arion val Valerion"
             character_dict["name"] = character_str.split(",")[0].strip()
-        
+
         # Parse description for character details
         # The description contains markdown-formatted character info
         description_lower = description_str.lower() if description_str else ""
         full_text = god_mode_data.lower()
-        
+
         # Extract name from **Name:** pattern (more reliable than character_str)
         name_match = re.search(r"\*\*name:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE)
         if name_match:
             character_dict["name"] = name_match.group(1).strip()
         elif character_str:
             character_dict["name"] = character_str.split(",")[0].strip()
-        
+
         # Extract class (look for "Level X Class" or "**Class:** Level X Class" pattern)
         class_match = re.search(r"\*\*class:\*\*\s*level\s+(\d+)\s+(\w+)", full_text, re.IGNORECASE)
         if not class_match:
@@ -1560,7 +1558,7 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
             # Remove parenthetical if present
             class_name = re.sub(r"\s*\([^)]+\)", "", class_name)
             character_dict["class"] = class_name.capitalize()
-        
+
         # Extract race if mentioned
         race_match = re.search(r"\*\*race:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE)
         if not race_match:
@@ -1570,7 +1568,7 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
             # Remove markdown formatting
             race_name = re.sub(r"\*\*", "", race_name)
             character_dict["race"] = race_name.capitalize()
-        
+
         # Extract background if mentioned
         background_match = re.search(r"\*\*background:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE)
         if background_match:
@@ -1578,7 +1576,7 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
             # Remove markdown formatting
             bg_name = re.sub(r"\*\*", "", bg_name)
             character_dict["background"] = bg_name
-        
+
         # Extract stats if mentioned (Str X, Con Y, Cha Z pattern)
         # Look for "**Stats:** Str X, Con Y, Cha Z" or "Stats: Str X, Con Y, Cha Z"
         stats_match = re.search(r"\*\*stats?:\*\*\s*(?:str|strength)\s+(\d+)[,\s|]+(?:con|constitution)\s+(\d+)[,\s|]+(?:cha|charisma)\s+(\d+)", full_text, re.IGNORECASE)
@@ -1591,7 +1589,7 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
                 "charisma": int(stats_match.group(3)),
             }
             character_dict["attributes"] = character_dict["base_attributes"].copy()
-        
+
         # Extract HP if mentioned
         hp_match = re.search(r"\*\*hp:\*\*\s*(\d+)", full_text, re.IGNORECASE)
         if not hp_match:
@@ -1600,31 +1598,31 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
             hp_value = int(hp_match.group(1))
             character_dict["hp_max"] = hp_value
             character_dict["hp_current"] = hp_value
-        
+
         # Extract AC if mentioned
         ac_match = re.search(r"\*\*ac:\*\*\s*(\d+)", full_text, re.IGNORECASE)
         if not ac_match:
             ac_match = re.search(r"ac[:\s]+(\d+)", full_text, re.IGNORECASE)
         if ac_match:
             character_dict["ac"] = int(ac_match.group(1))
-        
+
         # Only create god_mode dict if we found character info
         if character_dict:
             parsed["character"] = character_dict
             return parsed
-        
+
         # If no character info found but we have character string, create minimal character
         if character_str:
             parsed["character"] = {"name": character_str}
             return parsed
-        
+
         # Return parsed dict if we have setting or description, even without character
         # This prevents user-provided campaign settings from being lost
         if parsed.get("setting") or parsed.get("description"):
             return parsed
-        
+
         return None
-        
+
     except Exception as e:
         logging_util.warning(f"Failed to parse god_mode_data string: {e}")
         return None
@@ -1720,8 +1718,8 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         old_prompt = request_data.get("prompt", "")
         selected_prompts = request_data.get("selected_prompts", [])
         custom_options = request_data.get("custom_options", [])
-        god_mode = request_data.get("god_mode", None)
-        god_mode_data = request_data.get("god_mode_data", None)
+        god_mode = request_data.get("god_mode")
+        god_mode_data = request_data.get("god_mode_data")
 
         # Parse god_mode_data (string format) into god_mode (dict format) if needed
         # Real users send god_mode_data as string: "Character: X | Setting: Y | Description: Z"
@@ -1738,7 +1736,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                     setting = god_mode["setting"]
                 if not description and god_mode.get("description"):
                     description = god_mode["description"]
-        
+
         # Validate required fields
         if not user_id:
             return {KEY_ERROR: "User ID is required"}
@@ -1931,7 +1929,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         )
 
         # DEBUG LOGGING: Track why placeholder might be shown
-        logging_util.info(f"🔍 CHARACTER CREATION DECISION:")
+        logging_util.info("🔍 CHARACTER CREATION DECISION:")
         logging_util.info(f"  character_creation_in_progress: {initial_game_state['custom_campaign_state']['character_creation_in_progress']}")
         logging_util.info(f"  god_mode exists: {god_mode is not None}")
         logging_util.info(f"  god_mode type: {type(god_mode)}")
@@ -1982,7 +1980,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 
             # Extract structured fields
             fields = structured_fields_utils.extract_structured_fields(opening_story_response)
-            
+
             # Ensure planning_block is a dict (prevent string "empty" values from extraction)
             if constants.FIELD_PLANNING_BLOCK in fields:
                 if not isinstance(fields[constants.FIELD_PLANNING_BLOCK], dict):
@@ -3400,7 +3398,8 @@ async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 
 def get_campaigns_for_user_list(user_id: UserId) -> list[dict[str, Any]]:
     """Get campaigns list for a user - synchronous version for tests."""
-    return firestore_service.get_campaigns_for_user(user_id)
+    campaigns, _, _ = firestore_service.get_campaigns_for_user(user_id)
+    return campaigns
 
 
 async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, Any]:
@@ -3440,9 +3439,14 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
                 KEY_ERROR: f"Invalid sort_by parameter - must be one of: {', '.join(valid_sort_fields)}"
             }
 
+        # Get cursor for pagination
+        start_after = request_data.get("start_after")
+
         # Get campaigns with pagination and sorting (blocking I/O - run in thread)
-        campaigns = await asyncio.to_thread(
-            firestore_service.get_campaigns_for_user, user_id, limit, sort_by
+        # Include total count only on first page (when start_after is None)
+        include_total = start_after is None
+        campaigns, next_cursor, total_count = await asyncio.to_thread(
+            firestore_service.get_campaigns_for_user, user_id, limit, sort_by, start_after, include_total
         )
 
         # Clean JSON artifacts from campaign text fields
@@ -3453,10 +3457,23 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
                     if field in campaign and isinstance(campaign[field], str):
                         campaign[field] = clean_json_artifacts(campaign[field])
 
-        return {
+        result = {
             KEY_SUCCESS: True,
             "campaigns": campaigns,
         }
+
+        # Include pagination info if there are more results
+        if next_cursor:
+            result["next_cursor"] = next_cursor
+            result["has_more"] = True
+        else:
+            result["has_more"] = False
+        
+        # Include total count if available (only on first page)
+        if total_count is not None:
+            result["total_count"] = total_count
+
+        return result
 
     except Exception as e:
         logging_util.error(f"Failed to get campaigns: {e}")

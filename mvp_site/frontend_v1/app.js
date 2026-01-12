@@ -5,6 +5,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const isTestMode = urlParams.get('test_mode') === 'true';
 
+  // Initialize test mode if enabled
+  if (isTestMode) {
+    const testUserId = urlParams.get('test_user_id') || 'test-user-123';
+    window.testAuthBypass = { enabled: true, userId: testUserId };
+    console.log(`Test mode initialized for user: ${testUserId}`);
+    // Dispatch event after a short delay to ensure listeners are registered
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('testModeReady', { detail: { userId: testUserId } }));
+    }, 100);
+  }
+
   // --- State and Constants ---
   const views = {
     auth: document.getElementById('auth-view'),
@@ -763,98 +774,98 @@ document.addEventListener('DOMContentLoaded', () => {
         hasComplications);
 
     if (hasLivingWorldData) {
-        html += '<div class="living-world-updates">';
-        html += '<strong>🌍 Living World Updates (Debug):</strong>';
+      html += '<div class="living-world-updates">';
+      html += '<strong>🌍 Living World Updates (Debug):</strong>';
 
-        // Background events
-        if (hasBackgroundEvents) {
-          html +=
-            '<div class="living-world-section"><strong>📜 Background Events:</strong><ul class="living-world-list">';
-          worldEvents.background_events.forEach((event) => {
-            if (!event || typeof event !== 'object') return;
-            const actor = event.actor || 'Unknown';
-            const action = event.action || 'Unknown action';
-            const eventType = event.event_type || 'unknown';
-            const status = event.status || 'pending';
-            const statusEmoji =
-              status === 'discovered'
-                ? '👁️'
-                : status === 'resolved'
-                  ? '✅'
-                  : '⏳';
-            html += `<li>${statusEmoji} <strong>${sanitizeHtml(actor)}</strong>: ${sanitizeHtml(action)} <em>[${sanitizeHtml(eventType)}, ${sanitizeHtml(status)}]</em></li>`;
-          });
-          html += '</ul></div>';
+      // Background events
+      if (hasBackgroundEvents) {
+        html +=
+          '<div class="living-world-section"><strong>📜 Background Events:</strong><ul class="living-world-list">';
+        worldEvents.background_events.forEach((event) => {
+          if (!event || typeof event !== 'object') return;
+          const actor = event.actor || 'Unknown';
+          const action = event.action || 'Unknown action';
+          const eventType = event.event_type || 'unknown';
+          const status = event.status || 'pending';
+          const statusEmoji =
+            status === 'discovered'
+              ? '👁️'
+              : status === 'resolved'
+                ? '✅'
+                : '⏳';
+          html += `<li>${statusEmoji} <strong>${sanitizeHtml(actor)}</strong>: ${sanitizeHtml(action)} <em>[${sanitizeHtml(eventType)}, ${sanitizeHtml(status)}]</em></li>`;
+        });
+        html += '</ul></div>';
+      }
+
+      // Scene event (immediate player-facing)
+      if (hasSceneEvent) {
+        html +=
+          '<div class="living-world-section living-world-scene"><strong>⚡ Scene Event:</strong> ';
+        html += `<strong>${sanitizeHtml(sceneEvent.type || 'event')}</strong> - ${sanitizeHtml(sceneEvent.description || 'No description')}`;
+        if (sceneEvent.actor) {
+          html += ` (Actor: ${sanitizeHtml(sceneEvent.actor)})`;
         }
-
-        // Scene event (immediate player-facing)
-        if (hasSceneEvent) {
-          html +=
-            '<div class="living-world-section living-world-scene"><strong>⚡ Scene Event:</strong> ';
-          html += `<strong>${sanitizeHtml(sceneEvent.type || 'event')}</strong> - ${sanitizeHtml(sceneEvent.description || 'No description')}`;
-          if (sceneEvent.actor) {
-            html += ` (Actor: ${sanitizeHtml(sceneEvent.actor)})`;
-          }
-          html += '</div>';
-        }
-
-        // Faction updates
-        if (hasFactionUpdates) {
-          html +=
-            '<div class="living-world-section"><strong>⚔️ Faction Updates:</strong><ul class="living-world-list">';
-          Object.entries(factionUpdates).forEach(([faction, update]) => {
-            if (!update || typeof update !== 'object') return;
-            const objective = update.current_objective || 'Unknown objective';
-            html += `<li><strong>${sanitizeHtml(faction)}</strong>: ${sanitizeHtml(objective)}</li>`;
-          });
-          html += '</ul></div>';
-        }
-
-        // Time events
-        if (hasTimeEvents) {
-          html +=
-            '<div class="living-world-section"><strong>⏰ Time Events:</strong><ul class="living-world-list">';
-          Object.entries(timeEvents).forEach(([eventName, event]) => {
-            if (!event || typeof event !== 'object') return;
-            const timeRemaining = event.time_remaining || 'Unknown';
-            const status = event.status || 'ongoing';
-            html += `<li><strong>${sanitizeHtml(eventName)}</strong>: ${sanitizeHtml(timeRemaining)} [${sanitizeHtml(status)}]</li>`;
-          });
-          html += '</ul></div>';
-        }
-
-        // Rumors
-        if (hasRumors) {
-          html +=
-            '<div class="living-world-section"><strong>💬 Rumors:</strong><ul class="living-world-list">';
-          rumors.forEach((rumor) => {
-            if (!rumor || typeof rumor !== 'object') return;
-            const content = rumor.content || 'Unknown rumor';
-            const accuracy = rumor.accuracy || 'unknown';
-            const accuracyEmoji =
-              accuracy === 'true'
-                ? '✓'
-                : accuracy === 'false'
-                  ? '✗'
-                  : accuracy === 'partial'
-                    ? '≈'
-                    : '?';
-            html += `<li>${accuracyEmoji} ${sanitizeHtml(content)} <em>[${sanitizeHtml(rumor.source_type || 'unknown source')}]</em></li>`;
-          });
-          html += '</ul></div>';
-        }
-
-        // Complications
-        if (hasComplications) {
-          html +=
-            '<div class="living-world-section living-world-complication"><strong>⚠️ Complication:</strong> ';
-          html += `<strong>${sanitizeHtml(complications.type || 'unknown')}</strong> - ${sanitizeHtml(complications.description || 'No description')}`;
-          html += ` [Severity: ${sanitizeHtml(complications.severity || 'unknown')}]`;
-          html += '</div>';
-        }
-
         html += '</div>';
       }
+
+      // Faction updates
+      if (hasFactionUpdates) {
+        html +=
+          '<div class="living-world-section"><strong>⚔️ Faction Updates:</strong><ul class="living-world-list">';
+        Object.entries(factionUpdates).forEach(([faction, update]) => {
+          if (!update || typeof update !== 'object') return;
+          const objective = update.current_objective || 'Unknown objective';
+          html += `<li><strong>${sanitizeHtml(faction)}</strong>: ${sanitizeHtml(objective)}</li>`;
+        });
+        html += '</ul></div>';
+      }
+
+      // Time events
+      if (hasTimeEvents) {
+        html +=
+          '<div class="living-world-section"><strong>⏰ Time Events:</strong><ul class="living-world-list">';
+        Object.entries(timeEvents).forEach(([eventName, event]) => {
+          if (!event || typeof event !== 'object') return;
+          const timeRemaining = event.time_remaining || 'Unknown';
+          const status = event.status || 'ongoing';
+          html += `<li><strong>${sanitizeHtml(eventName)}</strong>: ${sanitizeHtml(timeRemaining)} [${sanitizeHtml(status)}]</li>`;
+        });
+        html += '</ul></div>';
+      }
+
+      // Rumors
+      if (hasRumors) {
+        html +=
+          '<div class="living-world-section"><strong>💬 Rumors:</strong><ul class="living-world-list">';
+        rumors.forEach((rumor) => {
+          if (!rumor || typeof rumor !== 'object') return;
+          const content = rumor.content || 'Unknown rumor';
+          const accuracy = rumor.accuracy || 'unknown';
+          const accuracyEmoji =
+            accuracy === 'true'
+              ? '✓'
+              : accuracy === 'false'
+                ? '✗'
+                : accuracy === 'partial'
+                  ? '≈'
+                  : '?';
+          html += `<li>${accuracyEmoji} ${sanitizeHtml(content)} <em>[${sanitizeHtml(rumor.source_type || 'unknown source')}]</em></li>`;
+        });
+        html += '</ul></div>';
+      }
+
+      // Complications
+      if (hasComplications) {
+        html +=
+          '<div class="living-world-section living-world-complication"><strong>⚠️ Complication:</strong> ';
+        html += `<strong>${sanitizeHtml(complications.type || 'unknown')}</strong> - ${sanitizeHtml(complications.description || 'No description')}`;
+        html += ` [Severity: ${sanitizeHtml(complications.severity || 'unknown')}]`;
+        html += '</div>';
+      }
+
+      html += '</div>';
+    }
 
     // 5. God mode response (if present, before narrative)
     if (
@@ -1373,20 +1384,160 @@ document.addEventListener('DOMContentLoaded', () => {
     return text.toString().replace(/[^a-zA-Z0-9_-]/g, '');
   };
 
+  /**
+   * Show a generic error toast notification
+   */
+  function showErrorToast(message, title = 'Error') {
+    // Remove any existing error toast
+    const existingToast = document.getElementById('error-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+
+    // Create toast container if it doesn't exist
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+      toastContainer.style.zIndex = '1100';
+      document.body.appendChild(toastContainer);
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.id = 'error-toast';
+    toast.className = 'toast show';
+    toast.setAttribute('role', 'alert');
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'toast-header bg-danger text-white';
+
+    const titleEl = document.createElement('strong');
+    titleEl.className = 'me-auto';
+    titleEl.textContent = title;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close btn-close-white';
+    closeBtn.setAttribute('data-bs-dismiss', 'toast');
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.addEventListener('click', () => toast.remove());
+
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'toast-body';
+    body.textContent = message;
+
+    toast.appendChild(header);
+    toast.appendChild(body);
+
+    toastContainer.appendChild(toast);
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 5000);
+  }
+
   // --- Data Fetching and Rendering ---
-  let renderCampaignList = async () => {
+  // Pagination state for campaigns
+  let campaignPagination = {
+    limit: 50, // Default page size
+    loadedCampaigns: [],
+    hasMore: false,
+    isLoading: false,
+    totalCount: 0, // Total campaigns loaded so far
+    estimatedTotal: null, // Estimated total if available from API
+    nextCursor: null, // Cursor for next page {timestamp, id}
+  };
+
+  let renderCampaignList = async (loadMore = false) => {
+    if (campaignPagination.isLoading) return;
+
     showSpinner('loading');
+    campaignPagination.isLoading = true;
+
+    // Update button state
+    const loadMoreBtn = document.getElementById('load-more-campaigns-btn');
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.textContent = 'Loading...';
+    }
+
     try {
-      const { data } = await fetchApi('/api/campaigns');
-      const campaigns = data.campaigns || data;
+      // Build query with limit
+      const limit = campaignPagination.limit;
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        paginate: 'true'
+      });
+
+      // Use cursor-based pagination if loading more
+      if (loadMore && campaignPagination.nextCursor) {
+        params.set('start_after_timestamp', campaignPagination.nextCursor.timestamp);
+        params.set('start_after_id', campaignPagination.nextCursor.id);
+      }
+
+      const { data } = await fetchApi(`/api/campaigns?${params}`);
+
+      // Handle both legacy array response and new paginated object response
+      const campaigns = Array.isArray(data) ? data : (data.campaigns || []);
+
+      // Update pagination state
+      if (loadMore) {
+        // Append to existing campaigns
+        campaignPagination.loadedCampaigns = [...campaignPagination.loadedCampaigns, ...campaigns];
+      } else {
+        // Replace campaigns (first load)
+        campaignPagination.loadedCampaigns = campaigns;
+      }
+
+      // Update pagination metadata from response
+      campaignPagination.hasMore = data.has_more || false;
+      campaignPagination.nextCursor = data.next_cursor || null;
+      campaignPagination.totalCount = campaignPagination.loadedCampaigns.length;
+
+      // Update estimated total if provided by API
+      if (data.total_count !== undefined) {
+        campaignPagination.estimatedTotal = data.total_count;
+      }
+
+      // Update button state
+      const updatedLoadMoreBtn = document.getElementById('load-more-campaigns-btn');
+      if (updatedLoadMoreBtn) {
+        updatedLoadMoreBtn.disabled = false;
+        updatedLoadMoreBtn.textContent = 'Load More';
+      }
 
       // RESILIENCE: Cache successful campaign data for offline viewing
-      localStorage.setItem('cachedCampaigns', JSON.stringify(campaigns));
+      localStorage.setItem('cachedCampaigns', JSON.stringify(campaignPagination.loadedCampaigns));
+      localStorage.setItem('cachedPaginationState', JSON.stringify({
+        hasMore: campaignPagination.hasMore,
+        nextCursor: campaignPagination.nextCursor,
+        estimatedTotal: campaignPagination.estimatedTotal,
+        totalCount: campaignPagination.loadedCampaigns.length
+      }));
       localStorage.setItem('lastCampaignUpdate', new Date().toISOString());
 
-      renderCampaignListUI(campaigns, false);
+      campaignPagination.isLoading = false;
+      renderCampaignListUI(campaignPagination.loadedCampaigns, loadMore);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
+      showErrorToast(`Failed to load campaigns: ${error.message || 'Unknown error'}`, 'Connection Error');
+
+      // Reset button state on error
+      const errorLoadMoreBtn = document.getElementById('load-more-campaigns-btn');
+      if (errorLoadMoreBtn) {
+        errorLoadMoreBtn.disabled = false;
+        errorLoadMoreBtn.textContent = 'Load More';
+      }
 
       // RESILIENCE: Try to load from cache if network fails
       const cachedCampaigns = localStorage.getItem('cachedCampaigns');
@@ -1394,10 +1545,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (cachedCampaigns) {
         const campaigns = JSON.parse(cachedCampaigns);
+        const cachedState = localStorage.getItem('cachedPaginationState');
+        if (cachedState) {
+          try {
+            const paginationState = JSON.parse(cachedState);
+            campaignPagination.hasMore = paginationState.hasMore || false;
+            campaignPagination.nextCursor = paginationState.nextCursor || null;
+            campaignPagination.estimatedTotal = paginationState.estimatedTotal || null;
+          } catch (e) {
+            console.warn('Failed to parse cached pagination state', e);
+          }
+        }
         const lastUpdateDate = lastUpdate
           ? new Date(lastUpdate).toLocaleDateString()
           : 'unknown';
-        renderCampaignListUI(campaigns, true, lastUpdateDate);
+
+        campaignPagination.isLoading = false;
+        renderCampaignListUI(campaigns, false, lastUpdateDate);
 
         // Show user that we're offline but they can still view campaigns
         const listEl = document.getElementById('campaign-list');
@@ -1418,6 +1582,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
       }
     } finally {
+      campaignPagination.isLoading = false;
       hideSpinner();
     }
   };
@@ -1425,18 +1590,39 @@ document.addEventListener('DOMContentLoaded', () => {
   // RESILIENCE: Separate UI rendering for reuse with cached data
   function renderCampaignListUI(
     campaigns,
-    isOffline = false,
+    loadMore = false,
     lastUpdate = null,
   ) {
     const listEl = document.getElementById('campaign-list');
-    listEl.innerHTML = '';
+    const dashboardView = document.getElementById('dashboard-view');
+    const isOffline = lastUpdate !== null;
+
+    // Only clear if not loading more
+    if (!loadMore) {
+      listEl.innerHTML = '';
+      // Also remove count/button when clearing
+      const existingCountDisplay = dashboardView.querySelector('#campaign-count-display');
+      const existingLoadMore = dashboardView.querySelector('#load-more-campaigns-btn');
+      if (existingCountDisplay) existingCountDisplay.remove();
+      if (existingLoadMore) existingLoadMore.remove();
+    }
 
     if (campaigns.length === 0) {
       listEl.innerHTML = '<p>You have no campaigns. Start a new one!</p>';
+      // Remove any existing count/button when no campaigns
+      const existingCountDisplay = dashboardView.querySelector('#campaign-count-display');
+      const existingLoadMore = dashboardView.querySelector('#load-more-campaigns-btn');
+      if (existingCountDisplay) existingCountDisplay.remove();
+      if (existingLoadMore) existingLoadMore.remove();
       return;
     }
 
-    campaigns.forEach((campaign) => {
+    // Determine which campaigns to render
+    // If loadMore is true, we only want to render the NEW campaigns that aren't already in the DOM
+    const campaignsToRender = loadMore
+      ? campaigns.filter(c => !listEl.querySelector(`[data-campaign-id="${CSS.escape(c.id)}"]`))
+      : campaigns;
+    campaignsToRender.forEach((campaign) => {
       const campaignEl = document.createElement('div');
       campaignEl.className = 'list-group-item list-group-item-action';
 
@@ -1462,6 +1648,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
       listEl.appendChild(campaignEl);
     });
+
+    // Expose pagination data for Enhanced Search
+    if (campaignPagination.estimatedTotal !== null) {
+      listEl.dataset.totalCount = campaignPagination.estimatedTotal;
+    } else {
+      delete listEl.dataset.totalCount;
+    }
+    listEl.dataset.hasMore = campaignPagination.hasMore;
+
+    // Add campaign count display and "Load More" button at the bottom (outside list-group)
+    const existingCountDisplay = dashboardView.querySelector('#campaign-count-display');
+    const existingLoadMore = dashboardView.querySelector('#load-more-campaigns-btn');
+    const isEnhancedSearchActive = !!document.getElementById('campaign-search');
+
+    // Update or create campaign count display
+    // Show "X out of Y" format if we know total, otherwise "X campaigns" or "X+ campaigns"
+    const loadedCount = campaigns.length;
+    let countText;
+
+    if (campaignPagination.estimatedTotal !== null) {
+      // We know the total: show "X out of Y"
+      countText = `${loadedCount} out of ${campaignPagination.estimatedTotal} campaigns`;
+    } else if (campaignPagination.hasMore) {
+      // We don't know total but there are more: show "X+ campaigns"
+      countText = `${loadedCount}+ campaigns`;
+    } else {
+      // No more campaigns: show exact count
+      countText = loadedCount === 1
+        ? '1 campaign'
+        : `${loadedCount} campaigns`;
+    }
+
+    if (!isEnhancedSearchActive) {
+      if (!existingCountDisplay) {
+        const countDisplay = document.createElement('div');
+        countDisplay.id = 'campaign-count-display';
+        countDisplay.className = 'text-muted text-center mt-3 mb-2';
+        countDisplay.style.fontSize = '0.9rem';
+        countDisplay.textContent = countText;
+        dashboardView.appendChild(countDisplay);
+      } else {
+        existingCountDisplay.textContent = countText;
+        existingCountDisplay.style.display = 'block';
+      }
+    } else if (existingCountDisplay) {
+      existingCountDisplay.remove();
+    }
+
+    // Add "Load More" button at the bottom if there are more campaigns
+    if (campaignPagination.hasMore && !existingLoadMore) {
+      const loadMoreBtn = document.createElement('button');
+      loadMoreBtn.id = 'load-more-campaigns-btn';
+      loadMoreBtn.className = 'btn btn-primary w-100 mt-2 mb-3';
+      loadMoreBtn.textContent = 'Load More';
+      loadMoreBtn.disabled = campaignPagination.isLoading;
+      loadMoreBtn.addEventListener('click', () => {
+        renderCampaignList(true);
+      });
+      dashboardView.appendChild(loadMoreBtn);
+    } else if (!campaignPagination.hasMore && existingLoadMore) {
+      existingLoadMore.remove();
+    } else if (existingLoadMore && campaignPagination.hasMore) {
+      existingLoadMore.disabled = campaignPagination.isLoading;
+      existingLoadMore.textContent = campaignPagination.isLoading ? 'Loading...' : 'Load More';
+    }
   }
 
   // Pagination state for story loading
@@ -1581,7 +1832,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       // Mobile gets lower story limit to reduce payload size
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-                       window.innerWidth < 768;
+        window.innerWidth < 768;
       const storyLimit = isMobile ? 100 : 300;
 
       const params = new URLSearchParams();
@@ -1653,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Render story with debug mode awareness and structured fields
       console.log(
         `Loading campaign ${campaignId} - Story entries: ${data.story.length}/${storyPagination.totalCount}, ` +
-          `Debug mode: ${debugMode}, Has older: ${storyPagination.hasOlder}`,
+        `Debug mode: ${debugMode}, Has older: ${storyPagination.hasOlder}`,
       );
 
       // Display all story entries
@@ -2159,7 +2410,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Ask user if they want to share truncated version
       const userChoice = confirm(
         `Your story is very long (${Math.round(storyText.length / 1000)}KB). ` +
-          'Would you like to share a shortened preview, or cancel and use Download instead?',
+        'Would you like to share a shortened preview, or cancel and use Download instead?',
       );
 
       if (!userChoice) {
