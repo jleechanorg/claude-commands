@@ -1961,6 +1961,7 @@ def create_app() -> Flask:
         user_id: UserId, campaign_id: CampaignId
     ) -> Response | tuple[Response, int]:
         try:
+            logging_util.set_campaign_id(campaign_id)
             logging_util.info("DEBUG: handle_interaction START - testing mode removed")
             data = request.get_json()
             logging_util.info(f"DEBUG: request data = {data}")

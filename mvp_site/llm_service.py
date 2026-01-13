@@ -1768,12 +1768,31 @@ def _get_text_from_response(response: Any) -> str:
         if response.text:
             return response.text
     except ValueError as e:
+        # Check for safety ratings in the exception message or response
         logging_util.warning(f"ValueError while extracting text: {e}")
     except Exception as e:
         logging_util.error(f"Unexpected error in _get_text_from_response: {e}")
 
+    # Enhanced logging for blocked responses
+    feedback_info = ""
+    try:
+        if hasattr(response, "prompt_feedback"):
+            feedback_info += f" PromptFeedback: {response.prompt_feedback}"
+        
+        candidates = getattr(response, "candidates", [])
+        if candidates:
+            for i, cand in enumerate(candidates):
+                finish_reason = getattr(cand, "finish_reason", "UNKNOWN")
+                safety_ratings = getattr(cand, "safety_ratings", "UNKNOWN")
+                feedback_info += f" Candidate[{i}]: finish_reason={finish_reason}, safety_ratings={safety_ratings}"
+        else:
+            feedback_info += " No candidates returned."
+            
+    except Exception as log_err:
+        feedback_info += f" (Failed to extract details: {log_err})"
+
     logging_util.warning(
-        f"Response did not contain valid text. Response object: {response}"
+        f"Response did not contain valid text.{feedback_info} Full response object: {response}"
     )
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 

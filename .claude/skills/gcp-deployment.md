@@ -25,6 +25,7 @@
 | **Production** | mvp-site-app-stable | https://mvp-site-app-stable-i6xf2p72ka-uc.a.run.app |
 | **Staging** | mvp-site-app-staging | https://mvp-site-app-staging-i6xf2p72ka-uc.a.run.app |
 | **Development** | mvp-site-app-dev | https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app |
+| **PR Preview** | mvp-site-app-s1 through s10 | Rotating pool (see PR Preview section below) |
 
 ### Health Check Endpoints
 
@@ -543,5 +544,117 @@ gcloud config get-value project
 
 ---
 
-**Last Updated**: 2025-11-14
-**Version**: 1.0
+---
+
+## 🔍 PR Preview Deployments
+
+### Overview
+
+PR preview deployments are automatically created for pull requests via the "Deploy PR Preview (Rotating Pool)" workflow. These deployments use a rotating pool of services (`mvp-site-app-s1` through `mvp-site-app-s10`) to provide isolated preview environments for testing PR changes.
+
+### Finding PR Preview URLs
+
+#### Method 1: From GitHub Actions (Recommended)
+
+**Get URL from latest PR preview deployment**:
+```bash
+# Get the latest PR preview deployment run
+RUN_ID=$(gh run list --workflow="Deploy PR Preview (Rotating Pool)" --limit=1 --json databaseId -q '.[0].databaseId')
+
+# Extract deployment URL from logs
+gh run view --log "$RUN_ID" | grep "PREVIEW_URL:" | grep -oE "https://[^[:space:]]+\.run\.app"
+```
+
+**Get URL for specific PR**:
+```bash
+# Find deployment run for PR #3490
+gh run list --workflow="Deploy PR Preview (Rotating Pool)" --limit=50 --json databaseId,displayTitle | \
+  python3 -c "import sys, json; runs = json.load(sys.stdin); \
+  matches = [r for r in runs if '3490' in r.get('displayTitle', '')]; \
+  print(matches[0]['databaseId'] if matches else 'No matching runs found')"
+
+# Then get URL from that run's logs
+gh run view --log <RUN_ID> | grep "PREVIEW_URL:"
+```
+
+> **Note:** If no matching runs are found, increase the `--limit` value or verify the PR number. The defensive Python snippet above will print "No matching runs found" instead of raising an `IndexError`.
+
+#### Method 2: From gcloud (Current Service)
+
+**List all PR preview services**:
+```bash
+gcloud run services list \
+  --project=worldarchitecture-ai \
+  --region=us-central1 \
+  --filter="name:mvp-site-app-s*" \
+  --format="table(name,status.url,metadata.labels.`pr-number`)"
+```
+
+**Get URL for specific PR**:
+```bash
+# Find service for PR #3490
+gcloud run services list \
+  --project=worldarchitecture-ai \
+  --region=us-central1 \
+  --filter="metadata.labels.`pr-number`=3490" \
+  --format="value(status.url)"
+```
+
+**Get URL for specific service (e.g., s8)**:
+```bash
+gcloud run services describe mvp-site-app-s8 \
+  --project=worldarchitecture-ai \
+  --region=us-central1 \
+  --format="value(status.url)"
+```
+
+#### Method 3: From PR Comments
+
+PR preview deployments automatically post comments on the PR with the deployment URL. Check the PR's comment thread for the deployment link.
+
+### PR Preview Service Naming
+
+- **Pattern**: `mvp-site-app-s{1-10}`
+- **Example**: `mvp-site-app-s8` (for PR #3490)
+- **Rotation**: Services are reused across different PRs
+- **Labels**: Each service has `pr-number` label indicating which PR it's currently serving
+
+### Checking PR Preview Deployment Status
+
+```bash
+# Check if PR has a preview deployment
+gh pr view <PR_NUMBER> --json number,headRefName
+
+# List recent PR preview deployments
+gh run list --workflow="Deploy PR Preview (Rotating Pool)" --limit=10
+
+# View specific deployment run
+gh run view <RUN_ID> --log | grep -E "(PREVIEW_URL|Service URL|Deployment URL)"
+```
+
+### PR Preview Health Checks
+
+```bash
+# Health check for s8 (example)
+curl https://mvp-site-app-s8-i6xf2p72ka-uc.a.run.app/health
+
+# Or get URL dynamically
+S8_URL=$(gcloud run services describe mvp-site-app-s8 \
+  --project=worldarchitecture-ai \
+  --region=us-central1 \
+  --format="value(status.url)")
+curl "${S8_URL}/health"
+```
+
+### Notes
+
+- PR preview deployments are **temporary** and may be cleaned up or reused
+- Each PR gets assigned to an available service from the pool (s1-s10)
+- The same service may serve different PRs over time
+- Always check the `pr-number` label to confirm which PR a service is currently serving
+- PR preview URLs are also posted as comments on the PR
+
+---
+
+**Last Updated**: 2026-01-12
+**Version**: 1.1

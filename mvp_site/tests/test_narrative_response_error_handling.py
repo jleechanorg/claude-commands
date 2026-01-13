@@ -149,8 +149,8 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         assert "Test response" in result
 
     def test_malformed_json_with_narrative_field(self):
-        """Test extraction from malformed JSON with narrative field"""
-        # Malformed JSON that contains narrative
+        """Test that malformed JSON (non-'Extra data' error) returns error message"""
+        # Malformed JSON that contains narrative but is not an "Extra data" error
         response_text = """
         {
             "narrative": "The player walks into the tavern\\nand sees many patrons.",
@@ -160,12 +160,11 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
 
         narrative, response = parse_structured_response(response_text)
 
-        # Should extract narrative even from malformed JSON
-        assert "player walks into the tavern" in narrative
-        assert "sees many patrons" in narrative
+        # Should return error message as recovery is only for "Extra data" errors
+        assert "Invalid JSON response received" in narrative
 
     def test_deeply_nested_malformed_json(self):
-        """Test extraction from deeply nested malformed JSON"""
+        """Test that deeply nested malformed JSON (non-'Extra data' error) returns error message"""
         response_text = """
         {
             "data": {
@@ -179,8 +178,8 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
 
         narrative, response = parse_structured_response(response_text)
 
-        # Should find narrative even in nested structure
-        assert "Nested narrative" in narrative
+        # Should return error message as recovery is only for "Extra data" errors
+        assert "Invalid JSON response received" in narrative
 
     def test_json_with_escaped_characters(self):
         """Test handling of JSON with escaped characters"""
@@ -240,6 +239,83 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         assert combined_text == "GM: Show this in UI"
         # The structured response should still capture planning fallback for narrative
         assert response.narrative == "You pause to consider your options..."
+
+    def test_extra_data_error_recovery_success(self):
+        """Test recovery for 'Extra data' errors with valid JSON + trailing text."""
+        # Valid JSON followed by extra text (simulating Gemini 3 Flash Preview behavior)
+        valid_json = json.dumps({
+            "narrative": "The hero enters the tavern.",
+            "entities_mentioned": ["hero", "tavern"],
+            "location_confirmed": "Rusty Goblet Tavern"
+        })
+        response_text = valid_json + " This is extra text that should be ignored."
+
+        narrative, response = parse_structured_response(response_text)
+
+        # Recovery should succeed - we should get the valid JSON portion
+        assert "hero enters the tavern" in narrative
+        assert response.entities_mentioned == ["hero", "tavern"]
+        assert response.location_confirmed == "Rusty Goblet Tavern"
+
+    def test_extra_data_error_recovery_with_nested_structures(self):
+        """Test recovery for 'Extra data' errors with nested JSON structures."""
+        valid_json = json.dumps({
+            "narrative": "The wizard casts a spell.",
+            "entities_mentioned": ["wizard"],
+            "state_updates": {
+                "mana": 50,
+                "spells_cast": ["fireball"]
+            }
+        })
+        response_text = valid_json + " Extra narrative continuation text."
+
+        narrative, response = parse_structured_response(response_text)
+
+        # Recovery should succeed with nested structures
+        assert "wizard casts a spell" in narrative
+        assert response.entities_mentioned == ["wizard"]
+        assert response.state_updates["mana"] == 50
+        assert response.state_updates["spells_cast"] == ["fireball"]
+
+    def test_extra_data_error_recovery_failure(self):
+        """Test recovery failure when truncated JSON is still invalid."""
+        # JSON that looks like it has extra data but the truncation point is invalid
+        # This is a contrived case - in practice, if pos is set, the JSON before it should be valid
+        response_text = '{"narrative": "Test", "incomplete": '
+
+        narrative, response = parse_structured_response(response_text)
+
+        # Recovery should fail and return error message
+        assert "Invalid JSON response received" in narrative
+
+    def test_non_extra_data_error_no_recovery(self):
+        """Test that non-'Extra data' errors do not trigger recovery."""
+        # Malformed JSON that is NOT an "Extra data" error
+        response_text = '{"narrative": "Test", "incomplete": '
+
+        narrative, response = parse_structured_response(response_text)
+
+        # Should NOT attempt recovery - return error message
+        assert "Invalid JSON response received" in narrative
+
+    def test_extra_data_error_without_position(self):
+        """Test that 'Extra data' errors without position do not trigger recovery."""
+        # This tests the guard clause - if pos is None, recovery should not be attempted
+        # In practice, JSONDecodeError for "Extra data" should always have pos, but we test the guard
+        response_text = '{"narrative": "Test"} extra'
+
+        # Mock json.loads to raise an error without pos attribute
+        with patch('mvp_site.narrative_response_schema.json.loads') as mock_loads:
+            # Create an error that has "Extra data" in message but pos is None
+            error = json.JSONDecodeError("Extra data: line 1 column 20 (char 19)", "", 19)
+            # Set pos to None to test the guard clause
+            error.pos = None
+            mock_loads.side_effect = error
+
+            narrative, response = parse_structured_response(response_text)
+
+            # Should NOT attempt recovery without position
+            assert "Invalid JSON response received" in narrative
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ from mvp_site import logging_util
 MIN_NARRATIVE_LENGTH = 100
 
 # Precompiled regex patterns for markdown code block extraction
-# NOTE: Regex-based JSON parsing and recovery have been removed per PR #3458.
+# NOTE: Limited recovery for "Extra data" errors (valid JSON + trailing text) has been restored.
 # Only markdown extraction patterns remain for extracting JSON from code blocks.
 JSON_MARKDOWN_PATTERN = re.compile(r"```json\s*\n?(.*?)\n?```", re.DOTALL)
 GENERIC_MARKDOWN_PATTERN = re.compile(r"```\s*\n?(.*?)\n?```", re.DOTALL)
@@ -3178,6 +3178,20 @@ def parse_structured_response(
         )
         return empty_response.narrative, empty_response
 
+    # Check for system messages (e.g. refused content)
+    if response_text.strip().startswith("[System Message:"):
+        system_msg = response_text.strip()
+        logging_util.warning(f"⚠️ Received system message instead of JSON: {system_msg}")
+
+        # Create a valid NarrativeResponse wrapping the system message
+        fallback_response = NarrativeResponse(
+            narrative=system_msg,
+            entities_mentioned=[],
+            location_confirmed="Unknown",
+            debug_info={"system_message": system_msg},
+        )
+        return fallback_response.narrative, fallback_response
+
     # First check if the JSON is wrapped in markdown code blocks
     json_content = response_text
 
@@ -3198,13 +3212,41 @@ def parse_structured_response(
                 logging_util.info("Extracted JSON from generic code block")
 
     # Parse JSON using standard json.loads()
-    # NOTE: No recovery logic - invalid JSON fails completely (per PR #3458)
+    # Recovery logic: Handle "Extra data" errors by parsing valid JSON portion
+    recovery_attempted = False
     try:
         parsed_data = json.loads(json_content)
     except json.JSONDecodeError as e:
-        # Log the malformed JSON content for debugging
-        _log_json_parse_error(e, json_content, include_recovery_message=True)
-        parsed_data = None
+        # Check if this is an "Extra data" error (valid JSON + trailing text)
+        error_msg = str(e)
+        if "Extra data" in error_msg and hasattr(e, "pos") and e.pos is not None:
+            # Try to recover by parsing only the valid JSON portion
+            # The error position is where extra data starts, so everything before it should be valid JSON
+            recovery_attempted = True
+            try:
+                # Extract JSON up to the error position and strip trailing whitespace
+                valid_json = json_content[: e.pos].rstrip()
+                
+                # Try parsing the truncated JSON
+                parsed_data = json.loads(valid_json)
+                extra_data_length = len(json_content) - e.pos
+                logging_util.warning(
+                    f"⚠️ JSON recovery: Successfully parsed valid JSON portion "
+                    f"(truncated at position {e.pos}, {extra_data_length} chars of extra data ignored). "
+                    f"Original error: {error_msg}"
+                )
+            except (json.JSONDecodeError, ValueError) as recovery_error:
+                # Recovery failed, log original error
+                _log_json_parse_error(e, json_content, include_recovery_message=False)
+                logging_util.warning(
+                    f"⚠️ JSON recovery attempted but failed: {recovery_error}. "
+                    f"Falling back to error response."
+                )
+                parsed_data = None
+        else:
+            # Not an "Extra data" error, or no position available - log and fail
+            _log_json_parse_error(e, json_content, include_recovery_message=False)
+            parsed_data = None
 
     # Create NarrativeResponse from parsed data
 
@@ -3320,12 +3362,14 @@ def parse_structured_response(
             )  # Return cleaned narrative from response
 
     # JSON parsing failed - return error response
-    # NOTE: Regex-based JSON parsing and recovery have been removed per PR #3458.
-    # Invalid or malformed JSON responses will fail completely rather than attempting
-    # partial recovery. This ensures consistent behavior and avoids silent data corruption.
+    # NOTE: Limited recovery for "Extra data" errors (valid JSON + trailing text) has been restored.
+    # Other malformed JSON errors will fail completely to avoid silent data corruption.
+    if recovery_attempted:
+        error_detail = "Recovery was attempted for 'Extra data' error but failed."
+    else:
+        error_detail = "No recovery attempted - not an 'Extra data' error or position unavailable."
     logging_util.error(
-        "Failed to parse JSON response - returning error message. "
-        "JSON recovery functionality has been removed."
+        f"Failed to parse JSON response - returning error message. {error_detail}"
     )
     fallback_response = NarrativeResponse(
         narrative="Invalid JSON response received. Please try again.",

@@ -211,6 +211,7 @@ class LoggingUtil:
             logger: Optional logger instance to preserve context. If None, uses root logger.
             **kwargs: Additional keyword arguments for logging
         """
+        message = with_campaign(message)
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
         if logger is not None:
             logger.error(enhanced_message, *args, **kwargs)
@@ -230,6 +231,7 @@ class LoggingUtil:
             logger: Optional logger instance to preserve context. If None, uses root logger.
             **kwargs: Additional keyword arguments for logging
         """
+        message = with_campaign(message)
         enhanced_message = f"{LoggingUtil.WARNING_EMOJI} {message}"
         if logger is not None:
             logger.warning(enhanced_message, *args, **kwargs)
@@ -256,6 +258,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        message = with_campaign(message)
         logging.info(message, *args, **kwargs)
 
     @staticmethod
@@ -268,6 +271,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        message = with_campaign(message)
         logging.debug(message, *args, **kwargs)
 
     @staticmethod
@@ -280,6 +284,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        message = with_campaign(message)
         enhanced_message = f"🔥🔥 {message}"
         logging.critical(enhanced_message, *args, **kwargs)
 
@@ -293,6 +298,7 @@ class LoggingUtil:
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
+        message = with_campaign(message)
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
         logging.exception(enhanced_message, *args, **kwargs)
 

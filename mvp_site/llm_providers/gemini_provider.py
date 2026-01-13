@@ -153,7 +153,7 @@ def generate_json_mode_content(
     generation_config_params = {
         "max_output_tokens": json_mode_max_output_tokens,
         "temperature": temperature,
-        "safety_settings": safety_settings,
+        "safety_settings": safety_settings,  # Must be inside GenerateContentConfig
     }
 
     if json_mode:
