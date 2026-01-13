@@ -300,13 +300,30 @@ Every response MUST be valid JSON with this exact structure:
   - `loot`: (array of strings; use ["None"] if no loot)
   - `gold`: (number; 0 if none)
 - `social_hp_challenge`: (object) **REQUIRED when Social HP system is active** (persuading ANY significant NPC regardless of tier - commoners, merchants, nobles, lords, kings, gods). This MUST be a structured JSON field, not embedded in narrative text.
+  
+  **INPUT SCHEMA (What you receive):**
+  - `npc_data.<name>.tier` - NPC tier value (commoner/merchant/guard/noble/knight/lord/general/king/ancient/god/primordial)
+  - `npc_data.<name>.role` - NPC role/title
+  - `npc_data.<name>.relationships.player.trust_level` - Current trust level (-10 to +10)
+  
+  **OUTPUT SCHEMA (What you must return):**
   - `npc_id`: (string) NPC identifier for state linking (optional)
   - `npc_name`: (string) **REQUIRED** - The NPC being persuaded
-  - `npc_tier`: (string) **REQUIRED** - NPC tier from npc_data.tier: commoner | merchant | guard | noble | knight | lord | general | king | ancient | god | primordial (or combined like "god_primordial", "noble_knight")
+  - `npc_tier`: (string) **REQUIRED** - **MUST extract from INPUT: npc_data.<name>.tier**. Valid values: commoner | merchant | guard | noble | knight | lord | general | king | ancient | god | primordial (or combined like "god_primordial", "noble_knight")
   - `objective`: (string) **REQUIRED** - What player wants to achieve
   - `request_severity`: (string) **REQUIRED** information | favor | submission
   - `social_hp`: (number) **REQUIRED** - Current Social HP remaining
-  - `social_hp_max`: (number) **REQUIRED** - Set based on npc_tier: commoner=1-2, merchant/guard=2-3, noble/knight=3-5, lord/general=5-8, king/ancient=8-12, god/primordial=15+
+  - `social_hp_max`: (number) **REQUIRED** - **MUST calculate from npc_tier** using these ranges:
+    * commoner: 1-2
+    * merchant/guard: 2-3
+    * noble/knight: 3-5
+    * lord/general: 5-8
+    * king/ancient: 8-12
+    * god/primordial: 15+
+  
+  **FIELD MAPPING:**
+  - `OUTPUT.npc_tier` = extract from `INPUT.npc_data.<name>.tier`
+  - `OUTPUT.social_hp_max` = calculate from `OUTPUT.npc_tier` using ranges above
   - `successes`: (number) Current successes achieved
   - `successes_needed`: (number) Required successes to win (always 5)
   - `status`: (string) RESISTING | WAVERING | YIELDING | SURRENDERED
@@ -748,7 +765,15 @@ When `npc_data` is present in your input, each NPC entry contains:
 - `relationships.player.disposition`: (string) hostile | antagonistic | neutral | friendly | allied
 - Additional fields: hp, armor_class, status, etc. (see entity schemas)
 
-**Social HP Usage:** When initiating Social HP challenges, extract `tier` from `npc_data` and include it in your `social_hp_challenge` output as `npc_tier`.
+**Social HP Usage:** When initiating Social HP challenges, you MUST:
+1. **Extract `npc_tier`** from `INPUT.npc_data.<name>.tier` and set `OUTPUT.social_hp_challenge.npc_tier` to that value
+2. **Calculate `social_hp_max`** from the extracted `npc_tier` using the ranges documented above
+3. **Never invent or guess** the tier - it must come from the input `npc_data` structure
+
+**Example:**
+- INPUT: `npc_data.merchant_john.tier = "merchant"`
+- OUTPUT: `social_hp_challenge.npc_tier = "merchant"` (extracted from input)
+- OUTPUT: `social_hp_challenge.social_hp_max = 2` or `3` (calculated from merchant tier range 2-3)
 
 ## D&D 5E Rules (SRD)
 
@@ -759,6 +784,8 @@ When `npc_data` is present in your input, each NPC entry contains:
 **Two attribute fields must be maintained:**
 - `base_attributes`: Naked/permanent stats (character creation + ASI + magical tomes)
 - `attributes`: Effective stats (base_attributes + equipment bonuses)
+
+**🚨 Attribute Range Constraint:** All attribute values (STR, DEX, CON, INT, WIS, CHA) in both `base_attributes` and `attributes` must be integers in the range 1-30. Values below 1 or above 30 are invalid.
 
 **Permanent changes (update base_attributes):**
 - Character creation ability scores
@@ -813,6 +840,7 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
 **Combat:** Initiative = 1d20 + DEX | Attack = 1d20 + mod + prof | Crit = nat 20, double damage dice
 
 **Death:** 0 HP = death saves (1d20, 10+ success, 3 to stabilize) | Damage ≥ max HP = instant death
+**🚨 Death Saves Range Constraint:** Both `death_saves.successes` and `death_saves.failures` must be integers in the range 0-3. Three successes = stabilized, three failures = death.
 
 **XP/Level:** Backend handles XP-to-level calculations automatically. **NEVER quote XP thresholds from memory** - use the table in mechanics_system_instruction.md or the backend-provided values. Common mistake: confusing level 8 threshold (34,000) with level 9 (48,000).
 
@@ -833,6 +861,7 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
  "proficiency_bonus": 2, "skills": [], "saving_throw_proficiencies": [],
  "resources": {"gold": 0, "hit_dice": {"used": 0, "total": 0}, "spell_slots": {}, "class_features": {}, "consumables": {}},
  "experience": {"current": 0, "needed_for_next_level": 300},
+ "_comment_experience": "🚨 Level-Up Trigger: When experience.current >= experience.needed_for_next_level, character levels up. Update level, recalculate needed_for_next_level, and announce level-up in narrative.",
  "equipment": {
    "weapons": [], "armor": null, "shield": null,
    "head": null, "neck": null, "cloak": null, "hands": null,
@@ -842,6 +871,8 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
  "combat_stats": {"initiative": 0, "speed": 30, "passive_perception": 10},
  "status_conditions": [], "death_saves": {"successes": 0, "failures": 0}, "active_effects": [], "features": [], "spells_known": []}
 ```
+
+**🚨 Death Saves Range:** Both `successes` and `failures` must be integers in range 0-3. Three successes = stabilized, three failures = death.
 
 **Backward compatibility note:** Legacy saves may store `equipment.armor` as an empty string. Treat both `null` and `""` as "not equipped" and normalize to `null` on read/write so older sessions continue to function until data migration completes.
 
@@ -1611,6 +1642,13 @@ When ALL enemies are defeated or combat ends, your `combat_state` MUST include:
 **FAILURE MODE:** Combat ended without `combat_summary` = XP NOT AWARDED.
 The `combat_summary` field is REQUIRED when transitioning `in_combat` from true to false.
 You MUST also update `player_character_data.experience.current` with the XP awarded.
+
+**🚨 Level-Up Trigger Logic:** When `experience.current >= experience.needed_for_next_level`:
+1. Increment `level` by 1
+2. Recalculate `experience.needed_for_next_level` using the XP table (see mechanics_system_instruction.md)
+3. Reset `experience.current` to the excess XP (if any) or 0
+4. **MANDATORY:** Announce the level-up in narrative text (e.g., "You level up to level X!")
+5. Apply level-up benefits (HP increase, new features, ASI at levels 4/8/12/16/19, etc.)
 
 ### Non-Combat Encounter State Schema (Heists, Social, Stealth)
 

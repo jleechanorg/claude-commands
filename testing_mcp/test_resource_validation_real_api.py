@@ -25,9 +25,14 @@ Run (start local MCP automatically):
     cd testing_mcp
     python test_resource_validation_real_api.py --start-local --real-services
 
-Run with evidence collection:
+PR #3470 Configuration:
+    - Evidence collection: ALWAYS enabled (saved to /tmp subdirectory)
+    - Model: ALWAYS gemini-3-flash-preview
+    - Firestore validation: ALWAYS enabled (validates persistence)
+
+Run (start local MCP automatically - PR #3470):
     cd testing_mcp
-    python test_resource_validation_real_api.py --start-local --real-services --evidence
+    python test_resource_validation_real_api.py --start-local --real-services
 
 Run only new resource tests (skip spell slots):
     cd testing_mcp
@@ -41,6 +46,7 @@ import json
 import os
 import sys
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import UTC, datetime
 from pathlib import Path
@@ -54,7 +60,8 @@ from lib.model_utils import (
     update_user_settings,
 )
 from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
-from lib.evidence_utils import get_evidence_dir, save_evidence as save_evidence_lib
+from lib.evidence_utils import get_evidence_dir, save_evidence as save_evidence_lib, capture_provenance
+from lib.campaign_utils import get_campaign_state
 from lib import MCPClient
 
 # =============================================================================
@@ -1192,6 +1199,108 @@ def validate_resource_check(
     return passed, errors
 
 
+def validate_firestore_persistence(
+    client: MCPClient,
+    user_id: str,
+    campaign_id: str,
+    state_updates: dict[str, Any],
+    resource_type: str,
+    firestore_state: dict[str, Any] | None = None,
+) -> list[str]:
+    """Validate that resource state was correctly persisted to Firestore.
+    
+    Args:
+        firestore_state: Optional pre-fetched Firestore state to avoid double fetch.
+                         If None, will fetch from client.
+    """
+    errors = []
+    
+    try:
+        # Fetch campaign state from Firestore only if not provided
+        if firestore_state is None:
+            firestore_state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+        
+        # Extract player character data from Firestore (nested under game_state)
+        firestore_game_state = firestore_state.get("game_state", {})
+        firestore_player_data = firestore_game_state.get("player_character_data", {})
+        if not isinstance(firestore_player_data, dict):
+            errors.append("Firestore game_state.player_character_data is not a dict")
+            return errors
+        
+        # Get response state updates
+        response_player_data = state_updates.get("player_character_data", {})
+        
+        # Validate resource persistence based on resource type
+        # Normalize resource_type: scenarios use "spell_slot" (singular) but validator expects "spell_slots" (plural)
+        normalized_resource_type = "spell_slots" if resource_type == "spell_slot" else resource_type
+        
+        if normalized_resource_type == "spell_slots":
+            firestore_resources = firestore_player_data.get("resources", {})
+            response_resources = response_player_data.get("resources", {})
+            firestore_slots = firestore_resources.get("spell_slots", {})
+            response_slots = response_resources.get("spell_slots", {})
+            
+            # Compare spell slots between response and Firestore
+            # Validate types first - don't skip validation when one side is empty dict
+            if not isinstance(firestore_slots, dict):
+                errors.append(f"Firestore spell_slots is not a dict, got {type(firestore_slots).__name__}")
+            elif not isinstance(response_slots, dict):
+                errors.append(f"Response spell_slots is not a dict, got {type(response_slots).__name__}")
+            elif not firestore_slots:
+                errors.append("Firestore spell_slots is empty but response has spell_slots")
+            elif not response_slots:
+                errors.append("Response spell_slots is empty but expected in state_updates")
+            else:
+                # Both are non-empty dicts - compare values
+                for level in response_slots:
+                    firestore_level = firestore_slots.get(level, {})
+                    response_level = response_slots.get(level, {})
+                    # Use "used" if present, fall back to "current" (preserve 0 values)
+                    firestore_used = firestore_level.get("used") if "used" in firestore_level else firestore_level.get("current")
+                    response_used = response_level.get("used") if "used" in response_level else response_level.get("current")
+                    if firestore_used != response_used:
+                        errors.append(
+                            f"Firestore spell_slots.{level}.used/current mismatch: "
+                            f"response={response_used}, firestore={firestore_used}"
+                        )
+        elif normalized_resource_type in ["hit_dice", "bardic_inspiration", "ki_points", "rage", 
+                              "channel_divinity", "sorcery_points", "wild_shape", "lay_on_hands"]:
+            # For class features, check that the resource count matches
+            firestore_features = firestore_player_data.get("resources", {}).get("class_features", {})
+            response_features = response_player_data.get("resources", {}).get("class_features", {})
+            
+            # Compare class feature uses between response and Firestore
+            # Validate types first - don't skip validation when one side is empty dict
+            if not isinstance(firestore_features, dict):
+                errors.append(f"Firestore class_features is not a dict, got {type(firestore_features).__name__}")
+            elif not isinstance(response_features, dict):
+                errors.append(f"Response class_features is not a dict, got {type(response_features).__name__}")
+            elif not firestore_features:
+                errors.append("Firestore class_features is empty but response has class_features")
+            elif not response_features:
+                errors.append("Response class_features is empty but expected in state_updates")
+            else:
+                # Both are non-empty dicts - compare values
+                # Check if the resource was correctly persisted (should remain at 0 if rejected)
+                for feature_name in response_features:
+                    firestore_feature = firestore_features.get(feature_name, {})
+                    response_feature = response_features.get(feature_name, {})
+                    # Use "used" if present, fall back to "current" (preserve 0 values)
+                    firestore_used = firestore_feature.get("used") if "used" in firestore_feature else firestore_feature.get("current")
+                    response_used = response_feature.get("used") if "used" in response_feature else response_feature.get("current")
+                    if firestore_used != response_used:
+                        errors.append(
+                            f"Firestore class_features.{feature_name}.used/current mismatch: "
+                            f"response={response_used}, firestore={firestore_used}"
+                        )
+        
+    except Exception as e:
+        errors.append(f"Firestore validation failed with exception: {e}")
+        errors.append(f"Traceback: {traceback.format_exc()}")
+    
+    return errors
+
+
 def save_evidence(
     model_id: str,
     scenario_name: str,
@@ -1199,6 +1308,8 @@ def save_evidence(
     result: dict[str, Any],
     validation_errors: list[str],
     evidence_dir: Path,
+    firestore_errors: list[str] | None = None,
+    firestore_state: dict[str, Any] | None = None,
 ) -> None:
     """Save test evidence to disk with checksums."""
     evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -1222,10 +1333,12 @@ def save_evidence(
         "user_input": user_input,
         "validation_passed": len(validation_errors) == 0,
         "validation_errors": validation_errors,
+        "firestore_validation_errors": firestore_errors or [],
         "narrative": result.get("narrative", ""),
         "dice_rolls": result.get("dice_rolls", []),
         "state_updates": result.get("state_updates", {}),
         "game_state": result.get("game_state", {}),
+        "firestore_state": firestore_state or {},
         "debug_info": result.get("debug_info", {}),
     }
 
@@ -1315,10 +1428,33 @@ def run_scenario_tests(
                     print("   ❌ FAILED: Timed out after 60s")
                     continue
 
-            # Validate result
+            # Validate result (narrative validation)
             passed, validation_errors = validate_resource_check(result, scenario)
 
-            # Save evidence if requested
+            # Validate Firestore persistence (PR #3470: Always validate Firestore)
+            firestore_errors = []
+            firestore_state = {}
+            state_updates = result.get("state_updates", {})
+            resource_type = scenario["resource_type"]
+            
+            try:
+                firestore_state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+                firestore_errors = validate_firestore_persistence(
+                    client,
+                    user_id=user_id,
+                    campaign_id=campaign_id,
+                    state_updates=state_updates,
+                    resource_type=resource_type,
+                    firestore_state=firestore_state,  # Pass pre-fetched state to avoid double fetch
+                )
+            except Exception as e:
+                firestore_errors.append(f"Failed to fetch Firestore state: {e}")
+            
+            # Combine validation errors (narrative + Firestore)
+            all_errors = validation_errors + firestore_errors
+            passed_final = len(all_errors) == 0
+
+            # Save evidence (ALWAYS enabled for PR #3470)
             if evidence_dir:
                 save_evidence(
                     model_id,
@@ -1327,18 +1463,25 @@ def run_scenario_tests(
                     result,
                     validation_errors,
                     evidence_dir,
+                    firestore_errors=firestore_errors if firestore_errors else None,
+                    firestore_state=firestore_state,
                 )
+                
+                if firestore_errors:
+                    print(f"  ⚠️  Firestore validation errors: {len(firestore_errors)}")
+                    for error in firestore_errors[:2]:
+                        print(f"     - {error}")
 
-            # Report results
-            if validation_errors:
+            # Report results (include Firestore validation)
+            if all_errors:
                 print(f"   ❌ FAILED: {scenario_name}")
-                for error in validation_errors:
+                for error in all_errors[:3]:  # Show first 3 errors
                     print(f"      Error: {error}")
                 narrative_preview = (result.get("narrative") or "")[:200]
                 print(f'      Narrative: "{narrative_preview}..."')
             else:
                 passed_tests += 1
-                print(f"   ✅ PASSED: LLM properly rejected {resource_type} use")
+                print(f"   ✅ PASSED: LLM properly rejected {resource_type} use (response + Firestore validation)")
 
     return passed_tests, total_tests
 
@@ -1366,7 +1509,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     parser.add_argument(
         "--models",
         default=os.environ.get("MCP_TEST_MODELS", ""),
-        help="Comma-separated model IDs to test. Defaults to Gemini+Qwen matrix.",
+        help="Comma-separated model IDs to test. Defaults to Gemini+Qwen matrix. (PR #3470: Ignored - always uses gemini-3-flash-preview)",
     )
     parser.add_argument(
         "--real-services",
@@ -1376,7 +1519,7 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     parser.add_argument(
         "--evidence",
         action="store_true",
-        help="Save detailed evidence files for each test",
+        help="Save detailed evidence files for each test (PR #3470: Ignored - always enabled)",
     )
     parser.add_argument(
         "--resources-only",
@@ -1415,16 +1558,19 @@ def main() -> int:  # noqa: PLR0912, PLR0915
         client.wait_healthy(timeout_s=45.0)
         print(f"✅ MCP server healthy at {base_url}\n")
 
-        # Parse model list
-        models = [m.strip() for m in (args.models or "").split(",") if m.strip()]
-        if not models:
-            models = list(DEFAULT_MODEL_MATRIX)
+        # PR #3470: Force gemini-3-flash-preview model
+        models = ["gemini-3-flash-preview"]
+        print(f"📋 PR #3470: Using gemini-3-flash-preview (forced)")
 
-        # Setup evidence directory if requested (per evidence-standards.md)
-        evidence_dir = None
-        if args.evidence:
-            evidence_dir = get_evidence_dir("resource_validation")
-            print(f"📁 Evidence directory: {evidence_dir}\n")
+        # Setup evidence directory (ALWAYS enabled for PR #3470)
+        # Evidence always saved to /tmp subdirectory for resource validation tests
+        evidence_dir = get_evidence_dir("resource_validation")
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        print(f"📁 Evidence directory: {evidence_dir}")
+        print(f"   PR #3470: Evidence collection ALWAYS enabled, Firestore validation ALWAYS enabled\n")
+        
+        # Capture provenance
+        capture_provenance(base_url)
 
         # Collect all scenarios based on flags
         all_scenarios: list[dict] = []

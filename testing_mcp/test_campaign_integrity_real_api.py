@@ -278,9 +278,11 @@ def main() -> int:
     # NOTE: Mock mode removed - these tests ALWAYS use real services
     # This is a "real API" test file - mocks defeat the purpose
     parser.add_argument(
-        "--evidence",
-        action="store_true",
-        help="Enable enhanced evidence capture (checksums, provenance).",
+        "--no-evidence",
+        dest="evidence",
+        action="store_false",
+        default=True,
+        help="Disable enhanced evidence capture (enabled by default).",
     )
     parser.add_argument(
         "--evidence-dir",
@@ -370,17 +372,17 @@ def main() -> int:
             user_id = f"mcp-integrity-{model_id.replace('/', '-')}-{int(time.time())}"
             update_user_settings(client, user_id=user_id, settings=model_settings)
 
-            # Create campaign with a standard fantasy setting
-            campaign_id = create_campaign(
-                client,
-                user_id,
-                title="Campaign Integrity Test",
-                character="Aldric the Wizard (INT 18, WIS 14)",
-                setting="A medieval fantasy kingdom with castles and dungeons",
-                description="Test campaign for validating campaign integrity guidelines",
-            )
-
             for scenario in scenarios:
+                # Create a fresh campaign for each scenario to prevent state pollution
+                campaign_id = create_campaign(
+                    client,
+                    user_id,
+                    title=f"Campaign Integrity Test - {scenario['name']}",
+                    character="Aldric the Wizard (INT 18, WIS 14)",
+                    setting="A medieval fantasy kingdom with castles and dungeons",
+                    description=f"Test campaign for scenario: {scenario['name']}",
+                )
+
                 run_summary["summary"]["total"] += 1
                 category = scenario.get("category", "other")
 

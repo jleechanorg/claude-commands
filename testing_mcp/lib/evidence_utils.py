@@ -822,6 +822,13 @@ Test scenarios validate that:
             )
             continue
 
+        # Work on a copy to avoid mutating `results` (run.json should remain raw)
+        scenario = dict(scenario)
+        
+        # Normalize scenario name: use "name" if present, otherwise "scenario" key
+        if "name" not in scenario and "scenario" in scenario:
+            scenario["name"] = str(scenario.get("scenario") or "")
+        
         # Check for pass/fail flags first (even if errors exist, they might be placeholder)
         passed_flag: bool | None = None
         if "passed" in scenario:
@@ -933,8 +940,11 @@ the raw narrative validation missed. See `errors` in individual scenario files.
 """
     for scenario in scenarios:
         status = "✅ PASS" if not scenario.get("errors") else "❌ FAIL"
-        # Support both 'name' and 'scenario_name' fields for backward compatibility
-        scenario_name = scenario.get('name') or scenario.get('scenario_name', 'Unknown')
+        # Support both 'name', 'scenario', and 'scenario_name' fields for backward compatibility
+        # Ensure we never print None or empty string
+        scenario_name = scenario.get('name') or scenario.get('scenario') or scenario.get('scenario_name') or 'Unknown'
+        if not scenario_name:
+            scenario_name = 'Unknown'
         evidence_content += f"\n### {scenario_name}\n"
         evidence_content += f"- **Status:** {status}\n"
         # Add campaign_id for traceability

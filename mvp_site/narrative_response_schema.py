@@ -244,6 +244,27 @@ VALID_QUALITY_TIERS = {
 # This schema defines the structured format for Social HP tracking.
 # Previously this was embedded in narrative text and parsed via regex.
 # Now it's an explicit JSON field for reliability.
+#
+# INPUT SCHEMA (What the LLM receives):
+# - npc_data.<name>.tier - NPC tier (commoner/merchant/guard/noble/knight/lord/general/king/ancient/god/primordial)
+# - npc_data.<name>.role - NPC role
+# - npc_data.<name>.relationships.player.trust_level - Current trust level (-10 to +10)
+#
+# OUTPUT SCHEMA (What the LLM must return):
+# - npc_tier - MUST be extracted from INPUT: npc_data.<name>.tier
+# - social_hp_max - Calculated from npc_tier:
+#   * commoner: 1-2
+#   * merchant/guard: 2-3
+#   * noble/knight: 3-5
+#   * lord/general: 5-8
+#   * king/ancient: 8-12
+#   * god/primordial: 15+
+#
+# FIELD MAPPING:
+# OUTPUT.npc_tier = extract from INPUT.npc_data.<name>.tier
+# OUTPUT.social_hp_max = calculate from OUTPUT.npc_tier using ranges above
+#
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 1 (Critical)
 
 SOCIAL_HP_CHALLENGE_SCHEMA = {
     "npc_id": str,  # NPC identifier (optional, for state linking)
@@ -270,6 +291,1230 @@ VALID_SOCIAL_HP_REQUEST_SEVERITY = {"information", "favor", "submission"}
 
 # Valid social skills
 VALID_SOCIAL_SKILLS = {"Persuasion", "Deception", "Intimidation", "Insight"}
+
+# =============================================================================
+# COMBAT STATE SCHEMA - Explicit validation for combat state
+# =============================================================================
+# This schema defines the structured format for combat state tracking.
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 1 (Critical)
+
+COMBAT_PHASE_ENUM = {"initiating", "active", "ended", "fled"}
+
+COMBAT_STATE_SCHEMA = {
+    "in_combat": bool,
+    "combat_session_id": str,  # Format: combat_<timestamp>_<4char>
+    "combat_phase": str,  # Must be in COMBAT_PHASE_ENUM
+    "current_round": int,
+    "initiative_order": list,  # Array of {name, initiative, type}
+    "combatants": dict,  # Dict of combatant data
+    "combat_summary": dict,  # {rounds_fought, enemies_defeated, xp_awarded, loot_distributed}
+    "rewards_processed": bool,
+}
+
+# =============================================================================
+# REPUTATION SCHEMA - Explicit validation for reputation tracking
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 1 (Critical)
+
+VALID_NOTORIETY_LEVELS = {
+    "infamous",
+    "notorious",
+    "disreputable",
+    "unknown",
+    "known",
+    "respected",
+    "famous",
+    "legendary",
+}
+
+VALID_STANDING_LEVELS = {
+    "enemy",
+    "hostile",
+    "unfriendly",
+    "neutral",
+    "friendly",
+    "trusted",
+    "ally",
+    "champion",
+}
+
+REPUTATION_PUBLIC_SCHEMA = {
+    "score": int,  # Range: -100 to +100
+    "titles": list,
+    "known_deeds": list,
+    "rumors": list,
+    "notoriety_level": str,  # Must be in VALID_NOTORIETY_LEVELS
+}
+
+REPUTATION_PRIVATE_SCHEMA = {
+    "score": int,  # Range: -10 to +10
+    "standing": str,  # Must be in VALID_STANDING_LEVELS
+    "known_deeds": list,
+    "secret_knowledge": list,
+    "trust_override": int | None,
+}
+
+# =============================================================================
+# RELATIONSHIP SCHEMA - Explicit validation for relationship tracking
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 2 (High)
+
+VALID_DISPOSITIONS = {
+    "hostile",
+    "antagonistic",
+    "cold",
+    "neutral",
+    "friendly",
+    "allied",  # Documented in game_state_instruction.md line 765
+    "trusted",
+    "devoted",
+    "bonded",
+}
+
+RELATIONSHIP_SCHEMA = {
+    "trust_level": int,  # Range: -10 to +10
+    "disposition": str,  # Must be in VALID_DISPOSITIONS
+    "history": list,  # Array of strings
+    "debts": list,  # Array of strings
+    "grievances": list,  # Array of strings
+}
+
+# =============================================================================
+# WORLD TIME SCHEMA - Explicit validation for world time tracking
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 2 (High)
+
+VALID_TIME_OF_DAY = {
+    "Dawn",
+    "Morning",
+    "Midday",
+    "Afternoon",
+    "Evening",
+    "Night",
+    "Deep Night",
+}
+
+WORLD_TIME_SCHEMA = {
+    "year": int,
+    "month": str | int,
+    "day": int,  # Range: 1-31
+    "hour": int,  # Range: 0-23
+    "minute": int,  # Range: 0-59
+    "second": int,  # Range: 0-59
+    "microsecond": int,  # Range: 0-999999
+    "time_of_day": str,  # Must be in VALID_TIME_OF_DAY
+}
+
+# =============================================================================
+# ENCOUNTER STATE SCHEMA - Explicit validation for encounter tracking
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 2 (High)
+
+VALID_ENCOUNTER_TYPES = {
+    "heist",
+    "social",
+    "stealth",
+    "puzzle",
+    "quest",
+    "narrative_victory",
+}
+
+VALID_ENCOUNTER_DIFFICULTIES = {"easy", "medium", "hard", "deadly"}
+
+ENCOUNTER_STATE_SCHEMA = {
+    "encounter_active": bool,
+    "encounter_id": str,  # Format: enc_<timestamp>_<type>_###
+    "encounter_type": str,  # Must be in VALID_ENCOUNTER_TYPES
+    "difficulty": str,  # Must be in VALID_ENCOUNTER_DIFFICULTIES
+    "encounter_completed": bool,
+    "encounter_summary": dict,  # {xp_awarded, outcome, method}
+    "rewards_processed": bool,
+}
+
+# =============================================================================
+# FROZEN PLANS SCHEMA - Explicit validation for frozen plans tracking
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 3 (Medium)
+# Note: frozen_plans is LLM-enforced via prompts, but we document structure
+
+FROZEN_PLANS_SCHEMA = {
+    "<plan_topic_key>": {
+        "failed_at": str,  # ISO timestamp or world_time string
+        "freeze_until": str,  # ISO timestamp or world_time string
+        "original_dc": int,
+        "freeze_hours": int,
+        "description": str,
+    }
+}
+
+# =============================================================================
+# DIRECTIVES SCHEMA - Explicit validation for god mode directives
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 3 (Medium)
+
+DIRECTIVES_SCHEMA = {
+    "add": list,  # Array of strings
+    "drop": list,  # Array of strings
+}
+
+# =============================================================================
+# EQUIPMENT SLOT ENUM - Valid equipment slot names
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 3 (Medium)
+
+VALID_EQUIPMENT_SLOTS = {
+    "head",
+    "body",
+    "armor",
+    "cloak",
+    "hands",
+    "feet",
+    "neck",
+    "ring_1",
+    "ring_2",
+    "belt",
+    "shield",
+    "main_hand",
+    "off_hand",
+    "instrument",
+    "weapons",  # Array slot
+    "backpack",  # Array slot
+}
+
+# Forbidden slot name mappings (should be normalized)
+FORBIDDEN_SLOT_MAPPINGS = {
+    "weapon_main": "main_hand",
+    "boots": "feet",
+}
+
+# =============================================================================
+# ARC MILESTONES SCHEMA - Explicit validation for arc milestone tracking
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 4 (Low)
+
+VALID_ARC_MILESTONE_STATUS = {"in_progress", "completed"}
+
+ARC_MILESTONE_SCHEMA = {
+    "status": str,  # Must be in VALID_ARC_MILESTONE_STATUS
+    "phase": str,
+    "progress": int,  # Range: 0-100
+    "updated_at": str | None,  # ISO timestamp
+    "completed_at": str | None,  # ISO timestamp
+}
+
+# =============================================================================
+# TIME PRESSURE SYSTEM SCHEMA - Explicit validation for time pressure tracking
+# =============================================================================
+# Per roadmap/llm_schema_alignment_gaps.md - Priority 4 (Low)
+
+TIME_PRESSURE_WARNINGS_SCHEMA = {
+    "subtle_given": bool,
+    "clear_given": bool,
+    "urgent_given": bool,
+    "last_warning_day": int,
+}
+
+# =============================================================================
+# RESOURCES SCHEMA - Explicit validation for resources tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 1 (Critical)
+
+RESOURCES_SCHEMA = {
+    "gold": int,  # >= 0
+    "hit_dice": dict,  # {used: int (0-total), total: int (>= 0)}
+    "spell_slots": dict,  # {level_X: {current: int (0-max), max: int (>= 0)}}
+    "class_features": dict,  # Class-specific resources (varies by class)
+    "consumables": dict,  # Consumable items
+}
+
+# =============================================================================
+# SPELL SLOTS SCHEMA - Explicit validation for spell slot tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 1 (Critical)
+
+VALID_SPELL_SLOT_LEVELS = {
+    "level_1",
+    "level_2",
+    "level_3",
+    "level_4",
+    "level_5",
+    "level_6",
+    "level_7",
+    "level_8",
+    "level_9",
+}
+
+SPELL_SLOTS_SCHEMA = {
+    "<level_X>": {
+        "used": int,  # Range: 0 to max (alias: "current" also accepted)
+        "current": int,  # Range: 0 to max (deprecated, use "used")
+        "max": int,  # Range: >= 0
+    }
+}
+
+# =============================================================================
+# CLASS FEATURES SCHEMA - Explicit validation for class-specific resources
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 1 (Critical)
+
+VALID_CLASS_FEATURES = {
+    "bardic_inspiration",
+    "ki_points",
+    "rage",
+    "channel_divinity",
+    "lay_on_hands",
+    "sorcery_points",
+    "wild_shape",
+}
+
+CLASS_FEATURES_SCHEMA = {
+    "<feature_name>": {
+        "used": int,  # Range: 0 to max (alias: "current" also accepted)
+        "current": int,  # Range: 0 to max (deprecated, use "used")
+        "max": int,  # Range: >= 0
+    }
+}
+
+# =============================================================================
+# ATTRIBUTES SCHEMA - Explicit validation for attributes tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 2 (High)
+
+# Support both abbreviated (STR, DEX, etc.) and full names (strength, dexterity, etc.)
+VALID_ATTRIBUTE_NAMES_ABBREV = {"STR", "DEX", "CON", "INT", "WIS", "CHA"}
+VALID_ATTRIBUTE_NAMES_FULL = {"strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"}
+VALID_ATTRIBUTE_NAMES = VALID_ATTRIBUTE_NAMES_ABBREV | VALID_ATTRIBUTE_NAMES_FULL
+
+# Mapping between formats for validation
+ATTRIBUTE_NAME_MAPPING = {
+    "STR": "strength",
+    "DEX": "dexterity",
+    "CON": "constitution",
+    "INT": "intelligence",
+    "WIS": "wisdom",
+    "CHA": "charisma",
+    "strength": "STR",
+    "dexterity": "DEX",
+    "constitution": "CON",
+    "intelligence": "INT",
+    "wisdom": "WIS",
+    "charisma": "CHA",
+}
+
+ATTRIBUTES_SCHEMA = {
+    "base_attributes": dict,  # {STR: int (1-30), DEX: int (1-30), ...}
+    "attributes": dict,  # {STR: int (1-30), DEX: int (1-30), ...}
+}
+
+# =============================================================================
+# EXPERIENCE SCHEMA - Explicit validation for experience tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 2 (High)
+
+EXPERIENCE_SCHEMA = {
+    "current": int,  # >= 0
+    "needed_for_next_level": int,  # >= current
+}
+
+# =============================================================================
+# DEATH SAVES SCHEMA - Explicit validation for death saves tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 2 (High)
+
+DEATH_SAVES_SCHEMA = {
+    "successes": int,  # Range: 0-3
+    "failures": int,  # Range: 0-3
+}
+
+# =============================================================================
+# SPELLS KNOWN SCHEMA - Explicit validation for spells known tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 2 (High)
+
+SPELLS_KNOWN_SCHEMA = {
+    "name": str,  # Required
+    "level": int,  # Range: 0-9
+    # Optional: school, casting_time, range, components, duration
+}
+
+# =============================================================================
+# STATUS CONDITIONS SCHEMA - Explicit validation for status conditions tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 3 (Medium)
+
+# Common D&D 5e status conditions (from SRD)
+VALID_STATUS_CONDITIONS = {
+    "Blinded",
+    "Charmed",
+    "Deafened",
+    "Exhaustion",
+    "Frightened",
+    "Grappled",
+    "Incapacitated",
+    "Invisible",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned",
+    "Prone",
+    "Restrained",
+    "Stunned",
+    "Unconscious",
+}
+
+STATUS_CONDITIONS_SCHEMA = list  # Array of strings
+
+# =============================================================================
+# ACTIVE EFFECTS SCHEMA - Explicit validation for active effects tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 3 (Medium)
+
+ACTIVE_EFFECTS_SCHEMA = list  # Array of strings describing persistent buffs/effects
+
+# =============================================================================
+# COMBAT STATS SCHEMA - Explicit validation for combat stats tracking
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 3 (Medium)
+
+COMBAT_STATS_SCHEMA = {
+    "initiative": int,
+    "speed": int,  # >= 0
+    "passive_perception": int,  # >= 0
+}
+
+# =============================================================================
+# ITEM SCHEMAS - Explicit validation for equipment items
+# =============================================================================
+# Per roadmap/schema_validation_gaps_resources_spells.md - Priority 3 (Medium)
+
+VALID_DAMAGE_TYPES = {
+    "acid",
+    "bludgeoning",
+    "cold",
+    "fire",
+    "force",
+    "lightning",
+    "necrotic",
+    "piercing",
+    "poison",
+    "psychic",
+    "radiant",
+    "slashing",
+    "thunder",
+}
+
+VALID_ARMOR_TYPES = {"light", "medium", "heavy"}
+
+WEAPON_SCHEMA = {
+    "name": str,
+    "type": str,  # Must be "weapon"
+    "damage": str,  # Dice notation (e.g., "1d8")
+    "damage_type": str,  # Must be in VALID_DAMAGE_TYPES
+    "properties": list,  # Optional
+    "bonus": int,  # Optional
+    "weight": int | float,  # Optional
+    "value_gp": int | float,  # Optional
+}
+
+ARMOR_SCHEMA = {
+    "name": str,
+    "type": str,  # Must be "armor"
+    "armor_class": int,  # Range: 1-30
+    "armor_type": str,  # Must be in VALID_ARMOR_TYPES
+    "stealth_disadvantage": bool,  # Optional
+    "strength_requirement": int,  # Optional
+    "weight": int | float,  # Optional
+    "value_gp": int | float,  # Optional
+}
+
+
+def _validate_combat_state(combat_state: dict[str, Any]) -> list[str]:
+    """Validate combat_state structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if "combat_phase" in combat_state:
+        phase = combat_state["combat_phase"]
+        # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+        if not isinstance(phase, str) or phase not in COMBAT_PHASE_ENUM:
+            errors.append(
+                f"Invalid combat_phase '{phase}', must be one of {COMBAT_PHASE_ENUM}"
+            )
+
+    if "combat_session_id" in combat_state:
+        session_id = combat_state["combat_session_id"]
+        if not isinstance(session_id, str):
+            errors.append("combat_session_id must be a string")
+        elif not session_id.startswith("combat_"):
+            errors.append(
+                f"combat_session_id must start with 'combat_', got '{session_id}'"
+            )
+        else:
+            # Validate format: combat_<timestamp>_<4char>
+            # Timestamp should be numeric, suffix should be 4 alphanumeric characters
+            pattern = r"^combat_\d+_[a-zA-Z0-9]{4}$"
+            if not re.match(pattern, session_id):
+                errors.append(
+                    f"combat_session_id must match format 'combat_<timestamp>_<4char>', got '{session_id}'"
+                )
+
+    return errors
+
+
+def _validate_reputation(reputation: dict[str, Any]) -> list[str]:
+    """Validate reputation structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if "public" in reputation:
+        public = reputation["public"]
+        if isinstance(public, dict):
+            if "score" in public:
+                score = public["score"]
+                # Strict type checking: must be int, not float (e.g., 50.0 is rejected)
+                if not isinstance(score, int) or score < -100 or score > 100:
+                    errors.append(
+                        f"Public reputation score must be an integer between -100 and +100, got {score}"
+                    )
+
+            if "notoriety_level" in public:
+                level = public["notoriety_level"]
+                # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+                if not isinstance(level, str) or level not in VALID_NOTORIETY_LEVELS:
+                    errors.append(
+                        f"Invalid notoriety_level '{level}', must be one of {VALID_NOTORIETY_LEVELS}"
+                    )
+
+    if "private" in reputation:
+        private = reputation["private"]
+        if isinstance(private, dict):
+            for faction_id, faction_data in private.items():
+                if isinstance(faction_data, dict):
+                    if "score" in faction_data:
+                        score = faction_data["score"]
+                        # Strict type checking: must be int, not float (e.g., 5.0 is rejected)
+                        if not isinstance(score, int) or score < -10 or score > 10:
+                            errors.append(
+                                f"Private reputation score for {faction_id} must be an integer between -10 and +10, got {score}"
+                            )
+
+                    if "standing" in faction_data:
+                        standing = faction_data["standing"]
+                        # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+                        if (
+                            not isinstance(standing, str)
+                            or standing not in VALID_STANDING_LEVELS
+                        ):
+                            errors.append(
+                                f"Invalid standing '{standing}' for {faction_id}, must be one of {VALID_STANDING_LEVELS}"
+                            )
+
+    return errors
+
+
+def _validate_relationship(relationship: dict[str, Any]) -> list[str]:
+    """Validate relationship structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if "trust_level" in relationship:
+        trust_level = relationship["trust_level"]
+        # Strict type checking: must be int, not float (e.g., 5.0 is rejected)
+        if not isinstance(trust_level, int) or trust_level < -10 or trust_level > 10:
+            errors.append(
+                f"trust_level must be an integer between -10 and +10, got {trust_level}"
+            )
+
+    if "disposition" in relationship:
+        disposition = relationship["disposition"]
+        # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+        if not isinstance(disposition, str) or disposition not in VALID_DISPOSITIONS:
+            errors.append(
+                f"Invalid disposition '{disposition}', must be one of {VALID_DISPOSITIONS}"
+            )
+
+    return errors
+
+
+def _validate_world_time(world_time: dict[str, Any]) -> list[str]:
+    """Validate world_time structure. Returns list of error messages (empty if valid).
+
+    Validates 6 of 8 required fields (day, hour, minute, second, microsecond, time_of_day).
+    Year and month are not validated as they have no range constraints (year: any int, month: str | int).
+    """
+    errors = []
+
+    if "day" in world_time:
+        day = world_time["day"]
+        # Strict type checking: must be int, not float (e.g., 15.0 is rejected)
+        if not isinstance(day, int) or day < 1 or day > 31:
+            errors.append(f"day must be an integer between 1 and 31, got {day}")
+
+    if "hour" in world_time:
+        hour = world_time["hour"]
+        # Strict type checking: must be int, not float (e.g., 10.0 is rejected)
+        if not isinstance(hour, int) or hour < 0 or hour > 23:
+            errors.append(f"hour must be an integer between 0 and 23, got {hour}")
+
+    if "minute" in world_time:
+        minute = world_time["minute"]
+        # Strict type checking: must be int, not float (e.g., 30.0 is rejected)
+        if not isinstance(minute, int) or minute < 0 or minute > 59:
+            errors.append(f"minute must be an integer between 0 and 59, got {minute}")
+
+    if "second" in world_time:
+        second = world_time["second"]
+        # Strict type checking: must be int, not float (e.g., 45.0 is rejected)
+        if not isinstance(second, int) or second < 0 or second > 59:
+            errors.append(f"second must be an integer between 0 and 59, got {second}")
+
+    if "microsecond" in world_time:
+        microsecond = world_time["microsecond"]
+        # Strict type checking: must be int, not float (e.g., 123456.0 is rejected)
+        if not isinstance(microsecond, int) or microsecond < 0 or microsecond > 999999:
+            errors.append(
+                f"microsecond must be an integer between 0 and 999999, got {microsecond}"
+            )
+
+    if "time_of_day" in world_time:
+        time_of_day = world_time["time_of_day"]
+        # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+        if not isinstance(time_of_day, str) or time_of_day not in VALID_TIME_OF_DAY:
+            errors.append(
+                f"Invalid time_of_day '{time_of_day}', must be one of {VALID_TIME_OF_DAY}"
+            )
+
+    return errors
+
+
+def _validate_encounter_state(encounter_state: dict[str, Any]) -> list[str]:
+    """Validate encounter_state structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if "encounter_type" in encounter_state:
+        encounter_type = encounter_state["encounter_type"]
+        # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+        if (
+            not isinstance(encounter_type, str)
+            or encounter_type not in VALID_ENCOUNTER_TYPES
+        ):
+            errors.append(
+                f"Invalid encounter_type '{encounter_type}', must be one of {VALID_ENCOUNTER_TYPES}"
+            )
+
+    if "difficulty" in encounter_state:
+        difficulty = encounter_state["difficulty"]
+        # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+        if (
+            not isinstance(difficulty, str)
+            or difficulty not in VALID_ENCOUNTER_DIFFICULTIES
+        ):
+            errors.append(
+                f"Invalid difficulty '{difficulty}', must be one of {VALID_ENCOUNTER_DIFFICULTIES}"
+            )
+
+    return errors
+
+
+def _validate_frozen_plans(frozen_plans: dict[str, Any]) -> list[str]:
+    """Validate frozen_plans structure. Returns list of error messages (empty if valid).
+
+    Note: frozen_plans is LLM-enforced via prompts, but we validate structure for consistency.
+    """
+    errors = []
+
+    if not isinstance(frozen_plans, dict):
+        errors.append("frozen_plans must be a dict")
+        return errors
+
+    for plan_key, plan_data in frozen_plans.items():
+        if not isinstance(plan_data, dict):
+            errors.append(f"frozen_plans.{plan_key} must be a dict")
+            continue
+
+        # Validate required fields exist
+        required_fields = [
+            "failed_at",
+            "freeze_until",
+            "original_dc",
+            "freeze_hours",
+            "description",
+        ]
+        for field in required_fields:
+            if field not in plan_data:
+                errors.append(
+                    f"frozen_plans.{plan_key} missing required field: {field}"
+                )
+
+        # Validate original_dc is integer
+        if "original_dc" in plan_data and not isinstance(plan_data["original_dc"], int):
+            errors.append(f"frozen_plans.{plan_key}.original_dc must be an integer")
+
+        # Validate freeze_hours is integer
+        if "freeze_hours" in plan_data and not isinstance(
+            plan_data["freeze_hours"], int
+        ):
+            errors.append(f"frozen_plans.{plan_key}.freeze_hours must be an integer")
+
+    return errors
+
+
+def _validate_directives(directives: dict[str, Any]) -> list[str]:
+    """Validate directives structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if "add" in directives:
+        if not isinstance(directives["add"], list):
+            errors.append("directives.add must be an array")
+        elif not all(isinstance(item, str) for item in directives["add"]):
+            errors.append("directives.add must be an array of strings")
+
+    if "drop" in directives:
+        if not isinstance(directives["drop"], list):
+            errors.append("directives.drop must be an array")
+        elif not all(isinstance(item, str) for item in directives["drop"]):
+            errors.append("directives.drop must be an array of strings")
+
+    return errors
+
+
+def _validate_equipment_slots(equipment: dict[str, Any]) -> list[str]:
+    """Validate equipment slot names. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(equipment, dict):
+        errors.append("equipment must be a dict")
+        return errors
+
+    for slot_name in equipment:
+        # Check for forbidden slot mappings
+        if slot_name in FORBIDDEN_SLOT_MAPPINGS:
+            errors.append(
+                f"Invalid equipment slot '{slot_name}', use '{FORBIDDEN_SLOT_MAPPINGS[slot_name]}' instead"
+            )
+        # Check if slot is valid (allow array slots like weapons/backpack)
+        elif slot_name not in VALID_EQUIPMENT_SLOTS:
+            errors.append(
+                f"Invalid equipment slot '{slot_name}', must be one of {VALID_EQUIPMENT_SLOTS}"
+            )
+
+    return errors
+
+
+def _validate_arc_milestones(arc_milestones: dict[str, Any]) -> list[str]:
+    """Validate arc_milestones structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(arc_milestones, dict):
+        errors.append("arc_milestones must be a dict")
+        return errors
+
+    for arc_key, milestone_data in arc_milestones.items():
+        if not isinstance(milestone_data, dict):
+            errors.append(f"arc_milestones.{arc_key} must be a dict")
+            continue
+
+        # Validate status enum
+        if "status" in milestone_data:
+            status = milestone_data["status"]
+            # Type check before set membership to avoid TypeError on unhashable types (list/dict)
+            if not isinstance(status, str) or status not in VALID_ARC_MILESTONE_STATUS:
+                errors.append(
+                    f"arc_milestones.{arc_key}.status must be one of {VALID_ARC_MILESTONE_STATUS}, got '{status}'"
+                )
+
+        # Validate progress range (0-100)
+        if "progress" in milestone_data:
+            progress = milestone_data["progress"]
+            # Strict type checking: must be int, not float (e.g., 45.0 is rejected)
+            if not isinstance(progress, int) or progress < 0 or progress > 100:
+                errors.append(
+                    f"arc_milestones.{arc_key}.progress must be an integer between 0 and 100, got {progress}"
+                )
+
+    return errors
+
+
+def _validate_time_pressure_warnings(
+    time_pressure_warnings: dict[str, Any],
+) -> list[str]:
+    """Validate time_pressure_warnings structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(time_pressure_warnings, dict):
+        errors.append("time_pressure_warnings must be a dict")
+        return errors
+
+    # Validate boolean fields
+    for field in ["subtle_given", "clear_given", "urgent_given"]:
+        if field in time_pressure_warnings:
+            if not isinstance(time_pressure_warnings[field], bool):
+                errors.append(f"time_pressure_warnings.{field} must be a boolean")
+
+    # Validate last_warning_day is integer
+    if "last_warning_day" in time_pressure_warnings:
+        if not isinstance(time_pressure_warnings["last_warning_day"], int):
+            errors.append("time_pressure_warnings.last_warning_day must be an integer")
+
+    return errors
+
+
+def _validate_resources(resources: dict[str, Any]) -> list[str]:
+    """Validate resources structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(resources, dict):
+        errors.append("resources must be a dict")
+        return errors
+
+    # Validate gold (must be int >= 0)
+    if "gold" in resources:
+        gold = resources["gold"]
+        if gold is None:
+            errors.append("resources.gold cannot be None")
+        elif isinstance(gold, float) and gold.is_integer():
+            # Allow whole number floats like 50.0
+            pass  # Valid
+        elif not isinstance(gold, int) or gold < 0:
+            errors.append(f"resources.gold must be an integer >= 0, got {gold}")
+
+    # Validate hit_dice structure
+    if "hit_dice" in resources:
+        hit_dice = resources["hit_dice"]
+        if isinstance(hit_dice, dict):
+            # Accept both "max" (actual game state) and "total" (legacy schema)
+            used = hit_dice.get("used")
+            # Preserve 0 values - only fall back to "total" if "max" is missing (not if it's 0)
+            max_or_total = hit_dice.get("max") if "max" in hit_dice else hit_dice.get("total")
+
+            if used is None:
+                errors.append("resources.hit_dice.used cannot be None")
+            elif isinstance(used, float) and used.is_integer():
+                # Allow whole number floats
+                pass
+            elif not isinstance(used, int) or used < 0:
+                errors.append(
+                    f"resources.hit_dice.used must be an integer >= 0, got {used}"
+                )
+
+            if max_or_total is None:
+                errors.append("resources.hit_dice.max/total cannot be None")
+            elif isinstance(max_or_total, float) and max_or_total.is_integer():
+                # Allow whole number floats
+                pass
+            elif not isinstance(max_or_total, int) or max_or_total < 0:
+                errors.append(
+                    f"resources.hit_dice.max/total must be an integer >= 0, got {max_or_total}"
+                )
+
+            # Validate used <= max/total
+            if used is not None and max_or_total is not None:
+                if (
+                    isinstance(used, int)
+                    and isinstance(max_or_total, int)
+                    and used > max_or_total
+                ):
+                    errors.append(
+                        f"resources.hit_dice.used ({used}) cannot exceed max/total ({max_or_total})"
+                    )
+
+            # Warn if both "max" and "total" are present (should use only one)
+            if "max" in hit_dice and "total" in hit_dice:
+                errors.append(
+                    "resources.hit_dice has both 'max' and 'total' - use only 'max'"
+                )
+
+    # Validate consumables (can be dict or array)
+    if "consumables" in resources:
+        consumables = resources["consumables"]
+        if consumables is not None and not isinstance(consumables, (dict, list)):
+            errors.append(
+                f"resources.consumables must be a dict or array, got {type(consumables).__name__}"
+            )
+
+    # Note: spell_slots and class_features are validated separately in _validate_state_updates()
+    # to provide clearer error message prefixes (SPELL_SLOTS_VALIDATION vs RESOURCES_VALIDATION)
+
+    return errors
+
+
+def _validate_spell_slots(spell_slots: dict[str, Any]) -> list[str]:
+    """Validate spell_slots structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(spell_slots, dict):
+        errors.append("spell_slots must be a dict")
+        return errors
+
+    for level_key, level_data in spell_slots.items():
+        # Validate level key format (level_1 through level_9)
+        if level_key not in VALID_SPELL_SLOT_LEVELS:
+            errors.append(
+                f"Invalid spell slot level '{level_key}', must be one of {VALID_SPELL_SLOT_LEVELS}"
+            )
+
+        # Validate level data structure
+        if isinstance(level_data, dict):
+            # Accept both "used" (actual game state) and "current" (legacy schema)
+            # Preserve 0 values - only fall back to "current" if "used" is missing (not if it's 0)
+            used_value = level_data.get("used") if "used" in level_data else level_data.get("current")
+
+            if used_value is not None:
+                # Strict type checking: must be int, not float
+                if not isinstance(used_value, int) or used_value < 0:
+                    errors.append(
+                        f"spell_slots.{level_key}.used/current must be an integer >= 0, got {used_value}"
+                    )
+
+            if "max" in level_data:
+                max_slots = level_data["max"]
+                # Strict type checking: must be int, not float
+                if not isinstance(max_slots, int) or max_slots < 0:
+                    errors.append(
+                        f"spell_slots.{level_key}.max must be an integer >= 0, got {max_slots}"
+                    )
+
+            # Validate used/current <= max
+            if used_value is not None and "max" in level_data:
+                max_slots = level_data["max"]
+                if (
+                    isinstance(used_value, int)
+                    and isinstance(max_slots, int)
+                    and used_value > max_slots
+                ):
+                    errors.append(
+                        f"spell_slots.{level_key}.used/current ({used_value}) cannot exceed max ({max_slots})"
+                    )
+
+            # Warn if both "used" and "current" are present (should use only one)
+            if "used" in level_data and "current" in level_data:
+                errors.append(
+                    f"spell_slots.{level_key} has both 'used' and 'current' - use only 'used'"
+                )
+
+    return errors
+
+
+def _validate_class_features(class_features: dict[str, Any]) -> list[str]:
+    """Validate class_features structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(class_features, dict):
+        errors.append("class_features must be a dict")
+        return errors
+
+    for feature_name, feature_data in class_features.items():
+        # Validate feature data structure
+        if isinstance(feature_data, dict):
+            # Accept both "used" (actual game state) and "current" (legacy schema)
+            # Preserve 0 values - only fall back to "current" if "used" is missing (not if it's 0)
+            used_value = feature_data.get("used") if "used" in feature_data else feature_data.get("current")
+
+            if used_value is not None:
+                # Strict type checking: must be int, not float
+                if not isinstance(used_value, int) or used_value < 0:
+                    errors.append(
+                        f"class_features.{feature_name}.used/current must be an integer >= 0, got {used_value}"
+                    )
+
+            if "max" in feature_data:
+                max_value = feature_data["max"]
+                # Strict type checking: must be int, not float
+                if not isinstance(max_value, int) or max_value < 0:
+                    errors.append(
+                        f"class_features.{feature_name}.max must be an integer >= 0, got {max_value}"
+                    )
+
+            # Validate used/current <= max
+            if used_value is not None and "max" in feature_data:
+                max_value = feature_data["max"]
+                if (
+                    isinstance(used_value, int)
+                    and isinstance(max_value, int)
+                    and used_value > max_value
+                ):
+                    errors.append(
+                        f"class_features.{feature_name}.used/current ({used_value}) cannot exceed max ({max_value})"
+                    )
+
+            # Warn if both "used" and "current" are present (should use only one)
+            if "used" in feature_data and "current" in feature_data:
+                errors.append(
+                    f"class_features.{feature_name} has both 'used' and 'current' - use only 'used'"
+                )
+
+    return errors
+
+
+def _validate_attributes(player_data: dict[str, Any]) -> list[str]:
+    """Validate attributes structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    base_attributes = player_data.get("base_attributes", {})
+    attributes = player_data.get("attributes", {})
+
+    if not isinstance(base_attributes, dict) or not isinstance(attributes, dict):
+        return ["base_attributes and attributes must be dicts"]
+
+    # Collect all attribute keys from both dicts to validate what's actually present
+    all_attr_keys = set(base_attributes.keys()) | set(attributes.keys())
+
+    # Validate each attribute stat that appears in either dict
+    for stat_name in all_attr_keys:
+        # Check if it's a valid attribute name (either abbreviated or full format)
+        if stat_name not in VALID_ATTRIBUTE_NAMES:
+            errors.append(
+                f"Unknown attribute name '{stat_name}'. Valid names are: {sorted(VALID_ATTRIBUTE_NAMES_ABBREV)} or {sorted(VALID_ATTRIBUTE_NAMES_FULL)}"
+            )
+            continue
+
+        base_value = base_attributes.get(stat_name)
+        if base_value is not None:
+            if isinstance(base_value, float) and base_value.is_integer():
+                # Allow whole number floats
+                pass
+            elif not isinstance(base_value, int) or base_value < 1 or base_value > 30:
+                errors.append(
+                    f"base_attributes.{stat_name} must be an integer between 1 and 30, got {base_value}"
+                )
+
+        attr_value = attributes.get(stat_name)
+        if attr_value is not None:
+            if isinstance(attr_value, float) and attr_value.is_integer():
+                # Allow whole number floats
+                pass
+            elif not isinstance(attr_value, int) or attr_value < 1 or attr_value > 30:
+                errors.append(
+                    f"attributes.{stat_name} must be an integer between 1 and 30, got {attr_value}"
+                )
+
+        # Validate attributes >= base_attributes (equipment can only add)
+        if base_value is not None and attr_value is not None:
+            if (
+                isinstance(base_value, (int, float))
+                and isinstance(attr_value, (int, float))
+                and float(attr_value) < float(base_value)
+            ):
+                errors.append(
+                    f"attributes.{stat_name} ({attr_value}) cannot be less than base_attributes.{stat_name} ({base_value})"
+                )
+
+    return errors
+
+
+def _validate_experience(experience: dict[str, Any]) -> list[str]:
+    """Validate experience structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(experience, dict):
+        errors.append("experience must be a dict")
+        return errors
+
+    if "current" in experience:
+        current = experience["current"]
+        # Strict type checking: must be int, not float
+        if not isinstance(current, int) or current < 0:
+            errors.append(f"experience.current must be an integer >= 0, got {current}")
+
+    if "needed_for_next_level" in experience:
+        needed = experience["needed_for_next_level"]
+        # Strict type checking: must be int, not float
+        if not isinstance(needed, int) or needed < 0:
+            errors.append(
+                f"experience.needed_for_next_level must be an integer >= 0, got {needed}"
+            )
+
+    # Warn if current > needed_for_next_level (should trigger level up)
+    if "current" in experience and "needed_for_next_level" in experience:
+        current = experience["current"]
+        needed = experience["needed_for_next_level"]
+        if isinstance(current, int) and isinstance(needed, int) and current > needed:
+            errors.append(
+                f"experience.current ({current}) exceeds needed_for_next_level ({needed}) - level up should trigger"
+            )
+
+    return errors
+
+
+def _validate_death_saves(death_saves: dict[str, Any]) -> list[str]:
+    """Validate death_saves structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(death_saves, dict):
+        errors.append("death_saves must be a dict")
+        return errors
+
+    if "successes" in death_saves:
+        successes = death_saves["successes"]
+        # Strict type checking: must be int, not float
+        if not isinstance(successes, int) or successes < 0 or successes > 3:
+            errors.append(
+                f"death_saves.successes must be an integer between 0 and 3, got {successes}"
+            )
+
+    if "failures" in death_saves:
+        failures = death_saves["failures"]
+        # Strict type checking: must be int, not float
+        if not isinstance(failures, int) or failures < 0 or failures > 3:
+            errors.append(
+                f"death_saves.failures must be an integer between 0 and 3, got {failures}"
+            )
+
+    return errors
+
+
+def _validate_spells_known(spells_known: list[dict[str, Any]]) -> list[str]:
+    """Validate spells_known array structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(spells_known, list):
+        errors.append("spells_known must be an array")
+        return errors
+
+    for idx, spell in enumerate(spells_known):
+        if not isinstance(spell, dict):
+            errors.append(f"spells_known[{idx}] must be a dict")
+            continue
+
+        # Required: name field
+        if (
+            "name" not in spell
+            or not isinstance(spell["name"], str)
+            or not spell["name"].strip()
+        ):
+            errors.append(f"spells_known[{idx}] missing required 'name' field")
+
+        # Required: level field
+        if "level" in spell:
+            level = spell["level"]
+            # Strict type checking: must be int, not float
+            if not isinstance(level, int) or level < 0 or level > 9:
+                errors.append(
+                    f"spells_known[{idx}].level must be an integer between 0 and 9, got {level}"
+                )
+        else:
+            errors.append(f"spells_known[{idx}] missing required 'level' field")
+
+    return errors
+
+
+def _validate_status_conditions(status_conditions: Any) -> list[str]:
+    """Validate status_conditions array structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(status_conditions, list):
+        return ["status_conditions must be an array"]
+
+    for idx, condition in enumerate(status_conditions):
+        if not isinstance(condition, str):
+            errors.append(f"status_conditions[{idx}] must be a string")
+            continue
+
+        # Warn on unknown conditions (but don't fail - allow custom conditions)
+        condition_normalized = condition.strip()
+        if condition_normalized and condition_normalized not in VALID_STATUS_CONDITIONS:
+            # Log warning but don't add to errors (permissive validation)
+            pass  # Could add warning here if needed
+
+    return errors
+
+
+def _validate_active_effects(active_effects: Any) -> list[str]:
+    """Validate active_effects array structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(active_effects, list):
+        return ["active_effects must be an array"]
+
+    for idx, effect in enumerate(active_effects):
+        if not isinstance(effect, str):
+            errors.append(f"active_effects[{idx}] must be a string")
+            continue
+
+        # Basic format validation: should describe effect and mechanical benefit
+        if not effect.strip():
+            errors.append(f"active_effects[{idx}] cannot be empty")
+
+    return errors
+
+
+def _validate_combat_stats(combat_stats: dict[str, Any]) -> list[str]:
+    """Validate combat_stats structure. Returns list of error messages (empty if valid)."""
+    errors = []
+
+    if not isinstance(combat_stats, dict):
+        return ["combat_stats must be a dict"]
+
+    if "speed" in combat_stats:
+        speed = combat_stats["speed"]
+        # Strict type checking: must be int, not float
+        if not isinstance(speed, int) or speed < 0:
+            errors.append(f"combat_stats.speed must be an integer >= 0, got {speed}")
+
+    if "passive_perception" in combat_stats:
+        passive_perception = combat_stats["passive_perception"]
+        # Strict type checking: must be int, not float
+        if not isinstance(passive_perception, int) or passive_perception < 0:
+            errors.append(
+                f"combat_stats.passive_perception must be an integer >= 0, got {passive_perception}"
+            )
+
+    # initiative is optional and can be any int (no range constraint)
+
+    return errors
+
+
+def _validate_item(item: dict[str, Any], item_name: str = "item") -> list[str]:
+    """Validate item structure (weapon, armor, or general item). Returns list of error messages."""
+    errors = []
+
+    if not isinstance(item, dict):
+        return [f"{item_name} must be a dict"]
+
+    item_type = item.get("type", "")
+
+    # Warn on unknown/non-empty item types (but don't fail - allow custom types)
+    if item_type and item_type not in ("weapon", "armor"):
+        errors.append(
+            f"{item_name}.type '{item_type}' is not a recognized type (expected 'weapon' or 'armor')"
+        )
+
+    # Validate weapon
+    if item_type == "weapon":
+        if "damage" in item:
+            damage = item["damage"]
+            if not isinstance(damage, str) or not damage.strip():
+                errors.append(
+                    f"{item_name}.damage must be a non-empty string (dice notation)"
+                )
+
+        if "damage_type" in item:
+            damage_type = item["damage_type"]
+            if (
+                isinstance(damage_type, str)
+                and damage_type.lower() not in VALID_DAMAGE_TYPES
+            ):
+                errors.append(
+                    f"{item_name}.damage_type '{damage_type}' must be one of {VALID_DAMAGE_TYPES}"
+                )
+
+    # Validate armor
+    elif item_type == "armor":
+        if "armor_class" in item:
+            ac = item["armor_class"]
+            # Strict type checking: must be int, not float
+            if not isinstance(ac, int) or ac < 1 or ac > 30:
+                errors.append(
+                    f"{item_name}.armor_class must be an integer between 1 and 30, got {ac}"
+                )
+
+        if "armor_type" in item:
+            armor_type = item["armor_type"]
+            if (
+                isinstance(armor_type, str)
+                and armor_type.lower() not in VALID_ARMOR_TYPES
+            ):
+                errors.append(
+                    f"{item_name}.armor_type '{armor_type}' must be one of {VALID_ARMOR_TYPES}"
+                )
+
+    return errors
 
 
 def _derive_quality_tier(success: bool, margin: int) -> str:
@@ -526,7 +1771,7 @@ class NarrativeResponse:
         self.state_updates = self._validate_state_updates(state_updates)
         self.debug_info = self._validate_debug_info(debug_info)
         self.god_mode_response = god_mode_response
-        self.directives = (
+        self.directives = self._validate_directives_field(
             directives or {}
         )  # God mode directives: {add: [...], drop: [...]}
 
@@ -607,6 +1852,13 @@ class NarrativeResponse:
         Note: frozen_plans is LLM-enforced via prompts, not Python-validated.
         The LLM tracks freeze state and enforces re-think cooldowns based on
         the rules in think_mode_instruction.md and planning_protocol.md.
+
+        Per roadmap/llm_schema_alignment_gaps.md, this method now validates:
+        - combat_state (Priority 1)
+        - reputation (Priority 1)
+        - relationships (Priority 2)
+        - world_time (Priority 2)
+        - encounter_state (Priority 2)
         """
         if state_updates is None:
             return {}
@@ -617,9 +1869,312 @@ class NarrativeResponse:
             )
             return {}
 
-        # Pass through state_updates with minimal validation
-        # frozen_plans enforcement is handled by LLM prompts, not Python code
-        return dict(state_updates)
+        validated = dict(state_updates)
+
+        # Validate combat_state (Priority 1)
+        if "combat_state" in validated:
+            combat_state = validated["combat_state"]
+            if isinstance(combat_state, dict):
+                try:
+                    errors = _validate_combat_state(combat_state)
+                    if errors:
+                        for error in errors:
+                            logging_util.warning(f"⚠️ COMBAT_STATE_VALIDATION: {error}")
+                except Exception as e:
+                    logging_util.error(f"⚠️ COMBAT_STATE_VALIDATION: Validation failed with exception: {e}")
+
+        # Validate reputation (Priority 1)
+        if "custom_campaign_state" in validated:
+            custom_state = validated["custom_campaign_state"]
+            if isinstance(custom_state, dict) and "reputation" in custom_state:
+                reputation = custom_state["reputation"]
+                if isinstance(reputation, dict):
+                    try:
+                        errors = _validate_reputation(reputation)
+                        if errors:
+                            for error in errors:
+                                logging_util.warning(f"⚠️ REPUTATION_VALIDATION: {error}")
+                    except Exception as e:
+                        logging_util.error(f"⚠️ REPUTATION_VALIDATION: Validation failed with exception: {e}")
+
+        # Validate relationships (Priority 2)
+        if "npc_data" in validated:
+            npc_data = validated["npc_data"]
+            if isinstance(npc_data, dict):
+                for npc_name, npc_info in npc_data.items():
+                    if isinstance(npc_info, dict) and "relationships" in npc_info:
+                        relationships = npc_info["relationships"]
+                        if isinstance(relationships, dict):
+                            for rel_name, relationship in relationships.items():
+                                if isinstance(relationship, dict):
+                                    try:
+                                        errors = _validate_relationship(relationship)
+                                        if errors:
+                                            for error in errors:
+                                                logging_util.warning(
+                                                    f"⚠️ RELATIONSHIP_VALIDATION ({npc_name}.{rel_name}): {error}"
+                                                )
+                                    except Exception as e:
+                                        logging_util.error(f"⚠️ RELATIONSHIP_VALIDATION ({npc_name}.{rel_name}): Validation failed with exception: {e}")
+
+        # Validate world_time (Priority 2)
+        if "world_data" in validated:
+            world_data = validated["world_data"]
+            if isinstance(world_data, dict) and "world_time" in world_data:
+                world_time = world_data["world_time"]
+                if isinstance(world_time, dict):
+                    try:
+                        errors = _validate_world_time(world_time)
+                        if errors:
+                            for error in errors:
+                                logging_util.warning(f"⚠️ WORLD_TIME_VALIDATION: {error}")
+                    except Exception as e:
+                        logging_util.error(f"⚠️ WORLD_TIME_VALIDATION: Validation failed with exception: {e}")
+
+        # Validate encounter_state (Priority 2)
+        if "encounter_state" in validated:
+            encounter_state = validated["encounter_state"]
+            if isinstance(encounter_state, dict):
+                try:
+                    errors = _validate_encounter_state(encounter_state)
+                    if errors:
+                        for error in errors:
+                            logging_util.warning(f"⚠️ ENCOUNTER_STATE_VALIDATION: {error}")
+                except Exception as e:
+                    logging_util.error(f"⚠️ ENCOUNTER_STATE_VALIDATION: Validation failed with exception: {e}")
+
+        # Validate frozen_plans (Priority 3)
+        if "frozen_plans" in validated:
+            frozen_plans = validated["frozen_plans"]
+            if isinstance(frozen_plans, dict):
+                try:
+                    errors = _validate_frozen_plans(frozen_plans)
+                    if errors:
+                        for error in errors:
+                            logging_util.warning(f"⚠️ FROZEN_PLANS_VALIDATION: {error}")
+                except Exception as e:
+                    logging_util.error(f"⚠️ FROZEN_PLANS_VALIDATION: Validation failed with exception: {e}")
+
+        # Validate equipment slots (Priority 3)
+        if "player_character_data" in validated:
+            player_data = validated["player_character_data"]
+            if isinstance(player_data, dict) and "equipment" in player_data:
+                equipment = player_data["equipment"]
+                if isinstance(equipment, dict):
+                    try:
+                        errors = _validate_equipment_slots(equipment)
+                        if errors:
+                            for error in errors:
+                                logging_util.warning(
+                                    f"⚠️ EQUIPMENT_SLOT_VALIDATION: {error}"
+                                )
+                    except Exception as e:
+                        logging_util.error(f"⚠️ EQUIPMENT_SLOT_VALIDATION: Validation failed with exception: {e}")
+
+        # Validate resources (Priority 1)
+        if "player_character_data" in validated:
+            player_data = validated["player_character_data"]
+            if isinstance(player_data, dict):
+                # Validate resources structure (gold, hit_dice, consumables)
+                if "resources" in player_data:
+                    resources = player_data["resources"]
+                    if isinstance(resources, dict):
+                        # Validate resources structure (gold, hit_dice)
+                        try:
+                            errors = _validate_resources(resources)
+                            if errors:
+                                for error in errors:
+                                    logging_util.warning(f"⚠️ RESOURCES_VALIDATION: {error}")
+                        except Exception as e:
+                            logging_util.error(f"⚠️ RESOURCES_VALIDATION: Validation failed with exception: {e}")
+
+                        # Validate spell_slots separately (for clearer error messages)
+                        if "spell_slots" in resources:
+                            spell_slots = resources["spell_slots"]
+                            if isinstance(spell_slots, dict):
+                                try:
+                                    spell_slot_errors = _validate_spell_slots(spell_slots)
+                                    if spell_slot_errors:
+                                        for error in spell_slot_errors:
+                                            logging_util.warning(
+                                                f"⚠️ SPELL_SLOTS_VALIDATION: {error}"
+                                            )
+                                except Exception as e:
+                                    logging_util.error(f"⚠️ SPELL_SLOTS_VALIDATION: Validation failed with exception: {e}")
+
+                        # Validate class_features separately (for clearer error messages)
+                        if "class_features" in resources:
+                            class_features = resources["class_features"]
+                            if isinstance(class_features, dict):
+                                try:
+                                    class_feature_errors = _validate_class_features(
+                                        class_features
+                                    )
+                                    if class_feature_errors:
+                                        for error in class_feature_errors:
+                                            logging_util.warning(
+                                                f"⚠️ CLASS_FEATURES_VALIDATION: {error}"
+                                            )
+                                except Exception as e:
+                                    logging_util.error(f"⚠️ CLASS_FEATURES_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate attributes (Priority 2)
+                if "base_attributes" in player_data or "attributes" in player_data:
+                    try:
+                        attribute_errors = _validate_attributes(player_data)
+                        if attribute_errors:
+                            for error in attribute_errors:
+                                logging_util.warning(f"⚠️ ATTRIBUTES_VALIDATION: {error}")
+                    except Exception as e:
+                        logging_util.error(f"⚠️ ATTRIBUTES_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate experience (Priority 2)
+                if "experience" in player_data:
+                    experience = player_data["experience"]
+                    if isinstance(experience, dict):
+                        try:
+                            experience_errors = _validate_experience(experience)
+                            if experience_errors:
+                                for error in experience_errors:
+                                    logging_util.warning(
+                                        f"⚠️ EXPERIENCE_VALIDATION: {error}"
+                                    )
+                        except Exception as e:
+                            logging_util.error(f"⚠️ EXPERIENCE_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate death_saves (Priority 2)
+                if "death_saves" in player_data:
+                    death_saves = player_data["death_saves"]
+                    if isinstance(death_saves, dict):
+                        try:
+                            death_saves_errors = _validate_death_saves(death_saves)
+                            if death_saves_errors:
+                                for error in death_saves_errors:
+                                    logging_util.warning(
+                                        f"⚠️ DEATH_SAVES_VALIDATION: {error}"
+                                    )
+                        except Exception as e:
+                            logging_util.error(f"⚠️ DEATH_SAVES_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate spells_known (Priority 2)
+                if "spells_known" in player_data:
+                    spells_known = player_data["spells_known"]
+                    if isinstance(spells_known, list):
+                        try:
+                            spells_known_errors = _validate_spells_known(spells_known)
+                            if spells_known_errors:
+                                for error in spells_known_errors:
+                                    logging_util.warning(
+                                        f"⚠️ SPELLS_KNOWN_VALIDATION: {error}"
+                                    )
+                        except Exception as e:
+                            logging_util.error(f"⚠️ SPELLS_KNOWN_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate status_conditions (Priority 3)
+                if "status_conditions" in player_data:
+                    status_conditions = player_data["status_conditions"]
+                    try:
+                        status_conditions_errors = _validate_status_conditions(
+                            status_conditions
+                        )
+                        if status_conditions_errors:
+                            for error in status_conditions_errors:
+                                logging_util.warning(
+                                    f"⚠️ STATUS_CONDITIONS_VALIDATION: {error}"
+                                )
+                    except Exception as e:
+                        logging_util.error(f"⚠️ STATUS_CONDITIONS_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate active_effects (Priority 3)
+                if "active_effects" in player_data:
+                    active_effects = player_data["active_effects"]
+                    try:
+                        active_effects_errors = _validate_active_effects(active_effects)
+                        if active_effects_errors:
+                            for error in active_effects_errors:
+                                logging_util.warning(
+                                    f"⚠️ ACTIVE_EFFECTS_VALIDATION: {error}"
+                                )
+                    except Exception as e:
+                        logging_util.error(f"⚠️ ACTIVE_EFFECTS_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate combat_stats (Priority 3)
+                if "combat_stats" in player_data:
+                    combat_stats = player_data["combat_stats"]
+                    if isinstance(combat_stats, dict):
+                        try:
+                            combat_stats_errors = _validate_combat_stats(combat_stats)
+                            if combat_stats_errors:
+                                for error in combat_stats_errors:
+                                    logging_util.warning(
+                                        f"⚠️ COMBAT_STATS_VALIDATION: {error}"
+                                    )
+                        except Exception as e:
+                            logging_util.error(f"⚠️ COMBAT_STATS_VALIDATION: Validation failed with exception: {e}")
+
+                # Validate equipment items (Priority 3)
+                if "equipment" in player_data:
+                    equipment = player_data["equipment"]
+                    if isinstance(equipment, dict):
+                        # Validate each item in equipment slots
+                        for slot_name, item in equipment.items():
+                            if item is not None and isinstance(item, dict):
+                                try:
+                                    item_errors = _validate_item(
+                                        item, f"equipment.{slot_name}"
+                                    )
+                                    if item_errors:
+                                        for error in item_errors:
+                                            logging_util.warning(
+                                                f"⚠️ ITEM_VALIDATION: {error}"
+                                            )
+                                except Exception as e:
+                                    logging_util.error(f"⚠️ ITEM_VALIDATION (equipment.{slot_name}): Validation failed with exception: {e}")
+                            elif isinstance(item, list):
+                                # Handle array slots (weapons, backpack)
+                                for idx, sub_item in enumerate(item):
+                                    if isinstance(sub_item, dict):
+                                        try:
+                                            item_errors = _validate_item(
+                                                sub_item, f"equipment.{slot_name}[{idx}]"
+                                            )
+                                            if item_errors:
+                                                for error in item_errors:
+                                                    logging_util.warning(
+                                                        f"⚠️ ITEM_VALIDATION: {error}"
+                                                    )
+                                        except Exception as e:
+                                            logging_util.error(f"⚠️ ITEM_VALIDATION (equipment.{slot_name}[{idx}]): Validation failed with exception: {e}")
+
+        # Validate arc_milestones (Priority 4)
+        if "custom_campaign_state" in validated:
+            custom_state = validated["custom_campaign_state"]
+            if isinstance(custom_state, dict) and "arc_milestones" in custom_state:
+                arc_milestones = custom_state["arc_milestones"]
+                if isinstance(arc_milestones, dict):
+                    try:
+                        errors = _validate_arc_milestones(arc_milestones)
+                        if errors:
+                            for error in errors:
+                                logging_util.warning(
+                                    f"⚠️ ARC_MILESTONES_VALIDATION: {error}"
+                                )
+                    except Exception as e:
+                        logging_util.error(f"⚠️ ARC_MILESTONES_VALIDATION: Validation failed with exception: {e}")
+
+        # Validate time_pressure_warnings (Priority 4)
+        if "time_pressure_warnings" in validated:
+            time_pressure_warnings = validated["time_pressure_warnings"]
+            if isinstance(time_pressure_warnings, dict):
+                try:
+                    errors = _validate_time_pressure_warnings(time_pressure_warnings)
+                    if errors:
+                        for error in errors:
+                            logging_util.warning(f"⚠️ TIME_PRESSURE_VALIDATION: {error}")
+                except Exception as e:
+                    logging_util.error(f"⚠️ TIME_PRESSURE_VALIDATION: Validation failed with exception: {e}")
+
+        return validated
 
     def _validate_debug_info(self, debug_info: Any) -> dict[str, Any]:
         """Validate and clean debug info"""
@@ -890,12 +2445,29 @@ class NarrativeResponse:
             return {}
 
         # Use deep copy to avoid mutating nested structures (e.g., mechanics dict)
+        # Schema is defined in game_state_instruction.md
+        # Required fields: trigger, player_intent, original_input, resolution_type, mechanics, audit_flags
         validated = copy.deepcopy(action_resolution)
         
         # Ensure reinterpreted field defaults to False if not provided
         if "reinterpreted" not in validated:
             validated["reinterpreted"] = False
         
+        # Validate required fields exist (warn but don't fail - downstream code may handle gracefully)
+        required_fields = [
+            "trigger",
+            "player_intent",
+            "original_input",
+            "resolution_type",
+            "mechanics",
+            "audit_flags",
+        ]
+        missing_fields = [field for field in required_fields if field not in validated]
+        if missing_fields:
+            logging_util.warning(
+                f"action_resolution missing required fields: {missing_fields}. "
+                "Schema defined in game_state_instruction.md"
+            )
         # Ensure audit_flags is a list (coerce non-list values, but preserve None/empty as empty list)
         if "audit_flags" not in validated:
             validated["audit_flags"] = []
@@ -907,7 +2479,6 @@ class NarrativeResponse:
                 validated["audit_flags"] = [validated["audit_flags"]]
             else:
                 validated["audit_flags"] = []
-        
         # Validate mechanics is a dict if present
         if "mechanics" in validated and validated["mechanics"] is not None:
             if not isinstance(validated["mechanics"], dict):
@@ -915,7 +2486,51 @@ class NarrativeResponse:
                     f"action_resolution.mechanics must be a dict, got {type(validated['mechanics']).__name__}"
                 )
                 validated["mechanics"] = {}
-        
+            elif "outcome" not in validated["mechanics"]:
+                logging_util.warning(
+                    "action_resolution.mechanics missing required 'outcome' field"
+                )
+
+        return validated
+
+    def _validate_directives_field(self, directives: dict[str, Any]) -> dict[str, Any]:
+        """Validate directives field structure."""
+        if not isinstance(directives, dict):
+            logging_util.warning(
+                f"Invalid directives type: {type(directives).__name__}, expected dict. Using empty dict."
+            )
+            return {}
+
+        validated = {}
+        errors = _validate_directives(directives)
+        if errors:
+            for error in errors:
+                logging_util.warning(f"⚠️ DIRECTIVES_VALIDATION: {error}")
+
+        # Coerce add/drop to lists if they exist but aren't lists
+        # Filter out None values to avoid converting None to string "None"
+        if "add" in directives:
+            if isinstance(directives["add"], list):
+                validated["add"] = [
+                    str(item) for item in directives["add"] if item is not None
+                ]
+            else:
+                validated["add"] = [str(directives["add"])] if directives["add"] else []
+        else:
+            validated["add"] = []
+
+        if "drop" in directives:
+            if isinstance(directives["drop"], list):
+                validated["drop"] = [
+                    str(item) for item in directives["drop"] if item is not None
+                ]
+            else:
+                validated["drop"] = (
+                    [str(directives["drop"])] if directives["drop"] else []
+                )
+        else:
+            validated["drop"] = []
+
         return validated
 
 
@@ -1601,7 +3216,7 @@ def parse_structured_response(
                 f"Response may be a list (e.g., dice roll result) instead of a structured response."
             )
             parsed_data = None
-        
+
         if parsed_data:
             try:
                 # Planning blocks should only come from JSON field, not extracted from narrative
@@ -1615,7 +3230,8 @@ def parse_structured_response(
                     and validated_response.god_mode_response
                 ):
                     combined_response = _combine_god_mode_and_narrative(
-                        validated_response.god_mode_response, validated_response.narrative
+                        validated_response.god_mode_response,
+                        validated_response.narrative,
                     )
                     validated_response.narrative = _apply_planning_fallback(
                         validated_response.narrative, validated_response.planning_block
@@ -1658,7 +3274,9 @@ def parse_structured_response(
                     extra_fields = {
                         k: v for k, v in parsed_data.items() if k not in known_fields
                     }
-                    fallback_response = NarrativeResponse(**known_fields, **extra_fields)
+                    fallback_response = NarrativeResponse(
+                        **known_fields, **extra_fields
+                    )
                     combined_response = _combine_god_mode_and_narrative(
                         god_mode_response, fallback_response.narrative
                     )
