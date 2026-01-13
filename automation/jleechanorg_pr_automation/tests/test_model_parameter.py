@@ -79,7 +79,7 @@ class TestModelParameter(unittest.TestCase):
 
     def test_model_parameter_passed_to_dispatcher(self):
         """Test that model parameter is passed through to dispatcher."""
-        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr_with_task') as mock_dispatch,              patch.object(self.monitor, '_post_fix_comment_queued') as mock_queued,              patch.object(self.monitor, '_start_fix_comment_review_watcher') as mock_watcher,              patch.object(self.monitor, '_get_pr_comment_state', return_value=(None, [])):
+        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr_with_task') as mock_dispatch,              patch.object(self.monitor, '_post_fix_comment_queued') as mock_queued,              patch.object(self.monitor, '_start_fix_comment_review_watcher') as mock_watcher,              patch.object(self.monitor, '_get_pr_comment_state', return_value=(None, [])),              patch.object(self.monitor, '_has_unaddressed_comments', return_value=True):
             
             mock_dispatch.return_value = True
             mock_queued.return_value = True

@@ -276,7 +276,7 @@ class TestPRLimits:
         assert len(attempts) == 1
 
         timestamp_str = attempts[0]["timestamp"]
-        timestamp = datetime.fromisoformat(timestamp_str)
+        timestamp = datetime.fromisoformat(timestamp_str).astimezone().replace(tzinfo=None)
         assert before_time <= timestamp <= after_time
 
     def test_get_pr_attempts_empty(self, manager):

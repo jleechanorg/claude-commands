@@ -568,7 +568,8 @@ class AutomationSafetyManager:
                 return False
 
             try:
-                approval_date = REAL_DATETIME.fromisoformat(approval_date_str)
+                # Use replace(tzinfo=None) for compatibility with datetime.now()
+                approval_date = REAL_DATETIME.fromisoformat(approval_date_str).replace(tzinfo=None)
             except (TypeError, ValueError):
                 return False
             expiry = approval_date + timedelta(hours=self.approval_hours)
