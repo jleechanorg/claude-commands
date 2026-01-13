@@ -352,3 +352,282 @@ class TestGetLastCodexAutomationCommentTime(unittest.TestCase):
 
         result = self.monitor._get_last_codex_automation_comment_time(comments)  # noqa: SLF001
         assert result == "2024-01-01T15:00:00Z"
+
+
+class TestFixCommentCheckpointLogic(unittest.TestCase):
+    """Test fix-comment checkpoint logic: completion marker before history."""
+
+    def setUp(self) -> None:
+        self.monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
+
+    def test_completion_marker_with_no_unaddressed_comments_skips(self):
+        """Test that completion marker + no unaddressed comments skips."""
+        head_sha = "abc123def"
+        
+        # Mock methods
+        original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
+        original_count = self.monitor._count_workflow_comments  # noqa: SLF001
+        original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
+        original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
+        original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
+        
+        def mock_get_state(*_):  # noqa: ARG001
+            return (head_sha, [])
+        
+        def mock_count(*_):  # noqa: ARG001
+            return 0
+        
+        def mock_has_marker(c, s):  # noqa: ARG001
+            return s == head_sha
+        
+        def mock_has_unaddressed(*_):  # noqa: ARG001
+            return False
+        
+        def mock_should_skip(*_):  # noqa: ARG001
+            return False
+        
+        self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
+        self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
+        self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
+        self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
+        self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
+        
+        try:
+            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                "test/repo",
+                123,
+                {"headRefOid": head_sha, "headRefName": "test-branch"},
+                "claude",
+            )
+            assert result == "skipped"
+        finally:
+            # Restore original methods
+            self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+            self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+            self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+            self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+            self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+
+    def test_completion_marker_with_unaddressed_comments_reprocesses(self):
+        """Test that completion marker + unaddressed comments reprocesses."""
+        head_sha = "abc123def"
+        
+        original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
+        original_count = self.monitor._count_workflow_comments  # noqa: SLF001
+        original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
+        original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
+        original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
+        original_cleanup = self.monitor._cleanup_pending_reviews  # noqa: SLF001
+        original_dispatch = self.monitor.dispatch_fix_comment_agent
+        original_post = self.monitor._post_fix_comment_queued  # noqa: SLF001
+        
+        def mock_get_state(*_):  # noqa: ARG001
+            return (head_sha, [])
+        
+        def mock_count(*_):  # noqa: ARG001
+            return 0
+        
+        def mock_has_marker(c, s):  # noqa: ARG001
+            return s == head_sha
+        
+        def mock_has_unaddressed(*_):  # noqa: ARG001
+            return True  # Has unaddressed comments
+        
+        def mock_should_skip(*_):  # noqa: ARG001
+            return False
+        
+        def mock_cleanup(*_):  # noqa: ARG001
+            pass
+        
+        def mock_dispatch(*_, **__):  # noqa: ARG001
+            return False  # Agent fails to prevent full execution
+        
+        def mock_post(*_, **__):  # noqa: ARG001
+            return True
+        
+        self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
+        self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
+        self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
+        self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
+        self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
+        self.monitor._cleanup_pending_reviews = mock_cleanup  # noqa: SLF001
+        self.monitor.dispatch_fix_comment_agent = mock_dispatch
+        self.monitor._post_fix_comment_queued = mock_post  # noqa: SLF001
+        
+        try:
+            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                "test/repo",
+                123,
+                {"headRefOid": head_sha, "headRefName": "test-branch"},
+                "claude",
+            )
+            assert result == "failed"  # Agent dispatched (not skipped)
+        finally:
+            # Restore original methods
+            self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+            self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+            self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+            self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+            self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+            self.monitor._cleanup_pending_reviews = original_cleanup  # noqa: SLF001
+            self.monitor.dispatch_fix_comment_agent = original_dispatch
+            self.monitor._post_fix_comment_queued = original_post  # noqa: SLF001
+
+    def test_no_completion_marker_history_no_unaddressed_skips(self):
+        """Test that no completion marker + history + no unaddressed skips."""
+        head_sha = "abc123def"
+        
+        original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
+        original_count = self.monitor._count_workflow_comments  # noqa: SLF001
+        original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
+        original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
+        original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
+        
+        def mock_get_state(*_):  # noqa: ARG001
+            return (head_sha, [])
+        
+        def mock_count(*_):  # noqa: ARG001
+            return 0
+        
+        def mock_has_marker(*_):  # noqa: ARG001
+            return False  # No completion marker
+        
+        def mock_has_unaddressed(*_):  # noqa: ARG001
+            return False  # No unaddressed comments
+        
+        def mock_should_skip(*_):  # noqa: ARG001
+            return True  # In history
+        
+        self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
+        self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
+        self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
+        self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
+        self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
+        
+        try:
+            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                "test/repo",
+                123,
+                {"headRefOid": head_sha, "headRefName": "test-branch"},
+                "claude",
+            )
+            assert result == "skipped"
+        finally:
+            # Restore original methods
+            self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+            self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+            self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+            self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+            self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+
+    def test_no_completion_marker_history_with_unaddressed_reprocesses(self):
+        """Test that no completion marker + history + unaddressed reprocesses."""
+        head_sha = "abc123def"
+        
+        original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
+        original_count = self.monitor._count_workflow_comments  # noqa: SLF001
+        original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
+        original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
+        original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
+        original_cleanup = self.monitor._cleanup_pending_reviews  # noqa: SLF001
+        original_dispatch = self.monitor.dispatch_fix_comment_agent
+        original_post = self.monitor._post_fix_comment_queued  # noqa: SLF001
+        
+        def mock_get_state(*_):  # noqa: ARG001
+            return (head_sha, [])
+        
+        def mock_count(*_):  # noqa: ARG001
+            return 0
+        
+        def mock_has_marker(*_):  # noqa: ARG001
+            return False  # No completion marker
+        
+        def mock_has_unaddressed(*_):  # noqa: ARG001
+            return True  # Has unaddressed comments
+        
+        def mock_should_skip(*_):  # noqa: ARG001
+            return True  # In history
+        
+        def mock_cleanup(*_):  # noqa: ARG001
+            pass
+        
+        def mock_dispatch(*_, **__):  # noqa: ARG001
+            return False
+        
+        def mock_post(*_, **__):  # noqa: ARG001
+            return True
+        
+        self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
+        self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
+        self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
+        self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
+        self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
+        self.monitor._cleanup_pending_reviews = mock_cleanup  # noqa: SLF001
+        self.monitor.dispatch_fix_comment_agent = mock_dispatch
+        self.monitor._post_fix_comment_queued = mock_post  # noqa: SLF001
+        
+        try:
+            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                "test/repo",
+                123,
+                {"headRefOid": head_sha, "headRefName": "test-branch"},
+                "claude",
+            )
+            assert result == "failed"  # Agent dispatched (not skipped)
+        finally:
+            # Restore original methods
+            self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+            self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+            self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+            self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+            self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+            self.monitor._cleanup_pending_reviews = original_cleanup  # noqa: SLF001
+            self.monitor.dispatch_fix_comment_agent = original_dispatch
+            self.monitor._post_fix_comment_queued = original_post  # noqa: SLF001
+
+    def test_no_completion_marker_no_history_no_unaddressed_skips(self):
+        """Test that no completion marker + no history + no unaddressed skips."""
+        head_sha = "abc123def"
+        
+        original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
+        original_count = self.monitor._count_workflow_comments  # noqa: SLF001
+        original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
+        original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
+        original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
+        
+        def mock_get_state(*_):  # noqa: ARG001
+            return (head_sha, [])
+        
+        def mock_count(*_):  # noqa: ARG001
+            return 0
+        
+        def mock_has_marker(*_):  # noqa: ARG001
+            return False
+        
+        def mock_has_unaddressed(*_):  # noqa: ARG001
+            return False
+        
+        def mock_should_skip(*_):  # noqa: ARG001
+            return False  # Not in history
+        
+        self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
+        self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
+        self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
+        self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
+        self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
+        
+        try:
+            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                "test/repo",
+                123,
+                {"headRefOid": head_sha, "headRefName": "test-branch"},
+                "claude",
+            )
+            assert result == "skipped"
+        finally:
+            # Restore original methods
+            self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+            self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+            self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+            self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+            self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001

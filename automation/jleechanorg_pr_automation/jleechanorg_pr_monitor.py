@@ -1635,26 +1635,55 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return "skipped"
 
-        # Check if we've already processed this PR with this commit
-        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+        # Check completion marker FIRST (authoritative checkpoint)
+        # This is the real indicator that fix-comment actually completed for this commit
+        has_completion_marker = False
+        if head_sha:
+            has_completion_marker = self._has_fix_comment_comment_for_commit(comments, head_sha)
+        
+        # Cache unaddressed comments check (expensive API call, avoid redundant calls)
+        has_unaddressed = self._has_unaddressed_comments(repo_full, pr_number)
+        
+        # If completion marker exists, check if there are unaddressed comments
+        # If no unaddressed comments, skip (work was completed successfully)
+        if has_completion_marker:
+            if not has_unaddressed:
+                self.logger.info(
+                    "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments - skipping",
+                    head_sha[:8] if head_sha else "unknown",
+                    pr_number,
+                )
+                return "skipped"
+            # Completion marker exists but there are unaddressed comments - reprocess
             self.logger.info(
-                "⏭️ Skipping PR #%s - already processed commit %s",
+                "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
+                head_sha[:8] if head_sha else "unknown",
+                pr_number,
+            )
+            # Continue to process unaddressed comments (skip history check since completion marker already decided)
+        
+        # If no completion marker, check commit history as fallback
+        # History might be stale (recorded after queuing but before completion)
+        elif head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+            # No completion marker but commit in history - check unaddressed comments to decide
+            if not has_unaddressed:
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - commit %s in history and no unaddressed comments",
+                    pr_number,
+                    head_sha[:8],
+                )
+                return "skipped"
+            # Commit in history but no completion marker AND unaddressed comments exist
+            # This indicates a previous run didn't complete - reprocess
+            self.logger.info(
+                "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
                 pr_number,
                 head_sha[:8],
             )
-            return "skipped"
-
-        if head_sha and self._has_fix_comment_comment_for_commit(comments, head_sha):
-            self.logger.info(
-                "♻️ Fix-comment automation already posted for commit %s on PR #%s, skipping",
-                head_sha[:8],
-                pr_number,
-            )
-            self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
-            return "skipped"
-
-        # Check if there are any unaddressed comments before dispatching agent
-        if not self._has_unaddressed_comments(repo_full, pr_number):
+            # Continue to process unaddressed comments
+        
+        # Final check: if no completion marker and not in history, check for unaddressed comments
+        elif not has_unaddressed:
             self.logger.info(
                 "⏭️ Skipping PR #%s - no unaddressed comments found",
                 pr_number,
@@ -1675,8 +1704,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         queued_posted = self._post_fix_comment_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
 
-        if head_sha:
-            self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+        # NOTE: Do NOT record in history here - only record after completion marker is posted
+        # The completion marker is the authoritative checkpoint, history is just a cache
+        # Recording here causes stale history when runs are queued but don't complete
 
         if not self._start_fix_comment_review_watcher(
             repo_full,

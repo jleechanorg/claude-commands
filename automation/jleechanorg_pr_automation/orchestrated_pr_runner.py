@@ -161,19 +161,34 @@ def query_recent_prs(cutoff_hours: int) -> list[dict]:
 def has_failing_checks(repo_full: str, pr_number: int) -> bool:
     """Return True if PR has any failing checks."""
     try:
+        # Use statusCheckRollup from pr view for authoritative check status
+        # This includes conclusion field which indicates final result
         result = run_cmd(
-            ["gh", "pr", "checks", str(pr_number), "--repo", repo_full, "--json", "name,state,workflow"],
+            ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "statusCheckRollup"],
             check=False,
             timeout=API_TIMEOUT,
         )
         if result.returncode != 0:
-            log(f"Failed to fetch checks for {repo_full}#{pr_number}: {result.stderr.strip()}")
+            log(f"Failed to fetch PR status for {repo_full}#{pr_number}: {result.stderr.strip()}")
             return False
-        data = json.loads(result.stdout or "[]")
+        pr_data = json.loads(result.stdout or "{}")
+        checks = pr_data.get("statusCheckRollup", [])
+        if not checks:
+            return False
+        
+        # Check conclusion field (authoritative - indicates final result)
+        # Also check state as fallback for checks that haven't completed yet
+        failing_conclusions = {"FAILURE", "FAILED", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
         failing_states = {"FAILED", "FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
-        for check in data:
+        for check in checks:
+            conclusion = (check.get("conclusion") or "").upper()
             state = (check.get("state") or "").upper()
-            if state in failing_states:
+            # Conclusion is authoritative - if check completed with failure, it's failing
+            if conclusion in failing_conclusions:
+                return True
+            # State fallback - for checks that haven't completed yet but are in failing state
+            # Only use state if conclusion is None/empty (check still running)
+            if not conclusion and state in failing_states:
                 return True
         return False
     except Exception as exc:
