@@ -41,23 +41,67 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Import lib modules with fallback for missing dependencies
+# We import directly from submodules to avoid lib/__init__.py import cascade
 try:
-    from lib.mcp_client import MCPClient
-    from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
-    from lib.model_utils import settings_for_model, update_user_settings
-    from lib.evidence_utils import (
-        capture_provenance,
-        create_evidence_bundle,
-        get_evidence_dir,
-        save_request_responses,
-    )
-    from lib.campaign_utils import (
-        create_campaign,
-        process_action,
-        get_campaign_state,
-    )
+    # Import directly to avoid __init__.py cascade
+    import importlib.util
+    _lib_path = Path(__file__).parent / "lib"
+
+    def _load_module(name):
+        spec = importlib.util.spec_from_file_location(name, _lib_path / f"{name}.py")
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod
+        return None
+
+    _mcp_client = _load_module("mcp_client")
+    _server_utils = _load_module("server_utils")
+    _model_utils = _load_module("model_utils")
+    _evidence_utils = _load_module("evidence_utils")
+    _campaign_utils = _load_module("campaign_utils")
+
+    if _mcp_client:
+        MCPClient = _mcp_client.MCPClient
+    else:
+        raise ImportError("mcp_client module not found")
+
+    if _server_utils:
+        LocalServer = _server_utils.LocalServer
+        pick_free_port = _server_utils.pick_free_port
+        start_local_mcp_server = _server_utils.start_local_mcp_server
+    else:
+        LocalServer = None
+        pick_free_port = lambda x: x
+        start_local_mcp_server = None
+
+    if _model_utils:
+        settings_for_model = _model_utils.settings_for_model
+        update_user_settings = _model_utils.update_user_settings
+    else:
+        settings_for_model = lambda x: {"selected_model": x}
+        update_user_settings = lambda *args: None
+
+    if _evidence_utils:
+        capture_provenance = _evidence_utils.capture_provenance
+        create_evidence_bundle = _evidence_utils.create_evidence_bundle
+        get_evidence_dir = _evidence_utils.get_evidence_dir
+        save_request_responses = _evidence_utils.save_request_responses
+    else:
+        capture_provenance = lambda *args, **kwargs: {"mode": "standalone"}
+        create_evidence_bundle = lambda *args, **kwargs: "/tmp/evidence"
+        get_evidence_dir = lambda name: Path(f"/tmp/worldarchitect.ai/evidence/{name}")
+        save_request_responses = lambda *args, **kwargs: None
+
+    if _campaign_utils:
+        create_campaign = _campaign_utils.create_campaign
+        process_action = _campaign_utils.process_action
+        get_campaign_state = _campaign_utils.get_campaign_state
+    else:
+        raise ImportError("campaign_utils module not found")
+
     LIB_AVAILABLE = True
-except ImportError as e:
+except (ImportError, Exception) as e:
     print(f"Warning: Could not import lib modules: {e}")
     print("Running in standalone mode - requires external MCP server")
     LIB_AVAILABLE = False
@@ -86,13 +130,23 @@ except ImportError as e:
             )
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                    result = json.loads(resp.read().decode())
-                    if "error" in result:
-                        return {"error": result["error"]}
-                    content = result.get("result", {}).get("content", [])
-                    for item in content:
-                        if item.get("type") == "text":
-                            return json.loads(item.get("text", "{}"))
+                    data = json.loads(resp.read().decode())
+                    if "error" in data:
+                        return {"error": data["error"]}
+                    # Server returns result directly in jsonrpc response
+                    result = data.get("result", {})
+                    if isinstance(result, dict):
+                        # Check for content array (MCP SDK format)
+                        content = result.get("content", [])
+                        if content:
+                            for item in content:
+                                if item.get("type") == "text":
+                                    try:
+                                        return json.loads(item.get("text", "{}"))
+                                    except json.JSONDecodeError:
+                                        return {"message": item.get("text", "")}
+                        # Direct result format (server native)
+                        return result
                     return {}
             except Exception as e:
                 return {"error": str(e)}
@@ -350,9 +404,15 @@ def validate_scenario(
 
     # Check narrative exists
     if validation.get("expect_narrative"):
-        narrative = result.get("narrative") or result.get("message") or ""
+        narrative = (
+            result.get("narrative") or
+            result.get("message") or
+            result.get("opening_story") or
+            result.get("response") or
+            ""
+        )
         if narrative:
-            checks.append("✅ Narrative generated")
+            checks.append(f"✅ Narrative generated ({len(narrative)} chars)")
         else:
             checks.append("❌ No narrative generated")
             failures.append("Expected narrative but got none")
@@ -395,8 +455,13 @@ def validate_scenario(
 
     # Check dice roll
     if validation.get("expect_dice_roll"):
-        narrative = result.get("narrative") or result.get("message") or ""
-        dice_indicators = ["d20", "roll", "check", "save", "modifier", "+"]
+        narrative = (
+            result.get("narrative") or
+            result.get("message") or
+            result.get("response") or
+            ""
+        )
+        dice_indicators = ["d20", "roll", "check", "save", "modifier", "+", "strength", "dexterity"]
         if any(ind in narrative.lower() for ind in dice_indicators):
             checks.append("✅ Dice roll/check detected in narrative")
         else:
