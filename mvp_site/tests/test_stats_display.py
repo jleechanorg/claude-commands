@@ -1,17 +1,13 @@
 import unittest
-import sys
-import os
-
-# Ensure project root is in path for imports
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 from mvp_site.stats_display import (
+    build_spells_summary,
     build_stats_summary,
+    calculate_unarmed_strike,
     compute_saving_throws,
     extract_equipment_bonuses,
     extract_equipped_weapons,
+    get_hit_dice,
     get_proficiency_bonus,
     get_spellcasting_ability,
 )
@@ -219,7 +215,7 @@ class TestStatsDisplay(unittest.TestCase):
     def test_build_spells_summary_handles_malformed_slots(self):
         """Malformed spell slots with non-numeric strings should be ignored safely."""
         from mvp_site.stats_display import build_spells_summary
-        
+
         game_state = {
             "player_character_data": {
                 "spell_slots": {
@@ -227,11 +223,126 @@ class TestStatsDisplay(unittest.TestCase):
                 }
             }
         }
-        
+
         # Should not raise ValueError
         summary = build_spells_summary(game_state)
         # Malformed slot should be skipped
         self.assertNotIn("L1:", summary)
+
+    def test_get_hit_dice_by_class(self):
+        """Hit dice should match D&D 5e class hit die sizes."""
+        self.assertEqual(get_hit_dice("Barbarian", 1), "1d12")
+        self.assertEqual(get_hit_dice("Fighter", 3), "3d10")
+        self.assertEqual(get_hit_dice("Rogue", 5), "5d8")
+        self.assertEqual(get_hit_dice("Wizard", 7), "7d6")
+        self.assertEqual(get_hit_dice("Cleric", 4), "4d8")
+
+    def test_get_hit_dice_multiclass(self):
+        """Multiclass should use first class hit die."""
+        self.assertEqual(get_hit_dice("Fighter/Wizard", 10), "10d10")
+        self.assertEqual(get_hit_dice("Rogue/Paladin", 6), "6d8")
+
+    def test_get_hit_dice_unknown_class(self):
+        """Unknown classes should default to d8."""
+        self.assertEqual(get_hit_dice("Unknown Class", 3), "3d8")
+        self.assertEqual(get_hit_dice("", 2), "2d8")
+
+    def test_get_hit_dice_level_clamping(self):
+        """Level should be clamped between 1 and 20."""
+        self.assertEqual(get_hit_dice("Barbarian", 0), "1d12")
+        self.assertEqual(get_hit_dice("Barbarian", 25), "20d12")
+        self.assertEqual(get_hit_dice("Wizard", "5"), "5d6")
+
+    def test_calculate_unarmed_strike_basic(self):
+        """Unarmed strikes should use STR mod + proficiency."""
+        result = calculate_unarmed_strike(str_mod=3, proficiency=2, is_monk=False)
+        self.assertEqual(result["attack_bonus"], 5)
+        self.assertEqual(result["damage"], "1")
+        self.assertEqual(result["damage_modifier"], 3)
+
+    def test_calculate_unarmed_strike_monk(self):
+        """Monks should get improved unarmed damage dice."""
+        result = calculate_unarmed_strike(str_mod=1, proficiency=3, is_monk=True)
+        self.assertEqual(result["attack_bonus"], 4)
+        self.assertEqual(result["damage"], "1d4")
+        self.assertEqual(result["damage_modifier"], 1)
+
+    def test_calculate_unarmed_strike_negative_modifier(self):
+        """Negative STR modifier should reduce attack and damage."""
+        result = calculate_unarmed_strike(str_mod=-2, proficiency=2, is_monk=False)
+        self.assertEqual(result["attack_bonus"], 0)
+        self.assertEqual(result["damage"], "1")
+        self.assertEqual(result["damage_modifier"], -2)
+
+    def test_build_stats_summary_includes_hit_dice(self):
+        """Stats summary should include hit dice display."""
+        pc_data = {
+            "level": 3,
+            "class_name": "Rogue",
+            "stats": {"strength": 10, "dexterity": 16, "constitution": 12,
+                     "intelligence": 10, "wisdom": 14, "charisma": 10},
+        }
+
+        summary = build_stats_summary({"player_character_data": pc_data})
+        self.assertIn("Hit Dice: 3d8", summary)
+
+    def test_build_stats_summary_includes_unarmed_strike(self):
+        """Stats summary should always include unarmed strike."""
+        pc_data = {
+            "level": 1,
+            "class_name": "Wizard",
+            "stats": {"strength": 8, "dexterity": 14, "constitution": 12,
+                     "intelligence": 16, "wisdom": 12, "charisma": 10},
+        }
+
+        summary = build_stats_summary({"player_character_data": pc_data})
+        self.assertIn("Unarmed Strike:", summary)
+        self.assertIn("1+(-1) damage", summary)  # Base damage 1 + STR mod -1
+
+    def test_build_stats_summary_proficiencies(self):
+        """Stats summary should show proficiencies if present."""
+        pc_data = {
+            "level": 1,
+            "stats": {"strength": 10, "dexterity": 14, "constitution": 12,
+                     "intelligence": 16, "wisdom": 12, "charisma": 10},
+            "armor_proficiencies": ["Light Armor", "Medium Armor"],
+            "tool_proficiencies": ["Thieves' Tools"],
+            "languages": ["Common", "Elvish"],
+        }
+
+        summary = build_stats_summary({"player_character_data": pc_data})
+        self.assertIn("▸ Proficiencies:", summary)
+        self.assertIn("Light Armor", summary)
+        self.assertIn("Thieves' Tools", summary)
+        self.assertIn("Common", summary)
+
+    def test_build_stats_summary_resistances(self):
+        """Stats summary should show damage resistances if present."""
+        pc_data = {
+            "level": 1,
+            "stats": {"strength": 10, "dexterity": 14, "constitution": 12,
+                     "intelligence": 16, "wisdom": 12, "charisma": 10},
+            "resistances": ["Fire", "Cold"],
+            "immunities": ["Poison"],
+        }
+
+        summary = build_stats_summary({"player_character_data": pc_data})
+        self.assertIn("▸ Damage Defenses:", summary)
+        self.assertIn("Fire", summary)
+        self.assertIn("Poison", summary)
+
+    def test_build_stats_summary_darkvision(self):
+        """Stats summary should show darkvision if present."""
+        pc_data = {
+            "level": 1,
+            "stats": {"strength": 10, "dexterity": 14, "constitution": 12,
+                     "intelligence": 16, "wisdom": 12, "charisma": 10},
+            "darkvision": "60",
+        }
+
+        summary = build_stats_summary({"player_character_data": pc_data})
+        self.assertIn("▸ Senses:", summary)
+        self.assertIn("Darkvision: 60 ft", summary)
 
 
 if __name__ == "__main__":

@@ -66,10 +66,22 @@ def get_proficiency_bonus(level: int | str | float) -> int:
     return PROFICIENCY_BY_LEVEL.get(level, 2)
 
 
-def get_spellcasting_ability(class_name: str) -> str | None:
-    """Get the spellcasting ability for a class."""
+def get_spellcasting_ability(class_name: str, pc_data: dict | None = None) -> str | None:
+    """Get the spellcasting ability for a class.
+
+    Args:
+        class_name: Character class name
+        pc_data: Optional player character data for fallback detection
+
+    Returns:
+        Spellcasting ability ('int', 'wis', or 'cha') or None
+    """
     if not class_name or not isinstance(class_name, str):
+        # Fallback: check if character has spell slots
+        if pc_data:
+            return _infer_spellcasting_ability_from_data(pc_data)
         return None
+
     normalized = class_name.lower().strip()
     # Handle multi-class (e.g., "Fighter/Wizard") - use first spellcasting class
     for part_raw in normalized.split("/"):
@@ -77,7 +89,90 @@ def get_spellcasting_ability(class_name: str) -> str | None:
         ability = SPELLCASTING_ABILITY_MAP.get(part)
         if ability:
             return ability
+
+    # Fallback: Check for spellcasting keywords in custom class names
+    spellcaster_keywords = {
+        "warlock": "cha",
+        "sorcerer": "cha",
+        "bard": "cha",
+        "wizard": "int",
+        "mage": "int",
+        "artificer": "int",
+        "cleric": "wis",
+        "druid": "wis",
+        "priest": "wis",
+        "paladin": "cha",
+        "ranger": "wis",
+    }
+
+    for keyword, ability in spellcaster_keywords.items():
+        if keyword in normalized:
+            return ability
+
+    # Final fallback: check player data for spell slots
+    if pc_data:
+        return _infer_spellcasting_ability_from_data(pc_data)
+
     return None
+
+
+def _infer_spellcasting_ability_from_data(pc_data: dict) -> str | None:
+    """Infer spellcasting ability from character data.
+
+    If character has spell slots, assume they're a spellcaster and use
+    highest mental stat (INT/WIS/CHA) as spellcasting ability.
+    """
+    # Check for spell slots
+    has_spell_slots = False
+    resources = pc_data.get("resources", {})
+    if isinstance(resources, dict):
+        spell_slots = resources.get("spell_slots", {})
+        if spell_slots and isinstance(spell_slots, dict) and len(spell_slots) > 0:
+            has_spell_slots = True
+
+    # Also check top-level spell_slots
+    if not has_spell_slots:
+        top_level_slots = pc_data.get("spell_slots", {})
+        if top_level_slots and isinstance(top_level_slots, dict) and len(top_level_slots) > 0:
+            has_spell_slots = True
+
+    # Check for known spells
+    if not has_spell_slots:
+        spells = pc_data.get("spells_known") or pc_data.get("spells") or []
+        if spells and len(spells) > 0:
+            has_spell_slots = True
+
+    if not has_spell_slots:
+        return None
+
+    # Character has spells - determine ability from highest mental stat
+    stats = pc_data.get("stats") or pc_data.get("attributes") or {}
+    normalized_stats = normalize_stats(stats)
+
+    int_score = normalized_stats.get("int", {})
+    wis_score = normalized_stats.get("wis", {})
+    cha_score = normalized_stats.get("cha", {})
+
+    # Extract scores (handle both dict and int formats, and None values)
+    def extract_stat_value(stat_data: Any) -> int:
+        if isinstance(stat_data, dict):
+            return int(stat_data.get("score", 10))
+        elif isinstance(stat_data, (int, float)):
+            return int(stat_data)
+        else:
+            return 10
+
+    int_val = extract_stat_value(int_score)
+    wis_val = extract_stat_value(wis_score)
+    cha_val = extract_stat_value(cha_score)
+
+    # Use highest mental stat
+    if cha_val >= int_val and cha_val >= wis_val:
+        return "cha"
+    elif int_val >= wis_val:
+        return "int"
+    else:
+        return "wis"
 
 
 def extract_equipped_weapons(pc_data: dict, item_registry: dict | None = None) -> list[dict]:
@@ -200,6 +295,30 @@ CLASS_SAVE_PROFICIENCIES = {
     "eldritch knight": ["str", "con"],
     "arcane trickster": ["dex", "int"],
     "hexblade": ["wis", "cha"],
+}
+
+# D&D 5e hit dice by class
+HIT_DICE_BY_CLASS = {
+    "barbarian": "d12",
+    "fighter": "d10",
+    "paladin": "d10",
+    "ranger": "d10",
+    "bard": "d8",
+    "cleric": "d8",
+    "druid": "d8",
+    "monk": "d8",
+    "rogue": "d8",
+    "warlock": "d8",
+    "sorcerer": "d6",
+    "wizard": "d6",
+    "artificer": "d8",
+    # Subclasses inherit from base class
+    "bladesinger": "d6",
+    "eldritch knight": "d10",
+    "arcane trickster": "d8",
+    "hexblade": "d8",
+    "blood hunter": "d10",
+    "bloodhunter": "d10",
 }
 
 # D&D 5e skills and their associated abilities
@@ -461,6 +580,67 @@ def compute_saving_throws(
     return saving_throws
 
 
+def get_hit_dice(class_name: str, level: int | str | float = 1) -> str:
+    """Get hit dice notation for a class and level.
+
+    Args:
+        class_name: Character class name
+        level: Character level
+
+    Returns:
+        Hit dice notation (e.g., "3d8" for a level 3 rogue)
+    """
+    if not isinstance(class_name, str):
+        coerced_level = coerce_int(level, 1) or 1
+        level_int = max(1, min(20, coerced_level))
+        return f"{level_int}d8"
+
+    normalized = class_name.lower().strip()
+    # Handle multi-class - use first class with known hit die
+    if normalized:
+        for part_raw in normalized.split("/"):
+            part = part_raw.strip()
+            hit_die = HIT_DICE_BY_CLASS.get(part)
+            if hit_die:
+                coerced_level = coerce_int(level, 1) or 1
+                level_int = max(1, min(20, coerced_level))
+                return f"{level_int}{hit_die}"
+
+    # Default to d8 if class not found or empty string
+    coerced_level = coerce_int(level, 1) or 1
+    level_int = max(1, min(20, coerced_level))
+    return f"{level_int}d8"
+
+
+def calculate_unarmed_strike(str_mod: int, proficiency: int, is_monk: bool = False) -> dict:
+    """Calculate unarmed strike attack and damage.
+
+    Args:
+        str_mod: Strength modifier
+        proficiency: Proficiency bonus
+        is_monk: Whether the character is a monk (uses Martial Arts)
+
+    Returns:
+        Dict with attack_bonus and damage
+    """
+    # Everyone is proficient in unarmed strikes
+    attack_bonus = str_mod + proficiency
+
+    # Base damage is 1 + STR modifier (monks get better dice based on level)
+    if is_monk:
+        # Simplified: monks start with 1d4 and scale up
+        # Full implementation would check monk level
+        damage = "1d4"
+    else:
+        damage = "1"
+
+    return {
+        "attack_bonus": attack_bonus,
+        "damage": damage,
+        "damage_modifier": str_mod,
+    }
+
+
 def build_stats_summary(game_state: dict) -> str:  # noqa: PLR0912, PLR0915
     """Build stats summary string for display.
 
@@ -555,9 +735,22 @@ def build_stats_summary(game_state: dict) -> str:  # noqa: PLR0912, PLR0915
         else:
             lines.append(f"  • Speed: {speed_str} ft")
 
-    # Spellcasting stats (if character is a spellcaster)
+    # Hit Dice
     class_name = pc_data.get("class_name", pc_data.get("class", ""))
-    spellcasting_ability = get_spellcasting_ability(class_name)
+    # Clamp level to 1-20 for consistency with get_hit_dice
+    coerced_level = coerce_int(level, 1) or 1
+    level_int = max(1, min(20, coerced_level))
+    hit_dice = get_hit_dice(class_name, level_int)
+    # Get current/max hit dice if available
+    hit_dice_current = pc_data.get("hit_dice_current")
+    hit_dice_max = pc_data.get("hit_dice_max", level_int)
+    if hit_dice_current is not None:
+        lines.append(f"  • Hit Dice: {hit_dice_current}/{hit_dice_max} {hit_dice}")
+    else:
+        lines.append(f"  • Hit Dice: {hit_dice}")
+
+    # Spellcasting stats (if character is a spellcaster)
+    spellcasting_ability = get_spellcasting_ability(class_name, pc_data)
     if spellcasting_ability:
         spell_mod = get_effective_mod(spellcasting_ability)
         spell_dc = 8 + proficiency + spell_mod
@@ -703,6 +896,115 @@ def build_stats_summary(game_state: dict) -> str:  # noqa: PLR0912, PLR0915
                 f"{damage_display} damage{note}"
             )
 
+    # Always show unarmed strike (everyone can punch!)
+    is_monk = "monk" in class_name.lower() if isinstance(class_name, str) and class_name else False
+    unarmed = calculate_unarmed_strike(str_mod, proficiency, is_monk)
+    unarmed_attack_sign = "+" if unarmed["attack_bonus"] >= 0 else ""
+    # Format damage modifier with proper sign handling
+    dmg_mod = unarmed["damage_modifier"]
+    if dmg_mod > 0:
+        unarmed_damage_display = f"{unarmed['damage']}+{dmg_mod}"
+    elif dmg_mod < 0:
+        unarmed_damage_display = f"{unarmed['damage']}+({dmg_mod})"
+    else:
+        # When the modifier is zero, just show the base damage (e.g., "1" instead of "1+0")
+        unarmed_damage_display = f"{unarmed['damage']}"
+    if not weapons:
+        lines.append("")
+        lines.append("▸ Weapons:")
+    lines.append(
+        f"  • Unarmed Strike: {unarmed_attack_sign}{unarmed['attack_bonus']} to hit | "
+        f"{unarmed_damage_display} damage"
+    )
+
+    # Proficiencies section (armor, weapon, tool, language)
+    armor_prof = pc_data.get("armor_proficiencies", [])
+    tool_prof = pc_data.get("tool_proficiencies", [])
+    language_prof = pc_data.get("languages", pc_data.get("language_proficiencies", []))
+
+    proficiencies_to_show = []
+    if weapon_proficiencies:
+        weapon_list = ", ".join(sorted(str(w) for w in weapon_proficiencies if w))
+        proficiencies_to_show.append(f"Weapons: {weapon_list}")
+    if armor_prof:
+        if isinstance(armor_prof, list):
+            armor_list = ", ".join(str(a) for a in armor_prof if a)
+        else:
+            armor_list = str(armor_prof)
+        proficiencies_to_show.append(f"Armor: {armor_list}")
+    if tool_prof:
+        if isinstance(tool_prof, list):
+            tool_list = ", ".join(str(t) for t in tool_prof if t)
+        else:
+            tool_list = str(tool_prof)
+        proficiencies_to_show.append(f"Tools: {tool_list}")
+    if language_prof:
+        if isinstance(language_prof, list):
+            lang_list = ", ".join(str(l) for l in language_prof if l)
+        else:
+            lang_list = str(language_prof)
+        proficiencies_to_show.append(f"Languages: {lang_list}")
+
+    if proficiencies_to_show:
+        lines.append("")
+        lines.append("▸ Proficiencies:")
+        for prof in proficiencies_to_show:
+            lines.append(f"  • {prof}")
+
+    # Resistances, Immunities, Vulnerabilities
+    resistances = pc_data.get("resistances", pc_data.get("damage_resistances", []))
+    immunities = pc_data.get("immunities", pc_data.get("damage_immunities", []))
+    vulnerabilities = pc_data.get("vulnerabilities", pc_data.get("damage_vulnerabilities", []))
+
+    defenses_to_show = []
+    if resistances:
+        if isinstance(resistances, list):
+            resist_list = ", ".join(str(r) for r in resistances if r)
+        else:
+            resist_list = str(resistances)
+        defenses_to_show.append(f"Resistances: {resist_list}")
+    if immunities:
+        if isinstance(immunities, list):
+            immune_list = ", ".join(str(i) for i in immunities if i)
+        else:
+            immune_list = str(immunities)
+        defenses_to_show.append(f"Immunities: {immune_list}")
+    if vulnerabilities:
+        if isinstance(vulnerabilities, list):
+            vuln_list = ", ".join(str(v) for v in vulnerabilities if v)
+        else:
+            vuln_list = str(vulnerabilities)
+        defenses_to_show.append(f"Vulnerabilities: {vuln_list}")
+
+    if defenses_to_show:
+        lines.append("")
+        lines.append("▸ Damage Defenses:")
+        for defense in defenses_to_show:
+            lines.append(f"  • {defense}")
+
+    # Senses (Darkvision, etc.)
+    darkvision = pc_data.get("darkvision")
+    senses = pc_data.get("senses", [])
+
+    senses_to_show = []
+    if darkvision:
+        darkvision_str = str(darkvision).strip()
+        if re.search(r"\bft\b", darkvision_str, re.IGNORECASE):
+            senses_to_show.append(f"Darkvision: {darkvision_str}")
+        else:
+            senses_to_show.append(f"Darkvision: {darkvision_str} ft")
+    if senses and isinstance(senses, list):
+        for sense in senses:
+            sense_str = str(sense).strip()
+            if sense_str and sense_str.lower() not in ["darkvision", "normal"]:
+                senses_to_show.append(sense_str)
+
+    if senses_to_show:
+        lines.append("")
+        lines.append("▸ Senses:")
+        for sense in senses_to_show:
+            lines.append(f"  • {sense}")
+
     # Extract and deduplicate features/feats
     features = pc_data.get("features", [])
     unique_features = deduplicate_features(features)
@@ -736,6 +1038,44 @@ def build_spells_summary(  # noqa: PLR0912, PLR0915
     resources = pc_data.get("resources", {})
 
     lines = ["━━━ Spells & Magic ━━━"]
+
+    # Get spell DC and spell attack bonus
+    class_name = pc_data.get("class_name", pc_data.get("class", ""))
+    spellcasting_ability = get_spellcasting_ability(class_name, pc_data)
+    if spellcasting_ability:
+        level = pc_data.get("level", 1)
+        proficiency = get_proficiency_bonus(level)
+
+        # Get ability scores
+        stats = (
+            pc_data.get("stats")
+            or pc_data.get("attributes")
+            or pc_data.get("ability_scores")
+            or {}
+        )
+        normalized_stats = normalize_stats(stats)
+
+        # Get spellcasting modifier
+        spell_score_raw = normalized_stats.get(spellcasting_ability, 10)
+        if isinstance(spell_score_raw, dict):
+            spell_score = spell_score_raw.get("score", 10)
+        else:
+            spell_score = spell_score_raw
+        try:
+            spell_score = int(spell_score)
+        except (TypeError, ValueError):
+            spell_score = 10
+
+        spell_mod = calc_modifier(spell_score)
+        spell_dc = 8 + proficiency + spell_mod
+        spell_attack = proficiency + spell_mod
+        spell_attack_sign = "+" if spell_attack >= 0 else ""
+        ability_display = STAT_DISPLAY_NAMES.get(
+            spellcasting_ability, spellcasting_ability.upper()
+        )
+
+        lines.append(f"Spell Save DC: {spell_dc} ({ability_display}) | Spell Attack: {spell_attack_sign}{spell_attack}")
+        lines.append("")
 
     # Spell slots from resources.spell_slots (format: {level_X: {used, max}})
     spell_slots_raw = resources.get("spell_slots", {})

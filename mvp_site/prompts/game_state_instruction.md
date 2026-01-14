@@ -601,6 +601,8 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
  "_comment_attributes": "base_attributes = naked stats (permanent: creation + ASI + tomes). attributes = effective stats (base + equipment bonuses). Must satisfy: attributes = base_attributes + sum(equipment stat bonuses)",
  "proficiency_bonus": 2, "skills": [], "saving_throw_proficiencies": [],
  "resources": {"gold": 0, "hit_dice": {"used": 0, "total": 0}, "spell_slots": {}, "class_features": {}, "consumables": {}},
+ "hit_dice_current": 1, "hit_dice_max": 1,
+ "_comment_hit_dice": "hit_dice_current/max: Top-level fields for short rest healing. Legacy: resources.hit_dice.used/total",
  "experience": {"current": 0, "needed_for_next_level": 300},
  "_comment_experience": "🚨 Level-Up Trigger: When experience.current >= experience.needed_for_next_level, character levels up. Update level, recalculate needed_for_next_level, and announce level-up in narrative.",
  "equipment": {
@@ -610,12 +612,169 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
    "backpack": []
  },
  "combat_stats": {"initiative": 0, "speed": 30, "passive_perception": 10},
+ "weapon_proficiencies": [], "armor_proficiencies": [], "tool_proficiencies": [], "languages": [],
+ "_comment_proficiencies": "weapon_proficiencies: ['simple weapons', 'martial weapons', 'longsword'], armor_proficiencies: ['light armor', 'medium armor', 'shields'], tool_proficiencies: ['thieves tools'], languages: ['Common', 'Elvish']",
+ "resistances": [], "immunities": [], "vulnerabilities": [],
+ "_comment_defenses": "resistances/immunities/vulnerabilities: Damage types (Fire, Cold, Poison, etc.) from race, class features, or magic items",
+ "darkvision": null, "senses": [],
+ "_comment_senses": "darkvision: Distance in feet (60, 120) or null. senses: ['Blindsight 10 ft', 'Tremorsense 30 ft']",
  "status_conditions": [], "death_saves": {"successes": 0, "failures": 0}, "active_effects": [], "features": [], "spells_known": []}
 ```
 
 **🚨 Death Saves Range:** Both `successes` and `failures` must be integers in range 0-3. Three successes = stabilized, three failures = death.
 
 **Backward compatibility note:** Legacy saves may store `equipment.armor` as an empty string. Treat both `null` and `""` as "not equipped" and normalize to `null` on read/write so older sessions continue to function until data migration completes.
+
+### 🎯 Proficiencies, Resistances, and Senses (Populate from Race/Class)
+
+**When to populate these fields:**
+- **Character creation**: Apply racial and class features
+- **Level up**: Add new proficiencies from class features
+- **Magic items**: Add resistances/immunities from equipped gear (temporary)
+- **Class features**: Add when gained (e.g., Monk's Diamond Soul, Paladin's Aura of Protection)
+
+#### Weapon Proficiencies (`weapon_proficiencies`)
+**Source**: Race and class features
+- **Format**: Array of strings (lowercase, descriptive)
+- **Examples**: `["simple weapons", "martial weapons", "longsword", "rapier", "hand crossbow"]`
+- **Class defaults**:
+  - Fighter/Paladin/Barbarian/Ranger: `["simple weapons", "martial weapons"]`
+  - Rogue: `["simple weapons", "hand crossbow", "longsword", "rapier", "shortsword"]`
+  - Wizard: `["dagger", "dart", "sling", "quarterstaff", "light crossbow"]`
+  - Cleric: Varies by domain (usually `["simple weapons"]`)
+  - Monk: `["simple weapons", "shortsword"]`
+
+#### Armor Proficiencies (`armor_proficiencies`)
+**Source**: Class features (NOT magical armor bonuses - those go in equipment)
+- **Format**: Array of strings
+- **Examples**: `["light armor", "medium armor", "heavy armor", "shields"]`
+- **Class defaults**:
+  - Fighter/Paladin/Cleric: `["light armor", "medium armor", "heavy armor", "shields"]`
+  - Barbarian/Ranger/Druid: `["light armor", "medium armor", "shields"]`
+  - Rogue/Bard: `["light armor"]`
+  - Wizard/Sorcerer/Monk: `[]` (no armor proficiency)
+
+#### Tool Proficiencies (`tool_proficiencies`)
+**Source**: Background, class, or racial features
+- **Format**: Array of strings
+- **Examples**: `["thieves' tools", "smith's tools", "herbalism kit", "disguise kit"]`
+- **Common sources**:
+  - Rogue: `["thieves' tools"]`
+  - Background (Criminal): `["thieves' tools", "gaming set"]`
+  - Background (Acolyte): `["alchemist's supplies", "herbalism kit"]`
+
+#### Languages (`languages`)
+**Source**: Race and background
+- **Format**: Array of strings (capitalized)
+- **Examples**: `["Common", "Elvish", "Dwarvish", "Draconic", "Thieves' Cant"]`
+- **Racial defaults**:
+  - Human: `["Common", "one extra language"]`
+  - Elf: `["Common", "Elvish"]`
+  - Dwarf: `["Common", "Dwarvish"]`
+  - Half-Elf: `["Common", "Elvish", "one extra language"]`
+  - Tiefling: `["Common", "Infernal"]`
+
+#### Resistances/Immunities/Vulnerabilities (`resistances`, `immunities`, `vulnerabilities`)
+**Source**: Race, class features, or temporary magic item effects
+- **Format**: Array of damage types (capitalized)
+- **Damage types**: `["Fire", "Cold", "Lightning", "Thunder", "Poison", "Acid", "Necrotic", "Radiant", "Force", "Psychic", "Bludgeoning", "Piercing", "Slashing"]`
+- **Racial examples**:
+  - Tiefling: `resistances: ["Fire"]`
+  - Dwarf: `resistances: ["Poison"]`
+  - Aasimar: `resistances: ["Necrotic", "Radiant"]`
+- **Class features**:
+  - Barbarian (Bear Totem): `resistances: ["All damage except psychic"]` (while raging)
+  - Paladin (Aura of Warding): `resistances: ["Spell damage"]` (level 7+)
+- **Magic items**: Only add while equipped (remove in state_updates if unequipped)
+
+#### Darkvision and Senses (`darkvision`, `senses`)
+**Source**: Racial traits or class features
+- **`darkvision`**: Distance in feet (number or string) or `null`
+  - **Examples**: `60`, `"120"`, `null`
+  - **Racial defaults**: Elf/Dwarf/Tiefling/Half-Orc = 60 ft, Drow = 120 ft, Human = null
+- **`senses`**: Array of special senses beyond darkvision
+  - **Format**: `["Blindsight 10 ft", "Tremorsense 30 ft", "Truesight 60 ft"]`
+  - **Sources**: Usually class features (Warlock Devil's Sight, Monk Blind Sense)
+
+#### Hit Dice (`hit_dice_current`, `hit_dice_max`)
+**Source**: Character level and class
+- **`hit_dice_max`**: Always equals character level
+- **`hit_dice_current`**: Spent during short rests, restored on long rest
+- **Class hit dice**:
+  - Barbarian: d12 | Fighter/Paladin/Ranger: d10
+  - Rogue/Bard/Cleric/Druid/Monk/Warlock: d8 | Wizard/Sorcerer: d6
+- **Multiclass**: Track separately per class (not implemented yet - use first class for now)
+
+**📝 Population Examples:**
+
+**New Elf Wizard at creation:**
+```json
+{
+  "weapon_proficiencies": ["dagger", "dart", "sling", "quarterstaff", "light crossbow", "longsword", "shortsword", "shortbow", "longbow"],
+  "armor_proficiencies": [],
+  "tool_proficiencies": [],
+  "languages": ["Common", "Elvish", "Draconic"],
+  "resistances": [],
+  "immunities": [],
+  "vulnerabilities": [],
+  "darkvision": 60,
+  "senses": [],
+  "hit_dice_current": 1,
+  "hit_dice_max": 1
+}
+```
+
+**Tiefling Barbarian with Bear Totem:**
+```json
+{
+  "weapon_proficiencies": ["simple weapons", "martial weapons"],
+  "armor_proficiencies": ["light armor", "medium armor", "shields"],
+  "tool_proficiencies": [],
+  "languages": ["Common", "Infernal"],
+  "resistances": ["Fire"],
+  "immunities": [],
+  "vulnerabilities": [],
+  "darkvision": 60,
+  "senses": [],
+  "hit_dice_current": 3,
+  "hit_dice_max": 3
+}
+```
+
+### Active Effects (🚨 ALWAYS APPLY THESE)
+
+The `active_effects` array contains **persistent buffs, spells, and effects** that are ALWAYS active on the character. These are shown in the system prompt and MUST be applied to all relevant rolls.
+
+**Format:** Array of strings describing each effect and its mechanical benefit.
+
+```json
+{
+  "active_effects": [
+    "Enhance Ability (Charisma) - Advantage on CHA checks",
+    "Haste - +2 AC, advantage on DEX saves, extra action",
+    "Greater Invisibility - Advantage on attacks, attacks against have disadvantage",
+    "Aid - +10 max HP (already included in hp_max)",
+    "Elixir of Battlemage's Power - +3 to spell attack and spell save DC",
+    "Longstrider - +10ft movement speed"
+  ]
+}
+```
+
+**When to add to `active_effects`:**
+- Player requests a buff be "always active" or "assumed on"
+- Specialist/companion casts a persistent buff
+- Elixirs or potions with long duration
+- Boons, traits, or campaign-specific bonuses
+
+**When NOT to use `active_effects`:**
+- Temporary combat effects (use `status_conditions` instead)
+- Concentration spells that might drop (unless player says "assume always on")
+- One-time effects
+
+**To add via state_updates:**
+```json
+{"player_character_data": {"active_effects": {"append": ["New Effect - mechanical description"]}}}
+```
 
 **(Rules for applying active effects are documented in `game_state_examples.md`)**
 

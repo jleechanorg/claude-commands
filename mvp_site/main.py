@@ -103,6 +103,7 @@ from mvp_site import (
     stats_display,
     world_logic,  # For MCP fallback logic
 )
+from mvp_site.game_state import coerce_int
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 
@@ -1561,7 +1562,7 @@ def create_app() -> Flask:
             proficiency_bonus = stats_display.get_proficiency_bonus(level)
             dex_mod = stats_display.calc_modifier(effective_stats.get("dex", {}).get("score", 10))
             class_name = safe_get("class_name", safe_get("class", ""))
-            spellcasting_ability = stats_display.get_spellcasting_ability(class_name)
+            spellcasting_ability = stats_display.get_spellcasting_ability(class_name, pc_data_dict)
 
             # Spell stats (if spellcaster)
             spell_stats = None
@@ -1586,6 +1587,21 @@ def create_app() -> Flask:
 
             speed_val = safe_get("speed", safe_get("movement_speed"))
 
+            # Calculate hit dice
+            # Clamp level to 1-20 for consistency with get_hit_dice
+            level_int = coerce_int(level, 1) or 1
+            level_int = max(1, min(20, level_int))
+            hit_dice = stats_display.get_hit_dice(class_name, level_int)
+            hit_dice_current = safe_get("hit_dice_current")
+            hit_dice_max = safe_get("hit_dice_max", level_int)
+
+            # Calculate unarmed strike
+            str_mod = stats_display.calc_modifier(effective_scores.get("str", 10))
+            is_monk = "monk" in class_name.lower() if isinstance(class_name, str) and class_name else False
+            unarmed_strike = stats_display.calculate_unarmed_strike(
+                str_mod, proficiency_bonus, is_monk
+            )
+
             return jsonify(
                 {
                     KEY_SUCCESS: True,
@@ -1602,8 +1618,12 @@ def create_app() -> Flask:
                         "proficiency_bonus": proficiency_bonus,
                         "initiative": dex_mod,
                         "speed": speed_val,
+                        "hit_dice": hit_dice,
+                        "hit_dice_current": hit_dice_current,
+                        "hit_dice_max": hit_dice_max,
                         "spell_stats": spell_stats,
                         "saving_throws": saving_throws,
+                        "unarmed_strike": unarmed_strike,
                     },
                     "features": unique_features,
                 }
@@ -1940,6 +1960,41 @@ def create_app() -> Flask:
                 lines.append("No spells or special resources found.")
                 lines.append("(Non-spellcasting classes may not have spell slots)")
 
+            # Calculate spell stats (spell DC and spell attack) for spellcasters
+            spell_stats = None
+            class_name = safe_get("class_name", safe_get("class", ""))
+            spellcasting_ability = stats_display.get_spellcasting_ability(class_name, pc_data_dict)
+            if spellcasting_ability:
+                level = safe_get("level", 1)
+                proficiency_bonus = stats_display.get_proficiency_bonus(level)
+
+                # Get ability scores
+                stats_raw = (
+                    safe_get("stats")
+                    or safe_get("attributes")
+                    or safe_get("ability_scores")
+                    or {}
+                )
+                normalized_stats = stats_display.normalize_stats(stats_raw)
+
+                # Get spellcasting modifier
+                spell_score_raw = normalized_stats.get(spellcasting_ability, 10)
+                if isinstance(spell_score_raw, dict):
+                    spell_score = spell_score_raw.get("score", 10)
+                else:
+                    spell_score = spell_score_raw
+                try:
+                    spell_score = int(spell_score)
+                except (TypeError, ValueError):
+                    spell_score = 10
+
+                spell_mod = stats_display.calc_modifier(spell_score)
+                spell_stats = {
+                    "spellcasting_ability": spellcasting_ability.upper(),
+                    "spell_save_dc": 8 + proficiency_bonus + spell_mod,
+                    "spell_attack_bonus": proficiency_bonus + spell_mod,
+                }
+
             return jsonify(
                 {
                     KEY_SUCCESS: True,
@@ -1949,6 +2004,7 @@ def create_app() -> Flask:
                     "spells_prepared": spells_prepared,
                     "spell_slots": spell_slots,
                     "class_resources": class_resources,
+                    "spell_stats": spell_stats,
                 }
             )
 

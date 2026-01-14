@@ -183,6 +183,14 @@ document.addEventListener('DOMContentLoaded', () => {
       html += `<span class="stat-badge info-badge">Speed ${speedText}</span>`;
     }
     html += `<span class="stat-badge info-badge">Prof ${fmtMod(combat.proficiency_bonus)}</span>`;
+
+    // Hit Dice
+    if (combat.hit_dice) {
+      const hitDiceText = combat.hit_dice_current !== null && combat.hit_dice_current !== undefined
+        ? `${combat.hit_dice_current}/${combat.hit_dice_max} ${combat.hit_dice}`
+        : combat.hit_dice;
+      html += `<span class="stat-badge info-badge">Hit Dice ${hitDiceText}</span>`;
+    }
     html += '</div>';
 
     if (spellStats) {
@@ -292,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const spellsPrepared = Array.isArray(data.spells_prepared) ? data.spells_prepared : [];
     const spellsKnown = Array.isArray(data.spells_known) ? data.spells_known : [];
     const classResources = data.class_resources || {};
+    const spellStats = data.spell_stats;
 
     const normalizeSpell = (spell) => {
       if (typeof spell === 'string') {
@@ -331,6 +340,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return section;
     };
 
+    const fmtMod = (mod) => {
+      const n = parseInt(mod, 10);
+      if (Number.isNaN(n)) return '+0';
+      return n >= 0 ? `+${n}` : `${n}`;
+    };
+
     let html = '<div class="stats-panel info-card">';
     html += '<div class="stats-header info-header">';
     html += '<span class="stat-badge info-badge">Spells & Resources</span>';
@@ -338,6 +353,15 @@ document.addEventListener('DOMContentLoaded', () => {
       html += `<span class="info-subtext">Slots: ${Object.keys(spellSlots).length}</span>`;
     }
     html += '</div>';
+
+    // Display spell DC and spell attack for spellcasters
+    if (spellStats) {
+      html += '<div class="stats-spellcasting info-subrow">';
+      html += `<span class="stat-badge spell info-badge">Spell DC ${spellStats.spell_save_dc}</span>`;
+      html += `<span class="stat-badge spell info-badge">Spell Attack ${fmtMod(spellStats.spell_attack_bonus)}</span>`;
+      html += `<span class="stat-badge spell info-badge">${spellStats.spellcasting_ability}</span>`;
+      html += '</div>';
+    }
 
     if (Object.keys(spellSlots).length) {
       html += '<div class="info-section-title">Spell Slots</div>';
