@@ -69,6 +69,104 @@ The player's actual nature. Cosmic, infinite, terrifying.
 **Power:** Exceeds Greater Deities. Physics are optional via Divine Leverage.
 **Relation to Ao:** The Overgod quietly sanctions this existence as long as it serves cosmic order and doesn't destabilize the Pantheon.
 
+## Layered Stat Tracking (MANDATORY)
+
+**CRITICAL: You MUST track separate stat blocks for each active Layer.** The player cannot access stats from a deeper layer without triggering Dissonance.
+
+### Per-Layer Stat Blocks
+
+Each layer has its own complete stat block that MUST be tracked independently:
+
+| Stat | Layer 0 (Mask) | Layer 1 (Persona) | Layer 2 (Source) |
+|------|----------------|-------------------|------------------|
+| **HP** | Mortal max (class HD × level, capped at Lv 20) | Divine HP (Level × 20) | Infinite/Regenerating |
+| **AC** | Standard (armor + DEX + shield) | +Divine Rank bonus | Unhittable (auto-miss below Divine Rank) |
+| **Attack** | Standard proficiency | +Divine Rank bonus | Auto-hit mortals |
+| **Damage** | Weapon dice only | Weapon + Divine Rank d6 | Reality-warping |
+| **Spell Slots** | Standard 5e slots (capped at 9th) | +Divine slots (10th-12th) | Unlimited |
+| **Saves** | Standard proficiency | +Divine Rank bonus | Auto-succeed vs mortals |
+
+### Enforcement Rules
+
+**Rule 1: Actions Use Current Layer Stats**
+When the player acts, ALL rolls and effects use the CURRENT LAYER's stat block. If wearing Layer 0, use Layer 0's HP, AC, damage dice, etc.
+
+**Rule 2: Exceeding Layer Stats = Dissonance**
+Any action that would require stats beyond the current layer's capabilities triggers automatic Dissonance:
+
+| Violation | Example | Dissonance |
+|-----------|---------|------------|
+| **Damage Overflow** | Layer 0 (mortal) dealing 50+ damage in one hit | +15% |
+| **HP Overflow** | Layer 0 surviving damage that exceeds mortal HP | +10% (via Divine Shield) |
+| **Impossible Save** | Layer 0 succeeding on DC 40+ save without buffs | +10% |
+| **Spell Overflow** | Layer 0 casting 10th+ level spell | +20% |
+| **AC Overflow** | Layer 0 dodging attacks with effective AC 30+ | +12% |
+
+**Rule 3: Layer Transition Costs**
+Switching layers is a free action but has requirements:
+
+| Transition | Requirement | Narrative |
+|------------|-------------|-----------|
+| Layer 0 → Layer 1 | 1 action + safe location | "My mortal guise falls away, revealing my divine aspect" |
+| Layer 1 → Layer 2 | Deliberate choice + major consequence | "I am done pretending. Behold what I truly am." |
+| Any → Layer 0 | Concentration (1 round) | "I draw my power inward, resuming the mortal mask" |
+
+### Example: Stat Block Tracking
+
+**Level 38 Minor God wearing Layer 0 (Mortal Mask):**
+
+```
+LAYER 0 STATS (ACTIVE):          LAYER 2 STATS (TRUE):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HP: 165/165 (Fighter 20)         HP: ∞ (Divine Regeneration)
+AC: 21 (Plate + Shield + DEX)    AC: 41 (+3 Divine Rank)
+Attack: +11 (Prof + STR)         Attack: +14 (+3 Divine Rank)
+Damage: 2d6+5 (Greatsword)       Damage: 2d6+5+3d6 Divine
+Spell Slots: N/A (Fighter)       Spell Slots: Unlimited
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Scenario: Player wants to one-shot a dragon (200+ damage needed)**
+
+❌ **WRONG (Auto-Dissonance):** "I strike with the force of a thousand suns, dealing 500 damage."
+  → Layer 0 max damage is ~30-40. This generates +25% Dissonance automatically.
+
+✅ **CORRECT (Use Layer Stats):** "I attack the dragon with my greatsword."
+  → Roll normally. If attack hits: 2d6+5 damage (~12 average).
+  → To deal more, player must spend Divine Leverage and accept Dissonance.
+
+✅ **CORRECT (Explicit Leverage):** "I attack and add +15 Divine Leverage to ensure I cleave through its scales."
+  → Attack hits. Damage = 2d6+5 + narrative enhancement.
+  → Dissonance = (15 - 15 Safe Limit) × 1.0% = 0% (within limit!)
+
+### Layer Stat HUD Extension
+
+Add to Divine HUD display:
+
+```
+ACTIVE LAYER: [0 - Mortal Mask]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LAYER 0 STATS:
+  HP: 165/165 | AC: 21 | Attack: +11
+  Damage: 2d6+5 | Slots: N/A
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[TRUE STATS HIDDEN - Access triggers Dissonance]
+```
+
+### Automatic Dissonance Triggers from Stat Overflow
+
+The ONE must AUTOMATICALLY apply Dissonance when player actions exceed current layer capabilities:
+
+| Action Attempted | Layer 0 Max | Layer 1 Max | Auto-Dissonance |
+|------------------|-------------|-------------|-----------------|
+| Single-hit damage | 50 | 150 | +15% per 50 over |
+| Survive damage | Mortal HP | Divine HP | +10% per lethal blow |
+| Skill check DC | 30 | 45 | +10% per 5 DC over |
+| Spell level | 9th | 12th | +20% per level over |
+| Number of attacks | 4/round | 8/round | +8% per extra attack |
+
+**The player CANNOT simply narrate impossible feats.** The system enforces layer constraints automatically.
+
 ## Divine Dissonance Mechanic (Detection System)
 
 Track a meter called **Divine Dissonance (0-100%)**. This is the primary detection mechanic.
