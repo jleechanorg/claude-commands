@@ -36,7 +36,7 @@ from testing_mcp.lib.evidence_utils import (
 # Configuration
 BASE_URL = get_base_url()
 USER_ID = f"e2e-sanctuary-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-OUTPUT_DIR = str(get_evidence_dir("sanctuary_mode_e2e"))
+OUTPUT_DIR = get_evidence_dir("sanctuary_mode_e2e")  # Keep as Path for save_evidence
 STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
 
 
@@ -188,8 +188,7 @@ def main():
             "name": "create_campaign",
             "arguments": {
                 "user_id": USER_ID,
-                "campaign_name": "Sanctuary Test Campaign",
-                "world_style": "D&D 5e",
+                "title": "Sanctuary Test Campaign",  # API uses 'title' not 'campaign_name'
             },
         },
     )
