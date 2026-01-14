@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from typing import Optional
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -494,6 +495,38 @@ done
         return None
 
 
+def get_automation_user() -> Optional[str]:
+    """Detect automation user from environment or gh CLI."""
+    automation_user = os.environ.get("GITHUB_ACTOR") or os.environ.get("AUTOMATION_USERNAME")
+    if automation_user:
+        return automation_user
+
+    try:
+        result = subprocess.run(
+            ["gh", "api", "user", "--jq", ".login"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if result.returncode == 0:
+            username = result.stdout.strip()
+            # Validate GitHub username: alphanumeric and hyphens, cannot start or end with hyphen, max length 39
+            if username and re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$', username):
+                log(f"🔍 Auto-detected automation user from gh CLI: {username}")
+                return username
+            else:
+                log(f"⚠️ Invalid username format from gh CLI: {username!r}")
+    except subprocess.TimeoutExpired:
+        log("⚠️ Timeout while auto-detecting automation user from gh CLI")
+    except subprocess.CalledProcessError as e:
+        log(f"⚠️ gh CLI error while auto-detecting automation user: {e}")
+    except Exception as e:
+        log(f"⚠️ Failed to auto-detect automation user: {type(e).__name__}: {e}")
+    
+    return None
+
+
 def dispatch_agent_for_pr(
     dispatcher: TaskDispatcher,
     pr: dict,
@@ -587,7 +620,8 @@ def dispatch_agent_for_pr(
     )
 
     # Start background monitor to immediately delete any pending reviews created during execution
-    automation_user = os.environ.get("GITHUB_ACTOR") or os.environ.get("AUTOMATION_USERNAME")
+    automation_user = get_automation_user()
+    
     monitor = None
     if automation_user:
         monitor = _start_pending_review_monitor(
@@ -597,9 +631,9 @@ def dispatch_agent_for_pr(
             f"/tmp/orchestration_logs/pr-{workspace_name}.log",
         )
         if monitor:
-            log(f"Started pending review monitor (PID: {monitor.process.pid}) for PR #{pr_number}")
+            log(f"✅ Started pending review monitor (PID: {monitor.process.pid}) for PR #{pr_number} (user: {automation_user})")
     else:
-        log("⚠️ GITHUB_ACTOR/AUTOMATION_USERNAME not set; skipping pending review monitor")
+        log("⚠️ GITHUB_ACTOR/AUTOMATION_USERNAME not set and gh CLI detection failed; skipping pending review monitor")
 
     agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=agent_cli)
     success = False
