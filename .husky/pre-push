@@ -29,11 +29,11 @@ fi
 echo ""
 
 # 3. Tests - Skip in pre-push hook (run specific tests manually or let CI handle it)
-echo "🧪 Tests: Skipping (run_tests.sh requires explicit test files)"
-echo "   💡 Run specific tests locally: ./run_tests.sh mvp_site/tests/test_app.py"
+echo "🧪 Tests: Skipping (run specific tests manually or let CI handle it)"
+echo "   💡 Tests auto-discover test_*.py files when run manually"
 echo "   💡 Full test suite runs automatically in CI"
 echo ""
 
-echo "✅ All pre-push checks passed!"
+echo "✅ Pre-push checks completed (type checking and security scan ran in warnings-allowed mode)"
 echo ""
 echo "💡 Tip: Use 'git push --no-verify' to skip these checks if needed"

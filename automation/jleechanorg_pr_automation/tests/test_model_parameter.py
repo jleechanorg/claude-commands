@@ -214,9 +214,10 @@ class TestModelParameter(unittest.TestCase):
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"), \
-             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch:
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch, \
+             patch.object(monitor, "safety_manager") as mock_safety:
 
-            monitor.safety_manager.fixpr_limit = 10
+            mock_safety.fixpr_limit = 10
             result = monitor._process_pr_fixpr(
                 repository="test/repo",
                 pr_number=123,

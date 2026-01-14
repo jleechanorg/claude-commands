@@ -45,7 +45,7 @@ from lib.campaign_utils import (
 )
 from lib.evidence_utils import (
     get_evidence_dir,
-    capture_git_provenance,
+    capture_provenance,
     write_with_checksum,
 )
 
@@ -238,16 +238,6 @@ def main() -> int:
     print("=" * 60)
     print(f"Evidence directory: {evidence_dir}")
 
-    # Capture provenance
-    print("\n📊 Capturing provenance...")
-    try:
-        git_provenance = capture_git_provenance(fetch_origin=False)
-        print(f"   Git HEAD: {git_provenance.get('git_head', 'unknown')[:12]}")
-        print(f"   Branch: {git_provenance.get('git_branch', 'unknown')}")
-    except Exception as e:
-        print(f"   ⚠️  Warning: {e}")
-        git_provenance = {}
-
     # Start local server if requested
     local_server: LocalServer | None = None
     server_url = args.server_url
@@ -267,6 +257,10 @@ def main() -> int:
         print("   Checking health...")
         client.wait_healthy(timeout_s=10.0)
         print("   ✅ Server is healthy")
+
+        # Capture provenance
+        print("\n📊 Capturing provenance...")
+        provenance = capture_provenance(server_url)
 
         # Create campaign
         print("\n📋 Creating test campaign...")
@@ -328,7 +322,7 @@ def main() -> int:
         evidence = {
             "test": "mission_auto_completion_bug",
             "timestamp": datetime.now().isoformat(),
-            "provenance": {"git": git_provenance},
+            "provenance": provenance,
             "initial_state": {
                 "active_missions": initial_analysis["active_missions_count"],
                 "completed_missions": initial_analysis["completed_missions_count"],

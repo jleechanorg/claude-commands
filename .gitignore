@@ -190,6 +190,4 @@ logs/react-mcp-logs.json
 logs/react-mcp-logs.txt
 
 # Git merge conflict metadata (rerere artifacts)
-.beads/beads.base.*
-.beads/beads.left.*
-.beads/beads.right.*
+# Note: .beads/ directory must remain version controlled per coding guidelines

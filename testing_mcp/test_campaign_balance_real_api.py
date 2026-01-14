@@ -76,7 +76,7 @@ from lib.server_utils import (
     start_local_mcp_server,
 )
 from lib.evidence_utils import (
-    capture_full_provenance,
+    capture_provenance,
     get_evidence_dir,
     write_with_checksum,
 )
@@ -1249,7 +1249,7 @@ def main() -> int:
 
         # Capture full provenance per evidence-standards.md
         print("Capturing provenance...")
-        provenance = capture_full_provenance(port, base_url, fetch_origin=True)
+        provenance = capture_provenance(base_url)
 
         # Aggregate results
         all_results: list[TestResult] = []

@@ -31,9 +31,7 @@ from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 from lib.model_utils import DEFAULT_MODEL_MATRIX, settings_for_model, update_user_settings
 from lib.campaign_utils import create_campaign, process_action
 from lib.evidence_utils import (
-    capture_git_provenance,
-    capture_server_runtime,
-    capture_server_health,
+    capture_provenance,
     get_evidence_dir,
     save_evidence as save_evidence_lib,
     save_request_responses,
@@ -51,10 +49,9 @@ def _write_checksum_for_file(filepath: Path) -> None:
     checksum_file.write_text(f"{sha256_hash}  {filepath.name}\n")
 
 # Module-level evidence storage (populated at test start)
-_evidence_dir: Path | None = None
-_git_provenance: dict[str, Any] | None = None
-_server_info: dict[str, Any] | None = None
+_provenance: dict[str, Any] | None = None
 _captured_requests: list[dict[str, Any]] = []
+_evidence_dir: Path | None = None
 
 
 def setup_world_time_with_god_mode(
@@ -317,14 +314,7 @@ def save_evidence(
             "Full raw_response_text from LLM is captured. Server logs in artifacts/."
         ),
         # Embedded provenance per evidence-standards.md
-        "provenance": {
-            "git_head": _git_provenance.get("git_head") if _git_provenance else None,
-            "git_branch": _git_provenance.get("git_branch") if _git_provenance else None,
-            "merge_base": _git_provenance.get("merge_base") if _git_provenance else None,
-            "commits_ahead_of_main": _git_provenance.get("commits_ahead_of_main") if _git_provenance else None,
-            "diff_stat_vs_main": _git_provenance.get("diff_stat_vs_main") if _git_provenance else None,
-            "server": _server_info if _server_info else {},
-        },
+        "provenance": _provenance if _provenance else {},
         # RAW REQUEST per evidence-standards.md (full MCP tool call payload)
         "raw_request": {
             "tool_name": "process_action",
@@ -401,7 +391,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    global _git_provenance, _server_info, _evidence_dir
+    global _provenance, _evidence_dir
 
     local: LocalServer | None = None
     base_url = str(args.server_url)
@@ -426,15 +416,8 @@ def main() -> int:
         print("✅ Server is healthy")
 
         # Capture provenance per evidence-standards.md
-        print("📋 Capturing git provenance...")
-        _git_provenance = capture_git_provenance(fetch_origin=True)
-        print(f"   Git HEAD: {_git_provenance.get('git_head', 'unknown')[:12]}...")
-        print(f"   Branch: {_git_provenance.get('git_branch', 'unknown')}")
-
-        print("📋 Capturing server runtime info...")
-        _server_info = capture_server_runtime(port)
-        _server_info["health"] = capture_server_health(base_url)
-        print(f"   Server PID: {_server_info.get('pid', 'unknown')}")
+        print("📋 Capturing provenance...")
+        _provenance = capture_provenance(base_url)
 
         # Initialize evidence directory
         _evidence_dir = get_evidence_dir("temporal_anomaly")

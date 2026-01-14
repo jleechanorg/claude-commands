@@ -35,14 +35,20 @@ import subprocess
 import sys
 import urllib.request
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib import MCPClient
-from lib.campaign_utils import create_campaign, process_action, get_campaign_state
+from lib.campaign_utils import create_campaign, get_campaign_state, process_action
 from lib.evidence_utils import capture_provenance, get_evidence_dir
+from lib.regression_oracle import (
+    save_regression_snapshot,
+    validate_multi_turn_test,
+)
+from lib.server_utils import start_local_mcp_server
 
 # Configuration
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
@@ -187,7 +193,7 @@ def save_turn_artifacts(turn_number: int, action: str, response: dict, campaign_
     }
 
 
-def check_living_world_content(response: dict, turn_number: int) -> dict:
+def check_living_world_content(response: dict, turn_number: int) -> dict:  # noqa: PLR0912, PLR0915
     """Check if response contains living world content.
 
     Living world content can appear in:
@@ -376,387 +382,481 @@ def main() -> int:  # noqa: PLR0912, PLR0915
     with open(LOG_FILE, "w") as f:
         f.write("")
 
-    results = {
-        "test_name": "living_world_real_e2e",
-        "test_type": "living_world_advancement",
-        "timestamp": datetime.now(UTC).isoformat(),
-        "base_url": BASE_URL,
-        "user_id": USER_ID,
-        "strict_mode": STRICT_MODE,
-        "provenance": capture_provenance(BASE_URL),
-        "artifacts_dir": ARTIFACTS_DIR,
-        "collection_log": LOG_FILE,
-        "steps": [],
-        "turn_analyses": [],
-        "summary": {},
-    }
+    # Start local server
+    port = 8001
+    server = start_local_mcp_server(port)
+    log(f"Started local MCP server on port {port}")
 
-    # Health check and config capture
-    health = fetch_health()
-    if health.get("ok"):
-        health_path = os.path.join(OUTPUT_DIR, "health_response.json")
-        if health.get("parsed") is not None:
-            write_json(health_path, health["parsed"])
-        else:
-            with open(health_path, "w") as f:
-                f.write(health.get("raw", ""))
-            write_checksum(health_path)
-        results["health_response_path"] = health_path
-    else:
-        results["health_error"] = health.get("error")
+    # Wait for server to be ready
+    import time
+    server_ready = False
+    for _ in range(20):
+        health = fetch_health()
+        if health.get("ok"):
+            server_ready = True
+            break
+        time.sleep(1)
 
-    config_info = capture_config_proof()
-    results["config_proof"] = config_info
-
-    log(f"Provenance: {results['provenance'].get('git_head', 'unknown')[:12]}...")
-    log(f"Living World E2E Test - Testing every-3-turns advancement")
-    log("=" * 60)
-
-    # Create MCP client
-    client = MCPClient(BASE_URL)
-
-    # Step 1: Create campaign with rich faction/NPC setup
-    log("\nStep 1: Creating campaign with factions and NPCs...")
-    try:
-        campaign_id = create_campaign(
-            client,
-            USER_ID,
-            title="The Merchant's War",
-            description=(
-                "A bustling trade city where three factions vie for control: "
-                "The Merchant's Guild (wealth and commerce), "
-                "The City Guard (law and order), and "
-                "The Shadow Court (thieves and spies). "
-                "Each faction has their own agenda and the player's actions ripple through the city."
-            ),
-            character=(
-                "Sera, a former merchant's daughter turned adventurer. "
-                "She knows the trade routes and has contacts in all factions."
-            ),
-            setting=(
-                "The Grand Bazaar of Saltmire, a coastal trade city. "
-                "The morning market is busy with merchants setting up stalls."
-            ),
-        )
-        log(f"  Campaign ID: {campaign_id}")
-        results["campaign_id"] = campaign_id
-        results["steps"].append({
-            "name": "create_campaign",
-            "passed": True,
-            "campaign_id": campaign_id,
-        })
-    except Exception as e:
-        log(f"  FAILED: {e}")
-        results["steps"].append({
-            "name": "create_campaign",
-            "passed": False,
-            "error": str(e),
-        })
-        save_results(results)
+    if not server_ready:
+        log("FAILED: Server did not start within timeout")
+        server.stop()
         return 1
 
-    # Step 2: Play through 10 turns to trigger:
-    # - Living World 3 times (turns 3, 6, 9) for background events
-    # - At least 1 Scene Event (every 3-6 turns)
-    actions = [
-        # Turn 1: Explore the market
-        "I walk through the market, observing the merchants and listening for any interesting gossip.",
-        # Turn 2: Interact with an NPC
-        "I approach a spice merchant I recognize from my father's business. 'Marcus, it's been a while. How's trade these days?'",
-        # Turn 3: Living World Turn - Should trigger advancement
-        "I thank Marcus for the information and head toward the Guild Hall to see what opportunities might be posted.",
-        # Turn 4: Continue exploration
-        "I examine the job postings on the Guild Hall board, looking for anything that pays well.",
-        # Turn 5: Take an action
-        "I speak with the Guild clerk about the caravan escort job. What are the details?",
-        # Turn 6: Living World Turn - Should trigger advancement again
-        "I accept the caravan job and ask when the caravan departs. Then I head to the market to prepare supplies.",
-        # Turn 7: Prepare for journey
-        "I visit the armorer to check if my equipment needs any repairs before the journey.",
-        # Turn 8: Gather information
-        "I stop by the tavern to ask travelers about the road conditions to Oakhaven.",
-        # Turn 9: Living World Turn - Should trigger advancement
-        "I return to the caravan staging area to meet my fellow guards and the merchant leading the caravan.",
-        # Turn 10: Begin journey
-        "I take my position with the caravan as we depart through the eastern gate. I keep my eyes open for trouble.",
-    ]
+    try:
+        results = {
+            "test_name": "living_world_real_e2e",
+            "test_type": "living_world_advancement",
+            "timestamp": datetime.now(UTC).isoformat(),
+            "base_url": BASE_URL,
+            "user_id": USER_ID,
+            "strict_mode": STRICT_MODE,
+            "provenance": capture_provenance(BASE_URL),
+            "artifacts_dir": ARTIFACTS_DIR,
+            "collection_log": LOG_FILE,
+            "steps": [],
+            "turn_analyses": [],
+            "summary": {},
+        }
 
-    living_world_turns = []
+        # Health check and config capture
+        health = fetch_health()
+        if health.get("ok"):
+            health_path = os.path.join(OUTPUT_DIR, "health_response.json")
+            if health.get("parsed") is not None:
+                write_json(health_path, health["parsed"])
+            else:
+                with open(health_path, "w") as f:
+                    f.write(health.get("raw", ""))
+                write_checksum(health_path)
+            results["health_response_path"] = health_path
+        else:
+            results["health_error"] = health.get("error")
 
-    for i, action in enumerate(actions, start=1):
-        log(f"\nStep 2.{i}: Turn {i} - {action[:50]}...")
+        config_info = capture_config_proof()
+        results["config_proof"] = config_info
+
+        log(f"Provenance: {results['provenance'].get('git_head', 'unknown')[:12]}...")
+        log("Living World E2E Test - Testing every-3-turns advancement")
+        log("=" * 60)
+
+        # Create MCP client
+        client = MCPClient(BASE_URL)
+
+        # Step 1: Create campaign with rich faction/NPC setup
+        log("\nStep 1: Creating campaign with factions and NPCs...")
         try:
-            response = process_action(
+            campaign_id = create_campaign(
+                client,
+                USER_ID,
+                title="The Merchant's War",
+                description=(
+                    "A bustling trade city where three factions vie for control: "
+                    "The Merchant's Guild (wealth and commerce), "
+                    "The City Guard (law and order), and "
+                    "The Shadow Court (thieves and spies). "
+                    "Each faction has their own agenda and the player's actions ripple through the city."
+                ),
+                character=(
+                    "Sera, a former merchant's daughter turned adventurer. "
+                    "She knows the trade routes and has contacts in all factions."
+                ),
+                setting=(
+                    "The Grand Bazaar of Saltmire, a coastal trade city. "
+                    "The morning market is busy with merchants setting up stalls."
+                ),
+            )
+            log(f"  Campaign ID: {campaign_id}")
+            results["campaign_id"] = campaign_id
+            results["steps"].append({
+                "name": "create_campaign",
+                "passed": True,
+                "campaign_id": campaign_id,
+            })
+        except Exception as e:
+            log(f"  FAILED: {e}")
+            results["steps"].append({
+                "name": "create_campaign",
+                "passed": False,
+                "error": str(e),
+            })
+            save_results(results)
+            return 1
+
+        # Step 2: Play through 10 turns to trigger:
+        # - Living World 3 times (turns 3, 6, 9) for background events
+        # - At least 1 Scene Event (every 3-6 turns)
+        actions = [
+            # Turn 1: Explore the market
+            "I walk through the market, observing the merchants and listening for any interesting gossip.",
+            # Turn 2: Interact with an NPC
+            "I approach a spice merchant I recognize from my father's business. 'Marcus, it's been a while. How's trade these days?'",
+            # Turn 3: Living World Turn - Should trigger advancement
+            "I thank Marcus for the information and head toward the Guild Hall to see what opportunities might be posted.",
+            # Turn 4: Continue exploration
+            "I examine the job postings on the Guild Hall board, looking for anything that pays well.",
+            # Turn 5: Take an action
+            "I speak with the Guild clerk about the caravan escort job. What are the details?",
+            # Turn 6: Living World Turn - Should trigger advancement again
+            "I accept the caravan job and ask when the caravan departs. Then I head to the market to prepare supplies.",
+            # Turn 7: Prepare for journey
+            "I visit the armorer to check if my equipment needs any repairs before the journey.",
+            # Turn 8: Gather information
+            "I stop by the tavern to ask travelers about the road conditions to Oakhaven.",
+            # Turn 9: Living World Turn - Should trigger advancement
+            "I return to the caravan staging area to meet my fellow guards and the merchant leading the caravan.",
+            # Turn 10: Begin journey
+            "I take my position with the caravan as we depart through the eastern gate. I keep my eyes open for trouble.",
+        ]
+
+        living_world_turns = []
+
+        for i, action in enumerate(actions, start=1):
+            log(f"\nStep 2.{i}: Turn {i} - {action[:50]}...")
+            try:
+                response = process_action(
+                    client,
+                    user_id=USER_ID,
+                    campaign_id=campaign_id,
+                    user_input=action,
+                )
+
+                narrative = response.get("narrative", "") or response.get("raw_text", "")
+                narrative_preview = narrative[:150] if narrative else "None"
+
+                # Analyze for living world content
+                lw_analysis = check_living_world_content(response, i)
+                results["turn_analyses"].append(lw_analysis)
+
+                artifact_paths = save_turn_artifacts(i, action, response, campaign_id)
+
+                passed = bool(narrative)
+                if isinstance(response.get("success"), bool):
+                    passed = passed and response.get("success") is True
+
+                step_result = {
+                    "name": f"turn_{i}",
+                    "turn_number": i,
+                    "passed": passed,
+                    "narrative_preview": narrative_preview,
+                    "is_living_world_turn": lw_analysis["is_living_world_turn"],
+                    "living_world_content": lw_analysis["has_living_world_content"],
+                    "structured_content": lw_analysis["structured_content_found"],
+                    "game_state_world_events": lw_analysis["game_state_world_events_found"],
+                    "lw_instruction_file_included": lw_analysis["lw_instruction_file_included"],
+                    "artifact_paths": artifact_paths,
+                }
+
+                if lw_analysis["is_living_world_turn"]:
+                    living_world_turns.append({
+                        "turn_number": i,
+                        "analysis": lw_analysis,
+                        "response_keys": list(response.keys()),
+                        "state_updates": response.get("state_updates", {}),
+                        "artifact_paths": artifact_paths,
+                    })
+                    log("  🌍 Living World Turn!")
+                    log(f"     World Events: {lw_analysis['world_events_found']}")
+                    log(f"     Background Events: {lw_analysis['background_events_count']} total")
+                    log(f"       - Immediate: {lw_analysis['immediate_events_count']}")
+                    log(f"       - Long-term: {lw_analysis['long_term_events_count']}")
+                    log(f"       - With event_type: {lw_analysis['events_with_type']}")
+                    log(f"       - With status: {lw_analysis['events_with_status']} (pending:{lw_analysis['events_pending']}, discovered:{lw_analysis['events_discovered']}, resolved:{lw_analysis['events_resolved']})")
+                    log(f"     Faction Updates: {lw_analysis['faction_updates_found']}")
+                    log(f"     Rumors: {lw_analysis['rumors_found']}")
+                    log(f"     Time Events: {lw_analysis['time_events_found']}")
+                    log(f"     Game State World Events: {lw_analysis['game_state_world_events_found']}")
+                    log(f"     LW Instruction File: {lw_analysis['lw_instruction_file_included']}")
+                    log(f"     SysInstr Files: {lw_analysis['system_instruction_files']}")
+                    log(f"     Narrative Hints: {lw_analysis['narrative_hints']}")
+                # Clarify: "persisted state" means world_events from prior LW turns still exist in game_state
+                # This is NOT new LW generation - just showing that world state persists across turns
+                elif lw_analysis['has_living_world_content']:
+                    log("  📖 Regular turn (persisted LW state visible: True)")
+                else:
+                    log("  📖 Regular turn (no LW state)")
+
+                # Check for scene event on any turn
+                if lw_analysis["scene_event_found"]:
+                    log(f"  🎭 Scene Event Triggered! Type: {lw_analysis['scene_event_type']}")
+
+                # Show scene event tracking state
+                if lw_analysis["next_scene_event_turn"] is not None:
+                    log(f"     Next Scene Event Turn: {lw_analysis['next_scene_event_turn']}")
+
+                log(f"  Narrative: {narrative_preview}...")
+
+                results["steps"].append(step_result)
+
+            except Exception as e:
+                log(f"  FAILED: {e}")
+                results["steps"].append({
+                    "name": f"turn_{i}",
+                    "turn_number": i,
+                    "passed": False,
+                    "error": str(e),
+                })
+                # Continue with other turns
+
+        # Step 3: Get final campaign state
+        log("\nStep 3: Getting final campaign state...")
+        try:
+            final_state = get_campaign_state(
                 client,
                 user_id=USER_ID,
                 campaign_id=campaign_id,
-                user_input=action,
             )
+            final_state_path = os.path.join(OUTPUT_DIR, "final_state.json")
+            write_json(final_state_path, final_state)
+            game_state = final_state.get("game_state", {})
 
-            narrative = response.get("narrative", "") or response.get("raw_text", "")
-            narrative_preview = narrative[:150] if narrative else "None"
+            # Check for living world data in game state
+            world_events = game_state.get("world_events", {})
+            custom_state = game_state.get("custom_campaign_state", {})
 
-            # Analyze for living world content
-            lw_analysis = check_living_world_content(response, i)
-            results["turn_analyses"].append(lw_analysis)
-
-            artifact_paths = save_turn_artifacts(i, action, response, campaign_id)
-
-            passed = bool(narrative)
-            if isinstance(response.get("success"), bool):
-                passed = passed and response.get("success") is True
-
-            step_result = {
-                "name": f"turn_{i}",
-                "turn_number": i,
-                "passed": passed,
-                "narrative_preview": narrative_preview,
-                "is_living_world_turn": lw_analysis["is_living_world_turn"],
-                "living_world_content": lw_analysis["has_living_world_content"],
-                "structured_content": lw_analysis["structured_content_found"],
-                "game_state_world_events": lw_analysis["game_state_world_events_found"],
-                "lw_instruction_file_included": lw_analysis["lw_instruction_file_included"],
-                "artifact_paths": artifact_paths,
+            results["steps"].append({
+                "name": "get_final_state",
+                "passed": True,
+                "has_world_events": bool(world_events),
+                "custom_state_keys": list(custom_state.keys()) if custom_state else [],
+                "final_state_path": final_state_path,
+            })
+            results["final_game_state_summary"] = {
+                "has_world_events": bool(world_events),
+                "world_events_sample": world_events if world_events else None,
+                "custom_campaign_state": custom_state,
             }
-
-            if lw_analysis["is_living_world_turn"]:
-                living_world_turns.append({
-                    "turn_number": i,
-                    "analysis": lw_analysis,
-                    "response_keys": list(response.keys()),
-                    "state_updates": response.get("state_updates", {}),
-                    "artifact_paths": artifact_paths,
-                })
-                log(f"  🌍 Living World Turn!")
-                log(f"     World Events: {lw_analysis['world_events_found']}")
-                log(f"     Background Events: {lw_analysis['background_events_count']} total")
-                log(f"       - Immediate: {lw_analysis['immediate_events_count']}")
-                log(f"       - Long-term: {lw_analysis['long_term_events_count']}")
-                log(f"       - With event_type: {lw_analysis['events_with_type']}")
-                log(f"       - With status: {lw_analysis['events_with_status']} (pending:{lw_analysis['events_pending']}, discovered:{lw_analysis['events_discovered']}, resolved:{lw_analysis['events_resolved']})")
-                log(f"     Faction Updates: {lw_analysis['faction_updates_found']}")
-                log(f"     Rumors: {lw_analysis['rumors_found']}")
-                log(f"     Time Events: {lw_analysis['time_events_found']}")
-                log(f"     Game State World Events: {lw_analysis['game_state_world_events_found']}")
-                log(f"     LW Instruction File: {lw_analysis['lw_instruction_file_included']}")
-                log(f"     SysInstr Files: {lw_analysis['system_instruction_files']}")
-                log(f"     Narrative Hints: {lw_analysis['narrative_hints']}")
-            else:
-                # Clarify: "persisted state" means world_events from prior LW turns still exist in game_state
-                # This is NOT new LW generation - just showing that world state persists across turns
-                if lw_analysis['has_living_world_content']:
-                    log(f"  📖 Regular turn (persisted LW state visible: True)")
-                else:
-                    log(f"  📖 Regular turn (no LW state)")
-
-            # Check for scene event on any turn
-            if lw_analysis["scene_event_found"]:
-                log(f"  🎭 Scene Event Triggered! Type: {lw_analysis['scene_event_type']}")
-
-            # Show scene event tracking state
-            if lw_analysis["next_scene_event_turn"] is not None:
-                log(f"     Next Scene Event Turn: {lw_analysis['next_scene_event_turn']}")
-
-            log(f"  Narrative: {narrative_preview}...")
-
-            results["steps"].append(step_result)
+            log(f"  World events in state: {bool(world_events)}")
+            log(f"  Custom state keys: {list(custom_state.keys()) if custom_state else []}")
 
         except Exception as e:
             log(f"  FAILED: {e}")
             results["steps"].append({
-                "name": f"turn_{i}",
-                "turn_number": i,
+                "name": "get_final_state",
                 "passed": False,
                 "error": str(e),
             })
-            # Continue with other turns
 
-    # Step 3: Get final campaign state
-    log("\nStep 3: Getting final campaign state...")
-    try:
-        final_state = get_campaign_state(
-            client,
-            user_id=USER_ID,
-            campaign_id=campaign_id,
+        # Summary
+        turns_with_lw_content = sum(1 for a in results["turn_analyses"] if a["has_living_world_content"])
+        lw_turns_with_content = sum(
+            1 for a in results["turn_analyses"]
+            if a["is_living_world_turn"] and a["has_living_world_content"]
         )
-        final_state_path = os.path.join(OUTPUT_DIR, "final_state.json")
-        write_json(final_state_path, final_state)
-        game_state = final_state.get("game_state", {})
+        expected_lw_turns = len([t for t in range(1, len(actions) + 1) if t % 3 == 0])
+        lw_turns_structured = sum(
+            1 for a in results["turn_analyses"]
+            if a["is_living_world_turn"] and a["structured_content_found"]
+        )
+        lw_turns_game_state = sum(
+            1 for a in results["turn_analyses"]
+            if a["is_living_world_turn"] and a["game_state_world_events_found"]
+        )
+        lw_turns_sysinstr = sum(
+            1 for a in results["turn_analyses"]
+            if a["is_living_world_turn"] and a["lw_instruction_file_included"]
+        )
+        structured_non_lw = sum(
+            1 for a in results["turn_analyses"]
+            if (not a["is_living_world_turn"]) and a["structured_content_found"]
+        )
 
-        # Check for living world data in game state
-        world_events = game_state.get("world_events", {})
-        custom_state = game_state.get("custom_campaign_state", {})
+        # NEW: Calculate event type metrics across all LW turns
+        total_immediate_events = sum(
+            a["immediate_events_count"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
+        total_long_term_events = sum(
+            a["long_term_events_count"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
+        total_events_with_type = sum(
+            a["events_with_type"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
+        total_events_with_discovery_turn = sum(
+            a["events_with_discovery_turn"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
+        # Event lifecycle status tracking
+        total_events_with_status = sum(
+            a["events_with_status"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
+        total_events_pending = sum(
+            a["events_pending"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
+        total_events_discovered = sum(
+            a["events_discovered"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
+        total_events_resolved = sum(
+            a["events_resolved"] for a in results["turn_analyses"]
+            if a["is_living_world_turn"]
+        )
 
-        results["steps"].append({
-            "name": "get_final_state",
-            "passed": True,
-            "has_world_events": bool(world_events),
-            "custom_state_keys": list(custom_state.keys()) if custom_state else [],
-            "final_state_path": final_state_path,
-        })
-        results["final_game_state_summary"] = {
-            "has_world_events": bool(world_events),
-            "world_events_sample": world_events if world_events else None,
-            "custom_campaign_state": custom_state,
-        }
-        log(f"  World events in state: {bool(world_events)}")
-        log(f"  Custom state keys: {list(custom_state.keys()) if custom_state else []}")
-
-    except Exception as e:
-        log(f"  FAILED: {e}")
-        results["steps"].append({
-            "name": "get_final_state",
-            "passed": False,
-            "error": str(e),
-        })
-
-    # Summary
-    turns_with_lw_content = sum(1 for a in results["turn_analyses"] if a["has_living_world_content"])
-    lw_turns_with_content = sum(
-        1 for a in results["turn_analyses"]
-        if a["is_living_world_turn"] and a["has_living_world_content"]
-    )
-    expected_lw_turns = len([t for t in range(1, len(actions) + 1) if t % 3 == 0])
-    lw_turns_structured = sum(
-        1 for a in results["turn_analyses"]
-        if a["is_living_world_turn"] and a["structured_content_found"]
-    )
-    lw_turns_game_state = sum(
-        1 for a in results["turn_analyses"]
-        if a["is_living_world_turn"] and a["game_state_world_events_found"]
-    )
-    lw_turns_sysinstr = sum(
-        1 for a in results["turn_analyses"]
-        if a["is_living_world_turn"] and a["lw_instruction_file_included"]
-    )
-    structured_non_lw = sum(
-        1 for a in results["turn_analyses"]
-        if (not a["is_living_world_turn"]) and a["structured_content_found"]
-    )
-
-    # NEW: Calculate event type metrics across all LW turns
-    total_immediate_events = sum(
-        a["immediate_events_count"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-    total_long_term_events = sum(
-        a["long_term_events_count"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-    total_events_with_type = sum(
-        a["events_with_type"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-    total_events_with_discovery_turn = sum(
-        a["events_with_discovery_turn"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-    # Event lifecycle status tracking
-    total_events_with_status = sum(
-        a["events_with_status"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-    total_events_pending = sum(
-        a["events_pending"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-    total_events_discovered = sum(
-        a["events_discovered"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-    total_events_resolved = sum(
-        a["events_resolved"] for a in results["turn_analyses"]
-        if a["is_living_world_turn"]
-    )
-
-    # NEW: Scene event metrics
-    scene_events_found = sum(
-        1 for a in results["turn_analyses"] if a["scene_event_found"]
-    )
-    scene_event_types = [
-        a["scene_event_type"] for a in results["turn_analyses"]
-        if a["scene_event_found"] and a["scene_event_type"]
-    ]
-
-    results["living_world_turns"] = living_world_turns
-    results["summary"] = {
-        "campaign_created": campaign_id is not None,
-        "total_turns": len(actions),
-        "expected_living_world_turns": expected_lw_turns,
-        "living_world_turns_with_content": lw_turns_with_content,
-        "living_world_turns_with_structured_content": lw_turns_structured,
-        "living_world_turns_with_game_state_world_events": lw_turns_game_state,
-        "living_world_turns_with_system_instruction": lw_turns_sysinstr,
-        "structured_content_on_non_lw_turns": structured_non_lw,
-        "total_turns_with_lw_content": turns_with_lw_content,
-        # NEW: Event type metrics
-        "total_immediate_events": total_immediate_events,
-        "total_long_term_events": total_long_term_events,
-        "total_events_with_type": total_events_with_type,
-        "total_events_with_discovery_turn": total_events_with_discovery_turn,
-        # NEW: Event lifecycle status metrics
-        "total_events_with_status": total_events_with_status,
-        "total_events_pending": total_events_pending,
-        "total_events_discovered": total_events_discovered,
-        "total_events_resolved": total_events_resolved,
         # NEW: Scene event metrics
-        "scene_events_found": scene_events_found,
-        "scene_event_types": scene_event_types,
-        # Existing metrics
-        "steps_passed": sum(1 for s in results["steps"] if s.get("passed")),
-        "steps_total": len(results["steps"]),
-        "living_world_success_rate": (
-            lw_turns_with_content / expected_lw_turns * 100
-            if expected_lw_turns > 0 else 0
-        ),
-    }
+        scene_events_found = sum(
+            1 for a in results["turn_analyses"] if a["scene_event_found"]
+        )
+        scene_event_types = [
+            a["scene_event_type"] for a in results["turn_analyses"]
+            if a["scene_event_found"] and a["scene_event_type"]
+        ]
 
-    log("\n" + "=" * 60)
-    log("SUMMARY")
-    log("=" * 60)
-    log(f"Campaign created: {campaign_id is not None}")
-    log(f"Total turns played: {len(actions)}")
-    log(f"Expected living world turns: {expected_lw_turns} (turns {', '.join(str(t) for t in range(3, len(actions) + 1, 3))})")
-    log(f"Living world turns with content: {lw_turns_with_content}/{expected_lw_turns}")
-    log(f"Living world turns with structured content: {lw_turns_structured}/{expected_lw_turns}")
-    log(f"Living world turns with game_state world_events: {lw_turns_game_state}/{expected_lw_turns}")
-    log(f"Living world turns with system_instruction: {lw_turns_sysinstr}/{expected_lw_turns}")
-    log(f"Structured content on non-LW turns: {structured_non_lw}")
-    log(f"Total turns with any LW content: {turns_with_lw_content}")
-    log("")
-    log("EVENT TYPE BREAKDOWN:")
-    log(f"  Total immediate events: {total_immediate_events}")
-    log(f"  Total long-term events: {total_long_term_events}")
-    log(f"  Events with event_type field: {total_events_with_type}")
-    log(f"  Events with estimated_discovery_turn: {total_events_with_discovery_turn}")
-    log("")
-    log("EVENT LIFECYCLE STATUS:")
-    log(f"  Events with status field: {total_events_with_status}")
-    log(f"    - pending: {total_events_pending}")
-    log(f"    - discovered: {total_events_discovered}")
-    log(f"    - resolved: {total_events_resolved}")
-    log("")
-    log("SCENE EVENTS:")
-    log(f"  Scene events triggered: {scene_events_found}")
-    log(f"  Scene event types: {scene_event_types}")
-    log("")
-    log(f"Steps passed: {results['summary']['steps_passed']}/{results['summary']['steps_total']}")
+        results["living_world_turns"] = living_world_turns
+        results["summary"] = {
+            "campaign_created": campaign_id is not None,
+            "total_turns": len(actions),
+            "expected_living_world_turns": expected_lw_turns,
+            "living_world_turns_with_content": lw_turns_with_content,
+            "living_world_turns_with_structured_content": lw_turns_structured,
+            "living_world_turns_with_game_state_world_events": lw_turns_game_state,
+            "living_world_turns_with_system_instruction": lw_turns_sysinstr,
+            "structured_content_on_non_lw_turns": structured_non_lw,
+            "total_turns_with_lw_content": turns_with_lw_content,
+            # NEW: Event type metrics
+            "total_immediate_events": total_immediate_events,
+            "total_long_term_events": total_long_term_events,
+            "total_events_with_type": total_events_with_type,
+            "total_events_with_discovery_turn": total_events_with_discovery_turn,
+            # NEW: Event lifecycle status metrics
+            "total_events_with_status": total_events_with_status,
+            "total_events_pending": total_events_pending,
+            "total_events_discovered": total_events_discovered,
+            "total_events_resolved": total_events_resolved,
+            # NEW: Scene event metrics
+            "scene_events_found": scene_events_found,
+            "scene_event_types": scene_event_types,
+            # Existing metrics
+            "steps_passed": sum(1 for s in results["steps"] if s.get("passed")),
+            "steps_total": len(results["steps"]),
+            "living_world_success_rate": (
+                lw_turns_with_content / expected_lw_turns * 100
+                if expected_lw_turns > 0 else 0
+            ),
+        }
 
-    save_results(results)
+        log("\n" + "=" * 60)
+        log("SUMMARY")
+        log("=" * 60)
+        log(f"Campaign created: {campaign_id is not None}")
+        log(f"Total turns played: {len(actions)}")
+        log(f"Expected living world turns: {expected_lw_turns} (turns {', '.join(str(t) for t in range(3, len(actions) + 1, 3))})")
+        log(f"Living world turns with content: {lw_turns_with_content}/{expected_lw_turns}")
+        log(f"Living world turns with structured content: {lw_turns_structured}/{expected_lw_turns}")
+        log(f"Living world turns with game_state world_events: {lw_turns_game_state}/{expected_lw_turns}")
+        log(f"Living world turns with system_instruction: {lw_turns_sysinstr}/{expected_lw_turns}")
+        log(f"Structured content on non-LW turns: {structured_non_lw}")
+        log(f"Total turns with any LW content: {turns_with_lw_content}")
+        log("")
+        log("EVENT TYPE BREAKDOWN:")
+        log(f"  Total immediate events: {total_immediate_events}")
+        log(f"  Total long-term events: {total_long_term_events}")
+        log(f"  Events with event_type field: {total_events_with_type}")
+        log(f"  Events with estimated_discovery_turn: {total_events_with_discovery_turn}")
+        log("")
+        log("EVENT LIFECYCLE STATUS:")
+        log(f"  Events with status field: {total_events_with_status}")
+        log(f"    - pending: {total_events_pending}")
+        log(f"    - discovered: {total_events_discovered}")
+        log(f"    - resolved: {total_events_resolved}")
+        log("")
+        log("SCENE EVENTS:")
+        log(f"  Scene events triggered: {scene_events_found}")
+        log(f"  Scene event types: {scene_event_types}")
+        log("")
+        log(f"Steps passed: {results['summary']['steps_passed']}/{results['summary']['steps_total']}")
 
-    # Success criteria
-    if lw_turns_structured > 0:
-        log("\n✅ SUCCESS: Structured living world content detected on scheduled turns!")
-        return 0
-    if REQUIRE_STRUCTURED:
-        log("\n❌ FAILED: Structured living world content not detected on scheduled turns")
-        return 1
-    elif turns_with_lw_content > 0:
-        log("\n⚠️ PARTIAL: Living world content detected, but not on expected turns")
-        return 0 if not STRICT_MODE else 1
-    else:
+        # Run regression validation against invariants
+        log("\n" + "=" * 60)
+        log("REGRESSION VALIDATION")
+        log("=" * 60)
+
+        # Build turn_results for regression oracle
+        turn_results = []
+        for analysis in results["turn_analyses"]:
+            turn_num = analysis.get("turn_number", len(turn_results) + 1)
+            try:
+                turn_num = int(turn_num)
+            except (TypeError, ValueError):
+                turn_num = len(turn_results) + 1
+            living_world_for_turn = next(
+                (lw for lw in living_world_turns if lw.get("turn_number") == turn_num),
+                None,
+            )
+            state_updates = (
+                living_world_for_turn.get("state_updates", {})
+                if living_world_for_turn
+                else {}
+            )
+            turn_result = {
+                "turn_number": turn_num,
+                "response": {
+                    "narrative": "",
+                    "state_updates": state_updates,
+                    "planning_block": {},
+                },
+                "analysis": analysis,
+            }
+            turn_results.append(turn_result)
+
+        # Validate using regression oracle
+        regression_result = validate_multi_turn_test(
+            turn_results,
+            expect_scene_events=True,
+            min_turns=10,
+        )
+
+        log(f"Regression status: {regression_result.overall_status.upper()}")
+        if regression_result.breaking_changes:
+            log("Breaking changes detected:")
+            for change in regression_result.breaking_changes:
+                log(f"  ❌ {change}")
+        if regression_result.suspicious_changes:
+            log("Suspicious changes detected:")
+            for change in regression_result.suspicious_changes:
+                log(f"  ⚠️ {change}")
+
+        # Add regression results to output
+        results["regression_validation"] = regression_result.to_dict()
+
+        # Save regression snapshot for future comparisons
+        snapshot_path = Path(OUTPUT_DIR) / "regression_snapshot.json"
+        save_regression_snapshot(
+            snapshot_path,
+            test_name="living_world_real_e2e",
+            test_type="living_world_advancement",
+            turn_results=turn_results,
+            summary={
+                "living_world_triggered": lw_turns_structured > 0,
+                "scene_event_occurred": scene_events_found > 0,
+                "total_background_events": total_immediate_events + total_long_term_events,
+                "total_scene_events": scene_events_found,
+                "total_faction_updates": sum(
+                    1 for a in results["turn_analyses"]
+                    if a["faction_updates_found"]
+                ),
+            },
+        )
+        log(f"\nRegression snapshot saved to: {snapshot_path}")
+
+        save_results(results)
+
+        # Success criteria
+        if lw_turns_structured > 0:
+            log("\n✅ SUCCESS: Structured living world content detected on scheduled turns!")
+            return 0
+        if REQUIRE_STRUCTURED:
+            log("\n❌ FAILED: Structured living world content not detected on scheduled turns")
+            return 1
+        if turns_with_lw_content > 0:
+            log("\n⚠️ PARTIAL: Living world content detected, but not on expected turns")
+            return 0 if not STRICT_MODE else 1
         log("\n❌ FAILED: No living world content detected in any turn")
         return 1 if STRICT_MODE else 0
+    finally:
+        server.stop()
 
 
 def save_results(results: dict) -> None:

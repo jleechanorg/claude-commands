@@ -64,8 +64,10 @@ def setup_logging(
     # File handler setup
     if log_file:
         # Explicit log file specified
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
+        log_dir = os.path.dirname(log_file)
+        if log_dir:  # Only create directory if log_file has a directory component
+            os.makedirs(log_dir, exist_ok=True)
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     elif log_dir:
@@ -73,7 +75,7 @@ def setup_logging(
         log_dir.mkdir(parents=True, exist_ok=True)
         log_filename = f"{name.replace('.', '_')}.log"
         log_path = log_dir / log_filename
-        file_handler = logging.FileHandler(log_path)
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

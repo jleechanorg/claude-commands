@@ -1,4 +1,23 @@
-"""Campaign management utilities for MCP tests."""
+"""Campaign management utilities for MCP tests.
+
+This module provides high-level utilities for creating campaigns and processing
+actions via the MCP server. It includes automatic invariant validation that
+runs on every response without requiring test code changes.
+
+Automatic Validation:
+    - Structural invariants (required keys, schema stability)
+    - Living world checks (on turns divisible by the configured interval)
+    - Combat state validation (when in_combat is true)
+    - God mode directive persistence
+
+Configuration via environment variables:
+    - MCP_INVARIANT_CHECK: Set to "0" or "false" to disable (default: enabled)
+    - MCP_INVARIANT_STRICT: Set to "1" or "true" to raise on breaking changes
+
+Results are attached to responses as:
+    - response["_invariant_validation"]: Dict with validation results
+    - response["_invariant_violations"]: List of violation strings (if any)
+"""
 
 from __future__ import annotations
 
@@ -7,6 +26,27 @@ import os
 from typing import Any
 
 from .mcp_client import MCPClient
+from .regression_oracle import DifferenceClass, InvariantChecker
+
+# Configuration
+_INVARIANT_CHECK_ENABLED = os.getenv("MCP_INVARIANT_CHECK", "1").lower() not in (
+    "0",
+    "false",
+    "no",
+)
+_INVARIANT_STRICT_MODE = os.getenv("MCP_INVARIANT_STRICT", "0").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
+# Track turn counts per campaign for living world validation
+_campaign_turn_counts: dict[str, int] = {}
+# Track whether god mode directives have ever been present per campaign
+_campaign_god_mode_expected: dict[str, bool] = {}
+
+# Shared invariant checker instance
+_invariant_checker = InvariantChecker()
 
 
 def create_campaign(
@@ -62,8 +102,12 @@ def process_action(
     user_input: str,
     mode: str = "character",
     include_raw_llm_payloads: bool | None = None,
+    track_turn: bool = True,
 ) -> dict[str, Any]:
     """Process a player action in a campaign.
+
+    This function automatically validates the response against invariants
+    and attaches validation results. To disable, set MCP_INVARIANT_CHECK=0.
 
     Args:
         client: MCPClient instance.
@@ -71,17 +115,28 @@ def process_action(
         campaign_id: Campaign identifier.
         user_input: Player action text.
         mode: Interaction mode (default: "character").
+        include_raw_llm_payloads: Whether to include raw LLM payloads in response.
+        track_turn: When False, do not advance turn counters or run invariant
+            validation (useful for administrative seeding actions).
 
     Notes:
         include_raw_llm_payloads defaults to TESTING_MCP_INCLUDE_RAW_LLM=true.
 
     Returns:
-        Response dict from server.
+        Response dict from server with added keys:
+        - _invariant_validation: Validation summary dict (when tracking turns)
+        - _invariant_violations: List of violation strings (if any, when tracking turns)
+        - _turn_number: Current turn number for this campaign (when tracking turns)
+
+    Raises:
+        AssertionError: If MCP_INVARIANT_STRICT=1 and breaking changes detected.
     """
     if include_raw_llm_payloads is None:
         include_raw_llm_payloads = (
             os.getenv("TESTING_MCP_INCLUDE_RAW_LLM", "true").lower() == "true"
         )
+
+    current_turn = _campaign_turn_counts.get(campaign_id, 0)
 
     payload = {
         "user_id": user_id,
@@ -91,7 +146,194 @@ def process_action(
     }
     if include_raw_llm_payloads:
         payload["include_raw_llm_payloads"] = True
-    return client.tools_call("process_action", payload)
+    response = client.tools_call("process_action", payload)
+
+    if track_turn:
+        turn_number = current_turn + 1
+        _campaign_turn_counts[campaign_id] = turn_number
+
+        # Attach turn number
+        response["_turn_number"] = turn_number
+
+        # Run automatic invariant validation if enabled
+        if _INVARIANT_CHECK_ENABLED:
+            response = _validate_response(response, turn_number, mode, campaign_id)
+
+    return response
+
+
+def _validate_response(
+    response: dict[str, Any],
+    turn_number: int,
+    mode: str,
+    campaign_id: str,
+) -> dict[str, Any]:
+    """Run invariant validation on a response and attach results.
+
+    Args:
+        response: Server response dict.
+        turn_number: Current turn number.
+        mode: Interaction mode.
+        campaign_id: Campaign identifier for tracking persistent invariants.
+
+    Returns:
+        Response with validation results attached.
+    """
+    # Detect context from response
+    state_updates = response.get("state_updates", {})
+    if not isinstance(state_updates, dict):
+        state_updates = {}
+
+    game_state = state_updates.get("game_state", {})
+    if not isinstance(game_state, dict):
+        game_state = {}
+
+    combat_state = game_state.get("combat_state", {})
+    if not isinstance(combat_state, dict):
+        combat_state = {}
+
+    custom_state = state_updates.get("custom_campaign_state", {})
+    if not isinstance(custom_state, dict):
+        custom_state = {}
+
+    is_combat = combat_state.get("in_combat", False)
+    god_mode_present = bool(custom_state.get("god_mode_directives"))
+    prior_god_mode_expected = _campaign_god_mode_expected.get(campaign_id, False)
+    expects_god_mode_directives = prior_god_mode_expected or god_mode_present
+
+    # Run validation
+    violations = _invariant_checker.validate_response(
+        response,
+        turn_number=turn_number,
+        is_combat=is_combat,
+        has_god_mode_directives=expects_god_mode_directives,
+    )
+
+    _campaign_god_mode_expected[campaign_id] = expects_god_mode_directives
+
+    # Classify violations
+    breaking = []
+    suspicious = []
+    safe = []
+
+    for v in violations:
+        msg = f"{v.invariant_name}: {v.actual}"
+        if v.severity == DifferenceClass.BREAKING:
+            breaking.append(msg)
+        elif v.severity == DifferenceClass.SUSPICIOUS:
+            suspicious.append(msg)
+        else:
+            safe.append(msg)
+
+    # Attach validation results
+    validation_result = {
+        "turn_number": turn_number,
+        "mode": mode,
+        "is_combat": is_combat,
+        "is_living_world_turn": (
+            turn_number > 0
+            and turn_number % _invariant_checker.living_world_interval == 0
+        ),
+        "breaking_count": len(breaking),
+        "suspicious_count": len(suspicious),
+        "safe_count": len(safe),
+        "status": "fail" if breaking else ("warn" if suspicious else "pass"),
+    }
+
+    response["_invariant_validation"] = validation_result
+    response["_invariant_violations"] = breaking + suspicious
+
+    # Strict mode: raise on breaking changes
+    if _INVARIANT_STRICT_MODE and breaking:
+        raise AssertionError(
+            f"Breaking invariant violations on turn {turn_number}:\n"
+            + "\n".join(f"  - {v}" for v in breaking)
+        )
+
+    return response
+
+
+def reset_turn_tracking(campaign_id: str | None = None) -> None:
+    """Reset turn tracking for a campaign or all campaigns.
+
+    Useful at the start of a test to ensure clean turn counting.
+
+    Args:
+        campaign_id: Specific campaign to reset, or None to reset all.
+    """
+    if campaign_id is None:
+        _campaign_turn_counts.clear()
+        _campaign_god_mode_expected.clear()
+    else:
+        _campaign_turn_counts.pop(campaign_id, None)
+        _campaign_god_mode_expected.pop(campaign_id, None)
+
+
+def get_turn_count(campaign_id: str) -> int:
+    """Get the current turn count for a campaign.
+
+    Args:
+        campaign_id: Campaign identifier.
+
+    Returns:
+        Current turn count (0 if not tracked).
+    """
+    return _campaign_turn_counts.get(campaign_id, 0)
+
+
+def aggregate_validation_summary(responses: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate validation results from multiple responses.
+
+    This is useful for getting a summary at the end of a test run.
+
+    Args:
+        responses: List of response dicts from process_action.
+
+    Returns:
+        Aggregated summary dict with:
+        - total_turns: Number of responses
+        - total_breaking: Count of breaking violations
+        - total_suspicious: Count of suspicious violations
+        - living_world_turns: Count of LW turns
+        - living_world_turns_valid: Count of LW turns that passed
+        - all_violations: List of all violation strings
+        - overall_status: "pass", "warn", or "fail"
+    """
+    total_breaking = 0
+    total_suspicious = 0
+    all_violations = []
+    living_world_turns = 0
+    living_world_turns_valid = 0
+
+    for resp in responses:
+        validation = resp.get("_invariant_validation", {})
+        violations = resp.get("_invariant_violations", [])
+
+        total_breaking += validation.get("breaking_count", 0)
+        total_suspicious += validation.get("suspicious_count", 0)
+        all_violations.extend(violations)
+
+        if validation.get("is_living_world_turn"):
+            living_world_turns += 1
+            if validation.get("status") != "fail":
+                living_world_turns_valid += 1
+
+    if total_breaking > 0:
+        status = "fail"
+    elif total_suspicious > 0:
+        status = "warn"
+    else:
+        status = "pass"
+
+    return {
+        "total_turns": len(responses),
+        "total_breaking": total_breaking,
+        "total_suspicious": total_suspicious,
+        "living_world_turns": living_world_turns,
+        "living_world_turns_valid": living_world_turns_valid,
+        "all_violations": all_violations,
+        "overall_status": status,
+    }
 
 
 def get_campaign_state(
@@ -242,6 +484,7 @@ def ensure_game_state_seed(
         user_id=user_id,
         campaign_id=campaign_id,
         user_input=god_mode_payload,
+        track_turn=False,
     )
     if result.get("error"):
         raise RuntimeError(f"GOD_MODE_UPDATE_STATE failed: {result['error']}")
