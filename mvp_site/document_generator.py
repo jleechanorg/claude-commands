@@ -61,6 +61,175 @@ def _normalize_text(text: str) -> str:
     return normalized
 
 
+def _format_background_event(event) -> str | None:
+    """
+    Format a single background event.
+
+    Args:
+        event: Event data (dict or string)
+
+    Returns:
+        Formatted event string, or None if invalid
+    """
+    if isinstance(event, dict):
+        actor = event.get("actor", "Unknown")
+        action = event.get("action", "Unknown action")
+        event_type = event.get("event_type", "unknown")
+        status = event.get("status", "pending")
+        icon = "⏳" if status == "pending" else "✅" if status == "resolved" else "🔍"
+        return f"  {icon} {actor}: {action} [{event_type}, {status}]"
+    elif isinstance(event, str):
+        return f"  ⏳ {event}"
+    return None
+
+
+def _format_debug_events(debug_info: dict) -> str:
+    """
+    Extract and format ALL debug events from debug_info.
+
+    Includes:
+    - Background events (living world)
+    - Faction updates
+    - Rumors
+    - Scene events
+    - Complications
+    - Time-sensitive events
+    - NPC status changes
+    - Any other debug metadata
+
+    Args:
+        debug_info: Debug info dictionary from story entry
+
+    Returns:
+        Formatted string of all debug events, or empty string if none found
+    """
+    if not debug_info or not isinstance(debug_info, dict):
+        return ""
+
+    parts = []
+    has_content = False
+
+    # Header for debug section
+    parts.append("🌍 Living World Updates (Debug):")
+
+    # 1. Background Events (most common location)
+    background_events = debug_info.get("background_events", [])
+    if background_events and isinstance(background_events, list):
+        has_content = True
+        parts.append("📜 Background Events:")
+        for event in background_events:
+            formatted = _format_background_event(event)
+            if formatted:
+                parts.append(formatted)
+
+    # 2. World Events (nested structure)
+    world_events = debug_info.get("world_events", {})
+    if isinstance(world_events, dict) and world_events:
+        # Background events in world_events
+        world_background_events = world_events.get("background_events", [])
+        if world_background_events and isinstance(world_background_events, list):
+            if not has_content:  # Only add header if not already added
+                has_content = True
+                parts.append("📜 Background Events:")
+            for event in world_background_events:
+                formatted = _format_background_event(event)
+                if formatted:
+                    parts.append(formatted)
+
+        # Faction updates
+        faction_updates = world_events.get("faction_updates", {})
+        if faction_updates and isinstance(faction_updates, dict):
+            has_content = True
+            parts.append("🏛️ Faction Updates:")
+            for faction_name, update in faction_updates.items():
+                if isinstance(update, dict):
+                    objective = update.get("current_objective", "Unknown objective")
+                    progress = update.get("progress", "Unknown progress")
+                    parts.append(f"  • {faction_name}:")
+                    parts.append(f"    - Objective: {objective}")
+                    parts.append(f"    - Progress: {progress}")
+                    if "resource_change" in update:
+                        parts.append(f"    - Resources: {update['resource_change']}")
+                elif isinstance(update, str):
+                    parts.append(f"  • {faction_name}: {update}")
+
+        # Rumors
+        rumors = world_events.get("rumors", [])
+        if rumors and isinstance(rumors, list) and len(rumors) > 0:
+            has_content = True
+            parts.append("💬 Rumors:")
+            for rumor in rumors:
+                if isinstance(rumor, dict):
+                    content = rumor.get("content", "Unknown rumor")
+                    accuracy = rumor.get("accuracy", "unknown")
+                    parts.append(f"  • {content} [Accuracy: {accuracy}]")
+                elif isinstance(rumor, str):
+                    parts.append(f"  • {rumor}")
+
+        # Scene Event
+        scene_event = world_events.get("scene_event", {})
+        if scene_event and isinstance(scene_event, dict):
+            has_content = True
+            parts.append("🎭 Scene Event:")
+            event_type = scene_event.get("type", "unknown")
+            actor = scene_event.get("actor", "Unknown")
+            description = scene_event.get("description", "No description")
+            parts.append(f"  Type: {event_type}")
+            parts.append(f"  Actor: {actor}")
+            parts.append(f"  Description: {description}")
+
+        # Complications
+        complications = world_events.get("complications", {})
+        if complications and isinstance(complications, dict):
+            has_content = True
+            parts.append("⚠️ Complications:")
+            comp_type = complications.get("type", "unknown")
+            severity = complications.get("severity", "unknown")
+            description = complications.get("description", "No description")
+            parts.append(f"  Type: {comp_type} [Severity: {severity}]")
+            parts.append(f"  {description}")
+
+        # Time Events
+        time_events = world_events.get("time_events", {})
+        if time_events and isinstance(time_events, dict):
+            has_content = True
+            parts.append("⏰ Time-Sensitive Events:")
+            for event_name, event_data in time_events.items():
+                if isinstance(event_data, dict):
+                    status = event_data.get("status", "unknown")
+                    time_remaining = event_data.get("time_remaining", "unknown")
+                    parts.append(f"  • {event_name}: {status} [Time: {time_remaining}]")
+                elif isinstance(event_data, str):
+                    parts.append(f"  • {event_name}: {event_data}")
+
+    # 3. NPC Status Changes (if present at top level)
+    npc_status_changes = debug_info.get("npc_status_changes", {})
+    if npc_status_changes and isinstance(npc_status_changes, dict):
+        has_content = True
+        parts.append("👥 NPC Status Changes:")
+        for npc_name, change in npc_status_changes.items():
+            if isinstance(change, dict):
+                previous = change.get("previous_state", "Unknown")
+                new = change.get("new_state", "Unknown")
+                reason = change.get("reason", "No reason given")
+                parts.append(f"  • {npc_name}: {previous} → {new}")
+                parts.append(f"    Reason: {reason}")
+            elif isinstance(change, str):
+                parts.append(f"  • {npc_name}: {change}")
+
+    # 4. Meta information (if present)
+    meta = debug_info.get("meta", {})
+    if meta and isinstance(meta, dict) and len(meta) > 0:
+        has_content = True
+        parts.append("📊 Meta Information:")
+        for key, value in meta.items():
+            if isinstance(value, (str, int, float, bool)):
+                parts.append(f"  • {key}: {value}")
+
+    # Only return content if we found something
+    return "\n".join(parts) if has_content else ""
+
+
 def get_choice_type(
     user_text: str, recent_planning_blocks: list[dict | None]
 ) -> tuple[str, str | None]:
@@ -137,7 +306,7 @@ def format_story_entry(
     recent_planning_blocks: list[dict | None] | None = None,
 ) -> str:
     """
-    Format a single story entry with scene numbers, session headers, resources, and dice rolls.
+    Format a single story entry with scene numbers, session headers, resources, dice rolls, and living world updates.
 
     Args:
         entry: Story entry dictionary from Firestore
@@ -154,6 +323,7 @@ def format_story_entry(
     session_header = entry.get("session_header", "")
     resources = entry.get("resources", "")
     dice_rolls = entry.get("dice_rolls", [])
+    debug_info = entry.get("debug_info", {})
 
     parts = []
 
@@ -180,8 +350,15 @@ def format_story_entry(
         for roll in dice_rolls:
             parts.append(f"  - {roll}")
 
+    # Add all debug events from debug_info if present
+    debug_events = ""
+    if debug_info and isinstance(debug_info, dict):
+        debug_events = _format_debug_events(debug_info)
+        if debug_events:
+            parts.append(debug_events)
+
     # Add blank line after metadata if we have any
-    if session_header or resources or dice_rolls:
+    if session_header or resources or dice_rolls or debug_events:
         parts.append("")
 
     # Add actor label with choice type for player actions
