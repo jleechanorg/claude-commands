@@ -34,6 +34,7 @@ from mvp_site.agents import (
     CharacterCreationAgent,
     CombatAgent,
     GodModeAgent,
+    InfoAgent,
     RewardsAgent,
     StoryModeAgent,
     get_agent_for_input,
@@ -805,13 +806,97 @@ class TestGetAgentForInput(unittest.TestCase):
         god_agent = get_agent_for_input("GOD MODE: test", game_state=mock_game_state)
         self.assertEqual(god_agent.game_state, mock_game_state)
 
-    def test_get_agent_returns_combat_agent_when_in_combat(self):
-        """get_agent_for_input returns CombatAgent when in_combat is True."""
+    @patch("mvp_site.agents.intent_classifier.classify_intent")
+    def test_get_agent_returns_combat_agent_when_in_combat(self, mock_classify):
+        """get_agent_for_input returns CombatAgent when in_combat is True and semantic classifier routes to combat."""
+        mock_classify.return_value = (constants.MODE_COMBAT, 0.85)
         mock_game_state = create_mock_game_state(in_combat=True)
 
-        # Regular input during combat should use CombatAgent
+        # Regular input during combat should use CombatAgent (semantic classifier + state validation)
         agent = get_agent_for_input("I attack the goblin!", game_state=mock_game_state)
         self.assertIsInstance(agent, CombatAgent)
+
+    @patch("mvp_site.agents.intent_classifier.classify_intent")
+    def test_get_agent_returns_combat_agent_when_combat_intent_but_not_in_combat(self, mock_classify):
+        """get_agent_for_input returns CombatAgent when semantic classifier returns MODE_COMBAT even if combat is not active (agent can initiate combat)."""
+        mock_classify.return_value = (constants.MODE_COMBAT, 0.85)
+        mock_game_state = create_mock_game_state(in_combat=False)
+
+        # Semantic classifier says combat -> route to CombatAgent (agent can initiate combat)
+        agent = get_agent_for_input("I attack the goblin!", game_state=mock_game_state)
+        self.assertIsInstance(agent, CombatAgent)
+
+    @patch("mvp_site.agents.intent_classifier.classify_intent")
+    def test_get_agent_returns_rewards_agent_when_rewards_intent_but_no_rewards_pending(self, mock_classify):
+        """get_agent_for_input returns RewardsAgent when semantic classifier returns MODE_REWARDS even if no rewards pending (agent can check for missed rewards)."""
+        mock_classify.return_value = (constants.MODE_REWARDS, 0.80)
+        mock_game_state = create_mock_game_state(in_combat=False)
+
+        # Semantic classifier says rewards -> route to RewardsAgent (agent can check for missed rewards)
+        agent = get_agent_for_input("claim my rewards", game_state=mock_game_state)
+        self.assertIsInstance(agent, RewardsAgent)
+
+    @patch("mvp_site.agents.intent_classifier.classify_intent")
+    def test_get_agent_returns_character_creation_agent_when_intent_but_not_active(self, mock_classify):
+        """get_agent_for_input returns CharacterCreationAgent when semantic classifier returns MODE_CHARACTER_CREATION even if character creation is not active (agent can handle level-up/recreation)."""
+        mock_classify.return_value = (constants.MODE_CHARACTER_CREATION, 0.75)
+        # Create game state with character creation NOT active (character completed, no level-up pending)
+        mock_game_state = create_mock_game_state(
+            in_combat=False,
+            character_creation_completed=True,
+            character_name="Test Character",
+            character_class="Fighter",
+        )
+
+        # Semantic classifier says character creation -> route to CharacterCreationAgent (agent can handle level-up/recreation)
+        agent = get_agent_for_input("level up", game_state=mock_game_state)
+        self.assertIsInstance(agent, CharacterCreationAgent, "CharacterCreationAgent should route on semantic intent alone, like CombatAgent/RewardsAgent")
+
+    @patch("mvp_site.agents.intent_classifier.classify_intent")
+    def test_get_agent_returns_character_creation_agent_when_intent_and_active(self, mock_classify):
+        """get_agent_for_input returns CharacterCreationAgent when semantic classifier returns MODE_CHARACTER_CREATION and character creation is active."""
+        mock_classify.return_value = (constants.MODE_CHARACTER_CREATION, 0.75)
+        # Create game state with character creation active
+        mock_game_state = create_character_creation_game_state()
+
+        # Semantic classifier says character creation -> route to CharacterCreationAgent
+        agent = get_agent_for_input("level up", game_state=mock_game_state)
+        self.assertIsInstance(agent, CharacterCreationAgent)
+
+    def test_get_agent_returns_character_creation_agent_on_explicit_mode_without_state(self):
+        """get_agent_for_input returns CharacterCreationAgent when mode='character_creation' even if character creation is not active (agent can handle level-up/recreation)."""
+        # Create game state with character creation NOT active
+        mock_game_state = create_mock_game_state(
+            in_combat=False,
+            character_creation_completed=True,
+            character_name="Test Character",
+            character_class="Fighter",
+        )
+
+        # Explicit mode parameter should route to CharacterCreationAgent (agent can handle level-up/recreation)
+        agent = get_agent_for_input("continue", mode=constants.MODE_CHARACTER_CREATION, game_state=mock_game_state)
+        self.assertIsInstance(agent, CharacterCreationAgent, "CharacterCreationAgent should route on explicit mode alone, like CombatAgent/RewardsAgent")
+
+    def test_get_agent_mode_parameter_case_insensitive(self):
+        """get_agent_for_input handles mode parameter case-insensitively (consistent with Priority 1 and 4)."""
+        mock_game_state = create_mock_game_state(in_combat=False)
+
+        # Test uppercase mode values (should match lowercase constants)
+        combat_agent_upper = get_agent_for_input("continue", mode="COMBAT", game_state=mock_game_state)
+        self.assertIsInstance(combat_agent_upper, CombatAgent, "mode='COMBAT' should match MODE_COMBAT")
+
+        rewards_agent_upper = get_agent_for_input("continue", mode="REWARDS", game_state=mock_game_state)
+        self.assertIsInstance(rewards_agent_upper, RewardsAgent, "mode='REWARDS' should match MODE_REWARDS")
+
+        char_creation_agent_upper = get_agent_for_input("continue", mode="CHARACTER_CREATION", game_state=mock_game_state)
+        self.assertIsInstance(char_creation_agent_upper, CharacterCreationAgent, "mode='CHARACTER_CREATION' should match MODE_CHARACTER_CREATION")
+
+        info_agent_upper = get_agent_for_input("continue", mode="INFO", game_state=mock_game_state)
+        self.assertIsInstance(info_agent_upper, InfoAgent, "mode='INFO' should match MODE_INFO")
+
+        # Test mixed case
+        combat_agent_mixed = get_agent_for_input("continue", mode="Combat", game_state=mock_game_state)
+        self.assertIsInstance(combat_agent_mixed, CombatAgent, "mode='Combat' should match MODE_COMBAT")
 
     def test_get_agent_god_mode_overrides_combat(self):
         """GOD MODE takes priority over combat mode."""
@@ -852,30 +937,36 @@ class TestGetAgentForInput(unittest.TestCase):
             )
         )
 
-        # Priority 3: Combat when in_combat=True
-        combat_state = create_mock_game_state(in_combat=True)
-        combat_agent = get_agent_for_input("attack", game_state=combat_state)
-        self.assertIsInstance(combat_agent, CombatAgent)
+        # Priority 3: Combat when in_combat=True (semantic classifier + state validation)
+        with patch("mvp_site.agents.intent_classifier.classify_intent") as mock_classify:
+            mock_classify.return_value = (constants.MODE_COMBAT, 0.85)
+            combat_state = create_mock_game_state(in_combat=True)
+            combat_agent = get_agent_for_input("attack the goblin", game_state=combat_state)
+            self.assertIsInstance(combat_agent, CombatAgent)
 
-        # Priority 4: Rewards mode when rewards are pending
-        rewards_state = create_rewards_game_state(
-            combat_state={
-                "in_combat": False,
-                "combat_phase": "ended",
-                "combat_summary": {"result": "victory"},
-                "rewards_processed": False,
-            }
-        )
-        rewards_agent = get_agent_for_input("continue", game_state=rewards_state)
-        self.assertIsInstance(rewards_agent, RewardsAgent)
+        # Priority 4: Rewards mode when rewards are pending (semantic classifier + state validation)
+        with patch("mvp_site.agents.intent_classifier.classify_intent") as mock_classify:
+            mock_classify.return_value = (constants.MODE_REWARDS, 0.80)
+            rewards_state = create_rewards_game_state(
+                combat_state={
+                    "in_combat": False,
+                    "combat_phase": "ended",
+                    "combat_summary": {"result": "victory"},
+                    "rewards_processed": False,
+                }
+            )
+            rewards_agent = get_agent_for_input("claim my rewards", game_state=rewards_state)
+            self.assertIsInstance(rewards_agent, RewardsAgent)
 
         # Priority 5: Story mode as default
         no_combat_state = create_mock_game_state(in_combat=False)
         story_agent = get_agent_for_input("attack", game_state=no_combat_state)
         self.assertIsInstance(story_agent, StoryModeAgent)
 
-    def test_get_agent_returns_rewards_agent_when_encounter_rewards_pending(self):
-        """get_agent_for_input returns RewardsAgent when encounter rewards pending."""
+    @patch("mvp_site.agents.intent_classifier.classify_intent")
+    def test_get_agent_returns_rewards_agent_when_encounter_rewards_pending(self, mock_classify):
+        """get_agent_for_input returns RewardsAgent when encounter rewards pending and semantic classifier routes to rewards."""
+        mock_classify.return_value = (constants.MODE_REWARDS, 0.80)
         rewards_state = create_rewards_game_state(
             encounter_state={
                 "encounter_completed": True,
@@ -884,7 +975,7 @@ class TestGetAgentForInput(unittest.TestCase):
             }
         )
 
-        agent = get_agent_for_input("collect", game_state=rewards_state)
+        agent = get_agent_for_input("claim my rewards", game_state=rewards_state)
         self.assertIsInstance(agent, RewardsAgent)
 
 

@@ -245,6 +245,7 @@ class TestPromptLoading(unittest.TestCase):
                 constants.PROMPT_TYPE_CHARACTER_TEMPLATE,  # Only when narrative is selected
                 constants.PROMPT_TYPE_RELATIONSHIP,  # Dynamic: loaded on LLM request
                 constants.PROMPT_TYPE_REPUTATION,  # Dynamic: loaded on LLM request
+                constants.PROMPT_TYPE_GAME_STATE_EXAMPLES,  # Dynamic: loaded on LLM request
             }
 
         # Separate always-loaded vs conditional prompts

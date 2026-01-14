@@ -40,9 +40,11 @@ echo "Available refs: $(git branch -a | grep main)"
 DIFF_SPEC="origin/main...HEAD"
 echo "Using merge-base diff spec: $DIFF_SPEC"
 
-python3 scripts/validate_imports.py --diff-only "$DIFF_SPEC"
+# Run validation and capture output for CI artifacts
+python3 scripts/validate_imports.py --diff-only "$DIFF_SPEC" 2>&1 | tee scripts/validate_imports.log
+VALIDATION_STATUS=${PIPESTATUS[0]}
 
-if [ $? -eq 0 ]; then
+if [ $VALIDATION_STATUS -eq 0 ]; then
   echo "✅ Delta import validation: All checks passed"
   exit 0
 else
@@ -54,5 +56,5 @@ else
   echo ""
   echo "Only files changed in this PR need to be fixed (delta validation)."
   echo "Please move all imports to the top of their respective files."
-  exit 1
+  exit $VALIDATION_STATUS
 fi

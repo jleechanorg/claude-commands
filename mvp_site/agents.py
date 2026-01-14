@@ -52,10 +52,11 @@ Each agent has:
 from __future__ import annotations
 
 import re
+import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from mvp_site import constants, logging_util
+from mvp_site import constants, intent_classifier, logging_util
 from mvp_site.agent_prompts import PromptBuilder
 
 if TYPE_CHECKING:
@@ -173,7 +174,7 @@ class BaseAgent(ABC):
     # Cache to avoid re-validating prompt order on every instantiation
     _prompt_order_validated: bool = False
 
-    def __init__(self, game_state: "GameState" | None = None) -> None:
+    def __init__(self, game_state: GameState | None = None) -> None:
         """
         Initialize the agent.
 
@@ -186,7 +187,7 @@ class BaseAgent(ABC):
         self._prompt_builder = PromptBuilder(game_state)
 
     @property
-    def prompt_builder(self) -> "PromptBuilder":
+    def prompt_builder(self) -> PromptBuilder:
         """Access the underlying PromptBuilder for advanced operations."""
         return self._prompt_builder
 
@@ -229,7 +230,7 @@ class BaseAgent(ABC):
         return False
 
     @classmethod
-    def matches_game_state(cls, _game_state: "GameState" | None) -> bool:
+    def matches_game_state(cls, _game_state: GameState | None) -> bool:
         """
         Check if this agent should handle the current game state.
 
@@ -727,7 +728,7 @@ class CharacterCreationAgent(BaseAgent):
         return builder.finalize_instructions(parts, use_default_world=False)
 
     @classmethod
-    def matches_game_state(cls, game_state: "GameState" | None) -> bool:
+    def matches_game_state(cls, game_state: GameState | None) -> bool:
         """
         Check if character creation or level-up mode should be active.
 
@@ -845,7 +846,7 @@ class CharacterCreationAgent(BaseAgent):
         lower = user_input.lower().strip()
         # Normalize curly apostrophes to straight apostrophes
         lower = lower.replace("\u2019", "'")
-        
+
         logging_util.debug(f"Matches Input Check: '{lower}'")
 
         if re.search(r"\bnot\s+(?:yet\s+)?(?:done|finished|ready)\b", lower):
@@ -855,7 +856,7 @@ class CharacterCreationAgent(BaseAgent):
         if re.search(r"\bdo(?:n't| not|nt)\s+(?:start|begin)\b", lower):
             logging_util.debug("Matches Input: False (Negative match)")
             return False
-        
+
         # Check for valid completion patterns first (before exclusions)
         # These patterns indicate clear intent to complete character creation
         completion_patterns = [
@@ -866,7 +867,7 @@ class CharacterCreationAgent(BaseAgent):
         ]
         # If input contains a valid completion pattern, allow it even if it also contains "ready to start"
         has_completion_pattern = any(re.search(p, lower) for p in completion_patterns)
-        
+
         # Explicitly exclude ambiguous "ready to start" ONLY if it's not part of a valid completion phrase
         # Examples: "I'm ready to start" (ambiguous) vs "I'm ready to start the adventure" (clear intent)
         if not has_completion_pattern and "ready to start" in lower:
@@ -892,7 +893,7 @@ class CharacterCreationAgent(BaseAgent):
 
         result = any(re.search(pattern, lower) for pattern in patterns)
         if result:
-            logging_util.debug(f"Matches Input: True (Matched pattern)")
+            logging_util.debug("Matches Input: True (Matched pattern)")
         return result
 
 
@@ -1124,11 +1125,11 @@ class CombatAgent(BaseAgent):
     REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
         constants.PROMPT_TYPE_MASTER_DIRECTIVE,
         constants.PROMPT_TYPE_GAME_STATE,
-        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,
         constants.PROMPT_TYPE_COMBAT,
-        constants.PROMPT_TYPE_NARRATIVE,  # For DM Note protocol and cinematic style
+        constants.PROMPT_TYPE_NARRATIVE,  # DM Note protocol and cinematic style
         constants.PROMPT_TYPE_DND_SRD,
-        constants.PROMPT_TYPE_MECHANICS,
+        constants.PROMPT_TYPE_MECHANICS,  # Detailed combat mechanics
     )
     REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
 
@@ -1183,7 +1184,7 @@ class CombatAgent(BaseAgent):
         return {"include_debug": True}
 
     @classmethod
-    def matches_game_state(cls, game_state: "GameState" | None) -> bool:
+    def matches_game_state(cls, game_state: GameState | None) -> bool:
         """
         Check if combat mode should be active based on game state.
 
@@ -1264,7 +1265,7 @@ class RewardsAgent(FixedPromptAgent):
     REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
         constants.PROMPT_TYPE_MASTER_DIRECTIVE,
         constants.PROMPT_TYPE_GAME_STATE,
-        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,
         constants.PROMPT_TYPE_REWARDS,
         constants.PROMPT_TYPE_DND_SRD,
         constants.PROMPT_TYPE_MECHANICS,
@@ -1284,7 +1285,7 @@ class RewardsAgent(FixedPromptAgent):
         return {"include_debug": True}
 
     @classmethod
-    def matches_game_state(cls, game_state: "GameState" | None) -> bool:
+    def matches_game_state(cls, game_state: GameState | None) -> bool:
         """
         Check if rewards mode should be active based on game state.
 
@@ -1366,70 +1367,33 @@ class RewardsAgent(FixedPromptAgent):
 
 def get_agent_for_input(
     user_input: str,
-    game_state: "GameState" | None = None,
+    game_state: GameState | None = None,
     mode: str | None = None,
 ) -> BaseAgent:
     """
     Factory function to get the appropriate agent for user input.
 
-    Determines which agent should handle the input based on mode detection:
-    1. GodModeAgent if input starts with "GOD MODE:" OR mode="god" (highest priority)
-    2. CharacterCreationAgent if character creation is in progress (second highest)
-       - UNLESS user indicates they're done, then transitions to StoryMode
-    3. PlanningAgent if input starts with "THINK:" or mode is "think" (strategic planning)
-    4. InfoAgent for pure info queries (equipment, inventory, stats)
-    5. CombatAgent if game_state.combat_state.in_combat is True
-    6. RewardsAgent if rewards are pending (combat end, encounter completion)
-    7. StoryModeAgent for all other inputs (default)
+    Primary routing is handled by the Semantic Intent Classifier.
+    Safety overrides (God Mode) are checked first.
 
-    Args:
-        user_input: Raw user input text
-        game_state: GameState for context (passed to agent)
-        mode: Optional mode string from API client (e.g., "think", "character")
-
-    Returns:
-        The appropriate agent instance for handling the input
-
-    Example:
-        >>> agent = get_agent_for_input("GOD MODE: Set my HP to 50")
-        >>> isinstance(agent, GodModeAgent)
-        True
-        >>> # During character creation
-        >>> agent = get_agent_for_input("I want to be a wizard", new_campaign_state)
-        >>> isinstance(agent, CharacterCreationAgent)
-        True
-        >>> # When done with character creation
-        >>> agent = get_agent_for_input("I'm done", new_campaign_state)
-        >>> isinstance(agent, StoryModeAgent)  # Transitions out
-        True
-        >>> agent = get_agent_for_input("list my equipment")
-        >>> isinstance(agent, InfoAgent)
-        True
-        >>> # With combat_state.in_combat = True
-        >>> agent = get_agent_for_input("I attack the goblin!", combat_game_state)
-        >>> isinstance(agent, CombatAgent)
-        True
-        >>> # With rewards pending (combat ended or encounter completed)
-        >>> agent = get_agent_for_input("continue", rewards_pending_state)
-        >>> isinstance(agent, RewardsAgent)
-        True
-        >>> agent = get_agent_for_input("THINK: what are my options?")
-        >>> isinstance(agent, PlanningAgent)
-        True
-        >>> agent = get_agent_for_input("I explore the tavern.")
-        >>> isinstance(agent, StoryModeAgent)
-        True
+    Priority:
+    1. GodModeAgent (Manual override)
+    2. Character Creation Completion Override
+    3. CharacterCreationAgent (State-based - when char creation is active)
+    4. PlanningAgent (Explicit override - "THINK:" prefix or mode="think")
+    5. Semantic Intent Classification (PRIMARY BRAIN)
+       - CombatAgent: Routes on semantic intent (can initiate combat if not active)
+       - RewardsAgent: Routes on semantic intent (can check for missed rewards)
+       - CharacterCreationAgent: Routes on semantic intent (can initiate level-up/recreation)
+    6. API Explicit Mode (Forced via UI/Param)
+    7. StoryModeAgent (Default)
     """
-    # Priority 1: GOD MODE always takes precedence (administrative override)
-    # Uses centralized constants.is_god_mode() via GodModeAgent.matches_input()
+    # 1. Safety Override: GOD MODE
     if GodModeAgent.matches_input(user_input, mode):
         logging_util.info("🔮 GOD_MODE_DETECTED: Using GodModeAgent")
         return GodModeAgent(game_state)
 
-    # Priority 2: Character Creation mode (second highest priority)
-    # FIRST check if user is indicating they're done with character creation
-    # This check happens BEFORE CharacterCreationAgent.matches_game_state to avoid
-    # the agent being selected when the user wants to exit character creation mode
+    # 2. Safety Override: Character Creation State Finalization
     if game_state is not None:
         custom_state = None
         if hasattr(game_state, "custom_campaign_state"):
@@ -1439,65 +1403,124 @@ def get_agent_for_input(
 
         if isinstance(custom_state, dict):
             char_creation_started = custom_state.get("character_creation_in_progress", False)
-
-            # Get turn number (handle both GameState objects and dicts, default to 0)
-            turn_number = 0
-            if hasattr(game_state, "player_turn"):
-                turn_number = game_state.player_turn
-            elif isinstance(game_state, dict):
-                turn_number = game_state.get("player_turn", 0)
-
-            # Ensure turn_number is an integer (handles Mock objects in tests)
-            try:
-                turn_number = int(turn_number or 0)
-            except (TypeError, ValueError):
-                turn_number = 0
-
-            # Check if user is done with character creation (explicit completion phrases)
             if char_creation_started and CharacterCreationAgent.matches_input(user_input):
-                logging_util.info(
-                    "🎭 CHARACTER_CREATION_COMPLETE: User finished, transitioning to StoryModeAgent"
-                )
-                # CRITICAL: Clear the flag BEFORE checking matches_game_state
-                # This prevents CharacterCreationAgent from being selected
+                logging_util.info("🎭 CHARACTER_CREATION_COMPLETE: Transitioning to Story")
+                # Mutate state to finalize (aligned with original behavior)
                 custom_state["character_creation_in_progress"] = False
                 custom_state["character_creation_completed"] = True
                 custom_state["character_creation_stage"] = "complete"
-                logging_util.info(
-                    "✅ CHARACTER_CREATION_FLAG_CLEARED: Set in_progress=False, completed=True, stage=complete"
-                )
-                logging_util.info(
-                    f"🎭 CHARACTER_CREATION_TURN_INFO: player_turn={turn_number}"
-                )
                 return StoryModeAgent(game_state)
 
-    # Now check if we should use CharacterCreationAgent (flag should be False if user just completed)
+    # 3. State-based Context (Character Creation only - Combat/Rewards handled via semantic classifier)
     if CharacterCreationAgent.matches_game_state(game_state):
         logging_util.info("🎭 CHARACTER_CREATION_ACTIVE: Using CharacterCreationAgent")
         return CharacterCreationAgent(game_state)
 
-    # Priority 3: Think mode for strategic planning (higher than all non-god modes)
-    # Supports both THINK: prefix and explicit mode="think" from API clients
+    # 4. Explicit Overrides (THINK: prefix or API mode params)
     if PlanningAgent.matches_input(user_input, mode):
-        logging_util.info("🧠 THINK_MODE_DETECTED: Using PlanningAgent")
+        logging_util.info("🧠 THINK_MODE_DETECTED: Using PlanningAgent (Explicit Override)")
         return PlanningAgent(game_state)
 
-    # Priority 4: Info queries (equipment, inventory, stats) - trimmed prompts
-    if InfoAgent.matches_input(user_input):
-        logging_util.info("📦 INFO_QUERY_DETECTED: Using InfoAgent (trimmed prompts)")
+    # 5. Semantic Intent Classification (PRIMARY BRAIN)
+    intent_mode = constants.MODE_CHARACTER
+    confidence = 0.0
+    start_time = time.time()
+    try:
+        intent_mode, confidence = intent_classifier.classify_intent(user_input)
+        elapsed_time = time.time() - start_time
+        logging_util.info(f"🧠 CLASSIFIER: classify_intent() call completed in {elapsed_time*1000:.2f}ms")
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        logging_util.warning(f"🧠 CLASSIFIER: Error during classification: {e}. Defaulting to MODE_CHARACTER. (took {elapsed_time*1000:.2f}ms)")
+        intent_mode = constants.MODE_CHARACTER
+        confidence = 0.0
+
+    # Security safeguard: MODE_GOD must never come from the classifier
+    if intent_mode == constants.MODE_GOD:
+        logging_util.warning(
+            f"🚨 SECURITY: Classifier returned MODE_GOD (invalid). Defaulting to MODE_CHARACTER."
+        )
+        intent_mode = constants.MODE_CHARACTER
+
+    if intent_mode == constants.MODE_THINK:
+        logging_util.info(f"🧠 SEMANTIC_INTENT_THINK: ({confidence:.2f}) -> PlanningAgent")
+        return PlanningAgent(game_state)
+
+    if intent_mode == constants.MODE_INFO:
+        logging_util.info(f"📦 SEMANTIC_INTENT_INFO: ({confidence:.2f}) -> InfoAgent")
         return InfoAgent(game_state)
 
-    # Priority 5: Combat mode when in active combat
-    if CombatAgent.matches_game_state(game_state):
-        logging_util.info("⚔️ COMBAT_MODE_ACTIVE: Using CombatAgent")
+    if intent_mode == constants.MODE_COMBAT:
+        # Route to CombatAgent based on semantic intent
+        # Agent can handle both active combat and initiating new combat
+        if CombatAgent.matches_game_state(game_state):
+            logging_util.info(f"⚔️ SEMANTIC_INTENT_COMBAT: ({confidence:.2f}) -> CombatAgent (combat active)")
+        else:
+            logging_util.info(f"⚔️ SEMANTIC_INTENT_COMBAT: ({confidence:.2f}) -> CombatAgent (initiating combat)")
         return CombatAgent(game_state)
 
-    # Priority 6: Rewards mode when rewards are pending
-    if RewardsAgent.matches_game_state(game_state):
-        logging_util.info("🏆 REWARDS_MODE_ACTIVE: Using RewardsAgent")
+    if intent_mode == constants.MODE_REWARDS:
+        # Route to RewardsAgent based on semantic intent
+        # Agent can handle both pending rewards and checking for missed rewards
+        if RewardsAgent.matches_game_state(game_state):
+            logging_util.info(f"🏆 SEMANTIC_INTENT_REWARDS: ({confidence:.2f}) -> RewardsAgent (rewards pending)")
+        else:
+            logging_util.info(f"🏆 SEMANTIC_INTENT_REWARDS: ({confidence:.2f}) -> RewardsAgent (checking for rewards)")
         return RewardsAgent(game_state)
 
-    # Priority 7: Default to story mode
+    if intent_mode == constants.MODE_CHARACTER_CREATION:
+        # Route to CharacterCreationAgent based on semantic intent
+        # Agent can handle both active character creation and initiating level-up/recreation
+        if CharacterCreationAgent.matches_game_state(game_state):
+            logging_util.info(
+                f"🎭 SEMANTIC_INTENT_CHAR_CREATION: ({confidence:.2f}) -> CharacterCreationAgent (char creation active)"
+            )
+        else:
+            logging_util.info(
+                f"🎭 SEMANTIC_INTENT_CHAR_CREATION: ({confidence:.2f}) -> CharacterCreationAgent (initiating level-up/recreation)"
+            )
+        return CharacterCreationAgent(game_state)
+
+    # 6. API Explicit Mode (UI forced fallback)
+    if mode:
+        # Normalize mode to lowercase for case-insensitive comparison (consistent with Priority 1 and 4)
+        normalized_mode = mode.lower() if isinstance(mode, str) else mode
+        logging_util.info(f"🔌 API_EXPLICIT_MODE: Forced {mode}")
+        if normalized_mode == constants.MODE_THINK:
+            return PlanningAgent(game_state)
+        elif normalized_mode == constants.MODE_INFO:
+            return InfoAgent(game_state)
+        elif normalized_mode == constants.MODE_GOD:
+            return GodModeAgent(game_state)
+        elif normalized_mode == constants.MODE_COMBAT:
+            # Route to CombatAgent - can handle both active combat and initiating new combat
+            if CombatAgent.matches_game_state(game_state):
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CombatAgent (combat active)")
+            else:
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CombatAgent (initiating combat)")
+            return CombatAgent(game_state)
+        elif normalized_mode == constants.MODE_REWARDS:
+            # Route to RewardsAgent - can handle both pending rewards and checking for missed rewards
+            if RewardsAgent.matches_game_state(game_state):
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> RewardsAgent (rewards pending)")
+            else:
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> RewardsAgent (checking for rewards)")
+            return RewardsAgent(game_state)
+        elif normalized_mode == constants.MODE_CHARACTER_CREATION:
+            # Route to CharacterCreationAgent - can handle both active creation and initiating level-up/recreation
+            if CharacterCreationAgent.matches_game_state(game_state):
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CharacterCreationAgent (char creation active)")
+            else:
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CharacterCreationAgent (initiating level-up/recreation)")
+            return CharacterCreationAgent(game_state)
+        # MODE_CHARACTER falls through to default StoryModeAgent
+
+    # 7. Default Fallback (always returns StoryModeAgent if no other agent matched)
+    if intent_mode == constants.MODE_CHARACTER:
+        logging_util.info(f"🎭 SEMANTIC_INTENT_STORY: ({confidence:.2f}) -> StoryModeAgent")
+    else:
+        # Fallback for any unexpected intent_mode values
+        logging_util.info(f"🎭 DEFAULT_FALLBACK: intent_mode={intent_mode} -> StoryModeAgent")
     return StoryModeAgent(game_state)
 
 

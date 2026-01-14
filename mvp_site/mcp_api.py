@@ -40,7 +40,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
 
 # WorldArchitect imports using absolute package imports
-from mvp_site import game_state, logging_util, world_logic
+from mvp_site import game_state, intent_classifier, logging_util, world_logic
 from mvp_site.firestore_service import json_default_serializer
 
 # Initialize MCP server
@@ -730,6 +730,10 @@ def create_mcp_handler(
 def run_server():
     """Run the World Logic MCP server."""
     setup_mcp_logging()
+
+    # Initialize local intent classifier (async load in background)
+    # Skip in tests unless explicitly requested to save resources/time
+    intent_classifier.initialize()
 
     # Auto-detect if we're being run by Claude Code with more specific criteria
     # Only trigger stdio mode when both stdin/stdout are non-TTY AND in specific environments

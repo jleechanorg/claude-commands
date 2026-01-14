@@ -44,6 +44,7 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_NARRATIVE: constants.NARRATIVE_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_MECHANICS: constants.MECHANICS_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_GAME_STATE_EXAMPLES: constants.GAME_STATE_EXAMPLES_PATH,
     constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
     # constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH, # Integrated into game_state
     constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
@@ -212,6 +213,7 @@ def _extract_essentials(content: str) -> str:
 SECTION_TO_PROMPT_TYPE: dict[str, str] = {
     "relationships": constants.PROMPT_TYPE_RELATIONSHIP,
     "reputation": constants.PROMPT_TYPE_REPUTATION,
+    "examples": constants.PROMPT_TYPE_GAME_STATE_EXAMPLES,
 }
 
 # 🚨 SHORT EARLY REMINDER - Prepended to system instruction for high-tier NPCs

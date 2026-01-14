@@ -98,6 +98,7 @@ from mvp_site import (
     constants,
     equipment_display,
     firestore_service,
+    intent_classifier,  # Added for local intent classification
     logging_util,
     stats_display,
     world_logic,  # For MCP fallback logic
@@ -538,6 +539,16 @@ def create_app() -> Flask:
 
     # Set up file logging before creating app
     setup_file_logging()
+
+    # Initialize local intent classifier (async load in background)
+    # Skip in tests unless explicitly requested to save resources/time
+    skip_classifier = os.environ.get("TESTING", "").lower() == "true"
+    force_classifier = os.environ.get("ENABLE_SEMANTIC_ROUTING", "").lower() == "true"
+    
+    if force_classifier or not skip_classifier:
+        intent_classifier.initialize()
+    else:
+        logging_util.info("🧪 TESTING_MODE: Skipping semantic classifier initialization (use ENABLE_SEMANTIC_ROUTING=true to override)")
 
     app = Flask(__name__)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)

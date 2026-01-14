@@ -89,6 +89,10 @@ class ImportValidator(ast.NodeVisitor):
             'constants', 'a2a_agent_wrapper', 'a2a_monitor', 'debug_worker', 'live_mode',
             # MCP optional dependencies
             'fastmcp', 'mcp.types',
+            # FastEmbed optional dependency (for intent classifier)
+            'fastembed',
+            # ONNX Runtime optional dependency (required by fastembed)
+            'onnxruntime',
             # Claude commands optional dependencies
             'exportcommands',
             # Django optional dependencies

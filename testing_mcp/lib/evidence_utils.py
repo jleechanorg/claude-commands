@@ -36,6 +36,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+# re is already imported above, no need to import again
+
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 # Evidence format versioning
@@ -367,7 +369,9 @@ def capture_provenance(
     # Server runtime info - capture all required env vars per evidence-standards.md
     # CRITICAL: Use server_env_overrides when available - these are the ACTUAL values
     # that were set on the server process, not the test runner's environment.
-    port = base_url.split(":")[-1].rstrip("/")
+    # Extract port from URL (e.g., "http://127.0.0.1:50364/mcp" -> "50364")
+    port_match = re.search(r":(\d+)", base_url)
+    port = port_match.group(1) if port_match else base_url.split(":")[-1].split("/")[0]
     env_vars_to_capture = [
         "WORLDAI_DEV_MODE",
         "TESTING",

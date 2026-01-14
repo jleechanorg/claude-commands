@@ -811,10 +811,8 @@ run_single_test() {
         echo "TESTFILE: $test_file"
         echo "START: $(date '+%Y-%m-%d %H:%M:%S')"
 
-        # Reasonable timeout for CI tests (2 minutes per test, configurable)
-        # Use shorter timeout for FAST_TESTS mode (CI optimization)
-        if [ "$FAST_TESTS" = "1" ] && [ -z "$TEST_TIMEOUT" ]; then
-            local test_timeout=60  # 1 minute for fast CI tests
+        if ([ "$FAST_TESTS" = "1" ] || [ "$FAST_TEST_MODE" = "true" ] || [ "$GITHUB_ACTIONS" = "true" ]) && [ -z "$TEST_TIMEOUT" ]; then
+            local test_timeout=180  # Increased from 60 to 180 to handle embedding model loading in CI
         else
             local test_timeout=${TEST_TIMEOUT:-120}  # 2 minutes default
         fi
@@ -850,6 +848,10 @@ run_single_test() {
         echo "DURATION: ${duration}s"
         echo "END: $(date '+%Y-%m-%d %H:%M:%S')"
     } > "$result_file"
+
+    # Export result to workspace for CI artifact upload
+    mkdir -p "$PROJECT_ROOT/mvp_site/test-results"
+    cp "$result_file" "$PROJECT_ROOT/mvp_site/test-results/$(basename "$test_file").${path_hash}.log"
 }
 
 # Overall test suite timeout (10 minutes for faster feedback and resource efficiency)

@@ -3213,41 +3213,98 @@ def parse_structured_response(
                 logging_util.info("Extracted JSON from generic code block")
 
     # Parse JSON using standard json.loads()
-    # Recovery logic: Handle "Extra data" errors by parsing valid JSON portion
+    # Recovery logic: Handle various JSON errors with multiple recovery strategies
     recovery_attempted = False
+    recovery_strategy = None
+    parsed_data = None
     try:
         parsed_data = json.loads(json_content)
     except json.JSONDecodeError as e:
-        # Check if this is an "Extra data" error (valid JSON + trailing text)
         error_msg = str(e)
-        if "Extra data" in error_msg and hasattr(e, "pos") and e.pos is not None:
-            # Try to recover by parsing only the valid JSON portion
-            # The error position is where extra data starts, so everything before it should be valid JSON
+        error_pos = getattr(e, "pos", None)
+        
+        # Strategy 1: Handle "Extra data" errors (valid JSON + trailing text)
+        if "Extra data" in error_msg and error_pos is not None:
             recovery_attempted = True
+            recovery_strategy = "extra_data_truncation"
             try:
                 # Extract JSON up to the error position and strip trailing whitespace
-                valid_json = json_content[: e.pos].rstrip()
+                valid_json = json_content[:error_pos].rstrip()
                 
                 # Try parsing the truncated JSON
                 parsed_data = json.loads(valid_json)
-                extra_data_length = len(json_content) - e.pos
+                extra_data_length = len(json_content) - error_pos
                 logging_util.warning(
-                    f"⚠️ JSON recovery: Successfully parsed valid JSON portion "
-                    f"(truncated at position {e.pos}, {extra_data_length} chars of extra data ignored). "
+                    f"⚠️ JSON recovery (extra_data_truncation): Successfully parsed valid JSON portion "
+                    f"(truncated at position {error_pos}, {extra_data_length} chars of extra data ignored). "
                     f"Original error: {error_msg}"
                 )
             except (json.JSONDecodeError, ValueError) as recovery_error:
-                # Recovery failed, log original error
-                _log_json_parse_error(e, json_content, include_recovery_message=False)
-                logging_util.warning(
-                    f"⚠️ JSON recovery attempted but failed: {recovery_error}. "
-                    f"Falling back to error response."
-                )
                 parsed_data = None
-        else:
-            # Not an "Extra data" error, or no position available - log and fail
+                # Keep recovery_strategy set to track which strategy was attempted
+        
+        # Strategy 2: Handle "Expecting value" errors (common with truncated/malformed responses)
+        if parsed_data is None and "Expecting value" in error_msg:
+            recovery_attempted = True
+            recovery_strategy = "expecting_value_recovery"
+            
+            # Try to find the last complete JSON object/array
+            # Look for the last closing brace/bracket
+            last_brace = json_content.rfind("}")
+            last_bracket = json_content.rfind("]")
+            last_valid_pos = max(last_brace, last_bracket)
+            
+            if last_valid_pos > 0:
+                try:
+                    # Try parsing from start to last valid position
+                    truncated_json = json_content[:last_valid_pos + 1]
+                    parsed_data = json.loads(truncated_json)
+                    logging_util.warning(
+                        f"⚠️ JSON recovery (expecting_value_recovery): Successfully parsed JSON "
+                        f"by truncating at last valid brace/bracket (position {last_valid_pos}). "
+                        f"Original error: {error_msg}"
+                    )
+                except (json.JSONDecodeError, ValueError) as recovery_error:
+                    parsed_data = None
+                    # Keep recovery_strategy set to track which strategy was attempted
+        
+        # Strategy 3: Try stripping common prefixes/suffixes that might cause issues
+        if parsed_data is None and error_pos is not None:
+            recovery_attempted = True
+            recovery_strategy = "prefix_suffix_stripping"
+            
+            # Try removing leading/trailing whitespace and common markdown artifacts
+            cleaned_json = json_content.strip()
+            
+            # Remove common markdown code block artifacts if present
+            if cleaned_json.startswith("```"):
+                # Find the first newline after ```
+                first_newline = cleaned_json.find("\n")
+                if first_newline > 0:
+                    cleaned_json = cleaned_json[first_newline + 1:]
+            
+            if cleaned_json.endswith("```"):
+                cleaned_json = cleaned_json[:-3].rstrip()
+            
+            # Try parsing cleaned JSON
+            try:
+                parsed_data = json.loads(cleaned_json)
+                logging_util.warning(
+                    f"⚠️ JSON recovery (prefix_suffix_stripping): Successfully parsed JSON "
+                    f"after removing markdown artifacts. Original error: {error_msg}"
+                )
+            except (json.JSONDecodeError, ValueError):
+                parsed_data = None
+                # Keep recovery_strategy set to track which strategy was attempted
+        
+        # If all recovery strategies failed, log the error
+        if parsed_data is None:
+            if recovery_attempted:
+                logging_util.warning(
+                    f"⚠️ JSON recovery attempted ({recovery_strategy}) but failed. "
+                    f"Falling back to error response. Original error: {error_msg}"
+                )
             _log_json_parse_error(e, json_content, include_recovery_message=False)
-            parsed_data = None
 
     # Create NarrativeResponse from parsed data
 
@@ -3363,15 +3420,19 @@ def parse_structured_response(
             )  # Return cleaned narrative from response
 
     # JSON parsing failed - return error response
-    # NOTE: Limited recovery for "Extra data" errors (valid JSON + trailing text) has been restored.
-    # Other malformed JSON errors will fail completely to avoid silent data corruption.
-    if recovery_attempted:
-        error_detail = "Recovery was attempted for 'Extra data' error but failed."
+    # NOTE: Multiple recovery strategies are attempted (extra_data_truncation, expecting_value_recovery, prefix_suffix_stripping).
+    # If all recovery strategies fail, we return an error response to avoid silent data corruption.
+    if recovery_attempted and parsed_data is None:
+        error_detail = f"Recovery was attempted ({recovery_strategy}) but failed."
+    elif not recovery_attempted:
+        error_detail = "No recovery attempted - error type not recoverable."
     else:
-        error_detail = "No recovery attempted - not an 'Extra data' error or position unavailable."
-    logging_util.error(
-        f"Failed to parse JSON response - returning error message. {error_detail}"
-    )
+        error_detail = None  # Recovery succeeded, parsed_data should be set
+    
+    if parsed_data is None:
+        logging_util.error(
+            f"Failed to parse JSON response - returning error message. {error_detail}"
+        )
     fallback_response = NarrativeResponse(
         narrative="Invalid JSON response received. Please try again.",
         entities_mentioned=[],

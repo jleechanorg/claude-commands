@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+# Use worldarchitect.ai venv if it exists (has dependencies), otherwise use local venv
+WORLDARCH_VENV = Path("/Users/jleechan/projects/worldarchitect.ai/venv/bin/python")
 # Server logs go to /tmp per evidence-standards.md
 DEFAULT_LOG_DIR = Path("/tmp/mcp_server_logs")
 
@@ -131,8 +133,13 @@ def start_local_mcp_server(
     Returns:
         LocalServer handle for managing the server process.
     """
-    python_bin = PROJECT_ROOT / "venv" / "bin" / "python"
-    if not python_bin.exists():
+    # Prefer worldarchitect.ai venv (has dependencies), fallback to local venv, then sys.executable
+    python_bin = None
+    if WORLDARCH_VENV.exists():
+        python_bin = WORLDARCH_VENV
+    elif (PROJECT_ROOT / "venv" / "bin" / "python").exists():
+        python_bin = PROJECT_ROOT / "venv" / "bin" / "python"
+    else:
         python_bin = Path(sys.executable)
 
     env = dict(os.environ)
