@@ -579,6 +579,108 @@ XP_SOURCE_CAPS: dict[str, int] = {
     "worshipper_milestone": 50_000,  # Per 10,000 new followers
 }
 
+# --- SOUL HARVESTING SYSTEM (Fiendish Deities) ---
+# Fiendish deities can harvest mortal souls for XP, BYPASSING normal caps
+# This gives demons/devils a unique progression path
+
+# Soul types and their base XP values
+SOUL_VALUES: dict[str, int] = {
+    "commoner": 10,           # Tier 1: Peasants, laborers
+    "soldier": 25,            # Tier 2: Guards, trained combatants
+    "named_npc": 250,         # Tier 3: Shopkeepers, minor nobles
+    "hero": 1_000,            # Tier 4: Adventurers level 5-10
+    "champion": 5_000,        # Tier 5: Famous warriors level 11-15
+    "legend": 25_000,         # Tier 6: World-renowned level 16-20
+    "epic_mortal": 100_000,   # Tier 7: Demigod-tier mortals level 21+
+    "celestial": 500_000,     # Tier 8: Angels, rival demons
+    "divine_fragment": 1_000_000,  # Tier 9: Piece of another god
+}
+
+# Soul tier numbers (for Dissonance calculation)
+SOUL_TIERS: dict[str, int] = {
+    "commoner": 1,
+    "soldier": 2,
+    "named_npc": 3,
+    "hero": 4,
+    "champion": 5,
+    "legend": 6,
+    "epic_mortal": 7,
+    "celestial": 8,
+    "divine_fragment": 9,
+}
+
+# Soul acquisition methods and their multipliers/costs
+SOUL_ACQUISITION_METHODS: dict[str, dict[str, float]] = {
+    "contract": {       # Willing soul via deal/bargain
+        "xp_multiplier": 2.0,
+        "dissonance_per_tier": 0.0,
+    },
+    "corruption": {     # Led astray, chose evil
+        "xp_multiplier": 1.5,
+        "dissonance_per_tier": 2.0,
+    },
+    "theft": {          # Violent extraction
+        "xp_multiplier": 1.0,
+        "dissonance_per_tier": 5.0,
+    },
+}
+
+
+def calculate_soul_xp(soul_type: str, method: str) -> int:
+    """Calculate XP gained from harvesting a soul.
+
+    Soul harvesting BYPASSES normal mortal XP caps for fiendish deities.
+
+    Args:
+        soul_type: Type of soul (from SOUL_VALUES keys)
+        method: Acquisition method (contract, corruption, theft)
+
+    Returns:
+        XP amount after applying method multiplier
+    """
+    base_xp = SOUL_VALUES.get(soul_type, 10)
+    method_data = SOUL_ACQUISITION_METHODS.get(method, SOUL_ACQUISITION_METHODS["theft"])
+    multiplier = method_data["xp_multiplier"]
+    return int(base_xp * multiplier)
+
+
+def calculate_soul_dissonance(soul_type: str, method: str) -> float:
+    """Calculate Dissonance from harvesting a soul.
+
+    Args:
+        soul_type: Type of soul (from SOUL_TIERS keys)
+        method: Acquisition method (contract, corruption, theft)
+
+    Returns:
+        Dissonance percentage (0.0 for contracts, scales with tier for others)
+    """
+    tier = SOUL_TIERS.get(soul_type, 1)
+    method_data = SOUL_ACQUISITION_METHODS.get(method, SOUL_ACQUISITION_METHODS["theft"])
+    dissonance_per_tier = method_data["dissonance_per_tier"]
+    return tier * dissonance_per_tier
+
+
+def is_fiendish_portfolio(portfolio: str | None) -> bool:
+    """Check if a divine portfolio qualifies for soul harvesting.
+
+    Args:
+        portfolio: The deity's portfolio/domain
+
+    Returns:
+        True if the portfolio is fiendish (demons, devils, dark gods)
+    """
+    if not portfolio:
+        return False
+
+    fiendish_keywords = {
+        "demon", "devil", "fiend", "hell", "abyss", "infernal",
+        "darkness", "evil", "death", "undeath", "corruption",
+        "tyranny", "suffering", "torment", "souls", "bargains",
+    }
+
+    portfolio_lower = portfolio.lower()
+    return any(keyword in portfolio_lower for keyword in fiendish_keywords)
+
 
 def get_xp_for_level(level: int) -> int:
     """Get the total XP required to reach a given level.

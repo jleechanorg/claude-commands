@@ -337,3 +337,69 @@ LEVEL → XP REQUIRED → XP TO NEXT → NOTES
 - Raw XP: 50,000 × 50 = 2,500,000 XP (would be 4+ levels!)
 - **Capped XP: 1,000 XP** (meaningless to a god)
 - To level up, they need to defeat a divine rival or complete a Great Work
+
+## Soul Harvesting (Fiendish Deities Only)
+
+**Fiendish deities** (demons, devils, dark gods) have a unique progression path: they can harvest mortal souls for XP, **bypassing normal mortal caps**.
+
+### Who Qualifies?
+
+Deities with fiendish portfolios: Hell, Abyss, Darkness, Evil, Death, Undeath, Corruption, Tyranny, Suffering, Torment, Souls, Bargains.
+
+### Soul Value Table
+
+| Soul Type | Tier | Base XP | Contract (×2) | Corruption (×1.5) | Theft (×1) |
+|-----------|------|---------|---------------|-------------------|------------|
+| Commoner | 1 | 10 | 20 | 15 | 10 |
+| Soldier | 2 | 25 | 50 | 37 | 25 |
+| Named NPC | 3 | 250 | 500 | 375 | 250 |
+| Hero (Lv 5-10) | 4 | 1,000 | 2,000 | 1,500 | 1,000 |
+| Champion (Lv 11-15) | 5 | 5,000 | 10,000 | 7,500 | 5,000 |
+| Legend (Lv 16-20) | 6 | 25,000 | 50,000 | 37,500 | 25,000 |
+| Epic Mortal (Lv 21+) | 7 | 100,000 | 200,000 | 150,000 | 100,000 |
+| Celestial/Fiend | 8 | 500,000 | 1,000,000 | 750,000 | 500,000 |
+| Divine Fragment | 9 | 1,000,000 | 2,000,000 | 1,500,000 | 1,000,000 |
+
+### Acquisition Methods
+
+| Method | XP Multiplier | Dissonance | Description |
+|--------|---------------|------------|-------------|
+| **Contract** | ×2 | 0% | Soul freely given via deal/bargain |
+| **Corruption** | ×1.5 | +2% per tier | Led astray, chose evil path |
+| **Theft** | ×1 | +5% per tier | Violent extraction, forced claim |
+
+### Dissonance Examples
+
+| Soul + Method | XP Gained | Dissonance |
+|---------------|-----------|------------|
+| 1,000 commoners via contract | 20,000 XP | 0% |
+| 1 Legend via corruption | 37,500 XP | +12% (tier 6 × 2%) |
+| 1 Celestial via theft | 500,000 XP | +40% (tier 8 × 5%) |
+
+### Gameplay Implications
+
+**Non-Fiendish Gods:**
+- Mortal kills = capped at 1,000 XP
+- Must pursue divine rivals, Great Works, worshippers
+
+**Fiendish Gods:**
+- Mortal souls = FULL uncapped XP via harvesting
+- Contracts are most efficient (×2 XP, 0 Dissonance)
+- Mass theft is fast but generates massive Dissonance
+- Creates unique "soul farming" gameplay loop
+
+### Soul Banking (Optional Rule)
+
+Fiendish deities can **bank** harvested souls instead of consuming them:
+
+| Banked Souls | Use |
+|--------------|-----|
+| **Spend for XP** | Convert to XP at any time |
+| **Trade** | Barter with other fiends (Infernal politics) |
+| **Fuel Rituals** | Power cosmic-scale abilities |
+| **Create Servants** | Forge lemures, demons from soul matter |
+
+**Soul Vault** displayed in HUD for fiendish characters:
+```
+SOUL VAULT: [Commoners: 347] [Heroes: 12] [Legends: 2] [Celestials: 0]
+```
