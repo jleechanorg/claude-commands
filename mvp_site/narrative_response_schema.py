@@ -172,11 +172,11 @@ MAX_PLANNING_JSON_BLOCK_CHARS = 50000
 CHOICE_SCHEMA = {
     "text": str,  # Display name for the choice (REQUIRED)
     "description": str,  # What this choice entails (REQUIRED)
-    "pros": list,  # Advantages of this choice (optional, list of strings)
-    "cons": list,  # Risks/disadvantages (optional, list of strings)
-    "confidence": str,  # "high" | "medium" | "low" (optional)
+    "pros": list,  # Advantages (optional, list[str]; primitives may be coerced to str) - for frontend display; always at choice level
+    "cons": list,  # Risks/disadvantages (optional, list[str]; primitives may be coerced to str) - for frontend display; always at choice level
+    "confidence": str,  # "high" | "medium" | "low" (optional) - for frontend display; always at choice level
     "risk_level": str,  # "safe" | "low" | "medium" | "high" (REQUIRED)
-    "analysis": dict,  # Additional analysis data (optional)
+    "analysis": dict,  # Additional non-display metadata (optional). For parallel execution: delegation_targets (list), personal_focus (str), coordination_dc (int)
     "switch_to_story_mode": bool,  # If true, selecting this choice switches UI to Character/story mode (optional)
 }
 
@@ -209,6 +209,7 @@ PLANNING_BLOCK_SCHEMA = {
     "choices": {
         # Choice keys should be snake_case, may have god: or think: prefix
         # "<choice_key>": CHOICE_SCHEMA
+        # Note: See planning_protocol.md for ordering rules (parallel execution must be last)
     },
     # Analysis (optional - for detailed Think Mode analysis)
     "analysis": {

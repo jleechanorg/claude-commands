@@ -13,7 +13,7 @@ This protocol applies to all planning blocks regardless of mode. The key differe
 
 ## Planning Block Structure
 
-The canonical schema is defined in `narrative_response_schema.py` as `PLANNING_BLOCK_SCHEMA`.
+The canonical schema is defined below. (Note: This schema is automatically injected from `narrative_response_schema.py` - you see the full schema content here, not just a reference.)
 
 ### Core Fields (Canonical Schema)
 
@@ -22,6 +22,49 @@ The canonical schema is defined in `narrative_response_schema.py` as `PLANNING_B
 ### Choice Structure
 
 {{CHOICE_SCHEMA}}
+
+**CRITICAL ORDERING RULE**: When a parallel execution option is included, it **MUST be placed LAST** in the choices object. All individual situational choices must come first, followed by the parallel execution option as the final choice. This ensures consistent UI presentation with the parallel option always appearing at the bottom.
+
+**Example with Parallel Execution (correct ordering):**
+```json
+{
+  "thinking": "The player faces three critical objectives that could be tackled sequentially or in parallel.",
+  "context": "Post-battle strategic planning phase",
+  "choices": {
+    "audit_avernus": {
+      "text": "Audit Avernus Remnants",
+      "description": "Systematically collect the remaining diabolical assets and souls in the First Layer while the Hells are in shock.",
+      "risk_level": "high",
+      "pros": ["Massive soul harvest", "Consolidate Hells territory"],
+      "cons": ["Increases chance of meeting Hellfire Auditors"],
+      "confidence": "high"
+    },
+    "return_to_waterdeep": {
+      "text": "Return to Waterdeep",
+      "description": "Personally oversee the final conversion of the Watchful Order and the Masked Lords to secure the North.",
+      "risk_level": "high",
+      "pros": ["Total shadow control of the North", "Stabilize 'Paradise' network"],
+      "cons": ["Direct exposure to Elminster's proximity"],
+      "confidence": "high"
+    },
+    "parallel_execution": {
+      "text": "Execute All Simultaneously",
+      "description": "Coordinate the Avernus audit through Ketheric while you return to Waterdeep to finalize shadow control.",
+      "risk_level": "high",
+      "pros": ["Maximum ROI", "Maintain momentum on all fronts"],
+      "cons": ["Divided attention", "High coordination complexity (+2 DC)"],
+      "confidence": "medium",
+      "analysis": {
+        "delegation_targets": ["Ketheric handles Avernus audit"],
+        "personal_focus": "Waterdeep conversion requires direct oversight",
+        "coordination_dc": 18
+      }
+    }
+  }
+}
+```
+
+**Note**: The `parallel_execution` choice is always the **last** key in the choices object. Individual situational choices come first.
 
 ### Field Requirements by Mode
 
@@ -32,6 +75,69 @@ The canonical schema is defined in `narrative_response_schema.py` as `PLANNING_B
 | `situation_assessment` | REQUIRED | Optional |
 | `choices` | REQUIRED (situation-specific; include return-to-story only when appropriate) | REQUIRED |
 | `analysis` | REQUIRED | Optional |
+
+---
+
+## Parallel Execution Option (MANDATORY)
+
+🚨 **MANDATORY**: When presenting 2 or more situational choices (excluding meta-choices like `think:continue` or `god:*`) and none of the exclusion conditions below apply, you **MUST** include a parallel/delegation option as an additional choice. This is not optional—it is a required feature of the planning system.
+
+**CRITICAL ORDERING RULE**: The parallel execution option **MUST always be placed LAST** in the choices object. All individual situational choices must come first, followed by the parallel execution option as the final choice.
+
+**Failure to include the parallel execution option when conditions are met will result in incomplete planning blocks.**
+
+*See "When NOT to Include Parallel Option" section below for the only valid exclusion conditions.*
+
+**Structure**: Use top-level `pros`/`cons`/`confidence` fields for frontend display, and `analysis` object for parallel execution metadata:
+- `pros` - advantages (list of strings, at choice level for frontend display)
+- `cons` - disadvantages (list of strings, at choice level for frontend display)
+- `confidence` - execution confidence level (string, at choice level for frontend display)
+- `analysis` object (optional) containing:
+  - `delegation_targets` - who handles which tasks (optional)
+  - `personal_focus` - character's main focus (optional)
+  - `coordination_dc` - coordination difficulty (optional)
+
+**Example**:
+```json
+"parallel_execution": {
+    "text": "Execute All Simultaneously",
+    "description": "Coordinate all operations using delegation and split focus",
+    "risk_level": "high",
+    "pros": ["Faster completion", "Maintain momentum"],
+    "cons": ["Divided attention", "Higher coordination complexity"],
+    "confidence": "medium",
+    "analysis": {
+        "delegation_targets": ["Lieutenants for garrison", "Researchers for refinement"],
+        "personal_focus": "High Hall audit requires direct oversight",
+        "coordination_dc": 16
+    }
+}
+```
+
+**Note on coordination_dc**: Set this to the base DC for the primary task + 2 per additional parallel task + modifiers for complexity. (e.g., base DC 12 + 2 (one additional task) = DC 14).
+
+### When NOT to Include Parallel Option
+
+- Only 1 situational choice available (nothing to parallelize)
+- Choices are mutually exclusive by nature (e.g., "Surrender" vs "Fight to the death")
+- Meta-choices only (`think:continue`, `think:return_story`, `god:*`)
+- Explicit sequential dependencies (must do A before B is possible)
+
+### Parallel Option Mechanics
+
+When a player selects a parallel execution choice:
+- **DC Modifier**: +2 to +4 (coordinating multiple tasks is harder). Use:
+  - **+2** when coordinating **2 relatively simple, compatible tasks** with generally competent allies and no severe time/pressure constraints.
+  - **+3** when coordinating **3 tasks** or when at least one task is moderately complex, conditions are somewhat chaotic, or some allies are less capable.
+  - **+4** when coordinating **4+ tasks** and/or **high-complexity or conflicting tasks**, under high stress or chaotic conditions, or with poorly coordinated/untrained allies.
+- **Success**: All tasks execute with reduced time cost. The exact time calculation is system-dependent, but the intent is "faster than pure sequencing while still incurring a coordination penalty." For example:
+  - 2 tasks: ~1.25x–1.5x the longest single-task time instead of 2x
+  - 3 tasks: ~1.5x the longest single-task time instead of 3x
+  - 4 tasks: ~1.75x–2x the longest single-task time instead of 4x
+  - 5+ tasks: cap at ~2x–2.5x the longest single-task time, or use your own system's parallel-action rules
+- **Partial Success**: Some tasks succeed, others fail or are delayed
+- **Failure**: Coordination breakdown - tasks may interfere with each other or none succeed
+- **Rewards**: On success, ×1.2 XP multiplier for efficient multi-tasking and strategic thinking (stacks with other modifiers per Risk/Reward Balance section)
 
 ---
 

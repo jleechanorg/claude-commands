@@ -1,6 +1,6 @@
 /**
  * JavaScript Unit Tests for Planning Block Parsing
- * Tests the new string format for pros/cons in deep think mode
+ * Tests pros/cons/confidence rendering for planning block choices
  *
  * Run with: node mvp_site/frontend_v1/js/test_planning_block_parsing.js
  */
@@ -30,17 +30,19 @@ function sanitizeHtml(text) {
 
 function escapeHtmlAttribute(str) {
   if (!str) return '';
-  return str.replace(/[&<>"']/g, function (match) {
-    const escapeMap = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#x27;',
-    };
-    return escapeMap[match];
-  });
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
 }
+
+const sanitizeIdentifier = (text) => {
+  if (!text) return 'unknown';
+  // Keep only alphanumeric, underscore, and hyphen characters
+  return text.toString().replace(/[^a-zA-Z0-9_-]/g, '');
+};
 
 // Extract the relevant parsing logic from app.js
 function parsePlanningBlocksJson(planningBlock) {
@@ -51,123 +53,122 @@ function parsePlanningBlocksJson(planningBlock) {
     console.warn(
       'parsePlanningBlocks: Invalid JSON structure - missing or invalid choices',
     );
-    return '<div class="planning-block-error">❌ Error: Invalid planning block structure. Expected "choices" object.</div>';
+    return planningBlock.thinking || '';
   }
 
-  let html = '<div class="planning-block-container">';
+  const choices = planningBlock.choices;
+  const choiceKeys = Object.keys(choices);
 
-  // Add thinking section if present
+  // If no choices, just return thinking text
+  if (choiceKeys.length === 0) {
+    console.log('parsePlanningBlocks: No choices in planning block');
+    return planningBlock.thinking || '';
+  }
+
+  // Build HTML output
+  let html = '';
+
+  // Add thinking text if present
   if (planningBlock.thinking) {
-    const safeThinking = sanitizeHtml(planningBlock.thinking);
-    html += `<div class="planning-thinking">
-            <div class="thinking-header">💭 Character's Thoughts:</div>
-            <div class="thinking-content">${safeThinking}</div>
-        </div>`;
+    const sanitizedThinking = sanitizeHtml(planningBlock.thinking);
+    html += `<div class="planning-block-thinking">${sanitizedThinking}</div>`;
   }
 
   // Add context if present
   if (planningBlock.context) {
-    const safeContext = sanitizeHtml(planningBlock.context);
-    html += `<div class="planning-context">
-            <div class="context-header">🌟 Current Situation:</div>
-            <div class="context-content">${safeContext}</div>
-        </div>`;
+    const sanitizedContext = sanitizeHtml(planningBlock.context);
+    html += `<div class="planning-block-context">${sanitizedContext}</div>`;
   }
 
-  html += '<div class="planning-choices">';
+  // Create choice buttons
+  html += '<div class="planning-block-choices">';
 
-  for (const [key, choice] of Object.entries(planningBlock.choices)) {
+  choiceKeys.forEach((choiceKey) => {
+    const choice = choices[choiceKey];
+
+    // Validate choice structure
     if (!choice || typeof choice !== 'object') {
       console.warn(
-        `parsePlanningBlocks: Invalid choice structure for key: ${key}`,
+        `parsePlanningBlocks: Invalid choice object for key: ${choiceKey}`,
       );
-      continue;
+      return;
     }
 
-    const safeKey = sanitizeHtml(key);
-    const safeText = sanitizeHtml(choice.text || 'Unknown Action');
-    const safeDescription = sanitizeHtml(choice.description || '');
+    if (!choice.text || !choice.description) {
+      console.warn(
+        `parsePlanningBlocks: Choice missing required fields: ${choiceKey}`,
+      );
+      return;
+    }
+
+    // Sanitize choice data
+    const safeKey = sanitizeIdentifier(choiceKey);
+    const safeText = sanitizeHtml(choice.text);
+    const safeDescription = sanitizeHtml(choice.description);
     const riskLevel = choice.risk_level || 'low';
+    const switchToStory = choice.switch_to_story_mode === true;
 
-    // Check if this is a deep think mode choice with analysis
-    if (choice.analysis && typeof choice.analysis === 'object') {
-      // Deep think mode - render expanded format with pros/cons as STRINGS
-      const analysis = choice.analysis;
-      const safePros = analysis.pros ? sanitizeHtml(analysis.pros) : '';
-      const safeCons = analysis.cons ? sanitizeHtml(analysis.cons) : '';
-      const safeConfidence = analysis.confidence
-        ? sanitizeHtml(analysis.confidence)
-        : '';
+    // Expanded rendering when pros/cons/confidence are present.
+    const hasExpandedDetails =
+      (Array.isArray(choice.pros) && choice.pros.length > 0) ||
+      (Array.isArray(choice.cons) && choice.cons.length > 0) ||
+      (typeof choice.confidence === 'string' && choice.confidence.trim());
 
-      // Create choice data for form submission
+    if (hasExpandedDetails) {
+      const safePros = Array.isArray(choice.pros)
+        ? choice.pros.map((p) => sanitizeHtml(p))
+        : [];
+      const safeCons = Array.isArray(choice.cons)
+        ? choice.cons.map((c) => sanitizeHtml(c))
+        : [];
+      const safeConfidence =
+        typeof choice.confidence === 'string'
+          ? sanitizeHtml(choice.confidence)
+          : '';
+
+      // Build multi-line button text
+      let buttonText = `${safeText}: ${safeDescription}`;
+      if (safePros.length > 0) {
+        buttonText += `\nPros: ${safePros.join(', ')}`;
+      }
+      if (safeCons.length > 0) {
+        buttonText += `\nCons: ${safeCons.join(', ')}`;
+      }
+      if (safeConfidence) {
+        buttonText += `\nAssessment: ${safeConfidence}`;
+      }
+
       const choiceData = `${safeText} - ${safeDescription}`;
       const escapedChoiceData = escapeHtmlAttribute(choiceData);
-
-      // Add deep-think class for enhanced styling
-      const riskClass = `risk-${riskLevel} deep-think-choice`;
-
-      html += `<div class="choice-container deep-think-choice">
-                <button class="choice-button choice-button-expanded ${riskClass}"
-                        data-choice-id="${safeKey}"
-                        data-choice-text="${escapedChoiceData}">
-                    <div class="choice-header">
-                        <strong>${safeText}</strong>
-                    </div>
-                    <div class="choice-description">${safeDescription}</div>
-                    <div class="choice-analysis">
-                        <div class="pros-cons-container">
-                            ${
-                              safePros
-                                ? `
-                                <div class="pros-section">
-                                    <span class="analysis-label">✅ Pros:</span>
-                                    <div class="analysis-text">${safePros}</div>
-                                </div>
-                            `
-                                : ''
-                            }
-                            ${
-                              safeCons
-                                ? `
-                                <div class="cons-section">
-                                    <span class="analysis-label">❌ Cons:</span>
-                                    <div class="analysis-text">${safeCons}</div>
-                                </div>
-                            `
-                                : ''
-                            }
-                        </div>
-                        ${
-                          safeConfidence
-                            ? `
-                            <div class="confidence-section">
-                                <span class="analysis-label">🎯 Assessment:</span>
-                                <div class="confidence-text">${safeConfidence}</div>
-                            </div>
-                        `
-                            : ''
-                        }
-                    </div>
-                </button>
-            </div>`;
-    } else {
-      // Standard choice format
-      const choiceData = `${safeText} - ${safeDescription}`;
-      const escapedChoiceData = escapeHtmlAttribute(choiceData);
+      const escapedTitle = escapeHtmlAttribute(safeDescription);
       const riskClass = `risk-${riskLevel}`;
 
-      html += `<div class="choice-container">
-                <button class="choice-button ${riskClass}"
-                        data-choice-id="${safeKey}"
-                        data-choice-text="${escapedChoiceData}">
-                    <div class="choice-text">${safeText}</div>
-                    <div class="choice-description">${safeDescription}</div>
-                </button>
-            </div>`;
-    }
-  }
+      html +=
+        `<button class="choice-button ${riskClass}" ` +
+        `data-choice-id="${safeKey}" ` +
+        `data-choice-text="${escapedChoiceData}" ` +
+        `data-switch-to-story="${switchToStory}" ` +
+        `title="${escapedTitle}" ` +
+        `style="white-space: pre-wrap; text-align: left;">${buttonText}</button>`;
+    } else {
+      // Standard mode - render simple button format
+      const buttonText = `${safeText}: ${safeDescription}`;
+      const choiceData = `${safeText} - ${safeDescription}`;
+      const escapedChoiceData = escapeHtmlAttribute(choiceData);
+      const escapedTitle = escapeHtmlAttribute(safeDescription);
+      const riskClass = `risk-${riskLevel}`;
 
-  html += '</div></div>';
+      html +=
+        `<button class="choice-button ${riskClass}" ` +
+        `data-choice-id="${safeKey}" ` +
+        `data-choice-text="${escapedChoiceData}" ` +
+        `data-switch-to-story="${switchToStory}" ` +
+        `title="${escapedTitle}">${buttonText}</button>`;
+    }
+  });
+
+  html += '</div>';
+
   return html;
 }
 
@@ -235,9 +236,9 @@ class PlanningBlockTestSuite {
 // Create test suite
 const suite = new PlanningBlockTestSuite();
 
-// Test 1: Basic string format parsing
+// Test 1: Expanded choice rendering with top-level fields
 suite.test(
-  'Should parse deep think mode with STRING format pros/cons',
+  'Should render expanded choice with choice-level pros/cons/confidence',
   function () {
     const planningBlock = {
       thinking:
@@ -247,35 +248,28 @@ suite.test(
           text: 'Attack Head-On',
           description: 'Charge forward with sword raised',
           risk_level: 'high',
-          analysis: {
-            pros: [
-              'Quick resolution',
-              'Shows courage',
-              'Might catch dragon off-guard',
-            ],
-            cons: [
-              'High risk of injury',
-              'Could provoke rage',
-              'Uses up stamina',
-            ],
-            confidence: 'Low - this seems reckless but could work',
-          },
+          // Canonical schema: pros/cons/confidence at the choice level.
+          pros: ['Quick resolution', 'Shows courage', 'Might catch dragon off-guard'],
+          cons: ['High risk of injury', 'Could provoke rage', 'Uses up stamina'],
+          confidence: 'Low - this seems reckless but could work',
+          // analysis is reserved for metadata (not required for this test)
+          analysis: { coordination_dc: 16 },
         },
       },
     };
 
     const html = parsePlanningBlocksJson(planningBlock);
 
-    // Should contain bullet points and content from arrays
+    // Should contain content from arrays (rendered as comma-separated strings in button text)
     this.assertContains(
       html,
-      '• Quick resolution',
-      'Should contain bullet point pros',
+      'Quick resolution',
+      'Should contain pros content',
     );
     this.assertContains(
       html,
-      '• High risk of injury',
-      'Should contain bullet point cons',
+      'High risk of injury',
+      'Should contain cons content',
     );
     this.assertContains(
       html,
@@ -283,18 +277,35 @@ suite.test(
       'Should contain confidence assessment',
     );
 
-    // Should contain single blue analysis section
+    // Should contain button with expanded details (matching production code)
     this.assertContains(
       html,
-      'analysis-content',
-      'Should contain analysis-content class',
+      'class="choice-button',
+      'Should contain choice-button class',
     );
-    this.assertContains(html, '✅ Pros:', 'Should contain pros label');
-    this.assertContains(html, '❌ Cons:', 'Should contain cons label');
+    this.assertContains(html, 'Pros:', 'Should contain pros label');
+    this.assertContains(html, 'Cons:', 'Should contain cons label');
     this.assertContains(
       html,
-      '🎯 Assessment:',
+      'Assessment:',
       'Should contain assessment label',
+    );
+    // Production uses newline-separated text in button, not nested divs
+    this.assertContains(
+      html,
+      'white-space: pre-wrap',
+      'Should use pre-wrap styling for multi-line text',
+    );
+    // Check for correct class names from production
+    this.assertContains(
+      html,
+      'planning-block-thinking',
+      'Should use production thinking class',
+    );
+    this.assertContains(
+      html,
+      'planning-block-choices',
+      'Should use production choices container class',
     );
   },
 );
@@ -308,14 +319,13 @@ suite.test('Should escape HTML in STRING format for safety', function () {
         text: 'Test Choice',
         description: 'Testing HTML escaping',
         risk_level: 'low',
-        analysis: {
-          pros: [
-            "<script>alert('xss')</script>Safe option",
-            "No danger<img src=x onerror=alert('xss')>",
-          ],
-          cons: ["Might be boring<script>console.log('evil')</script>"],
-          confidence: 'High confidence<b>bold text</b>',
-        },
+        pros: [
+          "<script>alert('xss')</script>Safe option",
+          "No danger<img src=x onerror=alert('xss')>",
+        ],
+        cons: ["Might be boring<script>console.log('evil')</script>"],
+        confidence: 'High confidence<b>bold text</b>',
+        analysis: { note: 'metadata-only' },
       },
     },
   };
@@ -342,7 +352,7 @@ suite.test('Should escape HTML in STRING format for safety', function () {
 
   // Safe content should remain (with escaped HTML)
   this.assertContains(html, 'Safe option', 'Should preserve safe content');
-  this.assertContains(html, 'no danger', 'Should preserve safe content');
+  this.assertContains(html, 'No danger', 'Should preserve safe content');
   this.assertContains(html, 'Might be boring', 'Should preserve safe content');
   this.assertContains(
     html,
@@ -360,32 +370,25 @@ suite.test('Should handle empty analysis fields gracefully', function () {
         text: 'Empty Analysis',
         description: 'Testing empty fields',
         risk_level: 'medium',
-        analysis: {
-          pros: '',
-          cons: '',
-          confidence: '',
-        },
+        pros: [],
+        cons: [],
+        confidence: '',
+        analysis: {},
       },
     },
   };
 
   const html = parsePlanningBlocksJson(planningBlock);
 
-  // Should not render empty sections
-  this.assertNotContains(
+  // Should not render empty sections (production doesn't use these labels if empty)
+  this.assertNotContains(html, 'Pros:', 'Should not render pros label when empty');
+  this.assertNotContains(html, 'Cons:', 'Should not render cons label when empty');
+  this.assertNotContains(html, 'Assessment:', 'Should not render assessment label when empty');
+  
+  this.assertContains(
     html,
-    'pros-section',
-    'Should not render empty pros section',
-  );
-  this.assertNotContains(
-    html,
-    'cons-section',
-    'Should not render empty cons section',
-  );
-  this.assertNotContains(
-    html,
-    'confidence-section',
-    'Should not render empty confidence section',
+    'class="choice-button',
+    'Should contain choice-button class',
   );
 });
 
@@ -401,11 +404,10 @@ suite.test('Should handle mixed choice types correctly', function () {
       deep_think_choice: {
         text: 'Deep Think Choice',
         description: 'Has analysis field',
-        analysis: {
-          pros: 'Thoughtful approach, well-considered',
-          cons: 'Takes more time, requires focus',
-          confidence: 'High confidence in this approach',
-        },
+        pros: ['Thoughtful approach, well-considered'],
+        cons: ['Takes more time, requires focus'],
+        confidence: 'High confidence in this approach',
+        analysis: { note: 'metadata-only' },
       },
     },
   };
@@ -419,7 +421,7 @@ suite.test('Should handle mixed choice types correctly', function () {
     'Should contain standard choice',
   );
 
-  // Deep think choice SHOULD have analysis sections
+  // Deep think choice SHOULD have expanded details in button text
   this.assertContains(
     html,
     'Thoughtful approach, well-considered',
@@ -439,36 +441,27 @@ suite.test('Should handle mixed choice types correctly', function () {
   // Should have both choice types
   this.assertContains(
     html,
-    'choice-button-expanded',
-    'Should have expanded choice',
+    'Pros:',
+    'Should have pros label in expanded choice',
   );
   this.assertContains(
     html,
-    'deep-think-choice',
-    'Should have deep think class',
+    'white-space: pre-wrap',
+    'Should use pre-wrap for multi-line expanded choice',
   );
 });
 
 // Test 5: Malformed data handling
 suite.test('Should handle malformed planning blocks gracefully', function () {
   const malformedBlock = {
-    choices: {
-      bad_choice: {
-        text: 'Bad Choice',
-        analysis: 'not an object', // Should be object, not string
-      },
-    },
+    thinking: 'Malformed test',
+    choices: 'not an object',
   };
 
   const html = parsePlanningBlocksJson(malformedBlock);
 
-  // Should render as standard choice when analysis is malformed
-  this.assertContains(html, 'Bad Choice', 'Should still render the choice');
-  this.assertNotContains(
-    html,
-    'choice-button-expanded',
-    'Should not render as expanded choice',
-  );
+  // Should return thinking text only (matching production app.js line 1233)
+  this.assert(html === 'Malformed test', 'Should return thinking text on malformed choices');
 });
 
 // Run the tests

@@ -1285,19 +1285,27 @@ document.addEventListener('DOMContentLoaded', () => {
       const riskLevel = choice.risk_level || 'low';
       const switchToStory = choice.switch_to_story_mode === true;
 
-      // Check if this is a deep think mode choice with analysis
-      if (choice.analysis && typeof choice.analysis === 'object') {
-        // Deep think mode - render as plain text button with multi-line content
-        const analysis = choice.analysis;
-        const safePros = Array.isArray(analysis.pros)
-          ? analysis.pros.map((p) => sanitizeHtml(p))
+      // Expanded rendering when pros/cons/confidence are present.
+      //
+      // Canonical schema (narrative_response_schema.py / CHOICE_SCHEMA):
+      // - pros/cons/confidence live at the choice level (choice.pros, choice.cons, choice.confidence)
+      // - choice.analysis is reserved for non-display metadata (e.g., parallel execution coordination details)
+      const hasExpandedDetails =
+        (Array.isArray(choice.pros) && choice.pros.length > 0) ||
+        (Array.isArray(choice.cons) && choice.cons.length > 0) ||
+        (typeof choice.confidence === 'string' && choice.confidence.trim());
+
+      if (hasExpandedDetails) {
+        const safePros = Array.isArray(choice.pros)
+          ? choice.pros.map((p) => sanitizeHtml(p))
           : [];
-        const safeCons = Array.isArray(analysis.cons)
-          ? analysis.cons.map((c) => sanitizeHtml(c))
+        const safeCons = Array.isArray(choice.cons)
+          ? choice.cons.map((c) => sanitizeHtml(c))
           : [];
-        const safeConfidence = analysis.confidence
-          ? sanitizeHtml(analysis.confidence)
-          : '';
+        const safeConfidence =
+          typeof choice.confidence === 'string'
+            ? sanitizeHtml(choice.confidence)
+            : '';
 
         // Build multi-line button text
         let buttonText = `${safeText}: ${safeDescription}`;
