@@ -380,6 +380,174 @@ DIVINE_UPGRADE_LEVEL_THRESHOLD = 25  # Level at which divine upgrade becomes ava
 DIVINE_POTENTIAL_THRESHOLD = 100  # divine_potential value to trigger upgrade
 UNIVERSE_CONTROL_THRESHOLD = 70  # universe_control value to trigger multiverse upgrade
 
+# --- DIVINE RANK SYSTEM ---
+# Level-based divine rank progression (inspired by 3.5e Epic/Deities & Demigods)
+# Divine Rank determines automatic bonuses to AC, attacks, saves, DCs
+# Scales existing stats instead of separate resource pools
+
+# Divine Rank names and level thresholds
+DIVINE_RANK_MORTAL = "mortal"  # Level 1-20
+DIVINE_RANK_EPIC_MORTAL = "epic_mortal"  # Level 21-25
+DIVINE_RANK_QUASI_DEITY = "quasi_deity"  # Level 26-30
+DIVINE_RANK_DEMIGOD = "demigod"  # Level 31-35
+DIVINE_RANK_MINOR_GOD = "minor_god"  # Level 36-40
+DIVINE_RANK_LESSER_DEITY = "lesser_deity"  # Level 41-45
+DIVINE_RANK_INTERMEDIATE_DEITY = "intermediate_deity"  # Level 46-50
+DIVINE_RANK_GREATER_DEITY = "greater_deity"  # Level 51+
+
+# Level thresholds for divine rank progression
+DIVINE_RANK_LEVEL_THRESHOLDS: dict[str, tuple[int, int]] = {
+    DIVINE_RANK_MORTAL: (1, 20),
+    DIVINE_RANK_EPIC_MORTAL: (21, 25),
+    DIVINE_RANK_QUASI_DEITY: (26, 30),
+    DIVINE_RANK_DEMIGOD: (31, 35),
+    DIVINE_RANK_MINOR_GOD: (36, 40),
+    DIVINE_RANK_LESSER_DEITY: (41, 45),
+    DIVINE_RANK_INTERMEDIATE_DEITY: (46, 50),
+    DIVINE_RANK_GREATER_DEITY: (51, 999),  # No upper limit
+}
+
+# Divine rank numeric values (for bonus calculations)
+DIVINE_RANK_VALUES: dict[str, int] = {
+    DIVINE_RANK_MORTAL: 0,
+    DIVINE_RANK_EPIC_MORTAL: 0,  # Epic but not yet divine
+    DIVINE_RANK_QUASI_DEITY: 1,
+    DIVINE_RANK_DEMIGOD: 2,
+    DIVINE_RANK_MINOR_GOD: 3,
+    DIVINE_RANK_LESSER_DEITY: 4,
+    DIVINE_RANK_INTERMEDIATE_DEITY: 5,
+    DIVINE_RANK_GREATER_DEITY: 6,
+}
+
+# Divine rank display names (for UI/narrative)
+DIVINE_RANK_DISPLAY_NAMES: dict[str, str] = {
+    DIVINE_RANK_MORTAL: "Mortal",
+    DIVINE_RANK_EPIC_MORTAL: "Epic Mortal",
+    DIVINE_RANK_QUASI_DEITY: "Quasi-Deity",
+    DIVINE_RANK_DEMIGOD: "Demigod",
+    DIVINE_RANK_MINOR_GOD: "Minor God",
+    DIVINE_RANK_LESSER_DEITY: "Lesser Deity",
+    DIVINE_RANK_INTERMEDIATE_DEITY: "Intermediate Deity",
+    DIVINE_RANK_GREATER_DEITY: "Greater Deity",
+}
+
+# Divine immunities granted at each rank (cumulative)
+DIVINE_RANK_IMMUNITIES: dict[str, list[str]] = {
+    DIVINE_RANK_MORTAL: [],
+    DIVINE_RANK_EPIC_MORTAL: [],
+    DIVINE_RANK_QUASI_DEITY: ["sleep"],
+    DIVINE_RANK_DEMIGOD: ["sleep", "paralysis"],
+    DIVINE_RANK_MINOR_GOD: ["sleep", "paralysis", "charm"],
+    DIVINE_RANK_LESSER_DEITY: ["sleep", "paralysis", "charm", "fear"],
+    DIVINE_RANK_INTERMEDIATE_DEITY: ["sleep", "paralysis", "charm", "fear", "disease", "poison"],
+    DIVINE_RANK_GREATER_DEITY: ["sleep", "paralysis", "charm", "fear", "disease", "poison", "death_effects", "energy_drain"],
+}
+
+
+def get_divine_rank_from_level(level: int) -> str:
+    """Get the divine rank name for a given character level.
+
+    Args:
+        level: Character level (1+)
+
+    Returns:
+        Divine rank constant (e.g., DIVINE_RANK_MINOR_GOD)
+    """
+    if not isinstance(level, int) or level < 1:
+        return DIVINE_RANK_MORTAL
+
+    for rank_name, (min_level, max_level) in DIVINE_RANK_LEVEL_THRESHOLDS.items():
+        if min_level <= level <= max_level:
+            return rank_name
+
+    # Fallback for very high levels
+    return DIVINE_RANK_GREATER_DEITY
+
+
+def get_divine_rank_bonus(level: int) -> int:
+    """Get the divine rank bonus for a given level.
+
+    The bonus is applied to AC, attack rolls, saving throws, ability checks,
+    and spell DCs. This replaces the separate DPP system with scaled stats.
+
+    Args:
+        level: Character level (1+)
+
+    Returns:
+        Divine rank bonus (0-6+)
+    """
+    rank_name = get_divine_rank_from_level(level)
+    return DIVINE_RANK_VALUES.get(rank_name, 0)
+
+
+def get_divine_safe_limit(level: int) -> int:
+    """Get the safe leverage limit for a given level.
+
+    Using Divine Leverage beyond this limit generates Dissonance.
+    Safe Limit = Divine Rank × 5
+
+    Args:
+        level: Character level (1+)
+
+    Returns:
+        Safe leverage limit (0, 5, 10, 15, 20, 25, 30)
+    """
+    return get_divine_rank_bonus(level) * 5
+
+
+def get_divine_power_points(level: int) -> int:
+    """Get the Divine Power Points pool for a given level.
+
+    DPP pool scales with divine rank: Rank × 5
+    (Replaces fixed tier-based pools)
+
+    Args:
+        level: Character level (1+)
+
+    Returns:
+        Maximum DPP (0, 5, 10, 15, 20, 25, 30)
+    """
+    return get_divine_rank_bonus(level) * 5
+
+
+def get_divine_immunities(level: int) -> list[str]:
+    """Get the list of immunities for a given level.
+
+    Immunities are cumulative as divine rank increases.
+
+    Args:
+        level: Character level (1+)
+
+    Returns:
+        List of immunity names
+    """
+    rank_name = get_divine_rank_from_level(level)
+    return DIVINE_RANK_IMMUNITIES.get(rank_name, []).copy()
+
+
+def is_epic_level(level: int) -> bool:
+    """Check if a level qualifies as epic (21+).
+
+    Args:
+        level: Character level
+
+    Returns:
+        True if level 21 or higher
+    """
+    return isinstance(level, int) and level >= 21
+
+
+def is_divine_level(level: int) -> bool:
+    """Check if a level qualifies as divine (26+, has divine rank bonuses).
+
+    Args:
+        level: Character level
+
+    Returns:
+        True if level 26 or higher (Quasi-Deity+)
+    """
+    return isinstance(level, int) and level >= 26
+
 
 # Helper functions for attribute system validation
 def get_attributes_for_system(system):

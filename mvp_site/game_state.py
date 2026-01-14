@@ -1873,6 +1873,137 @@ class GameState:
         return highest_modifier if highest_modifier is not None else 0
 
     # =========================================================================
+    # Divine Rank System (Level-Based Progression)
+    # =========================================================================
+
+    def get_character_level(self) -> int:
+        """
+        Get the character's current level.
+
+        Returns:
+            Character level (defaults to 1 if not found or invalid)
+        """
+        # Level may be at top-level (normalized) or in experience dict
+        level_raw = self.player_character_data.get("level", None)
+        if level_raw is None:
+            experience = self.player_character_data.get("experience", {})
+            level_raw = experience.get("level", 1) if isinstance(experience, dict) else 1
+        try:
+            level = int(level_raw) if level_raw else 1
+        except (ValueError, TypeError):
+            level = 1
+        return max(1, level)  # Ensure at least level 1
+
+    def get_divine_rank(self) -> str:
+        """
+        Get the divine rank name based on character level.
+
+        Uses constants.get_divine_rank_from_level() for calculation.
+
+        Returns:
+            Divine rank constant (e.g., "minor_god", "lesser_deity")
+        """
+        level = self.get_character_level()
+        return constants.get_divine_rank_from_level(level)
+
+    def get_divine_rank_display_name(self) -> str:
+        """
+        Get the display name for the character's divine rank.
+
+        Returns:
+            Human-readable rank name (e.g., "Minor God", "Lesser Deity")
+        """
+        rank = self.get_divine_rank()
+        return constants.DIVINE_RANK_DISPLAY_NAMES.get(rank, "Mortal")
+
+    def get_divine_rank_bonus(self) -> int:
+        """
+        Get the divine rank bonus for the character.
+
+        This bonus is applied to:
+        - AC (Divine Defense)
+        - Attack rolls (Divine Strike)
+        - Saving throws (Divine Resilience)
+        - Ability checks (Divine Competence)
+        - Spell DCs (Divine Authority)
+
+        Returns:
+            Divine rank bonus (0-6+)
+        """
+        level = self.get_character_level()
+        return constants.get_divine_rank_bonus(level)
+
+    def get_divine_safe_limit(self) -> int:
+        """
+        Get the safe leverage limit for the character.
+
+        Using Divine Leverage beyond this limit generates Dissonance.
+        Safe Limit = Divine Rank × 5
+
+        Returns:
+            Safe leverage limit (0, 5, 10, 15, 20, 25, 30)
+        """
+        level = self.get_character_level()
+        return constants.get_divine_safe_limit(level)
+
+    def get_divine_power_points_max(self) -> int:
+        """
+        Get the maximum Divine Power Points for the character.
+
+        DPP pool = Divine Rank × 5
+
+        Returns:
+            Maximum DPP (0, 5, 10, 15, 20, 25, 30)
+        """
+        level = self.get_character_level()
+        return constants.get_divine_power_points(level)
+
+    def get_divine_immunities(self) -> list[str]:
+        """
+        Get the list of immunities granted by divine rank.
+
+        Immunities are cumulative as divine rank increases.
+
+        Returns:
+            List of immunity names (e.g., ["sleep", "paralysis", "charm"])
+        """
+        level = self.get_character_level()
+        return constants.get_divine_immunities(level)
+
+    def is_epic_level(self) -> bool:
+        """
+        Check if the character is at epic level (21+).
+
+        Returns:
+            True if level 21 or higher
+        """
+        return constants.is_epic_level(self.get_character_level())
+
+    def is_divine_level(self) -> bool:
+        """
+        Check if the character has divine rank bonuses (26+).
+
+        Returns:
+            True if level 26 or higher (Quasi-Deity+)
+        """
+        return constants.is_divine_level(self.get_character_level())
+
+    def get_divine_leverage_bonus(self) -> int:
+        """
+        Calculate the total Divine Leverage bonus.
+
+        Divine Leverage = Highest Ability Modifier + Divine Rank Bonus
+
+        This replaces the separate DPP system with scaled stats.
+
+        Returns:
+            Total leverage bonus available
+        """
+        highest_mod = self.get_highest_stat_modifier()
+        rank_bonus = self.get_divine_rank_bonus()
+        return highest_mod + rank_bonus
+
+    # =========================================================================
     # Post-Combat Reward Detection
     # =========================================================================
 
