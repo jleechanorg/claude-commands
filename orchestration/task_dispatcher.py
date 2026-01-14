@@ -710,6 +710,106 @@ class TaskDispatcher:
 
         return cli_path or None
 
+    def _validate_cli_availability(self, cli_name: str, cli_path: str, agent_name: str, model: str | None = None) -> bool:
+        """
+        Pre-flight validation: Test if CLI can actually work (API connectivity/quota check).
+        Returns True if CLI is available and working, False if quota/rate limit detected.
+        Timeouts are treated as "unknown" and return True (will rely on runtime fallback).
+        """
+        try:
+            profile = CLI_PROFILES.get(cli_name, {})
+            
+            # For Gemini, check quota/rate limit by attempting a simple test
+            if cli_name == "gemini":
+                # Test with a minimal prompt to check quota/connectivity
+                # Use provided model or fall back to default GEMINI_MODEL
+                test_model = model if model and model != "sonnet" else GEMINI_MODEL
+                test_prompt = "Say 'ok' if you can read this."
+                try:
+                    result = subprocess.run(
+                        [cli_path, "-m", test_model, "--yolo"],
+                        input=test_prompt,
+                        capture_output=True,
+                        text=True,
+                        timeout=5,  # Shorter timeout - if slow, assume available (runtime fallback will catch errors)
+                        env={k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
+                    )
+                    output = result.stdout + result.stderr
+                    # Check for quota/rate limit errors - these are definitive failures
+                    if any(phrase in output.lower() for phrase in [
+                        "exhausted your capacity",
+                        "exhausted your daily quota",
+                        "rate limit",
+                        "quota exceeded",
+                        "resource_exhausted"
+                    ]):
+                        print(f"   ⚠️ Gemini CLI quota/rate limit detected during validation for {agent_name}")
+                        return False
+                    # Require exit code 0 for success - non-zero indicates failure
+                    if result.returncode == 0:
+                        return True
+                    # Non-zero exit code indicates failure (auth error, invalid model, network issues, etc.)
+                    print(f"   ⚠️ Gemini CLI validation failed for {agent_name}: exit code {result.returncode}")
+                    return False
+                except subprocess.TimeoutExpired:
+                    # Timeout = slow but might work - let runtime fallback handle actual errors
+                    print(f"   ⚠️ Gemini CLI validation timed out for {agent_name} (will try anyway, runtime fallback will catch errors)")
+                    return True
+                except Exception as e:
+                    # Other errors = unknown, assume available (runtime fallback will catch)
+                    print(f"   ⚠️ Gemini CLI validation error for {agent_name}: {e} (will try anyway)")
+                    return True
+            
+            # For Codex, test basic connectivity
+            elif cli_name == "codex":
+                try:
+                    # Codex exec --yolo with empty input should at least show help or version
+                    result = subprocess.run(
+                        [cli_path, "exec", "--yolo"],
+                        input="",
+                        capture_output=True,
+                        text=True,
+                        timeout=3,  # Shorter timeout
+                        env={k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
+                    )
+                    output = (result.stdout or "") + (result.stderr or "")
+                    # Prefer successful exit code for validation
+                    if result.returncode == 0:
+                        return True
+                    # Check for recognizable help/version output as fallback success indicator
+                    if re.search(r"\bUsage:\s*codex\b", output, re.IGNORECASE) or re.search(
+                        r"\bcodex\b.*\bversion\b", output, re.IGNORECASE
+                    ):
+                        return True
+                    # Non-zero exit code without recognizable output indicates failure
+                    print(f"   ⚠️ Codex CLI validation failed for {agent_name}: exit code {result.returncode}")
+                    return False
+                except subprocess.TimeoutExpired:
+                    # Timeout = slow but might work
+                    print(f"   ⚠️ Codex CLI validation timed out for {agent_name} (will try anyway)")
+                    return True
+                except Exception as e:
+                    # Other errors = unknown, assume available
+                    print(f"   ⚠️ Codex CLI validation error for {agent_name}: {e} (will try anyway)")
+                    return True
+            
+            # For Claude/Cursor, assume available if binary exists (OAuth-based, harder to validate)
+            # These CLIs use OAuth and may require interactive auth, so we can't easily test
+            elif cli_name in ["claude", "cursor"]:
+                # Just verify binary is executable
+                if os.access(cli_path, os.X_OK):
+                    return True
+                return False
+
+            # Unknown CLI type - log warning but assume available (runtime fallback will catch failures)
+            # This allows new CLIs to be added without breaking validation
+            print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
+            return True
+        except Exception as e:
+            # Unknown errors = assume available (runtime fallback will catch actual failures)
+            print(f"   ⚠️ CLI validation failed for {cli_name} (agent {agent_name}): {e} (will try anyway)")
+            return True
+
     def _find_recent_pr(self) -> str | None:
         """Try to find a recent PR from current branch or user."""
         try:
@@ -1315,6 +1415,74 @@ Complete the task, then use /pr to create a new pull request."""
                     return False
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
+
+            # Pre-flight validation: Test if CLI can actually work (API connectivity/quota check)
+            print(f"🔍 Starting pre-flight validation for {agent_name} (CLI chain: {', '.join(cli_chain)}, model: {model})")
+            validated_cli = None
+            validated_path = None
+            for candidate_cli in cli_chain:
+                candidate_path = self._resolve_cli_binary(candidate_cli)
+                if not candidate_path:
+                    print(f"⚠️ CLI '{candidate_cli}' binary not found, skipping validation")
+                    continue
+                
+                print(f"   🧪 Validating {CLI_PROFILES[candidate_cli]['display_name']} CLI at {candidate_path} (model: {model})...")
+                if self._validate_cli_availability(candidate_cli, candidate_path, agent_name, model=model):
+                    validated_cli = candidate_cli
+                    validated_path = candidate_path
+                    print(f"   ✅ {CLI_PROFILES[candidate_cli]['display_name']} CLI validation passed for {agent_name}")
+                    break
+                else:
+                    print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation, trying next in chain")
+            
+            # If validation failed for all CLIs in chain, try fallback CLIs
+            # Prefer Codex for fallback (most reliable), then others
+            if not validated_cli:
+                print(f"⚠️ All CLIs in chain failed validation for {agent_name}, attempting fallback")
+                # Prioritize Codex for fallback (most reliable for automation)
+                fallback_priority = ["codex", "claude", "cursor", "gemini"]
+                for fallback_cli in fallback_priority:
+                    if fallback_cli in cli_chain:
+                        continue
+                    fallback_path = self._resolve_cli_binary(fallback_cli)
+                    if fallback_path:
+                        print(f"   🔄 Trying fallback: {CLI_PROFILES[fallback_cli]['display_name']} CLI at {fallback_path}...")
+                        if self._validate_cli_availability(fallback_cli, fallback_path, agent_name, model=model):
+                            validated_cli = fallback_cli
+                            validated_path = fallback_path
+                            print(f"   ✅ Fallback to {CLI_PROFILES[fallback_cli]['display_name']} CLI validated for {agent_name}")
+                            break
+                        else:
+                            print(f"   ❌ Fallback {CLI_PROFILES[fallback_cli]['display_name']} CLI validation failed")
+            
+            if not validated_cli or not validated_path:
+                print(f"❌ No available CLI passed pre-flight validation for {agent_name} - agent creation aborted")
+                return False
+            
+            print(f"✅ Pre-flight validation complete for {agent_name}: using {CLI_PROFILES[validated_cli]['display_name']} CLI")
+            
+            # Update agent_cli and cli_path to use validated CLI
+            if validated_cli != agent_cli:
+                print(f"🔄 Switching to validated CLI: {CLI_PROFILES[validated_cli]['display_name']}")
+                agent_cli = validated_cli
+                cli_profile = CLI_PROFILES[agent_cli]
+                cli_path = validated_path
+                agent_spec["cli"] = agent_cli
+                # Update cli_chain to prioritize validated CLI
+                agent_spec["cli_chain"] = [validated_cli] + [c for c in cli_chain if c != validated_cli]
+                # Update model to match the new CLI (if using default 'sonnet')
+                if model == "sonnet" and agent_cli == "gemini":
+                    model = GEMINI_MODEL
+                elif model == "sonnet" and agent_cli == "cursor":
+                    model = CURSOR_MODEL
+                elif model == GEMINI_MODEL and agent_cli != "gemini":
+                    # If switching away from Gemini, reset to sonnet default
+                    model = "sonnet"
+                elif model == CURSOR_MODEL and agent_cli != "cursor":
+                    # If switching away from Cursor, reset to sonnet default
+                    model = "sonnet"
+                # Update model in agent_spec for downstream use
+                agent_spec["model"] = model
 
             # Create worktree for agent using new location logic
             try:

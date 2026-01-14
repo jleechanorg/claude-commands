@@ -687,5 +687,378 @@ class TestCursorCliIntegration(unittest.TestCase):
         self.assertIsNone(cursor["conversation_dir"])
 
 
+class TestCliValidation(unittest.TestCase):
+    """Tests for pre-flight CLI validation (_validate_cli_availability)."""
+
+    def setUp(self):
+        self.dispatcher = TaskDispatcher()
+
+    def test_gemini_validation_success_with_exit_code_0(self):
+        """Gemini validation should succeed when exit code is 0."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
+            result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+            self.assertTrue(result)
+
+    def test_gemini_validation_fails_with_quota_error(self):
+        """Gemini validation should fail when quota/rate limit is detected."""
+        quota_messages = [
+            "exhausted your capacity",
+            "exhausted your daily quota",
+            "rate limit",
+            "quota exceeded",
+            "resource_exhausted",
+        ]
+        for quota_msg in quota_messages:
+            with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=1, stdout="", stderr=f"Error: {quota_msg}"
+                )
+                result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+                self.assertFalse(result, f"Should fail for quota message: {quota_msg}")
+
+    def test_gemini_validation_fails_with_non_zero_exit_code(self):
+        """Gemini validation should fail when exit code is non-zero (unless quota error)."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Authentication failed")
+            result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+            self.assertFalse(result)
+
+    def test_gemini_validation_timeout_returns_true(self):
+        """Gemini validation timeout should return True (allows runtime fallback)."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            import subprocess
+            mock_run.side_effect = subprocess.TimeoutExpired("gemini", 5)
+            result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+            self.assertTrue(result)
+
+    def test_gemini_validation_exception_returns_true(self):
+        """Gemini validation exception should return True (allows runtime fallback)."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.side_effect = Exception("Network error")
+            result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+            self.assertTrue(result)
+
+    def test_codex_validation_success_with_exit_code_0(self):
+        """Codex validation should succeed when exit code is 0."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="Codex CLI", stderr="")
+            result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
+            self.assertTrue(result)
+
+    def test_codex_validation_success_with_help_output(self):
+        """Codex validation should succeed when help/version output is recognized."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                returncode=1, stdout="Usage: codex exec [options]", stderr=""
+            )
+            result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
+            self.assertTrue(result)
+
+    def test_codex_validation_success_with_version_output(self):
+        """Codex validation should succeed when version output is recognized."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                returncode=1, stdout="codex version 1.0.0", stderr=""
+            )
+            result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
+            self.assertTrue(result)
+
+    def test_codex_validation_fails_with_unrecognized_error(self):
+        """Codex validation should fail when exit code is non-zero and output is unrecognized."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Unknown error")
+            result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
+            self.assertFalse(result)
+
+    def test_codex_validation_timeout_returns_true(self):
+        """Codex validation timeout should return True (allows runtime fallback)."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            import subprocess
+            mock_run.side_effect = subprocess.TimeoutExpired("codex", 3)
+            result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
+            self.assertTrue(result)
+
+    def test_codex_validation_exception_returns_true(self):
+        """Codex validation exception should return True (allows runtime fallback)."""
+        with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+            mock_run.side_effect = Exception("Network error")
+            result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
+            self.assertTrue(result)
+
+    def test_claude_validation_success_with_executable(self):
+        """Claude validation should succeed when binary is executable."""
+        with patch("orchestration.task_dispatcher.os.access") as mock_access:
+            mock_access.return_value = True
+            result = self.dispatcher._validate_cli_availability("claude", "/usr/bin/claude", "test-agent")
+            self.assertTrue(result)
+
+    def test_claude_validation_fails_with_non_executable(self):
+        """Claude validation should fail when binary is not executable."""
+        with patch("orchestration.task_dispatcher.os.access") as mock_access:
+            mock_access.return_value = False
+            result = self.dispatcher._validate_cli_availability("claude", "/usr/bin/claude", "test-agent")
+            self.assertFalse(result)
+
+    def test_cursor_validation_success_with_executable(self):
+        """Cursor validation should succeed when binary is executable."""
+        with patch("orchestration.task_dispatcher.os.access") as mock_access:
+            mock_access.return_value = True
+            result = self.dispatcher._validate_cli_availability("cursor", "/usr/bin/cursor-agent", "test-agent")
+            self.assertTrue(result)
+
+    def test_cursor_validation_fails_with_non_executable(self):
+        """Cursor validation should fail when binary is not executable."""
+        with patch("orchestration.task_dispatcher.os.access") as mock_access:
+            mock_access.return_value = False
+            result = self.dispatcher._validate_cli_availability("cursor", "/usr/bin/cursor-agent", "test-agent")
+            self.assertFalse(result)
+
+    def test_unknown_cli_type_returns_true(self):
+        """Unknown CLI types should return True with warning (allows runtime fallback)."""
+        with patch("builtins.print") as mock_print:
+            result = self.dispatcher._validate_cli_availability("unknown-cli", "/usr/bin/unknown", "test-agent")
+            self.assertTrue(result)
+            # Verify warning was printed
+            mock_print.assert_called()
+            call_args = str(mock_print.call_args)
+            self.assertIn("Unknown CLI type", call_args)
+            self.assertIn("test-agent", call_args)
+
+    def test_validation_includes_agent_name_in_logs(self):
+        """Validation should include agent_name in all log messages."""
+        with patch("builtins.print") as mock_print, patch(
+            "orchestration.task_dispatcher.subprocess.run"
+        ) as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Error")
+            self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "my-test-agent")
+            # Check that agent_name appears in log messages
+            calls = [str(call) for call in mock_print.call_args_list]
+            agent_name_found = any("my-test-agent" in call for call in calls)
+            self.assertTrue(agent_name_found, "agent_name should appear in log messages")
+
+    def test_validation_exception_handling_includes_agent_name(self):
+        """Exception handling should include agent_name in log messages."""
+        with patch("builtins.print") as mock_print, patch(
+            "orchestration.task_dispatcher.subprocess.run"
+        ) as mock_run:
+            mock_run.side_effect = Exception("Test error")
+            result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "error-test-agent")
+            self.assertTrue(result)
+            # Verify exception log includes agent name
+            calls = [str(call) for call in mock_print.call_args_list]
+            agent_name_found = any("error-test-agent" in call for call in calls)
+            self.assertTrue(agent_name_found, "agent_name should appear in exception log")
+
+
+class TestAgentCreationWithValidation(unittest.TestCase):
+    """Integration tests that verify agent creation actually works with validation."""
+
+    def setUp(self):
+        self.dispatcher = TaskDispatcher()
+
+    def test_agent_creation_with_gemini_validation_success(self):
+        """Agent creation should succeed when Gemini validation passes."""
+        agent_spec = {
+            "name": "test-agent-gemini-validation",
+            "focus": "Test Gemini validation in agent creation",
+            "prompt": "Test prompt",
+            "capabilities": [],
+            "type": "development",
+            "cli": "gemini",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/test-agent-gemini-validation", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+        ):
+            def which_side_effect(command):
+                known_binaries = {
+                    "gemini": "/usr/bin/gemini",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            
+            # Mock validation call (success) and agent execution
+            def run_side_effect(cmd, **kwargs):
+                if "gemini" in cmd and "-m" in cmd and "--yolo" in cmd:
+                    # Validation call - return success
+                    return MagicMock(returncode=0, stdout="ok", stderr="")
+                # Agent execution call
+                return MagicMock(returncode=0, stdout="", stderr="")
+
+            mock_run.side_effect = run_side_effect
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result, "Agent creation should succeed when validation passes")
+        # Verify validation was called
+        validation_calls = [call for call in mock_run.call_args_list if "gemini" in str(call) and "--yolo" in str(call)]
+        self.assertGreater(len(validation_calls), 0, "Validation should be called during agent creation")
+
+    def test_agent_creation_with_gemini_validation_failure_falls_back(self):
+        """Agent creation should fall back to another CLI when Gemini validation fails."""
+        agent_spec = {
+            "name": "test-agent-gemini-fallback",
+            "focus": "Test fallback when Gemini validation fails",
+            "prompt": "Test prompt",
+            "capabilities": [],
+            "type": "development",
+            "cli": "gemini",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/test-agent-gemini-fallback", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+        ):
+            def which_side_effect(command):
+                known_binaries = {
+                    "gemini": "/usr/bin/gemini",
+                    "codex": "/usr/bin/codex",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            
+            # Mock validation calls: Gemini fails, Codex succeeds
+            def run_side_effect(cmd, **kwargs):
+                cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+                if "gemini" in cmd_str and "-m" in cmd_str and "--yolo" in cmd_str:
+                    # Gemini validation fails (quota error) - return non-zero exit code
+                    # The validation checks for quota messages in output, so we need non-zero exit
+                    return MagicMock(returncode=1, stdout="exhausted your daily quota", stderr="")
+                elif "codex" in cmd_str and "exec" in cmd_str and "--yolo" in cmd_str:
+                    # Codex validation succeeds
+                    return MagicMock(returncode=0, stdout="", stderr="")
+                # Agent execution call
+                return MagicMock(returncode=0, stdout="", stderr="")
+
+            mock_run.side_effect = run_side_effect
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result, "Agent creation should succeed with fallback")
+        # Verify agent spec was updated to use fallback CLI
+        self.assertEqual(agent_spec["cli"], "codex", "Should fall back to Codex when Gemini fails")
+        # Verify both validations were attempted
+        gemini_calls = [call for call in mock_run.call_args_list if "gemini" in str(call) and "--yolo" in str(call)]
+        codex_calls = [call for call in mock_run.call_args_list if "codex" in str(call) and "exec" in str(call) and "--yolo" in str(call)]
+        self.assertGreater(len(gemini_calls), 0, "Gemini validation should be attempted")
+        self.assertGreater(len(codex_calls), 0, "Codex fallback validation should be attempted")
+
+    def test_agent_creation_fails_when_all_validations_fail(self):
+        """Agent creation should fail when all CLI validations fail."""
+        agent_spec = {
+            "name": "test-agent-all-fail",
+            "focus": "Test failure when all validations fail",
+            "prompt": "Test prompt",
+            "capabilities": [],
+            "type": "development",
+            "cli": "gemini",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+        ):
+            def which_side_effect(command):
+                known_binaries = {
+                    "gemini": "/usr/bin/gemini",
+                    "codex": "/usr/bin/codex",
+                    "claude": "/usr/bin/claude",
+                    "cursor": "/usr/bin/cursor-agent",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            
+            # Mock all validations to fail
+            with patch("orchestration.task_dispatcher.subprocess.run") as mock_run:
+                # All validations fail (quota/errors)
+                mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="exhausted your daily quota")
+                
+                result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertFalse(result, "Agent creation should fail when all validations fail")
+
+    def test_agent_creation_logs_validation_steps(self):
+        """Agent creation should log validation steps for debugging."""
+        agent_spec = {
+            "name": "test-agent-logging",
+            "focus": "Test validation logging",
+            "prompt": "Test prompt",
+            "capabilities": [],
+            "type": "development",
+            "cli": "gemini",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/test-agent-logging", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch("builtins.print") as mock_print,
+        ):
+            def which_side_effect(command):
+                known_binaries = {
+                    "gemini": "/usr/bin/gemini",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
+
+            self.dispatcher.create_dynamic_agent(agent_spec)
+
+        # Verify validation logging occurred
+        print_calls = [str(call) for call in mock_print.call_args_list]
+        validation_logs = [call for call in print_calls if "validation" in call.lower() or "validating" in call.lower()]
+        self.assertGreater(len(validation_logs), 0, "Validation steps should be logged")
+        
+        # Verify agent name appears in logs
+        agent_name_logs = [call for call in print_calls if "test-agent-logging" in call]
+        self.assertGreater(len(agent_name_logs), 0, "Agent name should appear in validation logs")
+
+
 if __name__ == "__main__":
     unittest.main()

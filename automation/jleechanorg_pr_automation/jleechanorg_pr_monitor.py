@@ -1690,6 +1690,20 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return "skipped"
 
+        # Race condition fix: Check if a queued comment already exists for this commit
+        # This prevents duplicate agent dispatches during the window between when
+        # a fix-comment run is queued and when the completion marker is posted
+        # NOTE: Only check for queued markers if NO completion marker exists.
+        # If completion marker exists, any queued marker is stale and should be ignored
+        # (allows legitimate reprocessing when completion marker + unaddressed comments exist)
+        if not has_completion_marker and head_sha and self._has_fix_comment_queued_for_commit(comments, head_sha):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s",
+                pr_number,
+                head_sha[:8],
+            )
+            return "skipped"
+
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
 
@@ -2077,6 +2091,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return marker_content
 
+    def _extract_fix_comment_run_marker(self, comment_body: str) -> str | None:
+        """Extract commit SHA from fix-comment queued run markers.
+        
+        Handles format: <!-- fix-comment-run-automation-commit:agent:sha -->
+        Returns just the SHA portion for comparison.
+        """
+        if not comment_body:
+            return None
+
+        prefix_index = comment_body.find(self.FIX_COMMENT_RUN_MARKER_PREFIX)
+        if prefix_index == -1:
+            return None
+
+        start_index = prefix_index + len(self.FIX_COMMENT_RUN_MARKER_PREFIX)
+        end_index = comment_body.find(self.FIX_COMMENT_RUN_MARKER_SUFFIX, start_index)
+        if end_index == -1:
+            return None
+
+        marker_content = comment_body[start_index:end_index].strip()
+        # Format is agent:sha, extract just SHA (last part after colon)
+        if ":" in marker_content:
+            marker_content = marker_content.split(":")[-1]
+
+        return marker_content
+
     def _has_codex_comment_for_commit(self, comments: list[dict], head_sha: str) -> bool:
         """Determine if Codex instruction already exists for the latest commit"""
         if not head_sha:
@@ -2100,6 +2139,27 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             marker_sha = self._extract_fix_comment_marker(body)
             if marker_sha and marker_sha == head_sha and self.FIX_COMMENT_COMPLETION_MARKER in body:
                 return True
+
+        return False
+
+    def _has_fix_comment_queued_for_commit(self, comments: list[dict], head_sha: str) -> bool:
+        """Determine if a fix-comment run is already queued for the latest commit.
+        
+        This prevents duplicate agent dispatches during the window between when
+        a fix-comment run is queued and when the completion marker is posted.
+        """
+        if not head_sha:
+            return False
+
+        for comment in comments:
+            body = comment.get("body", "")
+            # Check for queued run marker (FIX_COMMENT_RUN_MARKER_PREFIX)
+            marker_sha = self._extract_fix_comment_run_marker(body)
+            if marker_sha and marker_sha == head_sha:
+                # Verify this is from automation user (not a bot echo)
+                author = self._get_comment_author_login(comment)
+                if author == self.automation_username:
+                    return True
 
         return False
 
