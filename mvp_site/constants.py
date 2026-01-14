@@ -534,9 +534,10 @@ def is_divine_level(level: int) -> bool:
     return isinstance(level, int) and level >= 26
 
 
-# --- EPIC XP TABLE (3.5e Adapted) ---
-# Standard 5e XP for levels 1-20, then 3.5e formula for 21+
-# Formula for level N (21+): Previous XP + (N × 1,000)
+# --- EPIC XP TABLE (3.5e Adapted with Exponential Divine Scaling) ---
+# Standard 5e XP for levels 1-20
+# Linear epic formula for levels 21-25: XP(N) = XP(N-1) + (N × 1,000)
+# Exponential divine formula for levels 26+: XP(N) = XP(N-1) × 1.15
 
 # 5e XP thresholds (total XP needed to reach each level)
 XP_TABLE_5E: dict[int, int] = {
@@ -562,12 +563,29 @@ XP_TABLE_5E: dict[int, int] = {
     20: 355_000,
 }
 
+# Exponential growth rate for divine levels (26+)
+# Each level requires 15% more XP than the previous
+DIVINE_XP_GROWTH_RATE = 1.15
+
+# XP source caps for divine beings (mortals don't impress gods)
+XP_SOURCE_CAPS: dict[str, int] = {
+    "mortal_combat": 1_000,      # CR 1-10 enemies, max per encounter
+    "epic_mortal_combat": 10_000,  # CR 11-20 enemies, max per encounter
+    "epic_creature": -1,         # CR 21-30, full XP (no cap)
+    "divine_rival": -1,          # Full XP × 10 multiplier
+    "great_work_minor": 100_000,  # Minor divine quest
+    "great_work_major": 500_000,  # Major divine quest
+    "great_work_cosmic": 1_000_000,  # Cosmic-scale achievement
+    "worshipper_milestone": 50_000,  # Per 10,000 new followers
+}
+
 
 def get_xp_for_level(level: int) -> int:
     """Get the total XP required to reach a given level.
 
-    Uses 5e XP table for levels 1-20, then 3.5e epic formula for 21+.
-    Epic formula: XP(N) = XP(N-1) + (N × 1,000)
+    Uses 5e XP table for levels 1-20.
+    Linear formula for epic levels 21-25: XP(N) = XP(N-1) + (N × 1,000)
+    Exponential formula for divine levels 26+: Each level costs 15% more.
 
     Args:
         level: Target level (1+)
@@ -582,11 +600,28 @@ def get_xp_for_level(level: int) -> int:
     if level <= 20:
         return XP_TABLE_5E.get(level, 0)
 
-    # Epic levels (21+): use 3.5e formula
-    # Start from level 20 XP and add incrementally
+    # Epic levels 21-25: linear formula
     xp = XP_TABLE_5E[20]  # 355,000
-    for lvl in range(21, level + 1):
+    for lvl in range(21, min(level + 1, 26)):
         xp += lvl * 1000
+
+    # Divine levels 26+: exponential formula
+    if level >= 26:
+        # XP at level 25 (end of linear)
+        xp_at_25 = XP_TABLE_5E[20]
+        for lvl in range(21, 26):
+            xp_at_25 += lvl * 1000  # 355k + 21k + 22k + 23k + 24k + 25k = 470k
+
+        # Base XP to go from 25→26
+        base_divine_xp = 27_000
+
+        # Calculate cumulative XP for divine levels
+        xp = xp_at_25
+        for lvl in range(26, level + 1):
+            # Each level costs base × 1.15^(lvl-25)
+            level_cost = int(base_divine_xp * (DIVINE_XP_GROWTH_RATE ** (lvl - 25)))
+            xp += level_cost
+
     return xp
 
 
@@ -602,7 +637,12 @@ def get_xp_to_next_level(current_level: int) -> int:
     if not isinstance(current_level, int) or current_level < 1:
         return 0
 
-    # For epic levels (21+), it's simply (next_level × 1,000)
+    # For divine levels (26+), use exponential formula
+    if current_level >= 25:
+        base_divine_xp = 27_000
+        return int(base_divine_xp * (DIVINE_XP_GROWTH_RATE ** (current_level + 1 - 25)))
+
+    # For epic levels (20-24), use linear formula
     if current_level >= 20:
         return (current_level + 1) * 1000
 
@@ -624,22 +664,44 @@ def get_level_from_xp(total_xp: int) -> int:
     if not isinstance(total_xp, int) or total_xp < 0:
         return 1
 
-    # Check 5e levels first (1-20)
-    for level in range(20, 0, -1):
-        if total_xp >= XP_TABLE_5E[level]:
-            if level == 20:
-                # Calculate epic level
-                xp = XP_TABLE_5E[20]
-                current_level = 20
-                while True:
-                    next_level_xp = (current_level + 1) * 1000
-                    if xp + next_level_xp > total_xp:
-                        return current_level
-                    xp += next_level_xp
-                    current_level += 1
-            return level
+    # Binary search would be more efficient, but this is clear
+    level = 1
+    while get_xp_for_level(level + 1) <= total_xp:
+        level += 1
+        # Safety cap at level 100
+        if level >= 100:
+            break
 
-    return 1
+    return level
+
+
+def get_capped_xp(xp_amount: int, source_type: str, divine_rank: int = 0) -> int:
+    """Apply XP source caps for divine beings.
+
+    Gods don't gain meaningful XP from mortal victories.
+
+    Args:
+        xp_amount: Raw XP from the source
+        source_type: Type of XP source (from XP_SOURCE_CAPS keys)
+        divine_rank: Character's divine rank (0 = mortal, 1+ = divine)
+
+    Returns:
+        Capped XP amount (or full amount if no cap applies)
+    """
+    # Mortals get full XP from everything
+    if divine_rank == 0:
+        return xp_amount
+
+    # Divine rivals give 10x XP
+    if source_type == "divine_rival":
+        return xp_amount * 10
+
+    # Check for caps
+    cap = XP_SOURCE_CAPS.get(source_type, -1)
+    if cap == -1:
+        return xp_amount  # No cap
+
+    return min(xp_amount, cap)
 
 
 # Helper functions for attribute system validation

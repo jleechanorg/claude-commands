@@ -281,34 +281,59 @@ LEVEL → DIVINE RANK → BONUS → SAFE LIMIT → IMMUNITIES
 - Safe Limit = Divine Rank × 5
 - Dissonance Cost = (Leverage - Safe Limit) × Risk Multiplier
 
-## Epic XP Table (3.5e Adapted)
+## Epic & Divine XP Table (Exponential Scaling)
 
-Standard 5e XP for levels 1-20. Epic levels use the 3.5e formula:
+Standard 5e XP for levels 1-20. Epic levels (21-25) use linear scaling.
+**Divine levels (26+) use exponential scaling** — each level requires 15% more XP.
 
 ```
-LEVEL → XP REQUIRED → XP TO NEXT LEVEL
-════════════════════════════════════════
-  20      355,000         21,000
-  21      376,000         22,000
+LEVEL → XP REQUIRED → XP TO NEXT → NOTES
+══════════════════════════════════════════════════════
+  20      355,000         21,000   5e cap
+  21      376,000         22,000   Epic (linear)
   22      398,000         23,000
   23      421,000         24,000
   24      445,000         25,000
-  25      470,000         26,000  ← Epic Mortal cap
-  26      496,000         27,000  ← Quasi-Deity
-  27      523,000         28,000
-  28      551,000         29,000
-  29      580,000         30,000
-  30      610,000         31,000
-  31      641,000         32,000  ← Demigod
+  25      470,000         31,050   Epic Mortal cap
+──────────────────────────────────────────────────────
+  26      501,050         35,708   Quasi-Deity (exponential starts)
+  27      536,758         41,064
+  28      577,822         47,224
+  29      625,046         54,307
+  30      679,353         62,453
+  31      741,806         71,821   Demigod
   ...
-  36      796,000         37,000  ← Minor God
+  36    1,063,000        130,000   Minor God
   ...
-  41      981,000         42,000  ← Lesser Deity
+  41    1,594,000        261,000   Lesser Deity
   ...
-  46    1,196,000         47,000  ← Intermediate Deity
+  46    2,555,000        525,000   Intermediate Deity
   ...
-  51    1,441,000         52,000  ← Greater Deity
-════════════════════════════════════════
+  51    4,336,000      1,056,000   Greater Deity
+══════════════════════════════════════════════════════
 ```
 
-**Formula:** XP for Level N (21+) = Previous Level XP + (N × 1,000)
+**Formulas:**
+- Levels 21-25: XP(N) = XP(N-1) + (N × 1,000) [Linear]
+- Levels 26+: XP(N) = XP(N-1) + (27,000 × 1.15^(N-25)) [Exponential]
+
+## XP Source Caps (Divine Perspective)
+
+**Gods don't level up from killing mortals.** Divine beings have capped XP from mundane sources:
+
+| XP Source | Cap/Modifier | Notes |
+|-----------|--------------|-------|
+| **Mortal Combat** (CR 1-10) | Max **1,000 XP**/encounter | Army of 10,000? Still 1,000 XP |
+| **Epic Mortal Combat** (CR 11-20) | Max **10,000 XP**/encounter | Epic heroes, ancient dragons |
+| **Epic Creatures** (CR 21-30) | **Full XP** | Tarrasque, Pit Fiends, etc. |
+| **Divine Rivals** | **Full XP × 10** | Defeating another god |
+| **Great Work (Minor)** | **100,000 XP** | Divine quest, portfolio expansion |
+| **Great Work (Major)** | **500,000 XP** | Cosmic intervention, planar shift |
+| **Great Work (Cosmic)** | **1,000,000 XP** | Reality-altering achievement |
+| **Worshipper Milestone** | **50,000 XP** | Per 10,000 new followers |
+
+**Example:**
+- Level 45 Lesser Deity destroys mortal army of 50,000 soldiers
+- Raw XP: 50,000 × 50 = 2,500,000 XP (would be 4+ levels!)
+- **Capped XP: 1,000 XP** (meaningless to a god)
+- To level up, they need to defeat a divine rival or complete a Great Work
