@@ -131,6 +131,11 @@ Use the `directives` field when the user establishes or removes **ongoing rules*
 - User says "from now on, X" → add "X"
 - User says "assume X is active" → add "Always apply X"
 
+**⛔ DO NOT add directives for:**
+- **Dynamic Numbers:** "Rule: Level is 42", "Rule: HP is 50", "Rule: Gold is 1000". These update automatically in `game_state`. Adding them as directives creates conflicting, stale rules that confuse the AI.
+- **One-time events:** "Rule: You just killed the dragon". This is history, not a directive.
+- **Formatting instructions:** "Rule: Always show XP in header". This is handled by system prompts.
+
 **When to use `directives.drop`:**
 - User says "forget about the X rule"
 - User says "stop doing X"
@@ -146,10 +151,11 @@ Use the `directives` field when the user establishes or removes **ongoing rules*
 | "always roll with advantage on Stealth" | `"directives": {"add": ["Apply advantage to all Stealth rolls"]}` |
 | "forget the extra attack rule" | `"directives": {"drop": ["Extra attack applies to Twin Stings"]}` |
 | "assume specialists give me Haste" | `"directives": {"add": ["Specialists always cast Haste on character - apply +2 AC and extra action"]}` |
+| "My level is now 15" | `State Update` ONLY (Do NOT add directive) |
 
 **🚨 FAILURE MODE:** If you acknowledge the user's request in `god_mode_response` but don't include `directives.add`, the rule WILL NOT BE SAVED and the LLM WILL forget it next turn.
 
-**Important:** Only add directives for things that should be remembered across turns. One-time modifications go in `state_updates`.
+**Important:** Only add directives for behavior that should be remembered. One-time state changes (Level, HP, Gold) go in `state_updates`.
 
 ## State Update Patterns
 

@@ -2670,5 +2670,462 @@ class TestGodModeParameterIntegration(unittest.TestCase):
         self.assertIsNone(result, "Should return None when no setting/description/character found")
 
 
+class TestExtractXPFromPlayerData(unittest.TestCase):
+    """Test _extract_xp_from_player_data function"""
+
+    def test_extract_xp_from_experience_dict(self):
+        """Test extracting XP from experience.current format"""
+        pc_data = {"experience": {"current": 5000}}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 5000)
+
+    def test_extract_xp_from_experience_int(self):
+        """Test extracting XP from experience as int"""
+        pc_data = {"experience": 3000}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 3000)
+
+    def test_extract_xp_from_experience_string(self):
+        """Test extracting XP from experience as string"""
+        pc_data = {"experience": "2500"}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 2500)
+
+    def test_extract_xp_from_experience_string_with_commas(self):
+        """Test extracting XP from experience as comma-formatted string"""
+        pc_data = {"experience": "2,700"}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 2700)
+
+    def test_extract_xp_from_xp_field(self):
+        """Test extracting XP from xp field"""
+        pc_data = {"xp": 1500}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 1500)
+
+    def test_extract_xp_from_xp_current_field(self):
+        """Test extracting XP from xp_current field"""
+        pc_data = {"xp_current": 2000}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 2000)
+
+    def test_extract_xp_priority_order(self):
+        """Test that experience field takes priority over xp"""
+        pc_data = {"experience": 1000, "xp": 2000}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 1000)
+
+    def test_extract_xp_returns_zero_for_missing(self):
+        """Test that missing XP returns 0"""
+        pc_data = {}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 0)
+
+    def test_extract_xp_returns_zero_for_invalid_type(self):
+        """Test that invalid input type returns 0"""
+        result = world_logic._extract_xp_from_player_data("not a dict")
+        self.assertEqual(result, 0)
+
+    def test_extract_xp_handles_float(self):
+        """Test that float XP values are converted to int"""
+        pc_data = {"experience": 1234.5}
+        result = world_logic._extract_xp_from_player_data(pc_data)
+        self.assertEqual(result, 1234)
+
+
+class TestHasRewardsNarrative(unittest.TestCase):
+    """Test _has_rewards_narrative function"""
+
+    def test_detects_reward_keyword(self):
+        """Test detection of 'reward' keyword"""
+        narrative = "You receive a reward for your efforts."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_rewards_keyword(self):
+        """Test detection of 'rewards' keyword"""
+        narrative = "Here are your rewards."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_xp_keyword(self):
+        """Test detection of 'xp' keyword"""
+        narrative = "You gain 500 XP."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_experience_keyword(self):
+        """Test detection of 'experience' keyword"""
+        narrative = "You gain experience."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_level_up_keyword(self):
+        """Test detection of 'level up' keyword"""
+        narrative = "You level up!"
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_levelup_keyword(self):
+        """Test detection of 'levelup' keyword"""
+        narrative = "You levelup!"
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_loot_keyword(self):
+        """Test detection of 'loot' keyword"""
+        narrative = "You find loot."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_gold_keyword(self):
+        """Test detection of 'gold' keyword"""
+        narrative = "You find 100 gold."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_treasure_keyword(self):
+        """Test detection of 'treasure' keyword"""
+        narrative = "You discover treasure."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_awarded_keyword(self):
+        """Test detection of 'awarded' keyword"""
+        narrative = "You are awarded 500 XP."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_gained_keyword(self):
+        """Test detection of 'gained' keyword"""
+        narrative = "You gained experience."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_victory_keyword(self):
+        """Test detection of 'victory' keyword"""
+        narrative = "Victory! You win."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_box_markers_double_equals(self):
+        """Test detection of box markers (══)"""
+        narrative = "═══ Rewards ═══"
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_detects_box_markers_double_dash(self):
+        """Test detection of box markers (──)"""
+        narrative = "─── Rewards ───"
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_case_insensitive_detection(self):
+        """Test that detection is case-insensitive"""
+        narrative = "You RECEIVE a REWARD."
+        self.assertTrue(world_logic._has_rewards_narrative(narrative))
+
+    def test_returns_false_for_no_rewards(self):
+        """Test that narrative without rewards returns False"""
+        narrative = "You walk through the forest."
+        self.assertFalse(world_logic._has_rewards_narrative(narrative))
+
+    def test_returns_false_for_none(self):
+        """Test that None input returns False"""
+        self.assertFalse(world_logic._has_rewards_narrative(None))
+
+    def test_returns_false_for_empty_string(self):
+        """Test that empty string returns False"""
+        self.assertFalse(world_logic._has_rewards_narrative(""))
+
+
+class TestHasRewardsContext(unittest.TestCase):
+    """Test _has_rewards_context function"""
+
+    def setUp(self):
+        """Set up test fixtures"""
+        self.mock_constants_patcher = patch("mvp_site.world_logic.constants")
+        self.mock_constants = self.mock_constants_patcher.start()
+        self.addCleanup(self.mock_constants_patcher.stop)
+
+    def test_detects_combat_summary(self):
+        """Test detection of combat_summary"""
+        state_dict = {"combat_state": {"combat_summary": "Combat ended"}}
+        self.assertTrue(world_logic._has_rewards_context(state_dict))
+
+    def test_detects_encounter_summary_dict(self):
+        """Test detection of encounter_summary as dict"""
+        state_dict = {"encounter_state": {"encounter_summary": {"xp": 500}}}
+        self.assertTrue(world_logic._has_rewards_context(state_dict))
+
+    def test_detects_rewards_pending(self):
+        """Test detection of rewards_pending"""
+        state_dict = {"rewards_pending": {"xp": 500, "gold": 100}}
+        self.assertTrue(world_logic._has_rewards_context(state_dict))
+
+    def test_detects_xp_increase(self):
+        """Test detection of XP increase from original state"""
+        state_dict = {"player_character_data": {"experience": {"current": 2000}}}
+        original_state = {"player_character_data": {"experience": {"current": 1000}}}
+        self.assertTrue(world_logic._has_rewards_context(state_dict, original_state))
+
+    def test_no_rewards_context(self):
+        """Test that state without rewards context returns False"""
+        state_dict = {"player_character_data": {"name": "Hero"}}
+        self.assertFalse(world_logic._has_rewards_context(state_dict))
+
+    def test_empty_combat_state(self):
+        """Test that empty combat_state doesn't trigger detection"""
+        state_dict = {"combat_state": {}}
+        self.assertFalse(world_logic._has_rewards_context(state_dict))
+
+    def test_empty_encounter_state(self):
+        """Test that empty encounter_state doesn't trigger detection"""
+        state_dict = {"encounter_state": {}}
+        self.assertFalse(world_logic._has_rewards_context(state_dict))
+
+    def test_xp_decrease_does_not_trigger(self):
+        """Test that XP decrease doesn't trigger rewards context"""
+        state_dict = {"player_character_data": {"experience": {"current": 1000}}}
+        original_state = {"player_character_data": {"experience": {"current": 2000}}}
+        self.assertFalse(world_logic._has_rewards_context(state_dict, original_state))
+
+    def test_xp_same_does_not_trigger(self):
+        """Test that same XP doesn't trigger rewards context"""
+        state_dict = {"player_character_data": {"experience": {"current": 1000}}}
+        original_state = {"player_character_data": {"experience": {"current": 1000}}}
+        self.assertFalse(world_logic._has_rewards_context(state_dict, original_state))
+
+
+class TestDetectRewardsDiscrepancyComprehensive(unittest.TestCase):
+    """Comprehensive tests for _detect_rewards_discrepancy function"""
+
+    def setUp(self):
+        """Set up test fixtures"""
+        self.mock_constants_patcher = patch("mvp_site.world_logic.constants")
+        self.mock_constants = self.mock_constants_patcher.start()
+        self.mock_constants.COMBAT_FINISHED_PHASES = ["victory", "defeat", "fled"]
+        self.addCleanup(self.mock_constants_patcher.stop)
+
+    def test_detects_combat_finished_without_rewards_processed(self):
+        """Test detection of combat finished without rewards_processed"""
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "victory",
+                "combat_summary": "You won!",
+                "rewards_processed": False,
+            }
+        }
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+        self.assertEqual(len(discrepancies), 1)
+        self.assertIn("REWARDS_STATE_ERROR", discrepancies[0])
+        self.assertIn("rewards_processed=false", discrepancies[0].lower())
+
+    def test_detects_encounter_completed_without_rewards_processed(self):
+        """Test detection of encounter completed without rewards_processed"""
+        state_dict = {
+            "encounter_state": {
+                "encounter_completed": True,
+                "encounter_summary": "Encounter finished",
+                "rewards_processed": False,
+            }
+        }
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+        self.assertEqual(len(discrepancies), 1)
+        self.assertIn("REWARDS_STATE_ERROR", discrepancies[0])
+
+    def test_detects_xp_increase_without_rewards_processed(self):
+        """Test detection of XP increase during combat without rewards_processed"""
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "victory",
+                "rewards_processed": False,
+            },
+            "player_character_data": {"experience": {"current": 2000}},
+        }
+        original_state = {
+            "combat_state": {"rewards_processed": False},
+            "player_character_data": {"experience": {"current": 1000}},
+        }
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict, original_state)
+        self.assertEqual(len(discrepancies), 1)
+        self.assertIn("REWARDS_STATE_ERROR", discrepancies[0])
+
+    def test_no_discrepancy_when_rewards_processed(self):
+        """Test no discrepancy when rewards_processed is True"""
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "victory",
+                "combat_summary": "You won!",
+                "rewards_processed": True,
+            }
+        }
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+        self.assertEqual(len(discrepancies), 0)
+
+    def test_warns_on_xp_increase_with_rewards_processed(self):
+        """Test warning when XP increases but rewards_processed is True"""
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "victory",
+                "rewards_processed": True,
+            },
+            "player_character_data": {"experience": {"current": 2000}},
+        }
+        original_state = {
+            "combat_state": {"rewards_processed": True},
+            "player_character_data": {"experience": {"current": 1000}},
+        }
+        warnings = []
+        discrepancies = world_logic._detect_rewards_discrepancy(
+            state_dict, original_state, warnings_out=warnings
+        )
+        self.assertEqual(len(discrepancies), 0)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("REWARDS_STATE_WARNING", warnings[0])
+
+    def test_no_discrepancy_for_non_finished_combat(self):
+        """Test no discrepancy for combat that hasn't finished"""
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "in_progress",
+                "combat_summary": "Fighting...",
+                "rewards_processed": False,
+            }
+        }
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+        self.assertEqual(len(discrepancies), 0)
+
+    def test_no_discrepancy_without_combat_summary(self):
+        """Test no discrepancy when combat finished but no summary"""
+        state_dict = {
+            "combat_state": {
+                "combat_phase": "victory",
+                "rewards_processed": False,
+            }
+        }
+        discrepancies = world_logic._detect_rewards_discrepancy(state_dict)
+        self.assertEqual(len(discrepancies), 0)
+
+
+class TestAnnotateEntry(unittest.TestCase):
+    """Test _annotate_entry function"""
+
+    def test_adds_turn_and_scene(self):
+        """Test that turn and scene are added to entry"""
+        entry = {}
+        world_logic._annotate_entry(entry, turn=5, scene=3)
+        self.assertEqual(entry["turn_generated"], 5)
+        self.assertEqual(entry["scene_generated"], 3)
+
+    def test_does_not_overwrite_existing_turn(self):
+        """Test that existing turn_generated is not overwritten"""
+        entry = {"turn_generated": 10, "scene_generated": 5}
+        world_logic._annotate_entry(entry, turn=5, scene=3)
+        self.assertEqual(entry["turn_generated"], 10)
+        self.assertEqual(entry["scene_generated"], 5)
+
+    def test_adds_only_missing_fields(self):
+        """Test that only missing fields are added"""
+        entry = {"turn_generated": 10}
+        world_logic._annotate_entry(entry, turn=5, scene=3)
+        self.assertEqual(entry["turn_generated"], 10)
+        self.assertEqual(entry["scene_generated"], 3)
+
+
+class TestAnnotateWorldEventsWithTurnScene(unittest.TestCase):
+    """Test annotate_world_events_with_turn_scene function"""
+
+    def test_annotates_world_events_background_events(self):
+        """Test annotation of world_events.background_events"""
+        game_state = {
+            "world_events": {
+                "background_events": [{"text": "Event 1"}, {"text": "Event 2"}]
+            }
+        }
+        result = world_logic.annotate_world_events_with_turn_scene(game_state, player_turn=3)
+        events = result["world_events"]["background_events"]
+        self.assertEqual(events[0]["turn_generated"], 3)
+        self.assertEqual(events[0]["scene_generated"], 2)  # (3+1)//2 = 2
+        self.assertEqual(events[1]["turn_generated"], 3)
+
+    def test_annotates_top_level_rumors(self):
+        """Test annotation of top-level rumors"""
+        game_state = {"rumors": [{"text": "Rumor 1"}]}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state, player_turn=5)
+        self.assertEqual(result["rumors"][0]["turn_generated"], 5)
+        self.assertEqual(result["rumors"][0]["scene_generated"], 3)  # (5+1)//2 = 3
+
+    def test_annotates_faction_updates(self):
+        """Test annotation of faction_updates"""
+        game_state = {
+            "faction_updates": {
+                "faction1": {"status": "active"},
+                "faction2": {"status": "inactive"},
+            }
+        }
+        result = world_logic.annotate_world_events_with_turn_scene(game_state, player_turn=7)
+        self.assertEqual(result["faction_updates"]["faction1"]["turn_generated"], 7)
+        self.assertEqual(result["faction_updates"]["faction2"]["turn_generated"], 7)
+
+    def test_annotates_complications(self):
+        """Test annotation of complications"""
+        game_state = {"complications": {"text": "Complication"}}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state, player_turn=1)
+        self.assertEqual(result["complications"]["turn_generated"], 1)
+        self.assertEqual(result["complications"]["scene_generated"], 1)  # (1+1)//2 = 1
+
+    def test_calculates_scene_correctly(self):
+        """Test that scene is calculated correctly (turns 1-2 = scene 1, 3-4 = scene 2)"""
+        # Create fresh game_state for each test case to avoid mutation issues
+        # Turn 1 -> Scene 1
+        game_state_1 = {"rumors": [{"text": "Rumor"}]}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state_1, player_turn=1)
+        self.assertEqual(result["rumors"][0]["scene_generated"], 1)
+        
+        # Turn 2 -> Scene 1
+        game_state_2 = {"rumors": [{"text": "Rumor"}]}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state_2, player_turn=2)
+        self.assertEqual(result["rumors"][0]["scene_generated"], 1)
+        
+        # Turn 3 -> Scene 2
+        game_state_3 = {"rumors": [{"text": "Rumor"}]}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state_3, player_turn=3)
+        self.assertEqual(result["rumors"][0]["scene_generated"], 2)
+        
+        # Turn 4 -> Scene 2
+        game_state_4 = {"rumors": [{"text": "Rumor"}]}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state_4, player_turn=4)
+        self.assertEqual(result["rumors"][0]["scene_generated"], 2)
+
+    def test_handles_missing_world_events(self):
+        """Test that missing world_events doesn't cause errors"""
+        game_state = {}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state, player_turn=1)
+        self.assertEqual(result, game_state)
+
+    def test_handles_non_dict_world_events(self):
+        """Test that non-dict world_events doesn't cause errors"""
+        game_state = {"world_events": "not a dict"}
+        result = world_logic.annotate_world_events_with_turn_scene(game_state, player_turn=1)
+        self.assertEqual(result, game_state)
+
+
+class TestTruncateGameStateForLogging(unittest.TestCase):
+    """Test truncate_game_state_for_logging function"""
+
+    def setUp(self):
+        """Set up test fixtures"""
+        self.mock_truncate_patcher = patch("mvp_site.world_logic._truncate_log_json")
+        self.mock_truncate = self.mock_truncate_patcher.start()
+        self.mock_truncate.return_value = "truncated output"
+        self.addCleanup(self.mock_truncate_patcher.stop)
+
+    def test_calls_truncate_log_json(self):
+        """Test that truncate_game_state_for_logging calls _truncate_log_json"""
+        game_state = {"test": "data"}
+        result = world_logic.truncate_game_state_for_logging(game_state)
+        self.assertEqual(result, "truncated output")
+        self.mock_truncate.assert_called_once()
+
+    def test_passes_max_lines_parameter(self):
+        """Test that max_lines parameter is passed correctly"""
+        game_state = {"test": "data"}
+        world_logic.truncate_game_state_for_logging(game_state, max_lines=50)
+        call_args = self.mock_truncate.call_args
+        self.assertEqual(call_args[1]["max_lines"], 50)
+
+
+# Note: _should_reject_directive is a nested function inside process_action_unified
+# and should be tested through integration tests that verify directive filtering
+# behavior in the full process_action_unified flow.
+
+
 if __name__ == "__main__":
     unittest.main()

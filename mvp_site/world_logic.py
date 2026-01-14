@@ -2712,7 +2712,117 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 if dropped_count > 0:
                     logging_util.info(f"GOD MODE: Dropped {dropped_count} directives")
 
-            # Process directives to add (avoid duplicates, case-insensitive)
+            def _should_reject_directive(rule: str) -> bool:
+                """
+                Filter out directives that should not be saved.
+                
+                IMPORTANT: We only reject directives that are STATE VALUES or ONE-TIME EVENTS.
+                BEHAVIORAL RULES (like "always apply Guidance", "always use advantage") MUST be kept.
+                
+                Reject:
+                - State values that change: "Level is X", "HP is Y", "Gold is Z"
+                - One-time events: "You just killed X", "You defeated Y"
+                - Formatting: "Always include X in header" (handled by system prompts)
+                
+                Keep:
+                - Behavioral rules: "Always apply Guidance", "Always use Enhance Ability"
+                - Persistent mechanics: "Apply advantage to Stealth", "Always use Foresight"
+                - Ongoing effects: "Maintain X buff", "Track Y condition" (if behavioral)
+                """
+                rule_lower = rule.lower().strip()
+                
+                # AI sometimes prefixes directives with "Rule: "
+                # We strip it for matching against our patterns
+                if rule_lower.startswith("rule:"):
+                    rule_lower = rule_lower[5:].strip()
+                
+                # Reject patterns: State values (numbers that change)
+                # These are specific values, not behavioral rules
+                state_value_patterns = [
+                    "level is",  # "Level is 42" - specific value
+                    "real level is",  # "Real Level is 15" - specific value
+                    "hp is",  # "HP is 50" - specific value
+                    "gold is",  # "Gold is 1000" - specific value
+                    "xp is",  # "XP is 5000" - specific value
+                    "experience is",  # "Experience is 5000" - specific value
+                    "soul coin is",  # "Soul Coin is 25k" - specific value
+                    "base spell save dc is",  # Calculated value
+                    "effective charisma is",  # Calculated value
+                ]
+                
+                # Reject patterns: One-time events (history, not ongoing rules)
+                # These patterns are more specific to catch actual one-time events,
+                # not behavioral rules like "Killed enemies should drop loot"
+                one_time_patterns = [
+                    "you just",  # "You just killed X"
+                    "you just killed",  # More specific than just "killed"
+                    "you just defeated",  # More specific than just "defeated"
+                    "you just completed",  # More specific than just "completed"
+                ]
+                
+                # Reject patterns: Formatting instructions (system-level, not game rules)
+                formatting_patterns = [
+                    "always include",  # "Always include XP in header"
+                    "format",  # Formatting instructions
+                ]
+                
+                # Check for state value patterns (must be exact value, not behavioral)
+                # e.g., "Level is 42" is bad, but "Level affects X" might be OK
+                for pattern in state_value_patterns:
+                    if pattern in rule_lower:
+                        # Additional check: if it's followed by a number or specific value, reject
+                        # But if it's behavioral like "Level affects calculations", allow it
+                        pattern_idx = rule_lower.find(pattern)
+                        if pattern_idx != -1:
+                            after_pattern = rule_lower[pattern_idx + len(pattern):].strip()
+                            # If followed by a number or "=", it's a state value
+                            if after_pattern and (after_pattern[0].isdigit() or after_pattern.startswith('=')):
+                                return True
+                
+                # Check for one-time events (with additional context check)
+                # Only reject if it's clearly a one-time event, not a behavioral rule
+                for pattern in one_time_patterns:
+                    if pattern in rule_lower:
+                        pattern_idx = rule_lower.find(pattern)
+                        if pattern_idx != -1:
+                            # Get context from original rule to preserve capitalization for proper noun detection
+                            # We find the pattern in rule_lower but apply the same offset to original rule
+                            # This is safe since rule_lower has same length as rule
+                            after_pattern_orig = rule[rule.lower().find(pattern) + len(pattern):].strip()
+                            if after_pattern_orig:
+                                behavioral_indicators = ["should", "grant", "affect", "provide", "give", "drop", "always"]
+                                is_behavioral = any(indicator in after_pattern_orig.lower() for indicator in behavioral_indicators)
+                                if not is_behavioral:
+                                    # Check if it looks like a one-time event (specific entity/event)
+                                    after_lower = after_pattern_orig.lower()
+                                    if after_lower.startswith(("the ", "a ", "an ")) or after_pattern_orig[0].isupper():
+                                        return True
+                
+                # Check for formatting instructions (with context validation)
+                # Only reject if it's clearly formatting, not behavioral rules
+                for pattern in formatting_patterns:
+                    if pattern in rule_lower:
+                        pattern_idx = rule_lower.find(pattern)
+                        if pattern_idx != -1:
+                            after_pattern = rule_lower[pattern_idx + len(pattern):].strip()
+                            # Formatting patterns are usually about display/headers, not game mechanics
+                            # If followed by formatting keywords, reject; otherwise allow behavioral rules
+                            formatting_keywords = ["in header", "in title", "in display", "as text", "as string"]
+                            is_formatting = any(keyword in after_pattern for keyword in formatting_keywords)
+                            if is_formatting:
+                                return True
+                            # If it's about game mechanics (bonus, damage, effect), allow it
+                            behavioral_keywords = ["bonus", "damage", "effect", "grant", "provide", "apply", "affect"]
+                            if any(keyword in after_pattern for keyword in behavioral_keywords):
+                                continue  # Don't reject - it's a behavioral rule
+                            # If pattern is "format" alone without context, be more conservative
+                            if pattern == "format" and len(after_pattern) < 10:
+                                # Short "format" phrases are likely formatting instructions
+                                return True
+                
+                # Allow everything else (behavioral rules, persistent mechanics, etc.)
+                return False
+
             for new_rule in directives_to_add:
                 if not new_rule or not isinstance(new_rule, str):
                     continue
@@ -2720,6 +2830,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 new_rule_clean = new_rule.strip()
                 if not new_rule_clean:
                     continue
+                
+                # Filter out problematic directives (server-side validation)
+                if _should_reject_directive(new_rule_clean):
+                    logging_util.warning(
+                        f"GOD MODE: Rejected problematic directive (should be in state_updates, not directives): {new_rule_clean[:100]}"
+                    )
+                    continue
+                
                 # Case-insensitive duplicate check
                 existing_rules_lower = [
                     (

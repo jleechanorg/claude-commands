@@ -64,19 +64,10 @@ def copy_campaign(source_user_id: str, source_campaign_id: str, dest_user_id: st
     # Get campaign data - copy everything as-is
     campaign_data = source_data.to_dict()
     
-    # Update name to add suffix
+    # Update name to always add suffix to the end
     original_name = campaign_data.get("title", "Untitled Campaign")
-    # Check if suffix already exists, if so add number
-    if copy_suffix in original_name:
-        # Extract base name and increment number
-        if "(copy 2)" in original_name:
-            campaign_data["title"] = original_name.replace("(copy 2)", "(copy 3)")
-        elif "(copy)" in original_name:
-            campaign_data["title"] = original_name.replace("(copy)", "(copy 2)")
-        else:
-            campaign_data["title"] = f"{original_name} {copy_suffix}"
-    else:
-        campaign_data["title"] = f"{original_name} {copy_suffix}"
+    # Always append the suffix to the end of the original title
+    campaign_data["title"] = f"{original_name} {copy_suffix}"
     
     # Create new campaign with auto-generated ID
     campaigns_ref = db.collection("users").document(dest_user_id).collection("campaigns")
@@ -90,7 +81,7 @@ def copy_campaign(source_user_id: str, source_campaign_id: str, dest_user_id: st
     print(f"📝 Name: {campaign_data['title']}")
     
     # Copy all subcollections - copy everything as-is
-    subcollections = ["story", "game_state", "notes", "characters"]
+    subcollections = ["story", "game_states", "notes", "characters"]
     
     for subcollection_name in subcollections:
         source_subcoll = source_ref.collection(subcollection_name)
@@ -120,12 +111,92 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="Copy a campaign with all its data")
-    parser.add_argument("source_user_id", help="User ID of the source campaign")
-    parser.add_argument("source_campaign_id", help="Campaign ID to copy")
+    parser.add_argument("source_user_id", nargs="?", help="User ID of the source campaign")
+    parser.add_argument("source_campaign_id", nargs="?", help="Campaign ID to copy")
     parser.add_argument("--dest-user-id", help="User ID for destination (default: same as source)")
     parser.add_argument("--suffix", default="(copy)", help="Suffix to add to campaign name (default: '(copy)')")
+    parser.add_argument("--find-by-title", help="Find campaign by title (searches all users)")
+    parser.add_argument("--find-by-id", help="Find campaign by campaign ID (searches all users)")
     
     args = parser.parse_args()
+    
+    # If --find-by-id is provided, search for the campaign by ID using collection group
+    if args.find_by_id:
+        print(f"🔍 Searching for campaign with ID: {args.find_by_id}")
+        db = firestore_service.get_db()
+        
+        # Use collection group query to find campaign across all users efficiently
+        # Iterate through campaigns and check document ID (much faster than iterating users)
+        campaigns_group = db.collection_group("campaigns")
+        found_campaign = None
+        
+        for campaign_doc in campaigns_group.stream():
+            if campaign_doc.id == args.find_by_id:
+                found_campaign = campaign_doc
+                break
+        
+        if found_campaign:
+            campaign_data = found_campaign.to_dict()
+            title = campaign_data.get("title", "Untitled Campaign")
+            
+            # Extract user_id from document path: users/{user_id}/campaigns/{campaign_id}
+            path_parts = found_campaign.reference.path.split("/")
+            if len(path_parts) >= 4 and path_parts[0] == "users" and path_parts[2] == "campaigns":
+                user_id = path_parts[1]
+                print(f"✅ Found campaign: {title}")
+                print(f"   User ID: {user_id}")
+                print(f"   Campaign ID: {args.find_by_id}")
+                args.source_user_id = user_id
+                args.source_campaign_id = args.find_by_id
+            else:
+                print(f"❌ Could not parse user ID from campaign path: {found_campaign.reference.path}")
+                sys.exit(1)
+        else:
+            print(f"❌ No campaign found with ID '{args.find_by_id}'")
+            sys.exit(1)
+    
+    # If --find-by-title is provided, search for the campaign
+    elif args.find_by_title:
+        print(f"🔍 Searching for campaign with title: {args.find_by_title}")
+        db = firestore_service.get_db()
+        campaigns_found = []
+        
+        # Search all users
+        users_ref = db.collection("users")
+        for user_doc in users_ref.stream():
+            user_id = user_doc.id
+            campaigns_ref = user_doc.reference.collection("campaigns")
+            for campaign_doc in campaigns_ref.stream():
+                campaign_data = campaign_doc.to_dict()
+                title = campaign_data.get("title", "")
+                if args.find_by_title.lower() in title.lower():
+                    campaigns_found.append({
+                        "user_id": user_id,
+                        "campaign_id": campaign_doc.id,
+                        "title": title
+                    })
+        
+        if not campaigns_found:
+            print(f"❌ No campaigns found matching '{args.find_by_title}'")
+            sys.exit(1)
+        
+        if len(campaigns_found) == 1:
+            print(f"✅ Found campaign: {campaigns_found[0]['title']}")
+            args.source_user_id = campaigns_found[0]["user_id"]
+            args.source_campaign_id = campaigns_found[0]["campaign_id"]
+        else:
+            print(f"⚠️  Found {len(campaigns_found)} matching campaigns:")
+            for i, camp in enumerate(campaigns_found, 1):
+                print(f"  {i}. {camp['title']} (User: {camp['user_id'][:20]}..., Campaign: {camp['campaign_id']})")
+            print("❌ Please specify exact user_id and campaign_id")
+            sys.exit(1)
+    
+    # Validate required arguments
+    if not args.source_user_id or not args.source_campaign_id:
+        parser.print_help()
+        print("\n❌ Error: source_user_id and source_campaign_id are required")
+        print("   Or use --find-by-title to search for a campaign")
+        sys.exit(1)
     
     try:
         campaign_id = copy_campaign(
