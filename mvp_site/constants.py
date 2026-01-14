@@ -495,21 +495,6 @@ def get_divine_safe_limit(level: int) -> int:
     return get_divine_rank_bonus(level) * 5
 
 
-def get_divine_power_points(level: int) -> int:
-    """Get the Divine Power Points pool for a given level.
-
-    DPP pool scales with divine rank: Rank × 5
-    (Replaces fixed tier-based pools)
-
-    Args:
-        level: Character level (1+)
-
-    Returns:
-        Maximum DPP (0, 5, 10, 15, 20, 25, 30)
-    """
-    return get_divine_rank_bonus(level) * 5
-
-
 def get_divine_immunities(level: int) -> list[str]:
     """Get the list of immunities for a given level.
 
@@ -547,6 +532,114 @@ def is_divine_level(level: int) -> bool:
         True if level 26 or higher (Quasi-Deity+)
     """
     return isinstance(level, int) and level >= 26
+
+
+# --- EPIC XP TABLE (3.5e Adapted) ---
+# Standard 5e XP for levels 1-20, then 3.5e formula for 21+
+# Formula for level N (21+): Previous XP + (N × 1,000)
+
+# 5e XP thresholds (total XP needed to reach each level)
+XP_TABLE_5E: dict[int, int] = {
+    1: 0,
+    2: 300,
+    3: 900,
+    4: 2_700,
+    5: 6_500,
+    6: 14_000,
+    7: 23_000,
+    8: 34_000,
+    9: 48_000,
+    10: 64_000,
+    11: 85_000,
+    12: 100_000,
+    13: 120_000,
+    14: 140_000,
+    15: 165_000,
+    16: 195_000,
+    17: 225_000,
+    18: 265_000,
+    19: 305_000,
+    20: 355_000,
+}
+
+
+def get_xp_for_level(level: int) -> int:
+    """Get the total XP required to reach a given level.
+
+    Uses 5e XP table for levels 1-20, then 3.5e epic formula for 21+.
+    Epic formula: XP(N) = XP(N-1) + (N × 1,000)
+
+    Args:
+        level: Target level (1+)
+
+    Returns:
+        Total XP required to reach that level
+    """
+    if not isinstance(level, int) or level < 1:
+        return 0
+
+    # Use 5e table for levels 1-20
+    if level <= 20:
+        return XP_TABLE_5E.get(level, 0)
+
+    # Epic levels (21+): use 3.5e formula
+    # Start from level 20 XP and add incrementally
+    xp = XP_TABLE_5E[20]  # 355,000
+    for lvl in range(21, level + 1):
+        xp += lvl * 1000
+    return xp
+
+
+def get_xp_to_next_level(current_level: int) -> int:
+    """Get the XP needed to advance from current level to next level.
+
+    Args:
+        current_level: Current character level
+
+    Returns:
+        XP needed for next level (or 0 if invalid)
+    """
+    if not isinstance(current_level, int) or current_level < 1:
+        return 0
+
+    # For epic levels (21+), it's simply (next_level × 1,000)
+    if current_level >= 20:
+        return (current_level + 1) * 1000
+
+    # For standard levels, calculate difference
+    current_xp = get_xp_for_level(current_level)
+    next_xp = get_xp_for_level(current_level + 1)
+    return next_xp - current_xp
+
+
+def get_level_from_xp(total_xp: int) -> int:
+    """Get the character level for a given total XP.
+
+    Args:
+        total_xp: Total experience points
+
+    Returns:
+        Character level (1+)
+    """
+    if not isinstance(total_xp, int) or total_xp < 0:
+        return 1
+
+    # Check 5e levels first (1-20)
+    for level in range(20, 0, -1):
+        if total_xp >= XP_TABLE_5E[level]:
+            if level == 20:
+                # Calculate epic level
+                xp = XP_TABLE_5E[20]
+                current_level = 20
+                while True:
+                    next_level_xp = (current_level + 1) * 1000
+                    if xp + next_level_xp > total_xp:
+                        return current_level
+                    xp += next_level_xp
+                    current_level += 1
+            return level
+
+    return 1
 
 
 # Helper functions for attribute system validation

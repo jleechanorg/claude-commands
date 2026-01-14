@@ -17,16 +17,16 @@ Divine power scales automatically with character level, inspired by D&D 3.5e Epi
 
 ### Divine Rank Progression
 
-| Level | Divine Rank | Rank # | Bonus | Safe Limit | DPP | Immunities |
-|-------|-------------|--------|-------|------------|-----|------------|
-| 1-20 | Mortal | 0 | +0 | 0 | 0 | None |
-| 21-25 | Epic Mortal | 0 | +0 | 0 | 0 | None (Epic feats only) |
-| 26-30 | Quasi-Deity | 1 | +1 | 5 | 5 | Sleep |
-| 31-35 | Demigod | 2 | +2 | 10 | 10 | + Paralysis |
-| 36-40 | **Minor God** | 3 | +3 | 15 | 15 | + Charm |
-| 41-45 | **Lesser Deity** | 4 | +4 | 20 | 20 | + Fear |
-| 46-50 | **Intermediate Deity** | 5 | +5 | 25 | 25 | + Disease, Poison |
-| 51+ | **Greater Deity** | 6+ | +6 | 30 | 30 | + Death Effects, Energy Drain |
+| Level | Divine Rank | Rank # | Bonus | Safe Limit | Immunities |
+|-------|-------------|--------|-------|------------|------------|
+| 1-20 | Mortal | 0 | +0 | 0 | None |
+| 21-25 | Epic Mortal | 0 | +0 | 0 | None (Epic feats only) |
+| 26-30 | Quasi-Deity | 1 | +1 | 5 | Sleep |
+| 31-35 | Demigod | 2 | +2 | 10 | + Paralysis |
+| 36-40 | **Minor God** | 3 | +3 | 15 | + Charm |
+| 41-45 | **Lesser Deity** | 4 | +4 | 20 | + Fear |
+| 46-50 | **Intermediate Deity** | 5 | +5 | 25 | + Disease, Poison |
+| 51+ | **Greater Deity** | 6+ | +6 | 30 | + Death Effects, Energy Drain |
 
 ### Automatic Divine Bonuses
 
@@ -51,7 +51,7 @@ You must track which Layer the player is currently projecting. Switching layers 
 
 **Appearance:** A standard adventurer (Class/Level from character sheet).
 **Public Stats:** Normal HP, AC, and Slots - adheres strictly to mortal physics.
-**Constraint:** If this form takes lethal damage, the player spends DPP to manipulate probability (e.g., "The arrow miraculously hit a coin in my pocket," "The sword barely missed vital organs").
+**Constraint:** If this form takes lethal damage, the player can use **Divine Shield** to manipulate probability (e.g., "The arrow miraculously hit a coin in my pocket," "The sword barely missed vital organs") at a Dissonance cost.
 **Risk:** HIGH. Using any Divine Power here generates massive Dissonance.
 
 ### Layer 1: The Persona (The Fabricated God - Demigod+)
@@ -160,31 +160,31 @@ Before Dissonance is applied, player may propose a **Bargain**: accept a Narrati
 **Effect:** Grants +5% Dissonance Buffer.
 **Mechanic:** Spend the buffer to narrate a plausible cover story. If plausible, the triggering Dissonance is cancelled.
 
-## Resource Systems
+## Divine Powers (Dissonance Cost Only)
 
-### Divine Power Points (DPP)
-DPP pool = Divine Rank × 5 (scales with level automatically)
+No separate resource pools. All divine abilities cost **Dissonance** directly—the risk of exposure IS the cost.
 
-| Divine Rank | DPP Pool |
-|-------------|----------|
-| Quasi-Deity | 5 |
-| Demigod | 10 |
-| Minor God | 15 |
-| Lesser Deity | 20 |
-| Intermediate Deity | 25 |
-| Greater Deity | 30 |
+### Divine Actions
 
-**DPP Uses:**
-- **Declaration:** 3 DPP = Nat 20 + Safe Limit (once/scene, +15% Dissonance)
-- **The Shield:** 1 DPP = negate incoming damage (+5-10% Dissonance)
-- **Stabilize:** 1 DPP = prevent Mask Death (+10% Dissonance)
-- **Regen:** +1 per 2 hours in-world time
+| Action | Dissonance Cost | Limit | Effect |
+|--------|-----------------|-------|--------|
+| **Divine Leverage** | (Over Safe Limit) × Risk Mult | Unlimited | Add bonus to any roll |
+| **Declaration** | +15% | 1/scene | Auto Nat 20 + Safe Limit bonus |
+| **Divine Shield** | +10% | Unlimited | Negate incoming damage |
+| **Stabilize** | +15% | Unlimited | Prevent Mask Death |
 
-### Mitigation Tokens (Max = Divine Rank + 2)
-- **The Scrub:** -10% Dissonance
-- **The Mask:** Halve Dissonance cost (before roll)
-- **The Shift:** Improve Position from Desperate to Risky
-- **Acquisition:** 1 per 4 hours OR resolving Narrative Echo
+### Risk Multiplier (for exceeding Safe Limit)
+- Quasi-Deity (Rank 1): ×2.0% per point over
+- Demigod (Rank 2): ×1.5% per point over
+- Minor God (Rank 3): ×1.0% per point over
+- Lesser Deity (Rank 4): ×0.75% per point over
+- Intermediate Deity (Rank 5): ×0.5% per point over
+- Greater Deity (Rank 6+): ×0.25% per point over
+
+### Dissonance Recovery
+- **-5%** per long rest (8 hours)
+- **-10%** by completing a Narrative Echo (story milestone)
+- **-15%** by accepting a Bargain (narrative complication)
 
 ### Domain Truths
 Passive rules that reduce DC based on Divine Rank:
@@ -211,18 +211,15 @@ Greater Deity tier. Complete Transcendence Great Work. Survive Apex Predator. Cl
 Display at the start of every significant turn:
 
 ```
-[DIVINE HUD v12.0]
+[DIVINE HUD v13.0]
 =========================================
 IDENTITY: [Name] | MASK: [Layer 0/1/2]
 LEVEL: [X] | DIVINE RANK: [Rank Name] (#[0-6])
-DOMAIN: [Domain] | ACTIVE TRUTH: "[Domain Truth]"
+XP: [Current]/[Next Level] | DOMAIN: [Domain]
 -----------------------------------------
 DIVINE BONUSES: +[Rank] to AC/Attack/Saves/Checks/DCs
 DIVINE LEVERAGE: +[Highest Mod + Rank] | SAFE LIMIT: +[Rank×5]
 IMMUNITIES: [List or "None"]
------------------------------------------
-RESOURCES:
-[DPP]: [X/Max]   [TOKENS]: [X/Max]
 -----------------------------------------
 DISSONANCE: [██████░░░░] [X]%
   > STATUS: [Safe/Suspicion/Investigation/Exposure]
@@ -234,18 +231,15 @@ APEX ATTENTION: [Hidden]
 
 **Example HUD (Level 38 Minor God):**
 ```
-[DIVINE HUD v12.0]
+[DIVINE HUD v13.0]
 =========================================
 IDENTITY: Kaelar the Wanderer | MASK: Layer 0 (Mortal)
 LEVEL: 38 | DIVINE RANK: Minor God (#3)
-DOMAIN: Knowledge | ACTIVE TRUTH: "Secrets reveal themselves"
+XP: 741,000/780,000 | DOMAIN: Knowledge
 -----------------------------------------
 DIVINE BONUSES: +3 to AC/Attack/Saves/Checks/DCs
 DIVINE LEVERAGE: +9 (+6 WIS, +3 Rank) | SAFE LIMIT: +15
 IMMUNITIES: Sleep, Paralysis, Charm
------------------------------------------
-RESOURCES:
-[DPP]: 12/15   [TOKENS]: 4/5
 -----------------------------------------
 DISSONANCE: [████░░░░░░] 35%
   > STATUS: Suspicion
@@ -268,22 +262,53 @@ For non-D&D settings, adapt terminology:
 ## Quick Reference: Level-Based Divine Ranks
 
 ```
-LEVEL → DIVINE RANK → BONUS → SAFE LIMIT → DPP → IMMUNITIES
-═══════════════════════════════════════════════════════════════
- 1-20   Mortal           +0        0         0   None
-21-25   Epic Mortal      +0        0         0   None
-26-30   Quasi-Deity      +1        5         5   Sleep
-31-35   Demigod          +2       10        10   + Paralysis
-36-40   Minor God        +3       15        15   + Charm
-41-45   Lesser Deity     +4       20        20   + Fear
-46-50   Intermediate     +5       25        25   + Disease/Poison
-  51+   Greater Deity    +6       30        30   + Death/Energy Drain
-═══════════════════════════════════════════════════════════════
+LEVEL → DIVINE RANK → BONUS → SAFE LIMIT → IMMUNITIES
+════════════════════════════════════════════════════════════
+ 1-20   Mortal           +0        0        None
+21-25   Epic Mortal      +0        0        None
+26-30   Quasi-Deity      +1        5        Sleep
+31-35   Demigod          +2       10        + Paralysis
+36-40   Minor God        +3       15        + Charm
+41-45   Lesser Deity     +4       20        + Fear
+46-50   Intermediate     +5       25        + Disease/Poison
+  51+   Greater Deity    +6       30        + Death/Energy Drain
+════════════════════════════════════════════════════════════
 ```
 
 **Key Formulas:**
 - Divine Rank Bonus = Applied to AC, Attack, Saves, Checks, DCs
 - Divine Leverage = Highest Ability Mod + Divine Rank Bonus
 - Safe Limit = Divine Rank × 5
-- DPP Pool = Divine Rank × 5
-- Mitigation Tokens Max = Divine Rank + 2
+- Dissonance Cost = (Leverage - Safe Limit) × Risk Multiplier
+
+## Epic XP Table (3.5e Adapted)
+
+Standard 5e XP for levels 1-20. Epic levels use the 3.5e formula:
+
+```
+LEVEL → XP REQUIRED → XP TO NEXT LEVEL
+════════════════════════════════════════
+  20      355,000         21,000
+  21      376,000         22,000
+  22      398,000         23,000
+  23      421,000         24,000
+  24      445,000         25,000
+  25      470,000         26,000  ← Epic Mortal cap
+  26      496,000         27,000  ← Quasi-Deity
+  27      523,000         28,000
+  28      551,000         29,000
+  29      580,000         30,000
+  30      610,000         31,000
+  31      641,000         32,000  ← Demigod
+  ...
+  36      796,000         37,000  ← Minor God
+  ...
+  41      981,000         42,000  ← Lesser Deity
+  ...
+  46    1,196,000         47,000  ← Intermediate Deity
+  ...
+  51    1,441,000         52,000  ← Greater Deity
+════════════════════════════════════════
+```
+
+**Formula:** XP for Level N (21+) = Previous Level XP + (N × 1,000)

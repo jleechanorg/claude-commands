@@ -1946,17 +1946,25 @@ class GameState:
         level = self.get_character_level()
         return constants.get_divine_safe_limit(level)
 
-    def get_divine_power_points_max(self) -> int:
+    def get_xp_for_next_level(self) -> int:
         """
-        Get the maximum Divine Power Points for the character.
-
-        DPP pool = Divine Rank × 5
+        Get the XP required to reach the next level.
 
         Returns:
-            Maximum DPP (0, 5, 10, 15, 20, 25, 30)
+            XP needed for next level
         """
         level = self.get_character_level()
-        return constants.get_divine_power_points(level)
+        return constants.get_xp_for_level(level + 1)
+
+    def get_xp_to_next_level(self) -> int:
+        """
+        Get the XP needed to advance from current level to next.
+
+        Returns:
+            XP delta needed for next level
+        """
+        level = self.get_character_level()
+        return constants.get_xp_to_next_level(level)
 
     def get_divine_immunities(self) -> list[str]:
         """
