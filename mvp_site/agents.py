@@ -1524,10 +1524,12 @@ def get_agent_for_input(
     2. Character Creation Completion Override
     3. CharacterCreationAgent (State-based - when char creation is active)
     4. PlanningAgent (Explicit override - "THINK:" prefix or mode="think")
+    4.5. CampaignUpgradeAgent (State-based - when upgrade is available)
     5. Semantic Intent Classification (PRIMARY BRAIN)
        - CombatAgent: Routes on semantic intent (can initiate combat if not active)
        - RewardsAgent: Routes on semantic intent (can check for missed rewards)
        - CharacterCreationAgent: Routes on semantic intent (can initiate level-up/recreation)
+       - CampaignUpgradeAgent: Routes on semantic intent (can guide toward ascension)
     6. API Explicit Mode (Forced via UI/Param)
     7. StoryModeAgent (Default)
     """

@@ -136,6 +136,7 @@ The classifier supports the following modes:
 - `MODE_COMBAT` → CombatAgent (routes on intent, can initiate combat)
 - `MODE_REWARDS` → RewardsAgent (routes on intent, can check for missed rewards)
 - `MODE_CHARACTER_CREATION` → CharacterCreationAgent (routes on intent, can initiate level-up/recreation)
+- `MODE_CAMPAIGN_UPGRADE` → CampaignUpgradeAgent (routes on intent, can guide toward divine ascension)
 - `MODE_CHARACTER` → StoryModeAgent (default fallback)
 
 **Security Note:** The classifier is explicitly blocked from returning `MODE_GOD`
@@ -274,6 +275,28 @@ ANCHOR_PHRASES = {
         "loot distribution",
         "collect rewards",
         "reward me",
+    ],
+    constants.MODE_CAMPAIGN_UPGRADE: [
+        "i wanna be a god",
+        "i want to be a god",
+        "accelerate my god",
+        "let me be multiverse god",
+        "become a deity",
+        "ascend to godhood",
+        "divine ascension",
+        "become divine",
+        "multiverse upgrade",
+        "sovereign protocol",
+        "transcend mortality",
+        "tier upgrade",
+        "upgrade my campaign",
+        "go to next tier",
+        "become more powerful",
+        "reach godhood",
+        "i want divine power",
+        "skip to god tier",
+        "multiverse god",
+        "cosmic ascension",
     ],
     constants.MODE_CHARACTER: [
         "i look around",
