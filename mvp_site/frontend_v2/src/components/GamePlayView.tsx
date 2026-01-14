@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
+import { formatDiceRoll, DiceRoll } from '../utils/diceUtils'
+import { DiceRollDisplay } from './DiceRollDisplay'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
 import { apiService } from '../services/api.service'
@@ -35,12 +37,15 @@ interface StoryEntry {
   timestamp: string
   author: 'player' | 'ai' | 'system'
   choices?: string[]
+  dice_rolls?: (string | DiceRoll | unknown)[]
+  god_mode_response?: string
+  narrative?: string
 }
 
 export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayViewProps) {
   console.log('🎯 GAMEPLAYVIEW received campaignTitle:', campaignTitle)
   console.log('🎯 GAMEPLAYVIEW received campaignId:', campaignId)
-  
+
   const [story, setStory] = useState<StoryEntry[]>([])
 
   const [playerInput, setPlayerInput] = useState('')
@@ -67,7 +72,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
 
         // First, try to load existing campaign data (like V1 does)
         console.log('🎯 GAMEPLAYVIEW loading existing campaign data for:', campaignId)
-        
+
         try {
           const campaignData = await apiService.getCampaign(campaignId)
           console.log('🎯 GAMEPLAYVIEW loaded campaign data:', campaignData)
@@ -75,13 +80,16 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           // Convert existing story entries to V2 format
           if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
             console.log('🎯 GAMEPLAYVIEW found existing story entries:', campaignData.story.length)
-            
+
             const convertedStory = campaignData.story.map((entry: any, index: number) => ({
               id: `story-${index}`,
               type: entry.mode === 'god' ? 'narration' : 'action' as 'narration' | 'action',
-              content: entry.text || entry.narrative || '',
+              // Prioritize god_mode_response for god mode entries, then narrative, then text
+              content: entry.god_mode_response || entry.narrative || entry.text || '',
               timestamp: entry.timestamp || new Date().toISOString(),
-              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system'
+              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
+              // Preserve dice_rolls and other structured fields
+              dice_rolls: entry.dice_rolls
             }))
 
             setStory(convertedStory)
@@ -95,7 +103,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
         // Fallback: Create initial content if no existing story (new campaign or API error)
         console.log('🎯 GAMEPLAYVIEW creating initial content for new campaign')
         const welcomeMessage = `Welcome to ${campaignTitle}! Your adventure begins now...`
-        
+
         const initialStory: StoryEntry = {
           id: '1',
           type: 'system',
@@ -111,14 +119,15 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           mode: 'god' // Use god mode for content generation
         })
 
-        if (response.success && (response.response || response.narrative)) {
-          const content = response.response || response.narrative || ''
+        if (response.success && (response.god_mode_response || response.narrative || response.response)) {
+          const content = response.god_mode_response || response.narrative || response.response || ''
           const aiStory: StoryEntry = {
             id: `init-${Date.now()}`,
             type: 'narration',
             content: content,
             timestamp: new Date().toISOString(),
-            author: 'ai'
+            author: 'ai',
+            dice_rolls: response.dice_rolls
           }
 
           setStory(prev => [...prev, aiStory])
@@ -173,14 +182,15 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
         mode: mode
       })
 
-      if (response.success && (response.response || response.narrative)) {
-        const content = response.response || response.narrative || 'The AI ponders your action...'
+      if (response.success && (response.god_mode_response || response.narrative || response.response)) {
+        const content = response.god_mode_response || response.narrative || response.response || 'The AI ponders your action...'
         const aiResponse: StoryEntry = {
           id: (Date.now() + 1).toString(),
           type: 'narration',
           content: content,
           timestamp: new Date().toISOString(),
-          author: 'ai'
+          author: 'ai',
+          dice_rolls: response.dice_rolls
         }
 
         setStory(prev => [...prev, aiResponse])
@@ -286,6 +296,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           </span>
         </div>
         <p className="text-purple-900 leading-relaxed">{entry.content}</p>
+        <DiceRollDisplay dice_rolls={entry.dice_rolls} />
       </div>
     )
   }
@@ -419,52 +430,52 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
 
               {/* Input Area */}
               <div className="bg-white/80 backdrop-blur-md border border-purple-200 rounded-lg p-6 shadow-lg">
-            <div className="mb-4">
-              <Textarea
-                ref={textareaRef}
-                value={playerInput}
-                onChange={(e) => setPlayerInput(e.target.value)}
-                placeholder="What do you do? Describe your action..."
-                className="min-h-[100px] resize-none border-purple-200 focus:border-purple-400 focus:ring-purple-400 bg-white/70 backdrop-blur-sm"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSubmit()
-                  }
-                }}
-              />
-            </div>
+                <div className="mb-4">
+                  <Textarea
+                    ref={textareaRef}
+                    value={playerInput}
+                    onChange={(e) => setPlayerInput(e.target.value)}
+                    placeholder="What do you do? Describe your action..."
+                    className="min-h-[100px] resize-none border-purple-200 focus:border-purple-400 focus:ring-purple-400 bg-white/70 backdrop-blur-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSubmit()
+                      }
+                    }}
+                  />
+                </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-purple-700 bg-purple-100 hover:bg-purple-100"
+                        disabled
+                      >
+                        <Crown className="w-4 h-4 mr-1" />
+                        God Mode
+                      </Button>
+                    </div>
+                  </div>
+
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-purple-700 bg-purple-100 hover:bg-purple-100"
-                    disabled
+                    onClick={handleSubmit}
+                    disabled={!playerInput.trim() || isLoading}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-2 shadow-lg"
                   >
-                    <Crown className="w-4 h-4 mr-1" />
-                    God Mode
+                    <Send className="w-4 h-4 mr-2" />
+                    Send
                   </Button>
                 </div>
               </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={!playerInput.trim() || isLoading}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-2 shadow-lg"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Send
-              </Button>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
   )
 }

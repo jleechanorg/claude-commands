@@ -27,6 +27,8 @@ import type { Campaign, Theme } from '../types'
 import { apiService } from '../services/api.service'
 import { handleAsyncError, showErrorToast, showSuccessToast, LoadingState } from '../utils/errorHandling'
 import type { InteractionRequest, InteractionResponse } from '../services/api.types'
+import { formatDiceRolls, DiceRoll, formatDiceRoll } from '../utils/diceUtils'
+import { DiceRollDisplay } from './DiceRollDisplay'
 
 interface GameViewProps {
   campaign: Campaign
@@ -44,6 +46,9 @@ interface StoryEntry {
   isError?: boolean
   isRetryable?: boolean
   originalInput?: string
+  dice_rolls?: (string | DiceRoll | unknown)[]
+  god_mode_response?: string
+  narrative?: string
 }
 
 
@@ -57,7 +62,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
   const [aiError, setAiError] = useState<string | null>(null)
   const [lastFailedInput, setLastFailedInput] = useState<string>('')
   const [isOnline, setIsOnline] = useState(navigator.onLine)
-  
+
   // Monitor network status
   useEffect(() => {
     const handleOnline = () => {
@@ -67,18 +72,18 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
         setAiError(null) // Clear AI error when back online
       }
     }
-    
+
     const handleOffline = () => {
       setIsOnline(false)
-      showErrorToast('You are offline - AI responses will be unavailable until connection is restored', { 
+      showErrorToast('You are offline - AI responses will be unavailable until connection is restored', {
         context: 'Network',
         persistent: true
       })
     }
-    
+
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
-    
+
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
@@ -161,12 +166,12 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
 
   const handleSubmit = async () => {
     if (!playerInput.trim() || isLoading || loadingState.isLoading) return
-    
+
     // Check network connectivity
     if (!isOnline) {
-      showErrorToast('Cannot send message - you are currently offline', { 
+      showErrorToast('Cannot send message - you are currently offline', {
         context: 'Offline',
-        persistent: false 
+        persistent: false
       })
       return
     }
@@ -187,14 +192,14 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
     try {
       setAiError(null)
       setLoadingState({ isLoading: true, status: 'Connecting to AI...', progress: 10 })
-      
+
       const interactionRequest: InteractionRequest = {
         input: playerInput,
         mode: mode === 'god' ? 'god' : 'character'
       }
-      
+
       setLoadingState({ isLoading: true, status: 'Processing your input...', progress: 30 })
-      
+
       const aiResponse = await handleAsyncError(
         () => apiService.sendInteraction(campaign.id, interactionRequest),
         {
@@ -208,19 +213,19 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
               // Retry on network errors, timeouts, or server errors
               const errorMessage = error?.message?.toLowerCase() || ''
               const shouldRetry = errorMessage.includes('network') ||
-                                  errorMessage.includes('timeout') ||
-                                  errorMessage.includes('fetch') ||
-                                  error?.status >= 500 ||
-                                  error?.status === 429
-              
+                errorMessage.includes('timeout') ||
+                errorMessage.includes('fetch') ||
+                error?.status >= 500 ||
+                error?.status === 429
+
               if (shouldRetry) {
-                setLoadingState({ 
-                  isLoading: true, 
-                  status: `Connection failed. Retrying in ${Math.ceil((2000 * Math.pow(2, retryCount))/1000)}s...`,
+                setLoadingState({
+                  isLoading: true,
+                  status: `Connection failed. Retrying in ${Math.ceil((2000 * Math.pow(2, retryCount)) / 1000)}s...`,
                   progress: 50 + (retryCount * 20)
                 })
               }
-              
+
               return shouldRetry
             }
           },
@@ -229,17 +234,17 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           },
           onRetry: (currentRetry, maxRetries) => {
             setRetryCount(currentRetry)
-            setLoadingState({ 
-              isLoading: true, 
+            setLoadingState({
+              isLoading: true,
               status: `Retry ${currentRetry}/${maxRetries}...`,
               progress: 40 + (currentRetry * 15)
             })
           }
         }
       )
-      
+
       setLoadingState({ isLoading: true, status: 'Processing AI response...', progress: 80 })
-      
+
       if (aiResponse && aiResponse.success) {
         // Create AI response entry with enhanced content handling
         const aiEntry: StoryEntry = {
@@ -247,26 +252,13 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           type: 'narration',
           content: aiResponse.god_mode_response || aiResponse.narrative || aiResponse.response || 'The AI provided a response, but it was empty.',
           timestamp: new Date().toISOString(),
-          author: 'ai'
+          author: 'ai',
+          dice_rolls: aiResponse.dice_rolls
         }
-        
+
         setStory(prev => [...prev, aiEntry])
         setRetryCount(0)
         setLastFailedInput('')
-        
-        // Add system message for additional info if available
-        if (aiResponse.dice_rolls && aiResponse.dice_rolls.length > 0) {
-          const diceEntry: StoryEntry = {
-            id: (Date.now() + 2).toString(),
-            type: 'system',
-            content: `🎲 Dice rolls: ${aiResponse.dice_rolls.map(roll =>
-              `${roll.type}: ${roll.result}${roll.modifier ? ` + ${roll.modifier}` : ''} = ${roll.total || roll.result}${roll.reason ? ` (${roll.reason})` : ''}`
-            ).join(', ')}`,
-            timestamp: new Date().toISOString(),
-            author: 'system'
-          }
-          setStory(prev => [...prev, diceEntry])
-        }
 
         // Add rewards box if XP was awarded
         if (aiResponse.rewards_box && (aiResponse.rewards_box.xp_gained || 0) > 0) {
@@ -307,12 +299,12 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
         console.error('AI API returned success=false:', aiResponse)
         throw new Error(errorMessage)
       }
-      
+
     } catch (error: any) {
       const errorMessage = error?.message || 'An unexpected error occurred while getting AI response'
       setAiError(errorMessage)
       setLastFailedInput(playerInput)
-      
+
       // Create error entry in story
       const errorEntry: StoryEntry = {
         id: (Date.now() + 1).toString(),
@@ -324,19 +316,19 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
         isRetryable: true,
         originalInput: playerInput
       }
-      
+
       setStory(prev => [...prev, errorEntry])
-      
+
       // Show error toast with actionable retry option
       showErrorToast(
         `AI response failed: ${errorMessage}`,
-        { 
-          actionable: true, 
+        {
+          actionable: true,
           context: 'Game AI',
           persistent: false
         }
       )
-      
+
       setLoadingState({ isLoading: false })
     } finally {
       setIsLoading(false)
@@ -350,14 +342,14 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
   const handleRetryAI = async (originalInput?: string) => {
     const inputToRetry = originalInput || lastFailedInput || playerInput
     if (!inputToRetry.trim()) return
-    
+
     // Remove the last error entry from story
     setStory(prev => prev.filter(entry => !(entry.isError && entry.originalInput === inputToRetry)))
-    
+
     // Temporarily set input and trigger AI response
     const currentInput = playerInput
     setPlayerInput(inputToRetry)
-    
+
     // Create user action entry for retry
     const retryUserAction: StoryEntry = {
       id: Date.now().toString(),
@@ -366,20 +358,20 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
       timestamp: new Date().toISOString(),
       author: 'player'
     }
-    
+
     setStory(prev => [...prev, retryUserAction])
     setIsLoading(true)
-    
+
     // Call the same AI logic with the retry input
     try {
       setAiError(null)
       setLoadingState({ isLoading: true, status: 'Retrying AI request...', progress: 10 })
-      
+
       const interactionRequest: InteractionRequest = {
         input: inputToRetry,
         mode: mode === 'god' ? 'god' : 'character'
       }
-      
+
       const aiResponse = await handleAsyncError(
         () => apiService.sendInteraction(campaign.id, interactionRequest),
         {
@@ -395,29 +387,30 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           }
         }
       )
-      
+
       if (aiResponse && aiResponse.success) {
         const aiEntry: StoryEntry = {
           id: (Date.now() + 1).toString(),
           type: 'narration',
           content: aiResponse.god_mode_response || aiResponse.narrative || aiResponse.response || 'The AI provided a response, but it was empty.',
           timestamp: new Date().toISOString(),
-          author: 'ai'
+          author: 'ai',
+          dice_rolls: aiResponse.dice_rolls
         }
-        
+
         setStory(prev => [...prev, aiEntry])
         setRetryCount(0)
         setLastFailedInput('')
         setAiError(null)
-        
+
         showSuccessToast('AI response received on retry!', { context: 'Game Retry', duration: 3000 })
       } else {
         throw new Error(aiResponse?.error || 'AI failed to generate a response on retry')
       }
-      
+
     } catch (error: any) {
       const errorMessage = error?.message || 'Retry failed'
-      
+
       const errorEntry: StoryEntry = {
         id: (Date.now() + 1).toString(),
         type: 'error',
@@ -427,7 +420,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
         isError: true,
         isRetryable: false
       }
-      
+
       setStory(prev => [...prev, errorEntry])
       showErrorToast(`Retry failed: ${errorMessage}`, { context: 'Game Retry' })
     } finally {
@@ -444,7 +437,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
         handleRetryAI(lastFailedInput)
       }
     }
-    
+
     window.addEventListener('error-toast-retry', handleRetryEvent)
     return () => window.removeEventListener('error-toast-retry', handleRetryEvent)
   }, [lastFailedInput])
@@ -556,12 +549,14 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                             {getEntryIcon(entry)}
                             <Badge variant="outline" className="text-xs">
                               {entry.author === 'player' ? 'You' :
-                               entry.author === 'ai' ? 'GM' :
-                               entry.type === 'rewards' ? 'Rewards' : 'System'}
+                                entry.author === 'ai' ? 'GM' :
+                                  entry.type === 'rewards' ? 'Rewards' : 'System'}
                             </Badge>
                           </div>
                           <div className="flex-1">
                             <p className="leading-relaxed">{entry.content}</p>
+                            {/* Display dice_rolls if present (from loaded story entries) */}
+                            <DiceRollDisplay dice_rolls={entry.dice_rolls} />
                             {entry.isError && entry.isRetryable && (
                               <Button
                                 variant="outline"
@@ -573,8 +568,9 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                                 <RefreshCw className={`w-3 h-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
                                 Retry AI Request
                               </Button>
-                            )}
-                            <p className="text-muted-foreground text-xs mt-2">
+                            )
+                            }
+                            < p className="text-muted-foreground text-xs mt-2">
                               {new Date(entry.timestamp).toLocaleTimeString()}
                             </p>
                           </div>
@@ -607,7 +603,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                             {loadingState.progress !== undefined && loadingState.progress > 0 && (
                               <div className="mt-3">
                                 <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                                  <div 
+                                  <div
                                     className="bg-primary h-2 rounded-full transition-all duration-300"
                                     style={{ width: `${Math.min(loadingState.progress, 100)}%` }}
                                   ></div>
@@ -622,7 +618,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                       </CardContent>
                     </Card>
                   )}
-                  
+
                   {aiError && !isLoading && !loadingState.isLoading && (
                     <Card className="bg-red-500/10 backdrop-blur-sm border-red-500/20">
                       <CardContent className="p-4">
@@ -693,20 +689,17 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
 
               {/* Connection Status */}
               {(aiError || !isOnline) && (
-                <div className={`mb-3 p-3 rounded-md ${
-                  !isOnline 
-                    ? 'bg-red-500/10 border border-red-500/20'
-                    : 'bg-yellow-500/10 border border-yellow-500/20'
-                }`}>
+                <div className={`mb-3 p-3 rounded-md ${!isOnline
+                  ? 'bg-red-500/10 border border-red-500/20'
+                  : 'bg-yellow-500/10 border border-yellow-500/20'
+                  }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Sparkles className={`w-4 h-4 ${
-                        !isOnline ? 'text-red-400' : 'text-yellow-400'
-                      }`} />
-                      <span className={`text-sm font-medium ${
-                        !isOnline ? 'text-red-400' : 'text-yellow-400'
-                      }`}>
-                        {!isOnline 
+                      <Sparkles className={`w-4 h-4 ${!isOnline ? 'text-red-400' : 'text-yellow-400'
+                        }`} />
+                      <span className={`text-sm font-medium ${!isOnline ? 'text-red-400' : 'text-yellow-400'
+                        }`}>
+                        {!isOnline
                           ? 'No internet connection - AI responses unavailable'
                           : 'AI connection issues detected - some features may be limited'
                         }
@@ -725,7 +718,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                   </div>
                 </div>
               )}
-              
+
               {/* Input Form */}
               <div className="flex space-x-4">
                 <div className="flex-1 relative">
@@ -791,7 +784,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                     <Crown className="w-4 h-4" />
                     <span>God Mode • You control the narrative</span>
                   </div>
-                  
+
                   {/* Network Status Indicator */}
                   <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
@@ -799,7 +792,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
                       {isOnline ? 'AI Online' : 'AI Offline'}
                     </span>
                   </div>
-                  
+
                   {/* AI Status */}
                   {aiError && (
                     <div className="flex items-center space-x-1">
@@ -824,7 +817,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
             </div>
           </main>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }
