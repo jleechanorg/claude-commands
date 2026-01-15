@@ -415,6 +415,65 @@ class TestGeminiCliSupport(unittest.TestCase):
         agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
         self.assertEqual(agent_specs[0]["cli"], "gemini")
 
+    def test_preflight_validation_fallback_to_codex_on_quota(self):
+        """Pre-flight validation should fallback to Codex when Gemini quota exhausted."""
+        agent_spec = {
+            "name": "task-agent-preflight-test",
+            "focus": "Test pre-flight validation fallback",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "gemini",
+            "cli_chain": ["gemini", "codex"],
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/task-agent-preflight-test", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability") as mock_validate,
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "gemini": "/usr/bin/gemini",
+                    "codex": "/usr/bin/codex",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+
+            # Mock validation: Gemini fails, Codex succeeds
+            def validate_side_effect(cli_name, cli_path, agent_name, model=None):
+                if cli_name == "gemini":
+                    return False  # Quota exhausted
+                elif cli_name == "codex":
+                    return True  # Available
+                return False
+
+            mock_validate.side_effect = validate_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        # Agent should have fallen back to Codex
+        self.assertEqual(agent_spec["cli"], "codex")
+        script_contents = mock_write_text.call_args_list[0][0][0]
+        self.assertIn("codex exec --yolo", script_contents)
+
 
 class TestGeminiCliIntegration(unittest.TestCase):
     """Integration tests for Gemini CLI with minimal mocking.

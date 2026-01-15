@@ -1904,6 +1904,23 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                         f"✅ Added '{player_name}' to active_entities (God Mode character)"
                     )
 
+        # Extract companions from god_mode if present
+        npc_data_from_god_mode = {}
+        if god_mode and isinstance(god_mode, dict) and "companions" in god_mode:
+            companions_dict = god_mode.get("companions", {})
+            if isinstance(companions_dict, dict):
+                # CRITICAL: Ensure all companions have relationship="companion" field
+                # so they're detected by build_companion_instruction() filter
+                npc_data_from_god_mode = {}
+                for name, npc in companions_dict.items():
+                    if isinstance(npc, dict):
+                        npc_copy = npc.copy()
+                        npc_copy["relationship"] = "companion"  # Required for companion detection
+                        npc_data_from_god_mode[name] = npc_copy
+                logging_util.info(
+                    f"🎭 GOD MODE: Found {len(npc_data_from_god_mode)} companions in god_mode: {list(npc_data_from_god_mode.keys())}"
+                )
+
         initial_game_state = GameState(
             user_id=user_id,
             custom_campaign_state={
@@ -1914,7 +1931,20 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             player_character_data=player_character_data,
             entity_tracking=entity_tracking,
             debug_mode=debug_mode,
+            npc_data=npc_data_from_god_mode,  # Pass directly - GameState handles empty dict default
         ).to_dict()
+        
+        # Verify companions are in the state dict
+        if npc_data_from_god_mode:
+            state_npc_data = initial_game_state.get("npc_data", {})
+            if not isinstance(state_npc_data, dict):
+                state_npc_data = {}
+            # Merge companions into state (in case GameState didn't preserve them)
+            state_npc_data.update(npc_data_from_god_mode)
+            initial_game_state["npc_data"] = state_npc_data
+            logging_util.info(
+                f"🎭 GOD MODE: Verified {len(state_npc_data)} companions in initial_game_state: {list(state_npc_data.keys())}"
+            )
 
         generate_companions = "companions" in custom_options
         use_default_world = "defaultWorld" in custom_options
@@ -1962,6 +1992,14 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             # Generate opening story using LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
             # For God Mode campaigns with character data, use CharacterCreationAgent
             # For regular campaigns, use StoryModeAgent
+            # CRITICAL: If companions are in initial_game_state (from god_mode), ensure generate_companions is True
+            # so the LLM knows to include them in the narrative
+            if npc_data_from_god_mode and not generate_companions:
+                generate_companions = True
+                logging_util.info(
+                    f"🎭 GOD MODE: Enabling generate_companions=True because {len(npc_data_from_god_mode)} companions found in god_mode"
+                )
+            
             try:
                 opening_story_response = await asyncio.to_thread(
                     llm_service.get_initial_story,
@@ -1971,6 +2009,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                     generate_companions,
                     use_default_world,
                     use_character_creation_agent=is_god_mode_with_character,  # Use CharacterCreationAgent for God Mode with character
+                    initial_npc_data=npc_data_from_god_mode if npc_data_from_god_mode else None,  # Pass companions from god_mode
                 )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during campaign creation: {e}")
@@ -2152,11 +2191,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             if debug_response:
                 return debug_response
 
-        campaign_data: dict[str, Any] | None = None
-        story_context: list[dict[str, Any]] = []
-        selected_prompts: list[str] = []
-        use_default_world = False
-
         # Extract current world_time and location for temporal validation
         # CRITICAL: world_data can be None or non-dict in existing saves - normalize to {} first
         world_data = getattr(current_game_state, "world_data", None)
@@ -2180,39 +2214,36 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             try:
-                if campaign_data is None:
-                    (
-                        campaign_data,
-                        story_context,
-                        llm_response_obj,
-                    ) = await asyncio.to_thread(
-                        _load_campaign_and_continue_story,
-                        user_id,
-                        campaign_id,
-                        llm_input=llm_input,
-                        mode=mode,
-                        current_game_state=current_game_state,
-                        include_raw_llm_payloads=include_raw_llm_payloads,
-                    )
-                    if not campaign_data or llm_response_obj is None:
-                        return {
-                            KEY_ERROR: "Campaign not found",
-                            "status_code": 404,
-                        }
-                    selected_prompts = campaign_data.get("selected_prompts", [])
-                    use_default_world = campaign_data.get("use_default_world", False)
-                else:
-                    llm_response_obj = await asyncio.to_thread(
-                        llm_service.continue_story,
-                        llm_input,  # Use llm_input, NOT user_input
-                        mode,
-                        story_context,
-                        current_game_state,
-                        selected_prompts,
-                        use_default_world,
-                        user_id,  # Pass user_id to enable user model preference selection
-                        include_raw_llm_payloads,
-                    )
+                # Always reload campaign_data and story_context from Firestore for each request.
+                # This ensures:
+                # 1. story_context includes the latest story entries (including previous commands)
+                # 2. campaign_data reflects any changes (selected_prompts, use_default_world, etc.)
+                #
+                # No caching is needed because:
+                # - MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0 (loop only runs once per request)
+                # - Campaign data is just one document read (cheap)
+                # - Story context must be fresh (includes latest entries)
+                # - Caching adds complexity and risk of stale data bugs
+                (
+                    campaign_data,
+                    story_context,
+                    llm_response_obj,
+                ) = await asyncio.to_thread(
+                    _load_campaign_and_continue_story,
+                    user_id,
+                    campaign_id,
+                    llm_input=llm_input,
+                    mode=mode,
+                    current_game_state=current_game_state,
+                    include_raw_llm_payloads=include_raw_llm_payloads,
+                )
+                if not campaign_data or llm_response_obj is None:
+                    return {
+                        KEY_ERROR: "Campaign not found",
+                        "status_code": 404,
+                    }
+                selected_prompts = campaign_data.get("selected_prompts", [])
+                use_default_world = campaign_data.get("use_default_world", False)
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during story continuation: {e}")
                 status_code = getattr(e, "status_code", None) or 422

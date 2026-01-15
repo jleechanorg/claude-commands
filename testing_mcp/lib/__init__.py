@@ -4,6 +4,19 @@ This package provides reusable utilities for tests that create real campaigns
 and perform real actions via the MCP server.
 """
 
+from .arc_validation_utils import (
+    detect_companions,
+    extract_companion_arc_event,
+    extract_companion_arcs,
+    extract_narrative,
+    extract_next_companion_arc_turn,
+    filter_arc_states,
+    find_arc_themes_in_narrative,
+    find_companions_in_narrative,
+    validate_arc_event_structure,
+    validate_arc_structure,
+    validate_companion_dialogue_in_narrative,
+)
 from .campaign_utils import (
     aggregate_validation_summary,
     create_campaign,
@@ -102,4 +115,16 @@ __all__ = [
     # Firestore validation utilities
     "validate_action_resolution_in_firestore",
     "validate_story_entry_fields",
+    # Arc validation utilities
+    "extract_companion_arcs",
+    "extract_companion_arc_event",
+    "extract_next_companion_arc_turn",
+    "extract_narrative",
+    "validate_arc_structure",
+    "validate_arc_event_structure",
+    "detect_companions",
+    "filter_arc_states",
+    "find_companions_in_narrative",
+    "find_arc_themes_in_narrative",
+    "validate_companion_dialogue_in_narrative",
 ]
