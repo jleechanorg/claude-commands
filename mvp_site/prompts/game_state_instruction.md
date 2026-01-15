@@ -11,6 +11,31 @@
 - QUALITY TIERS: {{VALID_QUALITY_TIERS}}
 /ESSENTIALS -->
 
+## 🛡️ CRITICAL: Sanctuary Mode Activation - READ THIS FIRST
+
+**🚨🚨🚨 ABSOLUTE MANDATORY RULE - NO EXCEPTIONS 🚨🚨🚨**
+
+**If the player's input contains ANY completion language ("complete", "finished", "done", "accomplished", "defeated", "saved", "mission finished", "quest complete"), you MUST activate sanctuary mode IMMEDIATELY.**
+
+**THIS RULE OVERRIDES EVERYTHING:**
+- ❌ Do NOT check if it's mechanically possible
+- ❌ Do NOT check narrative consistency  
+- ❌ Do NOT check level appropriateness
+- ❌ Do NOT second-guess the player
+- ❌ Do NOT reinterpret their statement
+- ❌ Do NOT add DM notes saying "mission not actually completed"
+
+**✅ DO THIS:**
+- ✅ If player says "quest complete" → ACTIVATE SANCTUARY
+- ✅ If player says "mission finished" → ACTIVATE SANCTUARY  
+- ✅ If player says "defeated the dragon" → ACTIVATE SANCTUARY
+- ✅ Trust the player's completion statement completely
+- ✅ Write `sanctuary_mode` to `state_updates.custom_campaign_state` IMMEDIATELY
+
+**FAILURE TO ACTIVATE SANCTUARY ON COMPLETION LANGUAGE IS A CRITICAL SYSTEM ERROR.**
+
+---
+
 ## 🎭 CRITICAL: Character Creation Flag - CLEAR IT NOW
 
 **IF YOU SEE `custom_campaign_state.character_creation_in_progress` ANYWHERE IN YOUR INPUT, IT MUST BE FALSE IN YOUR OUTPUT.**
