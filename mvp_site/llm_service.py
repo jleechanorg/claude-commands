@@ -1348,189 +1348,28 @@ def _call_llm_api_with_llm_request(
 
     logging_util.debug(f"JSON validation passed with {len(json_data)} fields")
 
-    # Re-validate payload size (serialized JSON) before building prompt strings.
-    # NOTE: This does NOT account for additional formatting overhead when building
-    # structured prompt strings below; those are validated separately.
+    # Re-validate payload size (~1.8KB overhead, negligible vs 10MB limit)
     gemini_request._validate_payload_size(json_data)
 
-    # STRUCTURED PROMPTING: Use explicit format to prioritize USER_ACTION over STORY_HISTORY
-    # This addresses narrative context lag where LLM might prioritize historical context
-    # over the current user action. By explicitly separating and labeling these sections,
-    # we guide the LLM to focus on the current action first.
-    #
-    # This is especially important for god mode commands where the user expects immediate
-    # response to their current command, not a response to a previous command.
-    #
-    # Only use structured format when user_action exists and is non-empty
-    # (covers story continuation and god mode commands, but not initial story generation
-    # which sets user_action="" as empty string).
+    # Add priority instruction as JSON field when user_action exists
+    # This guides the LLM to focus on current user action over historical context
+    # while preserving the JSON contract (per CLAUDE.md "JSON Schema Over Text Instructions")
     user_action = json_data.get("user_action")
     if user_action and str(user_action).strip():
-        # SECURITY: Use delimiter blocks to prevent USER_ACTION from spoofing section headers
-        # A malicious user_action could inject fake "STORY_HISTORY:" or "SYSTEM_CORRECTIONS:" 
-        # headers if we just interpolate it inline. By wrapping it in delimiters, we ensure
-        # the LLM can't confuse user content with system section boundaries.
-        # 
-        # Escape delimiter patterns to reduce confusion about section boundaries.
-        # NOTE: This is NOT a security boundary - prompt injection is fundamentally hard to
-        # prevent with text-based prompts. This escaping helps prevent:
-        # 1. Accidental confusion when users type text resembling section headers
-        # 2. Obvious injection attempts (but determined attackers can bypass)
-        # The real mitigation is the LLM instruction to prioritize USER_ACTION.
-        user_action_str = str(user_action).strip()
-        # Case-insensitive escaping for common delimiter patterns
-        user_action_str = re.sub(
-            r"(?i)USER_ACTION\s*:", "USER_ACTION_ESCAPED:", user_action_str
+        # Add priority instruction directly to JSON structure (not text wrapping)
+        # This preserves the JSON contract while guiding LLM behavior
+        json_data["priority_instruction"] = (
+            "CRITICAL: Respond to user_action field, NOT story_history entries. "
+            "story_history is context only. Focus exclusively on current user_action."
         )
-        user_action_str = re.sub(
-            r"(?i)END_USER_ACTION", "END_USER_ACTION_ESCAPED", user_action_str
-        )
-        user_action_str = re.sub(
-            r"(?i)STORY_HISTORY\s*:", "STORY_HISTORY_ESCAPED:", user_action_str
-        )
-        user_action_str = re.sub(
-            r"(?i)SYSTEM_CORRECTIONS\s*:", "SYSTEM_CORRECTIONS_ESCAPED:", user_action_str
-        )
-        user_action_block = f"USER_ACTION:\n{user_action_str}\nEND_USER_ACTION"
+        json_data["message_type"] = "story_continuation"
 
-        # Build structured prompt with explicit sections
-        # CRITICAL: Add explicit instruction to prioritize USER_ACTION over STORY_HISTORY
-        # This prevents the LLM from responding to old story entries instead of the current action
-        priority_instruction = (
-            "CRITICAL INSTRUCTION: You MUST respond to the USER_ACTION section below, "
-            "NOT to entries in STORY_HISTORY. STORY_HISTORY is provided for context only. "
-            "Your response must directly address the current USER_ACTION, even if STORY_HISTORY "
-            "contains similar or related content. Ignore old story entries and focus exclusively "
-            "on the current USER_ACTION.\n"
-        )
-        
-        # Log the user_action for debugging (DEBUG level to avoid PII leaks)
+        # Log user_action for debugging (DEBUG level to avoid PII leaks)
         logging_util.debug(
-            "USER_ACTION preview (structured prompt): %s...",
-            user_action_str[:200],
-        )
-        
-        structured_prompt_parts = [
-            priority_instruction,
-            "MESSAGE_TYPE: story_continuation",
-            user_action_block,
-            f"GAME_MODE: {json_data.get('game_mode', '')}",
-            f"USER_ID: {json_data.get('user_id', '')}",
-        ]
-
-        # Add game state as formatted JSON
-        # Use is not None to include empty dicts/arrays that are explicitly present
-        if json_data.get("game_state") is not None:
-            structured_prompt_parts.append(
-                f"GAME_STATE: {json.dumps(json_data.get('game_state', {}), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
-            )
-
-        # Add story history as formatted JSON (explicitly labeled as historical context)
-        # IMPORTANT: This is for context only - respond to USER_ACTION, not STORY_HISTORY
-        if json_data.get("story_history") is not None:
-            story_history_data = json_data.get("story_history", [])
-            logging_util.debug(
-                f"📚 STORY_HISTORY: {len(story_history_data)} entries being included in structured prompt"
-            )
-            # Log first and last few entries for debugging (DEBUG level to avoid PII leaks)
-            if story_history_data:
-                first_entry = story_history_data[0]
-                last_entry = story_history_data[-1]
-                if isinstance(first_entry, dict):
-                    logging_util.debug(
-                        "STORY_HISTORY first entry: actor=%s text_preview=%s...",
-                        first_entry.get("actor", "N/A"),
-                        str(first_entry.get("text", ""))[:50],
-                    )
-                if isinstance(last_entry, dict):
-                    logging_util.debug(
-                        "STORY_HISTORY last entry: actor=%s text_preview=%s...",
-                        last_entry.get("actor", "N/A"),
-                        str(last_entry.get("text", ""))[:50],
-                    )
-            structured_prompt_parts.append(
-                f"STORY_HISTORY (CONTEXT ONLY - RESPOND TO USER_ACTION ABOVE):\n{json.dumps(story_history_data, default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
-            )
-
-        # Add entity tracking
-        if json_data.get("entity_tracking") is not None:
-            structured_prompt_parts.append(
-                f"ENTITY_TRACKING: {json.dumps(json_data.get('entity_tracking', {}), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
-            )
-
-        # Add selected prompts
-        if json_data.get("selected_prompts") is not None:
-            structured_prompt_parts.append(
-                f"SELECTED_PROMPTS: {json.dumps(json_data.get('selected_prompts', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
-            )
-
-        # Add checkpoint block
-        if json_data.get("checkpoint_block") is not None:
-            structured_prompt_parts.append(
-                f"CHECKPOINT_BLOCK: {json_data.get('checkpoint_block', '')}"
-            )
-
-        # Add core memories
-        if json_data.get("core_memories") is not None:
-            structured_prompt_parts.append(
-                f"CORE_MEMORIES: {json.dumps(json_data.get('core_memories', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
-            )
-
-        # Add sequence IDs
-        if json_data.get("sequence_ids") is not None:
-            structured_prompt_parts.append(
-                f"SEQUENCE_IDS: {json.dumps(json_data.get('sequence_ids', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
-            )
-
-        # Add system corrections if present
-        if json_data.get("system_corrections") is not None:
-            structured_prompt_parts.append(
-                f"SYSTEM_CORRECTIONS: {json.dumps(json_data.get('system_corrections', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
-            )
-
-        # Join with double newlines for clear separation
-        prompt_content = "\n\n".join(structured_prompt_parts)
-
-        # Validate the ACTUAL payload we will send to the provider.
-        # Structured prompt can be larger than the serialized JSON due to labels/formatting.
-        prompt_size_bytes = len(prompt_content.encode("utf-8"))
-        if prompt_size_bytes > MAX_PAYLOAD_SIZE:
-            raise PayloadTooLargeError(
-                f"Prompt payload too large: {prompt_size_bytes} bytes exceeds limit of {MAX_PAYLOAD_SIZE} bytes"
-            )
-        
-        # Log the actual prompt being sent (DEBUG level to avoid PII leaks)
-        logging_util.debug(
-            "STRUCTURED PROMPT length=%s chars; preview=%s...",
-            len(prompt_content),
-            prompt_content[:300],
+            "USER_ACTION preview: %s...",
+            str(user_action)[:200],
         )
 
-        # Safe user_action access for logging (handles None/empty string)
-        user_action_preview = (
-            (gemini_request.user_action or "")[:100]
-            if gemini_request.user_action
-            else "story_continuation"
-        )
-
-        llm_response = _call_llm_api(
-            [prompt_content],
-            model_name,
-            f"Structured LLMRequest: {user_action_preview}...",
-            system_instruction_text,
-            provider_name,
-        )
-        
-        # Log the LLM response preview (DEBUG level to avoid log noise)
-        if llm_response:
-            response_text = getattr(llm_response, 'text', '') or getattr(llm_response, 'narrative_text', '') or str(llm_response)[:200]
-            logging_util.debug(
-                f"📥 LLM RESPONSE received (first 300 chars): {response_text[:300]}..."
-            )
-        
-        return llm_response
-
-    # Fallback for non-story requests (initial story, etc) - use standard JSON format
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
     # Uses centralized json_default_serializer from mvp_site.serialization
