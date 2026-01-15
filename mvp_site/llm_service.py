@@ -3068,7 +3068,7 @@ def _check_missing_required_fields(
 
     Required fields for story mode (character mode, not god/dm mode):
     - planning_block: Must be a dict with 'thinking' or 'choices' content
-    - session_header: Must be a non-empty string
+    # NOTE: session_header removed from required fields - cosmetic only, reprompt caused crashes
     - dice_rolls: Must be non-empty when required
     - dice_integrity: Not a field, but a validation flag for fabricated dice
 
@@ -3088,7 +3088,7 @@ def _check_missing_required_fields(
         return []
 
     if not structured_response:
-        return ["planning_block", "session_header"]
+        return ["planning_block"]  # session_header removed - cosmetic only
 
     missing = []
 
@@ -3108,10 +3108,12 @@ def _check_missing_required_fields(
         if not has_content:
             missing.append("planning_block")
 
-    # Check session_header
-    session_header = getattr(structured_response, "session_header", None)
-    if not session_header or not str(session_header).strip():
-        missing.append("session_header")
+    # NOTE: session_header check removed to prevent reprompt loops that crash the server
+    # The session_header is cosmetic and not critical for game state
+    # See: Server crash analysis - reprompt loops exhaust resources
+    # session_header = getattr(structured_response, "session_header", None)
+    # if not session_header or not str(session_header).strip():
+    #     missing.append("session_header")
 
     # Append dice-specific missing fields via helper
     dice_integrity.add_missing_dice_fields(
