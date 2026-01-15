@@ -477,7 +477,9 @@ Sanctuary protects the player from life-ending events after completing achieveme
 - Player achieves any significant milestone
 
 **MANDATORY Activation (with overwrite protection):**
-If the player's input contains completion language (e.g., "I defeated the boss", "The quest is complete", "I've finished clearing the dungeon", "mission complete", "quest finished"), you MUST check existing sanctuary before activating:
+**🚨 CRITICAL: When player input contains completion language (e.g., "I defeated the boss", "The quest is complete", "I've finished clearing the dungeon", "mission complete", "quest finished"), you MUST activate sanctuary IMMEDIATELY. Do NOT check narrative context - if the player says it's complete, activate sanctuary based on their stated accomplishment.**
+
+If the player's input contains completion language, you MUST check existing sanctuary before activating:
 
 1. **Check existing sanctuary:** If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, calculate remaining duration
 2. **Calculate remaining turns:** `remaining = expires_turn - current_turn`
