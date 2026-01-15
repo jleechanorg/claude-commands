@@ -424,6 +424,241 @@ Passive rules that reduce DC based on Divine Rank:
 - Rank 3-4: -15 DC when applicable
 - Rank 5+: -20 DC when applicable
 
+## Epic Spellcasting (10th-12th Level Magic)
+
+**Historical Context:** Before the Fall of Netheril, arcanists achieved magic beyond mortal limits. The Netherese developed 10th and 11th level spells. When Karsus cast the only 12th level spell ever created, he killed the goddess Mystryl and caused magic itself to fail. The reborn goddess Mystra placed a cap on mortal magic at 9th level—but **divine beings can circumvent this restriction**.
+
+### Epic Spell Slot Progression
+
+Divine-tier characters (Level 21+) gain access to epic spell slots. These require **divine power** to fuel—mortals cannot cast them without apotheosis.
+
+| Level | 10th Level Slots | 11th Level Slots | 12th Level Slots | Requirement |
+|-------|------------------|------------------|------------------|-------------|
+| 21-25 | 0 | 0 | 0 | Epic Mortal (no epic slots yet) |
+| 26-30 | 1 | 0 | 0 | Quasi-Deity (Divine Rank 1) |
+| 31-35 | 2 | 1 | 0 | Demigod (Divine Rank 2) |
+| 36-40 | 3 | 2 | 0 | Minor God (Divine Rank 3) |
+| 41-45 | 4 | 2 | 0 | Lesser Deity (Divine Rank 4) |
+| 46-50 | 5 | 3 | 1* | Intermediate Deity (Divine Rank 5) |
+| 51+ | 6 | 4 | 1* | Greater Deity (Divine Rank 6+) |
+
+*12th level slots are **forbidden**. See Karsus's Avatar below.
+
+### Epic Spell DCs and Casting
+
+**Spell Save DC:** 10 + Spell Level + Spellcasting Modifier + Divine Rank
+- 10th level spell: DC 20 + mod + rank (minimum DC 25-30)
+- 11th level spell: DC 21 + mod + rank (minimum DC 26-31)
+- 12th level spell: DC 22 + mod + rank (minimum DC 27-32)
+
+**Casting Time:** Epic spells require extended casting:
+- 10th level: 1 minute (10 rounds)
+- 11th level: 10 minutes
+- 12th level: 1 hour (and Ao's attention)
+
+**Component Costs:** Epic spells require extraordinary components:
+- 10th level: 10,000 GP worth of rare materials consumed
+- 11th level: 50,000 GP + willing sacrifice OR artifact component
+- 12th level: 500,000 GP + divine artifact + **permanent sacrifice**
+
+### 10th Level Spells (Netherese High Magic)
+
+Converted from D&D 3e Epic Level Handbook for 5e divine play:
+
+#### Hellball
+*10th-level evocation*
+- **Casting Time:** 1 minute
+- **Range:** 300 feet (40-foot radius sphere)
+- **Components:** V, S, M (diamond dust worth 10,000 GP)
+- **Duration:** Instantaneous
+- **Effect:** Deals 10d6 fire + 10d6 cold + 10d6 acid + 10d6 lightning damage. DEX save for half. Ignores resistance; treats immunity as resistance.
+- **Dissonance:** +5% if cast in Layer 0 (magic too powerful for mortal mask)
+
+#### Eclipse
+*10th-level transmutation*
+- **Casting Time:** 1 minute
+- **Range:** 1 mile radius centered on self
+- **Duration:** Concentration, up to 8 hours
+- **Effect:** Blocks all sunlight in area. Undead gain advantage on all rolls. Creatures with sunlight sensitivity lose it. Vampires can act freely.
+- **Dissonance:** +3% (subtle effect, but detectable by sun deities)
+
+#### Momento Mori
+*10th-level necromancy*
+- **Casting Time:** 1 minute
+- **Range:** Touch
+- **Duration:** Instantaneous
+- **Effect:** Target makes CON save or dies. On success, takes 20d6 necrotic damage. Cannot be resurrected except by divine intervention or *wish*.
+- **Dissonance:** +8% (death magic draws attention from Kelemvor/Myrkul)
+
+#### Superb Dispelling
+*10th-level abjuration*
+- **Casting Time:** 1 action
+- **Range:** 120 feet
+- **Duration:** Instantaneous
+- **Effect:** Automatically dispel ALL magical effects on target (no roll needed). Dispels effects up to 11th level. Can target artifacts (contested roll vs. artifact DC).
+- **Dissonance:** +4% (Mystra notices weave manipulation)
+
+#### Enslave
+*10th-level enchantment*
+- **Casting Time:** 1 minute
+- **Range:** 60 feet
+- **Duration:** Permanent until dispelled
+- **Effect:** Target makes WIS save or falls under permanent *dominate monster* effect. Target gets new save only when commanded to act against alignment or harm loved ones.
+- **Dissonance:** +10% (divine observers sense the soul-chain)
+
+#### Nailed to the Sky
+*10th-level transmutation*
+- **Casting Time:** 1 minute
+- **Range:** 300 feet
+- **Duration:** Permanent
+- **Effect:** Target is teleported straight up and fixed in place in low orbit. No save if already grappled/restrained; otherwise STR save negates. Target does not need air/food while nailed but is conscious and aware.
+- **Dissonance:** +6% (visible from great distances)
+
+#### Raise Island
+*10th-level transmutation*
+- **Casting Time:** 1 minute
+- **Range:** 1 mile
+- **Duration:** Permanent
+- **Effect:** Raise a landmass up to 1 mile in diameter from the ocean floor to the surface, or elevate existing land to create a floating island (Netherese specialty).
+- **Dissonance:** +15% (massive reality alteration, all deities within 100 miles notice)
+
+### 11th Level Spells (Forbidden Knowledge)
+
+Only the greatest Netherese arcanists ever mastered 11th level magic. These spells approach divine power.
+
+#### Proctiv's Move Mountain
+*11th-level transmutation*
+- **Casting Time:** 10 minutes
+- **Range:** 5 miles
+- **Duration:** Permanent
+- **Effect:** Teleport an entire mountain (up to 10 miles in diameter) to any location on the same plane. The mountain and everything on it arrives intact.
+- **Components:** Diamond worth 50,000 GP, consumed
+- **Dissonance:** +20% (Ao himself notes the disturbance)
+
+#### Mavin's Worldweave
+*11th-level transmutation*
+- **Casting Time:** 10 minutes
+- **Range:** Self (10-mile radius)
+- **Duration:** Permanent
+- **Effect:** Reshape terrain within range. Convert forests to deserts, create rivers, raise/lower elevation by up to 1000 feet. Living creatures are gently displaced.
+- **Components:** Soil from four elemental planes (worth 50,000 GP)
+- **Dissonance:** +18% (nature deities and primordials notice)
+
+#### Tolodine's Killing Wind
+*11th-level evocation*
+- **Casting Time:** 10 minutes
+- **Range:** 1 mile radius
+- **Duration:** Concentration, up to 1 hour
+- **Effect:** Toxic wind fills the area. All creatures must make CON save each round or take 8d8 poison damage and gain one level of exhaustion. Creatures reduced to 6 exhaustion die. Plants wither and die.
+- **Components:** Breath of a dying god (priceless)
+- **Dissonance:** +15% (Chauntea and nature gods will seek vengeance)
+
+#### Shadow's Mantle
+*11th-level illusion*
+- **Casting Time:** 10 minutes
+- **Range:** Self
+- **Duration:** 24 hours
+- **Effect:** Become undetectable by ANY divination magic, including deity-level scrying. You leave no trace in the Weave. Even Ao cannot locate you directly (but may deduce your presence from the "hole" in his perception).
+- **Components:** Shadow of a solar, freely given (worth 100,000 GP equivalent)
+- **Dissonance:** +0% (specifically designed to avoid detection)
+- **Risk:** Shar (goddess of shadows) *always* knows when this spell is cast
+
+#### Genesis
+*11th-level conjuration*
+- **Casting Time:** 1 week
+- **Range:** Extradimensional
+- **Duration:** Permanent
+- **Effect:** Create a new demiplane up to 100 miles in diameter with terrain, climate, and natural laws of your choosing. You are the absolute authority within this space.
+- **Components:** Crystallized time (worth 100,000 GP), piece of the Far Realm
+- **Dissonance:** +25% (creating planes draws Ao's direct attention)
+
+### 12th Level Magic: Karsus's Avatar (THE FORBIDDEN SPELL)
+
+**⚠️ SETTING-DEFINING WARNING: This spell has been cast exactly ONCE in all of history. Its casting destroyed the greatest magical civilization ever known and nearly unraveled reality itself.**
+
+#### Historical Record
+
+In the Year of Sundered Webs (-339 DR), the archwizard **Karsus** cast the only 12th level spell ever created. He sought to steal the divine power of **Mystryl**, goddess of magic, to save Netheril from the phaerimm threat.
+
+**What Happened:**
+1. Karsus successfully stole Mystryl's divine mantle
+2. For a brief moment, Karsus WAS the god of magic
+3. He immediately realized he had no idea how to maintain the Weave
+4. Magic across all Realmspace began failing catastrophically
+5. Mystryl sacrificed herself to prevent total unraveling
+6. ALL magic failed for several minutes—including the mythallar keeping Netheril's cities afloat
+7. Every floating city crashed. Millions died. Netheril ended.
+8. Karsus was petrified, transformed into a weeping stone monument
+9. When magic returned, Mystra (reborn Mystryl) declared: **No spell above 9th level shall ever function for mortals again**
+
+#### Karsus's Avatar
+*12th-level transmutation (FORBIDDEN)*
+
+- **Casting Time:** 1 hour of uninterrupted ritual
+- **Range:** Self → Any deity in the multiverse
+- **Components:** V, S, M (500,000 GP in rare materials, a divine artifact destroyed in casting, the caster's soul [permanently consumed])
+- **Duration:** Instantaneous (irreversible)
+
+**Effect:** You attempt to steal the divine portfolio of a single deity, replacing them as that god.
+
+**Mechanics:**
+1. Choose a target deity (any divine rank)
+2. Make a contested check: Your d20 + Spellcasting Mod + Divine Rank vs. Target's d20 + Divine Rank × 3 + WIS mod
+3. **If you succeed:** You instantly gain their divine rank, portfolio, and divine powers. The target deity DIES permanently (no resurrection, no reformation—true death).
+4. **If you fail:** Your soul is destroyed. You die permanently. The target deity gains +5 Divine Rank permanently from absorbing your failed attempt.
+
+**The Catch (Why It Always Fails):**
+- Even if you "succeed," you inherit divine responsibilities you cannot comprehend
+- Maintaining a divine portfolio requires **eons of practice**
+- The Weave, the planes, or cosmic forces will reject an unprepared usurper
+- **Ao WILL intervene** within 1d4 rounds of the casting
+
+**Ao's Intervention Options:**
+1. Reverse the spell (restores original deity, destroys caster)
+2. Allow it (then watches you fail catastrophically, teaching a cosmic lesson)
+3. Destroy both caster and target (resets that portfolio to "unclaimed")
+4. **Unmake you from history** (you never existed; all memory of you erased)
+
+**Dissonance:** Casting this spell instantly sets Dissonance to 100% AND Apex Attention to 100%. Every deity in existence knows what you attempted.
+
+#### Why This Spell Exists in the Prompt
+
+Players at the highest tiers may learn of Karsus's Avatar. The ONE should:
+
+1. **Allow research** into the spell's history (it's famous)
+2. **Warn extensively** about the consequences
+3. **Never prevent** a determined player from attempting it (free will)
+4. **Enforce consequences** exactly as written—this is the one spell that has NO safe outcome
+5. **Make it narratively epic** if they try—this should be a campaign-ending moment
+
+**Possible Outcomes If Cast:**
+- **Best Case:** You briefly become a god, realize you can't handle it, and Ao undoes everything (you survive but are forever marked)
+- **Expected Case:** You die, the target god survives, and your name becomes a cautionary tale
+- **Karsus Case:** You "succeed," magic breaks, millions die, you become a monument to hubris
+- **Worst Case:** Ao unmakes you from existence—the campaign continues but no one remembers your character ever existed
+
+### Epic Spell Slot Recovery
+
+Epic spell slots recover differently than standard slots:
+
+| Slot Level | Recovery Method |
+|------------|-----------------|
+| 10th | Long rest (8 hours) + 1000 GP material tithe to the Weave |
+| 11th | Extended rest (24 hours) + 10,000 GP material tithe |
+| 12th | **Never recovers** - each casting is a once-per-existence event |
+
+### Epic Spellcasting in Layer 0 (Mortal Mask)
+
+**Critical Rule:** Casting ANY epic spell while wearing Layer 0 (Mortal Mask) triggers immediate Dissonance:
+
+| Spell Level | Automatic Dissonance |
+|-------------|----------------------|
+| 10th | +10% (mortals cannot cast these) |
+| 11th | +20% (reality screams) |
+| 12th | **Mask shatters instantly** (100% Dissonance, all observers see true form) |
+
+**Safe Practice:** Transition to Layer 1 (Persona) or Layer 2 (Source) before casting epic magic.
+
 ## Campaign Phases
 
 ### Phase 1: Ascension (Level 21-30)
