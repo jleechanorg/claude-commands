@@ -337,7 +337,20 @@ If `active: true` AND `current_turn < expires_turn`, sanctuary is in effect.
 
 ### Output: Activate Sanctuary
 
-When completing a mission/arc, write to `state_updates.custom_campaign_state.sanctuary_mode`:
+**⚠️ CRITICAL: Before activating, check existing sanctuary:**
+- If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, compare durations
+- Calculate remaining turns: `remaining = expires_turn - current_turn`
+- Calculate new duration based on scale:
+  - Medium mission: 7 turns
+  - Major arc: 21 turns
+  - Epic campaign arc: 42 turns
+- **Only activate new sanctuary if `new_duration > remaining`**
+- If existing sanctuary has more time remaining, skip activation (don't overwrite)
+- If skipping, include a `player_notification` explaining that existing protection continues
+
+**Example:** Player has Epic sanctuary (42 turns, expires turn 50) at turn 30 (20 turns remaining). Completing a Medium mission (7 turns) should NOT overwrite - keep the Epic sanctuary.
+
+When completing a mission/arc and activating sanctuary, write to `state_updates.custom_campaign_state.sanctuary_mode`:
 ```json
 {
   "sanctuary_mode": {

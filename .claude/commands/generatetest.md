@@ -152,8 +152,9 @@ Input: "for this PR make sure the equipment logic works"
 **Action Steps:**
 1. Create test file in `testing_mcp/test_<focus>.py` (or custom `--test-dir`)
 2. Include self-contained evidence generation (methodology, evidence, notes)
-3. Add `--save-evidence` and `--work-name` CLI arguments to test
-4. Ensure test uses REAL servers (no mocks, no test mode)
+3. Add `--work-name` CLI argument (evidence saving is mandatory, no flag needed)
+4. Always start fresh local server with free port (unless `--server` provided)
+5. Ensure test uses REAL servers (no mocks, no test mode)
 
 **Generated Test Structure:**
 ```python
@@ -188,10 +189,11 @@ from testing_mcp.lib.campaign_utils import create_campaign, process_action
 from testing_mcp.lib.model_utils import settings_for_model, update_user_settings
 
 # Test configuration
-SERVER_URL = "http://localhost:8082"  # Real local server
 WORK_NAME = "[work_name]"
 DEFAULT_MODEL = "gemini-3-flash-preview"  # Pin model to avoid fallback noise
 
+# ✅ MANDATORY: Import server utilities for fresh server startup
+from testing_mcp.lib.server_utils import start_local_mcp_server, pick_free_port
 
 # ❌ REMOVED: get_next_iteration() - use lib/evidence_utils.get_evidence_dir() instead
 # ❌ REMOVED: get_evidence_dir() - use lib/evidence_utils.get_evidence_dir() instead
@@ -243,19 +245,34 @@ def run_tests(server_url: str) -> list:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--server", default=SERVER_URL)
-    parser.add_argument("--save-evidence", action="store_true",
-                        help="Save evidence to /tmp structure")
     parser.add_argument("--work-name", default=WORK_NAME)
+    parser.add_argument("--server", help="Optional: use existing server URL (default: start fresh)")
     args = parser.parse_args()
 
-    # Run tests against REAL server
-    results = run_tests(args.server)
+    # ✅ MANDATORY: Always start fresh local server with free port
+    local_server = None
+    server_url = args.server
+    
+    if not server_url:
+        # Start fresh server on free port
+        port = pick_free_port()
+        print(f"🚀 Starting fresh local MCP server on port {port}...")
+        local_server = start_local_mcp_server(port)
+        server_url = local_server.base_url
+        
+        # Wait for server to be ready
+        client = MCPClient(server_url)
+        client.wait_healthy(timeout_s=30.0)
+        print(f"✅ Server ready at {server_url}")
 
-    if args.save_evidence:
-        # ✅ Use lib utilities for evidence generation
+    try:
+        # Run tests against REAL server
+        results = run_tests(server_url)
+
+        # ✅ MANDATORY: Always save evidence (no optional flag)
         evidence_dir = get_evidence_dir(args.work_name)
-        provenance = capture_provenance(args.server)
+        server_pid = local_server.pid if local_server else None
+        provenance = capture_provenance(server_url, server_pid=server_pid)
 
         # Create evidence bundle using shared lib
         bundle_files = create_evidence_bundle(
@@ -263,10 +280,16 @@ def main():
             test_name=args.work_name,
             results={"scenarios": results, "summary": {"total_scenarios": len(results)}},
             provenance=provenance,
+            server_log_path=local_server.log_path if local_server else None,
         )
 
         print(f"📦 Evidence bundle created: {evidence_dir}")
         print(f"   Files: {len(bundle_files)} with checksums")
+    finally:
+        # Clean up local server if we started it
+        if local_server:
+            print("🛑 Stopping local server...")
+            local_server.stop()
 
 
 if __name__ == "__main__":
@@ -367,10 +390,11 @@ bundle_files = create_evidence_bundle(
 # - SHA256 checksums for all files
 ```
 
-### 2. CLI Arguments for Evidence
+### 2. CLI Arguments
 ```python
-parser.add_argument("--save-evidence", action="store_true")
 parser.add_argument("--work-name", default="<auto_generated>")
+parser.add_argument("--server", help="Optional: use existing server URL (default: start fresh)")
+# Note: Evidence saving is MANDATORY - no flag needed
 ```
 
 ### 3. Real Mode Verification
@@ -650,8 +674,8 @@ for notation in ("1d6", "1d20"):
 
 - [ ] Test file created in `testing_mcp/` (or custom dir)
 - [ ] Self-contained evidence generation (no external dependencies)
-- [ ] `write_with_checksum()` helper included
-- [ ] `get_evidence_dir()` helper included
+- [ ] **Fresh local server started** with free port (unless --server provided)
+- [ ] **Evidence ALWAYS saved** (no optional flag)
 - [ ] Real mode verified (no mocks, no TESTING=true)
 - [ ] Git provenance captured
 - [ ] All results derived from actual data
