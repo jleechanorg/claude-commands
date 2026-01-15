@@ -2667,17 +2667,21 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         rewards_corrections = prevention_extras.get("rewards_corrections", [])
         extra_warnings = prevention_extras.get("system_warnings", [])
         
-        # Extract system_warnings from LLM response debug_info (e.g., missing planning block, missing fields)
-        llm_system_warnings = []
-        if llm_response_obj and llm_response_obj.structured_response:
-            debug_info = llm_response_obj.structured_response.debug_info
-            if isinstance(debug_info, dict):
-                llm_warnings = debug_info.get("system_warnings", [])
-                if isinstance(llm_warnings, list):
-                    llm_system_warnings = llm_warnings
+        # Extract server-generated system_warnings from LLM response debug_info
+        # SECURITY: Only read _server_system_warnings (server-controlled) to prevent LLM spoofing
+        # LLM-provided system_warnings in debug_info are ignored for security
+        server_system_warnings = []
+        if llm_response_obj and hasattr(llm_response_obj, "structured_response"):
+            structured_response = llm_response_obj.structured_response
+            if structured_response:
+                debug_info = getattr(structured_response, "debug_info", None)
+                if isinstance(debug_info, dict):
+                    server_warnings = debug_info.get("_server_system_warnings", [])
+                    if isinstance(server_warnings, list):
+                        server_system_warnings = server_warnings
         
         system_warnings = (
-            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings + llm_system_warnings
+            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings + server_system_warnings
         )
 
         # Deduplicate warnings while preserving order

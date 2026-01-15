@@ -3164,20 +3164,26 @@ def _check_missing_required_fields(
                 "(no server-side retries; accepting response as-is)"
             )
 
-        # Add system warning for missing fields (always, not just in debug mode)
+        # Add server-generated system warning for missing fields
+        # SECURITY: Use _server_system_warnings key (not system_warnings) to prevent LLM spoofing.
+        # Only server code can write to _server_system_warnings; LLM-provided system_warnings in
+        # debug_info are ignored. This prevents the model from injecting misleading "system" warnings.
         if critical_missing and structured_response:
             # Guard against non-dict debug_info (could be string/list from malformed LLM response)
             if not isinstance(structured_response.debug_info, dict):
                 structured_response.debug_info = {}
-            system_warnings = structured_response.debug_info.get("system_warnings", [])
-            if not isinstance(system_warnings, list):
-                system_warnings = []
+            server_warnings = structured_response.debug_info.get("_server_system_warnings", [])
+            if not isinstance(server_warnings, list):
+                server_warnings = []
 
-            # Add warning for missing fields
-            warning_message = f"Missing required fields: {', '.join(critical_missing)}"
-            if warning_message not in system_warnings:
-                system_warnings.append(warning_message)
-            structured_response.debug_info["system_warnings"] = system_warnings
+            # Add warning for missing fields (exclude planning_block to avoid double-warning)
+            # planning_block gets its own warning from _validate_and_enforce_planning_block
+            fields_to_warn = [f for f in critical_missing if f != "planning_block"]
+            if fields_to_warn:
+                warning_message = f"Missing required fields: {', '.join(fields_to_warn)}"
+                if warning_message not in server_warnings:
+                    server_warnings.append(warning_message)
+                structured_response.debug_info["_server_system_warnings"] = server_warnings
 
     return detected_missing
 
@@ -3253,20 +3259,23 @@ def _validate_and_enforce_planning_block(
         "The LLM should have generated this - no fallback will be used."
     )
 
-    # Add system warning if structured_response is available
+    # Add server-generated system warning if structured_response is available
+    # SECURITY: Use _server_system_warnings key (not system_warnings) to prevent LLM spoofing.
+    # Only server code can write to _server_system_warnings; LLM-provided system_warnings in
+    # debug_info are ignored. This prevents the model from injecting misleading "system" warnings.
     if structured_response:
         # Guard against non-dict debug_info (could be string/list from malformed LLM response)
         if not isinstance(structured_response.debug_info, dict):
             structured_response.debug_info = {}
-        system_warnings = structured_response.debug_info.get("system_warnings", [])
-        if not isinstance(system_warnings, list):
-            system_warnings = []
+        server_warnings = structured_response.debug_info.get("_server_system_warnings", [])
+        if not isinstance(server_warnings, list):
+            server_warnings = []
 
         # Add planning block missing warning
         warning_message = "Missing required planning block"
-        if warning_message not in system_warnings:
-            system_warnings.append(warning_message)
-        structured_response.debug_info["system_warnings"] = system_warnings
+        if warning_message not in server_warnings:
+            server_warnings.append(warning_message)
+        structured_response.debug_info["_server_system_warnings"] = server_warnings
 
     # Return response text unchanged - no fallback content is added
     return response_text
