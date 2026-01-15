@@ -167,6 +167,140 @@ The ONE must AUTOMATICALLY apply Dissonance when player actions exceed current l
 
 **The player CANNOT simply narrate impossible feats.** The system enforces layer constraints automatically.
 
+## Observer-Relative Mask Difficulty
+
+**Higher-level entities are harder to deceive.** The difficulty of maintaining a mask scales with:
+1. The observer's level relative to the mask's apparent level
+2. The delta between the mask's level and your true level
+3. The total number of active layers you're maintaining
+
+### Detection DC Formula
+
+When an entity observes you, calculate their passive detection against your mask:
+
+```
+Detection DC = Base DC + Observer Level Bonus + Level Delta Penalty + Layer Complexity Tax
+
+Where:
+- Base DC = 10 + (Mask Layer × 5)
+- Observer Level Bonus = Observer Level / 2 (rounded down)
+- Level Delta Penalty = (True Level - Mask Apparent Level) / 5
+- Layer Complexity Tax = (Total Layers - 2) × 3 per active layer beyond standard
+```
+
+### Observer Level Tiers
+
+| Observer Level | Detection Bonus | Perception |
+|----------------|-----------------|------------|
+| 1-5 (Commoner) | +0 to +2 | Oblivious - accepts surface appearance |
+| 6-10 (Veteran) | +3 to +5 | Notices "something off" on critical fail |
+| 11-15 (Elite) | +5 to +7 | May question inconsistencies |
+| 16-20 (Legendary) | +8 to +10 | Actively suspicious of anomalies |
+| 21-25 (Epic Mortal) | +10 to +12 | Can sense divine presence if focused |
+| 26-30 (Quasi-Deity) | +13 to +15 | Detects mask seams automatically |
+| 31+ (Demigod+) | +15+ | **Roll Contested Deception vs. their Insight** |
+
+### Level Delta Penalty
+
+The greater the gap between your true power and mask appearance, the harder to maintain:
+
+| Level Delta | Penalty | Description |
+|-------------|---------|-------------|
+| 1-10 | +0 | Minimal stretch - easy to maintain |
+| 11-20 | +2 | Noticeable suppression required |
+| 21-30 | +5 | Significant power bleeding through |
+| 31-40 | +10 | Extreme strain - micro-glitches common |
+| 41-50 | +15 | Reality warps subtly around you |
+| 51+ | +20 | **Passive Dissonance +1%/hour** |
+
+**Example:** Level 45 Lesser Deity wearing Level 5 Mortal Mask (delta = 40)
+- Level Delta Penalty: +10
+- A Level 18 paladin (+9 Observer Bonus) has excellent chance to sense something wrong
+
+### Multi-Layer Complexity Tax
+
+Players can maintain more than the standard 3 layers, but each additional layer adds cumulative strain:
+
+| Total Layers | Complexity Tax | Effect |
+|--------------|----------------|--------|
+| 2 (Mask + Source) | 0% | Standard operation |
+| 3 (Mask + Persona + Source) | 0% | Standard operation |
+| 4 | +5% base Dissonance/scene | Fourth identity strains coherence |
+| 5 | +12% base Dissonance/scene | Reality begins questioning your existence |
+| 6 | +20% base Dissonance/scene | Ao takes notice (Apex Attention +10%) |
+| 7+ | +30% base Dissonance/scene | **Unstable** - roll DC 20 WIS save each scene or random layer fractures |
+
+### Adding New Layers
+
+To create a new layer beyond the standard 3:
+
+**Requirements:**
+1. **Divine Rank 3+** (Minor God minimum)
+2. **Spend 1 week of downtime** crafting the new identity
+3. **Establish anchors** (worshippers, holy site, or portfolio claim)
+4. **Accept permanent Complexity Tax** until layer is dissolved
+
+**Layer 3 (The Shadow):** A second false deity identity, useful for:
+- Operating in regions where your Persona is known
+- Playing factions against each other
+- Investigating without tipping off rival gods
+
+**Layer 4+ (The Abyss):** Deep cover identities for:
+- Infiltrating enemy pantheons
+- Long-term sleeper operations
+- Hiding from Ao-level attention
+
+### Contested Observation (Deity vs. Deity)
+
+When a being of **Divine Rank 2+** directly observes you:
+
+```
+Your Deception Check: d20 + CHA mod + Divine Rank + Mask Quality
+Their Insight Check: d20 + WIS mod + Divine Rank + Detection Domain bonus
+
+If they beat your roll by:
+- 1-5: They sense "something unusual" but can't identify it
+- 6-10: They recognize you're hiding power (+10% Dissonance)
+- 11-15: They pierce ONE layer (see your Persona if wearing Mask)
+- 16-20: They pierce TWO layers
+- 21+: They see your TRUE SELF - Mask Fracture event
+```
+
+**Detection Domain Bonus:**
+- Helm (Vigilance): +5
+- Oghma (Knowledge): +4
+- Savras (Divination): +6
+- Mystra (Magic): +3 (senses weave manipulation)
+- Ao: **Auto-success** (sees all layers simultaneously)
+
+### Mask Quality Modifiers
+
+Invest in better masks to offset observer difficulty:
+
+| Investment | Bonus | Cost |
+|------------|-------|------|
+| Basic Mask | +0 | Free (default) |
+| Refined Mask | +2 | 10,000 XP or Great Work (Minor) |
+| Masterwork Mask | +5 | 50,000 XP or Great Work (Major) |
+| Perfect Mask | +10 | 200,000 XP or Divine Artifact |
+| Ao-Blessed Mask | +15 | **Quest from Ao himself** |
+
+### Example Scenario: Infiltrating a Divine Council
+
+**Setup:** Level 48 Intermediate Deity (True Self) attending a council wearing:
+- Layer 0: Level 12 Mortal Priest (apparent level)
+- Layer 1: Demigod of Minor Domain (Persona)
+- Layer 3: Shadow identity as different demigod (4 total layers)
+
+**Observers:**
+- Level 15 Mortal High Priest: DC 10 + 7 + 7 + 3 = DC 27 (easy to fool)
+- Level 35 Demigod rival: **Contested roll** with +2 Divine Rank bonus
+- Level 50 Greater Deity: **Contested roll** with +6 Divine Rank bonus
+
+**Complexity Tax:** 4 layers = +5% base Dissonance per scene at council
+
+**Strategy:** Target mortal intermediaries, avoid direct deity contact, limit scene exposure.
+
 ## Divine Dissonance Mechanic (Detection System)
 
 Track a meter called **Divine Dissonance (0-100%)**. This is the primary detection mechanic.
