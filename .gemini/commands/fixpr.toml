@@ -631,7 +631,22 @@ Examine the collected data to understand what needs fixing:
   ```bash
   set -o pipefail
   # Extract specific failing tests and error messages (pytest + Python errors)
-  gh api "repos/$OWNER/$REPO/actions/jobs/$job_id/logs" | \n    grep -Ei \n      -e '^FAILURES?' \n      -e '^=+ FAILURES =+' \n      -e 'collected [0-9]+ items' \n      -e '===+ [0-9]+ (failed|errors?|x?failed|x?passed)' \n      -e 'E\\s+AssertionError' \n      -e 'Traceback \\(most recent call last\\):' \n      -e 'ModuleNotFoundError:' \n      -e 'ImportError:' \n      -e 'NameError:' \n      -e 'TypeError:' \n      -e '\\.py[:,]?\\d+(:\\d+)?' \n    -A 3 -B 3
+  # NOTE: Multi-line shell commands use backslash continuation (\\) for TOML compatibility
+  # rather than actual line breaks to ensure proper parsing by TOML libraries.
+  gh api "repos/$OWNER/$REPO/actions/jobs/$job_id/logs" | \\
+    grep -Ei \\
+      -e '^FAILURES?' \\
+      -e '^=+ FAILURES =+' \\
+      -e 'collected [0-9]+ items' \\
+      -e '===+ [0-9]+ (failed|errors?|x?failed|x?passed)' \\
+      -e 'E\\s+AssertionError' \\
+      -e 'Traceback \\(most recent call last\\):' \\
+      -e 'ModuleNotFoundError:' \\
+      -e 'ImportError:' \\
+      -e 'NameError:' \\
+      -e 'TypeError:' \\
+      -e '\\.py[:,]?\\d+(:\\d+)?' \\
+    -A 3 -B 3
 
   # Common patterns to identify:
   # - ModuleNotFoundError: Missing imports or dependencies

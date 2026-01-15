@@ -179,8 +179,13 @@ if ! echo "$ARGS" | grep -qE '([Pp][Rr][#[:space:]]*|#)[0-9]+'; then
 else
     # Extract PR number from arguments using the improved pattern
     # Fixed: Use two-step extraction to get only the number portion from valid PR patterns
+    # NOTE: Multi-line shell commands use backslash continuation (\\) for TOML compatibility
+    # rather than actual line breaks to ensure proper parsing by TOML libraries.
     PR_NUMBER=$(
-      echo "$ARGS" \n      | grep -oE '([Pp][Rr][#[:space:]]*|#)[0-9]+' \n      | grep -oE '[0-9]+' \n      | head -1
+      echo "$ARGS" \\
+      | grep -oE '([Pp][Rr][#[:space:]]*|#)[0-9]+' \\
+      | grep -oE '[0-9]+' \\
+      | head -1
     )
 fi
 

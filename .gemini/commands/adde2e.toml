@@ -76,11 +76,11 @@ execution_mode: immediate
 **Action Steps:**
 1. **Create test file with standard structure**:
    ```python
-   """
+   \"\"\"
    End-to-end integration test for {feature description}.
    Only mocks external services (Gemini API and Firestore DB) at the lowest level.
    Tests the full flow from API endpoint through all service layers.
-   """
+   \"\"\"
 
    from __future__ import annotations
 
@@ -98,10 +98,10 @@ execution_mode: immediate
 
 
    class Test{FeatureName}End2End(unittest.TestCase):
-       """Test {feature} through the full application stack."""
+       \"\"\"Test {feature} through the full application stack.\"\"\"
 
        def setUp(self):
-           """Set up test client."""
+           \"\"\"Set up test client.\"\"\"
            self.app = main.create_app()
            self.app.config["TESTING"] = True
            self.client = self.app.test_client()
@@ -123,7 +123,7 @@ execution_mode: immediate
        @patch("mvp_site.firestore_service.get_db")
        @patch("mvp_site.llm_service._call_llm_api_with_llm_request")
        def test_{feature}_success(self, mock_llm_request, mock_get_db):
-           """Test successful {feature} using fake services."""
+           \"\"\"Test successful {feature} using fake services.\"\"\"
            # Set up fake Firestore
            fake_firestore = FakeFirestoreClient()
            mock_get_db.return_value = fake_firestore

@@ -332,8 +332,14 @@ if [ -n "$CHANGED_FILES" ]; then
 fi
 
 # Update analysis file
+# NOTE: Multi-line shell commands use backslash continuation (\\) for TOML compatibility
+# rather than actual line breaks to ensure proper parsing by TOML libraries.
 
-jq --argjson security "$(printf '%s\n' "${SECURITY_ISSUES[@]}" | jq -R . | jq -s .)" \n   --argjson performance "$(printf '%s\n' "${PERFORMANCE_ISSUES[@]}" | jq -R . | jq -s .)" \n   --argjson quality "$(printf '%s\n' "${QUALITY_ISSUES[@]}" | jq -R . | jq -s .)" \n   '.vulnerabilities = $security | .performance = $performance | .quality = $quality' \n   "$ANALYSIS_FILE" > "$ANALYSIS_FILE.tmp" && mv "$ANALYSIS_FILE.tmp" "$ANALYSIS_FILE"
+jq --argjson security "$(printf '%s\n' "${SECURITY_ISSUES[@]}" | jq -R . | jq -s .)" \\
+   --argjson performance "$(printf '%s\n' "${PERFORMANCE_ISSUES[@]}" | jq -R . | jq -s .)" \\
+   --argjson quality "$(printf '%s\n' "${QUALITY_ISSUES[@]}" | jq -R . | jq -s .)" \\
+   '.vulnerabilities = $security | .performance = $performance | .quality = $quality' \\
+   "$ANALYSIS_FILE" > "$ANALYSIS_FILE.tmp" && mv "$ANALYSIS_FILE.tmp" "$ANALYSIS_FILE"
 
 echo "✅ Phase 1 complete: Analysis and assessment finished"
 log_operation "Phase 1 completed successfully"
