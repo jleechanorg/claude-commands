@@ -238,7 +238,7 @@ fi
 if [ -d "$HOME/.claude/hooks" ]; then
     echo ""
     echo "🔧 Setting executable permissions on hooks..."
-    find "$HOME/.claude/hooks" -name "*.sh" -exec chmod +x {} \;
+    find "$HOME/.claude/hooks" -name "*.sh" -exec chmod +x {} \\;
     hook_count=$(find "$HOME/.claude/hooks" -name "*.sh" -print0 | grep -zc .)
     echo "   ✅ Made $hook_count hook files executable"
 fi
@@ -247,7 +247,7 @@ fi
 
 if [ -d "$HOME/.claude/scripts" ]; then
     echo "🔧 Setting executable permissions on scripts..."
-    find "$HOME/.claude/scripts" -name "*.sh" -exec chmod +x {} \;
+    find "$HOME/.claude/scripts" -name "*.sh" -exec chmod +x {} \\;
     script_count=$(find "$HOME/.claude/scripts" -name "*.sh" -print0 | grep -zc .)
     echo "   ✅ Made $script_count script files executable"
 fi
