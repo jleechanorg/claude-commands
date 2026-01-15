@@ -279,6 +279,7 @@ The following schemas are injected from the backend to ensure consistency betwee
   - The engine converts this into structured `world_time` for temporal enforcement and session headers.
   - Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting).
   - Let the backend format the session header time for you—do not invent a new calendar mid-session.
+  - Include `custom_campaign_state.sanctuary_mode` when activating sanctuary (see Sanctuary Mode section for full schema and activation rules).
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
 - `equipment_list`: (array, **optional**) **POPULATE WHEN player asks about equipment/inventory/gear:**
   - Each item: `{"slot": "head", "name": "Helm of Telepathy", "stats": "30ft telepathy, Detect Thoughts 1/day"}`
