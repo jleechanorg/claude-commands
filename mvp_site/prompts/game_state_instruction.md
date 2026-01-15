@@ -226,9 +226,11 @@ The following schemas are injected from the backend to ensure consistency betwee
   }
   ```
 
-  **DEPRECATED FIELDS** (still accepted, will be removed in future cleanup PR):
-  - `dice_rolls`: Use `action_resolution.mechanics.rolls` instead. **Note:** For complete responses during the transitional period, include both `action_resolution` (required) and legacy `dice_rolls`/`dice_audit_events` (optional but recommended for backward compatibility). These fields are still validated and serialized by the backend.
-  - `dice_audit_events`: Use `action_resolution.mechanics.audit_events` instead. **Note:** See `dice_rolls` note above.
+  **DEPRECATED FIELDS** (DO NOT populate directly - backend extracts automatically):
+  - `dice_rolls`: **DO NOT populate this field directly.** The backend automatically extracts dice rolls from `action_resolution.mechanics.rolls` and formats them for UI display. Put ALL dice rolls in `action_resolution.mechanics.rolls` only.
+  - `dice_audit_events`: **DO NOT populate this field directly.** The backend automatically extracts audit events from `action_resolution.mechanics.audit_events`. Put ALL audit events in `action_resolution.mechanics.audit_events` only.
+  
+  **Single Source of Truth:** All dice rolls and audit events MUST be in `action_resolution.mechanics` only. The backend handles extraction and formatting for backward compatibility.
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
   - The engine converts this into structured `world_time` for temporal enforcement and session headers.

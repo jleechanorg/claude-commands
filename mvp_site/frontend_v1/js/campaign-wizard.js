@@ -1,3 +1,4 @@
+/* global UIUtils */
 /**
  * Campaign Wizard - Milestone 4 Interactive Features
  * Multi-step guided campaign creation with progress tracking
@@ -166,6 +167,7 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
     this.totalSteps = 3;
     this.formData = {};
     this.isEnabled = false;
+    this.editablePreviewController = null;
     this.init();
   }
 
@@ -288,6 +290,7 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
     this.currentStep = 1;
 
     this.setupStepNavigation();
+    this.setupEditablePreview();
     this.populateFromOriginalForm();
   }
 
@@ -488,26 +491,59 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
           <!-- Step 3: Launch -->
           <div class="wizard-step" data-step="3">
             <h3 class="step-title">🚀 Ready to Launch!</h3>
-            <p class="step-description">Review your settings and start your adventure.</p>
+            <p class="step-description">Review your settings and start your adventure. <span class="text-muted">(Click any field to edit, click outside to save, press Escape to cancel)</span></p>
 
             <div class="campaign-preview card">
               <div class="card-body">
                 <h5 class="card-title">Campaign Summary</h5>
                 <div class="preview-content">
-                  <div class="preview-item">
-                    <strong>Title:</strong> <span id="preview-title">My Epic Adventure</span>
+                  <div class="preview-item editable-preview" data-field="title">
+                    <strong>Title:</strong>
+                    <span id="preview-title" class="preview-value">My Epic Adventure</span>
+                    <input type="text" id="edit-title" class="form-control form-control-sm edit-input d-none" />
+                    <button type="button" class="btn btn-sm btn-link edit-btn" title="Edit title"><i class="fas fa-pencil-alt"></i></button>
                   </div>
-                  <div class="preview-item">
-                    <strong>Character:</strong> <span id="preview-character">Auto-generated</span>
+                  <div class="preview-item editable-preview" data-field="character">
+                    <strong>Character:</strong>
+                    <span id="preview-character" class="preview-value">Auto-generated</span>
+                    <input type="text" id="edit-character" class="form-control form-control-sm edit-input d-none" />
+                    <button type="button" class="btn btn-sm btn-link edit-btn" title="Edit character"><i class="fas fa-pencil-alt"></i></button>
                   </div>
-                  <div class="preview-item">
-                    <strong>Description:</strong> <span id="preview-description">A brave knight...</span>
+                  <div class="preview-item editable-preview" data-field="description">
+                    <strong>Description:</strong>
+                    <span id="preview-description" class="preview-value">A brave knight...</span>
+                    <textarea id="edit-description" class="form-control form-control-sm edit-input d-none" rows="3"></textarea>
+                    <button type="button" class="btn btn-sm btn-link edit-btn" title="Edit description"><i class="fas fa-pencil-alt"></i></button>
                   </div>
-                  <div class="preview-item">
-                    <strong>AI Personalities:</strong> <span id="preview-personalities">Narrative, Mechanical, Calibration</span>
+                  <div class="preview-item editable-preview" data-field="personalities">
+                    <strong>AI Personalities:</strong>
+                    <span id="preview-personalities" class="preview-value">Narrative, Mechanical, Calibration</span>
+                    <div id="edit-personalities" class="edit-checkboxes d-none">
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="edit-narrative" checked disabled>
+                        <label class="form-check-label" for="edit-narrative">Narrative</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="edit-mechanics">
+                        <label class="form-check-label" for="edit-mechanics">Mechanics</label>
+                      </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-link edit-btn" title="Edit AI personalities"><i class="fas fa-pencil-alt"></i></button>
                   </div>
-                  <div class="preview-item">
-                    <strong>Options:</strong> <span id="preview-options">Companions, Default World</span>
+                  <div class="preview-item editable-preview" data-field="options">
+                    <strong>Options:</strong>
+                    <span id="preview-options" class="preview-value">Companions, Default World</span>
+                    <div id="edit-options" class="edit-checkboxes d-none">
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="edit-companions">
+                        <label class="form-check-label" for="edit-companions">Companions</label>
+                      </div>
+                      <div class="form-check form-check-inline" id="edit-default-world-container">
+                        <input class="form-check-input" type="checkbox" id="edit-default-world">
+                        <label class="form-check-label" for="edit-default-world">Default World</label>
+                      </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-link edit-btn" title="Edit options"><i class="fas fa-pencil-alt"></i></button>
                   </div>
                 </div>
               </div>
@@ -945,9 +981,6 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
   }
 
   collectFormData() {
-    const isDragonKnight = document.getElementById(
-      'wizard-dragon-knight-campaign',
-    )?.checked;
     const useDefaultWorld = document.getElementById(
       'wizard-default-world',
     )?.checked;
@@ -1214,6 +1247,328 @@ You begin with Level 1 Paladin abilities: Divine Sense (4 uses) and Lay on Hands
     // Update UI
     this.updateUI();
     this.updatePreview();
+  }
+
+  /**
+   * Setup editable preview fields on Step 3
+   * Allows users to edit campaign selections before submission
+   */
+  setupEditablePreview() {
+    // Clean up previous listeners to prevent accumulation
+    if (this.editablePreviewController) {
+      this.editablePreviewController.abort();
+    }
+    this.editablePreviewController = new AbortController();
+    const listenerOptions = { signal: this.editablePreviewController.signal };
+
+    const editableItems = document.querySelectorAll('.editable-preview');
+
+    if (editableItems.length === 0) return;
+
+    editableItems.forEach((item) => {
+      const field = item.dataset.field;
+      const editBtn = item.querySelector('.edit-btn');
+      const previewValue = item.querySelector('.preview-value');
+      const editInput = item.querySelector('.edit-input, .edit-checkboxes');
+
+      if (!editBtn || !previewValue || !editInput) return;
+
+      // Click on edit button to toggle edit mode
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleEditMode(item, field, true);
+      }, listenerOptions);
+
+      // Click on preview value to enter edit mode
+      previewValue.addEventListener('click', () => {
+        this.toggleEditMode(item, field, true);
+      }, listenerOptions);
+
+      // Handle input blur to exit edit mode (for text inputs)
+      if (editInput.tagName === 'INPUT' || editInput.tagName === 'TEXTAREA') {
+        editInput.addEventListener('blur', (e) => {
+          const nextTarget = e.relatedTarget;
+          if (nextTarget && item.contains(nextTarget)) {
+            return;
+          }
+          this.toggleEditMode(item, field, false);
+        }, listenerOptions);
+
+        editInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && editInput.tagName === 'INPUT') {
+            e.preventDefault();
+            this.toggleEditMode(item, field, false);
+          }
+          if (e.key === 'Escape') {
+            this.toggleEditMode(item, field, false, true); // Cancel
+          }
+        }, listenerOptions);
+      }
+
+      // Handle checkbox changes for personalities and options
+      if (editInput.classList.contains('edit-checkboxes')) {
+        editInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            this.toggleEditMode(item, field, false, true);
+          }
+        }, listenerOptions);
+
+        editInput.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+          checkbox.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              this.toggleEditMode(item, field, false, true);
+            }
+          }, listenerOptions);
+
+          checkbox.addEventListener('change', () => {
+            this.syncCheckboxesToForm(field);
+            this.updatePreviewFromForm(field);
+          }, listenerOptions);
+        });
+      }
+    });
+
+    // Close edit mode when clicking outside (with cleanup signal)
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.editable-preview')) {
+        document.querySelectorAll('.editable-preview.editing').forEach((item) => {
+          const field = item.dataset.field;
+          this.toggleEditMode(item, field, false);
+        });
+      }
+    }, listenerOptions);
+  }
+
+  toggleEditMode(item, field, enterEdit, cancel = false) {
+    const previewValue = item.querySelector('.preview-value');
+    const editInput = item.querySelector('.edit-input, .edit-checkboxes');
+    const editBtn = item.querySelector('.edit-btn');
+
+    if (!previewValue || !editInput) return;
+
+    if (enterEdit && !item.classList.contains('editing')) {
+      document.querySelectorAll('.editable-preview.editing').forEach((editingItem) => {
+        if (editingItem !== item) {
+          const editingField = editingItem.dataset.field;
+          this.toggleEditMode(editingItem, editingField, false);
+        }
+      });
+
+      // Enter edit mode
+      item.classList.add('editing');
+      previewValue.classList.add('d-none');
+      editInput.classList.remove('d-none');
+      editBtn.classList.add('d-none');
+
+      // Populate input with current value
+      if (editInput.tagName === 'INPUT' || editInput.tagName === 'TEXTAREA') {
+        editInput.value = this.getFormValueForField(field);
+        editInput.focus();
+        editInput.select();
+      } else if (editInput.classList.contains('edit-checkboxes')) {
+        this.storeCheckboxSnapshot(item, field);
+        this.populateEditCheckboxes(field);
+        // Focus first enabled checkbox so Escape key works immediately
+        const firstCheckbox = editInput.querySelector('input[type="checkbox"]:not(:disabled)');
+        if (firstCheckbox) {
+          firstCheckbox.focus();
+        }
+      }
+    } else if (!enterEdit && item.classList.contains('editing')) {
+      // Exit edit mode
+      item.classList.remove('editing');
+      previewValue.classList.remove('d-none');
+      editInput.classList.add('d-none');
+      editBtn.classList.remove('d-none');
+
+      if (!cancel && (editInput.tagName === 'INPUT' || editInput.tagName === 'TEXTAREA')) {
+        // Save value back to form
+        this.syncEditToForm(field, editInput.value);
+      }
+
+      if (!cancel && editInput.classList.contains('edit-checkboxes')) {
+        this.syncCheckboxesToForm(field);
+      }
+
+      if (cancel && editInput.classList.contains('edit-checkboxes')) {
+        this.restoreCheckboxSnapshot(item, field);
+      }
+
+      // Update preview
+      this.updatePreviewFromForm(field);
+    }
+  }
+
+  getFormValueForField(field) {
+    switch (field) {
+      case 'title':
+        return document.getElementById('wizard-campaign-title')?.value || '';
+      case 'character':
+        return document.getElementById('wizard-character-input')?.value || '';
+      case 'description':
+        return document.getElementById('wizard-description-input')?.value || '';
+      default:
+        return '';
+    }
+  }
+
+  syncEditToForm(field, value) {
+    switch (field) {
+      case 'title': {
+        const titleInput = document.getElementById('wizard-campaign-title');
+        if (titleInput) titleInput.value = value;
+        break;
+      }
+      case 'character': {
+        const charInput = document.getElementById('wizard-character-input');
+        if (charInput) charInput.value = value;
+        break;
+      }
+      case 'description': {
+        const descInput = document.getElementById('wizard-description-input');
+        if (descInput) descInput.value = value;
+        break;
+      }
+    }
+  }
+
+  populateEditCheckboxes(field) {
+    if (field === 'personalities') {
+      const wizardMechanics = document.getElementById('wizard-mechanics');
+      const editMechanics = document.getElementById('edit-mechanics');
+      // Narrative is always enabled (checked + disabled) in the UI, so it is not synced here.
+      if (wizardMechanics && editMechanics) {
+        editMechanics.checked = wizardMechanics.checked;
+      }
+    } else if (field === 'options') {
+      const isDragonKnight = document.getElementById('wizard-dragon-knight-campaign')?.checked;
+      const wizardCompanions = document.getElementById('wizard-companions');
+      const wizardDefaultWorld = document.getElementById('wizard-default-world');
+      const editCompanions = document.getElementById('edit-companions');
+      const editDefaultWorld = document.getElementById('edit-default-world');
+      const defaultWorldContainer = document.getElementById('edit-default-world-container');
+
+      if (wizardCompanions && editCompanions) {
+        editCompanions.checked = wizardCompanions.checked;
+      }
+      if (wizardDefaultWorld && editDefaultWorld) {
+        editDefaultWorld.checked = wizardDefaultWorld.checked;
+      }
+      // Hide default world option for Dragon Knight campaigns
+      if (defaultWorldContainer) {
+        defaultWorldContainer.style.display = isDragonKnight ? 'none' : 'inline-flex';
+      }
+    }
+  }
+
+  syncCheckboxesToForm(field) {
+    if (field === 'personalities') {
+      const editMechanics = document.getElementById('edit-mechanics');
+      const wizardMechanics = document.getElementById('wizard-mechanics');
+      if (editMechanics && wizardMechanics) {
+        wizardMechanics.checked = editMechanics.checked;
+      }
+    } else if (field === 'options') {
+      const editCompanions = document.getElementById('edit-companions');
+      const editDefaultWorld = document.getElementById('edit-default-world');
+      const wizardCompanions = document.getElementById('wizard-companions');
+      const wizardDefaultWorld = document.getElementById('wizard-default-world');
+
+      if (editCompanions && wizardCompanions) {
+        wizardCompanions.checked = editCompanions.checked;
+      }
+      if (editDefaultWorld && wizardDefaultWorld) {
+        wizardDefaultWorld.checked = editDefaultWorld.checked;
+      }
+    }
+  }
+
+  storeCheckboxSnapshot(item, field) {
+    let snapshot = null;
+
+    if (field === 'personalities') {
+      const wizardMechanics = document.getElementById('wizard-mechanics');
+      snapshot = {
+        mechanics: wizardMechanics?.checked ?? false,
+      };
+    } else if (field === 'options') {
+      const wizardCompanions = document.getElementById('wizard-companions');
+      const wizardDefaultWorld = document.getElementById('wizard-default-world');
+      snapshot = {
+        companions: wizardCompanions?.checked ?? false,
+        defaultWorld: wizardDefaultWorld?.checked ?? false,
+      };
+    }
+
+    if (snapshot) {
+      item.dataset.checkboxSnapshot = JSON.stringify(snapshot);
+    }
+  }
+
+  restoreCheckboxSnapshot(item, field) {
+    const snapshotRaw = item.dataset.checkboxSnapshot;
+    if (!snapshotRaw) return;
+
+    let snapshot = null;
+    try {
+      snapshot = JSON.parse(snapshotRaw);
+    } catch (error) {
+      console.warn('Failed to parse checkbox snapshot', error);
+      return;
+    }
+
+    if (field === 'personalities') {
+      const editMechanics = document.getElementById('edit-mechanics');
+      const wizardMechanics = document.getElementById('wizard-mechanics');
+
+      if (editMechanics) editMechanics.checked = snapshot.mechanics;
+      if (wizardMechanics) wizardMechanics.checked = snapshot.mechanics;
+    } else if (field === 'options') {
+      const editCompanions = document.getElementById('edit-companions');
+      const editDefaultWorld = document.getElementById('edit-default-world');
+      const wizardCompanions = document.getElementById('wizard-companions');
+      const wizardDefaultWorld = document.getElementById('wizard-default-world');
+
+      if (editCompanions) editCompanions.checked = snapshot.companions;
+      if (wizardCompanions) wizardCompanions.checked = snapshot.companions;
+      if (editDefaultWorld) editDefaultWorld.checked = snapshot.defaultWorld;
+      if (wizardDefaultWorld) wizardDefaultWorld.checked = snapshot.defaultWorld;
+    }
+  }
+
+  updatePreviewFromForm(field) {
+    const isDragonKnight = document.getElementById('wizard-dragon-knight-campaign')?.checked;
+
+    if (field === 'title') {
+      const title = document.getElementById('wizard-campaign-title')?.value || CampaignWizard.DEFAULT_TITLE;
+      const previewTitle = document.getElementById('preview-title');
+      if (previewTitle) previewTitle.textContent = title;
+    } else if (field === 'character') {
+      const character = document.getElementById('wizard-character-input')?.value || '';
+      const previewCharacter = document.getElementById('preview-character');
+      if (previewCharacter) previewCharacter.textContent = this._formatCharacter(character, isDragonKnight);
+    } else if (field === 'description') {
+      const description = document.getElementById('wizard-description-input')?.value || '';
+      const previewDescription = document.getElementById('preview-description');
+      if (previewDescription) previewDescription.textContent = this._formatDescription(description, isDragonKnight);
+    } else if (field === 'personalities') {
+      const previewPersonalities = document.getElementById('preview-personalities');
+      const personalities = ['Narrative'];
+      if (document.getElementById('wizard-mechanics')?.checked) personalities.push('Mechanics');
+      if (previewPersonalities) previewPersonalities.textContent = personalities.join(', ') || 'None selected';
+    } else if (field === 'options') {
+      const previewOptions = document.getElementById('preview-options');
+      const options = [];
+      if (document.getElementById('wizard-companions')?.checked) options.push('Companions');
+      if (isDragonKnight) {
+        options.push('Dragon Knight World');
+      } else if (document.getElementById('wizard-default-world')?.checked) {
+        options.push('Default World');
+      }
+      if (previewOptions) previewOptions.textContent = options.join(', ') || 'None selected';
+    }
   }
 
   populateOriginalForm(data) {
