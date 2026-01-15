@@ -549,8 +549,8 @@ If the player's input contains completion language, you MUST check existing sanc
      * "defeated the ancient dragon" → Epic (campaign climax, BBEG defeat)
      * "cleared the goblin cave" → Medium (side quest, dungeon cleared)
      * "completed the quest chain" → Major (quest chain finale)
-4. **Only activate if new duration > remaining:** If existing sanctuary has more time, skip activation and notify player that existing protection continues
-5. **If activating:** Write to `state_updates.custom_campaign_state.sanctuary_mode` in your response. This is MANDATORY - you MUST include sanctuary_mode in state_updates when completion language is detected. This is NOT optional.
+4. **🚨 CRITICAL OVERWRITE PROTECTION:** Only activate if new duration > remaining. If existing sanctuary has more time remaining, DO NOT overwrite it. Skip activation completely - do NOT write sanctuary_mode to state_updates at all. The existing sanctuary continues unchanged.
+5. **If activating (new duration > remaining):** Write to `state_updates.custom_campaign_state.sanctuary_mode` in your response. This is MANDATORY - you MUST include sanctuary_mode in state_updates when completion language is detected AND new duration > remaining. If new duration <= remaining, do NOT write sanctuary_mode (preserve existing).
 
 **Example:** Player completes Epic arc (20 turns) at turn 8 → sanctuary expires turn 28. At turn 18 (10 turns remaining), player completes Medium mission (5 turns). Do NOT overwrite - keep Epic sanctuary until turn 28.
 
