@@ -198,6 +198,7 @@ def _annotate_entry(entry: dict[str, Any], turn: int, scene: int) -> None:
     """Add turn/scene to a dict entry if not already present."""
     if "turn_generated" not in entry:
         entry["turn_generated"] = turn
+    if "scene_generated" not in entry:
         entry["scene_generated"] = scene
 
 
