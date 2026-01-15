@@ -91,6 +91,7 @@ from mvp_site.agent_prompts import (
     get_static_prompt_parts,
 )
 from mvp_site.agents import (
+    BaseAgent,
     CharacterCreationAgent,
     GodModeAgent,
     RewardsAgent,
