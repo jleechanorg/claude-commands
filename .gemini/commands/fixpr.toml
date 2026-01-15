@@ -509,8 +509,9 @@ else:
    - **SAFE ACCESS**: Iterate over `contexts.nodes[]`; never call `.get()` on the rollup wrapper itself
    - **DISPLAY INLINE**: Print exact GitHub CI status: `❌ FAILING: test-unit (exit code 1)`
    - **FETCH LOGS (Primary)**: Use statusCheckRollup descriptions for failing checks (authoritative and fast):
+# NOTE: Multi-line shell commands use backslash continuation (\\\\) for TOML compatibility
     ```bash
-    gh pr view "$PR_NUMBER" --json statusCheckRollup --jq \n      '(.statusCheckRollup.contexts.nodes // [])
+    gh pr view "$PR_NUMBER" --json statusCheckRollup --jq \\      '(.statusCheckRollup.contexts.nodes // [])
        | map(select((.conclusion // .state // "")
            | test("^(FAILURE|ERROR|TIMED_OUT|ACTION_REQUIRED|CANCELLED)$")))
        | map("\\((.name // .context) // "unknown"): \\((.description // "no description provided"))")

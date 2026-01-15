@@ -11,10 +11,11 @@ prompt = """
 
 ```bash
 # Register Alice as a planning agent
-mcp__agentmail__register_agent \n  --id="alice" \n  --role="planner" \n  --model="claude-opus-4" \n  --capabilities='["reasoning","architecture","testing"]'
+# NOTE: Multi-line shell commands use backslash continuation (\\\\) for TOML compatibility
+mcp__agentmail__register_agent \\  --id="alice" \\  --role="planner" \\  --model="claude-opus-4" \\  --capabilities='["reasoning","architecture","testing"]'
 
 # Register Bob as a building agent
-mcp__agentmail__register_agent \n  --id="bob" \n  --role="builder" \n  --model="claude-sonnet-4.5" \n  --capabilities='["coding","implementation","debugging"]'
+mcp__agentmail__register_agent \\  --id="bob" \\  --role="builder" \\  --model="claude-sonnet-4.5" \\  --capabilities='["coding","implementation","debugging"]'
 ```
 
 2. **Verify Agents**
