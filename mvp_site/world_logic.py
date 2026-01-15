@@ -2537,17 +2537,17 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 entity_tracking = {}
                 updated_game_state_dict["entity_tracking"] = entity_tracking
 
-                active_entities = entity_tracking.get("active_entities")
-                if not isinstance(active_entities, list):
-                    active_entities = []
-                    entity_tracking["active_entities"] = active_entities
+            active_entities = entity_tracking.get("active_entities")
+            if not isinstance(active_entities, list):
+                active_entities = []
+                entity_tracking["active_entities"] = active_entities
 
-                # Add player character if not already present
-                if player_name not in active_entities:
-                    active_entities.append(player_name)
-                    logging_util.info(
-                        f"✅ Added player character '{player_name}' to active_entities"
-                    )
+            # Add player character if not already present
+            if player_name not in active_entities:
+                active_entities.append(player_name)
+                logging_util.info(
+                    f"✅ Added player character '{player_name}' to active_entities"
+                )
 
         # Apply automatic combat cleanup (sync defeated enemies between combat_state and npc_data)
         # Named NPCs are preserved and marked dead for continuity, while generic enemies are deleted.
