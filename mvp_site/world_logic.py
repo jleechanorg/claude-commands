@@ -2171,10 +2171,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             request_data.get("include_raw_llm_payloads", False)
         )
 
-        # Log incoming request
+        # Log incoming request (type-safe to handle non-string user_input)
+        user_input_preview = str(user_input)[:200] if user_input else 'None'
         logging_util.info(
             f"🎮 INCOMING INTERACTION: user_id={user_id}, campaign_id={campaign_id}, "
-            f"user_input={user_input[:200] if user_input else 'None'}..., mode={mode}"
+            f"user_input={user_input_preview}..., mode={mode}"
         )
 
         # Validate required fields

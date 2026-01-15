@@ -168,6 +168,10 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
   const handleSubmit = async () => {
     const trimmedInput = playerInput.trim()
     if (!trimmedInput || isLoading || submitInFlightRef.current) return
+    if (!campaignId) {
+      showErrorToast('No campaign selected. Please select a campaign first.', { context: 'Game' })
+      return
+    }
     submitInFlightRef.current = true
 
     // Store input before clearing
@@ -189,7 +193,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
 
     // Generate real AI response
     try {
-      const response = await apiService.sendInteraction(campaignId || '', {
+      const response = await apiService.sendInteraction(campaignId, {
         input: inputText,
         mode: mode
       })
@@ -202,6 +206,9 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           const campaignData = await apiService.getCampaign(campaignId)
           if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
             setStory(convertBackendStoryToEntries(campaignData.story))
+          } else {
+            // Story reload returned empty - log warning but don't clear optimistic UI
+            console.warn('Story reload returned empty or invalid data, keeping current state')
           }
         } catch (reloadError) {
           console.warn('Failed to reload story after interaction:', reloadError)
