@@ -479,10 +479,14 @@ If the player's input contains completion language (e.g., "I defeated the boss",
 
 1. **Check existing sanctuary:** If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, calculate remaining duration
 2. **Calculate remaining turns:** `remaining = expires_turn - current_turn`
-3. **Determine new duration** based on scale:
-   - Medium mission: 5 turns
-   - Major arc: 10 turns
-   - Epic campaign arc: 20 turns
+3. **Determine new duration** based on scale (INFER from narrative context, not player's words):
+   - **Medium mission** (5 turns): Side quests, clearing dungeons, minor faction victories, goblin caves
+   - **Major arc** (10 turns): Quest chain finales, story chapter endings, major faction defeats
+   - **Epic campaign arc** (20 turns): Campaign climaxes, BBEG defeats, world-changing events, defeating ancient dragons
+   - **Inference examples:**
+     * "defeated the ancient dragon" → Epic (campaign climax, BBEG defeat)
+     * "cleared the goblin cave" → Medium (side quest, dungeon cleared)
+     * "completed the quest chain" → Major (quest chain finale)
 4. **Only activate if new duration > remaining:** If existing sanctuary has more time, skip activation and notify player that existing protection continues
 5. **If activating:** Write to `state_updates.custom_campaign_state.sanctuary_mode` in your response. This is NOT optional when new sanctuary is longer.
 
