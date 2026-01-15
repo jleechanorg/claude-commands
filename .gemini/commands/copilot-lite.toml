@@ -318,7 +318,7 @@ git push origin HEAD
 # Generate summary
 echo "📊 COPILOT-LITE SUMMARY:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━"
-jq -r '.responses | group_by(.response) | .[] | "\(.[0].response): \(length)"' "$WORK_DIR/responses.json"
+jq -r '.responses | group_by(.response) | .[] | "\\(.[0].response): \\(length)"' "$WORK_DIR/responses.json"
 ```
 
 ## 🚨 CRITICAL RULES

@@ -203,7 +203,7 @@ echo "✅ USING COMMENTFETCH DATA: $(echo "$ALL_COMMENTS" | jq length) comments 
 # Step 2A: Analyze threading status for ALL comments (from commentfetch data)
 
 echo "📊 THREADING STATUS ANALYSIS:"
-echo "$ALL_COMMENTS" | jq -r '.[] | "ID: \(.id) | Author: \(.author) | Type: \(.type) | Replied: \(.already_replied)"'
+echo "$ALL_COMMENTS" | jq -r '.[] | "ID: \\(.id) | Author: \\(.author) | Type: \\(.type) | Replied: \\(.already_replied)"'
 
 # Step 2B: Count threading success rates (using commentfetch metadata)
 
@@ -238,7 +238,7 @@ echo "   Comments needing response: $NEEDS_RESPONSE_COUNT"
 
 echo ""
 echo "❌ COMMENTS NEEDING RESPONSE (simple logic):"
-echo "$NEEDS_RESPONSE_COMMENTS" | jq -r '.[] | "❌ Comment #\(.id) (\(.author)): \(.body[0:80])..."'
+echo "$NEEDS_RESPONSE_COMMENTS" | jq -r '.[] | "❌ Comment #\\(.id) (\\(.author)): \\(.body[0:80])..."'
 ```
 
 # Use simple AI responder detection for quality analysis
@@ -316,7 +316,7 @@ else
     echo "🚨 **COMMENTS REQUIRING IMMEDIATE ATTENTION**:"
 
     # List comments needing response (simple logic)
-    NEEDS_RESPONSE_LIST=$(jq -r '.comments[] | select(.body | startswith("[AI responder]") | not) | "❌ Comment #\(.id) (\(.author)): \(.body[0:80])..."' "$COMMENTS_FILE" 2>/dev/null)
+    NEEDS_RESPONSE_LIST=$(jq -r '.comments[] | select(.body | startswith("[AI responder]") | not) | "❌ Comment #\\(.id) (\\(.author)): \\(.body[0:80])..."' "$COMMENTS_FILE" 2>/dev/null)
     echo "$NEEDS_RESPONSE_LIST"
 
     echo ""
