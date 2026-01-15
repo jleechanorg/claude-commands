@@ -2254,7 +2254,8 @@ def continue_story(
 
     # --- NEW: Budget-based Truncation ---
     # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
-    serialized_game_state = json.dumps(
+    # Serialize game state for budget calculation (will be recomputed after truncation)
+    temp_serialized_game_state = json.dumps(
         current_game_state.to_dict(), indent=2, default=json_default_serializer
     )
 
@@ -2264,10 +2265,26 @@ def continue_story(
         current_game_state, []
     )
 
+    # Estimate entity tracking instruction size using empty context for budget calculation
+    # (actual instruction will be computed after truncation with real context)
+    session_number: int = current_game_state.custom_campaign_state.get(
+        "session_number", 1
+    )
+    _, _, temp_entity_tracking_instruction = _prepare_entity_tracking(
+        current_game_state, [], session_number
+    )
+
+    # Get current prompt text (doesn't depend on truncation)
+    temp_current_prompt_text = _get_current_turn_prompt(user_input, mode)
+
+    # Calculate prompt scaffold including all components that will be in the final prompt
     prompt_scaffold = (
-        f"{temp_checkpoint_block}\\n\\n"
+        f"{temp_checkpoint_block}\n\n"
         f"{temp_core_memories}"
-        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{temp_seq_ids}]\\n\\n"
+        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\n[{temp_seq_ids}]\n\n"
+        f"CURRENT GAME STATE:\n{temp_serialized_game_state}\n\n"
+        f"{temp_entity_tracking_instruction}"
+        f"YOUR TURN:\n{temp_current_prompt_text}"
     )
 
     # Calculate the character budget for the story context
@@ -2587,9 +2604,9 @@ def _get_static_prompt_parts(
     )
     core_memories_summary: str = ""
     if core_memories:
-        core_memories_list: str = "\\n".join([f"- {item}" for item in core_memories])
+        core_memories_list: str = "\n".join([f"- {item}" for item in core_memories])
         core_memories_summary = (
-            f"CORE MEMORY LOG (SUMMARY OF KEY EVENTS):\\n{core_memories_list}\\n\\n"
+            f"CORE MEMORY LOG (SUMMARY OF KEY EVENTS):\n{core_memories_list}\n\n"
         )
 
     checkpoint_block: str = (
@@ -2630,7 +2647,6 @@ def _get_current_turn_prompt(user_input: str, mode: str) -> str:
         # Check for multiple "Main Character: think" patterns using regex
         think_pattern = r"Main Character:\s*think[^\n]*"
         think_matches = re.findall(think_pattern, user_input, re.IGNORECASE)
-        len(think_matches)
 
         if is_think_command:
             # Emphasize planning for think commands (planning block handled separately in JSON)
@@ -2744,11 +2760,13 @@ if __name__ == "__main__":
 
     # Example usage for testing: pass all prompt types
     test_selected_prompts = ["narrative", "mechanics", "calibration"]
+    test_user_id = "test_user_123"
     test_game_state = GameState(
         player_character_data={"name": "Test Character", "hp_current": 10},
         world_data={"current_location_name": "The Testing Grounds"},
         npc_data={},
         custom_campaign_state={},
+        user_id=test_user_id,
     )
 
     # --- Turn 1: Initial Story ---
@@ -2758,7 +2776,7 @@ if __name__ == "__main__":
         f"Using prompt: '{turn_1_prompt}' with selected prompts: {test_selected_prompts}"
     )
     turn_1_response = get_initial_story(
-        turn_1_prompt, selected_prompts=test_selected_prompts
+        turn_1_prompt, selected_prompts=test_selected_prompts, user_id=test_user_id
     )
     print("\n--- LIVE RESPONSE 1 ---")
     print(turn_1_response)

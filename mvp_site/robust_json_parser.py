@@ -2,7 +2,9 @@
 Robust JSON parser for handling various forms of incomplete or malformed JSON from LLMs
 """
 
+import hashlib
 import json
+import os
 import re
 from typing import Any
 
@@ -135,7 +137,6 @@ class RobustJSONParser:
         # Sometimes code execution responses wrap JSON in markdown code blocks
         try:
             # Look for ```json or ``` code blocks
-            import re
             code_block_pattern = re.compile(r'```(?:json)?\s*\n?(.*?)\n?```', re.DOTALL)
             match = code_block_pattern.search(text)
             if match:
@@ -160,9 +161,6 @@ class RobustJSONParser:
             logging_util.debug(f"Aggressive fix failed: {e}")
 
         # Enhanced error logging with actual content
-        import hashlib
-        import os
-
         content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
         # Check if full error logging is enabled via environment variable
