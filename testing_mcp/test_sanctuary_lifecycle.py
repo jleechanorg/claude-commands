@@ -73,6 +73,28 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
 
+    # Verify we're in Story Mode
+    state_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    char_creation_in_progress = (
+        state_check.get("game_state", {})
+        .get("custom_campaign_state", {})
+        .get("character_creation_in_progress", True)
+    )
+
+    if char_creation_in_progress:
+        # Fallback: try to exit character creation explicitly
+        char_complete_response = process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input="I approve this character. Let's start the adventure.",
+        )
+        request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+
     # Start and complete a major arc
     quest_response = process_action(
         client,
@@ -94,22 +116,51 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         request_responses.extend(client.get_captures_as_dict())
         client.clear_captures()
 
-    # End any combat
-    combat_end = process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        user_input="I defeat all remaining enemies in combat.",
-    )
+    # End any combat - be explicit and check if combat is actually active
+    combat_state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
+    
+    game_state_combat = combat_state.get("game_state", {})
+    in_combat = game_state_combat.get("combat_state", {}).get("in_combat", False)
+    
+    if in_combat:
+        print("   Combat detected, ending combat first...")
+        combat_end = process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input="I defeat all remaining enemies in combat.",
+        )
+        request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+        
+        # Verify combat ended, use God Mode fallback if needed
+        combat_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+        request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+        
+        game_state_check = combat_check.get("game_state", {})
+        still_in_combat = game_state_check.get("in_combat", False)
+        
+        if still_in_combat:
+            print("   Combat still active, forcing end via God Mode...")
+            god_mode_end = process_action(
+                client,
+                user_id=user_id,
+                campaign_id=campaign_id,
+                user_input="[GOD MODE] All enemies are defeated. Combat ends. The dragon threat is eliminated.",
+            )
+            request_responses.extend(client.get_captures_as_dict())
+            client.clear_captures()
 
     # Complete the major arc (should activate Epic sanctuary ~21 turns)
+    # Use explicit completion language that avoids combat-triggering words
     epic_completion = process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="The quest is finished. I have successfully completed the major dragon quest arc. This epic campaign arc is now complete.",
+        user_input="The quest is finished. I have successfully completed the major dragon quest arc. This epic campaign arc is now complete. The mission is done. I have finished this quest.",
     )
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
