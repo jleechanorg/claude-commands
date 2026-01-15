@@ -3062,34 +3062,125 @@ def _check_missing_required_fields(
     require_dice_rolls: bool = False,
     dice_integrity_violation: bool = False,
     require_social_hp_challenge: bool = False,
+    debug_mode: bool = False,
 ) -> list[str]:
     """Check if required fields are missing from the structured response.
 
-    NOTE: All reprompt checks have been disabled to prevent server crashes from reprompt loops.
-    Reprompts cause back-to-back heavy API calls (~38K tokens each) which exhaust resources.
-    
-    Previously checked fields (now disabled):
-    - planning_block: Disabled - reprompts cause crashes
-    - dice_rolls: Disabled - reprompts cause crashes
-    - dice_integrity: Disabled - reprompts cause crashes
-    - session_header: Removed - cosmetic only
-    - social_hp_challenge: Removed - reprompts cause crashes
+    NOTE: Reprompts are DISABLED to prevent server crashes from reprompt loops.
+    However, missing fields are still DETECTED and LOGGED for observability.
+    In debug mode, warnings are also added to DM notes for user visibility.
+
+    Detected fields (logged but not reprompted):
+    - planning_block: Must have 'thinking' or 'choices' content
+    - dice_rolls: Required when require_dice_rolls=True
+    - dice_integrity: Flagged when dice_integrity_violation=True
+    - session_header: Cosmetic, logged but not critical
+    - social_hp_challenge: Required when require_social_hp_challenge=True
 
     Args:
         structured_response: The parsed NarrativeResponse object
         mode: Current game mode
         is_god_mode: Whether this is a god mode command
         is_dm_mode: Whether the response is in DM mode
-        require_dice_rolls: Whether dice_rolls is required for this turn (unused - checks disabled)
-        dice_integrity_violation: Whether dice integrity check failed (unused - checks disabled)
-        require_social_hp_challenge: Whether social HP challenge is required (unused - checks disabled)
+        require_dice_rolls: Whether dice_rolls is required for this turn
+        dice_integrity_violation: Whether dice integrity check failed
+        require_social_hp_challenge: Whether social HP challenge is required
+        debug_mode: Whether user has debug mode enabled (for DM notes)
 
     Returns:
-        Empty list (all checks disabled to prevent reprompt loops)
+        Empty list (reprompts disabled to prevent crashes)
     """
-    # NOTE: All reprompt checks disabled to prevent server crashes from reprompt loops
-    # Reprompts cause back-to-back heavy API calls (~38K tokens each) which exhaust resources
-    # Return empty list to skip all reprompt attempts
+    # Only check for story mode (character mode, not god/dm mode)
+    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
+        return []
+
+    if not structured_response:
+        logging_util.warning(
+            "⚠️ LLM_MISSING_FIELDS: No structured response - would need planning_block, session_header"
+        )
+        return []
+
+    detected_missing = []
+
+    # Check planning_block
+    planning_block = getattr(structured_response, "planning_block", None)
+    if not planning_block or not isinstance(planning_block, dict):
+        detected_missing.append("planning_block")
+    else:
+        # Check if planning_block has content
+        thinking_value = planning_block.get("thinking", "")
+        has_thinking = isinstance(thinking_value, str) and thinking_value.strip()
+
+        choices_value = planning_block.get("choices")
+        has_choices = isinstance(choices_value, dict) and len(choices_value) > 0
+
+        has_content = has_thinking or has_choices
+        if not has_content:
+            detected_missing.append("planning_block")
+
+    # Check session_header (cosmetic but tracked)
+    session_header = getattr(structured_response, "session_header", None)
+    if not session_header or not str(session_header).strip():
+        detected_missing.append("session_header")
+
+    # Check dice_rolls if required
+    if require_dice_rolls:
+        dice_rolls = getattr(structured_response, "dice_rolls", None)
+        if not dice_rolls or (isinstance(dice_rolls, list) and len(dice_rolls) == 0):
+            detected_missing.append("dice_rolls")
+
+    # Check dice integrity
+    if dice_integrity_violation:
+        detected_missing.append("dice_integrity")
+
+    # Check social HP challenge if required
+    if require_social_hp_challenge:
+        social_hp_challenge = getattr(structured_response, "social_hp_challenge", None)
+        is_missing = True
+        if isinstance(social_hp_challenge, dict):
+            npc_name = str(social_hp_challenge.get("npc_name", "")).strip()
+            objective = str(social_hp_challenge.get("objective", "")).strip()
+            resistance = str(social_hp_challenge.get("resistance_shown", "")).strip()
+            social_hp_val = social_hp_challenge.get("social_hp")
+            social_hp_max = social_hp_challenge.get("social_hp_max")
+            is_missing = not (
+                npc_name
+                and objective
+                and resistance
+                and social_hp_val is not None
+                and isinstance(social_hp_max, (int, float))
+                and social_hp_max > 0
+            )
+        if is_missing:
+            detected_missing.append("social_hp_challenge")
+
+    # Log warnings for observability (always)
+    if detected_missing:
+        # Filter out session_header from warning since it's cosmetic
+        critical_missing = [f for f in detected_missing if f != "session_header"]
+        if critical_missing:
+            logging_util.warning(
+                f"⚠️ LLM_MISSING_FIELDS: Response missing {critical_missing} "
+                "(reprompts disabled - accepting response as-is)"
+            )
+
+        # Add DM note warning in debug mode
+        if debug_mode and structured_response:
+            if structured_response.debug_info is None:
+                structured_response.debug_info = {}
+            dm_notes = structured_response.debug_info.get("dm_notes", [])
+            if isinstance(dm_notes, str):
+                dm_notes = [dm_notes] if dm_notes.strip() else []
+            elif not isinstance(dm_notes, list):
+                dm_notes = []
+
+            # Add warning note
+            warning_note = f"⚠️ LLM Response Quality: Missing {', '.join(detected_missing)}"
+            if warning_note not in dm_notes:
+                dm_notes.append(warning_note)
+            structured_response.debug_info["dm_notes"] = dm_notes
+
+    # Return empty list to prevent reprompts (crashes)
     return []
 
 
@@ -3786,6 +3877,7 @@ def continue_story(  # noqa: PLR0912, PLR0915
         require_dice_rolls=require_dice_rolls,
         dice_integrity_violation=dice_integrity_violation,
         require_social_hp_challenge=False,
+        debug_mode=current_game_state.debug_mode,
     )
 
     dice_retry_llm_call = False
@@ -3918,6 +4010,7 @@ def continue_story(  # noqa: PLR0912, PLR0915
                     require_dice_rolls=require_dice_rolls,
                     dice_integrity_violation=reprompt_dice_violation,
                     require_social_hp_challenge=False,
+                    debug_mode=current_game_state.debug_mode,
                 )
 
                 # CRITICAL: Never accept responses with dice_integrity violations
