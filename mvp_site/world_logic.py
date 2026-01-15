@@ -2214,13 +2214,16 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             try:
-                # CRITICAL FIX: Always reload story_context from Firestore for each request
-                # to ensure it includes the latest story entries (including previous commands).
-                # The previous caching logic caused the second god mode command to use stale
-                # story_context that didn't include the first command, leading to incorrect responses.
+                # Always reload campaign_data and story_context from Firestore for each request.
+                # This ensures:
+                # 1. story_context includes the latest story entries (including previous commands)
+                # 2. campaign_data reflects any changes (selected_prompts, use_default_world, etc.)
                 #
-                # We still cache campaign_data (selected_prompts, use_default_world) since
-                # those don't change between requests, but story_context MUST be fresh.
+                # No caching is needed because:
+                # - MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0 (loop only runs once per request)
+                # - Campaign data is just one document read (cheap)
+                # - Story context must be fresh (includes latest entries)
+                # - Caching adds complexity and risk of stale data bugs
                 (
                     campaign_data,
                     story_context,
