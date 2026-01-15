@@ -1382,9 +1382,10 @@ def _call_llm_api_with_llm_request(
             "on the current USER_ACTION.\n"
         )
         
-        # Log the user_action for debugging
-        logging_util.info(
-            f"🎯 USER_ACTION in structured prompt: {user_action_str[:200]}..."
+        # Log the user_action for debugging (DEBUG level to avoid PII leaks)
+        logging_util.debug(
+            "USER_ACTION preview (structured prompt): %s...",
+            user_action_str[:200],
         )
         
         structured_prompt_parts = [
@@ -1409,18 +1410,22 @@ def _call_llm_api_with_llm_request(
             logging_util.info(
                 f"📚 STORY_HISTORY: {len(story_history_data)} entries being included in structured prompt"
             )
-            # Log first and last few entries for debugging
+            # Log first and last few entries for debugging (DEBUG level to avoid PII leaks)
             if story_history_data:
-                first_entry = story_history_data[0] if story_history_data else None
-                last_entry = story_history_data[-1] if story_history_data else None
-                logging_util.info(
-                    f"📚 STORY_HISTORY first entry: actor={first_entry.get('actor') if first_entry else 'N/A'}, "
-                    f"text_preview={str(first_entry.get('text', ''))[:50] if first_entry else 'N/A'}..."
-                )
-                logging_util.info(
-                    f"📚 STORY_HISTORY last entry: actor={last_entry.get('actor') if last_entry else 'N/A'}, "
-                    f"text_preview={str(last_entry.get('text', ''))[:50] if last_entry else 'N/A'}..."
-                )
+                first_entry = story_history_data[0]
+                last_entry = story_history_data[-1]
+                if isinstance(first_entry, dict):
+                    logging_util.debug(
+                        "STORY_HISTORY first entry: actor=%s text_preview=%s...",
+                        first_entry.get("actor", "N/A"),
+                        str(first_entry.get("text", ""))[:50],
+                    )
+                if isinstance(last_entry, dict):
+                    logging_util.debug(
+                        "STORY_HISTORY last entry: actor=%s text_preview=%s...",
+                        last_entry.get("actor", "N/A"),
+                        str(last_entry.get("text", ""))[:50],
+                    )
             structured_prompt_parts.append(
                 f"STORY_HISTORY (CONTEXT ONLY - RESPOND TO USER_ACTION ABOVE):\n{json.dumps(story_history_data, indent=2, default=json_default_serializer)}"
             )
@@ -1464,12 +1469,11 @@ def _call_llm_api_with_llm_request(
         # Join with double newlines for clear separation
         prompt_content = "\n\n".join(structured_prompt_parts)
         
-        # Log the actual prompt being sent (first 1000 chars for debugging)
-        logging_util.info(
-            f"📤 STRUCTURED PROMPT being sent to LLM (first 1000 chars):\n{prompt_content[:1000]}..."
-        )
-        logging_util.info(
-            f"📤 STRUCTURED PROMPT total length: {len(prompt_content)} chars"
+        # Log the actual prompt being sent (DEBUG level to avoid PII leaks)
+        logging_util.debug(
+            "STRUCTURED PROMPT length=%s chars; preview=%s...",
+            len(prompt_content),
+            prompt_content[:300],
         )
 
         # Safe user_action access for logging (handles None/empty string)

@@ -84,7 +84,8 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
 
             const convertedStory = campaignData.story.map((entry: any, index: number) => ({
               id: `story-${index}`,
-              type: entry.mode === 'god' ? 'narration' : 'action' as 'narration' | 'action',
+              // Consistent type determination: god mode = narration, user actor = action, others = narration
+              type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
               // Prioritize god_mode_response for god mode entries, then narrative, then text
               content: entry.god_mode_response || entry.narrative || entry.text || '',
               timestamp: entry.timestamp || new Date().toISOString(),
