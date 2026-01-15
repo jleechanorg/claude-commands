@@ -1315,16 +1315,19 @@ def _load_campaign_and_continue_story(
     )
     if story_context:
         # Log first and last entries to see what's in context
+        # Guard against non-dict entries from malformed Firestore data
         first_entry = story_context[0]
         last_entry = story_context[-1]
-        logging_util.debug(
-            f"📖 story_context[0]: actor={first_entry.get('actor')}, "
-            f"text={str(first_entry.get('text', ''))[:100]}..."
-        )
-        logging_util.debug(
-            f"📖 story_context[-1]: actor={last_entry.get('actor')}, "
-            f"text={str(last_entry.get('text', ''))[:100]}..."
-        )
+        if isinstance(first_entry, dict):
+            logging_util.debug(
+                f"📖 story_context[0]: actor={first_entry.get('actor')}, "
+                f"text={str(first_entry.get('text', ''))[:100]}..."
+            )
+        if isinstance(last_entry, dict):
+            logging_util.debug(
+                f"📖 story_context[-1]: actor={last_entry.get('actor')}, "
+                f"text={str(last_entry.get('text', ''))[:100]}..."
+            )
     
     selected_prompts = campaign_data.get("selected_prompts", [])
     use_default_world = campaign_data.get("use_default_world", False)

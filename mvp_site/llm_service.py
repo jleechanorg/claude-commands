@@ -1371,12 +1371,26 @@ def _call_llm_api_with_llm_request(
         # headers if we just interpolate it inline. By wrapping it in delimiters, we ensure
         # the LLM can't confuse user content with system section boundaries.
         # 
-        # CRITICAL: Escape both start ("USER_ACTION:") and end ("END_USER_ACTION") delimiters
-        # to prevent users from injecting fake section boundaries.
+        # Escape delimiter patterns to reduce confusion about section boundaries.
+        # NOTE: This is NOT a security boundary - prompt injection is fundamentally hard to
+        # prevent with text-based prompts. This escaping helps prevent:
+        # 1. Accidental confusion when users type text resembling section headers
+        # 2. Obvious injection attempts (but determined attackers can bypass)
+        # The real mitigation is the LLM instruction to prioritize USER_ACTION.
         user_action_str = str(user_action).strip()
-        # Escape delimiter patterns to prevent injection (both start and end delimiters)
-        user_action_str = user_action_str.replace("USER_ACTION:", "USER_ACTION_ESCAPED:")
-        user_action_str = user_action_str.replace("END_USER_ACTION", "END_USER_ACTION_ESCAPED")
+        # Case-insensitive escaping for common delimiter patterns
+        user_action_str = re.sub(
+            r"(?i)USER_ACTION\s*:", "USER_ACTION_ESCAPED:", user_action_str
+        )
+        user_action_str = re.sub(
+            r"(?i)END_USER_ACTION", "END_USER_ACTION_ESCAPED", user_action_str
+        )
+        user_action_str = re.sub(
+            r"(?i)STORY_HISTORY\s*:", "STORY_HISTORY_ESCAPED:", user_action_str
+        )
+        user_action_str = re.sub(
+            r"(?i)SYSTEM_CORRECTIONS\s*:", "SYSTEM_CORRECTIONS_ESCAPED:", user_action_str
+        )
         user_action_block = f"USER_ACTION:\n{user_action_str}\nEND_USER_ACTION"
 
         # Build structured prompt with explicit sections
