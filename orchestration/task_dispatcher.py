@@ -1461,12 +1461,11 @@ Complete the task, then use /pr to create a new pull request."""
             
             print(f"✅ Pre-flight validation complete for {agent_name}: using {CLI_PROFILES[validated_cli]['display_name']} CLI")
             
-            # Update agent_cli and cli_path to use validated CLI
+            # Update agent_cli to use validated CLI
             if validated_cli != agent_cli:
                 print(f"🔄 Switching to validated CLI: {CLI_PROFILES[validated_cli]['display_name']}")
                 agent_cli = validated_cli
                 cli_profile = CLI_PROFILES[agent_cli]
-                cli_path = validated_path
                 agent_spec["cli"] = agent_cli
                 # Update cli_chain to prioritize validated CLI
                 agent_spec["cli_chain"] = [validated_cli] + [c for c in cli_chain if c != validated_cli]

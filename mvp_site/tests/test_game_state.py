@@ -11,6 +11,8 @@ import unittest
 from importlib import import_module
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # Set test environment before any imports
 os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
@@ -70,15 +72,8 @@ try:
     fpdf_module.XPos = MagicMock()
     fpdf_module.YPos = MagicMock()
     sys.modules["fpdf"] = fpdf_module
-except Exception:
-    pass  # If mocking fails, continue anyway
-
-# Add parent directory to path AFTER mocking firebase_admin (append instead of insert to avoid shadowing google package)
-mvp_site_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-if mvp_site_path not in sys.path:
-    sys.path.append(mvp_site_path)
+except Exception as exc:
+    raise RuntimeError("Failed to initialize optional dependency mocks.") from exc
 
 # Import proper fakes library
 
@@ -87,6 +82,7 @@ _perform_append = firestore_service_module._perform_append
 update_state_with_changes = firestore_service_module.update_state_with_changes
 
 game_state_module = import_module("mvp_site.game_state")
+constants = import_module("mvp_site.constants")
 GameState = game_state_module.GameState
 
 world_logic_module = import_module("mvp_site.world_logic")
@@ -177,6 +173,8 @@ class TestGameState(unittest.TestCase):
             "universe_control": 0,
             "divine_upgrade_available": False,
             "multiverse_upgrade_available": False,
+            "companion_arcs": {},
+            "next_companion_arc_turn": constants.COMPANION_ARC_INITIAL_TURN,
         }
 
         # Test that timestamp is recent
@@ -216,9 +214,19 @@ class TestGameState(unittest.TestCase):
             "universe_control": 0,
             "divine_upgrade_available": False,
             "multiverse_upgrade_available": False,
+            "companion_arcs": {},
+            "next_companion_arc_turn": constants.COMPANION_ARC_INITIAL_TURN,
         }
         assert gs.last_state_update_timestamp == custom_time
         assert gs.extra_field == "extra_value"
+
+    def test_next_companion_arc_turn_null_value_is_reset(self):
+        """Firestore can return null; next_companion_arc_turn should be an int."""
+        gs = GameState(custom_campaign_state={"next_companion_arc_turn": None})
+        assert (
+            gs.custom_campaign_state["next_companion_arc_turn"]
+            == constants.COMPANION_ARC_INITIAL_TURN
+        )
 
     def test_get_encounter_state_defaults_and_valid(self):
         """get_encounter_state returns defaults for missing/invalid data."""
@@ -226,14 +234,68 @@ class TestGameState(unittest.TestCase):
         if hasattr(gs, "encounter_state"):
             del gs.encounter_state
 
-        self.assertEqual(gs.get_encounter_state(), {"encounter_active": False})
+        assert gs.get_encounter_state() == {"encounter_active": False}
 
         gs.encounter_state = "not a dict"
-        self.assertEqual(gs.get_encounter_state(), {"encounter_active": False})
+        assert gs.get_encounter_state() == {"encounter_active": False}
 
         valid_state = {"encounter_active": True, "encounter_completed": True}
         gs.encounter_state = valid_state
-        self.assertIs(gs.get_encounter_state(), valid_state)
+        assert gs.get_encounter_state() is valid_state
+
+    def test_get_companion_arcs_summary_empty(self):
+        """get_companion_arcs_summary returns empty string when no arcs exist."""
+        gs = GameState()
+        assert gs.get_companion_arcs_summary() == ""
+
+    def test_get_companion_arcs_summary_formats_entries(self):
+        """get_companion_arcs_summary formats arc entries and callback details."""
+        custom_campaign_state = {
+            "companion_arcs": {
+                "Lyra": {
+                    "arc_type": "lost_family",
+                    "phase": "development",
+                    "history": [
+                        {"event": "Saw a familiar pendant."},
+                        {"description": "Learned of an eastern port."},
+                    ],
+                    "callbacks": [
+                        {
+                            "trigger_condition": "entering a port city",
+                            "effect": "A sailor recognizes Lyra's pendant.",
+                        }
+                    ],
+                }
+            }
+        }
+        gs = GameState(custom_campaign_state=custom_campaign_state)
+        summary = gs.get_companion_arcs_summary()
+
+        assert "- Lyra: lost_family (development)" in summary
+        assert "└ Saw a familiar pendant." in summary
+        assert "└ Learned of an eastern port." in summary
+        assert (
+            "⚡ Callback: entering a port city → A sailor recognizes Lyra's pendant."
+            in summary
+        )
+
+    def test_get_companion_arcs_summary_handles_invalid_entries(self):
+        """get_companion_arcs_summary skips malformed history/callback entries."""
+        custom_campaign_state = {
+            "companion_arcs": {
+                "Thorn": {
+                    "arc_type": "unknown_type",
+                    "phase": "mystery",
+                    "history": "not-a-list",
+                    "callbacks": ["oops"],
+                }
+            }
+        }
+        gs = GameState(custom_campaign_state=custom_campaign_state)
+        summary = gs.get_companion_arcs_summary()
+
+        assert "- Thorn: unknown (discovery)" in summary
+        assert "Callback:" not in summary
 
     def test_get_rewards_pending_returns_none_for_invalid(self):
         """get_rewards_pending handles missing, non-dict, and empty values."""
@@ -241,13 +303,13 @@ class TestGameState(unittest.TestCase):
         if hasattr(gs, "rewards_pending"):
             del gs.rewards_pending
 
-        self.assertIsNone(gs.get_rewards_pending())
+        assert gs.get_rewards_pending() is None
 
         gs.rewards_pending = "not a dict"
-        self.assertIsNone(gs.get_rewards_pending())
+        assert gs.get_rewards_pending() is None
 
         gs.rewards_pending = {}
-        self.assertIsNone(gs.get_rewards_pending())
+        assert gs.get_rewards_pending() is None
 
     def test_get_rewards_pending_returns_value_when_present(self):
         """get_rewards_pending returns the dict when data is valid."""
@@ -255,7 +317,7 @@ class TestGameState(unittest.TestCase):
         rewards_data = {"source": "quest", "xp": 100, "processed": False}
         gs.rewards_pending = rewards_data
 
-        self.assertIs(gs.get_rewards_pending(), rewards_data)
+        assert gs.get_rewards_pending() is rewards_data
 
     def test_has_pending_rewards_checks_all_sources(self):
         """has_pending_rewards returns True for any pending source."""
@@ -264,7 +326,7 @@ class TestGameState(unittest.TestCase):
         gs.combat_state = {"in_combat": False}
         gs.encounter_state = {"encounter_active": False}
 
-        self.assertTrue(gs.has_pending_rewards())
+        assert gs.has_pending_rewards()
 
     def test_has_pending_rewards_combat_and_encounter(self):
         """has_pending_rewards detects combat end and encounter completion."""
@@ -277,7 +339,7 @@ class TestGameState(unittest.TestCase):
             "rewards_processed": False,
         }
         gs.encounter_state = {"encounter_active": False}
-        self.assertTrue(gs.has_pending_rewards())
+        assert gs.has_pending_rewards()
 
         gs.combat_state["rewards_processed"] = True
         gs.encounter_state = {
@@ -286,7 +348,7 @@ class TestGameState(unittest.TestCase):
             "encounter_summary": {"result": "success", "xp_awarded": 80},
         }
         gs.rewards_pending = None
-        self.assertTrue(gs.has_pending_rewards())
+        assert gs.has_pending_rewards()
 
     def test_has_pending_rewards_returns_false_when_processed(self):
         """has_pending_rewards returns False when everything is processed/cleared."""
@@ -303,7 +365,7 @@ class TestGameState(unittest.TestCase):
             "encounter_summary": {"result": "success", "xp_awarded": 42},
         }
 
-        self.assertFalse(gs.has_pending_rewards())
+        assert not gs.has_pending_rewards()
 
     def test_has_pending_rewards_ignores_unfinished_combat(self):
         """Non-finished combat phases should not trigger rewards detection."""
@@ -314,7 +376,7 @@ class TestGameState(unittest.TestCase):
             "rewards_processed": False,
         }
 
-        self.assertFalse(gs.has_pending_rewards())
+        assert not gs.has_pending_rewards()
 
     def test_has_pending_rewards_encounter_missing_summary(self):
         """Encounter completion without summary should not trigger rewards."""
@@ -325,7 +387,7 @@ class TestGameState(unittest.TestCase):
             # encounter_summary intentionally missing
         }
 
-        self.assertFalse(gs.has_pending_rewards())
+        assert not gs.has_pending_rewards()
 
     def test_has_pending_rewards_encounter_missing_xp(self):
         """Encounter summary missing xp_awarded should not trigger rewards."""
@@ -336,7 +398,7 @@ class TestGameState(unittest.TestCase):
             "encounter_summary": {"result": "success"},
         }
 
-        self.assertFalse(gs.has_pending_rewards())
+        assert not gs.has_pending_rewards()
 
     def test_to_dict(self):
         """Test serialization to dictionary."""
@@ -365,12 +427,13 @@ class TestGameState(unittest.TestCase):
                 "universe_control": 0,
                 "divine_upgrade_available": False,
                 "multiverse_upgrade_available": False,
+                "companion_arcs": {},
+                "next_companion_arc_turn": constants.COMPANION_ARC_INITIAL_TURN,
             },
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
             "player_turn": 0,
             "extra_field": "test_value",
-            "player_turn": 0,
             # Time pressure structures
             "time_sensitive_events": {},
             "npc_agendas": {},
@@ -1955,16 +2018,15 @@ class TestXPLevelHelperFunctions(unittest.TestCase):
 
     def test_xp_thresholds_constant_exists(self):
         """Test that XP_THRESHOLDS constant is defined in game_state module."""
-        self.assertTrue(
-            hasattr(game_state_module, "XP_THRESHOLDS"),
-            "XP_THRESHOLDS constant should be defined in game_state module",
+        assert hasattr(game_state_module, "XP_THRESHOLDS"), (
+            "XP_THRESHOLDS constant should be defined in game_state module"
         )
 
     def test_xp_thresholds_has_20_levels(self):
         """Test that XP_THRESHOLDS has 20 entries for levels 1-20."""
         thresholds = game_state_module.XP_THRESHOLDS
-        self.assertEqual(
-            len(thresholds), 20, "XP_THRESHOLDS should have 20 entries for levels 1-20"
+        assert len(thresholds) == 20, (
+            "XP_THRESHOLDS should have 20 entries for levels 1-20"
         )
 
     def test_xp_thresholds_correct_values(self):
@@ -1992,151 +2054,122 @@ class TestXPLevelHelperFunctions(unittest.TestCase):
             355000,  # Level 20
         ]
         thresholds = game_state_module.XP_THRESHOLDS
-        self.assertEqual(
-            thresholds, expected, "XP_THRESHOLDS should match D&D 5e values"
-        )
+        assert thresholds == expected, "XP_THRESHOLDS should match D&D 5e values"
 
     def test_level_from_xp_function_exists(self):
         """Test that level_from_xp function is defined."""
-        self.assertTrue(
-            hasattr(game_state_module, "level_from_xp"),
-            "level_from_xp function should be defined in game_state module",
+        assert hasattr(game_state_module, "level_from_xp"), (
+            "level_from_xp function should be defined in game_state module"
         )
 
     def test_level_from_xp_zero(self):
         """Test level_from_xp returns 1 for 0 XP."""
         level = game_state_module.level_from_xp(0)
-        self.assertEqual(level, 1, "0 XP should be Level 1")
+        assert level == 1, "0 XP should be Level 1"
 
     def test_level_from_xp_level_1_boundary(self):
         """Test level_from_xp for XP values in Level 1 range (0-299)."""
-        self.assertEqual(game_state_module.level_from_xp(0), 1)
-        self.assertEqual(game_state_module.level_from_xp(150), 1)
-        self.assertEqual(game_state_module.level_from_xp(299), 1)
+        assert game_state_module.level_from_xp(0) == 1
+        assert game_state_module.level_from_xp(150) == 1
+        assert game_state_module.level_from_xp(299) == 1
 
     def test_level_from_xp_level_2_boundary(self):
         """Test level_from_xp for XP values at Level 2 boundary (300-899)."""
-        self.assertEqual(
-            game_state_module.level_from_xp(300), 2, "300 XP should be Level 2"
-        )
-        self.assertEqual(game_state_module.level_from_xp(500), 2)
-        self.assertEqual(game_state_module.level_from_xp(899), 2)
+        assert game_state_module.level_from_xp(300) == 2, "300 XP should be Level 2"
+        assert game_state_module.level_from_xp(500) == 2
+        assert game_state_module.level_from_xp(899) == 2
 
     def test_level_from_xp_level_3_boundary(self):
         """Test level_from_xp for XP values at Level 3 boundary (900-2699)."""
-        self.assertEqual(
-            game_state_module.level_from_xp(900), 3, "900 XP should be Level 3"
-        )
-        self.assertEqual(game_state_module.level_from_xp(2699), 3)
+        assert game_state_module.level_from_xp(900) == 3, "900 XP should be Level 3"
+        assert game_state_module.level_from_xp(2699) == 3
 
     def test_level_from_xp_level_4_boundary(self):
         """Test level_from_xp for XP values at Level 4 boundary (2700-6499)."""
-        self.assertEqual(
-            game_state_module.level_from_xp(2700), 4, "2700 XP should be Level 4"
-        )
-        self.assertEqual(game_state_module.level_from_xp(6499), 4)
+        assert game_state_module.level_from_xp(2700) == 4, "2700 XP should be Level 4"
+        assert game_state_module.level_from_xp(6499) == 4
 
     def test_level_from_xp_level_5_boundary(self):
         """Test level_from_xp for XP values at Level 5 boundary."""
-        self.assertEqual(
-            game_state_module.level_from_xp(6500), 5, "6500 XP should be Level 5"
-        )
+        assert game_state_module.level_from_xp(6500) == 5, "6500 XP should be Level 5"
 
     def test_level_from_xp_high_levels(self):
         """Test level_from_xp for high level boundaries."""
-        self.assertEqual(game_state_module.level_from_xp(85000), 11)
-        self.assertEqual(game_state_module.level_from_xp(165000), 15)
-        self.assertEqual(game_state_module.level_from_xp(305000), 19)
-        self.assertEqual(game_state_module.level_from_xp(355000), 20)
+        assert game_state_module.level_from_xp(85000) == 11
+        assert game_state_module.level_from_xp(165000) == 15
+        assert game_state_module.level_from_xp(305000) == 19
+        assert game_state_module.level_from_xp(355000) == 20
 
     def test_level_from_xp_caps_at_20(self):
         """Test level_from_xp caps at level 20 even with massive XP."""
-        self.assertEqual(
-            game_state_module.level_from_xp(500000), 20, "Should cap at Level 20"
-        )
-        self.assertEqual(game_state_module.level_from_xp(1000000), 20)
+        assert game_state_module.level_from_xp(500000) == 20, "Should cap at Level 20"
+        assert game_state_module.level_from_xp(1000000) == 20
 
     def test_level_from_xp_negative_returns_level_1(self):
         """Test level_from_xp returns Level 1 for negative XP (clamped)."""
-        self.assertEqual(
-            game_state_module.level_from_xp(-100),
-            1,
-            "Negative XP should return Level 1",
+        assert game_state_module.level_from_xp(-100) == 1, (
+            "Negative XP should return Level 1"
         )
 
     def test_xp_needed_for_level_function_exists(self):
         """Test that xp_needed_for_level function is defined."""
-        self.assertTrue(
-            hasattr(game_state_module, "xp_needed_for_level"),
-            "xp_needed_for_level function should be defined in game_state module",
+        assert hasattr(game_state_module, "xp_needed_for_level"), (
+            "xp_needed_for_level function should be defined in game_state module"
         )
 
     def test_xp_needed_for_level_values(self):
         """Test xp_needed_for_level returns correct thresholds."""
-        self.assertEqual(game_state_module.xp_needed_for_level(1), 0)
-        self.assertEqual(game_state_module.xp_needed_for_level(2), 300)
-        self.assertEqual(game_state_module.xp_needed_for_level(3), 900)
-        self.assertEqual(game_state_module.xp_needed_for_level(5), 6500)
-        self.assertEqual(game_state_module.xp_needed_for_level(10), 64000)
-        self.assertEqual(game_state_module.xp_needed_for_level(20), 355000)
+        assert game_state_module.xp_needed_for_level(1) == 0
+        assert game_state_module.xp_needed_for_level(2) == 300
+        assert game_state_module.xp_needed_for_level(3) == 900
+        assert game_state_module.xp_needed_for_level(5) == 6500
+        assert game_state_module.xp_needed_for_level(10) == 64000
+        assert game_state_module.xp_needed_for_level(20) == 355000
 
     def test_xp_needed_for_level_clamps_bounds(self):
         """Test xp_needed_for_level clamps invalid levels."""
-        self.assertEqual(
-            game_state_module.xp_needed_for_level(0),
-            0,
-            "Level 0 should return Level 1 threshold",
+        assert game_state_module.xp_needed_for_level(0) == 0, (
+            "Level 0 should return Level 1 threshold"
         )
-        self.assertEqual(
-            game_state_module.xp_needed_for_level(-1),
-            0,
-            "Negative level should return Level 1 threshold",
+        assert game_state_module.xp_needed_for_level(-1) == 0, (
+            "Negative level should return Level 1 threshold"
         )
-        self.assertEqual(
-            game_state_module.xp_needed_for_level(21),
-            355000,
-            "Level 21 should return Level 20 threshold",
+        assert game_state_module.xp_needed_for_level(21) == 355000, (
+            "Level 21 should return Level 20 threshold"
         )
-        self.assertEqual(
-            game_state_module.xp_needed_for_level(100),
-            355000,
-            "Level 100 should return Level 20 threshold",
+        assert game_state_module.xp_needed_for_level(100) == 355000, (
+            "Level 100 should return Level 20 threshold"
         )
 
     def test_xp_to_next_level_function_exists(self):
         """Test that xp_to_next_level function is defined."""
-        self.assertTrue(
-            hasattr(game_state_module, "xp_to_next_level"),
-            "xp_to_next_level function should be defined in game_state module",
+        assert hasattr(game_state_module, "xp_to_next_level"), (
+            "xp_to_next_level function should be defined in game_state module"
         )
 
     def test_xp_to_next_level_at_level_start(self):
         """Test xp_to_next_level when XP is exactly at level boundary."""
         # At Level 1 start (0 XP), need 300 XP to reach Level 2
-        self.assertEqual(game_state_module.xp_to_next_level(0), 300)
+        assert game_state_module.xp_to_next_level(0) == 300
         # At Level 2 start (300 XP), need 600 XP to reach Level 3
-        self.assertEqual(game_state_module.xp_to_next_level(300), 600)
+        assert game_state_module.xp_to_next_level(300) == 600
         # At Level 3 start (900 XP), need 1800 XP to reach Level 4
-        self.assertEqual(game_state_module.xp_to_next_level(900), 1800)
+        assert game_state_module.xp_to_next_level(900) == 1800
 
     def test_xp_to_next_level_mid_level(self):
         """Test xp_to_next_level when XP is in middle of a level."""
         # At 150 XP (Level 1), need 150 XP to reach Level 2
-        self.assertEqual(game_state_module.xp_to_next_level(150), 150)
+        assert game_state_module.xp_to_next_level(150) == 150
         # At 500 XP (Level 2), need 400 XP to reach Level 3
-        self.assertEqual(game_state_module.xp_to_next_level(500), 400)
+        assert game_state_module.xp_to_next_level(500) == 400
 
     def test_xp_to_next_level_at_level_20(self):
         """Test xp_to_next_level returns 0 at Level 20 (max level)."""
-        self.assertEqual(
-            game_state_module.xp_to_next_level(355000),
-            0,
-            "Level 20 should need 0 XP to next",
+        assert game_state_module.xp_to_next_level(355000) == 0, (
+            "Level 20 should need 0 XP to next"
         )
-        self.assertEqual(
-            game_state_module.xp_to_next_level(500000),
-            0,
-            "Beyond Level 20 should need 0 XP",
+        assert game_state_module.xp_to_next_level(500000) == 0, (
+            "Beyond Level 20 should need 0 XP"
         )
 
 
@@ -2153,9 +2186,8 @@ class TestXPLevelValidation(unittest.TestCase):
     def test_validate_xp_level_function_exists(self):
         """Test that validate_xp_level method exists on GameState."""
         gs = GameState()
-        self.assertTrue(
-            hasattr(gs, "validate_xp_level"),
-            "GameState should have validate_xp_level method",
+        assert hasattr(gs, "validate_xp_level"), (
+            "GameState should have validate_xp_level method"
         )
 
     def test_validate_xp_level_correct_data_passes(self):
@@ -2165,9 +2197,7 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         # Should not raise, should return True or the corrected data
         result = gs.validate_xp_level()
-        self.assertTrue(
-            result.get("valid", True), "Valid XP/level should pass validation"
-        )
+        assert result.get("valid", True), "Valid XP/level should pass validation"
 
     def test_validate_xp_level_levelup_sets_pending_no_correction(self):
         """Test level-up case: sets level_up_pending but does NOT auto-correct.
@@ -2194,10 +2224,8 @@ class TestXPLevelValidation(unittest.TestCase):
             result.get("provided_level"), 1, "Provided level should be recorded as 1"
         )
         # Level should NOT be mutated
-        self.assertEqual(
-            gs.player_character_data.get("level"),
-            1,
-            "Level should NOT be changed (LLM handles level-up)",
+        assert gs.player_character_data.get("level") == 1, (
+            "Level should NOT be changed (LLM handles level-up)"
         )
 
     def test_validate_xp_level_regression_autocorrects(self):
@@ -2225,10 +2253,8 @@ class TestXPLevelValidation(unittest.TestCase):
             result.get("provided_level"), 5, "Provided level should be recorded as 5"
         )
         # Level SHOULD be corrected
-        self.assertEqual(
-            gs.player_character_data.get("level"),
-            2,
-            "Level should be auto-corrected to match XP",
+        assert gs.player_character_data.get("level") == 2, (
+            "Level should be auto-corrected to match XP"
         )
 
     def test_validate_xp_level_strict_mode_raises(self):
@@ -2239,9 +2265,8 @@ class TestXPLevelValidation(unittest.TestCase):
                 "level": 1,  # Wrong!
             }
         )
-        with self.assertRaises(ValueError) as context:
+        with pytest.raises(ValueError, match="mismatch"):
             gs.validate_xp_level(strict=True)
-        self.assertIn("mismatch", str(context.exception).lower())
 
     def test_validate_xp_level_negative_xp_clamped(self):
         """Test negative XP is clamped to 0."""
@@ -2249,13 +2274,9 @@ class TestXPLevelValidation(unittest.TestCase):
             player_character_data={"experience": {"current": -100}, "level": 1}
         )
         result = gs.validate_xp_level()
-        self.assertEqual(
-            result.get("clamped_xp"), 0, "Negative XP should be clamped to 0"
-        )
-        self.assertEqual(
-            gs.player_character_data.get("experience", {}).get("current"),
-            0,
-            "Clamped XP should persist to player data",
+        assert result.get("clamped_xp") == 0, "Negative XP should be clamped to 0"
+        assert gs.player_character_data.get("experience", {}).get("current") == 0, (
+            "Clamped XP should persist to player data"
         )
 
     def test_validate_xp_level_zero_level_clamped(self):
@@ -2267,12 +2288,8 @@ class TestXPLevelValidation(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertEqual(
-            result.get("clamped_level"), 1, "Level 0 should be clamped to 1"
-        )
-        self.assertEqual(
-            gs.player_character_data.get("level"), 1, "Level clamp should persist"
-        )
+        assert result.get("clamped_level") == 1, "Level 0 should be clamped to 1"
+        assert gs.player_character_data.get("level") == 1, "Level clamp should persist"
 
     def test_validate_xp_level_epic_levels_allowed(self):
         """Test epic levels (21+) are accepted without clamping for epic campaigns."""
@@ -2305,7 +2322,7 @@ class TestXPLevelValidation(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         # Should not crash, should assume XP=0 for Level 1
-        self.assertTrue(result.get("valid", True))
+        assert result.get("valid", True)
 
     def test_validate_xp_level_missing_level_uses_xp(self):
         """Test validation handles missing level by computing from XP."""
@@ -2316,13 +2333,9 @@ class TestXPLevelValidation(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertEqual(
-            result.get("expected_level"), 4, "Should compute level 4 from 2700 XP"
-        )
-        self.assertEqual(
-            gs.player_character_data.get("level"),
-            4,
-            "Computed level should be persisted to player_character_data",
+        assert result.get("expected_level") == 4, "Should compute level 4 from 2700 XP"
+        assert gs.player_character_data.get("level") == 4, (
+            "Computed level should be persisted to player_character_data"
         )
 
 
@@ -2339,9 +2352,8 @@ class TestTimeMonotonicity(unittest.TestCase):
     def test_validate_time_monotonicity_function_exists(self):
         """Test that validate_time_monotonicity method exists on GameState."""
         gs = GameState()
-        self.assertTrue(
-            hasattr(gs, "validate_time_monotonicity"),
-            "GameState should have validate_time_monotonicity method",
+        assert hasattr(gs, "validate_time_monotonicity"), (
+            "GameState should have validate_time_monotonicity method"
         )
 
     def test_time_monotonicity_forward_time_passes(self):
@@ -2349,32 +2361,29 @@ class TestTimeMonotonicity(unittest.TestCase):
         gs = GameState(world_data={"world_time": {"hour": 10, "minute": 0}})
         new_time = {"hour": 12, "minute": 0}  # Later time
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(result.get("valid", True), "Forward time should pass")
+        assert result.get("valid", True), "Forward time should pass"
 
     def test_time_monotonicity_backwards_time_warns(self):
         """Test that backwards time triggers warning in default mode."""
         gs = GameState(world_data={"world_time": {"hour": 14, "minute": 0}})
         new_time = {"hour": 10, "minute": 0}  # Earlier time (regression!)
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(
-            result.get("warning", False), "Backwards time should trigger warning"
-        )
-        self.assertIn("regression", result.get("message", "").lower())
+        assert result.get("warning", False), "Backwards time should trigger warning"
+        assert "regression" in result.get("message", "").lower()
 
     def test_time_monotonicity_backwards_time_strict_raises(self):
         """Test that backwards time raises error in strict mode."""
         gs = GameState(world_data={"world_time": {"hour": 14, "minute": 0}})
         new_time = {"hour": 10, "minute": 0}  # Earlier time
-        with self.assertRaises(ValueError) as context:
+        with pytest.raises(ValueError, match="backwards"):
             gs.validate_time_monotonicity(new_time, strict=True)
-        self.assertIn("backwards", str(context.exception).lower())
 
     def test_time_monotonicity_same_time_passes(self):
         """Test that same time passes validation (no progression, but not regression)."""
         gs = GameState(world_data={"world_time": {"hour": 10, "minute": 30}})
         new_time = {"hour": 10, "minute": 30}  # Same time
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(result.get("valid", True), "Same time should pass")
+        assert result.get("valid", True), "Same time should pass"
 
     def test_time_monotonicity_day_boundary_handles_correctly(self):
         """Test time progression across day boundary (23:00 -> 01:00 next day)."""
@@ -2382,20 +2391,16 @@ class TestTimeMonotonicity(unittest.TestCase):
         # Next day, earlier hour but later overall
         new_time = {"hour": 1, "minute": 0, "day": 2}
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(
-            result.get("valid", True), "Day boundary crossing should be valid"
-        )
+        assert result.get("valid", True), "Day boundary crossing should be valid"
 
     def test_time_monotonicity_missing_new_day_defaults_to_previous_day(self):
         """New time without day should use previous day's context to avoid false regression."""
         gs = GameState(world_data={"world_time": {"hour": 10, "minute": 0, "day": 5}})
         new_time = {"hour": 12, "minute": 0}  # Later on same day, day omitted
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(
-            result.get("valid", True), "Should treat missing day as previous day"
-        )
-        self.assertFalse(
-            result.get("warning", False), "No warning expected when time moves forward"
+        assert result.get("valid", True), "Should treat missing day as previous day"
+        assert not result.get("warning", False), (
+            "No warning expected when time moves forward"
         )
 
     def test_time_monotonicity_missing_old_time_passes(self):
@@ -2405,7 +2410,7 @@ class TestTimeMonotonicity(unittest.TestCase):
         )
         new_time = {"hour": 10, "minute": 0}
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(result.get("valid", True), "No previous time should pass")
+        assert result.get("valid", True), "No previous time should pass"
 
     def test_time_monotonicity_mutation_bug_without_deepcopy(self):
         """
@@ -2435,19 +2440,16 @@ class TestTimeMonotonicity(unittest.TestCase):
         update_state_with_changes(state_dict, changes)
 
         # BUG PROOF: original_world_time WAS mutated (now shows 10, not 14)
-        self.assertEqual(
-            original_world_time["hour"],
-            10,
-            "BUG: Without deepcopy, original_world_time gets mutated to 10",
+        assert original_world_time["hour"] == 10, (
+            "BUG: Without deepcopy, original_world_time gets mutated to 10"
         )
 
         # BUG CONSEQUENCE: backward time is NOT detected because both are 10:00
         gs = GameState(world_data={"world_time": original_world_time})
         new_time = {"hour": 10, "minute": 0, "day": 1}
         result = gs.validate_time_monotonicity(new_time)
-        self.assertFalse(
-            result.get("warning", False),
-            "BUG: Backward time NOT detected because reference was mutated",
+        assert not result.get("warning", False), (
+            "BUG: Backward time NOT detected because reference was mutated"
         )
 
     def test_time_monotonicity_mutation_fix_with_deepcopy(self):
@@ -2482,19 +2484,16 @@ class TestTimeMonotonicity(unittest.TestCase):
         update_state_with_changes(state_dict, changes)
 
         # FIX PROOF: original_world_time is preserved (still 14)
-        self.assertEqual(
-            original_world_time["hour"],
-            14,
-            "FIX: With deepcopy, original_world_time is preserved at 14",
+        assert original_world_time["hour"] == 14, (
+            "FIX: With deepcopy, original_world_time is preserved at 14"
         )
 
         # FIX CONSEQUENCE: backward time IS detected
         gs = GameState(world_data={"world_time": original_world_time})
         new_time = {"hour": 10, "minute": 0, "day": 1}
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(
-            result.get("warning", False),
-            "FIX: Backward time (14:00 -> 10:00) IS detected with deepcopy",
+        assert result.get("warning", False), (
+            "FIX: Backward time (14:00 -> 10:00) IS detected with deepcopy"
         )
 
 
@@ -2514,32 +2513,32 @@ class TestTypeSafetyCoercion(unittest.TestCase):
         """Test level_from_xp handles string XP values from JSON."""
         # String "5000" should be coerced to int and return level 4
         result = game_state_module.level_from_xp("5000")
-        self.assertEqual(result, 4, "String '5000' should coerce to level 4")
+        assert result == 4, "String '5000' should coerce to level 4"
 
     def test_level_from_xp_string_zero(self):
         """Test level_from_xp handles string '0' correctly."""
         result = game_state_module.level_from_xp("0")
-        self.assertEqual(result, 1, "String '0' should return level 1")
+        assert result == 1, "String '0' should return level 1"
 
     def test_level_from_xp_float_input(self):
         """Test level_from_xp handles float XP values."""
         result = game_state_module.level_from_xp(5000.5)
-        self.assertEqual(result, 4, "Float 5000.5 should coerce to level 4")
+        assert result == 4, "Float 5000.5 should coerce to level 4"
 
     def test_level_from_xp_invalid_string_returns_level_1(self):
         """Test level_from_xp handles non-numeric strings gracefully."""
         result = game_state_module.level_from_xp("invalid")
-        self.assertEqual(result, 1, "Invalid string should default to level 1")
+        assert result == 1, "Invalid string should default to level 1"
 
     def test_xp_needed_for_level_string_input(self):
         """Test xp_needed_for_level handles string level values."""
         result = game_state_module.xp_needed_for_level("5")
-        self.assertEqual(result, 6500, "String '5' should return XP for level 5")
+        assert result == 6500, "String '5' should return XP for level 5"
 
     def test_xp_to_next_level_string_input(self):
         """Test xp_to_next_level handles string XP values."""
         result = game_state_module.xp_to_next_level("150")
-        self.assertEqual(result, 150, "String '150' should return 150 XP to level 2")
+        assert result == 150, "String '150' should return 150 XP to level 2"
 
     # =========================================================================
     # validate_xp_level Type Safety Tests
@@ -2554,8 +2553,8 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertTrue(
-            result.get("valid", False), "String XP '5000' should validate for level 4"
+        assert result.get("valid", False), (
+            "String XP '5000' should validate for level 4"
         )
 
     def test_validate_xp_level_string_level(self):
@@ -2567,8 +2566,8 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertTrue(
-            result.get("valid", False), "String level '4' should validate for 5000 XP"
+        assert result.get("valid", False), (
+            "String level '4' should validate for 5000 XP"
         )
 
     def test_validate_xp_level_both_strings(self):
@@ -2580,9 +2579,7 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertTrue(
-            result.get("valid", False), "Both string XP and level should validate"
-        )
+        assert result.get("valid", False), "Both string XP and level should validate"
 
     def test_validate_xp_level_string_xp_in_experience_dict(self):
         """Test validate_xp_level handles string XP in experience.current structure."""
@@ -2593,8 +2590,8 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertTrue(
-            result.get("valid", False), "String XP in experience dict should validate"
+        assert result.get("valid", False), (
+            "String XP in experience dict should validate"
         )
 
     def test_validate_xp_level_string_mismatch_detected(self):
@@ -2607,11 +2604,9 @@ class TestTypeSafetyCoercion(unittest.TestCase):
         )
         result = gs.validate_xp_level()
         # String "2" should equal int 2 after coercion
-        self.assertTrue(
-            result.get("valid", False), "String '2' should match expected level 2"
-        )
-        self.assertFalse(
-            result.get("corrected", False), "No correction needed for matching values"
+        assert result.get("valid", False), "String '2' should match expected level 2"
+        assert not result.get("corrected", False), (
+            "No correction needed for matching values"
         )
 
     def test_validate_xp_level_missing_level_persists_computed(self):
@@ -2623,12 +2618,10 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertEqual(result.get("computed_level"), 4, "Should compute level 4")
+        assert result.get("computed_level") == 4, "Should compute level 4"
         # Check that level was persisted to state
-        self.assertEqual(
-            gs.player_character_data.get("level"),
-            4,
-            "Computed level should be persisted to player_character_data",
+        assert gs.player_character_data.get("level") == 4, (
+            "Computed level should be persisted to player_character_data"
         )
 
     def test_validate_xp_level_scalar_negative_persisted(self):
@@ -2642,14 +2635,10 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertEqual(
-            result.get("clamped_xp"), 0, "Negative XP should be clamped to 0"
-        )
+        assert result.get("clamped_xp") == 0, "Negative XP should be clamped to 0"
         # Critical: scalar experience must be updated (not just dict format)
-        self.assertEqual(
-            gs.player_character_data.get("experience"),
-            0,
-            "Scalar negative experience should be persisted as 0",
+        assert gs.player_character_data.get("experience") == 0, (
+            "Scalar negative experience should be persisted as 0"
         )
 
     # =========================================================================
@@ -2662,14 +2651,14 @@ class TestTypeSafetyCoercion(unittest.TestCase):
         # String time values
         new_time = {"hour": "12", "minute": "30"}
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(result.get("valid", True), "String time values should work")
+        assert result.get("valid", True), "String time values should work"
 
     def test_time_to_minutes_string_day(self):
         """Test _time_to_minutes handles string day values."""
         gs = GameState(world_data={"world_time": {"hour": 10, "minute": 0, "day": 1}})
         new_time = {"hour": "12", "minute": "0", "day": "2"}
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(result.get("valid", True), "String day should work")
+        assert result.get("valid", True), "String day should work"
 
     def test_time_to_minutes_mixed_types(self):
         """Test _time_to_minutes handles mixed int/string types."""
@@ -2680,7 +2669,7 @@ class TestTypeSafetyCoercion(unittest.TestCase):
         )
         new_time = {"hour": 12, "minute": "30", "day": "1"}  # mixed types
         result = gs.validate_time_monotonicity(new_time)
-        self.assertTrue(result.get("valid", True), "Mixed types should work")
+        assert result.get("valid", True), "Mixed types should work"
 
     # =========================================================================
     # Scalar Experience Value Tests
@@ -2695,12 +2684,8 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertTrue(
-            result.get("valid", False), "Scalar int experience should validate"
-        )
-        self.assertEqual(
-            result.get("expected_level"), 4, "Should compute level 4 from 2700 XP"
-        )
+        assert result.get("valid", False), "Scalar int experience should validate"
+        assert result.get("expected_level") == 4, "Should compute level 4 from 2700 XP"
 
     def test_validate_xp_level_scalar_experience_str(self):
         """Test validate_xp_level handles scalar string experience values."""
@@ -2711,12 +2696,8 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertTrue(
-            result.get("valid", False), "Scalar string experience should validate"
-        )
-        self.assertEqual(
-            result.get("expected_level"), 4, "Should compute level 4 from 5000 XP"
-        )
+        assert result.get("valid", False), "Scalar string experience should validate"
+        assert result.get("expected_level") == 4, "Should compute level 4 from 5000 XP"
 
     def test_validate_xp_level_scalar_experience_mismatch(self):
         """Test that scalar experience correctly detects level mismatch."""
@@ -2741,13 +2722,9 @@ class TestTypeSafetyCoercion(unittest.TestCase):
             }
         )
         result = gs.validate_xp_level()
-        self.assertEqual(
-            result.get("computed_level"), 5, "Should compute level 5 from 6500 XP"
-        )
-        self.assertEqual(
-            gs.player_character_data.get("level"),
-            5,
-            "Computed level should be persisted",
+        assert result.get("computed_level") == 5, "Should compute level 5 from 6500 XP"
+        assert gs.player_character_data.get("level") == 5, (
+            "Computed level should be persisted"
         )
 
 
@@ -2756,7 +2733,7 @@ class TestExecuteToolRequests(unittest.TestCase):
 
     def test_invalid_input_type(self):
         result = game_state_module.execute_tool_requests("not a list")
-        self.assertEqual(result, [])
+        assert result == []
 
     def test_invalid_item_type(self):
         result = game_state_module.execute_tool_requests(["not a dict"])
@@ -2777,9 +2754,9 @@ class TestExecuteToolRequests(unittest.TestCase):
 
         result = game_state_module.execute_tool_requests(requests)
 
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["tool"], "roll_dice")
-        self.assertEqual(result[0]["result"], {"success": True})
+        assert len(result) == 1
+        assert result[0]["tool"] == "roll_dice"
+        assert result[0]["result"] == {"success": True}
         mock_execute.assert_called_with("roll_dice", {"notation": "1d20"})
 
     @patch("mvp_site.game_state.execute_dice_tool")
@@ -2789,14 +2766,14 @@ class TestExecuteToolRequests(unittest.TestCase):
 
         result = game_state_module.execute_tool_requests(requests)
 
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0]["result"])
-        self.assertEqual(result[0]["result"]["error"], "Tool error")
+        assert len(result) == 1
+        assert "error" in result[0]["result"]
+        assert result[0]["result"]["error"] == "Tool error"
 
 
 class TestFormatToolResultsText(unittest.TestCase):
     def test_non_list_returns_empty(self):
-        self.assertEqual(game_state_module.format_tool_results_text("nope"), "")
+        assert game_state_module.format_tool_results_text("nope") == ""
 
     def test_formats_valid_results(self):
         tool_results = [
@@ -2807,8 +2784,8 @@ class TestFormatToolResultsText(unittest.TestCase):
             },
         ]
         text = game_state_module.format_tool_results_text(tool_results)
-        self.assertIn("- roll_dice:", text)
-        self.assertIn('"total": 12', text)
+        assert "- roll_dice:" in text
+        assert '"total": 12' in text
 
     def test_prefers_formatted_string(self):
         tool_results = [
@@ -2819,7 +2796,7 @@ class TestFormatToolResultsText(unittest.TestCase):
             }
         ]
         text = game_state_module.format_tool_results_text(tool_results)
-        self.assertEqual(text, "- Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)")
+        assert text == "- Attack: 1d20+5 = 12+5 = 17 vs AC 15 (Hit!)"
 
     def test_ignores_invalid_items(self):
         tool_results = [
@@ -2827,7 +2804,7 @@ class TestFormatToolResultsText(unittest.TestCase):
             {"tool": "", "args": {}, "result": {}},
             {"tool": 123, "args": {}, "result": {}},
         ]
-        self.assertEqual(game_state_module.format_tool_results_text(tool_results), "")
+        assert game_state_module.format_tool_results_text(tool_results) == ""
 
 
 if __name__ == "__main__":

@@ -25,7 +25,13 @@ def _valid_planning_block() -> dict:
     }
 
 
-def test_check_missing_required_fields_does_not_require_dice_by_default():
+def test_check_missing_required_fields_always_returns_empty_list():
+    """All reprompt checks are disabled - function always returns empty list.
+    
+    NOTE: This test verifies that _check_missing_required_fields() always returns
+    an empty list to prevent reprompt loops that cause server crashes.
+    All field validation checks have been disabled.
+    """
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -34,10 +40,24 @@ def test_check_missing_required_fields_does_not_require_dice_by_default():
     )
 
     missing = _check_missing_required_fields(resp, constants.MODE_CHARACTER)
-    assert "dice_rolls" not in missing
+    assert missing == [], "All checks disabled - should always return empty list"
+    
+    # Test with None response
+    missing_none = _check_missing_required_fields(None, constants.MODE_CHARACTER)
+    assert missing_none == [], "Should return empty list even with None response"
+    
+    # Test with missing planning_block
+    resp_no_planning = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+    )
+    missing_no_planning = _check_missing_required_fields(resp_no_planning, constants.MODE_CHARACTER)
+    assert missing_no_planning == [], "Should return empty list even without planning_block"
 
 
-def test_check_missing_required_fields_requires_dice_rolls_when_requested():
+def test_check_missing_required_fields_ignores_dice_rolls_requirement():
+    """Dice rolls check is disabled - function always returns empty list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -48,10 +68,11 @@ def test_check_missing_required_fields_requires_dice_rolls_when_requested():
     missing = _check_missing_required_fields(
         resp, constants.MODE_CHARACTER, require_dice_rolls=True
     )
-    assert "dice_rolls" in missing
+    assert missing == [], "Dice rolls check disabled - should always return empty list"
 
 
-def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_required():
+def test_check_missing_required_fields_ignores_dice_rolls_content():
+    """Dice rolls content check is disabled - function always returns empty list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -62,10 +83,11 @@ def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_require
     missing = _check_missing_required_fields(
         resp, constants.MODE_CHARACTER, require_dice_rolls=True
     )
-    assert "dice_rolls" not in missing
+    assert missing == [], "Dice rolls check disabled - should always return empty list"
 
 
-def test_check_missing_required_fields_requires_social_hp_challenge_when_requested():
+def test_check_missing_required_fields_ignores_social_hp_challenge_requirement():
+    """Social HP challenge check is disabled - function always returns empty list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -78,10 +100,11 @@ def test_check_missing_required_fields_requires_social_hp_challenge_when_request
         constants.MODE_CHARACTER,
         require_social_hp_challenge=True,
     )
-    assert "social_hp_challenge" in missing
+    assert missing == [], "Social HP challenge check disabled - should always return empty list"
 
 
-def test_check_missing_required_fields_accepts_valid_social_hp_challenge_when_requested():
+def test_check_missing_required_fields_ignores_social_hp_challenge_content():
+    """Social HP challenge content check is disabled - function always returns empty list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -110,7 +133,7 @@ def test_check_missing_required_fields_accepts_valid_social_hp_challenge_when_re
         constants.MODE_CHARACTER,
         require_social_hp_challenge=True,
     )
-    assert "social_hp_challenge" not in missing
+    assert missing == [], "Social HP challenge check disabled - should always return empty list"
 
 
 def test_should_require_dice_rolls_only_for_combat_actions():
@@ -570,8 +593,8 @@ def test_validate_combat_dice_integrity_dm_mode_bypass():
 # =============================================================================
 
 
-def test_check_missing_required_fields_dice_integrity_violation():
-    """dice_integrity_violation should add 'dice_integrity' to missing fields."""
+def test_check_missing_required_fields_ignores_dice_integrity_violation():
+    """Dice integrity check is disabled - function always returns empty list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -584,11 +607,11 @@ def test_check_missing_required_fields_dice_integrity_violation():
         constants.MODE_CHARACTER,
         dice_integrity_violation=True,
     )
-    assert "dice_integrity" in missing
+    assert missing == [], "Dice integrity check disabled - should always return empty list"
 
 
-def test_check_missing_required_fields_no_dice_integrity_violation():
-    """No dice_integrity_violation should not add 'dice_integrity' to missing fields."""
+def test_check_missing_required_fields_ignores_no_dice_integrity_violation():
+    """Dice integrity check is disabled - function always returns empty list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -601,7 +624,7 @@ def test_check_missing_required_fields_no_dice_integrity_violation():
         constants.MODE_CHARACTER,
         dice_integrity_violation=False,
     )
-    assert "dice_integrity" not in missing
+    assert missing == [], "Dice integrity check disabled - should always return empty list"
 
 
 # =============================================================================

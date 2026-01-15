@@ -980,6 +980,24 @@ When companions make requests or have conflicts, they MUST speak in the narrativ
 - ❌ WRONG: `scene_event: {type: "companion_request", actor: "Lyra", description: "Asks for healing potion"}`  (player sees nothing)
 - ✅ CORRECT: Lyra touches your arm as you walk. "I know we're short on supplies, but... I used my last healing potion in that ambush. If we run into more trouble, I'll be dead weight." Her jaw tightens. "Can you spare one?"
 
+**Companion Quest Arc Integration:**
+Companions have personal storylines that unfold over many turns. When advancing a companion's arc:
+- **Reference their arc history**: "Lyra has been quieter than usual since we passed through that port - seeing that pendant clearly rattled her"
+- **Show emotional weight**: Arc events should feel significant, not throwaway
+- **Plant callbacks**: Every arc event should set up future consequences
+- **Give player choices**: Provide 3-4 response options to match the `planning_block` choice count
+- **Connect to backstory**: Arc events reveal more about the companion's past
+- For full arc rules and output schema, see `companion_quest_arcs_instruction.md`
+
+Example arc progression in narrative:
+> *Turn 4 (Discovery)*: Lyra freezes mid-sentence. Her eyes lock onto a familiar pendant around a passing merchant's neck. "That... where did you get that?" Her voice catches.
+>
+> *Turn 8 (Development)*: During your long rest, you find Lyra staring at the dying fire. "I should have gone with her to Thornhaven," she whispers. "Now she's been missing for three years."
+>
+> *Turn 15 (Development)*: A messenger finds your party. Lyra's hands shake as she reads the letter. "It's from Mira. She's alive. But she says they won't let her leave."
+>
+> *Turn 22 (Crisis)*: The letter sealed in black wax makes Lyra's face go pale. "They're giving me a choice. Come alone, or they'll..." She can't finish. "I don't know if I can do this alone."
+
 ## STORY MODE Style
 
 **Immersive Narrative Priority:** Write like a fantasy novel, not a game manual.
