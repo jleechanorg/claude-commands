@@ -6,6 +6,7 @@ import { DiceRollDisplay } from './DiceRollDisplay'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
 import { apiService } from '../services/api.service'
+import { showErrorToast } from '../utils/errorHandling'
 import {
   ArrowLeft,
   Send,
@@ -196,16 +197,23 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           }
         } catch (reloadError) {
           console.warn('Failed to reload story after interaction:', reloadError)
-          // Fallback: if reload fails, show error but don't break the UI
+          showErrorToast('Story updated but display refresh failed. Please reload the page.', { context: 'Game' })
         }
+      } else if (!response.success) {
+        // Handle unsuccessful API response
+        const errorMessage = response.error || 'Failed to process your action. Please try again.'
+        showErrorToast(errorMessage, { context: 'Game' })
       }
     } catch (error) {
       console.error('Failed to get AI response:', error)
-      // On error, reload story to ensure consistency
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while processing your action.'
+      showErrorToast(errorMessage, { context: 'Game' })
+      // On error, reload story to ensure consistency (but only if we have valid data)
       if (campaignId) {
         try {
           const campaignData = await apiService.getCampaign(campaignId)
-          if (campaignData.story && Array.isArray(campaignData.story)) {
+          // CRITICAL: Only update story if we have non-empty data to prevent clearing user's story
+          if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
             const convertedStory = campaignData.story.map((entry: any, index: number) => ({
               id: `story-${index}`,
               type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',

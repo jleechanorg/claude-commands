@@ -620,28 +620,31 @@ class TestGodModeEnd2End(unittest.TestCase):
 
         # Tighten assertions: Verify the second call received the second command
         # by inspecting prompt_contents directly instead of string concatenation
-        all_calls = mock_gemini_code_exec.call_args_list + mock_gemini_native_tools.call_args_list
-        if len(all_calls) >= 2:
-            second_call = all_calls[1]
-            # Extract prompt_contents from kwargs
-            prompt_contents = second_call.kwargs.get("prompt_contents", [])
-            # Flatten prompt_contents to check for the second command
-            prompt_text = " ".join(str(p) for p in prompt_contents)
-            assert (
-                "gold" in prompt_text.lower() or "200" in prompt_text
-            ), (
-                f"Second LLM call should contain 'gold' or '200' in prompt_contents. "
-                f"Got: {prompt_text[:500]}"
-            )
-            # Verify it's NOT the first command
-            assert (
-                "hp" not in prompt_text.lower() or "50" not in prompt_text
-            ) or (
-                "gold" in prompt_text.lower() and "200" in prompt_text
-            ), (
-                f"Second LLM call should NOT contain first command (HP/50). "
-                f"Got: {prompt_text[:500]}"
-            )
+        # NOTE: We check both mocks separately since concatenation order doesn't reflect
+        # chronological call order. The second POST request will call one of these mocks,
+        # and that call should contain the second command.
+        code_exec_calls = mock_gemini_code_exec.call_args_list
+        native_tools_calls = mock_gemini_native_tools.call_args_list
+        
+        # Check the last call from each mock - one of them should be the second command
+        second_call_found = False
+        for call_list in [code_exec_calls, native_tools_calls]:
+            if len(call_list) > 0:
+                last_call = call_list[-1]
+                prompt_contents = last_call.kwargs.get("prompt_contents", [])
+                prompt_text = " ".join(str(p) for p in prompt_contents)
+                # Check if this last call contains the second command
+                if "gold" in prompt_text.lower() or "200" in prompt_text:
+                    # Verify it's NOT the first command
+                    if not (("hp" in prompt_text.lower() and "50" in prompt_text) and 
+                            ("gold" not in prompt_text.lower() and "200" not in prompt_text)):
+                        second_call_found = True
+                        break
+        
+        assert second_call_found, (
+            f"Second LLM call should contain 'gold' or '200' in prompt_contents. "
+            f"Checked {len(code_exec_calls)} code_exec calls and {len(native_tools_calls)} native_tools calls."
+        )
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
