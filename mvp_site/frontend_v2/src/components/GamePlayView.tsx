@@ -214,10 +214,17 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           console.warn('Failed to reload story after interaction:', reloadError)
           showErrorToast('Story updated but display refresh failed. Please reload the page.', { context: 'Game' })
         }
+      } else if (response.success && !campaignId) {
+        // Handle case where response succeeded but campaignId is missing
+        // Remove optimistic entry since we can't sync with backend
+        setStory(prev => prev.filter(entry => entry.id !== optimisticUserAction.id))
+        showErrorToast('Campaign ID missing. Unable to save your action. Please reload the page.', { context: 'Game' })
       } else if (!response.success) {
         // Handle unsuccessful API response
         const errorMessage = response.error || 'Failed to process your action. Please try again.'
         showErrorToast(errorMessage, { context: 'Game' })
+        // Remove optimistic entry on error to prevent inconsistent state
+        setStory(prev => prev.filter(entry => entry.id !== optimisticUserAction.id))
       }
     } catch (error) {
       console.error('Failed to get AI response:', error)
