@@ -90,24 +90,33 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
 
-    # Progress through the arc
-    for i in range(3):
+    # Progress through the arc with actions that build toward completion
+    # This gives the LLM narrative context to recognize completion later
+    progress_actions = [
+        "I track the dragon to its lair in the mountains.",
+        "I prepare for battle, gathering information about the dragon's weaknesses.",
+        "I confront the dragon in its lair and engage in combat.",
+        "I strike the final blow, slaying the ancient dragon.",
+    ]
+    
+    for action in progress_actions:
         progress = process_action(
             client,
             user_id=user_id,
             campaign_id=campaign_id,
-            user_input="I continue my quest to defeat the dragon.",
+            user_input=action,
         )
         request_responses.extend(client.get_captures_as_dict())
         client.clear_captures()
 
     # Complete the major arc and verify Epic sanctuary activation
     # LLM should infer Epic scale from narrative context (defeating ancient dragon = Epic)
+    # Use completion language that references the actual accomplishment
     epic_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        completion_text="The quest is finished. I have successfully defeated the ancient dragon and saved the kingdom.",
+        completion_text="The quest is complete. I have slain the ancient dragon and saved the kingdom from destruction.",
         request_responses=request_responses,
         verbose=True,
     )
