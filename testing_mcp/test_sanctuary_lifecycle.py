@@ -92,11 +92,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
 
     # Progress through the arc with actions that build toward completion
     # This gives the LLM narrative context to recognize completion later
+    # Avoid combat-triggering language to prevent combat mode
     progress_actions = [
         "I track the dragon to its lair in the mountains.",
         "I prepare for battle, gathering information about the dragon's weaknesses.",
-        "I confront the dragon in its lair and engage in combat.",
-        "I strike the final blow, slaying the ancient dragon.",
+        "I reach the dragon's lair and prepare to face the ancient beast.",
+        "I have defeated the ancient dragon after an epic battle.",
     ]
     
     for action in progress_actions:
