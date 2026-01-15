@@ -4,6 +4,14 @@
 **Date:** 2026-01-15
 **Branch:** `claude/plan-avatar-ui-integration-Gd838`
 **Status:** Planning
+**Last Updated:** 2026-01-15
+**Related Docs:** [Firebase Setup](../docs/firebase-setup.md), [API Reference](./api-reference.md)
+
+### Change Log
+| Date | Change |
+|------|--------|
+| 2026-01-15 | Initial plan created |
+| 2026-01-15 | Added security considerations per code review |
 
 ---
 
@@ -204,30 +212,119 @@ This document outlines the engineering plan for integrating user avatars into th
 
 ```python
 from firebase_admin import storage
+from google.cloud.exceptions import GoogleCloudError
+
+# Whitelist of allowed MIME types and their extensions
+ALLOWED_AVATAR_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+}
+
+class AvatarUploadError(Exception):
+    """Custom exception for avatar upload failures."""
+    pass
 
 def upload_user_avatar(user_id: str, file_data: bytes, content_type: str) -> str:
-    """Upload avatar to Firebase Storage and return public URL."""
-    bucket = storage.bucket()
-    blob = bucket.blob(f"avatars/{user_id}/avatar.{content_type.split('/')[-1]}")
-    blob.upload_from_string(file_data, content_type=content_type)
-    blob.make_public()
-    return blob.public_url
+    """Upload avatar to Firebase Storage and return public URL.
+
+    Args:
+        user_id: The authenticated user's ID
+        file_data: Raw image bytes
+        content_type: MIME type of the image
+
+    Returns:
+        Public URL of the uploaded avatar
+
+    Raises:
+        AvatarUploadError: If validation fails or upload errors occur
+    """
+    # Validate content_type is non-empty and contains "/"
+    if not content_type or "/" not in content_type:
+        raise AvatarUploadError(f"Invalid content type: {content_type}")
+
+    # Validate against whitelist and get safe extension
+    if content_type not in ALLOWED_AVATAR_TYPES:
+        raise AvatarUploadError(f"Unsupported image type: {content_type}")
+
+    safe_ext = ALLOWED_AVATAR_TYPES[content_type]
+
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"avatars/{user_id}/avatar.{safe_ext}")
+        blob.upload_from_string(file_data, content_type=content_type)
+        blob.make_public()
+        return blob.public_url
+    except GoogleCloudError as e:
+        logging_util.error(f"Firebase Storage upload failed for user {user_id}: {e}")
+        raise AvatarUploadError(f"Storage upload failed: {e}") from e
 
 def delete_user_avatar(user_id: str) -> bool:
-    """Delete user's avatar from Firebase Storage."""
-    bucket = storage.bucket()
-    blobs = bucket.list_blobs(prefix=f"avatars/{user_id}/")
-    for blob in blobs:
-        blob.delete()
-    return True
+    """Delete user's avatar from Firebase Storage.
+
+    Args:
+        user_id: The authenticated user's ID
+
+    Returns:
+        True if deletion succeeded
+
+    Raises:
+        AvatarUploadError: If deletion fails
+    """
+    try:
+        bucket = storage.bucket()
+        blobs = list(bucket.list_blobs(prefix=f"avatars/{user_id}/"))
+        for blob in blobs:
+            blob.delete()
+        return True
+    except GoogleCloudError as e:
+        logging_util.error(f"Firebase Storage delete failed for user {user_id}: {e}")
+        raise AvatarUploadError(f"Storage delete failed: {e}") from e
 ```
+
+**Note:** The `upload_user_avatar` and `delete_user_avatar` functions will be implemented in `mvp_site/firestore_service.py`. The `update_user_settings` function already exists at `mvp_site/firestore_service.py:2094-2171`.
 
 #### 4.1.2 New API Endpoint
 
 **File:** `mvp_site/main.py`
 
 ```python
+from mvp_site.firestore_service import (
+    upload_user_avatar,
+    delete_user_avatar,
+    update_user_settings,
+    AvatarUploadError,
+    ALLOWED_AVATAR_TYPES,
+)
+
+MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 5MB
+
+def validate_file_size_streaming(file_storage, max_size: int) -> tuple[bool, bytes]:
+    """Validate file size by streaming chunks without loading entire file.
+
+    Args:
+        file_storage: Flask FileStorage object
+        max_size: Maximum allowed size in bytes
+
+    Returns:
+        Tuple of (is_valid, file_data) - file_data only populated if valid
+    """
+    chunks = []
+    total_size = 0
+    chunk_size = 8192  # 8KB chunks
+
+    for chunk in iter(lambda: file_storage.stream.read(chunk_size), b""):
+        total_size += len(chunk)
+        if total_size > max_size:
+            return False, b""
+        chunks.append(chunk)
+
+    return True, b"".join(chunks)
+
+
 @app.route("/api/avatar", methods=["POST"])
+@limiter.limit("5 per hour")  # Rate limit avatar uploads
 @check_token
 async def upload_avatar():
     """Upload user avatar image."""
@@ -240,23 +337,26 @@ async def upload_avatar():
     if file.filename == "":
         return jsonify({"success": False, "error": "No file selected"}), 400
 
-    # Validate file type
-    allowed_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
-    if file.content_type not in allowed_types:
+    # Validate file type against whitelist
+    if file.content_type not in ALLOWED_AVATAR_TYPES:
         return jsonify({"success": False, "error": "Invalid file type"}), 400
 
-    # Validate file size (max 5MB)
-    file_data = file.read()
-    if len(file_data) > 5 * 1024 * 1024:
+    # Validate file size via streaming (doesn't load entire file if too large)
+    is_valid_size, file_data = validate_file_size_streaming(file, MAX_AVATAR_SIZE)
+    if not is_valid_size:
         return jsonify({"success": False, "error": "File too large (max 5MB)"}), 400
 
-    # Upload to Firebase Storage
-    avatar_url = upload_user_avatar(user_id, file_data, file.content_type)
+    try:
+        # Upload to Firebase Storage (see firestore_service.py implementation)
+        avatar_url = upload_user_avatar(user_id, file_data, file.content_type)
 
-    # Save URL to user settings
-    update_user_settings(user_id, {"avatar_url": avatar_url})
+        # Save URL to user settings (existing function in firestore_service.py:2094)
+        update_user_settings(user_id, {"avatar_url": avatar_url})
 
-    return jsonify({"success": True, "avatar_url": avatar_url})
+        return jsonify({"success": True, "avatar_url": avatar_url})
+    except AvatarUploadError as e:
+        logging_util.error(f"Avatar upload failed for user {user_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/api/avatar", methods=["DELETE"])
@@ -264,9 +364,13 @@ async def upload_avatar():
 async def delete_avatar():
     """Delete user avatar."""
     user_id = request.user_id
-    delete_user_avatar(user_id)
-    update_user_settings(user_id, {"avatar_url": None})
-    return jsonify({"success": True})
+    try:
+        delete_user_avatar(user_id)
+        update_user_settings(user_id, {"avatar_url": None})
+        return jsonify({"success": True})
+    except AvatarUploadError as e:
+        logging_util.error(f"Avatar delete failed for user {user_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 ```
 
 #### 4.1.3 Settings Schema Update
@@ -435,13 +539,38 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 ```python
 def upload_campaign_avatar(user_id: str, campaign_id: str, file_data: bytes, content_type: str) -> str:
-    """Upload campaign-specific avatar to Firebase Storage."""
-    bucket = storage.bucket()
-    ext = content_type.split('/')[-1]
-    blob = bucket.blob(f"campaign_avatars/{user_id}/{campaign_id}/avatar.{ext}")
-    blob.upload_from_string(file_data, content_type=content_type)
-    blob.make_public()
-    return blob.public_url
+    """Upload campaign-specific avatar to Firebase Storage.
+
+    Args:
+        user_id: The authenticated user's ID
+        campaign_id: The campaign ID to associate avatar with
+        file_data: Raw image bytes
+        content_type: MIME type of the image
+
+    Returns:
+        Public URL of the uploaded avatar
+
+    Raises:
+        AvatarUploadError: If validation fails or upload errors occur
+    """
+    # Reuse same validation as user avatars
+    if not content_type or "/" not in content_type:
+        raise AvatarUploadError(f"Invalid content type: {content_type}")
+
+    if content_type not in ALLOWED_AVATAR_TYPES:
+        raise AvatarUploadError(f"Unsupported image type: {content_type}")
+
+    safe_ext = ALLOWED_AVATAR_TYPES[content_type]
+
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"campaign_avatars/{user_id}/{campaign_id}/avatar.{safe_ext}")
+        blob.upload_from_string(file_data, content_type=content_type)
+        blob.make_public()
+        return blob.public_url
+    except GoogleCloudError as e:
+        logging_util.error(f"Campaign avatar upload failed for {user_id}/{campaign_id}: {e}")
+        raise AvatarUploadError(f"Storage upload failed: {e}") from e
 ```
 
 #### 4.3.2 Backend: Extended Campaign Creation
@@ -508,19 +637,37 @@ const avatarInputRef = useRef<HTMLInputElement>(null);
 const handleAvatarSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (file) {
-    // Validate file
-    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
-      toast.error('Please select a valid image file');
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
       return;
     }
+    // Validate file size
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image must be under 5MB');
       return;
     }
     setAvatarFile(file);
-    // Create preview URL
+
+    // Create preview URL with proper error handling
     const reader = new FileReader();
-    reader.onload = (e) => setAvatarPreview(e.target?.result as string);
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (typeof result === 'string') {
+        setAvatarPreview(result);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read image file. Please try again.');
+      setAvatarFile(null);
+      setAvatarPreview(null);
+    };
+    reader.onabort = () => {
+      toast.warning('Image loading was cancelled.');
+      setAvatarFile(null);
+      setAvatarPreview(null);
+    };
     reader.readAsDataURL(file);
   }
 };
@@ -744,11 +891,25 @@ async createCampaignWithAvatar(formData: FormData): Promise<CampaignCreateRespon
 
 ## 8. Security Considerations
 
-1. **File Type Validation:** Only accept `image/jpeg`, `image/png`, `image/gif`, `image/webp`
-2. **File Size Limit:** Max 5MB per upload
-3. **Authentication Required:** All avatar endpoints require valid Firebase token
+### Core Security (Must Have)
+1. **File Type Validation:** Only accept `image/jpeg`, `image/png`, `image/gif`, `image/webp` via whitelist
+2. **File Size Limit:** Max 5MB per upload, validated via streaming (not loading entire file)
+3. **Authentication Required:** All avatar endpoints require valid Firebase token via `@check_token`
 4. **Storage Path Isolation:** Each user's avatar stored under `avatars/{user_id}/`
 5. **Public URL:** Avatar images are public (required for display), but path includes user_id
+
+### Production Hardening (Recommended)
+6. **Rate Limiting:** Per-user upload caps (5 uploads/hour) via `@limiter.limit()` decorator on upload handler
+7. **Image Sanitization/Re-encoding:** Server-side re-encode to strip EXIF/metadata and neutralize image-bombs or embedded exploits. Enforcement: upload handler before storage write
+8. **CORS Configuration:** Explicit Firebase Storage bucket CORS rules for browser access. Enforcement: Firebase Storage bucket settings
+9. **Content Security Policy (CSP):** CSP headers restricting `img-src` when serving avatars. Enforcement: CDN/web server response headers
+10. **Storage Cleanup:** Periodic job to remove orphaned avatars for deleted users. Enforcement: Cloud Function or cron job on storage lifecycle
+11. **Malware Scanning:** Optional integration with virus/malware scanning for uploaded files. Enforcement: upload handler before storage write (e.g., VirusTotal API, Cloud Functions trigger)
+
+### Implementation Notes
+- Items 1-5 are implemented in the upload handler (`main.py`)
+- Items 6-7 should be added during Phase 1 implementation
+- Items 8-11 are infrastructure-level and can be added in Phase 4 (Polish)
 
 ---
 
