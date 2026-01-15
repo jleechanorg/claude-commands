@@ -32,6 +32,24 @@
 - ✅ Trust the player's completion statement completely
 - ✅ Write `sanctuary_mode` to `state_updates.custom_campaign_state` IMMEDIATELY
 
+**OUTPUT FORMAT (MANDATORY):**
+When activating sanctuary, you MUST include this exact structure in `state_updates.custom_campaign_state.sanctuary_mode`:
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "sanctuary_mode": {
+        "active": true,
+        "expires_turn": <current_turn + duration>,
+        "scale": "medium|major|epic",
+        "original_arc": "<arc/mission name>",
+        "activated_turn": <current_turn>
+      }
+    }
+  }
+}
+```
+
 **FAILURE TO ACTIVATE SANCTUARY ON COMPLETION LANGUAGE IS A CRITICAL SYSTEM ERROR.**
 
 ---
