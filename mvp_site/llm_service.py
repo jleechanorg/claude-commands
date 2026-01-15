@@ -1354,15 +1354,21 @@ def _call_llm_api_with_llm_request(
     # This is especially important for god mode commands where the user expects immediate
     # response to their current command, not a response to a previous command.
     #
-    # Only use structured format when user_action exists (covers story continuation and
-    # god mode commands, but not initial story generation which has no user_action).
-    if json_data.get("user_action") is not None:
+    # Only use structured format when user_action exists and is non-empty
+    # (covers story continuation and god mode commands, but not initial story generation
+    # which sets user_action="" as empty string).
+    user_action = json_data.get("user_action")
+    if user_action and str(user_action).strip():
         # SECURITY: Use delimiter blocks to prevent USER_ACTION from spoofing section headers
         # A malicious user_action could inject fake "STORY_HISTORY:" or "SYSTEM_CORRECTIONS:" 
         # headers if we just interpolate it inline. By wrapping it in delimiters, we ensure
         # the LLM can't confuse user content with system section boundaries.
-        user_action = json_data.get("user_action")
-        user_action_str = "" if user_action is None else str(user_action)
+        # 
+        # CRITICAL: Also escape the delimiter itself to prevent users from including
+        # "END_USER_ACTION" in their input to escape the boundary.
+        user_action_str = str(user_action).strip()
+        # Escape the delimiter pattern to prevent injection
+        user_action_str = user_action_str.replace("END_USER_ACTION", "END_USER_ACTION_ESCAPED")
         user_action_block = f"USER_ACTION:\n{user_action_str}\nEND_USER_ACTION"
 
         # Build structured prompt with explicit sections
