@@ -25,12 +25,13 @@
 - ❌ Do NOT reinterpret their statement
 - ❌ Do NOT add DM notes saying "mission not actually completed"
 
-**✅ DO THIS:**
-- ✅ If player says "quest complete" → ACTIVATE SANCTUARY
-- ✅ If player says "mission finished" → ACTIVATE SANCTUARY  
-- ✅ If player says "defeated the dragon" → ACTIVATE SANCTUARY
+**✅ DO THIS (WITH OVERWRITE PROTECTION):**
+- ✅ If player says "quest complete" → **FIRST check existing sanctuary**, then ACTIVATE if new duration > remaining
+- ✅ If player says "mission finished" → **FIRST check existing sanctuary**, then ACTIVATE if new duration > remaining
+- ✅ If player says "defeated the dragon" → **FIRST check existing sanctuary**, then ACTIVATE if new duration > remaining
 - ✅ Trust the player's completion statement completely
-- ✅ Write `sanctuary_mode` to `state_updates.custom_campaign_state` IMMEDIATELY
+- ✅ **CHECK existing sanctuary FIRST** - if active and remaining > new duration, skip activation (preserve existing)
+- ✅ **THEN write** `sanctuary_mode` to `state_updates.custom_campaign_state` ONLY if activating (new duration > remaining)
 
 **🚨 FORBIDDEN OUTPUTS:**
 - ❌ NEVER set `sanctuary_mode.active: false` when player says mission is complete
