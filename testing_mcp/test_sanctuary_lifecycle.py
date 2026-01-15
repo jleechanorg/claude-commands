@@ -79,12 +79,13 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         request_responses=request_responses,
     )
 
-    # Start and complete a major arc - EXPLICITLY mark as EPIC from the start
+    # Start and complete a major arc - LLM should infer Epic scale from narrative context
+    # (defeating ancient dragon = Epic campaign arc)
     quest_response = process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="I begin an EPIC quest to defeat the ancient dragon threatening the kingdom. This is a major campaign arc that will span many turns.",
+        user_input="I begin a quest to defeat the ancient dragon threatening the kingdom.",
     )
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
@@ -101,12 +102,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         client.clear_captures()
 
     # Complete the major arc and verify Epic sanctuary activation
-    # EXPLICITLY state EPIC scale in completion language to ensure LLM recognizes it
+    # LLM should infer Epic scale from narrative context (defeating ancient dragon = Epic)
     epic_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        completion_text="The EPIC quest is finished. I have successfully completed the EPIC major dragon quest arc. This is an EPIC campaign arc completion. The EPIC mission is done. I have finished this EPIC quest arc.",
+        completion_text="The quest is finished. I have successfully defeated the ancient dragon and saved the kingdom.",
         request_responses=request_responses,
         verbose=True,
     )
@@ -153,12 +154,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     print(f"   Remaining turns: {remaining_turns}")
 
     # Complete a medium mission (should be ~5 turns, shorter than remaining Epic sanctuary)
-    # EXPLICITLY mark as MEDIUM scale to contrast with EPIC
+    # LLM should infer Medium scale from narrative context (clearing goblin cave = Medium)
     medium_quest = process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="I begin a MEDIUM quest to clear a goblin cave. This is a medium-scale mission.",
+        user_input="I begin a quest to clear a goblin cave.",
     )
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
@@ -175,12 +176,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         client.clear_captures()
 
     # Complete medium mission (should NOT overwrite Epic sanctuary)
-    # EXPLICITLY mark as MEDIUM scale in completion language
+    # LLM should infer Medium scale from narrative context (clearing goblin cave = Medium)
     medium_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        completion_text="The MEDIUM quest is finished. I have successfully completed the MEDIUM goblin cave mission. This is a MEDIUM mission completion. The MEDIUM quest is done.",
+        completion_text="The quest is finished. I have successfully cleared the goblin cave.",
         request_responses=request_responses,
         verbose=True,
     )
