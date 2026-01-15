@@ -163,61 +163,63 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
   const handleSubmit = async () => {
     if (!playerInput.trim() || isLoading) return
 
-    const userAction: StoryEntry = {
-      id: Date.now().toString(),
-      type: 'action',
-      content: playerInput,
-      timestamp: new Date().toISOString(),
-      author: 'player'
-    }
-
-    setStory(prev => [...prev, userAction])
+    // Store input before clearing
+    const inputText = playerInput
     setPlayerInput('')
     setIsLoading(true)
 
     // Generate real AI response
     try {
       const response = await apiService.sendInteraction(campaignId || '', {
-        input: playerInput,
+        input: inputText,
         mode: mode
       })
 
-      if (response.success && (response.god_mode_response || response.narrative || response.response)) {
-        const content = response.god_mode_response || response.narrative || response.response || 'The AI ponders your action...'
-        const aiResponse: StoryEntry = {
-          id: (Date.now() + 1).toString(),
-          type: 'narration',
-          content: content,
-          timestamp: new Date().toISOString(),
-          author: 'ai',
-          dice_rolls: response.dice_rolls
+      // CRITICAL: Reload story from backend to get canonical version
+      // Backend persists entries to Firestore, so we must reload to avoid duplicates
+      // This ensures we always have the single source of truth from Firestore
+      if (response.success && campaignId) {
+        try {
+          const campaignData = await apiService.getCampaign(campaignId)
+          if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
+            const convertedStory = campaignData.story.map((entry: any, index: number) => ({
+              id: `story-${index}`,
+              type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
+              // Prioritize god_mode_response for god mode entries, then narrative, then text
+              content: entry.god_mode_response || entry.narrative || entry.text || '',
+              timestamp: entry.timestamp || new Date().toISOString(),
+              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
+              // Preserve dice_rolls and other structured fields
+              dice_rolls: entry.dice_rolls
+            }))
+            setStory(convertedStory)
+          }
+        } catch (reloadError) {
+          console.warn('Failed to reload story after interaction:', reloadError)
+          // Fallback: if reload fails, show error but don't break the UI
         }
-
-        setStory(prev => [...prev, aiResponse])
-      } else {
-        // Fallback response
-        const aiResponse: StoryEntry = {
-          id: (Date.now() + 1).toString(),
-          type: 'narration',
-          content: 'Your action ripples through the world, creating new possibilities...',
-          timestamp: new Date().toISOString(),
-          author: 'ai'
-        }
-
-        setStory(prev => [...prev, aiResponse])
       }
     } catch (error) {
       console.error('Failed to get AI response:', error)
-      // Error fallback response
-      const aiResponse: StoryEntry = {
-        id: (Date.now() + 1).toString(),
-        type: 'narration',
-        content: 'The world seems to pause, waiting for the next moment to unfold...',
-        timestamp: new Date().toISOString(),
-        author: 'ai'
+      // On error, reload story to ensure consistency
+      if (campaignId) {
+        try {
+          const campaignData = await apiService.getCampaign(campaignId)
+          if (campaignData.story && Array.isArray(campaignData.story)) {
+            const convertedStory = campaignData.story.map((entry: any, index: number) => ({
+              id: `story-${index}`,
+              type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
+              content: entry.god_mode_response || entry.narrative || entry.text || '',
+              timestamp: entry.timestamp || new Date().toISOString(),
+              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
+              dice_rolls: entry.dice_rolls
+            }))
+            setStory(convertedStory)
+          }
+        } catch (reloadError) {
+          console.warn('Failed to reload story after error:', reloadError)
+        }
       }
-
-      setStory(prev => [...prev, aiResponse])
     } finally {
       setIsLoading(false)
     }
