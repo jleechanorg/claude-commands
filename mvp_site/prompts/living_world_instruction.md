@@ -317,9 +317,9 @@ After completing a mission or arc, grant the player sanctuary (protection from l
 
 | Arc Scale | Duration | Turns | Examples |
 |-----------|----------|-------|----------|
-| **Medium mission** | ~2-3 days | 7 | Side quest completion, minor faction victory, dungeon cleared |
-| **Major arc** | ~1 week | 21 | Quest chain finale, story chapter end, major faction defeated |
-| **Epic campaign arc** | ~2 weeks | 42 | Campaign climax, world-changing event, BBEG defeated |
+| **Medium mission** | ~2-3 days | 5 | Side quest completion, minor faction victory, dungeon cleared |
+| **Major arc** | ~1 week | 10 | Quest chain finale, story chapter end, major faction defeated |
+| **Epic campaign arc** | ~2 weeks | 20 | Campaign climax, world-changing event, BBEG defeated |
 
 ### Input: Check Sanctuary Status
 
@@ -341,14 +341,14 @@ If `active: true` AND `current_turn < expires_turn`, sanctuary is in effect.
 - If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, compare durations
 - Calculate remaining turns: `remaining = expires_turn - current_turn`
 - Calculate new duration based on scale:
-  - Medium mission: 7 turns
-  - Major arc: 21 turns
-  - Epic campaign arc: 42 turns
+  - Medium mission: 5 turns
+  - Major arc: 10 turns
+  - Epic campaign arc: 20 turns
 - **Only activate new sanctuary if `new_duration > remaining`**
 - If existing sanctuary has more time remaining, skip activation (don't overwrite)
 - If skipping, include a `player_notification` explaining that existing protection continues
 
-**Example:** Player has Epic sanctuary (42 turns, expires turn 50) at turn 30 (20 turns remaining). Completing a Medium mission (7 turns) should NOT overwrite - keep the Epic sanctuary.
+**Example:** Player has Epic sanctuary (20 turns, expires turn 28) at turn 18 (10 turns remaining). Completing a Medium mission (5 turns) should NOT overwrite - keep the Epic sanctuary.
 
 When completing a mission/arc and activating sanctuary, write to `state_updates.custom_campaign_state.sanctuary_mode`:
 ```json

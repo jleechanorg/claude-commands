@@ -480,13 +480,13 @@ If the player's input contains completion language (e.g., "I defeated the boss",
 1. **Check existing sanctuary:** If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, calculate remaining duration
 2. **Calculate remaining turns:** `remaining = expires_turn - current_turn`
 3. **Determine new duration** based on scale:
-   - Medium mission: 7 turns
-   - Major arc: 21 turns
-   - Epic campaign arc: 42 turns
+   - Medium mission: 5 turns
+   - Major arc: 10 turns
+   - Epic campaign arc: 20 turns
 4. **Only activate if new duration > remaining:** If existing sanctuary has more time, skip activation and notify player that existing protection continues
 5. **If activating:** Write to `state_updates.custom_campaign_state.sanctuary_mode` in your response. This is NOT optional when new sanctuary is longer.
 
-**Example:** Player completes Epic arc (42 turns) at turn 8 → sanctuary expires turn 50. At turn 30 (20 turns remaining), player completes Medium mission (7 turns). Do NOT overwrite - keep Epic sanctuary until turn 50.
+**Example:** Player completes Epic arc (20 turns) at turn 8 → sanctuary expires turn 28. At turn 18 (10 turns remaining), player completes Medium mission (5 turns). Do NOT overwrite - keep Epic sanctuary until turn 28.
 
 **EXAMPLE - Player says "I defeated the goblin chief. The mission is complete."**
 Your response MUST include:
@@ -497,7 +497,7 @@ Your response MUST include:
       "sanctuary_mode": {
         "active": true,
         "activated_turn": <current_turn>,
-        "expires_turn": <current_turn + 7>,
+        "expires_turn": <current_turn + 5>,
         "arc": "Clear the goblin cave",
         "scale": "medium"
       }
@@ -525,9 +525,9 @@ Your response MUST include:
 ```
 
 **Duration by Scale:**
-- **Medium mission** (side quest, minor victory): 7 turns
-- **Major arc** (quest chain finale, chapter end): 21 turns  
-- **Epic campaign arc** (campaign climax, BBEG defeat): 42 turns
+- **Medium mission** (side quest, minor victory): 5 turns
+- **Major arc** (quest chain finale, chapter end): 10 turns  
+- **Epic campaign arc** (campaign climax, BBEG defeat): 20 turns
 
 **Sanctuary Rules:**
 - **BLOCKS:** Lethal ambushes, assassination attempts, major faction attacks, life-threatening complications

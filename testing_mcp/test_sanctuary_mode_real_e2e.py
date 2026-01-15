@@ -8,7 +8,7 @@ that sanctuary mode activates with the correct state structure.
 What this test PROVES:
 - Sanctuary mode activates after arc completion (via OOC prompt)
 - sanctuary_mode state is persisted in custom_campaign_state
-- Duration scales based on arc size (medium=7, major=21, epic=42 turns)
+- Duration scales based on arc size (medium=5, major=10, epic=20 turns)
 - sanctuary_mode has required fields: active, expires_turn, arc, scale
 
 What this test does NOT prove:
@@ -117,7 +117,7 @@ def validate_sanctuary_mode(sanctuary: dict | None, expected_scale: str) -> dict
     expires_turn = sanctuary.get("expires_turn", 0)
     duration = expires_turn - activated_turn
 
-    expected_durations = {"medium": 7, "major": 21, "epic": 42}
+    expected_durations = {"medium": 5, "major": 10, "epic": 20}
     expected_duration = expected_durations.get(expected_scale.lower(), 21)
 
     # Allow some tolerance (LLM might not be exact)

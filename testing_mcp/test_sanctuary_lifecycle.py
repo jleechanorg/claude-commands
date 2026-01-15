@@ -62,7 +62,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     request_responses = []
 
     # ============================================================
-    # PHASE 1: Activate Epic Sanctuary (21+ turns)
+    # PHASE 1: Activate Epic Sanctuary (20 turns)
     # ============================================================
     print("📋 Phase 1: Activate Epic Sanctuary (Major Arc)...")
     campaign_id = create_campaign(
@@ -152,7 +152,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     remaining_turns = epic_expires - current_turn_epic
     print(f"   Remaining turns: {remaining_turns}")
 
-    # Complete a medium mission (should be ~7 turns, shorter than remaining Epic sanctuary)
+    # Complete a medium mission (should be ~5 turns, shorter than remaining Epic sanctuary)
     # EXPLICITLY mark as MEDIUM scale to contrast with EPIC
     medium_quest = process_action(
         client,
