@@ -123,10 +123,10 @@ def _detect_narrative_dice_fabrication(
             logging_util.warning(
                 logging_util.with_campaign(
                     f"🎲 DICE_TOOL_ERROR: Dice tools called but returned errors: {tool_errors}. "
-                    "This is a tool validation failure, not fabrication. Will reprompt."
+                    "This is a tool validation failure, not fabrication. Flagged for user warning."
                 )
             )
-            # Still return True to trigger reprompt, but with better context
+            # Return True to flag as integrity violation for user warning
             return True
 
         # If we get here, tool_requests_executed=True but tool_results lack dice tools
@@ -172,7 +172,11 @@ def add_missing_dice_fields(
 def build_dice_integrity_reprompt_lines(
     dice_roll_strategy: str | None,
 ) -> list[str]:
-    """Return dice integrity reprompt guidance based on strategy."""
+    """Return dice integrity warning lines based on strategy.
+
+    NOTE: Server-side reprompts are disabled. This function is kept for
+    potential future use in DM notes or user-facing warning messages.
+    """
     if dice_roll_strategy == dice_strategy.DICE_STRATEGY_CODE_EXECUTION:
         return [
             "- DICE INTEGRITY VIOLATION: Your response claims dice_rolls but you did NOT "
