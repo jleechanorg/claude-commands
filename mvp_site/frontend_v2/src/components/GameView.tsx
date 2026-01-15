@@ -256,7 +256,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings)
+        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings) && aiResponse.system_warnings.length > 0
           ? [
               {
                 id: `warnings-${Date.now()}`,
@@ -409,7 +409,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings)
+        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings) && aiResponse.system_warnings.length > 0
           ? [
               {
                 id: `warnings-${Date.now()}`,

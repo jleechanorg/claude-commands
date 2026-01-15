@@ -3119,10 +3119,13 @@ def _check_missing_required_fields(
     if not session_header or not str(session_header).strip():
         detected_missing.append("session_header")
 
-    # Check dice_rolls if required
+    # Check dice_rolls if required (detect whitespace-only entries as missing)
     if require_dice_rolls:
         dice_rolls = getattr(structured_response, "dice_rolls", None)
-        if not dice_rolls or (isinstance(dice_rolls, list) and len(dice_rolls) == 0):
+        has_valid_dice = dice_rolls and isinstance(dice_rolls, list) and any(
+            str(r).strip() for r in dice_rolls
+        )
+        if not has_valid_dice:
             detected_missing.append("dice_rolls")
 
     # Check dice integrity
@@ -3162,7 +3165,8 @@ def _check_missing_required_fields(
 
         # Add DM note warning in debug mode
         if debug_mode and structured_response:
-            if structured_response.debug_info is None:
+            # Guard against non-dict debug_info (could be string/list from malformed LLM response)
+            if not isinstance(structured_response.debug_info, dict):
                 structured_response.debug_info = {}
             dm_notes = structured_response.debug_info.get("dm_notes", [])
             if isinstance(dm_notes, str):

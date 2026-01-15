@@ -130,7 +130,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
             dice_rolls: response.dice_rolls
           }
 
-          const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings)
+          const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings) && response.system_warnings.length > 0
             ? [
                 {
                   id: `warnings-${Date.now()}`,
@@ -204,7 +204,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           dice_rolls: response.dice_rolls
         }
 
-        const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings)
+        const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings) && response.system_warnings.length > 0
           ? [
               {
                 id: `warnings-${Date.now()}`,
