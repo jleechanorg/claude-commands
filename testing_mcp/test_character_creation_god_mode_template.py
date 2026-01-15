@@ -2,13 +2,14 @@
 """Regression Test: CharacterCreationAgent with God Mode Templates
 
 Tests that CharacterCreationAgent properly activates when users create
-campaigns from templates with God Mode data.
+campaigns from templates with God Mode data. This prevents regression
+of a bug where CharacterCreationAgent was skipped with God Mode templates.
 
 Run (local MCP already running):
-    python testing_mcp/test_red_green_god_mode.py --server-url http://127.0.0.1:8001
+    python testing_mcp/test_character_creation_god_mode_template.py --server-url http://127.0.0.1:8001
 
 Run (start local MCP automatically):
-    python testing_mcp/test_red_green_god_mode.py --start-local
+    python testing_mcp/test_character_creation_god_mode_template.py --start-local
 """
 
 from __future__ import annotations
