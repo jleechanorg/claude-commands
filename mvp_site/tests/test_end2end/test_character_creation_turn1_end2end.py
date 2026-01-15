@@ -87,18 +87,6 @@ class TestCharacterCreationTurn1End2End(unittest.TestCase):
 - **Shield:** +2 AC, bearing the Two Suns of the Imperium
 """
 
-        # Mock campaign creation response (initial campaign setup)
-        campaign_creation_response = FakeLLMResponse(
-            json.dumps(
-                {
-                    "narrative": "Welcome to your adventure! Campaign created successfully.",
-                    "entities_mentioned": [],
-                    "location_confirmed": "World of Assiah",
-                    "state_updates": {},
-                }
-            )
-        )
-
         # Mock CharacterCreationAgent response for Turn 1
         character_creation_response = FakeLLMResponse(
             json.dumps(
@@ -139,7 +127,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
 
         # Step 1: Create campaign with full God Mode data
         campaign_data = {
-            "title": "RED Test - My Epic Adventure",
+            "title": "E2E Test - My Epic Adventure",
             "god_mode_data": god_mode_data,
             "selectedPrompts": [],
             "use_default_world": False,
@@ -246,18 +234,6 @@ Take your time! Once we finalize these details, we'll begin your epic adventure 
         # Minimal God Mode data (like user's "luke | star wars" example)
         god_mode_data = "Character: luke | Setting: star wars"
 
-        # Mock responses
-        campaign_creation_response = FakeLLMResponse(
-            json.dumps(
-                {
-                    "narrative": "Welcome to Star Wars! Campaign created successfully.",
-                    "entities_mentioned": [],
-                    "location_confirmed": "Star Wars Galaxy",
-                    "state_updates": {},
-                }
-            )
-        )
-
         # Return proper character creation narrative
         character_creation_response = FakeLLMResponse(
             json.dumps(
@@ -294,7 +270,7 @@ Tell me your choices and we'll build Luke's character sheet together!""",
 
         # Create campaign
         campaign_data = {
-            "title": "RED Test - Star Wars Luke",
+            "title": "E2E Test - Star Wars Luke",
             "god_mode_data": god_mode_data,
             "selectedPrompts": [],
             "use_default_world": False,

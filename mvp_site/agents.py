@@ -529,6 +529,7 @@ class StoryModeAgent(BaseAgent):
 
         # Add living world instruction every N turns (default: 3)
         # Only StoryModeAgent triggers living world updates
+        # Note: Companion quest arcs are integrated INTO living world (not separate)
         self._add_living_world_instruction(parts, turn_number)
 
         return parts
@@ -723,8 +724,21 @@ class CharacterCreationAgent(BaseAgent):
 
         # Build character creation instructions (focused prompt set)
         parts: list[str] = builder.build_character_creation_instructions()
+        
+        # CRITICAL: Add companion instruction EARLY (right after master directive) if companions exist
+        # This ensures the LLM sees it BEFORE character creation instructions that might conflict
+        # Security: Insert AFTER master directive (position 1) to maintain prompt hierarchy
+        companion_instruction = builder.build_companion_instruction()
+        if companion_instruction and "ACTIVE COMPANIONS" in companion_instruction:
+            # Insert at position 1 (AFTER master directive) to maintain security hierarchy
+            # finalize_instructions() will insert identity/directives at position 1-2,
+            # so companion instruction will be at position 1, right after master directive
+            parts.insert(1, companion_instruction)
+            logging_util.info("🎭 CharacterCreationAgent: Added companion instruction after master directive (position 1) for existing companions")
 
         # Finalize WITHOUT world lore (character creation doesn't need it)
+        # Note: finalize_instructions() will insert identity/directives after master directive,
+        # pushing companion instruction to position 2 (after identity) or keeping it at 1
         return builder.finalize_instructions(parts, use_default_world=False)
 
     @classmethod

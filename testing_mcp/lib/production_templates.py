@@ -36,3 +36,8 @@ See world history section below and then campaign details for more info on this 
 - **Shield:** +2 AC, bearing the Two Suns of the Imperium
 - **The Gryphon Helm:** Your iconic helmet
 """
+
+# Registry of templates for easy access in tests
+GOD_MODE_TEMPLATES = {
+    "My Epic Adventure": MY_EPIC_ADVENTURE_GOD_MODE
+}
