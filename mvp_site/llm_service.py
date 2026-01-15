@@ -1371,10 +1371,11 @@ def _call_llm_api_with_llm_request(
         # headers if we just interpolate it inline. By wrapping it in delimiters, we ensure
         # the LLM can't confuse user content with system section boundaries.
         # 
-        # CRITICAL: Also escape the delimiter itself to prevent users from including
-        # "END_USER_ACTION" in their input to escape the boundary.
+        # CRITICAL: Escape both start ("USER_ACTION:") and end ("END_USER_ACTION") delimiters
+        # to prevent users from injecting fake section boundaries.
         user_action_str = str(user_action).strip()
-        # Escape the delimiter pattern to prevent injection
+        # Escape delimiter patterns to prevent injection (both start and end delimiters)
+        user_action_str = user_action_str.replace("USER_ACTION:", "USER_ACTION_ESCAPED:")
         user_action_str = user_action_str.replace("END_USER_ACTION", "END_USER_ACTION_ESCAPED")
         user_action_block = f"USER_ACTION:\n{user_action_str}\nEND_USER_ACTION"
 
@@ -1414,7 +1415,7 @@ def _call_llm_api_with_llm_request(
         # IMPORTANT: This is for context only - respond to USER_ACTION, not STORY_HISTORY
         if json_data.get("story_history") is not None:
             story_history_data = json_data.get("story_history", [])
-            logging_util.info(
+            logging_util.debug(
                 f"📚 STORY_HISTORY: {len(story_history_data)} entries being included in structured prompt"
             )
             # Log first and last few entries for debugging (DEBUG level to avoid PII leaks)
@@ -1506,10 +1507,10 @@ def _call_llm_api_with_llm_request(
             provider_name,
         )
         
-        # Log the LLM response preview
+        # Log the LLM response preview (DEBUG level to avoid log noise)
         if llm_response:
             response_text = getattr(llm_response, 'text', '') or getattr(llm_response, 'narrative_text', '') or str(llm_response)[:200]
-            logging_util.info(
+            logging_util.debug(
                 f"📥 LLM RESPONSE received (first 300 chars): {response_text[:300]}..."
             )
         
@@ -3851,14 +3852,14 @@ def continue_story(  # noqa: PLR0912, PLR0915
             f"{pending_system_corrections}"
         )
 
-    # Log what we're passing to LLMRequest
-    logging_util.info(
+    # Log what we're passing to LLMRequest (DEBUG level to avoid log noise)
+    logging_util.debug(
         f"📝 Building LLMRequest: user_action={user_input[:200]}..., "
         f"story_history_length={len(stripped_story_context)}"
     )
     if stripped_story_context:
         last_story_entry = stripped_story_context[-1]
-        logging_util.info(
+        logging_util.debug(
             f"📝 Last story_history entry: actor={last_story_entry.get('actor')}, "
             f"text={str(last_story_entry.get('text', ''))[:100]}..."
         )
@@ -3882,8 +3883,8 @@ def continue_story(  # noqa: PLR0912, PLR0915
         system_corrections=pending_system_corrections,
     )
     
-    # Log what was actually set in the request
-    logging_util.info(
+    # Log what was actually set in the request (DEBUG level to avoid log noise)
+    logging_util.debug(
         f"📝 LLMRequest created: user_action={gemini_request.user_action[:200] if gemini_request.user_action else 'None'}..., "
         f"story_history_length={len(gemini_request.story_history) if gemini_request.story_history else 0}"
     )

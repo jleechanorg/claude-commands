@@ -1297,7 +1297,7 @@ def _load_campaign_and_continue_story(
     include_raw_llm_payloads: bool,
 ) -> tuple[dict[str, Any] | None, list[dict[str, Any]], Any]:
     """Fetch campaign data/story context and run continue_story in one thread."""
-    logging_util.info(
+    logging_util.debug(
         f"🔄 _load_campaign_and_continue_story: user_id={user_id}, campaign_id={campaign_id}, "
         f"llm_input={llm_input[:100]}..., mode={mode}"
     )
@@ -1310,18 +1310,18 @@ def _load_campaign_and_continue_story(
         return None, [], None
 
     story_context = story_context or []
-    logging_util.info(
+    logging_util.debug(
         f"📖 Loaded story_context from Firestore: {len(story_context)} entries"
     )
     if story_context:
         # Log first and last entries to see what's in context
         first_entry = story_context[0]
         last_entry = story_context[-1]
-        logging_util.info(
+        logging_util.debug(
             f"📖 story_context[0]: actor={first_entry.get('actor')}, "
             f"text={str(first_entry.get('text', ''))[:100]}..."
         )
-        logging_util.info(
+        logging_util.debug(
             f"📖 story_context[-1]: actor={last_entry.get('actor')}, "
             f"text={str(last_entry.get('text', ''))[:100]}..."
         )
@@ -1329,7 +1329,7 @@ def _load_campaign_and_continue_story(
     selected_prompts = campaign_data.get("selected_prompts", [])
     use_default_world = campaign_data.get("use_default_world", False)
     
-    logging_util.info(
+    logging_util.debug(
         f"🚀 Calling continue_story with llm_input={llm_input[:100]}..., "
         f"story_context_length={len(story_context)}"
     )
@@ -1345,10 +1345,10 @@ def _load_campaign_and_continue_story(
         include_raw_llm_payloads,
     )
     
-    # Log response preview
+    # Log response preview (DEBUG level to avoid log noise)
     if llm_response_obj:
         narrative_preview = getattr(llm_response_obj, 'narrative_text', '')[:200] if hasattr(llm_response_obj, 'narrative_text') else 'N/A'
-        logging_util.info(
+        logging_util.debug(
             f"✅ LLM response received: narrative_preview={narrative_preview}..."
         )
     

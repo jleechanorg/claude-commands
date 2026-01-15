@@ -39,6 +39,24 @@ interface StoryEntry {
   narrative?: string
 }
 
+/**
+ * Convert backend story entries to frontend StoryEntry format.
+ * Centralized to ensure consistent type determination across all reload paths.
+ */
+function convertBackendStoryToEntries(backendStory: any[]): StoryEntry[] {
+  return backendStory.map((entry: any, index: number) => ({
+    id: `story-${index}`,
+    // Consistent type determination: god mode = narration, user actor = action, others = narration
+    type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
+    // Prioritize god_mode_response for god mode entries, then narrative, then text
+    content: entry.god_mode_response || entry.narrative || entry.text || '',
+    timestamp: entry.timestamp || new Date().toISOString(),
+    author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
+    // Preserve dice_rolls and other structured fields
+    dice_rolls: entry.dice_rolls
+  }))
+}
+
 export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayViewProps) {
   console.log('🎯 GAMEPLAYVIEW received campaignTitle:', campaignTitle)
   console.log('🎯 GAMEPLAYVIEW received campaignId:', campaignId)
@@ -79,19 +97,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
             console.log('🎯 GAMEPLAYVIEW found existing story entries:', campaignData.story.length)
 
-            const convertedStory = campaignData.story.map((entry: any, index: number) => ({
-              id: `story-${index}`,
-              // Consistent type determination: god mode = narration, user actor = action, others = narration
-              type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
-              // Prioritize god_mode_response for god mode entries, then narrative, then text
-              content: entry.god_mode_response || entry.narrative || entry.text || '',
-              timestamp: entry.timestamp || new Date().toISOString(),
-              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
-              // Preserve dice_rolls and other structured fields
-              dice_rolls: entry.dice_rolls
-            }))
-
-            setStory(convertedStory)
+            setStory(convertBackendStoryToEntries(campaignData.story))
             setIsInitializing(false)
             return // Exit early if we successfully loaded existing story
           }
@@ -195,17 +201,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
         try {
           const campaignData = await apiService.getCampaign(campaignId)
           if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
-            const convertedStory = campaignData.story.map((entry: any, index: number) => ({
-              id: `story-${index}`,
-              type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
-              // Prioritize god_mode_response for god mode entries, then narrative, then text
-              content: entry.god_mode_response || entry.narrative || entry.text || '',
-              timestamp: entry.timestamp || new Date().toISOString(),
-              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
-              // Preserve dice_rolls and other structured fields
-              dice_rolls: entry.dice_rolls
-            }))
-            setStory(convertedStory)
+            setStory(convertBackendStoryToEntries(campaignData.story))
           }
         } catch (reloadError) {
           console.warn('Failed to reload story after interaction:', reloadError)
@@ -226,15 +222,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           const campaignData = await apiService.getCampaign(campaignId)
           // CRITICAL: Only update story if we have non-empty data to prevent clearing user's story
           if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
-            const convertedStory = campaignData.story.map((entry: any, index: number) => ({
-              id: `story-${index}`,
-              type: entry.mode === 'god' ? 'narration' : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
-              content: entry.god_mode_response || entry.narrative || entry.text || '',
-              timestamp: entry.timestamp || new Date().toISOString(),
-              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
-              dice_rolls: entry.dice_rolls
-            }))
-            setStory(convertedStory)
+            setStory(convertBackendStoryToEntries(campaignData.story))
           }
         } catch (reloadError) {
           console.warn('Failed to reload story after error:', reloadError)
