@@ -12,6 +12,7 @@
 |------|--------|
 | 2026-01-15 | Initial plan created |
 | 2026-01-15 | Added security considerations per code review |
+| 2026-01-15 | Fixed section numbering, function signatures, error handling per Copilot/Cursor review |
 
 ---
 
@@ -87,7 +88,7 @@ This document outlines the engineering plan for integrating user avatars into th
 - `@check_token` decorator validates and extracts `user_id`
 - Frontend uses `useAuth()` hook for user state
 
-### 2.3 Campaign Creation Architecture
+### 2.4 Campaign Creation Architecture
 
 **Campaign Creation Component:** `mvp_site/frontend_v2/src/components/CampaignCreationV2.tsx`
 
@@ -326,9 +327,12 @@ def validate_file_size_streaming(file_storage, max_size: int) -> tuple[bool, byt
 @app.route("/api/avatar", methods=["POST"])
 @limiter.limit("5 per hour")  # Rate limit avatar uploads
 @check_token
-async def upload_avatar():
-    """Upload user avatar image."""
-    user_id = request.user_id
+async def upload_avatar(user_id: str):
+    """Upload user avatar image.
+
+    Args:
+        user_id: Authenticated user ID (injected by @check_token decorator)
+    """
 
     if "file" not in request.files:
         return jsonify({"success": False, "error": "No file provided"}), 400
@@ -361,9 +365,12 @@ async def upload_avatar():
 
 @app.route("/api/avatar", methods=["DELETE"])
 @check_token
-async def delete_avatar():
-    """Delete user avatar."""
-    user_id = request.user_id
+async def delete_avatar(user_id: str):
+    """Delete user avatar.
+
+    Args:
+        user_id: Authenticated user ID (injected by @check_token decorator)
+    """
     try:
         delete_user_avatar(user_id)
         update_user_settings(user_id, {"avatar_url": None})
@@ -375,9 +382,26 @@ async def delete_avatar():
 
 #### 4.1.3 Settings Schema Update
 
-**File:** `mvp_site/main.py` (line ~2390)
+**File:** `mvp_site/main.py` (lines 2402-2413)
 
-Add `"avatar_url"` to the valid settings keys set.
+Add `"avatar_url"` to the `valid_settings_keys` set:
+
+```python
+# In api_settings() function, update valid_settings_keys:
+valid_settings_keys = {
+    "gemini_model",
+    "openrouter_model",
+    "cerebras_model",
+    "llm_provider",
+    "theme",
+    "auto_save",
+    "debug_mode",
+    "spicy_mode",
+    "pre_spicy_model",
+    "pre_spicy_provider",
+    "avatar_url",  # Add this line
+}
+```
 
 ### 4.2 Frontend Changes
 
@@ -388,28 +412,62 @@ Add `"avatar_url"` to the valid settings keys set.
 ```typescript
 /**
  * Upload user avatar
+ * @param file - Image file to upload
+ * @returns Promise with success status, avatar_url on success, or error message
  */
 async uploadAvatar(file: File): Promise<{ success: boolean; avatar_url?: string; error?: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
 
-  const response = await this.authenticatedRequest('/avatar', {
-    method: 'POST',
-    body: formData,
-    // Don't set Content-Type - browser will set multipart/form-data with boundary
-  });
+    const response = await this.authenticatedRequest('/avatar', {
+      method: 'POST',
+      body: formData,
+      // Don't set Content-Type - browser will set multipart/form-data with boundary
+    });
 
-  return response.json();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `Upload failed with status ${response.status}`,
+      };
+    }
+
+    return await response.json();
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error during upload',
+    };
+  }
 }
 
 /**
  * Delete user avatar
+ * @returns Promise with success status or error message
  */
-async deleteAvatar(): Promise<{ success: boolean }> {
-  const response = await this.authenticatedRequest('/avatar', {
-    method: 'DELETE',
-  });
-  return response.json();
+async deleteAvatar(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await this.authenticatedRequest('/avatar', {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `Delete failed with status ${response.status}`,
+      };
+    }
+
+    return await response.json();
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error during delete',
+    };
+  }
 }
 ```
 
@@ -582,18 +640,25 @@ Modify `POST /api/campaigns` to optionally accept multipart/form-data with avata
 ```python
 @app.route("/api/campaigns", methods=["POST"])
 @check_token
-async def create_campaign_route():
-    user_id = request.user_id
+async def create_campaign_route(user_id: str):
+    """Create a new campaign with optional avatar upload.
 
+    Args:
+        user_id: Authenticated user ID (injected by @check_token decorator)
+
+    Returns:
+        JSON response with campaign_id on success, error on failure
+    """
     # Handle both JSON and multipart/form-data
     if request.content_type and 'multipart/form-data' in request.content_type:
-        # Extract form fields
+        # Extract form fields (including custom_options per CampaignCreateRequest schema)
         campaign_data = {
             "title": request.form.get("title"),
             "character": request.form.get("character"),
             "setting": request.form.get("setting"),
             "description": request.form.get("description"),
             "selected_prompts": json.loads(request.form.get("selected_prompts", "[]")),
+            "custom_options": json.loads(request.form.get("custom_options", "[]")),
         }
         avatar_file = request.files.get("avatar")
     else:
@@ -607,18 +672,27 @@ async def create_campaign_route():
         **campaign_data
     })
 
+    # Check if campaign creation succeeded
     campaign_id = result.get("campaign_id")
+    if not campaign_id:
+        # Campaign creation failed - return error with appropriate status
+        error_msg = result.get("error", "Campaign creation failed")
+        return jsonify({"success": False, "error": error_msg}), 400
 
     # If avatar provided, upload and store URL
     if avatar_file and campaign_id:
-        avatar_url = upload_campaign_avatar(
-            user_id, campaign_id,
-            avatar_file.read(),
-            avatar_file.content_type
-        )
-        # Store avatar_url in campaign document
-        update_campaign_avatar(user_id, campaign_id, avatar_url)
-        result["avatar_url"] = avatar_url
+        try:
+            avatar_url = upload_campaign_avatar(
+                user_id, campaign_id,
+                avatar_file.read(),
+                avatar_file.content_type
+            )
+            # Store avatar_url in campaign document
+            update_campaign_avatar(user_id, campaign_id, avatar_url)
+            result["avatar_url"] = avatar_url
+        except AvatarUploadError as e:
+            # Avatar upload failed but campaign was created - log warning, don't fail
+            logging_util.warning(f"Avatar upload failed for campaign {campaign_id}: {e}")
 
     return jsonify(result), 201
 ```
@@ -739,6 +813,7 @@ const handleCreate = async () => {
     formData.append('setting', formState.setting);
     formData.append('description', formState.description);
     formData.append('selected_prompts', JSON.stringify(selectedPrompts));
+    formData.append('custom_options', JSON.stringify(customOptions || []));
     formData.append('avatar', avatarFile);
 
     const response = await apiService.createCampaignWithAvatar(formData);
