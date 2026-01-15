@@ -278,6 +278,28 @@ class GameState:
         ):
             self.custom_campaign_state["arc_milestones"] = {}
 
+        # Ensure companion_arcs is initialized for tracking companion personal quest arcs
+        # LLM manages arcs via state_updates; we just ensure the dict exists
+        if "companion_arcs" not in self.custom_campaign_state or not isinstance(
+            self.custom_campaign_state.get("companion_arcs"), dict
+        ):
+            self.custom_campaign_state["companion_arcs"] = {}
+
+        # Track cadence for companion arc events to align with prompt expectations.
+        # Handle both missing key AND null/invalid value from Firestore.
+        # Follow same pattern as arc_milestones/active_constraints for consistency.
+        raw_next_companion_arc_turn = self.custom_campaign_state.get(
+            "next_companion_arc_turn"
+        )
+        if (
+            "next_companion_arc_turn" not in self.custom_campaign_state
+            or not isinstance(raw_next_companion_arc_turn, int)
+            or isinstance(raw_next_companion_arc_turn, bool)
+        ):
+            self.custom_campaign_state["next_companion_arc_turn"] = _coerce_int(
+                raw_next_companion_arc_turn, constants.COMPANION_ARC_INITIAL_TURN
+            )
+
         # Ensure active_constraints exists for tracking secrecy/deception rules
         # (player OOC constraints such as "don't reveal X to Y") and remains
         # list-typed for prompt rules that append entries.
@@ -815,6 +837,67 @@ class GameState:
             )
 
         return "\n".join(lines)
+
+    def get_companion_arcs_summary(self) -> str:
+        """
+        Generate a summary of companion arcs for LLM context.
+
+        The LLM manages companion arcs via state_updates.companion_arcs.
+        This method formats the current state for inclusion in prompts.
+
+        Schema (managed by LLM in state_updates):
+        companion_arcs: {
+          "companion_name": {
+            "arc_type": "lost_family|rival_nemesis|dark_secret|...",
+            "phase": "discovery|development|crisis|resolution",
+            "callbacks": [{"trigger": "condition", "effect": "what happens"}],
+            "history": ["turn 3: saw pendant", "turn 6: learned sister missing"]
+          }
+        }
+        """
+        companion_arcs = self.custom_campaign_state.get("companion_arcs", {})
+        # Validate companion_arcs is a dict before calling .items()
+        # LLM may set it to non-dict types (string/list), which would raise AttributeError
+        if not companion_arcs or not isinstance(companion_arcs, dict):
+            return ""
+
+        lines = []
+        for name, arc in companion_arcs.items():
+            if not isinstance(arc, dict):
+                continue
+            phase = arc.get("phase", constants.COMPANION_ARC_PHASES[0])
+            if phase not in constants.COMPANION_ARC_PHASES:
+                phase = constants.COMPANION_ARC_PHASES[0]
+            arc_type = arc.get("arc_type", "unknown")
+            if arc_type not in constants.COMPANION_ARC_TYPES:
+                arc_type = "unknown"
+            lines.append(f"- {name}: {arc_type} ({phase})")
+
+            # Show recent history
+            history = arc.get("history", [])
+            if isinstance(history, list):
+                for event in history[-2:]:
+                    if isinstance(event, dict):
+                        event_text = event.get("event") or event.get("description")
+                    else:
+                        event_text = event
+                    if event_text:
+                        lines.append(f"  └ {event_text}")
+
+            # Show pending callbacks
+            callbacks = arc.get("callbacks", [])
+            if isinstance(callbacks, list):
+                for cb in callbacks[:2]:
+                    if not isinstance(cb, dict) or cb.get("triggered") is True:
+                        continue
+                    trigger = cb.get("trigger") or cb.get("trigger_condition")
+                    effect = cb.get("effect")
+                    if trigger or effect:
+                        lines.append(
+                            f"  ⚡ Callback: {trigger or 'unknown'} → {effect or 'unknown'}"
+                        )
+
+        return "\n".join(lines) if lines else ""
 
     def validate_checkpoint_consistency(self, narrative_text: str) -> list[str]:  # noqa: PLR0912,PLR0915,SIM102
         """

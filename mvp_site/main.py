@@ -2037,7 +2037,34 @@ def create_app() -> Flask:
                 f"DEBUG: user_input = {user_input} (KEY_USER_INPUT='{KEY_USER_INPUT}')"
             )
             mode = data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
-            include_raw_llm_payloads = bool(data.get("include_raw_llm_payloads", False))
+            # Security: Strict boolean check - only allow explicit True or "true" string
+            # bool("false") = True, so we must check explicitly
+            raw_payloads_raw = data.get("include_raw_llm_payloads", False)
+            include_raw_llm_payloads = (
+                raw_payloads_raw is True
+                or (isinstance(raw_payloads_raw, str) and raw_payloads_raw.lower() == "true")
+            )
+
+            # Security: Restrict raw LLM payload capture to admin/developer users only
+            # Harden: Use strict boolean check and require ALLOW_TEST_AUTH_BYPASS for test bypass
+            if include_raw_llm_payloads:
+                # Strict boolean check: only allow if explicitly "true" (case-insensitive)
+                is_dev_mode = os.getenv("WORLDAI_DEV_MODE", "").lower() == "true"
+                # Test bypass requires both TESTING_AUTH_BYPASS_MODE AND ALLOW_TEST_AUTH_BYPASS
+                is_test_bypass = TESTING_AUTH_BYPASS_MODE and ALLOW_TEST_AUTH_BYPASS
+                is_dev_or_test = is_dev_mode or is_test_bypass
+                
+                admin_ids = [
+                    uid.strip()
+                    for uid in os.getenv("WORLDAI_ADMIN_USER_IDS", "").split(",")
+                    if uid.strip()
+                ]
+                if not is_dev_or_test and user_id not in admin_ids:
+                    logging_util.warning(
+                        "UNAUTHORIZED_RAW_PAYLOAD_REQUEST: User %s requested raw LLM payloads but is not authorized.",
+                        user_id,
+                    )
+                    include_raw_llm_payloads = False
 
             # Validate user_input is provided (None only, empty strings are allowed)
             if user_input is None:

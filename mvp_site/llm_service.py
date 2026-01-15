@@ -712,7 +712,6 @@ STORY_BUDGET_END_RATIO: float = (
 # Keywords that indicate important events worth preserving in middle compaction
 # Organized by category for maintainability
 MIDDLE_COMPACTION_KEYWORDS: set[str] = {
-    # Combat and conflict (English)
     "attack",
     "hit",
     "damage",
@@ -737,7 +736,6 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
     "dodge",
     "block",
     "parry",
-    # Discovery and acquisition
     "discover",
     "find",
     "found",
@@ -762,7 +760,6 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
     "potion",
     "scroll",
     "map",
-    # Story progression
     "quest",
     "mission",
     "objective",
@@ -785,7 +782,6 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
     "lie",
     "confess",
     "admit",
-    # Location and movement
     "arrive",
     "enter",
     "leave",
@@ -802,7 +798,6 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
     "door",
     "passage",
     "hidden",
-    # Character interactions
     "meet",
     "ally",
     "join",
@@ -818,7 +813,6 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
     "sell",
     "steal",
     "pickpocket",
-    # Major events and mechanics
     "level",
     "experience",
     "rest",
@@ -834,7 +828,6 @@ MIDDLE_COMPACTION_KEYWORDS: set[str] = {
     "free",
     "liberate",
     "transform",
-    # Emotional/dramatic markers
     "suddenly",
     "finally",
     "unfortunately",
@@ -905,7 +898,7 @@ def _split_into_sentences(text: str) -> list[str]:
     current = []
     words = text.split()
 
-    for i, word in enumerate(words):
+    for _i, word in enumerate(words):
         current.append(word)
 
         # Check if this word ends a sentence
@@ -975,10 +968,7 @@ def _is_important_sentence(sentence: str) -> bool:
         return True
 
     # Exclamatory sentences are often important dramatic moments
-    if sentence.rstrip().endswith("!") and len(sentence) > 30:
-        return True
-
-    return False
+    return sentence.rstrip().endswith("!") and len(sentence) > 30
 
 
 SAFETY_SETTINGS: list[types.SafetySetting] = [
@@ -1371,7 +1361,7 @@ def _call_llm_api_with_llm_request(
     )
 
 
-def _call_llm_api(
+def _call_llm_api(  # noqa: PLR0912, PLR0915
     prompt_contents: list[Any],
     model_name: str,
     current_prompt_text_for_logging: str | None = None,
@@ -1935,7 +1925,7 @@ def _calculate_percentage_based_turns(
     return (start_turns, end_turns)
 
 
-def _compact_middle_turns(
+def _compact_middle_turns(  # noqa: PLR0912, PLR0915
     middle_turns: list[dict[str, Any]],
     max_tokens: int,
 ) -> dict[str, Any]:
@@ -1971,8 +1961,8 @@ def _compact_middle_turns(
     total_tokens = 0
 
     # Reserve tokens for formatting overhead (header + footer + bullets buffer)
-    FORMATTING_OVERHEAD = 30
-    effective_max_tokens = max(10, max_tokens - FORMATTING_OVERHEAD)
+    formatting_overhead = 30
+    effective_max_tokens = max(10, max_tokens - formatting_overhead)
 
     for turn in middle_turns:
         text = turn.get(constants.KEY_TEXT, "")
@@ -2075,7 +2065,7 @@ def _compact_middle_turns(
     }
 
 
-def _truncate_context(
+def _truncate_context(  # noqa: PLR0911, PLR0912, PLR0915
     story_context: list[dict[str, Any]],
     max_chars: int,
     model_name: str,
@@ -2141,11 +2131,9 @@ def _truncate_context(
         # Still over budget - iteratively hard-trim until we fit
         # Start with proportional trim based on current vs target
         trim_ratio = max_tokens / max(1, candidate_tokens)
-        trimmed_context = list(candidate)  # Copy to avoid mutation
-
         # FIX: Loop until we actually fit, not just 10 iterations
         max_iterations = 50  # Increased from 10
-        for iteration in range(max_iterations):
+        for _iteration in range(max_iterations):
             trimmed_entries = []
             # FIX: Always trim from the ORIGINAL candidate list to avoid recursive over-truncation
             # The trim_ratio is relative to the original size.
@@ -2209,12 +2197,12 @@ def _truncate_context(
 
     # ADAPTIVE LOOP: Reduce turns until content fits within token budget
     # Use absolute minimums but respect passed-in values if they're smaller
-    ABS_MIN_START = 3
-    ABS_MIN_END = 5
+    abs_min_start = 3
+    abs_min_end = 5
     min_start = (
-        min(ABS_MIN_START, turns_to_keep_at_start) if turns_to_keep_at_start > 0 else 0
+        min(abs_min_start, turns_to_keep_at_start) if turns_to_keep_at_start > 0 else 0
     )
-    min_end = min(ABS_MIN_END, turns_to_keep_at_end)
+    min_end = min(abs_min_end, turns_to_keep_at_end)
 
     current_start = turns_to_keep_at_start
     current_end = turns_to_keep_at_end
@@ -2342,9 +2330,7 @@ def _truncate_context(
 
                 # FIX: Detect JSON content and drop instead of corrupting
                 text_stripped = text.strip()
-                if (
-                    text_stripped.startswith("{") or text_stripped.startswith("[")
-                ) and len(text) > entry_max_chars:
+                if text_stripped.startswith(("{", "[")) and len(text) > entry_max_chars:
                     # JSON content would be corrupted by truncation - drop it
                     continue
 
@@ -2442,7 +2428,6 @@ MOCK_INITIAL_STORY_NO_COMPANIONS = """{
 "setting": {"location": "Dungeon Entrance", "atmosphere": "mysterious"},
 "mechanics": {"initiative_rolled": false, "characters_need_setup": true}
 }"""
-
 
 def _select_provider_and_model(user_id: UserId | None) -> ProviderSelection:
     """Select the configured LLM provider and model for a user.
@@ -2565,13 +2550,14 @@ def _select_model_for_user(user_id: UserId | None) -> str:
 
 
 @log_exceptions
-def get_initial_story(
+def get_initial_story(  # noqa: PLR0912, PLR0915
     prompt: str,
     user_id: UserId | None = None,
     selected_prompts: list[str] | None = None,
     generate_companions: bool = False,
     use_default_world: bool = False,
     use_character_creation_agent: bool = False,
+    initial_npc_data: dict[str, Any] | None = None,  # Companions from god_mode
 ) -> LLMResponse:
     """
     Generates the initial story part, including character, narrative, and mechanics instructions.
@@ -2588,7 +2574,7 @@ def get_initial_story(
     mock_mode = os.environ.get("MOCK_SERVICES_MODE", "").lower() == "true"
     if mock_mode:
         logging_util.info("Using mock mode - returning mock initial story response")
-        
+
         # If CharacterCreationAgent should be used, return character creation narrative
         if use_character_creation_agent:
             logging_util.info("Mock mode: Using CharacterCreationAgent for character review")
@@ -2610,7 +2596,7 @@ Welcome! I see you have a pre-defined character template. Let's review and final
 4. **Personality:** What drives your character? What are their ideals, bonds, and flaws?
 
 Take your time! Once we finalize these details, we'll begin your epic adventure."""
-            
+
             # Parse as structured response
             narrative_text, structured_response = parse_structured_response(
                 json.dumps({
@@ -2624,7 +2610,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
                     },
                 })
             )
-            
+
             if structured_response:
                 if structured_response.debug_info is None:
                     structured_response.debug_info = {}
@@ -2636,7 +2622,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
                 character_creation_narrative,
                 "mock-model",
             )
-        
+
         # Regular story mode
         if generate_companions:
             logging_util.info("Mock mode: Generating companions as requested")
@@ -2670,19 +2656,29 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
             "No specific system prompts selected for initial story. Using none."
         )
 
+    # Create game_state with companions if provided (from god_mode)
+    initial_game_state_for_agent = None
+    if initial_npc_data:
+        from mvp_site.game_state import GameState
+        initial_game_state_for_agent = GameState(npc_data=initial_npc_data)
+        logging_util.info(
+            f"🎭 Passing {len(initial_npc_data)} companions to agent for instruction building: {list(initial_npc_data.keys())}"
+        )
+    
     # Select agent based on use_character_creation_agent flag
     # For God Mode campaigns with character data, use CharacterCreationAgent
     # For regular campaigns, use StoryModeAgent
     if use_character_creation_agent:
-        agent = CharacterCreationAgent(game_state=None)  # No game state yet for initial story
+        agent = CharacterCreationAgent(game_state=initial_game_state_for_agent)
         logging_util.info("Using CharacterCreationAgent for initial story (God Mode with character)")
     else:
-        agent = StoryModeAgent(game_state=None)  # No game state yet for initial story
+        agent = StoryModeAgent(game_state=initial_game_state_for_agent)
         logging_util.info("Using StoryModeAgent for initial story (regular campaign)")
-    
+
     # Build system instructions based on agent type
     if use_character_creation_agent:
         # CharacterCreationAgent builds instructions directly (no build_system_instruction_parts)
+        # It will include companion instructions if companions are in game_state
         system_instruction_final = agent.build_system_instructions(
             selected_prompts=selected_prompts,
             use_default_world=use_default_world,
@@ -2691,12 +2687,12 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
     else:
         builder = agent.prompt_builder
 
-        # Start from agent’s standard story-mode stack (without continuation reminders)
+        # Start from agent's standard story-mode stack (without continuation reminders)
         system_instruction_parts = agent.build_system_instruction_parts(
             selected_prompts=selected_prompts,
             include_continuation_reminder=False,
+            turn_number=0,
         )
-
         # Initial story specific: Add companion generation instruction if requested
         if generate_companions:
             system_instruction_parts.append(builder.build_companion_instruction())
@@ -3250,7 +3246,7 @@ def _validate_and_enforce_planning_block(
 
 
 @log_exceptions
-def continue_story(
+def continue_story(  # noqa: PLR0912, PLR0915
     user_input: str,
     mode: str,
     story_context: list[dict[str, Any]],
@@ -3548,6 +3544,11 @@ def continue_story(
             story_context=timeline_log_string,
         )
         entity_specific_instructions = entity_instructions
+        logging_util.info(
+            "ENTITY_TRACKING_PROMPT: preload_chars=%s, specific_chars=%s",
+            len(entity_preload_text),
+            len(entity_specific_instructions),
+        )
 
     # Create the final prompt for the current user turn (User's preferred method)
     current_prompt_text: str = get_current_turn_prompt(user_input, mode)
@@ -3579,15 +3580,6 @@ def continue_story(
             logging_util.info(
                 f"📦 EQUIPMENT_CONTEXT_INJECTED: {len(equipment_display)} items added to prompt"
             )
-
-    # Build the full prompt with entity tracking enhancements
-    enhanced_entity_tracking = entity_tracking_instruction
-    if entity_preload_text or entity_specific_instructions:
-        enhanced_entity_tracking = (
-            f"{entity_preload_text}"
-            f"{entity_specific_instructions}"
-            f"{entity_tracking_instruction}"
-        )
 
     # Select appropriate model (use user preference if available, otherwise default selection)
     chosen_model: str = model_to_use
@@ -3659,9 +3651,9 @@ def continue_story(
 
     # Strip story entries to essential fields only to reduce token bloat
     # Full entries have ~555 tokens/entry due to metadata; stripped = ~200 tokens/entry
-    ESSENTIAL_STORY_FIELDS = {"text", "actor", "mode", "sequence_id"}
+    essential_story_fields = {"text", "actor", "mode", "sequence_id"}
     stripped_story_context = [
-        {k: v for k, v in entry.items() if k in ESSENTIAL_STORY_FIELDS}
+        {k: v for k, v in entry.items() if k in essential_story_fields}
         for entry in truncated_story_context
     ]
 
