@@ -175,10 +175,13 @@ class RobustJSONParser:
                 f"{text[:2000]}"
             )
         else:
-            # Log only content hash for security
+            # By default: Log first 100 lines for debugging
+            lines = text.split('\n')[:100]
+            snippet = '\n'.join(lines)
             logging_util.error(
-                f"All JSON parsing strategies failed. Content hash: {content_hash}. "
-                f"Set LOG_JSON_ERRORS_FULL=true to see full content."
+                f"All JSON parsing strategies failed. Content hash: {content_hash}\n"
+                f"Content preview (first 100 lines):\n{snippet}\n"
+                f"Set LOG_JSON_ERRORS_FULL=true to see first 2000 chars instead."
             )
 
         return None, True
