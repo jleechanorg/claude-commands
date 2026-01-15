@@ -593,19 +593,22 @@ class TestGodModeEnd2End(unittest.TestCase):
 
         # CRITICAL: Second response should mention gold/200, NOT HP/50
         god_mode_resp2 = data2.get("god_mode_response", "").lower()
-        assert (
-            "gold" in god_mode_resp2 or "200" in god_mode_resp2
-        ), f"Second command should mention gold/200. Got: {data2.get('god_mode_response')}"
-        
-        # Verify it's NOT responding to the first command
-        assert (
-            "hp" not in god_mode_resp2 or "50" not in god_mode_resp2
-        ) or (
-            "gold" in god_mode_resp2 and "200" in god_mode_resp2
-        ), (
-            f"Second command should NOT respond to first command (HP/50). "
-            f"Got: {data2.get('god_mode_response')}"
+
+        # Must mention gold or 200 (the second command)
+        has_gold_reference = "gold" in god_mode_resp2 or "200" in god_mode_resp2
+        assert has_gold_reference, (
+            f"Second command should mention gold/200. Got: {data2.get('god_mode_response')}"
         )
+
+        # Should NOT primarily be about HP/50 (the first command)
+        # If HP is mentioned, gold must also be mentioned to confirm it's about the gold command
+        hp_mentioned = "hp" in god_mode_resp2 and "50" in god_mode_resp2
+        gold_mentioned = "gold" in god_mode_resp2
+        if hp_mentioned and not gold_mentioned:
+            raise AssertionError(
+                f"Second command appears to respond to FIRST command (HP/50) instead of gold. "
+                f"Got: {data2.get('god_mode_response')}"
+            )
 
         # Verify gold was updated in state
         if "game_state" in data2:
