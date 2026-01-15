@@ -1382,6 +1382,11 @@ def _call_llm_api_with_llm_request(
             "on the current USER_ACTION.\n"
         )
         
+        # Log the user_action for debugging
+        logging_util.info(
+            f"🎯 USER_ACTION in structured prompt: {user_action_str[:200]}..."
+        )
+        
         structured_prompt_parts = [
             priority_instruction,
             "MESSAGE_TYPE: story_continuation",
@@ -1401,13 +1406,20 @@ def _call_llm_api_with_llm_request(
         # IMPORTANT: This is for context only - respond to USER_ACTION, not STORY_HISTORY
         if json_data.get("story_history") is not None:
             story_history_data = json_data.get("story_history", [])
-            # Limit to most recent entries to reduce focus on old content
-            # Keep last 15 entries (approximately last 7-8 turns) for context
-            max_history_entries = 15
-            if len(story_history_data) > max_history_entries:
-                story_history_data = story_history_data[-max_history_entries:]
+            logging_util.info(
+                f"📚 STORY_HISTORY: {len(story_history_data)} entries being included in structured prompt"
+            )
+            # Log first and last few entries for debugging
+            if story_history_data:
+                first_entry = story_history_data[0] if story_history_data else None
+                last_entry = story_history_data[-1] if story_history_data else None
                 logging_util.info(
-                    f"📚 STORY_HISTORY truncated: {len(json_data.get('story_history', []))} -> {len(story_history_data)} entries"
+                    f"📚 STORY_HISTORY first entry: actor={first_entry.get('actor') if first_entry else 'N/A'}, "
+                    f"text_preview={str(first_entry.get('text', ''))[:50] if first_entry else 'N/A'}..."
+                )
+                logging_util.info(
+                    f"📚 STORY_HISTORY last entry: actor={last_entry.get('actor') if last_entry else 'N/A'}, "
+                    f"text_preview={str(last_entry.get('text', ''))[:50] if last_entry else 'N/A'}..."
                 )
             structured_prompt_parts.append(
                 f"STORY_HISTORY (CONTEXT ONLY - RESPOND TO USER_ACTION ABOVE):\n{json.dumps(story_history_data, indent=2, default=json_default_serializer)}"
@@ -1451,6 +1463,14 @@ def _call_llm_api_with_llm_request(
 
         # Join with double newlines for clear separation
         prompt_content = "\n\n".join(structured_prompt_parts)
+        
+        # Log the actual prompt being sent (first 1000 chars for debugging)
+        logging_util.info(
+            f"📤 STRUCTURED PROMPT being sent to LLM (first 1000 chars):\n{prompt_content[:1000]}..."
+        )
+        logging_util.info(
+            f"📤 STRUCTURED PROMPT total length: {len(prompt_content)} chars"
+        )
 
         # Safe user_action access for logging (handles None/empty string)
         user_action_preview = (
@@ -1459,13 +1479,22 @@ def _call_llm_api_with_llm_request(
             else "story_continuation"
         )
 
-        return _call_llm_api(
+        llm_response = _call_llm_api(
             [prompt_content],
             model_name,
             f"Structured LLMRequest: {user_action_preview}...",
             system_instruction_text,
             provider_name,
         )
+        
+        # Log the LLM response preview
+        if llm_response:
+            response_text = getattr(llm_response, 'text', '') or getattr(llm_response, 'narrative_text', '') or str(llm_response)[:200]
+            logging_util.info(
+                f"📥 LLM RESPONSE received (first 300 chars): {response_text[:300]}..."
+            )
+        
+        return llm_response
 
     # Fallback for non-story requests (initial story, etc) - use standard JSON format
     # Convert JSON dict to formatted string for Gemini API
@@ -3792,6 +3821,18 @@ def continue_story(  # noqa: PLR0912, PLR0915
             f"{pending_system_corrections}"
         )
 
+    # Log what we're passing to LLMRequest
+    logging_util.info(
+        f"📝 Building LLMRequest: user_action={user_input[:200]}..., "
+        f"story_history_length={len(stripped_story_context)}"
+    )
+    if stripped_story_context:
+        last_story_entry = stripped_story_context[-1]
+        logging_util.info(
+            f"📝 Last story_history entry: actor={last_story_entry.get('actor')}, "
+            f"text={str(last_story_entry.get('text', ''))[:100]}..."
+        )
+    
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
@@ -3809,6 +3850,12 @@ def continue_story(  # noqa: PLR0912, PLR0915
         selected_prompts=selected_prompts or [],
         use_default_world=use_default_world,
         system_corrections=pending_system_corrections,
+    )
+    
+    # Log what was actually set in the request
+    logging_util.info(
+        f"📝 LLMRequest created: user_action={gemini_request.user_action[:200] if gemini_request.user_action else 'None'}..., "
+        f"story_history_length={len(gemini_request.story_history) if gemini_request.story_history else 0}"
     )
 
     # DEBUG: Log full LLMRequest payload size breakdown

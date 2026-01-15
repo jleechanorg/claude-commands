@@ -1297,15 +1297,43 @@ def _load_campaign_and_continue_story(
     include_raw_llm_payloads: bool,
 ) -> tuple[dict[str, Any] | None, list[dict[str, Any]], Any]:
     """Fetch campaign data/story context and run continue_story in one thread."""
+    logging_util.info(
+        f"🔄 _load_campaign_and_continue_story: user_id={user_id}, campaign_id={campaign_id}, "
+        f"llm_input={llm_input[:100]}..., mode={mode}"
+    )
+    
     campaign_data, story_context = firestore_service.get_campaign_by_id(
         user_id, campaign_id
     )
     if not campaign_data:
+        logging_util.warning(f"⚠️ Campaign not found: user_id={user_id}, campaign_id={campaign_id}")
         return None, [], None
 
     story_context = story_context or []
+    logging_util.info(
+        f"📖 Loaded story_context from Firestore: {len(story_context)} entries"
+    )
+    if story_context:
+        # Log first and last entries to see what's in context
+        first_entry = story_context[0]
+        last_entry = story_context[-1]
+        logging_util.info(
+            f"📖 story_context[0]: actor={first_entry.get('actor')}, "
+            f"text={str(first_entry.get('text', ''))[:100]}..."
+        )
+        logging_util.info(
+            f"📖 story_context[-1]: actor={last_entry.get('actor')}, "
+            f"text={str(last_entry.get('text', ''))[:100]}..."
+        )
+    
     selected_prompts = campaign_data.get("selected_prompts", [])
     use_default_world = campaign_data.get("use_default_world", False)
+    
+    logging_util.info(
+        f"🚀 Calling continue_story with llm_input={llm_input[:100]}..., "
+        f"story_context_length={len(story_context)}"
+    )
+    
     llm_response_obj = llm_service.continue_story(
         llm_input,
         mode,
@@ -1316,6 +1344,14 @@ def _load_campaign_and_continue_story(
         user_id,
         include_raw_llm_payloads,
     )
+    
+    # Log response preview
+    if llm_response_obj:
+        narrative_preview = getattr(llm_response_obj, 'narrative_text', '')[:200] if hasattr(llm_response_obj, 'narrative_text') else 'N/A'
+        logging_util.info(
+            f"✅ LLM response received: narrative_preview={narrative_preview}..."
+        )
+    
     return campaign_data, story_context, llm_response_obj
 
 
@@ -2130,6 +2166,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         mode = request_data.get("mode", constants.MODE_CHARACTER)
         include_raw_llm_payloads = bool(
             request_data.get("include_raw_llm_payloads", False)
+        )
+
+        # Log incoming request
+        logging_util.info(
+            f"🎮 INCOMING INTERACTION: user_id={user_id}, campaign_id={campaign_id}, "
+            f"user_input={user_input[:200] if user_input else 'None'}..., mode={mode}"
         )
 
         # Validate required fields
