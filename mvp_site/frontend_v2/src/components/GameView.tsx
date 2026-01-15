@@ -256,7 +256,18 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        setStory(prev => [...prev, aiEntry])
+        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings)
+          ? [
+              {
+                id: `warnings-${Date.now()}`,
+                type: 'system',
+                content: `⚠️ System warnings:\n${aiResponse.system_warnings.map((w: any) => `- ${String(w)}`).join('\n')}`,
+                timestamp: new Date().toISOString(),
+                author: 'system'
+              }
+            ]
+          : []
+        setStory(prev => [...prev, aiEntry, ...warningEntries])
         setRetryCount(0)
         setLastFailedInput('')
 
@@ -398,7 +409,18 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        setStory(prev => [...prev, aiEntry])
+        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings)
+          ? [
+              {
+                id: `warnings-${Date.now()}`,
+                type: 'system',
+                content: `⚠️ System warnings:\n${aiResponse.system_warnings.map((w: any) => `- ${String(w)}`).join('\n')}`,
+                timestamp: new Date().toISOString(),
+                author: 'system'
+              }
+            ]
+          : []
+        setStory(prev => [...prev, aiEntry, ...warningEntries])
         setRetryCount(0)
         setLastFailedInput('')
         setAiError(null)

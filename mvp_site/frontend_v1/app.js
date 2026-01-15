@@ -891,6 +891,22 @@ document.addEventListener('DOMContentLoaded', () => {
       html += '</div>';
     }
 
+    // 4b. System warnings (always-visible; emitted by backend for reliability issues)
+    if (
+      fullData.system_warnings &&
+      Array.isArray(fullData.system_warnings) &&
+      fullData.system_warnings.length > 0
+    ) {
+      html +=
+        '<div class="system-warnings" style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+      html += '<strong>⚠️ System Warnings:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
+      fullData.system_warnings.forEach((warning) => {
+        if (!warning) return;
+        html += `<li>${sanitizeHtml(String(warning))}</li>`;
+      });
+      html += '</ul></div>';
+    }
+
     // 5. God mode response (if present, before narrative)
     if (
       fullData.god_mode_response &&

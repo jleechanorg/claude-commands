@@ -130,7 +130,18 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
             dice_rolls: response.dice_rolls
           }
 
-          setStory(prev => [...prev, aiStory])
+          const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings)
+            ? [
+                {
+                  id: `warnings-${Date.now()}`,
+                  type: 'system',
+                  content: `⚠️ System warnings:\n${response.system_warnings.map(w => `- ${w}`).join('\n')}`,
+                  timestamp: new Date().toISOString(),
+                  author: 'system'
+                }
+              ]
+            : []
+          setStory(prev => [...prev, aiStory, ...warningEntries])
         }
       } catch (error) {
         console.error('Failed to load campaign or generate initial content:', error)
@@ -193,7 +204,18 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           dice_rolls: response.dice_rolls
         }
 
-        setStory(prev => [...prev, aiResponse])
+        const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings)
+          ? [
+              {
+                id: `warnings-${Date.now()}`,
+                type: 'system',
+                content: `⚠️ System warnings:\n${response.system_warnings.map(w => `- ${w}`).join('\n')}`,
+                timestamp: new Date().toISOString(),
+                author: 'system'
+              }
+            ]
+          : []
+        setStory(prev => [...prev, aiResponse, ...warningEntries])
       } else {
         // Fallback response
         const aiResponse: StoryEntry = {
