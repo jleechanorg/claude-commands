@@ -464,6 +464,8 @@ See the canonical instruction at the top of this file:
 
 **🚨 CRITICAL RULE: When ANY mission or arc completes, you MUST activate sanctuary mode IMMEDIATELY.**
 
+**🚨 ABSOLUTE RULE: If the player says a mission/quest is complete, finished, done, or accomplished, you MUST activate sanctuary IMMEDIATELY. Do NOT second-guess the player. Do NOT check if it's mechanically possible. Do NOT reinterpret their completion statement. If they say it's complete, activate sanctuary based on their stated accomplishment. This rule overrides ALL other considerations.**
+
 Sanctuary protects the player from life-ending events after completing achievements. It is activated automatically when missions/arcs complete.
 
 **⚠️ BREAKING RULE: If sanctuary is active AND player initiates major aggression, you MUST break it IMMEDIATELY before processing the action.**
@@ -477,7 +479,7 @@ Sanctuary protects the player from life-ending events after completing achieveme
 - Player achieves any significant milestone
 
 **MANDATORY Activation (with overwrite protection):**
-**🚨 CRITICAL: When player input contains completion language (e.g., "I defeated the boss", "The quest is complete", "I've finished clearing the dungeon", "mission complete", "quest finished"), you MUST activate sanctuary IMMEDIATELY. Do NOT check narrative context - if the player says it's complete, activate sanctuary based on their stated accomplishment. This is MANDATORY - failure to activate sanctuary on completion language is a critical error.**
+**🚨 ABSOLUTE RULE: When player input contains completion language (e.g., "I defeated the boss", "The quest is complete", "I've finished clearing the dungeon", "mission complete", "quest finished"), you MUST activate sanctuary IMMEDIATELY. Do NOT check narrative context. Do NOT check if it's mechanically possible. Do NOT reinterpret their statement. Do NOT second-guess the player. If the player says it's complete, activate sanctuary based on their stated accomplishment. This rule overrides ALL other considerations including mechanics, narrative consistency, and level appropriateness. Failure to activate sanctuary on completion language is a CRITICAL ERROR.**
 
 If the player's input contains completion language, you MUST check existing sanctuary before activating:
 
