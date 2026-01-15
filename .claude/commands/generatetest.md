@@ -253,19 +253,19 @@ def main():
     local_server = None
     server_url = args.server
     
-    if not server_url:
-        # Start fresh server on free port
-        port = pick_free_port()
-        print(f"🚀 Starting fresh local MCP server on port {port}...")
-        local_server = start_local_mcp_server(port)
-        server_url = local_server.base_url
-        
-        # Wait for server to be ready
-        client = MCPClient(server_url)
-        client.wait_healthy(timeout_s=30.0)
-        print(f"✅ Server ready at {server_url}")
-
     try:
+        if not server_url:
+            # Start fresh server on free port
+            port = pick_free_port()
+            print(f"🚀 Starting fresh local MCP server on port {port}...")
+            local_server = start_local_mcp_server(port)
+            server_url = local_server.base_url
+            
+            # Wait for server to be ready
+            client = MCPClient(server_url)
+            client.wait_healthy(timeout_s=30.0)
+            print(f"✅ Server ready at {server_url}")
+
         # Run tests against REAL server
         results = run_tests(server_url)
 

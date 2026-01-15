@@ -13,15 +13,22 @@ REAL MODE ONLY - No mocks, no test mode
 Evidence standards: .claude/skills/evidence-standards.md
 """
 import argparse
-import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # ✅ MANDATORY: Use shared library utilities
+from testing_mcp.lib.campaign_utils import (
+    advance_to_living_world_turn,
+    complete_mission_with_sanctuary,
+    create_campaign,
+    ensure_story_mode,
+    get_campaign_state,
+    process_action,
+)
 from testing_mcp.lib.evidence_utils import (
     capture_provenance,
     create_evidence_bundle,
@@ -29,16 +36,6 @@ from testing_mcp.lib.evidence_utils import (
     save_request_responses,
 )
 from testing_mcp.lib.mcp_client import MCPClient
-from testing_mcp.lib.campaign_utils import (
-    advance_to_living_world_turn,
-    complete_mission_with_sanctuary,
-    create_campaign,
-    end_combat_if_active,
-    ensure_game_state_seed,
-    ensure_story_mode,
-    get_campaign_state,
-    process_action,
-)
 from testing_mcp.lib.model_utils import settings_for_model, update_user_settings
 from testing_mcp.lib.server_utils import pick_free_port, start_local_mcp_server
 
@@ -50,7 +47,7 @@ DEFAULT_MODEL = "gemini-3-flash-preview"
 def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     """Run complete sanctuary lifecycle tests."""
     client = MCPClient(server_url, timeout_s=600.0)
-    user_id = f"lifecycle-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    user_id = f"lifecycle-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
     # Pin model
     update_user_settings(
@@ -82,7 +79,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
 
     # Start and complete a major arc - LLM should infer Epic scale from narrative context
     # (defeating ancient dragon = Epic campaign arc)
-    quest_response = process_action(
+    process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
@@ -99,9 +96,9 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         "I prepare for battle, gathering information about the dragon's weaknesses.",
         "I reach the dragon's lair and prepare to face the ancient beast.",
     ]
-    
+
     for action in progress_actions:
-        progress = process_action(
+        process_action(
             client,
             user_id=user_id,
             campaign_id=campaign_id,
@@ -121,7 +118,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         request_responses=request_responses,
         verbose=True,
     )
-    
+
     sanctuary_epic = epic_result["sanctuary_mode"]
     epic_active = epic_result["sanctuary_active"]
     current_turn_epic = epic_result["current_turn"]
@@ -132,7 +129,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         epic_active
         and epic_expires is not None
         and epic_expires > current_turn_epic
-        and "epic" in epic_scale or "major" in epic_scale
+        and ("epic" in epic_scale or "major" in epic_scale)
     )
 
     results.append(
@@ -151,8 +148,8 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         }
     )
 
-    if not epic_active:
-        print("❌ Epic sanctuary not activated, cannot continue lifecycle test")
+    if not epic_active or epic_expires is None:
+        print("❌ Epic sanctuary not activated or expires_turn missing, cannot continue lifecycle test")
         return results, request_responses
 
     # ============================================================
@@ -165,7 +162,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
 
     # Complete a medium mission (should be ~5 turns, shorter than remaining Epic sanctuary)
     # LLM should infer Medium scale from narrative context (clearing goblin cave = Medium)
-    medium_quest = process_action(
+    process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
@@ -175,8 +172,8 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     client.clear_captures()
 
     # Progress and complete medium mission
-    for i in range(2):
-        progress = process_action(
+    for _i in range(2):
+        process_action(
             client,
             user_id=user_id,
             campaign_id=campaign_id,
@@ -195,7 +192,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         request_responses=request_responses,
         verbose=True,
     )
-    
+
     sanctuary_overwrite = medium_result["sanctuary_mode"]
     overwrite_active = medium_result["sanctuary_active"]
     current_turn_overwrite = medium_result["current_turn"]
@@ -314,8 +311,8 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         print(f"   Advancing {turns_to_expire} turns to trigger expiration...")
 
         # Advance turns until we pass expires_turn
-        for i in range(turns_to_expire):
-            advance = process_action(
+        for _i in range(turns_to_expire):
+            process_action(
                 client,
                 user_id=user_id,
                 campaign_id=campaign_id,
@@ -369,7 +366,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     # PHASE 5: Breaking Via Aggression (Create new sanctuary, then break)
     # ============================================================
     print("📋 Phase 5: Test Breaking Via Aggression...")
-    
+
     # Create a new campaign for breaking test (since previous one expired)
     campaign_id2 = create_campaign(
         client,
@@ -377,12 +374,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         title="Sanctuary Breaking Test",
     )
 
-    ensure_game_state_seed(client, user_id=user_id, campaign_id=campaign_id2)
+    ensure_story_mode(client, user_id=user_id, campaign_id=campaign_id2)
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
 
     # Quick mission to activate sanctuary
-    quick_quest = process_action(
+    process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id2,
@@ -392,7 +389,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     client.clear_captures()
 
     # Complete quickly
-    quick_completion = process_action(
+    process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id2,
@@ -412,7 +409,7 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
 
     if break_active_before:
         # Break with major aggression
-        break_response = process_action(
+        process_action(
             client,
             user_id=user_id,
             campaign_id=campaign_id2,
@@ -475,16 +472,16 @@ def main():
     local_server = None
     server_url = args.server
 
-    if not server_url:
-        port = pick_free_port()
-        print(f"🚀 Starting fresh local MCP server on port {port}...")
-        local_server = start_local_mcp_server(port)
-        server_url = local_server.base_url
-        client = MCPClient(server_url, timeout_s=600.0)
-        client.wait_healthy(timeout_s=30.0)
-        print(f"✅ Server ready at {server_url}")
-
     try:
+        if not server_url:
+            port = pick_free_port()
+            print(f"🚀 Starting fresh local MCP server on port {port}...")
+            local_server = start_local_mcp_server(port)
+            server_url = local_server.base_url
+            client = MCPClient(server_url, timeout_s=600.0)
+            client.wait_healthy(timeout_s=30.0)
+            print(f"✅ Server ready at {server_url}")
+
         results, request_responses = run_lifecycle_tests(server_url)
 
         # Save evidence

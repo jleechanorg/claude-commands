@@ -499,10 +499,10 @@ def ensure_story_mode(
     request_responses: list | None = None,
 ) -> None:
     """Ensure campaign is in Story Mode (not Character Creation).
-    
+
     Exits character creation if needed and verifies we're in Story Mode.
     Captures request/response pairs if request_responses list is provided.
-    
+
     Args:
         client: MCPClient instance.
         user_id: User identifier.
@@ -529,7 +529,7 @@ def ensure_story_mode(
 
     if char_creation_in_progress:
         # Fallback: try to exit character creation explicitly
-        char_complete_response = process_action(
+        process_action(
             client,
             user_id=user_id,
             campaign_id=campaign_id,
@@ -549,17 +549,17 @@ def end_combat_if_active(
     verbose: bool = False,
 ) -> bool:
     """Detect and end combat if active, with God Mode fallback.
-    
+
     Returns True if combat was active and ended, False otherwise.
     Captures request/response pairs if request_responses list is provided.
-    
+
     Args:
         client: MCPClient instance.
         user_id: User identifier.
         campaign_id: Campaign identifier.
         request_responses: Optional list to append request/response captures.
         verbose: If True, print status messages.
-    
+
     Returns:
         True if combat was active and ended, False if no combat was active.
     """
@@ -579,7 +579,7 @@ def end_combat_if_active(
         print("   Combat detected, ending combat first...")
 
     # End combat
-    combat_end = process_action(
+    process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
@@ -602,11 +602,11 @@ def end_combat_if_active(
         # Force end combat via God Mode fallback
         if verbose:
             print("   Combat still active, forcing end via God Mode...")
-        god_mode_end = process_action(
+        process_action(
             client,
             user_id=user_id,
             campaign_id=campaign_id,
-            user_input="[GOD MODE] All enemies are defeated. Combat ends.",
+            user_input="GOD MODE: All enemies are defeated. Combat ends.",
         )
         if request_responses is not None:
             request_responses.extend(client.get_captures_as_dict())
@@ -636,10 +636,10 @@ def complete_mission_with_sanctuary(
     verbose: bool = False,
 ) -> dict[str, Any]:
     """Complete a mission and verify sanctuary activation.
-    
+
     Ends combat first if needed, then sends completion text.
     Returns the completion response and sanctuary state.
-    
+
     Args:
         client: MCPClient instance.
         user_id: User identifier.
@@ -647,7 +647,7 @@ def complete_mission_with_sanctuary(
         completion_text: Mission completion message (should use explicit completion language).
         request_responses: Optional list to append request/response captures.
         verbose: If True, print status messages.
-    
+
     Returns:
         Dict with keys:
         - completion_response: Response from completion action
@@ -708,17 +708,17 @@ def advance_to_living_world_turn(
     verbose: bool = False,
 ) -> tuple[int, bool]:
     """Advance turns until we reach a Living World turn (every 3 turns).
-    
+
     Returns the current turn number and whether it's a Living World turn.
     Captures request/response pairs if request_responses list is provided.
-    
+
     Args:
         client: MCPClient instance.
         user_id: User identifier.
         campaign_id: Campaign identifier.
         request_responses: Optional list to append request/response captures.
         verbose: If True, print status messages.
-    
+
     Returns:
         Tuple of (current_turn, is_living_world_turn).
     """
@@ -735,12 +735,12 @@ def advance_to_living_world_turn(
     if not is_living_world_turn:
         if verbose:
             print(f"   Current turn: {current_turn} (not a Living World turn)")
-            print(f"   Advancing to next Living World turn...")
+            print("   Advancing to next Living World turn...")
 
         # Calculate turns needed to reach next Living World turn
         turns_to_advance = 3 - (current_turn % 3)
-        for i in range(turns_to_advance):
-            advance = process_action(
+        for _i in range(turns_to_advance):
+            process_action(
                 client,
                 user_id=user_id,
                 campaign_id=campaign_id,
@@ -765,7 +765,6 @@ def advance_to_living_world_turn(
             print(f"   Now on turn: {new_turn} {status}")
 
         return new_turn, is_living_world_turn
-    else:
-        if verbose:
-            print(f"   Current turn: {current_turn} 🌍 (Living World turn)")
-        return current_turn, True
+    if verbose:
+        print(f"   Current turn: {current_turn} 🌍 (Living World turn)")
+    return current_turn, True

@@ -592,6 +592,25 @@ Your response MUST include:
 **Expiration:**
 When `current_turn >= expires_turn` and sanctuary is still active, set `active: false` and `expired: true` with a notification.
 
+**EXAMPLE - Sanctuary expires at turn 50:**
+Your response MUST include:
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "sanctuary_mode": {
+        "active": false,
+        "expired": true,
+        "expired_turn": <current_turn>,
+        "original_arc": "<arc name>",
+        "original_scale": "medium|major|epic"
+      }
+    }
+  },
+  "player_notification": "The sanctuary granted by <arc name> has expired. The realm returns to its natural state..."
+}
+```
+
 ## Input Schema
 
 **Fields:** `checkpoint`, `core_memories`, `reference_timeline`, `current_game_state`, `entity_manifest`, `timeline_log`, `current_input`, `system_context`, `system_corrections`.

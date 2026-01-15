@@ -8,15 +8,22 @@ REAL MODE ONLY - No mocks, no test mode
 Evidence standards: .claude/skills/evidence-standards.md
 """
 import argparse
-import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # ✅ MANDATORY: Use shared library utilities
+from testing_mcp.lib.campaign_utils import (
+    advance_to_living_world_turn,
+    complete_mission_with_sanctuary,
+    create_campaign,
+    ensure_story_mode,
+    get_campaign_state,
+    process_action,
+)
 from testing_mcp.lib.evidence_utils import (
     capture_provenance,
     create_evidence_bundle,
@@ -24,15 +31,6 @@ from testing_mcp.lib.evidence_utils import (
     save_request_responses,
 )
 from testing_mcp.lib.mcp_client import MCPClient
-from testing_mcp.lib.campaign_utils import (
-    advance_to_living_world_turn,
-    complete_mission_with_sanctuary,
-    create_campaign,
-    end_combat_if_active,
-    ensure_story_mode,
-    get_campaign_state,
-    process_action,
-)
 from testing_mcp.lib.model_utils import settings_for_model, update_user_settings
 from testing_mcp.lib.server_utils import pick_free_port, start_local_mcp_server
 
@@ -41,10 +39,10 @@ WORK_NAME = "sanctuary_mode_validation"
 DEFAULT_MODEL = "gemini-3-flash-preview"  # Pin model to avoid fallback noise
 
 
-def run_tests(server_url: str) -> list:
+def run_tests(server_url: str) -> tuple[list, list]:
     """Run sanctuary mode validation tests against real server."""
     client = MCPClient(server_url)
-    user_id = f"test-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    user_id = f"test-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
     # Pin model to avoid fallback noise
     update_user_settings(
@@ -74,7 +72,7 @@ def run_tests(server_url: str) -> list:
     )
 
     # Start the quest in Story Mode
-    quest_start_response = process_action(
+    process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
@@ -84,7 +82,7 @@ def run_tests(server_url: str) -> list:
     client.clear_captures()
 
     # Advance the quest (may start combat)
-    progress_response = process_action(
+    process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
@@ -102,14 +100,14 @@ def run_tests(server_url: str) -> list:
         request_responses=request_responses,
         verbose=True,
     )
-    
+
     completion_response = completion_result["completion_response"]
     sanctuary_mode = completion_result["sanctuary_mode"]
     sanctuary_active = completion_result["sanctuary_active"]
     current_turn = completion_result["current_turn"]
     expires_turn = sanctuary_mode.get("expires_turn")
     activated_turn = sanctuary_mode.get("activated_turn")
-    
+
     # Check completion response for sanctuary activation hints
     completion_narrative = completion_response.get("narrative", "").lower()
     has_completion_language = any(
@@ -123,13 +121,19 @@ def run_tests(server_url: str) -> list:
         and activated_turn is not None
         and expires_turn > current_turn
     )
-    
+
+    # Get full state for diagnostics
+    state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+    game_state = state.get("game_state", {})
+
     # Diagnostic info
     diagnostic_info = {
         "completion_narrative_length": len(completion_narrative),
         "has_completion_language": has_completion_language,
-        "state_keys": list(state.keys()),
-        "custom_campaign_state_keys": list(state.get("custom_campaign_state", {}).keys()),
+        "state_keys": list(game_state.keys()),
+        "custom_campaign_state_keys": list(game_state.get("custom_campaign_state", {}).keys()),
     }
 
     results.append(
@@ -165,7 +169,7 @@ def run_tests(server_url: str) -> list:
             request_responses=request_responses,
             verbose=True,
         )
-        
+
         # Try to trigger an event that should be blocked by sanctuary
         # On Living World turns, complications can emerge from off-screen events
         event_response = process_action(
@@ -204,13 +208,12 @@ def run_tests(server_url: str) -> list:
 
         # was_living_world_turn is already set from advance_to_living_world_turn
         final_turn = current_turn
-        
+
         scenario2_passed = (
-            not has_lethal_event 
-            and sanctuary_still_active 
+            not has_lethal_event
+            and sanctuary_still_active
             and was_living_world_turn  # ✅ Must be a Living World turn
         )
-
         results.append(
             {
                 "name": "Sanctuary prevents lethal events",
@@ -259,7 +262,7 @@ def run_tests(server_url: str) -> list:
         if level_up_available or char_creation_blocking:
             # Complete level-up first
             print("   Level-up detected, completing level-up first...")
-            level_up_response = process_action(
+            process_action(
                 client,
                 user_id=user_id,
                 campaign_id=campaign_id,
@@ -269,7 +272,7 @@ def run_tests(server_url: str) -> list:
             client.clear_captures()
 
         # Now break sanctuary with major aggression - be very explicit
-        break_response = process_action(
+        process_action(
             client,
             user_id=user_id,
             campaign_id=campaign_id,
@@ -292,13 +295,13 @@ def run_tests(server_url: str) -> list:
         broken_flag = sanctuary_mode_after.get("broken", False)
         broken_reason = sanctuary_mode_after.get("broken_reason", "")
         reason_field = sanctuary_mode_after.get("reason", "")
-        
+
         # Check if reason indicates breaking (even if broken flag not set)
         reason_indicates_break = any(
             keyword in (broken_reason + " " + reason_field).lower()
             for keyword in ["war", "attack", "hostile", "aggression", "broken", "shattered"]
         )
-        
+
         sanctuary_broken = (
             not active_after and (broken_flag or reason_indicates_break)
         )
@@ -374,19 +377,19 @@ def main():
     local_server = None
     server_url = args.server
 
-    if not server_url:
-        # Start fresh server on free port
-        port = pick_free_port()
-        print(f"🚀 Starting fresh local MCP server on port {port}...")
-        local_server = start_local_mcp_server(port)
-        server_url = local_server.base_url
-
-        # Wait for server to be ready
-        client = MCPClient(server_url)
-        client.wait_healthy(timeout_s=30.0)
-        print(f"✅ Server ready at {server_url}")
-
     try:
+        if not server_url:
+            # Start fresh server on free port
+            port = pick_free_port()
+            print(f"🚀 Starting fresh local MCP server on port {port}...")
+            local_server = start_local_mcp_server(port)
+            server_url = local_server.base_url
+
+            # Wait for server to be ready
+            client = MCPClient(server_url)
+            client.wait_healthy(timeout_s=30.0)
+            print(f"✅ Server ready at {server_url}")
+
         # Run tests against REAL server
         results, request_responses = run_tests(server_url)
 
