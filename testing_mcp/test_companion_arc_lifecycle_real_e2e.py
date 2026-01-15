@@ -31,19 +31,28 @@ Evidence will be automatically saved to:
 
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import requests
+
 from testing_mcp.dev_server import WORKTREE_PORT, get_base_url, is_server_healthy
-from testing_mcp.lib.server_utils import start_local_mcp_server
+from testing_mcp.lib.arc_validation_utils import (
+    extract_companion_arc_event,
+    extract_companion_arcs,
+    extract_narrative,
+    find_arc_themes_in_narrative,
+    find_companions_in_narrative,
+    validate_companion_dialogue_in_narrative,
+)
 from testing_mcp.lib.campaign_utils import (
     get_campaign_state,
     process_action,
@@ -55,10 +64,7 @@ from testing_mcp.lib.evidence_utils import (
     save_request_responses,
 )
 from testing_mcp.lib.mcp_client import MCPClient
-from testing_mcp.lib.arc_validation_utils import (
-    extract_companion_arcs,
-    extract_companion_arc_event,
-)
+from testing_mcp.lib.server_utils import start_local_mcp_server
 
     # Configuration (deferred to main() to avoid import-time side effects)
 BASE_URL: str | None = None
@@ -74,7 +80,7 @@ REQUEST_RESPONSE_PAIRS: list[tuple[dict, dict]] = []
 
 def log(msg: str) -> None:
     """Log with timestamp."""
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
     print(f"[{ts}] {msg}", flush=True)  # flush=True prevents buffering when piped to file
 
 
@@ -107,18 +113,18 @@ def main() -> int:
     """Run companion quest arc lifecycle E2E test."""
     # Initialize runtime configuration (deferred from import-time to avoid side effects)
     global BASE_URL, USER_ID, EVIDENCE_DIR, STRICT_MODE, SERVER
-    
+
     BASE_URL = os.getenv("BASE_URL") or get_base_url()
-    USER_ID = f"e2e-arc-lifecycle-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    USER_ID = f"e2e-arc-lifecycle-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
     STRICT_MODE = os.getenv("STRICT_MODE", "true").lower() == "true"
-    
+
     # Evidence directory following /tmp/<repo>/<branch>/<work>/<timestamp>/ structure
-    EVIDENCE_DIR = get_evidence_dir(WORK_NAME) / datetime.now().strftime("%Y%m%d_%H%M%S")
+    EVIDENCE_DIR = get_evidence_dir(WORK_NAME) / datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # Always restart server on worktree port for clean test state
     log("Restarting server on worktree port...")
-    
+
     # Kill any existing server on worktree port - more aggressive cleanup
     log(f"  Checking for existing server on port {WORKTREE_PORT}...")
     max_cleanup_attempts = 3
@@ -129,7 +135,7 @@ def main() -> int:
                 # Find and kill process on this port
                 result = subprocess.run(
                     ["lsof", "-ti", f":{WORKTREE_PORT}"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=5
                 )
@@ -144,23 +150,23 @@ def main() -> int:
                     time.sleep(3)  # Wait longer for process to die and port to free
                 else:
                     # Try alternative kill method
-                    log(f"    Using pkill fallback...")
+                    log("    Using pkill fallback...")
                     subprocess.run(
                         ["pkill", "-9", "-f", f"mcp_api.*--port.*{WORKTREE_PORT}"],
-                        timeout=5,
+                        check=False, timeout=5,
                         stderr=subprocess.DEVNULL
                     )
                     time.sleep(3)
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 # lsof not available or timeout - try alternative method
-                log(f"    Using pkill fallback (lsof unavailable)...")
+                log("    Using pkill fallback (lsof unavailable)...")
                 subprocess.run(
                     ["pkill", "-9", "-f", f"mcp_api.*--port.*{WORKTREE_PORT}"],
-                    timeout=5,
+                    check=False, timeout=5,
                     stderr=subprocess.DEVNULL
                 )
                 time.sleep(3)
-            
+
             # Verify port is free
             if not is_server_healthy(WORKTREE_PORT, timeout=1.0):
                 log(f"  ✅ Port {WORKTREE_PORT} is now free")
@@ -170,7 +176,7 @@ def main() -> int:
             break
     else:
         log(f"  ⚠️  Port {WORKTREE_PORT} still in use after {max_cleanup_attempts} attempts, proceeding anyway...")
-    
+
     # Start fresh server with logs captured to evidence directory
     log(f"  Starting fresh server on worktree port {WORKTREE_PORT}...")
     log(f"  Server logs will be saved to: {EVIDENCE_DIR / 'server.log'}")
@@ -184,11 +190,11 @@ def main() -> int:
     )
     server_port = WORKTREE_PORT
     BASE_URL = SERVER.base_url
-    
+
     # Log server process info for debugging
     log(f"  Server PID: {SERVER.pid}")
     log(f"  Server log file: {SERVER.log_path}")
-    
+
     # Wait for server to be ready (up to 30 seconds)
     max_wait = 30
     wait_time = 0
@@ -207,7 +213,7 @@ def main() -> int:
 
     results = {
         "test_name": "companion_arc_lifecycle_e2e",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "base_url": BASE_URL,
         "user_id": USER_ID,
         "strict_mode": STRICT_MODE,
@@ -251,28 +257,28 @@ def main() -> int:
                 "custom_options": ["companions"],  # Request companion generation
             }
         )
-        
+
         campaign_id = create_response.get("campaign_id") or create_response.get("campaignId")
-        
+
         if not campaign_id:
             # Try parsing from text content if it's in MCP format
             text_content = MCPClient.parse_text_content(create_response.get("content", []))
             if text_content:
                 parsed = json.loads(text_content)
                 campaign_id = parsed.get("campaign_id") or parsed.get("campaignId")
-        
+
         if not campaign_id:
             raise RuntimeError(f"Failed to extract campaign_id from response: {create_response}")
-        
+
         # Get initial state
         initial_state = get_campaign_state(client, user_id=USER_ID, campaign_id=campaign_id)
         initial_game_state = initial_state.get("game_state", {})
         initial_arcs = extract_companion_arcs(initial_game_state)
-        
+
         # Check if character creation is in progress
         custom_state = initial_game_state.get("custom_campaign_state", {})
         char_creation_in_progress = custom_state.get("character_creation_in_progress", False)
-        
+
         results["steps"].append({
             "name": "create_campaign",
             "passed": campaign_id is not None,
@@ -282,7 +288,7 @@ def main() -> int:
         })
         log(f"  Campaign ID: {campaign_id}")
         log(f"  Initial companion_arcs: {initial_arcs}")
-        
+
         # If character creation is in progress, complete it first
         if char_creation_in_progress:
             log("  Character creation in progress - completing it...")
@@ -292,12 +298,12 @@ def main() -> int:
                 campaign_id=campaign_id,
                 user_input="I'm done creating my character. Let's begin the adventure!",
             )
-        
+
         if not campaign_id:
             log("  FAILED: No campaign ID")
             save_results(results, client, SERVER)
             return 1
-        
+
         results["campaign_id"] = campaign_id
     except Exception as e:
         log(f"  FAILED: {e}")
@@ -307,17 +313,18 @@ def main() -> int:
 
     # Step 3: Play through turns to trigger arc initialization and progression
     log("Step 3: Playing through turns to complete arc lifecycle")
-    
+
     arc_initialized = False
     arc_events_found = []
     arc_phases_seen = set()
     arc_progress_history = []
+    narrative_mentions = []  # Track companion mentions in narrative
     max_turns = 30  # Play up to 30 turns to allow arc to complete
     actual_turns_played = 0
-    
+
     for turn_num in range(1, max_turns + 1):
         log(f"Turn {turn_num}: Action")
-        
+
         # Vary actions to create natural progression and trigger callbacks
         actions = [
             "I explore the town square and talk to the locals",
@@ -336,42 +343,42 @@ def main() -> int:
             "I help resolve the crisis my companion is facing",
             "I complete the final mission for my companion's arc",
         ]
-        
+
         user_input = actions[(turn_num - 1) % len(actions)] if turn_num <= len(actions) else f"I continue exploring and helping my companions (turn {turn_num})"
-        
+
         try:
             # Check server health before each turn to catch crashes early
             if not is_server_healthy(server_port, timeout=2.0):
                 log(f"  ⚠️  Server health check failed before turn {turn_num}")
                 # Try to capture server logs for debugging
                 if SERVER and SERVER.log_path and SERVER.log_path.exists():
-                    log(f"  📋 Last 50 lines of server log:")
+                    log("  📋 Last 50 lines of server log:")
                     try:
-                        with open(SERVER.log_path, "r") as f:
+                        with open(SERVER.log_path) as f:
                             log_lines = f.readlines()
                             for line in log_lines[-50:]:
                                 log(f"    {line.rstrip()}")
                     except Exception as log_err:
                         log(f"  ⚠️  Could not read server log: {log_err}")
                 raise RuntimeError(f"Server became unresponsive before turn {turn_num}")
-            
+
             action_response = process_action(
                 client,
                 user_id=USER_ID,
                 campaign_id=campaign_id,
                 user_input=user_input,
             )
-            
+
             # Extract game state
             game_state = action_response.get("game_state", {})
             arcs = extract_companion_arcs(game_state)
             arc_event = extract_companion_arc_event(action_response)
-            
+
             # Track arc initialization
             if arcs and not arc_initialized:
                 arc_initialized = True
                 log(f"  ✅ Companion arc initialized on turn {turn_num}")
-            
+
             # Track arc events
             if arc_event:
                 arc_events_found.append({
@@ -379,7 +386,7 @@ def main() -> int:
                     "event": arc_event,
                 })
                 log(f"  ✅ Arc event on turn {turn_num}: {arc_event.get('event_type')} ({arc_event.get('phase')})")
-            
+
             # Track arc phases and progress
             for arc_name, arc_data in arcs.items():
                 phase = get_arc_phase(arc_data)
@@ -391,7 +398,7 @@ def main() -> int:
                     "phase": phase,
                     "progress": progress,
                 })
-                
+
                 # Log phase changes
                 if turn_num > 1:
                     prev_progress = next(
@@ -400,7 +407,7 @@ def main() -> int:
                     )
                     if progress > prev_progress:
                         log(f"  📈 Arc '{arc_name}' progress: {prev_progress}% → {progress}% (phase: {phase})")
-                
+
                 # Check if arc is complete
                 if is_arc_complete(arc_data):
                     log(f"  🎉 Arc '{arc_name}' COMPLETED on turn {turn_num}!")
@@ -415,62 +422,79 @@ def main() -> int:
                     })
                     # Arc is complete, we can stop or continue to validate
                     break
-            
+
+            # Narrative validation - check if companions/arc themes appear in narrative
+            narrative = extract_narrative(action_response)
+            companions_in_narrative = find_companions_in_narrative(narrative)
+            arc_type = arc_event.get("arc_type") if arc_event else None
+            has_arc_themes = find_arc_themes_in_narrative(narrative, arc_type) if arc_type else False
+            has_dialogue_match = validate_companion_dialogue_in_narrative(narrative, arc_event) if arc_event else False
+
+            if companions_in_narrative:
+                narrative_mentions.append({
+                    "turn": turn_num,
+                    "companions": companions_in_narrative,
+                    "has_arc_themes": has_arc_themes,
+                    "has_dialogue_match": has_dialogue_match,
+                })
+                log(f"  📖 Narrative mentions companions: {companions_in_narrative}")
+
             results["steps"].append({
                 "name": f"turn_{turn_num}",
                 "passed": True,
                 "arc_event_found": arc_event is not None,
                 "arcs_after_turn": arcs,
+                "narrative_companions": companions_in_narrative,
+                "has_arc_themes": has_arc_themes,
             })
-            
+
             # Early exit if we have 3+ events and arc is complete
             if len(arc_events_found) >= 3:
                 final_state = get_campaign_state(client, user_id=USER_ID, campaign_id=campaign_id)
                 final_game_state = final_state.get("game_state", {})
                 final_arcs = extract_companion_arcs(final_game_state)
-                
+
                 # Check if any arc is complete
                 any_complete = any(is_arc_complete(arc) for arc in final_arcs.values())
                 if any_complete:
                     log(f"  ✅ Arc lifecycle complete! Stopping at turn {turn_num}")
                     actual_turns_played = turn_num
                     break
-            
+
             actual_turns_played = turn_num
-            
+
         except Exception as e:
             log(f"  ❌ FAILED at turn {turn_num}: {e}")
             # Capture server logs on failure for debugging
             server_log_excerpt = None
             if SERVER and SERVER.log_path and SERVER.log_path.exists():
                 try:
-                    with open(SERVER.log_path, "r") as f:
+                    with open(SERVER.log_path) as f:
                         log_lines = f.readlines()
                         server_log_excerpt = "".join(log_lines[-100:])  # Last 100 lines
                 except Exception as log_err:
                     log(f"  ⚠️  Could not read server log: {log_err}")
-            
+
             results["steps"].append({
                 "name": f"turn_{turn_num}",
                 "passed": False,
                 "error": str(e),
                 "server_log_excerpt": server_log_excerpt[-5000:] if server_log_excerpt else None,  # Last 5KB
             })
-            
+
             # Save server log to evidence directory for debugging
             if SERVER and SERVER.log_path and SERVER.log_path.exists():
                 try:
-                    import shutil
                     evidence_log_path = EVIDENCE_DIR / "server.log"
                     shutil.copy2(SERVER.log_path, evidence_log_path)
                     log(f"  📋 Server log copied to evidence: {evidence_log_path}")
                 except Exception as copy_err:
                     log(f"  ⚠️  Could not copy server log: {copy_err}")
-            
+
             if STRICT_MODE:
                 save_results(results, client, SERVER)
                 return 1
-    
+
     # Ensure actual_turns_played is set even if loop completes without break
     if actual_turns_played == 0:
         actual_turns_played = max_turns
@@ -480,28 +504,28 @@ def main() -> int:
     final_state = get_campaign_state(client, user_id=USER_ID, campaign_id=campaign_id)
     final_game_state = final_state.get("game_state", {})
     final_arcs = extract_companion_arcs(final_game_state)
-    
+
     # Requirement 1: Arc started
     arc_started = len(final_arcs) > 0
-    
+
     # Requirement 2: 3+ arc events occurred
     events_requirement_met = len(arc_events_found) >= 3
-    
+
     # Requirement 3: Arc progressed through phases
     expected_phases = {"discovery", "development", "crisis", "resolution"}
     phases_progressed = len(arc_phases_seen.intersection(expected_phases)) >= 2  # At least 2 phases
-    
+
     # Requirement 4: Arc finished (completed)
     arc_finished = any(is_arc_complete(arc) for arc in final_arcs.values())
-    
+
     # Requirement 5: Arc is marked as done
     arc_done = arc_finished  # If complete, it's done
-    
+
     results["steps"].append({
         "name": "validate_lifecycle",
         "passed": all([
             arc_started,
-            events_requirement_met,
+            events_requirement_met if STRICT_MODE else True,  # Non-strict: events may not be explicitly generated
             phases_progressed,
             arc_finished if STRICT_MODE else True,  # Non-strict: don't require completion
             arc_done if STRICT_MODE else True,
@@ -515,18 +539,20 @@ def main() -> int:
         "arc_done": arc_done,
         "final_arcs": final_arcs,
     })
-    
+
     log(f"  Arc started: {arc_started}")
-    log(f"  Arc events: {len(arc_events_found)} (required: 3+)")
+    log(f"  Arc events: {len(arc_events_found)} (required: 3+ in strict mode)")
     log(f"  Phases seen: {arc_phases_seen}")
     log(f"  Arc finished: {arc_finished}")
     log(f"  Arc done: {arc_done}")
-    
+    if not STRICT_MODE:
+        log("  (Non-strict mode: arc events, finish, and done checks are informational only)")
+
     # Step 5: Validate arc progression timeline
     log("Step 5: Validate arc progression timeline")
     progression_valid = True
     progression_errors = []
-    
+
     if arc_progress_history:
         # Check that progress generally increases
         for i in range(1, len(arc_progress_history)):
@@ -538,23 +564,23 @@ def main() -> int:
                     f"turn {arc_progress_history[i]['turn']} ({curr}%)"
                 )
                 progression_valid = False
-        
+
         # Check that we saw progress
         if arc_progress_history[-1]["progress"] <= arc_progress_history[0]["progress"]:
             progression_errors.append("No progress made over lifecycle")
             progression_valid = False
-    
+
     results["steps"].append({
         "name": "validate_progression",
         "passed": progression_valid,
         "errors": progression_errors,
         "progress_history": arc_progress_history,
     })
-    
+
     # Summary
     steps_passed = sum(1 for s in results["steps"] if s.get("passed"))
     steps_total = len(results["steps"])
-    
+
     results["summary"] = {
         "campaign_created": campaign_id is not None,
         "arc_started": arc_started,
@@ -570,42 +596,45 @@ def main() -> int:
         "steps_total": steps_total,
         "final_companion_arcs": final_arcs,
         "arc_events": arc_events_found,
+        # Narrative validation summary
+        "narrative_mentions_count": len(narrative_mentions),
+        "turns_with_companion_narrative": [n["turn"] for n in narrative_mentions],
+        "turns_with_arc_themes": [n["turn"] for n in narrative_mentions if n["has_arc_themes"]],
     }
-    
+
     log("")
     log("=" * 60)
     log("LIFECYCLE SUMMARY")
     log("=" * 60)
     log(f"✅ Arc started: {arc_started}")
-    log(f"{'✅' if events_requirement_met else '❌'} Arc events: {len(arc_events_found)}/3+ required")
+    events_icon = "✅" if events_requirement_met else ("⚠️" if not STRICT_MODE else "❌")
+    log(f"{events_icon} Arc events: {len(arc_events_found)}/3+ {'(strict only)' if not STRICT_MODE else 'required'}")
     log(f"{'✅' if phases_progressed else '❌'} Phases progressed: {arc_phases_seen}")
     log(f"{'✅' if arc_finished else '❌'} Arc finished: {arc_finished}")
     log(f"{'✅' if arc_done else '❌'} Arc done: {arc_done}")
     log(f"{'✅' if progression_valid else '❌'} Progression valid: {progression_valid}")
     log(f"Steps: {steps_passed}/{steps_total} passed")
-    
+
     save_results(results, client, SERVER)
-    
+
     # Determine success
     critical_checks = [
         campaign_id is not None,
         arc_started,
-        events_requirement_met,
+        events_requirement_met if STRICT_MODE else True,  # Events optional in non-strict mode
         phases_progressed,
         progression_valid,
         arc_finished if STRICT_MODE else True,  # Completion optional in non-strict mode
     ]
-    
+
     if all(critical_checks):
         log("\n✅ SUCCESS: Companion quest arc lifecycle validated!")
         return 0
-    else:
-        if STRICT_MODE:
-            log("\n❌ FAILED: Companion quest arc lifecycle validation failed (strict mode)")
-            return 1
-        else:
-            log("\n⚠️  Some lifecycle checks failed (non-strict mode)")
-            return 0
+    if STRICT_MODE:
+        log("\n❌ FAILED: Companion quest arc lifecycle validation failed (strict mode)")
+        return 1
+    log("\n⚠️  Some lifecycle checks failed (non-strict mode)")
+    return 0
 
 
 def save_results(results: dict, client: MCPClient | None = None, server: Any | None = None) -> None:
@@ -617,11 +646,10 @@ def save_results(results: dict, client: MCPClient | None = None, server: Any | N
         captures = client.get_captures_as_dict()
         if captures:
             request_responses = captures
-            save_request_responses(EVIDENCE_DIR, [
-                (c["request"], c["response"]) for c in captures
-            ])
+            save_request_responses(EVIDENCE_DIR, captures)
     elif REQUEST_RESPONSE_PAIRS:
         # Fallback to manual pairs if client captures not available
+        # Convert tuple format to dict format expected by save_request_responses
         request_responses = [
             {
                 "request_timestamp": req.get("timestamp", ""),
@@ -631,18 +659,17 @@ def save_results(results: dict, client: MCPClient | None = None, server: Any | N
             }
             for req, resp in REQUEST_RESPONSE_PAIRS
         ]
-        save_request_responses(EVIDENCE_DIR, REQUEST_RESPONSE_PAIRS)
-    
+        save_request_responses(EVIDENCE_DIR, request_responses)
+
     # Copy server log to evidence directory if available
     if server and server.log_path and server.log_path.exists():
         try:
-            import shutil
             evidence_log_path = EVIDENCE_DIR / "server.log"
             shutil.copy2(server.log_path, evidence_log_path)
             log(f"📋 Server log saved to evidence: {evidence_log_path}")
         except Exception as e:
             log(f"⚠️  Could not copy server log to evidence: {e}")
-    
+
     # Create evidence bundle
     create_evidence_bundle(
         EVIDENCE_DIR,
@@ -652,7 +679,7 @@ def save_results(results: dict, client: MCPClient | None = None, server: Any | N
         request_responses=request_responses,
         methodology_text="E2E test validating complete companion quest arc lifecycle: start → 3+ events → phase progression → finish → done",
     )
-    
+
     log(f"\nResults saved to: {EVIDENCE_DIR}")
     log(f"Latest symlink: {EVIDENCE_DIR.parent / 'latest'}")
 
