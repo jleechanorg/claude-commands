@@ -125,6 +125,9 @@ def start_local_mcp_server(
 ) -> LocalServer:
     """Start an HTTP-only MCP server (real services only).
 
+    Uses shared production environment setup from scripts/setup_production_env.sh
+    for consistency with run_local_server.sh.
+
     Args:
         port: Port to listen on.
         env_overrides: Environment variables to override (real mode enforced).
@@ -152,8 +155,38 @@ def start_local_mcp_server(
     if env_overrides:
         env.update(env_overrides)
 
-    # Enforce real mode: mock services are never allowed.
+    # Use shared production environment setup (same as run_local_server.sh)
+    # This ensures consistency between test and development server startup
+    setup_script = PROJECT_ROOT / "scripts" / "setup_production_env.sh"
+    if setup_script.exists():
+        # Source the setup script to get production environment
+        # We run it in a subprocess to capture the environment
+        setup_env_cmd = [
+            "bash",
+            "-c",
+            f"source {setup_script} && env",
+        ]
+        try:
+            setup_output = subprocess.check_output(
+                setup_env_cmd,
+                cwd=str(PROJECT_ROOT),
+                timeout=10,
+                stderr=subprocess.DEVNULL,
+            )
+            # Parse environment variables from output
+            for line in setup_output.decode("utf-8").split("\n"):
+                if "=" in line and not line.startswith("_"):
+                    key, value = line.split("=", 1)
+                    # Only set if not already overridden
+                    if key not in env or key not in (env_overrides or {}):
+                        env[key] = value
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+            # Fallback to manual setup if script fails
+            pass
+
+    # Enforce real mode: mock services are never allowed (override any script defaults)
     env["MOCK_SERVICES_MODE"] = "false"
+    env["TESTING"] = "false"  # Ensure production mode
 
     # Some environments set WORLDAI_GOOGLE_APPLICATION_CREDENTIALS globally.
     # When present, the app requires an explicit dev-mode acknowledgement.
@@ -162,7 +195,7 @@ def start_local_mcp_server(
     ):
         env["WORLDAI_DEV_MODE"] = "true"
 
-    # Load provider keys from Secret Manager if possible.
+    # Load provider keys from Secret Manager if possible (fallback if not in env)
     _load_secret(env, secret_name="gemini-api-key", env_var="GEMINI_API_KEY")
     _load_secret(env, secret_name="cerebras-api-key", env_var="CEREBRAS_API_KEY")
     _load_secret(env, secret_name="openrouter-api-key", env_var="OPENROUTER_API_KEY")
@@ -172,12 +205,13 @@ def start_local_mcp_server(
     log_path = log_root / f"local_mcp_{port}.log"
     log_f = open(log_path, "wb")  # noqa: SIM115
 
+    # Use same command pattern as start_mcp_production.sh but with --http-only for tests
     proc = subprocess.Popen(
         [
             str(python_bin),
             "-m",
             "mvp_site.mcp_api",
-            "--http-only",
+            "--http-only",  # Tests use HTTP-only, not dual transport
             "--host",
             "127.0.0.1",
             "--port",
