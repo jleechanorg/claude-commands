@@ -97,7 +97,6 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         "I track the dragon to its lair in the mountains.",
         "I prepare for battle, gathering information about the dragon's weaknesses.",
         "I reach the dragon's lair and prepare to face the ancient beast.",
-        "I have defeated the ancient dragon after an epic battle.",
     ]
     
     for action in progress_actions:
@@ -112,12 +111,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
 
     # Complete the major arc and verify Epic sanctuary activation
     # LLM should infer Epic scale from narrative context (defeating ancient dragon = Epic)
-    # Use completion language that references the actual accomplishment
+    # Use explicit completion language per prompts: "complete", "finished", "done", "accomplished"
     epic_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        completion_text="The quest is complete. I have slain the ancient dragon and saved the kingdom from destruction.",
+        completion_text="The quest is complete. I have defeated the ancient dragon and saved the kingdom. The mission is finished.",
         request_responses=request_responses,
         verbose=True,
     )
