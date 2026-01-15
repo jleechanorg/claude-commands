@@ -79,12 +79,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         request_responses=request_responses,
     )
 
-    # Start and complete a major arc
+    # Start and complete a major arc - EXPLICITLY mark as EPIC from the start
     quest_response = process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="I begin a major quest to defeat the dragon threatening the kingdom.",
+        user_input="I begin an EPIC quest to defeat the ancient dragon threatening the kingdom. This is a major campaign arc that will span many turns.",
     )
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
@@ -101,11 +101,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         client.clear_captures()
 
     # Complete the major arc and verify Epic sanctuary activation
+    # EXPLICITLY state EPIC scale in completion language to ensure LLM recognizes it
     epic_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        completion_text="The quest is finished. I have successfully completed the major dragon quest arc. This epic campaign arc is now complete. The mission is done. I have finished this quest.",
+        completion_text="The EPIC quest is finished. I have successfully completed the EPIC major dragon quest arc. This is an EPIC campaign arc completion. The EPIC mission is done. I have finished this EPIC quest arc.",
         request_responses=request_responses,
         verbose=True,
     )
@@ -152,11 +153,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     print(f"   Remaining turns: {remaining_turns}")
 
     # Complete a medium mission (should be ~7 turns, shorter than remaining Epic sanctuary)
+    # EXPLICITLY mark as MEDIUM scale to contrast with EPIC
     medium_quest = process_action(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="I begin a medium quest to clear a goblin cave.",
+        user_input="I begin a MEDIUM quest to clear a goblin cave. This is a medium-scale mission.",
     )
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
@@ -173,11 +175,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         client.clear_captures()
 
     # Complete medium mission (should NOT overwrite Epic sanctuary)
+    # EXPLICITLY mark as MEDIUM scale in completion language
     medium_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        completion_text="The quest is finished. I have successfully completed the goblin cave mission. This medium mission is now complete.",
+        completion_text="The MEDIUM quest is finished. I have successfully completed the MEDIUM goblin cave mission. This is a MEDIUM mission completion. The MEDIUM quest is done.",
         request_responses=request_responses,
         verbose=True,
     )
