@@ -251,8 +251,11 @@ TEMPERATURE: float = 0.9
 # Default planning block generation has been REMOVED
 # If the LLM doesn't generate a planning block, we return the response as-is
 # and let the error propagate to the UI rather than generating fake content
-# However, we DO attempt a single reprompt if required fields are missing.
-# Maximum reprompt attempts for missing required fields (planning_block, session_header)
+# NOTE: Reprompt attempts have been DISABLED to prevent server crashes from reprompt loops.
+# Reprompts cause back-to-back heavy API calls (~38K tokens each) which exhaust resources.
+# The constant below is kept for backward compatibility but reprompts will never execute
+# since _check_missing_required_fields() now always returns an empty list.
+# Maximum reprompt attempts for missing required fields (DISABLED - all checks disabled)
 MAX_MISSING_FIELD_REPROMPT_ATTEMPTS: int = 3
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
@@ -3062,86 +3065,32 @@ def _check_missing_required_fields(
 ) -> list[str]:
     """Check if required fields are missing from the structured response.
 
-    Required fields for story mode (character mode, not god/dm mode):
-    - planning_block: Must be a dict with 'thinking' or 'choices' content
-    - session_header: Must be a non-empty string
-    - dice_rolls: Must be non-empty when required
-    - dice_integrity: Not a field, but a validation flag for fabricated dice
+    NOTE: All reprompt checks have been disabled to prevent server crashes from reprompt loops.
+    Reprompts cause back-to-back heavy API calls (~38K tokens each) which exhaust resources.
+    
+    Previously checked fields (now disabled):
+    - planning_block: Disabled - reprompts cause crashes
+    - dice_rolls: Disabled - reprompts cause crashes
+    - dice_integrity: Disabled - reprompts cause crashes
+    - session_header: Removed - cosmetic only
+    - social_hp_challenge: Removed - reprompts cause crashes
 
     Args:
         structured_response: The parsed NarrativeResponse object
         mode: Current game mode
         is_god_mode: Whether this is a god mode command
         is_dm_mode: Whether the response is in DM mode
-        require_dice_rolls: Whether dice_rolls is required for this turn
-        dice_integrity_violation: Whether dice integrity check failed (fabricated dice)
+        require_dice_rolls: Whether dice_rolls is required for this turn (unused - checks disabled)
+        dice_integrity_violation: Whether dice integrity check failed (unused - checks disabled)
+        require_social_hp_challenge: Whether social HP challenge is required (unused - checks disabled)
 
     Returns:
-        List of missing field names (empty if all required fields present)
+        Empty list (all checks disabled to prevent reprompt loops)
     """
-    # Only check for story mode (character mode, not god/dm mode)
-    if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
-        return []
-
-    if not structured_response:
-        return ["planning_block", "session_header"]
-
-    missing = []
-
-    # Check planning_block
-    planning_block = getattr(structured_response, "planning_block", None)
-    if not planning_block or not isinstance(planning_block, dict):
-        missing.append("planning_block")
-    else:
-        # Check if planning_block has content (with type guards to prevent runtime errors)
-        thinking_value = planning_block.get("thinking", "")
-        has_thinking = isinstance(thinking_value, str) and thinking_value.strip()
-
-        choices_value = planning_block.get("choices")
-        has_choices = isinstance(choices_value, dict) and len(choices_value) > 0
-
-        has_content = has_thinking or has_choices
-        if not has_content:
-            missing.append("planning_block")
-
-    # Check session_header
-    session_header = getattr(structured_response, "session_header", None)
-    if not session_header or not str(session_header).strip():
-        missing.append("session_header")
-
-    # Append dice-specific missing fields via helper
-    dice_integrity.add_missing_dice_fields(
-        missing,
-        structured_response=structured_response,
-        require_dice_rolls=require_dice_rolls,
-        dice_integrity_violation=dice_integrity_violation,
-    )
-
-    # Social HP challenge is conditionally required when the Social HP system is active.
-    # We currently detect this by the presence of the narrative challenge box, which
-    # is already mandatory per game_state_instruction.md. This catches the common
-    # failure mode where the narrative shows the box but the JSON field is missing.
-    if require_social_hp_challenge:
-        social_hp_challenge = getattr(structured_response, "social_hp_challenge", None)
-        is_missing = True
-        if isinstance(social_hp_challenge, dict):
-            npc_name = str(social_hp_challenge.get("npc_name", "")).strip()
-            objective = str(social_hp_challenge.get("objective", "")).strip()
-            resistance = str(social_hp_challenge.get("resistance_shown", "")).strip()
-            social_hp_val = social_hp_challenge.get("social_hp")
-            social_hp_max = social_hp_challenge.get("social_hp_max")
-            is_missing = not (
-                npc_name
-                and objective
-                and resistance
-                and social_hp_val is not None
-                and isinstance(social_hp_max, (int, float))
-                and social_hp_max > 0
-            )
-        if is_missing:
-            missing.append("social_hp_challenge")
-
-    return missing
+    # NOTE: All reprompt checks disabled to prevent server crashes from reprompt loops
+    # Reprompts cause back-to-back heavy API calls (~38K tokens each) which exhaust resources
+    # Return empty list to skip all reprompt attempts
+    return []
 
 
 def _build_reprompt_request(
@@ -3741,11 +3690,11 @@ def continue_story(  # noqa: PLR0912, PLR0915
             dice_roll_strategy=dice_roll_strategy,
         )
 
-    # REPROMPT FOR MISSING REQUIRED FIELDS (planning_block, session_header)
-    # Only attempt reprompt if:
-    # 1. In story mode (character mode)
-    # 2. Not a god mode command
-    # 3. Response doesn't indicate DM mode
+    # REPROMPT FOR MISSING REQUIRED FIELDS - DISABLED
+    # All reprompt checks have been disabled in _check_missing_required_fields() to prevent
+    # server crashes from reprompt loops. The function now always returns an empty list,
+    # so no reprompts will be attempted regardless of missing fields.
+    # Previously checked: planning_block, dice_rolls, dice_integrity, session_header, social_hp_challenge
     is_dm_mode_initial = (
         "[Mode: DM MODE]" in narrative_text or "[Mode: GOD MODE]" in narrative_text
     )
