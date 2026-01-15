@@ -464,6 +464,132 @@ class TestGodModeEnd2End(unittest.TestCase):
                 "This indicates StoryModeAgent was used instead of GodModeAgent."
             )
 
+    @patch("mvp_site.firestore_service.get_db")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
+    def test_sequential_god_mode_commands_both_respected(
+        self, mock_gemini_generate, mock_get_db
+    ):
+        """
+        Test that two consecutive god mode commands are both processed correctly.
+        
+        This test verifies that the caching bug fix works correctly - when two
+        god mode commands are sent sequentially, both should be processed and
+        responded to correctly, not just the first one.
+        """
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_get_db.return_value = fake_firestore
+
+        campaign_id = "test_campaign_sequential"
+        self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
+
+        # Track calls to verify both commands are processed
+        call_count = {"count": 0}
+
+        def mock_gemini_side_effect(*args, **kwargs):
+            """Mock Gemini to return different responses based on call count."""
+            call_count["count"] += 1
+
+            if call_count["count"] == 1:
+                # First command: Set HP to 50
+                return FakeLLMResponse(
+                    json.dumps(
+                        {
+                            "session_header": "[SESSION_HEADER]\nTimestamp: 1492 DR, Mirtul 10, Afternoon\nLocation: Tavern\nStatus: Lvl 5 Fighter | HP: 50/50 | XP: 6500/14000 | Gold: 100gp",
+                            "god_mode_response": "HP has been set to 50. Character is now at full health.",
+                            "narrative": "",
+                            "entities_mentioned": [],
+                            "location_confirmed": "Tavern",
+                            "state_updates": {"player_character_data": {"hp_current": 50}},
+                            "planning_block": {
+                                "thinking": "The user wants to modify HP.",
+                                "choices": {
+                                    "god:return_story": {
+                                        "text": "Return to Story",
+                                        "description": "Exit God Mode",
+                                        "risk_level": "safe",
+                                    },
+                                },
+                            },
+                        }
+                    )
+                )
+            elif call_count["count"] == 2:
+                # Second command: Set gold to 200
+                return FakeLLMResponse(
+                    json.dumps(
+                        {
+                            "session_header": "[SESSION_HEADER]\nTimestamp: 1492 DR, Mirtul 10, Afternoon\nLocation: Tavern\nStatus: Lvl 5 Fighter | HP: 50/50 | XP: 6500/14000 | Gold: 200gp",
+                            "god_mode_response": "Gold has been set to 200. Character now has 200 gold pieces.",
+                            "narrative": "",
+                            "entities_mentioned": [],
+                            "location_confirmed": "Tavern",
+                            "state_updates": {"player_character_data": {"gold": 200}},
+                            "planning_block": {
+                                "thinking": "The user wants to modify gold.",
+                                "choices": {
+                                    "god:return_story": {
+                                        "text": "Return to Story",
+                                        "description": "Exit God Mode",
+                                        "risk_level": "safe",
+                                    },
+                                },
+                            },
+                        }
+                    )
+                )
+            else:
+                return FakeLLMResponse(
+                    json.dumps(
+                        {
+                            "god_mode_response": f"Unexpected call #{call_count['count']}",
+                            "narrative": "",
+                            "state_updates": {},
+                        }
+                    )
+                )
+
+        mock_gemini_generate.side_effect = mock_gemini_side_effect
+
+        # FIRST GOD MODE COMMAND
+        response1 = self.client.post(
+            f"/api/campaigns/{campaign_id}/interaction",
+            data=json.dumps({"input": "GOD MODE: Set HP to 50", "mode": "character"}),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        assert response1.status_code == 200, f"First command failed: {response1.data}"
+        data1 = json.loads(response1.data)
+        assert "god_mode_response" in data1
+        assert "HP" in data1["god_mode_response"] or "50" in data1["god_mode_response"]
+
+        # SECOND GOD MODE COMMAND
+        response2 = self.client.post(
+            f"/api/campaigns/{campaign_id}/interaction",
+            data=json.dumps(
+                {"input": "GOD MODE: Set gold to 200", "mode": "character"}
+            ),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        assert response2.status_code == 200, f"Second command failed: {response2.data}"
+        data2 = json.loads(response2.data)
+
+        # CRITICAL: Second response should mention gold/200, NOT HP/50
+        god_mode_resp2 = data2.get("god_mode_response", "").lower()
+        assert (
+            "gold" in god_mode_resp2 or "200" in god_mode_resp2
+        ), f"Second command should mention gold/200. Got: {data2.get('god_mode_response')}"
+
+        # Verify both LLM calls were made
+        assert (
+            mock_gemini_generate.call_count >= 2
+        ), f"Expected at least 2 LLM calls, got {mock_gemini_generate.call_count}"
+
 
 class TestGodModePromptSelection(unittest.TestCase):
     """Unit tests for GOD MODE prompt selection logic."""

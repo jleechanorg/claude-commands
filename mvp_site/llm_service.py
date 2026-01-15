@@ -1346,16 +1346,109 @@ def _call_llm_api_with_llm_request(
     # Re-validate payload size (~1.8KB overhead, negligible vs 10MB limit)
     gemini_request._validate_payload_size(json_data)
 
+    # STRUCTURED PROMPTING: Use explicit format to prioritize USER_ACTION over STORY_HISTORY
+    # This addresses narrative context lag where LLM might prioritize historical context
+    # over the current user action. By explicitly separating and labeling these sections,
+    # we guide the LLM to focus on the current action first.
+    #
+    # This is especially important for god mode commands where the user expects immediate
+    # response to their current command, not a response to a previous command.
+    #
+    # Only use structured format when user_action exists (covers story continuation and
+    # god mode commands, but not initial story generation which has no user_action).
+    if json_data.get("user_action"):
+        # Build structured prompt with explicit sections
+        structured_prompt_parts = [
+            f"MESSAGE_TYPE: story_continuation",
+            f"USER_ACTION: {json_data.get('user_action', '')}",
+            f"GAME_MODE: {json_data.get('game_mode', '')}",
+            f"USER_ID: {json_data.get('user_id', '')}",
+        ]
+
+        # Add game state as formatted JSON
+        if json_data.get("game_state"):
+            structured_prompt_parts.append(
+                f"GAME_STATE: {json.dumps(json_data.get('game_state', {}), indent=2, default=json_default_serializer)}"
+            )
+
+        # Add story history as formatted JSON (explicitly labeled as historical context)
+        if json_data.get("story_history"):
+            structured_prompt_parts.append(
+                f"STORY_HISTORY: {json.dumps(json_data.get('story_history', []), indent=2, default=json_default_serializer)}"
+            )
+
+        # Add entity tracking
+        if json_data.get("entity_tracking"):
+            structured_prompt_parts.append(
+                f"ENTITY_TRACKING: {json.dumps(json_data.get('entity_tracking', {}), indent=2, default=json_default_serializer)}"
+            )
+
+        # Add selected prompts
+        if json_data.get("selected_prompts"):
+            structured_prompt_parts.append(
+                f"SELECTED_PROMPTS: {json.dumps(json_data.get('selected_prompts', []), default=json_default_serializer)}"
+            )
+
+        # Add checkpoint block
+        if json_data.get("checkpoint_block"):
+            structured_prompt_parts.append(
+                f"CHECKPOINT_BLOCK: {json_data.get('checkpoint_block', '')}"
+            )
+
+        # Add core memories
+        if json_data.get("core_memories"):
+            structured_prompt_parts.append(
+                f"CORE_MEMORIES: {json.dumps(json_data.get('core_memories', []), default=json_default_serializer)}"
+            )
+
+        # Add sequence IDs
+        if json_data.get("sequence_ids"):
+            structured_prompt_parts.append(
+                f"SEQUENCE_IDS: {json.dumps(json_data.get('sequence_ids', []), default=json_default_serializer)}"
+            )
+
+        # Add system corrections if present
+        if json_data.get("system_corrections"):
+            structured_prompt_parts.append(
+                f"SYSTEM_CORRECTIONS: {json.dumps(json_data.get('system_corrections', []), default=json_default_serializer)}"
+            )
+
+        # Join with double newlines for clear separation
+        prompt_content = "\n\n".join(structured_prompt_parts)
+
+        # Safe user_action access for logging (handles None/empty string)
+        user_action_preview = (
+            (gemini_request.user_action or "")[:100]
+            if gemini_request.user_action
+            else "story_continuation"
+        )
+
+        return _call_llm_api(
+            [prompt_content],
+            model_name,
+            f"Structured LLMRequest: {user_action_preview}...",
+            system_instruction_text,
+            provider_name,
+        )
+
+    # Fallback for non-story requests (initial story, etc) - use standard JSON format
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
     # Uses centralized json_default_serializer from mvp_site.serialization
     json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
 
+    # Safe user_action access for logging (handles None/empty string for initial story)
+    user_action_preview = (
+        (gemini_request.user_action or "")[:100]
+        if gemini_request.user_action
+        else "initial_story"
+    )
+
     # Send the structured JSON as string to the API
     return _call_llm_api(
         [json_string],  # Send JSON as formatted string
         model_name,
-        f"LLMRequest: {gemini_request.user_action[:100]}...",  # Logging
+        f"LLMRequest: {user_action_preview}...",  # Logging
         system_instruction_text,
         provider_name,
     )
