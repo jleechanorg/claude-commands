@@ -25,8 +25,11 @@ from testing_mcp.lib.evidence_utils import (
 )
 from testing_mcp.lib.mcp_client import MCPClient
 from testing_mcp.lib.campaign_utils import (
+    advance_to_living_world_turn,
+    complete_mission_with_sanctuary,
     create_campaign,
-    ensure_game_state_seed,
+    end_combat_if_active,
+    ensure_story_mode,
     get_campaign_state,
     process_action,
 )
@@ -61,33 +64,14 @@ def run_tests(server_url: str) -> list:
         title="Sanctuary Test Campaign",
     )
 
-    # Exit character creation and seed game state (puts us in Story Mode)
+    # Exit character creation and ensure Story Mode
     print("   Exiting character creation and seeding game state...")
-    ensure_game_state_seed(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Verify we're in Story Mode
-    state_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    char_creation_in_progress = (
-        state_check.get("game_state", {})
-        .get("custom_campaign_state", {})
-        .get("character_creation_in_progress", True)
+    ensure_story_mode(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        request_responses=request_responses,
     )
-
-    if char_creation_in_progress:
-        # Fallback: try to exit character creation explicitly
-        char_complete_response = process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            user_input="I approve this character. Let's start the adventure.",
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
 
     # Start the quest in Story Mode
     quest_start_response = process_action(
@@ -109,95 +93,22 @@ def run_tests(server_url: str) -> list:
     request_responses.extend(client.get_captures_as_dict())
     client.clear_captures()
 
-    # Check if combat started and end it first - CRITICAL for sanctuary activation
-    state_before_completion = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    game_state_before = state_before_completion.get("game_state", {})
-    in_combat = game_state_before.get("combat_state", {}).get("in_combat", False)
-
-    if in_combat:
-        # End combat first by defeating enemies
-        print("   Combat detected, ending combat first...")
-        combat_end_response = process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            user_input="I defeat all remaining enemies in combat.",
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        # Verify combat ended
-        state_after_combat = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        still_in_combat = (
-            state_after_combat.get("game_state", {})
-            .get("combat_state", {})
-            .get("in_combat", False)
-        )
-
-        if still_in_combat:
-            # Force end combat via god mode if needed
-            print("   Combat still active, forcing end via God Mode...")
-            force_end_combat = process_action(
-                client,
-                user_id=user_id,
-                campaign_id=campaign_id,
-                user_input="GOD_MODE_UPDATE_STATE:{\"combat_state\": {\"in_combat\": false}}",
-            )
-            request_responses.extend(client.get_captures_as_dict())
-            client.clear_captures()
-            
-            # Verify combat ended after God Mode
-            state_after_god_mode = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-            request_responses.extend(client.get_captures_as_dict())
-            client.clear_captures()
-            
-            still_in_combat_after_god = (
-                state_after_god_mode.get("game_state", {})
-                .get("combat_state", {})
-                .get("in_combat", False)
-            )
-            if still_in_combat_after_god:
-                print("   ⚠️  WARNING: Combat still active after God Mode - proceeding anyway")
-
-    # Now complete the mission explicitly in Story Mode - this should trigger sanctuary
-    # ✅ FIX: Use completion language that avoids combat-triggering words
-    # Combat should already be ended above, but if classifier still routes to CombatAgent,
-    # the LLM should still recognize completion language and activate sanctuary
-    # Use explicit completion language that StoryModeAgent will recognize
-    # ✅ FIX: Avoid combat-triggering language ("eliminated", "threat") that routes to CombatAgent
-    completion_response = process_action(
+    # Complete mission and verify sanctuary activation (shared utility handles combat ending)
+    completion_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="The quest is finished. I have successfully completed the Cragmaw Hideout mission. This mission is now complete. I have finished this quest arc.",
+        completion_text="The quest is finished. I have successfully completed the Cragmaw Hideout mission. This mission is now complete. I have finished this quest arc.",
+        request_responses=request_responses,
+        verbose=True,
     )
     
-    # Verify agent mode after completion (for diagnostics - don't fail test, just warn)
-    completion_agent_mode = completion_response.get("agent_mode", "unknown")
-    if completion_agent_mode == "combat":
-        print(f"   ⚠️  WARNING: Mission completion routed to CombatAgent (agent_mode={completion_agent_mode})")
-        print(f"      See /tmp/classifier_improvement_issue.md for improvement suggestions")
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Check if sanctuary was activated
-    state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Get game_state from the response (nested structure)
-    game_state = state.get("game_state", {})
-    sanctuary_mode = game_state.get("custom_campaign_state", {}).get("sanctuary_mode", {})
-    sanctuary_active = sanctuary_mode.get("active", False)
+    completion_response = completion_result["completion_response"]
+    sanctuary_mode = completion_result["sanctuary_mode"]
+    sanctuary_active = completion_result["sanctuary_active"]
+    current_turn = completion_result["current_turn"]
     expires_turn = sanctuary_mode.get("expires_turn")
     activated_turn = sanctuary_mode.get("activated_turn")
-    current_turn = game_state.get("player_turn", 0)
     
     # Check completion response for sanctuary activation hints
     completion_narrative = completion_response.get("narrative", "").lower()
@@ -247,44 +158,13 @@ def run_tests(server_url: str) -> list:
         # ✅ CRITICAL: Ensure this happens on a Living World turn (every 3 turns)
         # Living World turns are when complications can emerge from off-screen events
         # Sanctuary should prevent lethal complications during Living World advancement
-        # NOTE: Check turn AFTER Scenario 1 completes (use Scenario 1's final state)
-        
-        # Get current state (after Scenario 1)
-        state_before_event = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-        
-        game_state_before = state_before_event.get("game_state", {})
-        current_turn = game_state_before.get("player_turn", 0)
-        is_living_world_turn = current_turn > 0 and current_turn % 3 == 0
-        
-        # Advance to next Living World turn if needed (turn 3, 6, 9, 12, etc.)
-        if not is_living_world_turn:
-            print(f"   Current turn: {current_turn} (not a Living World turn)")
-            print(f"   Advancing to next Living World turn...")
-            # Calculate turns needed to reach next Living World turn
-            turns_to_advance = 3 - (current_turn % 3)
-            for i in range(turns_to_advance):
-                advance_response = process_action(
-                    client,
-                    user_id=user_id,
-                    campaign_id=campaign_id,
-                    user_input="I continue my journey.",
-                )
-                request_responses.extend(client.get_captures_as_dict())
-                client.clear_captures()
-            
-            # Verify we're now on a Living World turn
-            state_after_advance = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-            request_responses.extend(client.get_captures_as_dict())
-            client.clear_captures()
-            
-            game_state_after = state_after_advance.get("game_state", {})
-            new_turn = game_state_after.get("player_turn", 0)
-            is_living_world_turn = new_turn > 0 and new_turn % 3 == 0
-            print(f"   Now on turn: {new_turn} {'🌍 (Living World turn)' if is_living_world_turn else '⚠️ (Still not a Living World turn)'}")
-        else:
-            print(f"   Current turn: {current_turn} 🌍 (Living World turn)")
+        current_turn, was_living_world_turn = advance_to_living_world_turn(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            request_responses=request_responses,
+            verbose=True,
+        )
         
         # Try to trigger an event that should be blocked by sanctuary
         # On Living World turns, complications can emerge from off-screen events
@@ -322,20 +202,8 @@ def run_tests(server_url: str) -> list:
             .get("active", False)
         )
 
-        # Verify this was actually a Living World turn
-        # Use the turn we verified BEFORE sending the exploration action
-        # (The action increments the turn, so we need to use the pre-action turn)
-        if 'is_living_world_turn' in locals() and 'current_turn' in locals():
-            was_living_world_turn = is_living_world_turn
-            final_turn = current_turn if is_living_world_turn else (new_turn if 'new_turn' in locals() else current_turn)
-        else:
-            # Fallback: check final state (but this will be post-action turn)
-            final_state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-            request_responses.extend(client.get_captures_as_dict())
-            client.clear_captures()
-            final_game_state = final_state.get("game_state", {})
-            final_turn = final_game_state.get("player_turn", 0)
-            was_living_world_turn = False  # Can't verify if we don't have pre-action state
+        # was_living_world_turn is already set from advance_to_living_world_turn
+        final_turn = current_turn
         
         scenario2_passed = (
             not has_lethal_event 

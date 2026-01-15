@@ -30,8 +30,11 @@ from testing_mcp.lib.evidence_utils import (
 )
 from testing_mcp.lib.mcp_client import MCPClient
 from testing_mcp.lib.campaign_utils import (
+    advance_to_living_world_turn,
+    complete_mission_with_sanctuary,
     create_campaign,
-    ensure_game_state_seed,
+    end_combat_if_active,
+    ensure_story_mode,
     get_campaign_state,
     process_action,
 )
@@ -68,32 +71,13 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         title="Sanctuary Lifecycle Test",
     )
 
-    # Exit character creation
-    ensure_game_state_seed(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Verify we're in Story Mode
-    state_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    char_creation_in_progress = (
-        state_check.get("game_state", {})
-        .get("custom_campaign_state", {})
-        .get("character_creation_in_progress", True)
+    # Exit character creation and ensure Story Mode
+    ensure_story_mode(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        request_responses=request_responses,
     )
-
-    if char_creation_in_progress:
-        # Fallback: try to exit character creation explicitly
-        char_complete_response = process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            user_input="I approve this character. Let's start the adventure.",
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
 
     # Start and complete a major arc
     quest_response = process_action(
@@ -116,66 +100,21 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         request_responses.extend(client.get_captures_as_dict())
         client.clear_captures()
 
-    # End any combat - be explicit and check if combat is actually active
-    combat_state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-    
-    game_state_combat = combat_state.get("game_state", {})
-    in_combat = game_state_combat.get("combat_state", {}).get("in_combat", False)
-    
-    if in_combat:
-        print("   Combat detected, ending combat first...")
-        combat_end = process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            user_input="I defeat all remaining enemies in combat.",
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-        
-        # Verify combat ended, use God Mode fallback if needed
-        combat_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-        
-        game_state_check = combat_check.get("game_state", {})
-        still_in_combat = game_state_check.get("in_combat", False)
-        
-        if still_in_combat:
-            print("   Combat still active, forcing end via God Mode...")
-            god_mode_end = process_action(
-                client,
-                user_id=user_id,
-                campaign_id=campaign_id,
-                user_input="[GOD MODE] All enemies are defeated. Combat ends. The dragon threat is eliminated.",
-            )
-            request_responses.extend(client.get_captures_as_dict())
-            client.clear_captures()
-
-    # Complete the major arc (should activate Epic sanctuary ~21 turns)
-    # Use explicit completion language that avoids combat-triggering words
-    epic_completion = process_action(
+    # Complete the major arc and verify Epic sanctuary activation
+    epic_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="The quest is finished. I have successfully completed the major dragon quest arc. This epic campaign arc is now complete. The mission is done. I have finished this quest.",
+        completion_text="The quest is finished. I have successfully completed the major dragon quest arc. This epic campaign arc is now complete. The mission is done. I have finished this quest.",
+        request_responses=request_responses,
+        verbose=True,
     )
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Verify Epic sanctuary activated
-    state_epic = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    game_state_epic = state_epic.get("game_state", {})
-    sanctuary_epic = game_state_epic.get("custom_campaign_state", {}).get("sanctuary_mode", {})
-    epic_active = sanctuary_epic.get("active", False)
+    
+    sanctuary_epic = epic_result["sanctuary_mode"]
+    epic_active = epic_result["sanctuary_active"]
+    current_turn_epic = epic_result["current_turn"]
     epic_expires = sanctuary_epic.get("expires_turn")
     epic_scale = sanctuary_epic.get("scale", "").lower()
-    current_turn_epic = game_state_epic.get("player_turn", 0)
 
     phase1_passed = (
         epic_active
@@ -233,37 +172,21 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         request_responses.extend(client.get_captures_as_dict())
         client.clear_captures()
 
-    # End combat if any
-    combat_end2 = process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        user_input="I defeat all remaining enemies in combat.",
-    )
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
     # Complete medium mission (should NOT overwrite Epic sanctuary)
-    medium_completion = process_action(
+    medium_result = complete_mission_with_sanctuary(
         client,
         user_id=user_id,
         campaign_id=campaign_id,
-        user_input="The quest is finished. I have successfully completed the goblin cave mission. This medium mission is now complete.",
+        completion_text="The quest is finished. I have successfully completed the goblin cave mission. This medium mission is now complete.",
+        request_responses=request_responses,
+        verbose=True,
     )
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Verify Epic sanctuary still active (not overwritten)
-    state_overwrite = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    game_state_overwrite = state_overwrite.get("game_state", {})
-    sanctuary_overwrite = game_state_overwrite.get("custom_campaign_state", {}).get("sanctuary_mode", {})
-    overwrite_active = sanctuary_overwrite.get("active", False)
+    
+    sanctuary_overwrite = medium_result["sanctuary_mode"]
+    overwrite_active = medium_result["sanctuary_active"]
+    current_turn_overwrite = medium_result["current_turn"]
     overwrite_expires = sanctuary_overwrite.get("expires_turn")
     overwrite_scale = sanctuary_overwrite.get("scale", "").lower()
-    current_turn_overwrite = game_state_overwrite.get("player_turn", 0)
 
     # Overwrite protection passed if:
     # 1. Sanctuary still active
@@ -302,26 +225,13 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     print("📋 Phase 3: Test Protection During Active Period...")
     if overwrite_active:
         # Ensure we're on a Living World turn
-        state_before_protection = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        game_state_before = state_before_protection.get("game_state", {})
-        turn_before = game_state_before.get("player_turn", 0)
-        is_living_world = turn_before > 0 and turn_before % 3 == 0
-
-        if not is_living_world:
-            print(f"   Advancing to Living World turn (current: {turn_before})...")
-            turns_needed = 3 - (turn_before % 3)
-            for i in range(turns_needed):
-                advance = process_action(
-                    client,
-                    user_id=user_id,
-                    campaign_id=campaign_id,
-                    user_input="I continue my journey.",
-                )
-                request_responses.extend(client.get_captures_as_dict())
-                client.clear_captures()
+        turn_before, is_living_world = advance_to_living_world_turn(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            request_responses=request_responses,
+            verbose=True,
+        )
 
         # Trigger event that should be protected
         event_response = process_action(

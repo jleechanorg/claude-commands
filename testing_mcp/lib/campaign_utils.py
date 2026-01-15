@@ -489,3 +489,283 @@ def ensure_game_state_seed(
     if result.get("error"):
         raise RuntimeError(f"GOD_MODE_UPDATE_STATE failed: {result['error']}")
     return True
+
+
+def ensure_story_mode(
+    client: MCPClient,
+    *,
+    user_id: str,
+    campaign_id: str,
+    request_responses: list | None = None,
+) -> None:
+    """Ensure campaign is in Story Mode (not Character Creation).
+    
+    Exits character creation if needed and verifies we're in Story Mode.
+    Captures request/response pairs if request_responses list is provided.
+    
+    Args:
+        client: MCPClient instance.
+        user_id: User identifier.
+        campaign_id: Campaign identifier.
+        request_responses: Optional list to append request/response captures.
+    """
+    # Seed game state (exits character creation)
+    ensure_game_state_seed(client, user_id=user_id, campaign_id=campaign_id)
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Verify we're in Story Mode
+    state_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    char_creation_in_progress = (
+        state_check.get("game_state", {})
+        .get("custom_campaign_state", {})
+        .get("character_creation_in_progress", True)
+    )
+
+    if char_creation_in_progress:
+        # Fallback: try to exit character creation explicitly
+        char_complete_response = process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input="I approve this character. Let's start the adventure.",
+        )
+        if request_responses is not None:
+            request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+
+
+def end_combat_if_active(
+    client: MCPClient,
+    *,
+    user_id: str,
+    campaign_id: str,
+    request_responses: list | None = None,
+    verbose: bool = False,
+) -> bool:
+    """Detect and end combat if active, with God Mode fallback.
+    
+    Returns True if combat was active and ended, False otherwise.
+    Captures request/response pairs if request_responses list is provided.
+    
+    Args:
+        client: MCPClient instance.
+        user_id: User identifier.
+        campaign_id: Campaign identifier.
+        request_responses: Optional list to append request/response captures.
+        verbose: If True, print status messages.
+    
+    Returns:
+        True if combat was active and ended, False if no combat was active.
+    """
+    # Check if combat is active
+    combat_state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    game_state = combat_state.get("game_state", {})
+    in_combat = game_state.get("combat_state", {}).get("in_combat", False)
+
+    if not in_combat:
+        return False
+
+    if verbose:
+        print("   Combat detected, ending combat first...")
+
+    # End combat
+    combat_end = process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input="I defeat all remaining enemies in combat.",
+    )
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Verify combat ended
+    combat_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    game_state_check = combat_check.get("game_state", {})
+    still_in_combat = game_state_check.get("combat_state", {}).get("in_combat", False)
+
+    if still_in_combat:
+        # Force end combat via God Mode fallback
+        if verbose:
+            print("   Combat still active, forcing end via God Mode...")
+        god_mode_end = process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input="[GOD MODE] All enemies are defeated. Combat ends.",
+        )
+        if request_responses is not None:
+            request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+
+        # Final verification
+        final_check = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+        if request_responses is not None:
+            request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+
+        final_game_state = final_check.get("game_state", {})
+        still_in_combat_after_god = final_game_state.get("combat_state", {}).get("in_combat", False)
+        if still_in_combat_after_god and verbose:
+            print("   ⚠️  WARNING: Combat still active after God Mode - proceeding anyway")
+
+    return True
+
+
+def complete_mission_with_sanctuary(
+    client: MCPClient,
+    *,
+    user_id: str,
+    campaign_id: str,
+    completion_text: str,
+    request_responses: list | None = None,
+    verbose: bool = False,
+) -> dict[str, Any]:
+    """Complete a mission and verify sanctuary activation.
+    
+    Ends combat first if needed, then sends completion text.
+    Returns the completion response and sanctuary state.
+    
+    Args:
+        client: MCPClient instance.
+        user_id: User identifier.
+        campaign_id: Campaign identifier.
+        completion_text: Mission completion message (should use explicit completion language).
+        request_responses: Optional list to append request/response captures.
+        verbose: If True, print status messages.
+    
+    Returns:
+        Dict with keys:
+        - completion_response: Response from completion action
+        - sanctuary_mode: Sanctuary state dict
+        - sanctuary_active: Boolean
+        - current_turn: Current turn number
+    """
+    # End combat first if active
+    end_combat_if_active(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        request_responses=request_responses,
+        verbose=verbose,
+    )
+
+    # Complete the mission
+    completion_response = process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input=completion_text,
+    )
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Verify agent mode (for diagnostics)
+    completion_agent_mode = completion_response.get("agent_mode", "unknown")
+    if verbose and completion_agent_mode == "combat":
+        print(f"   ⚠️  WARNING: Mission completion routed to CombatAgent (agent_mode={completion_agent_mode})")
+
+    # Get sanctuary state
+    state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    game_state = state.get("game_state", {})
+    sanctuary_mode = game_state.get("custom_campaign_state", {}).get("sanctuary_mode", {})
+    sanctuary_active = sanctuary_mode.get("active", False)
+    current_turn = game_state.get("player_turn", 0)
+
+    return {
+        "completion_response": completion_response,
+        "sanctuary_mode": sanctuary_mode,
+        "sanctuary_active": sanctuary_active,
+        "current_turn": current_turn,
+    }
+
+
+def advance_to_living_world_turn(
+    client: MCPClient,
+    *,
+    user_id: str,
+    campaign_id: str,
+    request_responses: list | None = None,
+    verbose: bool = False,
+) -> tuple[int, bool]:
+    """Advance turns until we reach a Living World turn (every 3 turns).
+    
+    Returns the current turn number and whether it's a Living World turn.
+    Captures request/response pairs if request_responses list is provided.
+    
+    Args:
+        client: MCPClient instance.
+        user_id: User identifier.
+        campaign_id: Campaign identifier.
+        request_responses: Optional list to append request/response captures.
+        verbose: If True, print status messages.
+    
+    Returns:
+        Tuple of (current_turn, is_living_world_turn).
+    """
+    # Get current state
+    state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    if request_responses is not None:
+        request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    game_state = state.get("game_state", {})
+    current_turn = game_state.get("player_turn", 0)
+    is_living_world_turn = current_turn > 0 and current_turn % 3 == 0
+
+    if not is_living_world_turn:
+        if verbose:
+            print(f"   Current turn: {current_turn} (not a Living World turn)")
+            print(f"   Advancing to next Living World turn...")
+
+        # Calculate turns needed to reach next Living World turn
+        turns_to_advance = 3 - (current_turn % 3)
+        for i in range(turns_to_advance):
+            advance = process_action(
+                client,
+                user_id=user_id,
+                campaign_id=campaign_id,
+                user_input="I continue my journey.",
+            )
+            if request_responses is not None:
+                request_responses.extend(client.get_captures_as_dict())
+            client.clear_captures()
+
+        # Verify we're now on a Living World turn
+        state_after = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+        if request_responses is not None:
+            request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+
+        game_state_after = state_after.get("game_state", {})
+        new_turn = game_state_after.get("player_turn", 0)
+        is_living_world_turn = new_turn > 0 and new_turn % 3 == 0
+
+        if verbose:
+            status = "🌍 (Living World turn)" if is_living_world_turn else "⚠️ (Still not a Living World turn)"
+            print(f"   Now on turn: {new_turn} {status}")
+
+        return new_turn, is_living_world_turn
+    else:
+        if verbose:
+            print(f"   Current turn: {current_turn} 🌍 (Living World turn)")
+        return current_turn, True
