@@ -1346,56 +1346,16 @@ def _call_llm_api_with_llm_request(
     # Re-validate payload size (~1.8KB overhead, negligible vs 10MB limit)
     gemini_request._validate_payload_size(json_data)
 
-    # Send the structured JSON as string to the API
-    
-    # NEW: Use structured prompt format to prioritize user action over history
-    # This implements the fix for narrative lag where LLM prioritizes history over current turn
-    # Use structured format when user_action exists (covers both continuation and initial story)
-    if json_data.get("user_action"):
-        structured_prompt = [
-            f"MESSAGE_TYPE: story_continuation",
-            f"USER_ACTION: {json_data.get('user_action', '')}",
-            f"GAME_MODE: {json_data.get('game_mode', '')}",
-            f"USER_ID: {json_data.get('user_id', '')}",
-            f"GAME_STATE: {json.dumps(json_data.get('game_state', {}), indent=2, default=json_default_serializer)}",
-            f"STORY_HISTORY: {json.dumps(json_data.get('story_history', []), indent=2, default=json_default_serializer)}",
-            f"ENTITY_TRACKING: {json.dumps(json_data.get('entity_tracking', {}), indent=2, default=json_default_serializer)}",
-            f"SELECTED_PROMPTS: {json.dumps(json_data.get('selected_prompts', []), default=json_default_serializer)}",
-            f"CHECKPOINT_BLOCK: {json_data.get('checkpoint_block', '')}",
-            f"CORE_MEMORIES: {json.dumps(json_data.get('core_memories', []), default=json_default_serializer)}",
-            f"SEQUENCE_IDS: {json.dumps(json_data.get('sequence_ids', []), default=json_default_serializer)}",
-        ]
-        
-        # Add optional fields if present
-        if json_data.get("system_corrections"):
-            structured_prompt.append(f"SYSTEM_CORRECTIONS: {json.dumps(json_data['system_corrections'], default=json_default_serializer)}")
-            
-        prompt_content = "\n\n".join(structured_prompt)
-        
-        # Safe user_action access for logging (handles None/empty string)
-        user_action_preview = (gemini_request.user_action or "")[:100] if gemini_request.user_action else "story_continuation"
-        
-        return _call_llm_api(
-            [prompt_content],
-            model_name,
-            f"Structured LLMRequest: {user_action_preview}...",
-            system_instruction_text,
-            provider_name,
-        )
-
-    # Fallback for non-story requests (initial story, etc)
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
     # Uses centralized json_default_serializer from mvp_site.serialization
     json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
 
-    # Safe user_action access for logging (handles None/empty string for initial story)
-    user_action_preview = (gemini_request.user_action or "")[:100] if gemini_request.user_action else "initial_story"
-
+    # Send the structured JSON as string to the API
     return _call_llm_api(
         [json_string],  # Send JSON as formatted string
         model_name,
-        f"LLMRequest: {user_action_preview}...",  # Logging
+        f"LLMRequest: {gemini_request.user_action[:100]}...",  # Logging
         system_instruction_text,
         provider_name,
     )
