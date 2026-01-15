@@ -29,6 +29,7 @@ import { handleAsyncError, showErrorToast, showSuccessToast, LoadingState } from
 import type { InteractionRequest, InteractionResponse } from '../services/api.types'
 import { formatDiceRolls, DiceRoll, formatDiceRoll } from '../utils/diceUtils'
 import { DiceRollDisplay } from './DiceRollDisplay'
+import { createSystemWarningEntries } from '../utils/systemWarnings'
 
 interface GameViewProps {
   campaign: Campaign
@@ -256,17 +257,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings) && aiResponse.system_warnings.length > 0
-          ? [
-              {
-                id: `warnings-${Date.now()}`,
-                type: 'system',
-                content: `⚠️ System warnings:\n${aiResponse.system_warnings.map((w: any) => `- ${String(w)}`).join('\n')}`,
-                timestamp: new Date().toISOString(),
-                author: 'system'
-              }
-            ]
-          : []
+        const warningEntries = createSystemWarningEntries(aiResponse.system_warnings)
         setStory(prev => [...prev, aiEntry, ...warningEntries])
         setRetryCount(0)
         setLastFailedInput('')
@@ -409,17 +400,7 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        const warningEntries: StoryEntry[] = Array.isArray(aiResponse.system_warnings) && aiResponse.system_warnings.length > 0
-          ? [
-              {
-                id: `warnings-${Date.now()}`,
-                type: 'system',
-                content: `⚠️ System warnings:\n${aiResponse.system_warnings.map((w: any) => `- ${String(w)}`).join('\n')}`,
-                timestamp: new Date().toISOString(),
-                author: 'system'
-              }
-            ]
-          : []
+        const warningEntries = createSystemWarningEntries(aiResponse.system_warnings)
         setStory(prev => [...prev, aiEntry, ...warningEntries])
         setRetryCount(0)
         setLastFailedInput('')

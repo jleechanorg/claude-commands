@@ -6,6 +6,7 @@ import { DiceRollDisplay } from './DiceRollDisplay'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
 import { apiService } from '../services/api.service'
+import { createSystemWarningEntries } from '../utils/systemWarnings'
 import {
   ArrowLeft,
   Send,
@@ -130,17 +131,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
             dice_rolls: response.dice_rolls
           }
 
-          const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings) && response.system_warnings.length > 0
-            ? [
-                {
-                  id: `warnings-${Date.now()}`,
-                  type: 'system',
-                  content: `⚠️ System warnings:\n${response.system_warnings.map(w => `- ${w}`).join('\n')}`,
-                  timestamp: new Date().toISOString(),
-                  author: 'system'
-                }
-              ]
-            : []
+          const warningEntries = createSystemWarningEntries(response.system_warnings)
           setStory(prev => [...prev, aiStory, ...warningEntries])
         }
       } catch (error) {
@@ -204,17 +195,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           dice_rolls: response.dice_rolls
         }
 
-        const warningEntries: StoryEntry[] = Array.isArray(response.system_warnings) && response.system_warnings.length > 0
-          ? [
-              {
-                id: `warnings-${Date.now()}`,
-                type: 'system',
-                content: `⚠️ System warnings:\n${response.system_warnings.map(w => `- ${w}`).join('\n')}`,
-                timestamp: new Date().toISOString(),
-                author: 'system'
-              }
-            ]
-          : []
+        const warningEntries = createSystemWarningEntries(response.system_warnings)
         setStory(prev => [...prev, aiResponse, ...warningEntries])
       } else {
         // Fallback response
