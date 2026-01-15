@@ -531,6 +531,18 @@ PLANNING_PROTOCOL_PATH = os.path.join(PROMPTS_DIR, "planning_protocol.md")
 # If this value changes, update living_world_instruction.md and references in
 # narrative_system_instruction.md to keep cadence documentation in sync.
 LIVING_WORLD_TURN_INTERVAL = 3
+COMPANION_ARC_INITIAL_TURN = 3
+COMPANION_ARC_PHASES = ("discovery", "development", "crisis", "resolution")
+COMPANION_ARC_TYPES = (
+    "personal_redemption",
+    "lost_family",
+    "rival_nemesis",
+    "forbidden_love",
+    "dark_secret",
+    "homeland_crisis",
+    "mentor_legacy",
+    "prophetic_destiny",
+)
 
 # --- PROMPT LOADING ORDER ---
 # User-selectable prompts that are conditionally added based on campaign settings

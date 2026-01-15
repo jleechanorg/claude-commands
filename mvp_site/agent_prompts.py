@@ -46,7 +46,6 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_GAME_STATE_EXAMPLES: constants.GAME_STATE_EXAMPLES_PATH,
     constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
-    # constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH, # Integrated into game_state
     constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
     constants.PROMPT_TYPE_DND_SRD: constants.DND_SRD_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_GOD_MODE: constants.GOD_MODE_INSTRUCTION_PATH,
@@ -807,9 +806,53 @@ class PromptBuilder:
         # Always include the D&D SRD instruction (replaces complex dual-system approach)
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
 
+    def _extract_companions_from_state(self, state: dict[str, Any] | None) -> dict[str, Any] | None:
+        """
+        Extract companions from game state, checking both game_state.companions and npc_data.
+        
+        Returns a dict of companions if found, None otherwise.
+        Handles malformed data (non-dict companions) by falling back to npc_data scan.
+        """
+        if not isinstance(state, dict):
+            logging_util.info(
+                f"🎭 _extract_companions_from_state: State is not a dict: {type(state)}"
+            )
+            return None
+
+        # First, check game_state.companions
+        companions_raw = state.get("game_state", {}).get("companions")
+        if companions_raw and isinstance(companions_raw, dict):
+            logging_util.info(
+                f"🎭 _extract_companions_from_state: Found companions in game_state.companions: {list(companions_raw.keys())}"
+            )
+            return companions_raw
+
+        # Fallback: scan npc_data for companions
+        npc_data = state.get("npc_data", {})
+        if not isinstance(npc_data, dict):
+            logging_util.info(
+                f"🎭 _extract_companions_from_state: npc_data is not a dict: {type(npc_data)}"
+            )
+            return None
+
+        companions = {
+            name: npc for name, npc in npc_data.items()
+            if isinstance(npc, dict) and npc.get("relationship") == "companion"
+        }
+        
+        if companions:
+            logging_util.info(
+                f"🎭 _extract_companions_from_state: Found companions in npc_data: {list(companions.keys())}"
+            )
+        else:
+            logging_util.info(
+                f"🎭 _extract_companions_from_state: No companions found in npc_data (keys: {list(npc_data.keys())})"
+            )
+        
+        return companions if companions else None
+
     def build_companion_instruction(self) -> str:
         """Build companion instruction text."""
-
         state: dict[str, Any] | None = None
         if self.game_state is not None:
             if hasattr(self.game_state, "to_dict"):
@@ -817,17 +860,57 @@ class PromptBuilder:
             elif hasattr(self.game_state, "data"):
                 state = self.game_state.data
 
-        companions: dict[str, Any] | None = None
-        if isinstance(state, dict):
-            companions = state.get("game_state", {}).get("companions")
+        companions = self._extract_companions_from_state(state)
 
         if companions and isinstance(companions, dict):
-            lines = ["**ACTIVE COMPANIONS**"]
+            companion_names = list(companions.keys())
+            logging_util.info(
+                f"🎭 build_companion_instruction: Found {len(companion_names)} companions: {companion_names}"
+            )
+            lines = [
+                "\n**🚨🚨🚨 CRITICAL: ACTIVE COMPANIONS - USE THESE EXACT COMPANIONS IN YOUR NARRATIVE 🚨🚨🚨**",
+                "**THIS IS A MANDATORY REQUIREMENT. FAILURE TO COMPLY WILL RESULT IN INCORRECT OUTPUT.**",
+                "",
+                "**DO NOT GENERATE NEW COMPANIONS.**",
+                "**DO NOT CREATE COMPANIONS.**",
+                "**DO NOT INVENT COMPANIONS.**",
+                "",
+                "These companions are ALREADY part of the party and MUST appear in your story.",
+                "**YOU MUST MENTION THESE COMPANIONS BY NAME IN YOUR NARRATIVE TEXT.**",
+                "**YOU MUST USE THESE EXACT NAMES. NO SUBSTITUTIONS. NO VARIATIONS.**",
+                "",
+                "**ONLY USE THESE COMPANIONS:**"
+            ]
             for name, info in companions.items():
                 if not isinstance(info, dict):
                     continue
-                cls = info.get("class", "Unknown")
-                lines.append(f"- {name} ({cls})")
+                role = info.get("role", info.get("class", "Unknown"))
+                background = info.get("background", "")
+                mbti = info.get("mbti", "")
+                # Type-safe background formatting: only slice if it's a string
+                background_str = ""
+                if background and isinstance(background, str):
+                    background_str = f": {background[:80]}"
+                lines.append(f"- **{name}** ({role}){background_str}")
+                if mbti:
+                    lines.append(f"  MBTI: {mbti}")
+            lines.extend([
+                "",
+                "**MANDATORY NARRATIVE REQUIREMENT:**",
+                "In your opening narrative, explicitly mention these companions traveling with the player character.",
+                "Use their EXACT names: " + ", ".join(companion_names),
+                "",
+                "**EXAMPLE (CORRECT):**",
+                "'You stand at the edge of Oakhaven with " + ", ".join(companion_names) + " at your side...'",
+                "",
+                "**FORBIDDEN:**",
+                "- ❌ DO NOT mention any companions not listed above",
+                "- ❌ DO NOT create new companions",
+                "- ❌ DO NOT use different names",
+                "- ❌ DO NOT invent companions",
+                "",
+                "**VERIFICATION:** After generating your narrative, verify that ALL of these companions are mentioned by name: " + ", ".join(companion_names)
+            ])
             return "\n".join(lines)
 
         # Fallback to static instruction used during initial story generation
@@ -1227,31 +1310,29 @@ class PromptBuilder:
         """
         Build living world advancement instruction for this turn.
 
-        This instruction triggers the LLM to advance world state for characters,
-        factions, and events that are not directly in the player's current scene.
-        The world continues to move even when the player isn't watching.
-
-        Args:
-            turn_number: Current turn number for context
-
-        Returns:
-            Living world instruction with turn context, or empty string if not
-            a living world turn.
+        Companion quest arcs are PART OF the living world - the instruction file
+        contains the Companion Quest Arcs section. Current arc state is prepended.
         """
         if not self.should_include_living_world(turn_number):
             return ""
 
-        # Load the living world instruction file
         base_instruction = _load_instruction_file(constants.PROMPT_TYPE_LIVING_WORLD)
 
-        # Add turn context header
-        turn_context = (
+        # Get current companion arc state (if any)
+        arc_context = ""
+        if self.game_state is not None and hasattr(
+            self.game_state, "get_companion_arcs_summary"
+        ):
+            arc_summary = self.game_state.get_companion_arcs_summary()
+            if arc_summary:
+                arc_context = f"\n**Current Companion Arcs:**\n{arc_summary}\n"
+
+        turn_header = (
             f"\n**🌍 LIVING WORLD TURN {turn_number}**\n"
-            f"This is turn {turn_number} - a living world advancement turn.\n"
-            f"You MUST generate background world events as specified below.\n\n"
+            f"Generate background events AND advance companion arcs.\n"
         )
 
-        return turn_context + base_instruction
+        return turn_header + arc_context + base_instruction
 
     def finalize_instructions(
         self, parts: list[str], use_default_world: bool = False

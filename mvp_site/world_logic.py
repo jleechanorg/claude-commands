@@ -69,6 +69,7 @@ from mvp_site.game_state import (
     validate_and_correct_state,
     xp_needed_for_level,
 )
+from mvp_site.action_resolution_utils import add_action_resolution_to_response
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
 
@@ -1903,6 +1904,23 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                         f"✅ Added '{player_name}' to active_entities (God Mode character)"
                     )
 
+        # Extract companions from god_mode if present
+        npc_data_from_god_mode = {}
+        if god_mode and isinstance(god_mode, dict) and "companions" in god_mode:
+            companions_dict = god_mode.get("companions", {})
+            if isinstance(companions_dict, dict):
+                # CRITICAL: Ensure all companions have relationship="companion" field
+                # so they're detected by build_companion_instruction() filter
+                npc_data_from_god_mode = {}
+                for name, npc in companions_dict.items():
+                    if isinstance(npc, dict):
+                        npc_copy = npc.copy()
+                        npc_copy["relationship"] = "companion"  # Required for companion detection
+                        npc_data_from_god_mode[name] = npc_copy
+                logging_util.info(
+                    f"🎭 GOD MODE: Found {len(npc_data_from_god_mode)} companions in god_mode: {list(npc_data_from_god_mode.keys())}"
+                )
+
         initial_game_state = GameState(
             user_id=user_id,
             custom_campaign_state={
@@ -1913,7 +1931,20 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             player_character_data=player_character_data,
             entity_tracking=entity_tracking,
             debug_mode=debug_mode,
+            npc_data=npc_data_from_god_mode,  # Pass directly - GameState handles empty dict default
         ).to_dict()
+        
+        # Verify companions are in the state dict
+        if npc_data_from_god_mode:
+            state_npc_data = initial_game_state.get("npc_data", {})
+            if not isinstance(state_npc_data, dict):
+                state_npc_data = {}
+            # Merge companions into state (in case GameState didn't preserve them)
+            state_npc_data.update(npc_data_from_god_mode)
+            initial_game_state["npc_data"] = state_npc_data
+            logging_util.info(
+                f"🎭 GOD MODE: Verified {len(state_npc_data)} companions in initial_game_state: {list(state_npc_data.keys())}"
+            )
 
         generate_companions = "companions" in custom_options
         use_default_world = "defaultWorld" in custom_options
@@ -1961,6 +1992,14 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             # Generate opening story using LLM (CRITICAL: blocking I/O - 10-30+ seconds!)
             # For God Mode campaigns with character data, use CharacterCreationAgent
             # For regular campaigns, use StoryModeAgent
+            # CRITICAL: If companions are in initial_game_state (from god_mode), ensure generate_companions is True
+            # so the LLM knows to include them in the narrative
+            if npc_data_from_god_mode and not generate_companions:
+                generate_companions = True
+                logging_util.info(
+                    f"🎭 GOD MODE: Enabling generate_companions=True because {len(npc_data_from_god_mode)} companions found in god_mode"
+                )
+            
             try:
                 opening_story_response = await asyncio.to_thread(
                     llm_service.get_initial_story,
@@ -1970,6 +2009,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                     generate_companions,
                     use_default_world,
                     use_character_creation_agent=is_god_mode_with_character,  # Use CharacterCreationAgent for God Mode with character
+                    initial_npc_data=npc_data_from_god_mode if npc_data_from_god_mode else None,  # Pass companions from god_mode
                 )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during campaign creation: {e}")
@@ -3085,6 +3125,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["session_header"] = structured_response.session_header
             if hasattr(structured_response, "planning_block"):
                 unified_response["planning_block"] = structured_response.planning_block
+            # Legacy dice_rolls/dice_audit_events - prefer extraction from action_resolution
+            # but allow direct population for backward compatibility
             if hasattr(structured_response, "dice_rolls"):
                 unified_response["dice_rolls"] = structured_response.dice_rolls
             if hasattr(structured_response, "dice_audit_events"):
@@ -3100,8 +3142,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     structured_response.social_hp_challenge
                 )
             # Include action_resolution and outcome_resolution (backward compat)
-            from mvp_site.action_resolution_utils import add_action_resolution_to_response
-
+            # Legacy dice_rolls/dice_audit_events fields; extraction from action_resolution takes precedence.
             add_action_resolution_to_response(structured_response, unified_response)
             # debug_info only in debug mode
             if debug_mode and hasattr(structured_response, "debug_info"):

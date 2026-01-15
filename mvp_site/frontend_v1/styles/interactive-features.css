@@ -291,6 +291,63 @@ body[data-interface-mode='modern'] {
   margin-right: 0.5rem;
 }
 
+/* Editable Preview Items */
+.editable-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.editable-preview:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.editable-preview .preview-value {
+  flex: 1;
+  word-break: break-word;
+}
+
+.editable-preview .edit-btn {
+  opacity: 0;
+  padding: 0.25rem 0.5rem;
+  color: #6c757d;
+  transition: opacity 0.2s ease;
+}
+
+.editable-preview:hover .edit-btn {
+  opacity: 1;
+}
+
+.editable-preview .edit-btn:hover {
+  color: #007bff;
+}
+
+.editable-preview .edit-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.editable-preview .edit-checkboxes {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.editable-preview.editing {
+  background-color: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+}
+
+.editable-preview.editing .preview-value,
+.editable-preview.editing .edit-btn {
+  display: none;
+}
+
 /* Launch Actions */
 .launch-actions .btn {
   padding: 0.75rem 2rem;
@@ -678,6 +735,29 @@ input[type='checkbox'] {
 
 [data-theme='dark'] .campaign-preview {
   background: linear-gradient(135deg, #495057, #343a40);
+}
+
+[data-theme='dark'] .editable-preview:hover {
+  background-color: rgba(108, 117, 125, 0.3);
+}
+
+[data-theme='dark'] .editable-preview.editing {
+  background-color: rgba(108, 117, 125, 0.4);
+  border-color: rgba(108, 117, 125, 0.6);
+}
+
+[data-theme='dark'] .editable-preview .edit-btn {
+  color: #adb5bd;
+}
+
+[data-theme='dark'] .editable-preview .edit-btn:hover {
+  color: #6cb2eb;
+}
+
+[data-theme='dark'] .editable-preview .edit-input {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #f8f9fa;
 }
 
 [data-theme='dark'] .modern-mode .campaign-item {
