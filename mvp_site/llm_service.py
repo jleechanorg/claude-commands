@@ -3750,10 +3750,12 @@ def continue_story(
         )
 
     # REPROMPT FOR MISSING REQUIRED FIELDS (planning_block, session_header)
+    # DISABLED: Skip reprompts for session_header and planning_block to reduce latency
     # Only attempt reprompt if:
     # 1. In story mode (character mode)
     # 2. Not a god mode command
     # 3. Response doesn't indicate DM mode
+    # 4. Missing field is NOT session_header or planning_block (reprompts disabled for these)
     is_dm_mode_initial = (
         "[Mode: DM MODE]" in narrative_text or "[Mode: GOD MODE]" in narrative_text
     )
@@ -3848,7 +3850,10 @@ def continue_story(
     )
 
     dice_retry_llm_call = False
-    if missing_fields and MAX_MISSING_FIELD_REPROMPT_ATTEMPTS > 0:
+    # Filter out session_header and planning_block from reprompt attempts (disabled for latency)
+    reprompt_fields = [f for f in missing_fields if f not in ["session_header", "planning_block"]]
+    
+    if reprompt_fields and MAX_MISSING_FIELD_REPROMPT_ATTEMPTS > 0:
         logging_util.warning(
             f"🔄 REPROMPT_MISSING_FIELDS: Response missing {missing_fields}. "
             f"Attempting reprompt..."
@@ -3875,7 +3880,7 @@ def continue_story(
             # Use a simple prompt_contents list with the reprompt message
             try:
                 logging_util.info(
-                    f"🔁 REPROMPT_ATTEMPT {attempt}/{MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} "
+                    f"🔁 REPROMPT_ATTEMPT {attempt}/{MAX_MISSING_FIELD_REPROMPT_ATTEMPTS} (session_header/planning_block reprompts disabled) "
                     f"for missing fields: {missing_fields}"
                 )
                 reprompt_request = _build_reprompt_request(
