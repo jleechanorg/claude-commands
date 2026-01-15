@@ -69,6 +69,7 @@ from mvp_site.game_state import (
     validate_and_correct_state,
     xp_needed_for_level,
 )
+from mvp_site.action_resolution_utils import add_action_resolution_to_response
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
 
@@ -3085,6 +3086,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["session_header"] = structured_response.session_header
             if hasattr(structured_response, "planning_block"):
                 unified_response["planning_block"] = structured_response.planning_block
+            # Legacy dice_rolls/dice_audit_events - prefer extraction from action_resolution
+            # but allow direct population for backward compatibility
             if hasattr(structured_response, "dice_rolls"):
                 unified_response["dice_rolls"] = structured_response.dice_rolls
             if hasattr(structured_response, "dice_audit_events"):
@@ -3100,8 +3103,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     structured_response.social_hp_challenge
                 )
             # Include action_resolution and outcome_resolution (backward compat)
-            from mvp_site.action_resolution_utils import add_action_resolution_to_response
-
+            # Legacy dice_rolls/dice_audit_events fields; extraction from action_resolution takes precedence.
             add_action_resolution_to_response(structured_response, unified_response)
             # debug_info only in debug mode
             if debug_mode and hasattr(structured_response, "debug_info"):

@@ -1,0 +1,17 @@
+{
+  "setup-worktree-unix": [
+    "python3 -m venv venv || python -m venv venv",
+    "source venv/bin/activate && pip install -r requirements/dev.txt || pip install -r requirements.txt",
+    "cp $ROOT_WORKTREE_PATH/.env .env 2>/dev/null || true",
+    "cp $ROOT_WORKTREE_PATH/.env.local .env.local 2>/dev/null || true"
+  ],
+  "setup-worktree-windows": [
+    "python -m venv venv",
+    ".\\venv\\Scripts\\activate && pip install -r requirements\\dev.txt || pip install -r requirements.txt",
+    "copy %ROOT_WORKTREE_PATH%\\.env .env 2>nul || echo No .env file to copy",
+    "copy %ROOT_WORKTREE_PATH%\\.env.local .env.local 2>nul || echo No .env.local file to copy"
+  ],
+  "setup-worktree": [
+    "echo 'Using generic fallback. For better support, define OS-specific scripts.'"
+  ]
+}

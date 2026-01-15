@@ -1,0 +1,5 @@
+{
+  "cursor.worktreeCleanupIntervalHours": 6,
+  "cursor.worktreeMaxCount": 20,
+  "git.showCursorWorktrees": true
+}
