@@ -2666,8 +2666,18 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Combine all system warnings (including any from rewards followup)
         rewards_corrections = prevention_extras.get("rewards_corrections", [])
         extra_warnings = prevention_extras.get("system_warnings", [])
+        
+        # Extract system_warnings from LLM response debug_info (e.g., missing planning block, missing fields)
+        llm_system_warnings = []
+        if llm_response_obj and llm_response_obj.structured_response:
+            debug_info = llm_response_obj.structured_response.debug_info
+            if isinstance(debug_info, dict):
+                llm_warnings = debug_info.get("system_warnings", [])
+                if isinstance(llm_warnings, list):
+                    llm_system_warnings = llm_warnings
+        
         system_warnings = (
-            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings
+            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings + llm_system_warnings
         )
 
         # Deduplicate warnings while preserving order

@@ -3061,7 +3061,7 @@ def _check_missing_required_fields(
 
     NOTE: There are no server-side retries for missing fields.
     Missing fields are still DETECTED and LOGGED for observability.
-    In debug mode, warnings are also added to DM notes for user visibility.
+    Warnings are added to system_warnings in debug_info for user visibility.
 
     Detected fields (logged for observability):
     - planning_block: Must have 'thinking' or 'choices' content
@@ -3078,14 +3078,14 @@ def _check_missing_required_fields(
         require_dice_rolls: Whether dice_rolls is required for this turn
         dice_integrity_violation: Whether dice integrity check failed
         require_social_hp_challenge: Whether social HP challenge is required
-        debug_mode: Whether user has debug mode enabled (for DM notes)
+        debug_mode: Whether user has debug mode enabled (deprecated, warnings always added)
 
     Returns:
         List of missing field names for observability (no retries).
 
     Side Effects:
-        When debug_mode=True and fields are missing, modifies structured_response.debug_info
-        in place to add warning notes to dm_notes list.
+        When critical fields are missing, modifies structured_response.debug_info
+        in place to add warning messages to system_warnings list.
     """
     # Only check for story mode (character mode, not god/dm mode)
     if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
@@ -3164,22 +3164,20 @@ def _check_missing_required_fields(
                 "(no server-side retries; accepting response as-is)"
             )
 
-        # Add DM note warning in debug mode
-        if debug_mode and structured_response:
+        # Add system warning for missing fields (always, not just in debug mode)
+        if critical_missing and structured_response:
             # Guard against non-dict debug_info (could be string/list from malformed LLM response)
             if not isinstance(structured_response.debug_info, dict):
                 structured_response.debug_info = {}
-            dm_notes = structured_response.debug_info.get("dm_notes", [])
-            if isinstance(dm_notes, str):
-                dm_notes = [dm_notes] if dm_notes.strip() else []
-            elif not isinstance(dm_notes, list):
-                dm_notes = []
+            system_warnings = structured_response.debug_info.get("system_warnings", [])
+            if not isinstance(system_warnings, list):
+                system_warnings = []
 
-            # Add warning note
-            warning_note = f"⚠️ LLM Response Quality: Missing {', '.join(detected_missing)}"
-            if warning_note not in dm_notes:
-                dm_notes.append(warning_note)
-            structured_response.debug_info["dm_notes"] = dm_notes
+            # Add warning for missing fields
+            warning_message = f"Missing required fields: {', '.join(critical_missing)}"
+            if warning_message not in system_warnings:
+                system_warnings.append(warning_message)
+            structured_response.debug_info["system_warnings"] = system_warnings
 
     return detected_missing
 
@@ -3254,6 +3252,21 @@ def _validate_and_enforce_planning_block(
         "⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block. "
         "The LLM should have generated this - no fallback will be used."
     )
+
+    # Add system warning if structured_response is available
+    if structured_response:
+        # Guard against non-dict debug_info (could be string/list from malformed LLM response)
+        if not isinstance(structured_response.debug_info, dict):
+            structured_response.debug_info = {}
+        system_warnings = structured_response.debug_info.get("system_warnings", [])
+        if not isinstance(system_warnings, list):
+            system_warnings = []
+
+        # Add planning block missing warning
+        warning_message = "Missing required planning block"
+        if warning_message not in system_warnings:
+            system_warnings.append(warning_message)
+        structured_response.debug_info["system_warnings"] = system_warnings
 
     # Return response text unchanged - no fallback content is added
     return response_text

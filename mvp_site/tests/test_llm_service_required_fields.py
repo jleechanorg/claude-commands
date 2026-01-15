@@ -606,12 +606,12 @@ def test_check_missing_required_fields_does_not_report_dice_integrity_when_clean
 
 
 # =============================================================================
-# Tests for debug_mode DM notes functionality
+# Tests for system_warnings functionality (moved from DM notes)
 # =============================================================================
 
 
-def test_check_missing_fields_debug_mode_adds_dm_notes():
-    """When debug_mode=True, missing fields should be added to dm_notes."""
+def test_check_missing_fields_adds_system_warnings():
+    """Missing fields should be added to system_warnings (always, not just in debug mode)."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=None,  # Missing
@@ -619,83 +619,68 @@ def test_check_missing_fields_debug_mode_adds_dm_notes():
         debug_info={},
     )
 
-    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
 
-    # Function modifies response in place
+    # Function modifies response in place - should add to system_warnings
     assert resp.debug_info is not None
-    assert "dm_notes" in resp.debug_info
-    dm_notes = resp.debug_info["dm_notes"]
-    assert isinstance(dm_notes, list)
-    assert len(dm_notes) == 1
-    assert "planning_block" in dm_notes[0]
-    assert "session_header" in dm_notes[0]
+    assert "system_warnings" in resp.debug_info
+    system_warnings = resp.debug_info["system_warnings"]
+    assert isinstance(system_warnings, list)
+    assert len(system_warnings) == 1
+    assert "planning_block" in system_warnings[0]
+    assert "session_header" in system_warnings[0]
 
 
-def test_check_missing_fields_debug_mode_handles_dm_notes_none():
-    """When dm_notes is None in debug_info, should initialize to empty list."""
+def test_check_missing_fields_handles_system_warnings_none():
+    """When system_warnings is None in debug_info, should initialize to empty list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=None,
         session_header="h",
-        debug_info={"dm_notes": None},  # Explicitly None
-    )
-
-    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
-
-    # Should handle None gracefully and create list
-    assert resp.debug_info["dm_notes"] is not None
-    assert isinstance(resp.debug_info["dm_notes"], list)
-    assert len(resp.debug_info["dm_notes"]) == 1
-    assert "planning_block" in resp.debug_info["dm_notes"][0]
-
-
-def test_check_missing_fields_debug_mode_handles_dm_notes_string():
-    """When dm_notes is a string in debug_info, should convert to list."""
-    resp = NarrativeResponse(
-        narrative="n",
-        planning_block=None,
-        session_header="h",
-        debug_info={"dm_notes": "Existing note"},
-    )
-
-    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
-
-    # Should convert string to list and append warning
-    dm_notes = resp.debug_info["dm_notes"]
-    assert isinstance(dm_notes, list)
-    assert len(dm_notes) == 2  # Original + warning
-    assert "Existing note" in dm_notes
-    assert any("planning_block" in note for note in dm_notes)
-
-
-def test_check_missing_fields_debug_mode_false_no_dm_notes():
-    """When debug_mode=False, should not add dm_notes."""
-    resp = NarrativeResponse(
-        narrative="n",
-        planning_block=None,
-        session_header="h",
-        debug_info={},
+        debug_info={"system_warnings": None},  # Explicitly None
     )
 
     _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
 
-    # Should NOT modify debug_info when debug_mode=False
-    assert "dm_notes" not in resp.debug_info or resp.debug_info["dm_notes"] == []
+    # Should handle None gracefully and create list
+    assert resp.debug_info["system_warnings"] is not None
+    assert isinstance(resp.debug_info["system_warnings"], list)
+    assert len(resp.debug_info["system_warnings"]) == 1
+    assert "planning_block" in resp.debug_info["system_warnings"][0]
 
 
-def test_check_missing_fields_debug_mode_prevents_duplicates():
-    """Should not add duplicate warning notes."""
+def test_check_missing_fields_handles_system_warnings_existing():
+    """When system_warnings already exists, should append to existing list."""
     resp = NarrativeResponse(
         narrative="n",
         planning_block=None,
         session_header="h",
-        debug_info={"dm_notes": []},
+        debug_info={"system_warnings": ["Existing warning"]},
+    )
+
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+
+    # Should append to existing list
+    system_warnings = resp.debug_info["system_warnings"]
+    assert isinstance(system_warnings, list)
+    assert len(system_warnings) == 2  # Original + new warning
+    assert "Existing warning" in system_warnings
+    assert any("planning_block" in warning for warning in system_warnings)
+
+
+def test_check_missing_fields_prevents_duplicates():
+    """Should not add duplicate warning messages."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={"system_warnings": []},
     )
 
     # Call twice
-    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
-    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
 
     # Should only have one warning, not duplicates
-    dm_notes = resp.debug_info["dm_notes"]
-    assert len(dm_notes) == 1
+    system_warnings = resp.debug_info["system_warnings"]
+    assert len(system_warnings) == 1
