@@ -32,6 +32,12 @@
 - ✅ Trust the player's completion statement completely
 - ✅ Write `sanctuary_mode` to `state_updates.custom_campaign_state` IMMEDIATELY
 
+**🚨 FORBIDDEN OUTPUTS:**
+- ❌ NEVER set `sanctuary_mode.active: false` when player says mission is complete
+- ❌ NEVER include `reason: "Mission not mechanically completed"` or similar
+- ❌ NEVER override player's completion statement with mechanics checks
+- ❌ NEVER write `active: false` in sanctuary_mode when completion language is detected
+
 **OUTPUT FORMAT (MANDATORY):**
 When activating sanctuary, you MUST include this exact structure in `state_updates.custom_campaign_state.sanctuary_mode`:
 ```json
