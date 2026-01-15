@@ -333,11 +333,7 @@ fi
 
 # Update analysis file
 
-jq --argjson security "$(printf '%s\n' "${SECURITY_ISSUES[@]}" | jq -R . | jq -s .)" \
-   --argjson performance "$(printf '%s\n' "${PERFORMANCE_ISSUES[@]}" | jq -R . | jq -s .)" \
-   --argjson quality "$(printf '%s\n' "${QUALITY_ISSUES[@]}" | jq -R . | jq -s .)" \
-   '.vulnerabilities = $security | .performance = $performance | .quality = $quality' \
-   "$ANALYSIS_FILE" > "$ANALYSIS_FILE.tmp" && mv "$ANALYSIS_FILE.tmp" "$ANALYSIS_FILE"
+jq --argjson security "$(printf '%s\n' "${SECURITY_ISSUES[@]}" | jq -R . | jq -s .)" \n   --argjson performance "$(printf '%s\n' "${PERFORMANCE_ISSUES[@]}" | jq -R . | jq -s .)" \n   --argjson quality "$(printf '%s\n' "${QUALITY_ISSUES[@]}" | jq -R . | jq -s .)" \n   '.vulnerabilities = $security | .performance = $performance | .quality = $quality' \n   "$ANALYSIS_FILE" > "$ANALYSIS_FILE.tmp" && mv "$ANALYSIS_FILE.tmp" "$ANALYSIS_FILE"
 
 echo "✅ Phase 1 complete: Analysis and assessment finished"
 log_operation "Phase 1 completed successfully"
@@ -458,28 +454,24 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
                     log_operation "Posted response to comment $comment_id"
 
                     # Record successful response
-                    jq --arg id "$comment_id" --arg body "$full_response" --arg author "$author" \
-                       '.responses += [{
+                    jq --arg id "$comment_id" --arg body "$full_response" --arg author "$author" \n                       '.responses += [{
                            comment_id: $id,
                            response_body: $body,
                            target_author: $author,
                            posted: true,
                            posted_at: now | strftime("%Y-%m-%dT%H:%M:%SZ")
-                       }] | .metadata.posted += 1' \
-                       "$RESPONSES_FILE" > "$RESPONSES_FILE.tmp" && mv "$RESPONSES_FILE.tmp" "$RESPONSES_FILE"
+                       }] | .metadata.posted += 1' \n                       "$RESPONSES_FILE" > "$RESPONSES_FILE.tmp" && mv "$RESPONSES_FILE.tmp" "$RESPONSES_FILE"
                 else
                     echo "❌ Failed to post response to comment $comment_id"
                     log_operation "FAILED: Response to comment $comment_id"
 
                     # Record failed response
-                    jq --arg id "$comment_id" --arg error "GitHub API error" \
-                       '.responses += [{
+                    jq --arg id "$comment_id" --arg error "GitHub API error" \n                       '.responses += [{
                            comment_id: $id,
                            posted: false,
                            error: $error,
                            attempted_at: now | strftime("%Y-%m-%dT%H:%M:%SZ")
-                       }] | .metadata.failed += 1' \
-                       "$RESPONSES_FILE" > "$RESPONSES_FILE.tmp" && mv "$RESPONSES_FILE.tmp" "$RESPONSES_FILE"
+                       }] | .metadata.failed += 1' \n                       "$RESPONSES_FILE" > "$RESPONSES_FILE.tmp" && mv "$RESPONSES_FILE.tmp" "$RESPONSES_FILE"
                 fi
 
                 # Rate limiting: pause between requests
@@ -511,9 +503,9 @@ PROCESSING_SUMMARY="
 **Response Rate**: ${RESPONSE_RATE}%
 
 **Changes Made**:
-\`\`\`
+\\`\\`\\`
 $CHANGE_SUMMARY
-\`\`\`
+\\`\\`\\`
 
 **Security Issues Addressed**: ${#SECURITY_ISSUES[@]}
 **Performance Improvements**: ${#PERFORMANCE_ISSUES[@]}
