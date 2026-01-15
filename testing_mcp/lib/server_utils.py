@@ -156,37 +156,20 @@ def start_local_mcp_server(
         env.update(env_overrides)
 
     # Use shared production environment setup (same as run_local_server.sh)
-    # This ensures consistency between test and development server startup
-    setup_script = PROJECT_ROOT / "scripts" / "setup_production_env.sh"
-    if setup_script.exists():
-        # Source the setup script to get production environment
-        # We run it in a subprocess to capture the environment
-        setup_env_cmd = [
-            "bash",
-            "-c",
-            f"source {setup_script} && env",
-        ]
-        try:
-            setup_output = subprocess.check_output(
-                setup_env_cmd,
-                cwd=str(PROJECT_ROOT),
-                timeout=10,
-                stderr=subprocess.DEVNULL,
-            )
-            # Parse environment variables from output
-            for line in setup_output.decode("utf-8").split("\n"):
-                if "=" in line and not line.startswith("_"):
-                    key, value = line.split("=", 1)
-                    # Only set if not already overridden
-                    if key not in env or key not in (env_overrides or {}):
-                        env[key] = value
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
-            # Fallback to manual setup if script fails
-            pass
-
-    # Enforce real mode: mock services are never allowed (override any script defaults)
+    # Replicate logic from scripts/setup_production_env.sh for consistency
+    # This ensures test servers use the same environment as development servers
+    
+    # Clear any testing/mock environment variables (same as setup_production_env.sh)
+    # Note: Don't unset TESTING - it may be needed for some server initialization
+    env.pop("MOCK_SERVICES_MODE", None)
+    env.pop("MOCK_MODE", None)
+    
+    # Ensure production mode is explicit (same as setup_production_env.sh)
+    env["PRODUCTION_MODE"] = "true"
+    
+    # Enforce real mode: mock services are never allowed
     env["MOCK_SERVICES_MODE"] = "false"
-    env["TESTING"] = "false"  # Ensure production mode
+    # Don't set TESTING=false - let server handle it (may break initialization)
 
     # Some environments set WORLDAI_GOOGLE_APPLICATION_CREDENTIALS globally.
     # When present, the app requires an explicit dev-mode acknowledgement.
