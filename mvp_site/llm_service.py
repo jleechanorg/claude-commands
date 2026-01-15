@@ -121,7 +121,12 @@ from mvp_site.llm_providers import (
     gemini_provider,
     openrouter_provider,
 )
-from mvp_site.llm_request import LLMRequest, LLMRequestError
+from mvp_site.llm_request import (
+    MAX_PAYLOAD_SIZE,
+    LLMRequest,
+    LLMRequestError,
+    PayloadTooLargeError,
+)
 from mvp_site.llm_response import LLMResponse
 
 # Memory utilities now imported via agent_prompts (centralized prompt manipulation)
@@ -1343,7 +1348,9 @@ def _call_llm_api_with_llm_request(
 
     logging_util.debug(f"JSON validation passed with {len(json_data)} fields")
 
-    # Re-validate payload size (~1.8KB overhead, negligible vs 10MB limit)
+    # Re-validate payload size (serialized JSON) before building prompt strings.
+    # NOTE: This does NOT account for additional formatting overhead when building
+    # structured prompt strings below; those are validated separately.
     gemini_request._validate_payload_size(json_data)
 
     # STRUCTURED PROMPTING: Use explicit format to prioritize USER_ACTION over STORY_HISTORY
@@ -1400,7 +1407,7 @@ def _call_llm_api_with_llm_request(
         # Use is not None to include empty dicts/arrays that are explicitly present
         if json_data.get("game_state") is not None:
             structured_prompt_parts.append(
-                f"GAME_STATE: {json.dumps(json_data.get('game_state', {}), indent=2, default=json_default_serializer)}"
+                f"GAME_STATE: {json.dumps(json_data.get('game_state', {}), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
             )
 
         # Add story history as formatted JSON (explicitly labeled as historical context)
@@ -1427,19 +1434,19 @@ def _call_llm_api_with_llm_request(
                         str(last_entry.get("text", ""))[:50],
                     )
             structured_prompt_parts.append(
-                f"STORY_HISTORY (CONTEXT ONLY - RESPOND TO USER_ACTION ABOVE):\n{json.dumps(story_history_data, indent=2, default=json_default_serializer)}"
+                f"STORY_HISTORY (CONTEXT ONLY - RESPOND TO USER_ACTION ABOVE):\n{json.dumps(story_history_data, default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
             )
 
         # Add entity tracking
         if json_data.get("entity_tracking") is not None:
             structured_prompt_parts.append(
-                f"ENTITY_TRACKING: {json.dumps(json_data.get('entity_tracking', {}), indent=2, default=json_default_serializer)}"
+                f"ENTITY_TRACKING: {json.dumps(json_data.get('entity_tracking', {}), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
             )
 
         # Add selected prompts
         if json_data.get("selected_prompts") is not None:
             structured_prompt_parts.append(
-                f"SELECTED_PROMPTS: {json.dumps(json_data.get('selected_prompts', []), default=json_default_serializer)}"
+                f"SELECTED_PROMPTS: {json.dumps(json_data.get('selected_prompts', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
             )
 
         # Add checkpoint block
@@ -1451,23 +1458,31 @@ def _call_llm_api_with_llm_request(
         # Add core memories
         if json_data.get("core_memories") is not None:
             structured_prompt_parts.append(
-                f"CORE_MEMORIES: {json.dumps(json_data.get('core_memories', []), default=json_default_serializer)}"
+                f"CORE_MEMORIES: {json.dumps(json_data.get('core_memories', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
             )
 
         # Add sequence IDs
         if json_data.get("sequence_ids") is not None:
             structured_prompt_parts.append(
-                f"SEQUENCE_IDS: {json.dumps(json_data.get('sequence_ids', []), default=json_default_serializer)}"
+                f"SEQUENCE_IDS: {json.dumps(json_data.get('sequence_ids', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
             )
 
         # Add system corrections if present
         if json_data.get("system_corrections") is not None:
             structured_prompt_parts.append(
-                f"SYSTEM_CORRECTIONS: {json.dumps(json_data.get('system_corrections', []), default=json_default_serializer)}"
+                f"SYSTEM_CORRECTIONS: {json.dumps(json_data.get('system_corrections', []), default=json_default_serializer, ensure_ascii=False, separators=(',', ':'))}"
             )
 
         # Join with double newlines for clear separation
         prompt_content = "\n\n".join(structured_prompt_parts)
+
+        # Validate the ACTUAL payload we will send to the provider.
+        # Structured prompt can be larger than the serialized JSON due to labels/formatting.
+        prompt_size_bytes = len(prompt_content.encode("utf-8"))
+        if prompt_size_bytes > MAX_PAYLOAD_SIZE:
+            raise PayloadTooLargeError(
+                f"Prompt payload too large: {prompt_size_bytes} bytes exceeds limit of {MAX_PAYLOAD_SIZE} bytes"
+            )
         
         # Log the actual prompt being sent (DEBUG level to avoid PII leaks)
         logging_util.debug(
@@ -1504,7 +1519,18 @@ def _call_llm_api_with_llm_request(
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
     # Uses centralized json_default_serializer from mvp_site.serialization
-    json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
+    json_string = json.dumps(
+        json_data,
+        default=json_default_serializer,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
+    prompt_size_bytes = len(json_string.encode("utf-8"))
+    if prompt_size_bytes > MAX_PAYLOAD_SIZE:
+        raise PayloadTooLargeError(
+            f"Prompt payload too large: {prompt_size_bytes} bytes exceeds limit of {MAX_PAYLOAD_SIZE} bytes"
+        )
 
     # Safe user_action access for logging (handles None/empty string for initial story)
     user_action_preview = (

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { formatDiceRoll, DiceRoll } from '../utils/diceUtils'
+import { DiceRoll } from '../utils/diceUtils'
 import { DiceRollDisplay } from './DiceRollDisplay'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
@@ -10,7 +10,6 @@ import { showErrorToast } from '../utils/errorHandling'
 import {
   ArrowLeft,
   Send,
-  User,
   Crown,
   Settings,
   RefreshCw,
@@ -18,10 +17,7 @@ import {
   Share,
   Volume2,
   VolumeX,
-  Sparkles,
-  Heart,
-  Shield,
-  Swords
+  Sparkles
 } from 'lucide-react'
 
 
@@ -53,11 +49,12 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
   const [isLoading, setIsLoading] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [mode, setMode] = useState<'god'>('god')
+  const mode: 'god' = 'god'
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const initialStoryCreatedRef = useRef(false)
+  const submitInFlightRef = useRef(false)
 
   // Load existing campaign data when component mounts (like V1 does)
   useEffect(() => {
@@ -163,10 +160,24 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
   }, [story])
 
   const handleSubmit = async () => {
-    if (!playerInput.trim() || isLoading) return
+    const trimmedInput = playerInput.trim()
+    if (!trimmedInput || isLoading || submitInFlightRef.current) return
+    submitInFlightRef.current = true
 
     // Store input before clearing
-    const inputText = playerInput
+    const inputText = trimmedInput
+
+    // Optimistically render the user's action immediately for responsiveness.
+    // Canonical story still comes from Firestore reload after the request completes.
+    const optimisticUserAction: StoryEntry = {
+      id: `local-user-${Date.now()}`,
+      type: 'action',
+      content: inputText,
+      timestamp: new Date().toISOString(),
+      author: 'player'
+    }
+    setStory(prev => [...prev, optimisticUserAction])
+
     setPlayerInput('')
     setIsLoading(true)
 
@@ -231,6 +242,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
       }
     } finally {
       setIsLoading(false)
+      submitInFlightRef.current = false
     }
   }
 
