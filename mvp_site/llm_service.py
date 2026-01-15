@@ -251,8 +251,11 @@ TEMPERATURE: float = 0.9
 # Default planning block generation has been REMOVED
 # If the LLM doesn't generate a planning block, we return the response as-is
 # and let the error propagate to the UI rather than generating fake content
-# However, we DO attempt a single reprompt if required fields are missing.
-# Maximum reprompt attempts for missing required fields (planning_block, dice_rolls)
+# NOTE: Reprompt attempts have been DISABLED to prevent server crashes from reprompt loops.
+# Reprompts cause back-to-back heavy API calls (~38K tokens each) which exhaust resources.
+# The constant below is kept for backward compatibility but reprompts will never execute
+# since _check_missing_required_fields() now always returns an empty list.
+# Maximum reprompt attempts for missing required fields (DISABLED - all checks disabled)
 MAX_MISSING_FIELD_REPROMPT_ATTEMPTS: int = 3
 # For JSON mode, use same output token limit as regular mode
 # This ensures complete character backstories and complex JSON responses
