@@ -3089,6 +3089,10 @@ def _check_missing_required_fields(
 
     Returns:
         Empty list (reprompts disabled to prevent crashes)
+
+    Side Effects:
+        When debug_mode=True and fields are missing, modifies structured_response.debug_info
+        in place to add warning notes to dm_notes list.
     """
     # Only check for story mode (character mode, not god/dm mode)
     if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:

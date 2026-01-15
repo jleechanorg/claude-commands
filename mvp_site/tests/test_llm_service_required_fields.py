@@ -706,3 +706,99 @@ def test_build_reprompt_request_preserves_context():
     assert reprompt.entity_tracking == base_request.entity_tracking
     assert reprompt.selected_prompts == base_request.selected_prompts
     assert reprompt.use_default_world == base_request.use_default_world
+
+
+# =============================================================================
+# Tests for debug_mode DM notes functionality
+# =============================================================================
+
+
+def test_check_missing_fields_debug_mode_adds_dm_notes():
+    """When debug_mode=True, missing fields should be added to dm_notes."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,  # Missing
+        session_header="",  # Empty (counts as missing)
+        debug_info={},
+    )
+
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
+
+    # Function modifies response in place
+    assert resp.debug_info is not None
+    assert "dm_notes" in resp.debug_info
+    dm_notes = resp.debug_info["dm_notes"]
+    assert isinstance(dm_notes, list)
+    assert len(dm_notes) == 1
+    assert "planning_block" in dm_notes[0]
+    assert "session_header" in dm_notes[0]
+
+
+def test_check_missing_fields_debug_mode_handles_dm_notes_none():
+    """When dm_notes is None in debug_info, should initialize to empty list."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={"dm_notes": None},  # Explicitly None
+    )
+
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
+
+    # Should handle None gracefully and create list
+    assert resp.debug_info["dm_notes"] is not None
+    assert isinstance(resp.debug_info["dm_notes"], list)
+    assert len(resp.debug_info["dm_notes"]) == 1
+    assert "planning_block" in resp.debug_info["dm_notes"][0]
+
+
+def test_check_missing_fields_debug_mode_handles_dm_notes_string():
+    """When dm_notes is a string in debug_info, should convert to list."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={"dm_notes": "Existing note"},
+    )
+
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
+
+    # Should convert string to list and append warning
+    dm_notes = resp.debug_info["dm_notes"]
+    assert isinstance(dm_notes, list)
+    assert len(dm_notes) == 2  # Original + warning
+    assert "Existing note" in dm_notes
+    assert any("planning_block" in note for note in dm_notes)
+
+
+def test_check_missing_fields_debug_mode_false_no_dm_notes():
+    """When debug_mode=False, should not add dm_notes."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={},
+    )
+
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+
+    # Should NOT modify debug_info when debug_mode=False
+    assert "dm_notes" not in resp.debug_info or resp.debug_info["dm_notes"] == []
+
+
+def test_check_missing_fields_debug_mode_prevents_duplicates():
+    """Should not add duplicate warning notes."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={"dm_notes": []},
+    )
+
+    # Call twice
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=True)
+
+    # Should only have one warning, not duplicates
+    dm_notes = resp.debug_info["dm_notes"]
+    assert len(dm_notes) == 1
