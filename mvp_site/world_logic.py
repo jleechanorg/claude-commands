@@ -2191,11 +2191,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             if debug_response:
                 return debug_response
 
-        campaign_data: dict[str, Any] | None = None
-        story_context: list[dict[str, Any]] = []
-        selected_prompts: list[str] = []
-        use_default_world = False
-
         # Extract current world_time and location for temporal validation
         # CRITICAL: world_data can be None or non-dict in existing saves - normalize to {} first
         world_data = getattr(current_game_state, "world_data", None)
@@ -2219,39 +2214,33 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             try:
-                if campaign_data is None:
-                    (
-                        campaign_data,
-                        story_context,
-                        llm_response_obj,
-                    ) = await asyncio.to_thread(
-                        _load_campaign_and_continue_story,
-                        user_id,
-                        campaign_id,
-                        llm_input=llm_input,
-                        mode=mode,
-                        current_game_state=current_game_state,
-                        include_raw_llm_payloads=include_raw_llm_payloads,
-                    )
-                    if not campaign_data or llm_response_obj is None:
-                        return {
-                            KEY_ERROR: "Campaign not found",
-                            "status_code": 404,
-                        }
-                    selected_prompts = campaign_data.get("selected_prompts", [])
-                    use_default_world = campaign_data.get("use_default_world", False)
-                else:
-                    llm_response_obj = await asyncio.to_thread(
-                        llm_service.continue_story,
-                        llm_input,  # Use llm_input, NOT user_input
-                        mode,
-                        story_context,
-                        current_game_state,
-                        selected_prompts,
-                        use_default_world,
-                        user_id,  # Pass user_id to enable user model preference selection
-                        include_raw_llm_payloads,
-                    )
+                # CRITICAL FIX: Always reload story_context from Firestore for each request
+                # to ensure it includes the latest story entries (including previous commands).
+                # The previous caching logic caused the second god mode command to use stale
+                # story_context that didn't include the first command, leading to incorrect responses.
+                #
+                # We still cache campaign_data (selected_prompts, use_default_world) since
+                # those don't change between requests, but story_context MUST be fresh.
+                (
+                    campaign_data,
+                    story_context,
+                    llm_response_obj,
+                ) = await asyncio.to_thread(
+                    _load_campaign_and_continue_story,
+                    user_id,
+                    campaign_id,
+                    llm_input=llm_input,
+                    mode=mode,
+                    current_game_state=current_game_state,
+                    include_raw_llm_payloads=include_raw_llm_payloads,
+                )
+                if not campaign_data or llm_response_obj is None:
+                    return {
+                        KEY_ERROR: "Campaign not found",
+                        "status_code": 404,
+                    }
+                selected_prompts = campaign_data.get("selected_prompts", [])
+                use_default_world = campaign_data.get("use_default_world", False)
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during story continuation: {e}")
                 status_code = getattr(e, "status_code", None) or 422
