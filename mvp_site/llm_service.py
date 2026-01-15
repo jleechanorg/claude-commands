@@ -3092,65 +3092,6 @@ def _check_missing_required_fields(
     # Return empty list to skip all reprompt attempts
     return []
 
-    # DISABLED: All field checks below are commented out to prevent reprompt loops
-    # Only check for story mode (character mode, not god/dm mode)
-    # if mode != constants.MODE_CHARACTER or is_god_mode or is_dm_mode:
-    #     return []
-    #
-    # if not structured_response:
-    #     return []
-    #
-    # missing = []
-    #
-    # # DISABLED: planning_block check
-    # # planning_block = getattr(structured_response, "planning_block", None)
-    # # if not planning_block or not isinstance(planning_block, dict):
-    # #     missing.append("planning_block")
-    # # else:
-    # #     thinking_value = planning_block.get("thinking", "")
-    # #     has_thinking = isinstance(thinking_value, str) and thinking_value.strip()
-    # #     choices_value = planning_block.get("choices")
-    # #     has_choices = isinstance(choices_value, dict) and len(choices_value) > 0
-    # #     has_content = has_thinking or has_choices
-    # #     if not has_content:
-    # #         missing.append("planning_block")
-    #
-    # # DISABLED: session_header check (removed - cosmetic only)
-    # # session_header = getattr(structured_response, "session_header", None)
-    # # if not session_header or not str(session_header).strip():
-    # #     missing.append("session_header")
-    #
-    # # DISABLED: dice_rolls and dice_integrity checks
-    # # dice_integrity.add_missing_dice_fields(
-    # #     missing,
-    # #     structured_response=structured_response,
-    # #     require_dice_rolls=require_dice_rolls,
-    # #     dice_integrity_violation=dice_integrity_violation,
-    # # )
-    #
-    # # DISABLED: social_hp_challenge check (removed)
-    # # if require_social_hp_challenge:
-    # #     social_hp_challenge = getattr(structured_response, "social_hp_challenge", None)
-    # #     is_missing = True
-    # #     if isinstance(social_hp_challenge, dict):
-    # #         npc_name = str(social_hp_challenge.get("npc_name", "")).strip()
-    # #         objective = str(social_hp_challenge.get("objective", "")).strip()
-    # #         resistance = str(social_hp_challenge.get("resistance_shown", "")).strip()
-    # #         social_hp_val = social_hp_challenge.get("social_hp")
-    # #         social_hp_max = social_hp_challenge.get("social_hp_max")
-    # #         is_missing = not (
-    # #             npc_name
-    # #             and objective
-    # #             and resistance
-    # #             and social_hp_val is not None
-    # #             and isinstance(social_hp_max, (int, float))
-    # #             and social_hp_max > 0
-    # #         )
-    # #     if is_missing:
-    # #         missing.append("social_hp_challenge")
-    #
-    # return missing
-
 
 def _build_reprompt_request(
     base_request: LLMRequest,

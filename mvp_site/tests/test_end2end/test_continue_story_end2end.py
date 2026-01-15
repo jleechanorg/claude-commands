@@ -154,13 +154,13 @@ class TestContinueStoryEnd2End(unittest.TestCase):
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_time_anomaly_includes_dice_retry_notice(
+    def test_time_anomaly_warns_without_reprompt(
         self, mock_gemini_generate, mock_get_db
     ):
-        """Temporal anomaly warning should mention dice retry when reprompt occurs.
+        """Temporal anomaly detection works correctly without reprompts.
         
-        NOTE: Reprompts are now disabled to prevent server crashes. This test verifies
-        that temporal anomaly detection still works correctly, but reprompts will not occur.
+        NOTE: Reprompts are disabled to prevent server crashes. This test verifies
+        that temporal anomaly detection still works correctly in a single LLM call.
         """
         fake_firestore = FakeFirestoreClient()
         mock_get_db.return_value = fake_firestore
