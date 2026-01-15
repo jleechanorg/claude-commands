@@ -713,7 +713,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 4b. Rewards box (if XP was awarded)
+    // 4b. System warnings (always-visible; emitted by backend for reliability issues)
+    // Positioned below dice rolls as requested
+    if (
+      fullData.system_warnings &&
+      Array.isArray(fullData.system_warnings) &&
+      fullData.system_warnings.length > 0
+    ) {
+      html +=
+        '<div class="system-warnings" style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+      html += '<strong>⚠️ System Warnings:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
+      fullData.system_warnings.forEach((warning) => {
+        if (!warning) return;
+        html += `<li>${sanitizeHtml(String(warning))}</li>`;
+      });
+      html += '</ul></div>';
+    }
+
+    // 4c. Rewards box (if XP was awarded)
     if (fullData.rewards_box && fullData.rewards_box.xp_gained > 0) {
       const rb = fullData.rewards_box;
       const source = sanitizeHtml(rb.source || 'earned');

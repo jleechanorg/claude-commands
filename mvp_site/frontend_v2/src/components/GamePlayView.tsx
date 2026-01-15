@@ -6,7 +6,7 @@ import { DiceRollDisplay } from './DiceRollDisplay'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
 import { apiService } from '../services/api.service'
-import { showErrorToast } from '../utils/errorHandling'
+import { createSystemWarningEntries } from '../utils/systemWarnings'
 import {
   ArrowLeft,
   Send,
@@ -135,7 +135,8 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
             dice_rolls: response.dice_rolls
           }
 
-          setStory(prev => [...prev, aiStory])
+          const warningEntries = createSystemWarningEntries(response.system_warnings)
+          setStory(prev => [...prev, aiStory, ...warningEntries])
         }
       } catch (error) {
         console.error('Failed to load campaign or generate initial content:', error)
@@ -198,21 +199,27 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
         mode: mode
       })
 
-      // CRITICAL: Reload story from backend to get canonical version
-      // Backend persists entries to Firestore, so we must reload to avoid duplicates
-      // This ensures we always have the single source of truth from Firestore
-      if (response.success && campaignId) {
-        try {
-          const campaignData = await apiService.getCampaign(campaignId)
-          if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
-            setStory(convertBackendStoryToEntries(campaignData.story))
-          } else {
-            // Story reload returned empty - log warning but don't clear optimistic UI
-            console.warn('Story reload returned empty or invalid data, keeping current state')
-          }
-        } catch (reloadError) {
-          console.warn('Failed to reload story after interaction:', reloadError)
-          showErrorToast('Story updated but display refresh failed. Please reload the page.', { context: 'Game' })
+      if (response.success && (response.god_mode_response || response.narrative || response.response)) {
+        const content = response.god_mode_response || response.narrative || response.response || 'The AI ponders your action...'
+        const aiResponse: StoryEntry = {
+          id: (Date.now() + 1).toString(),
+          type: 'narration',
+          content: content,
+          timestamp: new Date().toISOString(),
+          author: 'ai',
+          dice_rolls: response.dice_rolls
+        }
+
+        const warningEntries = createSystemWarningEntries(response.system_warnings)
+        setStory(prev => [...prev, aiResponse, ...warningEntries])
+      } else {
+        // Fallback response
+        const aiResponse: StoryEntry = {
+          id: (Date.now() + 1).toString(),
+          type: 'narration',
+          content: 'Your action ripples through the world, creating new possibilities...',
+          timestamp: new Date().toISOString(),
+          author: 'ai'
         }
       } else if (response.success && !campaignId) {
         // Handle case where response succeeded but campaignId is missing

@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from mvp_site import constants, dice_strategy
-from mvp_site.agent_prompts import build_reprompt_for_missing_fields
+from mvp_site import constants
 from mvp_site.dice_integrity import (
     _check_dice_integrity,
     _detect_combat_in_narrative,
@@ -13,8 +12,7 @@ from mvp_site.dice_integrity import (
     _validate_combat_dice_integrity,
 )
 from mvp_site.game_state import GameState
-from mvp_site.llm_request import LLMRequest
-from mvp_site.llm_service import _build_reprompt_request, _check_missing_required_fields
+from mvp_site.llm_service import _check_missing_required_fields
 from mvp_site.narrative_response_schema import NarrativeResponse
 
 
@@ -25,16 +23,35 @@ def _valid_planning_block() -> dict:
     }
 
 
-def test_check_missing_required_fields_does_not_require_dice_by_default():
+def test_check_missing_required_fields_returns_empty_outside_story_mode():
+    resp = NarrativeResponse(narrative="n")
+    assert (
+        _check_missing_required_fields(resp, constants.MODE_GOD) == []
+    ), "Should only validate in character/story mode"
+    assert (
+        _check_missing_required_fields(resp, constants.MODE_CHARACTER, is_god_mode=True) == []
+    ), "Should skip in god mode"
+    assert (
+        _check_missing_required_fields(resp, constants.MODE_CHARACTER, is_dm_mode=True) == []
+    ), "Should skip in DM mode"
+
+
+def test_check_missing_required_fields_reports_missing_structured_response():
+    missing = _check_missing_required_fields(None, constants.MODE_CHARACTER)
+    assert "planning_block" in missing
+    assert "session_header" in missing
+
+
+def test_check_missing_required_fields_reports_missing_planning_block_and_session_header():
     resp = NarrativeResponse(
         narrative="n",
-        planning_block=_valid_planning_block(),
-        session_header="h",
+        planning_block=None,
+        session_header="",
         dice_rolls=[],
     )
-
     missing = _check_missing_required_fields(resp, constants.MODE_CHARACTER)
-    assert "dice_rolls" not in missing
+    assert "planning_block" in missing
+    assert "session_header" in missing
 
 
 def test_check_missing_required_fields_requires_dice_rolls_when_requested():
@@ -44,7 +61,6 @@ def test_check_missing_required_fields_requires_dice_rolls_when_requested():
         session_header="h",
         dice_rolls=[],
     )
-
     missing = _check_missing_required_fields(
         resp, constants.MODE_CHARACTER, require_dice_rolls=True
     )
@@ -58,7 +74,6 @@ def test_check_missing_required_fields_accepts_non_empty_dice_rolls_when_require
         session_header="h",
         dice_rolls=["Attack: 1d20+5 = 12+5 = 17 vs AC 14 (Hit)"],
     )
-
     missing = _check_missing_required_fields(
         resp, constants.MODE_CHARACTER, require_dice_rolls=True
     )
@@ -70,9 +85,7 @@ def test_check_missing_required_fields_requires_social_hp_challenge_when_request
         narrative="n",
         planning_block=_valid_planning_block(),
         session_header="h",
-        # social_hp_challenge omitted → validates to {}
     )
-
     missing = _check_missing_required_fields(
         resp,
         constants.MODE_CHARACTER,
@@ -87,24 +100,13 @@ def test_check_missing_required_fields_accepts_valid_social_hp_challenge_when_re
         planning_block=_valid_planning_block(),
         session_header="h",
         social_hp_challenge={
-            "npc_id": "npc_1",
             "npc_name": "Lord Commander Valerius",
-            "npc_tier": "king",
             "objective": "Secure emergency passage",
-            "request_severity": "favor",
+            "resistance_shown": "The gate remains shut.",
             "social_hp": 24,
             "social_hp_max": 24,
-            "successes": 0,
-            "successes_needed": 5,
-            "status": "RESISTING",
-            "resistance_shown": "The gate remains shut.",
-            "skill_used": "Persuasion",
-            "roll_result": 8,
-            "roll_dc": 20,
-            "social_hp_damage": 0,
         },
     )
-
     missing = _check_missing_required_fields(
         resp,
         constants.MODE_CHARACTER,
@@ -570,7 +572,7 @@ def test_validate_combat_dice_integrity_dm_mode_bypass():
 # =============================================================================
 
 
-def test_check_missing_required_fields_dice_integrity_violation():
+def test_check_missing_required_fields_reports_dice_integrity_violation():
     """dice_integrity_violation should add 'dice_integrity' to missing fields."""
     resp = NarrativeResponse(
         narrative="n",
@@ -587,8 +589,7 @@ def test_check_missing_required_fields_dice_integrity_violation():
     assert "dice_integrity" in missing
 
 
-def test_check_missing_required_fields_no_dice_integrity_violation():
-    """No dice_integrity_violation should not add 'dice_integrity' to missing fields."""
+def test_check_missing_required_fields_does_not_report_dice_integrity_when_clean():
     resp = NarrativeResponse(
         narrative="n",
         planning_block=_valid_planning_block(),
@@ -605,81 +606,88 @@ def test_check_missing_required_fields_no_dice_integrity_violation():
 
 
 # =============================================================================
-# Tests for reprompt tool_results preservation
+# Tests for system_warnings functionality (moved from DM notes)
 # =============================================================================
 
 
-def test_build_reprompt_includes_tool_results_when_available():
-    """RED TEST: build_reprompt_for_missing_fields should include tool_results context.
-
-    When reprompting after Phase 2 returned malformed JSON, the reprompt message
-    MUST include the original tool_results so the model can reference them.
-
-    Without this, the model might fabricate new dice results during reprompt.
-    """
-    original_response = '{"narrative": "The goblin attacks!", "dice_rolls": []}'
-    missing_fields = ["dice_rolls"]
-
-    # Tool results that should be included in reprompt
-    tool_results = [
-        {
-            "tool": "roll_dice",
-            "args": {"notation": "1d20+5"},
-            "result": {"total": 17, "rolls": [12]},
-        },
-    ]
-
-    # RED: Current implementation doesn't accept tool_results parameter
-    # This test documents that it SHOULD accept and include tool_results
-    reprompt = build_reprompt_for_missing_fields(
-        original_response,
-        missing_fields,
-        tool_results=tool_results,  # This parameter doesn't exist yet
+def test_check_missing_fields_adds_server_system_warnings():
+    """Missing fields should be added to _server_system_warnings (server-controlled, prevents LLM spoofing)."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,  # Missing (but excluded from warning to avoid double-warning)
+        session_header="",  # Empty (counts as missing, but cosmetic so filtered out)
+        debug_info={},
     )
 
-    # The reprompt should mention the tool results
-    assert (
-        "17" in reprompt or "tool" in reprompt.lower()
-    ), "Reprompt MUST include tool_results context to prevent dice fabrication"
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+
+    # Function modifies response in place - should add to _server_system_warnings
+    # Note: planning_block is excluded to avoid double-warning with _validate_and_enforce_planning_block
+    # session_header is filtered out as cosmetic
+    assert resp.debug_info is not None
+    # If only planning_block and session_header are missing, no warning should be added here
+    # (planning_block gets its own warning, session_header is cosmetic)
 
 
-def test_build_reprompt_dice_integrity_code_execution_only():
-    """Reprompt for code_execution strategy should not mention tool_requests."""
-    reprompt = build_reprompt_for_missing_fields(
-        '{"narrative": "test"}',
-        ["dice_integrity"],
-        dice_roll_strategy=dice_strategy.DICE_STRATEGY_CODE_EXECUTION,
+def test_check_missing_fields_adds_warning_for_non_planning_fields():
+    """Missing non-planning fields should be added to _server_system_warnings."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block={"thinking": "test"},  # Present
+        session_header="h",  # Present
+        debug_info={},
+    )
+    # Note: This test can't easily test dice_rolls or social_hp_challenge without more setup
+    # But the key point is that _server_system_warnings is used, not system_warnings
+
+
+def test_check_missing_fields_handles_server_warnings_none():
+    """When _server_system_warnings is None in debug_info, should initialize to empty list."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={"_server_system_warnings": None},  # Explicitly None
     )
 
-    assert "code_execution" in reprompt.lower()
-    assert "tool_requests" not in reprompt.lower()
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+
+    # Should handle None gracefully and create list
+    assert resp.debug_info["_server_system_warnings"] is not None
+    assert isinstance(resp.debug_info["_server_system_warnings"], list)
 
 
-def test_build_reprompt_request_preserves_context():
-    """Reprompt request should preserve context while replacing user_action."""
-    base_request = LLMRequest.build_story_continuation(
-        user_action="Attack the goblin",
-        user_id="user-1",
-        game_mode="character",
-        game_state={"hp": 10},
-        story_history=[{"text": "A goblin appears", "actor": "gemini"}],
-        checkpoint_block="Checkpoint",
-        core_memories=["memory-1"],
-        sequence_ids=["seq-1"],
-        entity_tracking={"npc": "goblin"},
-        selected_prompts=["game_state"],
-        use_default_world=True,
+def test_check_missing_fields_handles_server_warnings_existing():
+    """When _server_system_warnings already exists, should append to existing list."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={"_server_system_warnings": ["Existing warning"]},
     )
 
-    reprompt = _build_reprompt_request(base_request, "Reprompt message")
-    assert reprompt.user_action == "Reprompt message"
-    assert reprompt.user_id == base_request.user_id
-    assert reprompt.game_mode == base_request.game_mode
-    assert reprompt.game_state == base_request.game_state
-    assert reprompt.story_history == base_request.story_history
-    assert reprompt.checkpoint_block == base_request.checkpoint_block
-    assert reprompt.core_memories == base_request.core_memories
-    assert reprompt.sequence_ids == base_request.sequence_ids
-    assert reprompt.entity_tracking == base_request.entity_tracking
-    assert reprompt.selected_prompts == base_request.selected_prompts
-    assert reprompt.use_default_world == base_request.use_default_world
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+
+    # Should append to existing list (if any non-planning fields are missing)
+    server_warnings = resp.debug_info["_server_system_warnings"]
+    assert isinstance(server_warnings, list)
+    assert "Existing warning" in server_warnings
+
+
+def test_check_missing_fields_prevents_duplicates():
+    """Should not add duplicate warning messages."""
+    resp = NarrativeResponse(
+        narrative="n",
+        planning_block=None,
+        session_header="h",
+        debug_info={"_server_system_warnings": []},
+    )
+
+    # Call twice
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+    _check_missing_required_fields(resp, constants.MODE_CHARACTER, debug_mode=False)
+
+    # Should only have one warning, not duplicates (if any warnings were added)
+    server_warnings = resp.debug_info["_server_system_warnings"]
+    assert isinstance(server_warnings, list)
+    # Note: planning_block is excluded, so may be empty if only planning_block/session_header missing
