@@ -477,7 +477,7 @@ Sanctuary protects the player from life-ending events after completing achieveme
 - Player achieves any significant milestone
 
 **MANDATORY Activation (with overwrite protection):**
-**🚨 CRITICAL: When player input contains completion language (e.g., "I defeated the boss", "The quest is complete", "I've finished clearing the dungeon", "mission complete", "quest finished"), you MUST activate sanctuary IMMEDIATELY. Do NOT check narrative context - if the player says it's complete, activate sanctuary based on their stated accomplishment.**
+**🚨 CRITICAL: When player input contains completion language (e.g., "I defeated the boss", "The quest is complete", "I've finished clearing the dungeon", "mission complete", "quest finished"), you MUST activate sanctuary IMMEDIATELY. Do NOT check narrative context - if the player says it's complete, activate sanctuary based on their stated accomplishment. This is MANDATORY - failure to activate sanctuary on completion language is a critical error.**
 
 If the player's input contains completion language, you MUST check existing sanctuary before activating:
 
@@ -492,7 +492,7 @@ If the player's input contains completion language, you MUST check existing sanc
      * "cleared the goblin cave" → Medium (side quest, dungeon cleared)
      * "completed the quest chain" → Major (quest chain finale)
 4. **Only activate if new duration > remaining:** If existing sanctuary has more time, skip activation and notify player that existing protection continues
-5. **If activating:** Write to `state_updates.custom_campaign_state.sanctuary_mode` in your response. This is NOT optional when new sanctuary is longer.
+5. **If activating:** Write to `state_updates.custom_campaign_state.sanctuary_mode` in your response. This is MANDATORY - you MUST include sanctuary_mode in state_updates when completion language is detected. This is NOT optional.
 
 **Example:** Player completes Epic arc (20 turns) at turn 8 → sanctuary expires turn 28. At turn 18 (10 turns remaining), player completes Medium mission (5 turns). Do NOT overwrite - keep Epic sanctuary until turn 28.
 
