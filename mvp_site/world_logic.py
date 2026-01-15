@@ -2220,7 +2220,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 # 2. campaign_data reflects any changes (selected_prompts, use_default_world, etc.)
                 #
                 # No caching is needed because:
-                # - MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0 (loop only runs once per request)
+                # - MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0 (loop executes exactly once per request)
                 # - Campaign data is just one document read (cheap)
                 # - Story context must be fresh (includes latest entries)
                 # - Caching adds complexity and risk of stale data bugs
