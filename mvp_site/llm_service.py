@@ -1356,59 +1356,68 @@ def _call_llm_api_with_llm_request(
     #
     # Only use structured format when user_action exists (covers story continuation and
     # god mode commands, but not initial story generation which has no user_action).
-    if json_data.get("user_action"):
+    if json_data.get("user_action") is not None:
+        # SECURITY: Use delimiter blocks to prevent USER_ACTION from spoofing section headers
+        # A malicious user_action could inject fake "STORY_HISTORY:" or "SYSTEM_CORRECTIONS:" 
+        # headers if we just interpolate it inline. By wrapping it in delimiters, we ensure
+        # the LLM can't confuse user content with system section boundaries.
+        user_action = json_data.get("user_action")
+        user_action_str = "" if user_action is None else str(user_action)
+        user_action_block = f"USER_ACTION:\n{user_action_str}\nEND_USER_ACTION"
+
         # Build structured prompt with explicit sections
         structured_prompt_parts = [
-            f"MESSAGE_TYPE: story_continuation",
-            f"USER_ACTION: {json_data.get('user_action', '')}",
+            "MESSAGE_TYPE: story_continuation",
+            user_action_block,
             f"GAME_MODE: {json_data.get('game_mode', '')}",
             f"USER_ID: {json_data.get('user_id', '')}",
         ]
 
         # Add game state as formatted JSON
-        if json_data.get("game_state"):
+        # Use is not None to include empty dicts/arrays that are explicitly present
+        if json_data.get("game_state") is not None:
             structured_prompt_parts.append(
                 f"GAME_STATE: {json.dumps(json_data.get('game_state', {}), indent=2, default=json_default_serializer)}"
             )
 
         # Add story history as formatted JSON (explicitly labeled as historical context)
-        if json_data.get("story_history"):
+        if json_data.get("story_history") is not None:
             structured_prompt_parts.append(
                 f"STORY_HISTORY: {json.dumps(json_data.get('story_history', []), indent=2, default=json_default_serializer)}"
             )
 
         # Add entity tracking
-        if json_data.get("entity_tracking"):
+        if json_data.get("entity_tracking") is not None:
             structured_prompt_parts.append(
                 f"ENTITY_TRACKING: {json.dumps(json_data.get('entity_tracking', {}), indent=2, default=json_default_serializer)}"
             )
 
         # Add selected prompts
-        if json_data.get("selected_prompts"):
+        if json_data.get("selected_prompts") is not None:
             structured_prompt_parts.append(
                 f"SELECTED_PROMPTS: {json.dumps(json_data.get('selected_prompts', []), default=json_default_serializer)}"
             )
 
         # Add checkpoint block
-        if json_data.get("checkpoint_block"):
+        if json_data.get("checkpoint_block") is not None:
             structured_prompt_parts.append(
                 f"CHECKPOINT_BLOCK: {json_data.get('checkpoint_block', '')}"
             )
 
         # Add core memories
-        if json_data.get("core_memories"):
+        if json_data.get("core_memories") is not None:
             structured_prompt_parts.append(
                 f"CORE_MEMORIES: {json.dumps(json_data.get('core_memories', []), default=json_default_serializer)}"
             )
 
         # Add sequence IDs
-        if json_data.get("sequence_ids"):
+        if json_data.get("sequence_ids") is not None:
             structured_prompt_parts.append(
                 f"SEQUENCE_IDS: {json.dumps(json_data.get('sequence_ids', []), default=json_default_serializer)}"
             )
 
         # Add system corrections if present
-        if json_data.get("system_corrections"):
+        if json_data.get("system_corrections") is not None:
             structured_prompt_parts.append(
                 f"SYSTEM_CORRECTIONS: {json.dumps(json_data.get('system_corrections', []), default=json_default_serializer)}"
             )

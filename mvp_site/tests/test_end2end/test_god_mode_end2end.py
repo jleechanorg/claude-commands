@@ -466,10 +466,13 @@ class TestGodModeEnd2End(unittest.TestCase):
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools"
+    )
+    @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
     def test_sequential_god_mode_commands_both_respected(
-        self, mock_gemini_generate, mock_get_db
+        self, mock_gemini_code_exec, mock_gemini_native_tools, mock_get_db
     ):
         """
         Test that two consecutive god mode commands are both processed correctly.
@@ -477,6 +480,8 @@ class TestGodModeEnd2End(unittest.TestCase):
         This test verifies that the caching bug fix works correctly - when two
         god mode commands are sent sequentially, both should be processed and
         responded to correctly, not just the first one.
+        
+        Patches both Gemini entrypoints to be resilient to dispatch changes.
         """
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
@@ -551,7 +556,9 @@ class TestGodModeEnd2End(unittest.TestCase):
                     )
                 )
 
-        mock_gemini_generate.side_effect = mock_gemini_side_effect
+        # Patch both entrypoints to handle dispatch changes
+        mock_gemini_code_exec.side_effect = mock_gemini_side_effect
+        mock_gemini_native_tools.side_effect = mock_gemini_side_effect
 
         # FIRST GOD MODE COMMAND
         response1 = self.client.post(
@@ -565,6 +572,11 @@ class TestGodModeEnd2End(unittest.TestCase):
         data1 = json.loads(response1.data)
         assert "god_mode_response" in data1
         assert "HP" in data1["god_mode_response"] or "50" in data1["god_mode_response"]
+
+        # Verify HP was updated in state
+        if "game_state" in data1:
+            hp = data1["game_state"].get("player_character_data", {}).get("hp_current")
+            assert hp == 50, f"HP should be 50 after first command, got {hp}"
 
         # SECOND GOD MODE COMMAND
         response2 = self.client.post(
@@ -584,11 +596,163 @@ class TestGodModeEnd2End(unittest.TestCase):
         assert (
             "gold" in god_mode_resp2 or "200" in god_mode_resp2
         ), f"Second command should mention gold/200. Got: {data2.get('god_mode_response')}"
-
-        # Verify both LLM calls were made
+        
+        # Verify it's NOT responding to the first command
         assert (
-            mock_gemini_generate.call_count >= 2
-        ), f"Expected at least 2 LLM calls, got {mock_gemini_generate.call_count}"
+            "hp" not in god_mode_resp2 or "50" not in god_mode_resp2
+        ) or (
+            "gold" in god_mode_resp2 and "200" in god_mode_resp2
+        ), (
+            f"Second command should NOT respond to first command (HP/50). "
+            f"Got: {data2.get('god_mode_response')}"
+        )
+
+        # Verify gold was updated in state
+        if "game_state" in data2:
+            gold = data2["game_state"].get("player_character_data", {}).get("gold")
+            assert gold == 200, f"Gold should be 200 after second command, got {gold}"
+
+        # Verify both LLM calls were made (check both entrypoints)
+        total_calls = mock_gemini_code_exec.call_count + mock_gemini_native_tools.call_count
+        assert (
+            total_calls >= 2
+        ), f"Expected at least 2 LLM calls, got code_exec={mock_gemini_code_exec.call_count}, native_tools={mock_gemini_native_tools.call_count}"
+
+        # Tighten assertions: Verify the second call received the second command
+        # by inspecting prompt_contents directly instead of string concatenation
+        all_calls = mock_gemini_code_exec.call_args_list + mock_gemini_native_tools.call_args_list
+        if len(all_calls) >= 2:
+            second_call = all_calls[1]
+            # Extract prompt_contents from kwargs
+            prompt_contents = second_call.kwargs.get("prompt_contents", [])
+            # Flatten prompt_contents to check for the second command
+            prompt_text = " ".join(str(p) for p in prompt_contents)
+            assert (
+                "gold" in prompt_text.lower() or "200" in prompt_text
+            ), (
+                f"Second LLM call should contain 'gold' or '200' in prompt_contents. "
+                f"Got: {prompt_text[:500]}"
+            )
+            # Verify it's NOT the first command
+            assert (
+                "hp" not in prompt_text.lower() or "50" not in prompt_text
+            ) or (
+                "gold" in prompt_text.lower() and "200" in prompt_text
+            ), (
+                f"Second LLM call should NOT contain first command (HP/50). "
+                f"Got: {prompt_text[:500]}"
+            )
+
+    @patch("mvp_site.firestore_service.get_db")
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools"
+    )
+    @patch(
+        "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
+    )
+    def test_story_context_reloaded_for_each_command(
+        self, mock_gemini_code_exec, mock_gemini_native_tools, mock_get_db
+    ):
+        """
+        Test that story_context is reloaded from Firestore for each command.
+        
+        This verifies that the caching bug is fixed by ensuring story_context
+        includes the previous command's entry when processing the second command.
+        
+        Patches both Gemini entrypoints to be resilient to dispatch changes.
+        """
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_get_db.return_value = fake_firestore
+
+        campaign_id = "test_campaign_context_reload"
+        self._setup_fake_firestore_with_campaign(fake_firestore, campaign_id)
+
+        call_count = {"count": 0}
+
+        def mock_gemini_side_effect(*args, **kwargs):
+            """Mock Gemini to track story_context in each call."""
+            call_count["count"] += 1
+            
+            # Extract story_history from prompt_contents to verify it's being reloaded
+            # The story_history should grow with each command
+            prompt_contents = kwargs.get("prompt_contents", [])
+            prompt_text = " ".join(str(p) for p in prompt_contents)
+            
+            if call_count["count"] == 1:
+                # First call: story_context should be empty or minimal
+                # (no previous commands yet)
+                return FakeLLMResponse(
+                    json.dumps(
+                        {
+                            "god_mode_response": "First command processed",
+                            "narrative": "",
+                            "state_updates": {},
+                        }
+                    )
+                )
+            elif call_count["count"] == 2:
+                # Second call: story_context should include the first command
+                # Verify that the first command's text is in the prompt_contents
+                if "GOD MODE: Set HP" in prompt_text or "Set HP" in prompt_text:
+                    # Good - story_context includes first command
+                    pass
+                else:
+                    # Bad - story_context is stale/empty
+                    self.fail(
+                        f"Second call should include first command in story_context. "
+                        f"Prompt contents (first 1000 chars): {prompt_text[:1000]}"
+                    )
+                
+                return FakeLLMResponse(
+                    json.dumps(
+                        {
+                            "god_mode_response": "Second command processed",
+                            "narrative": "",
+                            "state_updates": {},
+                        }
+                    )
+                )
+            else:
+                return FakeLLMResponse(
+                    json.dumps(
+                        {
+                            "god_mode_response": f"Call #{call_count['count']}",
+                            "narrative": "",
+                            "state_updates": {},
+                        }
+                    )
+                )
+
+        # Patch both entrypoints
+        mock_gemini_code_exec.side_effect = mock_gemini_side_effect
+        mock_gemini_native_tools.side_effect = mock_gemini_side_effect
+
+        # Send first command
+        response1 = self.client.post(
+            f"/api/campaigns/{campaign_id}/interaction",
+            data=json.dumps({"input": "GOD MODE: Set HP to 50", "mode": "character"}),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+        assert response1.status_code == 200
+
+        # Send second command
+        response2 = self.client.post(
+            f"/api/campaigns/{campaign_id}/interaction",
+            data=json.dumps(
+                {"input": "GOD MODE: Set gold to 200", "mode": "character"}
+            ),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+        assert response2.status_code == 200
+
+        # Verify both calls were made (check both entrypoints)
+        total_calls = mock_gemini_code_exec.call_count + mock_gemini_native_tools.call_count
+        assert (
+            total_calls >= 2
+        ), f"Expected at least 2 calls, got code_exec={mock_gemini_code_exec.call_count}, native_tools={mock_gemini_native_tools.call_count}"
 
 
 class TestGodModePromptSelection(unittest.TestCase):
