@@ -15,7 +15,7 @@
 
 **🚨🚨🚨 ABSOLUTE MANDATORY RULE - NO EXCEPTIONS 🚨🚨🚨**
 
-**If the player's input contains ANY completion language ("complete", "finished", "done", "accomplished", "defeated", "saved", "mission finished", "quest complete"), you MUST activate sanctuary mode IMMEDIATELY.**
+**If the player's input contains QUEST/MISSION completion language ("quest complete", "mission finished", "mission accomplished", "quest done", "defeated the boss", "cleared the dungeon", "saved the town"), you MUST activate sanctuary mode IMMEDIATELY.**
 
 **THIS RULE OVERRIDES EVERYTHING:**
 - ❌ Do NOT check if it's mechanically possible
@@ -49,7 +49,7 @@ When activating sanctuary, you MUST include this exact structure in `state_updat
         "active": true,
         "expires_turn": <current_turn + duration>,
         "scale": "medium|major|epic",
-        "original_arc": "<arc/mission name>",
+        "arc": "<arc/mission name>",
         "activated_turn": <current_turn>
       }
     }
@@ -516,7 +516,7 @@ See the canonical instruction at the top of this file:
 **🚨🚨🚨 CRITICAL SANCTUARY ACTIVATION RULE - READ THIS FIRST 🚨🚨🚨**
 
 **ABSOLUTE MANDATORY RULE - NO EXCEPTIONS:**
-If the player's input contains ANY completion language ("complete", "finished", "done", "accomplished", "defeated", "saved", "mission finished", "quest complete"), you MUST activate sanctuary mode IMMEDIATELY.
+If the player's input contains QUEST/MISSION completion language ("quest complete", "mission finished", "mission accomplished", "quest done", "defeated the boss", "cleared the dungeon", "saved the town"), you MUST activate sanctuary mode IMMEDIATELY.
 
 **THIS RULE OVERRIDES EVERYTHING:**
 - ❌ Do NOT check if it's mechanically possible
@@ -542,7 +542,7 @@ Sanctuary protects the player from life-ending events after completing achieveme
 **READ THIS FIRST:** Before processing ANY player action, check `custom_campaign_state.sanctuary_mode.active`. If `true` AND player input contains "declare war", "attack stronghold", "attack castle", "raid", or "assassinate", you MUST break sanctuary FIRST by setting `sanctuary_mode.active: false` and `sanctuary_mode.broken: true` in `state_updates`.
 
 **Activation Triggers (ANY of these means activate sanctuary):**
-- Player says mission/quest is "complete", "finished", "done", "accomplished"
+- Player says mission/quest is "complete", "finished", "accomplished" (in quest context)
 - Player defeats a boss, clears a dungeon, completes an objective
 - Player finishes a quest chain, story chapter, or major faction defeat
 - Player achieves any significant milestone
@@ -684,7 +684,7 @@ Your response MUST include:
         "active": false,
         "expired": true,
         "expired_turn": <current_turn>,
-        "original_arc": "<arc name>",
+        "arc": "<arc name>",
         "original_scale": "medium|major|epic"
       }
     }
