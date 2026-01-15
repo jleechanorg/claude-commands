@@ -34,6 +34,7 @@ from testing_mcp.lib.campaign_utils import (
     complete_mission_with_sanctuary,
     create_campaign,
     end_combat_if_active,
+    ensure_game_state_seed,
     ensure_story_mode,
     get_campaign_state,
     process_action,
