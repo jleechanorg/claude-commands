@@ -1368,13 +1368,9 @@ def _call_llm_api_with_llm_request(
 
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
+    # Uses indent=2 for readability (matches origin/main format)
     # Uses centralized json_default_serializer from mvp_site.serialization
-    json_string = json.dumps(
-        json_data,
-        default=json_default_serializer,
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
+    json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
 
     prompt_size_bytes = len(json_string.encode("utf-8"))
     if prompt_size_bytes > MAX_PAYLOAD_SIZE:
