@@ -1372,7 +1372,18 @@ def _call_llm_api_with_llm_request(
         user_action_block = f"USER_ACTION:\n{user_action_str}\nEND_USER_ACTION"
 
         # Build structured prompt with explicit sections
+        # CRITICAL: Add explicit instruction to prioritize USER_ACTION over STORY_HISTORY
+        # This prevents the LLM from responding to old story entries instead of the current action
+        priority_instruction = (
+            "CRITICAL INSTRUCTION: You MUST respond to the USER_ACTION section below, "
+            "NOT to entries in STORY_HISTORY. STORY_HISTORY is provided for context only. "
+            "Your response must directly address the current USER_ACTION, even if STORY_HISTORY "
+            "contains similar or related content. Ignore old story entries and focus exclusively "
+            "on the current USER_ACTION.\n"
+        )
+        
         structured_prompt_parts = [
+            priority_instruction,
             "MESSAGE_TYPE: story_continuation",
             user_action_block,
             f"GAME_MODE: {json_data.get('game_mode', '')}",
@@ -1387,9 +1398,19 @@ def _call_llm_api_with_llm_request(
             )
 
         # Add story history as formatted JSON (explicitly labeled as historical context)
+        # IMPORTANT: This is for context only - respond to USER_ACTION, not STORY_HISTORY
         if json_data.get("story_history") is not None:
+            story_history_data = json_data.get("story_history", [])
+            # Limit to most recent entries to reduce focus on old content
+            # Keep last 15 entries (approximately last 7-8 turns) for context
+            max_history_entries = 15
+            if len(story_history_data) > max_history_entries:
+                story_history_data = story_history_data[-max_history_entries:]
+                logging_util.info(
+                    f"📚 STORY_HISTORY truncated: {len(json_data.get('story_history', []))} -> {len(story_history_data)} entries"
+                )
             structured_prompt_parts.append(
-                f"STORY_HISTORY: {json.dumps(json_data.get('story_history', []), indent=2, default=json_default_serializer)}"
+                f"STORY_HISTORY (CONTEXT ONLY - RESPOND TO USER_ACTION ABOVE):\n{json.dumps(story_history_data, indent=2, default=json_default_serializer)}"
             )
 
         # Add entity tracking
