@@ -71,6 +71,19 @@ def run_tests(server_url: str) -> tuple[list, list]:
         request_responses=request_responses,
     )
 
+    # Set character to level 20 to avoid level-up distractions
+    # Level-ups cause LLM to go into level-up flow instead of activating sanctuary
+    level_20_state = '{"player_character_data": {"level": 20, "xp_current": 355000}}'
+    process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input=f"GOD_MODE_UPDATE_STATE:{level_20_state}",
+        track_turn=False,
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
     # Start the quest in Story Mode
     process_action(
         client,
