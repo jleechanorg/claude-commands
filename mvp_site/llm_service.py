@@ -3881,7 +3881,7 @@ def continue_story(  # noqa: PLR0912, PLR0915
         require_dice_rolls=require_dice_rolls,
         dice_integrity_violation=dice_integrity_violation,
         require_social_hp_challenge=False,
-        debug_mode=current_game_state.debug_mode,
+        debug_mode=getattr(current_game_state, "debug_mode", False),
     )
 
     dice_retry_llm_call = False
@@ -4014,7 +4014,7 @@ def continue_story(  # noqa: PLR0912, PLR0915
                     require_dice_rolls=require_dice_rolls,
                     dice_integrity_violation=reprompt_dice_violation,
                     require_social_hp_challenge=False,
-                    debug_mode=current_game_state.debug_mode,
+                    debug_mode=getattr(current_game_state, "debug_mode", False),
                 )
 
                 # CRITICAL: Never accept responses with dice_integrity violations
