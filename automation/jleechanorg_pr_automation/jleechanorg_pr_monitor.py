@@ -18,7 +18,7 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -2175,6 +2175,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not head_sha:
             return None
 
+        latest_created_at = None
+        latest_created_at_str = ""
+        found_unparseable = False
+
         for comment in comments:
             body = comment.get("body", "")
             # Check for queued run marker (FIX_COMMENT_RUN_MARKER_PREFIX)
@@ -2185,27 +2189,36 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 if author == self.automation_username:
                     created_at_str = (
                         comment.get("createdAt")
-                        or comment.get("updatedAt")
                         or comment.get("created_at")
                         or ""
                     )
-                    if created_at_str:
-                        try:
-                            # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
-                            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
-                            # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
-                            if created_at.tzinfo is None:
-                                created_at = created_at.replace(tzinfo=timezone.utc)
-                            now = datetime.now(timezone.utc)
-                            age_hours = (now - created_at).total_seconds() / 3600
-                            return {
-                                "age_hours": age_hours,
-                                "created_at": created_at_str,
-                            }
-                        except (ValueError, AttributeError, TypeError):
-                            # If we can't parse date or compare (naive vs aware), assume it's recent (conservative)
-                            return {"age_hours": 0.0, "created_at": created_at_str}
-                    return {"age_hours": 0.0, "created_at": ""}
+                    if not created_at_str:
+                        found_unparseable = True
+                        continue
+
+                    try:
+                        # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
+                        created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                        # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
+                        if created_at.tzinfo is None:
+                            created_at = created_at.replace(tzinfo=UTC)
+                    except (ValueError, AttributeError, TypeError):
+                        found_unparseable = True
+                        continue
+
+                    if latest_created_at is None or created_at > latest_created_at:
+                        latest_created_at = created_at
+                        latest_created_at_str = created_at_str
+
+        if latest_created_at is not None:
+            age_hours = (datetime.now(UTC) - latest_created_at).total_seconds() / 3600
+            return {
+                "age_hours": age_hours,
+                "created_at": latest_created_at_str,
+            }
+
+        if found_unparseable:
+            return {"age_hours": 0.0, "created_at": ""}
 
         return None
 

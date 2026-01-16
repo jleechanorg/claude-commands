@@ -1,19 +1,8 @@
 import unittest
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import Any
 from unittest.mock import Mock, patch
 
-_CaptureT = TypeVar("_CaptureT")
-
-if TYPE_CHECKING:
-    from _pytest.capture import CaptureFixture
-    from _pytest.monkeypatch import MonkeyPatch
-else:
-    class CaptureFixture(Generic[_CaptureT]):
-        """Runtime placeholder for pytest capture fixture typing."""
-
-    class MonkeyPatch:
-        """Runtime placeholder for pytest monkeypatch fixture typing."""
 from automation.jleechanorg_pr_automation import jleechanorg_pr_monitor as mon
 
 FAILED_PR_NUMBER = 2
@@ -24,7 +13,7 @@ def codex_marker(monitor: mon.JleechanorgPRMonitor, token: str) -> str:
     return f"{monitor.CODEX_COMMIT_MARKER_PREFIX}{token}{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
 
 
-def test_list_actionable_prs_conflicts_and_failing(monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]) -> None:
+def test_list_actionable_prs_conflicts_and_failing(monkeypatch: Any, capsys: Any) -> None:
     monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
 
     sample_prs = [
@@ -751,6 +740,42 @@ class TestRaceConditionFix(unittest.TestCase):
         info = self.monitor._get_fix_comment_queued_info(comments, self.head_sha)  # noqa: SLF001
         self.assertIsNotNone(info)
         self.assertGreater(info["age_hours"], self.monitor.FIX_COMMENT_QUEUED_TIMEOUT_HOURS)
+
+    def test_get_fix_comment_queued_info_uses_most_recent_comment(self):
+        """Uses the newest queued comment when multiple entries exist."""
+        fixed_now = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+        older_created_at = (fixed_now - timedelta(hours=2)).isoformat()
+        newer_created_at = (fixed_now - timedelta(minutes=20)).isoformat()
+        comments = [
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": older_created_at,
+            },
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": newer_created_at,
+            },
+        ]
+
+        with patch.object(mon, "datetime") as mock_datetime:
+            mock_datetime.fromisoformat = datetime.fromisoformat
+            mock_datetime.now.side_effect = lambda tz=None: fixed_now
+            info = self.monitor._get_fix_comment_queued_info(comments, self.head_sha)  # noqa: SLF001
+
+        expected_age = (
+            (fixed_now - datetime.fromisoformat(newer_created_at)).total_seconds() / 3600
+        )
+        self.assertIsNotNone(info)
+        self.assertAlmostEqual(info["age_hours"], expected_age, places=2)
+        self.assertEqual(info["created_at"], newer_created_at)
 
     @patch.object(mon.JleechanorgPRMonitor, "_get_pr_comment_state")
     @patch.object(mon.JleechanorgPRMonitor, "_count_workflow_comments", return_value=0)
