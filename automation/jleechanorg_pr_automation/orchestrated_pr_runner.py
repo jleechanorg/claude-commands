@@ -15,7 +15,6 @@ import sys
 import tempfile
 from typing import Optional
 from contextlib import contextmanager
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -55,12 +54,6 @@ def display_log_viewing_command(session_name: str) -> None:
         log("   Or use the shorter command:")
         log(f"   ./orchestration/stream_logs.sh {session_name}")
         log("")
-
-
-@dataclass(frozen=True)
-class PendingReviewMonitor:
-    process: subprocess.Popen
-    script_path: Path
 
 
 def get_github_token() -> Optional[str]:
@@ -540,176 +533,6 @@ def dispatch_agent_for_pr_with_task(
         else:
             log(f"Failed to spawn agent for {repo_full}#{pr_number}")
     return success
-
-
-def _start_pending_review_monitor(
-    repo_full: str,
-    pr_number: int,
-    automation_user: str,
-    log_file: str,
-) -> PendingReviewMonitor | None:
-    """Start a background process that monitors for and immediately deletes pending reviews.
-
-    Uses a fixed script path per PR to prevent macOS permission prompts. File locking
-    prevents concurrent access, and atomic creation with O_EXCL prevents TOCTOU attacks.
-    The script file cleans itself up on exit using a trap.
-    """
-    monitor_script = """#!/bin/bash
-# Background monitor to immediately delete any pending reviews created by agents
-REPO_FULL="${REPO_FULL}"
-PR_NUMBER="${PR_NUMBER}"
-AUTOMATION_USER="${AUTOMATION_USER}"
-LOG_FILE="${LOG_FILE}"
-SCRIPT_PATH="${SCRIPT_PATH}"
-TIMEOUT_SECONDS=3600
-START_TIME=$(date +%s)
-
-cleanup() {
-    if [ -n "$SCRIPT_PATH" ] && [ -f "$SCRIPT_PATH" ]; then
-        rm -f "$SCRIPT_PATH"
-    fi
-}
-
-trap cleanup EXIT
-trap cleanup TERM INT
-
-while true; do
-    CURRENT_TIME=$(date +%s)
-    ELAPSED=$((CURRENT_TIME - START_TIME))
-    if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
-        echo "[$(date)] 🕒 Monitor timeout reached after $TIMEOUT_SECONDSs, exiting" | tee -a "$LOG_FILE"
-        exit 0
-    fi
-    # Check for pending reviews from automation user
-    # gh api --jq doesn't support --arg, so use jq in a separate step
-    PENDING_REVIEWS=$(
-        gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/reviews" 2>/dev/null | jq --arg user "$AUTOMATION_USER" \
-        "[.[] | select(.state==\\\"PENDING\\\" and .user.login==\\\"$user\\\") | .id]"
-    )
-
-    if [ -n "$PENDING_REVIEWS" ] && [ "$PENDING_REVIEWS" != "[]" ]; then
-        echo "[$(date)] 🚨 DETECTED PENDING REVIEW - DELETING IMMEDIATELY" | tee -a "$LOG_FILE"
-        # Extract review IDs and delete them
-        echo "$PENDING_REVIEWS" | jq -r '.[]' | while read -r review_id; do
-            if [ -n "$review_id" ]; then
-                echo "[$(date)] 🗑️ Deleting pending review #$review_id" | tee -a "$LOG_FILE"
-                gh api repos/$REPO_FULL/pulls/$PR_NUMBER/reviews/$review_id -X DELETE 2>&1 | tee -a "$LOG_FILE"
-            fi
-        done
-    fi
-    sleep 5  # Check every 5 seconds
-done
-"""
-    script_path_obj = None
-    lock_fd = None
-    lock_acquired = False
-    try:
-        # Validate pr_number to prevent path traversal attacks
-        pr_num_str = str(pr_number)
-        if not pr_num_str.isdigit():
-            log(f"Invalid pr_number (must be numeric): {pr_number}")
-            return None
-
-        # Use a FIXED script path per PR to avoid macOS permission prompts
-        # macOS treats each unique script path as a separate "app" and asks permission repeatedly
-        # Using a fixed path allows macOS to recognize it as the same app
-        script_path = f"/tmp/pending_review_monitor_{pr_num_str}.sh"
-        script_path_obj = Path(script_path)
-        lock_path = Path(f"{script_path}.lock")
-
-        # Use file locking to prevent concurrent access when multiple processes
-        # try to start a monitor for the same PR simultaneously
-        try:
-            # Create lock file if it doesn't exist
-            lock_path.parent.mkdir(parents=True, exist_ok=True)
-            lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_WRONLY, 0o644)
-            # Acquire exclusive lock (non-blocking)
-            try:
-                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                lock_acquired = True
-            except BlockingIOError:
-                # Another process is already handling this PR's monitor
-                log(f"Monitor for PR #{pr_number} already being created by another process")
-                os.close(lock_fd)
-                lock_fd = None  # Fix: Set to None to prevent double close in finally block
-                return None
-
-            # Check if monitor script already exists and if the process is still running
-            if script_path_obj.exists():
-                # Try to read PID from script's shebang or check if process is running
-                # For simplicity, we'll remove stale script if it exists
-                # The script itself has cleanup logic via trap, so this is safe
-                try:
-                    script_path_obj.unlink()
-                except OSError:
-                    pass  # File may have been removed by another process
-
-            # Use atomic file creation with O_EXCL to prevent TOCTOU race conditions
-            # O_NOFOLLOW prevents symlink attacks
-            flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
-            if hasattr(os, "O_NOFOLLOW"):
-                flags |= os.O_NOFOLLOW
-            try:
-                script_fd = os.open(str(script_path_obj), flags, 0o700)
-            except FileExistsError:
-                # Race condition: another process created it between unlink and open
-                log(f"Monitor script for PR #{pr_number} was created by another process")
-                # Lock will be released in finally block
-                return None
-
-            # Write script content using secure fd-based approach
-            with os.fdopen(script_fd, "w", encoding="utf-8") as f:
-                f.write(monitor_script)
-
-            env = {
-                **os.environ,
-                "REPO_FULL": repo_full,
-                "PR_NUMBER": str(pr_number),
-                "AUTOMATION_USER": automation_user,
-                "LOG_FILE": log_file,
-                "SCRIPT_PATH": str(script_path_obj),
-            }
-            # Fix: Keep lock until after Popen succeeds to prevent race window
-            process = subprocess.Popen(
-                ["bash", str(script_path_obj)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-                env=env,
-            )
-            # Lock will be released in finally block after successful Popen
-            monitor = PendingReviewMonitor(process=process, script_path=script_path_obj)
-            # Lock will be released in finally block
-            return monitor
-        finally:
-            # Release lock only if we acquired it
-            if lock_acquired and lock_fd is not None:
-                try:
-                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
-                    os.close(lock_fd)
-                except OSError:
-                    pass
-                # Fix: Only delete lock file if we acquired the lock
-                try:
-                    lock_path.unlink(missing_ok=True)
-                except OSError:
-                    pass
-            elif lock_fd is not None:
-                # Lock not acquired but fd is open - just close it
-                try:
-                    os.close(lock_fd)
-                except OSError:
-                    pass
-    except Exception as e:
-        log(f"Failed to start pending review monitor: {e}")
-        # Clean up script file if it was created but Popen failed
-        if script_path_obj and script_path_obj.exists():
-            try:
-                script_path_obj.unlink()
-                log(f"Cleaned up monitor script file after failure: {script_path_obj}")
-            except Exception as cleanup_exc:
-                log(f"Failed to cleanup script file after monitor failure: {cleanup_exc}")
-        return None
 
 
 def get_automation_user() -> Optional[str]:
