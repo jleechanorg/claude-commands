@@ -21,8 +21,6 @@ from typing import Any
 
 # Use standard logging - orchestration package doesn't have logging_util dependency
 # Per coding guidelines: module-level imports only, no try/except imports
-import logging
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
