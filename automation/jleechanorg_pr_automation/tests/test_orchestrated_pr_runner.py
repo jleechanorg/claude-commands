@@ -807,47 +807,153 @@ def test_get_github_token_from_env(monkeypatch):
     assert token == "test-token-123"
 
 
-def test_get_github_token_from_gh_cli(monkeypatch):
-    """Test get_github_token falls back to gh CLI when env var not set."""
+def test_get_github_token_from_config_file_top_level(monkeypatch, tmp_path):
+    """Test get_github_token reads token from gh config file (top-level oauth_token)."""
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     
-    mock_result = SimpleNamespace(returncode=0, stdout="gh-token-456\n", stderr="")
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda *_, **__: mock_result
-    )
+    # Create mock config file
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    
+    import yaml
+    config_data = {
+        "github.com": {
+            "oauth_token": "config-token-789"
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+    
+    # Mock Path.home() to return our temp directory
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
     
     token = runner.get_github_token()
-    assert token == "gh-token-456"
+    assert token == "config-token-789"
 
 
-def test_get_github_token_gh_cli_failure(monkeypatch):
-    """Test get_github_token returns None when gh CLI fails."""
+def test_get_github_token_from_config_file_user_specific(monkeypatch, tmp_path):
+    """Test get_github_token reads token from gh config file (user-specific token)."""
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     
-    mock_result = SimpleNamespace(returncode=1, stdout="", stderr="error")
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda *_, **__: mock_result
-    )
+    # Create mock config file with user-specific token
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    
+    import yaml
+    config_data = {
+        "github.com": {
+            "users": {
+                "testuser": {
+                    "oauth_token": "user-token-abc"
+                }
+            }
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+    
+    # Mock Path.home() to return our temp directory
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    
+    token = runner.get_github_token()
+    assert token == "user-token-abc"
+
+
+def test_get_github_token_config_file_not_exists(monkeypatch, tmp_path):
+    """Test get_github_token returns None when config file doesn't exist."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    
+    # Mock Path.home() to return temp directory without config file
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
     
     token = runner.get_github_token()
     assert token is None
 
 
-def test_get_github_token_gh_cli_timeout(monkeypatch):
-    """Test get_github_token handles gh CLI timeout gracefully."""
+def test_get_github_token_config_file_invalid_yaml(monkeypatch, tmp_path):
+    """Test get_github_token handles invalid YAML in config file gracefully."""
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     
-    def mock_run(*args, **kwargs):
-        raise subprocess.TimeoutExpired("gh", 5)
+    # Create invalid YAML file
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    config_file.write_text("invalid: yaml: content: [")
     
-    monkeypatch.setattr(subprocess, "run", mock_run)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
     
     token = runner.get_github_token()
     assert token is None
+
+
+def test_get_github_token_config_file_no_github_com(monkeypatch, tmp_path):
+    """Test get_github_token returns None when config has no github.com entry."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    
+    import yaml
+    config_data = {
+        "gitlab.com": {
+            "oauth_token": "gitlab-token"
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+    
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    
+    token = runner.get_github_token()
+    assert token is None
+
+
+def test_get_github_token_config_file_no_yaml_module(monkeypatch, tmp_path):
+    """Test get_github_token handles missing PyYAML module gracefully."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    config_file.write_text("github.com:\n  oauth_token: test-token")
+    
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    
+    # Mock yaml module as None (not available)
+    original_yaml = runner.yaml
+    monkeypatch.setattr(runner, "yaml", None)
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+        token = runner.get_github_token()
+        assert token is None
+        mock_log.assert_any_call("⚠️ PyYAML not available, cannot read gh config file")
+    
+    # Restore yaml module
+    runner.yaml = original_yaml
+
+
+def test_get_github_token_env_var_takes_precedence(monkeypatch, tmp_path):
+    """Test that GITHUB_TOKEN env var takes precedence over config file."""
+    monkeypatch.setenv("GITHUB_TOKEN", "env-token-123")
+    
+    # Create config file with different token
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    
+    import yaml
+    config_data = {
+        "github.com": {
+            "oauth_token": "config-token-456"
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+    
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    
+    token = runner.get_github_token()
+    # Should use env var, not config file
+    assert token == "env-token-123"
 
 
 def test_post_pr_comment_python_success(monkeypatch):
