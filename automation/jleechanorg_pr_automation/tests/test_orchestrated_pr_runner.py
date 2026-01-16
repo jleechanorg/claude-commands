@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 import automation.jleechanorg_pr_automation.orchestrated_pr_runner as runner
 import pytest
 import requests
+import yaml
 
 
 def _mock_has_failing_checks_responses(monkeypatch, pr_number, check_runs_data, head_sha="abc123"):
@@ -798,7 +799,6 @@ def test_get_github_token_from_config_file_top_level(monkeypatch, tmp_path):
     config_dir.mkdir(parents=True)
     config_file = config_dir / "hosts.yml"
 
-    import yaml
     config_data = {
         "github.com": {
             "oauth_token": "config-token-789"
@@ -822,7 +822,6 @@ def test_get_github_token_from_config_file_user_specific(monkeypatch, tmp_path):
     config_dir.mkdir(parents=True)
     config_file = config_dir / "hosts.yml"
 
-    import yaml
     config_data = {
         "github.com": {
             "users": {
@@ -876,7 +875,6 @@ def test_get_github_token_config_file_no_github_com(monkeypatch, tmp_path):
     config_dir.mkdir(parents=True)
     config_file = config_dir / "hosts.yml"
 
-    import yaml
     config_data = {
         "gitlab.com": {
             "oauth_token": "gitlab-token"
@@ -923,7 +921,6 @@ def test_get_github_token_env_var_takes_precedence(monkeypatch, tmp_path):
     config_dir.mkdir(parents=True)
     config_file = config_dir / "hosts.yml"
 
-    import yaml
     config_data = {
         "github.com": {
             "oauth_token": "config-token-456"
@@ -1190,7 +1187,6 @@ def test_get_github_token_from_config_file_with_encoding(monkeypatch, tmp_path):
     config_dir.mkdir(parents=True)
     config_file = config_dir / "hosts.yml"
 
-    import yaml
     config_data = {
         "github.com": {
             "oauth_token": "utf8-token-🚀"

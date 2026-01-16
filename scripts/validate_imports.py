@@ -69,7 +69,6 @@ class ImportValidator(ast.NodeVisitor):
             'mvp_site.testing_framework',
             # Automation modules that need sys.path manipulation
             'automation_safety_manager', 'jleechanorg_pr_monitor',
-            'yaml',  # PyYAML is optional dependency
             'automation.automation_safety_manager', 'automation.utils',
             'utils', '.automation_safety_manager', '.utils',
             'codex_config', '.codex_config',

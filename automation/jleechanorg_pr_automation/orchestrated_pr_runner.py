@@ -23,10 +23,7 @@ import requests
 from orchestration import task_dispatcher
 from orchestration.task_dispatcher import TaskDispatcher
 
-try:
-    import yaml
-except ImportError:
-    yaml = None  # PyYAML is optional - only needed for reading gh config file
+import yaml
 
 ORG = "jleechanorg"
 BASE_CLONE_ROOT = Path("/tmp/pr-orch-bases")
