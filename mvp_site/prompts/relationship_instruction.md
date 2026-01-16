@@ -2,7 +2,7 @@
 
 **CRITICAL: Relationships are ACTIVE game mechanics, not passive flavor text.**
 
-**Schema:** See `game_state_instruction.md` → "🔗 Relationships Object (REQUIRED for recurring NPCs)" for the JSON structure (trust_level, disposition, history, debts, grievances).
+**Schema:** See `game_state_instruction.md` → "NPC Data Input Structure" section for the JSON structure. Relationships are stored in `npc_data.<name>.relationships.player` with fields: `trust_level` (-10 to +10), `disposition` (hostile/antagonistic/neutral/friendly/allied), `history` (array), `debts` (array), `grievances` (array).
 
 ## Trust Level Scale (-10 to +10)
 
