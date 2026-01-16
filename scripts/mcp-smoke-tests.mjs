@@ -577,6 +577,9 @@ async function checkToolsList() {
 async function testCampaignCreation(userId, providerLabel = 'gemini') {
   logStep(`Testing campaign creation via create_campaign tool (${providerLabel})`);
 
+  // Use god_mode to skip character creation and go straight to StoryModeAgent
+  // StoryModeAgent loads game_state_instruction.md which contains the tool_requests guidance fix
+  // CharacterCreationAgent doesn't load game_state_instruction.md and explicitly says "DO NOT roll dice"
   const payload = await callRpc(
     'tools/call',
     {
@@ -584,9 +587,27 @@ async function testCampaignCreation(userId, providerLabel = 'gemini') {
       arguments: {
         user_id: userId,
         title: 'Smoke Test Campaign',
-        character: 'Test Hero, Fighter',
-        setting: 'Test dungeon for smoke tests',
-        description: 'Automated MCP smoke test scenario',
+        god_mode: {
+          title: 'Smoke Test Campaign',
+          setting: 'A dungeon entrance',
+          character: {
+            name: 'Test Fighter',
+            race: 'Human',
+            class: 'Fighter',
+            level: 5,
+            hp_current: 50,
+            hp_max: 50,
+            armor_class: 18,
+            attributes: {
+              strength: 16,
+              dexterity: 14,
+              constitution: 15,
+              intelligence: 10,
+              wisdom: 12,
+              charisma: 8,
+            },
+          },
+        },
         selected_prompts: ['mechanicalPrecision'],
         custom_options: [],
         debug_mode: true
@@ -618,6 +639,8 @@ async function testCampaignCreation(userId, providerLabel = 'gemini') {
 async function testCampaignCreationWithDefaultWorld(userId, providerLabel = 'gemini') {
   logStep(`Testing campaign creation with defaultWorld enabled (${providerLabel})`);
 
+  // Use god_mode to skip character creation and go straight to StoryModeAgent
+  // StoryModeAgent loads game_state_instruction.md which contains the tool_requests guidance fix
   const payload = await callRpc(
     'tools/call',
     {
@@ -625,8 +648,27 @@ async function testCampaignCreationWithDefaultWorld(userId, providerLabel = 'gem
       arguments: {
         user_id: userId,
         title: 'Smoke Test Campaign - Default World',
-        character: '',
-        setting: 'World of Assiah. Caught between an oath to a ruthless tyrant and a vow to protect the innocent.',
+        god_mode: {
+          title: 'Smoke Test Campaign - Default World',
+          setting: 'World of Assiah. Caught between an oath to a ruthless tyrant and a vow to protect the innocent.',
+          character: {
+            name: 'Test Fighter',
+            race: 'Human',
+            class: 'Fighter',
+            level: 5,
+            hp_current: 50,
+            hp_max: 50,
+            armor_class: 18,
+            attributes: {
+              strength: 16,
+              dexterity: 14,
+              constitution: 15,
+              intelligence: 10,
+              wisdom: 12,
+              charisma: 8,
+            },
+          },
+        },
         selected_prompts: ['defaultWorld', 'mechanicalPrecision'],
         custom_options: ['defaultWorld'],
         debug_mode: true
