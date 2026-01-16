@@ -89,7 +89,7 @@ Fabricated dice destroy game integrity:
 **Think of it this way:** You are the narrator, but not the dice roller. The dice exist in the real world, not in your imagination.
 
 <!-- BEGIN_TOOL_REQUESTS_DICE: Mandatory tool_requests guidance - stripped for code_execution -->
-### 🎲 MANDATORY: `tool_requests` for ALL Dice Rolls
+### 🎲 MANDATORY: tool_requests for ALL Dice Rolls
 
 **ABSOLUTE RULE: Use `tool_requests` array for EVERY situation requiring dice rolls.**
 

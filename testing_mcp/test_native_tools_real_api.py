@@ -18,8 +18,9 @@ Tip:
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent))
 
 import argparse
@@ -112,13 +113,16 @@ def main() -> int:
         return 2
 
     print(f"✅ create_campaign ok: {campaign_id}")
-    
+
     # Verify we're in story mode (god_mode campaigns should skip character creation)
     state = client.tools_call(
         "get_campaign_state",
         {"user_id": user_id, "campaign_id": campaign_id},
     )
-    creation_in_progress = state.get("custom_campaign_state", {}).get("character_creation_in_progress", True)
+    custom_state = state.get("custom_campaign_state")
+    if not isinstance(custom_state, dict):
+        custom_state = {}
+    creation_in_progress = custom_state.get("character_creation_in_progress", True)
     if creation_in_progress:
         # If still in creation, complete it with a story action
         completion_result = client.tools_call(
