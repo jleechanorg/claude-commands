@@ -1354,11 +1354,13 @@ def _load_campaign_and_continue_story(
 
     # Log response preview (DEBUG level to avoid log noise)
     if llm_response_obj:
-        narrative_text = getattr(llm_response_obj, "narrative_text", None)
-        if narrative_text is None:
-            narrative_text = getattr(llm_response_obj, "text", None)
+        # Safely get narrative_text, handling case where attribute exists but is None
+        # Using 'or' operator ensures we get '' instead of None, preventing TypeError on slice
+        narrative_text = (getattr(llm_response_obj, "narrative_text", "") or "")
+        if not narrative_text:
+            narrative_text = (getattr(llm_response_obj, "text", "") or "")
         narrative_preview = (
-            "N/A" if narrative_text is None else str(narrative_text)[:200]
+            "N/A" if not narrative_text else str(narrative_text)[:200]
         )
         logging_util.debug(
             f"✅ LLM response received: narrative_preview={narrative_preview}..."
