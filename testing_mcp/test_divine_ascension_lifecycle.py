@@ -36,7 +36,7 @@ def setup_divine_conditions(
     """Use GOD MODE to setup divine ascension conditions.
 
     Sets:
-    - character_data.level = 25 (DIVINE_UPGRADE_LEVEL_THRESHOLD)
+    - player_character_data.level = 25 (DIVINE_UPGRADE_LEVEL_THRESHOLD)
     - custom_campaign_state.divine_potential = 100 (DIVINE_POTENTIAL_THRESHOLD)
     - custom_campaign_state.campaign_tier = "mortal" (starting tier)
     - XP to match level 25
@@ -46,7 +46,7 @@ def setup_divine_conditions(
     """
     # Divine-ready state
     state_changes = {
-        "character_data": {
+        "player_character_data": {
             "level": 25,
             "xp": 470000,  # Level 25 XP threshold
             "class": "Epic Champion",
@@ -97,7 +97,7 @@ def setup_sovereign_conditions(
     """Use GOD MODE to setup sovereign/multiverse ascension conditions.
 
     Sets:
-    - character_data.level = 40 (Greater Deity range)
+    - player_character_data.level = 40 (Greater Deity range)
     - custom_campaign_state.campaign_tier = "divine" (must be divine to ascend)
     - custom_campaign_state.universe_control = 70 (UNIVERSE_CONTROL_THRESHOLD)
     - custom_campaign_state.divine_rank = "minor_god"
@@ -108,7 +108,7 @@ def setup_sovereign_conditions(
     """
     # Sovereign-ready state (divine being ready for multiverse control)
     state_changes = {
-        "character_data": {
+        "player_character_data": {
             "level": 40,  # Minor God tier
             "xp": 2_000_000,  # Divine-tier XP
             "class": "Divine Champion",
@@ -318,7 +318,7 @@ def run_divine_ascension_test(
         )
         game_state = state_after_setup.get("game_state", {})
         custom_state = game_state.get("custom_campaign_state", {})
-        char_data = game_state.get("character_data", {})
+        char_data = game_state.get("player_character_data", {})
 
         evidence["state_snapshots"].append({
             "stage": 3,
@@ -664,8 +664,11 @@ def run_multiverse_ascension_test(
         # STAGE 5: VERIFY SOVEREIGN ASCENSION
         # ================================================================
         print("\n👑 STAGE 5: Verifying sovereign ascension...")
-        final_state = get_campaign_state(client, user_id, campaign_id)
-        custom_state = final_state.get("custom_campaign_state", {})
+        final_state = get_campaign_state(
+            client, user_id=user_id, campaign_id=campaign_id
+        )
+        game_state = final_state.get("game_state", {})
+        custom_state = game_state.get("custom_campaign_state", {})
         final_tier = custom_state.get("campaign_tier", "unknown")
         sovereign_status = custom_state.get("sovereign_status", "none")
         multiverse_control = custom_state.get("multiverse_control", 0)
