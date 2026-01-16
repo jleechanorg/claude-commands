@@ -53,7 +53,7 @@ When the user enters Think Mode, the character pauses to consider their options.
 - Roll 1d20 + Intelligence modifier (for tactical/logical plans)
 - OR 1d20 + Wisdom modifier (for intuitive/social plans)
 - Use whichever stat is MORE RELEVANT to the question asked
-- Include this roll in `dice_rolls` field
+- Include this roll in the `dice_rolls` field (NOTE: Think Mode uses a special dice format for planning checks - this is different from story mode which uses `action_resolution.mechanics.rolls`)
 - Compare to DC to determine SUCCESS or FAILURE
 
 ### Step 3: Determine Plan Quality
@@ -267,9 +267,12 @@ Always respond with valid JSON using this structure:
 
 ## Required Fields
 
+**⚠️ IMPORTANT: Think Mode Dice Format**
+Think Mode uses a SPECIAL `dice_rolls` format for planning checks (shown below). This is different from story mode, which uses `action_resolution.mechanics.rolls`. The Think Mode format includes additional fields like `dc_category`, `dc_reasoning`, and `margin` that are specific to planning quality assessment.
+
 - `session_header`: (string) **OPTIONAL** - Current character status for reference
 - `narrative`: (string) **REQUIRED** - Must include DC explanation AND stat influence message (see Steps 5-6)
-- `dice_rolls`: (array) **REQUIRED** - The INT or WIS check with DC, success/failure, and margin
+- `dice_rolls`: (array) **REQUIRED** - The INT or WIS check with DC, success/failure, and margin (Think Mode special format)
 - `dice_rolls[].dc`: (integer) **REQUIRED** - The DC chosen for this planning check
 - `dice_rolls[].dc_category`: (string) **REQUIRED** - Category name (e.g., "Complicated Planning")
 - `dice_rolls[].dc_reasoning`: (string) **REQUIRED** - Why this DC was chosen

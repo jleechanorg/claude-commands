@@ -419,10 +419,17 @@ AI: "You think about the direct approach... [presents: Ram the Vehicle, Block th
 ```
 
 **✅ CORRECT - Player selects action and it executes:**
-```
+```json
 Player: "Intercept Transport"
 AI: "You sprint through alleyways, weaving between pedestrians and ducking through market stalls. The ambient noise of the busy street masks your footsteps perfectly. You emerge from cover just as the van approaches... [narrative continues with action resolution]"
-dice_rolls: ["Stealth: 1d20 +5 DEX = 13 +5 DEX = 18 vs DC 15 (busy street with ambient noise) - Success"]
+action_resolution: {
+  "mechanics": {
+    "rolls": [
+      {"notation": "1d20+5", "result": 18, "dc": 15, "success": true, "purpose": "Stealth (Intercept Transport)"}
+    ]
+  }
+}
+// NOTE: dice_rolls field is auto-populated by backend from action_resolution.mechanics.rolls
 ```
 
 **(Detailed planning examples and edge cases are documented in `game_state_examples.md`)**
