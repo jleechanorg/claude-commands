@@ -408,8 +408,9 @@ def _start_pending_review_monitor(
 ) -> PendingReviewMonitor | None:
     """Start a background process that monitors for and immediately deletes pending reviews.
 
-    Uses mktemp for secure temporary file creation. The script file cleans itself
-    up on exit using a trap, and startup failures remove the file immediately.
+    Uses a fixed script path per PR to prevent macOS permission prompts. File locking
+    prevents concurrent access, and atomic creation with O_EXCL prevents TOCTOU attacks.
+    The script file cleans itself up on exit using a trap.
     """
     monitor_script = """#!/bin/bash
 # Background monitor to immediately delete any pending reviews created by agents
@@ -458,6 +459,8 @@ while true; do
 done
 """
     script_path_obj = None
+    lock_fd = None
+    lock_acquired = False
     try:
         # Validate pr_number to prevent path traversal attacks
         pr_num_str = str(pr_number)
@@ -474,7 +477,6 @@ done
 
         # Use file locking to prevent concurrent access when multiple processes
         # try to start a monitor for the same PR simultaneously
-        lock_fd = None
         try:
             # Create lock file if it doesn't exist
             lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -482,10 +484,12 @@ done
             # Acquire exclusive lock (non-blocking)
             try:
                 fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                lock_acquired = True
             except BlockingIOError:
                 # Another process is already handling this PR's monitor
                 log(f"Monitor for PR #{pr_number} already being created by another process")
                 os.close(lock_fd)
+                lock_fd = None  # Fix: Set to None to prevent double close in finally block
                 return None
 
             # Check if monitor script already exists and if the process is still running
@@ -508,41 +512,52 @@ done
             except FileExistsError:
                 # Race condition: another process created it between unlink and open
                 log(f"Monitor script for PR #{pr_number} was created by another process")
+                # Lock will be released in finally block
                 return None
 
             # Write script content using secure fd-based approach
             with os.fdopen(script_fd, "w", encoding="utf-8") as f:
                 f.write(monitor_script)
+
+            env = {
+                **os.environ,
+                "REPO_FULL": repo_full,
+                "PR_NUMBER": str(pr_number),
+                "AUTOMATION_USER": automation_user,
+                "LOG_FILE": log_file,
+                "SCRIPT_PATH": str(script_path_obj),
+            }
+            # Fix: Keep lock until after Popen succeeds to prevent race window
+            process = subprocess.Popen(
+                ["bash", str(script_path_obj)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+                env=env,
+            )
+            # Lock will be released in finally block after successful Popen
+            monitor = PendingReviewMonitor(process=process, script_path=script_path_obj)
+            # Lock will be released in finally block
+            return monitor
         finally:
-            # Release lock
-            if lock_fd is not None:
+            # Release lock only if we acquired it
+            if lock_acquired and lock_fd is not None:
                 try:
                     fcntl.flock(lock_fd, fcntl.LOCK_UN)
                     os.close(lock_fd)
                 except OSError:
                     pass
-                # Clean up lock file
+                # Fix: Only delete lock file if we acquired the lock
                 try:
                     lock_path.unlink(missing_ok=True)
                 except OSError:
                     pass
-
-        env = {
-            **os.environ,
-            "REPO_FULL": repo_full,
-            "PR_NUMBER": str(pr_number),
-            "AUTOMATION_USER": automation_user,
-            "LOG_FILE": log_file,
-            "SCRIPT_PATH": str(script_path_obj),
-        }
-        process = subprocess.Popen(
-            ["bash", str(script_path_obj)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-            env=env,
-        )
-        return PendingReviewMonitor(process=process, script_path=script_path_obj)
+            elif lock_fd is not None:
+                # Lock not acquired but fd is open - just close it
+                try:
+                    os.close(lock_fd)
+                except OSError:
+                    pass
     except Exception as e:
         log(f"Failed to start pending review monitor: {e}")
         # Clean up script file if it was created but Popen failed
