@@ -458,12 +458,18 @@ done
 """
     script_path_obj = None
     try:
-        # Use mktemp for secure temporary file creation
-        script_fd, script_path = tempfile.mkstemp(suffix=f"_pending_review_monitor_{pr_number}.sh", dir="/tmp")
+        # Use a FIXED script path per PR to avoid macOS permission prompts
+        # macOS treats each unique script path as a separate "app" and asks permission repeatedly
+        # Using a fixed path allows macOS to recognize it as the same app
+        script_path = f"/tmp/pending_review_monitor_{pr_number}.sh"
         script_path_obj = Path(script_path)
+        
+        # Remove existing script if it exists (from previous run)
+        if script_path_obj.exists():
+            script_path_obj.unlink()
 
         # Write script content
-        with os.fdopen(script_fd, "w", encoding="utf-8") as f:
+        with script_path_obj.open("w", encoding="utf-8") as f:
             f.write(monitor_script)
         script_path_obj.chmod(0o700)
 
